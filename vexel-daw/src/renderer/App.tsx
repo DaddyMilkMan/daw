@@ -18,7 +18,7 @@ function App() {
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
 
   useEffect(() => {
-    console.log('🎯 Zenith DAW initialized');
+    console.log('🎯 Vexel DAW initialized');
 
     // Get initial audio state
     window.electron.getAudioState().then((state) => {
@@ -42,7 +42,7 @@ function App() {
       {/* Title Bar */}
       <div className="h-8 bg-black/40 flex items-center justify-between px-4 select-none drag-region">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">Zenith DAW</span>
+          <span className="text-sm font-semibold">Vexel DAW</span>
           <span className="text-xs text-muted-foreground">v0.1.0</span>
         </div>
         <div className="flex items-center gap-2 no-drag">

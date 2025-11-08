@@ -1,7 +1,7 @@
 {
-  "name": "zenith-daw",
+  "name": "vexel-daw",
   "version": "0.1.0",
-  "description": "Zenith - AI-Native Digital Audio Workstation with Wingman Integration",
+  "description": "Vexel - AI-Native Digital Audio Workstation with Wingman Integration",
   "main": "src/main/index.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"wait-on tcp:5173 && electron .\"",
@@ -61,8 +61,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.daddymilkman.zenith",
-    "productName": "Zenith DAW",
+    "appId": "com.daddymilkman.vexel",
+    "productName": "Vexel DAW",
     "directories": {
       "output": "dist-electron",
       "buildResources": "build"
