@@ -4,7 +4,36 @@ Comprehensive research and technical implementation plan for the "Perfect DAW" a
 
 ## 📚 Project Documents
 
-### 1. [Perfect DAW Analysis](./PERFECT_DAW_ANALYSIS.md)
+### 1. [AI-Native DAW Architecture](./AI_NATIVE_DAW_ARCHITECTURE.md) ⭐ **NEW - If Building Your Own DAW**
+**Complete blueprint for building a DAW with Wingman AI integrated from the ground up**
+
+**This is the recommended approach if you're building your own DAW!**
+
+Unlike retrofitting AI onto existing DAWs (which requires plugins + control surfaces), building your own DAW lets you:
+- ✅ Design AI as a first-class citizen with native access to everything
+- ✅ Direct memory access (zero overhead, no WebSocket/OSC latency)
+- ✅ Total control over features and workflow
+- ✅ Build features impossible in existing DAWs
+
+**What's inside:**
+- 🏗️ Complete system architecture (Audio Engine + AI + UI)
+- 💻 Code examples in C++, Python, TypeScript
+- 🎹 JUCE-based audio engine design
+- 🤖 Wingman AI integration layer (lock-free, real-time safe)
+- 🎛️ Natural language examples ("create a lofi beat")
+- 📅 18-month implementation roadmap
+- 💰 Business model and revenue streams
+- 📊 Competitive advantages vs. Soundverse, FL Gopher, etc.
+
+**Tech stack:**
+- Audio Engine: C++ with JUCE Framework
+- AI Core: Python with LangChain + LLM
+- UI: TypeScript/React/Electron
+- Communication: ZeroMQ (low latency)
+
+---
+
+### 2. [Perfect DAW Analysis](./PERFECT_DAW_ANALYSIS.md)
 **Comprehensive feature comparison of all major DAWs (2025)**
 
 Analyzes praised features and common criticisms of:
@@ -33,8 +62,8 @@ Plus the vision for the "Perfect DAW" that combines the best of all platforms wh
 
 ---
 
-### 2. [AI Agent DAW Controller Plan](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
-**Technical implementation plan for AI-powered universal DAW control**
+### 3. [AI Agent DAW Controller Plan](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
+**Technical implementation plan for AI-powered universal DAW control (for existing DAWs)**
 
 A detailed architectural blueprint for building an AI agent that can control ANY DAW through natural language commands.
 
@@ -452,9 +481,21 @@ This is an open research project. Feel free to:
 
 ## Quick Links
 
+- ⭐ **[AI-Native DAW Architecture](./AI_NATIVE_DAW_ARCHITECTURE.md)** - If building your own DAW (RECOMMENDED)
 - 📖 [Full DAW Analysis](./PERFECT_DAW_ANALYSIS.md)
-- 🏗️ [Technical Implementation Plan](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
+- 🏗️ [AI Controller for Existing DAWs](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
 - 🐛 [Report Issues](#)
 - 💬 [Discussions](#)
 - ⭐ Star this repo if you find it useful!
+
+## Which Document Should I Read?
+
+**Building your own DAW?**
+→ Read [AI_NATIVE_DAW_ARCHITECTURE.md](./AI_NATIVE_DAW_ARCHITECTURE.md)
+
+**Want AI to control existing DAWs (Reaper, Ableton, etc.)?**
+→ Read [AI_AGENT_DAW_CONTROLLER_PLAN.md](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
+
+**Researching DAW features?**
+→ Read [PERFECT_DAW_ANALYSIS.md](./PERFECT_DAW_ANALYSIS.md)
 
