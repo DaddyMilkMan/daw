@@ -92,7 +92,37 @@ Plus the vision for the "Perfect DAW" that combines the best of all platforms wh
 
 ---
 
-### 4. [AI Agent DAW Controller Plan](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
+### 4. [Perfect DAW UI Design](./PERFECT_DAW_UI_DESIGN.md) ⭐ **NEW - UI/UX Specification**
+**Evidence-based UI design combining the best of all major DAWs**
+
+**Built from real user feedback!**
+
+Comprehensive UI/UX specification that combines:
+- ✅ Ableton's Session View + Arrangement workflow
+- ✅ FL Studio's legendary piano roll
+- ✅ Pro Tools' professional audio editing
+- ✅ Bitwig's modulation system
+- ✅ Studio One's drag-and-drop simplicity
+- ✅ Reaper's customization power
+- ✅ LUNA's beautiful aesthetics
+- ✅ Wingman AI integrated throughout
+
+**What's inside:**
+- 🎨 Complete UI architecture (tri-pane layout)
+- 🖼️ Wireframes for all major views
+- ⌨️ Keyboard shortcuts and interaction patterns
+- 🎹 FL-grade piano roll specification
+- 🎚️ Pro-level audio editor with comp lanes
+- 🤖 Wingman AI integration (chat, voice, quick actions)
+- ♿ Accessibility features (WCAG 2.1 AA)
+- 📅 20-week implementation roadmap
+
+**Design philosophy:**
+"Zero Friction, Maximum Flow" - Idea → Sound in 3 clicks
+
+---
+
+### 5. [AI Agent DAW Controller Plan](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
 **Technical implementation plan for AI-powered universal DAW control (for existing DAWs)**
 
 A detailed architectural blueprint for building an AI agent that can control ANY DAW through natural language commands.
@@ -512,6 +542,7 @@ This is an open research project. Feel free to:
 ## Quick Links
 
 - ⭐⭐ **[Wingman Integration](./WINGMAN_INTEGRATION_PLAN.md)** - Use your existing Wingman! (FASTEST PATH)
+- ⭐ **[Perfect DAW UI Design](./PERFECT_DAW_UI_DESIGN.md)** - UI/UX specification (NEW!)
 - ⭐ [AI-Native DAW Architecture](./AI_NATIVE_DAW_ARCHITECTURE.md) - Building from scratch
 - 📖 [Full DAW Analysis](./PERFECT_DAW_ANALYSIS.md)
 - 🏗️ [AI Controller for Existing DAWs](./AI_AGENT_DAW_CONTROLLER_PLAN.md)
