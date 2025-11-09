@@ -1,10 +1,11 @@
 import { Track } from '@/types/audio';
-import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree } from 'lucide-react';
+import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { useState } from 'react';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
+import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
 
 interface CenterPanelProps {
   tracks: Track[];
@@ -77,6 +78,8 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
 function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
   const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
+  const [expandedAutomation, setExpandedAutomation] = useState<Set<string>>(new Set());
+  const [automationLanes, setAutomationLanes] = useState<Map<string, AutomationLane[]>>(new Map());
 
   const handleTrackContextMenu = (e: React.MouseEvent, trackId: string) => {
     e.preventDefault();
@@ -91,6 +94,38 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
         newSet.delete(trackId);
       } else {
         newSet.add(trackId);
+      }
+      return newSet;
+    });
+  };
+
+  const toggleAutomation = (trackId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedAutomation((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackId)) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+        // Initialize default automation lanes if not exists
+        if (!automationLanes.has(trackId)) {
+          const defaultLanes: AutomationLane[] = [
+            {
+              id: `${trackId}-volume`,
+              trackId,
+              parameter: 'volume',
+              parameterName: 'Volume',
+              points: [
+                { time: 0, value: 0.8 },
+                { time: 16, value: 0.5 },
+                { time: 32, value: 0.8 },
+              ],
+              mode: 'read',
+              color: '#3b82f6',
+            },
+          ];
+          setAutomationLanes((prev) => new Map(prev).set(trackId, defaultLanes));
+        }
       }
       return newSet;
     });
@@ -202,36 +237,105 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
                     delay: index * 0.05,
                   }}
                   whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.05)' }}
-                  className="h-16 border-b border-border/30 px-3 py-2 cursor-pointer transition-colors"
-                  onDoubleClick={() => onOpenPianoRoll(track.id, track.name)}
-                  onContextMenu={(e) => handleTrackContextMenu(e, track.id)}
-                  title="Double-click to open Piano Roll • Right-click for options"
+                  className="border-b border-border/30"
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">{track.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {track.type.toUpperCase()}
+                  {/* Main Track Row */}
+                  <div
+                    className="h-16 px-3 py-2 cursor-pointer"
+                    onDoubleClick={() => onOpenPianoRoll(track.id, track.name)}
+                    onContextMenu={(e) => handleTrackContextMenu(e, track.id)}
+                    title="Double-click to open Piano Roll • Right-click for options"
+                  >
+                    <div className="flex items-center justify-between gap-2 h-full">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {/* Automation toggle */}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => toggleAutomation(track.id, e)}
+                          className="text-muted-foreground hover:text-foreground transition-colors"
+                          title="Toggle automation lanes (A)"
+                        >
+                          {expandedAutomation.has(track.id) ? (
+                            <ChevronDown className="h-3 w-3" />
+                          ) : (
+                            <ChevronRight className="h-3 w-3" />
+                          )}
+                        </motion.button>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium truncate">{track.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {track.type.toUpperCase()}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Track controls */}
+                      <div className="flex items-center gap-1">
+                        {/* Record arm */}
+                        <motion.button
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          onClick={(e) => toggleRecordArm(track.id, e)}
+                          className={`p-1.5 rounded-full transition-all ${
+                            recordArmed.has(track.id)
+                              ? 'bg-red-500 shadow-lg shadow-red-500/50 animate-pulse'
+                              : 'bg-muted hover:bg-red-500/20'
+                          }`}
+                          title={recordArmed.has(track.id) ? 'Disarm track' : 'Arm track for recording'}
+                        >
+                          <Circle
+                            className="h-3 w-3"
+                            fill={recordArmed.has(track.id) ? 'currentColor' : 'none'}
+                            stroke="currentColor"
+                          />
+                        </motion.button>
                       </div>
                     </div>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => toggleRecordArm(track.id, e)}
-                      className={`p-1.5 rounded-full transition-all ${
-                        recordArmed.has(track.id)
-                          ? 'bg-red-500 shadow-lg shadow-red-500/50 animate-pulse'
-                          : 'bg-muted hover:bg-red-500/20'
-                      }`}
-                      title={recordArmed.has(track.id) ? 'Disarm track' : 'Arm track for recording'}
-                    >
-                      <Circle
-                        className="h-3 w-3"
-                        fill={recordArmed.has(track.id) ? 'currentColor' : 'none'}
-                        stroke="currentColor"
-                      />
-                    </motion.button>
                   </div>
+
+                  {/* Automation Lanes */}
+                  <AnimatePresence>
+                    {expandedAutomation.has(track.id) && automationLanes.get(track.id) && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        {automationLanes.get(track.id)!.map((lane) => (
+                          <AutomationLaneComponent
+                            key={lane.id}
+                            lane={lane}
+                            width={1600} // 32 bars × 50px per beat
+                            height={80}
+                            onPointAdd={(time, value) => {
+                              console.log('Add automation point:', time, value);
+                            }}
+                            onPointMove={(index, time, value) => {
+                              console.log('Move automation point:', index, time, value);
+                            }}
+                            onPointDelete={(index) => {
+                              console.log('Delete automation point:', index);
+                            }}
+                            onModeChange={(mode) => {
+                              setAutomationLanes((prev) => {
+                                const newMap = new Map(prev);
+                                const lanes = newMap.get(track.id) || [];
+                                const updatedLanes = lanes.map((l) =>
+                                  l.id === lane.id ? { ...l, mode } : l
+                                );
+                                newMap.set(track.id, updatedLanes);
+                                return newMap;
+                              });
+                            }}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
             </AnimatePresence>
