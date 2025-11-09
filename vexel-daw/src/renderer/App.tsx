@@ -4,7 +4,7 @@ import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
-import WingmanPanel from './components/WingmanPanel';
+import WingmanSidebar from './components/WingmanSidebar';
 import './App.css';
 
 function App() {
@@ -16,6 +16,7 @@ function App() {
     tracks: [],
   });
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
+  const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
 
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
@@ -95,10 +96,12 @@ function App() {
         </div>
       </div>
 
-      {/* Wingman AI Panel */}
-      <WingmanPanel
+      {/* Wingman AI Sidebar */}
+      <WingmanSidebar
         isOpen={isWingmanOpen}
         onClose={() => setIsWingmanOpen(false)}
+        position={wingmanPosition}
+        onPositionChange={setWingmanPosition}
       />
     </div>
   );
