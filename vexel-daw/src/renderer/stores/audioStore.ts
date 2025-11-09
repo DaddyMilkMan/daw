@@ -41,6 +41,7 @@ interface AudioStore {
   // Audio/MIDI management
   loadAudioFile: (trackId: string, file: File) => Promise<void>;
   addMIDINotes: (trackId: string, notes: MIDINote[]) => void;
+  clearMIDINotes: (trackId: string) => void;
 
   // Metering
   updateMeters: () => void;
@@ -83,10 +84,74 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
     });
 
     // Initialize with default tracks for testing
-    engine.createTrack('Drums', 'midi', '#ef4444');
-    engine.createTrack('Bass', 'midi', '#3b82f6');
-    engine.createTrack('Synth', 'instrument', '#8b5cf6');
+    const drumsId = engine.createTrack('Drums', 'midi', '#ef4444');
+    const bassId = engine.createTrack('Bass', 'midi', '#3b82f6');
+    const synthId = engine.createTrack('Synth', 'instrument', '#8b5cf6');
     engine.createTrack('Vocals', 'audio', '#10b981');
+
+    // Add demo MIDI notes for testing
+    // Drums - Simple kick and snare pattern
+    engine.addMIDINotes(drumsId, [
+      // Kick on beats 1 and 3 (every 4 beats)
+      { pitch: 36, startTime: 0, duration: 0.25, velocity: 100 },
+      { pitch: 36, startTime: 2, duration: 0.25, velocity: 100 },
+      { pitch: 36, startTime: 4, duration: 0.25, velocity: 100 },
+      { pitch: 36, startTime: 6, duration: 0.25, velocity: 100 },
+      // Snare on beats 2 and 4
+      { pitch: 38, startTime: 1, duration: 0.25, velocity: 90 },
+      { pitch: 38, startTime: 3, duration: 0.25, velocity: 90 },
+      { pitch: 38, startTime: 5, duration: 0.25, velocity: 90 },
+      { pitch: 38, startTime: 7, duration: 0.25, velocity: 90 },
+      // Hi-hat on every half beat
+      { pitch: 42, startTime: 0, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 0.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 1, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 1.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 2, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 2.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 3, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 3.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 4, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 4.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 5, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 5.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 6, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 6.5, duration: 0.125, velocity: 60 },
+      { pitch: 42, startTime: 7, duration: 0.125, velocity: 70 },
+      { pitch: 42, startTime: 7.5, duration: 0.125, velocity: 60 },
+    ]);
+
+    // Bass - Simple bass line (C minor scale)
+    engine.addMIDINotes(bassId, [
+      { pitch: 36, startTime: 0, duration: 1, velocity: 85 }, // C
+      { pitch: 39, startTime: 1, duration: 1, velocity: 80 }, // Eb
+      { pitch: 43, startTime: 2, duration: 1, velocity: 85 }, // G
+      { pitch: 39, startTime: 3, duration: 1, velocity: 80 }, // Eb
+      { pitch: 36, startTime: 4, duration: 1, velocity: 85 }, // C
+      { pitch: 39, startTime: 5, duration: 1, velocity: 80 }, // Eb
+      { pitch: 43, startTime: 6, duration: 1, velocity: 85 }, // G
+      { pitch: 41, startTime: 7, duration: 1, velocity: 80 }, // F
+    ]);
+
+    // Synth - Simple chord progression (C minor)
+    engine.addMIDINotes(synthId, [
+      // Cm chord (bar 1)
+      { pitch: 48, startTime: 0, duration: 2, velocity: 70 }, // C
+      { pitch: 51, startTime: 0, duration: 2, velocity: 65 }, // Eb
+      { pitch: 55, startTime: 0, duration: 2, velocity: 70 }, // G
+      // Fm chord (bar 2)
+      { pitch: 53, startTime: 2, duration: 2, velocity: 70 }, // F
+      { pitch: 56, startTime: 2, duration: 2, velocity: 65 }, // Ab
+      { pitch: 60, startTime: 2, duration: 2, velocity: 70 }, // C
+      // G chord (bar 3)
+      { pitch: 55, startTime: 4, duration: 2, velocity: 70 }, // G
+      { pitch: 59, startTime: 4, duration: 2, velocity: 65 }, // B
+      { pitch: 62, startTime: 4, duration: 2, velocity: 70 }, // D
+      // Ab chord (bar 4)
+      { pitch: 56, startTime: 6, duration: 2, velocity: 70 }, // Ab
+      { pitch: 60, startTime: 6, duration: 2, velocity: 65 }, // C
+      { pitch: 63, startTime: 6, duration: 2, velocity: 70 }, // Eb
+    ]);
 
     set({
       engine,
@@ -94,7 +159,7 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
       transport: engine.getTransport(),
     });
 
-    console.log('🎵 Audio store initialized with engine');
+    console.log('🎵 Audio store initialized with engine and demo MIDI notes');
 
     // Start metering loop
     get().startMeteringLoop();
@@ -283,6 +348,16 @@ export const useAudioStore = create<AudioStore>((set, get) => ({
     if (!engine) return;
 
     engine.addMIDINotes(trackId, notes);
+  },
+
+  /**
+   * Clear MIDI notes
+   */
+  clearMIDINotes: (trackId: string) => {
+    const { engine } = get();
+    if (!engine) return;
+
+    engine.clearMIDINotes(trackId);
   },
 
   /**

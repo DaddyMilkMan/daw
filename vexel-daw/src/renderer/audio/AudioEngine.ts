@@ -4,6 +4,8 @@
  * Handles real-time audio processing, routing, and playback
  */
 
+import { MIDISequencer } from './MIDISequencer';
+
 export interface AudioTrack {
   id: string;
   name: string;
@@ -25,6 +27,9 @@ export interface AudioTrack {
 
   // MIDI data
   notes?: MIDINote[];
+
+  // MIDI sequencer (for MIDI/instrument tracks)
+  sequencer?: MIDISequencer;
 
   // Effects chain
   effects: AudioEffect[];
@@ -136,6 +141,13 @@ export class AudioEngine {
     panNode.connect(analyserNode);
     analyserNode.connect(this.masterGain);
 
+    // Create MIDI sequencer for MIDI/instrument tracks
+    let sequencer: MIDISequencer | undefined;
+    if (type === 'midi' || type === 'instrument') {
+      sequencer = new MIDISequencer(this.context, gainNode);
+      sequencer.setTempo(this.transport.tempo);
+    }
+
     const track: AudioTrack = {
       id,
       name,
@@ -151,6 +163,7 @@ export class AudioEngine {
       analyserNode,
       effects: [],
       notes: type === 'midi' || type === 'instrument' ? [] : undefined,
+      sequencer,
     };
 
     this.tracks.set(id, track);
@@ -171,6 +184,11 @@ export class AudioEngine {
     track.gainNode?.disconnect();
     track.panNode?.disconnect();
     track.analyserNode?.disconnect();
+
+    // Cleanup sequencer
+    if (track.sequencer) {
+      track.sequencer.dispose();
+    }
 
     this.tracks.delete(trackId);
     this.notifyTracksUpdate();
@@ -291,8 +309,30 @@ export class AudioEngine {
     track.notes.push(...notes);
     track.notes.sort((a, b) => a.startTime - b.startTime);
 
+    // Update sequencer
+    if (track.sequencer) {
+      track.sequencer.loadNotes(track.notes);
+    }
+
     this.notifyTracksUpdate();
     console.log(`🎹 Added ${notes.length} MIDI notes to ${track.name}`);
+  }
+
+  /**
+   * Clear MIDI notes from track
+   */
+  clearMIDINotes(trackId: string) {
+    const track = this.tracks.get(trackId);
+    if (!track || (track.type !== 'midi' && track.type !== 'instrument')) return;
+
+    track.notes = [];
+
+    if (track.sequencer) {
+      track.sequencer.clearNotes();
+    }
+
+    this.notifyTracksUpdate();
+    console.log(`🎹 Cleared MIDI notes from ${track.name}`);
   }
 
   /**
@@ -303,6 +343,16 @@ export class AudioEngine {
 
     this.transport.isPlaying = true;
     this.startTime = this.context.currentTime - this.transport.currentTime;
+
+    // Start all MIDI sequencers
+    const beatsPerSecond = this.transport.tempo / 60;
+    const currentBeat = this.transport.currentTime * beatsPerSecond;
+
+    this.tracks.forEach(track => {
+      if (track.sequencer) {
+        track.sequencer.start(currentBeat);
+      }
+    });
 
     // Start animation loop for transport updates
     this.startTransportLoop();
@@ -318,6 +368,13 @@ export class AudioEngine {
     if (!this.transport.isPlaying) return;
 
     this.transport.isPlaying = false;
+
+    // Stop all MIDI sequencers
+    this.tracks.forEach(track => {
+      if (track.sequencer) {
+        track.sequencer.stop();
+      }
+    });
 
     // Stop animation loop
     if (this.animationFrameId !== null) {
@@ -347,6 +404,14 @@ export class AudioEngine {
    */
   setTempo(bpm: number) {
     this.transport.tempo = Math.max(20, Math.min(999, bpm));
+
+    // Update all sequencers with new tempo
+    this.tracks.forEach(track => {
+      if (track.sequencer) {
+        track.sequencer.setTempo(this.transport.tempo);
+      }
+    });
+
     console.log(`🎵 Tempo set to ${this.transport.tempo} BPM`);
     this.notifyTransportUpdate();
   }
@@ -508,6 +573,11 @@ export class AudioEngine {
       track.gainNode?.disconnect();
       track.panNode?.disconnect();
       track.analyserNode?.disconnect();
+
+      // Dispose sequencers
+      if (track.sequencer) {
+        track.sequencer.dispose();
+      }
     });
 
     // Disconnect master
