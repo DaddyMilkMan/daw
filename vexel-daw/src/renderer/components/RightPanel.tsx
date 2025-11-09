@@ -2,13 +2,105 @@ import { Track } from '@/types/audio';
 import { Volume2, PanelRight, Sliders, Plus, Minus, MoreHorizontal, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PluginState, BuiltInEffectType } from '@/types/plugin';
+import { PluginHost, createPlugin } from '@/services/PluginHost';
+import PluginChainView from './PluginChainView';
 
 interface RightPanelProps {
   tracks: Track[];
+  onTracksUpdate?: (tracks: Track[]) => void;
 }
 
-export default function RightPanel({ tracks }: RightPanelProps) {
+export default function RightPanel({ tracks, onTracksUpdate }: RightPanelProps) {
   const [tab, setTab] = useState<'mixer' | 'inspector'>('mixer');
+  const [localTracks, setLocalTracks] = useState<Track[]>(tracks);
+
+  // Sync local tracks with prop changes
+  useEffect(() => {
+    setLocalTracks(tracks);
+  }, [tracks]);
+
+  // Plugin management handlers
+  const handleAddPlugin = (trackId: string, type: BuiltInEffectType) => {
+    const pluginHost = PluginHost.getInstance();
+    const audioContext = pluginHost.getAudioContext();
+    const plugin = createPlugin(audioContext, type);
+    const pluginState = plugin.getState();
+    plugin.dispose(); // We'll recreate it when needed
+
+    setLocalTracks((prevTracks) => {
+      const newTracks = prevTracks.map((track) => {
+        if (track.id === trackId) {
+          return {
+            ...track,
+            plugins: [...(track.plugins || []), pluginState],
+          };
+        }
+        return track;
+      });
+      onTracksUpdate?.(newTracks);
+      return newTracks;
+    });
+  };
+
+  const handleRemovePlugin = (trackId: string, pluginId: string) => {
+    setLocalTracks((prevTracks) => {
+      const newTracks = prevTracks.map((track) => {
+        if (track.id === trackId) {
+          return {
+            ...track,
+            plugins: (track.plugins || []).filter((p) => p.id !== pluginId),
+          };
+        }
+        return track;
+      });
+      onTracksUpdate?.(newTracks);
+      return newTracks;
+    });
+  };
+
+  const handleBypassPlugin = (trackId: string, pluginId: string, bypass: boolean) => {
+    setLocalTracks((prevTracks) => {
+      const newTracks = prevTracks.map((track) => {
+        if (track.id === trackId) {
+          return {
+            ...track,
+            plugins: (track.plugins || []).map((p) =>
+              p.id === pluginId ? { ...p, bypassed: bypass } : p
+            ),
+          };
+        }
+        return track;
+      });
+      onTracksUpdate?.(newTracks);
+      return newTracks;
+    });
+  };
+
+  const handleParameterChange = (
+    trackId: string,
+    pluginId: string,
+    parameterId: string,
+    value: number
+  ) => {
+    setLocalTracks((prevTracks) => {
+      const newTracks = prevTracks.map((track) => {
+        if (track.id === trackId) {
+          return {
+            ...track,
+            plugins: (track.plugins || []).map((p) =>
+              p.id === pluginId
+                ? { ...p, parameters: { ...p.parameters, [parameterId]: value } }
+                : p
+            ),
+          };
+        }
+        return track;
+      });
+      onTracksUpdate?.(newTracks);
+      return newTracks;
+    });
+  };
 
   return (
     <div className="w-72 bg-card border-l border-border flex flex-col">
@@ -44,7 +136,14 @@ export default function RightPanel({ tracks }: RightPanelProps) {
       <div className="flex-1 overflow-y-auto">
         <AnimatePresence mode="wait">
           {tab === 'mixer' ? (
-            <MixerView key="mixer" tracks={tracks} />
+            <MixerView
+              key="mixer"
+              tracks={localTracks}
+              onAddPlugin={handleAddPlugin}
+              onRemovePlugin={handleRemovePlugin}
+              onBypassPlugin={handleBypassPlugin}
+              onParameterChange={handleParameterChange}
+            />
           ) : (
             <InspectorView key="inspector" />
           )}
@@ -54,7 +153,21 @@ export default function RightPanel({ tracks }: RightPanelProps) {
   );
 }
 
-function MixerView({ tracks }: { tracks: Track[] }) {
+interface MixerViewProps {
+  tracks: Track[];
+  onAddPlugin: (trackId: string, type: BuiltInEffectType) => void;
+  onRemovePlugin: (trackId: string, pluginId: string) => void;
+  onBypassPlugin: (trackId: string, pluginId: string, bypass: boolean) => void;
+  onParameterChange: (trackId: string, pluginId: string, parameterId: string, value: number) => void;
+}
+
+function MixerView({
+  tracks,
+  onAddPlugin,
+  onRemovePlugin,
+  onBypassPlugin,
+  onParameterChange,
+}: MixerViewProps) {
   if (tracks.length === 0) {
     return (
       <motion.div
@@ -86,7 +199,15 @@ function MixerView({ tracks }: { tracks: Track[] }) {
     >
       <AnimatePresence>
         {tracks.map((track, index) => (
-          <ChannelStrip key={track.id} track={track} index={index} />
+          <ChannelStrip
+            key={track.id}
+            track={track}
+            index={index}
+            onAddPlugin={onAddPlugin}
+            onRemovePlugin={onRemovePlugin}
+            onBypassPlugin={onBypassPlugin}
+            onParameterChange={onParameterChange}
+          />
         ))}
       </AnimatePresence>
 
@@ -101,9 +222,20 @@ function MixerView({ tracks }: { tracks: Track[] }) {
 interface ChannelStripProps {
   track: Track;
   index: number;
+  onAddPlugin: (trackId: string, type: BuiltInEffectType) => void;
+  onRemovePlugin: (trackId: string, pluginId: string) => void;
+  onBypassPlugin: (trackId: string, pluginId: string, bypass: boolean) => void;
+  onParameterChange: (trackId: string, pluginId: string, parameterId: string, value: number) => void;
 }
 
-function ChannelStrip({ track, index }: ChannelStripProps) {
+function ChannelStrip({
+  track,
+  index,
+  onAddPlugin,
+  onRemovePlugin,
+  onBypassPlugin,
+  onParameterChange,
+}: ChannelStripProps) {
   const [volume, setVolume] = useState(track.volume);
   const [pan, setPan] = useState(track.pan);
   const [muted, setMuted] = useState(track.muted);
@@ -164,29 +296,22 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
         </motion.button>
       </div>
 
-      {/* Insert Effects Slots */}
+      {/* Plugin Chain */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground font-medium">INSERTS</span>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="p-0.5 rounded hover:bg-accent transition-colors"
-          >
-            <Plus className="h-3 w-3 text-muted-foreground" />
-          </motion.button>
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-muted-foreground font-medium">PLUGINS</span>
+          <span className="text-[10px] text-muted-foreground">
+            {track.plugins?.length || 0} loaded
+          </span>
         </div>
-        <div className="space-y-1">
-          {[1, 2].map((slot) => (
-            <motion.div
-              key={slot}
-              whileHover={{ backgroundColor: 'rgba(255,255,255,0.05)' }}
-              className="px-2 py-1 bg-background/50 border border-dashed border-border/30 rounded text-[10px] text-muted-foreground text-center cursor-pointer"
-            >
-              Empty Slot
-            </motion.div>
-          ))}
-        </div>
+        <PluginChainView
+          trackId={track.id}
+          plugins={track.plugins || []}
+          onAddPlugin={onAddPlugin}
+          onRemovePlugin={onRemovePlugin}
+          onBypassPlugin={onBypassPlugin}
+          onParameterChange={onParameterChange}
+        />
       </div>
 
       {/* EQ Section */}

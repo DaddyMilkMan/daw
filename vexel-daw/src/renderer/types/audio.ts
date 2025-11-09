@@ -1,3 +1,5 @@
+import { PluginState } from './plugin';
+
 export interface Track {
   id: string;
   name: string;
@@ -6,6 +8,7 @@ export interface Track {
   pan: number;
   muted: boolean;
   solo: boolean;
+  plugins?: PluginState[];
 }
 
 export interface AudioState {
