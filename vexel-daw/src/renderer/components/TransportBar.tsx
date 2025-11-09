@@ -1,19 +1,36 @@
-import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity, Settings } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { AudioState } from '@/types/audio';
+import { MetronomeSettings as MetronomeSettingsType, MIDIClockSettings } from '@/types/metronome';
 import { formatTime } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import MetronomeSettings from './MetronomeSettings';
 
 interface TransportBarProps {
   audioState: AudioState;
   onOpenWingman: () => void;
+  metronomeSettings: MetronomeSettingsType;
+  midiSettings: MIDIClockSettings;
+  onMetronomeToggle: () => void;
+  onMetronomeSettingsChange: (settings: Partial<MetronomeSettingsType>) => void;
+  onMIDISettingsChange: (settings: Partial<MIDIClockSettings>) => void;
+  onLoadCustomSound?: (file: File) => void;
 }
 
-export default function TransportBar({ audioState, onOpenWingman }: TransportBarProps) {
+export default function TransportBar({
+  audioState,
+  onOpenWingman,
+  metronomeSettings,
+  midiSettings,
+  onMetronomeToggle,
+  onMetronomeSettingsChange,
+  onMIDISettingsChange,
+  onLoadCustomSound,
+}: TransportBarProps) {
   const [tempo, setTempo] = useState(audioState.tempo);
   const [isLooping, setIsLooping] = useState(false);
-  const [isMetronomeOn, setIsMetronomeOn] = useState(false);
+  const [showMetronomeSettings, setShowMetronomeSettings] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [cpuUsage, setCpuUsage] = useState(12);
 
@@ -246,9 +263,33 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
         transition={{ type: 'spring', stiffness: 400, damping: 10 }}
       >
         <span className="text-xs text-muted-foreground font-medium">Time Sig</span>
-        <span className="text-lg font-mono font-semibold">
-          {audioState.timeSignature.numerator}/{audioState.timeSignature.denominator}
-        </span>
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            value={audioState.timeSignature.numerator}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (value >= 1 && value <= 32) {
+                window.electron.setTimeSignature?.({ numerator: value, denominator: audioState.timeSignature.denominator });
+              }
+            }}
+            min="1"
+            max="32"
+            className="w-12 px-2 py-1 bg-secondary/40 border border-border/50 rounded text-sm font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+          <span className="text-sm font-mono">/</span>
+          <input
+            type="number"
+            value={audioState.timeSignature.denominator}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if ([2, 4, 8, 16].includes(value)) {
+                window.electron.setTimeSignature?.({ numerator: audioState.timeSignature.numerator, denominator: value });
+              }
+            }}
+            className="w-12 px-2 py-1 bg-secondary/40 border border-border/50 rounded text-sm font-mono font-semibold focus:outline-none focus:ring-1 focus:ring-primary/50"
+          />
+        </div>
       </motion.div>
 
       {/* Spacer */}
@@ -284,21 +325,36 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
       <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
       {/* Metronome */}
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsMetronomeOn(!isMetronomeOn)}
-          title="Metronome (M)"
-          className={`transition-all ${
-            isMetronomeOn
-              ? 'bg-primary/20 text-primary hover:bg-primary/30'
-              : 'hover:bg-white/5'
-          }`}
-        >
-          <Activity className={`h-5 w-5 ${isMetronomeOn ? 'animate-pulse' : ''}`} />
-        </Button>
-      </motion.div>
+      <div className="flex items-center gap-1">
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={onMetronomeToggle}
+            title="Metronome (M)"
+            className={`transition-all ${
+              metronomeSettings.enabled
+                ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <Activity className={`h-5 w-5 ${metronomeSettings.enabled ? 'animate-pulse' : ''}`} />
+          </Button>
+        </motion.div>
+
+        {/* Metronome Settings */}
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowMetronomeSettings(true)}
+            title="Metronome Settings"
+            className="hover:bg-white/5 transition-all"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
+        </motion.div>
+      </div>
 
       {/* Divider */}
       <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
@@ -327,6 +383,20 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
         </div>
         <span className="text-sm font-mono font-semibold">-6 dB</span>
       </div>
+
+      {/* Metronome Settings Modal */}
+      <AnimatePresence>
+        {showMetronomeSettings && (
+          <MetronomeSettings
+            settings={metronomeSettings}
+            midiSettings={midiSettings}
+            onSettingsChange={onMetronomeSettingsChange}
+            onMIDISettingsChange={onMIDISettingsChange}
+            onClose={() => setShowMetronomeSettings(false)}
+            onLoadCustomSound={onLoadCustomSound}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

@@ -1,12 +1,15 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AudioState } from './types/audio';
+import { MetronomeSettings as MetronomeSettingsType, MIDIClockSettings, MetronomeState, DEFAULT_METRONOME_SETTINGS, DEFAULT_MIDI_CLOCK_SETTINGS } from './types/metronome';
+import { MetronomeEngine } from './audio/MetronomeEngine';
 import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
+import MetronomeCountdown from './components/MetronomeCountdown';
 import './App.css';
 
 function App() {
@@ -21,8 +24,35 @@ function App() {
   const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
 
+  // Metronome state
+  const [metronomeSettings, setMetronomeSettings] = useState<MetronomeSettingsType>(DEFAULT_METRONOME_SETTINGS);
+  const [midiSettings, setMidiSettings] = useState<MIDIClockSettings>(DEFAULT_MIDI_CLOCK_SETTINGS);
+  const [metronomeState, setMetronomeState] = useState<MetronomeState>({
+    isPlaying: false,
+    isInPreCount: false,
+    preCountBeat: 0,
+    currentBeat: 0,
+    nextClickTime: 0,
+  });
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const metronomeEngineRef = useRef<MetronomeEngine | null>(null);
+
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
+
+    // Initialize Audio Context and Metronome Engine
+    audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    metronomeEngineRef.current = new MetronomeEngine(
+      audioContextRef.current,
+      metronomeSettings,
+      midiSettings
+    );
+
+    // Subscribe to metronome state changes
+    const unsubscribeMetronome = metronomeEngineRef.current.onStateChange((state) => {
+      setMetronomeState(state);
+    });
 
     // Get initial audio state
     window.electron.getAudioState().then((state) => {
@@ -128,9 +158,76 @@ function App() {
 
     return () => {
       unsubscribe();
+      unsubscribeMetronome();
       window.removeEventListener('keydown', handleGlobalKeyDown);
+
+      // Cleanup metronome
+      if (metronomeEngineRef.current) {
+        metronomeEngineRef.current.destroy();
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close();
+      }
     };
   }, [pianoRollTrack, isWingmanOpen]);
+
+  // Metronome control functions
+  const handleMetronomeToggle = () => {
+    const newSettings = { ...metronomeSettings, enabled: !metronomeSettings.enabled };
+    setMetronomeSettings(newSettings);
+    if (metronomeEngineRef.current) {
+      metronomeEngineRef.current.updateSettings(newSettings);
+
+      // If metronome is now enabled and transport is playing, start it
+      if (newSettings.enabled && audioState.isPlaying) {
+        metronomeEngineRef.current.start(audioState.tempo, audioState.timeSignature, false);
+      } else if (!newSettings.enabled) {
+        metronomeEngineRef.current.stop();
+      }
+    }
+  };
+
+  const handleMetronomeSettingsChange = (settings: Partial<MetronomeSettingsType>) => {
+    const newSettings = { ...metronomeSettings, ...settings };
+    setMetronomeSettings(newSettings);
+    if (metronomeEngineRef.current) {
+      metronomeEngineRef.current.updateSettings(newSettings);
+    }
+  };
+
+  const handleMIDISettingsChange = (settings: Partial<MIDIClockSettings>) => {
+    const newSettings = { ...midiSettings, ...settings };
+    setMidiSettings(newSettings);
+    if (metronomeEngineRef.current) {
+      metronomeEngineRef.current.updateMIDISettings(newSettings);
+    }
+  };
+
+  const handleLoadCustomSound = async (file: File) => {
+    if (!metronomeEngineRef.current) return;
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      await metronomeEngineRef.current.loadCustomSound(arrayBuffer);
+      handleMetronomeSettingsChange({ customSoundUrl: URL.createObjectURL(file) });
+    } catch (error) {
+      console.error('Failed to load custom sound:', error);
+    }
+  };
+
+  // Sync metronome with transport
+  useEffect(() => {
+    if (!metronomeEngineRef.current) return;
+
+    metronomeEngineRef.current.setTempo(audioState.tempo);
+    metronomeEngineRef.current.setTimeSignature(audioState.timeSignature);
+
+    if (audioState.isPlaying && metronomeSettings.enabled) {
+      metronomeEngineRef.current.start(audioState.tempo, audioState.timeSignature, false);
+    } else {
+      metronomeEngineRef.current.stop();
+    }
+  }, [audioState.isPlaying, audioState.tempo, audioState.timeSignature]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -166,6 +263,12 @@ function App() {
       <TransportBar
         audioState={audioState}
         onOpenWingman={() => setIsWingmanOpen(true)}
+        metronomeSettings={metronomeSettings}
+        midiSettings={midiSettings}
+        onMetronomeToggle={handleMetronomeToggle}
+        onMetronomeSettingsChange={handleMetronomeSettingsChange}
+        onMIDISettingsChange={handleMIDISettingsChange}
+        onLoadCustomSound={handleLoadCustomSound}
       />
 
       {/* Main Content - Tri-Pane Layout */}
@@ -211,6 +314,15 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Metronome Visual Countdown */}
+      {metronomeSettings.preCount.showVisualCountdown && (
+        <MetronomeCountdown
+          state={metronomeState}
+          totalPreCountBeats={metronomeSettings.preCount.bars * audioState.timeSignature.numerator}
+          timeSignature={audioState.timeSignature}
+        />
+      )}
     </div>
   );
 }
