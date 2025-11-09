@@ -6,9 +6,10 @@ import { useState } from 'react';
 
 interface CenterPanelProps {
   tracks: Track[];
+  onOpenPianoRoll: (trackId: string, trackName: string) => void;
 }
 
-export default function CenterPanel({ tracks }: CenterPanelProps) {
+export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
 
   const handleCreateTrack = () => {
@@ -61,7 +62,7 @@ export default function CenterPanel({ tracks }: CenterPanelProps) {
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {view === 'arrangement' ? (
-            <ArrangementView key="arrangement" tracks={tracks} />
+            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} />
           ) : (
             <SessionView key="session" tracks={tracks} />
           )}
@@ -71,7 +72,7 @@ export default function CenterPanel({ tracks }: CenterPanelProps) {
   );
 }
 
-function ArrangementView({ tracks }: { tracks: Track[] }) {
+function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -116,6 +117,8 @@ function ArrangementView({ tracks }: { tracks: Track[] }) {
                   }}
                   whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.05)' }}
                   className="h-16 border-b border-border/30 px-3 py-2 cursor-pointer transition-colors"
+                  onDoubleClick={() => onOpenPianoRoll(track.id, track.name)}
+                  title="Double-click to open Piano Roll"
                 >
                   <div className="text-sm font-medium truncate">{track.name}</div>
                   <div className="text-xs text-muted-foreground">

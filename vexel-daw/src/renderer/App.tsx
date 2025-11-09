@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import { AudioState } from './types/audio';
 import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
+import PianoRoll from './components/PianoRoll';
 import './App.css';
 
 function App() {
@@ -17,6 +19,7 @@ function App() {
   });
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
   const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
+  const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
@@ -80,7 +83,10 @@ function App() {
         <LeftPanel />
 
         {/* Center Panel - Arrangement/Session View */}
-        <CenterPanel tracks={audioState.tracks} />
+        <CenterPanel
+          tracks={audioState.tracks}
+          onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
+        />
 
         {/* Right Panel - Mixer/Inspector */}
         <RightPanel tracks={audioState.tracks} />
@@ -103,6 +109,17 @@ function App() {
         position={wingmanPosition}
         onPositionChange={setWingmanPosition}
       />
+
+      {/* Piano Roll Editor */}
+      <AnimatePresence>
+        {pianoRollTrack && (
+          <PianoRoll
+            trackId={pianoRollTrack.id}
+            trackName={pianoRollTrack.name}
+            onClose={() => setPianoRollTrack(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
