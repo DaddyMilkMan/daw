@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { AudioState } from '@/types/audio';
 import { formatTime } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import WingmanConnectionStatus from './WingmanConnectionStatus';
 
 interface TransportBarProps {
   audioState: AudioState;
@@ -327,6 +328,12 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
         </div>
         <span className="text-sm font-mono font-semibold">-6 dB</span>
       </div>
+
+      {/* Divider */}
+      <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
+
+      {/* Wingman AI Connection Status */}
+      <WingmanConnectionStatus />
     </motion.div>
   );
 }
