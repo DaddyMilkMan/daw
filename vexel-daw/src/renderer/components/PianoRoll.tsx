@@ -109,6 +109,56 @@ export default function PianoRoll({ trackId, trackName, onClose }: PianoRollProp
     }));
   };
 
+  // Delete selected notes
+  const handleDelete = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      notes: prev.notes.filter(n => !prev.selectedNotes.includes(n.id)),
+      selectedNotes: [],
+    }));
+  }, []);
+
+  // Quantize selected notes
+  const handleQuantize = useCallback(() => {
+    setState(prev => ({
+      ...prev,
+      notes: prev.notes.map(note =>
+        prev.selectedNotes.includes(note.id)
+          ? { ...note, start: snapToGrid(note.start, prev.snapValue) }
+          : note
+      ),
+    }));
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Select all (Ctrl+A)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+        e.preventDefault();
+        handleSelectAll();
+      }
+      // Delete (Delete/Backspace)
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+      }
+      // Quantize (Ctrl+Q)
+      if ((e.ctrlKey || e.metaKey) && e.key === 'q') {
+        e.preventDefault();
+        handleQuantize();
+      }
+      // Tool shortcuts
+      if (e.key === 'v') setState(prev => ({ ...prev, tool: 'select' }));
+      if (e.key === 'b') setState(prev => ({ ...prev, tool: 'draw' }));
+      if (e.key === 'e') setState(prev => ({ ...prev, tool: 'erase' }));
+      if (e.key === 's') setState(prev => ({ ...prev, tool: 'slice' }));
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleDelete, handleQuantize]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -244,6 +294,13 @@ export default function PianoRoll({ trackId, trackName, onClose }: PianoRollProp
           <Guitar className="h-4 w-4 mr-1" />
           Strum
         </Button>
+        <Button size="sm" onClick={handleQuantize} title="Quantize (Ctrl+Q)">
+          <Grid3x3 className="h-4 w-4 mr-1" />
+          Quantize
+        </Button>
+        <Button size="sm" onClick={handleSelectAll} title="Select All (Ctrl+A)">
+          Select All
+        </Button>
 
         <div className="flex-1" />
 
@@ -360,6 +417,24 @@ interface PianoRollGridProps {
 
 function PianoRollGrid({ state, onAddNote, hoveredNote }: PianoRollGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const [isAltPressed, setIsAltPressed] = useState(false);
+
+  // Track Alt key for snap override
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.altKey) setIsAltPressed(true);
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (!e.altKey) setIsAltPressed(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (state.tool !== 'draw') return;
@@ -370,8 +445,13 @@ function PianoRollGrid({ state, onAddNote, hoveredNote }: PianoRollGridProps) {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const beat = x / state.zoom.horizontal;
+    let beat = x / state.zoom.horizontal;
     const pitch = TOTAL_KEYS - 1 - Math.floor(y / state.zoom.vertical);
+
+    // Override snap if Alt is pressed (FL Studio behavior)
+    if (!isAltPressed && state.snapEnabled) {
+      beat = snapToGrid(beat, state.snapValue);
+    }
 
     onAddNote(pitch, beat);
   };

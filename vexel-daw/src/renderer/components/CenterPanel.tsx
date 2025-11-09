@@ -1,8 +1,9 @@
 import { Track } from '@/types/audio';
-import { Plus, Grid3X3, List } from 'lucide-react';
+import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { useState } from 'react';
+import ContextMenu, { ContextMenuItem } from './ContextMenu';
 
 interface CenterPanelProps {
   tracks: Track[];
@@ -73,6 +74,66 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
 }
 
 function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
+
+  const handleTrackContextMenu = (e: React.MouseEvent, trackId: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, trackId });
+  };
+
+  const getTrackContextMenuItems = (trackId: string): ContextMenuItem[] => {
+    const track = tracks.find(t => t.id === trackId);
+    if (!track) return [];
+
+    return [
+      {
+        label: 'Rename Track',
+        icon: <Edit3 className="h-4 w-4" />,
+        shortcut: 'F2',
+        onClick: () => {
+          console.log('Rename track:', trackId);
+          // TODO: Implement rename
+        },
+      },
+      {
+        label: 'Duplicate Track',
+        icon: <Copy className="h-4 w-4" />,
+        shortcut: 'Ctrl+D',
+        onClick: () => {
+          console.log('Duplicate track:', trackId);
+          // TODO: Implement duplicate
+        },
+      },
+      {
+        label: 'Change Color',
+        icon: <Palette className="h-4 w-4" />,
+        onClick: () => {
+          console.log('Change color:', trackId);
+          // TODO: Implement color picker
+        },
+      },
+      {
+        label: 'Group Tracks',
+        icon: <FolderTree className="h-4 w-4" />,
+        onClick: () => {
+          console.log('Group tracks:', trackId);
+          // TODO: Implement grouping
+        },
+      },
+      { divider: true, label: '', onClick: () => {} },
+      {
+        label: 'Delete Track',
+        icon: <Trash2 className="h-4 w-4" />,
+        shortcut: 'Del',
+        danger: true,
+        onClick: () => {
+          console.log('Delete track:', trackId);
+          // TODO: Implement delete
+        },
+      },
+    ];
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -118,7 +179,8 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
                   whileHover={{ x: 4, backgroundColor: 'rgba(255,255,255,0.05)' }}
                   className="h-16 border-b border-border/30 px-3 py-2 cursor-pointer transition-colors"
                   onDoubleClick={() => onOpenPianoRoll(track.id, track.name)}
-                  title="Double-click to open Piano Roll"
+                  onContextMenu={(e) => handleTrackContextMenu(e, track.id)}
+                  title="Double-click to open Piano Roll • Right-click for options"
                 >
                   <div className="text-sm font-medium truncate">{track.name}</div>
                   <div className="text-xs text-muted-foreground">
@@ -190,12 +252,25 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
           </motion.div>
         )}
       </div>
+
+      {/* Track Context Menu */}
+      <AnimatePresence>
+        {contextMenu && (
+          <ContextMenu
+            x={contextMenu.x}
+            y={contextMenu.y}
+            items={getTrackContextMenuItems(contextMenu.trackId)}
+            onClose={() => setContextMenu(null)}
+          />
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }
 
 function SessionView({ tracks }: { tracks: Track[] }) {
   const [clips, setClips] = useState<Array<{id: string; sceneIndex: number; trackId: string; color: string; isPlaying: boolean}>>([]);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; clipId: string } | null>(null);
   const SCENES = 8;
   const CLIP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
 
@@ -232,6 +307,54 @@ function SessionView({ tracks }: { tracks: Track[] }) {
       ...c,
       isPlaying: c.sceneIndex === sceneIndex,
     })));
+  };
+
+  const handleClipContextMenu = (e: React.MouseEvent, clipId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, clipId });
+  };
+
+  const getClipContextMenuItems = (clipId: string): ContextMenuItem[] => {
+    return [
+      {
+        label: 'Duplicate Clip',
+        icon: <Copy className="h-4 w-4" />,
+        shortcut: 'Ctrl+D',
+        onClick: () => {
+          console.log('Duplicate clip:', clipId);
+          // TODO: Implement duplicate
+        },
+      },
+      {
+        label: 'Rename Clip',
+        icon: <Edit3 className="h-4 w-4" />,
+        shortcut: 'F2',
+        onClick: () => {
+          console.log('Rename clip:', clipId);
+          // TODO: Implement rename
+        },
+      },
+      {
+        label: 'Change Color',
+        icon: <Palette className="h-4 w-4" />,
+        onClick: () => {
+          console.log('Change color:', clipId);
+          // TODO: Implement color picker
+        },
+      },
+      { divider: true, label: '', onClick: () => {} },
+      {
+        label: 'Delete Clip',
+        icon: <Trash2 className="h-4 w-4" />,
+        shortcut: 'Del',
+        danger: true,
+        onClick: () => {
+          setClips(clips.filter(c => c.id !== clipId));
+          console.log('Deleted clip:', clipId);
+        },
+      },
+    ];
   };
 
   return (
@@ -271,6 +394,7 @@ function SessionView({ tracks }: { tracks: Track[] }) {
                   <motion.button
                     key={sceneIndex}
                     onClick={() => handleClipClick(track.id, sceneIndex)}
+                    onContextMenu={(e) => clip && handleClipContextMenu(e, clip.id)}
                     className={`h-16 rounded-lg transition-all relative overflow-hidden ${
                       clip
                         ? 'border-2'
@@ -339,6 +463,18 @@ function SessionView({ tracks }: { tracks: Track[] }) {
               </motion.button>
             ))}
           </div>
+
+          {/* Clip Context Menu */}
+          <AnimatePresence>
+            {contextMenu && (
+              <ContextMenu
+                x={contextMenu.x}
+                y={contextMenu.y}
+                items={getClipContextMenuItems(contextMenu.clipId)}
+                onClose={() => setContextMenu(null)}
+              />
+            )}
+          </AnimatePresence>
         </div>
       )}
     </motion.div>

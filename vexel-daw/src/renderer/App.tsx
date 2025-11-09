@@ -36,10 +36,101 @@ function App() {
       setAudioState(state);
     });
 
+    // Global keyboard shortcuts
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().includes('MAC');
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Space: Play/Pause (only if not typing in an input)
+      if (e.code === 'Space' && !isTypingInInput(e)) {
+        e.preventDefault();
+        window.electron.playPause();
+        console.log('⏯️ Play/Pause toggled');
+      }
+
+      // Tab: Switch between Session and Arrangement views (handled by CenterPanel)
+      // This is handled locally in CenterPanel but we could add it here for consistency
+
+      // Escape: Close modals/Piano Roll
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        if (pianoRollTrack) {
+          setPianoRollTrack(null);
+          console.log('❌ Closed Piano Roll');
+        }
+        if (isWingmanOpen) {
+          setIsWingmanOpen(false);
+          console.log('❌ Closed Wingman');
+        }
+      }
+
+      // Ctrl/Cmd+S: Save project
+      if (cmdOrCtrl && e.key === 's') {
+        e.preventDefault();
+        console.log('💾 Save project');
+        // TODO: Implement save functionality
+      }
+
+      // Ctrl/Cmd+N: New project
+      if (cmdOrCtrl && e.key === 'n') {
+        e.preventDefault();
+        console.log('🆕 New project');
+        // TODO: Implement new project functionality
+      }
+
+      // Ctrl/Cmd+O: Open project
+      if (cmdOrCtrl && e.key === 'o') {
+        e.preventDefault();
+        console.log('📂 Open project');
+        // TODO: Implement open project functionality
+      }
+
+      // Ctrl/Cmd+W: Toggle Wingman
+      if (cmdOrCtrl && e.key === 'w') {
+        e.preventDefault();
+        setIsWingmanOpen(!isWingmanOpen);
+        console.log('🤖 Toggled Wingman');
+      }
+
+      // Ctrl/Cmd+/: Show keyboard shortcuts help
+      if (cmdOrCtrl && e.key === '/') {
+        e.preventDefault();
+        console.log('⌨️ Show keyboard shortcuts');
+        // TODO: Show keyboard shortcuts modal
+      }
+
+      // Ctrl/Cmd+Z: Undo
+      if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        console.log('↩️ Undo');
+        // TODO: Implement undo - will be handled by history manager
+      }
+
+      // Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo
+      if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        console.log('↪️ Redo');
+        // TODO: Implement redo - will be handled by history manager
+      }
+    };
+
+    // Helper to check if user is typing in an input
+    const isTypingInInput = (e: KeyboardEvent): boolean => {
+      const target = e.target as HTMLElement;
+      return (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.contentEditable === 'true'
+      );
+    };
+
+    window.addEventListener('keydown', handleGlobalKeyDown);
+
     return () => {
       unsubscribe();
+      window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, []);
+  }, [pianoRollTrack, isWingmanOpen]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
