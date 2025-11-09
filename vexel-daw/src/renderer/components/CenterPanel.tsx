@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { useState } from 'react';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
+import TimelineRuler from './TimelineRuler';
 
 interface CenterPanelProps {
   tracks: Track[];
@@ -75,10 +76,24 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
 
 function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
+  const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
 
   const handleTrackContextMenu = (e: React.MouseEvent, trackId: string) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, trackId });
+  };
+
+  const toggleRecordArm = (trackId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecordArmed((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackId)) {
+        newSet.delete(trackId);
+      } else {
+        newSet.add(trackId);
+      }
+      return newSet;
+    });
   };
 
   const getTrackContextMenuItems = (trackId: string): ContextMenuItem[] => {
@@ -140,10 +155,20 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.2 }}
-      className="h-full flex"
+      className="h-full flex flex-col"
     >
-      {/* Track List */}
-      <div className="w-48 border-r border-border/50 bg-card/30 backdrop-blur-xl">
+      {/* Timeline Ruler */}
+      <div className="flex">
+        <div className="w-48" /> {/* Spacer for track list */}
+        <div className="flex-1">
+          <TimelineRuler bars={32} beatsPerBar={4} tempo={128} pixelsPerBeat={50} />
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex min-h-0">
+        {/* Track List */}
+        <div className="w-48 border-r border-border/50 bg-card/30 backdrop-blur-xl">
         {tracks.length === 0 ? (
           <motion.div
             initial={{ opacity: 0 }}
@@ -182,9 +207,30 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
                   onContextMenu={(e) => handleTrackContextMenu(e, track.id)}
                   title="Double-click to open Piano Roll • Right-click for options"
                 >
-                  <div className="text-sm font-medium truncate">{track.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {track.type.toUpperCase()}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{track.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {track.type.toUpperCase()}
+                      </div>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.1 }}
+                      whileTap={{ scale: 0.9 }}
+                      onClick={(e) => toggleRecordArm(track.id, e)}
+                      className={`p-1.5 rounded-full transition-all ${
+                        recordArmed.has(track.id)
+                          ? 'bg-red-500 shadow-lg shadow-red-500/50 animate-pulse'
+                          : 'bg-muted hover:bg-red-500/20'
+                      }`}
+                      title={recordArmed.has(track.id) ? 'Disarm track' : 'Arm track for recording'}
+                    >
+                      <Circle
+                        className="h-3 w-3"
+                        fill={recordArmed.has(track.id) ? 'currentColor' : 'none'}
+                        stroke="currentColor"
+                      />
+                    </motion.button>
                   </div>
                 </motion.div>
               ))}
@@ -251,6 +297,7 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
             </div>
           </motion.div>
         )}
+      </div>
       </div>
 
       {/* Track Context Menu */}
