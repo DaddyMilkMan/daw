@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { AudioState } from './types/audio';
 import TransportBar from './components/TransportBar';
@@ -7,6 +7,8 @@ import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
+import FileMenu from './components/FileMenu';
+import { NotificationContainer, NotificationProps } from './components/Notification';
 import './App.css';
 
 function App() {
@@ -20,6 +22,73 @@ function App() {
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
   const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
+  const [notifications, setNotifications] = useState<NotificationProps[]>([]);
+
+  // Notification helpers
+  const showNotification = (type: NotificationProps['type'], message: string) => {
+    const id = Date.now().toString();
+    const notification: NotificationProps = {
+      id,
+      type,
+      message,
+      onClose: removeNotification,
+    };
+    setNotifications((prev) => [...prev, notification]);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  // Project handlers
+  const handleNewProject = useCallback(async () => {
+    try {
+      const result = await window.electron.newProject();
+      if (result.success) {
+        showNotification('success', 'New project created');
+        console.log('🆕 New project created');
+      } else {
+        showNotification('error', `Failed to create new project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to create new project');
+      console.error('Error creating new project:', error);
+    }
+  }, []);
+
+  const handleSaveProject = useCallback(async () => {
+    try {
+      const result = await window.electron.saveProject();
+      if (result.success && !result.canceled) {
+        showNotification('success', `Project saved: ${result.fileName}`);
+        console.log(`💾 Project saved: ${result.filePath}`);
+      } else if (result.canceled) {
+        console.log('💾 Save canceled');
+      } else {
+        showNotification('error', `Failed to save project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to save project');
+      console.error('Error saving project:', error);
+    }
+  }, []);
+
+  const handleLoadProject = useCallback(async () => {
+    try {
+      const result = await window.electron.loadProject();
+      if (result.success && !result.canceled) {
+        showNotification('success', `Project loaded: ${result.fileName}`);
+        console.log(`📂 Project loaded: ${result.filePath}`);
+      } else if (result.canceled) {
+        console.log('📂 Load canceled');
+      } else {
+        showNotification('error', `Failed to load project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to load project');
+      console.error('Error loading project:', error);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
@@ -67,22 +136,19 @@ function App() {
       // Ctrl/Cmd+S: Save project
       if (cmdOrCtrl && e.key === 's') {
         e.preventDefault();
-        console.log('💾 Save project');
-        // TODO: Implement save functionality
+        handleSaveProject();
       }
 
       // Ctrl/Cmd+N: New project
       if (cmdOrCtrl && e.key === 'n') {
         e.preventDefault();
-        console.log('🆕 New project');
-        // TODO: Implement new project functionality
+        handleNewProject();
       }
 
       // Ctrl/Cmd+O: Open project
       if (cmdOrCtrl && e.key === 'o') {
         e.preventDefault();
-        console.log('📂 Open project');
-        // TODO: Implement open project functionality
+        handleLoadProject();
       }
 
       // Ctrl/Cmd+W: Toggle Wingman
@@ -130,15 +196,24 @@ function App() {
       unsubscribe();
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [pianoRollTrack, isWingmanOpen]);
+  }, [pianoRollTrack, isWingmanOpen, handleNewProject, handleSaveProject, handleLoadProject]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Title Bar */}
       <div className="h-8 bg-black/40 flex items-center justify-between px-4 select-none drag-region">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">Vexel DAW</span>
-          <span className="text-xs text-muted-foreground">v0.1.0</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Vexel DAW</span>
+            <span className="text-xs text-muted-foreground">v0.1.0</span>
+          </div>
+          <div className="no-drag">
+            <FileMenu
+              onNewProject={handleNewProject}
+              onSaveProject={handleSaveProject}
+              onLoadProject={handleLoadProject}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 no-drag">
           <button
@@ -211,6 +286,9 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Notifications */}
+      <NotificationContainer notifications={notifications} />
     </div>
   );
 }
