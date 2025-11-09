@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { AudioState } from './types/audio';
+import { useAudioStore } from './stores/audioStore';
 import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
@@ -10,31 +10,26 @@ import PianoRoll from './components/PianoRoll';
 import './App.css';
 
 function App() {
-  const [audioState, setAudioState] = useState<AudioState>({
-    tempo: 120,
-    timeSignature: { numerator: 4, denominator: 4 },
-    isPlaying: false,
-    currentBar: 0,
-    tracks: [],
-  });
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
   const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
 
+  // Get audio store state and actions
+  const {
+    tracks,
+    transport,
+    initEngine,
+    play,
+    pause,
+    stop,
+    dispose,
+  } = useAudioStore();
+
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
 
-    // Get initial audio state
-    window.electron.getAudioState().then((state) => {
-      console.log('📊 Initial audio state:', state);
-      setAudioState(state);
-    });
-
-    // Subscribe to audio state updates
-    const unsubscribe = window.electron.onAudioStateUpdate((state) => {
-      console.log('🔄 Audio state updated:', state);
-      setAudioState(state);
-    });
+    // Initialize audio engine
+    initEngine();
 
     // Global keyboard shortcuts
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -44,8 +39,19 @@ function App() {
       // Space: Play/Pause (only if not typing in an input)
       if (e.code === 'Space' && !isTypingInInput(e)) {
         e.preventDefault();
-        window.electron.playPause();
+        if (transport.isPlaying) {
+          pause();
+        } else {
+          play();
+        }
         console.log('⏯️ Play/Pause toggled');
+      }
+
+      // Enter: Stop
+      if (e.key === 'Enter' && !isTypingInInput(e)) {
+        e.preventDefault();
+        stop();
+        console.log('⏹️ Transport stopped');
       }
 
       // Tab: Switch between Session and Arrangement views (handled by CenterPanel)
@@ -127,10 +133,10 @@ function App() {
     window.addEventListener('keydown', handleGlobalKeyDown);
 
     return () => {
-      unsubscribe();
       window.removeEventListener('keydown', handleGlobalKeyDown);
+      dispose(); // Cleanup audio engine on unmount
     };
-  }, [pianoRollTrack, isWingmanOpen]);
+  }, [pianoRollTrack, isWingmanOpen, transport.isPlaying, play, pause, stop, dispose]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -142,19 +148,19 @@ function App() {
         </div>
         <div className="flex items-center gap-2 no-drag">
           <button
-            onClick={() => window.electron.windowMinimize()}
+            onClick={() => window.electron?.windowMinimize?.()}
             className="w-8 h-6 hover:bg-white/10 rounded flex items-center justify-center"
           >
             <span className="text-xs">─</span>
           </button>
           <button
-            onClick={() => window.electron.windowMaximize()}
+            onClick={() => window.electron?.windowMaximize?.()}
             className="w-8 h-6 hover:bg-white/10 rounded flex items-center justify-center"
           >
             <span className="text-xs">□</span>
           </button>
           <button
-            onClick={() => window.electron.windowClose()}
+            onClick={() => window.electron?.windowClose?.()}
             className="w-8 h-6 hover:bg-red-500/80 rounded flex items-center justify-center"
           >
             <span className="text-xs">×</span>
@@ -164,7 +170,7 @@ function App() {
 
       {/* Transport Bar */}
       <TransportBar
-        audioState={audioState}
+        transport={transport}
         onOpenWingman={() => setIsWingmanOpen(true)}
       />
 
@@ -175,12 +181,12 @@ function App() {
 
         {/* Center Panel - Arrangement/Session View */}
         <CenterPanel
-          tracks={audioState.tracks}
+          tracks={tracks}
           onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
         />
 
         {/* Right Panel - Mixer/Inspector */}
-        <RightPanel tracks={audioState.tracks} />
+        <RightPanel tracks={tracks} />
       </div>
 
       {/* Bottom Panel - Editor (Piano Roll / Audio Editor) */}

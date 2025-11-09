@@ -1,25 +1,32 @@
 import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from './ui/button';
-import { AudioState } from '@/types/audio';
-import { formatTime } from '@/lib/utils';
+import { TransportState } from '../audio/AudioEngine';
+import { useAudioStore } from '../stores/audioStore';
 import { useState, useEffect } from 'react';
 
 interface TransportBarProps {
-  audioState: AudioState;
+  transport: TransportState;
   onOpenWingman: () => void;
 }
 
-export default function TransportBar({ audioState, onOpenWingman }: TransportBarProps) {
-  const [tempo, setTempo] = useState(audioState.tempo);
-  const [isLooping, setIsLooping] = useState(false);
+const formatTime = (bar: number, beatsPerBar: number) => {
+  const beat = bar % beatsPerBar;
+  const actualBar = Math.floor(bar / beatsPerBar) + 1;
+  return `${actualBar}.${beat + 1}.01.000`;
+};
+
+export default function TransportBar({ transport, onOpenWingman }: TransportBarProps) {
+  const { play, pause, stop, setTempo: setEngineTempo, toggleLoop } = useAudioStore();
+
+  const [tempo, setTempo] = useState(transport.tempo);
   const [isMetronomeOn, setIsMetronomeOn] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [cpuUsage, setCpuUsage] = useState(12);
 
   useEffect(() => {
-    setTempo(audioState.tempo);
-  }, [audioState.tempo]);
+    setTempo(transport.tempo);
+  }, [transport.tempo]);
 
   // Simulate CPU usage (in real DAW, this would come from audio engine)
   useEffect(() => {
@@ -30,15 +37,15 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
   }, []);
 
   const handlePlay = () => {
-    if (audioState.isPlaying) {
-      window.electron.transportPause();
+    if (transport.isPlaying) {
+      pause();
     } else {
-      window.electron.transportPlay();
+      play();
     }
   };
 
   const handleStop = () => {
-    window.electron.transportStop();
+    stop();
   };
 
   const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -47,10 +54,10 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
   };
 
   const handleTempoBlur = () => {
-    if (tempo !== audioState.tempo && tempo >= 20 && tempo <= 999) {
-      window.electron.setTempo(tempo);
+    if (tempo !== transport.tempo && tempo >= 20 && tempo <= 999) {
+      setEngineTempo(tempo);
     } else {
-      setTempo(audioState.tempo);
+      setTempo(transport.tempo);
     }
   };
 
@@ -69,7 +76,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
       if (newTempo >= 20 && newTempo <= 999) {
         setTempo(newTempo);
-        window.electron.setTempo(newTempo);
+        setEngineTempo(newTempo);
       }
     }
 
@@ -105,23 +112,23 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
             size="icon"
             variant="ghost"
             onClick={handlePlay}
-            title={audioState.isPlaying ? 'Pause (Space)' : 'Play (Space)'}
+            title={transport.isPlaying ? 'Pause (Space)' : 'Play (Space)'}
             className={`transition-all ${
-              audioState.isPlaying
+              transport.isPlaying
                 ? 'bg-primary/20 text-primary hover:bg-primary/30'
                 : 'hover:bg-white/5'
             }`}
           >
             <motion.div
               animate={{
-                scale: audioState.isPlaying ? [1, 1.2, 1] : 1,
+                scale: transport.isPlaying ? [1, 1.2, 1] : 1,
               }}
               transition={{
-                repeat: audioState.isPlaying ? Infinity : 0,
+                repeat: transport.isPlaying ? Infinity : 0,
                 duration: 1,
               }}
             >
-              {audioState.isPlaying ? (
+              {transport.isPlaying ? (
                 <Pause className="h-5 w-5" />
               ) : (
                 <Play className="h-5 w-5 ml-0.5" />
@@ -157,10 +164,10 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => setIsLooping(!isLooping)}
+            onClick={toggleLoop}
             title="Loop (L)"
             className={`transition-all ${
-              isLooping
+              transport.loopEnabled
                 ? 'bg-primary/20 text-primary hover:bg-primary/30'
                 : 'hover:bg-white/5'
             }`}
@@ -195,14 +202,14 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
         <motion.span
           className="text-lg font-mono font-semibold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent"
           animate={{
-            opacity: audioState.isPlaying ? [1, 0.7, 1] : 1,
+            opacity: transport.isPlaying ? [1, 0.7, 1] : 1,
           }}
           transition={{
-            repeat: audioState.isPlaying ? Infinity : 0,
+            repeat: transport.isPlaying ? Infinity : 0,
             duration: 1,
           }}
         >
-          {formatTime(audioState.currentBar, audioState.timeSignature.numerator)}
+          {formatTime(transport.currentBar, transport.timeSignature.numerator)}
         </motion.span>
       </motion.div>
 
@@ -247,7 +254,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
       >
         <span className="text-xs text-muted-foreground font-medium">Time Sig</span>
         <span className="text-lg font-mono font-semibold">
-          {audioState.timeSignature.numerator}/{audioState.timeSignature.denominator}
+          {transport.timeSignature.numerator}/{transport.timeSignature.denominator}
         </span>
       </motion.div>
 
