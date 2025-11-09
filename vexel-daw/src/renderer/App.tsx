@@ -176,6 +176,7 @@ function App() {
         {/* Center Panel - Arrangement/Session View */}
         <CenterPanel
           tracks={audioState.tracks}
+          audioState={audioState}
           onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
         />
 
@@ -207,6 +208,7 @@ function App() {
           <PianoRoll
             trackId={pianoRollTrack.id}
             trackName={pianoRollTrack.name}
+            timeSignature={audioState.timeSignature}
             onClose={() => setPianoRollTrack(null)}
           />
         )}

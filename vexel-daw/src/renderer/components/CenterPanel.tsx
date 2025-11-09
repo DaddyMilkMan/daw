@@ -1,4 +1,4 @@
-import { Track } from '@/types/audio';
+import { Track, AudioState } from '@/types/audio';
 import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
@@ -10,9 +10,10 @@ import AutomationLaneComponent, { AutomationLane, AutomationMode } from './Autom
 interface CenterPanelProps {
   tracks: Track[];
   onOpenPianoRoll: (trackId: string, trackName: string) => void;
+  audioState: AudioState;
 }
 
-export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
+export default function CenterPanel({ tracks, onOpenPianoRoll, audioState }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
 
   const handleCreateTrack = () => {
@@ -65,7 +66,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {view === 'arrangement' ? (
-            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} />
+            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} audioState={audioState} />
           ) : (
             <SessionView key="session" tracks={tracks} />
           )}
@@ -75,7 +76,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
   );
 }
 
-function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
+function ArrangementView({ tracks, onOpenPianoRoll, audioState }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void; audioState: AudioState }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
   const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
   const [expandedAutomation, setExpandedAutomation] = useState<Set<string>>(new Set());
@@ -196,7 +197,13 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
       <div className="flex">
         <div className="w-48" /> {/* Spacer for track list */}
         <div className="flex-1">
-          <TimelineRuler bars={32} beatsPerBar={4} tempo={128} pixelsPerBeat={50} />
+          <TimelineRuler
+            bars={32}
+            beatsPerBar={audioState.timeSignature.numerator}
+            tempo={audioState.tempo}
+            pixelsPerBeat={50}
+            timeSignature={audioState.timeSignature}
+          />
         </div>
       </div>
 

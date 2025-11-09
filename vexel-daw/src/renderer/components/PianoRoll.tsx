@@ -30,15 +30,16 @@ interface PianoRollProps {
   trackId: string;
   trackName: string;
   onClose: () => void;
+  timeSignature?: { numerator: number; denominator: number };
 }
 
 const KEYS_PER_OCTAVE = 12;
 const OCTAVES = 10; // C-1 to C9
 const TOTAL_KEYS = KEYS_PER_OCTAVE * OCTAVES + 1;
-const BEATS_PER_BAR = 4;
 const TOTAL_BARS = 16;
 
-export default function PianoRoll({ trackId, trackName, onClose }: PianoRollProps) {
+export default function PianoRoll({ trackId, trackName, onClose, timeSignature = { numerator: 4, denominator: 4 } }: PianoRollProps) {
+  const beatsPerBar = timeSignature.numerator;
   const [state, setState] = useState<PianoRollState>({
     notes: [],
     selectedNotes: [],
@@ -365,6 +366,7 @@ export default function PianoRoll({ trackId, trackName, onClose }: PianoRollProp
             state={state}
             onAddNote={addNote}
             hoveredNote={hoveredNote}
+            beatsPerBar={beatsPerBar}
           />
         </div>
       </div>
@@ -413,9 +415,10 @@ interface PianoRollGridProps {
   state: PianoRollState;
   onAddNote: (pitch: number, start: number) => void;
   hoveredNote: number | null;
+  beatsPerBar: number;
 }
 
-function PianoRollGrid({ state, onAddNote, hoveredNote }: PianoRollGridProps) {
+function PianoRollGrid({ state, onAddNote, hoveredNote, beatsPerBar }: PianoRollGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
   const [isAltPressed, setIsAltPressed] = useState(false);
 
@@ -461,7 +464,7 @@ function PianoRollGrid({ state, onAddNote, hoveredNote }: PianoRollGridProps) {
       ref={gridRef}
       className="relative"
       style={{
-        width: TOTAL_BARS * BEATS_PER_BAR * state.zoom.horizontal,
+        width: TOTAL_BARS * beatsPerBar * state.zoom.horizontal,
         height: TOTAL_KEYS * state.zoom.vertical,
       }}
       onClick={handleClick}
@@ -492,8 +495,8 @@ function PianoRollGrid({ state, onAddNote, hoveredNote }: PianoRollGridProps) {
       })}
 
       {/* Vertical lines (beats) */}
-      {Array.from({ length: TOTAL_BARS * BEATS_PER_BAR + 1 }).map((_, beatIndex) => {
-        const isBar = beatIndex % BEATS_PER_BAR === 0;
+      {Array.from({ length: TOTAL_BARS * beatsPerBar + 1 }).map((_, beatIndex) => {
+        const isBar = beatIndex % beatsPerBar === 0;
         return (
           <div
             key={beatIndex}

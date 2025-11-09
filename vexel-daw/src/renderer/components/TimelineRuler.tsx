@@ -5,6 +5,7 @@ interface TimelineRulerProps {
   beatsPerBar: number;
   tempo: number;
   pixelsPerBeat: number;
+  timeSignature?: { numerator: number; denominator: number };
 }
 
 export default function TimelineRuler({
@@ -12,6 +13,7 @@ export default function TimelineRuler({
   beatsPerBar,
   tempo,
   pixelsPerBeat,
+  timeSignature = { numerator: 4, denominator: 4 },
 }: TimelineRulerProps) {
   const totalBeats = bars * beatsPerBar;
   const width = totalBeats * pixelsPerBeat;
@@ -90,7 +92,7 @@ export default function TimelineRuler({
 
       {/* Time display (optional hover info) */}
       <div className="absolute top-1 right-2 px-2 py-0.5 bg-background/80 rounded text-[10px] font-mono text-muted-foreground backdrop-blur-sm">
-        {tempo} BPM • {beatsPerBar}/4
+        {tempo} BPM • {timeSignature.numerator}/{timeSignature.denominator}
       </div>
     </div>
   );

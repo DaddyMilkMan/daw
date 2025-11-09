@@ -1,9 +1,11 @@
-import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity, Volume2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
 import { AudioState } from '@/types/audio';
 import { formatTime } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { metronome } from '@/lib/metronome';
+import { loadMetronomeSettings, saveMetronomeSettings, loadProjectSettings, saveProjectSettings } from '@/lib/storage';
 
 interface TransportBarProps {
   audioState: AudioState;
@@ -11,15 +13,51 @@ interface TransportBarProps {
 }
 
 export default function TransportBar({ audioState, onOpenWingman }: TransportBarProps) {
-  const [tempo, setTempo] = useState(audioState.tempo);
+  // Load saved settings
+  const savedMetronome = loadMetronomeSettings();
+  const savedProject = loadProjectSettings();
+
+  const [tempo, setTempo] = useState(savedProject.tempo || audioState.tempo);
   const [isLooping, setIsLooping] = useState(false);
   const [isMetronomeOn, setIsMetronomeOn] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [cpuUsage, setCpuUsage] = useState(12);
+  const [timeSignature, setTimeSignature] = useState(savedProject.timeSignature || audioState.timeSignature);
+  const [showMetronomeSettings, setShowMetronomeSettings] = useState(false);
+  const [metronomeVolume, setMetronomeVolume] = useState(savedMetronome.volume);
+  const [showTimeSignatureEdit, setShowTimeSignatureEdit] = useState(false);
+  const [preCountEnabled, setPreCountEnabled] = useState(savedMetronome.preCountEnabled);
+  const [preCountBars, setPreCountBars] = useState(savedMetronome.preCountBars);
 
   useEffect(() => {
     setTempo(audioState.tempo);
   }, [audioState.tempo]);
+
+  useEffect(() => {
+    setTimeSignature(audioState.timeSignature);
+  }, [audioState.timeSignature]);
+
+  // Initialize metronome settings
+  useEffect(() => {
+    metronome.setTempo(tempo);
+    metronome.setTimeSignature(timeSignature.numerator, timeSignature.denominator);
+    metronome.setVolume(metronomeVolume);
+    metronome.setEnabled(isMetronomeOn);
+  }, [tempo, timeSignature, metronomeVolume, isMetronomeOn]);
+
+  // Sync metronome with playback
+  useEffect(() => {
+    if (audioState.isPlaying) {
+      if (isMetronomeOn) {
+        metronome.start();
+      }
+    } else {
+      metronome.stop();
+    }
+    return () => {
+      metronome.stop();
+    };
+  }, [audioState.isPlaying, isMetronomeOn]);
 
   // Simulate CPU usage (in real DAW, this would come from audio engine)
   useEffect(() => {
@@ -29,11 +67,35 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
     return () => clearInterval(interval);
   }, []);
 
+  // Save metronome settings when they change
+  useEffect(() => {
+    saveMetronomeSettings({
+      volume: metronomeVolume,
+      preCountEnabled,
+      preCountBars,
+    });
+  }, [metronomeVolume, preCountEnabled, preCountBars]);
+
+  // Save project settings when they change
+  useEffect(() => {
+    saveProjectSettings({
+      tempo,
+      timeSignature,
+    });
+  }, [tempo, timeSignature]);
+
   const handlePlay = () => {
     if (audioState.isPlaying) {
       window.electron.transportPause();
     } else {
-      window.electron.transportPlay();
+      // Start with pre-count if enabled and metronome is on
+      if (preCountEnabled && isMetronomeOn && !audioState.isPlaying) {
+        metronome.startWithPreCount(preCountBars, () => {
+          window.electron.transportPlay();
+        });
+      } else {
+        window.electron.transportPlay();
+      }
     }
   };
 
@@ -77,6 +139,17 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
     setTimeout(() => {
       setTapTimes((prev) => prev.filter((t) => Date.now() - t < 2000));
     }, 2000);
+  };
+
+  const handleTimeSignatureChange = (numerator: number, denominator: number) => {
+    const newTimeSignature = { numerator, denominator };
+    setTimeSignature(newTimeSignature);
+    // TODO: Send to electron main process via IPC
+    // window.electron.setTimeSignature(numerator, denominator);
+  };
+
+  const handleMetronomeVolumeChange = (volume: number) => {
+    setMetronomeVolume(volume);
   };
 
   return (
@@ -240,16 +313,75 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
       <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
       {/* Time Signature */}
-      <motion.div
-        className="flex flex-col"
-        whileHover={{ scale: 1.02 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-      >
+      <div className="relative flex flex-col">
         <span className="text-xs text-muted-foreground font-medium">Time Sig</span>
-        <span className="text-lg font-mono font-semibold">
-          {audioState.timeSignature.numerator}/{audioState.timeSignature.denominator}
-        </span>
-      </motion.div>
+        <motion.button
+          onClick={() => setShowTimeSignatureEdit(!showTimeSignatureEdit)}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="text-lg font-mono font-semibold hover:bg-secondary/40 px-2 py-0.5 rounded transition-colors"
+        >
+          {timeSignature.numerator}/{timeSignature.denominator}
+        </motion.button>
+
+        {/* Time Signature Editor Dropdown */}
+        <AnimatePresence>
+          {showTimeSignatureEdit && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full left-0 mt-2 bg-card border border-border/50 rounded-lg p-4 shadow-xl backdrop-blur-xl z-50 min-w-[200px]"
+            >
+              <div className="flex flex-col gap-3">
+                <div>
+                  <label className="text-xs text-muted-foreground font-medium block mb-1">
+                    Numerator
+                  </label>
+                  <select
+                    value={timeSignature.numerator}
+                    onChange={(e) =>
+                      handleTimeSignatureChange(parseInt(e.target.value), timeSignature.denominator)
+                    }
+                    className="w-full px-3 py-1.5 bg-secondary/40 border border-border/50 rounded text-sm"
+                  >
+                    {[2, 3, 4, 5, 6, 7, 8, 9, 12, 16].map((num) => (
+                      <option key={num} value={num}>
+                        {num}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground font-medium block mb-1">
+                    Denominator
+                  </label>
+                  <select
+                    value={timeSignature.denominator}
+                    onChange={(e) =>
+                      handleTimeSignatureChange(timeSignature.numerator, parseInt(e.target.value))
+                    }
+                    className="w-full px-3 py-1.5 bg-secondary/40 border border-border/50 rounded text-sm"
+                  >
+                    {[2, 4, 8, 16].map((den) => (
+                      <option key={den} value={den}>
+                        {den}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setShowTimeSignatureEdit(false)}
+                  className="mt-2"
+                >
+                  Done
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
@@ -284,21 +416,111 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
       <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
 
       {/* Metronome */}
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setIsMetronomeOn(!isMetronomeOn)}
-          title="Metronome (M)"
-          className={`transition-all ${
-            isMetronomeOn
-              ? 'bg-primary/20 text-primary hover:bg-primary/30'
-              : 'hover:bg-white/5'
-          }`}
-        >
-          <Activity className={`h-5 w-5 ${isMetronomeOn ? 'animate-pulse' : ''}`} />
-        </Button>
-      </motion.div>
+      <div className="relative flex items-center gap-1">
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setIsMetronomeOn(!isMetronomeOn)}
+            title="Metronome (M)"
+            className={`transition-all ${
+              isMetronomeOn
+                ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                : 'hover:bg-white/5'
+            }`}
+          >
+            <Activity className={`h-5 w-5 ${isMetronomeOn ? 'animate-pulse' : ''}`} />
+          </Button>
+        </motion.div>
+
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setShowMetronomeSettings(!showMetronomeSettings)}
+            title="Metronome Settings"
+            className="hover:bg-white/5 transition-all"
+          >
+            <Volume2 className="h-4 w-4" />
+          </Button>
+        </motion.div>
+
+        {/* Metronome Settings Dropdown */}
+        <AnimatePresence>
+          {showMetronomeSettings && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-full right-0 mt-2 bg-card border border-border/50 rounded-lg p-4 shadow-xl backdrop-blur-xl z-50 min-w-[250px]"
+            >
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-xs text-muted-foreground font-medium block mb-2">
+                    Metronome Volume
+                  </label>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={metronomeVolume}
+                      onChange={(e) => handleMetronomeVolumeChange(parseFloat(e.target.value))}
+                      className="flex-1"
+                    />
+                    <span className="text-sm font-mono w-12 text-right">
+                      {Math.round(metronomeVolume * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="h-px bg-border/50" />
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs text-muted-foreground font-medium">
+                      Pre-Count
+                    </label>
+                    <Button
+                      size="sm"
+                      variant={preCountEnabled ? 'default' : 'ghost'}
+                      onClick={() => setPreCountEnabled(!preCountEnabled)}
+                      className="h-6 px-2 text-xs"
+                    >
+                      {preCountEnabled ? 'On' : 'Off'}
+                    </Button>
+                  </div>
+                  {preCountEnabled && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Bars:</span>
+                      <select
+                        value={preCountBars}
+                        onChange={(e) => setPreCountBars(parseInt(e.target.value))}
+                        className="px-2 py-1 bg-secondary/40 border border-border/50 rounded text-sm"
+                      >
+                        {[1, 2, 4].map((bars) => (
+                          <option key={bars} value={bars}>
+                            {bars}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <Button
+                  size="sm"
+                  onClick={() => setShowMetronomeSettings(false)}
+                  className="mt-2"
+                >
+                  Done
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Divider */}
       <div className="h-12 w-px bg-gradient-to-b from-transparent via-border to-transparent" />
