@@ -6,13 +6,15 @@ import { useState } from 'react';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
+import ArrangementViewEnhanced from './ArrangementViewEnhanced';
 
 interface CenterPanelProps {
   tracks: Track[];
+  bpm?: number;
   onOpenPianoRoll: (trackId: string, trackName: string) => void;
 }
 
-export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
+export default function CenterPanel({ tracks, bpm = 128, onOpenPianoRoll }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
 
   const handleCreateTrack = () => {
@@ -65,7 +67,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {view === 'arrangement' ? (
-            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} />
+            <ArrangementViewEnhanced key="arrangement" tracks={tracks} bpm={bpm} onOpenPianoRoll={onOpenPianoRoll} />
           ) : (
             <SessionView key="session" tracks={tracks} />
           )}
