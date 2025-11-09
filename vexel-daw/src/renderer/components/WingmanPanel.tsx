@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Sparkles, X, Mic, Loader2 } from 'lucide-react';
+import { Send, Sparkles, X, Mic, Loader2, Music, Drum, Piano } from 'lucide-react';
 import { Button } from './ui/button';
+import magentaService from '../lib/MagentaService';
+import { getRandomColor } from '../types/session';
 
 interface Message {
   id: string;
@@ -42,26 +44,156 @@ export default function WingmanPanel({ isOpen, onClose }: WingmanPanelProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const userInput = input;
     setInput('');
     setIsProcessing(true);
 
-    // Simulate AI response (will connect to Wingman later)
-    setTimeout(() => {
+    try {
+      // Process the request with MagentaService
+      const response = await processAIRequest(userInput);
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: generateMockResponse(input),
+        content: response,
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsProcessing(false);
-    }, 1000);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const processAIRequest = async (input: string): Promise<string> => {
+    const lowerInput = input.toLowerCase();
+
+    // Initialize MagentaService
+    await magentaService.initialize();
+
+    // Generate drums
+    if (lowerInput.includes('drum') || lowerInput.includes('beat')) {
+      const style = lowerInput.includes('trap') ? 'trap' :
+                    lowerInput.includes('house') ? 'house' : 'trap';
+
+      const result = await magentaService.generateDrumPattern(style);
+
+      console.log('🥁 Generated drum pattern:', result);
+
+      return `I've created a ${result.style} drum pattern for you! Generated:\n` +
+             `• ${result.pattern.length} drum hits\n` +
+             `• ${result.bars} bars\n` +
+             `• Pattern includes kick, snare, and hi-hats\n\n` +
+             `The pattern is ready to be inserted into your track!`;
+    }
+
+    // Generate melody
+    if (lowerInput.includes('melody') || lowerInput.includes('lead')) {
+      const result = await magentaService.generateMelody();
+
+      console.log('🎼 Generated melody:', result);
+
+      return `I've generated a melody for you! Created:\n` +
+             `• ${result.notes.length} notes\n` +
+             `• Temperature: ${result.temperature}\n` +
+             `• Musical and expressive\n\n` +
+             `The melody is ready to be added to your arrangement!`;
+    }
+
+    // Generate chords
+    if (lowerInput.includes('chord')) {
+      const key = lowerInput.includes('c minor') || lowerInput.includes('cm') ? 'Cm' :
+                  lowerInput.includes('g major') || lowerInput.includes('g') ? 'G' : 'C';
+
+      const result = await magentaService.generateChordProgression(key);
+
+      console.log('🎹 Generated chord progression:', result);
+
+      return `Here's a chord progression in ${result.key}:\n` +
+             `${result.chords.join(' - ')}\n\n` +
+             `This is a ${result.scale} progression with ${result.notes.length} notes.\n` +
+             `Perfect for your track! Want me to insert it?`;
+    }
+
+    // Generate bass
+    if (lowerInput.includes('bass')) {
+      const result = await magentaService.generateMelody([], { steps: 16 });
+
+      console.log('🎸 Generated bass line:', result);
+
+      return `I've created a bass line for you! Features:\n` +
+             `• ${result.notes.length} notes\n` +
+             `• Root-focused progression\n` +
+             `• Groovy rhythm\n\n` +
+             `Ready to add some low-end to your track!`;
+    }
+
+    // Default response
+    return "I'm here to help! I can:\n" +
+           "• 🥁 Generate drum patterns (try 'create trap drums')\n" +
+           "• 🎹 Suggest chord progressions (try 'chords in C minor')\n" +
+           "• 🎼 Create melodies (try 'generate a melody')\n" +
+           "• 🎸 Make bass lines (try 'add a bass line')\n\n" +
+           "What would you like to create?";
+  };
+
+  const handleQuickAction = async (action: 'drums' | 'chords' | 'melody' | 'bass') => {
+    setIsProcessing(true);
+
+    try {
+      await magentaService.initialize();
+      let result: string;
+
+      switch (action) {
+        case 'drums':
+          const drums = await magentaService.generateDrumPattern('trap');
+          result = `Created trap drums: ${drums.pattern.length} hits across ${drums.bars} bars`;
+          break;
+        case 'chords':
+          const chords = await magentaService.generateChordProgression('C');
+          result = `Generated progression: ${chords.chords.join(' - ')}`;
+          break;
+        case 'melody':
+          const melody = await magentaService.generateMelody();
+          result = `Created melody with ${melody.notes.length} notes`;
+          break;
+        case 'bass':
+          const bass = await magentaService.generateMelody([], { steps: 16 });
+          result = `Generated bass line with ${bass.notes.length} notes`;
+          break;
+      }
+
+      const aiMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `✓ ${result}\n\nThe pattern is ready to be inserted into your timeline!`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -122,23 +254,54 @@ export default function WingmanPanel({ isOpen, onClose }: WingmanPanelProps) {
       </div>
 
       {/* Quick Actions */}
-      <div className="border-t border-border p-2 flex flex-wrap gap-2">
-        <QuickActionButton
-          label="Create drums"
-          onClick={() => setInput('Create a trap beat')}
-        />
-        <QuickActionButton
-          label="Add bass"
-          onClick={() => setInput('Add a bass line')}
-        />
-        <QuickActionButton
-          label="Suggest chords"
-          onClick={() => setInput('What chords should I use?')}
-        />
-        <QuickActionButton
-          label="Auto-mix"
-          onClick={() => setInput('Mix this track for me')}
-        />
+      <div className="border-t border-border p-2 space-y-2">
+        <div className="flex items-center gap-2 mb-1">
+          <Sparkles className="h-3 w-3 text-primary" />
+          <span className="text-xs font-semibold text-muted-foreground">AI Generation</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <QuickActionButton
+            icon={<Drum className="h-3 w-3" />}
+            label="Generate Drums"
+            onClick={() => handleQuickAction('drums')}
+            variant="ai"
+          />
+          <QuickActionButton
+            icon={<Piano className="h-3 w-3" />}
+            label="Generate Chords"
+            onClick={() => handleQuickAction('chords')}
+            variant="ai"
+          />
+          <QuickActionButton
+            icon={<Music className="h-3 w-3" />}
+            label="Generate Melody"
+            onClick={() => handleQuickAction('melody')}
+            variant="ai"
+          />
+          <QuickActionButton
+            icon={<Music className="h-3 w-3" />}
+            label="Generate Bass"
+            onClick={() => handleQuickAction('bass')}
+            variant="ai"
+          />
+        </div>
+        <div className="flex items-center gap-2 mb-1 mt-3">
+          <span className="text-xs font-semibold text-muted-foreground">Quick Prompts</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <QuickActionButton
+            label="Trap drums"
+            onClick={() => setInput('Create a trap beat')}
+          />
+          <QuickActionButton
+            label="House drums"
+            onClick={() => setInput('Create house drums')}
+          />
+          <QuickActionButton
+            label="Chords in Cm"
+            onClick={() => setInput('Chords in C minor')}
+          />
+        </div>
       </div>
 
       {/* Input */}
@@ -166,37 +329,23 @@ export default function WingmanPanel({ isOpen, onClose }: WingmanPanelProps) {
 interface QuickActionButtonProps {
   label: string;
   onClick: () => void;
+  icon?: React.ReactNode;
+  variant?: 'default' | 'ai';
 }
 
-function QuickActionButton({ label, onClick }: QuickActionButtonProps) {
+function QuickActionButton({ label, onClick, icon, variant = 'default' }: QuickActionButtonProps) {
+  const baseClasses = "px-3 py-1.5 text-xs rounded transition-colors flex items-center gap-1.5";
+  const variantClasses = variant === 'ai'
+    ? "bg-primary/10 hover:bg-primary/20 text-primary border border-primary/30"
+    : "bg-secondary hover:bg-accent";
+
   return (
     <button
       onClick={onClick}
-      className="px-3 py-1 text-xs bg-secondary hover:bg-accent rounded transition-colors"
+      className={`${baseClasses} ${variantClasses}`}
     >
-      {label}
+      {icon}
+      <span>{label}</span>
     </button>
   );
-}
-
-function generateMockResponse(input: string): string {
-  const lowerInput = input.toLowerCase();
-
-  if (lowerInput.includes('drum') || lowerInput.includes('beat')) {
-    return "I'll create a trap beat for you! Creating:\n• Kick pattern on beats 1 and 3\n• Snare on beats 2 and 4\n• Hi-hat rolls\n• 808 bass slides\n\nSet tempo to 140 BPM. Check the arrangement view!";
-  }
-
-  if (lowerInput.includes('bass')) {
-    return "Adding a bass line in the key of C minor. I'm creating:\n• Root notes on strong beats\n• Octave jumps for interest\n• Slides between notes\n\nPlaced on Track 2. You can edit it in the piano roll!";
-  }
-
-  if (lowerInput.includes('chord')) {
-    return "For a chill vibe, try this progression:\nCm - Ab - Eb - Bb\n\nThis is a i-VI-III-VII progression in C minor. It's used in lots of lo-fi and R&B tracks. Want me to generate it?";
-  }
-
-  if (lowerInput.includes('mix')) {
-    return "Analyzing your tracks...\n✓ Adjusted levels for clarity\n✓ Applied EQ to drums\n✓ Added compression to vocals\n✓ Set proper panning\n\nYour mix is balanced! Check the mixer panel for details.";
-  }
-
-  return "I'm still learning to understand that! Here's what I can do:\n• Create drum patterns\n• Generate MIDI melodies\n• Suggest chord progressions\n• Auto-mix tracks\n• Control transport (play, stop, tempo)\n\nTry asking me to create drums or suggest chords!";
 }
