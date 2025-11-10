@@ -180,10 +180,10 @@ export class AudioEngine {
     const track = this.tracks.get(trackId);
     if (!track) return;
 
-    // Disconnect and cleanup nodes
-    track.gainNode?.disconnect();
-    track.panNode?.disconnect();
-    track.analyserNode?.disconnect();
+    // Disconnect and cleanup nodes (Web Audio API throws if no connections exist)
+    try { track.gainNode?.disconnect(); } catch (e) { /* ignore */ }
+    try { track.panNode?.disconnect(); } catch (e) { /* ignore */ }
+    try { track.analyserNode?.disconnect(); } catch (e) { /* ignore */ }
 
     // Cleanup sequencer
     if (track.sequencer) {
@@ -568,11 +568,11 @@ export class AudioEngine {
   dispose() {
     this.stop();
 
-    // Disconnect all tracks
+    // Disconnect all tracks (Web Audio API throws if no connections exist)
     this.tracks.forEach(track => {
-      track.gainNode?.disconnect();
-      track.panNode?.disconnect();
-      track.analyserNode?.disconnect();
+      try { track.gainNode?.disconnect(); } catch (e) { /* ignore */ }
+      try { track.panNode?.disconnect(); } catch (e) { /* ignore */ }
+      try { track.analyserNode?.disconnect(); } catch (e) { /* ignore */ }
 
       // Dispose sequencers
       if (track.sequencer) {
@@ -580,9 +580,9 @@ export class AudioEngine {
       }
     });
 
-    // Disconnect master
-    this.masterGain.disconnect();
-    this.masterAnalyser.disconnect();
+    // Disconnect master (Web Audio API throws if no connections exist)
+    try { this.masterGain.disconnect(); } catch (e) { /* ignore */ }
+    try { this.masterAnalyser.disconnect(); } catch (e) { /* ignore */ }
 
     // Close context
     this.context.close();
