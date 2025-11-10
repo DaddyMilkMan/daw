@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useAudioStore } from './stores/audioStore';
 import TransportBar from './components/TransportBar';
@@ -7,12 +7,33 @@ import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
+import { useWingmanBridge, useWingmanTransportSync, useWingmanClipInsertion } from './hooks/useWingmanBridge';
 import './App.css';
 
 function App() {
   const [isWingmanOpen, setIsWingmanOpen] = useState(false);
   const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
+  const [generatedClips, setGeneratedClips] = useState<any[]>([]);
+
+  // Wingman AI Bridge integration
+  const wingman = useWingmanBridge();
+
+  // Sync transport state with Wingman AI
+  useWingmanTransportSync(audioState.isPlaying, audioState.tempo);
+
+  // Handle AI-generated clip insertion
+  const handleClipInsertion = useCallback((data: any) => {
+    console.log('🎵 Inserting AI-generated clip:', data);
+
+    // Add to generated clips state (to be picked up by CenterPanel)
+    setGeneratedClips(prev => [...prev, data]);
+
+    // Show notification or toast
+    console.log(`✅ Clip inserted: ${data.clip?.name || 'Untitled'}`);
+  }, []);
+
+  useWingmanClipInsertion(handleClipInsertion);
 
   // Get audio store state and actions
   const {

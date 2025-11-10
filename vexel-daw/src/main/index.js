@@ -1,7 +1,9 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const WingmanBridgeService = require('./services/WingmanBridgeService');
 
 let mainWindow;
+let wingmanBridge;
 
 // Audio engine state (stub for now)
 const audioState = {
@@ -44,6 +46,10 @@ function createWindow() {
 
 app.whenReady().then(() => {
   createWindow();
+
+  // Initialize Wingman AI Bridge
+  wingmanBridge = new WingmanBridgeService(mainWindow, audioState);
+  console.log('🤖 Wingman AI Bridge initialized');
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -118,4 +124,57 @@ ipcMain.on('window-maximize', () => {
 
 ipcMain.on('window-close', () => {
   mainWindow.close();
+});
+
+// ============================================================================
+// Wingman AI Bridge IPC Handlers
+// ============================================================================
+
+// Connect to Wingman AI
+ipcMain.handle('wingman-connect', async (event, config) => {
+  try {
+    console.log('🤖 Connecting to Wingman AI...', config);
+    await wingmanBridge.connect(config);
+    return { success: true, state: wingmanBridge.getConnectionState() };
+  } catch (err) {
+    console.error('❌ Failed to connect to Wingman AI:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Disconnect from Wingman AI
+ipcMain.on('wingman-disconnect', () => {
+  console.log('🤖 Disconnecting from Wingman AI...');
+  wingmanBridge.disconnect();
+});
+
+// Send command to Wingman AI
+ipcMain.handle('wingman-send-command', async (event, { command, payload }) => {
+  try {
+    console.log('🤖 Sending command to Wingman AI:', command);
+    const result = await wingmanBridge.sendCommand(command, payload);
+    return { success: true, data: result };
+  } catch (err) {
+    console.error('❌ Failed to send command to Wingman AI:', err);
+    return { success: false, error: err.message };
+  }
+});
+
+// Send event to Wingman AI
+ipcMain.on('wingman-send-event', (event, { event: eventType, data }) => {
+  console.log('🤖 Sending event to Wingman AI:', eventType);
+  wingmanBridge.sendEvent(eventType, data);
+});
+
+// Get connection state
+ipcMain.handle('wingman-get-connection-state', () => {
+  return wingmanBridge.getConnectionState();
+});
+
+// Cleanup on app quit
+app.on('before-quit', () => {
+  if (wingmanBridge) {
+    console.log('🤖 Cleaning up Wingman AI Bridge...');
+    wingmanBridge.disconnect();
+  }
 });
