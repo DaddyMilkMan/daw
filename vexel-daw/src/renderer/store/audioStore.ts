@@ -407,11 +407,24 @@ export const useAudioStore = create<AudioStore>()(
               trackState.sampleRate
             );
 
-            let offset = 0;
-            trackState.recordedData.forEach((chunk) => {
-              const channelData = audioBuffer.getChannelData(0);
-              channelData.set(chunk, offset);
-              offset += chunk.length;
+            // Deinterleave and write chunks to appropriate channels
+            let offset = 0; // Per-channel offset (not interleaved offset)
+
+            trackState.recordedData.forEach((interleavedChunk) => {
+              const samplesPerChannel = interleavedChunk.length / trackState.channelCount;
+
+              // Deinterleave: separate interleaved LRLRLR... into LLL... and RRR...
+              for (let channel = 0; channel < trackState.channelCount; channel++) {
+                const channelData = audioBuffer.getChannelData(channel);
+
+                // Extract samples for this channel from interleaved data
+                for (let i = 0; i < samplesPerChannel; i++) {
+                  channelData[offset + i] = interleavedChunk[i * trackState.channelCount + channel];
+                }
+              }
+
+              // Advance offset by per-channel length (not interleaved length)
+              offset += samplesPerChannel;
             });
 
             const lengthInBeats =
