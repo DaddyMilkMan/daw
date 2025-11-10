@@ -277,22 +277,220 @@ export class TimeStretchService {
 
   /**
    * Phase Vocoder pitch shifting (high quality, FFT-based)
-   * TODO: Implement full Phase Vocoder for production use
+   * Implements STFT-based pitch shifting with phase coherence
    */
   private async phaseVocoderPitchShift(
     audioBuffer: AudioBuffer,
     pitchRatio: number
   ): Promise<AudioBuffer> {
-    // This is a placeholder for full Phase Vocoder implementation
-    // Phase Vocoder requires:
-    // 1. FFT analysis with overlap
-    // 2. Phase unwrapping
-    // 3. Frequency-domain pitch shifting
-    // 4. Phase reconstruction
-    // 5. Inverse FFT synthesis
+    const fftSize = 4096;
+    const hopSize = fftSize / 4;
+    const numChannels = audioBuffer.numberOfChannels;
+    const sampleRate = audioBuffer.sampleRate;
+    const inputLength = audioBuffer.length;
 
-    // For now, fallback to simple resampling
-    return this.pitchShiftInternal(audioBuffer, pitchRatio);
+    // Calculate output length (pitch shift doesn't change duration with phase vocoder)
+    const outputLength = inputLength;
+
+    // Create output buffer
+    const context = new AudioContext({ sampleRate });
+    const outputBuffer = context.createBuffer(numChannels, outputLength, sampleRate);
+
+    // Process each channel
+    for (let channel = 0; channel < numChannels; channel++) {
+      const inputData = audioBuffer.getChannelData(channel);
+      const outputData = outputBuffer.getChannelData(channel);
+
+      // Perform STFT-based pitch shifting
+      this.phaseVocoderChannel(
+        inputData,
+        outputData,
+        pitchRatio,
+        fftSize,
+        hopSize,
+        sampleRate
+      );
+    }
+
+    return outputBuffer;
+  }
+
+  /**
+   * Phase vocoder processing for a single channel
+   */
+  private phaseVocoderChannel(
+    input: Float32Array,
+    output: Float32Array,
+    pitchRatio: number,
+    fftSize: number,
+    hopSize: number,
+    sampleRate: number
+  ): void {
+    const numFrames = Math.floor((input.length - fftSize) / hopSize);
+    const omega = (2 * Math.PI * hopSize) / fftSize;
+
+    // Allocate arrays for FFT
+    const fftReal = new Float32Array(fftSize);
+    const fftImag = new Float32Array(fftSize);
+    const magnitude = new Float32Array(fftSize);
+    const phase = new Float32Array(fftSize);
+    const phaseDiff = new Float32Array(fftSize);
+    const lastPhase = new Float32Array(fftSize);
+    const sumPhase = new Float32Array(fftSize);
+
+    // Hanning window
+    const window = new Float32Array(fftSize);
+    for (let i = 0; i < fftSize; i++) {
+      window[i] = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (fftSize - 1)));
+    }
+
+    // Analysis hop
+    const analysisHop = hopSize;
+    // Synthesis hop (scaled by pitch ratio)
+    const synthesisHop = Math.round(hopSize * pitchRatio);
+
+    let outputPos = 0;
+
+    // Process frames
+    for (let frame = 0; frame < numFrames; frame++) {
+      const inputPos = frame * analysisHop;
+
+      // Apply window and copy to FFT buffer
+      for (let i = 0; i < fftSize; i++) {
+        if (inputPos + i < input.length) {
+          fftReal[i] = input[inputPos + i] * window[i];
+        } else {
+          fftReal[i] = 0;
+        }
+        fftImag[i] = 0;
+      }
+
+      // Perform FFT (simplified DFT for demonstration)
+      this.fft(fftReal, fftImag);
+
+      // Convert to magnitude and phase
+      for (let i = 0; i < fftSize / 2; i++) {
+        magnitude[i] = Math.sqrt(fftReal[i] * fftReal[i] + fftImag[i] * fftImag[i]);
+        phase[i] = Math.atan2(fftImag[i], fftReal[i]);
+
+        // Calculate phase difference
+        let deltaPhi = phase[i] - lastPhase[i];
+        lastPhase[i] = phase[i];
+
+        // Subtract expected phase advance
+        deltaPhi -= i * omega;
+
+        // Map to -PI to PI range
+        deltaPhi = deltaPhi - 2 * Math.PI * Math.round(deltaPhi / (2 * Math.PI));
+
+        // Calculate true frequency
+        const trueFreq = i + deltaPhi / omega;
+
+        // Update accumulated phase
+        sumPhase[i] += trueFreq * omega;
+      }
+
+      // Resynthesis: convert back to complex
+      for (let i = 0; i < fftSize / 2; i++) {
+        fftReal[i] = magnitude[i] * Math.cos(sumPhase[i]);
+        fftImag[i] = magnitude[i] * Math.sin(sumPhase[i]);
+      }
+
+      // Mirror for negative frequencies
+      for (let i = fftSize / 2; i < fftSize; i++) {
+        fftReal[i] = fftReal[fftSize - i];
+        fftImag[i] = -fftImag[fftSize - i];
+      }
+
+      // Inverse FFT
+      this.ifft(fftReal, fftImag);
+
+      // Overlap-add with window
+      for (let i = 0; i < fftSize && outputPos + i < output.length; i++) {
+        output[outputPos + i] += fftReal[i] * window[i];
+      }
+
+      outputPos += synthesisHop;
+    }
+
+    // Normalize output
+    const maxVal = Math.max(...Array.from(output).map(Math.abs));
+    if (maxVal > 0) {
+      for (let i = 0; i < output.length; i++) {
+        output[i] /= maxVal;
+      }
+    }
+  }
+
+  /**
+   * Simple FFT implementation (Cooley-Tukey algorithm)
+   */
+  private fft(real: Float32Array, imag: Float32Array): void {
+    const n = real.length;
+    if (n <= 1) return;
+
+    // Bit reversal
+    for (let i = 0; i < n; i++) {
+      const j = this.reverseBits(i, Math.log2(n));
+      if (j > i) {
+        [real[i], real[j]] = [real[j], real[i]];
+        [imag[i], imag[j]] = [imag[j], imag[i]];
+      }
+    }
+
+    // FFT
+    for (let size = 2; size <= n; size *= 2) {
+      const halfSize = size / 2;
+      const step = (2 * Math.PI) / size;
+
+      for (let i = 0; i < n; i += size) {
+        for (let j = 0; j < halfSize; j++) {
+          const angle = step * j;
+          const cos = Math.cos(angle);
+          const sin = -Math.sin(angle);
+
+          const tReal = real[i + j + halfSize] * cos - imag[i + j + halfSize] * sin;
+          const tImag = real[i + j + halfSize] * sin + imag[i + j + halfSize] * cos;
+
+          real[i + j + halfSize] = real[i + j] - tReal;
+          imag[i + j + halfSize] = imag[i + j] - tImag;
+          real[i + j] += tReal;
+          imag[i + j] += tImag;
+        }
+      }
+    }
+  }
+
+  /**
+   * Inverse FFT
+   */
+  private ifft(real: Float32Array, imag: Float32Array): void {
+    // Conjugate
+    for (let i = 0; i < imag.length; i++) {
+      imag[i] = -imag[i];
+    }
+
+    // Forward FFT
+    this.fft(real, imag);
+
+    // Conjugate and scale
+    const n = real.length;
+    for (let i = 0; i < n; i++) {
+      real[i] /= n;
+      imag[i] = -imag[i] / n;
+    }
+  }
+
+  /**
+   * Reverse bits for FFT
+   */
+  private reverseBits(x: number, bits: number): number {
+    let result = 0;
+    for (let i = 0; i < bits; i++) {
+      result = (result << 1) | (x & 1);
+      x >>= 1;
+    }
+    return result;
   }
 
   /**
