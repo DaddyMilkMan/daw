@@ -1,0 +1,2 @@
+# Hashes of file build rules.
+e1b03fde35e38cbde7b7c1daa18f7dc8 ZenithDAW_artefacts/JuceLibraryCode/JuceHeader.h

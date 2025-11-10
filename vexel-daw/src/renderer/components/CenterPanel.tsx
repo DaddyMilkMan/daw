@@ -1,4 +1,4 @@
-import { Track } from '@/types/audio';
+import { AudioTrack } from '../audio/AudioEngine';
 import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
@@ -6,18 +6,22 @@ import { useState } from 'react';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
+import SessionView from './SessionView';
+import ArrangementViewEnhanced from './ArrangementViewEnhanced';
+import { engineClient } from '@/lib/engineClient';
 
 interface CenterPanelProps {
-  tracks: Track[];
+  tracks: AudioTrack[];
+  bpm?: number;
   onOpenPianoRoll: (trackId: string, trackName: string) => void;
 }
 
-export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
+export default function CenterPanel({ tracks, bpm = 128, onOpenPianoRoll }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
 
   const handleCreateTrack = () => {
     const name = `Track ${tracks.length + 1}`;
-    window.electron.createTrack(name, 'midi');
+    engineClient.sendCommand('track:create', { name, type: 'midi' });
   };
 
   return (
@@ -65,9 +69,9 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {view === 'arrangement' ? (
-            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} />
+            <ArrangementViewEnhanced key="arrangement" tracks={tracks} bpm={bpm} onOpenPianoRoll={onOpenPianoRoll} />
           ) : (
-            <SessionView key="session" tracks={tracks} />
+            <SessionView key="session" onOpenPianoRoll={onOpenPianoRoll} />
           )}
         </AnimatePresence>
       </div>
@@ -75,7 +79,8 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
   );
 }
 
-function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
+// Legacy ArrangementView - kept for reference but not used (using ArrangementViewEnhanced instead)
+function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: AudioTrack[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
   const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
   const [expandedAutomation, setExpandedAutomation] = useState<Set<string>>(new Set());
@@ -419,215 +424,4 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: Track[]; onOpenP
   );
 }
 
-function SessionView({ tracks }: { tracks: Track[] }) {
-  const [clips, setClips] = useState<Array<{id: string; sceneIndex: number; trackId: string; color: string; isPlaying: boolean}>>([]);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; clipId: string } | null>(null);
-  const SCENES = 8;
-  const CLIP_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#14b8a6'];
-
-  const getClip = (trackId: string, sceneIndex: number) => {
-    return clips.find(c => c.trackId === trackId && c.sceneIndex === sceneIndex);
-  };
-
-  const handleClipClick = (trackId: string, sceneIndex: number) => {
-    const existingClip = getClip(trackId, sceneIndex);
-
-    if (existingClip) {
-      // Toggle playback
-      setClips(clips.map(c =>
-        c.id === existingClip.id
-          ? { ...c, isPlaying: !c.isPlaying }
-          : c
-      ));
-    } else {
-      // Create new clip
-      const newClip = {
-        id: `clip-${Date.now()}`,
-        trackId,
-        sceneIndex,
-        color: CLIP_COLORS[Math.floor(Math.random() * CLIP_COLORS.length)],
-        isPlaying: false,
-      };
-      setClips([...clips, newClip]);
-    }
-  };
-
-  const handleSceneLaunch = (sceneIndex: number) => {
-    // Launch all clips in this scene
-    setClips(clips.map(c => ({
-      ...c,
-      isPlaying: c.sceneIndex === sceneIndex,
-    })));
-  };
-
-  const handleClipContextMenu = (e: React.MouseEvent, clipId: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, clipId });
-  };
-
-  const getClipContextMenuItems = (clipId: string): ContextMenuItem[] => {
-    return [
-      {
-        label: 'Duplicate Clip',
-        icon: <Copy className="h-4 w-4" />,
-        shortcut: 'Ctrl+D',
-        onClick: () => {
-          console.log('Duplicate clip:', clipId);
-          // TODO: Implement duplicate
-        },
-      },
-      {
-        label: 'Rename Clip',
-        icon: <Edit3 className="h-4 w-4" />,
-        shortcut: 'F2',
-        onClick: () => {
-          console.log('Rename clip:', clipId);
-          // TODO: Implement rename
-        },
-      },
-      {
-        label: 'Change Color',
-        icon: <Palette className="h-4 w-4" />,
-        onClick: () => {
-          console.log('Change color:', clipId);
-          // TODO: Implement color picker
-        },
-      },
-      { divider: true, label: '', onClick: () => {} },
-      {
-        label: 'Delete Clip',
-        icon: <Trash2 className="h-4 w-4" />,
-        shortcut: 'Del',
-        danger: true,
-        onClick: () => {
-          setClips(clips.filter(c => c.id !== clipId));
-          console.log('Deleted clip:', clipId);
-        },
-      },
-    ];
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.2 }}
-      className="h-full flex flex-col p-4 gap-4"
-    >
-      {tracks.length === 0 ? (
-        <div className="flex-1 flex items-center justify-center text-muted-foreground">
-          <div className="text-center">
-            <motion.div animate={{ y: [0, -5, 0] }} transition={{ repeat: Infinity, duration: 2 }}>
-              <Plus className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            </motion.div>
-            <p className="text-lg font-semibold mb-2">Session View</p>
-            <p className="text-sm">Add tracks to start launching clips</p>
-          </div>
-        </div>
-      ) : (
-        <div className="flex gap-3 overflow-auto">
-          {/* Track columns */}
-          {tracks.map((track, trackIndex) => (
-            <div key={track.id} className="flex flex-col gap-2" style={{ minWidth: '120px' }}>
-              {/* Track header */}
-              <div className="h-12 rounded-lg bg-card/50 border border-border/30 px-3 flex flex-col justify-center">
-                <div className="text-sm font-medium truncate">{track.name}</div>
-                <div className="text-xs text-muted-foreground">{track.type}</div>
-              </div>
-
-              {/* Clip slots */}
-              {Array.from({ length: SCENES }).map((_, sceneIndex) => {
-                const clip = getClip(track.id, sceneIndex);
-
-                return (
-                  <motion.button
-                    key={sceneIndex}
-                    onClick={() => handleClipClick(track.id, sceneIndex)}
-                    onContextMenu={(e) => clip && handleClipContextMenu(e, clip.id)}
-                    className={`h-16 rounded-lg transition-all relative overflow-hidden ${
-                      clip
-                        ? 'border-2'
-                        : 'border border-dashed border-border/30 hover:border-primary/50 hover:bg-primary/5'
-                    }`}
-                    style={{
-                      backgroundColor: clip ? `${clip.color}20` : 'transparent',
-                      borderColor: clip ? clip.color : undefined,
-                    }}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                  >
-                    {clip && (
-                      <>
-                        {/* Playing indicator */}
-                        {clip.isPlaying && (
-                          <motion.div
-                            className="absolute inset-0"
-                            style={{ backgroundColor: clip.color }}
-                            animate={{ opacity: [0.1, 0.3, 0.1] }}
-                            transition={{ repeat: Infinity, duration: 0.8 }}
-                          />
-                        )}
-
-                        {/* Clip content */}
-                        <div className="relative z-10 h-full flex flex-col items-center justify-center px-2">
-                          <div className="text-xs font-medium truncate w-full text-center">
-                            Clip {sceneIndex + 1}
-                          </div>
-                          {clip.isPlaying && (
-                            <div className="text-[10px] text-muted-foreground">Playing</div>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {!clip && (
-                      <div className="flex items-center justify-center h-full text-muted-foreground/30">
-                        <Plus className="h-4 w-4" />
-                      </div>
-                    )}
-                  </motion.button>
-                );
-              })}
-            </div>
-          ))}
-
-          {/* Scene launch column */}
-          <div className="flex flex-col gap-2" style={{ minWidth: '60px' }}>
-            {/* Header */}
-            <div className="h-12 rounded-lg bg-card/50 border border-border/30 px-2 flex items-center justify-center">
-              <span className="text-xs font-medium">Scenes</span>
-            </div>
-
-            {/* Scene buttons */}
-            {Array.from({ length: SCENES }).map((_, sceneIndex) => (
-              <motion.button
-                key={sceneIndex}
-                onClick={() => handleSceneLaunch(sceneIndex)}
-                className="h-16 rounded-lg bg-gradient-to-r from-primary/20 to-primary/10 border border-primary/30 hover:border-primary/60 hover:from-primary/30 hover:to-primary/20 transition-all"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                title={`Launch Scene ${sceneIndex + 1}`}
-              >
-                <div className="text-sm font-semibold">{sceneIndex + 1}</div>
-              </motion.button>
-            ))}
-          </div>
-
-          {/* Clip Context Menu */}
-          <AnimatePresence>
-            {contextMenu && (
-              <ContextMenu
-                x={contextMenu.x}
-                y={contextMenu.y}
-                items={getClipContextMenuItems(contextMenu.clipId)}
-                onClose={() => setContextMenu(null)}
-              />
-            )}
-          </AnimatePresence>
-        </div>
-      )}
-    </motion.div>
-  );
-}
+// SessionView is now imported from ./SessionView.tsx

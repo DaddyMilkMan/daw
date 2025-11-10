@@ -1,18 +1,31 @@
 import { Play, Pause, Square, SkipBack, SkipForward, Circle, Sparkles, Repeat, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from './ui/button';
-import { AudioState } from '@/types/audio';
-import { formatTime } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { engineClient } from '../lib/engineClient';
 
 interface TransportBarProps {
-  audioState: AudioState;
+  audioState: {
+    isPlaying: boolean;
+    tempo: number;
+    currentBar: number;
+    timeSignature: {
+      numerator: number;
+      denominator: number;
+    };
+    loopEnabled: boolean;
+  };
   onOpenWingman: () => void;
 }
 
+const formatTime = (bar: number, beatsPerBar: number) => {
+  const beat = bar % beatsPerBar;
+  const actualBar = Math.floor(bar / beatsPerBar) + 1;
+  return `${actualBar}.${beat + 1}.01.000`;
+};
+
 export default function TransportBar({ audioState, onOpenWingman }: TransportBarProps) {
   const [tempo, setTempo] = useState(audioState.tempo);
-  const [isLooping, setIsLooping] = useState(false);
   const [isMetronomeOn, setIsMetronomeOn] = useState(false);
   const [tapTimes, setTapTimes] = useState<number[]>([]);
   const [cpuUsage, setCpuUsage] = useState(12);
@@ -31,14 +44,14 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
   const handlePlay = () => {
     if (audioState.isPlaying) {
-      window.electron.transportPause();
+      engineClient.sendCommand('transport:pause');
     } else {
-      window.electron.transportPlay();
+      engineClient.sendCommand('transport:play');
     }
   };
 
   const handleStop = () => {
-    window.electron.transportStop();
+    engineClient.sendCommand('transport:stop');
   };
 
   const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +61,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
   const handleTempoBlur = () => {
     if (tempo !== audioState.tempo && tempo >= 20 && tempo <= 999) {
-      window.electron.setTempo(tempo);
+      engineClient.sendCommand('transport:setTempo', { tempo });
     } else {
       setTempo(audioState.tempo);
     }
@@ -69,7 +82,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
       if (newTempo >= 20 && newTempo <= 999) {
         setTempo(newTempo);
-        window.electron.setTempo(newTempo);
+        engineClient.sendCommand('transport:setTempo', { tempo: newTempo });
       }
     }
 
@@ -77,6 +90,10 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
     setTimeout(() => {
       setTapTimes((prev) => prev.filter((t) => Date.now() - t < 2000));
     }, 2000);
+  };
+
+  const handleToggleLoop = () => {
+    engineClient.sendCommand('transport:toggleLoop');
   };
 
   return (
@@ -157,10 +174,10 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => setIsLooping(!isLooping)}
+            onClick={handleToggleLoop}
             title="Loop (L)"
             className={`transition-all ${
-              isLooping
+              audioState.loopEnabled
                 ? 'bg-primary/20 text-primary hover:bg-primary/30'
                 : 'hover:bg-white/5'
             }`}

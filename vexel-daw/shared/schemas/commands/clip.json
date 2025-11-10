@@ -1,0 +1,244 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/commands/clip.json",
+  "title": "Clip Commands",
+  "description": "Commands for clip management",
+  "definitions": {
+    "MidiNote": {
+      "type": "object",
+      "properties": {
+        "startBeat": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lengthBeats": {
+          "type": "number",
+          "minimum": 0.01
+        },
+        "pitch": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 127
+        },
+        "velocity": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 127
+        }
+      },
+      "required": ["startBeat", "lengthBeats", "pitch", "velocity"],
+      "additionalProperties": false
+    },
+    "CreateMidiClipCommand": {
+      "type": "object",
+      "title": "Create MIDI Clip Command",
+      "description": "Create a new MIDI clip",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "create_midi_clip"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "trackId": {
+              "type": "string",
+              "description": "Parent track UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "startBeat": {
+              "type": "number",
+              "description": "Clip start position",
+              "minimum": 0
+            },
+            "lengthBeats": {
+              "type": "number",
+              "description": "Clip duration",
+              "minimum": 0.25
+            },
+            "name": {
+              "type": "string",
+              "description": "Clip name (optional)",
+              "maxLength": 255
+            }
+          },
+          "required": ["trackId", "startBeat", "lengthBeats"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "SetClipNotesCommand": {
+      "type": "object",
+      "title": "Set Clip Notes Command",
+      "description": "Set or update notes in a MIDI clip",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "set_clip_notes"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "clipId": {
+              "type": "string",
+              "description": "MIDI clip UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "notes": {
+              "type": "array",
+              "description": "Array of MIDI notes",
+              "items": {
+                "$ref": "#/definitions/MidiNote"
+              }
+            }
+          },
+          "required": ["clipId", "notes"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "LoadAudioClipCommand": {
+      "type": "object",
+      "title": "Load Audio Clip Command",
+      "description": "Create an audio clip from a file",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "load_audio_clip"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "trackId": {
+              "type": "string",
+              "description": "Parent track UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "audioFileId": {
+              "type": "string",
+              "description": "Audio file asset UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "startBeat": {
+              "type": "number",
+              "description": "Clip start position",
+              "minimum": 0
+            },
+            "name": {
+              "type": "string",
+              "description": "Clip name (optional)",
+              "maxLength": 255
+            }
+          },
+          "required": ["trackId", "audioFileId", "startBeat"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "SetClipPropertiesCommand": {
+      "type": "object",
+      "title": "Set Clip Properties Command",
+      "description": "Update clip properties",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "set_clip_properties"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "clipId": {
+              "type": "string",
+              "description": "Clip UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "maxLength": 255
+                },
+                "startBeat": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "lengthBeats": {
+                  "type": "number",
+                  "minimum": 0.01
+                },
+                "muted": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                },
+                "fadeInBeats": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "fadeOutBeats": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "gain": {
+                  "type": "number",
+                  "minimum": 0.0,
+                  "maximum": 2.0
+                },
+                "playbackRate": {
+                  "type": "number",
+                  "minimum": 0.25,
+                  "maximum": 4.0
+                },
+                "pitchShift": {
+                  "type": "number",
+                  "minimum": -12,
+                  "maximum": 12
+                }
+              },
+              "minProperties": 1,
+              "additionalProperties": false
+            }
+          },
+          "required": ["clipId", "properties"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "DeleteClipCommand": {
+      "type": "object",
+      "title": "Delete Clip Command",
+      "description": "Remove a clip from its track",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "delete_clip"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "clipId": {
+              "type": "string",
+              "description": "Clip UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          "required": ["clipId"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,10 +1,11 @@
-import { Track } from '@/types/audio';
+import { AudioTrack } from '../audio/AudioEngine';
 import { Volume2, PanelRight, Sliders, Plus, Minus, MoreHorizontal, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { engineClient } from '@/lib/engineClient';
 
 interface RightPanelProps {
-  tracks: Track[];
+  tracks: AudioTrack[];
 }
 
 export default function RightPanel({ tracks }: RightPanelProps) {
@@ -54,7 +55,7 @@ export default function RightPanel({ tracks }: RightPanelProps) {
   );
 }
 
-function MixerView({ tracks }: { tracks: Track[] }) {
+function MixerView({ tracks }: { tracks: AudioTrack[] }) {
   if (tracks.length === 0) {
     return (
       <motion.div
@@ -99,7 +100,7 @@ function MixerView({ tracks }: { tracks: Track[] }) {
 }
 
 interface ChannelStripProps {
-  track: Track;
+  track: AudioTrack;
   index: number;
 }
 
@@ -107,29 +108,33 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
   const [volume, setVolume] = useState(track.volume);
   const [pan, setPan] = useState(track.pan);
   const [muted, setMuted] = useState(track.muted);
-  const [solo, setSolo] = useState(track.solo);
+  const [solo, setSolo] = useState(track.soloed);
   const [level, setLevel] = useState(0);
   const [peak, setPeak] = useState(0);
   const [showEQ, setShowEQ] = useState(false);
   const [showSends, setShowSends] = useState(false);
 
-  // Simulate VU meter animation
+  // Sync local state with track props
+  useEffect(() => {
+    setVolume(track.volume);
+    setPan(track.pan);
+    setMuted(track.muted);
+    setSolo(track.soloed);
+  }, [track.volume, track.pan, track.muted, track.soloed]);
+
+  // Simulated VU meter (will be replaced with real engine data in Phase 1)
   useEffect(() => {
     const interval = setInterval(() => {
-      if (!muted && !solo) {
-        const newLevel = Math.random() * 0.8 + 0.1;
-        setLevel(newLevel);
-        if (newLevel > peak) {
-          setPeak(newLevel);
-          setTimeout(() => setPeak(0), 1500);
-        }
-      } else {
-        setLevel(0);
+      const newLevel = Math.random() * 0.7 + 0.1;
+      setLevel(newLevel);
+      if (newLevel > peak) {
+        setPeak(newLevel);
+        setTimeout(() => setPeak(0), 1500);
       }
-    }, 100);
+    }, 50); // 20Hz update rate
 
     return () => clearInterval(interval);
-  }, [muted, solo]);
+  }, [peak]);
 
   // Calculate dB value
   const volumeDB = volume === 0 ? -Infinity : Math.round(20 * Math.log10(volume));
@@ -255,7 +260,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
             max="1"
             step="0.01"
             value={pan}
-            onChange={(e) => setPan(parseFloat(e.target.value))}
+            onChange={(e) => {
+              const newPan = parseFloat(e.target.value);
+              setPan(newPan);
+              engineClient.sendCommand('track:setPan', { trackId: track.id, pan: newPan });
+            }}
             className="w-full h-1 bg-accent rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer"
           />
           <div
@@ -298,7 +307,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
               max="1"
               step="0.01"
               value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const newVolume = parseFloat(e.target.value);
+                setVolume(newVolume);
+                engineClient.sendCommand('track:setVolume', { trackId: track.id, volume: newVolume });
+              }}
               orient="vertical"
               className="absolute inset-0 w-full h-full opacity-0 cursor-ns-resize"
             />
@@ -323,7 +336,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setMuted(!muted)}
+          onClick={() => {
+            const newMuted = !muted;
+            setMuted(newMuted);
+            engineClient.sendCommand('track:setMute', { trackId: track.id, muted: newMuted });
+          }}
           className={`flex-1 px-3 py-1.5 text-xs font-bold rounded transition-all ${
             muted
               ? 'bg-yellow-500/80 text-yellow-950 shadow-lg shadow-yellow-500/50'
@@ -335,7 +352,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setSolo(!solo)}
+          onClick={() => {
+            const newSolo = !solo;
+            setSolo(newSolo);
+            engineClient.sendCommand('track:setSolo', { trackId: track.id, solo: newSolo });
+          }}
           className={`flex-1 px-3 py-1.5 text-xs font-bold rounded transition-all ${
             solo
               ? 'bg-primary/80 text-primary-foreground shadow-lg shadow-primary/50'

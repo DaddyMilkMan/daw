@@ -1,0 +1,107 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/events/transport.json",
+  "title": "Transport Events",
+  "description": "Events related to transport state changes",
+  "definitions": {
+    "TransportStateEvent": {
+      "type": "object",
+      "title": "Transport State Event",
+      "description": "Playback state changed",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "transport_state"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "isPlaying": {
+              "type": "boolean"
+            },
+            "isRecording": {
+              "type": "boolean"
+            },
+            "position": {
+              "type": "number",
+              "description": "Playhead position in beats",
+              "minimum": 0
+            },
+            "tempo": {
+              "type": "number",
+              "description": "Current tempo in BPM",
+              "minimum": 1,
+              "maximum": 999
+            },
+            "timeSignature": {
+              "type": "object",
+              "properties": {
+                "numerator": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 64
+                },
+                "denominator": {
+                  "type": "integer",
+                  "enum": [1, 2, 4, 8, 16, 32]
+                }
+              },
+              "required": ["numerator", "denominator"]
+            }
+          },
+          "required": ["isPlaying", "isRecording", "position", "tempo", "timeSignature"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    },
+    "PlayheadPositionEvent": {
+      "type": "object",
+      "title": "Playhead Position Event",
+      "description": "Playhead moved (emitted frequently during playback)",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "playhead_position"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "beat": {
+              "type": "number",
+              "description": "Position in beats",
+              "minimum": 0
+            },
+            "bar": {
+              "type": "integer",
+              "description": "Current bar number",
+              "minimum": 0
+            },
+            "beatInBar": {
+              "type": "integer",
+              "description": "Beat within current bar",
+              "minimum": 1
+            },
+            "sample": {
+              "type": "integer",
+              "description": "Position in samples",
+              "minimum": 0
+            }
+          },
+          "required": ["beat", "bar", "beatInBar", "sample"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    }
+  }
+}
