@@ -1,40 +1,56 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { AudioState } from './types/audio';
 import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
+import { engineClient } from './lib/engineClient';
+import { useStore, useProjectState, usePreferences } from './lib/store';
 import './App.css';
 
 function App() {
-  const [audioState, setAudioState] = useState<AudioState>({
-    tempo: 120,
-    timeSignature: { numerator: 4, denominator: 4 },
-    isPlaying: false,
-    currentBar: 0,
-    tracks: [],
-  });
-  const [isWingmanOpen, setIsWingmanOpen] = useState(false);
-  const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
+  // Use Zustand store instead of local state
+  const projectState = useProjectState();
+  const { wingmanOpen, wingmanPosition } = usePreferences();
+  const setWingmanOpen = useStore((state) => state.setWingmanOpen);
+  const setWingmanPosition = useStore((state) => state.setWingmanPosition);
+  const updateProjectState = useStore((state) => state.updateProjectState);
+  const setEngineConnected = useStore((state) => state.setEngineConnected);
+  const setEngineMode = useStore((state) => state.setEngineMode);
+
+  // Keep piano roll as local state for now (UI-only)
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
 
-    // Get initial audio state
-    window.electron.getAudioState().then((state) => {
-      console.log('📊 Initial audio state:', state);
-      setAudioState(state);
-    });
+    // Connect to engine and wire up event listeners
+    const initializeEngine = async () => {
+      try {
+        await engineClient.connect();
+        setEngineConnected(true);
+        setEngineMode(engineClient.getMode());
+        console.log('✅ Engine connected:', engineClient.getMode());
 
-    // Subscribe to audio state updates
-    const unsubscribe = window.electron.onAudioStateUpdate((state) => {
-      console.log('🔄 Audio state updated:', state);
-      setAudioState(state);
-    });
+        // Subscribe to engine events
+        const unsubscribe = engineClient.onEvent((event) => {
+          console.log('🔄 Engine event:', event.type, event.data);
+
+          if (event.type === 'state:updated' || event.type === 'state:initial') {
+            updateProjectState(event.data);
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('❌ Failed to connect to engine:', error);
+        setEngineConnected(false);
+      }
+    };
+
+    const unsubscribePromise = initializeEngine();
 
     // Global keyboard shortcuts
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
@@ -44,7 +60,12 @@ function App() {
       // Space: Play/Pause (only if not typing in an input)
       if (e.code === 'Space' && !isTypingInInput(e)) {
         e.preventDefault();
-        window.electron.playPause();
+        // Use engineClient instead of direct window.electron
+        if (projectState.isPlaying) {
+          engineClient.sendCommand('transport:pause');
+        } else {
+          engineClient.sendCommand('transport:play');
+        }
         console.log('⏯️ Play/Pause toggled');
       }
 
@@ -58,8 +79,8 @@ function App() {
           setPianoRollTrack(null);
           console.log('❌ Closed Piano Roll');
         }
-        if (isWingmanOpen) {
-          setIsWingmanOpen(false);
+        if (wingmanOpen) {
+          setWingmanOpen(false);
           console.log('❌ Closed Wingman');
         }
       }
@@ -88,7 +109,7 @@ function App() {
       // Ctrl/Cmd+W: Toggle Wingman
       if (cmdOrCtrl && e.key === 'w') {
         e.preventDefault();
-        setIsWingmanOpen(!isWingmanOpen);
+        setWingmanOpen(!wingmanOpen);
         console.log('🤖 Toggled Wingman');
       }
 
@@ -127,10 +148,15 @@ function App() {
     window.addEventListener('keydown', handleGlobalKeyDown);
 
     return () => {
-      unsubscribe();
+      unsubscribePromise?.then((unsubscribe) => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      });
+      engineClient.disconnect();
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, [pianoRollTrack, isWingmanOpen]);
+  }, [pianoRollTrack, wingmanOpen, projectState.isPlaying]);
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -164,8 +190,8 @@ function App() {
 
       {/* Transport Bar */}
       <TransportBar
-        audioState={audioState}
-        onOpenWingman={() => setIsWingmanOpen(true)}
+        audioState={projectState}
+        onOpenWingman={() => setWingmanOpen(true)}
       />
 
       {/* Main Content - Tri-Pane Layout */}
@@ -175,12 +201,12 @@ function App() {
 
         {/* Center Panel - Arrangement/Session View */}
         <CenterPanel
-          tracks={audioState.tracks}
+          tracks={projectState.tracks}
           onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
         />
 
         {/* Right Panel - Mixer/Inspector */}
-        <RightPanel tracks={audioState.tracks} />
+        <RightPanel tracks={projectState.tracks} />
       </div>
 
       {/* Bottom Panel - Editor (Piano Roll / Audio Editor) */}
@@ -195,8 +221,8 @@ function App() {
 
       {/* Wingman AI Sidebar */}
       <WingmanSidebar
-        isOpen={isWingmanOpen}
-        onClose={() => setIsWingmanOpen(false)}
+        isOpen={wingmanOpen}
+        onClose={() => setWingmanOpen(false)}
         position={wingmanPosition}
         onPositionChange={setWingmanPosition}
       />

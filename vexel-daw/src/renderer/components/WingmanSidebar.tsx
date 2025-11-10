@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, X, Mic, Loader2, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
+import { engineClient } from '@/lib/engineClient';
 
 interface Message {
   id: string;
@@ -58,8 +59,8 @@ export default function WingmanSidebar({ isOpen, onClose, position, onPositionCh
     setIsProcessing(true);
 
     // Simulate AI response with actions
-    setTimeout(() => {
-      const response = generateMockResponse(input);
+    setTimeout(async () => {
+      const response = await generateMockResponse(input);
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -70,13 +71,13 @@ export default function WingmanSidebar({ isOpen, onClose, position, onPositionCh
       setMessages((prev) => [...prev, aiMessage]);
       setIsProcessing(false);
 
-      // Execute mock DAW actions
+      // Execute DAW actions through engineClient
       if (response.dawActions) {
         response.dawActions.forEach((action: any) => {
           if (action.type === 'setTempo') {
-            window.electron.setTempo(action.value);
+            engineClient.sendCommand('transport:setTempo', { tempo: action.value });
           } else if (action.type === 'createTrack') {
-            window.electron.createTrack(action.name, action.trackType);
+            engineClient.sendCommand('track:create', { name: action.name, type: action.trackType });
           }
         });
       }
@@ -363,16 +364,21 @@ function QuickActionButton({ icon, label, onClick }: QuickActionButtonProps) {
   );
 }
 
-function generateMockResponse(input: string): {
+async function generateMockResponse(input: string): Promise<{
   message: string;
   actions?: Array<{ label: string; onClick: () => void }>;
   dawActions?: Array<any>;
-} {
+}> {
   const lowerInput = input.toLowerCase();
 
+  // Query project state if needed for context-aware responses
+  const projectState = await engineClient.requestProjectState();
+  const trackCount = projectState.audio.tracks.length;
+
   if (lowerInput.includes('drum') || lowerInput.includes('beat')) {
+    const trackNum = trackCount + 1;
     return {
-      message: "I'll create a trap beat for you!\n\n✓ Set tempo to 140 BPM\n✓ Created drum track\n✓ Generated kick pattern (beats 1 & 3)\n✓ Added snare (beats 2 & 4)\n✓ Hi-hat rolls with variations\n✓ 808 bass slides\n\nCheck Track 1 in the arrangement!",
+      message: `I'll create a trap beat for you!\n\nCurrent project: ${trackCount} track${trackCount !== 1 ? 's' : ''}, ${projectState.audio.tempo} BPM\n\n✓ Set tempo to 140 BPM\n✓ Created drum track (Track ${trackNum})\n✓ Generated kick pattern (beats 1 & 3)\n✓ Added snare (beats 2 & 4)\n✓ Hi-hat rolls with variations\n✓ 808 bass slides\n\nCheck Track ${trackNum} in the arrangement!`,
       actions: [
         { label: 'View in Piano Roll', onClick: () => console.log('Open piano roll') },
         { label: 'Adjust Pattern', onClick: () => console.log('Adjust') },

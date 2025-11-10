@@ -6,6 +6,7 @@ import { useState } from 'react';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
+import { engineClient } from '@/lib/engineClient';
 
 interface CenterPanelProps {
   tracks: Track[];
@@ -17,7 +18,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
 
   const handleCreateTrack = () => {
     const name = `Track ${tracks.length + 1}`;
-    window.electron.createTrack(name, 'midi');
+    engineClient.sendCommand('track:create', { name, type: 'midi' });
   };
 
   return (

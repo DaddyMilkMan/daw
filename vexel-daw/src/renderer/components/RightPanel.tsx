@@ -2,6 +2,7 @@ import { Track } from '@/types/audio';
 import { Volume2, PanelRight, Sliders, Plus, Minus, MoreHorizontal, Activity } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { engineClient } from '@/lib/engineClient';
 
 interface RightPanelProps {
   tracks: Track[];
@@ -255,7 +256,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
             max="1"
             step="0.01"
             value={pan}
-            onChange={(e) => setPan(parseFloat(e.target.value))}
+            onChange={(e) => {
+              const newPan = parseFloat(e.target.value);
+              setPan(newPan);
+              engineClient.sendCommand('track:setPan', { trackId: track.id, pan: newPan });
+            }}
             className="w-full h-1 bg-accent rounded-full appearance-none cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:cursor-pointer"
           />
           <div
@@ -298,7 +303,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
               max="1"
               step="0.01"
               value={volume}
-              onChange={(e) => setVolume(parseFloat(e.target.value))}
+              onChange={(e) => {
+                const newVolume = parseFloat(e.target.value);
+                setVolume(newVolume);
+                engineClient.sendCommand('track:setVolume', { trackId: track.id, volume: newVolume });
+              }}
               orient="vertical"
               className="absolute inset-0 w-full h-full opacity-0 cursor-ns-resize"
             />
@@ -323,7 +332,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setMuted(!muted)}
+          onClick={() => {
+            const newMuted = !muted;
+            setMuted(newMuted);
+            engineClient.sendCommand('track:setMute', { trackId: track.id, muted: newMuted });
+          }}
           className={`flex-1 px-3 py-1.5 text-xs font-bold rounded transition-all ${
             muted
               ? 'bg-yellow-500/80 text-yellow-950 shadow-lg shadow-yellow-500/50'
@@ -335,7 +348,11 @@ function ChannelStrip({ track, index }: ChannelStripProps) {
         <motion.button
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => setSolo(!solo)}
+          onClick={() => {
+            const newSolo = !solo;
+            setSolo(newSolo);
+            engineClient.sendCommand('track:setSolo', { trackId: track.id, solo: newSolo });
+          }}
           className={`flex-1 px-3 py-1.5 text-xs font-bold rounded transition-all ${
             solo
               ? 'bg-primary/80 text-primary-foreground shadow-lg shadow-primary/50'

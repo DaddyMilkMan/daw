@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { AudioState } from '@/types/audio';
 import { formatTime } from '@/lib/utils';
 import { useState, useEffect } from 'react';
+import { engineClient } from '@/lib/engineClient';
 
 interface TransportBarProps {
   audioState: AudioState;
@@ -31,14 +32,14 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
   const handlePlay = () => {
     if (audioState.isPlaying) {
-      window.electron.transportPause();
+      engineClient.sendCommand('transport:pause');
     } else {
-      window.electron.transportPlay();
+      engineClient.sendCommand('transport:play');
     }
   };
 
   const handleStop = () => {
-    window.electron.transportStop();
+    engineClient.sendCommand('transport:stop');
   };
 
   const handleTempoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,7 +49,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
   const handleTempoBlur = () => {
     if (tempo !== audioState.tempo && tempo >= 20 && tempo <= 999) {
-      window.electron.setTempo(tempo);
+      engineClient.sendCommand('transport:setTempo', { tempo });
     } else {
       setTempo(audioState.tempo);
     }
@@ -69,7 +70,7 @@ export default function TransportBar({ audioState, onOpenWingman }: TransportBar
 
       if (newTempo >= 20 && newTempo <= 999) {
         setTempo(newTempo);
-        window.electron.setTempo(newTempo);
+        engineClient.sendCommand('transport:setTempo', { tempo: newTempo });
       }
     }
 
