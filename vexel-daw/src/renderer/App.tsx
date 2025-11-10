@@ -25,6 +25,7 @@ function App() {
   // Keep piano roll as local state for now (UI-only)
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
   const [notifications, setNotifications] = useState<NotificationProps[]>([]);
+  const [showKeyboardShortcuts, setShowKeyboardShortcuts] = useState(false);
 
   // Notification helpers
   const showNotification = (type: NotificationProps['type'], message: string) => {
@@ -231,7 +232,7 @@ function App() {
       if (cmdOrCtrl && e.key === '/') {
         e.preventDefault();
         console.log('⌨️ Show keyboard shortcuts');
-        // TODO: Show keyboard shortcuts modal
+        setShowKeyboardShortcuts(true);
       }
 
       // Ctrl/Cmd+Z: Undo
@@ -349,6 +350,79 @@ function App() {
 
       {/* Notifications */}
       <NotificationContainer notifications={notifications} />
+
+      {/* Keyboard Shortcuts Modal */}
+      <AnimatePresence>
+        {showKeyboardShortcuts && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowKeyboardShortcuts(false)}
+          >
+            <div
+              className="bg-card border border-border rounded-lg shadow-2xl max-w-2xl w-full m-4 p-6 max-h-[80vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <h2 className="text-2xl font-bold mb-4">Keyboard Shortcuts</h2>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Transport</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Space</kbd> Play/Pause</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+Enter</kbd> Stop</div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Project</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Ctrl/Cmd+N</kbd> New Project</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+O</kbd> Open Project</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+S</kbd> Save Project</div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Tracks</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Ctrl/Cmd+T</kbd> Create Track</div>
+                    <div><kbd className="kbd">F2</kbd> Rename Track</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+D</kbd> Duplicate Track</div>
+                    <div><kbd className="kbd">Del</kbd> Delete Track</div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Clips</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Ctrl/Cmd+C</kbd> Copy</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+V</kbd> Paste</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+X</kbd> Cut</div>
+                    <div><kbd className="kbd">L</kbd> Lock/Unlock Clip</div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Editing</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Ctrl/Cmd+Z</kbd> Undo</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+Shift+Z</kbd> Redo</div>
+                    <div><kbd className="kbd">Ctrl/Cmd+A</kbd> Select All</div>
+                    <div><kbd className="kbd">Escape</kbd> Deselect All</div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Wingman AI</h3>
+                  <div className="space-y-1 text-sm">
+                    <div><kbd className="kbd">Ctrl/Cmd+Shift+W</kbd> Toggle Wingman</div>
+                  </div>
+                </div>
+              </div>
+              <button
+                className="mt-6 w-full bg-primary text-primary-foreground py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                onClick={() => setShowKeyboardShortcuts(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

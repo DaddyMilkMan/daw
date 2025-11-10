@@ -146,8 +146,10 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: AudioTrack[]; on
         icon: <Edit3 className="h-4 w-4" />,
         shortcut: 'F2',
         onClick: () => {
-          console.log('Rename track:', trackId);
-          // TODO: Implement rename
+          const newName = prompt('Enter new track name:', track.name);
+          if (newName && newName !== track.name) {
+            engineClient.sendCommand('track:rename', { trackId, name: newName });
+          }
         },
       },
       {
@@ -155,24 +157,37 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: AudioTrack[]; on
         icon: <Copy className="h-4 w-4" />,
         shortcut: 'Ctrl+D',
         onClick: () => {
-          console.log('Duplicate track:', trackId);
-          // TODO: Implement duplicate
+          const newTrackName = `${track.name} Copy`;
+          engineClient.sendCommand('track:create', {
+            name: newTrackName,
+            type: track.type
+          });
+          // TODO: Copy track settings (volume, pan, effects, etc.)
         },
       },
       {
         label: 'Change Color',
         icon: <Palette className="h-4 w-4" />,
         onClick: () => {
-          console.log('Change color:', trackId);
-          // TODO: Implement color picker
+          const colors = ['#e11d48', '#ea580c', '#ca8a04', '#65a30d', '#059669', '#0891b2', '#2563eb', '#7c3aed', '#c026d3'];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          engineClient.sendCommand('track:setColor', { trackId, color });
+          // TODO: Implement proper color picker UI
         },
       },
       {
         label: 'Group Tracks',
         icon: <FolderTree className="h-4 w-4" />,
         onClick: () => {
-          console.log('Group tracks:', trackId);
-          // TODO: Implement grouping
+          const groupName = prompt('Enter group name:', 'Group');
+          if (groupName) {
+            // Create a group folder track
+            engineClient.sendCommand('track:create', {
+              name: groupName,
+              type: 'group'
+            });
+            // TODO: Implement track grouping/foldering system
+          }
         },
       },
       { divider: true, label: '', onClick: () => {} },
@@ -182,8 +197,9 @@ function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: AudioTrack[]; on
         shortcut: 'Del',
         danger: true,
         onClick: () => {
-          console.log('Delete track:', trackId);
-          // TODO: Implement delete
+          if (confirm(`Delete track "${track.name}"?`)) {
+            engineClient.sendCommand('track:delete', { trackId });
+          }
         },
       },
     ];

@@ -488,13 +488,22 @@ class WingmanBridgeService {
         return { tempo: audioState.tempo };
 
       case 'SET_LOOP':
-        // TODO: Implement loop functionality in audioState
-        this.sendEvent('LOOP_CHANGED', payload);
-        return { success: true };
+        audioState.loop = {
+          enabled: payload.enabled !== undefined ? payload.enabled : audioState.loop?.enabled || false,
+          start: payload.start !== undefined ? payload.start : audioState.loop?.start || 0,
+          end: payload.end !== undefined ? payload.end : audioState.loop?.end || 4,
+        };
+        this.broadcastAudioState();
+        this.sendEvent('LOOP_CHANGED', audioState.loop);
+        return { loop: audioState.loop };
 
       case 'SET_METRONOME':
-        // TODO: Implement metronome functionality
-        return { success: true };
+        audioState.metronome = {
+          enabled: payload.enabled !== undefined ? payload.enabled : audioState.metronome?.enabled || false,
+        };
+        this.broadcastAudioState();
+        this.sendEvent('METRONOME_CHANGED', audioState.metronome);
+        return { metronome: audioState.metronome };
 
       // Track Commands
       case 'CREATE_TRACK':
