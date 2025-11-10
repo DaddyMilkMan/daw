@@ -1,3 +1,39 @@
+export interface ProjectData {
+  clips: any[];
+  scenes: any[];
+  automation: any[];
+  markers: any[];
+  metadata: {
+    name: string;
+    createdAt: string;
+    modifiedAt: string;
+    author?: string;
+    description?: string;
+  };
+}
+
+export interface SaveProjectResult {
+  success: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
+  error?: string;
+}
+
+export interface LoadProjectResult {
+  success: boolean;
+  canceled?: boolean;
+  filePath?: string;
+  fileName?: string;
+  data?: any;
+  error?: string;
+}
+
+export interface ProjectInfo {
+  currentPath: string | null;
+  metadata: ProjectData['metadata'];
+}
+
 export interface ElectronAPI {
   transportPlay: () => void;
   transportPause: () => void;
@@ -24,6 +60,13 @@ export interface ElectronAPI {
     onInsertClip: (callback: (data: any) => void) => () => void;
     onLaunchClip: (callback: (data: any) => void) => () => void;
   };
+
+  // Project operations
+  onProjectDataUpdate: (callback: (data: ProjectData) => void) => () => void;
+  saveProject: (filePath?: string, data?: any) => Promise<SaveProjectResult>;
+  loadProject: (filePath?: string) => Promise<LoadProjectResult>;
+  newProject: () => Promise<{ success: boolean; data?: any; error?: string }>;
+  getProjectInfo: () => Promise<ProjectInfo>;
 }
 
 declare global {
