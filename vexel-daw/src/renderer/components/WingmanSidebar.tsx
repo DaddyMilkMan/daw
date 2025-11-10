@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Sparkles, X, Mic, Loader2, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from './ui/button';
-import { CommandParser } from '../lib/CommandParser';
+import { engineClient } from '@/lib/engineClient';
 
 interface Message {
   id: string;
@@ -59,10 +59,9 @@ export default function WingmanSidebar({ isOpen, onClose, position, onPositionCh
     setInput('');
     setIsProcessing(true);
 
-    // Parse and execute command using CommandParser
-    setTimeout(() => {
-      const response = CommandParser.parseAndExecute(userInput);
-
+    // Simulate AI response with actions
+    setTimeout(async () => {
+      const response = await generateMockResponse(userInput);
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
@@ -73,25 +72,13 @@ export default function WingmanSidebar({ isOpen, onClose, position, onPositionCh
       setMessages((prev) => [...prev, aiMessage]);
       setIsProcessing(false);
 
-      // Execute DAW actions
-      if (response.success && response.dawActions) {
+      // Execute DAW actions through engineClient
+      if (response.dawActions) {
         response.dawActions.forEach((action: any) => {
-          try {
-            if (action.type === 'setTempo') {
-              window.electron.setTempo(action.value);
-            } else if (action.type === 'createTrack') {
-              window.electron.createTrack(action.name, action.trackType);
-            } else if (action.type === 'transportPlay') {
-              window.electron.transportPlay();
-            } else if (action.type === 'transportPause') {
-              window.electron.transportPause();
-            } else if (action.type === 'transportStop') {
-              window.electron.transportStop();
-            }
-            // Note: Other actions like generateChords, generateDrums, etc.
-            // are not yet implemented in the Electron API but are prepared for future integration
-          } catch (error) {
-            console.error('Error executing DAW action:', action.type, error);
+          if (action.type === 'setTempo') {
+            engineClient.sendCommand('transport:setTempo', { tempo: action.value });
+          } else if (action.type === 'createTrack') {
+            engineClient.sendCommand('track:create', { name: action.name, type: action.trackType });
           }
         });
       }
@@ -378,4 +365,64 @@ function QuickActionButton({ icon, label, onClick }: QuickActionButtonProps) {
   );
 }
 
-// Old generateMockResponse function removed - now using CommandParser
+async function generateMockResponse(input: string): Promise<{
+  message: string;
+  actions?: Array<{ label: string; onClick: () => void }>;
+  dawActions?: Array<any>;
+}> {
+  const lowerInput = input.toLowerCase();
+
+  // Query project state if needed for context-aware responses
+  const projectState = await engineClient.requestProjectState();
+  const trackCount = projectState.audio.tracks.length;
+
+  if (lowerInput.includes('drum') || lowerInput.includes('beat')) {
+    const trackNum = trackCount + 1;
+    return {
+      message: `I'll create a trap beat for you!\n\nCurrent project: ${trackCount} track${trackCount !== 1 ? 's' : ''}, ${projectState.audio.tempo} BPM\n\n✓ Set tempo to 140 BPM\n✓ Created drum track (Track ${trackNum})\n✓ Generated kick pattern (beats 1 & 3)\n✓ Added snare (beats 2 & 4)\n✓ Hi-hat rolls with variations\n✓ 808 bass slides\n\nCheck Track ${trackNum} in the arrangement!`,
+      actions: [
+        { label: 'View in Piano Roll', onClick: () => console.log('Open piano roll') },
+        { label: 'Adjust Pattern', onClick: () => console.log('Adjust') },
+      ],
+      dawActions: [
+        { type: 'setTempo', value: 140 },
+        { type: 'createTrack', name: 'Trap Drums', trackType: 'midi' },
+      ],
+    };
+  }
+
+  if (lowerInput.includes('bass')) {
+    return {
+      message: "Adding a bass line in C minor!\n\n✓ Created bass track\n✓ Root notes on strong beats\n✓ Octave jumps for movement\n✓ Slides between key notes\n✓ Follows your chord progression\n\nPlaced on Track 2. Ready to edit!",
+      actions: [
+        { label: 'Edit Bass Line', onClick: () => console.log('Edit bass') },
+      ],
+      dawActions: [
+        { type: 'createTrack', name: 'Bass', trackType: 'midi' },
+      ],
+    };
+  }
+
+  if (lowerInput.includes('chord')) {
+    return {
+      message: "For a chill vibe, try this progression:\n\nCm → Ab → Eb → Bb\n(i - VI - III - VII in C minor)\n\nThis progression is perfect for:\n• Lo-fi hip hop\n• R&B\n• Neo-soul\n• Chill beats\n\nWant me to generate it?",
+      actions: [
+        { label: 'Generate Chords', onClick: () => console.log('Generate chords') },
+        { label: 'Try Different Key', onClick: () => console.log('Different key') },
+      ],
+    };
+  }
+
+  if (lowerInput.includes('mix')) {
+    return {
+      message: "Analyzing your mix...\n\n✓ Balanced levels for clarity\n✓ Applied EQ (cut mud, boost presence)\n✓ Compression for consistency\n✓ Stereo panning for width\n✓ Headroom at -6dB\n\nYour mix is ready! Check the mixer for details.",
+      actions: [
+        { label: 'View Mixer', onClick: () => console.log('View mixer') },
+      ],
+    };
+  }
+
+  return {
+    message: "I can help you with:\n\n🥁 Create drum patterns\n🎹 Generate MIDI melodies\n🎸 Suggest chord progressions\n🎚️ Auto-mix your tracks\n⚡ Control transport & tempo\n\nTry: \"Create drums\" or \"Suggest chords\"",
+  };
+}
