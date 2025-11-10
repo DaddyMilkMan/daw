@@ -40,7 +40,7 @@ This document provides a comprehensive checklist for packaging and licensing Zen
 > — [JUCE Forum: JUCE 8 EULA](https://forum.juce.com/t/archived-juce-8-eula/60947)
 
 **JUCE 8 EULA (2024):**
-> "Upon the launch of JUCE 8 all JUCE 7 subscriptions were automatically upgraded to JUCE 8 subscriptions and became subject to the JUCE 8 End User Licence Agreement. The JUCE 8 EULA was published on May 20th, 2024."
+> "The JUCE 8 End User Licence Agreement was published on May 20th, 2024. All JUCE subscriptions are subject to the JUCE 8 EULA."
 > — [JUCE Forum: JUCE 8 EULA](https://forum.juce.com/t/archived-juce-8-eula/60947)
 
 #### Checklist
