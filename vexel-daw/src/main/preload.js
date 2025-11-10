@@ -100,4 +100,21 @@ contextBridge.exposeInMainWorld('electron', {
       };
     },
   },
+
+  // Listen for project data updates
+  onProjectDataUpdate: (callback) => {
+    const subscription = (event, data) => callback(data);
+    ipcRenderer.on('project-data-update', subscription);
+
+    // Return unsubscribe function
+    return () => {
+      ipcRenderer.removeListener('project-data-update', subscription);
+    };
+  },
+
+  // Project file operations
+  saveProject: (filePath, data) => ipcRenderer.invoke('save-project', { filePath, data }),
+  loadProject: (filePath) => ipcRenderer.invoke('load-project', { filePath }),
+  newProject: () => ipcRenderer.invoke('new-project'),
+  getProjectInfo: () => ipcRenderer.invoke('get-project-info'),
 });

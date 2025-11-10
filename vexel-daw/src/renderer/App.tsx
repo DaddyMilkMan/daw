@@ -6,6 +6,8 @@ import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
+import FileMenu from './components/FileMenu';
+import { NotificationContainer, NotificationProps } from './components/Notification';
 import { engineClient } from './lib/engineClient';
 import { useStore, useProjectState, usePreferences } from './lib/store';
 import './App.css';
@@ -22,6 +24,73 @@ function App() {
 
   // Keep piano roll as local state for now (UI-only)
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
+  const [notifications, setNotifications] = useState<NotificationProps[]>([]);
+
+  // Notification helpers
+  const showNotification = (type: NotificationProps['type'], message: string) => {
+    const id = Date.now().toString();
+    const notification: NotificationProps = {
+      id,
+      type,
+      message,
+      onClose: removeNotification,
+    };
+    setNotifications((prev) => [...prev, notification]);
+  };
+
+  const removeNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  // Project handlers
+  const handleNewProject = useCallback(async () => {
+    try {
+      const result = await window.electron.newProject();
+      if (result.success) {
+        showNotification('success', 'New project created');
+        console.log('🆕 New project created');
+      } else {
+        showNotification('error', `Failed to create new project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to create new project');
+      console.error('Error creating new project:', error);
+    }
+  }, []);
+
+  const handleSaveProject = useCallback(async () => {
+    try {
+      const result = await window.electron.saveProject();
+      if (result.success && !result.canceled) {
+        showNotification('success', `Project saved: ${result.fileName}`);
+        console.log(`💾 Project saved: ${result.filePath}`);
+      } else if (result.canceled) {
+        console.log('💾 Save canceled');
+      } else {
+        showNotification('error', `Failed to save project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to save project');
+      console.error('Error saving project:', error);
+    }
+  }, []);
+
+  const handleLoadProject = useCallback(async () => {
+    try {
+      const result = await window.electron.loadProject();
+      if (result.success && !result.canceled) {
+        showNotification('success', `Project loaded: ${result.fileName}`);
+        console.log(`📂 Project loaded: ${result.filePath}`);
+      } else if (result.canceled) {
+        console.log('📂 Load canceled');
+      } else {
+        showNotification('error', `Failed to load project: ${result.error}`);
+      }
+    } catch (error) {
+      showNotification('error', 'Failed to load project');
+      console.error('Error loading project:', error);
+    }
+  }, []);
 
   // Store latest state in refs for stable access (Pattern from web search)
   const pianoRollTrackRef = useRef(pianoRollTrack);
@@ -136,22 +205,19 @@ function App() {
       // Ctrl/Cmd+S: Save project
       if (cmdOrCtrl && e.key === 's') {
         e.preventDefault();
-        console.log('💾 Save project');
-        engineClient.sendCommand('project:save');
+        handleSaveProject();
       }
 
       // Ctrl/Cmd+N: New project
       if (cmdOrCtrl && e.key === 'n') {
         e.preventDefault();
-        console.log('🆕 New project');
-        engineClient.sendCommand('project:new');
+        handleNewProject();
       }
 
       // Ctrl/Cmd+O: Open project
       if (cmdOrCtrl && e.key === 'o') {
         e.preventDefault();
-        console.log('📂 Open project');
-        engineClient.sendCommand('project:open');
+        handleLoadProject();
       }
 
       // Ctrl/Cmd+W: Toggle Wingman
@@ -189,15 +255,24 @@ function App() {
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
     };
-  }, []); // Empty deps - keyboard handler can read refs for latest values
+  }, [handleNewProject, handleSaveProject, handleLoadProject]); // Include handler deps for keyboard shortcuts
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
       {/* Title Bar */}
       <div className="h-8 bg-black/40 flex items-center justify-between px-4 select-none drag-region">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold">Vexel DAW</span>
-          <span className="text-xs text-muted-foreground">v0.1.0</span>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold">Vexel DAW</span>
+            <span className="text-xs text-muted-foreground">v0.1.0</span>
+          </div>
+          <div className="no-drag">
+            <FileMenu
+              onNewProject={handleNewProject}
+              onSaveProject={handleSaveProject}
+              onLoadProject={handleLoadProject}
+            />
+          </div>
         </div>
         <div className="flex items-center gap-2 no-drag">
           <button
@@ -271,6 +346,9 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Notifications */}
+      <NotificationContainer notifications={notifications} />
     </div>
   );
 }
