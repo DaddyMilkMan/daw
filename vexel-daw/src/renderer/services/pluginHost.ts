@@ -157,7 +157,12 @@ export class PluginHostService {
     }
 
     // Connect: inputNode -> wamNode.audioNode -> outputNode
-    inputNode.disconnect();
+    // Safely disconnect (Web Audio API throws InvalidAccessError if no connections exist)
+    try {
+      inputNode.disconnect();
+    } catch (e) {
+      // No connections exist, which is fine
+    }
     inputNode.connect(instance.wamNode.audioNode);
     instance.wamNode.audioNode.connect(outputNode);
 
@@ -172,8 +177,12 @@ export class PluginHostService {
       return;
     }
 
-    // Disconnect plugin
-    instance.wamNode.audioNode.disconnect();
+    // Disconnect plugin (safely handle case where no connections exist)
+    try {
+      instance.wamNode.audioNode.disconnect();
+    } catch (e) {
+      // No connections exist, which is fine
+    }
 
     // Reconnect bypassed chain
     if (reconnect.length >= 2) {

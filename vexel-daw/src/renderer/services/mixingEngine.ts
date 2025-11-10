@@ -178,12 +178,14 @@ export class MixingEngine {
     const channel = this.trackChannels.get(trackId);
     if (!channel) return;
 
-    // Disconnect all nodes
-    channel.inputGain.disconnect();
-    channel.volumeGain.disconnect();
-    channel.panner.disconnect();
-    channel.mute.disconnect();
-    channel.sendGains.forEach((gain) => gain.disconnect());
+    // Disconnect all nodes (Web Audio API throws if no connections exist)
+    try { channel.inputGain.disconnect(); } catch (e) { /* ignore */ }
+    try { channel.volumeGain.disconnect(); } catch (e) { /* ignore */ }
+    try { channel.panner.disconnect(); } catch (e) { /* ignore */ }
+    try { channel.mute.disconnect(); } catch (e) { /* ignore */ }
+    channel.sendGains.forEach((gain) => {
+      try { gain.disconnect(); } catch (e) { /* ignore */ }
+    });
 
     // Remove from map
     this.trackChannels.delete(trackId);
@@ -372,10 +374,20 @@ export class MixingEngine {
     const context = useAudioStore.getState().audioContext.context;
     if (!context) return;
 
-    // Disconnect current chain
-    channel.inputGain.disconnect();
+    // Disconnect current chain (Web Audio API throws if no connections exist)
+    try {
+      channel.inputGain.disconnect();
+    } catch (e) {
+      // No connections, which is fine
+    }
     if (channel.insertNodes.length > 0) {
-      channel.insertNodes.forEach((node) => node.disconnect());
+      channel.insertNodes.forEach((node) => {
+        try {
+          node.disconnect();
+        } catch (e) {
+          // No connections, which is fine
+        }
+      });
     }
 
     // Insert effect at position
@@ -402,10 +414,20 @@ export class MixingEngine {
     const context = useAudioStore.getState().audioContext.context;
     if (!context) return;
 
-    // Disconnect current chain
-    channel.inputGain.disconnect();
+    // Disconnect current chain (Web Audio API throws if no connections exist)
+    try {
+      channel.inputGain.disconnect();
+    } catch (e) {
+      // No connections, which is fine
+    }
     if (channel.insertNodes.length > 0) {
-      channel.insertNodes.forEach((node) => node.disconnect());
+      channel.insertNodes.forEach((node) => {
+        try {
+          node.disconnect();
+        } catch (e) {
+          // No connections, which is fine
+        }
+      });
     }
 
     // Remove effect

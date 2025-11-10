@@ -226,8 +226,9 @@ export class AudioEngine {
     // Auto-cleanup when finished
     source.onended = () => {
       this.activeSourceNodes.delete(clip.id);
-      gainNode.disconnect();
-      panNode.disconnect();
+      // Safely disconnect (Web Audio API throws if no connections exist)
+      try { gainNode.disconnect(); } catch (e) { /* ignore */ }
+      try { panNode.disconnect(); } catch (e) { /* ignore */ }
     };
   }
 

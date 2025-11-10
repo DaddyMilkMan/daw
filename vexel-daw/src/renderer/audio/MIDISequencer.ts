@@ -113,7 +113,12 @@ export class SimpleSynth {
    */
   dispose() {
     this.allNotesOff();
-    this.masterGain.disconnect();
+    // Safely disconnect (Web Audio API throws if no connections exist)
+    try {
+      this.masterGain.disconnect();
+    } catch (e) {
+      // No connections, which is fine
+    }
   }
 }
 
