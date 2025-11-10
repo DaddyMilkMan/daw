@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/events/project.json",
+  "title": "Project Events",
+  "description": "Events related to project state",
+  "definitions": {
+    "ProjectStateEvent": {
+      "type": "object",
+      "title": "Project State Event",
+      "description": "Full project state snapshot",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "project_state"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "project": {
+              "type": "object",
+              "description": "Full Project object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "version": {
+                  "type": "string",
+                  "pattern": "^\\d+\\.\\d+\\.\\d+$"
+                },
+                "sampleRate": {
+                  "type": "integer",
+                  "enum": [44100, 48000, 88200, 96000, 176400, 192000]
+                },
+                "bitDepth": {
+                  "type": "integer",
+                  "enum": [16, 24, 32]
+                }
+              },
+              "required": ["id", "name", "version", "sampleRate", "bitDepth"]
+            }
+          },
+          "required": ["project"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/events/plugin.json",
+  "title": "Plugin Events",
+  "description": "Events related to plugin state changes",
+  "definitions": {
+    "PluginInsertedEvent": {
+      "type": "object",
+      "title": "Plugin Inserted Event",
+      "description": "Plugin added to track",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "plugin_inserted"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "pluginSlot": {
+              "type": "object",
+              "description": "Full PluginSlot object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "pluginId": {
+                  "type": "string"
+                },
+                "pluginName": {
+                  "type": "string"
+                },
+                "trackId": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                }
+              },
+              "required": ["id", "pluginId", "pluginName"]
+            }
+          },
+          "required": ["pluginSlot"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    },
+    "PluginParamChangedEvent": {
+      "type": "object",
+      "title": "Plugin Parameter Changed Event",
+      "description": "Plugin parameter value changed",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "plugin_param_changed"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "pluginSlotId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "parameterId": {
+              "type": "string"
+            },
+            "value": {
+              "type": "number",
+              "minimum": 0.0,
+              "maximum": 1.0
+            },
+            "displayValue": {
+              "type": "string",
+              "description": "Human-readable parameter value"
+            }
+          },
+          "required": ["pluginSlotId", "parameterId", "value"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    },
+    "PluginRemovedEvent": {
+      "type": "object",
+      "title": "Plugin Removed Event",
+      "description": "Plugin removed from track",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "plugin_removed"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "pluginSlotId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "trackId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          "required": ["pluginSlotId", "trackId"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    }
+  }
+}
