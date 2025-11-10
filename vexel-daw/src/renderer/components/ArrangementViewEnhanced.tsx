@@ -6,12 +6,14 @@ import { Track } from '../types/audio';
 import { useClipStore } from '../store/clipStore';
 import { useAudioFileLoader } from '../hooks/useAudioFileLoader';
 import { useAudioFileDrop } from '../hooks/useAudioFileDrop';
+import { useAudioStore } from '../stores/audioStore';
 import { audioEngine } from '../lib/audioEngine';
 import AudioClipComponent from './AudioClipComponent';
 import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane } from './AutomationLane';
 import { createAudioClip, beatsFromSeconds } from '../types/clip';
+import { ColorPickerDialog, RenameDialog, DeleteConfirmDialog } from './TrackManagement';
 import {
   ChevronDown,
   ChevronRight,
@@ -30,6 +32,7 @@ import {
   Palette,
   FileAudio,
   Loader2,
+  FolderTree,
 } from 'lucide-react';
 import { Button } from './ui/button';
 
@@ -67,6 +70,7 @@ export default function ArrangementViewEnhanced({
   } = useClipStore();
 
   const { loadAudioFile, isLoading, progress } = useAudioFileLoader();
+  const { addTrack, removeTrack, updateTrack } = useAudioStore();
 
   const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
   const [expandedAutomation, setExpandedAutomation] = useState<Set<string>>(new Set());
@@ -78,6 +82,11 @@ export default function ArrangementViewEnhanced({
     id: string;
   } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+
+  // Track management dialogs
+  const [renameDialog, setRenameDialog] = useState<{ trackId: string; currentName: string } | null>(null);
+  const [colorPickerDialog, setColorPickerDialog] = useState<{ trackId: string; currentColor: string; trackName: string } | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{ trackId: string; trackName: string } | null>(null);
 
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -318,6 +327,79 @@ export default function ArrangementViewEnhanced({
         onClick: () => {
           selectClip(clipId);
           deleteSelectedClips();
+        },
+      },
+    ];
+  };
+
+  // Track context menu items
+  const getTrackContextMenuItems = (trackId: string): ContextMenuItem[] => {
+    const track = tracks.find((t) => t.id === trackId);
+    if (!track) return [];
+
+    return [
+      {
+        label: 'Rename Track',
+        icon: <Edit3 className="h-4 w-4" />,
+        shortcut: 'F2',
+        onClick: () => {
+          setContextMenu(null);
+          setRenameDialog({ trackId, currentName: track.name });
+        },
+      },
+      {
+        label: 'Duplicate Track',
+        icon: <Copy className="h-4 w-4" />,
+        shortcut: 'Ctrl+D',
+        onClick: () => {
+          // Duplicate track with all its properties
+          const newTrackId = addTrack(track.type, `${track.name} (Copy)`);
+          updateTrack(newTrackId, {
+            volume: track.volume,
+            pan: track.pan,
+            color: track.color,
+            muted: false,
+            solo: false,
+          });
+          // Copy clips (if any)
+          const trackClips = clips.filter((c) => c.trackId === trackId);
+          trackClips.forEach((clip) => {
+            const newClip = { ...clip, id: `${clip.id}-copy`, trackId: newTrackId };
+            addClip(newClip);
+          });
+        },
+      },
+      {
+        label: 'Change Color',
+        icon: <Palette className="h-4 w-4" />,
+        onClick: () => {
+          setContextMenu(null);
+          setColorPickerDialog({
+            trackId,
+            currentColor: track.color || '#3b82f6',
+            trackName: track.name,
+          });
+        },
+      },
+      {
+        label: 'Group Tracks',
+        icon: <FolderTree className="h-4 w-4" />,
+        onClick: () => {
+          // TODO: Implement track grouping
+          console.log('Group tracks:', trackId);
+          // For now, just show a message
+          alert('Track grouping will be implemented in a future update');
+        },
+      },
+      { divider: true, label: '', onClick: () => {} },
+      {
+        label: 'Delete Track',
+        icon: <Trash2 className="h-4 w-4" />,
+        shortcut: 'Del',
+        danger: true,
+        onClick: () => {
+          setContextMenu(null);
+          setDeleteDialog({ trackId, trackName: track.name });
         },
       },
     ];
@@ -566,12 +648,47 @@ export default function ArrangementViewEnhanced({
             items={
               contextMenu.type === 'clip'
                 ? getClipContextMenuItems(contextMenu.id)
-                : []
+                : getTrackContextMenuItems(contextMenu.id)
             }
             onClose={() => setContextMenu(null)}
           />
         )}
       </AnimatePresence>
+
+      {/* Track Management Dialogs */}
+      <RenameDialog
+        isOpen={!!renameDialog}
+        currentName={renameDialog?.currentName || ''}
+        onClose={() => setRenameDialog(null)}
+        onRename={(newName) => {
+          if (renameDialog) {
+            updateTrack(renameDialog.trackId, { name: newName });
+          }
+        }}
+      />
+
+      <ColorPickerDialog
+        isOpen={!!colorPickerDialog}
+        currentColor={colorPickerDialog?.currentColor || '#3b82f6'}
+        trackName={colorPickerDialog?.trackName || ''}
+        onClose={() => setColorPickerDialog(null)}
+        onColorChange={(color) => {
+          if (colorPickerDialog) {
+            updateTrack(colorPickerDialog.trackId, { color });
+          }
+        }}
+      />
+
+      <DeleteConfirmDialog
+        isOpen={!!deleteDialog}
+        trackName={deleteDialog?.trackName || ''}
+        onClose={() => setDeleteDialog(null)}
+        onConfirm={() => {
+          if (deleteDialog) {
+            removeTrack(deleteDialog.trackId);
+          }
+        }}
+      />
     </motion.div>
   );
 }
