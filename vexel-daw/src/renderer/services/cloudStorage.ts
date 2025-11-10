@@ -22,6 +22,7 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
+import { S3Client, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 
 export type CloudProvider = 's3' | 'google-drive' | 'local';
 
@@ -450,10 +451,94 @@ export class CloudStorageService {
   private async downloadFromS3(projectId: string): Promise<{ data: Blob; audioFiles: { name: string; blob: Blob }[] }> {
     console.log('Downloading from S3...');
 
-    // Placeholder for AWS SDK integration
-    // Implementation would use: S3Client.send(new GetObjectCommand(...))
+    if (!this.config?.credentials) {
+      throw new Error('S3 credentials not configured');
+    }
 
-    throw new Error('S3 download not implemented');
+    const { accessKeyId, secretAccessKey, region, bucket } = this.config.credentials;
+
+    if (!accessKeyId || !secretAccessKey || !region || !bucket) {
+      throw new Error('Missing S3 credentials');
+    }
+
+    try {
+      // Initialize S3 client
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+
+      // Download project file
+      const projectKey = `projects/${projectId}.json`;
+      console.log(`Downloading project from S3: ${bucket}/${projectKey}`);
+
+      const command = new GetObjectCommand({
+        Bucket: bucket,
+        Key: projectKey,
+      });
+
+      const response = await s3Client.send(command);
+
+      // Convert stream to blob
+      const projectData = await this.streamToBlob(response.Body as ReadableStream);
+
+      console.log('✅ Project downloaded from S3');
+
+      // Download associated audio files (if any)
+      // This would need to be enhanced based on project structure
+      const audioFiles: { name: string; blob: Blob }[] = [];
+
+      return {
+        data: projectData,
+        audioFiles,
+      };
+    } catch (error) {
+      console.error('❌ S3 download failed:', error);
+      throw new Error(`S3 download failed: ${error}`);
+    }
+  }
+
+  /**
+   * Convert ReadableStream to Blob
+   */
+  private async streamToBlob(stream: ReadableStream | Blob | Uint8Array | any): Promise<Blob> {
+    // Handle different response types
+    if (stream instanceof Blob) {
+      return stream;
+    }
+
+    if (stream instanceof Uint8Array) {
+      return new Blob([stream]);
+    }
+
+    // Handle ReadableStream (browser)
+    if (stream && typeof stream.getReader === 'function') {
+      const reader = stream.getReader();
+      const chunks: Uint8Array[] = [];
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+      }
+
+      return new Blob(chunks);
+    }
+
+    // Handle Node.js stream
+    if (stream && typeof stream.on === 'function') {
+      return new Promise((resolve, reject) => {
+        const chunks: Uint8Array[] = [];
+        stream.on('data', (chunk: Uint8Array) => chunks.push(chunk));
+        stream.on('error', reject);
+        stream.on('end', () => resolve(new Blob(chunks)));
+      });
+    }
+
+    throw new Error('Unsupported stream type');
   }
 
   /**
@@ -508,9 +593,43 @@ export class CloudStorageService {
   private async downloadFromGoogleDrive(projectId: string): Promise<{ data: Blob; audioFiles: { name: string; blob: Blob }[] }> {
     console.log('Downloading from Google Drive...');
 
-    // Placeholder for Google Drive API integration
+    if (!this.config?.credentials?.accessToken) {
+      throw new Error('Google Drive not authenticated');
+    }
 
-    throw new Error('Google Drive download not implemented');
+    try {
+      const API_BASE = 'https://www.googleapis.com/drive/v3';
+
+      // Download project file
+      console.log(`Downloading project from Google Drive: ${projectId}`);
+
+      const response = await fetch(`${API_BASE}/files/${projectId}?alt=media`, {
+        headers: {
+          Authorization: `Bearer ${this.config.credentials.accessToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Download failed: ${errorText}`);
+      }
+
+      const projectData = await response.blob();
+
+      console.log('✅ Project downloaded from Google Drive');
+
+      // Download associated audio files (if any)
+      // You could search for files in the same folder or with specific metadata
+      const audioFiles: { name: string; blob: Blob }[] = [];
+
+      return {
+        data: projectData,
+        audioFiles,
+      };
+    } catch (error) {
+      console.error('❌ Google Drive download failed:', error);
+      throw new Error(`Google Drive download failed: ${error}`);
+    }
   }
 
   /**

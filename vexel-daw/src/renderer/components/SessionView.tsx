@@ -3,11 +3,12 @@
  * Ableton-style clip launcher for live performance
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Square, Circle, Plus } from 'lucide-react';
 import { useAudioStore } from '../stores/audioStore';
 import { Clip, Scene } from '../types/session';
+import { playbackEngine } from '../services/playbackEngine';
 
 interface SessionViewProps {
   onOpenPianoRoll?: (trackId: string, trackName: string) => void;
@@ -23,19 +24,25 @@ export default function SessionView({ onOpenPianoRoll }: SessionViewProps) {
     { id: 'scene-4', name: 'Outro', index: 4 },
   ]);
 
+  // Track playing clips and their engine clip IDs
+  const [playingClips, setPlayingClips] = useState<Map<string, string>>(new Map());
+
   // Generate clips from tracks (for now, each track has clips in each scene)
   const clips: Clip[] = [];
   tracks.forEach((track, trackIndex) => {
     scenes.forEach((scene, sceneIndex) => {
       // Only add clip if track has MIDI notes
       if ((track.type === 'midi' || track.type === 'instrument') && track.notes && track.notes.length > 0) {
+        const clipId = `clip-${track.id}-${scene.id}`;
+        const isPlaying = playingClips.has(clipId);
+
         clips.push({
-          id: `clip-${track.id}-${scene.id}`,
+          id: clipId,
           name: `${track.name} ${scene.name}`,
           trackId: track.id,
           sceneIndex: scene.index,
           color: track.color,
-          state: 'stopped',
+          state: isPlaying ? 'playing' : 'stopped',
           type: 'midi',
           midiNotes: track.notes,
           length: 8, // 8 beats
@@ -47,13 +54,88 @@ export default function SessionView({ onOpenPianoRoll }: SessionViewProps) {
   });
 
   const handleClipTrigger = (clip: Clip) => {
-    console.log('🎬 Clip triggered:', clip.name);
-    // TODO: Implement clip triggering in audio engine
+    if (playingClips.has(clip.id)) {
+      // Stop the clip
+      const engineClipId = playingClips.get(clip.id);
+      if (engineClipId) {
+        playbackEngine.stopSessionClip(engineClipId);
+      }
+      setPlayingClips((prev) => {
+        const next = new Map(prev);
+        next.delete(clip.id);
+        return next;
+      });
+      console.log('⏹️ Clip stopped:', clip.name);
+    } else {
+      // Start the clip
+      if (clip.type === 'midi' && clip.midiNotes) {
+        const engineClipId = playbackEngine.triggerMIDIClip(
+          clip.trackId,
+          clip.midiNotes,
+          clip.length,
+          clip.loopEnabled
+        );
+        setPlayingClips((prev) => new Map(prev).set(clip.id, engineClipId));
+        console.log('▶️ Clip playing:', clip.name);
+      } else if (clip.type === 'audio' && clip.audioBuffer) {
+        const engineClipId = playbackEngine.triggerAudioClip(
+          clip.trackId,
+          clip.audioBuffer,
+          clip.length,
+          clip.loopEnabled
+        );
+        setPlayingClips((prev) => new Map(prev).set(clip.id, engineClipId));
+        console.log('▶️ Clip playing:', clip.name);
+      }
+    }
   };
 
   const handleSceneTrigger = (scene: Scene) => {
     console.log('🎭 Scene triggered:', scene.name);
-    // TODO: Trigger all clips in this scene
+
+    // Get all clips in this scene
+    const sceneClips = clips.filter((clip) => clip.sceneIndex === scene.index);
+
+    // Stop any currently playing clips on these tracks
+    sceneClips.forEach((clip) => {
+      if (playingClips.has(clip.id)) {
+        const engineClipId = playingClips.get(clip.id);
+        if (engineClipId) {
+          playbackEngine.stopSessionClip(engineClipId);
+        }
+      }
+    });
+
+    // Start all clips in this scene
+    const newPlayingClips = new Map<string, string>();
+    sceneClips.forEach((clip) => {
+      if (clip.type === 'midi' && clip.midiNotes) {
+        const engineClipId = playbackEngine.triggerMIDIClip(
+          clip.trackId,
+          clip.midiNotes,
+          clip.length,
+          clip.loopEnabled
+        );
+        newPlayingClips.set(clip.id, engineClipId);
+      } else if (clip.type === 'audio' && clip.audioBuffer) {
+        const engineClipId = playbackEngine.triggerAudioClip(
+          clip.trackId,
+          clip.audioBuffer,
+          clip.length,
+          clip.loopEnabled
+        );
+        newPlayingClips.set(clip.id, engineClipId);
+      }
+    });
+
+    setPlayingClips((prev) => {
+      const next = new Map(prev);
+      // Remove old clips from these tracks
+      sceneClips.forEach((clip) => next.delete(clip.id));
+      // Add new clips
+      newPlayingClips.forEach((value, key) => next.set(key, value));
+      return next;
+    });
   };
 
   return (

@@ -475,6 +475,154 @@ export class PlaybackEngine {
     // Update store
     store.setCurrentBeat(beat);
   }
+
+  /**
+   * Trigger a MIDI clip immediately (for Session View)
+   * Returns a clip ID that can be used to stop the clip
+   */
+  triggerMIDIClip(
+    trackId: string,
+    notes: MIDINote[],
+    clipLength: number,
+    loopEnabled: boolean = true,
+    clipId?: string
+  ): string {
+    const store = useAudioStore.getState();
+    const context = store.audioContext.context;
+
+    if (!context || notes.length === 0) {
+      return clipId || `clip-${Date.now()}`;
+    }
+
+    const generatedClipId = clipId || `session-clip-${trackId}-${Date.now()}`;
+    const startTime = context.currentTime;
+
+    // Schedule all notes in the clip
+    const scheduleNotes = () => {
+      const currentTime = context.currentTime;
+      notes.forEach((note) => {
+        const noteStartTime = currentTime + this.beatsToSeconds(note.start, store.tempo);
+        this.playMIDINote(trackId, note, noteStartTime);
+      });
+    };
+
+    // Play notes immediately
+    scheduleNotes();
+
+    // If looping is enabled, schedule the clip to loop
+    if (loopEnabled) {
+      const clipDuration = this.beatsToSeconds(clipLength, store.tempo);
+      const loopClip = () => {
+        const isStillActive = this.activeSessionClips.has(generatedClipId);
+        if (isStillActive) {
+          scheduleNotes();
+          setTimeout(loopClip, clipDuration * 1000);
+        }
+      };
+
+      // Schedule the first loop
+      setTimeout(loopClip, clipDuration * 1000);
+      this.activeSessionClips.set(generatedClipId, { trackId, startTime, loopEnabled });
+    }
+
+    return generatedClipId;
+  }
+
+  /**
+   * Trigger an audio clip immediately (for Session View)
+   */
+  triggerAudioClip(
+    trackId: string,
+    audioBuffer: AudioBuffer,
+    clipLength: number,
+    loopEnabled: boolean = true,
+    clipId?: string
+  ): string {
+    const store = useAudioStore.getState();
+    const context = store.audioContext.context;
+
+    if (!context) {
+      return clipId || `clip-${Date.now()}`;
+    }
+
+    const generatedClipId = clipId || `session-clip-${trackId}-${Date.now()}`;
+    const startTime = context.currentTime;
+
+    const playAudio = () => {
+      const track = store.tracks.find((t) => t.id === trackId);
+      if (!track || track.muted) {
+        return null;
+      }
+
+      // Check solo mode
+      const hasSolo = store.tracks.some((t) => t.solo);
+      if (hasSolo && !track.solo) {
+        return null;
+      }
+
+      // Create audio source
+      const source = context.createBufferSource();
+      source.buffer = audioBuffer;
+      source.loop = false; // We handle looping manually
+
+      // Create gain node for track
+      const trackGain = context.createGain();
+      trackGain.gain.value = track.volume;
+
+      // Create pan node
+      const panner = context.createStereoPanner();
+      panner.pan.value = track.pan;
+
+      // Connect: source -> trackGain -> panner -> destination
+      source.connect(trackGain);
+      trackGain.connect(panner);
+      panner.connect(context.destination);
+
+      // Start playback
+      source.start(context.currentTime);
+
+      return source;
+    };
+
+    // Play audio immediately
+    const source = playAudio();
+
+    if (loopEnabled && source) {
+      const clipDuration = this.beatsToSeconds(clipLength, store.tempo);
+      const loopAudio = () => {
+        const isStillActive = this.activeSessionClips.has(generatedClipId);
+        if (isStillActive) {
+          playAudio();
+          setTimeout(loopAudio, clipDuration * 1000);
+        }
+      };
+
+      // Schedule the loop
+      setTimeout(loopAudio, clipDuration * 1000);
+      this.activeSessionClips.set(generatedClipId, { trackId, startTime, loopEnabled });
+    }
+
+    return generatedClipId;
+  }
+
+  /**
+   * Stop a session clip
+   */
+  stopSessionClip(clipId: string): void {
+    this.activeSessionClips.delete(clipId);
+    // Note: Individual notes will stop naturally based on their durations
+    // Audio sources will also complete naturally
+  }
+
+  /**
+   * Get all active session clips
+   */
+  getActiveSessionClips(): string[] {
+    return Array.from(this.activeSessionClips.keys());
+  }
+
+  // Track active session clips
+  private activeSessionClips: Map<string, { trackId: string; startTime: number; loopEnabled: boolean }> = new Map();
 }
 
 export const playbackEngine = PlaybackEngine.getInstance();

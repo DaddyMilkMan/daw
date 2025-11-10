@@ -123,8 +123,15 @@ export class GoogleDriveConnector implements ICloudConnector {
     if (options.blob) {
       fileData = await options.blob.arrayBuffer();
     } else if (options.filePath) {
-      // In Electron, you'd use fs.readFile here
-      throw new Error('File path upload not implemented');
+      // Read file from path using Electron's fs
+      // In Electron renderer with nodeIntegration, we can use fs
+      try {
+        const fs = await import('fs/promises');
+        const buffer = await fs.readFile(options.filePath);
+        fileData = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+      } catch (error) {
+        throw new Error(`Failed to read file from path: ${error}`);
+      }
     } else {
       throw new Error('No file data provided');
     }

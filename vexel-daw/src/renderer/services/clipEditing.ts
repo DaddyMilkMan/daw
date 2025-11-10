@@ -23,11 +23,13 @@ export class ClipEditingService {
       trimEnd?: number; // beats to trim from end
     }
   ): AudioClip {
+    const store = useAudioStore.getState();
+    const tempo = store.tempo;
     const newClip = { ...clip };
 
     if (options.trimStart !== undefined && options.trimStart > 0) {
       newClip.start += options.trimStart;
-      newClip.offset += this.beatsToSeconds(options.trimStart, 120); // TODO: get actual tempo
+      newClip.offset += this.beatsToSeconds(options.trimStart, tempo);
       newClip.length -= options.trimStart;
     }
 
@@ -45,6 +47,9 @@ export class ClipEditingService {
    * Split audio clip at position
    */
   static splitAudioClip(clip: AudioClip, splitBeat: number): [AudioClip, AudioClip] {
+    const store = useAudioStore.getState();
+    const tempo = store.tempo;
+
     if (splitBeat <= clip.start || splitBeat >= clip.start + clip.length) {
       throw new Error('Split position must be within clip bounds');
     }
@@ -64,7 +69,7 @@ export class ClipEditingService {
       id: `${clip.id}-2`,
       start: splitBeat,
       length: clip.length - splitOffset,
-      offset: clip.offset + this.beatsToSeconds(splitOffset, 120), // TODO: get actual tempo
+      offset: clip.offset + this.beatsToSeconds(splitOffset, tempo),
     };
 
     return [clip1, clip2];

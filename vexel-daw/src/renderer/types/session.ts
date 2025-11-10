@@ -6,10 +6,20 @@ export interface Clip {
   sceneIndex: number;
   color: string;
   length: number; // in beats
-  isPlaying: boolean;
-  isRecording: boolean;
-  launchMode: 'trigger' | 'gate' | 'toggle' | 'repeat';
-  followAction: {
+  state: 'empty' | 'stopped' | 'playing' | 'recording' | 'queued';
+  type: 'midi' | 'audio';
+  loopEnabled: boolean;
+  startOffset: number;
+
+  // MIDI-specific
+  midiNotes?: import('./recording').MIDINote[];
+
+  // Audio-specific
+  audioBuffer?: AudioBuffer;
+
+  // Optional launch behavior
+  launchMode?: 'trigger' | 'gate' | 'toggle' | 'repeat';
+  followAction?: {
     enabled: boolean;
     action: 'next' | 'previous' | 'first' | 'last' | 'any' | 'other' | 'stop';
     chance: number; // 0-100
