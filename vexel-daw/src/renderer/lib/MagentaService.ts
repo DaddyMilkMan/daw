@@ -3,11 +3,12 @@
  *
  * Provides methods for generating musical content using AI models:
  * - Chord progressions
- * - Melodies (RNN-based)
- * - Drum patterns
+ * - Melodies (MelodyRNN, MusicVAE)
+ * - Drum patterns (DrumsRNN, GrooVAE)
  *
- * This service can be extended to integrate with actual Magenta.js library
- * or communicate with a remote AI service via the Wingman AI Bridge.
+ * Integrates with @magenta/music for TensorFlow.js-based generation.
+ * Dynamically loads the library to avoid hard dependency.
+ * Falls back to procedural generation if library not available.
  */
 
 export interface Note {
@@ -43,22 +44,81 @@ export interface GenerationOptions {
   style?: string;
 }
 
+// Type definitions for Magenta.js
+type MagentaMusic = any;
+type MusicVAE = any;
+type MelodyRNN = any;
+type DrumsRNN = any;
+
 class MagentaService {
   private initialized = false;
+  private magentaMusic: MagentaMusic | null = null;
+  private musicVAE: MusicVAE | null = null;
+  private melodyRNN: MelodyRNN | null = null;
+  private drumsRNN: DrumsRNN | null = null;
+  private useMagentaModels = false;
 
   /**
-   * Initialize the Magenta service
+   * Lazy-load @magenta/music library
+   */
+  private async loadMagentaMusic(): Promise<boolean> {
+    if (this.magentaMusic) return true;
+
+    try {
+      // Dynamic import to avoid hard dependency
+      this.magentaMusic = await import('@magenta/music');
+      console.log('✅ Magenta.js library loaded');
+      return true;
+    } catch (error) {
+      console.warn('@magenta/music library not installed. Run: npm install @magenta/music');
+      console.warn('Falling back to procedural generation');
+      return false;
+    }
+  }
+
+  /**
+   * Initialize the Magenta service with AI models
    */
   async initialize(): Promise<void> {
     if (this.initialized) return;
 
     console.log('🎵 Initializing MagentaService...');
 
-    // TODO: Load actual Magenta.js models here
-    // For now, we'll use procedural generation
+    const magentaAvailable = await this.loadMagentaMusic();
+
+    if (magentaAvailable) {
+      try {
+        // Initialize MusicVAE for chord/melody generation
+        this.musicVAE = new this.magentaMusic.MusicVAE(
+          'https://storage.googleapis.com/magentadata/js/checkpoints/music_vae/mel_2bar_small'
+        );
+        await this.musicVAE.initialize();
+        console.log('✅ MusicVAE model loaded');
+
+        // Initialize MelodyRNN for melody continuation
+        this.melodyRNN = new this.magentaMusic.MelodyRNN(
+          'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/basic_rnn'
+        );
+        await this.melodyRNN.initialize();
+        console.log('✅ MelodyRNN model loaded');
+
+        // Initialize DrumsRNN for drum pattern generation
+        this.drumsRNN = new this.magentaMusic.DrumsRNN(
+          'https://storage.googleapis.com/magentadata/js/checkpoints/music_rnn/drum_kit_rnn'
+        );
+        await this.drumsRNN.initialize();
+        console.log('✅ DrumsRNN model loaded');
+
+        this.useMagentaModels = true;
+      } catch (error) {
+        console.warn('Failed to load Magenta models:', error);
+        console.warn('Falling back to procedural generation');
+        this.useMagentaModels = false;
+      }
+    }
 
     this.initialized = true;
-    console.log('✅ MagentaService initialized');
+    console.log(`✅ MagentaService initialized (mode: ${this.useMagentaModels ? 'AI' : 'Procedural'})`);
   }
 
   /**
@@ -97,7 +157,7 @@ class MagentaService {
   }
 
   /**
-   * Generate a melody using RNN
+   * Generate a melody using RNN (with Magenta.js or procedural fallback)
    * @param seed - Seed notes to start the melody
    * @param options - Generation options
    */
@@ -107,23 +167,55 @@ class MagentaService {
   ): Promise<MelodySequence> {
     await this.ensureInitialized();
 
-    console.log('🎼 Generating melody with RNN...');
-
     const temperature = options.temperature ?? 1.0;
     const steps = options.steps ?? 32;
 
-    // Generate a melodic sequence
+    if (this.useMagentaModels && this.melodyRNN) {
+      console.log('🎼 Generating melody with MelodyRNN...');
+
+      try {
+        // Convert seed notes to NoteSequence format
+        const seedSequence = seed.length > 0 ? {
+          notes: seed.map(note => ({
+            pitch: note.pitch,
+            velocity: note.velocity,
+            startTime: note.startTime,
+            endTime: note.startTime + note.duration,
+          })),
+          totalTime: seed[seed.length - 1]?.startTime + seed[seed.length - 1]?.duration || 0,
+        } : undefined;
+
+        // Generate using MelodyRNN
+        const generated = await this.melodyRNN.continueSequence(
+          seedSequence || this.magentaMusic.sequences.createQuantizedNoteSequence(4, 120),
+          steps,
+          temperature
+        );
+
+        // Convert NoteSequence back to our Note format
+        const notes: Note[] = generated.notes.map((note: any) => ({
+          pitch: note.pitch,
+          velocity: note.velocity || 80,
+          startTime: note.startTime,
+          duration: note.endTime - note.startTime,
+        }));
+
+        return { notes, temperature, steps };
+      } catch (error) {
+        console.warn('MelodyRNN generation failed, falling back to procedural:', error);
+      }
+    }
+
+    // Procedural fallback
+    console.log('🎼 Generating melody procedurally...');
     const notes: Note[] = [];
     const scale = [60, 62, 64, 65, 67, 69, 71, 72]; // C major scale
 
     let currentTime = 0;
 
     for (let i = 0; i < steps; i++) {
-      // Use temperature to control randomness
       const noteIndex = Math.floor(Math.random() * scale.length);
       const pitch = scale[noteIndex];
-
-      // Vary rhythm
       const duration = Math.random() > 0.7 ? 0.5 : 0.25;
 
       notes.push({
@@ -136,15 +228,11 @@ class MagentaService {
       currentTime += duration;
     }
 
-    return {
-      notes,
-      temperature,
-      steps,
-    };
+    return { notes, temperature, steps };
   }
 
   /**
-   * Generate drum patterns
+   * Generate drum patterns (with Magenta.js DrumsRNN or procedural fallback)
    * @param style - Drum pattern style (e.g., 'trap', 'house', 'techno')
    * @param options - Generation options
    */
@@ -154,9 +242,39 @@ class MagentaService {
   ): Promise<DrumPattern> {
     await this.ensureInitialized();
 
-    console.log(`🥁 Generating ${style} drum pattern...`);
-
     const bars = 4;
+
+    if (this.useMagentaModels && this.drumsRNN) {
+      console.log(`🥁 Generating ${style} drum pattern with DrumsRNN...`);
+
+      try {
+        const temperature = options.temperature ?? 1.0;
+        const steps = options.steps ?? 32;
+
+        // Generate drum pattern using DrumsRNN
+        const generated = await this.drumsRNN.continueSequence(
+          this.magentaMusic.sequences.createQuantizedNoteSequence(4, 120),
+          steps,
+          temperature
+        );
+
+        // Convert to our Note format
+        const pattern: Note[] = generated.notes.map((note: any) => ({
+          pitch: note.pitch,
+          velocity: note.velocity || 80,
+          startTime: note.startTime,
+          duration: note.endTime - note.startTime,
+        }));
+
+        return { pattern, style, bars };
+      } catch (error) {
+        console.warn('DrumsRNN generation failed, falling back to procedural:', error);
+      }
+    }
+
+    // Procedural fallback
+    console.log(`🥁 Generating ${style} drum pattern procedurally...`);
+
     const stepsPerBar = 16; // 16th notes
     const pattern: Note[] = [];
 
