@@ -1,5 +1,4 @@
 import { AudioTrack } from '../audio/AudioEngine';
-import { useAudioStore } from '../stores/audioStore';
 import { Plus, Grid3X3, List, Copy, Trash2, Edit3, Palette, FolderTree, Circle, ChevronDown, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from './ui/button';
@@ -8,6 +7,7 @@ import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
 import SessionView from './SessionView';
+import { engineClient } from '@/lib/engineClient';
 
 interface CenterPanelProps {
   tracks: AudioTrack[];
@@ -16,13 +16,10 @@ interface CenterPanelProps {
 
 export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
-  const { createTrack } = useAudioStore();
 
   const handleCreateTrack = () => {
     const name = `Track ${tracks.length + 1}`;
-    const colors = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#ec4899'];
-    const color = colors[tracks.length % colors.length];
-    createTrack(name, 'midi', color);
+    engineClient.sendCommand('track:create', { name, type: 'midi' });
   };
 
   return (

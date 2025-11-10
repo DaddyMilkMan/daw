@@ -1,69 +1,113 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { useAudioStore } from './stores/audioStore';
 import TransportBar from './components/TransportBar';
 import LeftPanel from './components/LeftPanel';
 import CenterPanel from './components/CenterPanel';
 import RightPanel from './components/RightPanel';
 import WingmanSidebar from './components/WingmanSidebar';
 import PianoRoll from './components/PianoRoll';
-import { useWingmanBridge, useWingmanTransportSync, useWingmanClipInsertion } from './hooks/useWingmanBridge';
+import { engineClient } from './lib/engineClient';
+import { useStore, useProjectState, usePreferences } from './lib/store';
 import './App.css';
 
 function App() {
-  const [isWingmanOpen, setIsWingmanOpen] = useState(false);
-  const [wingmanPosition, setWingmanPosition] = useState<'left' | 'right'>('right');
+  // Use Zustand store instead of local state
+  const projectState = useProjectState();
+  const { wingmanOpen, wingmanPosition } = usePreferences();
+  const setWingmanOpen = useStore((state) => state.setWingmanOpen);
+  const setWingmanPosition = useStore((state) => state.setWingmanPosition);
+  const updateProjectState = useStore((state) => state.updateProjectState);
+  const setEngineConnected = useStore((state) => state.setEngineConnected);
+  const setEngineMode = useStore((state) => state.setEngineMode);
+
+  // Keep piano roll as local state for now (UI-only)
   const [pianoRollTrack, setPianoRollTrack] = useState<{ id: string; name: string } | null>(null);
-  const [generatedClips, setGeneratedClips] = useState<any[]>([]);
 
-  // Wingman AI Bridge integration
-  const wingman = useWingmanBridge();
+  // Store latest state in refs for stable access (Pattern from web search)
+  const pianoRollTrackRef = useRef(pianoRollTrack);
+  const wingmanOpenRef = useRef(wingmanOpen);
+  const isPlayingRef = useRef(projectState.isPlaying);
 
-  // Sync transport state with Wingman AI
-  useWingmanTransportSync(audioState.isPlaying, audioState.tempo);
+  // Update refs when state changes (no side effects)
+  useEffect(() => {
+    pianoRollTrackRef.current = pianoRollTrack;
+  }, [pianoRollTrack]);
 
-  // Handle AI-generated clip insertion
-  const handleClipInsertion = useCallback((data: any) => {
-    console.log('🎵 Inserting AI-generated clip:', data);
+  useEffect(() => {
+    wingmanOpenRef.current = wingmanOpen;
+  }, [wingmanOpen]);
 
-    // Add to generated clips state (to be picked up by CenterPanel)
-    setGeneratedClips(prev => [...prev, data]);
+  useEffect(() => {
+    isPlayingRef.current = projectState.isPlaying;
+  }, [projectState.isPlaying]);
 
-    // Show notification or toast
-    console.log(`✅ Clip inserted: ${data.clip?.name || 'Untitled'}`);
-  }, []);
-
-  useWingmanClipInsertion(handleClipInsertion);
-
-  // Get audio store state and actions
-  const {
-    tracks,
-    transport,
-    initEngine,
-    play,
-    pause,
-    stop,
-    dispose,
-  } = useAudioStore();
-
+  // Effect 1: Connect to engine ONCE on mount (never disconnects except on unmount)
   useEffect(() => {
     console.log('🎯 Vexel DAW initialized');
 
-    // Initialize audio engine
-    initEngine();
+    // Connect to engine and wire up event listeners
+    const initializeEngine = async () => {
+      try {
+        await engineClient.connect();
+        setEngineConnected(true);
+        setEngineMode(engineClient.getMode());
+        console.log('✅ Engine connected:', engineClient.getMode());
 
+        // Subscribe to engine events
+        const unsubscribe = engineClient.onEvent((event) => {
+          console.log('🔄 Engine event:', event.type, event.data);
+
+          if (event.type === 'state:updated' || event.type === 'state:initial') {
+            updateProjectState(event.data);
+          }
+        });
+
+        return unsubscribe;
+      } catch (error) {
+        console.error('❌ Failed to connect to engine:', error);
+        setEngineConnected(false);
+      }
+    };
+
+    const unsubscribePromise = initializeEngine();
+
+    // Cleanup: Only disconnect on unmount
+    return () => {
+      console.log('🔌 Disconnecting engine (component unmount)');
+      unsubscribePromise?.then((unsubscribe) => {
+        if (unsubscribe) {
+          unsubscribe();
+        }
+      });
+      engineClient.disconnect();
+    };
+  }, []); // Empty deps - runs ONCE on mount
+
+  // Effect 2: Setup keyboard handlers (rebinds when needed, but no engine disconnect)
+  useEffect(() => {
     // Global keyboard shortcuts
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().includes('MAC');
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
+      // Helper to check if user is typing in an input
+      const isTypingInInput = (e: KeyboardEvent): boolean => {
+        const target = e.target as HTMLElement;
+        return (
+          target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.contentEditable === 'true'
+        );
+      };
+
       // Space: Play/Pause (only if not typing in an input)
       if (e.code === 'Space' && !isTypingInInput(e)) {
         e.preventDefault();
-        if (transport.isPlaying) {
-          pause();
+        // Read from ref - always has latest value
+        if (isPlayingRef.current) {
+          engineClient.sendCommand('transport:pause');
         } else {
-          play();
+          engineClient.sendCommand('transport:play');
         }
         console.log('⏯️ Play/Pause toggled');
       }
@@ -71,22 +115,20 @@ function App() {
       // Enter: Stop
       if (e.key === 'Enter' && !isTypingInInput(e)) {
         e.preventDefault();
-        stop();
+        engineClient.sendCommand('transport:stop');
         console.log('⏹️ Transport stopped');
       }
-
-      // Tab: Switch between Session and Arrangement views (handled by CenterPanel)
-      // This is handled locally in CenterPanel but we could add it here for consistency
 
       // Escape: Close modals/Piano Roll
       if (e.key === 'Escape') {
         e.preventDefault();
-        if (pianoRollTrack) {
+        // Read from refs - always has latest value
+        if (pianoRollTrackRef.current) {
           setPianoRollTrack(null);
           console.log('❌ Closed Piano Roll');
         }
-        if (isWingmanOpen) {
-          setIsWingmanOpen(false);
+        if (wingmanOpenRef.current) {
+          setWingmanOpen(false);
           console.log('❌ Closed Wingman');
         }
       }
@@ -95,27 +137,27 @@ function App() {
       if (cmdOrCtrl && e.key === 's') {
         e.preventDefault();
         console.log('💾 Save project');
-        // TODO: Implement save functionality
+        engineClient.sendCommand('project:save');
       }
 
       // Ctrl/Cmd+N: New project
       if (cmdOrCtrl && e.key === 'n') {
         e.preventDefault();
         console.log('🆕 New project');
-        // TODO: Implement new project functionality
+        engineClient.sendCommand('project:new');
       }
 
       // Ctrl/Cmd+O: Open project
       if (cmdOrCtrl && e.key === 'o') {
         e.preventDefault();
         console.log('📂 Open project');
-        // TODO: Implement open project functionality
+        engineClient.sendCommand('project:open');
       }
 
       // Ctrl/Cmd+W: Toggle Wingman
       if (cmdOrCtrl && e.key === 'w') {
         e.preventDefault();
-        setIsWingmanOpen(!isWingmanOpen);
+        setWingmanOpen(!wingmanOpenRef.current);
         console.log('🤖 Toggled Wingman');
       }
 
@@ -130,34 +172,24 @@ function App() {
       if (cmdOrCtrl && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         console.log('↩️ Undo');
-        // TODO: Implement undo - will be handled by history manager
+        engineClient.sendCommand('project:undo');
       }
 
       // Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo
       if (cmdOrCtrl && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
         console.log('↪️ Redo');
-        // TODO: Implement redo - will be handled by history manager
+        engineClient.sendCommand('project:redo');
       }
-    };
-
-    // Helper to check if user is typing in an input
-    const isTypingInInput = (e: KeyboardEvent): boolean => {
-      const target = e.target as HTMLElement;
-      return (
-        target.tagName === 'INPUT' ||
-        target.tagName === 'TEXTAREA' ||
-        target.contentEditable === 'true'
-      );
     };
 
     window.addEventListener('keydown', handleGlobalKeyDown);
 
+    // Cleanup: Only remove listener (no engine disconnect)
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown);
-      dispose(); // Cleanup audio engine on unmount
     };
-  }, [pianoRollTrack, isWingmanOpen, transport.isPlaying, play, pause, stop, dispose]);
+  }, []); // Empty deps - keyboard handler can read refs for latest values
 
   return (
     <div className="h-screen w-screen flex flex-col bg-background text-foreground overflow-hidden">
@@ -191,8 +223,8 @@ function App() {
 
       {/* Transport Bar */}
       <TransportBar
-        transport={transport}
-        onOpenWingman={() => setIsWingmanOpen(true)}
+        audioState={projectState}
+        onOpenWingman={() => setWingmanOpen(true)}
       />
 
       {/* Main Content - Tri-Pane Layout */}
@@ -202,12 +234,12 @@ function App() {
 
         {/* Center Panel - Arrangement/Session View */}
         <CenterPanel
-          tracks={tracks}
+          tracks={projectState.tracks}
           onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
         />
 
         {/* Right Panel - Mixer/Inspector */}
-        <RightPanel tracks={tracks} />
+        <RightPanel tracks={projectState.tracks} />
       </div>
 
       {/* Bottom Panel - Editor (Piano Roll / Audio Editor) */}
@@ -222,8 +254,8 @@ function App() {
 
       {/* Wingman AI Sidebar */}
       <WingmanSidebar
-        isOpen={isWingmanOpen}
-        onClose={() => setIsWingmanOpen(false)}
+        isOpen={wingmanOpen}
+        onClose={() => setWingmanOpen(false)}
         position={wingmanPosition}
         onPositionChange={setWingmanPosition}
       />
