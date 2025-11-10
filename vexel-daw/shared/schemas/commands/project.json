@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/commands/project.json",
+  "title": "Project Commands",
+  "description": "Commands for project management",
+  "definitions": {
+    "SaveProjectCommand": {
+      "type": "object",
+      "title": "Save Project Command",
+      "description": "Save current project to disk",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "save_project"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File path for project"
+            },
+            "format": {
+              "type": "string",
+              "description": "File format",
+              "enum": ["json", "binary"],
+              "default": "json"
+            }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "LoadProjectCommand": {
+      "type": "object",
+      "title": "Load Project Command",
+      "description": "Load a project from disk",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "load_project"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "description": "File path to project"
+            }
+          },
+          "required": ["path"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "NewProjectCommand": {
+      "type": "object",
+      "title": "New Project Command",
+      "description": "Create a new empty project",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "new_project"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Project name",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "sampleRate": {
+              "type": "integer",
+              "description": "Audio sample rate",
+              "enum": [44100, 48000, 88200, 96000, 176400, 192000],
+              "default": 48000
+            },
+            "bitDepth": {
+              "type": "integer",
+              "description": "Audio bit depth",
+              "enum": [16, 24, 32],
+              "default": 24
+            }
+          },
+          "required": ["name"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    }
+  }
+}

@@ -235,6 +235,7 @@ function App() {
         {/* Center Panel - Arrangement/Session View */}
         <CenterPanel
           tracks={projectState.tracks}
+          bpm={projectState.tempo}
           onOpenPianoRoll={(trackId, trackName) => setPianoRollTrack({ id: trackId, name: trackName })}
         />
 

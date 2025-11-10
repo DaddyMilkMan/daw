@@ -7,14 +7,16 @@ import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import TimelineRuler from './TimelineRuler';
 import AutomationLaneComponent, { AutomationLane, AutomationMode } from './AutomationLane';
 import SessionView from './SessionView';
+import ArrangementViewEnhanced from './ArrangementViewEnhanced';
 import { engineClient } from '@/lib/engineClient';
 
 interface CenterPanelProps {
   tracks: AudioTrack[];
+  bpm?: number;
   onOpenPianoRoll: (trackId: string, trackName: string) => void;
 }
 
-export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProps) {
+export default function CenterPanel({ tracks, bpm = 128, onOpenPianoRoll }: CenterPanelProps) {
   const [view, setView] = useState<'session' | 'arrangement'>('arrangement');
 
   const handleCreateTrack = () => {
@@ -67,7 +69,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
       <div className="flex-1 overflow-auto">
         <AnimatePresence mode="wait">
           {view === 'arrangement' ? (
-            <ArrangementView key="arrangement" tracks={tracks} onOpenPianoRoll={onOpenPianoRoll} />
+            <ArrangementViewEnhanced key="arrangement" tracks={tracks} bpm={bpm} onOpenPianoRoll={onOpenPianoRoll} />
           ) : (
             <SessionView key="session" onOpenPianoRoll={onOpenPianoRoll} />
           )}
@@ -77,6 +79,7 @@ export default function CenterPanel({ tracks, onOpenPianoRoll }: CenterPanelProp
   );
 }
 
+// Legacy ArrangementView - kept for reference but not used (using ArrangementViewEnhanced instead)
 function ArrangementView({ tracks, onOpenPianoRoll }: { tracks: AudioTrack[]; onOpenPianoRoll: (trackId: string, trackName: string) => void }) {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; trackId: string } | null>(null);
   const [recordArmed, setRecordArmed] = useState<Set<string>>(new Set());
