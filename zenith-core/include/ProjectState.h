@@ -1,0 +1,229 @@
+/**
+ * @file ProjectState.h
+ * @brief Project state management using ValueTree
+ *
+ * Manages all project state using JUCE's ValueTree:
+ * - Project metadata (name, tempo, time signature)
+ * - Tracks
+ * - Clips
+ * - Mixer state
+ * - Plugin state
+ *
+ * Benefits of ValueTree:
+ * - Built-in undo/redo support
+ * - Serialization to XML/JSON
+ * - Efficient change notifications
+ * - Thread-safe with proper listeners
+ *
+ * Phase 0: Foundation
+ * - Basic project structure
+ * - Tempo and time signature
+ * - Save/load to XML
+ */
+
+#pragma once
+
+#include <JuceHeader.h>
+
+//==============================================================================
+/**
+ * @class ProjectState
+ * @brief Manages all project state using ValueTree
+ *
+ * The state tree structure:
+ *
+ * PROJECT
+ * ├── name: "Untitled"
+ * ├── tempo: 120.0
+ * ├── timeSignatureNumerator: 4
+ * ├── timeSignatureDenominator: 4
+ * ├── sampleRate: 44100.0
+ * ├── TRACKS
+ * │   ├── TRACK
+ * │   │   ├── id: "track_1"
+ * │   │   ├── name: "Audio 1"
+ * │   │   ├── type: "audio" or "midi"
+ * │   │   ├── volume: 0.8
+ * │   │   ├── pan: 0.0
+ * │   │   ├── mute: false
+ * │   │   ├── solo: false
+ * │   │   └── CLIPS
+ * │   │       └── CLIP
+ * │   │           ├── id: "clip_1"
+ * │   │           ├── start: 0.0
+ * │   │           ├── length: 4.0
+ * │   │           └── ...
+ * │   └── ...
+ * └── MIXER
+ *     ├── masterVolume: 0.8
+ *     └── ...
+ */
+class ProjectState
+{
+public:
+    //==========================================================================
+    // Identifiers for ValueTree types and properties
+    //==========================================================================
+
+    static const juce::Identifier ID_PROJECT;
+    static const juce::Identifier ID_TRACKS;
+    static const juce::Identifier ID_TRACK;
+    static const juce::Identifier ID_CLIPS;
+    static const juce::Identifier ID_CLIP;
+    static const juce::Identifier ID_MIXER;
+
+    static const juce::Identifier PROP_NAME;
+    static const juce::Identifier PROP_TEMPO;
+    static const juce::Identifier PROP_TIME_SIG_NUM;
+    static const juce::Identifier PROP_TIME_SIG_DEN;
+    static const juce::Identifier PROP_SAMPLE_RATE;
+
+    static const juce::Identifier PROP_ID;
+    static const juce::Identifier PROP_TYPE;
+    static const juce::Identifier PROP_VOLUME;
+    static const juce::Identifier PROP_PAN;
+    static const juce::Identifier PROP_MUTE;
+    static const juce::Identifier PROP_SOLO;
+
+    static const juce::Identifier PROP_START;
+    static const juce::Identifier PROP_LENGTH;
+
+    //==========================================================================
+    ProjectState();
+    ~ProjectState();
+
+    //==========================================================================
+    // Project Management
+    //==========================================================================
+
+    /**
+     * @brief Create a new empty project
+     */
+    void newProject();
+
+    /**
+     * @brief Load project from file
+     * @param file Project file (.zth)
+     * @return true if loaded successfully
+     */
+    bool loadFromFile(const juce::File& file);
+
+    /**
+     * @brief Save project to file
+     * @param file Project file (.zth)
+     * @return true if saved successfully
+     */
+    bool saveToFile(const juce::File& file);
+
+    //==========================================================================
+    // Project Properties
+    //==========================================================================
+
+    juce::String getProjectName() const;
+    void setProjectName(const juce::String& name);
+
+    double getTempo() const;
+    void setTempo(double tempo);
+
+    int getTimeSignatureNumerator() const;
+    int getTimeSignatureDenominator() const;
+    void setTimeSignature(int numerator, int denominator);
+
+    //==========================================================================
+    // Track Management
+    //==========================================================================
+
+    /**
+     * @brief Add a new track
+     * @param name Track name
+     * @param type "audio" or "midi"
+     * @return Track ID
+     */
+    juce::String addTrack(const juce::String& name, const juce::String& type);
+
+    /**
+     * @brief Remove a track
+     * @param trackId Track ID
+     */
+    void removeTrack(const juce::String& trackId);
+
+    /**
+     * @brief Get number of tracks
+     */
+    int getNumTracks() const;
+
+    //==========================================================================
+    // Undo/Redo
+    //==========================================================================
+
+    /**
+     * @brief Get undo manager
+     */
+    juce::UndoManager& getUndoManager() { return undoManager; }
+
+    /**
+     * @brief Undo last action
+     */
+    void undo();
+
+    /**
+     * @brief Redo last undone action
+     */
+    void redo();
+
+    /**
+     * @brief Check if can undo
+     */
+    bool canUndo() const { return undoManager.canUndo(); }
+
+    /**
+     * @brief Check if can redo
+     */
+    bool canRedo() const { return undoManager.canRedo(); }
+
+    //==========================================================================
+    // State Access
+    //==========================================================================
+
+    /**
+     * @brief Get the root ValueTree
+     */
+    juce::ValueTree& getState() { return state; }
+
+    /**
+     * @brief Get the root ValueTree (const)
+     */
+    const juce::ValueTree& getState() const { return state; }
+
+private:
+    //==========================================================================
+    // Helper Methods
+    //==========================================================================
+
+    /**
+     * @brief Create default project structure
+     */
+    void createDefaultState();
+
+    /**
+     * @brief Generate unique ID
+     */
+    juce::String generateUniqueId(const juce::String& prefix);
+
+    /**
+     * @brief Find track by ID
+     */
+    juce::ValueTree findTrack(const juce::String& trackId);
+
+    //==========================================================================
+    // Member Variables
+    //==========================================================================
+
+    juce::ValueTree state;
+    juce::UndoManager undoManager;
+
+    // ID counter for generating unique IDs
+    std::atomic<int> idCounter{0};
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
+};
