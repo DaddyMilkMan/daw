@@ -1,0 +1,159 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/commands/track.json",
+  "title": "Track Commands",
+  "description": "Commands for track management",
+  "definitions": {
+    "CreateTrackCommand": {
+      "type": "object",
+      "title": "Create Track Command",
+      "description": "Create a new track",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "create_track"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "description": "Track type",
+              "enum": ["audio", "midi", "instrument", "bus", "master"]
+            },
+            "name": {
+              "type": "string",
+              "description": "Track name",
+              "minLength": 1,
+              "maxLength": 255
+            },
+            "position": {
+              "type": "integer",
+              "description": "Insert position (optional)",
+              "minimum": 0
+            }
+          },
+          "required": ["type", "name"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "DeleteTrackCommand": {
+      "type": "object",
+      "title": "Delete Track Command",
+      "description": "Remove a track",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "delete_track"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "trackId": {
+              "type": "string",
+              "description": "Track UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          "required": ["trackId"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "SetTrackPropertiesCommand": {
+      "type": "object",
+      "title": "Set Track Properties Command",
+      "description": "Update track properties",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "set_track_properties"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "trackId": {
+              "type": "string",
+              "description": "Track UUID",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "properties": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 255
+                },
+                "volumeDb": {
+                  "type": "number",
+                  "minimum": -120,
+                  "maximum": 12
+                },
+                "pan": {
+                  "type": "number",
+                  "minimum": -1.0,
+                  "maximum": 1.0
+                },
+                "muted": {
+                  "type": "boolean"
+                },
+                "solo": {
+                  "type": "boolean"
+                },
+                "armed": {
+                  "type": "boolean"
+                },
+                "color": {
+                  "type": "string",
+                  "pattern": "^#[0-9a-fA-F]{6}$"
+                }
+              },
+              "minProperties": 1,
+              "additionalProperties": false
+            }
+          },
+          "required": ["trackId", "properties"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    },
+    "ReorderTracksCommand": {
+      "type": "object",
+      "title": "Reorder Tracks Command",
+      "description": "Change track order",
+      "properties": {
+        "command": {
+          "type": "string",
+          "const": "reorder_tracks"
+        },
+        "params": {
+          "type": "object",
+          "properties": {
+            "trackId": {
+              "type": "string",
+              "description": "Track UUID to move",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "newPosition": {
+              "type": "integer",
+              "description": "New order index",
+              "minimum": 0
+            }
+          },
+          "required": ["trackId", "newPosition"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["command", "params"],
+      "additionalProperties": false
+    }
+  }
+}

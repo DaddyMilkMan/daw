@@ -1,0 +1,116 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zenith-daw.com/schemas/events/clip.json",
+  "title": "Clip Events",
+  "description": "Events related to clip state changes",
+  "definitions": {
+    "ClipAddedEvent": {
+      "type": "object",
+      "title": "Clip Added Event",
+      "description": "Clip created on a track",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "clip_added"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "clip": {
+              "type": "object",
+              "description": "Full Clip object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "trackId": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": ["audio", "midi"]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": ["id", "trackId", "type", "name"]
+            }
+          },
+          "required": ["clip"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    },
+    "ClipUpdatedEvent": {
+      "type": "object",
+      "title": "Clip Updated Event",
+      "description": "Clip properties changed",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "clip_updated"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "clipId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "changes": {
+              "type": "object",
+              "description": "Changed properties",
+              "minProperties": 1
+            }
+          },
+          "required": ["clipId", "changes"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    },
+    "ClipRemovedEvent": {
+      "type": "object",
+      "title": "Clip Removed Event",
+      "description": "Clip deleted from track",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "clip_removed"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "clipId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            },
+            "trackId": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+            }
+          },
+          "required": ["clipId", "trackId"]
+        }
+      },
+      "required": ["type", "timestamp", "data"],
+      "additionalProperties": false
+    }
+  }
+}
