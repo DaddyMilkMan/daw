@@ -66,9 +66,9 @@ export default function TransportBarRecording({ onOpenWingman }: TransportBarRec
 
   const handlePlay = () => {
     if (isPlaying) {
-      pause();
+      audioEngine.pausePlayback();
     } else {
-      play();
+      audioEngine.startPlayback();
     }
   };
 
@@ -76,7 +76,7 @@ export default function TransportBarRecording({ onOpenWingman }: TransportBarRec
     if (recording.isRecording) {
       audioEngine.stopRecording();
     }
-    stop();
+    audioEngine.stopPlayback();
   };
 
   const handleRecord = async () => {

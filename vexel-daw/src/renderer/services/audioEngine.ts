@@ -1,16 +1,21 @@
 /**
  * Audio Engine Service
- * Manages Web Audio API, recording, playback, and MIDI
+ * Manages Web Audio API, recording, playback, mixing, and MIDI
+ * Integrates: PlaybackEngine, MixingEngine, Recording
  */
 
 import { useAudioStore } from '../store/audioStore';
 import { RecordingTrackState } from '../types/recording';
+import { playbackEngine } from './playbackEngine';
+import { mixingEngine } from './mixingEngine';
 
 export class AudioEngine {
   private static instance: AudioEngine | null = null;
   private recorderWorklet: AudioWorkletNode | null = null;
   private animationFrameId: number | null = null;
   private started: boolean = false;
+  private playbackInitialized: boolean = false;
+  private mixingInitialized: boolean = false;
 
   private constructor() {}
 
@@ -22,7 +27,7 @@ export class AudioEngine {
   }
 
   /**
-   * Initialize the audio engine
+   * Initialize the audio engine (recording, playback, mixing)
    */
   async initialize(): Promise<void> {
     const store = useAudioStore.getState();
@@ -33,13 +38,23 @@ export class AudioEngine {
     }
 
     try {
+      // Initialize audio context
       await store.initializeAudioContext();
       await store.initializeMIDI();
 
       const context = store.audioContext.context!;
 
-      // Load AudioWorklet module
+      // Load AudioWorklet module for recording
       await context.audioWorklet.addModule('/audio-recorder-worklet.js');
+
+      // Initialize mixing engine
+      await mixingEngine.initialize();
+      this.mixingInitialized = true;
+
+      // Create track channels for existing tracks
+      store.tracks.forEach((track) => {
+        mixingEngine.createTrackChannel(track);
+      });
 
       console.log('Audio engine initialized successfully');
     } catch (error) {
@@ -337,6 +352,122 @@ export class AudioEngine {
   selectMIDIInput(deviceId: string): void {
     const store = useAudioStore.getState();
     store.selectMIDIInput(deviceId);
+  }
+
+  /**
+   * Start playback (integrated with PlaybackEngine)
+   */
+  startPlayback(): void {
+    if (!this.playbackInitialized) {
+      this.playbackInitialized = true;
+    }
+
+    const store = useAudioStore.getState();
+    store.play();
+    playbackEngine.start();
+  }
+
+  /**
+   * Stop playback
+   */
+  stopPlayback(): void {
+    const store = useAudioStore.getState();
+    store.stop();
+    playbackEngine.stop();
+  }
+
+  /**
+   * Pause playback
+   */
+  pausePlayback(): void {
+    const store = useAudioStore.getState();
+    store.pause();
+    playbackEngine.stop();
+  }
+
+  /**
+   * Seek to beat position
+   */
+  seekTo(beat: number): void {
+    const store = useAudioStore.getState();
+    store.setCurrentBeat(beat);
+    playbackEngine.seekToBeat(beat);
+  }
+
+  /**
+   * Toggle metronome
+   */
+  toggleMetronome(enabled: boolean): void {
+    playbackEngine.setMetronomeEnabled(enabled);
+  }
+
+  /**
+   * Update track mixing parameters
+   */
+  updateTrackMixing(trackId: string, updates: {
+    volume?: number;
+    pan?: number;
+    muted?: boolean;
+    solo?: boolean;
+  }): void {
+    if (!this.mixingInitialized) return;
+
+    if (updates.volume !== undefined) {
+      mixingEngine.setTrackVolume(trackId, updates.volume);
+    }
+    if (updates.pan !== undefined) {
+      mixingEngine.setTrackPan(trackId, updates.pan);
+    }
+    if (updates.muted !== undefined) {
+      mixingEngine.setTrackMute(trackId, updates.muted);
+    }
+    if (updates.solo !== undefined) {
+      mixingEngine.setTrackSolo(trackId, updates.solo);
+    }
+  }
+
+  /**
+   * Update master volume
+   */
+  updateMasterVolume(volume: number): void {
+    if (!this.mixingInitialized) return;
+    mixingEngine.setMasterVolume(volume);
+  }
+
+  /**
+   * Create track channel when track is added
+   */
+  onTrackAdded(trackId: string): void {
+    if (!this.mixingInitialized) return;
+
+    const store = useAudioStore.getState();
+    const track = store.tracks.find((t) => t.id === trackId);
+
+    if (track) {
+      mixingEngine.createTrackChannel(track);
+    }
+  }
+
+  /**
+   * Remove track channel when track is deleted
+   */
+  onTrackRemoved(trackId: string): void {
+    if (!this.mixingInitialized) return;
+    mixingEngine.removeTrackChannel(trackId);
+  }
+
+  /**
+   * Get mixing engine instance
+   */
+  getMixingEngine() {
+    return mixingEngine;
+  }
+
+  /**
+   * Get playback engine instance
+   */
+  getPlaybackEngine() {
+    return playbackEngine;
   }
 }
 
