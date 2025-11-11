@@ -26,8 +26,9 @@ export class ClipEditingService {
     const newClip = { ...clip };
 
     if (options.trimStart !== undefined && options.trimStart > 0) {
+      const tempo = useAudioStore.getState().audioState.tempo || 120;
       newClip.start += options.trimStart;
-      newClip.offset += this.beatsToSeconds(options.trimStart, 120); // TODO: get actual tempo
+      newClip.offset += this.beatsToSeconds(options.trimStart, tempo);
       newClip.length -= options.trimStart;
     }
 
@@ -59,12 +60,13 @@ export class ClipEditingService {
     };
 
     // Second part
+    const tempo = useAudioStore.getState().audioState.tempo || 120;
     const clip2: AudioClip = {
       ...clip,
       id: `${clip.id}-2`,
       start: splitBeat,
       length: clip.length - splitOffset,
-      offset: clip.offset + this.beatsToSeconds(splitOffset, 120), // TODO: get actual tempo
+      offset: clip.offset + this.beatsToSeconds(splitOffset, tempo),
     };
 
     return [clip1, clip2];

@@ -76,7 +76,8 @@ export default function TimePitchControls({ clip, onClose }: TimePitchControlsPr
   };
 
   // Calculate resulting tempo and pitch
-  const originalTempo = 120; // TODO: Get from project tempo
+  const audioState = useAudioStore((state) => state.audioState);
+  const originalTempo = audioState.tempo || 120;
   const resultingTempo = preserveTempo ? originalTempo : originalTempo / timeStretchRate;
   const resultingPitch = preservePitch ? pitchShift : pitchShift + (12 * Math.log2(timeStretchRate));
 

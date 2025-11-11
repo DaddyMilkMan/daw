@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Square, Circle, Plus } from 'lucide-react';
 import { useAudioStore } from '../stores/audioStore';
 import { Clip, Scene } from '../types/session';
+import { engineClient } from '../lib/engineClient';
 
 interface SessionViewProps {
   onOpenPianoRoll?: (trackId: string, trackName: string) => void;
@@ -48,12 +49,18 @@ export default function SessionView({ onOpenPianoRoll }: SessionViewProps) {
 
   const handleClipTrigger = (clip: Clip) => {
     console.log('🎬 Clip triggered:', clip.name);
-    // TODO: Implement clip triggering in audio engine
+    engineClient.sendCommand('clip:launch', { clipId: clip.id });
+    // Update clip state to playing
+    // TODO: Listen for actual playback state updates from engine
   };
 
   const handleSceneTrigger = (scene: Scene) => {
     console.log('🎭 Scene triggered:', scene.name);
-    // TODO: Trigger all clips in this scene
+    // Trigger all clips in this scene
+    const sceneClips = clips.filter(c => c.sceneIndex === scene.index);
+    sceneClips.forEach(clip => {
+      engineClient.sendCommand('clip:launch', { clipId: clip.id });
+    });
   };
 
   return (

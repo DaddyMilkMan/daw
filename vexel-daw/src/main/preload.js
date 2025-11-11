@@ -10,7 +10,42 @@ contextBridge.exposeInMainWorld('electron', {
 
   // Audio controls
   setTempo: (tempo) => ipcRenderer.send('set-tempo', { tempo }),
+  setTimeSignature: (numerator, denominator) => ipcRenderer.send('set-time-signature', { numerator, denominator }),
+  setLoop: (enabled, start, end) => ipcRenderer.send('set-loop', { enabled, start, end }),
+  setMetronome: (enabled) => ipcRenderer.send('set-metronome', { enabled }),
+
+  // Track operations
   createTrack: (name, type) => ipcRenderer.send('create-track', { name, type }),
+  deleteTrack: (trackId) => ipcRenderer.send('delete-track', { trackId }),
+  renameTrack: (trackId, name) => ipcRenderer.send('rename-track', { trackId, name }),
+  setTrackVolume: (trackId, volume) => ipcRenderer.send('set-track-volume', { trackId, volume }),
+  setTrackPan: (trackId, pan) => ipcRenderer.send('set-track-pan', { trackId, pan }),
+  setTrackMute: (trackId, muted) => ipcRenderer.send('set-track-mute', { trackId, muted }),
+  setTrackSolo: (trackId, solo) => ipcRenderer.send('set-track-solo', { trackId, solo }),
+  setTrackRecordArm: (trackId, armed) => ipcRenderer.send('set-track-record-arm', { trackId, armed }),
+  setTrackColor: (trackId, color) => ipcRenderer.send('set-track-color', { trackId, color }),
+
+  // Automation
+  addAutomation: (trackId, parameter, points) => ipcRenderer.send('add-automation', { trackId, parameter, points }),
+  updateAutomation: (trackId, parameter, points) => ipcRenderer.send('update-automation', { trackId, parameter, points }),
+  deleteAutomation: (trackId, parameter) => ipcRenderer.send('delete-automation', { trackId, parameter }),
+
+  // Clips (Session View)
+  createClip: (trackId, sceneIndex, length) => ipcRenderer.send('create-clip', { trackId, sceneIndex, length }),
+  deleteClip: (clipId) => ipcRenderer.send('delete-clip', { clipId }),
+  launchClip: (clipId) => ipcRenderer.send('launch-clip', { clipId }),
+  stopClip: (trackId) => ipcRenderer.send('stop-clip', { trackId }),
+
+  // MIDI operations
+  addMidiNote: (trackId, pitch, time, duration, velocity) => ipcRenderer.send('add-midi-note', { trackId, pitch, time, duration, velocity }),
+  removeMidiNote: (trackId, noteId) => ipcRenderer.send('remove-midi-note', { trackId, noteId }),
+  updateMidiNote: (trackId, noteId, updates) => ipcRenderer.send('update-midi-note', { trackId, noteId, ...updates }),
+
+  // Batch operations
+  batchStart: () => ipcRenderer.send('batch-start'),
+  batchCommit: () => ipcRenderer.send('batch-commit'),
+  batchRollback: () => ipcRenderer.send('batch-rollback'),
+
   getAudioState: () => ipcRenderer.invoke('get-audio-state'),
 
   // Window controls

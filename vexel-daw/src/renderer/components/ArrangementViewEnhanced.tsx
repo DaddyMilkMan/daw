@@ -193,7 +193,11 @@ export default function ArrangementViewEnhanced({
       // Spacebar - Play/Pause (implement later with transport)
       if (e.key === ' ' || e.key === 'Spacebar') {
         e.preventDefault();
-        // TODO: Toggle playback
+        if (audioEngine.isPlaying()) {
+          audioEngine.pause();
+        } else {
+          audioEngine.play();
+        }
       }
     };
 
@@ -305,8 +309,14 @@ export default function ArrangementViewEnhanced({
         label: 'Change Color',
         icon: <Palette className="h-4 w-4" />,
         onClick: () => {
-          // TODO: Implement color picker
-          console.log('Change color for clip:', clipId);
+          const colors = ['#e11d48', '#ea580c', '#ca8a04', '#65a30d', '#059669', '#0891b2', '#2563eb', '#7c3aed', '#c026d3'];
+          const color = colors[Math.floor(Math.random() * colors.length)];
+          const clips = useClipStore.getState().clips;
+          const updatedClips = clips.map(c =>
+            c.id === clipId ? { ...c, color } : c
+          );
+          useClipStore.setState({ clips: updatedClips });
+          // TODO: Implement proper color picker UI dialog
         },
       },
       { divider: true, label: '', onClick: () => {} },

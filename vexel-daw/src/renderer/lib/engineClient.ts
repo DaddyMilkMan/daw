@@ -273,41 +273,124 @@ class EngineClient {
           window.electron.createTrack(data.name, data.type);
           break;
 
-        // Commands not yet supported by mock engine
+        // Transport commands
         case 'transport:setTimeSignature':
+          window.electron.setTimeSignature(data.numerator, data.denominator);
+          break;
+
         case 'transport:setLoop':
+          window.electron.setLoop(data.enabled, data.start, data.end);
+          break;
+
         case 'transport:setMetronome':
+          window.electron.setMetronome(data.enabled);
+          break;
+
+        // Track commands
         case 'track:delete':
+          window.electron.deleteTrack(data.trackId);
+          break;
+
         case 'track:rename':
+          window.electron.renameTrack(data.trackId, data.name);
+          break;
+
         case 'track:setVolume':
+          window.electron.setTrackVolume(data.trackId, data.volume);
+          break;
+
         case 'track:setPan':
+          window.electron.setTrackPan(data.trackId, data.pan);
+          break;
+
         case 'track:setMute':
+          window.electron.setTrackMute(data.trackId, data.muted);
+          break;
+
         case 'track:setSolo':
+          window.electron.setTrackSolo(data.trackId, data.solo);
+          break;
+
         case 'track:setRecordArm':
+          window.electron.setTrackRecordArm(data.trackId, data.armed);
+          break;
+
         case 'track:setColor':
+          window.electron.setTrackColor(data.trackId, data.color);
+          break;
+
+        // Automation commands
         case 'automation:add':
+          window.electron.addAutomation(data.trackId, data.parameter, data.points);
+          break;
+
         case 'automation:update':
+          window.electron.updateAutomation(data.trackId, data.parameter, data.points);
+          break;
+
         case 'automation:delete':
+          window.electron.deleteAutomation(data.trackId, data.parameter);
+          break;
+
+        // Clip commands
         case 'clip:create':
+          window.electron.createClip(data.trackId, data.sceneIndex, data.length);
+          break;
+
         case 'clip:delete':
+          window.electron.deleteClip(data.clipId);
+          break;
+
         case 'clip:launch':
+          window.electron.launchClip(data.clipId);
+          break;
+
         case 'clip:stop':
+          window.electron.stopClip(data.trackId);
+          break;
+
+        // MIDI commands
         case 'midi:addNote':
+          window.electron.addMidiNote(data.trackId, data.pitch, data.time, data.duration, data.velocity);
+          break;
+
         case 'midi:removeNote':
+          window.electron.removeMidiNote(data.trackId, data.noteId);
+          break;
+
         case 'midi:updateNote':
-        case 'batch:start':
-        case 'batch:commit':
-        case 'batch:rollback':
-        case 'project:save':
-        case 'project:load':
-        case 'project:new':
-          console.warn(`[EngineClient] Command "${type}" not yet implemented in mock engine`);
-          // Emit a mock event so UI can still update locally if needed
-          this.emitEvent({
-            type: 'command:notImplemented',
-            data: { commandType: type, commandData: data },
-            timestamp: Date.now(),
+          window.electron.updateMidiNote(data.trackId, data.noteId, {
+            pitch: data.pitch,
+            time: data.time,
+            duration: data.duration,
+            velocity: data.velocity,
           });
+          break;
+
+        // Batch commands
+        case 'batch:start':
+          window.electron.batchStart();
+          break;
+
+        case 'batch:commit':
+          window.electron.batchCommit();
+          break;
+
+        case 'batch:rollback':
+          window.electron.batchRollback();
+          break;
+
+        // Project commands
+        case 'project:save':
+          await window.electron.saveProject(data?.path, data);
+          break;
+
+        case 'project:load':
+          await window.electron.loadProject(data.path);
+          break;
+
+        case 'project:new':
+          await window.electron.newProject();
           break;
 
         default:
