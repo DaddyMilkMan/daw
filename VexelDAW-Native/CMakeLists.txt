@@ -156,5 +156,6 @@ endif()
 # )
 
 # Enable testing
-enable_testing()
-add_subdirectory(Tests EXCLUDE_FROM_ALL)
+# TODO: Create Tests directory and implement tests
+# enable_testing()
+# add_subdirectory(Tests EXCLUDE_FROM_ALL)
