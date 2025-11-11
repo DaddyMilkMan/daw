@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
+  <assemblyIdentity
+    version="0.1.0.0"
+    processorArchitecture="amd64"
+    name="ZenithAudio.ZenithDAW"
+    type="win32"/>
+
+  <description>Zenith DAW - Professional Digital Audio Workstation</description>
+
+  <!-- Per-Monitor V2 DPI Awareness (Windows 10 1703+) -->
+  <asmv3:application>
+    <asmv3:windowsSettings>
+      <!-- Legacy DPI awareness (Windows 7+) with Per-Monitor fallback -->
+      <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/pm</dpiAware>
+
+      <!-- Modern DPI awareness (Windows 10 1607+) -->
+      <!-- PerMonitorV2 provides best scaling with automatic non-client area scaling -->
+      <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">PerMonitorV2,PerMonitor</dpiAwareness>
+
+      <!-- Enable GDI scaling for legacy controls (optional, use if needed) -->
+      <!-- <gdiScaling xmlns="http://schemas.microsoft.com/SMI/2017/WindowsSettings">true</gdiScaling> -->
+
+      <!-- Windows 10 long path aware (optional, for future file handling) -->
+      <longPathAware xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">true</longPathAware>
+
+      <!-- Windows 10 heap type (optional, for better heap performance) -->
+      <heapType xmlns="http://schemas.microsoft.com/SMI/2020/WindowsSettings">SegmentHeap</heapType>
+    </asmv3:windowsSettings>
+  </asmv3:application>
+
+  <!-- Compatibility with Windows 7 through Windows 11 -->
+  <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1">
+    <application>
+      <!-- Windows 7 -->
+      <supportedOS Id="{35138b9a-5d96-4fbd-8e2d-a2440225f93a}"/>
+      <!-- Windows 8 -->
+      <supportedOS Id="{4a2f28e3-53b9-4441-ba9c-d69d4a4a6e38}"/>
+      <!-- Windows 8.1 -->
+      <supportedOS Id="{1f676c76-80e1-4239-95bb-83d0f6d0da78}"/>
+      <!-- Windows 10/11 -->
+      <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
+    </application>
+  </compatibility>
+
+  <!-- Request administrator execution level: asInvoker (standard user privileges) -->
+  <trustInfo xmlns="urn:schemas-microsoft-com:asm.v3">
+    <security>
+      <requestedPrivileges>
+        <requestedExecutionLevel level="asInvoker" uiAccess="false"/>
+      </requestedPrivileges>
+    </security>
+  </trustInfo>
+
+</assembly>

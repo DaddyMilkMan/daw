@@ -99,6 +99,9 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/Sidebar.cpp
     Source/ui/TrackView.cpp
     Source/ui/TransportBar.cpp
+
+    # Windows resources (manifest, version info)
+    $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
 )
 
 # ============================================================================
