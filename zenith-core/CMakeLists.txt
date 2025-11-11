@@ -73,6 +73,7 @@ target_sources(ZenithDAW PRIVATE
     src/MainWindow.cpp
     src/Engine.cpp
     src/ProjectState.cpp
+    src/AutoSaveManager.cpp
 )
 
 # ============================================================================
