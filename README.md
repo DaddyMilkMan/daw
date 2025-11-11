@@ -294,10 +294,17 @@ cmake --build build
 - **JUCE 8.0+** - Professional audio framework
 - **VST3 SDK** - Plugin hosting
 - **Audio Unit** - macOS plugins
-- **ASIO** - Windows low-latency audio
+
+**Windows Audio APIs** (all supported):
+- **ASIO** - Professional (1-10ms latency) ⭐ Best
+- **WASAPI** - Modern Windows (10-30ms) ✅ Recommended
+- **DirectSound** - Legacy compatibility (50-80ms)
+- **MME** - Maximum compatibility (100-200ms+)
+
+**Other Platforms:**
 - **CoreAudio** - macOS audio I/O
-- **WASAPI** - Windows modern audio API
 - **ALSA** - Linux audio
+- **JACK** - Linux pro audio
 
 ### Build System
 - **CMake 3.22+** - Cross-platform build

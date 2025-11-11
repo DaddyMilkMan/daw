@@ -37,8 +37,12 @@ public:
 
     // Audio device management
     bool setAudioDevice(const std::string& deviceName);
+    bool setAudioDeviceType(const std::string& typeName); // ASIO, WASAPI, DirectSound, MME
     void setBufferSize(int samples);
     void setSampleRate(int rate);
+    std::vector<std::string> getAvailableDeviceTypes() const;
+    std::vector<std::string> getAvailableDevices(const std::string& typeName) const;
+    std::string getCurrentDeviceType() const;
 
     // Track management
     int addTrack(const std::string& name, bool isAudio);

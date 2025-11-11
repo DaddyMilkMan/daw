@@ -322,6 +322,72 @@ add_subdirectory(src/qt-qml)
 
 ---
 
+## Windows Audio API Support
+
+### Comprehensive Driver Support
+
+The Vexel DAW supports **ALL major Windows audio APIs** through JUCE, providing maximum compatibility and flexibility:
+
+| API | Latency | Status | Use Case |
+|-----|---------|--------|----------|
+| **ASIO** | 1-10ms | ⭐ Best | Professional audio interfaces |
+| **WASAPI** | 10-30ms | ✅ Recommended | Modern Windows (Vista+) |
+| **DirectSound** | 50-80ms | ⚠️ Legacy | Compatibility mode |
+| **MME** | 100-200ms+ | ❌ Last Resort | Maximum compatibility |
+
+### Auto-Detection Strategy
+
+```cpp
+// Automatic API selection in order of preference:
+1. ASIO       // If professional driver installed
+2. WASAPI     // Default for Windows Vista+
+3. DirectSound // Fallback for older systems
+4. MME        // Last resort (maximum compatibility)
+```
+
+### Why All APIs?
+
+**ASIO:**
+- Used by professional audio interfaces (Focusrite, RME, UA, MOTU)
+- Lowest latency (1-10ms) for real-time recording
+- Industry standard for pro audio
+
+**WASAPI:**
+- Built into Windows Vista+ (no driver needed)
+- Excellent latency in Exclusive Mode (10-15ms)
+- **Recommended default** when ASIO unavailable
+
+**DirectSound:**
+- Legacy Windows API (Windows 95+)
+- Higher latency (50-80ms) but wide compatibility
+- Fallback for systems without WASAPI
+
+**MME:**
+- Original Windows audio API (Windows 3.1+)
+- Very high latency (100-200ms+)
+- **Only for maximum compatibility**
+
+### Implementation
+
+```cpp
+// JUCE automatically handles all Windows audio APIs
+audioEngine.setAudioDeviceType("ASIO");     // Professional
+audioEngine.setAudioDeviceType("WASAPI");   // Modern Windows
+audioEngine.setAudioDeviceType("DirectSound"); // Legacy
+audioEngine.setAudioDeviceType("MME");      // Compatibility
+```
+
+### Documentation
+
+See **[WINDOWS_AUDIO_APIS_GUIDE.md](./WINDOWS_AUDIO_APIS_GUIDE.md)** for complete details including:
+- Detailed latency comparisons
+- Buffer size recommendations
+- Driver installation guides
+- Troubleshooting tips
+- JUCE implementation examples
+
+---
+
 ## Development Workflow
 
 ### 1. UI Development (QML)
