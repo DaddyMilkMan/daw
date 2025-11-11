@@ -39,6 +39,7 @@ export interface RecordingState {
   armedTracks: Set<string>; // Track IDs
   preCountBars: number;
   preCountRemaining: number; // Bars remaining before recording starts
+  preCountIntervalId: number | null; // Timer ID for pre-count countdown (for cleanup)
   recordingTracks: Map<string, RecordingTrackState>; // Active recording sessions
   inputMonitoring: boolean; // Global input monitoring toggle
   latencyCompensation: number; // in samples

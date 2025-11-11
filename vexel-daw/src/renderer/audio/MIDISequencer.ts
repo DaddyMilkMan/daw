@@ -26,11 +26,14 @@ export class SimpleSynth {
   }
 
   /**
-   * Play a MIDI note
+   * Play a MIDI note (with optional scheduling for precise Web Audio timing)
+   * @param pitch MIDI note number (0-127)
+   * @param velocity MIDI velocity (0-127)
+   * @param time Optional scheduled start time in AudioContext time (defaults to now)
    */
-  noteOn(pitch: number, velocity: number) {
+  noteOn(pitch: number, velocity: number, time?: number) {
     // If note is already playing, stop it first
-    this.noteOff(pitch);
+    this.noteOff(pitch, time);
 
     // Calculate frequency from MIDI note number
     const frequency = this.midiToFrequency(pitch);
@@ -48,38 +51,43 @@ export class SimpleSynth {
     oscillator.connect(gain);
     gain.connect(this.masterGain);
 
-    // Attack envelope
-    const now = this.context.currentTime;
+    // Use scheduled time or current time
+    const startTime = time !== undefined ? time : this.context.currentTime;
     const normalizedVelocity = velocity / 127;
     const attackTime = 0.01;
 
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(normalizedVelocity * 0.3, now + attackTime);
+    // Schedule attack envelope using Web Audio precise timing
+    gain.gain.setValueAtTime(0, startTime);
+    gain.gain.linearRampToValueAtTime(normalizedVelocity * 0.3, startTime + attackTime);
 
-    // Start oscillator
-    oscillator.start(now);
+    // Start oscillator at precise time
+    oscillator.start(startTime);
 
     // Store active note
     this.activeNotes.set(pitch, { oscillator, gain });
   }
 
   /**
-   * Stop a MIDI note
+   * Stop a MIDI note (with optional scheduling for precise Web Audio timing)
+   * @param pitch MIDI note number (0-127)
+   * @param time Optional scheduled stop time in AudioContext time (defaults to now)
    */
-  noteOff(pitch: number) {
+  noteOff(pitch: number, time?: number) {
     const note = this.activeNotes.get(pitch);
     if (!note) return;
 
-    const now = this.context.currentTime;
+    // Use scheduled time or current time
+    const stopTime = time !== undefined ? time : this.context.currentTime;
     const releaseTime = 0.1;
 
-    // Release envelope
-    note.gain.gain.cancelScheduledValues(now);
-    note.gain.gain.setValueAtTime(note.gain.gain.value, now);
-    note.gain.gain.linearRampToValueAtTime(0, now + releaseTime);
+    // Schedule release envelope using Web Audio precise timing
+    // Only cancel values after the stop time to avoid canceling the attack
+    note.gain.gain.cancelScheduledValues(stopTime);
+    note.gain.gain.setValueAtTime(note.gain.gain.value, stopTime);
+    note.gain.gain.linearRampToValueAtTime(0, stopTime + releaseTime);
 
-    // Stop oscillator after release
-    note.oscillator.stop(now + releaseTime);
+    // Stop oscillator after release at precise time
+    note.oscillator.stop(stopTime + releaseTime);
 
     // Cleanup
     this.activeNotes.delete(pitch);
@@ -277,30 +285,23 @@ export class MIDISequencer {
   }
 
   /**
-   * Schedule a note on event
+   * Schedule a note on event using Web Audio API's precise timing
+   * (no setTimeout - uses AudioContext.currentTime for sample-accurate scheduling)
    */
   private scheduleNoteOn(note: MIDINote, time: number) {
-    // Schedule with a small delay to ensure it happens at the right time
-    const delay = Math.max(0, (time - this.context.currentTime) * 1000);
-
-    setTimeout(() => {
-      if (this.isPlaying) {
-        this.synth.noteOn(note.pitch, note.velocity);
-      }
-    }, delay);
+    // Directly schedule using Web Audio's high-precision clock
+    // The time parameter is in AudioContext time, not JavaScript time
+    this.synth.noteOn(note.pitch, note.velocity, time);
   }
 
   /**
-   * Schedule a note off event
+   * Schedule a note off event using Web Audio API's precise timing
+   * (no setTimeout - uses AudioContext.currentTime for sample-accurate scheduling)
    */
   private scheduleNoteOff(note: MIDINote, time: number) {
-    const delay = Math.max(0, (time - this.context.currentTime) * 1000);
-
-    setTimeout(() => {
-      if (this.isPlaying) {
-        this.synth.noteOff(note.pitch);
-      }
-    }, delay);
+    // Directly schedule using Web Audio's high-precision clock
+    // The time parameter is in AudioContext time, not JavaScript time
+    this.synth.noteOff(note.pitch, time);
   }
 
   /**

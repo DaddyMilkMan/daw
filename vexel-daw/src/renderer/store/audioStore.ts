@@ -162,6 +162,7 @@ export const useAudioStore = create<AudioStore>()(
       armedTracks: new Set(),
       preCountBars: 2,
       preCountRemaining: 0,
+      preCountIntervalId: null,
       recordingTracks: new Map(),
       inputMonitoring: false,
       latencyCompensation: 0,
@@ -325,15 +326,8 @@ export const useAudioStore = create<AudioStore>()(
       }
 
       // Start pre-count
-      set((state) => ({
-        recording: {
-          ...state.recording,
-          preCountRemaining: state.recording.preCountBars,
-        },
-      }));
-
       // Countdown timer
-      const countdownInterval = setInterval(() => {
+      const countdownInterval = window.setInterval(() => {
         const { recording } = get();
         if (recording.preCountRemaining > 0) {
           set((state) => ({
@@ -344,10 +338,26 @@ export const useAudioStore = create<AudioStore>()(
           }));
         } else {
           clearInterval(countdownInterval);
+          // Clear interval ID from state
+          set((state) => ({
+            recording: {
+              ...state.recording,
+              preCountIntervalId: null,
+            },
+          }));
           // Actually start recording
           get()._actuallyStartRecording();
         }
       }, (60 / get().tempo) * get().timeSignature.numerator * 1000); // One bar in ms
+
+      // Store interval ID and set pre-count remaining
+      set((state) => ({
+        recording: {
+          ...state.recording,
+          preCountRemaining: state.recording.preCountBars,
+          preCountIntervalId: countdownInterval,
+        },
+      }));
     },
 
     _actuallyStartRecording: () => {
@@ -380,6 +390,18 @@ export const useAudioStore = create<AudioStore>()(
 
     stopRecording: async () => {
       const { recording, audioContext, audioSettings } = get();
+
+      // Clear pre-count interval if it exists (prevents memory leak)
+      if (recording.preCountIntervalId !== null) {
+        clearInterval(recording.preCountIntervalId);
+        set((state) => ({
+          recording: {
+            ...state.recording,
+            preCountIntervalId: null,
+            preCountRemaining: 0,
+          },
+        }));
+      }
 
       if (!recording.isRecording) {
         return;
@@ -470,6 +492,7 @@ export const useAudioStore = create<AudioStore>()(
           isRecording: false,
           recordingTracks: new Map(),
           preCountRemaining: 0,
+          preCountIntervalId: null,
         },
       }));
 
