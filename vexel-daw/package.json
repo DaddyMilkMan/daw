@@ -73,6 +73,10 @@
     "vite": "^5.4.1",
     "wait-on": "^7.2.0"
   },
+  "optionalDependencies": {
+    "megajs": "^1.1.1",
+    "pcloud-sdk-js": "^1.4.0"
+  },
   "build": {
     "appId": "com.daddymilkman.vexel",
     "productName": "Vexel DAW",
