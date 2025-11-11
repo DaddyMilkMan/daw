@@ -58,7 +58,8 @@
  *     ├── masterVolume: 0.8
  *     └── ...
  */
-class ProjectState
+class ProjectState : public juce::ChangeBroadcaster,
+                     public juce::ValueTree::Listener
 {
 public:
     //==========================================================================
@@ -194,6 +195,40 @@ public:
      * @brief Get the root ValueTree (const)
      */
     const juce::ValueTree& getState() const { return state; }
+
+    //==========================================================================
+    // ValueTree::Listener overrides
+    //==========================================================================
+
+    /**
+     * @brief Called when a property is changed
+     */
+    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                   const juce::Identifier& property) override;
+
+    /**
+     * @brief Called when a child is added
+     */
+    void valueTreeChildAdded(juce::ValueTree& parentTree,
+                             juce::ValueTree& childWhichHasBeenAdded) override;
+
+    /**
+     * @brief Called when a child is removed
+     */
+    void valueTreeChildRemoved(juce::ValueTree& parentTree,
+                               juce::ValueTree& childWhichHasBeenRemoved,
+                               int indexFromWhichChildWasRemoved) override;
+
+    /**
+     * @brief Called when a child order changed
+     */
+    void valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved,
+                                     int oldIndex, int newIndex) override;
+
+    /**
+     * @brief Called when parent changed
+     */
+    void valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged) override;
 
 private:
     //==========================================================================

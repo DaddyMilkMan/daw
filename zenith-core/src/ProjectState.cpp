@@ -37,10 +37,16 @@ ProjectState::ProjectState()
 {
     DBG("ProjectState: Constructor");
     newProject();
+
+    // Register as listener for ValueTree changes
+    state.addListener(this);
 }
 
 ProjectState::~ProjectState()
 {
+    // Unregister listener
+    state.removeListener(this);
+
     DBG("ProjectState: Destructor");
 }
 
@@ -295,4 +301,53 @@ juce::ValueTree ProjectState::findTrack(const juce::String& trackId)
     }
 
     return {};
+}
+
+//==============================================================================
+// ValueTree::Listener overrides
+//==============================================================================
+
+void ProjectState::valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                             const juce::Identifier& property)
+{
+    // Broadcast change to listeners (e.g., UI components)
+    sendChangeMessage();
+
+    DBG("ProjectState: Property changed - " + property.toString());
+}
+
+void ProjectState::valueTreeChildAdded(juce::ValueTree& parentTree,
+                                        juce::ValueTree& childWhichHasBeenAdded)
+{
+    // Broadcast change to listeners
+    sendChangeMessage();
+
+    DBG("ProjectState: Child added - " + childWhichHasBeenAdded.getType().toString());
+}
+
+void ProjectState::valueTreeChildRemoved(juce::ValueTree& parentTree,
+                                          juce::ValueTree& childWhichHasBeenRemoved,
+                                          int indexFromWhichChildWasRemoved)
+{
+    // Broadcast change to listeners
+    sendChangeMessage();
+
+    DBG("ProjectState: Child removed - " + childWhichHasBeenRemoved.getType().toString());
+}
+
+void ProjectState::valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved,
+                                                int oldIndex, int newIndex)
+{
+    // Broadcast change to listeners
+    sendChangeMessage();
+
+    DBG("ProjectState: Child order changed");
+}
+
+void ProjectState::valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged)
+{
+    // Broadcast change to listeners
+    sendChangeMessage();
+
+    DBG("ProjectState: Parent changed");
 }
