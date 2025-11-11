@@ -74,6 +74,8 @@ target_sources(ZenithDAW PRIVATE
     src/Engine.cpp
     src/ProjectState.cpp
     src/AutoSaveManager.cpp
+    src/Mixer.cpp
+    src/AudioTrack.cpp
 )
 
 # ============================================================================
