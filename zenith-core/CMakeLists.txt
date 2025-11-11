@@ -11,6 +11,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Export compile commands for IDEs
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Platform detection
+if(WIN32)
+    set(CMAKE_GENERATOR_PLATFORM x64 CACHE STRING "Generator platform" FORCE)
+endif()
+
 # ============================================================================
 # Fetch JUCE 8.0.9 (pinned to exact commit for reproducibility)
 # ============================================================================
@@ -42,6 +47,17 @@ if(APPLE)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
     # Build universal binaries for Apple Silicon + Intel
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "macOS architectures")
+endif()
+
+# Windows-specific build options
+if(WIN32)
+    # Warnings as errors (OFF by default for local dev, ON in CI)
+    option(ZENITH_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" OFF)
+
+    # Link-Time Code Generation (OFF by default for faster link times)
+    # Enable for final release builds with: cmake -DZENITH_LTCG=ON
+    option(ZENITH_LTCG "Enable whole program optimization (/GL + /LTCG)" OFF)
+    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}")
 endif()
 
 # ============================================================================
@@ -171,18 +187,97 @@ target_compile_definitions(ZenithDAW PRIVATE
 )
 
 # ============================================================================
-# Compiler Warnings
+# Compiler Warnings & Optimization
 # ============================================================================
 
+# Helper function to apply warnings to our targets only (not third-party)
+function(zenith_apply_warnings target)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE
+            /W4                    # Warning level 4 (comprehensive)
+            /permissive-           # Standards conformance mode
+            /w14242                # Implicit int to narrower type conversion
+            /w14254                # Different type qualifiers
+            /w14263                # Override but doesn't override any base class member
+            /w14265                # Class has virtual functions but no virtual destructor
+            /w14287                # Unsigned/negative constant mismatch
+            /we4289                # Loop control variable used outside loop (error)
+            /w14296                # Expression always true/false
+            /w14311                # Pointer truncation
+            /w14545 /w14546 /w14547 /w14549 /w14555  # Operator precedence issues
+            /w14619                # Unknown warning number
+            /w14640                # Thread-unsafe static member initialization
+            /w14826                # Sign extension issues
+            /w14905                # Wide string literal cast issues
+            /w14906                # String literal cast issues
+            /w14928                # Illegal copy-initialization
+        )
+
+        # Warnings as errors (opt-in)
+        if(ZENITH_WARNINGS_AS_ERRORS)
+            target_compile_options(${target} PRIVATE /WX)
+            message(STATUS "Warnings as errors ENABLED for ${target}")
+        endif()
+    else()
+        target_compile_options(${target} PRIVATE
+            -Wall
+            -Wextra
+            -Wpedantic
+            -Wno-unused-parameter  # JUCE callbacks often have unused params
+        )
+    endif()
+endfunction()
+
+# Apply warnings to our app target
+zenith_apply_warnings(ZenithDAW)
+
+# Windows-specific optimization and PDB generation
 if(MSVC)
-    target_compile_options(ZenithDAW PRIVATE /W4)
-else()
+    # Generate PDBs in all configurations for crash analysis
     target_compile_options(ZenithDAW PRIVATE
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wno-unused-parameter  # JUCE callbacks often have unused params
+        /Zi                        # Generate complete debugging information
     )
+
+    # Release-specific optimizations
+    target_compile_options(ZenithDAW PRIVATE
+        $<$<CONFIG:Release>:/O2>   # Maximize speed
+        $<$<CONFIG:Release>:/Oi>   # Enable intrinsic functions
+        $<$<CONFIG:Release>:/Gy>   # Enable function-level linking (for better dead code removal)
+        $<$<CONFIG:Release>:/Gw>   # Optimize global data (allows linker to remove unused globals)
+    )
+
+    # Optional Link-Time Code Generation (whole program optimization)
+    if(ZENITH_LTCG)
+        target_compile_options(ZenithDAW PRIVATE
+            $<$<CONFIG:Release>:/GL>   # Whole program optimization
+        )
+        target_link_options(ZenithDAW PRIVATE
+            $<$<CONFIG:Release>:/LTCG> # Link-time code generation
+        )
+        message(STATUS "LTCG enabled for Release builds (expect slower link times)")
+    endif()
+
+    # Linker flags for all configurations
+    target_link_options(ZenithDAW PRIVATE
+        /DEBUG:FULL                # Generate complete PDB for all configs
+        /OPT:REF                   # Eliminate unreferenced functions/data
+        /OPT:ICF                   # Identical COMDAT folding (merge duplicate functions)
+    )
+
+    # Release-specific linker flags
+    target_link_options(ZenithDAW PRIVATE
+        $<$<CONFIG:Release>:/INCREMENTAL:NO>  # Disable incremental linking for Release
+    )
+
+    message(STATUS "MSVC flags applied:")
+    message(STATUS "  - PDB generation: /Zi + /DEBUG:FULL")
+    message(STATUS "  - Release optimizations: /O2 /Oi /Gy /Gw")
+    message(STATUS "  - Linker optimizations: /OPT:REF /OPT:ICF")
+    if(ZENITH_LTCG)
+        message(STATUS "  - LTCG: /GL + /LTCG (ENABLED)")
+    else()
+        message(STATUS "  - LTCG: OFF (enable with -DZENITH_LTCG=ON)")
+    endif()
 endif()
 
 # ============================================================================
