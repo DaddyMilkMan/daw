@@ -22,7 +22,8 @@
  */
 
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
-import { S3Client, GetObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { Upload } from '@aws-sdk/lib-storage';
 
 export type CloudProvider = 's3' | 'google-drive' | 'local';
 
@@ -99,6 +100,8 @@ export class CloudStorageService {
   private db: IDBPDatabase<ZenithDB> | null = null;
   private uploadListeners: ((progress: UploadProgress) => void)[] = [];
   private autoSaveInterval: NodeJS.Timeout | null = null;
+  private lastSaveTime: number = 0;
+  private autoSaveCallback: (() => Promise<void>) | null = null;
 
   private constructor() {}
 
@@ -199,9 +202,12 @@ export class CloudStorageService {
   }
 
   /**
-   * Download project from cloud
+   * Download project from cloud (with version sync detection)
    */
-  async downloadProject(projectId: string): Promise<{ data: Blob; audioFiles: { name: string; blob: Blob }[] }> {
+  async downloadProject(
+    projectId: string,
+    forceDownload: boolean = false
+  ): Promise<{ data: Blob; audioFiles: { name: string; blob: Blob }[]; isNewerVersion: boolean }> {
     if (!this.config) {
       throw new Error('Cloud storage not initialized');
     }
@@ -210,21 +216,42 @@ export class CloudStorageService {
 
     // Check local cache first
     const cached = await this.getCachedProject(projectId);
-    if (cached) {
-      console.log('Project found in cache');
+
+    // Get cloud version info
+    let cloudLastModified = 0;
+    const projects = await this.listProjects();
+    const cloudProject = projects.find(p => p.id === projectId);
+    if (cloudProject) {
+      cloudLastModified = cloudProject.lastModified;
+    }
+
+    // Check if cloud version is newer
+    const isNewerVersion = cached && cloudLastModified > cached.lastModified;
+
+    if (cached && !forceDownload && !isNewerVersion) {
+      console.log('✅ Using cached version (up to date)');
       return {
         data: cached.data,
         audioFiles: [], // TODO: Retrieve cached audio files
+        isNewerVersion: false,
       };
     }
 
+    if (isNewerVersion) {
+      console.log('⚠️ Newer version available in cloud - downloading...');
+    }
+
     // Download from provider
+    let result: { data: Blob; audioFiles: { name: string; blob: Blob }[] };
+
     switch (this.config.provider) {
       case 's3':
-        return await this.downloadFromS3(projectId);
+        result = await this.downloadFromS3(projectId);
+        break;
 
       case 'google-drive':
-        return await this.downloadFromGoogleDrive(projectId);
+        result = await this.downloadFromGoogleDrive(projectId);
+        break;
 
       case 'local':
         throw new Error('Project not found in local storage');
@@ -232,6 +259,33 @@ export class CloudStorageService {
       default:
         throw new Error('Invalid cloud provider');
     }
+
+    // Update cache with new version
+    await this.cacheProjectLocally(
+      projectId,
+      cloudProject?.name || projectId,
+      result.data
+    );
+
+    return {
+      ...result,
+      isNewerVersion: isNewerVersion || false,
+    };
+  }
+
+  /**
+   * Check if cloud has newer version than local
+   */
+  async hasNewerVersion(projectId: string): Promise<boolean> {
+    const cached = await this.getCachedProject(projectId);
+    if (!cached) return true; // No local version
+
+    const projects = await this.listProjects();
+    const cloudProject = projects.find(p => p.id === projectId);
+
+    if (!cloudProject) return false; // No cloud version
+
+    return cloudProject.lastModified > cached.lastModified;
   }
 
   /**
@@ -304,19 +358,45 @@ export class CloudStorageService {
   }
 
   /**
-   * Enable auto-save
+   * Enable auto-save with throttling
+   * @param intervalMs - Throttle interval (recommended: 3000-5000ms for UX)
+   * @param saveCallback - Function that returns project data to save
    */
-  enableAutoSave(intervalMs: number = 60000): void {
+  enableAutoSave(
+    intervalMs: number = 5000,
+    saveCallback: () => Promise<{ projectId: string; projectName: string; projectData: Blob; audioFiles: { name: string; blob: Blob }[] }>
+  ): void {
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
     }
 
-    this.autoSaveInterval = setInterval(() => {
-      console.log('Auto-saving project...');
-      // TODO: Get current project state and save
+    // Throttled auto-save: saves at regular intervals
+    // Uses throttle (not debounce) to ensure regular saves even during continuous editing
+    this.autoSaveInterval = setInterval(async () => {
+      const now = Date.now();
+      const timeSinceLastSave = now - this.lastSaveTime;
+
+      // Skip if saved too recently (throttle)
+      if (timeSinceLastSave < intervalMs) {
+        return;
+      }
+
+      try {
+        console.log('💾 Auto-saving project...');
+        const data = await saveCallback();
+
+        // Upload to cloud
+        await this.uploadProject(data.projectName, data.projectData, data.audioFiles);
+
+        this.lastSaveTime = now;
+        console.log('✅ Auto-save completed');
+      } catch (error) {
+        console.error('❌ Auto-save failed:', error);
+        // Don't throw - auto-save should be non-blocking
+      }
     }, intervalMs);
 
-    console.log(`Auto-save enabled (interval: ${intervalMs}ms)`);
+    console.log(`✅ Auto-save enabled (throttle interval: ${intervalMs}ms)`);
   }
 
   /**
@@ -326,9 +406,25 @@ export class CloudStorageService {
     if (this.autoSaveInterval) {
       clearInterval(this.autoSaveInterval);
       this.autoSaveInterval = null;
+      this.autoSaveCallback = null;
     }
 
     console.log('Auto-save disabled');
+  }
+
+  /**
+   * Manually trigger a save (bypasses throttle)
+   */
+  async forceSave(
+    projectId: string,
+    projectName: string,
+    projectData: Blob,
+    audioFiles: { name: string; blob: Blob }[]
+  ): Promise<void> {
+    console.log('💾 Force saving project...');
+    await this.uploadProject(projectName, projectData, audioFiles);
+    this.lastSaveTime = Date.now();
+    console.log('✅ Force save completed');
   }
 
   /**
@@ -429,20 +525,109 @@ export class CloudStorageService {
   ): Promise<void> {
     console.log('Uploading to S3...');
 
-    // Placeholder for AWS SDK integration
-    // Implementation would use AWS SDK v3:
-    // - S3Client.send(new PutObjectCommand(...))
-    // - For large files: CreateMultipartUpload -> UploadPart -> CompleteMultipartUpload
+    if (!this.config?.credentials) {
+      throw new Error('S3 credentials not configured');
+    }
 
-    // Emit progress
-    this.emitProgress({
-      projectId,
-      fileName: projectName,
-      loaded: projectData.size,
-      total: projectData.size,
-      percentage: 100,
-      status: 'completed',
-    });
+    const { accessKeyId, secretAccessKey, region, bucket } = this.config.credentials;
+
+    if (!accessKeyId || !secretAccessKey || !region || !bucket) {
+      throw new Error('Missing S3 credentials');
+    }
+
+    try {
+      // Initialize S3 client
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+
+      const projectKey = `projects/${projectId}.json`;
+      const timestamp = Date.now();
+
+      // Convert Blob to ArrayBuffer for upload
+      const arrayBuffer = await projectData.arrayBuffer();
+
+      // Use Upload for multipart (handles large files automatically)
+      const upload = new Upload({
+        client: s3Client,
+        params: {
+          Bucket: bucket,
+          Key: projectKey,
+          Body: new Uint8Array(arrayBuffer),
+          ContentType: 'application/json',
+          Metadata: {
+            'project-name': projectName,
+            'project-id': projectId,
+            'last-modified': timestamp.toString(),
+            'version': '1.0',
+          },
+        },
+      });
+
+      // Track upload progress
+      upload.on('httpUploadProgress', (progress) => {
+        if (progress.loaded && progress.total) {
+          this.emitProgress({
+            projectId,
+            fileName: projectName,
+            loaded: progress.loaded,
+            total: progress.total,
+            percentage: Math.round((progress.loaded / progress.total) * 100),
+            status: 'uploading',
+          });
+        }
+      });
+
+      // Perform upload
+      const result = await upload.done();
+      console.log('✅ S3 upload complete:', result);
+
+      // Upload audio files (if any)
+      for (const audioFile of audioFiles) {
+        const audioKey = `projects/${projectId}/audio/${audioFile.name}`;
+        const audioBuffer = await audioFile.blob.arrayBuffer();
+
+        const audioUpload = new Upload({
+          client: s3Client,
+          params: {
+            Bucket: bucket,
+            Key: audioKey,
+            Body: new Uint8Array(audioBuffer),
+            ContentType: 'audio/wav',
+          },
+        });
+
+        await audioUpload.done();
+        console.log(`✅ Uploaded audio file: ${audioFile.name}`);
+      }
+
+      // Emit final completion
+      this.emitProgress({
+        projectId,
+        fileName: projectName,
+        loaded: projectData.size,
+        total: projectData.size,
+        percentage: 100,
+        status: 'completed',
+      });
+
+      console.log(`✅ Project "${projectName}" uploaded to S3 successfully`);
+    } catch (error) {
+      console.error('❌ S3 upload failed:', error);
+      this.emitProgress({
+        projectId,
+        fileName: projectName,
+        loaded: 0,
+        total: projectData.size,
+        percentage: 0,
+        status: 'error',
+      });
+      throw new Error(`S3 upload failed: ${error}`);
+    }
   }
 
   /**
@@ -547,10 +732,80 @@ export class CloudStorageService {
   private async listS3Projects(): Promise<CloudProject[]> {
     console.log('Listing S3 projects...');
 
-    // Placeholder for AWS SDK integration
-    // Implementation would use: S3Client.send(new ListObjectsV2Command(...))
+    if (!this.config?.credentials) {
+      return [];
+    }
 
-    return [];
+    const { accessKeyId, secretAccessKey, region, bucket } = this.config.credentials;
+
+    if (!accessKeyId || !secretAccessKey || !region || !bucket) {
+      return [];
+    }
+
+    try {
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+
+      const command = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: 'projects/',
+      });
+
+      const response = await s3Client.send(command);
+
+      if (!response.Contents || response.Contents.length === 0) {
+        return [];
+      }
+
+      const projects: CloudProject[] = await Promise.all(
+        response.Contents.filter(item => item.Key?.endsWith('.json')).map(async (item) => {
+          const id = item.Key!.replace('projects/', '').replace('.json', '');
+
+          // Get metadata by fetching object head
+          try {
+            const headCommand = new GetObjectCommand({
+              Bucket: bucket,
+              Key: item.Key!,
+            });
+            const headResponse = await s3Client.send(headCommand);
+
+            return {
+              id,
+              name: headResponse.Metadata?.['project-name'] || id,
+              path: item.Key!,
+              size: item.Size || 0,
+              lastModified: item.LastModified?.getTime() || Date.now(),
+              provider: 's3' as CloudProvider,
+              syncStatus: 'synced' as const,
+              localCached: false,
+            };
+          } catch {
+            // Fallback if head request fails
+            return {
+              id,
+              name: id,
+              path: item.Key!,
+              size: item.Size || 0,
+              lastModified: item.LastModified?.getTime() || Date.now(),
+              provider: 's3' as CloudProvider,
+              syncStatus: 'synced' as const,
+              localCached: false,
+            };
+          }
+        })
+      );
+
+      console.log(`✅ Found ${projects.length} projects in S3`);
+      return projects;
+    } catch (error) {
+      console.error('❌ Failed to list S3 projects:', error);
+      return [];
+    }
   }
 
   /**
@@ -559,12 +814,46 @@ export class CloudStorageService {
   private async deleteFromS3(projectId: string): Promise<void> {
     console.log('Deleting from S3...');
 
-    // Placeholder for AWS SDK integration
-    // Implementation would use: S3Client.send(new DeleteObjectCommand(...))
+    if (!this.config?.credentials) {
+      throw new Error('S3 credentials not configured');
+    }
+
+    const { accessKeyId, secretAccessKey, region, bucket } = this.config.credentials;
+
+    if (!accessKeyId || !secretAccessKey || !region || !bucket) {
+      throw new Error('Missing S3 credentials');
+    }
+
+    try {
+      const s3Client = new S3Client({
+        region,
+        credentials: {
+          accessKeyId,
+          secretAccessKey,
+        },
+      });
+
+      const projectKey = `projects/${projectId}.json`;
+
+      // Delete project file
+      const deleteCommand = new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: projectKey,
+      });
+
+      await s3Client.send(deleteCommand);
+      console.log(`✅ Deleted project ${projectId} from S3`);
+
+      // TODO: Also delete associated audio files in projects/${projectId}/audio/
+      // This would require listing and deleting all objects with that prefix
+    } catch (error) {
+      console.error('❌ S3 delete failed:', error);
+      throw new Error(`S3 delete failed: ${error}`);
+    }
   }
 
   /**
-   * Google Drive Upload
+   * Google Drive Upload (resumable for large files)
    */
   private async uploadToGoogleDrive(
     projectId: string,
@@ -574,17 +863,110 @@ export class CloudStorageService {
   ): Promise<void> {
     console.log('Uploading to Google Drive...');
 
-    // Placeholder for Google Drive API integration
-    // Implementation would use: gapi.client.drive.files.create(...)
+    if (!this.config?.credentials?.accessToken) {
+      throw new Error('Google Drive not authenticated');
+    }
 
-    this.emitProgress({
-      projectId,
-      fileName: projectName,
-      loaded: projectData.size,
-      total: projectData.size,
-      percentage: 100,
-      status: 'completed',
-    });
+    try {
+      const API_BASE = 'https://www.googleapis.com/drive/v3';
+      const UPLOAD_API_BASE = 'https://www.googleapis.com/upload/drive/v3';
+
+      // Step 1: Initiate resumable upload
+      const initResponse = await fetch(`${UPLOAD_API_BASE}/files?uploadType=resumable`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.config.credentials.accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${projectName}.json`,
+          mimeType: 'application/json',
+          properties: {
+            projectId,
+            projectName,
+            lastModified: Date.now().toString(),
+            version: '1.0',
+          },
+        }),
+      });
+
+      if (!initResponse.ok) {
+        throw new Error(`Failed to initiate upload: ${await initResponse.text()}`);
+      }
+
+      const resumableUri = initResponse.headers.get('Location');
+      if (!resumableUri) {
+        throw new Error('No resumable URI returned');
+      }
+
+      // Step 2: Upload the file data
+      const arrayBuffer = await projectData.arrayBuffer();
+      const uploadResponse = await fetch(resumableUri, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: arrayBuffer,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${await uploadResponse.text()}`);
+      }
+
+      const result = await uploadResponse.json();
+      console.log('✅ Google Drive upload complete:', result);
+
+      // Upload audio files (if any)
+      for (const audioFile of audioFiles) {
+        const audioInitResponse = await fetch(`${UPLOAD_API_BASE}/files?uploadType=resumable`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.config.credentials.accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: audioFile.name,
+            mimeType: 'audio/wav',
+            parents: [result.id], // Store in same folder as project
+          }),
+        });
+
+        const audioUri = audioInitResponse.headers.get('Location');
+        if (audioUri) {
+          const audioBuffer = await audioFile.blob.arrayBuffer();
+          await fetch(audioUri, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'audio/wav',
+            },
+            body: audioBuffer,
+          });
+          console.log(`✅ Uploaded audio file: ${audioFile.name}`);
+        }
+      }
+
+      this.emitProgress({
+        projectId,
+        fileName: projectName,
+        loaded: projectData.size,
+        total: projectData.size,
+        percentage: 100,
+        status: 'completed',
+      });
+
+      console.log(`✅ Project "${projectName}" uploaded to Google Drive successfully`);
+    } catch (error) {
+      console.error('❌ Google Drive upload failed:', error);
+      this.emitProgress({
+        projectId,
+        fileName: projectName,
+        loaded: 0,
+        total: projectData.size,
+        percentage: 0,
+        status: 'error',
+      });
+      throw new Error(`Google Drive upload failed: ${error}`);
+    }
   }
 
   /**
@@ -638,9 +1020,46 @@ export class CloudStorageService {
   private async listGoogleDriveProjects(): Promise<CloudProject[]> {
     console.log('Listing Google Drive projects...');
 
-    // Placeholder for Google Drive API integration
+    if (!this.config?.credentials?.accessToken) {
+      return [];
+    }
 
-    return [];
+    try {
+      const API_BASE = 'https://www.googleapis.com/drive/v3';
+
+      // Search for JSON files (DAW projects)
+      const response = await fetch(
+        `${API_BASE}/files?q=mimeType='application/json' and name contains '.json'&fields=files(id,name,size,modifiedTime,properties)`,
+        {
+          headers: {
+            'Authorization': `Bearer ${this.config.credentials.accessToken}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to list projects: ${await response.text()}`);
+      }
+
+      const data = await response.json();
+
+      const projects: CloudProject[] = (data.files || []).map((file: any) => ({
+        id: file.properties?.projectId || file.id,
+        name: file.properties?.projectName || file.name.replace('.json', ''),
+        path: file.id,
+        size: parseInt(file.size) || 0,
+        lastModified: new Date(file.modifiedTime).getTime(),
+        provider: 'google-drive' as CloudProvider,
+        syncStatus: 'synced' as const,
+        localCached: false,
+      }));
+
+      console.log(`✅ Found ${projects.length} projects in Google Drive`);
+      return projects;
+    } catch (error) {
+      console.error('❌ Failed to list Google Drive projects:', error);
+      return [];
+    }
   }
 
   /**
@@ -649,7 +1068,29 @@ export class CloudStorageService {
   private async deleteFromGoogleDrive(projectId: string): Promise<void> {
     console.log('Deleting from Google Drive...');
 
-    // Placeholder for Google Drive API integration
+    if (!this.config?.credentials?.accessToken) {
+      throw new Error('Google Drive not authenticated');
+    }
+
+    try {
+      const API_BASE = 'https://www.googleapis.com/drive/v3';
+
+      const response = await fetch(`${API_BASE}/files/${projectId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${this.config.credentials.accessToken}`,
+        },
+      });
+
+      if (!response.ok && response.status !== 204) {
+        throw new Error(`Delete failed: ${await response.text()}`);
+      }
+
+      console.log(`✅ Deleted project ${projectId} from Google Drive`);
+    } catch (error) {
+      console.error('❌ Google Drive delete failed:', error);
+      throw new Error(`Google Drive delete failed: ${error}`);
+    }
   }
 
   /**
