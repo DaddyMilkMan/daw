@@ -2,3 +2,42 @@ wingman/
 vexel-daw/node_modules/
 vexel-daw/dist/
 vexel-daw/dist-electron/
+
+# Build directories (CMake, JUCE)
+build/
+Build/
+cmake-build-*/
+out/
+zenith-core/build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Compiled binaries
+*.o
+*.obj
+*.so
+*.dylib
+*.dll
+*.exe
+*.app
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+
+# macOS
+.DS_Store
+*.dSYM/
+
+# JUCE
+JuceLibraryCode/
+*.jucer.bak
