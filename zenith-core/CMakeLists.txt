@@ -69,6 +69,7 @@ juce_add_gui_app(ZenithDAW
 # ============================================================================
 
 target_sources(ZenithDAW PRIVATE
+    # Core application
     src/Main.cpp
     src/MainWindow.cpp
     src/Engine.cpp
@@ -76,6 +77,14 @@ target_sources(ZenithDAW PRIVATE
     src/AutoSaveManager.cpp
     src/Mixer.cpp
     src/AudioTrack.cpp
+
+    # UI Components (custom JUCE-based UI)
+    Source/ui/ZenithLookAndFeel.cpp
+    Source/ui/MainComponent.cpp
+    Source/ui/TopBar.cpp
+    Source/ui/Sidebar.cpp
+    Source/ui/TrackView.cpp
+    Source/ui/TransportBar.cpp
 )
 
 # ============================================================================
@@ -84,6 +93,7 @@ target_sources(ZenithDAW PRIVATE
 
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source
 )
 
 # ============================================================================
