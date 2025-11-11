@@ -12,23 +12,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ============================================================================
-# Fetch JUCE 8.0.9 using FetchContent
+# Fetch JUCE 8.0.9 (pinned to exact commit for reproducibility)
 # ============================================================================
 include(FetchContent)
 
-message(STATUS "Fetching JUCE 8.0.9...")
+message(STATUS "Fetching JUCE 8.0.9 (commit: f72bad6)...")
 
-FetchContent_Declare(
-    JUCE
+FetchContent_Declare(juce
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.9
+    GIT_TAG f72bad64d29715216226685810c5196bd0d79d77  # JUCE 8.0.9
     GIT_SHALLOW TRUE
-    GIT_PROGRESS TRUE
 )
 
-FetchContent_MakeAvailable(JUCE)
+FetchContent_MakeAvailable(juce)
 
-message(STATUS "JUCE fetched successfully!")
+message(STATUS "JUCE 8.0.9 fetched successfully!")
 
 # ============================================================================
 # Build Configuration
