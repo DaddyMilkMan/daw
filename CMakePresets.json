@@ -1,0 +1,99 @@
+{
+  "version": 5,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 22
+  },
+  "configurePresets": [
+    {
+      "name": "dev-debug",
+      "displayName": "Development Debug (W10 Audio ON)",
+      "description": "Debug build with W10 Phase 1 audio engine enabled for development",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/dev-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ZENITH_ENABLE_PHASE1_AUDIO": "ON",
+        "ZENITH_ENABLE_MMCSS": "ON",
+        "ZENITH_USE_CRASHPAD": "OFF",
+        "ZENITH_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "dev-debug-crashpad",
+      "displayName": "Development Debug (W10 + Crashpad)",
+      "description": "Debug build with W10 audio and Crashpad enabled",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/dev-debug-crashpad",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ZENITH_ENABLE_PHASE1_AUDIO": "ON",
+        "ZENITH_ENABLE_MMCSS": "ON",
+        "ZENITH_USE_CRASHPAD": "ON",
+        "CRASHPAD_HANDLER_PATH": "C:/path/to/crashpad_handler.exe",
+        "ZENITH_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "release-safe",
+      "displayName": "Release Safe (W10 Audio OFF)",
+      "description": "Release build with W10 audio disabled (test-tone only)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/release-safe",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZENITH_ENABLE_PHASE1_AUDIO": "OFF",
+        "ZENITH_ENABLE_MMCSS": "ON",
+        "ZENITH_USE_CRASHPAD": "OFF",
+        "ZENITH_WARNINGS_AS_ERRORS": "OFF"
+      }
+    },
+    {
+      "name": "release-full",
+      "displayName": "Release Full (W10 Audio ON)",
+      "description": "Release build with W10 audio enabled for production testing",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/release-full",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ZENITH_ENABLE_PHASE1_AUDIO": "ON",
+        "ZENITH_ENABLE_MMCSS": "ON",
+        "ZENITH_USE_CRASHPAD": "OFF",
+        "ZENITH_LTCG": "ON",
+        "ZENITH_WARNINGS_AS_ERRORS": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev-debug",
+      "displayName": "Build Development Debug",
+      "configurePreset": "dev-debug"
+    },
+    {
+      "name": "dev-debug-crashpad",
+      "displayName": "Build Development Debug + Crashpad",
+      "configurePreset": "dev-debug-crashpad"
+    },
+    {
+      "name": "release-safe",
+      "displayName": "Build Release Safe",
+      "configurePreset": "release-safe"
+    },
+    {
+      "name": "release-full",
+      "displayName": "Build Release Full",
+      "configurePreset": "release-full"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev-debug",
+      "displayName": "Test Development Debug",
+      "configurePreset": "dev-debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}

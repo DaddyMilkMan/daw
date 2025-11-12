@@ -65,7 +65,10 @@ if(WIN32)
     option(ZENITH_USE_CRASHPAD "Enable Crashpad crash capture (local minidumps)" OFF)
     set(CRASHPAD_HANDLER_PATH "" CACHE STRING "Path to crashpad_handler.exe at runtime (absolute)")
 
-    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}, Crashpad: ${ZENITH_USE_CRASHPAD}")
+    # W10: Phase 1 Audio Engine (OFF by default, opt-in)
+    option(ZENITH_ENABLE_PHASE1_AUDIO "Enable Phase 1 engine wiring (gated mixdown path)" OFF)
+
+    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}, Crashpad: ${ZENITH_USE_CRASHPAD}, Phase1 Audio: ${ZENITH_ENABLE_PHASE1_AUDIO}")
 
     if(ZENITH_USE_CRASHPAD)
         if(CRASHPAD_HANDLER_PATH STREQUAL "")
@@ -125,6 +128,9 @@ target_sources(ZenithDAW PRIVATE
 
     # W8: Crashpad crash reporting (Windows-only, opt-in)
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:Source/win/CrashpadInit.cpp>
+
+    # W10: Phase 1 audio engine (opt-in, cross-platform)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Track.cpp>
 
     # Windows resources (manifest, version info)
     $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
@@ -213,6 +219,9 @@ target_compile_definitions(ZenithDAW PRIVATE
     # W8: Crashpad crash reporting (Windows-only, opt-in)
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:ZENITH_USE_CRASHPAD=1>
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:CRASHPAD_HANDLER_PATH="${CRASHPAD_HANDLER_PATH}">
+
+    # W10: Phase 1 audio engine wiring (opt-in, cross-platform)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:ZENITH_ENABLE_PHASE1_AUDIO=1>
 
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>

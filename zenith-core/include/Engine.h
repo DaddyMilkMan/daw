@@ -24,6 +24,13 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <vector>
+#include <memory>
+
+// Forward declarations
+namespace zenith {
+    class Track;
+}
 
 //==============================================================================
 /**
@@ -87,6 +94,66 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+    //==========================================================================
+    // W10: Transport Position
+    //==========================================================================
+
+    /**
+     * @brief Set transport position in samples (MESSAGE THREAD)
+     */
+    void setTransportSamples(juce::int64 pos) { playbackPosition.store(pos); }
+
+    /**
+     * @brief Get transport position in samples
+     */
+    juce::int64 getTransportSamples() const { return playbackPosition.load(); }
+
+    //==========================================================================
+    // W10: Master Controls
+    //==========================================================================
+
+    /**
+     * @brief Set master gain (MESSAGE THREAD)
+     * @param g Gain [0..2], default 1.0
+     */
+    void setMasterGain(float g) { masterGain_.store(juce::jlimit(0.0f, 2.0f, g)); }
+
+    /**
+     * @brief Get master gain
+     */
+    float getMasterGain() const { return masterGain_.load(); }
+
+    /**
+     * @brief Set master pan (MESSAGE THREAD)
+     * @param p Pan [-1..1], L..R, default 0.0 (center)
+     */
+    void setMasterPan(float p) { masterPan_.store(juce::jlimit(-1.0f, 1.0f, p)); }
+
+    /**
+     * @brief Get master pan
+     */
+    float getMasterPan() const { return masterPan_.load(); }
+
+    //==========================================================================
+    // W10: Track Management (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Get number of tracks
+     */
+    int getNumTracks() const;
+
+    /**
+     * @brief Get track by index
+     */
+    zenith::Track* getTrack(int index);
+
+    /**
+     * @brief Add test tracks for Phase 1 development
+     * @param count Number of tracks to add
+     */
+    void addTestTracks(int count);
 
     //==========================================================================
     // Audio Device Management
@@ -213,6 +280,18 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+    // --------- W10 state (no RT allocations; lock discipline documented) ----
+    std::atomic<float> masterGain_{1.0f};   // [0..2], default 1.0
+    std::atomic<float> masterPan_{0.0f};    // [-1..1], L..R, default 0.0 (center)
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // Preallocated mix buffer sized in prepareToPlay()
+    juce::AudioBuffer<float> mixBuffer_;
+
+    // Track container (MESSAGE THREAD access only)
+    std::vector<std::unique_ptr<zenith::Track>> tracks_;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

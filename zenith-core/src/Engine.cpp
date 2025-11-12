@@ -9,6 +9,10 @@
     #include "../Source/win/WinRtAudioPriority.h"
 #endif
 
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    #include "../Source/engine/Track.h"
+#endif
+
 //==============================================================================
 Engine::Engine()
 {
@@ -129,6 +133,52 @@ double Engine::getCpuUsage() const
 }
 
 //==============================================================================
+// W10: Track Management
+//==============================================================================
+
+int Engine::getNumTracks() const
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    return static_cast<int>(tracks_.size());
+#else
+    return 0;
+#endif
+}
+
+zenith::Track* Engine::getTrack(int index)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    if (index >= 0 && index < static_cast<int>(tracks_.size()))
+        return tracks_[static_cast<size_t>(index)].get();
+#endif
+    return nullptr;
+}
+
+void Engine::addTestTracks(int count)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    DBG("Engine: Adding " + juce::String(count) + " test tracks");
+
+    for (int i = 0; i < count; ++i)
+    {
+        auto track = std::make_unique<zenith::Track>();
+        track->setName("Track " + juce::String(i + 1));
+
+        // Prepare track if audio is running
+        if (currentSampleRate.load() > 0)
+            track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+
+        tracks_.push_back(std::move(track));
+    }
+
+    DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
+#else
+    juce::ignoreUnused(count);
+    DBG("Engine: W10 disabled - addTestTracks() requires ZENITH_ENABLE_PHASE1_AUDIO");
+#endif
+}
+
+//==============================================================================
 // AudioIODeviceCallback Implementation
 //==============================================================================
 
@@ -137,12 +187,33 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     DBG("Engine: Audio device starting...");
 
     // Update settings
-    currentSampleRate.store(device->getCurrentSampleRate());
-    currentBufferSize.store(device->getCurrentBufferSizeSamples());
+    const double sampleRate = device->getCurrentSampleRate();
+    const int blockSize = device->getCurrentBufferSizeSamples();
+
+    currentSampleRate.store(sampleRate);
+    currentBufferSize.store(blockSize);
 
     // Reset state
     phase = 0.0;
     playbackPosition.store(0);
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // W10: Pre-allocate mix buffer once, no RT allocs afterwards
+    const int numOutputs = juce::jmax(1, device->getActiveOutputChannels().countNumberOfSetBits());
+    mixBuffer_.setSize(numOutputs, blockSize, false, true, true);
+    mixBuffer_.clear();
+
+    // W10: Prepare all tracks (no RT allocs expected inside)
+    for (auto& track : tracks_)
+    {
+        if (track)
+            track->prepareToPlay(blockSize, sampleRate);
+    }
+
+    DBG("W10: Mix buffer allocated (" + juce::String(numOutputs) + " channels, "
+        + juce::String(blockSize) + " samples)");
+    DBG("W10: Prepared " + juce::String(tracks_.size()) + " tracks");
+#endif
 
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
@@ -153,6 +224,20 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 void Engine::audioDeviceStopped()
 {
     DBG("Engine: Audio device stopped");
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // W10: Release track resources
+    for (auto& track : tracks_)
+    {
+        if (track)
+            track->releaseResources();
+    }
+
+    // W10: Release mix buffer
+    mixBuffer_.setSize(0, 0);
+
+    DBG("W10: Released resources");
+#endif
 }
 
 void Engine::audioDeviceIOCallbackWithContext(
@@ -185,6 +270,62 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     juce::ignoreUnused(inputChannelData, numInputChannels, context);
 
+    // ===================== W10 gated path =====================
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // Advance transport (simple free-run when playing)
+    if (isPlaying_.load(std::memory_order_acquire))
+        playbackPosition.fetch_add(numSamples, std::memory_order_acq_rel);
+
+    // Size-check (device may change block at runtime)
+    if (mixBuffer_.getNumChannels() != numOutputChannels || mixBuffer_.getNumSamples() != numSamples)
+        mixBuffer_.setSize(juce::jmax(1, numOutputChannels), numSamples, false, true, true);
+
+    // One clear per callback
+    mixBuffer_.clear();
+
+    // Mix all tracks (each track must NOT clear the buffer internally)
+    for (auto& track : tracks_)
+    {
+        if (track)
+            track->processBlock(mixBuffer_, numSamples);
+    }
+
+    // Master gain/pan (constant per block; no per-sample allocs or branches)
+    const float g = masterGain_.load(std::memory_order_relaxed);
+    const float p = masterPan_.load(std::memory_order_relaxed); // -1..1
+    float gL = g, gR = g;
+
+    if (numOutputChannels >= 2)
+    {
+        // Equal-power-ish pan law
+        const float l = juce::jlimit(0.0f, 1.0f, 0.5f - 0.5f * p);
+        const float r = juce::jlimit(0.0f, 1.0f, 0.5f + 0.5f * p);
+        gL *= l * 2.0f;
+        gR *= r * 2.0f;
+    }
+
+    // Apply to outputs
+    if (numOutputChannels == 1)
+    {
+        // Mono output
+        const float* inL = mixBuffer_.getReadPointer(0);
+        juce::FloatVectorOperations::copyWithMultiply(outputChannelData[0], inL, gL, numSamples);
+    }
+    else if (numOutputChannels >= 2)
+    {
+        // Stereo output
+        const float* inL = mixBuffer_.getReadPointer(0);
+        const float* inR = mixBuffer_.getNumChannels() > 1 ? mixBuffer_.getReadPointer(1) : inL;
+
+        juce::FloatVectorOperations::copyWithMultiply(outputChannelData[0], inL, gL, numSamples);
+        juce::FloatVectorOperations::copyWithMultiply(outputChannelData[1], inR, gR, numSamples);
+
+        // Clear any extra channels
+        for (int ch = 2; ch < numOutputChannels; ++ch)
+            juce::FloatVectorOperations::clear(outputChannelData[ch], numSamples);
+    }
+#else
+    // ===================== Existing test-tone path (unchanged) =====================
     // Check if playing
     bool playing = isPlaying_.load();
 
@@ -208,6 +349,7 @@ void Engine::audioDeviceIOCallbackWithContext(
             }
         }
     }
+#endif
 }
 
 //==============================================================================
