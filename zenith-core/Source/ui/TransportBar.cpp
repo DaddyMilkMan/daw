@@ -244,28 +244,6 @@ void TransportBar::loopButtonClicked()
         onLoopToggle(loopEnabled);
 }
 
-void TrackView::mouseDown(const juce::MouseEvent& event)
-{
-    // Check if click is in timeline
-    if (event.y < timelineHeight)
-    {
-        double clickTime = xToTime((float)event.x);
-        if (onPlayheadClicked)
-            onPlayheadClicked(clickTime);
-        return;
-    }
-
-    // Check which track was clicked
-    int trackY = event.y - timelineHeight;
-    int trackIndex = (int)(((float)trackY + scrollY) / ((float)defaultTrackHeight * verticalZoom));
-
-    if (juce::isPositiveAndBelow(trackIndex, trackNames.size()))
-    {
-        if (onTrackSelected)
-            onTrackSelected(trackIndex);
-    }
-}
-
 void TransportBar::metronomeButtonClicked()
 {
     metronomeEnabled = !metronomeEnabled;
