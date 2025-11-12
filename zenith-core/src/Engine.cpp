@@ -9,6 +9,10 @@
     #include "../Source/win/WinRtAudioPriority.h"
 #endif
 
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    #include <vector>
+#endif
+
 //==============================================================================
 Engine::Engine()
 {
@@ -319,18 +323,30 @@ void Engine::seekSamples(int64_t targetSample)
     transportSamples_.store(targetSample, std::memory_order_release);
 
     // Purge all queued events < targetSample (they're now stale)
-    // This runs on message thread, so it's safe to drain the queue
+    // This runs on MESSAGE THREAD - safe to allocate and drain entire queue
+
+    // Drain entire queue to temp buffer, preserving chronological order
+    std::vector<TransportEvent> futureEvents;
+    futureEvents.reserve(kEventRingCap);  // Avoid reallocations
+
     TransportEvent ev;
     while (eventQ_.tryPop(ev))
     {
         if (ev.whenSamples >= targetSample)
         {
-            // This event is still valid, but we just popped it
-            // Try to push it back (best effort, may drop if queue is full)
-            (void)eventQ_.tryPush(ev);
-            break;
+            futureEvents.push_back(ev);  // Keep future events
         }
-        // else: event is in the past, discard it
+        // else: event is in the past (< targetSample), discard it
+    }
+
+    // Re-push all future events in original chronological order
+    for (const auto& e : futureEvents)
+    {
+        if (!eventQ_.tryPush(e))
+        {
+            // Queue full (shouldn't happen with correct sizing, but be defensive)
+            droppedEvents_.fetch_add(1, std::memory_order_relaxed);
+        }
     }
 }
 
