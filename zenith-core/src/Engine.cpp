@@ -5,6 +5,10 @@
 
 #include "../include/Engine.h"
 
+#ifdef _WIN32
+    #include "../Source/win/WinRtAudioPriority.h"
+#endif
+
 //==============================================================================
 Engine::Engine()
 {
@@ -131,6 +135,20 @@ double Engine::getCpuUsage() const
 void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
     DBG("Engine: Audio device starting...");
+
+    // Windows: Boost audio thread priority with MMCSS
+    #ifdef _WIN32
+        static MMCSSAudioPriority audioPriority(L"Pro Audio");
+        if (audioPriority.isActive())
+        {
+            DBG("Engine: MMCSS 'Pro Audio' priority active (task index: " +
+                juce::String((int)audioPriority.getTaskIndex()) + ")");
+        }
+        else
+        {
+            DBG("Engine: WARNING - MMCSS failed (check if service is running)");
+        }
+    #endif
 
     // Update settings
     currentSampleRate.store(device->getCurrentSampleRate());

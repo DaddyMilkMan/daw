@@ -57,7 +57,11 @@ if(WIN32)
     # Link-Time Code Generation (OFF by default for faster link times)
     # Enable for final release builds with: cmake -DZENITH_LTCG=ON
     option(ZENITH_LTCG "Enable whole program optimization (/GL + /LTCG)" OFF)
-    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}")
+
+    # MMCSS Audio Priority (ON by default for pro audio performance)
+    option(ZENITH_ENABLE_MMCSS "Enable Windows MMCSS audio thread priority boost" ON)
+
+    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}")
 endif()
 
 # ============================================================================
@@ -99,6 +103,9 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/Sidebar.cpp
     Source/ui/TrackView.cpp
     Source/ui/TransportBar.cpp
+
+    # Windows-specific sources
+    $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
 
     # Windows resources (manifest, version info)
     $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
@@ -180,6 +187,9 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Disable analytics
     JUCE_USE_CURL=0
     JUCE_WEB_BROWSER=0
+
+    # Windows MMCSS
+    $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_ENABLE_MMCSS}>>:ZENITH_ENABLE_MMCSS=1>
 
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>
