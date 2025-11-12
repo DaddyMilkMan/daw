@@ -19,6 +19,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(ZENITH_ENABLE_PHASE1_AUDIO "Enable src/audio skeleton (Phase 1 - not ready)" OFF)
 option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from VexelDAW-Native" OFF)
 
+# C3: Optional debug seed for testing track integration (disabled by default)
+option(ZENITH_ENGINE_SEED_DEBUG_TRACKS "Create 8 demo tracks at startup in Debug builds" OFF)
+
 # ============================================================================
 # Fetch JUCE 8.0.9 using FetchContent
 # ============================================================================
@@ -175,6 +178,9 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Release builds
     $<$<CONFIG:Release>:NDEBUG=1>
+
+    # C3: Optional debug seed for track testing
+    $<$<BOOL:${ZENITH_ENGINE_SEED_DEBUG_TRACKS}>:ZENITH_ENGINE_SEED_DEBUG_TRACKS=1>
 )
 
 # ============================================================================

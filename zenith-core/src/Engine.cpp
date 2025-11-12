@@ -5,6 +5,11 @@
 
 #include "../include/Engine.h"
 
+// C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
+#include "engine/Track.h"
+#include "engine/Clip.h"
+#include "engine/MixerChannel.h"
+
 //==============================================================================
 Engine::Engine()
 {
@@ -53,6 +58,12 @@ bool Engine::initialize()
 
     // Add this engine as the audio callback
     deviceManager.addAudioCallback(this);
+
+    // C3: Optional debug seed (disabled by default; enable with -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
+#if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
+    DBG("Engine: Seeding debug tracks (ZENITH_ENGINE_SEED_DEBUG_TRACKS enabled)");
+    addTestTracks(8);
+#endif
 
     DBG("Engine: Initialization complete!");
     return true;
@@ -122,6 +133,47 @@ juce::String Engine::getAudioDeviceInfo() const
 double Engine::getCpuUsage() const
 {
     return deviceManager.getCpuUsage() * 100.0;
+}
+
+//==============================================================================
+// C3: Minimal Engine Surface (compile-only, no audio wiring)
+//==============================================================================
+
+int Engine::getNumTracks() const noexcept
+{
+    return static_cast<int>(tracks_.size());
+}
+
+const std::vector<std::unique_ptr<zenith::Track>>& Engine::tracks() const noexcept
+{
+    return tracks_;
+}
+
+void Engine::addTestTracks(int count)
+{
+    if (count <= 0)
+        return;
+
+    DBG("Engine: Adding " + juce::String(count) + " test tracks");
+
+    // Reserve capacity to avoid reallocations
+    tracks_.reserve(tracks_.size() + static_cast<size_t>(count));
+
+    for (int i = 0; i < count; ++i)
+    {
+        // Create track with default name and type
+        auto track = std::make_unique<zenith::Track>(
+            "Track " + juce::String(tracks_.size() + 1),
+            zenith::Track::Type::Audio);
+
+        // NOTE: Do NOT call prepareToPlay() here - these are detached test tracks
+        // They are NOT wired into the audio graph and will not be used in processAudio()
+        // This is purely for compile verification and UI testing
+
+        tracks_.push_back(std::move(track));
+    }
+
+    DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
 }
 
 //==============================================================================

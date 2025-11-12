@@ -24,6 +24,15 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <vector>
+#include <memory>
+
+// C3: Forward declarations for donor engine primitives
+namespace zenith {
+    class Track;
+    class Clip;
+    class MixerChannel;
+}
 
 //==============================================================================
 /**
@@ -119,6 +128,31 @@ public:
     double getCpuUsage() const;
 
     //==========================================================================
+    // C3: Minimal Engine Surface (compile-only, no audio wiring)
+    //==========================================================================
+
+    /**
+     * @brief Get number of tracks in engine
+     * @return Track count
+     * @note Thread-safe; can be called from any thread
+     */
+    int getNumTracks() const noexcept;
+
+    /**
+     * @brief Get const reference to tracks container
+     * @return Const reference to tracks vector
+     * @note Use only from message thread; do NOT iterate from audio thread
+     */
+    const std::vector<std::unique_ptr<zenith::Track>>& tracks() const noexcept;
+
+    /**
+     * @brief Debug helper to create test tracks (message thread only)
+     * @param count Number of tracks to create
+     * @note Does NOT attach tracks to audio graph; for compile/UI testing only
+     */
+    void addTestTracks(int count);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -207,6 +241,9 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+    // C3: Donor track container (no audio thread access yet)
+    std::vector<std::unique_ptr<zenith::Track>> tracks_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
