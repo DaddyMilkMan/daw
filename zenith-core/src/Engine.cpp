@@ -137,7 +137,12 @@ double Engine::getCpuUsage() const
 #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
 void Engine::play()  noexcept { isPlaying_.store(true,  std::memory_order_release); }
 void Engine::pause() noexcept { isPlaying_.store(false, std::memory_order_release); }
-void Engine::seekSamples(int64_t absolute) noexcept { transportSamples_.store(absolute, std::memory_order_release); }
+void Engine::seekSamples(int64_t absolute) noexcept {
+    // SPSC discipline: only seek when not playing (queue owned by message thread when paused)
+    jassert(!isPlaying_.load(std::memory_order_acquire));
+    transportSamples_.store(absolute, std::memory_order_release);
+    // TODO: If seeking while events queued, may want to flush/rewrite eventQ_
+}
 
 bool Engine::scheduleClipStart(int trackIndex, int clipId, int64_t atSample) noexcept {
     TransportEvent ev{ TransportEvent::Type::StartClip, trackIndex, clipId, atSample };
@@ -312,27 +317,24 @@ void Engine::processAudio(
     {
         TransportEvent ev;
         while (eventQ_.pop(ev)) {
-            // If event is in the future, requeue (we can't "unpop", so buffer locally)
+            // If event is in the future, stash it (we already popped, must preserve)
             if (ev.whenSamples >= blockEnd) {
                 dueEventsScratch_.push_back(ev);
-                break;
+                continue; // Keep draining to catch ALL future events
             }
             if (ev.whenSamples >= blockStart) {
-                // For now, we just DBG-log. Hook to mixer in Phase 1.1.
+                // Event is due in this block
                 const int offset = (int) juce::jlimit<int64_t>(0, numSamples - 1, ev.whenSamples - blockStart);
-                DBG("Scheduler: due event type=" << (int)ev.type
-                    << " track=" << ev.trackIndex << " clip=" << ev.clipId
-                    << " when=" << ev.whenSamples << " (offset " << offset << ")");
-                // Future: mixer_.onScheduledEvent(ev, offset);
+                // TODO W10.3: mixer_.onScheduledEvent(ev, offset);
+                // For now: no-op (no RT logging)
+                juce::ignoreUnused(offset);
             }
-            // continue draining to catch multiple events inside the block
+            // Events before blockStart are late - drop them (or could handle as immediate)
         }
-        // Re-enqueue future events we stashed (preserves ordering)
-        if (!dueEventsScratch_.empty()) {
-            for (const auto& futureEv : dueEventsScratch_)
-                eventQ_.push(futureEv);
-            dueEventsScratch_.clear();
-        }
+        // Re-enqueue ALL future events we stashed (preserves ordering)
+        for (const auto& futureEv : dueEventsScratch_)
+            eventQ_.push(futureEv);
+        dueEventsScratch_.clear();
     }
 
     // Ensure mix buffer matches device config
