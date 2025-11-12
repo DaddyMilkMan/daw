@@ -41,3 +41,6 @@ Makefile
 # JUCE
 JuceLibraryCode/
 *.jucer.bak
+
+# Branch audit patches (temporary safety net)
+branch_audits/
