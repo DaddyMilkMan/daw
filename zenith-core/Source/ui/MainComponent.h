@@ -65,6 +65,11 @@ private:
 
     void setupCallbacks();
 
+    /**
+     * @brief W5: Inject test session data (100 tracks × 50 clips)
+     */
+    void injectTestSessionData();
+
     //==========================================================================
     // Settings panel management
     //==========================================================================

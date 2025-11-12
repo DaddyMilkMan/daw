@@ -24,6 +24,9 @@ MainComponent::MainComponent(Engine& eng)
 
     // Setup callbacks between components
     setupCallbacks();
+
+    // W5: Inject stress test data (100 tracks × 50 clips)
+    injectTestSessionData();
 }
 
 MainComponent::~MainComponent()
@@ -188,6 +191,68 @@ void MainComponent::setupCallbacks()
         trackView.setBPM(bpm);
         // TODO: Update engine BPM
     };
+}
+
+//==============================================================================
+void MainComponent::injectTestSessionData()
+{
+    // W5: Create 100 tracks
+    std::vector<Track> testTracks;
+    testTracks.reserve(100);
+
+    for (int i = 0; i < 100; ++i)
+    {
+        Track track;
+        track.name = (i % 3 == 0) ? "Audio " : (i % 3 == 1) ? "MIDI " : "Aux ";
+        track.name += juce::String(i + 1);
+        track.lanes = 1;
+        testTracks.push_back(track);
+    }
+
+    // W5: Create 50 clips per track (5000 total clips)
+    std::vector<Clip> testClips;
+    testClips.reserve(5000);
+
+    juce::Random rng(12345);  // Seeded for reproducibility
+
+    juce::Array<juce::Colour> clipColours = {
+        ZenithColours::track1,
+        ZenithColours::track2,
+        ZenithColours::track3,
+        ZenithColours::track4,
+        juce::Colours::green,
+        juce::Colours::orange,
+        juce::Colours::purple,
+        juce::Colours::cyan
+    };
+
+    for (int trackIdx = 0; trackIdx < 100; ++trackIdx)
+    {
+        for (int clipIdx = 0; clipIdx < 50; ++clipIdx)
+        {
+            Clip clip;
+            clip.trackIndex = trackIdx;
+
+            // Random start position (0-300 seconds)
+            clip.startSamples = rng.nextInt64(juce::Range<juce::int64>(0, 300 * 44100));
+
+            // Random length (0.5-5 seconds)
+            clip.lengthSamples = rng.nextInt64(juce::Range<juce::int64>(22050, 220500));
+
+            // Random color
+            clip.colour = clipColours[rng.nextInt(clipColours.size())];
+
+            // Random name
+            clip.name = "Clip " + juce::String(clipIdx + 1);
+
+            testClips.push_back(clip);
+        }
+    }
+
+    // Inject into TrackView
+    trackView.setSessionData(std::move(testTracks), std::move(testClips));
+
+    DBG("W5: Injected test data - 100 tracks × 50 clips (5000 total clips)");
 }
 
 //==============================================================================
