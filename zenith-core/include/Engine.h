@@ -24,6 +24,11 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <cstdint>
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+#include "lockfree/SpscRing.h"
+#endif
 
 //==============================================================================
 /**
@@ -87,6 +92,83 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    //==========================================================================
+    // Sample-Accurate Transport (Phase 1)
+    //==========================================================================
+
+    /**
+     * @brief Transport event types for sample-accurate scheduling
+     */
+    enum class TransportEventType : uint8_t
+    {
+        ClipStart,  ///< Start a clip at specified sample
+        ClipStop    ///< Stop a clip at specified sample
+    };
+
+    /**
+     * @brief Sample-accurate transport event
+     *
+     * Scheduled from message thread, consumed in audio callback
+     * All fields are trivially copyable for lock-free queue
+     */
+    struct TransportEvent
+    {
+        TransportEventType type;
+        int64_t whenSamples;  ///< Absolute sample position
+        int trackIndex;       ///< Which track
+        int64_t clipId;       ///< Unique clip identifier
+
+        TransportEvent() = default;
+        TransportEvent(TransportEventType t, int64_t when, int track, int64_t clip)
+            : type(t), whenSamples(when), trackIndex(track), clipId(clip) {}
+    };
+
+    /**
+     * @brief Schedule a clip to start at specific sample position
+     * @param trackIndex Track index (0-based)
+     * @param clipId Unique clip identifier
+     * @param startSample Absolute sample position to start
+     * @return true if scheduled, false if event queue is full
+     *
+     * Thread-safe: Call from message thread
+     */
+    bool scheduleClipStart(int trackIndex, int64_t clipId, int64_t startSample);
+
+    /**
+     * @brief Schedule a clip to stop at specific sample position
+     * @param trackIndex Track index (0-based)
+     * @param clipId Unique clip identifier
+     * @param stopSample Absolute sample position to stop
+     * @return true if scheduled, false if event queue is full
+     *
+     * Thread-safe: Call from message thread
+     */
+    bool scheduleClipStop(int trackIndex, int64_t clipId, int64_t stopSample);
+
+    /**
+     * @brief Seek to specific sample position
+     * @param targetSample Target sample position
+     *
+     * Purges all queued events < targetSample to prevent stale events
+     * Thread-safe: Call from message thread
+     */
+    void seekSamples(int64_t targetSample);
+
+    /**
+     * @brief Get current transport position in samples
+     * @return Current sample position (monotonic)
+     */
+    int64_t getTransportSamples() const { return transportSamples_.load(); }
+
+    /**
+     * @brief Get number of dropped events (queue full)
+     * @return Count of events that couldn't be scheduled
+     */
+    uint64_t getDroppedEvents() const { return droppedEvents_.load(); }
+
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     //==========================================================================
     // Audio Device Management
@@ -213,6 +295,29 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    //==========================================================================
+    // Phase 1: Sample-Accurate Scheduling
+    //==========================================================================
+
+    // Lock-free event queue (message thread → audio thread)
+    static constexpr size_t kEventRingCap = 4096;
+    zenith::SpscRing<TransportEvent> eventQ_{kEventRingCap};
+
+    // Transport sample position (monotonic, updated on audio thread)
+    std::atomic<int64_t> transportSamples_{0};
+
+    // Dropped events counter (queue full)
+    std::atomic<uint64_t> droppedEvents_{0};
+
+    /**
+     * @brief Drain scheduled events for current block [blockStart, blockEnd)
+     * @note AUDIO THREAD - uses peek-then-pop to avoid losing future events
+     */
+    void drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numSamples);
+
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

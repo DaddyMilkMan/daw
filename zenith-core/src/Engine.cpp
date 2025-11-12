@@ -270,4 +270,104 @@ void Engine::processAudio(
             }
         }
     }
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // Phase 1: Drain scheduled events for this block
+    const int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
+    const int64_t blockEnd = blockStart + numSamples;
+    drainScheduledEvents(blockStart, blockEnd, numSamples);
+
+    // Update transport position
+    transportSamples_.fetch_add(numSamples, std::memory_order_relaxed);
+#endif
 }
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+//==============================================================================
+// Phase 1: Sample-Accurate Scheduling Implementation
+//==============================================================================
+
+bool Engine::scheduleClipStart(int trackIndex, int64_t clipId, int64_t startSample)
+{
+    TransportEvent ev(TransportEventType::ClipStart, startSample, trackIndex, clipId);
+
+    if (!eventQ_.tryPush(ev))
+    {
+        droppedEvents_.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    return true;
+}
+
+bool Engine::scheduleClipStop(int trackIndex, int64_t clipId, int64_t stopSample)
+{
+    TransportEvent ev(TransportEventType::ClipStop, stopSample, trackIndex, clipId);
+
+    if (!eventQ_.tryPush(ev))
+    {
+        droppedEvents_.fetch_add(1, std::memory_order_relaxed);
+        return false;
+    }
+
+    return true;
+}
+
+void Engine::seekSamples(int64_t targetSample)
+{
+    // Update transport position
+    transportSamples_.store(targetSample, std::memory_order_release);
+
+    // Purge all queued events < targetSample (they're now stale)
+    // This runs on message thread, so it's safe to drain the queue
+    TransportEvent ev;
+    while (eventQ_.tryPop(ev))
+    {
+        if (ev.whenSamples >= targetSample)
+        {
+            // This event is still valid, but we just popped it
+            // Try to push it back (best effort, may drop if queue is full)
+            (void)eventQ_.tryPush(ev);
+            break;
+        }
+        // else: event is in the past, discard it
+    }
+}
+
+void Engine::drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numSamples)
+{
+    // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
+    // Uses peek-then-pop to avoid losing future events
+
+    TransportEvent ev;
+    while (eventQ_.tryPeek(ev))
+    {
+        // If event is beyond this block, leave it in queue
+        if (ev.whenSamples >= blockEnd)
+            break;
+
+        // Event is for this block or past, consume it
+        (void)eventQ_.tryPop(ev);
+
+        // If event is in this block, process it
+        if (ev.whenSamples >= blockStart)
+        {
+            const int offset = static_cast<int>(ev.whenSamples - blockStart);
+
+            // Boundary check (should never trigger if logic is correct)
+            jassert(offset >= 0 && offset < numSamples);
+
+            // TODO (W10.3): Route to Mixer
+            // mixer_.onScheduledEvent(ev, offset);
+
+            // Temporary: Silent acknowledgment
+            // In dev builds, we can verify events are being processed
+            // In release builds, this compiles to nothing
+            (void)offset;
+        }
+        // else: Event is overdue (< blockStart)
+        // Policy: Drop silently (could also clamp to offset 0)
+    }
+}
+
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
