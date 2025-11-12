@@ -41,3 +41,19 @@ Makefile
 # JUCE
 JuceLibraryCode/
 *.jucer.bak
+
+# Additional build and IDE patterns (merged from daw-features)
+*.ninja
+*.sln.docstates
+*.sublime-project
+*.sublime-workspace
+*.suo
+*.user
+*.vcxproj.user
+.cproject
+.ninja_deps
+.ninja_log
+.project
+.settings/
+_deps/
+compile_commands.json
