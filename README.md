@@ -5,6 +5,7 @@
 [![Project Status](https://img.shields.io/badge/Status-Phase%200%20Foundation-blue)](#project-status)
 [![JUCE](https://img.shields.io/badge/JUCE-8.0.9-green)](https://juce.com/)
 [![Documentation](https://img.shields.io/badge/Docs-Complete-brightgreen)](#documentation)
+[![Windows CI](https://github.com/DaddyMilkMan/daw/actions/workflows/windows.yml/badge.svg?branch=main)](https://github.com/DaddyMilkMan/daw/actions/workflows/windows.yml)
 
 ---
 

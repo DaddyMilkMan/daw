@@ -29,6 +29,14 @@ jobs:
       - name: Ensure Ninja
         uses: seanmiddleditch/gha-setup-ninja@v5
 
+      - name: Cache CMake deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            out/build/${{ matrix.preset }}/_deps
+            out/build/${{ matrix.preset }}/CMakeFiles
+          key: ${{ runner.os }}-cmake-${{ matrix.preset }}-${{ hashFiles('**/CMakeLists.txt', 'CMakePresets.json') }}
+
       - name: Configure (${{ matrix.preset }})
         shell: bash
         run: cmake --preset ${{ matrix.preset }}
@@ -37,33 +45,39 @@ jobs:
         shell: bash
         run: cmake --build --preset ${{ matrix.preset }} -j
 
-      # Guardrails: flags must match expectations per preset
-      - name: Verify flags (${{ matrix.preset }})
-        shell: pwsh
-        run: |
-          $cache = Get-Content "out/build/${{ matrix.preset }}/CMakeCache.txt"
-          if ("${{ matrix.preset }}" -eq "release-safe") {
-            if ($cache -notmatch 'ZENITH_ENABLE_PHASE1_AUDIO:BOOL=OFF') { throw "Engine flag should be OFF in release-safe" }
-            if ($cache -notmatch 'ZENITH_ENABLE_CRASH_CAPTURE:BOOL=OFF') { throw "Crash flag should be OFF in release-safe" }
-          } else {
-            if ($cache -notmatch 'ZENITH_ENABLE_PHASE1_AUDIO:BOOL=ON')  { throw "Engine flag should be ON in dev-debug" }
-          }
-
-      # Extra guard: CrashCapture objects must NOT exist when flag is OFF
-      - name: Verify no CrashCapture objects (release-safe only)
+      # Guardrails: Assert flags match preset expectations
+      - name: Assert flags (release-safe)
         if: matrix.preset == 'release-safe'
         shell: pwsh
         run: |
-          $hits = Get-ChildItem -Recurse "out/build/${{ matrix.preset }}" -Include *CrashCapture*.obj, *Crashpad*.obj, *Crashpad*.lib -ErrorAction SilentlyContinue
-          if ($hits) { $hits | % FullName; throw "Crash artifacts present with flag OFF." }
+          $cache = Get-Content "out/build/release-safe/CMakeCache.txt" -Raw
+          if ($cache -notmatch 'ZENITH_ENABLE_PHASE1_AUDIO:BOOL=OFF') { throw "PHASE1_AUDIO must be OFF" }
+          if ($cache -notmatch 'ZENITH_ENABLE_CRASH_CAPTURE:BOOL=OFF') { throw "CRASH_CAPTURE must be OFF" }
+
+      - name: Assert flags (dev-debug)
+        if: matrix.preset == 'dev-debug'
+        shell: pwsh
+        run: |
+          $cache = Get-Content "out/build/dev-debug/CMakeCache.txt" -Raw
+          if ($cache -notmatch 'ZENITH_ENABLE_PHASE1_AUDIO:BOOL=ON') { throw "PHASE1_AUDIO must be ON in dev-debug" }
+
+      # Extra guard: compile_commands.json must NOT reference forbidden units in release-safe
+      - name: Assert compile excludes (release-safe)
+        if: matrix.preset == 'release-safe'
+        shell: pwsh
+        run: |
+          $cc = Get-Content "out/build/release-safe/compile_commands.json" -Raw
+          foreach ($bad in @('CrashCapture.cpp','win/Crashpad','Mixer.cpp')) {
+            if ($cc -match [Regex]::Escape($bad)) { throw "Forbidden compile unit in release-safe: $bad" }
+          }
 
       - name: Upload artifacts (${{ matrix.preset }})
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: zenith-${{ matrix.preset }}-${{ github.sha }}
+          name: ${{ matrix.preset }}-win
           path: |
             out/build/${{ matrix.preset }}/**/*.exe
-            out/build/${{ matrix.preset }}/**/*.dll
             out/build/${{ matrix.preset }}/**/*.pdb
+          retention-days: 3
           if-no-files-found: ignore
