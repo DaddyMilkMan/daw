@@ -1,0 +1,221 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Zenith DAW - ETW Recording Profiles (W7)
+
+  Provides 4 presets for Windows Performance Recorder (WPR):
+  - debug-light: General debugging (CPU, GPU, lightweight)
+  - glitch-hunt: Audio dropout/glitch analysis (WASAPI, AudioSes, MMCSS)
+  - gpu-ui: GPU/DWM/Present performance (DX composition, frame pacing)
+  - audio-stack: Full audio subsystem (kernel to app layer)
+
+  Usage:
+    wpr -start zenith_etw.wprp!debug-light
+    wpr -stop output.etl
+
+  Validation:
+    wpr -validate zenith_etw.wprp
+-->
+
+<WindowsPerformanceRecorder Version="1.0" Author="Zenith DAW Team" Copyright="2025">
+  <Profiles>
+
+    <!--========================================================================
+        SYSTEM COLLECTORS (reused across presets)
+    =========================================================================-->
+
+    <!-- Kernel collector for CPU + CSwitch + DPC/ISR -->
+    <SystemCollector Id="SystemCollector_Base" Name="NT Kernel Logger">
+      <BufferSize Value="1024" />
+      <Buffers Value="256" />
+    </SystemCollector>
+
+    <!-- Kernel collector for Audio (larger buffers) -->
+    <SystemCollector Id="SystemCollector_Audio" Name="NT Kernel Logger">
+      <BufferSize Value="1024" />
+      <Buffers Value="512" />
+    </SystemCollector>
+
+    <!-- Event collector for user-mode providers -->
+    <EventCollector Id="EventCollector_Base" Name="User Event Collector">
+      <BufferSize Value="1024" />
+      <Buffers Value="256" />
+    </EventCollector>
+
+    <!-- Event collector for Audio (larger buffers) -->
+    <EventCollector Id="EventCollector_Audio" Name="User Event Collector (Audio)">
+      <BufferSize Value="1024" />
+      <Buffers Value="512" />
+    </EventCollector>
+
+    <!--========================================================================
+        SYSTEM PROVIDERS (kernel-mode)
+    =========================================================================-->
+
+    <!-- CPU Sampling + Context Switches + DPC/ISR (Base) -->
+    <SystemProvider Id="SystemProvider_Base">
+      <Keywords>
+        <Keyword Value="CpuConfig" />
+        <Keyword Value="Loader" />
+        <Keyword Value="ProcessThread" />
+        <Keyword Value="CSwitch" />
+        <Keyword Value="Dispatcher" />
+        <Keyword Value="SampledProfile" />
+        <Keyword Value="DPC" />
+        <Keyword Value="ISR" />
+      </Keywords>
+      <Stacks>
+        <Stack Value="CSwitch" />
+        <Stack Value="ReadyThread" />
+        <Stack Value="SampledProfile" />
+        <Stack Value="Dpc" />
+        <Stack Value="Isr" />
+      </Stacks>
+    </SystemProvider>
+
+    <!-- Extended kernel provider with Disk I/O -->
+    <SystemProvider Id="SystemProvider_Extended">
+      <Keywords>
+        <Keyword Value="CpuConfig" />
+        <Keyword Value="Loader" />
+        <Keyword Value="ProcessThread" />
+        <Keyword Value="CSwitch" />
+        <Keyword Value="Dispatcher" />
+        <Keyword Value="SampledProfile" />
+        <Keyword Value="DPC" />
+        <Keyword Value="ISR" />
+        <Keyword Value="DiskIO" />
+        <Keyword Value="HardFaults" />
+        <Keyword Value="VirtualAlloc" />
+      </Keywords>
+      <Stacks>
+        <Stack Value="CSwitch" />
+        <Stack Value="ReadyThread" />
+        <Stack Value="SampledProfile" />
+        <Stack Value="Dpc" />
+        <Stack Value="Isr" />
+        <Stack Value="PageFault" />
+      </Stacks>
+    </SystemProvider>
+
+    <!--========================================================================
+        EVENT PROVIDERS (user-mode)
+    =========================================================================-->
+
+    <!-- GPU/DWM Providers -->
+    <EventProvider Id="Provider_DWM" Name="Microsoft-Windows-Dwm-Core" />
+    <EventProvider Id="Provider_DXGI" Name="Microsoft-Windows-DXGI" />
+    <EventProvider Id="Provider_Win32k" Name="Microsoft-Windows-Win32k" />
+    <EventProvider Id="Provider_DxgKrnl" Name="Microsoft-Windows-DxgKrnl" />
+
+    <!-- Audio Providers -->
+    <EventProvider Id="Provider_Audio" Name="Microsoft-Windows-Audio" />
+    <EventProvider Id="Provider_AudioSes" Name="ae4bd3be-f36f-45b6-8d21-bdd6fb832853" /> <!-- Microsoft-Windows-Audio GUID -->
+    <EventProvider Id="Provider_WASAPI" Name="0c38e9f0-f748-4fb5-aa6b-ea0fd8f73832" /> <!-- AudioSes GUID -->
+    <EventProvider Id="Provider_AudioKSE" Name="Microsoft-Windows-Kernel-Audio" />
+    <EventProvider Id="Provider_MMCSS" Name="f8f10121-b617-4a56-868b-9df1b27fe32c" /> <!-- MMCSS GUID -->
+    <EventProvider Id="Provider_AudioClient" Name="Microsoft-Windows-AudioClient" />
+
+    <!-- Power/Performance Providers -->
+    <EventProvider Id="Provider_ProcPower" Name="Microsoft-Windows-Kernel-Processor-Power" />
+    <EventProvider Id="Provider_PerfInfo" Name="Microsoft-Windows-Kernel-PerfInfo" />
+
+    <!--========================================================================
+        PROFILE DEFINITIONS
+    =========================================================================-->
+
+    <!-- PROFILE 1: debug-light (General debugging) -->
+    <Profile Id="debug-light.Verbose.File" Name="debug-light"
+             Description="General debugging - CPU, GPU, lightweight (~500 MB / 30s)"
+             LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <!-- Kernel: CPU + CSwitch + DPC/ISR -->
+        <SystemCollectorId Value="SystemCollector_Base">
+          <SystemProviderId Value="SystemProvider_Base" />
+        </SystemCollectorId>
+
+        <!-- User: GPU/DWM -->
+        <EventCollectorId Value="EventCollector_Base">
+          <EventProviders>
+            <EventProviderId Value="Provider_DWM" />
+            <EventProviderId Value="Provider_DXGI" />
+            <EventProviderId Value="Provider_Win32k" />
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+    <!-- PROFILE 2: glitch-hunt (Audio dropouts & glitches) -->
+    <Profile Id="glitch-hunt.Verbose.File" Name="glitch-hunt"
+             Description="Audio glitch hunting - WASAPI, AudioSes, MMCSS (~2 GB / min)"
+             LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <!-- Kernel: Extended (CPU + CSwitch + DPC/ISR, larger buffers) -->
+        <SystemCollectorId Value="SystemCollector_Audio">
+          <SystemProviderId Value="SystemProvider_Base" />
+        </SystemCollectorId>
+
+        <!-- User: Audio subsystem -->
+        <EventCollectorId Value="EventCollector_Audio">
+          <EventProviders>
+            <EventProviderId Value="Provider_Audio" />
+            <EventProviderId Value="Provider_AudioSes" />
+            <EventProviderId Value="Provider_WASAPI" />
+            <EventProviderId Value="Provider_AudioKSE" />
+            <EventProviderId Value="Provider_MMCSS" />
+            <EventProviderId Value="Provider_AudioClient" />
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+    <!-- PROFILE 3: gpu-ui (GPU/DWM/Present performance) -->
+    <Profile Id="gpu-ui.Verbose.File" Name="gpu-ui"
+             Description="GPU/UI performance - DWM, DXGI, Win32k (~1 GB / 60s)"
+             LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <!-- Kernel: CPU + CSwitch + DPC/ISR -->
+        <SystemCollectorId Value="SystemCollector_Base">
+          <SystemProviderId Value="SystemProvider_Base" />
+        </SystemCollectorId>
+
+        <!-- User: GPU + DWM + Win32k -->
+        <EventCollectorId Value="EventCollector_Base">
+          <EventProviders>
+            <EventProviderId Value="Provider_DWM" />
+            <EventProviderId Value="Provider_DXGI" />
+            <EventProviderId Value="Provider_Win32k" />
+            <EventProviderId Value="Provider_DxgKrnl" />
+            <EventProviderId Value="Provider_PerfInfo" />
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+    <!-- PROFILE 4: audio-stack (Full audio subsystem) -->
+    <Profile Id="audio-stack.Verbose.File" Name="audio-stack"
+             Description="Full audio stack - kernel to app layer (~1.5 GB / 30s)"
+             LoggingMode="File" DetailLevel="Verbose">
+      <Collectors>
+        <!-- Kernel: Extended (CPU + CSwitch + DPC/ISR + Disk + Memory) -->
+        <SystemCollectorId Value="SystemCollector_Audio">
+          <SystemProviderId Value="SystemProvider_Extended" />
+        </SystemCollectorId>
+
+        <!-- User: Audio + GPU (for A/V sync) + Power -->
+        <EventCollectorId Value="EventCollector_Audio">
+          <EventProviders>
+            <EventProviderId Value="Provider_Audio" />
+            <EventProviderId Value="Provider_AudioSes" />
+            <EventProviderId Value="Provider_WASAPI" />
+            <EventProviderId Value="Provider_AudioKSE" />
+            <EventProviderId Value="Provider_MMCSS" />
+            <EventProviderId Value="Provider_AudioClient" />
+            <EventProviderId Value="Provider_DWM" />
+            <EventProviderId Value="Provider_ProcPower" />
+          </EventProviders>
+        </EventCollectorId>
+      </Collectors>
+    </Profile>
+
+  </Profiles>
+</WindowsPerformanceRecorder>

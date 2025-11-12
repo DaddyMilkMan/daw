@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Zenith DAW - WPA Starter Profile (W7)
+
+  Windows Performance Analyzer profile for quick ETW trace analysis.
+
+  Includes graphs for:
+  - CPU (Sampled + Precise)
+  - Context Switches
+  - DPC/ISR Latency
+  - GPU/DWM/Present
+  - WASAPI/Audio Glitches
+
+  Usage:
+    1. Open Windows Performance Analyzer (WPA)
+    2. File -> Open -> session.etl
+    3. Profiles -> Apply -> Browse -> wpa_starter_profile.wpaProfile
+
+  Note: This is a basic starter profile. Users can customize graphs/columns as needed.
+-->
+
+<WpaProfileContainer xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" Version="2" xmlns="http://tempuri.org/SerializableElement.xsd">
+  <Content xsi:type="WpaProfile2">
+    <Sessions>
+      <Session Index="0">
+        <FileReferences />
+      </Session>
+    </Sessions>
+    <Views>
+      <View Guid="00000000-0000-0000-0000-000000000001" IsVisible="true" Title="Zenith DAW - CPU & Scheduling Analysis">
+        <Graphs>
+
+          <!-- CPU Usage (Sampled) - Main hotspot analysis -->
+          <Graph Guid="00000000-0000-0000-0000-000000000010" LayoutStyle="DataTable" Color="#FF0000FF" GraphHeight="250">
+            <Preset Name="CPU Usage (Sampled) by Process, Thread, Stack" GraphChartType="StackedLine" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="8" LeftFrozenColumnCount="9" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Process" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Thread" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Stack" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+          <!-- CPU Usage (Precise) - Exact on/off CPU timing -->
+          <Graph Guid="00000000-0000-0000-0000-000000000011" LayoutStyle="DataTable" Color="#FF00FF00" GraphHeight="250">
+            <Preset Name="CPU Usage (Precise) by Process, Thread" GraphChartType="StackedBars" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="6" LeftFrozenColumnCount="7" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Process" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Thread" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+          <!-- Context Switches - Thread scheduling analysis -->
+          <Graph Guid="00000000-0000-0000-0000-000000000012" LayoutStyle="DataTable" Color="#FFFF0000" GraphHeight="200">
+            <Preset Name="Context Switches by Process, Thread, Ready Thread Stack" GraphChartType="StackedLine" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="10" LeftFrozenColumnCount="11" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="New Process" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="New Thread" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Ready Thread Stack" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+        </Graphs>
+      </View>
+
+      <View Guid="00000000-0000-0000-0000-000000000002" IsVisible="true" Title="Zenith DAW - DPC/ISR & Driver Latency">
+        <Graphs>
+
+          <!-- DPC/ISR Duration - Driver latency analysis -->
+          <Graph Guid="00000000-0000-0000-0000-000000000020" LayoutStyle="DataTable" Color="#FFFF00FF" GraphHeight="250">
+            <Preset Name="DPC/ISR Duration by Module, Function" GraphChartType="StackedBars" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="6" LeftFrozenColumnCount="7" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="1000000">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Module" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Function" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+        </Graphs>
+      </View>
+
+      <View Guid="00000000-0000-0000-0000-000000000003" IsVisible="true" Title="Zenith DAW - GPU/DWM/Present Timeline">
+        <Graphs>
+
+          <!-- GPU Activity - DWM Composition -->
+          <Graph Guid="00000000-0000-0000-0000-000000000030" LayoutStyle="DataTable" Color="#FF00FFFF" GraphHeight="250">
+            <Preset Name="DWM Frame Activity by Process" GraphChartType="StackedBars" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="4" LeftFrozenColumnCount="5" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Process" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+          <!-- DXGI Present Timeline -->
+          <Graph Guid="00000000-0000-0000-0000-000000000031" LayoutStyle="DataTable" Color="#FFFFFF00" GraphHeight="250">
+            <Preset Name="DXGI Present by Process" GraphChartType="StackedBars" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="4" LeftFrozenColumnCount="5" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Process" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+        </Graphs>
+      </View>
+
+      <View Guid="00000000-0000-0000-0000-000000000004" IsVisible="true" Title="Zenith DAW - Audio (WASAPI/AudioSes/MMCSS)">
+        <Graphs>
+
+          <!-- Generic Events - Filter to Audio providers -->
+          <Graph Guid="00000000-0000-0000-0000-000000000040" LayoutStyle="DataTable" Color="#FFFF8000" GraphHeight="300">
+            <Preset Name="Generic Events - Audio Providers (filter manually)" GraphChartType="None" BarGraphIntervalCount="50" IsThreadActivityTable="false" GraphColumnCount="24" KeyColumnCount="6" LeftFrozenColumnCount="7" RightFrozenColumnCount="7" InitialFilterShouldKeep="true" GraphFilterTopValue="0" GraphFilterThresholdValue="0">
+              <MetadataEntries>
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Provider Name" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Task Name" ColumnMetadata="StartTime" />
+                <MetadataEntry Guid="00000000-0000-0000-0000-000000000000" Name="Opcode Name" ColumnMetadata="StartTime" />
+              </MetadataEntries>
+              <HighlightEntries />
+            </Preset>
+          </Graph>
+
+        </Graphs>
+      </View>
+
+    </Views>
+    <ModifiedGraphs />
+  </Content>
+</WpaProfileContainer>

@@ -46,13 +46,16 @@ public:
     void closeButtonPressed() override;
 
     //==========================================================================
+    // Accessors (for menu bar access to main component)
+    //==========================================================================
+
+    ::MainComponent* getMainComponent() { return mainComponent.get(); }
+
+    //==========================================================================
     // Menu bar
     //==========================================================================
 
-    /**
-     * @brief Creates the menu bar
-     */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    class MenuBar; // Forward declare inner class
 
 private:
     //==========================================================================
@@ -67,6 +70,9 @@ private:
 
     // Main content (custom JUCE UI defined in Source/ui/MainComponent.h)
     std::unique_ptr<::MainComponent> mainComponent;
+
+    // Menu bar model
+    std::unique_ptr<MenuBar> menuBar;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

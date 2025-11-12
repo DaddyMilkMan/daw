@@ -63,6 +63,18 @@ public:
     void resized() override;
     bool keyPressed(const juce::KeyPress& key) override;
 
+    #if JUCE_DEBUG
+        /**
+         * @brief W6.1: Get stats overlay for menu bar access
+         */
+        StatsOverlay* getStatsOverlay() { return statsOverlay.get(); }
+
+        /**
+         * @brief W6.1: Toggle stats overlay (public for menu bar)
+         */
+        void toggleStatsOverlay();
+    #endif
+
 private:
     //==========================================================================
     // Setup methods
@@ -85,11 +97,6 @@ private:
     void toggleAudioSettings();
 
     #if JUCE_DEBUG
-        /**
-         * @brief W6: Show/hide stats overlay (Ctrl+F10)
-         */
-        void toggleStatsOverlay();
-
         /**
          * @brief W6: Update stats overlay with TrackView paint timing
          */
@@ -119,6 +126,9 @@ private:
     #if JUCE_DEBUG
         // W6: Performance monitoring overlay (DEBUG-only)
         std::unique_ptr<StatsOverlay> statsOverlay;
+
+        // W6.1: Persistent settings for Debug HUD
+        juce::ApplicationProperties appProperties;
     #endif
 
     // Layout constants

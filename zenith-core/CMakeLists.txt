@@ -198,6 +198,7 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>
     $<$<CONFIG:Debug>:_DEBUG=1>
+    $<$<CONFIG:Debug>:ZENITH_DEBUG_PERF_HUD=1>  # W6.1: Enable performance HUD in Debug
 
     # Release builds
     $<$<CONFIG:Release>:NDEBUG=1>

@@ -29,10 +29,25 @@ MainComponent::MainComponent(Engine& eng)
     injectTestSessionData();
 
     #if JUCE_DEBUG
-        // W6: Create stats overlay (DEBUG-only, default ON)
+        // W6.1: Initialize ApplicationProperties for HUD persistence
+        juce::PropertiesFile::Options options;
+        options.applicationName = "ZenithDAW";
+        options.filenameSuffix = ".settings";
+        options.osxLibrarySubFolder = "Application Support";
+        options.folderName = "ZenithDAW";
+        appProperties.setStorageParameters(options);
+
+        // W6: Create stats overlay (DEBUG-only)
         statsOverlay = std::make_unique<StatsOverlay>();
         addChildComponent(statsOverlay.get());
-        statsOverlay->setVisible(true);  // Default ON in Debug
+
+        // W6.1: Load persisted HUD visibility (default ON if not set)
+        auto* userSettings = appProperties.getUserSettings();
+        bool showPerfHUD = userSettings->getBoolValue("debug.showPerfHUD", true);
+        statsOverlay->setVisible(showPerfHUD);
+
+        DBG("W6.1: HUD visibility loaded from settings: " + juce::String(showPerfHUD));
+        DBG("W6.1: Settings file: " + userSettings->getFile().getFullPathName());
     #endif
 
     // W6: Enable keyboard input for Ctrl+F10 toggle
@@ -349,8 +364,19 @@ void MainComponent::toggleStatsOverlay()
     if (statsOverlay != nullptr)
     {
         bool isVisible = statsOverlay->isVisible();
-        statsOverlay->setOverlayVisible(!isVisible);
+        bool newVisibility = !isVisible;
+        statsOverlay->setOverlayVisible(newVisibility);
+
+        // W6.1: Persist HUD visibility state (message thread only, no allocations in paint)
+        auto* userSettings = appProperties.getUserSettings();
+        if (userSettings != nullptr)
+        {
+            userSettings->setValue("debug.showPerfHUD", newVisibility);
+            userSettings->saveIfNeeded();
+        }
+
         DBG("Stats overlay " + juce::String(isVisible ? "hidden" : "shown"));
+        DBG("W6.1: HUD visibility persisted: " + juce::String(newVisibility));
     }
 }
 
