@@ -61,7 +61,14 @@ if(WIN32)
     # MMCSS Audio Priority (ON by default for pro audio performance)
     option(ZENITH_ENABLE_MMCSS "Enable Windows MMCSS audio thread priority boost" ON)
 
+    # Phase 1 Audio Engine (OFF by default until wiring complete)
+    option(ZENITH_ENABLE_PHASE1_AUDIO "Enable Phase 1 audio processing (Track/Clip mixer)" OFF)
+
+    # Crash Capture (OFF by default for Release builds)
+    option(ZENITH_ENABLE_CRASH_CAPTURE "Enable crash reporting and minidump capture" OFF)
+
     message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}")
+    message(STATUS "Feature flags - Phase1 Audio: ${ZENITH_ENABLE_PHASE1_AUDIO}, Crash Capture: ${ZENITH_ENABLE_CRASH_CAPTURE}")
 endif()
 
 # ============================================================================
