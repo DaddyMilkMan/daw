@@ -193,5 +193,13 @@ private:
                                           bool isHighlighted,
                                           bool isDown);
 
+    //==========================================================================
+    // Cached resources (W4: Font/text rendering optimization)
+    //==========================================================================
+
+    juce::Font buttonFont {14.0f, juce::Font::bold};         // Cached for drawButtonText()
+    juce::Path cachedComboBoxArrow;                          // Cached arrow path for ComboBox
+    bool comboBoxArrowInitialized = false;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithLookAndFeel)
 };

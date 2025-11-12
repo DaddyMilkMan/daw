@@ -104,8 +104,8 @@ void ZenithLookAndFeel::drawButtonText(juce::Graphics& g,
                                       bool shouldDrawButtonAsHighlighted,
                                       bool shouldDrawButtonAsDown)
 {
-    auto font = juce::Font(14.0f, juce::Font::bold);
-    g.setFont(font);
+    // W4: Use cached font instead of creating new one every paint
+    g.setFont(buttonFont);
     g.setColour(button.findColour(button.getToggleState() ? juce::TextButton::textColourOnId
                                                           : juce::TextButton::textColourOffId)
                       .withMultipliedAlpha(button.isEnabled() ? 1.0f : 0.5f));
@@ -113,7 +113,7 @@ void ZenithLookAndFeel::drawButtonText(juce::Graphics& g,
     auto yIndent = juce::jmin(4, button.proportionOfHeight(0.3f));
     auto cornerSize = juce::jmin(button.getHeight(), button.getWidth()) / 2;
 
-    auto fontHeight = juce::roundToInt(font.getHeight() * 0.6f);
+    auto fontHeight = juce::roundToInt(buttonFont.getHeight() * 0.6f);
     auto leftIndent  = juce::jmin(fontHeight, 2 + cornerSize / (button.isConnectedOnLeft() ? 4 : 2));
     auto rightIndent = juce::jmin(fontHeight, 2 + cornerSize / (button.isConnectedOnRight() ? 4 : 2));
     auto textWidth = button.getWidth() - leftIndent - rightIndent;
@@ -314,15 +314,23 @@ void ZenithLookAndFeel::drawComboBox(juce::Graphics& g,
     g.setColour(ZenithColours::border);
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
 
-    // Draw dropdown arrow
+    // W4: Draw dropdown arrow using cached path (only created once)
     auto arrowBounds = juce::Rectangle<int>(buttonX, buttonY, buttonW, buttonH).toFloat().reduced(4.0f);
-    juce::Path arrow;
-    arrow.addTriangle(arrowBounds.getX(), arrowBounds.getY(),
-                     arrowBounds.getRight(), arrowBounds.getY(),
-                     arrowBounds.getCentreX(), arrowBounds.getBottom());
+
+    if (!comboBoxArrowInitialized)
+    {
+        // Build arrow path once at 10x10 unit square, will be scaled per use
+        cachedComboBoxArrow.addTriangle(0.0f, 0.0f, 10.0f, 0.0f, 5.0f, 10.0f);
+        comboBoxArrowInitialized = true;
+    }
+
+    // Scale and position cached arrow to fit bounds
+    auto transform = juce::AffineTransform::scale(arrowBounds.getWidth() / 10.0f,
+                                                   arrowBounds.getHeight() / 10.0f)
+                        .translated(arrowBounds.getX(), arrowBounds.getY());
 
     g.setColour(ZenithColours::textSecondary);
-    g.fillPath(arrow);
+    g.fillPath(cachedComboBoxArrow, transform);
 }
 
 //==============================================================================

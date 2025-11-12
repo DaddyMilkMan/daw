@@ -131,5 +131,24 @@ private:
     static constexpr int maxTaps = 4;
     static constexpr int tapTimeoutMs = 2000;
 
+    //==========================================================================
+    // W4: Cached resources for text rendering optimization
+    //==========================================================================
+
+    juce::Font bpmFont {12.0f};                    // Cached BPM label font
+    juce::Font positionFont {16.0f, juce::Font::bold}; // Cached position font
+    juce::Font timecodeFont {11.0f};               // Cached timecode font
+    juce::Font cpuFont {12.0f};                    // Cached CPU label font
+
+    // Dirty-check state to avoid unnecessary setText() calls
+    double lastDisplayedCpuUsage = -1.0;
+    double lastDisplayedPosition = -1.0;
+    juce::String lastCpuText;
+    juce::String lastPositionText;
+    juce::String lastTimecodeText;
+
+    // Pre-allocated buffer for timecode formatting (avoid allocation in timer)
+    char timecodeBuffer[16];
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 };

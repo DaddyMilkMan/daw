@@ -44,7 +44,7 @@ TransportBar::TransportBar(Engine& eng)
     // BPM label
     bpmLabel.setText("BPM", juce::dontSendNotification);
     bpmLabel.setJustificationType(juce::Justification::centredRight);
-    bpmLabel.setFont(juce::Font(12.0f));
+    bpmLabel.setFont(bpmFont);  // W4: Use cached font
     addAndMakeVisible(bpmLabel);
 
     // BPM slider
@@ -63,22 +63,27 @@ TransportBar::TransportBar(Engine& eng)
     // Position label
     positionLabel.setText("1.1.1", juce::dontSendNotification);
     positionLabel.setJustificationType(juce::Justification::centred);
-    positionLabel.setFont(juce::Font(16.0f, juce::Font::bold));
+    positionLabel.setFont(positionFont);  // W4: Use cached font
     positionLabel.setColour(juce::Label::backgroundColourId, ZenithColours::backgroundLight);
     addAndMakeVisible(positionLabel);
 
     // Timecode label
     timecodeLabel.setText("00:00:00:00", juce::dontSendNotification);
     timecodeLabel.setJustificationType(juce::Justification::centred);
-    timecodeLabel.setFont(juce::Font(11.0f));
+    timecodeLabel.setFont(timecodeFont);  // W4: Use cached font
     timecodeLabel.setColour(juce::Label::textColourId, ZenithColours::textSecondary);
     addAndMakeVisible(timecodeLabel);
 
     // CPU label
     cpuLabel.setText("CPU: 0%", juce::dontSendNotification);
     cpuLabel.setJustificationType(juce::Justification::centredRight);
-    cpuLabel.setFont(juce::Font(12.0f));
+    cpuLabel.setFont(cpuFont);  // W4: Use cached font
     addAndMakeVisible(cpuLabel);
+
+    // W4: Initialize cached strings to avoid first-frame allocation
+    lastCpuText = "CPU: 0%";
+    lastPositionText = "1.1.1";
+    lastTimecodeText = "00:00:00:00";
 
     // Start timer (30 Hz)
     startTimer(33);
@@ -150,18 +155,45 @@ void TransportBar::resized()
 
 void TransportBar::timerCallback()
 {
-    // Update CPU
+    // W4: Update CPU with dirty-check (epsilon 0.05% to avoid jitter)
     double cpuUsage = engine.getCpuUsage();
-    cpuLabel.setText("CPU: " + juce::String(cpuUsage, 1) + "%", juce::dontSendNotification);
+    if (std::abs(cpuUsage - lastDisplayedCpuUsage) > 0.05)
+    {
+        lastDisplayedCpuUsage = cpuUsage;
+        juce::String newCpuText = "CPU: " + juce::String(cpuUsage, 1) + "%";
 
-    // Update position if playing
+        if (newCpuText != lastCpuText)
+        {
+            lastCpuText = newCpuText;
+            cpuLabel.setText(newCpuText, juce::dontSendNotification);
+        }
+    }
+
+    // W4: Update position if playing with dirty-check
     if (isPlaying)
     {
         currentPosition += 0.1; // Simulated
-        positionLabel.setText(formatPosition(currentPosition), juce::dontSendNotification);
 
-        double positionInSeconds = currentPosition / (currentBPM / 60.0);
-        timecodeLabel.setText(formatTimecode(positionInSeconds), juce::dontSendNotification);
+        // Only format and update if position actually changed
+        if (std::abs(currentPosition - lastDisplayedPosition) > 0.01)
+        {
+            lastDisplayedPosition = currentPosition;
+
+            juce::String newPositionText = formatPosition(currentPosition);
+            if (newPositionText != lastPositionText)
+            {
+                lastPositionText = newPositionText;
+                positionLabel.setText(newPositionText, juce::dontSendNotification);
+            }
+
+            double positionInSeconds = currentPosition / (currentBPM / 60.0);
+            juce::String newTimecodeText = formatTimecode(positionInSeconds);
+            if (newTimecodeText != lastTimecodeText)
+            {
+                lastTimecodeText = newTimecodeText;
+                timecodeLabel.setText(newTimecodeText, juce::dontSendNotification);
+            }
+        }
     }
 }
 
@@ -329,11 +361,15 @@ juce::String TransportBar::formatPosition(double positionInQuarterNotes)
 
 juce::String TransportBar::formatTimecode(double positionInSeconds)
 {
+    // W4: Use pre-allocated buffer + snprintf to avoid String::formatted allocation
     int totalFrames = (int)(positionInSeconds * 30.0);
     int hours = totalFrames / (30 * 60 * 60);
     int minutes = (totalFrames / (30 * 60)) % 60;
     int seconds = (totalFrames / 30) % 60;
     int frames = totalFrames % 30;
 
-    return juce::String::formatted("%02d:%02d:%02d:%02d", hours, minutes, seconds, frames);
+    std::snprintf(timecodeBuffer, sizeof(timecodeBuffer), "%02d:%02d:%02d:%02d",
+                 hours, minutes, seconds, frames);
+
+    return juce::String(timecodeBuffer);
 }
