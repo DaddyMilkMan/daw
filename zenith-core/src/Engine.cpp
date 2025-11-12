@@ -136,20 +136,6 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
     DBG("Engine: Audio device starting...");
 
-    // Windows: Boost audio thread priority with MMCSS
-    #ifdef _WIN32
-        static MMCSSAudioPriority audioPriority(L"Pro Audio");
-        if (audioPriority.isActive())
-        {
-            DBG("Engine: MMCSS 'Pro Audio' priority active (task index: " +
-                juce::String((int)audioPriority.getTaskIndex()) + ")");
-        }
-        else
-        {
-            DBG("Engine: WARNING - MMCSS failed (check if service is running)");
-        }
-    #endif
-
     // Update settings
     currentSampleRate.store(device->getCurrentSampleRate());
     currentBufferSize.store(device->getCurrentBufferSizeSamples());
@@ -161,6 +147,7 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+    DBG("  MMCSS will be registered on first audio callback");
 }
 
 void Engine::audioDeviceStopped()
@@ -188,6 +175,13 @@ void Engine::audioDeviceIOCallbackWithContext(
     // - Process audio samples
     // - Read/write std::atomic values
     // - Use pre-allocated buffers
+
+    // Windows: Register MMCSS on first callback (correct thread)
+    // NOTE: Static construction happens once, not per-callback
+    #ifdef _WIN32
+        static MMCSSAudioPriority audioPriority(L"Pro Audio");
+        juce::ignoreUnused(audioPriority);
+    #endif
 
     juce::ignoreUnused(inputChannelData, numInputChannels, context);
 
