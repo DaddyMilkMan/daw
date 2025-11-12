@@ -24,9 +24,12 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <cstdint>
+#include <vector>
 
 #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
 #include "Mixer.h"
+#include "rt/SpscRing.h"
 #endif
 
 //==============================================================================
@@ -74,23 +77,25 @@ public:
     void shutdown();
 
     //==========================================================================
-    // Transport Controls
+    // Transport Controls (Phase 0 - gated when Phase 1 enabled)
     //==========================================================================
 
+#if !defined(ZENITH_ENABLE_PHASE1_AUDIO) || !ZENITH_ENABLE_PHASE1_AUDIO
     /**
-     * @brief Start playback
+     * @brief Start playback (Phase 0)
      */
     void play();
 
     /**
-     * @brief Stop playback
+     * @brief Stop playback (Phase 0)
      */
     void stop();
 
     /**
-     * @brief Check if playing
+     * @brief Check if playing (Phase 0)
      */
     bool isPlaying() const { return isPlaying_.load(); }
+#endif
 
     //==========================================================================
     // Audio Device Management
@@ -134,6 +139,32 @@ public:
      * @return Reference to Mixer
      */
     Mixer& getMixer() { return mixer_; }
+
+    //==========================================================================
+    // W10.2: Sample-accurate transport & event scheduler (gated)
+    //==========================================================================
+
+    struct TransportEvent {
+        enum class Type : int32_t { StartClip = 0, StopClip = 1 };
+        Type      type{};
+        int32_t   trackIndex{-1};
+        int32_t   clipId{-1};
+        int64_t   whenSamples{0};  // absolute transport sample time
+    };
+
+    /** Transport controls (message thread only) */
+    void play() noexcept;                        // start advancing transport
+    void pause() noexcept;                       // stop advancing transport
+    void seekSamples(int64_t absolute) noexcept; // set absolute transport time
+    int64_t transportSamples() const noexcept { return transportSamples_.load(std::memory_order_relaxed); }
+    bool    isPlaying() const noexcept { return isPlaying_.load(std::memory_order_relaxed); }
+
+    /** Schedule events (message thread only, lock-free enqueue). */
+    bool scheduleClipStart(int trackIndex, int clipId, int64_t atSample) noexcept;
+    bool scheduleClipStop (int trackIndex, int clipId, int64_t atSample) noexcept;
+
+    /** Debug/introspection (message thread only). */
+    std::size_t pendingEventCount() const noexcept { return eventQ_.size(); }
 #endif
 
     //==========================================================================
@@ -219,10 +250,6 @@ private:
     // Audio device manager
     juce::AudioDeviceManager deviceManager;
 
-    // Transport state (std::atomic for thread-safe access)
-    std::atomic<bool> isPlaying_{false};
-    std::atomic<bool> isRecording_{false};
-
     // Audio settings (std::atomic for thread-safe access)
     std::atomic<double> currentSampleRate{44100.0};
     std::atomic<int> currentBufferSize{512};
@@ -231,17 +258,34 @@ private:
     mutable std::atomic<double> cpuUsage_{0.0};
     juce::int64 lastCpuCheckTime{0};
 
+#if !defined(ZENITH_ENABLE_PHASE1_AUDIO) || !ZENITH_ENABLE_PHASE1_AUDIO
+    // Phase 0 transport state (std::atomic for thread-safe access)
+    std::atomic<bool> isPlaying_{false};
+    std::atomic<bool> isRecording_{false};
+
     // Playback position (in samples)
     std::atomic<juce::int64> playbackPosition{0};
 
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+#endif
 
 #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
     // W10: Phase 1 audio engine (mixer + tracks)
     Mixer mixer_;
     juce::AudioBuffer<float> mixBuffer_;  // Temp buffer for mixer output
+
+    // W10.2: Transport + scheduler (exists only when engine flag is ON)
+    std::atomic<int64_t> transportSamples_{0};
+    std::atomic<bool>    isPlaying_{false};
+    std::atomic<bool>    isRecording_{false};  // For future use
+    rt::SpscRing<TransportEvent, 4096> eventQ_;
+    std::vector<TransportEvent> dueEventsScratch_;
+
+    // Test tone generator (available in Phase 1 for testing)
+    double phase{0.0};
+    std::atomic<bool> enableTestTone_{false};
 #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)

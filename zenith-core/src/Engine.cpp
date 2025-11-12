@@ -79,9 +79,10 @@ void Engine::shutdown()
 }
 
 //==============================================================================
-// Transport Controls
+// Transport Controls (Phase 0 - gated)
 //==============================================================================
 
+#if !defined(ZENITH_ENABLE_PHASE1_AUDIO) || !ZENITH_ENABLE_PHASE1_AUDIO
 void Engine::play()
 {
     DBG("Engine: Play");
@@ -99,6 +100,7 @@ void Engine::stop()
     isPlaying_.store(false);
     enableTestTone_.store(false);
 }
+#endif
 
 //==============================================================================
 // Audio Device Management
@@ -129,6 +131,25 @@ double Engine::getCpuUsage() const
 }
 
 //==============================================================================
+// W10.2: Transport & scheduler (gated)
+//==============================================================================
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+void Engine::play()  noexcept { isPlaying_.store(true,  std::memory_order_release); }
+void Engine::pause() noexcept { isPlaying_.store(false, std::memory_order_release); }
+void Engine::seekSamples(int64_t absolute) noexcept { transportSamples_.store(absolute, std::memory_order_release); }
+
+bool Engine::scheduleClipStart(int trackIndex, int clipId, int64_t atSample) noexcept {
+    TransportEvent ev{ TransportEvent::Type::StartClip, trackIndex, clipId, atSample };
+    return eventQ_.push(ev);
+}
+bool Engine::scheduleClipStop(int trackIndex, int clipId, int64_t atSample) noexcept {
+    TransportEvent ev{ TransportEvent::Type::StopClip, trackIndex, clipId, atSample };
+    return eventQ_.push(ev);
+}
+#endif
+
+//==============================================================================
 // AudioIODeviceCallback Implementation
 //==============================================================================
 
@@ -142,7 +163,9 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 
     // Reset state
     phase = 0.0;
+#if !defined(ZENITH_ENABLE_PHASE1_AUDIO) || !ZENITH_ENABLE_PHASE1_AUDIO
     playbackPosition.store(0);
+#endif
 
     // W10: Prepare mixer and buffers
     prepareToPlay(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
@@ -176,6 +199,11 @@ void Engine::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     // Prepare mixer
     mixer_.prepare(sampleRate, samplesPerBlockExpected);
 
+    // W10.2: Reset transport + queues on (re)prepare
+    transportSamples_.store(0, std::memory_order_relaxed);
+    isPlaying_.store(false, std::memory_order_relaxed);
+    dueEventsScratch_.clear();
+
     DBG("Engine: Phase 1 mixer prepared (" + juce::String(outs) + " ch, "
         + juce::String(samplesPerBlockExpected) + " samples)");
 #endif
@@ -186,6 +214,7 @@ void Engine::releaseResources()
 #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
     mixBuffer_.setSize(0, 0);
     mixer_.release();
+    dueEventsScratch_.clear();
 #endif
 }
 
@@ -219,7 +248,8 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     juce::ignoreUnused(inputChannelData, numInputChannels, context);
 
-    // Check if playing
+#if !defined(ZENITH_ENABLE_PHASE1_AUDIO) || !ZENITH_ENABLE_PHASE1_AUDIO
+    // Phase 0: Check if playing
     bool playing = isPlaying_.load();
 
     if (playing)
@@ -242,6 +272,11 @@ void Engine::audioDeviceIOCallbackWithContext(
             }
         }
     }
+#else
+    // Phase 1: Always process (transport managed in processAudio)
+    processAudio(inputChannelData, numInputChannels,
+                outputChannelData, numOutputChannels, numSamples);
+#endif
 }
 
 //==============================================================================
@@ -269,6 +304,37 @@ void Engine::processAudio(
     // W10: Phase 1 mixer path (flag ON)
     //==========================================================================
 
+    // W10.2: Transport window for this block
+    int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
+    int64_t blockEnd   = blockStart + numSamples;
+
+    // W10.2: Drain due events [blockStart, blockEnd)
+    {
+        TransportEvent ev;
+        while (eventQ_.pop(ev)) {
+            // If event is in the future, requeue (we can't "unpop", so buffer locally)
+            if (ev.whenSamples >= blockEnd) {
+                dueEventsScratch_.push_back(ev);
+                break;
+            }
+            if (ev.whenSamples >= blockStart) {
+                // For now, we just DBG-log. Hook to mixer in Phase 1.1.
+                const int offset = (int) juce::jlimit<int64_t>(0, numSamples - 1, ev.whenSamples - blockStart);
+                DBG("Scheduler: due event type=" << (int)ev.type
+                    << " track=" << ev.trackIndex << " clip=" << ev.clipId
+                    << " when=" << ev.whenSamples << " (offset " << offset << ")");
+                // Future: mixer_.onScheduledEvent(ev, offset);
+            }
+            // continue draining to catch multiple events inside the block
+        }
+        // Re-enqueue future events we stashed (preserves ordering)
+        if (!dueEventsScratch_.empty()) {
+            for (const auto& futureEv : dueEventsScratch_)
+                eventQ_.push(futureEv);
+            dueEventsScratch_.clear();
+        }
+    }
+
     // Ensure mix buffer matches device config
     if (mixBuffer_.getNumChannels() != numOutputChannels || mixBuffer_.getNumSamples() < numSamples)
         mixBuffer_.setSize(std::max(1, numOutputChannels), std::max(1, numSamples), false, true, true);
@@ -278,7 +344,7 @@ void Engine::processAudio(
 
     // Process mixer (renders all tracks)
     // NOTE: Phase 1 constraint - tracks must not be mutated during playback
-    mixer_.process(mixBuffer_, numSamples, playbackPosition.load());
+    mixer_.process(mixBuffer_, numSamples, blockStart);
 
     // Copy mix buffer → device outputs
     for (int ch = 0; ch < numOutputChannels; ++ch)
@@ -293,6 +359,10 @@ void Engine::processAudio(
             );
         }
     }
+
+    // Advance transport only while playing
+    if (isPlaying_.load(std::memory_order_relaxed))
+        transportSamples_.store(blockEnd, std::memory_order_relaxed);
 
 #else
     //==========================================================================
