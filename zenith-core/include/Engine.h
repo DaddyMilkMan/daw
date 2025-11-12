@@ -118,6 +118,12 @@ public:
      */
     double getCpuUsage() const;
 
+    /**
+     * @brief Get audio device manager (for UI configuration)
+     * @return Reference to AudioDeviceManager
+     */
+    juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
+
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================

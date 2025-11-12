@@ -72,8 +72,45 @@ void MainComponent::setupCallbacks()
     topBar.onSettingsClicked = [this]()
     {
         DBG("Settings clicked");
-        // TODO: Show settings dialog
+        toggleAudioSettings();
     };
+
+    #ifdef _WIN32
+        // Create audio settings panel (Windows only)
+        if (audioSettingsPanel == nullptr)
+        {
+            // Access the AudioDeviceManager through Engine
+            // Note: Engine exposes deviceManager as private, so we'll access it indirectly
+            // For W3 stub, we'll use a temporary approach
+            audioSettingsPanel = std::make_unique<AudioSettingsWindows>(engine.getDeviceManager());
+
+            // Set up callbacks
+            audioSettingsPanel->onSettingsChanged = [this](
+                juce::String deviceType,
+                juce::String outputDevice,
+                juce::String inputDevice,
+                double sampleRate,
+                int bufferSize)
+            {
+                DBG("Audio settings changed:");
+                DBG("  Device Type: " + deviceType);
+                DBG("  Output: " + outputDevice);
+                DBG("  Input: " + inputDevice);
+                DBG("  Sample Rate: " + juce::String(sampleRate));
+                DBG("  Buffer Size: " + juce::String(bufferSize));
+                // W3 stub: no engine mutation yet
+            };
+
+            audioSettingsPanel->onOpenAsioPanel = [this]()
+            {
+                DBG("ASIO control panel requested");
+                // TODO: Call device->showControlPanel() for ASIO devices
+            };
+
+            audioSettingsPanel->setVisible(false);
+            addChildComponent(audioSettingsPanel.get());
+        }
+    #endif
 
     topBar.onAIToggleChanged = [this](bool enabled)
     {
@@ -151,4 +188,39 @@ void MainComponent::setupCallbacks()
         trackView.setBPM(bpm);
         // TODO: Update engine BPM
     };
+}
+
+//==============================================================================
+void MainComponent::toggleAudioSettings()
+{
+    #ifdef _WIN32
+        if (audioSettingsPanel == nullptr)
+            return;
+
+        bool isCurrentlyVisible = audioSettingsPanel->isVisible();
+
+        if (isCurrentlyVisible)
+        {
+            // Hide settings panel
+            audioSettingsPanel->setVisible(false);
+            DBG("Audio settings panel hidden");
+        }
+        else
+        {
+            // Show settings panel as overlay (centered)
+            int panelWidth = 500;
+            int panelHeight = 400;
+            int x = (getWidth() - panelWidth) / 2;
+            int y = (getHeight() - panelHeight) / 2;
+
+            audioSettingsPanel->setBounds(x, y, panelWidth, panelHeight);
+            audioSettingsPanel->setVisible(true);
+            audioSettingsPanel->toFront(true); // Bring to front
+            audioSettingsPanel->refreshDevices(); // Refresh device list when shown
+
+            DBG("Audio settings panel shown");
+        }
+    #else
+        DBG("Audio settings panel not available on this platform");
+    #endif
 }

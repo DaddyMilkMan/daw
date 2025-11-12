@@ -29,6 +29,10 @@
 #include "TrackView.h"
 #include "TransportBar.h"
 
+#ifdef _WIN32
+    #include "AudioSettingsWindows.h"
+#endif
+
 //==============================================================================
 /**
  * @class MainComponent
@@ -62,6 +66,15 @@ private:
     void setupCallbacks();
 
     //==========================================================================
+    // Settings panel management
+    //==========================================================================
+
+    /**
+     * @brief Show/hide audio settings panel
+     */
+    void toggleAudioSettings();
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
@@ -75,6 +88,11 @@ private:
     Sidebar sidebar;
     TrackView trackView;
     TransportBar transportBar;
+
+    #ifdef _WIN32
+        // Audio settings panel (Windows-specific, shown as overlay)
+        std::unique_ptr<AudioSettingsWindows> audioSettingsPanel;
+    #endif
 
     // Layout constants
     static constexpr int topBarHeight = 48;

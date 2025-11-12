@@ -106,6 +106,7 @@ target_sources(ZenithDAW PRIVATE
 
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
+    $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>
 
     # Windows resources (manifest, version info)
     $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
