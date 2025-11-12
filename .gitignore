@@ -57,3 +57,6 @@ JuceLibraryCode/
 .settings/
 _deps/
 compile_commands.json
+
+# Branch audit patches (temporary safety net)
+branch_audits/
