@@ -18,6 +18,8 @@ TrackView::TrackView()
 void TrackView::paint(juce::Graphics& g)
 {
     // W5: Zero allocations in paint() - all fonts/paths are cached members
+    // W6: Track paint time for performance monitoring
+    double startTime = juce::Time::getMillisecondCounterHiRes();
 
     auto bounds = getLocalBounds();
 
@@ -44,6 +46,11 @@ void TrackView::paint(juce::Graphics& g)
         if (showDebugOverlay)
             drawDebugOverlay(g);
     #endif
+
+    // W6: Notify paint complete with timing
+    double paintTimeMs = juce::Time::getMillisecondCounterHiRes() - startTime;
+    if (onPaintComplete)
+        onPaintComplete(paintTimeMs);
 }
 
 void TrackView::resized()
@@ -199,10 +206,18 @@ void TrackView::drawTracks(juce::Graphics& g, juce::Rectangle<int> bounds)
     auto visibleTracks = visibleTrackIndexRange();
 
     if (visibleTracks.isEmpty())
+    {
+        // W6: Track stats even if no tracks visible
+        lastPaintVisibleTracks = 0;
+        lastPaintVisibleClips = 0;
         return;
+    }
 
     // W5: Use cached font (zero allocations)
     g.setFont(trackNameFont);
+
+    // W6: Track visible clip count
+    int visibleClipCount = 0;
 
     for (int i = visibleTracks.getStart(); i < visibleTracks.getEnd(); ++i)
     {
@@ -270,6 +285,9 @@ void TrackView::drawTracks(juce::Graphics& g, juce::Rectangle<int> bounds)
             if (clipEnd < visibleTime.getStart() || clipStart > visibleTime.getEnd())
                 continue;
 
+            // W6: Count visible clip
+            visibleClipCount++;
+
             double clipX1 = timeToX(clipStart);
             double clipX2 = timeToX(clipEnd);
 
@@ -305,6 +323,10 @@ void TrackView::drawTracks(juce::Graphics& g, juce::Rectangle<int> bounds)
             }
         }
     }
+
+    // W6: Store stats for StatsOverlay (zero allocations)
+    lastPaintVisibleTracks = visibleTracks.getLength();
+    lastPaintVisibleClips = visibleClipCount;
 }
 
 void TrackView::drawPlayhead(juce::Graphics& g)
@@ -497,4 +519,11 @@ void TrackView::setSessionData(std::vector<Track> newTracks, std::vector<Clip> n
     tracks = std::move(newTracks);
     clips = std::move(newClips);
     repaint();
+}
+
+void TrackView::getLastPaintStats(int& outVisibleTracks, int& outVisibleClips) const
+{
+    // W6: Zero-allocation API for StatsOverlay
+    outVisibleTracks = lastPaintVisibleTracks;
+    outVisibleClips = lastPaintVisibleClips;
 }

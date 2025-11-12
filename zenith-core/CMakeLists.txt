@@ -104,6 +104,9 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/TrackView.cpp
     Source/ui/TransportBar.cpp
 
+    # W6: Performance monitoring overlay (DEBUG-only)
+    $<$<CONFIG:Debug>:Source/ui/StatsOverlay.cpp>
+
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>

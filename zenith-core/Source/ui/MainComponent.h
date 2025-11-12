@@ -33,6 +33,10 @@
     #include "AudioSettingsWindows.h"
 #endif
 
+#if JUCE_DEBUG
+    #include "StatsOverlay.h"
+#endif
+
 //==============================================================================
 /**
  * @class MainComponent
@@ -57,6 +61,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    bool keyPressed(const juce::KeyPress& key) override;
 
 private:
     //==========================================================================
@@ -79,6 +84,18 @@ private:
      */
     void toggleAudioSettings();
 
+    #if JUCE_DEBUG
+        /**
+         * @brief W6: Show/hide stats overlay (Ctrl+F10)
+         */
+        void toggleStatsOverlay();
+
+        /**
+         * @brief W6: Update stats overlay with TrackView paint timing
+         */
+        void updateStatsOverlay();
+    #endif
+
     //==========================================================================
     // Member variables
     //==========================================================================
@@ -97,6 +114,11 @@ private:
     #ifdef _WIN32
         // Audio settings panel (Windows-specific, shown as overlay)
         std::unique_ptr<AudioSettingsWindows> audioSettingsPanel;
+    #endif
+
+    #if JUCE_DEBUG
+        // W6: Performance monitoring overlay (DEBUG-only)
+        std::unique_ptr<StatsOverlay> statsOverlay;
     #endif
 
     // Layout constants

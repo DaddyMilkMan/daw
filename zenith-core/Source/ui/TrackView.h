@@ -70,6 +70,11 @@ public:
      */
     std::function<void(double position)> onPlayheadClicked;
 
+    /**
+     * @brief W6: Callback after paint completes (for performance monitoring)
+     */
+    std::function<void(double paintTimeMs)> onPaintComplete;
+
     //==========================================================================
     TrackView();
     ~TrackView() override = default;
@@ -122,6 +127,13 @@ public:
      * @brief Inject test session data (W5: for stress testing)
      */
     void setSessionData(std::vector<Track> newTracks, std::vector<Clip> newClips);
+
+    /**
+     * @brief W6: Get last paint stats (zero allocations)
+     * @param outVisibleTracks Number of tracks painted in last frame
+     * @param outVisibleClips Number of clips painted in last frame
+     */
+    void getLastPaintStats(int& outVisibleTracks, int& outVisibleClips) const;
 
 private:
     //==========================================================================
@@ -213,6 +225,13 @@ private:
         bool showDebugOverlay = true;
         juce::Font debugFont {10.0f};
     #endif
+
+    //==========================================================================
+    // W6: Paint stats tracking (for StatsOverlay)
+    //==========================================================================
+
+    mutable int lastPaintVisibleTracks = 0;
+    mutable int lastPaintVisibleClips = 0;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackView)
 };

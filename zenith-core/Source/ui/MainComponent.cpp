@@ -27,6 +27,16 @@ MainComponent::MainComponent(Engine& eng)
 
     // W5: Inject stress test data (100 tracks × 50 clips)
     injectTestSessionData();
+
+    #if JUCE_DEBUG
+        // W6: Create stats overlay (DEBUG-only, default ON)
+        statsOverlay = std::make_unique<StatsOverlay>();
+        addChildComponent(statsOverlay.get());
+        statsOverlay->setVisible(true);  // Default ON in Debug
+    #endif
+
+    // W6: Enable keyboard input for Ctrl+F10 toggle
+    setWantsKeyboardFocus(true);
 }
 
 MainComponent::~MainComponent()
@@ -60,6 +70,19 @@ void MainComponent::resized()
 
     // Remaining space is for TrackView
     trackView.setBounds(bounds);
+
+    #if JUCE_DEBUG
+        // W6: Position stats overlay in top-right corner
+        if (statsOverlay != nullptr)
+        {
+            int overlayWidth = 220;
+            int overlayHeight = 140;
+            int margin = 10;
+            statsOverlay->setBounds(getWidth() - overlayWidth - margin,
+                                   topBarHeight + margin,
+                                   overlayWidth, overlayHeight);
+        }
+    #endif
 }
 
 //==============================================================================
@@ -153,6 +176,18 @@ void MainComponent::setupCallbacks()
         transportBar.setPosition(position);
         // TODO: Seek engine to position
     };
+
+    #if JUCE_DEBUG
+        // W6: TrackView paint complete callback (for performance monitoring)
+        trackView.onPaintComplete = [this](double paintTimeMs)
+        {
+            if (statsOverlay != nullptr && statsOverlay->isVisible())
+            {
+                statsOverlay->recordPaint("TrackView", paintTimeMs);
+                updateStatsOverlay();
+            }
+        };
+    #endif
 
     // TransportBar callbacks
     transportBar.onPlay = [this]()
@@ -289,3 +324,47 @@ void MainComponent::toggleAudioSettings()
         DBG("Audio settings panel not available on this platform");
     #endif
 }
+
+//==============================================================================
+// W6: Keyboard input and stats overlay
+//==============================================================================
+
+bool MainComponent::keyPressed(const juce::KeyPress& key)
+{
+    #if JUCE_DEBUG
+        // Ctrl+F10 toggle stats overlay
+        if (key == juce::KeyPress::F10Key && key.getModifiers().isCtrlDown())
+        {
+            toggleStatsOverlay();
+            return true;
+        }
+    #endif
+
+    return false;  // Let other components handle key
+}
+
+#if JUCE_DEBUG
+void MainComponent::toggleStatsOverlay()
+{
+    if (statsOverlay != nullptr)
+    {
+        bool isVisible = statsOverlay->isVisible();
+        statsOverlay->setOverlayVisible(!isVisible);
+        DBG("Stats overlay " + juce::String(isVisible ? "hidden" : "shown"));
+    }
+}
+
+void MainComponent::updateStatsOverlay()
+{
+    if (statsOverlay != nullptr && statsOverlay->isVisible())
+    {
+        // Get TrackView paint stats
+        int visibleTracks = 0;
+        int visibleClips = 0;
+        trackView.getLastPaintStats(visibleTracks, visibleClips);
+
+        // Update overlay
+        statsOverlay->updateTrackViewStats(visibleTracks, visibleClips);
+    }
+}
+#endif
