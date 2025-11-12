@@ -51,6 +51,16 @@ Clip ClipLoader::loadFromFile(const juce::File& file,
         return clip;  // Invalid clip
     }
 
+    // W13.1: Check sample rate mismatch (pitch shift prevention)
+    const double fileSR = reader->sampleRate;
+    if (engineSampleRate_ > 0.0 && std::abs(fileSR - engineSampleRate_) > 1e-3)
+    {
+        DBG("ClipLoader: Sample rate mismatch! File=" + juce::String(fileSR, 0)
+            + " Hz, Engine=" + juce::String(engineSampleRate_, 0) + " Hz");
+        DBG("  -> Rejecting file to prevent pitch shift: " + file.getFileName());
+        return clip;  // Invalid clip
+    }
+
     // Store sample rate for fade calculations
     currentSampleRate = reader->sampleRate;
 
@@ -87,6 +97,13 @@ Clip ClipLoader::loadFromFile(const juce::File& file,
 
     if (fadeOutMs > 0.0)
         clip.fadeOutSamples = static_cast<int>(fadeOutMs * currentSampleRate / 1000.0);
+
+    // W13.1: Clamp fades to prevent overlap on short clips
+    const int maxFade = static_cast<int>(clip.lengthSamples / 2);
+    if (clip.fadeInSamples > maxFade)
+        clip.fadeInSamples = maxFade;
+    if (clip.fadeOutSamples > maxFade)
+        clip.fadeOutSamples = maxFade;
 
     clip.loop = false;
 

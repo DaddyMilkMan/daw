@@ -44,6 +44,8 @@ void Track::releaseResources()
 
 void Track::addClip(const Clip& clip)
 {
+    JUCE_ASSERT_MESSAGE_THREAD;  // W13.1: Enforce message-thread-only access
+
     if (!clip.isValid())
     {
         DBG("Track: Rejecting invalid clip");
@@ -59,6 +61,12 @@ void Track::addClip(const Clip& clip)
     DBG("Track: Added clip (start=" + juce::String(clip.startSample)
         + ", length=" + juce::String(clip.lengthSamples) + ")");
     DBG("Track: Total clips: " + juce::String(clips_.size()));
+}
+
+void Track::clearClips()
+{
+    JUCE_ASSERT_MESSAGE_THREAD;  // W13.1: Enforce message-thread-only access
+    clips_.clear();
 }
 
 //==============================================================================
@@ -107,6 +115,14 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
         // Source range in clip PCM buffer
         const juce::int64 srcStart = clip.srcOffset + juce::jmax(juce::int64(0), transportPosition - clip.startSample);
         const int srcLength = dstLength;
+
+        // W13.1: Debug bounds validation (compile-time only)
+        #if JUCE_DEBUG
+            jassert(dstStart >= 0 && dstStart <= numSamples);
+            jassert(dstEnd > dstStart && dstEnd <= numSamples);
+            jassert(srcStart >= 0);
+            jassert(srcStart + srcLength <= clip.pcm->getNumSamples());
+        #endif
 
         // Safety check: ensure source range is valid
         if (srcStart < 0 || srcStart + srcLength > clip.pcm->getNumSamples())

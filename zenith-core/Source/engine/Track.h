@@ -105,7 +105,7 @@ public:
     /**
      * @brief Clear all clips (MESSAGE THREAD)
      */
-    void clearClips() { clips_.clear(); }
+    void clearClips();
 
 private:
     //==========================================================================

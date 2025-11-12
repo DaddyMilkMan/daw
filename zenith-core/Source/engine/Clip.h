@@ -117,12 +117,18 @@ struct Clip
      */
     bool isValid() const noexcept
     {
-        return pcm != nullptr
-            && pcm->getNumChannels() > 0
-            && pcm->getNumSamples() > 0
-            && lengthSamples > 0
-            && srcOffset >= 0
-            && srcOffset + lengthSamples <= pcm->getNumSamples();
+        if (pcm == nullptr) return false;
+        if (pcm->getNumChannels() <= 0) return false;
+        if (pcm->getNumSamples() <= 0) return false;
+        if (lengthSamples <= 0) return false;
+        if (srcOffset < 0) return false;
+        if (srcOffset + lengthSamples > pcm->getNumSamples()) return false;
+
+        // W13.1: Validate fades don't overlap
+        if (fadeInSamples < 0 || fadeOutSamples < 0) return false;
+        if (fadeInSamples + fadeOutSamples > lengthSamples) return false;
+
+        return true;
     }
 };
 
@@ -142,6 +148,12 @@ public:
     ~ClipLoader();
 
     /**
+     * @brief Set engine sample rate for validation (MESSAGE THREAD)
+     * @param sampleRate Engine sample rate (0 = disable check)
+     */
+    void setEngineSampleRate(double sampleRate) { engineSampleRate_ = sampleRate; }
+
+    /**
      * @brief Load audio file into Clip (MESSAGE THREAD)
      * @param file Audio file to load (WAV, AIFF, FLAC, etc.)
      * @param startSample Timeline position for clip start
@@ -151,6 +163,7 @@ public:
      *
      * @note This decodes the entire file into memory (MESSAGE THREAD)
      * @note Do NOT call from AUDIO THREAD
+     * @note W13.1: Rejects files with mismatched sample rate
      */
     Clip loadFromFile(const juce::File& file,
                       juce::int64 startSample = 0,
@@ -160,6 +173,7 @@ public:
 private:
     juce::AudioFormatManager formatManager;
     double currentSampleRate = 44100.0;  // Updated when loading
+    double engineSampleRate_ = 0.0;      // W13.1: Engine SR for validation (0 = disabled)
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipLoader)
 };
