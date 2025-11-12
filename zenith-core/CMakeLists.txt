@@ -77,10 +77,19 @@ juce_add_gui_app(ZenithDAW
 # ============================================================================
 
 target_sources(ZenithDAW PRIVATE
+    # Core application
     src/Main.cpp
     src/MainWindow.cpp
     src/Engine.cpp
     src/ProjectState.cpp
+
+    # Engine primitives (ported from VexelDAW-Native, Phase 2)
+    Source/engine/Track.h
+    Source/engine/Track.cpp
+    Source/engine/Clip.h
+    Source/engine/Clip.cpp
+    Source/engine/MixerChannel.h
+    Source/engine/MixerChannel.cpp
 )
 
 # ============================================================================
@@ -89,6 +98,7 @@ target_sources(ZenithDAW PRIVATE
 
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
 )
 
 # ============================================================================
