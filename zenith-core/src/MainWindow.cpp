@@ -31,6 +31,11 @@ MainComponent::MainComponent(Engine& eng)
     audioDeviceLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(audioDeviceLabel);
 
+    // C4: Track count label (read-only)
+    trackCountLabel.setText("Tracks: 0", juce::dontSendNotification);
+    trackCountLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(trackCountLabel);
+
     // Transport buttons
     playButton.setButtonText("Play");
     playButton.onClick = [this]() {
@@ -113,6 +118,11 @@ void MainComponent::resized()
     // Top bar (status)
     auto topBar = bounds.removeFromTop(40);
     statusLabel.setBounds(topBar.removeFromLeft(500).reduced(10, 8));
+
+    // C4: Track count label sits on the right side of the top bar (after CPU)
+    auto trackCountArea = topBar.removeFromRight(120);
+    trackCountLabel.setBounds(trackCountArea.reduced(10, 8));
+
     cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
 
     // Bottom bar (transport + audio device)
@@ -141,6 +151,25 @@ void MainComponent::timerCallback()
     // Update audio device info
     auto deviceInfo = engine.getAudioDeviceInfo();
     audioDeviceLabel.setText("Audio: " + deviceInfo, juce::dontSendNotification);
+
+    // C4: Update track count (dirty-checked)
+    refreshTrackCountLabel();
+}
+
+//==============================================================================
+// C4: Track count monitoring (read-only, dirty-checked)
+//==============================================================================
+
+void MainComponent::refreshTrackCountLabel()
+{
+    // Message-thread read only
+    const int count = engine.getNumTracks();
+    if (count == lastTrackCount_)
+        return;
+
+    lastTrackCount_ = count;
+    // No heavy formatting, no repaint storm
+    trackCountLabel.setText("Tracks: " + juce::String(count), juce::dontSendNotification);
 }
 
 //==============================================================================
