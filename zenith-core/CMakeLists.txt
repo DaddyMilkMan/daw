@@ -132,6 +132,9 @@ target_sources(ZenithDAW PRIVATE
     # W10: Phase 1 audio engine (opt-in, cross-platform)
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Track.cpp>
 
+    # W13: Clip rendering (requires W10, cross-platform)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Clip.cpp>
+
     # Windows resources (manifest, version info)
     $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
 )

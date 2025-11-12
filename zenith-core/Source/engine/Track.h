@@ -13,6 +13,7 @@
 #include <JuceHeader.h>
 #include <atomic>
 #include <vector>
+#include "Clip.h"
 
 namespace zenith {
 
@@ -55,11 +56,14 @@ public:
      * @brief Render track into mix buffer
      * @param mixBuffer Buffer to render into (additive mix)
      * @param numSamples Number of samples to render
+     * @param transportPosition Current transport position in samples
      *
      * @note AUDIO THREAD - real-time safe!
      * @note Does NOT clear buffer - mixes additively
      */
-    void processBlock(juce::AudioBuffer<float>& mixBuffer, int numSamples);
+    void processBlock(juce::AudioBuffer<float>& mixBuffer,
+                      int numSamples,
+                      juce::int64 transportPosition);
 
     //==========================================================================
     // Track State (MESSAGE THREAD)
@@ -79,6 +83,29 @@ public:
 
     void setSoloed(bool s) { soloed_.store(s); }
     bool isSoloed() const { return soloed_.load(); }
+
+    //==========================================================================
+    // W13: Clip Management (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Add clip to track (MESSAGE THREAD)
+     * @param clip Clip to add (must be valid)
+     *
+     * @note Clips are automatically sorted by startSample
+     * @note Do NOT call while audio is playing (static timeline assumption)
+     */
+    void addClip(const Clip& clip);
+
+    /**
+     * @brief Get number of clips
+     */
+    int getNumClips() const { return static_cast<int>(clips_.size()); }
+
+    /**
+     * @brief Clear all clips (MESSAGE THREAD)
+     */
+    void clearClips() { clips_.clear(); }
 
 private:
     //==========================================================================
@@ -101,7 +128,10 @@ private:
     // Pre-allocated scratch buffer for track processing
     juce::AudioBuffer<float> trackBuffer;
 
-    // TODO: Add clip list, plugin chain, automation, etc.
+    // W13: Clip list (sorted by startSample, MESSAGE THREAD access only)
+    std::vector<Clip> clips_;
+
+    // TODO: Add plugin chain, automation, etc.
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };

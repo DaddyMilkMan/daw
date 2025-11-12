@@ -284,10 +284,13 @@ void Engine::audioDeviceIOCallbackWithContext(
     mixBuffer_.clear();
 
     // Mix all tracks (each track must NOT clear the buffer internally)
+    // W13: Pass transport position for sample-accurate clip rendering
+    const juce::int64 currentTransportPos = playbackPosition.load(std::memory_order_relaxed);
+
     for (auto& track : tracks_)
     {
         if (track)
-            track->processBlock(mixBuffer_, numSamples);
+            track->processBlock(mixBuffer_, numSamples, currentTransportPos);
     }
 
     // Master gain/pan (constant per block; no per-sample allocs or branches)
