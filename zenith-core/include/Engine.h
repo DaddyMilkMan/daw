@@ -151,8 +151,21 @@ public:
      * @brief Seek to specific sample position
      * @param targetSample Target sample position
      *
+     * ⚠️ CRITICAL: You MUST call stop() before seekSamples()
+     * Reason: seekSamples() rewrites the event queue (both consumes and produces)
+     * This violates SPSC contract if audio thread is also consuming
+     * Enforced by jassert(!isPlaying_) in implementation
+     *
      * Purges all queued events < targetSample to prevent stale events
-     * Thread-safe: Call from message thread
+     * Preserves chronological order of future events >= targetSample
+     *
+     * Thread-safe: Call from message thread ONLY when playback is stopped
+     *
+     * Usage:
+     *   engine.stop();
+     *   engine.seekSamples(newPosition);
+     *   // reschedule clips as needed
+     *   engine.play();
      */
     void seekSamples(int64_t targetSample);
 

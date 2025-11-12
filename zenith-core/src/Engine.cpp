@@ -277,11 +277,15 @@ void Engine::processAudio(
 
 #if ZENITH_ENABLE_PHASE1_AUDIO
     // Phase 1: Drain scheduled events for this block
+    // SPSC Safety: This runs ONLY when isPlaying_ == true (enforced by caller)
+    // seekSamples() can only run when isPlaying_ == false (enforced by jassert)
+    // Therefore, audio thread (consumer) and message thread (producer) never
+    // conflict on eventQ_ - SPSC contract is maintained
     const int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
     const int64_t blockEnd = blockStart + numSamples;
     drainScheduledEvents(blockStart, blockEnd, numSamples);
 
-    // Update transport position
+    // Update transport position (always advances, even when not playing audio)
     transportSamples_.fetch_add(numSamples, std::memory_order_relaxed);
 #endif
 }
@@ -319,11 +323,18 @@ bool Engine::scheduleClipStop(int trackIndex, int64_t clipId, int64_t stopSample
 
 void Engine::seekSamples(int64_t targetSample)
 {
+    // CRITICAL: You MUST be stopped (not playing) to safely rewrite the queue
+    // SPSC contract: audio thread is consumer, message thread is producer
+    // If audio callback is running, it's consuming from eventQ_ concurrently
+    // This would violate SPSC and cause undefined behavior
+    jassert(!isPlaying_.load(std::memory_order_acquire));
+
     // Update transport position
     transportSamples_.store(targetSample, std::memory_order_release);
 
     // Purge all queued events < targetSample (they're now stale)
     // This runs on MESSAGE THREAD - safe to allocate and drain entire queue
+    // ONLY SAFE BECAUSE AUDIO THREAD IS NOT CONSUMING (playback stopped)
 
     // Drain entire queue to temp buffer, preserving chronological order
     std::vector<TransportEvent> futureEvents;
