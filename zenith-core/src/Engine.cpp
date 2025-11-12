@@ -144,6 +144,9 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     phase = 0.0;
     playbackPosition.store(0);
 
+    // W10: Prepare mixer and buffers
+    prepareToPlay(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
+
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
@@ -153,6 +156,37 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 void Engine::audioDeviceStopped()
 {
     DBG("Engine: Audio device stopped");
+    releaseResources();
+}
+
+//==============================================================================
+// W10: Prepare/Release (allocate mix buffers when flag ON)
+//==============================================================================
+
+void Engine::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
+{
+    juce::ignoreUnused(samplesPerBlockExpected, sampleRate);
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    // Allocate mix buffer for Phase 1 audio engine
+    auto* dev = deviceManager.getCurrentAudioDevice();
+    const int outs = dev ? std::max(1, dev->getActiveOutputChannels().countNumberOfSetBits()) : 2;
+    mixBuffer_.setSize(outs, std::max(1, samplesPerBlockExpected), false, true, true);
+
+    // Prepare mixer
+    mixer_.prepare(sampleRate, samplesPerBlockExpected);
+
+    DBG("Engine: Phase 1 mixer prepared (" + juce::String(outs) + " ch, "
+        + juce::String(samplesPerBlockExpected) + " samples)");
+#endif
+}
+
+void Engine::releaseResources()
+{
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    mixBuffer_.setSize(0, 0);
+    mixer_.release();
+#endif
 }
 
 void Engine::audioDeviceIOCallbackWithContext(
@@ -225,8 +259,45 @@ void Engine::processAudio(
 
     juce::ignoreUnused(inputChannelData, numInputChannels);
 
-    // For Phase 0, generate a simple test tone (440 Hz sine wave)
-    // TODO: Replace with actual audio processing in Phase 1
+    // Clear outputs first
+    for (int ch = 0; ch < numOutputChannels; ++ch)
+        if (outputChannelData[ch] != nullptr)
+            juce::FloatVectorOperations::clear(outputChannelData[ch], numSamples);
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    //==========================================================================
+    // W10: Phase 1 mixer path (flag ON)
+    //==========================================================================
+
+    // Ensure mix buffer matches device config
+    if (mixBuffer_.getNumChannels() != numOutputChannels || mixBuffer_.getNumSamples() < numSamples)
+        mixBuffer_.setSize(std::max(1, numOutputChannels), std::max(1, numSamples), false, true, true);
+
+    // Clear mix buffer
+    mixBuffer_.clear();
+
+    // Process mixer (renders all tracks)
+    // NOTE: Phase 1 constraint - tracks must not be mutated during playback
+    mixer_.process(mixBuffer_, numSamples, playbackPosition.load());
+
+    // Copy mix buffer → device outputs
+    for (int ch = 0; ch < numOutputChannels; ++ch)
+    {
+        if (outputChannelData[ch] != nullptr)
+        {
+            const int srcCh = std::min(ch, mixBuffer_.getNumChannels() - 1);
+            juce::FloatVectorOperations::copy(
+                outputChannelData[ch],
+                mixBuffer_.getReadPointer(srcCh),
+                numSamples
+            );
+        }
+    }
+
+#else
+    //==========================================================================
+    // Phase 0: Test tone fallback (flag OFF)
+    //==========================================================================
 
     bool testToneEnabled = enableTestTone_.load();
 
@@ -259,15 +330,5 @@ void Engine::processAudio(
                 phase -= 2.0 * juce::MathConstants<double>::pi;
         }
     }
-    else
-    {
-        // Silent output
-        for (int channel = 0; channel < numOutputChannels; ++channel)
-        {
-            if (outputChannelData[channel] != nullptr)
-            {
-                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
-            }
-        }
-    }
+#endif
 }

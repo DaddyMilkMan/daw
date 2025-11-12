@@ -25,6 +25,10 @@
 #include <JuceHeader.h>
 #include <atomic>
 
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+#include "Mixer.h"
+#endif
+
 //==============================================================================
 /**
  * @class Engine
@@ -124,6 +128,14 @@ public:
      */
     juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    /**
+     * @brief Get mixer (W10: Phase 1 audio engine)
+     * @return Reference to Mixer
+     */
+    Mixer& getMixer() { return mixer_; }
+#endif
+
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
@@ -172,6 +184,18 @@ public:
         int numSamples,
         const juce::AudioIODeviceCallbackContext& context) override;
 
+    /**
+     * @brief Prepare for playback (W10: allocate mix buffers when flag ON)
+     * @note AUDIO THREAD - Called before audio starts
+     */
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+
+    /**
+     * @brief Release resources (W10: deallocate mix buffers)
+     * @note AUDIO THREAD - Called when audio stops
+     */
+    void releaseResources() override;
+
 private:
     //==========================================================================
     // Audio Processing (AUDIO THREAD)
@@ -213,6 +237,12 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    // W10: Phase 1 audio engine (mixer + tracks)
+    Mixer mixer_;
+    juce::AudioBuffer<float> mixBuffer_;  // Temp buffer for mixer output
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

@@ -65,6 +65,19 @@ if(WIN32)
 endif()
 
 # ============================================================================
+# Audio Engine Flags (cross-platform)
+# ============================================================================
+
+# Phase 1 Audio Engine (OFF by default; zero runtime cost when disabled)
+option(ZENITH_ENABLE_PHASE1_AUDIO "Enable Phase 1 mixer/track engine wiring" OFF)
+
+if(ZENITH_ENABLE_PHASE1_AUDIO)
+    message(STATUS "Phase 1 audio engine: ENABLED (mixer+track rendering)")
+else()
+    message(STATUS "Phase 1 audio engine: DISABLED (test tone fallback)")
+endif()
+
+# ============================================================================
 # Zenith DAW Application
 # ============================================================================
 
@@ -194,6 +207,9 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Windows MMCSS
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_ENABLE_MMCSS}>>:ZENITH_ENABLE_MMCSS=1>
+
+    # W10: Phase 1 audio engine (mixer + track rendering)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:ZENITH_ENABLE_PHASE1_AUDIO=1>
 
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>
