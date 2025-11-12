@@ -6,6 +6,10 @@
 #include "../include/MainWindow.h"
 #include "../Source/ui/MainComponent.h"
 
+#if defined(ZENITH_USE_CRASHPAD) && defined(JUCE_WINDOWS)
+    #include "../Source/win/CrashpadInit.h"
+#endif
+
 //==============================================================================
 // MenuBar Implementation (W6.1: View menu for Performance HUD)
 //==============================================================================
@@ -64,6 +68,37 @@ public:
         }
         else if (menuName == "Help")
         {
+            #if defined(ZENITH_USE_CRASHPAD) && defined(JUCE_WINDOWS)
+                // W8: Diagnostics submenu (crash reporting & testing)
+                juce::PopupMenu diagnosticsMenu;
+
+                // Check if crash reports are enabled
+                bool crashReportsEnabled = false;
+                if (auto* mainComp = owner.getMainComponent())
+                {
+                    if (auto* userSettings = mainComp->getAppProperties().getUserSettings())
+                        crashReportsEnabled = userSettings->getBoolValue("diagnostics.crashReportsEnabled", false);
+                }
+
+                diagnosticsMenu.addItem(MenuItemIDs::diagEnableCrashReports,
+                                       "Enable Crash Reports",
+                                       true,
+                                       crashReportsEnabled,
+                                       [](int result) {});
+
+                #if JUCE_DEBUG
+                    diagnosticsMenu.addSeparator();
+                    diagnosticsMenu.addItem(MenuItemIDs::diagTriggerTestCrash,
+                                           "Trigger Test Crash",
+                                           true,
+                                           false,
+                                           [](int result) {});
+                #endif
+
+                menu.addSubMenu("Diagnostics", diagnosticsMenu);
+                menu.addSeparator();
+            #endif
+
             menu.addItem(MenuItemIDs::helpAbout, "About Zenith DAW...", true, false);
         }
 
@@ -83,6 +118,61 @@ public:
                     if (auto* mainComp = owner.getMainComponent())
                         mainComp->toggleStatsOverlay();
                     break;
+            #endif
+
+            #if defined(ZENITH_USE_CRASHPAD) && defined(JUCE_WINDOWS)
+                case MenuItemIDs::diagEnableCrashReports:
+                {
+                    // W8: Toggle crash reporting enable/disable
+                    if (auto* mainComp = owner.getMainComponent())
+                    {
+                        if (auto* userSettings = mainComp->getAppProperties().getUserSettings())
+                        {
+                            bool currentState = userSettings->getBoolValue("diagnostics.crashReportsEnabled", false);
+                            bool newState = !currentState;
+                            userSettings->setValue("diagnostics.crashReportsEnabled", newState);
+                            userSettings->saveIfNeeded();
+
+                            DBG("W8: Crash reporting " + juce::String(newState ? "enabled" : "disabled"));
+
+                            // Show alert to user
+                            juce::AlertWindow::showMessageBoxAsync(
+                                juce::AlertWindow::InfoIcon,
+                                "Crash Reporting " + juce::String(newState ? "Enabled" : "Disabled"),
+                                newState
+                                    ? "Crash reports will be saved locally on your computer.\n\n"
+                                      "Location: %APPDATA%\\ZenithDAW\\crashpad_db\\\n\n"
+                                      "Restart the application for changes to take effect."
+                                    : "Crash reporting has been disabled.\n\n"
+                                      "Restart the application for changes to take effect.",
+                                "OK");
+                        }
+                    }
+                    break;
+                }
+
+                #if JUCE_DEBUG
+                    case MenuItemIDs::diagTriggerTestCrash:
+                    {
+                        // W8: Trigger intentional crash for testing (DEBUG only)
+                        auto result = juce::AlertWindow::showOkCancelBox(
+                            juce::AlertWindow::WarningIcon,
+                            "Trigger Test Crash",
+                            "This will intentionally crash the application to test crash reporting.\n\n"
+                            "A minidump (.dmp) will be created in:\n"
+                            "%APPDATA%\\ZenithDAW\\crashpad_db\\completed\\\n\n"
+                            "Continue?",
+                            "Crash Now",
+                            "Cancel");
+
+                        if (result)
+                        {
+                            DBG("W8: User triggered test crash");
+                            zenith::diag::triggerTestCrash();
+                        }
+                        break;
+                    }
+                #endif
             #endif
 
             default:
@@ -113,7 +203,9 @@ private:
         viewMixer,
         viewBrowser,
 
-        helpAbout = 4000
+        helpAbout = 4000,
+        diagEnableCrashReports = 4100,  // W8: Crash reporting toggle
+        diagTriggerTestCrash = 4101      // W8: Test crash (DEBUG only)
     };
 };
 

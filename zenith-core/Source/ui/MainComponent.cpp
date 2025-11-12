@@ -5,6 +5,10 @@
 
 #include "MainComponent.h"
 
+#if defined(ZENITH_USE_CRASHPAD) && defined(JUCE_WINDOWS)
+    #include "../win/CrashpadInit.h"
+#endif
+
 //==============================================================================
 MainComponent::MainComponent(Engine& eng)
     : engine(eng),
@@ -28,15 +32,65 @@ MainComponent::MainComponent(Engine& eng)
     // W5: Inject stress test data (100 tracks × 50 clips)
     injectTestSessionData();
 
-    #if JUCE_DEBUG
-        // W6.1: Initialize ApplicationProperties for HUD persistence
-        juce::PropertiesFile::Options options;
-        options.applicationName = "ZenithDAW";
-        options.filenameSuffix = ".settings";
-        options.osxLibrarySubFolder = "Application Support";
-        options.folderName = "ZenithDAW";
-        appProperties.setStorageParameters(options);
+    // W6.1 & W8: Initialize ApplicationProperties (used for HUD persistence & crash reporting settings)
+    juce::PropertiesFile::Options options;
+    options.applicationName = "ZenithDAW";
+    options.filenameSuffix = ".settings";
+    options.osxLibrarySubFolder = "Application Support";
+    options.folderName = "ZenithDAW";
+    appProperties.setStorageParameters(options);
 
+    #if defined(ZENITH_USE_CRASHPAD) && defined(JUCE_WINDOWS)
+        // W8: Initialize Crashpad crash reporting (opt-in via settings)
+        auto* userSettings = appProperties.getUserSettings();
+        bool crashReportsEnabled = userSettings->getBoolValue("diagnostics.crashReportsEnabled", false);
+
+        if (crashReportsEnabled)
+        {
+            auto appData = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                              .getChildFile("ZenithDAW");
+            auto dbDir = appData.getChildFile("crashpad_db");
+
+            #ifndef CRASHPAD_HANDLER_PATH
+                DBG("Crashpad: CRASHPAD_HANDLER_PATH not defined at compile time");
+            #else
+                juce::File handler(CRASHPAD_HANDLER_PATH);
+
+                if (handler.existsAsFile())
+                {
+                    juce::StringPairArray annotations;
+                    annotations.set("product", "Zenith DAW");
+                    annotations.set("version", "0.1.0");
+                    annotations.set("build", juce::String(JUCE_DEBUG ? "Debug" : "Release"));
+                    annotations.set("platform", "Windows");
+
+                    bool success = zenith::diag::initCrashpad(handler, dbDir, annotations);
+
+                    if (success)
+                    {
+                        DBG("W8: Crashpad initialized successfully");
+                        DBG("  Handler: " + handler.getFullPathName());
+                        DBG("  Database: " + dbDir.getFullPathName());
+                    }
+                    else
+                    {
+                        DBG("W8: Crashpad initialization failed (see logs above)");
+                    }
+                }
+                else
+                {
+                    DBG("Crashpad: handler not found at " + handler.getFullPathName());
+                }
+            #endif
+        }
+        else
+        {
+            DBG("W8: Crash reporting disabled (user opt-in required)");
+            DBG("  Enable in: Help → Diagnostics → Enable Crash Reports");
+        }
+    #endif
+
+    #if JUCE_DEBUG
         // W6: Create stats overlay (DEBUG-only)
         statsOverlay = std::make_unique<StatsOverlay>();
         addChildComponent(statsOverlay.get());

@@ -75,6 +75,11 @@ public:
         void toggleStatsOverlay();
     #endif
 
+    /**
+     * @brief W8: Get application properties for menu bar access (crash reporting settings)
+     */
+    juce::ApplicationProperties& getAppProperties() { return appProperties; }
+
 private:
     //==========================================================================
     // Setup methods
@@ -126,10 +131,10 @@ private:
     #if JUCE_DEBUG
         // W6: Performance monitoring overlay (DEBUG-only)
         std::unique_ptr<StatsOverlay> statsOverlay;
-
-        // W6.1: Persistent settings for Debug HUD
-        juce::ApplicationProperties appProperties;
     #endif
+
+    // W6.1 & W8: Persistent settings (HUD visibility, crash reporting, etc.)
+    juce::ApplicationProperties appProperties;
 
     // Layout constants
     static constexpr int topBarHeight = 48;

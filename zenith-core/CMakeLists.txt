@@ -61,7 +61,19 @@ if(WIN32)
     # MMCSS Audio Priority (ON by default for pro audio performance)
     option(ZENITH_ENABLE_MMCSS "Enable Windows MMCSS audio thread priority boost" ON)
 
-    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}")
+    # W8: Crashpad Crash Reporting (OFF by default, opt-in)
+    option(ZENITH_USE_CRASHPAD "Enable Crashpad crash capture (local minidumps)" OFF)
+    set(CRASHPAD_HANDLER_PATH "" CACHE STRING "Path to crashpad_handler.exe at runtime (absolute)")
+
+    message(STATUS "Windows build - LTCG: ${ZENITH_LTCG}, Warnings as errors: ${ZENITH_WARNINGS_AS_ERRORS}, MMCSS: ${ZENITH_ENABLE_MMCSS}, Crashpad: ${ZENITH_USE_CRASHPAD}")
+
+    if(ZENITH_USE_CRASHPAD)
+        if(CRASHPAD_HANDLER_PATH STREQUAL "")
+            message(WARNING "ZENITH_USE_CRASHPAD enabled but CRASHPAD_HANDLER_PATH not set. Set with: -DCRAS HPAD_HANDLER_PATH=\"C:/path/to/crashpad_handler.exe\"")
+        else()
+            message(STATUS "  Crashpad handler path: ${CRASHPAD_HANDLER_PATH}")
+        endif()
+    endif()
 endif()
 
 # ============================================================================
@@ -110,6 +122,9 @@ target_sources(ZenithDAW PRIVATE
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>
+
+    # W8: Crashpad crash reporting (Windows-only, opt-in)
+    $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:Source/win/CrashpadInit.cpp>
 
     # Windows resources (manifest, version info)
     $<$<PLATFORM_ID:Windows>:resources/windows/app.rc>
@@ -194,6 +209,10 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Windows MMCSS
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_ENABLE_MMCSS}>>:ZENITH_ENABLE_MMCSS=1>
+
+    # W8: Crashpad crash reporting (Windows-only, opt-in)
+    $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:ZENITH_USE_CRASHPAD=1>
+    $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_USE_CRASHPAD}>>:CRASHPAD_HANDLER_PATH="${CRASHPAD_HANDLER_PATH}">
 
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>
