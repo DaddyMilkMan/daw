@@ -95,8 +95,14 @@ bool ProjectState::loadFromFile(const juce::File& file)
         return false;
     }
 
+    // Remove listener from old state
+    state.removeListener(this);
+
     // Replace current state
     state = newState;
+
+    // Re-register listener to new state (CRITICAL FIX)
+    state.addListener(this);
 
     // Clear undo history (fresh start)
     undoManager.clearUndoHistory();
@@ -260,6 +266,9 @@ void ProjectState::redo()
 
 void ProjectState::createDefaultState()
 {
+    // Remove listener from old state
+    state.removeListener(this);
+
     // Create root PROJECT node
     state = juce::ValueTree(ID_PROJECT);
 
@@ -277,6 +286,9 @@ void ProjectState::createDefaultState()
     juce::ValueTree mixer(ID_MIXER);
     mixer.setProperty(PROP_VOLUME, 0.8, nullptr);
     state.appendChild(mixer, nullptr);
+
+    // Re-register listener to new state (CRITICAL FIX)
+    state.addListener(this);
 
     DBG("ProjectState: Default state created");
 }

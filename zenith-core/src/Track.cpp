@@ -56,9 +56,6 @@ bool Track::Clip::isActive() const
 
 void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // Clear buffer first
-    bufferToFill.clearActiveBufferRegion();
-
     if (reader == nullptr)
         return;
 
@@ -70,6 +67,7 @@ void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     if (currentPos < startTime || currentPos >= endTime)
     {
         // Clip is not active at this position
+        // **CRITICAL FIX:** Don't clear buffer - would erase other clips' audio!
         return;
     }
 

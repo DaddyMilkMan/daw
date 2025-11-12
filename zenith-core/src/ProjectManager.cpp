@@ -184,11 +184,12 @@ juce::Result ProjectManager::saveDocument(const juce::File& file)
 juce::File ProjectManager::getLastDocumentOpened()
 {
     // Load from application properties
-    auto& properties = juce::PropertiesFile::Options().getDefaultFile();
+    // CRITICAL FIX: Store File locally instead of binding to temporary
+    juce::File propertiesFile = juce::PropertiesFile::Options().getDefaultFile();
 
-    if (properties.existsAsFile())
+    if (propertiesFile.existsAsFile())
     {
-        auto props = std::make_unique<juce::PropertiesFile>(properties);
+        auto props = std::make_unique<juce::PropertiesFile>(propertiesFile);
         auto lastFile = props->getValue("lastProjectFile");
 
         if (lastFile.isNotEmpty())
@@ -202,9 +203,10 @@ juce::File ProjectManager::getLastDocumentOpened()
 void ProjectManager::setLastDocumentOpened(const juce::File& file)
 {
     // Save to application properties
-    auto& properties = juce::PropertiesFile::Options().getDefaultFile();
+    // CRITICAL FIX: Store File locally instead of binding to temporary
+    juce::File propertiesFile = juce::PropertiesFile::Options().getDefaultFile();
 
-    auto props = std::make_unique<juce::PropertiesFile>(properties);
+    auto props = std::make_unique<juce::PropertiesFile>(propertiesFile);
     props->setValue("lastProjectFile", file.getFullPathName());
     props->saveIfNeeded();
 }
