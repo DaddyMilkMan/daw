@@ -12,6 +12,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ============================================================================
+# Build Options
+# ============================================================================
+
+# Phase control flags for incremental integration
+option(ZENITH_ENABLE_PHASE1_AUDIO "Enable src/audio skeleton (Phase 1 - not ready)" OFF)
+option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from VexelDAW-Native" OFF)
+
+# ============================================================================
 # Fetch JUCE 8.0.9 using FetchContent
 # ============================================================================
 include(FetchContent)
