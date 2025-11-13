@@ -50,6 +50,10 @@ const ClipDef* Track::findClipDef(int64_t clipId) const noexcept
 void Track::setFxNode(int slotIndex, std::unique_ptr<IDspNode> node)
 {
 #if ZENITH_ENABLE_PHASE1_AUDIO
+    // CRITICAL: FX chain mutation only allowed when transport is stopped
+    // (prevents UB from audio thread reading node pointers during mutation)
+    // TODO: Add jassert(!engine.isPlaying()) when engine reference available
+
     jassert(slotIndex >= 0 && slotIndex < kMaxFxSlots);
     if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
         return;
@@ -63,6 +67,9 @@ void Track::setFxNode(int slotIndex, std::unique_ptr<IDspNode> node)
 void Track::clearFxNode(int slotIndex)
 {
 #if ZENITH_ENABLE_PHASE1_AUDIO
+    // CRITICAL: FX chain mutation only allowed when transport is stopped
+    // TODO: Add jassert(!engine.isPlaying()) when engine reference available
+
     jassert(slotIndex >= 0 && slotIndex < kMaxFxSlots);
     if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
         return;

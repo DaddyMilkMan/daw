@@ -126,6 +126,12 @@ target_sources(ZenithDAW PRIVATE
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/GainPanNode.h>
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/GainPanNode.cpp>
 
+    # W11.1: VST3 host wrapper + test nodes (gated by ZENITH_ENABLE_PHASE1_AUDIO)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/Vst3Node.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/Vst3Node.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/TestNode.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/TestNode.cpp>
+
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>
@@ -170,6 +176,11 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_recommended_lto_flags
     juce::juce_recommended_warning_flags
 )
+
+# W11.1: Add audio_plugin_client for VST3 hosting (conditional on PHASE1_AUDIO)
+if(ZENITH_ENABLE_PHASE1_AUDIO)
+    target_link_libraries(ZenithDAW PRIVATE juce::juce_audio_plugin_client)
+endif()
 
 # ============================================================================
 # Generate JuceHeader.h
@@ -358,6 +369,12 @@ if(ZENITH_ENABLE_PHASE1_AUDIO)
         include/engine/IDspNode.h
         Source/engine/nodes/GainPanNode.h
         Source/engine/nodes/GainPanNode.cpp
+
+        # W11.1: VST3 + test nodes
+        Source/engine/nodes/Vst3Node.h
+        Source/engine/nodes/Vst3Node.cpp
+        Source/engine/nodes/TestNode.h
+        Source/engine/nodes/TestNode.cpp
     )
 
     target_include_directories(zenith-core-phase1-tests PRIVATE
@@ -368,6 +385,8 @@ if(ZENITH_ENABLE_PHASE1_AUDIO)
     target_link_libraries(zenith-core-phase1-tests PRIVATE
         juce::juce_audio_basics
         juce::juce_audio_formats
+        juce::juce_audio_processors
+        juce::juce_audio_plugin_client
         juce::juce_core
         juce::juce_data_structures
         juce::juce_events

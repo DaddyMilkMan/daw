@@ -11,6 +11,7 @@
 #include "../../Source/engine/Track.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/nodes/GainPanNode.h"
+#include "../../Source/engine/nodes/TestNode.h"
 #include "../../include/Engine.h"
 #include <vector>
 #include <cmath>
@@ -600,6 +601,154 @@ TEST(PluginChain_AppliesGainAndBypassCorrectly)
     }
 
     // Cleanup
+    track->releaseResources();
+}
+
+//==============================================================================
+// Test 5: Multiple FX nodes process in correct order
+//==============================================================================
+
+TEST(MultipleFxNodesProcessInOrder)
+{
+    // Setup
+    zenith::Mixer mixer;
+    int trackIdx = mixer.addTrack();
+    zenith::Track* track = mixer.getTrack(trackIdx);
+    ASSERT_EQ(track != nullptr, true);
+
+    // Prepare track
+    const double sampleRate = 48000.0;
+    const int blockSize = 512;
+    track->prepareToPlay(sampleRate, blockSize);
+
+    // Create clip with constant value 1.0
+    const int64_t clipId = 5001;
+    const int clipLength = 256;
+    zenith::Clip clip = createFlatClip(clipLength, 1.0f);
+
+    zenith::ClipDef clipDef(clipId, clip);
+    track->addClipDefinition(clipDef);
+
+    // Start clip at sample 0
+    Engine::TransportEvent startEvent(
+        Engine::TransportEventType::ClipStart,
+        0,
+        trackIdx,
+        clipId
+    );
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 1: Chain multiple nodes: GainHalf → GainDouble → AddConstant
+    // Expected: 1.0 → 0.5 → 1.0 → 1.1
+    {
+        std::cout << "  Test 1: Chain GainHalf → GainDouble → AddConstant" << std::endl;
+
+        // Slot 0: GainHalf (1.0 → 0.5)
+        auto node0 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainHalf);
+        node0->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(0, std::move(node0));
+
+        // Slot 1: GainDouble (0.5 → 1.0)
+        auto node1 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainDouble);
+        node1->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(1, std::move(node1));
+
+        // Slot 2: AddConstant (1.0 → 1.1)
+        auto node2 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::AddConstant);
+        node2->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(2, std::move(node2));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 1.1f, 0.01f);
+        std::cout << "    Final value: " << peak << " (expected ≈1.1)" << std::endl;
+    }
+
+    // Reset for next test
+    track->clearFxNode(0);
+    track->clearFxNode(1);
+    track->clearFxNode(2);
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 2: Verify order matters: GainDouble → GainHalf → AddConstant
+    // Expected: 1.0 → 2.0 → 1.0 → 1.1
+    {
+        std::cout << "  Test 2: Chain GainDouble → GainHalf → AddConstant (different order)" << std::endl;
+
+        // Slot 0: GainDouble (1.0 → 2.0)
+        auto node0 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainDouble);
+        node0->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(0, std::move(node0));
+
+        // Slot 1: GainHalf (2.0 → 1.0)
+        auto node1 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainHalf);
+        node1->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(1, std::move(node1));
+
+        // Slot 2: AddConstant (1.0 → 1.1)
+        auto node2 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::AddConstant);
+        node2->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(2, std::move(node2));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 1.1f, 0.01f);
+        std::cout << "    Final value: " << peak << " (expected ≈1.1)" << std::endl;
+    }
+
+    // Reset for bypass test
+    track->clearFxNode(0);
+    track->clearFxNode(1);
+    track->clearFxNode(2);
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 3: Middle node bypassed: GainHalf → [GainDouble BYPASSED] → AddConstant
+    // Expected: 1.0 → 0.5 → (skip) → 0.6
+    {
+        std::cout << "  Test 3: Middle node bypassed" << std::endl;
+
+        // Slot 0: GainHalf (1.0 → 0.5)
+        auto node0 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainHalf);
+        node0->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(0, std::move(node0));
+
+        // Slot 1: GainDouble (BYPASSED)
+        auto node1 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::GainDouble);
+        node1->prepareToPlay(sampleRate, blockSize, 2);
+        node1->setBypassed(true);
+        track->setFxNode(1, std::move(node1));
+
+        // Slot 2: AddConstant (0.5 → 0.6)
+        auto node2 = std::make_unique<zenith::TestNode>(zenith::TestNode::TransformType::AddConstant);
+        node2->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(2, std::move(node2));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 0.6f, 0.01f);
+        std::cout << "    Final value: " << peak << " (expected ≈0.6)" << std::endl;
+    }
+
+    // Cleanup
+    track->clearFxNode(0);
+    track->clearFxNode(1);
+    track->clearFxNode(2);
     track->releaseResources();
 }
 
