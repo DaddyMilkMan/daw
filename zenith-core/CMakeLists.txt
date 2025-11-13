@@ -328,6 +328,63 @@ endif()
 # target_link_libraries(ZenithDAW PRIVATE ZenithResources)
 
 # ============================================================================
+# Phase 1 Audio Engine Tests (optional, gated by ZENITH_ENABLE_PHASE1_AUDIO)
+# ============================================================================
+
+if(ZENITH_ENABLE_PHASE1_AUDIO)
+    message(STATUS "Building Phase 1 audio engine tests...")
+
+    # Create console test app
+    juce_add_console_app(zenith-core-phase1-tests
+        PRODUCT_NAME "Zenith Phase 1 Tests"
+    )
+
+    target_sources(zenith-core-phase1-tests PRIVATE
+        tests/engine/Phase1AudioTests.cpp
+
+        # Include same engine sources as main app
+        Source/engine/Clip.h
+        Source/engine/Track.h
+        Source/engine/Track.cpp
+        Source/engine/Mixer.h
+        Source/engine/Mixer.cpp
+    )
+
+    target_include_directories(zenith-core-phase1-tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source
+    )
+
+    target_link_libraries(zenith-core-phase1-tests PRIVATE
+        juce::juce_audio_basics
+        juce::juce_audio_formats
+        juce::juce_core
+        juce::juce_data_structures
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_gui_basics
+        juce::juce_recommended_config_flags
+    )
+
+    target_compile_definitions(zenith-core-phase1-tests PRIVATE
+        JUCE_APP_VERSION="0.1.0"
+        ZENITH_ENABLE_PHASE1_AUDIO=1
+        $<$<CONFIG:Debug>:DEBUG=1>
+        $<$<CONFIG:Debug>:_DEBUG=1>
+        $<$<CONFIG:Release>:NDEBUG=1>
+    )
+
+    juce_generate_juce_header(zenith-core-phase1-tests)
+
+    # Apply same warnings as main app
+    zenith_apply_warnings(zenith-core-phase1-tests)
+
+    message(STATUS "Phase 1 tests target: zenith-core-phase1-tests")
+else()
+    message(STATUS "Phase 1 tests SKIPPED (ZENITH_ENABLE_PHASE1_AUDIO=OFF)")
+endif()
+
+# ============================================================================
 # Post-Build Messages
 # ============================================================================
 
