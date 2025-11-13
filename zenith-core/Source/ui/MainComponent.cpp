@@ -341,6 +341,56 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         return true;
     }
 
+    // Cmd+T / Ctrl+T: Add Track
+    if (key == juce::KeyPress('t', juce::ModifierKeys::commandModifier, 0))
+    {
+        int newTrackIndex = editorState.addAudioTrack();
+        DBG("Added new track: " + juce::String(newTrackIndex + 1));
+        arrangerComponent.repaint();
+        return true;
+    }
+
+    // Cmd+Shift+Backspace / Ctrl+Shift+Backspace: Remove Track
+    if (key == juce::KeyPress::backspaceKey &&
+        key.getModifiers().isCommandDown() &&
+        key.getModifiers().isShiftDown())
+    {
+        const int selectedTrack = editorState.getSelectedTrack();
+        if (selectedTrack >= 0)
+        {
+            // Check if track has clips
+            const auto* track = editorState.getTrack(selectedTrack);
+            if (track != nullptr && !track->clips.empty())
+            {
+                // Show confirmation dialog
+                juce::AlertWindow::showOkCancelBox(
+                    juce::MessageBoxIconType::QuestionIcon,
+                    "Delete Track",
+                    "Delete track \"" + track->name + "\" and all its clips?",
+                    "Yes", "No",
+                    nullptr,
+                    juce::ModalCallbackFunction::create([this, selectedTrack](int result)
+                    {
+                        if (result == 1)  // OK clicked
+                        {
+                            editorState.removeTrack(selectedTrack);
+                            DBG("Removed track: " + juce::String(selectedTrack + 1));
+                            arrangerComponent.repaint();
+                        }
+                    })
+                );
+            }
+            else
+            {
+                // No clips, just delete
+                editorState.removeTrack(selectedTrack);
+                DBG("Removed track: " + juce::String(selectedTrack + 1));
+                arrangerComponent.repaint();
+            }
+            return true;
+        }
+    }
+
     return false;  // Let other components handle key
 }
 
@@ -410,19 +460,34 @@ void MainComponent::startImportAudio()
 
 void MainComponent::handleImportAudioFile(const juce::File& file)
 {
-    // Determine target track (always track 0 for v0.1)
-    const int trackIndex = 0;
+    // Determine target track (selected track, or create track 0 if none exist)
+    int targetTrack = editorState.getSelectedTrack();
+
+    if (targetTrack < 0)
+    {
+        // No track selected
+        if (editorState.getNumTracks() == 0)
+        {
+            // No tracks exist - create one
+            targetTrack = editorState.addAudioTrack();
+            DBG("No tracks exist, created Track 1");
+        }
+        else
+        {
+            // Tracks exist but none selected - use track 0
+            targetTrack = 0;
+            editorState.setSelectedTrack(targetTrack);
+            DBG("No track selected, using Track 1");
+        }
+    }
 
     // Determine start position (current playhead)
     const auto startSample = editorState.getTransportSamples();
 
     // Insert clip
-    if (editorState.insertClipFromFile(trackIndex, startSample, file))
+    if (editorState.insertClipFromFile(targetTrack, startSample, file))
     {
-        DBG("Imported audio file: " + file.getFileName());
-
-        // Optionally select the new clip in arranger
-        // (For v0.1, we'll just let it appear without selecting)
+        DBG("Imported audio file: " + file.getFileName() + " to track " + juce::String(targetTrack + 1));
 
         // Repaint arranger to show new clip
         arrangerComponent.repaint();

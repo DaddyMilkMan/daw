@@ -26,6 +26,7 @@ ArrangerComponent::ArrangerComponent(zenith::ProjectEditorState& editorState)
 void ArrangerComponent::paint(juce::Graphics& g)
 {
     drawBackground(g);
+    drawTrackHeaders(g);
     drawTracksAndClips(g);
     drawPlayhead(g);
 }
@@ -43,13 +44,42 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 {
     const auto pos = e.getPosition();
 
-    // Hit-test for clip with edge detection
+    // Priority 1: Check for mute button click
+    int muteTrackIndex = -1;
+    if (hitTestMuteButton(pos, muteTrackIndex))
+    {
+        // Toggle mute for this track
+        const bool newMuted = !editor_.isTrackMuted(muteTrackIndex);
+        editor_.setTrackMuted(muteTrackIndex, newMuted);
+        repaint();
+        return;
+    }
+
+    // Priority 2: Check for track header click (selection only)
+    const int headerTrack = hitTestTrackHeader(pos);
+    if (headerTrack >= 0)
+    {
+        // Select this track
+        selectedTrackIndex_ = headerTrack;
+        editor_.setSelectedTrack(headerTrack);
+
+        // Clear clip selection
+        selected_ = SelectedClip{};
+        repaint();
+        return;
+    }
+
+    // Priority 3: Check for clip click with edge detection
     auto hitResult = hitTestClip(pos.toFloat());
 
     if (hitResult.clip.isValid())
     {
         // Select this clip
         selected_ = hitResult.clip;
+
+        // Also select the track
+        selectedTrackIndex_ = hitResult.clip.trackIndex;
+        editor_.setSelectedTrack(hitResult.clip.trackIndex);
 
         // Set drag mode
         dragMode_ = hitResult.mode;
@@ -79,6 +109,8 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
         // Clear selection and drag mode
         selected_ = SelectedClip{};
         dragMode_ = DragMode::None;
+
+        // Don't clear track selection on empty click (keep last selected)
 
         // Clicking on background - set playhead without playing
         const juce::int64 clickSample = xToSamples(pos.x);
@@ -346,7 +378,7 @@ void ArrangerComponent::drawBackground(juce::Graphics& g)
         const int x = samplesToX(sample);
 
         // Skip if outside visible area
-        if (x < trackHeaderWidth_ || x > getWidth())
+        if (x < kTrackHeaderWidth || x > getWidth())
             continue;
 
         // Vertical grid line (full height from ruler bottom to component bottom)
@@ -363,6 +395,70 @@ void ArrangerComponent::drawBackground(juce::Graphics& g)
     }
 }
 
+void ArrangerComponent::drawTrackHeaders(juce::Graphics& g)
+{
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto& track = project.tracks[t];
+        const auto headerBounds = getTrackHeaderBounds(t);
+        const bool isSelected = (selectedTrackIndex_ == t || (selected_.isValid() && selected_.trackIndex == t));
+        const bool isMuted = editor_.isTrackMuted(t);
+
+        // Background color (highlight if selected, dim if muted)
+        if (isSelected)
+            g.setColour(juce::Colour(0xff3a3a3a));  // Brighter for selection
+        else if (isMuted)
+            g.setColour(juce::Colour(0xff1a1a1a));  // Dimmer for muted
+        else
+            g.setColour(juce::Colour(0xff2a2a2a));  // Normal
+        g.fillRect(headerBounds);
+
+        // Border
+        g.setColour(isSelected ? juce::Colour(0xff5a5a5a) : juce::Colour(0xff444444));
+        g.drawRect(headerBounds, 1);
+
+        // Track index (1-based) in top-left
+        g.setColour(isMuted ? juce::Colour(0xff666666) : juce::Colour(0xff999999));
+        g.setFont(11.0f);
+        g.drawText(juce::String(t + 1),
+                   8, headerBounds.getY() + 4, 30, 16,
+                   juce::Justification::centredLeft, false);
+
+        // Track name (centered vertically)
+        g.setColour(isMuted ? juce::Colour(0xff888888) : juce::Colours::white);
+        g.setFont(14.0f);
+        g.drawText(track.name,
+                   8, headerBounds.getY() + 20, kTrackHeaderWidth - 60, headerBounds.getHeight() - 24,
+                   juce::Justification::centredLeft, true);
+
+        // Mute button ("M") in top-right
+        const auto muteButtonBounds = getMuteButtonBounds(t);
+
+        if (isMuted)
+        {
+            // Filled button when muted
+            g.setColour(juce::Colour(0xffff6b6b));  // Red
+            g.fillRect(muteButtonBounds);
+            g.setColour(juce::Colours::white);
+            g.drawRect(muteButtonBounds, 1);
+        }
+        else
+        {
+            // Outlined button when not muted
+            g.setColour(juce::Colour(0xff666666));
+            g.drawRect(muteButtonBounds, 1);
+        }
+
+        // "M" label
+        g.setColour(isMuted ? juce::Colours::white : juce::Colour(0xff999999));
+        g.setFont(12.0f);
+        g.drawText("M", muteButtonBounds, juce::Justification::centred, false);
+    }
+}
+
 void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
 {
     const auto& project = editor_.getProject();
@@ -373,25 +469,13 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
     {
         const auto& track = project.tracks[t];
         const auto trackBounds = getTrackBounds(t);
+        const bool isSelected = (selectedTrackIndex_ == t || (selected_.isValid() && selected_.trackIndex == t));
+        const bool isMuted = editor_.isTrackMuted(t);
 
-        // Track header (left side)
-        g.setColour(juce::Colour(0xff2a2a2a));
-        g.fillRect(0, trackBounds.getY(), trackHeaderWidth_, trackBounds.getHeight());
-
-        g.setColour(juce::Colour(0xff444444));
-        g.drawRect(0, trackBounds.getY(), trackHeaderWidth_, trackBounds.getHeight(), 1);
-
-        // Track name
-        g.setColour(juce::Colours::white);
-        g.setFont(14.0f);
-        g.drawText(track.name,
-                   8, trackBounds.getY(), trackHeaderWidth_ - 16, trackBounds.getHeight(),
-                   juce::Justification::centredLeft, true);
-
-        // Track lane (clip area)
+        // Track lane (clip area) - highlight if selected, dim if muted
         g.setColour(juce::Colour(0xff242424));
-        g.fillRect(trackHeaderWidth_, trackBounds.getY(),
-                   getWidth() - trackHeaderWidth_, trackBounds.getHeight());
+        g.fillRect(kTrackHeaderWidth, trackBounds.getY(),
+                   getWidth() - kTrackHeaderWidth, trackBounds.getHeight());
 
         // Separator line
         g.setColour(juce::Colour(0xff444444));
@@ -472,7 +556,7 @@ void ArrangerComponent::drawPlayhead(juce::Graphics& g)
 juce::Rectangle<int> ArrangerComponent::getTrackBounds(int trackIndex) const
 {
     const int y = rulerHeight_ + trackIndex * trackHeight_;
-    return juce::Rectangle<int>(trackHeaderWidth_, y, getWidth() - trackHeaderWidth_, trackHeight_);
+    return juce::Rectangle<int>(kTrackHeaderWidth, y, getWidth() - kTrackHeaderWidth, trackHeight_);
 }
 
 juce::Rectangle<int> ArrangerComponent::getClipBounds(const zenith::TrackModel& track,
@@ -499,16 +583,20 @@ double ArrangerComponent::getProjectSampleRate() const
 
 int ArrangerComponent::samplesToX(juce::int64 samples) const
 {
-    // samples → X coordinate (includes scroll offset)
-    // X = (samples - scrollOffset) / samplesPerPixel
-    return static_cast<int>(std::round((samples - scrollOffsetSamples_) / samplesPerPixel_));
+    // samples → X coordinate (includes scroll offset and header width)
+    // X = kTrackHeaderWidth + (samples - scrollOffset) / samplesPerPixel
+    return kTrackHeaderWidth + static_cast<int>(std::round((samples - scrollOffsetSamples_) / samplesPerPixel_));
 }
 
 juce::int64 ArrangerComponent::xToSamples(int x) const
 {
-    // X coordinate → samples (includes scroll offset)
-    // samples = scrollOffset + X * samplesPerPixel
-    return scrollOffsetSamples_ + static_cast<juce::int64>(std::round(x * samplesPerPixel_));
+    // X coordinate → samples (includes scroll offset and header width)
+    // If x < kTrackHeaderWidth, we're in the header area (return 0)
+    if (x < kTrackHeaderWidth)
+        return 0;
+
+    // samples = scrollOffset + (x - kTrackHeaderWidth) * samplesPerPixel
+    return scrollOffsetSamples_ + static_cast<juce::int64>(std::round((x - kTrackHeaderWidth) * samplesPerPixel_));
 }
 
 juce::Range<juce::int64> ArrangerComponent::getVisibleSampleRange() const
@@ -567,4 +655,62 @@ ArrangerComponent::HitTestResult ArrangerComponent::hitTestClip(juce::Point<floa
 
     // No clip hit - return invalid
     return HitTestResult{};
+}
+
+int ArrangerComponent::hitTestTrackHeader(juce::Point<int> pos) const
+{
+    // Check if x is in header area
+    if (pos.x >= kTrackHeaderWidth)
+        return -1;
+
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto headerBounds = getTrackHeaderBounds(t);
+        if (headerBounds.contains(pos))
+            return t;
+    }
+
+    return -1;
+}
+
+bool ArrangerComponent::hitTestMuteButton(juce::Point<int> pos, int& outTrackIndex) const
+{
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto muteButtonBounds = getMuteButtonBounds(t);
+        if (muteButtonBounds.contains(pos))
+        {
+            outTrackIndex = t;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::Rectangle<int> ArrangerComponent::getTrackHeaderBounds(int trackIndex) const
+{
+    const int y = rulerHeight_ + trackIndex * trackHeight_;
+    return juce::Rectangle<int>(0, y, kTrackHeaderWidth, trackHeight_);
+}
+
+juce::Rectangle<int> ArrangerComponent::getMuteButtonBounds(int trackIndex) const
+{
+    const auto headerBounds = getTrackHeaderBounds(trackIndex);
+
+    // Position mute button in top-right corner of header
+    const int buttonSize = 24;
+    const int margin = 8;
+    return juce::Rectangle<int>(
+        headerBounds.getRight() - buttonSize - margin,
+        headerBounds.getY() + margin,
+        buttonSize,
+        buttonSize
+    );
 }

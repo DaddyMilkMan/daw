@@ -45,6 +45,117 @@ void ProjectEditorState::reloadPlayback()
 }
 
 //==============================================================================
+// Track Operations
+//==============================================================================
+
+int ProjectEditorState::getNumTracks() const
+{
+    return static_cast<int>(model_.tracks.size());
+}
+
+const TrackModel* ProjectEditorState::getTrack(int trackIndex) const
+{
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return nullptr;
+    return &model_.tracks[trackIndex];
+}
+
+void ProjectEditorState::setTrackMuted(int trackIndex, bool muted)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return;
+
+    // Update mute state
+    model_.tracks[trackIndex].muted = muted;
+
+    // Reload playback to apply changes
+    reloadPlayback();
+}
+
+bool ProjectEditorState::isTrackMuted(int trackIndex) const
+{
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+    return model_.tracks[trackIndex].muted;
+}
+
+void ProjectEditorState::setSelectedTrack(int trackIndex)
+{
+    // Clamp to valid range
+    const int numTracks = static_cast<int>(model_.tracks.size());
+    if (trackIndex < -1 || trackIndex >= numTracks)
+        trackIndex = -1;
+
+    selectedTrack_ = trackIndex;
+}
+
+int ProjectEditorState::addAudioTrack()
+{
+    // MESSAGE THREAD ONLY
+
+    // Generate new track ID (max + 1)
+    juce::int64 maxTrackId = -1;
+    for (const auto& t : model_.tracks)
+        maxTrackId = juce::jmax(maxTrackId, t.trackId);
+
+    // Create new track
+    TrackModel newTrack;
+    newTrack.trackId = maxTrackId + 1;
+    newTrack.name = juce::String("Track ") + juce::String(model_.tracks.size() + 1);
+    newTrack.gain = 1.0f;
+    newTrack.pan = 0.0f;
+    newTrack.muted = false;
+
+    // Add to project
+    model_.tracks.push_back(newTrack);
+
+    // Reload playback
+    reloadPlayback();
+
+    // Set as selected track
+    const int newIndex = static_cast<int>(model_.tracks.size()) - 1;
+    setSelectedTrack(newIndex);
+
+    return newIndex;
+}
+
+void ProjectEditorState::removeTrack(int trackIndex)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return;
+
+    // Remove track
+    model_.tracks.erase(model_.tracks.begin() + trackIndex);
+
+    // Adjust selected track
+    const int numTracks = static_cast<int>(model_.tracks.size());
+    if (numTracks == 0)
+    {
+        // No tracks left
+        selectedTrack_ = -1;
+    }
+    else if (trackIndex >= numTracks)
+    {
+        // Deleted last track, select previous
+        selectedTrack_ = numTracks - 1;
+    }
+    else
+    {
+        // Keep same index (next track shifted up)
+        selectedTrack_ = trackIndex;
+    }
+
+    // Reload playback
+    reloadPlayback();
+}
+
+//==============================================================================
 // Clip Editing Operations
 //==============================================================================
 

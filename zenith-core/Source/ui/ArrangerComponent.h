@@ -83,6 +83,7 @@ private:
     };
 
     SelectedClip selected_;
+    int selectedTrackIndex_ = -1;  // Selected track (-1 = none)
 
     //==========================================================================
     // Drag State
@@ -105,7 +106,7 @@ private:
     // Layout Constants
     //==========================================================================
 
-    int trackHeaderWidth_ = 120;
+    static constexpr int kTrackHeaderWidth = 180;
     int trackHeight_ = 60;
     int rulerHeight_ = 20;  // space for time ruler at top
 
@@ -172,11 +173,41 @@ private:
      */
     HitTestResult hitTestClip(juce::Point<float> pos) const;
 
+    /**
+     * @brief Hit-test for track header at mouse position
+     * @param pos Mouse position
+     * @return Track index or -1 if not in header area
+     */
+    int hitTestTrackHeader(juce::Point<int> pos) const;
+
+    /**
+     * @brief Hit-test for mute button in track header
+     * @param pos Mouse position
+     * @param outTrackIndex Output track index if hit
+     * @return true if mouse is over a mute button
+     */
+    bool hitTestMuteButton(juce::Point<int> pos, int& outTrackIndex) const;
+
+    /**
+     * @brief Get bounds for track header rectangle
+     * @param trackIndex Track index
+     * @return Rectangle for track header
+     */
+    juce::Rectangle<int> getTrackHeaderBounds(int trackIndex) const;
+
+    /**
+     * @brief Get bounds for mute button within a track header
+     * @param trackIndex Track index
+     * @return Rectangle for mute button
+     */
+    juce::Rectangle<int> getMuteButtonBounds(int trackIndex) const;
+
     //==========================================================================
     // Drawing Methods
     //==========================================================================
 
     void drawBackground(juce::Graphics& g);
+    void drawTrackHeaders(juce::Graphics& g);
     void drawTracksAndClips(juce::Graphics& g);
     void drawPlayhead(juce::Graphics& g);
 

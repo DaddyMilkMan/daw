@@ -91,6 +91,61 @@ namespace zenith
         double getSampleRate() const noexcept { return model_.sampleRate; }
 
         //==========================================================================
+        // Track Operations
+        //==========================================================================
+
+        /**
+         * @brief Get number of tracks in project
+         * @return Number of tracks
+         */
+        int getNumTracks() const;
+
+        /**
+         * @brief Get track by index (read-only)
+         * @param trackIndex Track index
+         * @return Pointer to track or nullptr if index invalid
+         */
+        const TrackModel* getTrack(int trackIndex) const;
+
+        /**
+         * @brief Set track muted state
+         * @param trackIndex Track index
+         * @param muted Mute state
+         */
+        void setTrackMuted(int trackIndex, bool muted);
+
+        /**
+         * @brief Check if track is muted
+         * @param trackIndex Track index
+         * @return true if muted, false otherwise (or if index invalid)
+         */
+        bool isTrackMuted(int trackIndex) const;
+
+        /**
+         * @brief Get selected track index
+         * @return Selected track index or -1 if none
+         */
+        int getSelectedTrack() const { return selectedTrack_; }
+
+        /**
+         * @brief Set selected track index
+         * @param trackIndex Track index or -1 for none
+         */
+        void setSelectedTrack(int trackIndex);
+
+        /**
+         * @brief Add a new audio track
+         * @return Index of newly created track
+         */
+        int addAudioTrack();
+
+        /**
+         * @brief Remove a track and all its clips
+         * @param trackIndex Track index
+         */
+        void removeTrack(int trackIndex);
+
+        //==========================================================================
         // Clip Editing Operations
         //==========================================================================
 
@@ -274,6 +329,7 @@ namespace zenith
         ProjectModel model_;                        // In-memory project data
         ArrangementPlaybackController playback_;    // Playback controller (owns engine ref)
         juce::File currentProjectFile_;             // Current project file (empty = no file)
+        int selectedTrack_ = -1;                    // Selected track index (-1 = none)
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectEditorState)
     };
