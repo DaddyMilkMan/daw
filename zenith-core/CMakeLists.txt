@@ -105,6 +105,7 @@ target_sources(ZenithDAW PRIVATE
 
     # v0.1: Core data model
     src/model/ProjectModel.cpp
+    src/model/ProjectPlaybackContext.cpp
 
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
