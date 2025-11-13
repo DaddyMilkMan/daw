@@ -130,7 +130,7 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/MainComponent.cpp
     Source/ui/TopBar.cpp
     Source/ui/Sidebar.cpp
-    Source/ui/TrackView.cpp
+    Source/ui/ArrangerComponent.cpp
     Source/ui/TransportBar.cpp
 
     # W6: Performance monitoring overlay (DEBUG-only)

@@ -110,6 +110,13 @@ namespace zenith
          */
         bool isPlaying() const;
 
+        /**
+         * @brief Seek to specific sample position without changing play state
+         * @param sample Target sample position
+         * @note Does not start or stop playback, just moves the playhead
+         */
+        void seekSamples(SamplePos sample);
+
     private:
         //==========================================================================
         // Internal Methods

@@ -28,7 +28,7 @@
 #include "ZenithLookAndFeel.h"
 #include "TopBar.h"
 #include "Sidebar.h"
-#include "TrackView.h"
+#include "ArrangerComponent.h"
 #include "TransportBar.h"
 
 #ifdef _WIN32
@@ -144,7 +144,7 @@ private:
     // UI Components (order matches visual hierarchy)
     TopBar topBar;
     Sidebar sidebar;
-    TrackView trackView;
+    ArrangerComponent arrangerComponent;
     TransportBar transportBar;
 
     #ifdef _WIN32

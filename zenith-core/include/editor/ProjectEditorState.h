@@ -176,6 +176,19 @@ namespace zenith
          */
         bool isPlaying() const;
 
+        /**
+         * @brief Set playhead position without changing play state
+         * @param sample Target sample position
+         * @note Just seeks the transport, doesn't start/stop playback
+         */
+        void setPlayheadSamples(SamplePos sample);
+
+        /**
+         * @brief Start playback from current playhead position
+         * @note Convenience method for UI (e.g., spacebar play/pause)
+         */
+        void playFromPlayhead();
+
         //==========================================================================
         // Playback Controller Access (for advanced use)
         //==========================================================================

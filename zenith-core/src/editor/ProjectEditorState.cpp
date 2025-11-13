@@ -163,4 +163,17 @@ bool ProjectEditorState::isPlaying() const
     return playback_.isPlaying();
 }
 
+void ProjectEditorState::setPlayheadSamples(SamplePos sample)
+{
+    // MESSAGE THREAD ONLY
+    playback_.seekSamples(sample);
+}
+
+void ProjectEditorState::playFromPlayhead()
+{
+    // MESSAGE THREAD ONLY
+    const SamplePos currentPos = getTransportSamples();
+    playFromSamples(currentPos);
+}
+
 } // namespace zenith

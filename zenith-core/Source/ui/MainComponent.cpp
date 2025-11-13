@@ -9,6 +9,7 @@
 MainComponent::MainComponent(Engine& eng)
     : engine(eng),
       editorState(eng),
+      arrangerComponent(editorState),
       transportBar(eng)
 {
     // Apply custom LookAndFeel to this component and all children
@@ -20,7 +21,7 @@ MainComponent::MainComponent(Engine& eng)
     // Add all UI components
     addAndMakeVisible(topBar);
     addAndMakeVisible(sidebar);
-    addAndMakeVisible(trackView);
+    addAndMakeVisible(arrangerComponent);
     addAndMakeVisible(transportBar);
 
     // Setup callbacks between components
@@ -95,8 +96,8 @@ void MainComponent::resized()
     // Mixer on right (if visible)
     // auto mixer = bounds.removeFromRight(mixerWidth);
 
-    // Remaining space is for TrackView
-    trackView.setBounds(bounds);
+    // Remaining space is for ArrangerComponent
+    arrangerComponent.setBounds(bounds);
 
     #if JUCE_DEBUG
         // W6: Position stats overlay in top-right corner
@@ -197,49 +198,19 @@ void MainComponent::setupCallbacks()
         // TODO: Load audio file into project
     };
 
-    // TrackView callbacks
-    trackView.onClipSelected = [this](int clipId)
-    {
-        DBG("Clip selected: " + juce::String(clipId));
-        // TODO: Show clip editor
-    };
-
-    trackView.onTrackSelected = [this](int trackIndex)
-    {
-        DBG("Track selected in view: " + juce::String(trackIndex));
-        // TODO: Update sidebar selection
-    };
-
-    trackView.onPlayheadClicked = [this](double position)
-    {
-        DBG("Playhead clicked at: " + juce::String(position));
-        transportBar.setPosition(position);
-        // TODO: Seek engine to position
-    };
-
-    #if JUCE_DEBUG
-        // W6: TrackView paint complete callback (for performance monitoring)
-        trackView.onPaintComplete = [this](double paintTimeMs)
-        {
-            if (statsOverlay != nullptr && statsOverlay->isVisible())
-            {
-                statsOverlay->recordPaint("TrackView", paintTimeMs);
-                updateStatsOverlay();
-            }
-        };
-    #endif
+    // ArrangerComponent doesn't use callbacks - it interacts directly with editorState
 
     // TransportBar callbacks
     transportBar.onPlay = [this]()
     {
         DBG("Transport: Play");
-        engine.play();
+        editorState.playFromPlayhead();
     };
 
     transportBar.onStop = [this]()
     {
         DBG("Transport: Stop");
-        engine.stop();
+        editorState.stop();
     };
 
     transportBar.onRecord = [this]()
@@ -263,71 +234,18 @@ void MainComponent::setupCallbacks()
     transportBar.onBPMChanged = [this](double bpm)
     {
         DBG("Transport: BPM changed to " + juce::String(bpm, 1));
-        trackView.setBPM(bpm);
-        // TODO: Update engine BPM
+        // TODO: Update engine BPM (v0.1: tempo not implemented yet)
     };
 }
 
 //==============================================================================
 void MainComponent::injectTestSessionData()
 {
-    // W5: Create 100 tracks
-    std::vector<Track> testTracks;
-    testTracks.reserve(100);
+    // v0.1: ArrangerComponent uses real ProjectModel data from editorState
+    // No need to inject dummy test data like the old TrackView did
+    // Users will load/create projects via File menu or drag-and-drop
 
-    for (int i = 0; i < 100; ++i)
-    {
-        Track track;
-        track.name = (i % 3 == 0) ? "Audio " : (i % 3 == 1) ? "MIDI " : "Aux ";
-        track.name += juce::String(i + 1);
-        track.lanes = 1;
-        testTracks.push_back(track);
-    }
-
-    // W5: Create 50 clips per track (5000 total clips)
-    std::vector<Clip> testClips;
-    testClips.reserve(5000);
-
-    juce::Random rng(12345);  // Seeded for reproducibility
-
-    juce::Array<juce::Colour> clipColours = {
-        ZenithColours::track1,
-        ZenithColours::track2,
-        ZenithColours::track3,
-        ZenithColours::track4,
-        juce::Colours::green,
-        juce::Colours::orange,
-        juce::Colours::purple,
-        juce::Colours::cyan
-    };
-
-    for (int trackIdx = 0; trackIdx < 100; ++trackIdx)
-    {
-        for (int clipIdx = 0; clipIdx < 50; ++clipIdx)
-        {
-            Clip clip;
-            clip.trackIndex = trackIdx;
-
-            // Random start position (0-300 seconds)
-            clip.startSamples = rng.nextInt64(juce::Range<juce::int64>(0, 300 * 44100));
-
-            // Random length (0.5-5 seconds)
-            clip.lengthSamples = rng.nextInt64(juce::Range<juce::int64>(22050, 220500));
-
-            // Random color
-            clip.colour = clipColours[rng.nextInt(clipColours.size())];
-
-            // Random name
-            clip.name = "Clip " + juce::String(clipIdx + 1);
-
-            testClips.push_back(clip);
-        }
-    }
-
-    // Inject into TrackView
-    trackView.setSessionData(std::move(testTracks), std::move(testClips));
-
-    DBG("W5: Injected test data - 100 tracks × 50 clips (5000 total clips)");
+    DBG("MainComponent: Using real ProjectModel (no dummy test data for v0.1)");
 }
 
 //==============================================================================
@@ -371,6 +289,22 @@ void MainComponent::toggleAudioSettings()
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)
 {
+    // Spacebar: toggle play/pause
+    if (key == juce::KeyPress::spaceKey)
+    {
+        if (editorState.isPlaying())
+        {
+            editorState.pause();
+            DBG("Spacebar: Paused");
+        }
+        else
+        {
+            editorState.playFromPlayhead();
+            DBG("Spacebar: Playing from current position");
+        }
+        return true;
+    }
+
     #if JUCE_DEBUG
         // Ctrl+F10 toggle stats overlay
         if (key == juce::KeyPress::F10Key && key.getModifiers().isCtrlDown())

@@ -84,6 +84,15 @@ bool ArrangementPlaybackController::isPlaying() const
     return engine_.isPlaying();
 }
 
+void ArrangementPlaybackController::seekSamples(SamplePos sample)
+{
+    // MESSAGE THREAD ONLY
+    if (sample < 0)
+        sample = 0;
+
+    engine_.seekSamples(sample);
+}
+
 //==============================================================================
 // Core Logic: Project → Engine Conversion
 //==============================================================================
