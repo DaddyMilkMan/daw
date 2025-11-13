@@ -84,6 +84,42 @@ namespace zenith
          */
         void reloadPlayback();
 
+        /**
+         * @brief Get project sample rate
+         * @return Sample rate in Hz
+         */
+        double getSampleRate() const noexcept { return model_.sampleRate; }
+
+        //==========================================================================
+        // Clip Editing Operations
+        //==========================================================================
+
+        /**
+         * @brief Delete a clip from a track
+         * @param trackIndex Track index
+         * @param clipIndex Clip index within track
+         * @return true if successful, false if indices invalid
+         */
+        bool deleteClip(int trackIndex, int clipIndex);
+
+        /**
+         * @brief Duplicate a clip on the same track
+         * @param trackIndex Track index
+         * @param clipIndex Clip index within track
+         * @param offsetSamples Offset for duplicated clip (added to original startSample)
+         * @return true if successful, false if indices invalid
+         */
+        bool duplicateClip(int trackIndex, int clipIndex, juce::int64 offsetSamples);
+
+        /**
+         * @brief Insert a new clip from an audio file
+         * @param trackIndex Target track (creates track 0 if no tracks exist)
+         * @param startSample Start position in timeline
+         * @param audioFile Audio file to import
+         * @return true if successful, false if file invalid or other error
+         */
+        bool insertClipFromFile(int trackIndex, juce::int64 startSample, const juce::File& audioFile);
+
         //==========================================================================
         // File I/O
         //==========================================================================

@@ -109,6 +109,21 @@ private:
     #endif
 
     //==========================================================================
+    // Audio Import
+    //==========================================================================
+
+    /**
+     * @brief Start audio file import (File → Import Audio...)
+     */
+    void startImportAudio();
+
+    /**
+     * @brief Handle audio file import after file chooser
+     * @param file Audio file to import
+     */
+    void handleImportAudioFile(const juce::File& file);
+
+    //==========================================================================
     // Export management
     //==========================================================================
 

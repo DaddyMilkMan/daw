@@ -45,6 +45,137 @@ void ProjectEditorState::reloadPlayback()
 }
 
 //==============================================================================
+// Clip Editing Operations
+//==============================================================================
+
+bool ProjectEditorState::deleteClip(int trackIndex, int clipIndex)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+
+    auto& track = model_.tracks[trackIndex];
+
+    // Validate clip index
+    if (clipIndex < 0 || clipIndex >= static_cast<int>(track.clips.size()))
+        return false;
+
+    // Remove clip from model
+    track.clips.erase(track.clips.begin() + clipIndex);
+
+    // Reload playback to apply changes to engine
+    reloadPlayback();
+
+    return true;
+}
+
+bool ProjectEditorState::duplicateClip(int trackIndex, int clipIndex, juce::int64 offsetSamples)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+
+    auto& track = model_.tracks[trackIndex];
+
+    // Validate clip index
+    if (clipIndex < 0 || clipIndex >= static_cast<int>(track.clips.size()))
+        return false;
+
+    // Get source clip
+    const auto& srcClip = track.clips[clipIndex];
+
+    // Create duplicate with new ID
+    ClipModel dstClip = srcClip;
+
+    // Generate new clip ID (simple: find max ID + 1)
+    juce::int64 maxId = 0;
+    for (const auto& t : model_.tracks)
+    {
+        for (const auto& c : t.clips)
+            maxId = juce::jmax(maxId, c.id);
+    }
+    dstClip.id = maxId + 1;
+
+    // Apply offset
+    dstClip.startSample = srcClip.startSample + offsetSamples;
+
+    // Clamp to non-negative
+    dstClip.startSample = juce::jmax((juce::int64) 0, dstClip.startSample);
+
+    // Add to track
+    track.clips.push_back(dstClip);
+
+    // Reload playback to apply changes to engine
+    reloadPlayback();
+
+    return true;
+}
+
+bool ProjectEditorState::insertClipFromFile(int trackIndex, juce::int64 startSample, const juce::File& audioFile)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate audio file
+    if (!audioFile.existsAsFile())
+        return false;
+
+    // Ensure track exists
+    if (trackIndex < 0)
+        return false;
+
+    // If track doesn't exist and it's track 0, create it
+    if (trackIndex >= static_cast<int>(model_.tracks.size()))
+    {
+        if (trackIndex == 0)
+        {
+            // Create track 0
+            TrackModel newTrack;
+            newTrack.id = 0;
+            newTrack.name = "Track 1";
+            model_.tracks.push_back(newTrack);
+        }
+        else
+        {
+            return false;  // Can't create tracks beyond track 0
+        }
+    }
+
+    auto& track = model_.tracks[trackIndex];
+
+    // Generate new clip ID
+    juce::int64 maxId = 0;
+    for (const auto& t : model_.tracks)
+    {
+        for (const auto& c : t.clips)
+            maxId = juce::jmax(maxId, c.id);
+    }
+
+    // Create new clip
+    ClipModel clip;
+    clip.id = maxId + 1;
+    clip.file = audioFile;
+    clip.startSample = juce::jmax((juce::int64) 0, startSample);
+    clip.lengthSamples = 0;  // 0 = use full file length
+    clip.srcOffset = 0;
+    clip.gain = 1.0f;
+    clip.fadeInSamples = 0;
+    clip.fadeOutSamples = 0;
+    clip.muted = false;
+
+    // Add to track
+    track.clips.push_back(clip);
+
+    // Reload playback to apply changes to engine
+    reloadPlayback();
+
+    return true;
+}
+
+//==============================================================================
 // File I/O
 //==============================================================================
 

@@ -14,6 +14,9 @@ ArrangerComponent::ArrangerComponent(zenith::ProjectEditorState& editorState)
 {
     // Start timer for playhead animation (30 fps is fine for v0.1)
     startTimer(33);
+
+    // Enable keyboard focus for delete/duplicate shortcuts
+    setWantsKeyboardFocus(true);
 }
 
 //==============================================================================
@@ -40,35 +43,32 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 {
     const auto pos = e.getPosition();
 
-    // Check if clicking on a clip
-    int trackIndex = -1;
-    juce::int64 clipId = -1;
+    // Hit-test for clip
+    auto hitClip = hitTestClip(pos.toFloat());
 
-    if (findClipAtPosition(pos, trackIndex, clipId))
+    if (hitClip.isValid())
     {
+        // Select this clip
+        selected_ = hitClip;
+
         // Start dragging this clip
         const auto& project = editor_.getProject();
-        if (trackIndex >= 0 && trackIndex < static_cast<int>(project.tracks.size()))
-        {
-            const auto& track = project.tracks[trackIndex];
+        const auto& track = project.tracks[hitClip.trackIndex];
+        const auto& clip = track.clips[hitClip.clipIndex];
 
-            // Find the clip model
-            for (const auto& clip : track.clips)
-            {
-                if (clip.id == clipId)
-                {
-                    drag_.active = true;
-                    drag_.trackIndex = trackIndex;
-                    drag_.clipId = clipId;
-                    drag_.originalClipStart = clip.startSample;
-                    drag_.dragStartSample = xToSamples(pos.x);
-                    break;
-                }
-            }
-        }
+        drag_.active = true;
+        drag_.trackIndex = hitClip.trackIndex;
+        drag_.clipIndex = hitClip.clipIndex;
+        drag_.originalClipStart = clip.startSample;
+        drag_.dragStartSample = xToSamples(pos.x);
+
+        repaint();
     }
     else
     {
+        // Clear selection
+        selected_ = SelectedClip{};
+
         // Clicking on background - set playhead without playing
         const juce::int64 clickSample = xToSamples(pos.x);
 
@@ -105,14 +105,10 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
     {
         auto& track = project.tracks[drag_.trackIndex];
 
-        // Find and update the clip
-        for (auto& clip : track.clips)
+        // Update the clip by index
+        if (drag_.clipIndex >= 0 && drag_.clipIndex < static_cast<int>(track.clips.size()))
         {
-            if (clip.id == drag_.clipId)
-            {
-                clip.startSample = newStartSample;
-                break;
-            }
+            track.clips[drag_.clipIndex].startSample = newStartSample;
         }
     }
 
@@ -131,7 +127,7 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent& e)
     // Clear drag state
     drag_.active = false;
     drag_.trackIndex = -1;
-    drag_.clipId = -1;
+    drag_.clipIndex = -1;
     drag_.originalClipStart = 0;
     drag_.dragStartSample = 0;
 }
@@ -198,6 +194,55 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::Mo
 
         repaint();
     }
+}
+
+//==============================================================================
+// Keyboard Interactions
+//==============================================================================
+
+bool ArrangerComponent::keyPressed(const juce::KeyPress& key)
+{
+    // Delete/Backspace: delete selected clip
+    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    {
+        if (selected_.isValid())
+        {
+            if (editor_.deleteClip(selected_.trackIndex, selected_.clipIndex))
+            {
+                // Clear selection
+                selected_ = SelectedClip{};
+                repaint();
+                return true;
+            }
+        }
+    }
+
+    // Ctrl/Cmd+D: duplicate selected clip
+    if (key == juce::KeyPress('d', juce::ModifierKeys::commandModifier, 0))
+    {
+        if (selected_.isValid())
+        {
+            // Offset by 0.5 seconds
+            const auto sampleRate = editor_.getSampleRate();
+            const juce::int64 offset = static_cast<juce::int64>(0.5 * sampleRate);
+
+            if (editor_.duplicateClip(selected_.trackIndex, selected_.clipIndex, offset))
+            {
+                // Update selection to the new clip (last clip on the track)
+                const auto& project = editor_.getProject();
+                if (selected_.trackIndex >= 0 && selected_.trackIndex < static_cast<int>(project.tracks.size()))
+                {
+                    const auto& track = project.tracks[selected_.trackIndex];
+                    selected_.clipIndex = static_cast<int>(track.clips.size()) - 1;
+                }
+
+                repaint();
+                return true;
+            }
+        }
+    }
+
+    return false;  // Key not handled
 }
 
 //==============================================================================
@@ -299,8 +344,10 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
         g.drawLine(0, trackBounds.getBottom(), getWidth(), trackBounds.getBottom(), 1.0f);
 
         // Draw clips (only if visible)
-        for (const auto& clip : track.clips)
+        for (int c = 0; c < static_cast<int>(track.clips.size()); ++c)
         {
+            const auto& clip = track.clips[c];
+
             if (clip.muted)
                 continue;  // Don't draw muted clips
 
@@ -311,13 +358,27 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
 
             const auto clipBounds = getClipBounds(track, clip, t);
 
-            // Clip rectangle
-            g.setColour(juce::Colour(0xff4a90e2));  // Blue
+            // Check if this clip is selected
+            const bool isSelected = (selected_.isValid() && selected_.trackIndex == t && selected_.clipIndex == c);
+
+            // Clip rectangle (brighter if selected)
+            if (isSelected)
+                g.setColour(juce::Colour(0xff6ab0f2));  // Lighter blue
+            else
+                g.setColour(juce::Colour(0xff4a90e2));  // Normal blue
             g.fillRect(clipBounds);
 
-            // Border
-            g.setColour(juce::Colour(0xff5a9ff2));
-            g.drawRect(clipBounds, 1);
+            // Border (thicker/brighter if selected)
+            if (isSelected)
+            {
+                g.setColour(juce::Colours::white);
+                g.drawRect(clipBounds, 2);  // Thicker border
+            }
+            else
+            {
+                g.setColour(juce::Colour(0xff5a9ff2));
+                g.drawRect(clipBounds, 1);
+            }
 
             // Clip name (if wide enough)
             if (clipBounds.getWidth() > 50)
@@ -403,7 +464,7 @@ juce::Range<juce::int64> ArrangerComponent::getVisibleSampleRange() const
     return juce::Range<juce::int64>(start, end);
 }
 
-bool ArrangerComponent::findClipAtPosition(juce::Point<int> pos, int& outTrackIndex, juce::int64& outClipId)
+ArrangerComponent::SelectedClip ArrangerComponent::hitTestClip(juce::Point<float> pos) const
 {
     const auto& project = editor_.getProject();
     const int numTracks = static_cast<int>(project.tracks.size());
@@ -412,21 +473,25 @@ bool ArrangerComponent::findClipAtPosition(juce::Point<int> pos, int& outTrackIn
     {
         const auto& track = project.tracks[t];
 
-        for (const auto& clip : track.clips)
+        for (int c = 0; c < static_cast<int>(track.clips.size()); ++c)
         {
+            const auto& clip = track.clips[c];
+
             if (clip.muted)
                 continue;
 
             const auto clipBounds = getClipBounds(track, clip, t);
 
-            if (clipBounds.contains(pos))
+            if (clipBounds.contains(pos.toInt()))
             {
-                outTrackIndex = t;
-                outClipId = clip.id;
-                return true;
+                SelectedClip result;
+                result.trackIndex = t;
+                result.clipIndex = c;
+                return result;
             }
         }
     }
 
-    return false;
+    // No clip hit - return invalid
+    return SelectedClip{};
 }

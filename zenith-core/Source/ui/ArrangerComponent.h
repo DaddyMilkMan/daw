@@ -59,12 +59,31 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     //==========================================================================
+    // Keyboard interactions
+    //==========================================================================
+
+    bool keyPressed(const juce::KeyPress& key) override;
+
+    //==========================================================================
     // Timer: poll playhead position while playing
     //==========================================================================
 
     void timerCallback() override;
 
 private:
+    //==========================================================================
+    // Selection State
+    //==========================================================================
+
+    struct SelectedClip
+    {
+        int trackIndex = -1;
+        int clipIndex = -1;   // index into TrackModel::clips
+        bool isValid() const { return trackIndex >= 0 && clipIndex >= 0; }
+    };
+
+    SelectedClip selected_;
+
     //==========================================================================
     // Drag State
     //==========================================================================
@@ -73,9 +92,9 @@ private:
     {
         bool active = false;
         int trackIndex = -1;
+        int clipIndex = -1;   // changed from clipId to clipIndex for consistency
         juce::int64 originalClipStart = 0;  // in samples
         juce::int64 dragStartSample = 0;    // timeline sample at mouseDown
-        juce::int64 clipId = -1;
     };
 
     DragState drag_;
@@ -135,10 +154,10 @@ private:
     juce::Range<juce::int64> getVisibleSampleRange() const;
 
     /**
-     * @brief Find clip at mouse position (returns trackIndex and clipId)
-     * @return true if clip found, sets outTrackIndex and outClipId
+     * @brief Hit-test for clip at mouse position
+     * @return SelectedClip if hit, or invalid SelectedClip if no clip at position
      */
-    bool findClipAtPosition(juce::Point<int> pos, int& outTrackIndex, juce::int64& outClipId);
+    SelectedClip hitTestClip(juce::Point<float> pos) const;
 
     //==========================================================================
     // Drawing Methods

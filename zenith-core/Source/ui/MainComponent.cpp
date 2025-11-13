@@ -327,6 +327,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         #endif
     #endif
 
+    // Cmd/Ctrl+I: Import Audio
+    if (key == juce::KeyPress('i', juce::ModifierKeys::commandModifier, 0))
+    {
+        startImportAudio();
+        return true;
+    }
+
     // Cmd+E / Ctrl+E: Export WAV
     if (key == juce::KeyPress('e', juce::ModifierKeys::commandModifier, 0))
     {
@@ -373,6 +380,65 @@ void MainComponent::updateStatsOverlay()
     }
 }
 #endif
+
+//==============================================================================
+// Audio Import
+//==============================================================================
+
+void MainComponent::startImportAudio()
+{
+    // Create file chooser for audio files
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Import Audio File",
+        juce::File{},
+        "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg"
+    );
+
+    // Launch async file chooser
+    chooser->launchAsync(
+        juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (file.existsAsFile())
+            {
+                handleImportAudioFile(file);
+            }
+        }
+    );
+}
+
+void MainComponent::handleImportAudioFile(const juce::File& file)
+{
+    // Determine target track (always track 0 for v0.1)
+    const int trackIndex = 0;
+
+    // Determine start position (current playhead)
+    const auto startSample = editorState.getTransportSamples();
+
+    // Insert clip
+    if (editorState.insertClipFromFile(trackIndex, startSample, file))
+    {
+        DBG("Imported audio file: " + file.getFileName());
+
+        // Optionally select the new clip in arranger
+        // (For v0.1, we'll just let it appear without selecting)
+
+        // Repaint arranger to show new clip
+        arrangerComponent.repaint();
+    }
+    else
+    {
+        DBG("Failed to import audio file: " + file.getFileName());
+
+        // Show error to user
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::MessageBoxIconType::WarningIcon,
+            "Import Failed",
+            "Could not import audio file: " + file.getFileName()
+        );
+    }
+}
 
 //==============================================================================
 // Export Management
