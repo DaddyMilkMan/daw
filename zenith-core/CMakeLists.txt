@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.22)
 # Project definition
 project(ZenithDAW VERSION 0.1.0 LANGUAGES C CXX)
 
+enable_testing()
+
 # C++20 standard required
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -158,6 +160,35 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Release builds
     $<$<CONFIG:Release>:NDEBUG=1>
 )
+
+# ============================================================================
+# ProjectState Tests
+# ============================================================================
+
+juce_add_console_app(ProjectStateTests
+    PRODUCT_NAME "ProjectStateTests"
+)
+
+target_sources(ProjectStateTests PRIVATE
+    tests/ProjectStateTests.cpp
+    src/ProjectState.cpp
+)
+
+target_include_directories(ProjectStateTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(ProjectStateTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+)
+
+target_compile_definitions(ProjectStateTests PRIVATE
+    JUCE_USE_CURL=0
+)
+
+add_test(NAME ProjectStateTests COMMAND $<TARGET_FILE:ProjectStateTests>)
 
 # ============================================================================
 # Compiler Warnings
