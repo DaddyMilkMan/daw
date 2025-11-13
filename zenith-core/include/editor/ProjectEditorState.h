@@ -124,6 +124,22 @@ namespace zenith
         juce::Result loadFromFile(const juce::File& file);
 
         //==========================================================================
+        // Offline Export
+        //==========================================================================
+
+        /**
+         * @brief Render current project to WAV file (offline export)
+         * @param outputFile Target WAV file path
+         * @param blockSize Processing block size (default: 1024)
+         * @param tailSeconds Extra time after last clip for FX tails (default: 0.0)
+         * @return Result indicating success or failure
+         * @note Stops playback during export, uses throwaway engine
+         */
+        juce::Result renderCurrentProjectToWav(const juce::File& outputFile,
+                                               int blockSize = 1024,
+                                               double tailSeconds = 0.0);
+
+        //==========================================================================
         // Transport Controls (delegates to playback controller)
         //==========================================================================
 

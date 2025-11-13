@@ -202,6 +202,94 @@ const AudioTrack* Engine::getTrack(int index) const
 }
 
 //==============================================================================
+// Offline Rendering (MESSAGE THREAD ONLY)
+//==============================================================================
+
+void Engine::prepareOffline(double sampleRate, int blockSize, int numChannels)
+{
+    // MESSAGE THREAD ONLY - no audio device involved
+
+    DBG("Engine: Preparing for offline rendering...");
+    DBG("  Sample Rate: " + juce::String(sampleRate) + " Hz");
+    DBG("  Block Size: " + juce::String(blockSize));
+    DBG("  Channels: " + juce::String(numChannels));
+
+    // Store settings
+    currentSampleRate.store(sampleRate);
+    currentBufferSize.store(blockSize);
+
+    // Allocate mix buffer for offline processing
+    mixBuffer_.setSize(numChannels, blockSize);
+    mixBuffer_.clear();
+
+    // Prepare mixer
+    mixer_.prepare(sampleRate, blockSize);
+
+    // Reset transport to 0
+    transportSamples_.store(0, std::memory_order_release);
+    isPlaying_.store(false, std::memory_order_release);
+
+    DBG("Engine: Offline preparation complete");
+}
+
+void Engine::processOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples)
+{
+    // MESSAGE THREAD ONLY - process one block offline
+
+    const int numChannels = buffer.getNumChannels();
+
+    // W10.2/W10.3: Transport window for this block
+    const int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
+    const int64_t blockEnd = blockStart + numSamples;
+
+    // Ensure mix buffer matches requested size
+    if (mixBuffer_.getNumChannels() != numChannels || mixBuffer_.getNumSamples() < numSamples)
+        mixBuffer_.setSize(numChannels, numSamples, false, true, true);
+
+    // Clear mix buffer
+    mixBuffer_.clear();
+
+    // W10.3: Drain scheduled events due in [blockStart, blockEnd)
+    int eventCount = 0;
+    auto* events = drainScheduledEvents(blockStart, blockEnd, eventCount);
+
+    // W10.3: Segment loop - render audio between events for sample-accurate timing
+    int cursor = 0;
+    for (int i = 0; i < eventCount; ++i)
+    {
+        const int eventOffset = events[i].offsetInBlock;
+
+        // Render segment before this event
+        if (eventOffset > cursor)
+        {
+            const int segmentLen = eventOffset - cursor;
+            mixer_.processSegment(mixBuffer_, blockStart + cursor, cursor, segmentLen);
+            cursor = eventOffset;
+        }
+
+        // Handle event at exact sample offset
+        mixer_.handleTransportEventRT(events[i].ev, eventOffset);
+    }
+
+    // Render final segment after last event (or entire block if no events)
+    if (cursor < numSamples)
+    {
+        const int segmentLen = numSamples - cursor;
+        mixer_.processSegment(mixBuffer_, blockStart + cursor, cursor, segmentLen);
+    }
+
+    // Copy mix buffer → output buffer
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const int srcCh = std::min(ch, mixBuffer_.getNumChannels() - 1);
+        buffer.copyFrom(ch, 0, mixBuffer_, srcCh, 0, numSamples);
+    }
+
+    // Always advance transport in offline mode (no isPlaying check needed)
+    transportSamples_.store(blockEnd, std::memory_order_relaxed);
+}
+
+//==============================================================================
 // W10.3: Drain scheduled events for segment loop
 //==============================================================================
 

@@ -246,6 +246,28 @@ public:
      */
     Phase1DebugMetrics getPhase1DebugMetrics() const noexcept;
 #endif // JUCE_DEBUG
+
+    //==========================================================================
+    // Offline Rendering (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Prepare engine for offline rendering (no audio device)
+     * @param sampleRate Target sample rate
+     * @param blockSize Processing block size
+     * @param numChannels Number of output channels (typically 2 for stereo)
+     * @note MESSAGE THREAD ONLY - used for offline export
+     */
+    void prepareOffline(double sampleRate, int blockSize, int numChannels);
+
+    /**
+     * @brief Process one offline block
+     * @param buffer Output buffer to fill (must be pre-allocated)
+     * @param numSamples Number of samples to process
+     * @note MESSAGE THREAD ONLY - advances transport automatically
+     */
+    void processOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples);
+
 #endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     //==========================================================================

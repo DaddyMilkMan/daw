@@ -121,6 +121,9 @@ target_sources(ZenithDAW PRIVATE
     # Editor layer (v0.1: high-level project state coordinator)
     src/editor/ProjectEditorState.cpp
 
+    # Render layer (v0.1: offline WAV export)
+    src/render/OfflineRender.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp

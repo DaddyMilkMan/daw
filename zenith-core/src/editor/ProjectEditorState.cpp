@@ -5,6 +5,7 @@
 
 #include <editor/ProjectEditorState.h>
 #include <io/ProjectPersistence.h>
+#include <render/OfflineRender.h>
 #include <Engine.h>
 
 namespace zenith
@@ -109,6 +110,23 @@ juce::Result ProjectEditorState::loadFromFile(const juce::File& file)
     DBG("ProjectEditorState: Project loaded from " + file.getFullPathName());
 
     return res;
+}
+
+//==============================================================================
+// Offline Export
+//==============================================================================
+
+juce::Result ProjectEditorState::renderCurrentProjectToWav(const juce::File& outputFile,
+                                                           int blockSize,
+                                                           double tailSeconds)
+{
+    // MESSAGE THREAD ONLY
+
+    // Stop playback during export
+    stop();
+
+    // Use project's sample rate
+    return renderProjectToWav(model_, outputFile, model_.sampleRate, blockSize, tailSeconds);
 }
 
 //==============================================================================
