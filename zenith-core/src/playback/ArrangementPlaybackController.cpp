@@ -117,10 +117,41 @@ void ArrangementPlaybackController::applyProjectToEngine_()
     const int numTracks = static_cast<int>(project_.tracks.size());
     engine_.setNumTracks(numTracks);
 
+    // 3a) Determine if any track has solo active
+    bool anySolo = false;
+    for (const auto& t : project_.tracks)
+    {
+        if (t.solo)
+        {
+            anySolo = true;
+            break;
+        }
+    }
+
     // 4) For each track in the model:
     for (int t = 0; t < numTracks; ++t)
     {
         const auto& trackModel = project_.tracks[static_cast<size_t>(t)];
+
+        // 4a) Compute effective mute state (solo logic)
+        bool effectiveMuted = false;
+        if (anySolo)
+        {
+            // If any track is soloed, only solo tracks are audible
+            effectiveMuted = !trackModel.solo;
+        }
+        else
+        {
+            // No solo active - use normal mute state
+            effectiveMuted = trackModel.muted;
+        }
+
+        // 4b) Skip effectively muted tracks entirely (don't even load clips)
+        if (effectiveMuted)
+        {
+            DBG("  Track " + juce::String(t) + ": " + trackModel.name + " (EFFECTIVELY MUTED - skipped)");
+            continue;
+        }
 
         auto* track = engine_.getTrack(t);
         if (track == nullptr)
@@ -135,6 +166,10 @@ void ArrangementPlaybackController::applyProjectToEngine_()
 
         // Clear any existing clips (message thread only API)
         track->clearClips();
+
+        // TODO Phase 2.4: Set track gain/pan on GainPanNode in FX slot 0
+        // For now, gain/pan is applied per-clip (clip.gain)
+        // Track-level gain/pan would multiply with clip gain in full implementation
 
         // 5) For each clip on this track:
         for (const auto& clipModel : trackModel.clips)

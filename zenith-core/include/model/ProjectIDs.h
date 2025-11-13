@@ -25,6 +25,10 @@ namespace zenith::model::ids
     // Track props
     static const juce::Identifier attrTrackId   { "trackId" };   // int
     static const juce::Identifier attrTrackName { "trackName" }; // String
+    static const juce::Identifier trackGain     { "trackGain" };  // float (default 1.0)
+    static const juce::Identifier trackPan      { "trackPan" };   // float (default 0.0, range -1.0 to +1.0)
+    static const juce::Identifier trackMuted    { "trackMuted" }; // bool (default false)
+    static const juce::Identifier trackSolo     { "trackSolo" };  // bool (default false)
 
     // Clip props
     static const juce::Identifier attrClipId         { "clipId" };         // int64

@@ -82,6 +82,78 @@ bool ProjectEditorState::isTrackMuted(int trackIndex) const
     return model_.tracks[trackIndex].muted;
 }
 
+float ProjectEditorState::getTrackGain(int trackIndex) const
+{
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return 1.0f;
+    return model_.tracks[trackIndex].gain;
+}
+
+void ProjectEditorState::setTrackGain(int trackIndex, float gainLinear)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return;
+
+    // Clamp gain to valid range [0.0, 2.0]
+    gainLinear = juce::jlimit(0.0f, 2.0f, gainLinear);
+
+    // Update gain
+    model_.tracks[trackIndex].gain = gainLinear;
+
+    // Reload playback to apply changes
+    reloadPlayback();
+}
+
+float ProjectEditorState::getTrackPan(int trackIndex) const
+{
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return 0.0f;
+    return model_.tracks[trackIndex].pan;
+}
+
+void ProjectEditorState::setTrackPan(int trackIndex, float pan)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return;
+
+    // Clamp pan to valid range [-1.0, +1.0]
+    pan = juce::jlimit(-1.0f, 1.0f, pan);
+
+    // Update pan
+    model_.tracks[trackIndex].pan = pan;
+
+    // Reload playback to apply changes
+    reloadPlayback();
+}
+
+bool ProjectEditorState::isTrackSolo(int trackIndex) const
+{
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+    return model_.tracks[trackIndex].solo;
+}
+
+void ProjectEditorState::setTrackSolo(int trackIndex, bool solo)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return;
+
+    // Update solo state
+    model_.tracks[trackIndex].solo = solo;
+
+    // Reload playback to apply changes (recomputes effective mutes)
+    reloadPlayback();
+}
+
 void ProjectEditorState::setSelectedTrack(int trackIndex)
 {
     // Clamp to valid range
@@ -108,6 +180,7 @@ int ProjectEditorState::addAudioTrack()
     newTrack.gain = 1.0f;
     newTrack.pan = 0.0f;
     newTrack.muted = false;
+    newTrack.solo = false;
 
     // Add to project
     model_.tracks.push_back(newTrack);

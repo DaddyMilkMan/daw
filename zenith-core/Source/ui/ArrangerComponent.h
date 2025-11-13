@@ -94,13 +94,16 @@ private:
         None,
         Move,
         TrimLeft,
-        TrimRight
+        TrimRight,
+        AdjustGain,
+        AdjustPan
     };
 
     DragMode dragMode_ = DragMode::None;
     SelectedClip dragClip_;  // The clip being manipulated
     juce::int64 dragOriginalStartSamples_ = 0;
     juce::int64 dragOriginalEndSamples_ = 0;  // start + resolved length
+    int dragTrackForMixer_ = -1;  // Track index for gain/pan drag
 
     //==========================================================================
     // Layout Constants
@@ -201,6 +204,27 @@ private:
      * @return Rectangle for mute button
      */
     juce::Rectangle<int> getMuteButtonBounds(int trackIndex) const;
+
+    /**
+     * @brief Get bounds for solo button within a track header
+     * @param trackIndex Track index
+     * @return Rectangle for solo button
+     */
+    juce::Rectangle<int> getSoloButtonBounds(int trackIndex) const;
+
+    /**
+     * @brief Get bounds for gain slider within a track header
+     * @param trackIndex Track index
+     * @return Rectangle for gain slider
+     */
+    juce::Rectangle<int> getGainSliderBounds(int trackIndex) const;
+
+    /**
+     * @brief Get bounds for pan slider within a track header
+     * @param trackIndex Track index
+     * @return Rectangle for pan slider
+     */
+    juce::Rectangle<int> getPanSliderBounds(int trackIndex) const;
 
     //==========================================================================
     // Drawing Methods

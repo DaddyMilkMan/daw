@@ -46,6 +46,10 @@ juce::ValueTree projectToValueTree(const ProjectModel& project,
         juce::ValueTree trackVT(ID_TRACK);
         trackVT.setProperty(attrTrackId, track.trackId, nullptr);
         trackVT.setProperty(attrTrackName, track.name, nullptr);
+        trackVT.setProperty(trackGain, track.gain, nullptr);
+        trackVT.setProperty(trackPan, track.pan, nullptr);
+        trackVT.setProperty(trackMuted, track.muted, nullptr);
+        trackVT.setProperty(trackSolo, track.solo, nullptr);
 
         // Add clips
         for (const auto& clip : track.clips)
@@ -138,6 +142,14 @@ ProjectModel projectFromValueTree(const juce::ValueTree& root,
         autoTrackId = track.trackId + 1; // Ensure next auto-ID doesn't conflict
 
         track.name = trackVT.getProperty(attrTrackName, "Track " + juce::String(track.trackId)).toString();
+        track.gain = trackVT.getProperty(trackGain, 1.0f);
+        track.pan = trackVT.getProperty(trackPan, 0.0f);
+        track.muted = trackVT.getProperty(trackMuted, false);
+        track.solo = trackVT.getProperty(trackSolo, false);
+
+        // Clamp track mixer values to sensible ranges
+        track.gain = juce::jlimit(0.0f, 2.0f, track.gain);
+        track.pan = juce::jlimit(-1.0f, 1.0f, track.pan);
 
         // Parse clips
         for (int clipIdx = 0; clipIdx < trackVT.getNumChildren(); ++clipIdx)

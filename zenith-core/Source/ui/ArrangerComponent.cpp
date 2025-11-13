@@ -714,3 +714,51 @@ juce::Rectangle<int> ArrangerComponent::getMuteButtonBounds(int trackIndex) cons
         buttonSize
     );
 }
+
+juce::Rectangle<int> ArrangerComponent::getSoloButtonBounds(int trackIndex) const
+{
+    const auto headerBounds = getTrackHeaderBounds(trackIndex);
+    const auto muteButtonBounds = getMuteButtonBounds(trackIndex);
+
+    // Position solo button to the left of mute button
+    const int buttonSize = 24;
+    const int spacing = 4;
+    return juce::Rectangle<int>(
+        muteButtonBounds.getX() - buttonSize - spacing,
+        headerBounds.getY() + 8,
+        buttonSize,
+        buttonSize
+    );
+}
+
+juce::Rectangle<int> ArrangerComponent::getGainSliderBounds(int trackIndex) const
+{
+    const auto headerBounds = getTrackHeaderBounds(trackIndex);
+
+    // Position gain slider below track name
+    const int sliderHeight = 12;
+    const int margin = 8;
+    const int y = headerBounds.getY() + 36;  // Below track name
+    return juce::Rectangle<int>(
+        margin,
+        y,
+        kTrackHeaderWidth - 2 * margin,
+        sliderHeight
+    );
+}
+
+juce::Rectangle<int> ArrangerComponent::getPanSliderBounds(int trackIndex) const
+{
+    const auto headerBounds = getTrackHeaderBounds(trackIndex);
+
+    // Position pan slider below gain slider
+    const int sliderHeight = 12;
+    const int margin = 8;
+    const int y = headerBounds.getY() + 52;  // Below gain slider
+    return juce::Rectangle<int>(
+        margin,
+        y,
+        kTrackHeaderWidth - 2 * margin,
+        sliderHeight
+    );
+}

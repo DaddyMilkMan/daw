@@ -122,6 +122,48 @@ namespace zenith
         bool isTrackMuted(int trackIndex) const;
 
         /**
+         * @brief Get track gain (volume)
+         * @param trackIndex Track index
+         * @return Gain value (0.0 to 2.0, 1.0 = unity), or 1.0 if index invalid
+         */
+        float getTrackGain(int trackIndex) const;
+
+        /**
+         * @brief Set track gain (volume)
+         * @param trackIndex Track index
+         * @param gainLinear Gain value (0.0 to 2.0, 1.0 = unity)
+         */
+        void setTrackGain(int trackIndex, float gainLinear);
+
+        /**
+         * @brief Get track pan
+         * @param trackIndex Track index
+         * @return Pan value (-1.0 to +1.0, 0.0 = center), or 0.0 if index invalid
+         */
+        float getTrackPan(int trackIndex) const;
+
+        /**
+         * @brief Set track pan
+         * @param trackIndex Track index
+         * @param pan Pan value (-1.0 to +1.0, 0.0 = center)
+         */
+        void setTrackPan(int trackIndex, float pan);
+
+        /**
+         * @brief Check if track is solo
+         * @param trackIndex Track index
+         * @return true if solo, false otherwise (or if index invalid)
+         */
+        bool isTrackSolo(int trackIndex) const;
+
+        /**
+         * @brief Set track solo state
+         * @param trackIndex Track index
+         * @param solo Solo state
+         */
+        void setTrackSolo(int trackIndex, bool solo);
+
+        /**
          * @brief Get selected track index
          * @return Selected track index or -1 if none
          */

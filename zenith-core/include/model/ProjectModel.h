@@ -41,6 +41,10 @@ namespace zenith::model
     {
         int                     trackId { 0 };   // Track index/ID
         juce::String            name;            // Track name
+        float                   gain    { 1.0f }; // Track volume (0.0 to 2.0, default 1.0)
+        float                   pan     { 0.0f }; // Track pan (-1.0 to +1.0, default 0.0)
+        bool                    muted   { false }; // Track mute state
+        bool                    solo    { false }; // Track solo state
         std::vector<ClipModel>  clips;           // All clips on this track
     };
 
