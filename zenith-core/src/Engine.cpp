@@ -177,6 +177,80 @@ const Track* Engine::getTrack(int index) const
 }
 
 //==============================================================================
+// Offline Rendering
+//==============================================================================
+
+void Engine::prepareOffline(double sampleRate, int blockSize, int numChannels)
+{
+    // MESSAGE THREAD ONLY - no RT constraints
+
+    DBG("Engine: Preparing for offline rendering - " +
+        juce::String(sampleRate, 1) + " Hz, " +
+        juce::String(blockSize) + " samples, " +
+        juce::String(numChannels) + " channels");
+
+    offlineSampleRate_ = sampleRate;
+    offlineBlockSize_ = blockSize;
+    offlineNumChannels_ = numChannels;
+
+    // Allocate offline mix buffer
+    offlineMixBuffer_.setSize(numChannels, blockSize);
+    offlineMixBuffer_.clear();
+
+    // Store settings for tracks to use
+    currentSampleRate.store(sampleRate);
+    currentBufferSize.store(blockSize);
+
+    // Reset transport
+    playbackPosition.store(0);
+    isPlaying_.store(false);
+    phase = 0.0;
+
+    DBG("Engine: Offline preparation complete");
+}
+
+void Engine::processOfflineBlock(juce::AudioBuffer<float>& outBuffer, int numSamples)
+{
+    // MESSAGE THREAD ONLY (offline rendering, no RT constraints)
+
+    jassert(numSamples <= offlineBlockSize_);
+    jassert(outBuffer.getNumChannels() == offlineNumChannels_);
+
+    // Clear offline mix buffer
+    offlineMixBuffer_.clear();
+
+    // Get current transport position
+    const double transportPositionSeconds =
+        static_cast<double>(playbackPosition.load()) / offlineSampleRate_;
+
+    // Process all tracks (reuse existing Track::processAudioBlock)
+    for (auto& track : tracks_)
+    {
+        if (track == nullptr)
+            continue;
+
+        // Create AudioSourceChannelInfo for this track
+        juce::AudioSourceChannelInfo channelInfo;
+        channelInfo.buffer = &offlineMixBuffer_;
+        channelInfo.startSample = 0;
+        channelInfo.numSamples = numSamples;
+
+        // Process track (this calls all clips and mixes)
+        track->processAudioBlock(channelInfo, transportPositionSeconds);
+    }
+
+    // Advance transport
+    playbackPosition.fetch_add(numSamples);
+
+    // Copy mixed audio to output buffer
+    const int numCh = juce::jmin(outBuffer.getNumChannels(), offlineMixBuffer_.getNumChannels());
+    for (int ch = 0; ch < numCh; ++ch)
+    {
+        outBuffer.copyFrom(ch, 0, offlineMixBuffer_, ch, 0, numSamples);
+    }
+}
+
+//==============================================================================
 // AudioIODeviceCallback Implementation
 //==============================================================================
 

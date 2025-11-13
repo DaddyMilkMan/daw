@@ -179,6 +179,27 @@ public:
     const Track* getTrack(int index) const;
 
     //==========================================================================
+    // Offline Rendering
+    //==========================================================================
+
+    /**
+     * @brief Prepare engine for offline (headless) rendering
+     * @param sampleRate Target sample rate
+     * @param blockSize Processing block size
+     * @param numChannels Number of output channels (typically 2)
+     * @note MESSAGE THREAD ONLY
+     */
+    void prepareOffline(double sampleRate, int blockSize, int numChannels);
+
+    /**
+     * @brief Process one block of audio in offline mode
+     * @param outBuffer Buffer to fill with mixed audio
+     * @param numSamples Number of samples to process
+     * @note MESSAGE THREAD ONLY (offline rendering, no RT constraints)
+     */
+    void processOfflineBlock(juce::AudioBuffer<float>& outBuffer, int numSamples);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -270,6 +291,12 @@ private:
 
     // Track management (Phase 1)
     std::vector<std::unique_ptr<Track>> tracks_;
+
+    // Offline rendering state
+    double offlineSampleRate_{0.0};
+    int offlineBlockSize_{0};
+    int offlineNumChannels_{0};
+    juce::AudioBuffer<float> offlineMixBuffer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

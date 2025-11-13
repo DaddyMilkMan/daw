@@ -78,6 +78,7 @@ target_sources(ZenithDAW PRIVATE
     src/model/ProjectModel.cpp
     src/playback/ArrangementPlaybackController.cpp
     src/io/ProjectPersistence.cpp
+    src/render/OfflineRender.cpp
 )
 
 # ============================================================================
