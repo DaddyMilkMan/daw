@@ -192,6 +192,23 @@ public:
     zenith::Mixer& getMixer() { return mixer_; }
     const zenith::Mixer& getMixer() const { return mixer_; }
 
+    /**
+     * @brief Process audio block offline (no device I/O)
+     * @param buffer Destination buffer (caller-provided)
+     * @param numSamples Number of samples to process
+     *
+     * MESSAGE THREAD ONLY - offline rendering
+     * Drives same internal processing path as audio callback but writes to
+     * caller-supplied buffer instead of device output.
+     * Used for offline export/bounce.
+     *
+     * Notes:
+     * - Transport advances by numSamples
+     * - Events are drained and processed
+     * - Buffer must be pre-allocated (numChannels x numSamples)
+     */
+    void processBlockOffline(juce::AudioBuffer<float>& buffer, int numSamples);
+
 #endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     //==========================================================================

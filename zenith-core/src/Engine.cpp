@@ -333,6 +333,69 @@ void Engine::processAudio(
 #endif
 }
 
+void Engine::processBlockOffline(juce::AudioBuffer<float>& buffer, int numSamples)
+{
+    // MESSAGE THREAD ONLY - offline rendering (no RT constraints)
+    // This uses the same processing path as the audio callback but writes to
+    // a caller-supplied buffer instead of device output.
+
+    const int numChannels = buffer.getNumChannels();
+
+    // Run the same Phase 1 segment loop
+    const int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
+    const int64_t blockEnd = blockStart + numSamples;
+
+    // Drain events into dueEvents_ array
+    drainScheduledEvents(blockStart, blockEnd, numSamples);
+
+    // Segment loop: Process audio between events
+    int segmentStart = 0;
+
+    for (int i = 0; i < numDueEvents_; ++i)
+    {
+        const auto& due = dueEvents_[i];
+        const int segEnd = due.offsetInBlock;
+        const int segLen = segEnd - segmentStart;
+
+        // Process audio segment up to this event
+        if (segLen > 0)
+        {
+            mixer_.processSegment(mixBuffer_, segmentStart, segLen, blockStart + segmentStart);
+            segmentStart = segEnd;
+        }
+
+        // Handle transport event at sample-accurate offset
+        mixer_.handleTransportEventRT(due.ev, due.offsetInBlock, blockStart + due.offsetInBlock);
+    }
+
+    // Process remaining segment after last event
+    if (segmentStart < numSamples)
+    {
+        mixer_.processSegment(mixBuffer_, segmentStart, numSamples - segmentStart, blockStart + segmentStart);
+    }
+
+    // Copy mix buffer to output buffer
+    for (int channel = 0; channel < numChannels; ++channel)
+    {
+        const int srcCh = juce::jmin(channel, mixBuffer_.getNumChannels() - 1);
+        if (srcCh >= 0)
+        {
+            const float* src = mixBuffer_.getReadPointer(srcCh, 0);
+            float* dst = buffer.getWritePointer(channel, 0);
+            juce::FloatVectorOperations::copy(dst, src, numSamples);
+        }
+        else
+        {
+            // Clear if no source channel
+            float* dst = buffer.getWritePointer(channel, 0);
+            juce::FloatVectorOperations::clear(dst, numSamples);
+        }
+    }
+
+    // Update transport position
+    transportSamples_.fetch_add(numSamples, std::memory_order_relaxed);
+}
+
 #if ZENITH_ENABLE_PHASE1_AUDIO
 //==============================================================================
 // Phase 1: Sample-Accurate Scheduling Implementation

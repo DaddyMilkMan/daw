@@ -103,6 +103,9 @@ target_sources(ZenithDAW PRIVATE
     src/Mixer.cpp
     src/AudioTrack.cpp
 
+    # v0.1: Core data model
+    src/model/ProjectModel.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp

@@ -47,6 +47,29 @@ void Mixer::clearTracks()
     tracks_.clear();
 }
 
+void Mixer::setNumTracks(int numTracks)
+{
+    // TODO: Add jassert(isMessageThread())
+    // TODO: Add jassert(!engine.isPlaying())
+
+    if (numTracks < 0)
+        numTracks = 0;
+
+    const int currentCount = static_cast<int>(tracks_.size());
+
+    if (numTracks > currentCount)
+    {
+        // Add tracks
+        for (int i = currentCount; i < numTracks; ++i)
+            tracks_.push_back(std::make_unique<Track>());
+    }
+    else if (numTracks < currentCount)
+    {
+        // Remove tracks from end
+        tracks_.resize(static_cast<size_t>(numTracks));
+    }
+}
+
 //==============================================================================
 // Audio Processing (AUDIO THREAD)
 //==============================================================================

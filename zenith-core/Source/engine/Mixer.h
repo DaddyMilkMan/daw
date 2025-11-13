@@ -67,6 +67,16 @@ public:
      */
     void clearTracks();
 
+    /**
+     * @brief Set number of tracks (v0.1 helper)
+     * @param numTracks Desired track count
+     *
+     * Creates/destroys tracks to match count.
+     * MUST be called when playback is stopped
+     * MESSAGE THREAD only
+     */
+    void setNumTracks(int numTracks);
+
     //==========================================================================
     // Audio Processing (AUDIO THREAD)
     //==========================================================================
