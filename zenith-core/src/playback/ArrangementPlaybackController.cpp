@@ -129,29 +129,28 @@ namespace zenith
                     : 0.0;  // 0.0 means "use entire file"
 
                 DBG("  Loading clip '" + clipModel.name + "' at " +
-                    juce::String(startTime, 2) + "s");
+                    juce::String(startTime, 2) + "s" +
+                    " srcOffset=" + juce::String(clipModel.srcOffset) +
+                    " gain=" + juce::String(clipModel.gain, 2) +
+                    " fadeIn=" + juce::String(clipModel.fadeInSamples) +
+                    " fadeOut=" + juce::String(clipModel.fadeOutSamples));
 
-                // Create clip in track
-                auto* clip = track->addClip(file, startTime, length);
+                // Create clip in track with all properties
+                auto* clip = track->addClip(
+                    file,
+                    startTime,
+                    length,
+                    clipModel.srcOffset,        // srcOffsetSamples
+                    clipModel.gain,             // clip gain
+                    clipModel.fadeInSamples,    // fade in
+                    clipModel.fadeOutSamples    // fade out
+                );
 
                 if (clip == nullptr)
                 {
                     DBG("    ERROR: Failed to create clip!");
                     continue;
                 }
-
-                // TODO v0.1.1: Apply clip-level properties
-                // - srcOffset: requires Track::Clip API extension
-                // - gain: requires Track::Clip API extension
-                // - fadeInSamples/fadeOutSamples: requires Track::Clip API extension
-                //
-                // For now, these properties are stored in the model but not
-                // applied to playback. This is acceptable for v0.1 minimal scope.
-
-                juce::ignoreUnused(clipModel.srcOffset);
-                juce::ignoreUnused(clipModel.gain);
-                juce::ignoreUnused(clipModel.fadeInSamples);
-                juce::ignoreUnused(clipModel.fadeOutSamples);
             }
         }
 

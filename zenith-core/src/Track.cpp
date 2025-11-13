@@ -9,13 +9,36 @@
 // Clip Implementation
 //==============================================================================
 
-Track::Clip::Clip(const juce::File& audioFile, double start, double len)
+Track::Clip::Clip(const juce::File& audioFile,
+                   double start,
+                   double len,
+                   int64_t srcOffset,
+                   float clipGain,
+                   int fadeIn,
+                   int fadeOut)
     : file(audioFile),
       startTime(start),
       length(len),
+      srcOffsetSamples(srcOffset),
+      gain(clipGain),
+      fadeInSamples(fadeIn),
+      fadeOutSamples(fadeOut),
       transportPosition(0.0),
       currentReadPosition(0)
 {
+    // Validate and clamp parameters
+    if (srcOffsetSamples < 0)
+        srcOffsetSamples = 0;
+
+    if (gain < 0.0f)
+        gain = 0.0f;
+
+    if (fadeInSamples < 0)
+        fadeInSamples = 0;
+
+    if (fadeOutSamples < 0)
+        fadeOutSamples = 0;
+
     // Register audio formats
     formatManager.registerBasicFormats();
 
@@ -29,7 +52,43 @@ Track::Clip::Clip(const juce::File& audioFile, double start, double len)
     else
     {
         DBG("Track::Clip: Loaded audio file: " + audioFile.getFullPathName() +
-            " (" + juce::String(reader->lengthInSamples) + " samples)");
+            " (" + juce::String(reader->lengthInSamples) + " samples)" +
+            " srcOffset=" + juce::String(srcOffsetSamples) +
+            " gain=" + juce::String(gain, 2) +
+            " fadeIn=" + juce::String(fadeInSamples) +
+            " fadeOut=" + juce::String(fadeOutSamples));
+
+        // Validate srcOffset doesn't exceed file length
+        if (srcOffsetSamples >= reader->lengthInSamples)
+        {
+            DBG("  WARNING: srcOffset >= file length, clamping to 0");
+            srcOffsetSamples = 0;
+        }
+
+        // Calculate effective clip length in samples
+        const double sampleRate = reader->sampleRate;
+        int64_t lengthInSamples = (length > 0.0)
+            ? static_cast<int64_t>(length * sampleRate)
+            : (reader->lengthInSamples - srcOffsetSamples);
+
+        // Clamp length to not exceed available samples
+        int64_t availableSamples = reader->lengthInSamples - srcOffsetSamples;
+        if (lengthInSamples > availableSamples)
+        {
+            DBG("  WARNING: lengthSamples exceeds available samples, clamping");
+            lengthInSamples = availableSamples;
+        }
+
+        // Validate fades don't exceed clip length
+        if (fadeInSamples + fadeOutSamples > lengthInSamples)
+        {
+            DBG("  WARNING: fadeIn + fadeOut exceeds clip length, clamping");
+            // Proportionally reduce both fades
+            double scale = static_cast<double>(lengthInSamples) /
+                           static_cast<double>(fadeInSamples + fadeOutSamples);
+            fadeInSamples = static_cast<int>(fadeInSamples * scale);
+            fadeOutSamples = static_cast<int>(fadeOutSamples * scale);
+        }
     }
 }
 
@@ -84,26 +143,78 @@ void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     double sampleRate = reader->sampleRate;
     int64_t sampleOffsetIntoClip = static_cast<int64_t>(offsetIntoClip * sampleRate);
 
+    // Apply srcOffset: read from srcOffset + sampleOffsetIntoClip in the source file
+    int64_t fileReadPosition = srcOffsetSamples + sampleOffsetIntoClip;
+
     // Calculate how many samples to read
     int numSamples = bufferToFill.numSamples;
-    int64_t samplesAvailable = reader->lengthInSamples - sampleOffsetIntoClip;
+    int64_t samplesAvailable = reader->lengthInSamples - fileReadPosition;
 
     if (samplesAvailable <= 0)
     {
-        // Reached end of clip
+        // Reached end of file
         return;
     }
 
     // Don't read more than available
     int samplesToRead = static_cast<int>(juce::jmin<int64_t>(numSamples, samplesAvailable));
 
-    // Read from file at correct position
+    // Also don't read past the clip's length
+    int64_t clipLengthInSamples = (length > 0.0)
+        ? static_cast<int64_t>(length * sampleRate)
+        : (reader->lengthInSamples - srcOffsetSamples);
+
+    int64_t samplesRemainingInClip = clipLengthInSamples - sampleOffsetIntoClip;
+    if (samplesRemainingInClip <= 0)
+        return;
+
+    samplesToRead = static_cast<int>(juce::jmin<int64_t>(samplesToRead, samplesRemainingInClip));
+
+    // Read from file at correct position (including srcOffset)
     reader->read(bufferToFill.buffer,
                  bufferToFill.startSample,
                  samplesToRead,
-                 sampleOffsetIntoClip,  // **CRITICAL:** Read from correct position
+                 fileReadPosition,  // Read from srcOffset + offsetIntoClip
                  true,  // Use left channel
                  true); // Use right channel
+
+    // Apply clip gain
+    if (gain != 1.0f)
+    {
+        bufferToFill.buffer->applyGain(bufferToFill.startSample,
+                                       samplesToRead,
+                                       gain);
+    }
+
+    // Apply fades (linear for v0.1, could be improved to equal-power later)
+    if (fadeInSamples > 0 || fadeOutSamples > 0)
+    {
+        for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
+        {
+            float* channelData = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+
+            for (int i = 0; i < samplesToRead; ++i)
+            {
+                int64_t samplePosInClip = sampleOffsetIntoClip + i;
+                float fadeMult = 1.0f;
+
+                // Fade in
+                if (samplePosInClip < fadeInSamples)
+                {
+                    fadeMult *= static_cast<float>(samplePosInClip) / static_cast<float>(fadeInSamples);
+                }
+
+                // Fade out
+                int64_t samplesFromEnd = clipLengthInSamples - samplePosInClip;
+                if (samplesFromEnd < fadeOutSamples)
+                {
+                    fadeMult *= static_cast<float>(samplesFromEnd) / static_cast<float>(fadeOutSamples);
+                }
+
+                channelData[i] *= fadeMult;
+            }
+        }
+    }
 
     // RT-SAFETY: No logging on audio thread!
     // For debugging, use jassert or set atomic flags and poll from message thread

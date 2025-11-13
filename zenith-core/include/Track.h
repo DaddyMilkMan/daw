@@ -53,8 +53,18 @@ public:
          * @param audioFile File to play
          * @param startTime Start time in seconds
          * @param length Length in seconds
+         * @param srcOffsetSamples Offset into source file (in samples)
+         * @param gain Clip gain (0.0 = silent, 1.0 = unity)
+         * @param fadeInSamples Fade-in length (in samples, >= 0)
+         * @param fadeOutSamples Fade-out length (in samples, >= 0)
          */
-        Clip(const juce::File& audioFile, double startTime, double length);
+        Clip(const juce::File& audioFile,
+             double startTime,
+             double length,
+             int64_t srcOffsetSamples = 0,
+             float gain = 1.0f,
+             int fadeInSamples = 0,
+             int fadeOutSamples = 0);
 
         /**
          * @brief Set current transport position
@@ -109,6 +119,12 @@ public:
         juce::File file;
         double startTime{0.0};
         double length{0.0};
+
+        // Clip properties
+        int64_t srcOffsetSamples{0};    ///< Offset into source file (samples)
+        float gain{1.0f};               ///< Clip gain (0.0 = silent, 1.0 = unity)
+        int fadeInSamples{0};           ///< Fade-in length (samples, >= 0)
+        int fadeOutSamples{0};          ///< Fade-out length (samples, >= 0)
 
         // **CRITICAL:** Transport position must be updated on each audio callback
         std::atomic<double> transportPosition{0.0};
