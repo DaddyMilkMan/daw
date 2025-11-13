@@ -460,4 +460,15 @@ void AudioTrack::renderVoiceIntoSegment(ActiveVoice& voice, juce::AudioBuffer<fl
     }
 }
 
+#if JUCE_DEBUG
+//==============================================================================
+// Test-Only API
+//==============================================================================
+
+void AudioTrack::addClipDefForTest(const ClipDef& def)
+{
+    clipDefs_.push_back(def);
+}
+#endif
+
 #endif // ZENITH_ENABLE_PHASE1_AUDIO

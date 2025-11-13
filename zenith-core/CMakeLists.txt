@@ -348,6 +348,63 @@ message(STATUS "========================================")
 message(STATUS "")
 
 # ============================================================================
+# Phase 1 Audio Tests (W10+W10.2+W10.3) - Optional
+# ============================================================================
+
+if(ZENITH_ENABLE_PHASE1_AUDIO)
+    message(STATUS "Building Phase 1 Audio Tests (headless)")
+
+    # Console test app (no GUI, no audio device)
+    juce_add_console_app(zenith-core-phase1-tests
+        PRODUCT_NAME "Zenith Phase1 Tests"
+    )
+
+    target_sources(zenith-core-phase1-tests PRIVATE
+        tests/Phase1AudioTests.cpp
+        src/Engine.cpp
+        src/Mixer.cpp
+        src/AudioTrack.cpp
+    )
+
+    target_include_directories(zenith-core-phase1-tests PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+    )
+
+    target_link_libraries(zenith-core-phase1-tests PRIVATE
+        juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_core
+        juce::juce_events
+        juce::juce_graphics
+        juce::juce_gui_basics
+        juce::juce_recommended_config_flags
+        juce::juce_recommended_warning_flags
+    )
+
+    target_compile_definitions(zenith-core-phase1-tests PRIVATE
+        JUCE_USE_OGGVORBIS=1
+        JUCE_USE_FLAC=1
+        JUCE_USE_MP3AUDIOFORMAT=1
+        JUCE_STRICT_REFCOUNTEDPOINTER=1
+        JUCE_USE_CURL=0
+        JUCE_WEB_BROWSER=0
+        ZENITH_ENABLE_PHASE1_AUDIO=1
+        $<$<CONFIG:Debug>:DEBUG=1>
+        $<$<CONFIG:Debug>:_DEBUG=1>
+        $<$<CONFIG:Release>:NDEBUG=1>
+    )
+
+    juce_generate_juce_header(zenith-core-phase1-tests)
+
+    zenith_apply_warnings(zenith-core-phase1-tests)
+
+    message(STATUS "Phase 1 tests target: zenith-core-phase1-tests")
+else()
+    message(STATUS "Skipping Phase 1 Audio Tests (ZENITH_ENABLE_PHASE1_AUDIO=OFF)")
+endif()
+
+# ============================================================================
 # Installation (optional)
 # ============================================================================
 

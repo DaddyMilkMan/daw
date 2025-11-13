@@ -187,6 +187,14 @@ public:
      * @param offsetInBlock Sample offset to begin fade-out
      */
     void stopClipRT(int32_t clipId, int offsetInBlock);
+
+#if JUCE_DEBUG
+    /**
+     * @brief TEST ONLY: Add a ClipDef directly (message-thread only)
+     * @note This is a temporary API for testing until proper clip management is implemented
+     */
+    void addClipDefForTest(const ClipDef& def);
+#endif
 #endif
 
 private:
