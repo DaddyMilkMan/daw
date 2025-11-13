@@ -1,36 +1,34 @@
 #!/bin/bash
-# Launch the native Zenith DAW build. Builds the project if missing.
+# Run Script for Vexel DAW Qt/QML Application
+#
+# This script runs the Qt/QML + JUCE hybrid DAW application
+# It will build first if needed
 
-set -euo pipefail
+set -e
 
-BUILD_DIR="build"
-CONFIG="${1:-Release}"
-
-if [ ! -d "$BUILD_DIR" ]; then
-    echo "Build directory missing. Building now..."
-    ./build.sh "$CONFIG"
+# Check if built
+if [ ! -f "build/bin/VexelDAW" ] && [ ! -f "build/VexelDAW" ]; then
+    echo "Application not built yet. Building now..."
+    ./build.sh Release
 fi
 
-APP_PATH=""
-if [ -f "$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW" ]; then
-    APP_PATH="$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW"
-elif [ -f "$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW.exe" ]; then
-    APP_PATH="$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW.exe"
+# Find executable
+EXECUTABLE=""
+if [ -f "build/bin/VexelDAW" ]; then
+    EXECUTABLE="build/bin/VexelDAW"
+elif [ -f "build/VexelDAW" ]; then
+    EXECUTABLE="build/VexelDAW"
 fi
 
-if [ -z "$APP_PATH" ]; then
-    echo "Unable to locate ZenithDAW binary. Rebuilding..."
-    ./build.sh "$CONFIG"
-    if [ -f "$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW" ]; then
-        APP_PATH="$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW"
-    elif [ -f "$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW.exe" ]; then
-        APP_PATH="$BUILD_DIR/zenith-core/ZenithDAW_artefacts/$CONFIG/ZenithDAW.exe"
-    fi
-fi
-
-if [ -z "$APP_PATH" ]; then
-    echo "❌ Unable to find ZenithDAW executable after rebuild."
+if [ -z "$EXECUTABLE" ]; then
+    echo "❌ ERROR: VexelDAW executable not found"
     exit 1
 fi
 
-"$APP_PATH"
+echo "================================="
+echo "Starting Vexel DAW..."
+echo "================================="
+echo ""
+
+# Run application
+$EXECUTABLE "$@"

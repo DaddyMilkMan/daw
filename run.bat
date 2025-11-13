@@ -1,31 +1,35 @@
 @echo off
-REM Launch Zenith DAW native build. Builds automatically if needed.
+REM Run Script for Vexel DAW Qt/QML Application (Windows)
 
-setlocal enabledelayedexpansion
+setlocal
 
-if "%1"=="" (
-    set CONFIG=Release
-) else (
-    set CONFIG=%1
+REM Check if built
+if not exist "build\bin\Release\VexelDAW.exe" (
+    if not exist "build\bin\Debug\VexelDAW.exe" (
+        echo Application not built yet. Building now...
+        call build.bat Release
+    )
 )
 
-set BUILD_DIR=build
-
-if not exist "%BUILD_DIR%" (
-    echo Build directory missing. Building now...
-    call build.bat %CONFIG%
+REM Find executable
+set EXECUTABLE=
+if exist "build\bin\Release\VexelDAW.exe" (
+    set EXECUTABLE=build\bin\Release\VexelDAW.exe
+) else if exist "build\bin\Debug\VexelDAW.exe" (
+    set EXECUTABLE=build\bin\Debug\VexelDAW.exe
 )
 
-set APP_PATH=%BUILD_DIR%\zenith-core\ZenithDAW_artefacts\%CONFIG%\ZenithDAW.exe
-if not exist "%APP_PATH%" (
-    call build.bat %CONFIG%
-)
-
-if not exist "%APP_PATH%" (
-    echo Unable to find ZenithDAW executable after rebuild.
+if "%EXECUTABLE%"=="" (
+    echo ERROR: VexelDAW executable not found
     exit /b 1
 )
 
-"%APP_PATH%"
+echo =================================
+echo Starting Vexel DAW...
+echo =================================
+echo.
+
+REM Run application
+"%EXECUTABLE%" %*
 
 endlocal
