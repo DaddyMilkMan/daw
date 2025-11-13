@@ -123,6 +123,7 @@ target_sources(ZenithDAW PRIVATE
 
     # Render layer (v0.1: offline WAV export)
     src/render/OfflineRender.cpp
+    Source/render/ExportWavJob.cpp
 
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp

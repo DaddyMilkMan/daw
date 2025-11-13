@@ -23,6 +23,8 @@
 
 #include <JuceHeader.h>
 #include "../../include/Engine.h"
+#include "../../include/editor/ProjectEditorState.h"
+#include "../render/ExportWavJob.h"
 #include "ZenithLookAndFeel.h"
 #include "TopBar.h"
 #include "Sidebar.h"
@@ -107,10 +109,34 @@ private:
     #endif
 
     //==========================================================================
+    // Export management
+    //==========================================================================
+
+    /**
+     * @brief Start WAV export process (File → Export WAV)
+     */
+    void startExportWav();
+
+    /**
+     * @brief Handle export completion (success or failure)
+     * @param ok True if export succeeded
+     * @param message Error message (if failed)
+     * @param file Output file path
+     */
+    void onExportFinished(bool ok, const juce::String& message, juce::File file);
+
+    /**
+     * @brief Poll export job for completion (called from timer)
+     * @param file Output file being exported
+     */
+    void pollExportCompletion(juce::File file);
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
     Engine& engine;
+    zenith::ProjectEditorState editorState;
 
     // Custom LookAndFeel
     ZenithLookAndFeel zenithLookAndFeel;
@@ -138,6 +164,10 @@ private:
         // W6.1: Persistent settings for Debug HUD
         juce::ApplicationProperties appProperties;
     #endif
+
+    // Export management
+    std::unique_ptr<ExportWavJob> exportJob_;
+    bool isExporting_ = false;
 
     // Layout constants
     static constexpr int topBarHeight = 48;

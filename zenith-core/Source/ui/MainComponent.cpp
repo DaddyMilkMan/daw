@@ -8,6 +8,7 @@
 //==============================================================================
 MainComponent::MainComponent(Engine& eng)
     : engine(eng),
+      editorState(eng),
       transportBar(eng)
 {
     // Apply custom LookAndFeel to this component and all children
@@ -392,6 +393,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         #endif
     #endif
 
+    // Cmd+E / Ctrl+E: Export WAV
+    if (key == juce::KeyPress('e', juce::ModifierKeys::commandModifier, 0))
+    {
+        startExportWav();
+        return true;
+    }
+
     return false;  // Let other components handle key
 }
 
@@ -431,3 +439,121 @@ void MainComponent::updateStatsOverlay()
     }
 }
 #endif
+
+//==============================================================================
+// Export Management
+//==============================================================================
+
+void MainComponent::startExportWav()
+{
+    // Check if already exporting
+    if (isExporting_)
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Export already in progress",
+            "Please wait for the current export to finish.");
+        return;
+    }
+
+    // Check if project has any clips
+    const auto& proj = editorState.getProject();
+    bool hasAudio = false;
+    for (const auto& t : proj.tracks)
+    {
+        if (!t.clips.empty())
+        {
+            hasAudio = true;
+            break;
+        }
+    }
+
+    if (!hasAudio)
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Nothing to export",
+            "This project has no audio clips to render.");
+        return;
+    }
+
+    // Determine default directory
+    juce::File defaultDir;
+    if (editorState.hasProjectFile())
+        defaultDir = editorState.getCurrentProjectFile().getParentDirectory();
+    else
+        defaultDir = juce::File::getSpecialLocation(juce::File::userMusicDirectory);
+
+    // Launch file chooser
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Export mixdown as WAV",
+        defaultDir,
+        "*.wav");
+
+    chooser->launchAsync(
+        juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles,
+        [this, chooser](const juce::FileChooser& fc)
+        {
+            auto file = fc.getResult();
+            if (file == juce::File())
+                return; // user cancelled
+
+            // Ensure .wav extension
+            if (file.getFileExtension().isEmpty())
+                file = file.withFileExtension(".wav");
+
+            // Start background job
+            isExporting_ = true;
+            setEnabled(false); // v0.1 brute force: disable UI during export
+
+            exportJob_ = std::make_unique<ExportWavJob>(editorState, file);
+            exportJob_->startThread();
+
+            DBG("Export started: " + file.getFullPathName());
+
+            // Start polling for completion
+            pollExportCompletion(file);
+        });
+}
+
+void MainComponent::pollExportCompletion(juce::File file)
+{
+    if (!exportJob_ || !exportJob_->isThreadRunning())
+    {
+        // Export finished
+        bool ok = exportJob_ ? exportJob_->wasSuccessful() : false;
+        auto msg = ok ? juce::String() : (exportJob_ ? exportJob_->getErrorMessage() : "Unknown error");
+
+        exportJob_.reset();
+        isExporting_ = false;
+        setEnabled(true);
+
+        onExportFinished(ok, msg, file);
+    }
+    else if (isExporting_)
+    {
+        // Still running, poll again in 100ms
+        juce::Timer::callAfterDelay(100, [this, file]()
+        {
+            pollExportCompletion(file);
+        });
+    }
+}
+
+void MainComponent::onExportFinished(bool ok, const juce::String& message, juce::File file)
+{
+    if (ok)
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::InfoIcon,
+            "Export complete",
+            "Exported mixdown to:\n" + file.getFullPathName());
+    }
+    else
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Export failed",
+            message.isNotEmpty() ? message : "Unknown error while exporting.");
+    }
+}
