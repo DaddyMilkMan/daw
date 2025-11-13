@@ -5,6 +5,32 @@
 
 #include "../include/ProjectState.h"
 
+#include <functional>
+
+namespace
+{
+//==============================================================================
+int extractNumericSuffix(const juce::String& identifier)
+{
+    auto trimmed = identifier.trim();
+
+    if (trimmed.isEmpty())
+        return -1;
+
+    const int lastUnderscore = trimmed.lastIndexOfChar('_');
+
+    if (lastUnderscore < 0)
+        return -1;
+
+    auto numericPart = trimmed.substring(lastUnderscore + 1).trim();
+
+    if (numericPart.isEmpty() || !numericPart.containsOnly("0123456789"))
+        return -1;
+
+    return numericPart.getIntValue();
+}
+} // namespace
+
 //==============================================================================
 // Static identifier definitions
 //==============================================================================
@@ -58,6 +84,9 @@ void ProjectState::newProject()
     // Create default state
     createDefaultState();
 
+    // Reset ID counter for a fresh project
+    idCounter.store(0);
+
     DBG("ProjectState: New project created");
 }
 
@@ -91,6 +120,9 @@ bool ProjectState::loadFromFile(const juce::File& file)
 
     // Replace current state
     state = newState;
+
+    // Ensure future IDs do not clash with those loaded from disk
+    rebuildIdCounter();
 
     // Clear undo history (fresh start)
     undoManager.clearUndoHistory();
@@ -295,4 +327,30 @@ juce::ValueTree ProjectState::findTrack(const juce::String& trackId)
     }
 
     return {};
+}
+
+void ProjectState::rebuildIdCounter()
+{
+    int highestId = -1;
+
+    std::function<void(const juce::ValueTree&)> scanTree = [&](const juce::ValueTree& node)
+    {
+        if (!node.isValid())
+            return;
+
+        if (node.hasProperty(PROP_ID))
+        {
+            const int suffix = extractNumericSuffix(node[PROP_ID].toString());
+
+            if (suffix > highestId)
+                highestId = suffix;
+        }
+
+        for (int i = 0; i < node.getNumChildren(); ++i)
+            scanTree(node.getChild(i));
+    };
+
+    scanTree(state);
+
+    idCounter.store(highestId + 1);
 }
