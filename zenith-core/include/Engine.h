@@ -28,6 +28,7 @@
 
 #if ZENITH_ENABLE_PHASE1_AUDIO
 #include "lockfree/SpscRing.h"
+#include "../Source/engine/Mixer.h"
 #endif
 
 //==============================================================================
@@ -181,6 +182,16 @@ public:
      */
     uint64_t getDroppedEvents() const { return droppedEvents_.load(); }
 
+    /**
+     * @brief Get mixer for track/clip management
+     * @return Reference to mixer
+     *
+     * Thread-safe: Returns reference, but track/clip modifications must be
+     * done when playback is stopped
+     */
+    zenith::Mixer& getMixer() { return mixer_; }
+    const zenith::Mixer& getMixer() const { return mixer_; }
+
 #endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     //==========================================================================
@@ -314,6 +325,15 @@ private:
     // Phase 1: Sample-Accurate Scheduling
     //==========================================================================
 
+    /**
+     * @brief Event scheduled for specific offset within current block
+     */
+    struct DueEvent
+    {
+        TransportEvent ev;
+        int offsetInBlock; ///< 0..numSamples-1
+    };
+
     // Lock-free event queue (message thread → audio thread)
     static constexpr size_t kEventRingCap = 4096;
     zenith::SpscRing<TransportEvent> eventQ_{kEventRingCap};
@@ -324,8 +344,22 @@ private:
     // Dropped events counter (queue full)
     std::atomic<uint64_t> droppedEvents_{0};
 
+    // Mixer (track/clip rendering)
+    zenith::Mixer mixer_;
+
+    // Mix buffer (pre-allocated, reused each block)
+    juce::AudioBuffer<float> mixBuffer_;
+
+    // Due events for current block (pre-allocated)
+    static constexpr int kMaxEventsPerBlock = 64;
+    DueEvent dueEvents_[kMaxEventsPerBlock];
+    int numDueEvents_ = 0;
+
     /**
-     * @brief Drain scheduled events for current block [blockStart, blockEnd)
+     * @brief Drain scheduled events for current block into dueEvents_ array
+     * @param blockStart Start of block (absolute samples)
+     * @param blockEnd End of block (absolute samples)
+     * @param numSamples Block length
      * @note AUDIO THREAD - uses peek-then-pop to avoid losing future events
      */
     void drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numSamples);

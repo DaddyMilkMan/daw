@@ -276,16 +276,59 @@ void Engine::processAudio(
     }
 
 #if ZENITH_ENABLE_PHASE1_AUDIO
-    // Phase 1: Drain scheduled events for this block
+    // Phase 1: Sample-accurate event scheduling + mixer rendering
     // SPSC Safety: This runs ONLY when isPlaying_ == true (enforced by caller)
     // seekSamples() can only run when isPlaying_ == false (enforced by jassert)
     // Therefore, audio thread (consumer) and message thread (producer) never
     // conflict on eventQ_ - SPSC contract is maintained
+
     const int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
     const int64_t blockEnd = blockStart + numSamples;
+
+    // Drain events into dueEvents_ array
     drainScheduledEvents(blockStart, blockEnd, numSamples);
 
-    // Update transport position (always advances, even when not playing audio)
+    // Segment loop: Process audio between events
+    int segmentStart = 0;
+
+    for (int i = 0; i < numDueEvents_; ++i)
+    {
+        const auto& due = dueEvents_[i];
+        const int segEnd = due.offsetInBlock;
+        const int segLen = segEnd - segmentStart;
+
+        // Process audio segment up to this event
+        if (segLen > 0)
+        {
+            mixer_.processSegment(mixBuffer_, segmentStart, segLen, blockStart + segmentStart);
+            segmentStart = segEnd;
+        }
+
+        // Handle transport event at sample-accurate offset
+        mixer_.handleTransportEventRT(due.ev, due.offsetInBlock, blockStart + due.offsetInBlock);
+    }
+
+    // Process remaining segment after last event
+    if (segmentStart < numSamples)
+    {
+        mixer_.processSegment(mixBuffer_, segmentStart, numSamples - segmentStart, blockStart + segmentStart);
+    }
+
+    // Copy mix buffer to output
+    for (int channel = 0; channel < numOutputChannels; ++channel)
+    {
+        if (outputChannelData[channel] != nullptr)
+        {
+            const int srcCh = juce::jmin(channel, mixBuffer_.getNumChannels() - 1);
+            if (srcCh >= 0)
+            {
+                const float* src = mixBuffer_.getReadPointer(srcCh, 0);
+                juce::FloatVectorOperations::copy(outputChannelData[channel], src, numSamples);
+            }
+        }
+    }
+
+    // Update transport position
     transportSamples_.fetch_add(numSamples, std::memory_order_relaxed);
 #endif
 }
@@ -365,6 +408,9 @@ void Engine::drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numS
 {
     // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
     // Uses peek-then-pop to avoid losing future events
+    // Fills dueEvents_ array for segment loop processing
+
+    numDueEvents_ = 0;
 
     TransportEvent ev;
     while (eventQ_.tryPeek(ev))
@@ -376,7 +422,7 @@ void Engine::drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numS
         // Event is for this block or past, consume it
         (void)eventQ_.tryPop(ev);
 
-        // If event is in this block, process it
+        // If event is in this block, add to due events
         if (ev.whenSamples >= blockStart)
         {
             const int offset = static_cast<int>(ev.whenSamples - blockStart);
@@ -384,13 +430,15 @@ void Engine::drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int numS
             // Boundary check (should never trigger if logic is correct)
             jassert(offset >= 0 && offset < numSamples);
 
-            // TODO (W10.3): Route to Mixer
-            // mixer_.onScheduledEvent(ev, offset);
-
-            // Temporary: Silent acknowledgment
-            // In dev builds, we can verify events are being processed
-            // In release builds, this compiles to nothing
-            (void)offset;
+            // Add to due events array if space available
+            if (numDueEvents_ < kMaxEventsPerBlock)
+            {
+                dueEvents_[numDueEvents_].ev = ev;
+                dueEvents_[numDueEvents_].offsetInBlock = offset;
+                numDueEvents_++;
+            }
+            // else: Dropped (too many events in one block)
+            // TODO: Increment droppedEvents_ counter
         }
         // else: Event is overdue (< blockStart)
         // Policy: Drop silently (could also clamp to offset 0)

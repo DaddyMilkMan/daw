@@ -114,6 +114,13 @@ target_sources(ZenithDAW PRIVATE
     # W6: Performance monitoring overlay (DEBUG-only)
     $<$<CONFIG:Debug>:Source/ui/StatsOverlay.cpp>
 
+    # W10.3: Phase 1 audio engine - Track/Clip mixer (gated by ZENITH_ENABLE_PHASE1_AUDIO)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Clip.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Track.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Track.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Mixer.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Mixer.cpp>
+
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>
@@ -201,6 +208,9 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Windows MMCSS
     $<$<AND:$<PLATFORM_ID:Windows>,$<BOOL:${ZENITH_ENABLE_MMCSS}>>:ZENITH_ENABLE_MMCSS=1>
+
+    # Phase 1 Audio Engine
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:ZENITH_ENABLE_PHASE1_AUDIO=1>
 
     # Debug builds
     $<$<CONFIG:Debug>:DEBUG=1>
