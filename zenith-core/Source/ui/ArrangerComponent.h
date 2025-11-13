@@ -88,16 +88,18 @@ private:
     // Drag State
     //==========================================================================
 
-    struct DragState
+    enum class DragMode
     {
-        bool active = false;
-        int trackIndex = -1;
-        int clipIndex = -1;   // changed from clipId to clipIndex for consistency
-        juce::int64 originalClipStart = 0;  // in samples
-        juce::int64 dragStartSample = 0;    // timeline sample at mouseDown
+        None,
+        Move,
+        TrimLeft,
+        TrimRight
     };
 
-    DragState drag_;
+    DragMode dragMode_ = DragMode::None;
+    SelectedClip dragClip_;  // The clip being manipulated
+    juce::int64 dragOriginalStartSamples_ = 0;
+    juce::int64 dragOriginalEndSamples_ = 0;  // start + resolved length
 
     //==========================================================================
     // Layout Constants
@@ -106,6 +108,8 @@ private:
     int trackHeaderWidth_ = 120;
     int trackHeight_ = 60;
     int rulerHeight_ = 20;  // space for time ruler at top
+
+    static constexpr float kEdgeHotZonePixels = 6.0f;  // edge detection zone
 
     //==========================================================================
     // Zoom & Scroll State
@@ -154,10 +158,19 @@ private:
     juce::Range<juce::int64> getVisibleSampleRange() const;
 
     /**
-     * @brief Hit-test for clip at mouse position
-     * @return SelectedClip if hit, or invalid SelectedClip if no clip at position
+     * @brief Hit test result with clip and drag mode
      */
-    SelectedClip hitTestClip(juce::Point<float> pos) const;
+    struct HitTestResult
+    {
+        SelectedClip clip;
+        DragMode mode = DragMode::None;
+    };
+
+    /**
+     * @brief Hit-test for clip at mouse position with edge detection
+     * @return HitTestResult with clip and drag mode
+     */
+    HitTestResult hitTestClip(juce::Point<float> pos) const;
 
     //==========================================================================
     // Drawing Methods

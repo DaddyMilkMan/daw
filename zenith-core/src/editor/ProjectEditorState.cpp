@@ -175,6 +175,95 @@ bool ProjectEditorState::insertClipFromFile(int trackIndex, juce::int64 startSam
     return true;
 }
 
+bool ProjectEditorState::trimClipLeft(int trackIndex, int clipIndex, juce::int64 newStartSample)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+
+    auto& track = model_.tracks[trackIndex];
+
+    // Validate clip index
+    if (clipIndex < 0 || clipIndex >= static_cast<int>(track.clips.size()))
+        return false;
+
+    auto& clip = track.clips[clipIndex];
+
+    const auto oldStart = clip.startSample;
+    const auto oldOffset = clip.srcOffset;
+    auto oldLength = clip.lengthSamples;
+
+    // For v0.1: disallow extending left beyond original start
+    if (newStartSample <= oldStart)
+        return true;  // No-op, but not an error
+
+    // Compute delta
+    const auto delta = newStartSample - oldStart;
+
+    // Update start and source offset
+    clip.startSample = oldStart + delta;
+    clip.srcOffset = oldOffset + delta;
+
+    // Length handling
+    if (oldLength == 0)
+    {
+        // Keep as 0 (full length from new offset)
+        // Playback will clamp to actual file length
+    }
+    else
+    {
+        // Reduce explicit length
+        auto newLength = oldLength - delta;
+
+        // Clamp to minimum
+        if (newLength < kMinClipLengthSamples)
+            newLength = kMinClipLengthSamples;
+
+        clip.lengthSamples = newLength;
+    }
+
+    // Reload playback to apply changes to engine
+    reloadPlayback();
+
+    return true;
+}
+
+bool ProjectEditorState::trimClipRight(int trackIndex, int clipIndex, juce::int64 newEndSample)
+{
+    // MESSAGE THREAD ONLY
+
+    // Validate track index
+    if (trackIndex < 0 || trackIndex >= static_cast<int>(model_.tracks.size()))
+        return false;
+
+    auto& track = model_.tracks[trackIndex];
+
+    // Validate clip index
+    if (clipIndex < 0 || clipIndex >= static_cast<int>(track.clips.size()))
+        return false;
+
+    auto& clip = track.clips[clipIndex];
+
+    const auto start = clip.startSample;
+
+    // Compute new length
+    auto newLength = newEndSample - start;
+
+    // Clamp to minimum
+    if (newLength < kMinClipLengthSamples)
+        newLength = kMinClipLengthSamples;
+
+    // Set explicit length (no more "full file" mode after trim)
+    clip.lengthSamples = newLength;
+
+    // Reload playback to apply changes to engine
+    reloadPlayback();
+
+    return true;
+}
+
 //==============================================================================
 // File I/O
 //==============================================================================

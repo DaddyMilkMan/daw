@@ -120,6 +120,31 @@ namespace zenith
          */
         bool insertClipFromFile(int trackIndex, juce::int64 startSample, const juce::File& audioFile);
 
+        /**
+         * @brief Trim left edge of clip (non-destructive)
+         * @param trackIndex Track index
+         * @param clipIndex Clip index within track
+         * @param newStartSample New start position (increases srcOffset and startSample)
+         * @return true if successful, false if indices invalid
+         * @note For v0.1: cannot extend left beyond original start
+         */
+        bool trimClipLeft(int trackIndex, int clipIndex, juce::int64 newStartSample);
+
+        /**
+         * @brief Trim right edge of clip (non-destructive)
+         * @param trackIndex Track index
+         * @param clipIndex Clip index within track
+         * @param newEndSample New end position (changes lengthSamples)
+         * @return true if successful, false if indices invalid
+         */
+        bool trimClipRight(int trackIndex, int clipIndex, juce::int64 newEndSample);
+
+        //==========================================================================
+        // Constants
+        //==========================================================================
+
+        static constexpr juce::int64 kMinClipLengthSamples = 128;  // ~3ms @ 44.1kHz
+
         //==========================================================================
         // File I/O
         //==========================================================================

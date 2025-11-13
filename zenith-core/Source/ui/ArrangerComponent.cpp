@@ -43,31 +43,42 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 {
     const auto pos = e.getPosition();
 
-    // Hit-test for clip
-    auto hitClip = hitTestClip(pos.toFloat());
+    // Hit-test for clip with edge detection
+    auto hitResult = hitTestClip(pos.toFloat());
 
-    if (hitClip.isValid())
+    if (hitResult.clip.isValid())
     {
         // Select this clip
-        selected_ = hitClip;
+        selected_ = hitResult.clip;
 
-        // Start dragging this clip
+        // Set drag mode
+        dragMode_ = hitResult.mode;
+        dragClip_ = hitResult.clip;
+
+        // Cache original positions
         const auto& project = editor_.getProject();
-        const auto& track = project.tracks[hitClip.trackIndex];
-        const auto& clip = track.clips[hitClip.clipIndex];
+        const auto& track = project.tracks[dragClip_.trackIndex];
+        const auto& clip = track.clips[dragClip_.clipIndex];
 
-        drag_.active = true;
-        drag_.trackIndex = hitClip.trackIndex;
-        drag_.clipIndex = hitClip.clipIndex;
-        drag_.originalClipStart = clip.startSample;
-        drag_.dragStartSample = xToSamples(pos.x);
+        dragOriginalStartSamples_ = clip.startSample;
+
+        // Compute resolved end sample
+        juce::int64 clipLen = clip.lengthSamples;
+        if (clipLen == 0)
+        {
+            // For full-length clips, use a heuristic (1 second for now)
+            // In real usage, this should come from decoded audio length
+            clipLen = static_cast<juce::int64>(editor_.getSampleRate());
+        }
+        dragOriginalEndSamples_ = dragOriginalStartSamples_ + clipLen;
 
         repaint();
     }
     else
     {
-        // Clear selection
+        // Clear selection and drag mode
         selected_ = SelectedClip{};
+        dragMode_ = DragMode::None;
 
         // Clicking on background - set playhead without playing
         const juce::int64 clickSample = xToSamples(pos.x);
@@ -84,52 +95,95 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 
 void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
 {
-    if (!drag_.active)
+    if (dragMode_ == DragMode::None)
         return;
 
     const auto pos = e.getPosition();
-    const juce::int64 currentSample = xToSamples(pos.x);
+    const juce::int64 mouseSamples = xToSamples(pos.x);
 
-    // Calculate delta from drag start
-    const juce::int64 delta = currentSample - drag_.dragStartSample;
-
-    // Apply delta to original position
-    juce::int64 newStartSample = drag_.originalClipStart + delta;
-
-    // Clamp to non-negative
-    newStartSample = juce::jmax((juce::int64) 0, newStartSample);
-
-    // Update model (mutable)
-    auto& project = editor_.getProjectMutable();
-    if (drag_.trackIndex >= 0 && drag_.trackIndex < static_cast<int>(project.tracks.size()))
+    switch (dragMode_)
     {
-        auto& track = project.tracks[drag_.trackIndex];
-
-        // Update the clip by index
-        if (drag_.clipIndex >= 0 && drag_.clipIndex < static_cast<int>(track.clips.size()))
+        case DragMode::Move:
         {
-            track.clips[drag_.clipIndex].startSample = newStartSample;
-        }
-    }
+            // Calculate delta from original position
+            const juce::int64 delta = mouseSamples - dragOriginalStartSamples_;
 
-    // Repaint to show updated position
-    repaint();
+            // Apply delta to original position
+            juce::int64 newStartSample = dragOriginalStartSamples_ + delta;
+
+            // Clamp to non-negative
+            newStartSample = juce::jmax((juce::int64) 0, newStartSample);
+
+            // Update model (mutable)
+            auto& project = editor_.getProjectMutable();
+            if (dragClip_.trackIndex >= 0 && dragClip_.trackIndex < static_cast<int>(project.tracks.size()))
+            {
+                auto& track = project.tracks[dragClip_.trackIndex];
+
+                // Update the clip by index
+                if (dragClip_.clipIndex >= 0 && dragClip_.clipIndex < static_cast<int>(track.clips.size()))
+                {
+                    track.clips[dragClip_.clipIndex].startSample = newStartSample;
+                }
+            }
+
+            repaint();
+            break;
+        }
+
+        case DragMode::TrimLeft:
+        {
+            // Clamp to valid range: [originalStart, originalEnd - minLength]
+            auto newStart = juce::jlimit(
+                dragOriginalStartSamples_,
+                dragOriginalEndSamples_ - zenith::ProjectEditorState::kMinClipLengthSamples,
+                mouseSamples
+            );
+
+            // Call trim function (which reloads playback)
+            editor_.trimClipLeft(dragClip_.trackIndex, dragClip_.clipIndex, newStart);
+
+            repaint();
+            break;
+        }
+
+        case DragMode::TrimRight:
+        {
+            // Clamp to valid range: [originalStart + minLength, infinity]
+            auto newEnd = juce::jmax(
+                dragOriginalStartSamples_ + zenith::ProjectEditorState::kMinClipLengthSamples,
+                mouseSamples
+            );
+
+            // Call trim function (which reloads playback)
+            editor_.trimClipRight(dragClip_.trackIndex, dragClip_.clipIndex, newEnd);
+
+            repaint();
+            break;
+        }
+
+        default:
+            break;
+    }
 }
 
 void ArrangerComponent::mouseUp(const juce::MouseEvent& e)
 {
-    if (!drag_.active)
+    if (dragMode_ == DragMode::None)
         return;
 
-    // Apply changes to engine
-    editor_.reloadPlayback();
+    // For Move mode, apply changes to engine
+    if (dragMode_ == DragMode::Move)
+    {
+        editor_.reloadPlayback();
+    }
 
-    // Clear drag state
-    drag_.active = false;
-    drag_.trackIndex = -1;
-    drag_.clipIndex = -1;
-    drag_.originalClipStart = 0;
-    drag_.dragStartSample = 0;
+    // For trim modes, reloadPlayback() already called in trim functions
+
+    // Reset drag mode (keep selection)
+    dragMode_ = DragMode::None;
+    dragOriginalStartSamples_ = 0;
+    dragOriginalEndSamples_ = 0;
 }
 
 void ArrangerComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
@@ -464,7 +518,7 @@ juce::Range<juce::int64> ArrangerComponent::getVisibleSampleRange() const
     return juce::Range<juce::int64>(start, end);
 }
 
-ArrangerComponent::SelectedClip ArrangerComponent::hitTestClip(juce::Point<float> pos) const
+ArrangerComponent::HitTestResult ArrangerComponent::hitTestClip(juce::Point<float> pos) const
 {
     const auto& project = editor_.getProject();
     const int numTracks = static_cast<int>(project.tracks.size());
@@ -484,14 +538,33 @@ ArrangerComponent::SelectedClip ArrangerComponent::hitTestClip(juce::Point<float
 
             if (clipBounds.contains(pos.toInt()))
             {
-                SelectedClip result;
-                result.trackIndex = t;
-                result.clipIndex = c;
+                HitTestResult result;
+                result.clip.trackIndex = t;
+                result.clip.clipIndex = c;
+
+                // Detect edge zones
+                const float x = pos.x;
+                const float left = static_cast<float>(clipBounds.getX());
+                const float right = static_cast<float>(clipBounds.getRight());
+
+                if (std::abs(x - left) <= kEdgeHotZonePixels)
+                {
+                    result.mode = DragMode::TrimLeft;
+                }
+                else if (std::abs(x - right) <= kEdgeHotZonePixels)
+                {
+                    result.mode = DragMode::TrimRight;
+                }
+                else
+                {
+                    result.mode = DragMode::Move;
+                }
+
                 return result;
             }
         }
     }
 
     // No clip hit - return invalid
-    return SelectedClip{};
+    return HitTestResult{};
 }
