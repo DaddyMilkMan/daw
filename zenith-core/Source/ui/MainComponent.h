@@ -98,6 +98,30 @@ private:
      */
     void toggleAudioSettings();
 
+    //==========================================================================
+    // v0.1: File operations
+    //==========================================================================
+
+    /**
+     * @brief Handle Ctrl+N (New Project)
+     */
+    void handleNewProject();
+
+    /**
+     * @brief Handle Ctrl+O (Open Project)
+     */
+    void handleOpenProject();
+
+    /**
+     * @brief Handle Ctrl+S (Save Project)
+     */
+    void handleSaveProject();
+
+    /**
+     * @brief Handle Ctrl+Shift+S (Save Project As)
+     */
+    void handleSaveProjectAs();
+
     #if JUCE_DEBUG
         /**
          * @brief W6: Update stats overlay with TrackView paint timing

@@ -110,6 +110,9 @@ target_sources(ZenithDAW PRIVATE
     # v0.1: Editor layer (model ↔ UI bridge)
     src/editor/ProjectEditorState.cpp
 
+    # v0.1: I/O layer (save/load)
+    src/io/ProjectPersistence.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp

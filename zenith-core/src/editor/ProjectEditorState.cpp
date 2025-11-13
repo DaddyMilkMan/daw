@@ -5,6 +5,7 @@
 
 #include "../../include/editor/ProjectEditorState.h"
 #include "../../include/Engine.h"
+#include "../../include/io/ProjectPersistence.h"
 
 namespace zenith {
 
@@ -116,7 +117,101 @@ void ProjectEditorState::moveClipStart(int trackIndex, int clipIndex, SamplePos 
     auto& clip = track.clips[static_cast<size_t>(clipIndex)];
     clip.startSample = newStart;
 
+    // Mark project as dirty
+    isDirty_ = true;
+
     DBG("Moved clip " << clip.id << " to sample " << newStart);
+}
+
+//==============================================================================
+// Project File Management
+//==============================================================================
+
+void ProjectEditorState::newProject(double sampleRate, const juce::String& name)
+{
+    // Stop playback if running
+    if (isPlaying())
+        stop();
+
+    // Create empty project
+    model_ = ProjectModel{};
+    model_.name = name.toStdString();
+    model_.sampleRate = sampleRate;
+    model_.blockSize = 512;
+    model_.nextClipId = 1;
+
+    // Clear file tracking
+    currentProjectFile_ = juce::File{};
+    projectRoot_ = juce::File{};
+    playhead_ = 0;
+
+    // Mark as unsaved (dirty)
+    isDirty_ = true;
+
+    // Reload playback context
+    reloadPlayback_();
+
+    DBG("New project created: " << name << " @ " << sampleRate << " Hz");
+}
+
+bool ProjectEditorState::openProjectFromFile(const juce::File& file, juce::String* outError)
+{
+    // Load from disk
+    ProjectModel loaded;
+    if (!loadProjectFromFile(file, loaded, outError))
+        return false;
+
+    // Stop playback if running
+    if (isPlaying())
+        stop();
+
+    // Replace model
+    model_ = std::move(loaded);
+
+    // Update file tracking
+    currentProjectFile_ = file;
+    projectRoot_ = file.getParentDirectory(); // v0.1: Use file directory as project root
+    playhead_ = 0;
+
+    // Mark as clean (just loaded)
+    isDirty_ = false;
+
+    // Reload playback context (sync model → engine)
+    reloadPlayback_();
+
+    DBG("Project opened: " << file.getFullPathName());
+    return true;
+}
+
+bool ProjectEditorState::saveProjectToFile(const juce::File& file, juce::String* outError)
+{
+    // Save to disk
+    if (!zenith::saveProjectToFile(model_, file, outError))
+        return false;
+
+    // Update file tracking
+    currentProjectFile_ = file;
+    projectRoot_ = file.getParentDirectory(); // v0.1: Use file directory as project root
+
+    // Mark as clean (just saved)
+    isDirty_ = false;
+
+    DBG("Project saved: " << file.getFullPathName());
+    return true;
+}
+
+bool ProjectEditorState::saveIfHasFile(juce::String* outError)
+{
+    // Check if we have a file to save to
+    if (!currentProjectFile_.existsAsFile() && currentProjectFile_.getFullPathName().isEmpty())
+    {
+        if (outError)
+            *outError = "No file path set (use Save As)";
+        return false;
+    }
+
+    // Save to current file
+    return saveProjectToFile(currentProjectFile_, outError);
 }
 
 //==============================================================================

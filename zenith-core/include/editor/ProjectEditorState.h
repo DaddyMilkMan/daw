@@ -156,6 +156,64 @@ public:
 
     // v0.2+: Add more editing operations (resize, delete, duplicate, etc.)
 
+    //==========================================================================
+    // Project File Management (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Start a fresh, empty project
+     * @param sampleRate Project sample rate (Hz)
+     * @param name Project name
+     *
+     * Stops playback, creates new empty model, marks as unsaved.
+     * MESSAGE THREAD only
+     */
+    void newProject(double sampleRate, const juce::String& name);
+
+    /**
+     * @brief Open project from disk
+     * @param file Project file path (.zenithproj)
+     * @param outError Optional error message output
+     * @return true on success, false on failure
+     *
+     * Stops playback, loads model from file, reloads playback context.
+     * MESSAGE THREAD only
+     */
+    bool openProjectFromFile(const juce::File& file, juce::String* outError = nullptr);
+
+    /**
+     * @brief Save project to disk
+     * @param file Target file path (.zenithproj)
+     * @param outError Optional error message output
+     * @return true on success, false on failure
+     *
+     * Writes current model to file, updates current file path, marks clean.
+     * MESSAGE THREAD only
+     */
+    bool saveProjectToFile(const juce::File& file, juce::String* outError = nullptr);
+
+    /**
+     * @brief Save to current file (if set)
+     * @param outError Optional error message output
+     * @return true on success, false if no file set or save failed
+     *
+     * Convenience method for "Save" (vs "Save As").
+     * MESSAGE THREAD only
+     */
+    bool saveIfHasFile(juce::String* outError = nullptr);
+
+    /**
+     * @brief Get current project file path
+     * @return Current file (empty if unsaved project)
+     */
+    const juce::File& getCurrentProjectFile() const noexcept { return currentProjectFile_; }
+
+    /**
+     * @brief Check if project has unsaved changes
+     * @return true if model changed since last save
+     */
+    bool isDirty() const noexcept { return isDirty_; }
+
 private:
     //==========================================================================
     // Internal Helpers
@@ -180,6 +238,10 @@ private:
     juce::File projectRoot_;             ///< Root directory for clip path resolution
 
     SamplePos playhead_ = 0;             ///< Current playhead position (samples)
+
+    // v0.1: File tracking and dirty state
+    juce::File currentProjectFile_;      ///< Current project file (empty if unsaved)
+    bool isDirty_ = false;               ///< true if model changed since last save
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectEditorState)
 };

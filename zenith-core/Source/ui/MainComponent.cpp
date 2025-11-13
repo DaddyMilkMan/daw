@@ -351,6 +351,115 @@ void MainComponent::injectTestSessionData()
 }
 
 //==============================================================================
+// v0.1: File operations
+//==============================================================================
+
+void MainComponent::handleNewProject()
+{
+    // v0.1: Simple implementation - just create new project without prompting
+    // v0.2+: Check for unsaved changes, prompt user
+
+    editorState.newProject(48000.0, "Untitled Project");
+
+    // Repaint arranger to show empty project
+    if (arranger != nullptr)
+        arranger->repaint();
+
+    DBG("New project created");
+}
+
+void MainComponent::handleOpenProject()
+{
+    // Create file chooser for .zenithproj files
+    auto fileChooser = std::make_shared<juce::FileChooser>(
+        "Open Project",
+        juce::File{},
+        "*.zenithproj"
+    );
+
+    // Show async file chooser (non-blocking)
+    auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles;
+
+    fileChooser->launchAsync(flags, [this, fileChooser](const juce::FileChooser& chooser)
+    {
+        auto file = chooser.getResult();
+        if (file == juce::File{})
+        {
+            DBG("Open project cancelled");
+            return; // User cancelled
+        }
+
+        // Load project
+        juce::String error;
+        if (!editorState.openProjectFromFile(file, &error))
+        {
+            DBG("Failed to open project: " << error);
+            // v0.1: Just log error, v0.2+: Show alert dialog
+            return;
+        }
+
+        // Repaint arranger to show loaded project
+        if (arranger != nullptr)
+            arranger->repaint();
+
+        DBG("Project opened: " << file.getFullPathName());
+    });
+}
+
+void MainComponent::handleSaveProject()
+{
+    // Try to save to current file
+    juce::String error;
+    if (editorState.saveIfHasFile(&error))
+    {
+        DBG("Project saved");
+        return;
+    }
+
+    // No file set - fall back to Save As
+    DBG("No file set, using Save As: " << error);
+    handleSaveProjectAs();
+}
+
+void MainComponent::handleSaveProjectAs()
+{
+    // Create file chooser for .zenithproj files
+    auto fileChooser = std::make_shared<juce::FileChooser>(
+        "Save Project As",
+        juce::File{},
+        "*.zenithproj"
+    );
+
+    // Show async file chooser (non-blocking)
+    auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
+
+    fileChooser->launchAsync(flags, [this, fileChooser](const juce::FileChooser& chooser)
+    {
+        auto file = chooser.getResult();
+        if (file == juce::File{})
+        {
+            DBG("Save project cancelled");
+            return; // User cancelled
+        }
+
+        // Ensure .zenithproj extension
+        if (!file.hasFileExtension(".zenithproj"))
+            file = file.withFileExtension(".zenithproj");
+
+        // Save project
+        juce::String error;
+        if (!editorState.saveProjectToFile(file, &error))
+        {
+            DBG("Failed to save project: " << error);
+            // v0.1: Just log error, v0.2+: Show alert dialog
+            return;
+        }
+
+        DBG("Project saved: " << file.getFullPathName());
+    });
+}
+
+//==============================================================================
 void MainComponent::toggleAudioSettings()
 {
     #ifdef _WIN32
@@ -403,6 +512,37 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
         if (arranger != nullptr)
             arranger->repaint();
 
+        return true;
+    }
+
+    // v0.1: File operations (Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S)
+    auto mods = key.getModifiers();
+
+    // Ctrl+N - New project
+    if (key == juce::KeyPress('n') && mods.isCommandDown() && !mods.isShiftDown())
+    {
+        handleNewProject();
+        return true;
+    }
+
+    // Ctrl+O - Open project
+    if (key == juce::KeyPress('o') && mods.isCommandDown() && !mods.isShiftDown())
+    {
+        handleOpenProject();
+        return true;
+    }
+
+    // Ctrl+S - Save project
+    if (key == juce::KeyPress('s') && mods.isCommandDown() && !mods.isShiftDown())
+    {
+        handleSaveProject();
+        return true;
+    }
+
+    // Ctrl+Shift+S - Save As
+    if (key == juce::KeyPress('s') && mods.isCommandDown() && mods.isShiftDown())
+    {
+        handleSaveProjectAs();
         return true;
     }
 
