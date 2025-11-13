@@ -219,20 +219,38 @@ public:
     //==========================================================================
 
     /**
-     * @brief Render current project to WAV file (offline mixdown)
-     * @param outputFile Target WAV file path
-     * @param blockSize Processing block size (1024 recommended)
-     * @param tailSeconds Extra silence at end (for reverb tails, etc.)
+     * @brief Render current project to audio file (offline mixdown)
+     * @param outputFile Target audio file path
+     * @param options Export options (format, bit depth, tail, etc.)
      * @return Result::ok() on success, or failure with error message
      *
-     * Renders project to stereo 32-bit float WAV using offline engine.
+     * Renders project to stereo PCM audio using offline engine.
      * Stops playback during export.
+     *
+     * Supported formats: WAV, AIFF (8, 16, 24, 32-bit)
      *
      * MESSAGE THREAD only (blocks until complete)
      */
-    juce::Result renderCurrentProjectToWav(const juce::File& outputFile,
-                                           int blockSize = 1024,
-                                           double tailSeconds = 0.0);
+    juce::Result renderCurrentProjectToFile(const juce::File& outputFile,
+                                            const zenith::ExportOptions& options);
+
+    /**
+     * @brief Legacy: Render current project to WAV file (offline mixdown)
+     * @deprecated Use renderCurrentProjectToFile() with ExportOptions instead
+     *
+     * Backward compatibility wrapper. Defaults to 32-bit float WAV.
+     */
+    inline juce::Result renderCurrentProjectToWav(const juce::File& outputFile,
+                                                  int blockSize = 1024,
+                                                  double tailSeconds = 0.0)
+    {
+        zenith::ExportOptions opts;
+        opts.format = zenith::ExportFormat::WAV;
+        opts.bitsPerSample = 32;
+        opts.blockSize = blockSize;
+        opts.tailSeconds = tailSeconds;
+        return renderCurrentProjectToFile(outputFile, opts);
+    }
 
 private:
     //==========================================================================

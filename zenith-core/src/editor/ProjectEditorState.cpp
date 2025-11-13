@@ -219,20 +219,18 @@ bool ProjectEditorState::saveIfHasFile(juce::String* outError)
 // Offline Export
 //==============================================================================
 
-juce::Result ProjectEditorState::renderCurrentProjectToWav(const juce::File& outputFile,
-                                                           int blockSize,
-                                                           double tailSeconds)
+juce::Result ProjectEditorState::renderCurrentProjectToFile(const juce::File& outputFile,
+                                                            const zenith::ExportOptions& options)
 {
     // v0.1: Stop playback during export to avoid confusion
     if (isPlaying())
         stop();
 
     // Render via offline renderer
-    return renderProjectToWav(model_,
-                              outputFile,
-                              model_.sampleRate,
-                              blockSize,
-                              tailSeconds);
+    return renderProjectToFile(model_,
+                               outputFile,
+                               model_.sampleRate,
+                               options);
 }
 
 //==============================================================================

@@ -461,17 +461,27 @@ void MainComponent::handleSaveProjectAs()
 
 void MainComponent::handleExportProject()
 {
-    // Create file chooser for .wav files
+    // v0.1: Simple export with default options
+    // v0.2+: Show dialog for format/bit depth selection
+
+    // Default to 24-bit WAV (common mastering format)
+    zenith::ExportOptions exportOpts;
+    exportOpts.format = zenith::ExportFormat::WAV;
+    exportOpts.bitsPerSample = 24;  // 24-bit is good default (better than 16, smaller than 32-float)
+    exportOpts.tailSeconds = 0.5;
+    exportOpts.blockSize = 1024;
+
+    // Create file chooser with wildcard for supported formats
     auto fileChooser = std::make_shared<juce::FileChooser>(
-        "Export Project to WAV",
+        "Export Project (WAV/AIFF - 8/16/24/32-bit)",
         juce::File{},
-        "*.wav"
+        "*.wav;*.aiff"  // Support both WAV and AIFF
     );
 
     // Show async file chooser (non-blocking)
     auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
 
-    fileChooser->launchAsync(flags, [this, fileChooser](const juce::FileChooser& chooser)
+    fileChooser->launchAsync(flags, [this, fileChooser, exportOpts](const juce::FileChooser& chooser)
     {
         auto file = chooser.getResult();
         if (file == juce::File{})
@@ -480,18 +490,29 @@ void MainComponent::handleExportProject()
             return; // User cancelled
         }
 
-        // Ensure .wav extension
-        if (!file.hasFileExtension(".wav"))
-            file = file.withFileExtension(".wav");
+        // Detect format from extension
+        zenith::ExportOptions opts = exportOpts;
 
-        // Render project to WAV
-        DBG("Starting offline render to: " << file.getFullPathName());
+        if (file.hasFileExtension(".aiff") || file.hasFileExtension(".aif"))
+        {
+            opts.format = zenith::ExportFormat::AIFF;
+            if (!file.hasFileExtension(".aiff"))
+                file = file.withFileExtension(".aiff");
+        }
+        else
+        {
+            // Default to WAV
+            opts.format = zenith::ExportFormat::WAV;
+            if (!file.hasFileExtension(".wav"))
+                file = file.withFileExtension(".wav");
+        }
 
-        auto result = editorState.renderCurrentProjectToWav(
-            file,
-            1024,  // block size
-            0.5    // tail seconds (0.5s for reverb tails)
-        );
+        // Render project to file
+        DBG("Starting offline render to: " << file.getFullPathName()
+            << " (format: " << opts.getFormatName()
+            << ", bit depth: " << opts.bitsPerSample << ")");
+
+        auto result = editorState.renderCurrentProjectToFile(file, opts);
 
         if (!result.wasOk())
         {
@@ -500,8 +521,9 @@ void MainComponent::handleExportProject()
             return;
         }
 
-        DBG("Export complete: " << file.getFullPathName());
-        // v0.2+: Show success notification
+        DBG("Export complete: " << file.getFullPathName()
+            << " (" << opts.getFormatName() << ", " << opts.bitsPerSample << "-bit)");
+        // v0.2+: Show success notification with format info
     });
 }
 

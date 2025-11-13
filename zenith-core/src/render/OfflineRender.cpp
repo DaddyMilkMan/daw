@@ -43,24 +43,45 @@ int64_t computeProjectLengthSamples(const ProjectModel& project)
     return maxEnd;
 }
 
+/**
+ * @brief Create appropriate audio format for export
+ * @param options Export options
+ * @return Audio format instance (caller owns)
+ */
+std::unique_ptr<juce::AudioFormat> createAudioFormat(const ExportOptions& options)
+{
+    switch (options.format)
+    {
+        case ExportFormat::WAV:
+            return std::make_unique<juce::WavAudioFormat>();
+
+        case ExportFormat::AIFF:
+            return std::make_unique<juce::AiffAudioFormat>();
+
+        default:
+            return std::make_unique<juce::WavAudioFormat>();
+    }
+}
+
 } // anonymous namespace
 
 //==============================================================================
 // Public API
 //==============================================================================
 
-juce::Result renderProjectToWav(const ProjectModel& project,
-                                const juce::File& outputFile,
-                                double sampleRate,
-                                int blockSize,
-                                double tailSeconds)
+juce::Result renderProjectToFile(const ProjectModel& project,
+                                 const juce::File& outputFile,
+                                 double sampleRate,
+                                 const ExportOptions& options)
 {
+    // Validate export options
+    auto validationError = options.validate();
+    if (validationError.isNotEmpty())
+        return juce::Result::fail(validationError);
+
     // Validate parameters
     if (sampleRate <= 0.0)
         return juce::Result::fail("Invalid sample rate for export.");
-
-    if (blockSize <= 0)
-        return juce::Result::fail("Invalid block size for export.");
 
     // v0.1: No resampling support
     if (std::abs(project.sampleRate - sampleRate) > 1e-3)
@@ -74,14 +95,15 @@ juce::Result renderProjectToWav(const ProjectModel& project,
 
     // Compute render length
     const int64_t lengthSamples = computeProjectLengthSamples(project);
-    const int64_t tailSamples = static_cast<int64_t>(std::llround(tailSeconds * sampleRate));
+    const int64_t tailSamples = static_cast<int64_t>(std::llround(options.tailSeconds * sampleRate));
     const int64_t totalSamples = lengthSamples + tailSamples;
 
     if (totalSamples <= 0)
         return juce::Result::fail("Project has no audio to render (no unmuted clips).");
 
     DBG("Offline render: " << totalSamples << " samples ("
-        << (totalSamples / sampleRate) << " seconds)");
+        << (totalSamples / sampleRate) << " seconds) @ "
+        << options.bitsPerSample << "-bit " << options.getFormatName());
 
     // Ensure output directory exists
     auto parentDir = outputFile.getParentDirectory();
@@ -109,11 +131,14 @@ juce::Result renderProjectToWav(const ProjectModel& project,
     // Seek to start (t=0)
     offlineEngine.seekSamples(0);
 
-    // Schedule all clip events from the beginning
-    // (ProjectPlaybackContext already scheduled them during loadFromModel)
+    // Create appropriate audio format
+    auto audioFormat = createAudioFormat(options);
+    if (!audioFormat)
+    {
+        return juce::Result::fail("Failed to create audio format writer.");
+    }
 
-    // Create WAV writer
-    juce::WavAudioFormat wavFormat;
+    // Create output stream
     std::unique_ptr<juce::FileOutputStream> outStream(outputFile.createOutputStream());
 
     if (!outStream || !outStream->openedOk())
@@ -124,23 +149,25 @@ juce::Result renderProjectToWav(const ProjectModel& project,
     }
 
     const int numChannels = 2; // v0.1: Always stereo
-    const int bitsPerSample = 32; // 32-bit float
 
+    // Create audio format writer
     std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(
+        audioFormat->createWriterFor(
             outStream.get(),
             sampleRate,
             static_cast<unsigned int>(numChannels),
-            bitsPerSample,
+            options.bitsPerSample,
             {},  // metadata (empty)
-            0    // quality hint (ignored for WAV)
+            0    // quality hint (0 = default quality)
         )
     );
 
     if (writer == nullptr)
     {
         return juce::Result::fail(
-            "Failed to create WAV writer for: " + outputFile.getFullPathName()
+            "Failed to create audio writer for: " + outputFile.getFullPathName() +
+            " (format: " + options.getFormatName() +
+            ", bit depth: " + juce::String(options.bitsPerSample) + ")"
         );
     }
 
@@ -148,7 +175,7 @@ juce::Result renderProjectToWav(const ProjectModel& project,
     outStream.release();
 
     // Allocate processing buffer
-    juce::AudioBuffer<float> blockBuffer(numChannels, blockSize);
+    juce::AudioBuffer<float> blockBuffer(numChannels, options.blockSize);
 
     // Offline render loop
     int64_t rendered = 0;
@@ -156,7 +183,7 @@ juce::Result renderProjectToWav(const ProjectModel& project,
     {
         // Compute samples to process in this block
         const int remaining = static_cast<int>(
-            juce::jmin<int64_t>(blockSize, totalSamples - rendered)
+            juce::jmin<int64_t>(options.blockSize, totalSamples - rendered)
         );
 
         // Clear buffer
@@ -165,7 +192,7 @@ juce::Result renderProjectToWav(const ProjectModel& project,
         // Process audio via engine's offline path
         offlineEngine.processBlockOffline(blockBuffer, remaining);
 
-        // Write to WAV file
+        // Write to audio file
         if (!writer->writeFromAudioSampleBuffer(blockBuffer, 0, remaining))
         {
             return juce::Result::fail(
@@ -186,11 +213,14 @@ juce::Result renderProjectToWav(const ProjectModel& project,
     // Flush and close
     writer->flush();
 
-    DBG("Offline render complete: " << outputFile.getFullPathName());
+    DBG("Offline render complete: " << outputFile.getFullPathName()
+        << " (" << options.getFormatName() << ", "
+        << options.bitsPerSample << "-bit)");
+
     return juce::Result::ok();
 
 #else
-    juce::ignoreUnused(project, outputFile, sampleRate, blockSize, tailSeconds);
+    juce::ignoreUnused(project, outputFile, sampleRate, options);
     return juce::Result::fail("Phase 1 audio not enabled (ZENITH_ENABLE_PHASE1_AUDIO=OFF)");
 #endif
 }
