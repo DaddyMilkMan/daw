@@ -32,6 +32,7 @@ namespace zenith {
     class Track;
     class Clip;
     class MixerChannel;
+    class AudioFilePool;
 }
 
 //==============================================================================
@@ -98,6 +99,45 @@ public:
     bool isPlaying() const { return isPlaying_.load(); }
 
     //==========================================================================
+    // Phase 1.3: Transport Position & Looping
+    //==========================================================================
+
+    /**
+     * @brief Get current playback position in samples
+     */
+    juce::int64 getPlayheadSamples() const { return playheadSamples_.load(); }
+
+    /**
+     * @brief Set playback position (MESSAGE THREAD ONLY)
+     */
+    void setPlayheadSamples(juce::int64 position);
+
+    /**
+     * @brief Enable/disable looping
+     */
+    void setLooping(bool shouldLoop);
+
+    /**
+     * @brief Check if looping is enabled
+     */
+    bool isLooping() const { return isLooping_.load(); }
+
+    /**
+     * @brief Set loop region in samples (MESSAGE THREAD ONLY)
+     */
+    void setLoopRegion(juce::int64 start, juce::int64 end);
+
+    /**
+     * @brief Get loop start position in samples
+     */
+    juce::int64 getLoopStart() const { return loopStartSamples_.load(); }
+
+    /**
+     * @brief Get loop end position in samples
+     */
+    juce::int64 getLoopEnd() const { return loopEndSamples_.load(); }
+
+    //==========================================================================
     // Audio Device Management
     //==========================================================================
 
@@ -151,6 +191,17 @@ public:
      * @note Does NOT attach tracks to audio graph; for compile/UI testing only
      */
     void addTestTracks(int count);
+
+    //==========================================================================
+    // Phase 1.2: Audio File Pool
+    //==========================================================================
+
+    /**
+     * @brief Get the audio file pool for loading/caching audio files
+     * @return Reference to the audio file pool
+     * @note Thread-safe; pool handles internal locking
+     */
+    zenith::AudioFilePool& getAudioFilePool();
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -235,7 +286,13 @@ private:
     mutable std::atomic<double> cpuUsage_{0.0};
     juce::int64 lastCpuCheckTime{0};
 
-    // Playback position (in samples)
+    // Phase 1.3: Transport position tracking (atomic for RT-safe access)
+    std::atomic<juce::int64> playheadSamples_{0};
+    std::atomic<bool> isLooping_{false};
+    std::atomic<juce::int64> loopStartSamples_{0};
+    std::atomic<juce::int64> loopEndSamples_{0};  // 0 = no loop end set
+
+    // Legacy (Phase 0) - kept for backward compat during transition
     std::atomic<juce::int64> playbackPosition{0};
 
     // Test tone generator (Phase 0 testing)
@@ -244,6 +301,16 @@ private:
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    // Phase 1: Track mixing infrastructure
+    // Pre-allocated temp buffer for track mixing (avoid RT allocs)
+    juce::AudioBuffer<float> mixBuffer_;
+
+    // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for access)
+    std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
+
+    // Track management (message thread only)
+    void prepareTracks(int samplesPerBlockExpected, double sampleRate);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

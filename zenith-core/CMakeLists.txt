@@ -95,6 +95,10 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Phase 1.2: Audio File Pool
+    Source/engine/AudioFilePool.h
+    Source/engine/AudioFilePool.cpp
 )
 
 # ============================================================================

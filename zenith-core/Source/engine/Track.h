@@ -154,6 +154,9 @@ private:
     std::vector<std::unique_ptr<Clip>> clips;
     juce::CriticalSection clipsLock;
 
+    // Phase 1: Pre-allocated clip buffer to avoid RT allocations
+    juce::AudioBuffer<float> clipBuffer_;
+
     //==============================================================================
     // Helper methods
     void processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples);

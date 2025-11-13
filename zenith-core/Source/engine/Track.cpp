@@ -46,6 +46,9 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
 
+    // Phase 1: Pre-allocate clip buffer to avoid RT allocations
+    clipBuffer_.setSize(2, samplesPerBlockExpected, false, true, false);
+
     // TODO(Phase 2: plugin hosting) - Prepare all plugins
 
     // Prepare all clips
@@ -98,22 +101,22 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         {
             if (clip != nullptr && clip->isActive())
             {
-                // Create a temporary buffer for this clip
-                juce::AudioBuffer<float> clipBuffer(
-                    bufferToFill.buffer->getNumChannels(),
-                    bufferToFill.numSamples);
-                clipBuffer.clear();
+                // Phase 1: Use pre-allocated clipBuffer_ to avoid RT allocations
+                clipBuffer_.clear();
 
-                juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
+                juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, bufferToFill.numSamples);
                 clip->getNextAudioBlock(clipInfo);
 
                 // Mix clip into main buffer
-                for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
+                                                      clipBuffer_.getNumChannels());
+
+                for (int ch = 0; ch < channelsToMix; ++ch)
                 {
                     bufferToFill.buffer->addFrom(
                         ch,
                         bufferToFill.startSample,
-                        clipBuffer,
+                        clipBuffer_,
                         ch,
                         0,
                         bufferToFill.numSamples);
