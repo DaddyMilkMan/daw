@@ -79,6 +79,11 @@ ArrangementPlaybackController::getTransportSamples() const
     return engine_.getTransportSamples();
 }
 
+bool ArrangementPlaybackController::isPlaying() const
+{
+    return engine_.isPlaying();
+}
+
 //==============================================================================
 // Core Logic: Project → Engine Conversion
 //==============================================================================

@@ -104,6 +104,12 @@ namespace zenith
          */
         SamplePos getTransportSamples() const;
 
+        /**
+         * @brief Check if transport is playing
+         * @return true if playing, false if stopped/paused
+         */
+        bool isPlaying() const;
+
     private:
         //==========================================================================
         // Internal Methods

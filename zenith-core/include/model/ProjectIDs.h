@@ -18,8 +18,9 @@ namespace zenith::model::ids
     static const juce::Identifier ID_AUDIO_CLIP { "audioClip" };
 
     // Project props
-    static const juce::Identifier attrName       { "name" };
-    static const juce::Identifier attrSampleRate { "sampleRate" }; // double
+    static const juce::Identifier attrName             { "name" };
+    static const juce::Identifier attrSampleRate       { "sampleRate" };       // double
+    static const juce::Identifier projSchemaVersion    { "schemaVersion" };    // int (v0.1 = 1)
 
     // Track props
     static const juce::Identifier attrTrackId   { "trackId" };   // int
