@@ -6,6 +6,7 @@
 #include "../../include/editor/ProjectEditorState.h"
 #include "../../include/Engine.h"
 #include "../../include/io/ProjectPersistence.h"
+#include "../../include/render/OfflineRender.h"
 
 namespace zenith {
 
@@ -212,6 +213,26 @@ bool ProjectEditorState::saveIfHasFile(juce::String* outError)
 
     // Save to current file
     return saveProjectToFile(currentProjectFile_, outError);
+}
+
+//==============================================================================
+// Offline Export
+//==============================================================================
+
+juce::Result ProjectEditorState::renderCurrentProjectToWav(const juce::File& outputFile,
+                                                           int blockSize,
+                                                           double tailSeconds)
+{
+    // v0.1: Stop playback during export to avoid confusion
+    if (isPlaying())
+        stop();
+
+    // Render via offline renderer
+    return renderProjectToWav(model_,
+                              outputFile,
+                              model_.sampleRate,
+                              blockSize,
+                              tailSeconds);
 }
 
 //==============================================================================

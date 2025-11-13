@@ -214,6 +214,26 @@ public:
      */
     bool isDirty() const noexcept { return isDirty_; }
 
+    //==========================================================================
+    // Offline Export (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Render current project to WAV file (offline mixdown)
+     * @param outputFile Target WAV file path
+     * @param blockSize Processing block size (1024 recommended)
+     * @param tailSeconds Extra silence at end (for reverb tails, etc.)
+     * @return Result::ok() on success, or failure with error message
+     *
+     * Renders project to stereo 32-bit float WAV using offline engine.
+     * Stops playback during export.
+     *
+     * MESSAGE THREAD only (blocks until complete)
+     */
+    juce::Result renderCurrentProjectToWav(const juce::File& outputFile,
+                                           int blockSize = 1024,
+                                           double tailSeconds = 0.0);
+
 private:
     //==========================================================================
     // Internal Helpers

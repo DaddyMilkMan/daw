@@ -459,6 +459,52 @@ void MainComponent::handleSaveProjectAs()
     });
 }
 
+void MainComponent::handleExportProject()
+{
+    // Create file chooser for .wav files
+    auto fileChooser = std::make_shared<juce::FileChooser>(
+        "Export Project to WAV",
+        juce::File{},
+        "*.wav"
+    );
+
+    // Show async file chooser (non-blocking)
+    auto flags = juce::FileBrowserComponent::saveMode | juce::FileBrowserComponent::canSelectFiles;
+
+    fileChooser->launchAsync(flags, [this, fileChooser](const juce::FileChooser& chooser)
+    {
+        auto file = chooser.getResult();
+        if (file == juce::File{})
+        {
+            DBG("Export cancelled");
+            return; // User cancelled
+        }
+
+        // Ensure .wav extension
+        if (!file.hasFileExtension(".wav"))
+            file = file.withFileExtension(".wav");
+
+        // Render project to WAV
+        DBG("Starting offline render to: " << file.getFullPathName());
+
+        auto result = editorState.renderCurrentProjectToWav(
+            file,
+            1024,  // block size
+            0.5    // tail seconds (0.5s for reverb tails)
+        );
+
+        if (!result.wasOk())
+        {
+            DBG("Export failed: " << result.getErrorMessage());
+            // v0.1: Just log error, v0.2+: Show alert dialog
+            return;
+        }
+
+        DBG("Export complete: " << file.getFullPathName());
+        // v0.2+: Show success notification
+    });
+}
+
 //==============================================================================
 void MainComponent::toggleAudioSettings()
 {
@@ -543,6 +589,13 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
     if (key == juce::KeyPress('s') && mods.isCommandDown() && mods.isShiftDown())
     {
         handleSaveProjectAs();
+        return true;
+    }
+
+    // Ctrl+E - Export to WAV
+    if (key == juce::KeyPress('e') && mods.isCommandDown() && !mods.isShiftDown())
+    {
+        handleExportProject();
         return true;
     }
 

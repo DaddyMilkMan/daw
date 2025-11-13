@@ -122,6 +122,11 @@ private:
      */
     void handleSaveProjectAs();
 
+    /**
+     * @brief Handle Ctrl+E (Export/Render Project to WAV)
+     */
+    void handleExportProject();
+
     #if JUCE_DEBUG
         /**
          * @brief W6: Update stats overlay with TrackView paint timing

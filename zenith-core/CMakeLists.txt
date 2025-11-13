@@ -113,6 +113,9 @@ target_sources(ZenithDAW PRIVATE
     # v0.1: I/O layer (save/load)
     src/io/ProjectPersistence.cpp
 
+    # v0.1: Render layer (offline export)
+    src/render/OfflineRender.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp
