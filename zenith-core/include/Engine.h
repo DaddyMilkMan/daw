@@ -24,6 +24,11 @@
 
 #include <JuceHeader.h>
 #include <atomic>
+#include <vector>
+#include <memory>
+
+// Forward declarations
+class Track;
 
 //==============================================================================
 /**
@@ -35,10 +40,12 @@
  * 2. Transport (play/stop/record)
  * 3. Audio routing and mixing
  * 4. CPU usage monitoring
+ * 5. Track management
  */
 class Engine : public juce::AudioIODeviceCallback
 {
 public:
+    using SamplePos = juce::int64;
     //==========================================================================
     Engine();
     ~Engine() override;
@@ -75,11 +82,19 @@ public:
 
     /**
      * @brief Start playback
+     * @note MESSAGE THREAD ONLY
      */
     void play();
 
     /**
-     * @brief Stop playback
+     * @brief Pause playback (keep position)
+     * @note MESSAGE THREAD ONLY
+     */
+    void pause();
+
+    /**
+     * @brief Stop playback and reset state
+     * @note MESSAGE THREAD ONLY
      */
     void stop();
 
@@ -87,6 +102,19 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+    /**
+     * @brief Seek to sample position
+     * @param targetSample Sample position to seek to
+     * @note MESSAGE THREAD ONLY - MUST NOT be called while playing
+     */
+    void seekSamples(SamplePos targetSample);
+
+    /**
+     * @brief Get current transport position in samples
+     * @return Current playback position
+     */
+    SamplePos getTransportSamples() const { return playbackPosition.load(); }
 
     //==========================================================================
     // Audio Device Management
@@ -117,6 +145,38 @@ public:
      * @return CPU usage (0.0 - 100.0)
      */
     double getCpuUsage() const;
+
+    //==========================================================================
+    // Track Management
+    //==========================================================================
+
+    /**
+     * @brief Set number of tracks
+     * @param numTracks Number of tracks to create
+     * @note MESSAGE THREAD ONLY
+     */
+    void setNumTracks(int numTracks);
+
+    /**
+     * @brief Get number of tracks
+     * @return Current track count
+     */
+    int getNumTracks() const { return static_cast<int>(tracks_.size()); }
+
+    /**
+     * @brief Get track by index
+     * @param index Track index (0-based)
+     * @return Pointer to track or nullptr if invalid
+     * @note MESSAGE THREAD ONLY
+     */
+    Track* getTrack(int index);
+
+    /**
+     * @brief Get track by index (const version)
+     * @param index Track index (0-based)
+     * @return Pointer to track or nullptr if invalid
+     */
+    const Track* getTrack(int index) const;
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -207,6 +267,9 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+    // Track management (Phase 1)
+    std::vector<std::unique_ptr<Track>> tracks_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

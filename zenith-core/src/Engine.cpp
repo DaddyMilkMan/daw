@@ -4,6 +4,7 @@
  */
 
 #include "../include/Engine.h"
+#include "../include/Track.h"
 
 //==============================================================================
 Engine::Engine()
@@ -82,11 +83,17 @@ void Engine::play()
 {
     DBG("Engine: Play");
     isPlaying_.store(true);
-    playbackPosition.store(0);
 
     // Enable test tone for Phase 0 testing
     // TODO: Remove this in Phase 1 when we have actual content
     enableTestTone_.store(true);
+}
+
+void Engine::pause()
+{
+    DBG("Engine: Pause");
+    isPlaying_.store(false);
+    // Keep playbackPosition - don't reset
 }
 
 void Engine::stop()
@@ -94,6 +101,16 @@ void Engine::stop()
     DBG("Engine: Stop");
     isPlaying_.store(false);
     enableTestTone_.store(false);
+    playbackPosition.store(0);
+}
+
+void Engine::seekSamples(SamplePos targetSample)
+{
+    // MESSAGE THREAD ONLY - must not be called while playing
+    jassert(!isPlaying_.load());
+
+    DBG("Engine: Seek to sample " + juce::String(targetSample));
+    playbackPosition.store(targetSample);
 }
 
 //==============================================================================
@@ -122,6 +139,41 @@ juce::String Engine::getAudioDeviceInfo() const
 double Engine::getCpuUsage() const
 {
     return deviceManager.getCpuUsage() * 100.0;
+}
+
+//==============================================================================
+// Track Management
+//==============================================================================
+
+void Engine::setNumTracks(int numTracks)
+{
+    // MESSAGE THREAD ONLY
+    DBG("Engine: Setting number of tracks to " + juce::String(numTracks));
+
+    tracks_.clear();
+    tracks_.reserve(numTracks);
+
+    for (int i = 0; i < numTracks; ++i)
+    {
+        auto trackName = "Track " + juce::String(i + 1);
+        tracks_.push_back(std::make_unique<Track>(trackName, true)); // true = audio track
+    }
+}
+
+Track* Engine::getTrack(int index)
+{
+    if (index >= 0 && index < static_cast<int>(tracks_.size()))
+        return tracks_[static_cast<size_t>(index)].get();
+
+    return nullptr;
+}
+
+const Track* Engine::getTrack(int index) const
+{
+    if (index >= 0 && index < static_cast<int>(tracks_.size()))
+        return tracks_[static_cast<size_t>(index)].get();
+
+    return nullptr;
 }
 
 //==============================================================================

@@ -214,3 +214,10 @@ void Track::removeClip(Clip* clip)
 
     DBG("Track: Removed clip");
 }
+
+void Track::clearClips()
+{
+    // MESSAGE THREAD ONLY
+    clips.clear();
+    DBG("Track: Cleared all clips from '" + name + "'");
+}

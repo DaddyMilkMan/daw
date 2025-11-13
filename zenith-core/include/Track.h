@@ -190,6 +190,12 @@ public:
     void removeClip(Clip* clip);
 
     /**
+     * @brief Clear all clips from track
+     * @note MESSAGE THREAD ONLY
+     */
+    void clearClips();
+
+    /**
      * @brief Get all clips
      * @return Vector of clip pointers
      */

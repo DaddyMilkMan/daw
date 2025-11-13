@@ -76,6 +76,7 @@ target_sources(ZenithDAW PRIVATE
     src/ProjectManager.cpp
     src/Track.cpp
     src/model/ProjectModel.cpp
+    src/playback/ArrangementPlaybackController.cpp
 )
 
 # ============================================================================
