@@ -48,6 +48,17 @@ MainComponent::MainComponent(Engine& eng)
 
         DBG("W6.1: HUD visibility loaded from settings: " + juce::String(showPerfHUD));
         DBG("W6.1: Settings file: " + userSettings->getFile().getFullPathName());
+
+        #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+            // Phase 1: Create debug HUD overlay (F12 toggle)
+            phase1DebugOverlay = std::make_unique<Phase1DebugOverlay>(engine);
+            addChildComponent(phase1DebugOverlay.get());
+
+            // Start hidden by default
+            phase1DebugOverlay->setVisible(false);
+
+            DBG("Phase 1 Debug HUD initialized (press F12 to toggle)");
+        #endif
     #endif
 
     // W6: Enable keyboard input for Ctrl+F10 toggle
@@ -97,6 +108,19 @@ void MainComponent::resized()
                                    topBarHeight + margin,
                                    overlayWidth, overlayHeight);
         }
+
+        #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+            // Phase 1: Position debug HUD in bottom-left corner
+            if (phase1DebugOverlay != nullptr)
+            {
+                int overlayWidth = 300;
+                int overlayHeight = 200;
+                int margin = 10;
+                phase1DebugOverlay->setBounds(sidebarWidth + margin,
+                                             getHeight() - transportBarHeight - overlayHeight - margin,
+                                             overlayWidth, overlayHeight);
+            }
+        #endif
     #endif
 }
 
@@ -353,6 +377,19 @@ bool MainComponent::keyPressed(const juce::KeyPress& key)
             toggleStatsOverlay();
             return true;
         }
+
+        #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+            // F12 toggle Phase 1 debug HUD
+            if (key == juce::KeyPress::F12Key)
+            {
+                if (phase1DebugOverlay != nullptr)
+                {
+                    phase1DebugOverlay->setVisible(!phase1DebugOverlay->isVisible());
+                    DBG("Phase 1 Debug HUD: " + juce::String(phase1DebugOverlay->isVisible() ? "ON" : "OFF"));
+                }
+                return true;
+            }
+        #endif
     #endif
 
     return false;  // Let other components handle key

@@ -187,7 +187,32 @@ public:
      * @note AUDIO THREAD ONLY - uses peek/pop pattern to avoid dropping future events
      */
     DueEvent* drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int& outCount) noexcept;
-#endif
+
+#if JUCE_DEBUG
+    //==========================================================================
+    // Debug Metrics (MESSAGE THREAD - read-only, RT-safe via atomics)
+    //==========================================================================
+
+    /** Debug-only metrics for Phase 1 HUD. */
+    struct Phase1DebugMetrics {
+        int64_t transportSamples = 0;
+        bool    isPlaying = false;
+        int     numTracks = 0;
+        int     activeVoices = 0;
+        int     queuedEvents = 0;
+        uint64_t droppedEvents = 0;
+        float   peakL = 0.0f;
+        float   peakR = 0.0f;
+        double  sampleRate = 44100.0;
+    };
+
+    /**
+     * @brief Get current Phase 1 debug metrics (MESSAGE THREAD only).
+     * @note Uses atomics for RT-safe reading, no locks.
+     */
+    Phase1DebugMetrics getPhase1DebugMetrics() const noexcept;
+#endif // JUCE_DEBUG
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -311,6 +336,12 @@ private:
     // Test tone generator (available in Phase 1 for testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+#if JUCE_DEBUG
+    // Debug: Peak tracking for HUD (RT writes, message thread reads)
+    std::atomic<float> debugPeakL_{0.0f};
+    std::atomic<float> debugPeakR_{0.0f};
+#endif
 #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)

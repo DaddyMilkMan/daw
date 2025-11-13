@@ -120,6 +120,9 @@ target_sources(ZenithDAW PRIVATE
     # W6: Performance monitoring overlay (DEBUG-only)
     $<$<CONFIG:Debug>:Source/ui/StatsOverlay.cpp>
 
+    # Phase 1: Debug HUD overlay (DEBUG-only, requires Phase 1 audio)
+    $<$<AND:$<CONFIG:Debug>,$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>>:Source/ui/Phase1DebugOverlay.cpp>
+
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>

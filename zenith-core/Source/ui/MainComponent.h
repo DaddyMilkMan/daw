@@ -35,6 +35,9 @@
 
 #if JUCE_DEBUG
     #include "StatsOverlay.h"
+    #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+        #include "Phase1DebugOverlay.h"
+    #endif
 #endif
 
 //==============================================================================
@@ -126,6 +129,11 @@ private:
     #if JUCE_DEBUG
         // W6: Performance monitoring overlay (DEBUG-only)
         std::unique_ptr<StatsOverlay> statsOverlay;
+
+        #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+            // Phase 1: Real-time engine debug HUD (F12 toggle)
+            std::unique_ptr<Phase1DebugOverlay> phase1DebugOverlay;
+        #endif
 
         // W6.1: Persistent settings for Debug HUD
         juce::ApplicationProperties appProperties;

@@ -192,7 +192,50 @@ Engine::DueEvent* Engine::drainScheduledEvents(int64_t blockStart, int64_t block
     // No need to sort if queue maintains order (SPSC ring preserves order)
     return dueEvents_;
 }
-#endif
+
+#if JUCE_DEBUG
+//==============================================================================
+// Debug Metrics (MESSAGE THREAD - RT-safe reading)
+//==============================================================================
+
+Engine::Phase1DebugMetrics Engine::getPhase1DebugMetrics() const noexcept
+{
+    Phase1DebugMetrics metrics;
+
+    // Read transport state (atomics, no locks)
+    metrics.transportSamples = transportSamples_.load(std::memory_order_relaxed);
+    metrics.isPlaying = isPlaying_.load(std::memory_order_relaxed);
+    metrics.sampleRate = currentSampleRate.load(std::memory_order_relaxed);
+
+    // Read mixer state (requires lock, but we're on message thread)
+    metrics.numTracks = mixer_.getNumTracks();
+
+    // Active voices: sum across all tracks
+    // Note: This requires iterating tracks, which is message-thread safe
+    metrics.activeVoices = 0;
+    for (int i = 0; i < metrics.numTracks; ++i)
+    {
+        auto* track = mixer_.getTrack(i);
+        if (track != nullptr)
+        {
+            // Count active voices in this track
+            // We'll need a method on AudioTrack to expose this
+            // For now, leave at 0 (TODO: add getActiveVoiceCount() to AudioTrack)
+        }
+    }
+
+    // Scheduler stats
+    metrics.queuedEvents = (int) eventQ_.size();
+    metrics.droppedEvents = 0;  // TODO: Add if tracking dropped events
+
+    // Peak levels (atomics, RT writes / message reads)
+    metrics.peakL = debugPeakL_.load(std::memory_order_relaxed);
+    metrics.peakR = debugPeakR_.load(std::memory_order_relaxed);
+
+    return metrics;
+}
+#endif // JUCE_DEBUG
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
 
 //==============================================================================
 // AudioIODeviceCallback Implementation
@@ -399,6 +442,24 @@ void Engine::processAudio(
             );
         }
     }
+
+#if JUCE_DEBUG
+    // Update peak meters for debug HUD (RT writes, message thread reads)
+    if (numOutputChannels >= 1 && outputChannelData[0] != nullptr)
+    {
+        float peakL = 0.0f;
+        for (int i = 0; i < numSamples; ++i)
+            peakL = std::max(peakL, std::abs(outputChannelData[0][i]));
+        debugPeakL_.store(peakL, std::memory_order_relaxed);
+    }
+    if (numOutputChannels >= 2 && outputChannelData[1] != nullptr)
+    {
+        float peakR = 0.0f;
+        for (int i = 0; i < numSamples; ++i)
+            peakR = std::max(peakR, std::abs(outputChannelData[1][i]));
+        debugPeakR_.store(peakR, std::memory_order_relaxed);
+    }
+#endif
 
     // Advance transport only while playing
     if (isPlaying_.load(std::memory_order_relaxed))
