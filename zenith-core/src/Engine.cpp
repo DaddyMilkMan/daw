@@ -137,6 +137,10 @@ double Engine::getCpuUsage() const
 #if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
 void Engine::play()  noexcept { isPlaying_.store(true,  std::memory_order_release); }
 void Engine::pause() noexcept { isPlaying_.store(false, std::memory_order_release); }
+void Engine::stop() noexcept {
+    pause();
+    seekSamples(0);
+}
 void Engine::seekSamples(int64_t absolute) noexcept {
     // SPSC discipline: only seek when not playing (queue owned by message thread when paused)
     jassert(!isPlaying_.load(std::memory_order_acquire));
@@ -151,6 +155,50 @@ bool Engine::scheduleClipStart(int trackIndex, int clipId, int64_t atSample) noe
 bool Engine::scheduleClipStop(int trackIndex, int clipId, int64_t atSample) noexcept {
     TransportEvent ev{ TransportEvent::Type::StopClip, trackIndex, clipId, atSample };
     return eventQ_.push(ev);
+}
+
+//==============================================================================
+// Track Management (MESSAGE THREAD ONLY)
+//==============================================================================
+
+void Engine::setNumTracks(int numTracks)
+{
+    const int current = mixer_.getNumTracks();
+
+    if (numTracks == current)
+        return;
+
+    if (numTracks > current)
+    {
+        // Add tracks
+        for (int i = current; i < numTracks; ++i)
+        {
+            mixer_.addTrack("Track " + juce::String(i + 1));
+        }
+    }
+    else
+    {
+        // Remove tracks from the end
+        for (int i = current - 1; i >= numTracks; --i)
+        {
+            mixer_.removeTrack(i);
+        }
+    }
+}
+
+int Engine::getNumTracks() const
+{
+    return mixer_.getNumTracks();
+}
+
+AudioTrack* Engine::getTrack(int index)
+{
+    return mixer_.getTrack(index);
+}
+
+const AudioTrack* Engine::getTrack(int index) const
+{
+    return const_cast<Mixer&>(mixer_).getTrack(index);
 }
 
 //==============================================================================

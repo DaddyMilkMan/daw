@@ -155,8 +155,10 @@ public:
     /** Transport controls (message thread only) */
     void play() noexcept;                        // start advancing transport
     void pause() noexcept;                       // stop advancing transport
+    void stop() noexcept;                        // stop and reset to sample 0
     void seekSamples(int64_t absolute) noexcept; // set absolute transport time
     int64_t transportSamples() const noexcept { return transportSamples_.load(std::memory_order_relaxed); }
+    int64_t getTransportSamples() const noexcept { return transportSamples(); }
     bool    isPlaying() const noexcept { return isPlaying_.load(std::memory_order_relaxed); }
 
     /** Schedule events (message thread only, lock-free enqueue). */
@@ -165,6 +167,38 @@ public:
 
     /** Debug/introspection (message thread only). */
     std::size_t pendingEventCount() const noexcept { return eventQ_.size(); }
+
+    //==========================================================================
+    // Track Management (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Set number of tracks (creates/removes as needed)
+     * @param numTracks Desired number of tracks
+     * @note MESSAGE THREAD ONLY - delegates to mixer
+     */
+    void setNumTracks(int numTracks);
+
+    /**
+     * @brief Get number of tracks
+     * @return Number of tracks in mixer
+     */
+    int getNumTracks() const;
+
+    /**
+     * @brief Get track by index
+     * @param index Track index (0-based)
+     * @return Pointer to track or nullptr if invalid index
+     * @note MESSAGE THREAD ONLY - non-owning pointer
+     */
+    AudioTrack* getTrack(int index);
+
+    /**
+     * @brief Get track by index (const version)
+     * @param index Track index (0-based)
+     * @return Const pointer to track or nullptr if invalid index
+     */
+    const AudioTrack* getTrack(int index) const;
 
     //==========================================================================
     // W10.3: Sample-accurate event draining for segment loop

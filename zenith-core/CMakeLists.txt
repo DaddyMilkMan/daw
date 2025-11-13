@@ -112,6 +112,9 @@ target_sources(ZenithDAW PRIVATE
     # Model layer (v0.1: project data model)
     src/model/ProjectModel.cpp
 
+    # Playback layer (v0.1: model → engine bridge)
+    src/playback/ArrangementPlaybackController.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp
