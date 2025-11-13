@@ -1,19 +1,20 @@
 /**
  * @file ArrangerComponent.h
- * @brief Minimal timeline/arranger view for v0.1
+ * @brief Timeline/arranger view with zoom and scroll
  *
  * Displays tracks and clips on a horizontal time axis.
  * Supports:
  * - Visual representation of tracks and clips
+ * - Zoom (Ctrl/Cmd + wheel) and scroll (Shift + wheel)
+ * - Time ruler with second marks
  * - Click to set playhead
  * - Drag clips horizontally to change startSample
  * - Playhead animation during playback
  *
- * v0.1 Constraints (intentionally minimal):
- * - No zoom/scroll
+ * v0.1.1 Constraints (intentionally minimal):
  * - No vertical drag (no moving clips between tracks)
  * - No resizing clips
- * - No snapping/grid
+ * - No snapping (basic snap coming soon)
  * - No selection, multi-select, delete
  * - No automation, MIDI, tempo
  */
@@ -26,12 +27,13 @@
 
 /**
  * @class ArrangerComponent
- * @brief Minimal timeline view for arranging audio clips
+ * @brief Timeline view for arranging audio clips with zoom and scroll
  *
  * Coordinate System:
- * - Horizontal: seconds → pixels (pixelsPerSecond = 100)
+ * - Horizontal: samples → pixels (dynamic zoom via samplesPerPixel_)
  * - Vertical: fixed track height (60px per track)
  * - Origin: top-left of timeline area (after headers)
+ * - Scroll offset: scrollOffsetSamples_ defines left edge of view
  */
 class ArrangerComponent : public juce::Component,
                          public juce::Timer
@@ -54,6 +56,7 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     //==========================================================================
     // Timer: poll playhead position while playing
@@ -81,10 +84,18 @@ private:
     // Layout Constants
     //==========================================================================
 
-    float pixelsPerSecond_ = 100.0f;  // v0.1: fixed zoom
     int trackHeaderWidth_ = 120;
     int trackHeight_ = 60;
-    int timelineHeight_ = 30;  // space for time ruler at top
+    int rulerHeight_ = 20;  // space for time ruler at top
+
+    //==========================================================================
+    // Zoom & Scroll State
+    //==========================================================================
+
+    double samplesPerPixel_ = 4800.0;       // default: 100 px/sec at 48kHz
+    double minSamplesPerPixel_ = 480.0;     // max zoom-in  (10x closer)
+    double maxSamplesPerPixel_ = 48000.0;   // max zoom-out (10x further)
+    juce::int64 scrollOffsetSamples_ = 0;   // left edge of view in samples
 
     //==========================================================================
     // Helper Methods
@@ -108,14 +119,20 @@ private:
     double getProjectSampleRate() const;
 
     /**
-     * @brief Convert samples to x pixel coordinate
+     * @brief Convert samples to x pixel coordinate (includes scroll offset)
      */
-    double samplesToX(juce::int64 samples) const;
+    int samplesToX(juce::int64 samples) const;
 
     /**
-     * @brief Convert x pixel coordinate to samples
+     * @brief Convert x pixel coordinate to samples (includes scroll offset)
      */
     juce::int64 xToSamples(int x) const;
+
+    /**
+     * @brief Get visible sample range for current view
+     * @return [start, end) in samples based on scroll offset and component width
+     */
+    juce::Range<juce::int64> getVisibleSampleRange() const;
 
     /**
      * @brief Find clip at mouse position (returns trackIndex and clipId)

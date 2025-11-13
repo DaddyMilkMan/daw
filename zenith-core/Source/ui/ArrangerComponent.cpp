@@ -1,6 +1,6 @@
 /**
  * @file ArrangerComponent.cpp
- * @brief Minimal timeline/arranger view implementation
+ * @brief Timeline/arranger view implementation with zoom and scroll
  */
 
 #include "ArrangerComponent.h"
@@ -136,6 +136,70 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent& e)
     drag_.dragStartSample = 0;
 }
 
+void ArrangerComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    const bool cmdOrCtrl = e.mods.isCommandDown() || e.mods.isCtrlDown();
+    const bool shift = e.mods.isShiftDown();
+
+    if (cmdOrCtrl)
+    {
+        // Ctrl/Cmd + wheel = zoom
+        const int anchorX = e.position.x;
+        const juce::int64 anchorSample = xToSamples(anchorX);
+
+        // Zoom factor: wheel.deltaY is typically -1.0 to 1.0
+        // Negative = zoom in (decrease samplesPerPixel_)
+        // Positive = zoom out (increase samplesPerPixel_)
+        const double zoomFactor = 1.0 - (wheel.deltaY * 0.5);  // 0.5x to 1.5x per wheel notch
+        double newSamplesPerPixel = samplesPerPixel_ * zoomFactor;
+
+        // Clamp to limits
+        newSamplesPerPixel = juce::jlimit(minSamplesPerPixel_, maxSamplesPerPixel_, newSamplesPerPixel);
+
+        // Update zoom level
+        samplesPerPixel_ = newSamplesPerPixel;
+
+        // Adjust scroll offset to keep anchor point under cursor
+        // anchorSample should still be at anchorX after zoom
+        // anchorSample = scrollOffsetSamples_ + anchorX * samplesPerPixel_
+        // => scrollOffsetSamples_ = anchorSample - anchorX * samplesPerPixel_
+        scrollOffsetSamples_ = anchorSample - static_cast<juce::int64>(std::round(anchorX * samplesPerPixel_));
+
+        // Clamp scroll offset to non-negative
+        scrollOffsetSamples_ = juce::jmax((juce::int64) 0, scrollOffsetSamples_);
+
+        repaint();
+    }
+    else if (shift)
+    {
+        // Shift + wheel = horizontal scroll
+        const double scrollFactor = 0.1;  // scroll 10% of view per notch
+        const auto visibleRange = getVisibleSampleRange();
+        const juce::int64 scrollAmount = static_cast<juce::int64>(wheel.deltaY * scrollFactor * visibleRange.getLength());
+
+        scrollOffsetSamples_ -= scrollAmount;  // deltaY positive = scroll right (decrease offset)
+
+        // Clamp to non-negative
+        scrollOffsetSamples_ = juce::jmax((juce::int64) 0, scrollOffsetSamples_);
+
+        repaint();
+    }
+    else
+    {
+        // No modifiers = horizontal scroll (same as shift)
+        const double scrollFactor = 0.1;
+        const auto visibleRange = getVisibleSampleRange();
+        const juce::int64 scrollAmount = static_cast<juce::int64>(wheel.deltaY * scrollFactor * visibleRange.getLength());
+
+        scrollOffsetSamples_ -= scrollAmount;
+
+        // Clamp to non-negative
+        scrollOffsetSamples_ = juce::jmax((juce::int64) 0, scrollOffsetSamples_);
+
+        repaint();
+    }
+}
+
 //==============================================================================
 // Timer Callback
 //==============================================================================
@@ -160,34 +224,40 @@ void ArrangerComponent::drawBackground(juce::Graphics& g)
 
     // Draw time ruler at top
     const int rulerY = 0;
-    const int rulerHeight = timelineHeight_;
 
     g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRect(0, rulerY, getWidth(), rulerHeight);
+    g.fillRect(0, rulerY, getWidth(), rulerHeight_);
 
-    // Draw 1-second grid lines and labels
+    // Get visible sample range
     const double sampleRate = getProjectSampleRate();
-    const juce::int64 samplesPerSecond = static_cast<juce::int64>(sampleRate);
+    const auto visibleRange = getVisibleSampleRange();
+    const double startSec = static_cast<double>(visibleRange.getStart()) / sampleRate;
+    const double endSec = static_cast<double>(visibleRange.getEnd()) / sampleRate;
+
+    // Draw 1-second grid lines and labels for visible range only
+    const int startSecInt = static_cast<int>(std::ceil(startSec));
+    const int endSecInt = static_cast<int>(std::floor(endSec)) + 1;  // +1 to include last visible second
 
     g.setColour(juce::Colour(0xff3a3a3a));
     g.setFont(12.0f);
 
-    // Draw grid lines every second
-    for (int sec = 0; sec < 100; ++sec)  // Arbitrary max for v0.1
+    for (int sec = startSecInt; sec <= endSecInt; ++sec)
     {
-        const juce::int64 sample = sec * samplesPerSecond;
-        const int x = static_cast<int>(samplesToX(sample));
+        const juce::int64 sample = static_cast<juce::int64>(sec * sampleRate);
+        const int x = samplesToX(sample);
 
-        if (x > getWidth())
-            break;
+        // Skip if outside visible area
+        if (x < trackHeaderWidth_ || x > getWidth())
+            continue;
 
-        // Vertical grid line
-        g.drawLine(x, rulerHeight, x, getHeight(), 1.0f);
+        // Vertical grid line (full height from ruler bottom to component bottom)
+        g.drawLine(static_cast<float>(x), static_cast<float>(rulerHeight_),
+                   static_cast<float>(x), static_cast<float>(getHeight()), 1.0f);
 
-        // Time label
+        // Time label in ruler
         g.setColour(juce::Colour(0xff999999));
         g.drawText(juce::String(sec) + "s",
-                   x + 4, rulerY + 4, 60, rulerHeight - 8,
+                   x + 4, rulerY + 2, 60, rulerHeight_ - 4,
                    juce::Justification::centredLeft, false);
 
         g.setColour(juce::Colour(0xff3a3a3a));
@@ -198,6 +268,7 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
 {
     const auto& project = editor_.getProject();
     const int numTracks = static_cast<int>(project.tracks.size());
+    const auto visibleRange = getVisibleSampleRange();
 
     for (int t = 0; t < numTracks; ++t)
     {
@@ -227,11 +298,16 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
         g.setColour(juce::Colour(0xff444444));
         g.drawLine(0, trackBounds.getBottom(), getWidth(), trackBounds.getBottom(), 1.0f);
 
-        // Draw clips
+        // Draw clips (only if visible)
         for (const auto& clip : track.clips)
         {
             if (clip.muted)
                 continue;  // Don't draw muted clips
+
+            // Skip clips outside visible range (performance optimization)
+            const juce::int64 clipEnd = clip.startSample + clip.lengthSamples;
+            if (clipEnd < visibleRange.getStart() || clip.startSample > visibleRange.getEnd())
+                continue;
 
             const auto clipBounds = getClipBounds(track, clip, t);
 
@@ -260,15 +336,17 @@ void ArrangerComponent::drawTracksAndClips(juce::Graphics& g)
 void ArrangerComponent::drawPlayhead(juce::Graphics& g)
 {
     const juce::int64 transportSample = editor_.getTransportSamples();
-    const int x = static_cast<int>(samplesToX(transportSample));
+    const int x = samplesToX(transportSample);
 
     // Red vertical line
     g.setColour(juce::Colours::red);
-    g.drawLine(x, 0, x, getHeight(), 2.0f);
+    g.drawLine(static_cast<float>(x), 0.0f, static_cast<float>(x), static_cast<float>(getHeight()), 2.0f);
 
     // Playhead triangle at top
     juce::Path triangle;
-    triangle.addTriangle(x - 6, 0, x + 6, 0, x, 12);
+    triangle.addTriangle(static_cast<float>(x - 6), 0.0f,
+                        static_cast<float>(x + 6), 0.0f,
+                        static_cast<float>(x), 12.0f);
     g.fillPath(triangle);
 }
 
@@ -278,7 +356,7 @@ void ArrangerComponent::drawPlayhead(juce::Graphics& g)
 
 juce::Rectangle<int> ArrangerComponent::getTrackBounds(int trackIndex) const
 {
-    const int y = timelineHeight_ + trackIndex * trackHeight_;
+    const int y = rulerHeight_ + trackIndex * trackHeight_;
     return juce::Rectangle<int>(trackHeaderWidth_, y, getWidth() - trackHeaderWidth_, trackHeight_);
 }
 
@@ -288,8 +366,9 @@ juce::Rectangle<int> ArrangerComponent::getClipBounds(const zenith::TrackModel& 
 {
     const auto trackBounds = getTrackBounds(trackIndex);
 
-    const int x = static_cast<int>(samplesToX(clip.startSample));
-    const int width = static_cast<int>(samplesToX(clip.lengthSamples));
+    const int x = samplesToX(clip.startSample);
+    const int clipEndX = samplesToX(clip.startSample + clip.lengthSamples);
+    const int width = clipEndX - x;
 
     // 4px padding on top/bottom
     const int padding = 4;
@@ -303,17 +382,25 @@ double ArrangerComponent::getProjectSampleRate() const
     return editor_.getProject().sampleRate;
 }
 
-double ArrangerComponent::samplesToX(juce::int64 samples) const
+int ArrangerComponent::samplesToX(juce::int64 samples) const
 {
-    const double seconds = samples / getProjectSampleRate();
-    return trackHeaderWidth_ + seconds * pixelsPerSecond_;
+    // samples → X coordinate (includes scroll offset)
+    // X = (samples - scrollOffset) / samplesPerPixel
+    return static_cast<int>(std::round((samples - scrollOffsetSamples_) / samplesPerPixel_));
 }
 
 juce::int64 ArrangerComponent::xToSamples(int x) const
 {
-    const int timelineX = x - trackHeaderWidth_;
-    const double seconds = timelineX / pixelsPerSecond_;
-    return static_cast<juce::int64>(seconds * getProjectSampleRate());
+    // X coordinate → samples (includes scroll offset)
+    // samples = scrollOffset + X * samplesPerPixel
+    return scrollOffsetSamples_ + static_cast<juce::int64>(std::round(x * samplesPerPixel_));
+}
+
+juce::Range<juce::int64> ArrangerComponent::getVisibleSampleRange() const
+{
+    const auto start = scrollOffsetSamples_;
+    const auto end = scrollOffsetSamples_ + static_cast<juce::int64>(std::round(getWidth() * samplesPerPixel_));
+    return juce::Range<juce::int64>(start, end);
 }
 
 bool ArrangerComponent::findClipAtPosition(juce::Point<int> pos, int& outTrackIndex, juce::int64& outClipId)
