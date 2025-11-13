@@ -75,6 +75,7 @@ target_sources(ZenithDAW PRIVATE
     src/ProjectState.cpp
     src/ProjectManager.cpp
     src/Track.cpp
+    src/model/ProjectModel.cpp
 )
 
 # ============================================================================
