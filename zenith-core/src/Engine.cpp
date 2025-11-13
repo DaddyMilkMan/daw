@@ -11,6 +11,7 @@
 
 #if ZENITH_ENABLE_PHASE1_AUDIO
     #include "../Source/engine/Track.h"
+    #include "../Source/engine/nodes/GainPanNode.h"
 #endif
 
 //==============================================================================
@@ -175,6 +176,73 @@ void Engine::addTestTracks(int count)
 #else
     juce::ignoreUnused(count);
     DBG("Engine: W10 disabled - addTestTracks() requires ZENITH_ENABLE_PHASE1_AUDIO");
+#endif
+}
+
+//==============================================================================
+// W11.0: FX Chain Management
+//==============================================================================
+
+void Engine::setTrackGainFx(int trackIndex, int slotIndex, float gain, float pan)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    auto* track = getTrack(trackIndex);
+    if (!track)
+    {
+        DBG("Engine: Invalid track index " + juce::String(trackIndex));
+        return;
+    }
+
+    // Create and configure GainPanNode
+    auto gainPanNode = std::make_unique<zenith::GainPanNode>();
+    gainPanNode->setGain(gain);
+    gainPanNode->setPan(pan);
+
+    // Install in FX slot
+    track->setFxNode(slotIndex, std::move(gainPanNode));
+
+    DBG("Engine: Set GainPanNode on track " + juce::String(trackIndex)
+        + ", slot " + juce::String(slotIndex)
+        + " (gain=" + juce::String(gain, 2)
+        + ", pan=" + juce::String(pan, 2) + ")");
+#else
+    juce::ignoreUnused(trackIndex, slotIndex, gain, pan);
+    DBG("Engine: W11.0 disabled - setTrackGainFx() requires ZENITH_ENABLE_PHASE1_AUDIO");
+#endif
+}
+
+void Engine::setTrackFxBypassed(int trackIndex, int slotIndex, bool shouldBypass)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    auto* track = getTrack(trackIndex);
+    if (!track)
+    {
+        DBG("Engine: Invalid track index " + juce::String(trackIndex));
+        return;
+    }
+
+    track->setFxBypassed(slotIndex, shouldBypass);
+
+    DBG("Engine: Set FX bypass on track " + juce::String(trackIndex)
+        + ", slot " + juce::String(slotIndex)
+        + ": " + (shouldBypass ? "BYPASSED" : "ACTIVE"));
+#else
+    juce::ignoreUnused(trackIndex, slotIndex, shouldBypass);
+    DBG("Engine: W11.0 disabled - setTrackFxBypassed() requires ZENITH_ENABLE_PHASE1_AUDIO");
+#endif
+}
+
+bool Engine::isTrackFxBypassed(int trackIndex, int slotIndex) const
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    const auto* track = const_cast<Engine*>(this)->getTrack(trackIndex);
+    if (!track)
+        return true;
+
+    return track->isFxBypassed(slotIndex);
+#else
+    juce::ignoreUnused(trackIndex, slotIndex);
+    return true;
 #endif
 }
 

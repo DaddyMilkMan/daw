@@ -5,6 +5,7 @@
  * Responsibilities:
  * - Manage track-level state (gain, pan, mute, solo)
  * - Render clips into audio buffer
+ * - Process FX chain (W11.0: internal nodes, later VST3)
  * - No allocations in processBlock() (real-time safe)
  */
 
@@ -13,7 +14,10 @@
 #include <JuceHeader.h>
 #include <atomic>
 #include <vector>
+#include <array>
+#include <memory>
 #include "Clip.h"
+#include "IDspNode.h"
 
 namespace zenith {
 
@@ -107,6 +111,52 @@ public:
      */
     void clearClips();
 
+    //==========================================================================
+    // W11.0: FX Chain Management (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Get number of FX slots per track (fixed at 5)
+     */
+    static constexpr int getNumFxSlots() { return 5; }
+
+    /**
+     * @brief Set FX node in slot (MESSAGE THREAD)
+     * @param slotIndex Slot index [0..4]
+     * @param node DSP node (ownership transferred to Track)
+     *
+     * @note Replaces existing node in slot (if any)
+     * @note Node will be prepared if track is already prepared
+     */
+    void setFxNode(int slotIndex, std::unique_ptr<IDspNode> node);
+
+    /**
+     * @brief Clear FX node from slot (MESSAGE THREAD)
+     * @param slotIndex Slot index [0..4]
+     */
+    void clearFxNode(int slotIndex);
+
+    /**
+     * @brief Get FX node from slot (for parameter access)
+     * @param slotIndex Slot index [0..4]
+     * @return Pointer to node, or nullptr if slot is empty
+     */
+    IDspNode* getFxNode(int slotIndex);
+
+    /**
+     * @brief Set FX bypass state (MESSAGE THREAD)
+     * @param slotIndex Slot index [0..4]
+     * @param shouldBypass true = bypass, false = active
+     */
+    void setFxBypassed(int slotIndex, bool shouldBypass);
+
+    /**
+     * @brief Check if FX is bypassed
+     * @param slotIndex Slot index [0..4]
+     * @return true if bypassed or slot is empty
+     */
+    bool isFxBypassed(int slotIndex) const;
+
 private:
     //==========================================================================
     // Member Variables
@@ -131,7 +181,13 @@ private:
     // W13: Clip list (sorted by startSample, MESSAGE THREAD access only)
     std::vector<Clip> clips_;
 
-    // TODO: Add plugin chain, automation, etc.
+    // W11.0: FX chain (fixed 5 slots, MESSAGE THREAD access only)
+    struct FxSlot
+    {
+        std::unique_ptr<IDspNode> node;
+    };
+
+    std::array<FxSlot, 5> fxSlots_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };

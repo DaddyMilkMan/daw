@@ -31,10 +31,26 @@ void Track::prepareToPlay(int blockSize, double sampleRate)
     // No allocations will happen in processBlock() after this
     trackBuffer.setSize(2, blockSize, false, true, true);
     trackBuffer.clear();
+
+    // W11.0: Prepare all FX nodes
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node)
+            slot.node->prepareToPlay(sampleRate, blockSize, 2);  // Stereo
+    }
+
+    DBG("Track: Prepared (FX slots: " + juce::String(fxSlots_.size()) + ")");
 }
 
 void Track::releaseResources()
 {
+    // W11.0: Release FX nodes
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node)
+            slot.node->releaseResources();
+    }
+
     trackBuffer.setSize(0, 0);
 }
 
@@ -70,6 +86,73 @@ void Track::clearClips()
 }
 
 //==============================================================================
+// W11.0: FX Chain Management
+//==============================================================================
+
+void Track::setFxNode(int slotIndex, std::unique_ptr<IDspNode> node)
+{
+    JUCE_ASSERT_MESSAGE_THREAD;  // W11.0: Enforce message-thread-only access
+
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(fxSlots_.size()))
+    {
+        DBG("Track: Invalid FX slot index " + juce::String(slotIndex));
+        return;
+    }
+
+    // Prepare node if track is already prepared
+    if (node && currentSampleRate > 0)
+        node->prepareToPlay(currentSampleRate, currentBlockSize, 2);
+
+    // Replace existing node (unique_ptr handles cleanup)
+    fxSlots_[static_cast<size_t>(slotIndex)].node = std::move(node);
+
+    DBG("Track: Set FX in slot " + juce::String(slotIndex));
+}
+
+void Track::clearFxNode(int slotIndex)
+{
+    JUCE_ASSERT_MESSAGE_THREAD;
+
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(fxSlots_.size()))
+    {
+        DBG("Track: Invalid FX slot index " + juce::String(slotIndex));
+        return;
+    }
+
+    fxSlots_[static_cast<size_t>(slotIndex)].node.reset();
+
+    DBG("Track: Cleared FX from slot " + juce::String(slotIndex));
+}
+
+IDspNode* Track::getFxNode(int slotIndex)
+{
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(fxSlots_.size()))
+        return nullptr;
+
+    return fxSlots_[static_cast<size_t>(slotIndex)].node.get();
+}
+
+void Track::setFxBypassed(int slotIndex, bool shouldBypass)
+{
+    JUCE_ASSERT_MESSAGE_THREAD;
+
+    if (auto* node = getFxNode(slotIndex))
+        node->setBypassed(shouldBypass);
+}
+
+bool Track::isFxBypassed(int slotIndex) const
+{
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(fxSlots_.size()))
+        return true;  // Empty slots considered bypassed
+
+    const auto& slot = fxSlots_[static_cast<size_t>(slotIndex)];
+    if (!slot.node)
+        return true;
+
+    return slot.node->isBypassed();
+}
+
+//==============================================================================
 // Audio Processing (AUDIO THREAD)
 //==============================================================================
 
@@ -78,6 +161,12 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
                          juce::int64 transportPosition)
 {
     // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
+    //
+    // W11.0 Processing Flow:
+    // 1. Clear trackBuffer
+    // 2. Render clips into trackBuffer (W13)
+    // 3. Process trackBuffer through FX chain (W11.0)
+    // 4. Sum trackBuffer into mixBuffer
     //
     // NEVER:
     // - Allocate memory
@@ -90,9 +179,11 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
 
     // Get track state (constant per block)
     const float trackGain = gain_.load(std::memory_order_relaxed);
-    const float trackPan = pan_.load(std::memory_order_relaxed);
 
-    // W13: Render clips that intersect this block
+    // W11.0: Clear track buffer (prepare for clip rendering)
+    trackBuffer.clear(0, numSamples);
+
+    // W13: Render clips into trackBuffer (NOT mixBuffer anymore)
     const juce::int64 blockEnd = transportPosition + numSamples;
 
     for (const auto& clip : clips_)
@@ -136,16 +227,16 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
         const int fadeInEnd = clip.fadeInSamples;
         const int fadeOutStart = static_cast<int>(clip.lengthSamples - clip.fadeOutSamples);
 
-        // Render clip with fades
-        const int numMixChannels = mixBuffer.getNumChannels();
+        // Render clip with fades into trackBuffer
+        const int numTrackChannels = trackBuffer.getNumChannels();
         const int numClipChannels = clip.pcm->getNumChannels();
 
-        for (int ch = 0; ch < numMixChannels; ++ch)
+        for (int ch = 0; ch < numTrackChannels; ++ch)
         {
-            // Map mix channel to clip channel (mono clips copy to all channels)
+            // Map track channel to clip channel (mono clips copy to all channels)
             const int clipCh = juce::jmin(ch, numClipChannels - 1);
             const float* clipData = clip.pcm->getReadPointer(clipCh, static_cast<int>(srcStart));
-            float* mixData = mixBuffer.getWritePointer(ch, dstStart);
+            float* trackData = trackBuffer.getWritePointer(ch, dstStart);
 
             // Three-zone rendering: fade-in, steady, fade-out
             int pos = 0;
@@ -164,7 +255,7 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
                     // Linear ramp gain
                     const float gainIncrement = (endGain - startGain) * baseGain / fadeLen;
                     for (int i = 0; i < fadeLen; ++i)
-                        mixData[pos + i] += clipData[pos + i] * (baseGain * startGain + gainIncrement * i);
+                        trackData[pos + i] += clipData[pos + i] * (baseGain * startGain + gainIncrement * i);
 
                     pos += fadeLen;
                 }
@@ -178,7 +269,7 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
             if (steadyLen > 0 && pos < srcLength)
             {
                 const int actualSteadyLen = juce::jmin(steadyLen, srcLength - pos);
-                juce::FloatVectorOperations::addWithMultiply(mixData + pos,
+                juce::FloatVectorOperations::addWithMultiply(trackData + pos,
                                                               clipData + pos,
                                                               baseGain,
                                                               actualSteadyLen);
@@ -198,7 +289,7 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
                     // Linear ramp gain
                     const float gainIncrement = (endGain - startGain) * baseGain / fadeLen;
                     for (int i = 0; i < fadeLen; ++i)
-                        mixData[pos + i] += clipData[pos + i] * (baseGain * startGain + gainIncrement * i);
+                        trackData[pos + i] += clipData[pos + i] * (baseGain * startGain + gainIncrement * i);
 
                     pos += fadeLen;
                 }
@@ -206,6 +297,25 @@ void Track::processBlock(juce::AudioBuffer<float>& mixBuffer,
         }
     }
 
-    // Track pan is applied at master level (Engine), not per-track in W10/W13
-    // This allows efficient stereo panning in the final mix
+    // W11.0: Process trackBuffer through FX chain
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node && !slot.node->isBypassed())
+            slot.node->processBlock(trackBuffer, numSamples);
+    }
+
+    // W11.0: Sum trackBuffer into mixBuffer (additive mix)
+    const int numMixChannels = mixBuffer.getNumChannels();
+    const int numTrackChannels = trackBuffer.getNumChannels();
+
+    for (int ch = 0; ch < numMixChannels; ++ch)
+    {
+        // Map track channel to mix channel (mono tracks copy to stereo)
+        const int trackCh = juce::jmin(ch, numTrackChannels - 1);
+        const float* trackData = trackBuffer.getReadPointer(trackCh);
+        float* mixData = mixBuffer.getWritePointer(ch);
+
+        // Additive sum into mix
+        juce::FloatVectorOperations::add(mixData, trackData, numSamples);
+    }
 }

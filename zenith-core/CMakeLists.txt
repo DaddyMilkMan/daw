@@ -135,6 +135,9 @@ target_sources(ZenithDAW PRIVATE
     # W13: Clip rendering (requires W10, cross-platform)
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Clip.cpp>
 
+    # W11.0: Plugin chain scaffolding (requires W10, cross-platform)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/GainPanNode.cpp>
+
     # W13.1: Debug tests for clip rendering (DEBUG + Phase1 only)
     $<$<AND:$<CONFIG:Debug>,$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>>:Source/tests/ClipTrackTests.cpp>
 

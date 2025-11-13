@@ -156,6 +156,43 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // W11.0: FX Chain Management (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Get number of FX slots per track (fixed at 5)
+     */
+    static constexpr int getNumFxSlots() { return zenith::Track::getNumFxSlots(); }
+
+    /**
+     * @brief Set GainPanNode in FX slot for debugging/testing
+     * @param trackIndex Track index
+     * @param slotIndex FX slot index [0..4]
+     * @param gain Gain [0..2], default 1.0
+     * @param pan Pan [-1..1], default 0.0 (center)
+     *
+     * @note Convenience method for testing W11.0 plugin chain
+     * @note For VST3, use setFxNode() with VST3 instance
+     */
+    void setTrackGainFx(int trackIndex, int slotIndex, float gain, float pan);
+
+    /**
+     * @brief Set FX bypass state
+     * @param trackIndex Track index
+     * @param slotIndex FX slot index [0..4]
+     * @param shouldBypass true = bypass, false = active
+     */
+    void setTrackFxBypassed(int trackIndex, int slotIndex, bool shouldBypass);
+
+    /**
+     * @brief Check if FX is bypassed
+     * @param trackIndex Track index
+     * @param slotIndex FX slot index [0..4]
+     * @return true if bypassed or slot is empty
+     */
+    bool isTrackFxBypassed(int trackIndex, int slotIndex) const;
+
+    //==========================================================================
     // Audio Device Management
     //==========================================================================
 

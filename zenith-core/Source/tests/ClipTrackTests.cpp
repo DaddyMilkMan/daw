@@ -19,6 +19,7 @@
 #include <JuceHeader.h>
 #include "../engine/Track.h"
 #include "../engine/Clip.h"
+#include "../engine/nodes/GainPanNode.h"
 
 using namespace zenith;
 
@@ -48,6 +49,10 @@ public:
         // Test 3: Fade-in and fade-out sanity
         beginTest("Test 3: Fade-in and fade-out rendering");
         testFadeRendering();
+
+        // Test 4: W11.0 FX chain (GainPanNode with bypass)
+        beginTest("Test 4: FX chain applies gain and bypass");
+        testFxChainGainAndBypass();
     }
 
 private:
@@ -233,6 +238,112 @@ private:
         }
 
         DBG("Test 3 PASS: Fades rendered correctly");
+    }
+
+    //==========================================================================
+    // Test Case 4: W11.0 FX Chain (GainPanNode + Bypass)
+    //==========================================================================
+
+    void testFxChainGainAndBypass()
+    {
+        const int clipLength = 100;
+        const int blockSize = 64;
+        const double sampleRate = 48000.0;
+
+        // Create synthetic PCM: constant 0.5 (so gain effects are clear)
+        auto pcmBuffer = std::make_shared<juce::AudioBuffer<float>>(1, clipLength);
+        pcmBuffer->clear();
+        juce::FloatVectorOperations::fill(pcmBuffer->getWritePointer(0), 0.5f, clipLength);
+
+        // Create clip at timeline position 0
+        Clip clip;
+        clip.pcm = pcmBuffer;
+        clip.startSample = 0;
+        clip.lengthSamples = clipLength;
+        clip.srcOffset = 0;
+        clip.gain = 1.0f;
+        clip.fadeInSamples = 0;   // No fades for this test
+        clip.fadeOutSamples = 0;
+
+        expectTrue(clip.isValid(), "Clip should be valid");
+
+        // Create track and add clip
+        Track track;
+        track.prepareToPlay(blockSize, sampleRate);
+        track.addClip(clip);
+
+        juce::AudioBuffer<float> mixBuffer(2, blockSize);
+
+        // =====================================================
+        // Part A: Render WITHOUT FX (baseline)
+        // =====================================================
+
+        mixBuffer.clear();
+        track.processBlock(mixBuffer, blockSize, 0);
+
+        const float* outL = mixBuffer.getReadPointer(0);
+        float peakWithoutFx = juce::FloatVectorOperations::findMaximum(outL, blockSize);
+
+        expectWithinAbsoluteError(peakWithoutFx, 0.5f, 0.01f,
+                                 "Peak without FX should be ~0.5");
+
+        DBG("Test 4a PASS: Without FX, peak = " + juce::String(peakWithoutFx, 3));
+
+        // =====================================================
+        // Part B: Add GainPanNode with gain=2.0 in slot 0
+        // =====================================================
+
+        auto gainNode = std::make_unique<GainPanNode>();
+        gainNode->setGain(2.0f);
+        gainNode->setPan(0.0f);  // Center
+        track.setFxNode(0, std::move(gainNode));
+
+        mixBuffer.clear();
+        track.processBlock(mixBuffer, blockSize, 0);
+
+        outL = mixBuffer.getReadPointer(0);
+        float peakWithGain = juce::FloatVectorOperations::findMaximum(outL, blockSize);
+
+        expectWithinAbsoluteError(peakWithGain, 1.0f, 0.01f,
+                                 "Peak with gain=2.0 should be ~1.0 (0.5 * 2.0)");
+
+        DBG("Test 4b PASS: With gain=2.0, peak = " + juce::String(peakWithGain, 3));
+
+        // =====================================================
+        // Part C: Bypass FX (should return to ~0.5)
+        // =====================================================
+
+        track.setFxBypassed(0, true);
+
+        mixBuffer.clear();
+        track.processBlock(mixBuffer, blockSize, 0);
+
+        outL = mixBuffer.getReadPointer(0);
+        float peakBypassed = juce::FloatVectorOperations::findMaximum(outL, blockSize);
+
+        expectWithinAbsoluteError(peakBypassed, 0.5f, 0.01f,
+                                 "Peak with FX bypassed should be ~0.5");
+
+        DBG("Test 4c PASS: With FX bypassed, peak = " + juce::String(peakBypassed, 3));
+
+        // =====================================================
+        // Part D: Re-enable FX (should return to ~1.0)
+        // =====================================================
+
+        track.setFxBypassed(0, false);
+
+        mixBuffer.clear();
+        track.processBlock(mixBuffer, blockSize, 0);
+
+        outL = mixBuffer.getReadPointer(0);
+        float peakReEnabled = juce::FloatVectorOperations::findMaximum(outL, blockSize);
+
+        expectWithinAbsoluteError(peakReEnabled, 1.0f, 0.01f,
+                                 "Peak with FX re-enabled should be ~1.0");
+
+        DBG("Test 4d PASS: With FX re-enabled, peak = " + juce::String(peakReEnabled, 3));
+
+        DBG("Test 4 PASS: FX chain applies gain and bypass correctly");
     }
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipTrackTests)
