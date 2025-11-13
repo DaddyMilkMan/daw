@@ -81,7 +81,8 @@ void Track::releaseResources()
     }
 }
 
-void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
+// Phase 1.3: Process with explicit playhead position
+void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
 {
     // Clear the buffer first
     bufferToFill.clearActiveBufferRegion();
@@ -99,13 +100,22 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 
         for (auto& clip : clips)
         {
-            if (clip != nullptr && clip->isActive())
+            if (clip != nullptr && clip->isPlaying() && clip->isActiveAt(playheadSamples))
             {
                 // Phase 1: Use pre-allocated clipBuffer_ to avoid RT allocations
                 clipBuffer_.clear();
 
                 juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, bufferToFill.numSamples);
-                clip->getNextAudioBlock(clipInfo);
+
+                // Phase 1.3: Pass playhead to clip for timing
+                if (clip->getType() == Clip::Type::Audio)
+                {
+                    clip->processAudioClip(clipInfo, playheadSamples);
+                }
+                else if (clip->getType() == Clip::Type::MIDI)
+                {
+                    clip->processMidiClip(clipInfo, playheadSamples);
+                }
 
                 // Mix clip into main buffer
                 const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
@@ -140,6 +150,12 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 
     // Update level meters
     updateLevelMeters(localBuffer, bufferToFill.numSamples);
+}
+
+// Legacy overload: uses default playhead of 0
+void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
+{
+    getNextAudioBlock(bufferToFill, 0);
 }
 
 //==============================================================================

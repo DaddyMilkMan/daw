@@ -70,12 +70,21 @@ private:
     juce::TextButton stopButton;
     juce::TextButton recordButton;
 
+    // Phase 1: Import Audio button
+    juce::TextButton importButton;
+
     // Audio device info
     juce::Label audioDeviceLabel;
 
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    //==========================================================================
+    // Phase 1: Audio import
+    //==========================================================================
+
+    void handleImportAudio();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

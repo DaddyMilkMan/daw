@@ -16,6 +16,7 @@
 
 #include "Track.h"
 #include "Clip.h"
+#include "AudioFilePool.h"
 
 namespace zenith {
 
@@ -95,6 +96,16 @@ void Track::Clip::setPlaying(bool shouldPlay)
     playing.store(shouldPlay);
 }
 
+// Phase 1.3: Check if active at given playhead position
+bool Track::Clip::isActiveAt(int64_t playheadSamples) const
+{
+    const int64_t start = startPosition.load();
+    const int64_t end = start + clipLength.load();
+
+    return playheadSamples >= start && playheadSamples < end;
+}
+
+// Legacy: Check if active at stored transport position
 bool Track::Clip::isActive() const
 {
     const int64_t pos = transportPosition.load();
@@ -105,13 +116,46 @@ bool Track::Clip::isActive() const
 }
 
 //==============================================================================
+// Phase 1.2: Set audio file using AudioFilePool (preferred method)
+void Track::Clip::setAudioFileFromPool(const juce::File& file, AudioFilePool& pool)
+{
+    const juce::ScopedLock sl(audioLock);
+
+    audioFile = file;
+
+    // Load file through pool (message thread, does I/O)
+    juce::String error;
+    auto handle = pool.loadFile(file, error);
+
+    if (handle)
+    {
+        // Store handle (shared_ptr is RT-safe for read)
+        audioFileHandle_ = handle;
+
+        // Set clip length to match audio file
+        clipLength.store(handle->lengthInSamples);
+
+        DBG("Clip: Loaded " + file.getFileName() +
+            " (" + juce::String(handle->lengthInSamples) + " samples)");
+    }
+    else
+    {
+        DBG("Clip: Failed to load " + file.getFileName() + ": " + error);
+        audioFileHandle_ = nullptr;
+    }
+
+    // Clear legacy audioSource (unused)
+    audioSource.reset();
+}
+
+// Legacy method (kept for backward compatibility, but not recommended)
 void Track::Clip::setAudioFile(const juce::File& file)
 {
     const juce::ScopedLock sl(audioLock);
 
     audioFile = file;
 
-    // Load the audio file
+    // Load the audio file (legacy path - loads directly without pool)
     juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
 
@@ -273,14 +317,35 @@ void Track::Clip::loadState(const juce::ValueTree& state)
 }
 
 //==============================================================================
-void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill)
+// Phase 1.3: Process audio clip with explicit playhead position
+void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
 {
-    const juce::ScopedLock sl(audioLock);
+    // Phase 1.2: Use AudioFilePool handle if available (RT-safe)
+    // Otherwise fall back to legacy audioBuffer
 
-    if (audioBuffer.getNumSamples() == 0)
+    // Get audio source buffer (RT-safe - no locks needed for shared_ptr read)
+    const juce::AudioBuffer<float>* sourceBuffer = nullptr;
+
+    if (audioFileHandle_)
+    {
+        // Cast type-erased handle back to AudioFileHandle
+        auto handle = std::static_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
+        sourceBuffer = &handle->buffer;
+    }
+    else
+    {
+        // Fall back to legacy buffer (for setAudioBuffer() method)
+        const juce::ScopedLock sl(audioLock);
+        if (audioBuffer.getNumSamples() > 0)
+        {
+            sourceBuffer = &audioBuffer;
+        }
+    }
+
+    if (!sourceBuffer || sourceBuffer->getNumSamples() == 0)
         return;
 
-    const int64_t transportPos = transportPosition.load();
+    const int64_t transportPos = playheadSamples;  // Use passed-in playhead
     const int64_t clipStart = startPosition.load();
     const int64_t clipLen = clipLength.load();
     const int64_t clipOff = clipOffset.load();
@@ -295,15 +360,15 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
     int64_t sourcePosition = positionInClip + clipOff;
 
     // Handle looping
-    if (looping.load() && sourcePosition >= audioBuffer.getNumSamples())
+    if (looping.load() && sourcePosition >= sourceBuffer->getNumSamples())
     {
-        sourcePosition = sourcePosition % audioBuffer.getNumSamples();
+        sourcePosition = sourcePosition % sourceBuffer->getNumSamples();
     }
 
     // Copy audio from buffer
     const int numSamplesToCopy = juce::jmin(
         bufferToFill.numSamples,
-        static_cast<int>(audioBuffer.getNumSamples() - sourcePosition),
+        static_cast<int>(sourceBuffer->getNumSamples() - sourcePosition),
         static_cast<int>(clipLen - positionInClip));
 
     if (numSamplesToCopy <= 0)
@@ -311,12 +376,12 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
 
     const float clipGain = gain.load();
 
-    for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(), audioBuffer.getNumChannels()); ++ch)
+    for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(), sourceBuffer->getNumChannels()); ++ch)
     {
         bufferToFill.buffer->copyFrom(
             ch,
             bufferToFill.startSample,
-            audioBuffer,
+            *sourceBuffer,
             ch,
             static_cast<int>(sourcePosition),
             numSamplesToCopy);
@@ -334,14 +399,28 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
     }
 }
 
-void Track::Clip::processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill)
+// Legacy overload: uses internal transportPosition
+void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill)
 {
+    processAudioClip(bufferToFill, transportPosition.load());
+}
+
+void Track::Clip::processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
+{
+    juce::ignoreUnused(playheadSamples);
+
     // MIDI clips don't produce audio directly
     // They would need to be processed by an instrument plugin
     // For now, just clear the buffer
     bufferToFill.clearActiveBufferRegion();
 
     // TODO(Phase 2: plugin hosting) - Send MIDI events to parent track's instrument plugins
+}
+
+// Legacy overload: uses internal transportPosition
+void Track::Clip::processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill)
+{
+    processMidiClip(bufferToFill, transportPosition.load());
 }
 
 float Track::Clip::calculateFadeMultiplier(int64_t positionInClip) const

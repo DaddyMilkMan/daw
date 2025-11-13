@@ -408,6 +408,9 @@ void Engine::processAudio(
 
     // Phase 1: Process each track and mix into output
     // Using pre-allocated mixBuffer_ to avoid RT allocations
+    // Phase 1.3: Pass current playhead position to tracks
+    const juce::int64 currentPlayhead = playheadSamples_.load();
+
     for (const auto& track : tracks_)
     {
         if (track == nullptr)
@@ -419,8 +422,8 @@ void Engine::processAudio(
         // Prepare channel info for track processing
         juce::AudioSourceChannelInfo channelInfo(&mixBuffer_, 0, numSamples);
 
-        // Get audio from track (processes all clips, plugins, mixer)
-        track->getNextAudioBlock(channelInfo);
+        // Phase 1.3: Get audio from track with explicit playhead position
+        track->getNextAudioBlock(channelInfo, currentPlayhead);
 
         // Mix track output into main output buffer
         const int channelsToMix = juce::jmin(numOutputChannels, mixBuffer_.getNumChannels());

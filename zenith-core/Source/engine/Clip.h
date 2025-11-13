@@ -83,11 +83,21 @@ public:
     void setPlaying(bool shouldPlay);
     bool isPlaying() const { return playing.load(); }
 
-    // Check if clip is active at current transport position
+    // Check if clip is active at given playhead position (Phase 1.3: uses Engine playhead)
+    bool isActiveAt(int64_t playheadSamples) const;
+
+    // Legacy: check if clip is active at stored transport position
     bool isActive() const;
 
     //==============================================================================
     // Audio clip specific
+
+    // Phase 1.2: Use AudioFilePool for RT-safe file access
+    // Forward declaration
+    class AudioFilePool;
+    void setAudioFileFromPool(const juce::File& file, AudioFilePool& pool);
+
+    // Legacy method (deprecated - loads file directly without pool)
     void setAudioFile(const juce::File& file);
     juce::File getAudioFile() const { return audioFile; }
 
@@ -152,9 +162,12 @@ private:
     //==============================================================================
     // Audio data
     juce::File audioFile;
-    juce::AudioBuffer<float> audioBuffer;
-    std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
+    juce::AudioBuffer<float> audioBuffer;  // Legacy: for setAudioBuffer()
+    std::unique_ptr<juce::AudioFormatReaderSource> audioSource;  // Unused legacy
     juce::CriticalSection audioLock;
+
+    // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
+    std::shared_ptr<const void> audioFileHandle_;  // Type-erased to avoid forward decl issues
 
     //==============================================================================
     // MIDI data
@@ -168,8 +181,14 @@ private:
 
     //==============================================================================
     // Helper methods
+    // Phase 1.3: Process with explicit playhead position
+    void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+
+    // Legacy overloads (use internal transportPosition)
     void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill);
     void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill);
+
     float calculateFadeMultiplier(int64_t positionInClip) const;
 
     //==============================================================================
