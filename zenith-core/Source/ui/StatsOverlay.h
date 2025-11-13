@@ -21,6 +21,9 @@
 #include <array>
 #include <cstddef>
 
+// Forward declaration
+class Engine;
+
 //==============================================================================
 /**
  * @class StatsOverlay
@@ -36,7 +39,7 @@ class StatsOverlay : public juce::Component,
 {
 public:
     //==========================================================================
-    StatsOverlay();
+    explicit StatsOverlay(Engine& engine);
     ~StatsOverlay() override = default;
 
     //==========================================================================
@@ -133,6 +136,12 @@ private:
 
     // Pre-allocated strings (updated in timerCallback, not paint)
     juce::String cachedStatsText;
+
+    //==========================================================================
+    // W13.1 Debug HUD: Engine reference for audio stats
+    //==========================================================================
+
+    Engine& engine_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StatsOverlay)
 };

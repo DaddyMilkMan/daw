@@ -92,7 +92,7 @@ MainComponent::MainComponent(Engine& eng)
 
     #if JUCE_DEBUG
         // W6: Create stats overlay (DEBUG-only)
-        statsOverlay = std::make_unique<StatsOverlay>();
+        statsOverlay = std::make_unique<StatsOverlay>(engine);
         addChildComponent(statsOverlay.get());
 
         // W6.1: Load persisted HUD visibility (default ON if not set)

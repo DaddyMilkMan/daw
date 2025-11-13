@@ -313,6 +313,13 @@ void Engine::audioDeviceIOCallbackWithContext(
         // Mono output
         const float* inL = mixBuffer_.getReadPointer(0);
         juce::FloatVectorOperations::copyWithMultiply(outputChannelData[0], inL, gL, numSamples);
+
+        #if JUCE_DEBUG
+            // Compute peak for debug HUD
+            lastPeakL_.store(juce::FloatVectorOperations::findMaximum(outputChannelData[0], numSamples),
+                            std::memory_order_relaxed);
+            lastPeakR_.store(lastPeakL_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        #endif
     }
     else if (numOutputChannels >= 2)
     {
@@ -322,6 +329,14 @@ void Engine::audioDeviceIOCallbackWithContext(
 
         juce::FloatVectorOperations::copyWithMultiply(outputChannelData[0], inL, gL, numSamples);
         juce::FloatVectorOperations::copyWithMultiply(outputChannelData[1], inR, gR, numSamples);
+
+        #if JUCE_DEBUG
+            // Compute peaks for debug HUD (absolute max per channel)
+            lastPeakL_.store(std::abs(juce::FloatVectorOperations::findMinAndMax(outputChannelData[0], numSamples).getEnd()),
+                            std::memory_order_relaxed);
+            lastPeakR_.store(std::abs(juce::FloatVectorOperations::findMinAndMax(outputChannelData[1], numSamples).getEnd()),
+                            std::memory_order_relaxed);
+        #endif
 
         // Clear any extra channels
         for (int ch = 2; ch < numOutputChannels; ++ch)

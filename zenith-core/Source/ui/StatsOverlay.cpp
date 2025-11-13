@@ -5,9 +5,15 @@
 
 #include "StatsOverlay.h"
 #include "ZenithLookAndFeel.h"
+#include "../../include/Engine.h"
+
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    #include "../engine/Track.h"
+#endif
 
 //==============================================================================
-StatsOverlay::StatsOverlay()
+StatsOverlay::StatsOverlay(Engine& engine)
+    : engine_(engine)
 {
     // Start timer at ~15 Hz (66ms) for stat updates
     startTimer(66);
@@ -16,7 +22,7 @@ StatsOverlay::StatsOverlay()
     cachedStatsText = "Stats Overlay\nInitializing...";
 
     // Set initial size (will be repositioned by MainComponent)
-    setSize(220, 140);
+    setSize(260, 200);  // Increased height for audio stats
 }
 
 //==============================================================================
@@ -115,6 +121,8 @@ void StatsOverlay::timerCallback()
     {
         // Build stats text (allocates String, but only at 15 Hz, not in paint)
         juce::String text;
+
+        // Frame stats
         text << "Paints/sec: " << displayPaintsPerSec << "\n";
         text << "Frame: avg " << juce::String(displayAvgMs, 2) << "ms"
              << " / min " << juce::String(displayMinMs, 2) << "ms"
@@ -122,6 +130,38 @@ void StatsOverlay::timerCallback()
         text << "\n";
         text << "TrackView: " << juce::String(lastTrackViewPaintMs, 2) << "ms\n";
         text << "Tracks: " << lastVisibleTracks << " / Clips: " << lastVisibleClips;
+
+        #if ZENITH_ENABLE_PHASE1_AUDIO
+            // Audio engine stats (W13.1 Debug HUD)
+            text << "\n\n--- AUDIO ENGINE ---\n";
+
+            // Transport position
+            const juce::int64 transportSamples = engine_.getTransportSamples();
+            const double transportSeconds = transportSamples / juce::jmax(1.0, engine_.getSampleRate());
+            text << "Transport: " << juce::String(transportSamples) << " samples\n";
+            text << "           " << juce::String(transportSeconds, 2) << " sec\n";
+
+            // Track/clip counts
+            const int numTracks = engine_.getNumTracks();
+            int totalClips = 0;
+            for (int i = 0; i < numTracks; ++i)
+            {
+                if (auto* track = engine_.getTrack(i))
+                    totalClips += track->getNumClips();
+            }
+            text << "Tracks: " << numTracks << " / Total clips: " << totalClips << "\n";
+
+            #if JUCE_DEBUG
+                // Peak meters (only in debug builds)
+                const float peakL = engine_.getLastPeakL();
+                const float peakR = engine_.getLastPeakR();
+                const float peakLdB = peakL > 0.0f ? 20.0f * std::log10(peakL) : -96.0f;
+                const float peakRdB = peakR > 0.0f ? 20.0f * std::log10(peakR) : -96.0f;
+
+                text << "Peak L: " << juce::String(peakLdB, 1) << " dB\n";
+                text << "Peak R: " << juce::String(peakRdB, 1) << " dB";
+            #endif
+        #endif
 
         cachedStatsText = text;
         repaint();

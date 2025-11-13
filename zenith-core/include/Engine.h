@@ -185,6 +185,22 @@ public:
      */
     double getCpuUsage() const;
 
+#if JUCE_DEBUG && ZENITH_ENABLE_PHASE1_AUDIO
+    //==========================================================================
+    // Debug HUD: Peak Meters (MESSAGE THREAD reads, AUDIO THREAD writes)
+    //==========================================================================
+
+    /**
+     * @brief Get last peak level for left channel [0..1]
+     */
+    float getLastPeakL() const { return lastPeakL_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Get last peak level for right channel [0..1]
+     */
+    float getLastPeakR() const { return lastPeakR_.load(std::memory_order_relaxed); }
+#endif
+
     /**
      * @brief Get audio device manager (for UI configuration)
      * @return Reference to AudioDeviceManager
@@ -291,6 +307,12 @@ private:
 
     // Track container (MESSAGE THREAD access only)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    #if JUCE_DEBUG
+        // Debug HUD: Peak meters (AUDIO THREAD writes, MESSAGE THREAD reads)
+        std::atomic<float> lastPeakL_{0.0f};
+        std::atomic<float> lastPeakR_{0.0f};
+    #endif
 #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
