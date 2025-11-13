@@ -44,6 +44,99 @@ const ClipDef* Track::findClipDef(int64_t clipId) const noexcept
 }
 
 //==============================================================================
+// FX Chain Management (MESSAGE THREAD)
+//==============================================================================
+
+void Track::setFxNode(int slotIndex, std::unique_ptr<IDspNode> node)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    jassert(slotIndex >= 0 && slotIndex < kMaxFxSlots);
+    if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
+        return;
+
+    fxSlots_[slotIndex].node = std::move(node);
+#else
+    juce::ignoreUnused(slotIndex, node);
+#endif
+}
+
+void Track::clearFxNode(int slotIndex)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    jassert(slotIndex >= 0 && slotIndex < kMaxFxSlots);
+    if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
+        return;
+
+    fxSlots_[slotIndex].node.reset();
+#else
+    juce::ignoreUnused(slotIndex);
+#endif
+}
+
+void Track::setFxBypassed(int slotIndex, bool bypassed)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    jassert(slotIndex >= 0 && slotIndex < kMaxFxSlots);
+    if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
+        return;
+
+    if (fxSlots_[slotIndex].node)
+        fxSlots_[slotIndex].node->setBypassed(bypassed);
+#else
+    juce::ignoreUnused(slotIndex, bypassed);
+#endif
+}
+
+bool Track::isFxBypassed(int slotIndex) const noexcept
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    if (slotIndex < 0 || slotIndex >= kMaxFxSlots)
+        return true;
+
+    const auto& slot = fxSlots_[slotIndex];
+    return !slot.node || slot.node->isBypassed();
+#else
+    juce::ignoreUnused(slotIndex);
+    return true;
+#endif
+}
+
+//==============================================================================
+// Prepare / Release (MESSAGE THREAD)
+//==============================================================================
+
+void Track::prepareToPlay(double sampleRate, int blockSize)
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // Allocate track buffer (stereo for now)
+    trackBuffer_.setSize(2, blockSize, false, true, false);
+
+    // Prepare all FX nodes
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node)
+            slot.node->prepareToPlay(sampleRate, blockSize, trackBuffer_.getNumChannels());
+    }
+#else
+    juce::ignoreUnused(sampleRate, blockSize);
+#endif
+}
+
+void Track::releaseResources()
+{
+#if ZENITH_ENABLE_PHASE1_AUDIO
+    // Release all FX nodes
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node)
+            slot.node->releaseResources();
+    }
+
+    trackBuffer_.setSize(0, 0);
+#endif
+}
+
+//==============================================================================
 // Transport Event Handling (AUDIO THREAD)
 //==============================================================================
 
@@ -140,8 +233,12 @@ void Track::processSegment(juce::AudioBuffer<float>& mixBuffer,
     juce::ignoreUnused(timelineSample);
 
 #if ZENITH_ENABLE_PHASE1_AUDIO
-    const int outChans = mixBuffer.getNumChannels();
+    // Step 1: Clear track buffer for this segment
+    trackBuffer_.clear(0, segmentLength);
 
+    const int trackChans = trackBuffer_.getNumChannels();
+
+    // Step 2: Render all clips into track buffer
     for (auto& v : voices_)
     {
         if (!v.isActive())
@@ -169,8 +266,8 @@ void Track::processSegment(juce::AudioBuffer<float>& mixBuffer,
             continue;
         }
 
-        // Render each channel with fades
-        for (int ch = 0; ch < outChans; ++ch)
+        // Render each channel with fades into track buffer
+        for (int ch = 0; ch < trackChans; ++ch)
         {
             const int srcCh = juce::jmin(ch, clipChans - 1);
             const int srcSample = static_cast<int>(clip.srcOffset + v.clipPos);
@@ -179,7 +276,7 @@ void Track::processSegment(juce::AudioBuffer<float>& mixBuffer,
                 continue; // Safety check
 
             const float* src = pcm->getReadPointer(srcCh, srcSample);
-            float* dst = mixBuffer.getWritePointer(ch, segmentOffset);
+            float* dst = trackBuffer_.getWritePointer(ch, 0); // Write to start of track buffer
 
             // Apply fades and mix
             for (int i = 0; i < samplesToRead; ++i)
@@ -204,7 +301,7 @@ void Track::processSegment(juce::AudioBuffer<float>& mixBuffer,
                         v.fadeOutDone++;
                 }
 
-                dst[i] += src[i] * gain; // Additive mix
+                dst[i] += src[i] * gain; // Additive mix into track buffer
             }
         }
 
@@ -215,6 +312,26 @@ void Track::processSegment(juce::AudioBuffer<float>& mixBuffer,
         {
             v.def = nullptr; // Deactivate voice
         }
+    }
+
+    // Step 3: Run FX chain on track buffer
+    for (auto& slot : fxSlots_)
+    {
+        if (slot.node && !slot.node->isBypassed())
+        {
+            slot.node->processBlock(trackBuffer_, segmentLength);
+        }
+    }
+
+    // Step 4: Mix track buffer into mix buffer
+    const int outChans = mixBuffer.getNumChannels();
+    for (int ch = 0; ch < outChans; ++ch)
+    {
+        const int srcCh = juce::jmin(ch, trackChans - 1);
+        const float* src = trackBuffer_.getReadPointer(srcCh, 0);
+        float* dst = mixBuffer.getWritePointer(ch, segmentOffset);
+
+        juce::FloatVectorOperations::add(dst, src, segmentLength);
     }
 #else
     juce::ignoreUnused(mixBuffer, segmentOffset, segmentLength);

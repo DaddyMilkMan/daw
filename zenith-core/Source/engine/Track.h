@@ -10,9 +10,11 @@
 
 #include <JuceHeader.h>
 #include "Clip.h"
+#include "../../include/engine/IDspNode.h"
 #include <vector>
 #include <array>
 #include <cstdint>
+#include <memory>
 
 // Forward declarations
 class Engine;
@@ -122,6 +124,75 @@ public:
     const ClipDef* findClipDef(int64_t clipId) const noexcept;
 
     //==========================================================================
+    // FX Chain Management (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Get number of FX slots per track
+     * @return Number of FX slots (fixed at 5 for Phase 1)
+     */
+    int getNumFxSlots() const noexcept { return kMaxFxSlots; }
+
+    /**
+     * @brief Set FX node in slot
+     * @param slotIndex Slot index [0..4]
+     * @param node DSP node (takes ownership), or nullptr to clear
+     *
+     * MUST be called when playback is stopped
+     * MESSAGE THREAD only
+     */
+    void setFxNode(int slotIndex, std::unique_ptr<IDspNode> node);
+
+    /**
+     * @brief Clear FX node from slot
+     * @param slotIndex Slot index [0..4]
+     *
+     * MUST be called when playback is stopped
+     * MESSAGE THREAD only
+     */
+    void clearFxNode(int slotIndex);
+
+    /**
+     * @brief Set FX bypass state
+     * @param slotIndex Slot index [0..4]
+     * @param bypassed True to bypass
+     *
+     * MESSAGE THREAD only
+     */
+    void setFxBypassed(int slotIndex, bool bypassed);
+
+    /**
+     * @brief Get FX bypass state
+     * @param slotIndex Slot index [0..4]
+     * @return True if bypassed or slot is empty
+     *
+     * Safe to call from any thread
+     */
+    bool isFxBypassed(int slotIndex) const noexcept;
+
+    //==========================================================================
+    // Prepare / Release (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Prepare track for playback
+     * @param sampleRate Sample rate in Hz
+     * @param blockSize Maximum block size
+     *
+     * MESSAGE THREAD only
+     * Allocates trackBuffer_ and calls prepareToPlay on all FX nodes
+     */
+    void prepareToPlay(double sampleRate, int blockSize);
+
+    /**
+     * @brief Release track resources
+     *
+     * MESSAGE THREAD only
+     * Calls releaseResources on all FX nodes
+     */
+    void releaseResources();
+
+    //==========================================================================
     // Transport Event Handling (AUDIO THREAD)
     //==========================================================================
 
@@ -208,6 +279,17 @@ private:
     /// Active voices (AUDIO THREAD only)
     static constexpr int kMaxVoicesPerTrack = 32;
     std::array<ActiveVoice, kMaxVoicesPerTrack> voices_;
+
+    /// FX chain (MESSAGE THREAD owns nodes, AUDIO THREAD reads/processes)
+    struct FxSlot
+    {
+        std::unique_ptr<IDspNode> node;
+    };
+    static constexpr int kMaxFxSlots = 5;
+    std::array<FxSlot, kMaxFxSlots> fxSlots_;
+
+    /// Track buffer for clip rendering before FX chain (pre-allocated)
+    juce::AudioBuffer<float> trackBuffer_;
 #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)

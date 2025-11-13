@@ -121,6 +121,11 @@ target_sources(ZenithDAW PRIVATE
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Mixer.h>
     $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/Mixer.cpp>
 
+    # W11.0: Plugin chain scaffold - internal FX nodes (gated by ZENITH_ENABLE_PHASE1_AUDIO)
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:include/engine/IDspNode.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/GainPanNode.h>
+    $<$<BOOL:${ZENITH_ENABLE_PHASE1_AUDIO}>:Source/engine/nodes/GainPanNode.cpp>
+
     # Windows-specific sources
     $<$<PLATFORM_ID:Windows>:Source/win/WinRtAudioPriority.cpp>
     $<$<PLATFORM_ID:Windows>:Source/ui/AudioSettingsWindows.cpp>
@@ -348,6 +353,11 @@ if(ZENITH_ENABLE_PHASE1_AUDIO)
         Source/engine/Track.cpp
         Source/engine/Mixer.h
         Source/engine/Mixer.cpp
+
+        # W11.0: FX nodes
+        include/engine/IDspNode.h
+        Source/engine/nodes/GainPanNode.h
+        Source/engine/nodes/GainPanNode.cpp
     )
 
     target_include_directories(zenith-core-phase1-tests PRIVATE

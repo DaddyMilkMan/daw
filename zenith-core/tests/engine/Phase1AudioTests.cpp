@@ -10,6 +10,7 @@
 #include "../../Source/engine/Mixer.h"
 #include "../../Source/engine/Track.h"
 #include "../../Source/engine/Clip.h"
+#include "../../Source/engine/nodes/GainPanNode.h"
 #include "../../include/Engine.h"
 #include <vector>
 #include <cmath>
@@ -439,6 +440,167 @@ TEST(StopClipTriggersFadeOutAndSilenceAfterEnd)
     // Print excerpt for manual inspection
     std::cout << "  Timeline excerpt around stop point:" << std::endl;
     printTimeline(timeline, stopAtSample - 5, stopAtSample + 15);
+}
+
+//==============================================================================
+// Test 4: FX chain applies gain and bypass correctly
+//==============================================================================
+
+TEST(PluginChain_AppliesGainAndBypassCorrectly)
+{
+    // Setup
+    zenith::Mixer mixer;
+    int trackIdx = mixer.addTrack();
+    zenith::Track* track = mixer.getTrack(trackIdx);
+    ASSERT_EQ(track != nullptr, true);
+
+    // Prepare track (simulate audio device initialization)
+    const double sampleRate = 48000.0;
+    const int blockSize = 512;
+    track->prepareToPlay(sampleRate, blockSize);
+
+    // Create constant clip (all samples = 0.5f)
+    const int64_t clipId = 4001;
+    const int clipLength = 256;
+    zenith::Clip clip = createFlatClip(clipLength, 0.5f);
+
+    zenith::ClipDef clipDef(clipId, clip);
+    track->addClipDefinition(clipDef);
+
+    // Start clip at sample 0
+    Engine::TransportEvent startEvent(
+        Engine::TransportEventType::ClipStart,
+        0,
+        trackIdx,
+        clipId
+    );
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 1: No FX - baseline (should be ≈0.5)
+    {
+        std::cout << "  Test 1: No FX (baseline)" << std::endl;
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 0.5f, 0.01f);
+        std::cout << "    Peak without FX: " << peak << " (expected ≈0.5)" << std::endl;
+    }
+
+    // Reset voice for next test
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 2: Add GainPanNode with gain = 2.0
+    {
+        std::cout << "  Test 2: GainPanNode with gain=2.0" << std::endl;
+
+        auto gainNode = std::make_unique<zenith::GainPanNode>();
+        gainNode->setGain(2.0f);
+        gainNode->setPan(0.0f); // Center
+        gainNode->prepareToPlay(sampleRate, blockSize, 2);
+
+        track->setFxNode(0, std::move(gainNode));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 1.0f, 0.02f); // 0.5 * 2.0 = 1.0
+        std::cout << "    Peak with gain=2.0: " << peak << " (expected ≈1.0)" << std::endl;
+    }
+
+    // Reset for next test
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 3: Bypass FX (should be back to ≈0.5)
+    {
+        std::cout << "  Test 3: Bypass FX (should revert to baseline)" << std::endl;
+
+        track->setFxBypassed(0, true); // Bypass the gain node
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peak = mixBuffer.getMagnitude(0, 0, clipLength);
+        ASSERT_NEAR(peak, 0.5f, 0.01f); // Back to baseline
+        std::cout << "    Peak with bypass=true: " << peak << " (expected ≈0.5)" << std::endl;
+    }
+
+    // Reset for pan test
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 4: Pan hard left
+    {
+        std::cout << "  Test 4: Pan hard left (-1.0)" << std::endl;
+
+        track->setFxBypassed(0, false); // Un-bypass
+        // Get node and set pan
+        // Note: We need to clear and recreate since we can't easily get the node reference
+        auto gainNode = std::make_unique<zenith::GainPanNode>();
+        gainNode->setGain(1.0f);
+        gainNode->setPan(-1.0f); // Full left
+        gainNode->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(0, std::move(gainNode));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peakLeft = mixBuffer.getMagnitude(0, 0, clipLength);
+        float peakRight = mixBuffer.getMagnitude(1, 0, clipLength);
+
+        std::cout << "    Peak L: " << peakLeft << ", Peak R: " << peakRight << std::endl;
+
+        // Left should be ≈0.5 (full signal), right should be ≈0.0
+        ASSERT_NEAR(peakLeft, 0.5f, 0.05f);
+        ASSERT_NEAR(peakRight, 0.0f, 0.05f);
+    }
+
+    // Reset for pan test
+    track->clearClipDefinitions();
+    track->addClipDefinition(clipDef);
+    track->handleEventRT(startEvent, 0, 0);
+
+    // Test 5: Pan hard right
+    {
+        std::cout << "  Test 5: Pan hard right (+1.0)" << std::endl;
+
+        auto gainNode = std::make_unique<zenith::GainPanNode>();
+        gainNode->setGain(1.0f);
+        gainNode->setPan(+1.0f); // Full right
+        gainNode->prepareToPlay(sampleRate, blockSize, 2);
+        track->setFxNode(0, std::move(gainNode));
+
+        juce::AudioBuffer<float> mixBuffer(2, clipLength);
+        mixBuffer.clear();
+
+        track->processSegment(mixBuffer, 0, clipLength, 0);
+
+        float peakLeft = mixBuffer.getMagnitude(0, 0, clipLength);
+        float peakRight = mixBuffer.getMagnitude(1, 0, clipLength);
+
+        std::cout << "    Peak L: " << peakLeft << ", Peak R: " << peakRight << std::endl;
+
+        // Right should be ≈0.5 (full signal), left should be ≈0.0
+        ASSERT_NEAR(peakLeft, 0.0f, 0.05f);
+        ASSERT_NEAR(peakRight, 0.5f, 0.05f);
+    }
+
+    // Cleanup
+    track->releaseResources();
 }
 
 //==============================================================================
