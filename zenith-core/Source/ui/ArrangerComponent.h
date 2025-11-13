@@ -192,6 +192,30 @@ private:
     bool hitTestMuteButton(juce::Point<int> pos, int& outTrackIndex) const;
 
     /**
+     * @brief Hit-test for solo button in track header
+     * @param pos Mouse position
+     * @param outTrackIndex Output track index if hit
+     * @return true if mouse is over a solo button
+     */
+    bool hitTestSoloButton(juce::Point<int> pos, int& outTrackIndex) const;
+
+    /**
+     * @brief Hit-test for gain slider in track header
+     * @param pos Mouse position
+     * @param outTrackIndex Output track index if hit
+     * @return true if mouse is over a gain slider
+     */
+    bool hitTestGainSlider(juce::Point<int> pos, int& outTrackIndex) const;
+
+    /**
+     * @brief Hit-test for pan slider in track header
+     * @param pos Mouse position
+     * @param outTrackIndex Output track index if hit
+     * @return true if mouse is over a pan slider
+     */
+    bool hitTestPanSlider(juce::Point<int> pos, int& outTrackIndex) const;
+
+    /**
      * @brief Get bounds for track header rectangle
      * @param trackIndex Track index
      * @return Rectangle for track header

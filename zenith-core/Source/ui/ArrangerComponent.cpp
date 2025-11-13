@@ -44,18 +44,73 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 {
     const auto pos = e.getPosition();
 
-    // Priority 1: Check for mute button click
+    // Priority 1: Check for solo button click
+    int soloTrackIndex = -1;
+    if (hitTestSoloButton(pos, soloTrackIndex))
+    {
+        // Toggle solo for this track
+        const bool newSolo = !editor_.isTrackSolo(soloTrackIndex);
+        editor_.setTrackSolo(soloTrackIndex, newSolo);
+
+        // Select this track
+        selectedTrackIndex_ = soloTrackIndex;
+        editor_.setSelectedTrack(soloTrackIndex);
+
+        repaint();
+        return;
+    }
+
+    // Priority 2: Check for mute button click
     int muteTrackIndex = -1;
     if (hitTestMuteButton(pos, muteTrackIndex))
     {
         // Toggle mute for this track
         const bool newMuted = !editor_.isTrackMuted(muteTrackIndex);
         editor_.setTrackMuted(muteTrackIndex, newMuted);
+
+        // Select this track
+        selectedTrackIndex_ = muteTrackIndex;
+        editor_.setSelectedTrack(muteTrackIndex);
+
         repaint();
         return;
     }
 
-    // Priority 2: Check for track header click (selection only)
+    // Priority 3: Check for gain slider drag
+    int gainTrackIndex = -1;
+    if (hitTestGainSlider(pos, gainTrackIndex))
+    {
+        // Start gain adjustment
+        dragMode_ = DragMode::AdjustGain;
+        dragTrackForMixer_ = gainTrackIndex;
+
+        // Select this track
+        selectedTrackIndex_ = gainTrackIndex;
+        editor_.setSelectedTrack(gainTrackIndex);
+
+        // Apply initial value
+        mouseDrag(e);
+        return;
+    }
+
+    // Priority 4: Check for pan slider drag
+    int panTrackIndex = -1;
+    if (hitTestPanSlider(pos, panTrackIndex))
+    {
+        // Start pan adjustment
+        dragMode_ = DragMode::AdjustPan;
+        dragTrackForMixer_ = panTrackIndex;
+
+        // Select this track
+        selectedTrackIndex_ = panTrackIndex;
+        editor_.setSelectedTrack(panTrackIndex);
+
+        // Apply initial value
+        mouseDrag(e);
+        return;
+    }
+
+    // Priority 5: Check for track header click (selection only)
     const int headerTrack = hitTestTrackHeader(pos);
     if (headerTrack >= 0)
     {
@@ -131,12 +186,53 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
         return;
 
     const auto pos = e.getPosition();
-    const juce::int64 mouseSamples = xToSamples(pos.x);
 
     switch (dragMode_)
     {
+        case DragMode::AdjustGain:
+        {
+            if (dragTrackForMixer_ < 0)
+                break;
+
+            const int t = dragTrackForMixer_;
+            const auto bounds = getGainSliderBounds(t);
+
+            // Normalize X position to [0, 1]
+            float norm = (pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth());
+            norm = juce::jlimit(0.0f, 1.0f, norm);
+
+            // Convert to gain [0.0, 2.0]
+            const float gain = norm * 2.0f;
+            editor_.setTrackGain(t, gain);
+
+            repaint();
+            return;
+        }
+
+        case DragMode::AdjustPan:
+        {
+            if (dragTrackForMixer_ < 0)
+                break;
+
+            const int t = dragTrackForMixer_;
+            const auto bounds = getPanSliderBounds(t);
+
+            // Normalize X position to [0, 1]
+            float norm = (pos.x - bounds.getX()) / static_cast<float>(bounds.getWidth());
+            norm = juce::jlimit(0.0f, 1.0f, norm);
+
+            // Convert to pan [-1.0, +1.0]
+            const float pan = norm * 2.0f - 1.0f;
+            editor_.setTrackPan(t, pan);
+
+            repaint();
+            return;
+        }
+
         case DragMode::Move:
         {
+            const juce::int64 mouseSamples = xToSamples(pos.x);
+
             // Calculate delta from original position
             const juce::int64 delta = mouseSamples - dragOriginalStartSamples_;
 
@@ -165,6 +261,8 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
 
         case DragMode::TrimLeft:
         {
+            const juce::int64 mouseSamples = xToSamples(pos.x);
+
             // Clamp to valid range: [originalStart, originalEnd - minLength]
             auto newStart = juce::jlimit(
                 dragOriginalStartSamples_,
@@ -181,6 +279,8 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
 
         case DragMode::TrimRight:
         {
+            const juce::int64 mouseSamples = xToSamples(pos.x);
+
             // Clamp to valid range: [originalStart + minLength, infinity]
             auto newEnd = juce::jmax(
                 dragOriginalStartSamples_ + zenith::ProjectEditorState::kMinClipLengthSamples,
@@ -211,11 +311,20 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent& e)
     }
 
     // For trim modes, reloadPlayback() already called in trim functions
+    // For mixer modes (gain/pan), reloadPlayback() already called in setters
 
     // Reset drag mode (keep selection)
-    dragMode_ = DragMode::None;
-    dragOriginalStartSamples_ = 0;
-    dragOriginalEndSamples_ = 0;
+    if (dragMode_ == DragMode::AdjustGain || dragMode_ == DragMode::AdjustPan)
+    {
+        dragMode_ = DragMode::None;
+        dragTrackForMixer_ = -1;
+    }
+    else
+    {
+        dragMode_ = DragMode::None;
+        dragOriginalStartSamples_ = 0;
+        dragOriginalEndSamples_ = 0;
+    }
 }
 
 void ArrangerComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
@@ -434,6 +543,30 @@ void ArrangerComponent::drawTrackHeaders(juce::Graphics& g)
                    8, headerBounds.getY() + 20, kTrackHeaderWidth - 60, headerBounds.getHeight() - 24,
                    juce::Justification::centredLeft, true);
 
+        // Solo button ("S") to the left of mute
+        const auto soloButtonBounds = getSoloButtonBounds(t);
+        const bool isSolo = editor_.isTrackSolo(t);
+
+        if (isSolo)
+        {
+            // Filled button when solo
+            g.setColour(juce::Colours::yellow.withBrightness(0.7f));
+            g.fillRect(soloButtonBounds);
+            g.setColour(juce::Colours::black);
+            g.drawRect(soloButtonBounds, 1);
+        }
+        else
+        {
+            // Outlined button when not solo
+            g.setColour(juce::Colour(0xff666666));
+            g.drawRect(soloButtonBounds, 1);
+        }
+
+        // "S" label
+        g.setColour(isSolo ? juce::Colours::black : juce::Colour(0xff999999));
+        g.setFont(12.0f);
+        g.drawText("S", soloButtonBounds, juce::Justification::centred, false);
+
         // Mute button ("M") in top-right
         const auto muteButtonBounds = getMuteButtonBounds(t);
 
@@ -456,6 +589,52 @@ void ArrangerComponent::drawTrackHeaders(juce::Graphics& g)
         g.setColour(isMuted ? juce::Colours::white : juce::Colour(0xff999999));
         g.setFont(12.0f);
         g.drawText("M", muteButtonBounds, juce::Justification::centred, false);
+
+        // Gain slider (horizontal bar)
+        const auto gainBounds = getGainSliderBounds(t);
+        const float gain = editor_.getTrackGain(t);  // [0.0, 2.0]
+        const float gainNorm = juce::jlimit(0.0f, 1.0f, gain / 2.0f);
+
+        // Background bar
+        g.setColour(juce::Colour(0xff3a3a3a));
+        g.fillRect(gainBounds);
+
+        // Fill bar (proportional to gain)
+        const int fillWidth = static_cast<int>(gainBounds.getWidth() * gainNorm);
+        auto fillRect = gainBounds.withWidth(fillWidth);
+        g.setColour(juce::Colour(0xff66cc66));  // Light green
+        g.fillRect(fillRect);
+
+        // Border
+        g.setColour(juce::Colour(0xff555555));
+        g.drawRect(gainBounds, 1);
+
+        // Pan slider (horizontal bar with center mark)
+        const auto panBounds = getPanSliderBounds(t);
+        const float pan = editor_.getTrackPan(t);  // [-1.0, 1.0]
+        const float panNorm = (pan + 1.0f) * 0.5f;  // [0.0, 1.0]
+
+        // Background bar
+        g.setColour(juce::Colour(0xff3a3a3a));
+        g.fillRect(panBounds);
+
+        // Center mark (vertical line at 0.0 pan)
+        const int centerX = panBounds.getX() + panBounds.getWidth() / 2;
+        g.setColour(juce::Colour(0xff666666));
+        g.drawLine(static_cast<float>(centerX), static_cast<float>(panBounds.getY()),
+                   static_cast<float>(centerX), static_cast<float>(panBounds.getBottom()), 1.0f);
+
+        // Handle (small rectangle at pan position)
+        const int handleX = panBounds.getX() + static_cast<int>(panBounds.getWidth() * panNorm);
+        const int handleWidth = 4;
+        auto handleRect = juce::Rectangle<int>(handleX - handleWidth / 2, panBounds.getY(),
+                                                handleWidth, panBounds.getHeight());
+        g.setColour(juce::Colour(0xff66cccc));  // Cyan
+        g.fillRect(handleRect);
+
+        // Border
+        g.setColour(juce::Colour(0xff555555));
+        g.drawRect(panBounds, 1);
     }
 }
 
@@ -685,6 +864,60 @@ bool ArrangerComponent::hitTestMuteButton(juce::Point<int> pos, int& outTrackInd
     {
         const auto muteButtonBounds = getMuteButtonBounds(t);
         if (muteButtonBounds.contains(pos))
+        {
+            outTrackIndex = t;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ArrangerComponent::hitTestSoloButton(juce::Point<int> pos, int& outTrackIndex) const
+{
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto soloButtonBounds = getSoloButtonBounds(t);
+        if (soloButtonBounds.contains(pos))
+        {
+            outTrackIndex = t;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ArrangerComponent::hitTestGainSlider(juce::Point<int> pos, int& outTrackIndex) const
+{
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto gainSliderBounds = getGainSliderBounds(t);
+        if (gainSliderBounds.contains(pos))
+        {
+            outTrackIndex = t;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ArrangerComponent::hitTestPanSlider(juce::Point<int> pos, int& outTrackIndex) const
+{
+    const auto& project = editor_.getProject();
+    const int numTracks = static_cast<int>(project.tracks.size());
+
+    for (int t = 0; t < numTracks; ++t)
+    {
+        const auto panSliderBounds = getPanSliderBounds(t);
+        if (panSliderBounds.contains(pos))
         {
             outTrackIndex = t;
             return true;

@@ -579,8 +579,8 @@ void Engine::processAudio(
         }
     }
 
-#if JUCE_DEBUG
-    // Update peak meters for debug HUD (RT writes, message thread reads)
+    // Update peak meters for master meter (Phase 2.4)
+    // RT writes, message thread reads
     if (numOutputChannels >= 1 && outputChannelData[0] != nullptr)
     {
         float peakL = 0.0f;
@@ -595,7 +595,6 @@ void Engine::processAudio(
             peakR = std::max(peakR, std::abs(outputChannelData[1][i]));
         debugPeakR_.store(peakR, std::memory_order_relaxed);
     }
-#endif
 
     // Advance transport only while playing
     if (isPlaying_.load(std::memory_order_relaxed))

@@ -161,6 +161,18 @@ public:
     int64_t getTransportSamples() const noexcept { return transportSamples(); }
     bool    isPlaying() const noexcept { return isPlaying_.load(std::memory_order_relaxed); }
 
+    /**
+     * @brief Get last peak level for left channel (linear, [0..1+])
+     * @return Peak level (message thread safe)
+     */
+    float getLastPeakL() const noexcept { return debugPeakL_.load(std::memory_order_relaxed); }
+
+    /**
+     * @brief Get last peak level for right channel (linear, [0..1+])
+     * @return Peak level (message thread safe)
+     */
+    float getLastPeakR() const noexcept { return debugPeakR_.load(std::memory_order_relaxed); }
+
     /** Schedule events (message thread only, lock-free enqueue). */
     bool scheduleClipStart(int trackIndex, int clipId, int64_t atSample) noexcept;
     bool scheduleClipStop (int trackIndex, int clipId, int64_t atSample) noexcept;
@@ -393,11 +405,9 @@ private:
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
 
-#if JUCE_DEBUG
-    // Debug: Peak tracking for HUD (RT writes, message thread reads)
+    // Peak tracking for master meter (RT writes, message thread reads)
     std::atomic<float> debugPeakL_{0.0f};
     std::atomic<float> debugPeakR_{0.0f};
-#endif
 #endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
