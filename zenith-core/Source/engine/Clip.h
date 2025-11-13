@@ -7,6 +7,12 @@
 
     Audio/MIDI clip with transport synchronization and playback control
 
+    CANONICAL IMPLEMENTATION: This supersedes VexelDAW-Native/Source/Audio/Clip.*
+    Phase 1.4 implementation (2025-11-13)
+
+    Key Design: Playhead-driven timing (parameter-based) instead of internal
+    transportPosition member. Integrates with AudioFilePool for RT-safe buffer access.
+
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - Kept as Track::Clip (nested class)

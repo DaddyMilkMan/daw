@@ -2,6 +2,15 @@
  * @file Engine.h
  * @brief Core audio engine for Zenith DAW
  *
+ * CANONICAL IMPLEMENTATION: This is the authoritative Engine for Zenith.
+ * Supersedes: src/audio/AudioEngine.*, src/juce-engine/*, VexelDAW-Native/Source/Audio/AudioEngine.*
+ *
+ * Phase 1 Complete (2025-11-13):
+ * - RT-safe track mixdown loop (processAudio iterates tracks)
+ * - Atomic playhead tracking with loop support
+ * - AudioFilePool integration for audio file caching
+ * - Pre-allocated buffers (mixBuffer_, Track::clipBuffer_)
+ *
  * Manages:
  * - Audio device I/O
  * - Audio processing callback
