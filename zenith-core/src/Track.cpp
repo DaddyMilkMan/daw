@@ -56,6 +56,11 @@ bool Track::Clip::isActive() const
 
 void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
 {
+    // ⚠️ REAL-TIME AUDIO THREAD
+    // - No heap allocations
+    // - No logging or String creation
+    // - No locks or UI calls
+
     if (reader == nullptr)
         return;
 
@@ -100,10 +105,8 @@ void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
                  true,  // Use left channel
                  true); // Use right channel
 
-    DBG("Track::Clip: Playing at transport " + juce::String(currentPos, 2) +
-        "s, clip offset " + juce::String(offsetIntoClip, 2) +
-        "s, reading " + juce::String(samplesToRead) + " samples from position " +
-        juce::String(sampleOffsetIntoClip));
+    // RT-SAFETY: No logging on audio thread!
+    // For debugging, use jassert or set atomic flags and poll from message thread
 }
 
 //==============================================================================
@@ -130,6 +133,11 @@ Track::~Track()
 void Track::processAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill,
                                double transportPosition)
 {
+    // ⚠️ REAL-TIME AUDIO THREAD
+    // - No heap allocations
+    // - No logging or String creation
+    // - No locks or UI calls
+
     // Clear buffer
     bufferToFill.clearActiveBufferRegion();
 

@@ -77,6 +77,8 @@ public:
          * @brief Get next audio block
          * @param bufferToFill Buffer to fill
          *
+         * ⚠️ REAL-TIME AUDIO THREAD - Must be RT-safe!
+         *
          * Uses the transport position set by setTransportPosition()
          * to determine:
          * 1. Is this clip active right now?
@@ -142,6 +144,8 @@ public:
      * @brief Process audio block for this track
      * @param bufferToFill Buffer to fill
      * @param transportPosition Current playhead position in seconds
+     *
+     * ⚠️ REAL-TIME AUDIO THREAD - Must be RT-safe!
      *
      * **CRITICAL FIX:** Must pass transportPosition to each clip
      * before calling getNextAudioBlock()

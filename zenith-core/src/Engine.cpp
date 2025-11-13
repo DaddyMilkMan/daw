@@ -130,7 +130,11 @@ double Engine::getCpuUsage() const
 
 void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 {
-    DBG("Engine: Audio device starting...");
+    // ⚠️ AUDIO THREAD CONTEXT
+    // This is called from the audio thread before streaming starts
+    // - No heap allocations
+    // - No logging or String creation
+    // - No locks or UI calls
 
     // Update settings
     currentSampleRate.store(device->getCurrentSampleRate());
@@ -140,9 +144,8 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     phase = 0.0;
     playbackPosition.store(0);
 
-    DBG("Engine: Audio device started");
-    DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
-    DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+    // RT-SAFETY: No logging on audio thread!
+    // Device info is available via getAudioDeviceInfo() on message thread
 }
 
 void Engine::audioDeviceStopped()
