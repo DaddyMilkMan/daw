@@ -52,6 +52,12 @@ private:
     void timerCallback() override;
 
     //==========================================================================
+    // C4: Track count monitoring (read-only, dirty-checked)
+    //==========================================================================
+
+    void refreshTrackCountLabel();
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
@@ -66,6 +72,10 @@ private:
 
     // Audio device info
     juce::Label audioDeviceLabel;
+
+    // C4: Track count label (read-only)
+    juce::Label trackCountLabel;
+    int lastTrackCount_ = -1;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

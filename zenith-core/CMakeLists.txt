@@ -14,6 +14,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # ============================================================================
+# Build Options
+# ============================================================================
+
+# Phase control flags for incremental integration
+option(ZENITH_ENABLE_PHASE1_AUDIO "Enable src/audio skeleton (Phase 1 - not ready)" OFF)
+option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from VexelDAW-Native" OFF)
+
+# C3: Optional debug seed for testing track integration (disabled by default)
+option(ZENITH_ENGINE_SEED_DEBUG_TRACKS "Create 8 demo tracks at startup in Debug builds" OFF)
+
+# ============================================================================
 # Fetch JUCE 8.0.9 using FetchContent
 # ============================================================================
 include(FetchContent)
@@ -71,10 +82,19 @@ juce_add_gui_app(ZenithDAW
 # ============================================================================
 
 target_sources(ZenithDAW PRIVATE
+    # Core application
     src/Main.cpp
     src/MainWindow.cpp
     src/Engine.cpp
     src/ProjectState.cpp
+
+    # Engine primitives (ported from VexelDAW-Native, Phase 2)
+    Source/engine/Track.h
+    Source/engine/Track.cpp
+    Source/engine/Clip.h
+    Source/engine/Clip.cpp
+    Source/engine/MixerChannel.h
+    Source/engine/MixerChannel.cpp
 )
 
 # ============================================================================
@@ -83,6 +103,7 @@ target_sources(ZenithDAW PRIVATE
 
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
 )
 
 # ============================================================================
@@ -159,6 +180,9 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Release builds
     $<$<CONFIG:Release>:NDEBUG=1>
+
+    # C3: Optional debug seed for track testing
+    $<$<BOOL:${ZENITH_ENGINE_SEED_DEBUG_TRACKS}>:ZENITH_ENGINE_SEED_DEBUG_TRACKS=1>
 )
 
 # ============================================================================
