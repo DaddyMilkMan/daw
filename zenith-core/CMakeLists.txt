@@ -107,6 +107,9 @@ target_sources(ZenithDAW PRIVATE
     src/model/ProjectModel.cpp
     src/model/ProjectPlaybackContext.cpp
 
+    # v0.1: Editor layer (model ↔ UI bridge)
+    src/editor/ProjectEditorState.cpp
+
     # UI Components (custom JUCE-based UI)
     Source/ui/ZenithLookAndFeel.cpp
     Source/ui/MainComponent.cpp
@@ -114,6 +117,7 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/Sidebar.cpp
     Source/ui/TrackView.cpp
     Source/ui/TransportBar.cpp
+    Source/ui/ArrangerComponent.cpp
 
     # W6: Performance monitoring overlay (DEBUG-only)
     $<$<CONFIG:Debug>:Source/ui/StatsOverlay.cpp>

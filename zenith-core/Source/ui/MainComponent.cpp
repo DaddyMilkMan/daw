@@ -8,6 +8,7 @@
 //==============================================================================
 MainComponent::MainComponent(Engine& eng)
     : engine(eng),
+      editorState(eng),
       transportBar(eng)
 {
     // Apply custom LookAndFeel to this component and all children
@@ -21,6 +22,44 @@ MainComponent::MainComponent(Engine& eng)
     addAndMakeVisible(sidebar);
     addAndMakeVisible(trackView);
     addAndMakeVisible(transportBar);
+
+    // v0.1: Create demo project
+    zenith::ProjectModel demoProject;
+    demoProject.name = "v0.1 Demo Project";
+    demoProject.sampleRate = 48000.0;
+    demoProject.blockSize = 512;
+    demoProject.nextClipId = 1;
+
+    // Create a demo track
+    zenith::TrackModel track;
+    track.id = 0;
+    track.name = "Audio 1";
+    track.gain = 1.0f;
+    track.pan = 0.0f;
+    track.muted = false;
+
+    // Create a demo clip (stub - no actual audio file for now)
+    zenith::ClipModel clip;
+    clip.id = 1;
+    clip.filePath = "";  // v0.1: empty for now (will need real file for playback)
+    clip.startSample = 0;
+    clip.lengthSamples = 48000; // 1 second @ 48kHz
+    clip.srcOffset = 0;
+    clip.gain = 1.0f;
+    clip.fadeInSamples = 0;
+    clip.fadeOutSamples = 0;
+    clip.muted = false;
+    clip.loopEnabled = false;
+
+    track.clips.push_back(clip);
+    demoProject.tracks.push_back(track);
+
+    // Load demo project into editor state
+    editorState.setProject(demoProject);
+
+    // v0.1: Create minimal arranger UI
+    arranger = std::make_unique<zenith::ArrangerComponent>(editorState);
+    addAndMakeVisible(*arranger);
 
     // Setup callbacks between components
     setupCallbacks();
@@ -85,6 +124,12 @@ void MainComponent::resized()
 
     // Remaining space is for TrackView
     trackView.setBounds(bounds);
+
+    // v0.1: Arranger overlays on top of TrackView (for now)
+    if (arranger != nullptr)
+    {
+        arranger->setBounds(bounds);
+    }
 
     #if JUCE_DEBUG
         // W6: Position stats overlay in top-right corner
@@ -346,6 +391,21 @@ void MainComponent::toggleAudioSettings()
 
 bool MainComponent::keyPressed(const juce::KeyPress& key)
 {
+    // v0.1: Spacebar for play/stop
+    if (key == juce::KeyPress::spaceKey)
+    {
+        if (editorState.isPlaying())
+            editorState.stop();
+        else
+            editorState.playFromCursor();
+
+        // Repaint arranger to update playhead
+        if (arranger != nullptr)
+            arranger->repaint();
+
+        return true;
+    }
+
     #if JUCE_DEBUG
         // Ctrl+F10 toggle stats overlay
         if (key == juce::KeyPress::F10Key && key.getModifiers().isCtrlDown())

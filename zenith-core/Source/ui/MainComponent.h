@@ -23,11 +23,13 @@
 
 #include <JuceHeader.h>
 #include "../../include/Engine.h"
+#include "../../include/editor/ProjectEditorState.h"
 #include "ZenithLookAndFeel.h"
 #include "TopBar.h"
 #include "Sidebar.h"
 #include "TrackView.h"
 #include "TransportBar.h"
+#include "ArrangerComponent.h"
 
 #ifdef _WIN32
     #include "AudioSettingsWindows.h"
@@ -109,6 +111,9 @@ private:
 
     Engine& engine;
 
+    // v0.1: Editor state (model + playback bridge)
+    zenith::ProjectEditorState editorState;
+
     // Custom LookAndFeel
     ZenithLookAndFeel zenithLookAndFeel;
 
@@ -117,6 +122,9 @@ private:
     Sidebar sidebar;
     TrackView trackView;
     TransportBar transportBar;
+
+    // v0.1: Minimal arranger UI
+    std::unique_ptr<zenith::ArrangerComponent> arranger;
 
     #ifdef _WIN32
         // Audio settings panel (Windows-specific, shown as overlay)
