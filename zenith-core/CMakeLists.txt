@@ -351,7 +351,10 @@ message(STATUS "")
 # Phase 1 Audio Tests (W10+W10.2+W10.3) - Optional
 # ============================================================================
 
-if(ZENITH_ENABLE_PHASE1_AUDIO)
+# Option to build Phase 1 tests (requires Phase 1 audio to be enabled)
+option(ZENITH_ENABLE_PHASE1_TESTS "Build Phase 1 audio headless tests" ON)
+
+if(ZENITH_ENABLE_PHASE1_AUDIO AND ZENITH_ENABLE_PHASE1_TESTS)
     message(STATUS "Building Phase 1 Audio Tests (headless)")
 
     # Console test app (no GUI, no audio device)

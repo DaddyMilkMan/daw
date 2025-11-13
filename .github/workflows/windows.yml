@@ -1,0 +1,79 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ main, claude/** ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-dev-debug:
+    name: Build & Test (dev-debug)
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v1.3
+
+    - name: Configure (dev-debug)
+      working-directory: ${{github.workspace}}/zenith-core
+      run: cmake --preset dev-debug
+
+    - name: Build ZenithDAW (dev-debug)
+      working-directory: ${{github.workspace}}/zenith-core
+      run: cmake --build --preset dev-debug --config Debug -j
+
+    - name: Build Phase 1 headless tests (dev-debug)
+      working-directory: ${{github.workspace}}/zenith-core
+      run: cmake --build --preset dev-debug --target zenith-core-phase1-tests --config Debug -j
+
+    - name: Run Phase 1 headless tests (dev-debug)
+      working-directory: ${{github.workspace}}/zenith-core/out/build/dev-debug
+      run: |
+        echo "Running zenith-core-phase1-tests..."
+        .\zenith-core-phase1-tests_artefacts\Debug\zenith-core-phase1-tests.exe
+      shell: cmd
+
+  build-release-safe:
+    name: Build (release-safe)
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Ninja
+      uses: seanmiddleditch/gha-setup-ninja@v4
+
+    - name: Setup MSVC
+      uses: microsoft/setup-msbuild@v1.3
+
+    - name: Configure (release-safe)
+      working-directory: ${{github.workspace}}/zenith-core
+      run: cmake --preset release-safe
+
+    - name: Build ZenithDAW (release-safe)
+      working-directory: ${{github.workspace}}/zenith-core
+      run: cmake --build --preset release-safe --config Release -j
+
+    - name: Verify Phase 1 tests NOT built (release-safe)
+      working-directory: ${{github.workspace}}/zenith-core/out/build/release-safe
+      run: |
+        echo "Verifying Phase 1 tests are NOT built in release-safe..."
+        if exist zenith-core-phase1-tests_artefacts (
+          echo "ERROR: Phase 1 tests should not exist in release-safe build!"
+          exit 1
+        ) else (
+          echo "✓ Phase 1 tests correctly excluded from release-safe build"
+        )
+      shell: cmd

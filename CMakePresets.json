@@ -7,12 +7,13 @@
   "configurePresets": [
     {
       "name": "dev-debug",
-      "displayName": "Dev Debug (Engine ON, HUD ON)",
+      "displayName": "Dev Debug (Engine ON, HUD ON, Tests ON)",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/out/build/dev-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ZENITH_ENABLE_PHASE1_AUDIO": "ON",
+        "ZENITH_ENABLE_PHASE1_TESTS": "ON",
         "ZENITH_ENABLE_CRASH_CAPTURE": "OFF"
       }
     },
@@ -24,6 +25,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ZENITH_ENABLE_PHASE1_AUDIO": "OFF",
+        "ZENITH_ENABLE_PHASE1_TESTS": "OFF",
         "ZENITH_ENABLE_CRASH_CAPTURE": "OFF",
         "ZENITH_LTCG": "ON"
       }
