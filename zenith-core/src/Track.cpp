@@ -23,9 +23,10 @@ Track::Clip::Clip(const juce::File& audioFile,
       gain(clipGain),
       fadeInSamples(fadeIn),
       fadeOutSamples(fadeOut),
-      transportPosition(0.0),
-      currentReadPosition(0)
+      transportPosition(0.0)
 {
+    // MESSAGE THREAD ONLY - decode entire file into PCM buffer
+
     // Validate and clamp parameters
     if (srcOffsetSamples < 0)
         srcOffsetSamples = 0;
@@ -39,57 +40,75 @@ Track::Clip::Clip(const juce::File& audioFile,
     if (fadeOutSamples < 0)
         fadeOutSamples = 0;
 
-    // Register audio formats
+    // Register audio formats and create reader
+    juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
 
-    // Load audio file
-    reader.reset(formatManager.createReaderFor(audioFile));
+    std::unique_ptr<juce::AudioFormatReader> reader(formatManager.createReaderFor(audioFile));
 
     if (reader == nullptr)
     {
         DBG("Track::Clip: Failed to load audio file: " + audioFile.getFullPathName());
+        return;
     }
-    else
+
+    DBG("Track::Clip: Decoding audio file: " + audioFile.getFullPathName() +
+        " (" + juce::String(reader->lengthInSamples) + " samples)" +
+        " srcOffset=" + juce::String(srcOffsetSamples) +
+        " gain=" + juce::String(gain, 2) +
+        " fadeIn=" + juce::String(fadeInSamples) +
+        " fadeOut=" + juce::String(fadeOutSamples));
+
+    // Store sample rate
+    pcmSampleRate = reader->sampleRate;
+
+    // Validate srcOffset doesn't exceed file length
+    if (srcOffsetSamples >= reader->lengthInSamples)
     {
-        DBG("Track::Clip: Loaded audio file: " + audioFile.getFullPathName() +
-            " (" + juce::String(reader->lengthInSamples) + " samples)" +
-            " srcOffset=" + juce::String(srcOffsetSamples) +
-            " gain=" + juce::String(gain, 2) +
-            " fadeIn=" + juce::String(fadeInSamples) +
-            " fadeOut=" + juce::String(fadeOutSamples));
-
-        // Validate srcOffset doesn't exceed file length
-        if (srcOffsetSamples >= reader->lengthInSamples)
-        {
-            DBG("  WARNING: srcOffset >= file length, clamping to 0");
-            srcOffsetSamples = 0;
-        }
-
-        // Calculate effective clip length in samples
-        const double sampleRate = reader->sampleRate;
-        int64_t lengthInSamples = (length > 0.0)
-            ? static_cast<int64_t>(length * sampleRate)
-            : (reader->lengthInSamples - srcOffsetSamples);
-
-        // Clamp length to not exceed available samples
-        int64_t availableSamples = reader->lengthInSamples - srcOffsetSamples;
-        if (lengthInSamples > availableSamples)
-        {
-            DBG("  WARNING: lengthSamples exceeds available samples, clamping");
-            lengthInSamples = availableSamples;
-        }
-
-        // Validate fades don't exceed clip length
-        if (fadeInSamples + fadeOutSamples > lengthInSamples)
-        {
-            DBG("  WARNING: fadeIn + fadeOut exceeds clip length, clamping");
-            // Proportionally reduce both fades
-            double scale = static_cast<double>(lengthInSamples) /
-                           static_cast<double>(fadeInSamples + fadeOutSamples);
-            fadeInSamples = static_cast<int>(fadeInSamples * scale);
-            fadeOutSamples = static_cast<int>(fadeOutSamples * scale);
-        }
+        DBG("  WARNING: srcOffset >= file length, clamping to 0");
+        srcOffsetSamples = 0;
     }
+
+    // Calculate effective clip length in samples
+    int64_t lengthInSamples = (length > 0.0)
+        ? static_cast<int64_t>(length * pcmSampleRate)
+        : (reader->lengthInSamples - srcOffsetSamples);
+
+    // Clamp length to not exceed available samples
+    int64_t availableSamples = reader->lengthInSamples - srcOffsetSamples;
+    if (lengthInSamples > availableSamples)
+    {
+        DBG("  WARNING: lengthSamples exceeds available samples, clamping");
+        lengthInSamples = availableSamples;
+    }
+
+    // Validate fades don't exceed clip length
+    if (fadeInSamples + fadeOutSamples > lengthInSamples)
+    {
+        DBG("  WARNING: fadeIn + fadeOut exceeds clip length, clamping");
+        // Proportionally reduce both fades
+        double scale = static_cast<double>(lengthInSamples) /
+                       static_cast<double>(fadeInSamples + fadeOutSamples);
+        fadeInSamples = static_cast<int>(fadeInSamples * scale);
+        fadeOutSamples = static_cast<int>(fadeOutSamples * scale);
+    }
+
+    // **CRITICAL: Pre-decode entire file into PCM buffer**
+    // This happens on MESSAGE THREAD, NOT on audio thread
+    const int numChannels = static_cast<int>(reader->numChannels);
+    const int numSamples = static_cast<int>(reader->lengthInSamples);
+
+    pcm = std::make_shared<juce::AudioBuffer<float>>(numChannels, numSamples);
+
+    // Decode entire file in one go
+    if (!reader->read(pcm.get(), 0, numSamples, 0, true, true))
+    {
+        DBG("  ERROR: Failed to decode audio file into PCM buffer");
+        pcm.reset();
+        return;
+    }
+
+    DBG("  SUCCESS: Decoded " + juce::String(numSamples) + " samples into PCM buffer");
 }
 
 void Track::Clip::setTransportPosition(double positionInSeconds)
@@ -119,11 +138,13 @@ void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     // - No heap allocations
     // - No logging or String creation
     // - No locks or UI calls
+    // - No file I/O (use pre-decoded PCM only!)
 
-    if (reader == nullptr)
+    // Check if PCM buffer is valid
+    if (pcm == nullptr || pcmSampleRate <= 0.0)
         return;
 
-    // **CRITICAL FIX:** Use transport position to determine activity
+    // Use transport position to determine activity
     double currentPos = transportPosition.load();
     double endTime = startTime + length;
 
@@ -131,88 +152,71 @@ void Track::Clip::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     if (currentPos < startTime || currentPos >= endTime)
     {
         // Clip is not active at this position
-        // **CRITICAL FIX:** Don't clear buffer - would erase other clips' audio!
+        // Don't clear buffer - would erase other clips' audio!
         return;
     }
 
-    // **CRITICAL FIX:** Calculate correct read offset based on transport position
-    // How far into the clip are we? (in seconds)
+    // Calculate position within clip (samples from clip start)
     double offsetIntoClip = currentPos - startTime;
+    int64_t clipPlayPos = static_cast<int64_t>(offsetIntoClip * pcmSampleRate);
 
-    // Convert to samples
-    double sampleRate = reader->sampleRate;
-    int64_t sampleOffsetIntoClip = static_cast<int64_t>(offsetIntoClip * sampleRate);
-
-    // Apply srcOffset: read from srcOffset + sampleOffsetIntoClip in the source file
-    int64_t fileReadPosition = srcOffsetSamples + sampleOffsetIntoClip;
-
-    // Calculate how many samples to read
-    int numSamples = bufferToFill.numSamples;
-    int64_t samplesAvailable = reader->lengthInSamples - fileReadPosition;
-
-    if (samplesAvailable <= 0)
-    {
-        // Reached end of file
-        return;
-    }
-
-    // Don't read more than available
-    int samplesToRead = static_cast<int>(juce::jmin<int64_t>(numSamples, samplesAvailable));
-
-    // Also don't read past the clip's length
+    // Calculate effective clip length
     int64_t clipLengthInSamples = (length > 0.0)
-        ? static_cast<int64_t>(length * sampleRate)
-        : (reader->lengthInSamples - srcOffsetSamples);
+        ? static_cast<int64_t>(length * pcmSampleRate)
+        : (pcm->getNumSamples() - srcOffsetSamples);
 
-    int64_t samplesRemainingInClip = clipLengthInSamples - sampleOffsetIntoClip;
-    if (samplesRemainingInClip <= 0)
+    // Check if we're past the end of the clip
+    if (clipPlayPos >= clipLengthInSamples)
         return;
 
-    samplesToRead = static_cast<int>(juce::jmin<int64_t>(samplesToRead, samplesRemainingInClip));
+    // Apply srcOffset: index into PCM buffer
+    int64_t pcmStart = srcOffsetSamples + clipPlayPos;
 
-    // Read from file at correct position (including srcOffset)
-    reader->read(bufferToFill.buffer,
-                 bufferToFill.startSample,
-                 samplesToRead,
-                 fileReadPosition,  // Read from srcOffset + offsetIntoClip
-                 true,  // Use left channel
-                 true); // Use right channel
+    // Clamp to PCM buffer bounds
+    if (pcmStart >= pcm->getNumSamples())
+        return;
 
-    // Apply clip gain
-    if (gain != 1.0f)
+    // Calculate how many samples to process
+    int samplesToProcess = bufferToFill.numSamples;
+
+    // Don't read past end of clip
+    int64_t samplesRemaining = clipLengthInSamples - clipPlayPos;
+    samplesToProcess = static_cast<int>(juce::jmin<int64_t>(samplesToProcess, samplesRemaining));
+
+    // Don't read past end of PCM buffer
+    int64_t pcmSamplesAvailable = pcm->getNumSamples() - pcmStart;
+    samplesToProcess = static_cast<int>(juce::jmin<int64_t>(samplesToProcess, pcmSamplesAvailable));
+
+    if (samplesToProcess <= 0)
+        return;
+
+    // Process each channel (mixing into output buffer)
+    const int numChannels = juce::jmin(pcm->getNumChannels(), bufferToFill.buffer->getNumChannels());
+
+    for (int ch = 0; ch < numChannels; ++ch)
     {
-        bufferToFill.buffer->applyGain(bufferToFill.startSample,
-                                       samplesToRead,
-                                       gain);
-    }
+        const float* src = pcm->getReadPointer(ch, static_cast<int>(pcmStart));
+        float* dst = bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample);
 
-    // Apply fades (linear for v0.1, could be improved to equal-power later)
-    if (fadeInSamples > 0 || fadeOutSamples > 0)
-    {
-        for (int channel = 0; channel < bufferToFill.buffer->getNumChannels(); ++channel)
+        // Process each sample with gain and fades
+        for (int i = 0; i < samplesToProcess; ++i)
         {
-            float* channelData = bufferToFill.buffer->getWritePointer(channel, bufferToFill.startSample);
+            int64_t playPos = clipPlayPos + i;
+            int64_t fromEnd = clipLengthInSamples - playPos;
 
-            for (int i = 0; i < samplesToRead; ++i)
-            {
-                int64_t samplePosInClip = sampleOffsetIntoClip + i;
-                float fadeMult = 1.0f;
+            // Calculate fade multiplier
+            float fadeMult = 1.0f;
 
-                // Fade in
-                if (samplePosInClip < fadeInSamples)
-                {
-                    fadeMult *= static_cast<float>(samplePosInClip) / static_cast<float>(fadeInSamples);
-                }
+            // Fade in from start
+            if (fadeInSamples > 0 && playPos < fadeInSamples)
+                fadeMult *= static_cast<float>(playPos) / static_cast<float>(fadeInSamples);
 
-                // Fade out
-                int64_t samplesFromEnd = clipLengthInSamples - samplePosInClip;
-                if (samplesFromEnd < fadeOutSamples)
-                {
-                    fadeMult *= static_cast<float>(samplesFromEnd) / static_cast<float>(fadeOutSamples);
-                }
+            // Fade out to end
+            if (fadeOutSamples > 0 && fromEnd < fadeOutSamples)
+                fadeMult *= static_cast<float>(fromEnd) / static_cast<float>(fadeOutSamples);
 
-                channelData[i] *= fadeMult;
-            }
+            // Apply gain and fade, then mix into output
+            dst[i] += src[i] * gain * fadeMult;
         }
     }
 

@@ -129,12 +129,9 @@ public:
         // **CRITICAL:** Transport position must be updated on each audio callback
         std::atomic<double> transportPosition{0.0};
 
-        // Audio file reader
-        std::unique_ptr<juce::AudioFormatReader> reader;
-        juce::AudioFormatManager formatManager;
-
-        // Current read position within the file
-        int64_t currentReadPosition{0};
+        // Pre-decoded audio data (MESSAGE THREAD: loaded, AUDIO THREAD: read-only)
+        std::shared_ptr<juce::AudioBuffer<float>> pcm;
+        double pcmSampleRate{0.0};
 
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Clip)
     };
