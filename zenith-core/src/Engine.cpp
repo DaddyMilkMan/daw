@@ -152,6 +152,46 @@ bool Engine::scheduleClipStop(int trackIndex, int clipId, int64_t atSample) noex
     TransportEvent ev{ TransportEvent::Type::StopClip, trackIndex, clipId, atSample };
     return eventQ_.push(ev);
 }
+
+//==============================================================================
+// W10.3: Drain scheduled events for segment loop
+//==============================================================================
+
+Engine::DueEvent* Engine::drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int& outCount) noexcept {
+    outCount = 0;
+    TransportEvent ev;
+
+    // Drain all events due in [blockStart, blockEnd)
+    // Use peek-then-pop pattern to avoid consuming future events
+    while (outCount < kMaxEventsPerBlock && eventQ_.tryPeek(ev)) {
+        // If event is in the future, stop draining (leave it in queue)
+        if (ev.whenSamples >= blockEnd) {
+            break;
+        }
+
+        // Pop the event (we're consuming it)
+        if (!eventQ_.tryPop(ev)) {
+            // Shouldn't happen (peek succeeded but pop failed), but handle gracefully
+            break;
+        }
+
+        // If event is late (before blockStart), drop it
+        // Future work: could dispatch as immediate (offset=0)
+        if (ev.whenSamples < blockStart) {
+            continue;
+        }
+
+        // Event is due in this block - calculate offset and add to array
+        const int offset = (int) juce::jlimit<int64_t>(0, blockEnd - blockStart - 1, ev.whenSamples - blockStart);
+        dueEvents_[outCount].ev = ev;
+        dueEvents_[outCount].offsetInBlock = offset;
+        ++outCount;
+    }
+
+    // Note: Events are already in chronological order from the queue
+    // No need to sort if queue maintains order (SPSC ring preserves order)
+    return dueEvents_;
+}
 #endif
 
 //==============================================================================
@@ -309,33 +349,9 @@ void Engine::processAudio(
     // W10: Phase 1 mixer path (flag ON)
     //==========================================================================
 
-    // W10.2: Transport window for this block
+    // W10.2/W10.3: Transport window for this block
     int64_t blockStart = transportSamples_.load(std::memory_order_relaxed);
     int64_t blockEnd   = blockStart + numSamples;
-
-    // W10.2: Drain due events [blockStart, blockEnd)
-    {
-        TransportEvent ev;
-        while (eventQ_.pop(ev)) {
-            // If event is in the future, stash it (we already popped, must preserve)
-            if (ev.whenSamples >= blockEnd) {
-                dueEventsScratch_.push_back(ev);
-                continue; // Keep draining to catch ALL future events
-            }
-            if (ev.whenSamples >= blockStart) {
-                // Event is due in this block
-                const int offset = (int) juce::jlimit<int64_t>(0, numSamples - 1, ev.whenSamples - blockStart);
-                // TODO W10.3: mixer_.onScheduledEvent(ev, offset);
-                // For now: no-op (no RT logging)
-                juce::ignoreUnused(offset);
-            }
-            // Events before blockStart are late - drop them (or could handle as immediate)
-        }
-        // Re-enqueue ALL future events we stashed (preserves ordering)
-        for (const auto& futureEv : dueEventsScratch_)
-            eventQ_.push(futureEv);
-        dueEventsScratch_.clear();
-    }
 
     // Ensure mix buffer matches device config
     if (mixBuffer_.getNumChannels() != numOutputChannels || mixBuffer_.getNumSamples() < numSamples)
@@ -344,9 +360,31 @@ void Engine::processAudio(
     // Clear mix buffer
     mixBuffer_.clear();
 
-    // Process mixer (renders all tracks)
-    // NOTE: Phase 1 constraint - tracks must not be mutated during playback
-    mixer_.process(mixBuffer_, numSamples, blockStart);
+    // W10.3: Drain scheduled events due in [blockStart, blockEnd)
+    int eventCount = 0;
+    auto* events = drainScheduledEvents(blockStart, blockEnd, eventCount);
+
+    // W10.3: Segment loop - render audio between events for sample-accurate timing
+    int cursor = 0;
+    for (int i = 0; i < eventCount; ++i) {
+        const int eventOffset = events[i].offsetInBlock;
+
+        // Render segment before this event
+        if (eventOffset > cursor) {
+            const int segmentLen = eventOffset - cursor;
+            mixer_.processSegment(mixBuffer_, blockStart + cursor, cursor, segmentLen);
+            cursor = eventOffset;
+        }
+
+        // Handle event at exact sample offset
+        mixer_.handleTransportEventRT(events[i].ev, eventOffset);
+    }
+
+    // Render final segment after last event (or entire block if no events)
+    if (cursor < numSamples) {
+        const int segmentLen = numSamples - cursor;
+        mixer_.processSegment(mixBuffer_, blockStart + cursor, cursor, segmentLen);
+    }
 
     // Copy mix buffer → device outputs
     for (int ch = 0; ch < numOutputChannels; ++ch)

@@ -5,6 +5,10 @@
 
 #include "../include/Mixer.h"
 
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+#include "../include/Engine.h"
+#endif
+
 //==============================================================================
 Mixer::Mixer()
 {
@@ -46,6 +50,81 @@ void Mixer::process(juce::AudioBuffer<float>& outputBuffer, int numSamples, juce
     }
     masterPeakLevel.store(peak);
 }
+
+//==============================================================================
+// W10.3: Segment-based processing (AUDIO THREAD)
+//==============================================================================
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+void Mixer::processSegment(juce::AudioBuffer<float>& outputBuffer, int64_t transportStart,
+                           int offsetInBuffer, int segmentLen)
+{
+    // Try to acquire lock without blocking
+    if (!trackLock.tryEnter())
+        return;
+
+    // Check solo state
+    bool hasSoloedTracks = false;
+    for (const auto& track : tracks)
+    {
+        if (track->isSoloed())
+        {
+            hasSoloedTracks = true;
+            break;
+        }
+    }
+
+    // Process each track for this segment
+    for (auto& track : tracks)
+    {
+        // Solo logic
+        bool shouldPlay = !track->isMuted();
+        if (hasSoloedTracks)
+            shouldPlay = track->isSoloed();
+
+        if (shouldPlay)
+        {
+            track->processSegment(outputBuffer, transportStart, offsetInBuffer, segmentLen);
+        }
+    }
+
+    trackLock.exit();
+
+    // Apply master processing to this segment only
+    const float vol = masterVolume.load();
+    for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
+    {
+        auto* channelData = outputBuffer.getWritePointer(ch, offsetInBuffer);
+
+        // Apply master volume
+        juce::FloatVectorOperations::multiply(channelData, vol, segmentLen);
+
+        // Soft clip
+        for (int i = 0; i < segmentLen; ++i)
+        {
+            float sample = channelData[i];
+            if (sample > 1.0f)
+                channelData[i] = 1.0f - (1.0f / (1.0f + (sample - 1.0f)));
+            else if (sample < -1.0f)
+                channelData[i] = -1.0f + (1.0f / (1.0f + (-sample - 1.0f)));
+        }
+    }
+}
+
+void Mixer::handleTransportEventRT(const Engine::TransportEvent& ev, int offsetInBlock)
+{
+    // Route event to appropriate track
+    if (!trackLock.tryEnter())
+        return;
+
+    if (ev.trackIndex >= 0 && ev.trackIndex < static_cast<int>(tracks.size()))
+    {
+        tracks[ev.trackIndex]->handleEventRT(ev, offsetInBlock);
+    }
+
+    trackLock.exit();
+}
+#endif
 
 void Mixer::processTracks(juce::AudioBuffer<float>& outputBuffer, int numSamples, juce::int64 playheadPosition)
 {

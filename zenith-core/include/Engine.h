@@ -165,6 +165,28 @@ public:
 
     /** Debug/introspection (message thread only). */
     std::size_t pendingEventCount() const noexcept { return eventQ_.size(); }
+
+    //==========================================================================
+    // W10.3: Sample-accurate event draining for segment loop
+    //==========================================================================
+
+    /** Due event with offset within current block. */
+    struct DueEvent {
+        TransportEvent ev;
+        int offsetInBlock;
+    };
+
+    static constexpr int kMaxEventsPerBlock = 64;
+
+    /**
+     * @brief Drain all events due in [blockStart, blockEnd) and return sorted by offset.
+     * @param blockStart Start of current block (absolute transport samples)
+     * @param blockEnd End of current block (absolute transport samples)
+     * @param outCount Number of events drained (will be written here)
+     * @return Pointer to static array of DueEvent (valid until next call)
+     * @note AUDIO THREAD ONLY - uses peek/pop pattern to avoid dropping future events
+     */
+    DueEvent* drainScheduledEvents(int64_t blockStart, int64_t blockEnd, int& outCount) noexcept;
 #endif
 
     //==========================================================================
@@ -282,6 +304,9 @@ private:
     std::atomic<bool>    isRecording_{false};  // For future use
     rt::SpscRing<TransportEvent, 4096> eventQ_;
     std::vector<TransportEvent> dueEventsScratch_;
+
+    // W10.3: Pre-allocated array for due events (RT-safe)
+    DueEvent dueEvents_[kMaxEventsPerBlock];
 
     // Test tone generator (available in Phase 1 for testing)
     double phase{0.0};

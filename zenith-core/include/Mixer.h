@@ -30,6 +30,11 @@
 #include <memory>
 #include <atomic>
 
+// Forward declarations
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+class Engine;
+#endif
+
 //==============================================================================
 /**
  * @class Mixer
@@ -65,6 +70,29 @@ public:
      * - No system calls
      */
     void process(juce::AudioBuffer<float>& outputBuffer, int numSamples, juce::int64 playheadPosition);
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+    /**
+     * @brief W10.3: Process a segment of audio (between events)
+     * @param outputBuffer Output buffer to write to
+     * @param transportStart Absolute transport time at start of segment
+     * @param offsetInBuffer Offset within output buffer to start writing
+     * @param segmentLen Number of samples in this segment
+     *
+     * ⚠️ AUDIO THREAD - RT-SAFE!
+     */
+    void processSegment(juce::AudioBuffer<float>& outputBuffer, int64_t transportStart,
+                       int offsetInBuffer, int segmentLen);
+
+    /**
+     * @brief W10.3: Handle a transport event at exact sample offset
+     * @param ev Transport event (StartClip, StopClip, etc.)
+     * @param offsetInBlock Sample offset within current block
+     *
+     * ⚠️ AUDIO THREAD - RT-SAFE!
+     */
+    void handleTransportEventRT(const Engine::TransportEvent& ev, int offsetInBlock);
+#endif
 
     //==========================================================================
     // Track Management (MESSAGE THREAD)

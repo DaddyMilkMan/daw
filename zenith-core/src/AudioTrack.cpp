@@ -5,6 +5,10 @@
 
 #include "../include/AudioTrack.h"
 
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+#include "../include/Engine.h"
+#endif
+
 //==============================================================================
 AudioTrack::AudioTrack(const juce::String& trackName, int trackIndex)
     : name(trackName), index(trackIndex)
@@ -234,3 +238,226 @@ float AudioTrack::getPeakLevel() const
 
     return juce::Decibels::gainToDecibels(peak);
 }
+
+//==============================================================================
+// W10.3: Voice-based rendering (AUDIO THREAD - RT-SAFE!)
+//==============================================================================
+
+#if defined(ZENITH_ENABLE_PHASE1_AUDIO) && ZENITH_ENABLE_PHASE1_AUDIO
+
+//==============================================================================
+// Voice Management Helpers
+//==============================================================================
+
+const AudioTrack::ClipDef* AudioTrack::findClipDef(int32_t clipId) const noexcept
+{
+    for (const auto& def : clipDefs_)
+    {
+        if (def.clipId == clipId)
+            return &def;
+    }
+    return nullptr;
+}
+
+AudioTrack::ActiveVoice* AudioTrack::findVoiceForClip(int32_t clipId) noexcept
+{
+    for (int i = 0; i < kMaxVoices; ++i)
+    {
+        if (voices_[i].clip != nullptr && voices_[i].clip->clipId == clipId)
+            return &voices_[i];
+    }
+    return nullptr;
+}
+
+AudioTrack::ActiveVoice* AudioTrack::allocVoiceRT() noexcept
+{
+    // First, try to find a free voice
+    for (int i = 0; i < kMaxVoices; ++i)
+    {
+        if (voices_[i].clip == nullptr)
+            return &voices_[i];
+    }
+
+    // No free voices - steal the oldest (voice 0)
+    // Future: Could track age or implement LRU
+    return &voices_[0];
+}
+
+//==============================================================================
+// Event Handling
+//==============================================================================
+
+void AudioTrack::handleEventRT(const Engine::TransportEvent& ev, int offsetInBlock)
+{
+    switch (ev.type)
+    {
+        case Engine::TransportEvent::Type::StartClip:
+            startClipRT(ev.clipId, offsetInBlock);
+            break;
+
+        case Engine::TransportEvent::Type::StopClip:
+            stopClipRT(ev.clipId, offsetInBlock);
+            break;
+    }
+}
+
+void AudioTrack::startClipRT(int32_t clipId, int offsetInBlock)
+{
+    // Find ClipDef (message-thread data, read-only in RT)
+    const ClipDef* def = findClipDef(clipId);
+    if (def == nullptr)
+        return;  // Clip not found (could be removed between schedule and playback)
+
+    // Check if already playing
+    if (findVoiceForClip(clipId) != nullptr)
+        return;  // Already playing, ignore
+
+    // Allocate voice
+    ActiveVoice* voice = allocVoiceRT();
+    if (voice == nullptr)
+        return;  // Should not happen (allocVoiceRT always returns a voice)
+
+    // Initialize voice state
+    voice->clip = def;
+    voice->playheadInClip = 0;
+    voice->fadeInDone = (def->fadeInSamples == 0);
+    voice->fadeOutDone = false;
+    voice->fadingOut = false;
+
+    // Note: offsetInBlock is when the event occurs, but we start rendering from the next segment
+    // For true sample-accurate start, we'd render from offsetInBlock with partial segment
+    // For now: voice starts playing in next segment (acceptable for W10.3)
+    juce::ignoreUnused(offsetInBlock);
+}
+
+void AudioTrack::stopClipRT(int32_t clipId, int offsetInBlock)
+{
+    ActiveVoice* voice = findVoiceForClip(clipId);
+    if (voice == nullptr)
+        return;  // Not playing, ignore
+
+    // Begin fade-out
+    voice->fadingOut = true;
+
+    // Note: offsetInBlock is when fade-out should begin
+    // For now: fade starts immediately (acceptable for W10.3)
+    juce::ignoreUnused(offsetInBlock);
+}
+
+//==============================================================================
+// Segment Processing
+//==============================================================================
+
+void AudioTrack::processSegment(juce::AudioBuffer<float>& buffer, int64_t transportStart,
+                                int offsetInBuffer, int segmentLen)
+{
+    // Render all active voices into segment
+    for (int i = 0; i < kMaxVoices; ++i)
+    {
+        if (voices_[i].clip != nullptr)
+        {
+            renderVoiceIntoSegment(voices_[i], buffer, transportStart, offsetInBuffer, segmentLen);
+
+            // Free voice if fade-out is complete
+            if (voices_[i].fadeOutDone)
+            {
+                voices_[i].clip = nullptr;  // Mark as free
+            }
+        }
+    }
+}
+
+//==============================================================================
+// Voice Rendering with Fades (W13 logic)
+//==============================================================================
+
+void AudioTrack::renderVoiceIntoSegment(ActiveVoice& voice, juce::AudioBuffer<float>& buffer,
+                                       int64_t transportStart, int offsetInBuffer, int segmentLen)
+{
+    const ClipDef* clip = voice.clip;
+    if (clip == nullptr || clip->audioData == nullptr)
+        return;
+
+    // Calculate how many samples to read from clip
+    const int64_t samplesRemaining = clip->clipLengthSamples - voice.playheadInClip;
+    const int samplesToRead = (int) juce::jmin((int64_t) segmentLen, samplesRemaining);
+
+    if (samplesToRead <= 0)
+    {
+        // Reached end of clip
+        voice.fadeOutDone = true;
+        return;
+    }
+
+    // Render clip audio into buffer with gain
+    const int numChannels = juce::jmin(buffer.getNumChannels(), clip->audioData->getNumChannels());
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        buffer.addFrom(
+            ch,
+            offsetInBuffer,
+            *clip->audioData,
+            ch,
+            (int) voice.playheadInClip,
+            samplesToRead,
+            clip->gain
+        );
+    }
+
+    // Apply fades (W13 logic - per-voice state)
+    const int fadeInSamples = clip->fadeInSamples;
+    const int fadeOutSamples = clip->fadeOutSamples;
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        auto* channelData = buffer.getWritePointer(ch, offsetInBuffer);
+
+        for (int i = 0; i < samplesToRead; ++i)
+        {
+            float gain = 1.0f;
+            const int64_t posInClip = voice.playheadInClip + i;
+
+            // Fade-in (if not done)
+            if (!voice.fadeInDone && fadeInSamples > 0)
+            {
+                if (posInClip < fadeInSamples)
+                {
+                    gain *= (float) posInClip / (float) fadeInSamples;
+                }
+                else
+                {
+                    voice.fadeInDone = true;
+                }
+            }
+
+            // Fade-out (if fading out)
+            if (voice.fadingOut && fadeOutSamples > 0)
+            {
+                const int64_t fadeOutStart = clip->clipLengthSamples - fadeOutSamples;
+                if (posInClip >= fadeOutStart)
+                {
+                    const int64_t fadeOutPos = posInClip - fadeOutStart;
+                    gain *= 1.0f - ((float) fadeOutPos / (float) fadeOutSamples);
+
+                    if (fadeOutPos >= fadeOutSamples - 1)
+                    {
+                        voice.fadeOutDone = true;
+                    }
+                }
+            }
+
+            channelData[i] *= gain;
+        }
+    }
+
+    // Advance playhead
+    voice.playheadInClip += samplesToRead;
+
+    // If reached end of clip and not fading out, mark as done
+    if (voice.playheadInClip >= clip->clipLengthSamples)
+    {
+        voice.fadeOutDone = true;
+    }
+}
+
+#endif // ZENITH_ENABLE_PHASE1_AUDIO
