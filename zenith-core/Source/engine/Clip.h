@@ -187,12 +187,15 @@ private:
 
     //==============================================================================
     // Helper methods
-    // Phase 1.3: Process with explicit playhead position
+    // Phase 1.3: Process audio clip with explicit playhead position
     void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
-    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+
+    // Phase 2A: Process MIDI clip with explicit playhead position
+    void processMidiClip(juce::MidiBuffer& midiBuffer, int64_t playheadSamples, int numSamples);
 
     // Legacy overloads (use internal transportPosition)
     void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill);
+    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
     void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill);
 
     float calculateFadeMultiplier(int64_t positionInClip) const;

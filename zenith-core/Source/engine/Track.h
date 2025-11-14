@@ -153,12 +153,43 @@ private:
     juce::AudioBuffer<float> pluginBuffer;
 
     //==============================================================================
-    // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)
-    std::vector<std::unique_ptr<Clip>> clips;
-    juce::CriticalSection clipsLock;
+    // Phase 2A: Lock-free clip list using RCU-style atomic snapshot
+    //
+    // Pattern:
+    // - Track owns clips via std::vector<std::unique_ptr<Clip>> (message thread only)
+    // - ClipSnapshot holds raw Clip* pointers for audio thread to iterate
+    // - Audio thread loads snapshot atomically, iterates without locking
+    // - Message thread creates new snapshot when modifying clips, swaps atomically
+    //
+    // This eliminates clipsLock from the audio thread (RT-safe).
+
+    struct ClipSnapshot
+    {
+        std::vector<Clip*> clips;  // Raw pointers (non-owning)
+
+        ClipSnapshot() = default;
+        explicit ClipSnapshot(const std::vector<std::unique_ptr<Clip>>& ownedClips)
+        {
+            clips.reserve(ownedClips.size());
+            for (const auto& clip : ownedClips)
+                clips.push_back(clip.get());
+        }
+    };
+
+    // Clip ownership (message thread only)
+    std::vector<std::unique_ptr<Clip>> clipsOwned_;
+
+    // Atomic snapshot for audio thread (RT-safe read)
+    std::atomic<std::shared_ptr<const ClipSnapshot>> clipsSnapshot_;
+
+    // Helper: Create new snapshot from current ownership
+    void updateClipSnapshot();
 
     // Phase 1: Pre-allocated clip buffer to avoid RT allocations
     juce::AudioBuffer<float> clipBuffer_;
+
+    // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback
+    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
     // Helper methods

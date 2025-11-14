@@ -25,16 +25,19 @@ namespace zenith {
 Track::Track(const juce::String& name, Type type)
     : trackName(name), trackType(type)
 {
+    // Initialize empty clip snapshot
+    clipsSnapshot_.store(std::make_shared<const ClipSnapshot>());
 }
 
 Track::~Track()
 {
     // Ensure we're not in the middle of audio processing
     const juce::ScopedLock sl1(pluginLock);
-    const juce::ScopedLock sl2(clipsLock);
 
-    // Clips are automatically destroyed via std::unique_ptr
-    clips.clear();
+    // Phase 2A: Clips are automatically destroyed via std::unique_ptr
+    // No lock needed - destructor is called from message thread only
+    clipsOwned_.clear();
+    clipsSnapshot_.store(std::make_shared<const ClipSnapshot>());
 }
 
 //==============================================================================
@@ -51,15 +54,12 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
     // TODO(Phase 2: plugin hosting) - Prepare all plugins
 
-    // Prepare all clips
+    // Phase 2A: Prepare all clips (message thread only, no lock needed)
+    for (auto& clip : clipsOwned_)
     {
-        const juce::ScopedLock sl(clipsLock);
-        for (auto& clip : clips)
+        if (clip != nullptr)
         {
-            if (clip != nullptr)
-            {
-                clip->prepareToPlay(samplesPerBlockExpected, sampleRate);
-            }
+            clip->prepareToPlay(samplesPerBlockExpected, sampleRate);
         }
     }
 }
@@ -68,20 +68,17 @@ void Track::releaseResources()
 {
     // TODO(Phase 2: plugin hosting) - Release all plugins
 
-    // Release all clips
+    // Phase 2A: Release all clips (message thread only, no lock needed)
+    for (auto& clip : clipsOwned_)
     {
-        const juce::ScopedLock sl(clipsLock);
-        for (auto& clip : clips)
+        if (clip != nullptr)
         {
-            if (clip != nullptr)
-            {
-                clip->releaseResources();
-            }
+            clip->releaseResources();
         }
     }
 }
 
-// Phase 1.3: Process with explicit playhead position
+// Phase 1.3 / 2A: Process with explicit playhead position (lock-free)
 void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
 {
     // Clear the buffer first
@@ -91,45 +88,52 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
     if (!enabled.load() || muted.load())
     {
         currentLevel.store(0.0f);
+        midiBuffer_.clear();  // Phase 2A: Clear MIDI buffer too
         return;
     }
 
-    // Get audio from all clips and mix them together
-    {
-        const juce::ScopedLock sl(clipsLock);
+    // Phase 2A: Clear MIDI buffer for this block
+    midiBuffer_.clear();
 
-        for (auto& clip : clips)
+    // Phase 2A: Get current clip snapshot (RT-safe atomic load)
+    auto currentSnapshot = clipsSnapshot_.load(std::memory_order_acquire);
+
+    if (currentSnapshot)
+    {
+        // Iterate clips from snapshot (no lock needed!)
+        for (auto* clip : currentSnapshot->clips)
         {
             if (clip != nullptr && clip->isPlaying() && clip->isActiveAt(playheadSamples))
             {
-                // Phase 1: Use pre-allocated clipBuffer_ to avoid RT allocations
-                clipBuffer_.clear();
-
-                juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, bufferToFill.numSamples);
-
-                // Phase 1.3: Pass playhead to clip for timing
                 if (clip->getType() == Clip::Type::Audio)
                 {
+                    // Phase 1: Use pre-allocated clipBuffer_ to avoid RT allocations
+                    clipBuffer_.clear();
+
+                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, bufferToFill.numSamples);
+
+                    // Phase 1.3: Pass playhead to clip for timing
                     clip->processAudioClip(clipInfo, playheadSamples);
+
+                    // Mix clip into main buffer
+                    const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
+                                                          clipBuffer_.getNumChannels());
+
+                    for (int ch = 0; ch < channelsToMix; ++ch)
+                    {
+                        bufferToFill.buffer->addFrom(
+                            ch,
+                            bufferToFill.startSample,
+                            clipBuffer_,
+                            ch,
+                            0,
+                            bufferToFill.numSamples);
+                    }
                 }
                 else if (clip->getType() == Clip::Type::MIDI)
                 {
-                    clip->processMidiClip(clipInfo, playheadSamples);
-                }
-
-                // Mix clip into main buffer
-                const int channelsToMix = juce::jmin(bufferToFill.buffer->getNumChannels(),
-                                                      clipBuffer_.getNumChannels());
-
-                for (int ch = 0; ch < channelsToMix; ++ch)
-                {
-                    bufferToFill.buffer->addFrom(
-                        ch,
-                        bufferToFill.startSample,
-                        clipBuffer_,
-                        ch,
-                        0,
-                        bufferToFill.numSamples);
+                    // Phase 2A: Process MIDI clip into track's MIDI buffer
+                    clip->processMidiClip(midiBuffer_, playheadSamples, bufferToFill.numSamples);
                 }
             }
         }
@@ -143,6 +147,7 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
         bufferToFill.numSamples);
 
     // Process through plugin chain
+    // TODO(Phase 2B: plugin hosting) - Pass midiBuffer_ to plugins
     processPluginChain(localBuffer, bufferToFill.numSamples);
 
     // Apply volume and pan
@@ -218,59 +223,81 @@ void Track::setEnabled(bool shouldBeEnabled)
 // Stubbed for now; will implement VST3/AU support in Phase 2
 
 //==============================================================================
+// Phase 2A: Lock-free clip management (message thread only)
+//==============================================================================
+
+void Track::updateClipSnapshot()
+{
+    // Called from message thread only - no lock needed
+    // Create new snapshot from current ownership
+    auto newSnapshot = std::make_shared<const ClipSnapshot>(clipsOwned_);
+
+    // Atomically swap snapshot (audio thread will see new snapshot on next load)
+    clipsSnapshot_.store(newSnapshot, std::memory_order_release);
+}
+
 void Track::addClip(std::unique_ptr<Clip> clip)
 {
     if (clip != nullptr)
     {
-        const juce::ScopedLock sl(clipsLock);
-
         // Prepare the clip if we're already initialized
         if (currentSampleRate > 0)
         {
             clip->prepareToPlay(currentBlockSize, currentSampleRate);
         }
 
-        clips.push_back(std::move(clip));
+        // Add to ownership vector
+        clipsOwned_.push_back(std::move(clip));
+
+        // Update snapshot for audio thread
+        updateClipSnapshot();
+
         sendChangeMessage();
     }
 }
 
 void Track::removeClip(int clipIndex)
 {
-    const juce::ScopedLock sl(clipsLock);
-
-    if (clipIndex >= 0 && clipIndex < static_cast<int>(clips.size()))
+    if (clipIndex >= 0 && clipIndex < static_cast<int>(clipsOwned_.size()))
     {
-        auto& clip = clips[clipIndex];
+        auto& clip = clipsOwned_[clipIndex];
         if (clip != nullptr)
         {
             clip->releaseResources();
         }
-        clips.erase(clips.begin() + clipIndex);
+
+        // Remove from ownership vector
+        clipsOwned_.erase(clipsOwned_.begin() + clipIndex);
+
+        // Update snapshot for audio thread
+        updateClipSnapshot();
+
         sendChangeMessage();
     }
 }
 
 void Track::removeClip(Clip* clip)
 {
-    const juce::ScopedLock sl(clipsLock);
-
-    auto it = std::find_if(clips.begin(), clips.end(),
+    auto it = std::find_if(clipsOwned_.begin(), clipsOwned_.end(),
         [clip](const std::unique_ptr<Clip>& c) { return c.get() == clip; });
 
-    if (it != clips.end())
+    if (it != clipsOwned_.end())
     {
         (*it)->releaseResources();
-        clips.erase(it);
+
+        // Remove from ownership vector
+        clipsOwned_.erase(it);
+
+        // Update snapshot for audio thread
+        updateClipSnapshot();
+
         sendChangeMessage();
     }
 }
 
 void Track::clearClips()
 {
-    const juce::ScopedLock sl(clipsLock);
-
-    for (auto& clip : clips)
+    for (auto& clip : clipsOwned_)
     {
         if (clip != nullptr)
         {
@@ -278,21 +305,26 @@ void Track::clearClips()
         }
     }
 
-    clips.clear();
+    // Clear ownership vector
+    clipsOwned_.clear();
+
+    // Update snapshot for audio thread
+    updateClipSnapshot();
+
     sendChangeMessage();
 }
 
 int Track::getNumClips() const
 {
-    const juce::ScopedLock sl(clipsLock);
-    return static_cast<int>(clips.size());
+    // Message thread access - read ownership vector directly
+    return static_cast<int>(clipsOwned_.size());
 }
 
 Track::Clip* Track::getClip(int index) const
 {
-    const juce::ScopedLock sl(clipsLock);
-    if (index >= 0 && index < static_cast<int>(clips.size()))
-        return clips[index].get();
+    // Message thread access - read ownership vector directly
+    if (index >= 0 && index < static_cast<int>(clipsOwned_.size()))
+        return clipsOwned_[index].get();
     return nullptr;
 }
 
@@ -318,16 +350,13 @@ juce::ValueTree Track::getState() const
 
     // TODO(Phase 2: plugin hosting) - Save plugin states
 
-    // Save clip states
+    // Phase 2A: Save clip states (message thread, no lock needed)
     juce::ValueTree clipsState("Clips");
+    for (auto& clip : clipsOwned_)
     {
-        const juce::ScopedLock sl(clipsLock);
-        for (auto& clip : clips)
+        if (clip != nullptr)
         {
-            if (clip != nullptr)
-            {
-                clipsState.appendChild(clip->getState(), nullptr);
-            }
+            clipsState.appendChild(clip->getState(), nullptr);
         }
     }
     state.appendChild(clipsState, nullptr);

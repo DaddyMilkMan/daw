@@ -22,6 +22,10 @@ Engine::Engine()
 Engine::~Engine()
 {
     DBG("Engine: Destructor");
+
+    // Phase 2A: Disable MIDI input
+    disableMidiInput();
+
     shutdown();
 }
 
@@ -61,6 +65,9 @@ bool Engine::initialize()
 
     // Add this engine as the audio callback
     deviceManager.addAudioCallback(this);
+
+    // Phase 2A: Enable MIDI input
+    enableMidiInput();
 
     // C3: Optional debug seed (disabled by default; enable with -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
 #if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
@@ -461,6 +468,103 @@ void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate)
         {
             track->prepareToPlay(samplesPerBlockExpected, sampleRate);
             DBG("  Prepared: " + track->getName());
+        }
+    }
+}
+
+//==============================================================================
+// Phase 2A: MIDI Input Handling
+//==============================================================================
+
+void Engine::enableMidiInput()
+{
+    DBG("Engine: Enabling MIDI input...");
+
+    // Get list of available MIDI input devices
+    auto midiInputs = juce::MidiInput::getAvailableDevices();
+
+    if (midiInputs.isEmpty())
+    {
+        DBG("Engine: No MIDI input devices available");
+        return;
+    }
+
+    // Open the first available MIDI input device
+    const auto& firstInput = midiInputs[0];
+    DBG("Engine: Opening MIDI input: " + firstInput.name);
+
+    midiInput_ = juce::MidiInput::openDevice(firstInput.identifier, this);
+
+    if (midiInput_ != nullptr)
+    {
+        midiInput_->start();
+        DBG("Engine: MIDI input started: " + firstInput.name);
+    }
+    else
+    {
+        DBG("Engine: Failed to open MIDI input");
+    }
+
+    // Initialize MIDI recording buffers for all tracks
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.trackRecordings.resize(tracks_.size());
+    }
+}
+
+void Engine::disableMidiInput()
+{
+    if (midiInput_ != nullptr)
+    {
+        DBG("Engine: Stopping MIDI input...");
+        midiInput_->stop();
+        midiInput_.reset();
+        DBG("Engine: MIDI input stopped");
+    }
+}
+
+void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message)
+{
+    juce::ignoreUnused(source);
+
+    // This runs on MIDI input thread (NOT audio thread or message thread)
+    // Buffer the message for processing in audio callback
+
+    // Add message to incoming buffer with current timestamp
+    {
+        const juce::ScopedLock sl(midiInputLock_);
+        incomingMidiBuffer_.addEvent(message, 0);  // Will be time-adjusted in audio callback
+    }
+
+    // Phase 2A: MIDI recording - if recording is active, store with playhead timestamp
+    if (isRecording_.load())
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+
+        // Get current playhead position
+        const juce::int64 playhead = playheadSamples_.load();
+        const juce::int64 recordStart = midiRecording_.recordingStartSamples;
+
+        // Calculate position relative to recording start
+        const double positionInSeconds = static_cast<double>(playhead - recordStart) / currentSampleRate.load();
+
+        // Add to all armed MIDI/Instrument tracks
+        for (size_t i = 0; i < tracks_.size() && i < midiRecording_.trackRecordings.size(); ++i)
+        {
+            auto* track = tracks_[i].get();
+            if (track != nullptr && track->isArmed() &&
+                (track->getType() == zenith::Track::Type::MIDI ||
+                 track->getType() == zenith::Track::Type::Instrument))
+            {
+                // Create timestamped message
+                juce::MidiMessage timestampedMessage(message);
+                timestampedMessage.setTimeStamp(positionInSeconds);
+
+                // Add to track's recording buffer
+                midiRecording_.trackRecordings[i].addEvent(timestampedMessage);
+
+                // TODO(Phase 2B): On stop, quantize and create MIDI clip from recorded events
+            }
         }
     }
 }

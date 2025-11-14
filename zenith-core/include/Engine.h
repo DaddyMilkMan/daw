@@ -54,8 +54,10 @@ namespace zenith {
  * 2. Transport (play/stop/record)
  * 3. Audio routing and mixing
  * 4. CPU usage monitoring
+ * 5. MIDI input routing (Phase 2A)
  */
-class Engine : public juce::AudioIODeviceCallback
+class Engine : public juce::AudioIODeviceCallback,
+               public juce::MidiInputCallback
 {
 public:
     //==========================================================================
@@ -260,6 +262,17 @@ public:
         int numSamples,
         const juce::AudioIODeviceCallbackContext& context) override;
 
+    //==========================================================================
+    // Phase 2A: MidiInputCallback interface
+    //==========================================================================
+
+    /**
+     * @brief Handle incoming MIDI messages from input devices
+     * @note Runs on MIDI input thread, routes to armed tracks
+     */
+    void handleIncomingMidiMessage(juce::MidiInput* source,
+                                   const juce::MidiMessage& message) override;
+
 private:
     //==========================================================================
     // Audio Processing (AUDIO THREAD)
@@ -318,8 +331,26 @@ private:
     // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for access)
     std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
 
+    // Phase 2A: MIDI input handling
+    std::unique_ptr<juce::MidiInput> midiInput_;
+    juce::MidiBuffer incomingMidiBuffer_;  // Buffered MIDI from input
+    juce::CriticalSection midiInputLock_;  // Protects incomingMidiBuffer_
+
+    // Phase 2A: MIDI recording state (per-track)
+    struct MidiRecordingBuffer
+    {
+        std::vector<juce::MidiMessageSequence> trackRecordings;  // One per track
+        juce::int64 recordingStartSamples = 0;  // Playhead when recording started
+    };
+    MidiRecordingBuffer midiRecording_;
+    juce::CriticalSection midiRecordingLock_;
+
     // Track management (message thread only)
     void prepareTracks(int samplesPerBlockExpected, double sampleRate);
+
+    // Phase 2A: MIDI input management (message thread only)
+    void enableMidiInput();
+    void disableMidiInput();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
