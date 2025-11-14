@@ -153,6 +153,73 @@ public:
      */
     int getNumTracks() const;
 
+    /**
+     * @brief Get track ValueTree by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId);
+
+    //==========================================================================
+    // Clip Management
+    //==========================================================================
+
+    /**
+     * @brief Create an empty clip on a track
+     * @param trackId Track ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Clip length in beats
+     * @param isMidi true for MIDI clip, false for audio clip
+     * @param name Clip name
+     * @param actionName Undo action name
+     * @return Clip ID
+     */
+    juce::String createEmptyClip(const juce::String& trackId,
+                                  double startBeats,
+                                  double lengthBeats,
+                                  bool isMidi,
+                                  const juce::String& name,
+                                  const juce::String& actionName);
+
+    /**
+     * @brief Move a clip to a new track and/or time position
+     * @param clipId Clip ID
+     * @param newTrackId Target track ID
+     * @param newStartBeats New start position in beats
+     * @param actionName Undo action name
+     */
+    void moveClip(const juce::String& clipId,
+                  const juce::String& newTrackId,
+                  double newStartBeats,
+                  const juce::String& actionName);
+
+    /**
+     * @brief Resize a clip (change start and/or length)
+     * @param clipId Clip ID
+     * @param newStartBeats New start position in beats
+     * @param newLengthBeats New length in beats
+     * @param actionName Undo action name
+     */
+    void setClipRange(const juce::String& clipId,
+                      double newStartBeats,
+                      double newLengthBeats,
+                      const juce::String& actionName);
+
+    /**
+     * @brief Delete a clip
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     */
+    void deleteClip(const juce::String& clipId,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Find clip by ID across all tracks
+     * @param clipId Clip ID
+     * @return Pair of (track ValueTree, clip ValueTree) - both invalid if not found
+     */
+    std::pair<juce::ValueTree, juce::ValueTree> findClip(const juce::String& clipId);
+
     //==========================================================================
     // Undo/Redo
     //==========================================================================
@@ -212,9 +279,9 @@ private:
     juce::String generateUniqueId(const juce::String& prefix);
 
     /**
-     * @brief Find track by ID
+     * @brief Find track by ID (internal helper)
      */
-    juce::ValueTree findTrack(const juce::String& trackId);
+    juce::ValueTree findTrackInternal(const juce::String& trackId);
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree
