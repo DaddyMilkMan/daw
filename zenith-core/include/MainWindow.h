@@ -25,7 +25,7 @@
  * This component is the main content area and will contain:
  * - Transport bar
  * - Browser panel
- * - Arrangement view
+ * - Arrangement view (Phase 8.1)
  * - Mixer panel
  * - Wingman AI panel (Phase 2)
  */
@@ -34,7 +34,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& state);
     ~MainComponent() override;
 
     //==========================================================================
@@ -62,6 +62,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +77,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 8.1: Arranger view
+    std::unique_ptr<class ArrangerComponent> arrangerComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

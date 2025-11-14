@@ -4,13 +4,14 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../include/ArrangerComponent.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& state)
+    : engine(eng), projectState(state)
 {
     // Set size
     setSize(1400, 800);
@@ -55,6 +56,10 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Phase 8.1: Arranger view
+    arrangerComponent = std::make_unique<ArrangerComponent>(projectState);
+    addAndMakeVisible(arrangerComponent.get());
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -66,49 +71,8 @@ MainComponent::~MainComponent()
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
+    // Phase 8.1: No custom painting, all handled by child components
+    g.fillAll(juce::Colour(0xff1e1e1e));
 }
 
 void MainComponent::resized()
@@ -140,6 +104,12 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 8.1: Arranger view takes remaining space
+    if (arrangerComponent != nullptr)
+    {
+        arrangerComponent->setBounds(bounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -188,8 +158,8 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    // Create main content (pass both engine and projectState)
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
