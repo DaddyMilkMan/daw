@@ -223,6 +223,26 @@ public:
      */
     void quantizeClip(const juce::String& clipId, double gridBeats, const juce::String& actionName);
 
+    /**
+     * @brief Change a MIDI note's velocity (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newVelocity New velocity (1-127, clamped)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
+                             int newVelocity, const juce::String& actionName);
+
+    /**
+     * @brief Change a MIDI note's length (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newLengthBeats New duration in beats (must be > 0)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteLength(const juce::String& clipId, const juce::String& noteId,
+                           double newLengthBeats, const juce::String& actionName);
+
     //==========================================================================
     // Undo/Redo
     //==========================================================================

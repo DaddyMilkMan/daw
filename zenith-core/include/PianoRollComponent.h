@@ -1,17 +1,23 @@
 /**
  * @file PianoRollComponent.h
- * @brief Piano Roll MIDI editor (Phase 8.1)
+ * @brief Piano Roll MIDI editor (Phase 8.2 - Enhanced Ergonomics)
  *
  * Provides MIDI note editing with full undo/redo support via ProjectState.
  * All edits go through ProjectState's undoable MIDI API - never modifies
  * Clip's internal data directly.
  *
- * Features:
+ * Phase 8.1 Features:
  * - Create/move/delete notes via mouse
  * - Grid snapping (configurable)
  * - Undo/Redo (Cmd/Ctrl+Z)
  * - Auto-updates when notes change (ValueTree listener)
  * - Supports Wingman MIDI commands
+ *
+ * Phase 8.2 NEW Features:
+ * - Velocity editing (velocity lane at bottom)
+ * - Note length resize (edge drag)
+ * - Multi-selection (Ctrl/Cmd-click, marquee drag)
+ * - Zoom & scroll (mousewheel, keyboard shortcuts)
  */
 
 #pragma once
@@ -82,6 +88,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     bool keyPressed(const juce::KeyPress& key) override;
 
@@ -114,9 +122,24 @@ private:
         bool muted;                // Muted flag
         bool selected;             // UI selection state
 
-        juce::Rectangle<float> bounds;  // Screen coordinates
+        juce::Rectangle<float> bounds;          // Screen coordinates (note grid area)
+        juce::Rectangle<float> velocityBounds;  // Velocity lane bar (Phase 8.2)
 
         NoteRect() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false), selected(false) {}
+    };
+
+    //==========================================================================
+    // Phase 8.2: Drag Modes
+    //==========================================================================
+
+    enum class DragMode
+    {
+        None,
+        MoveNote,           // Dragging note body (move pitch + time)
+        ResizeLeft,         // Dragging left edge (change start + length)
+        ResizeRight,        // Dragging right edge (change length only)
+        VelocityEdit,       // Dragging velocity bar
+        MarqueeSelect       // Rectangle selection drag
     };
 
     //==========================================================================
@@ -148,8 +171,12 @@ private:
 
     double snapToGrid(double beats) const;
 
+    // Phase 8.2: Velocity conversion
+    int pixelsToVelocity(float y) const;
+    float velocityToPixels(int velocity) const;
+
     //==========================================================================
-    // Mouse Interaction
+    // Mouse Interaction (Phase 8.1)
     //==========================================================================
 
     NoteRect* findNoteAtPosition(float x, float y);
@@ -159,6 +186,57 @@ private:
 
     void createNoteAtPosition(float x, float y);
     void deleteSelectedNotes();
+
+    //==========================================================================
+    // Phase 8.2: Edge Detection & Resize
+    //==========================================================================
+
+    /**
+     * @brief Detect what part of a note was clicked
+     * @param note Note to test
+     * @param x Mouse x position
+     * @param y Mouse y position
+     * @return DragMode (MoveNote, ResizeLeft, ResizeRight)
+     */
+    DragMode detectNoteHitRegion(const NoteRect& note, float x, float y) const;
+
+    void startResizingNote(NoteRect* note, DragMode mode, const juce::MouseEvent& e);
+    void updateNoteResize(const juce::MouseEvent& e);
+    void finishNoteResize();
+
+    //==========================================================================
+    // Phase 8.2: Multi-Selection
+    //==========================================================================
+
+    void clearSelection();
+    void selectNote(NoteRect* note, bool addToSelection);
+    void selectNotesInRectangle(const juce::Rectangle<float>& rect);
+
+    void startMarqueeSelect(const juce::MouseEvent& e);
+    void updateMarqueeSelect(const juce::MouseEvent& e);
+    void finishMarqueeSelect();
+
+    void startMovingSelection(const juce::MouseEvent& e);
+    void updateSelectionMove(const juce::MouseEvent& e);
+    void finishSelectionMove();
+
+    //==========================================================================
+    // Phase 8.2: Velocity Editing
+    //==========================================================================
+
+    NoteRect* findNoteInVelocityLane(float x);
+    void startEditingVelocity(NoteRect* note, const juce::MouseEvent& e);
+    void updateVelocityEdit(const juce::MouseEvent& e);
+    void finishVelocityEdit();
+
+    //==========================================================================
+    // Phase 8.2: Zoom & Scroll
+    //==========================================================================
+
+    void zoomHorizontal(float factor, float centerX);
+    void zoomVertical(float factor, float centerY);
+    void scrollHorizontal(float delta);
+    void scrollVertical(float delta);
 
     //==========================================================================
     // Member Variables
@@ -174,17 +252,43 @@ private:
     double gridBeats = 0.25;       // 1/16 note
     bool snapEnabled = true;
 
-    // Zoom & scroll
+    // Zoom & scroll (Phase 8.2: user-controllable)
     double pixelsPerBeat = 80.0;
-    int pixelsPerPitch = 12;
-    int scrollOffsetX = 0;
-    int scrollOffsetY = 0;
+    double pixelsPerPitch = 12.0;
+    double viewStartBeats = 0.0;
+    int viewLowestPitch = 0;
+
+    // Phase 8.2: Velocity lane
+    int velocityLaneHeight = 80;
+
+    // Phase 8.2: Edge resize detection
+    float resizeHandleWidth = 6.0f;
 
     // Interaction state
-    NoteRect* draggingNote = nullptr;
+    DragMode currentDragMode = DragMode::None;
+    NoteRect* activeNote = nullptr;  // Note being dragged/resized/velocity-edited
+
+    // Phase 8.2: Multi-select state
     juce::Point<float> dragStartPos;
+    juce::Rectangle<float> marqueeRect;
+
+    // Phase 8.2: Multi-note drag (cache original positions)
+    struct NoteDragState
+    {
+        juce::String id;
+        int originalPitch;
+        double originalStartBeats;
+        double originalLengthBeats;  // For resize
+        int originalVelocity;         // For velocity edits
+    };
+    std::vector<NoteDragState> dragStates;
+
+    // Legacy state (for compatibility with Phase 8.1 code during migration)
+    NoteRect* draggingNote = nullptr;
     int dragStartPitch = 60;
     double dragStartBeats = 0.0;
+    int scrollOffsetX = 0;
+    int scrollOffsetY = 0;
 
     bool needsRefresh = false;
 

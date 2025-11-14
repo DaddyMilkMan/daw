@@ -439,6 +439,44 @@ void ProjectState::quantizeClip(const juce::String& clipId, double gridBeats, co
     DBG("ProjectState: Quantized clip " + clipId + " to grid " + juce::String(gridBeats) + " beats");
 }
 
+void ProjectState::setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
+                                        int newVelocity, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot set velocity - note not found: " + noteId);
+        return;
+    }
+
+    // Clamp velocity (1-127, never 0)
+    int velocity = juce::jlimit(1, 127, newVelocity);
+
+    undoManager.beginNewTransaction(actionName);
+    noteTree.setProperty(PROP_VELOCITY, velocity, &undoManager);
+
+    DBG("ProjectState: Set velocity for note " + noteId + " to " + juce::String(velocity));
+}
+
+void ProjectState::setMidiNoteLength(const juce::String& clipId, const juce::String& noteId,
+                                      double newLengthBeats, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot set length - note not found: " + noteId);
+        return;
+    }
+
+    // Ensure positive length (minimum 0.01 beats)
+    double lengthBeats = juce::jmax(0.01, newLengthBeats);
+
+    undoManager.beginNewTransaction(actionName);
+    noteTree.setProperty(PROP_LENGTH_BEATS, lengthBeats, &undoManager);
+
+    DBG("ProjectState: Set length for note " + noteId + " to " + juce::String(lengthBeats) + " beats");
+}
+
 //==============================================================================
 // Helper Methods
 //==============================================================================
