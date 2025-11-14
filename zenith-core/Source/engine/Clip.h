@@ -24,6 +24,23 @@ namespace zenith {
 
 //==============================================================================
 /**
+ * @brief MIDI note specification (Phase 8)
+ * Matches ProjectState::MidiNoteSpec for compatibility
+ */
+struct MidiNoteSpec
+{
+    juce::String id;         // Unique note ID
+    int pitch;               // MIDI note number (0-127)
+    double startBeats;       // Start time in beats (relative to clip start)
+    double lengthBeats;      // Duration in beats
+    int velocity;            // Note velocity (0-127)
+    bool muted;              // Muted flag
+
+    MidiNoteSpec() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false) {}
+};
+
+//==============================================================================
+/**
     Represents an audio or MIDI clip on the timeline.
 
     Each clip has a position on the timeline, a length, and can contain either
@@ -98,6 +115,19 @@ public:
     // MIDI clip specific
     void setMidiSequence(const juce::MidiMessageSequence& sequence);
     const juce::MidiMessageSequence* getMidiSequence() const { return &midiSequence; }
+
+    /**
+     * @brief Rebuild MIDI sequence from note specifications (Phase 8)
+     * @param notes Array of note specs from ProjectState
+     * @param clipStartBeats Clip start time in beats (for absolute positioning)
+     * @param tempo Project tempo (for beat-to-time conversion)
+     *
+     * This method should be called from the message thread whenever MIDI notes change.
+     * It rebuilds the cached midiSequence that the audio thread reads.
+     */
+    void buildMidiSequenceFromNotes(const juce::Array<MidiNoteSpec>& notes,
+                                     double clipStartBeats,
+                                     double tempo);
 
     //==============================================================================
     // Fades (in samples)

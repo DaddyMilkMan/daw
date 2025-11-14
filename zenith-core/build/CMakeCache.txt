@@ -295,6 +295,15 @@ PKG_CONFIG_ARGN:STRING=
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
 
+//Enable src/audio skeleton (Phase 1 - not ready)
+ZENITH_ENABLE_PHASE1_AUDIO:BOOL=OFF
+
+//Enable donor compile checks from VexelDAW-Native
+ZENITH_ENABLE_VEXEL_DONOR:BOOL=OFF
+
+//Create 8 demo tracks at startup in Debug builds
+ZENITH_ENGINE_SEED_DEBUG_TRACKS:BOOL=OFF
+
 //Value Computed by CMake
 ZenithDAW_BINARY_DIR:STATIC=/home/user/daw/zenith-core/build
 
@@ -421,7 +430,7 @@ CMAKE_MODULE_LINKER_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_NM
 CMAKE_NM-ADVANCED:INTERNAL=1
 //number of local generators
-CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=5
+CMAKE_NUMBER_OF_MAKEFILES:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJCOPY
 CMAKE_OBJCOPY-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_OBJDUMP
