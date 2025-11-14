@@ -4,6 +4,7 @@
  */
 
 #include "../include/Engine.h"
+#include "../include/ProjectState.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "engine/Track.h"
@@ -131,8 +132,72 @@ void Engine::play()
 void Engine::stop()
 {
     DBG("Engine: Stop");
+
+    // Phase 2C: If recording, bake recordings into clips first
+    if (isRecording_.load())
+    {
+        stopRecording();
+    }
+
     isPlaying_.store(false);
     enableTestTone_.store(false);
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording
+//==============================================================================
+
+void Engine::record()
+{
+    DBG("Engine: Record");
+
+    // Set recording start position to current playhead
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.recordingStartSamples = playheadSamples_.load();
+
+        // Resize recording buffers to match track count
+        midiRecording_.trackRecordings.resize(tracks_.size());
+
+        // Clear all track recordings
+        for (auto& trackRecording : midiRecording_.trackRecordings)
+        {
+            trackRecording.clear();
+        }
+    }
+
+    // Enable recording
+    isRecording_.store(true);
+
+    // Start playback if not already playing
+    if (!isPlaying_.load())
+    {
+        play();
+    }
+
+    DBG("Engine: Recording started at sample " + juce::String(midiRecording_.recordingStartSamples));
+}
+
+void Engine::stopRecording()
+{
+    DBG("Engine: Stop recording");
+
+    // Disable recording first (stops new MIDI from being recorded)
+    isRecording_.store(false);
+
+    // Bake recordings into clips (with quantization enabled)
+    bakeMidiRecordingsIntoClips(true);
+
+    // Clear recording buffers
+    clearMidiRecordings();
+
+    DBG("Engine: Recording stopped, clips created");
+}
+
+void Engine::setProjectState(ProjectState* state)
+{
+    projectState_ = state;
+    DBG("Engine: ProjectState reference set");
 }
 
 //==============================================================================
@@ -562,9 +627,128 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
 
                 // Add to track's recording buffer
                 midiRecording_.trackRecordings[i].addEvent(timestampedMessage);
-
-                // TODO(Phase 2B): On stop, quantize and create MIDI clip from recorded events
             }
         }
     }
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording Baking
+//==============================================================================
+
+void Engine::bakeMidiRecordingsIntoClips(bool quantize)
+{
+    DBG("Engine: Baking MIDI recordings into clips (quantize=" + juce::String(quantize ? "true" : "false") + ")");
+
+    // Get project tempo for quantization (default to 120 BPM if no project state)
+    const double tempo = (projectState_ != nullptr) ? projectState_->getTempo() : 120.0;
+
+    // Copy recording data while locked (minimize lock time)
+    std::vector<juce::MidiMessageSequence> recordingsCopy;
+    juce::int64 recordStart = 0;
+
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        recordingsCopy = midiRecording_.trackRecordings;
+        recordStart = midiRecording_.recordingStartSamples;
+    }
+
+    // Process each track's recording (unlocked)
+    for (size_t i = 0; i < recordingsCopy.size() && i < tracks_.size(); ++i)
+    {
+        auto& recording = recordingsCopy[i];
+
+        // Skip empty recordings
+        if (recording.getNumEvents() == 0)
+            continue;
+
+        // Quantize if requested
+        juce::MidiMessageSequence finalSequence = recording;
+        if (quantize)
+        {
+            finalSequence = quantizeMidiSequence(recording, tempo, 0.25);  // 1/16 note grid
+        }
+
+        // Ensure note-off events are properly matched
+        finalSequence.updateMatchedPairs();
+
+        // Calculate clip length from sequence end time
+        const double endTimeSeconds = finalSequence.getEndTime();
+        const juce::int64 clipLengthSamples = static_cast<juce::int64>(
+            endTimeSeconds * currentSampleRate.load());
+
+        // Create MIDI clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::MIDI);
+        clip->setName("MIDI Recording");
+        clip->setMidiSequence(finalSequence);
+        clip->setStartPosition(recordStart);
+        clip->setLength(clipLengthSamples);
+
+        // Add clip to track
+        auto* track = tracks_[i].get();
+        if (track != nullptr)
+        {
+            track->addClip(std::move(clip));
+            DBG("Engine: Created MIDI clip on track " + juce::String(i) +
+                " (start=" + juce::String(recordStart) +
+                ", length=" + juce::String(clipLengthSamples) +
+                ", events=" + juce::String(finalSequence.getNumEvents()) + ")");
+        }
+    }
+
+    DBG("Engine: Baking complete");
+}
+
+void Engine::clearMidiRecordings()
+{
+    const juce::ScopedLock sl(midiRecordingLock_);
+
+    for (auto& recording : midiRecording_.trackRecordings)
+    {
+        recording.clear();
+    }
+
+    midiRecording_.recordingStartSamples = 0;
+
+    DBG("Engine: MIDI recordings cleared");
+}
+
+juce::MidiMessageSequence Engine::quantizeMidiSequence(
+    const juce::MidiMessageSequence& input,
+    double tempo,
+    double quantizeGrid)
+{
+    // Calculate grid spacing in seconds
+    const double beatsPerSecond = tempo / 60.0;
+    const double quarterNoteSeconds = 1.0 / beatsPerSecond;
+    const double gridSeconds = quarterNoteSeconds * quantizeGrid;
+
+    juce::MidiMessageSequence output;
+
+    // Quantize each event
+    for (int i = 0; i < input.getNumEvents(); ++i)
+    {
+        auto* event = input.getEventPointer(i);
+        if (event == nullptr)
+            continue;
+
+        double timestamp = event->message.getTimeStamp();
+
+        // Quantize to nearest grid point
+        double quantized = std::round(timestamp / gridSeconds) * gridSeconds;
+
+        // Ensure non-negative timestamps
+        quantized = juce::jmax(0.0, quantized);
+
+        // Create quantized message
+        juce::MidiMessage msg(event->message);
+        msg.setTimeStamp(quantized);
+        output.addEvent(msg);
+    }
+
+    // Update note-on/note-off pairing after quantization
+    output.updateMatchedPairs();
+
+    return output;
 }

@@ -109,6 +109,23 @@ public:
      */
     bool isPlaying() const { return isPlaying_.load(); }
 
+    /**
+     * @brief Start recording
+     * @note MESSAGE THREAD ONLY - Starts recording on armed tracks
+     */
+    void record();
+
+    /**
+     * @brief Stop recording and bake MIDI clips
+     * @note MESSAGE THREAD ONLY - Converts recordings to clips
+     */
+    void stopRecording();
+
+    /**
+     * @brief Check if recording
+     */
+    bool isRecording() const { return isRecording_.load(); }
+
     //==========================================================================
     // Phase 1.3: Transport Position & Looping
     //==========================================================================
@@ -215,6 +232,17 @@ public:
     zenith::AudioFilePool& getAudioFilePool();
 
     //==========================================================================
+    // Phase 2C: Project State Integration
+    //==========================================================================
+
+    /**
+     * @brief Set project state reference for tempo/time sig access
+     * @param state Pointer to ProjectState (non-owning)
+     * @note MESSAGE THREAD ONLY
+     */
+    void setProjectState(class ProjectState* state);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -290,6 +318,35 @@ private:
         int numSamples);
 
     //==========================================================================
+    // Phase 2C: MIDI Recording Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Convert recorded MIDI into clips on tracks
+     * @param quantize If true, quantize events to 1/16 note grid
+     * @note MESSAGE THREAD ONLY
+     */
+    void bakeMidiRecordingsIntoClips(bool quantize);
+
+    /**
+     * @brief Clear all MIDI recording buffers
+     * @note MESSAGE THREAD ONLY
+     */
+    void clearMidiRecordings();
+
+    /**
+     * @brief Quantize MIDI sequence to grid
+     * @param input Original sequence
+     * @param tempo Project tempo in BPM
+     * @param quantizeGrid Grid size (0.25 = 1/16, 0.5 = 1/8, etc.)
+     * @return Quantized sequence
+     */
+    juce::MidiMessageSequence quantizeMidiSequence(
+        const juce::MidiMessageSequence& input,
+        double tempo,
+        double quantizeGrid);
+
+    //==========================================================================
     // Member Variables
     //==========================================================================
 
@@ -330,6 +387,9 @@ private:
 
     // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for access)
     std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
+
+    // Phase 2C: Project state reference (non-owning, for tempo/time sig access)
+    class ProjectState* projectState_ = nullptr;
 
     // Phase 2A: MIDI input handling
     std::unique_ptr<juce::MidiInput> midiInput_;
