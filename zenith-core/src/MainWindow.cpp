@@ -5,19 +5,21 @@
 
 #include "../include/MainWindow.h"
 #include "ui/ArrangerComponent.h"
+#include "ui/WingmanPanel.h"
+#include "commands/CommandAPI.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
+MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api)
     : engine(eng)
 {
     // Set size
     setSize(1400, 800);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 4: Timeline + Piano Roll", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 5: Wingman v0", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -59,6 +61,10 @@ MainComponent::MainComponent(Engine& eng)
     // Phase 4: Create arranger component
     arrangerComponent = std::make_unique<ArrangerComponent>(engine);
     addAndMakeVisible(arrangerComponent.get());
+
+    // Phase 5: Create Wingman console panel
+    wingmanPanel = std::make_unique<WingmanPanel>(api);
+    addAndMakeVisible(wingmanPanel.get());
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -104,6 +110,13 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 5: Layout Wingman panel on the right (300px width)
+    if (wingmanPanel != nullptr)
+    {
+        auto wingmanBounds = bounds.removeFromRight(400);
+        wingmanPanel->setBounds(wingmanBounds);
+    }
 
     // Phase 4: Layout arranger in remaining space
     if (arrangerComponent != nullptr)
@@ -158,8 +171,11 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Phase 5: Create Wingman command API
+    commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
+
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI);
 
     // Set up window
     setUsingNativeTitleBar(true);

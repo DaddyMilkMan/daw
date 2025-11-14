@@ -19,6 +19,11 @@
 
 // Forward declarations
 class ArrangerComponent;
+class WingmanPanel;
+
+namespace zenith {
+    class CommandAPI;
+}
 
 //==============================================================================
 /**
@@ -37,7 +42,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, zenith::CommandAPI& api);
     ~MainComponent() override;
 
     //==========================================================================
@@ -82,6 +87,9 @@ private:
 
     // Phase 4: Arranger/Timeline view
     std::unique_ptr<ArrangerComponent> arrangerComponent;
+
+    // Phase 5: Wingman command console
+    std::unique_ptr<WingmanPanel> wingmanPanel;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -130,6 +138,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Phase 5: Wingman command API
+    std::unique_ptr<zenith::CommandAPI> commandAPI;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;

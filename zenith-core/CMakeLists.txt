@@ -109,6 +109,14 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/ArrangerComponent.cpp
     Source/ui/PianoRollComponent.h
     Source/ui/PianoRollComponent.cpp
+
+    # Phase 5: Wingman v0 (AI Command Console)
+    Source/commands/CommandAPI.h
+    Source/commands/CommandAPI.cpp
+    Source/commands/SessionGraph.h
+    Source/commands/SessionGraph.cpp
+    Source/ui/WingmanPanel.h
+    Source/ui/WingmanPanel.cpp
 )
 
 # ============================================================================
@@ -119,6 +127,7 @@ target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/commands
 )
 
 # ============================================================================
