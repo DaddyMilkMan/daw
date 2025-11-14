@@ -17,6 +17,7 @@
 
 #include "Track.h"
 #include "Clip.h"
+#include "PluginHost.h"
 #include <algorithm>
 
 namespace zenith {
@@ -43,10 +44,18 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlockExpected;
 
-    // Prepare plugin buffer
-    pluginBuffer.setSize(2, samplesPerBlockExpected);
-
-    // TODO(Phase 2: plugin hosting) - Prepare all plugins
+    // Phase 3: Prepare all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& plugin : plugins)
+        {
+            if (plugin != nullptr)
+            {
+                plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
+                plugin->setNonRealtime(false);
+            }
+        }
+    }
 
     // Prepare all clips
     {
@@ -63,7 +72,17 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
-    // TODO(Phase 2: plugin hosting) - Release all plugins
+    // Phase 3: Release all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& plugin : plugins)
+        {
+            if (plugin != nullptr)
+            {
+                plugin->releaseResources();
+            }
+        }
+    }
 
     // Release all clips
     {
@@ -195,8 +214,72 @@ void Track::setEnabled(bool shouldBeEnabled)
 }
 
 //==============================================================================
-// Plugin management - TODO(Phase 2: plugin hosting)
-// Stubbed for now; will implement VST3/AU support in Phase 2
+// Plugin chain management (Phase 3: VST3 hosting MVP)
+//==============================================================================
+
+void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin)
+{
+    if (plugin == nullptr)
+        return;
+
+    const juce::ScopedLock sl(pluginLock);
+
+    // Prepare the plugin if we're already initialized
+    if (currentSampleRate > 0)
+    {
+        plugin->prepareToPlay(currentSampleRate, currentBlockSize);
+        plugin->setNonRealtime(false);
+    }
+
+    plugins.push_back(std::move(plugin));
+    sendChangeMessage();
+}
+
+void Track::removePlugin(int pluginIndex)
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(plugins.size()))
+    {
+        auto& plugin = plugins[pluginIndex];
+        if (plugin != nullptr)
+        {
+            plugin->releaseResources();
+        }
+        plugins.erase(plugins.begin() + pluginIndex);
+        sendChangeMessage();
+    }
+}
+
+void Track::clearPlugins()
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    for (auto& plugin : plugins)
+    {
+        if (plugin != nullptr)
+        {
+            plugin->releaseResources();
+        }
+    }
+
+    plugins.clear();
+    sendChangeMessage();
+}
+
+int Track::getNumPlugins() const
+{
+    const juce::ScopedLock sl(pluginLock);
+    return static_cast<int>(plugins.size());
+}
+
+juce::AudioPluginInstance* Track::getPlugin(int index) const
+{
+    const juce::ScopedLock sl(pluginLock);
+    if (index >= 0 && index < static_cast<int>(plugins.size()))
+        return plugins[index].get();
+    return nullptr;
+}
 
 //==============================================================================
 void Track::addClip(std::unique_ptr<Clip> clip)
@@ -297,7 +380,35 @@ juce::ValueTree Track::getState() const
     state.setProperty("armed", armed.load(), nullptr);
     state.setProperty("enabled", enabled.load(), nullptr);
 
-    // TODO(Phase 2: plugin hosting) - Save plugin states
+    // Phase 3: Save plugin states
+    juce::ValueTree pluginsState("Plugins");
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& plugin : plugins)
+        {
+            if (plugin != nullptr)
+            {
+                juce::ValueTree pluginState("Plugin");
+
+                // Store plugin identifier
+                auto description = plugin->getPluginDescription();
+                pluginState.setProperty("identifier", description.createIdentifierString(), nullptr);
+                pluginState.setProperty("name", description.name, nullptr);
+
+                // Store plugin state as binary data
+                juce::MemoryBlock stateData;
+                plugin->getStateInformation(stateData);
+
+                if (stateData.getSize() > 0)
+                {
+                    pluginState.setProperty("state", stateData.toBase64Encoding(), nullptr);
+                }
+
+                pluginsState.appendChild(pluginState, nullptr);
+            }
+        }
+    }
+    state.appendChild(pluginsState, nullptr);
 
     // Save clip states
     juce::ValueTree clipsState("Clips");
@@ -330,7 +441,18 @@ void Track::loadState(const juce::ValueTree& state)
     armed.store(state.getProperty("armed", false));
     enabled.store(state.getProperty("enabled", true));
 
-    // TODO(Phase 2: plugin hosting) - Load plugin states
+    // Phase 3: Load plugin states
+    // NOTE: Plugin loading requires PluginHost to recreate instances.
+    // This should be called from Engine/ProjectState level where PluginHost is available.
+    // For now, we just clear plugins and document the requirement.
+    // TODO(Phase 3+): Add loadPluginState(ValueTree, PluginHost&) method
+    auto pluginsState = state.getChildWithName("Plugins");
+    if (pluginsState.isValid())
+    {
+        clearPlugins();
+        // Plugin recreation needs to happen at Engine level with access to PluginHost
+        // See ProjectState integration for proper plugin loading
+    }
 
     // Load clip states
     auto clipsState = state.getChildWithName("Clips");
@@ -349,12 +471,102 @@ void Track::loadState(const juce::ValueTree& state)
     sendChangeMessage();
 }
 
+void Track::loadPluginStates(const juce::ValueTree& state, PluginHost& pluginHost)
+{
+    if (!state.hasType("Track"))
+        return;
+
+    auto pluginsState = state.getChildWithName("Plugins");
+    if (!pluginsState.isValid())
+        return;
+
+    DBG("Track: Loading plugin states for " + trackName);
+
+    // Clear existing plugins
+    clearPlugins();
+
+    // Recreate each plugin
+    for (int i = 0; i < pluginsState.getNumChildren(); ++i)
+    {
+        auto pluginState = pluginsState.getChild(i);
+
+        if (!pluginState.hasType("Plugin"))
+            continue;
+
+        // Get plugin identifier
+        juce::String identifier = pluginState.getProperty("identifier", "");
+        juce::String name = pluginState.getProperty("name", "Unknown");
+
+        if (identifier.isEmpty())
+        {
+            DBG("Track: Skipping plugin with no identifier");
+            continue;
+        }
+
+        // Try to create plugin instance
+        juce::String errorMessage;
+        auto instance = pluginHost.createInstance(
+            identifier,
+            currentSampleRate > 0 ? currentSampleRate : 44100.0,
+            currentBlockSize > 0 ? currentBlockSize : 512,
+            errorMessage);
+
+        if (instance == nullptr)
+        {
+            DBG("Track: WARNING - Failed to load plugin '" + name + "': " + errorMessage);
+            continue;
+        }
+
+        // Restore plugin state
+        juce::String stateBase64 = pluginState.getProperty("state", "");
+        if (stateBase64.isNotEmpty())
+        {
+            juce::MemoryBlock stateData;
+            if (stateData.fromBase64Encoding(stateBase64))
+            {
+                instance->setStateInformation(stateData.getData(), static_cast<int>(stateData.getSize()));
+                DBG("Track: Restored state for plugin '" + name + "'");
+            }
+        }
+
+        // Add to track
+        addPlugin(std::move(instance));
+        DBG("Track: Loaded plugin '" + name + "'");
+    }
+
+    DBG("Track: Loaded " + juce::String(getNumPlugins()) + " plugins");
+}
+
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
-    (void)buffer;
-    (void)numSamples;
-    // TODO(Phase 2: plugin hosting) - Process plugin chain
+    // Phase 3: Process plugin chain
+    // RT-SAFE: We only read the plugins vector here, no modifications
+    // The pluginLock is only used when adding/removing plugins (message thread)
+
+    if (plugins.empty())
+        return;
+
+    // Clear MIDI buffer (for audio tracks, empty MIDI; for instrument tracks, would contain MIDI)
+    pluginMidiBuffer.clear();
+
+    // For MVP: Simple linear plugin chain processing
+    // Audio tracks: audio in → plugins → audio out
+    // Instrument tracks (future): MIDI in → first plugin (synth) → audio → remaining plugins → audio out
+
+    // TODO(Phase 3+): Distinguish instrument vs audio tracks properly
+    // For now, we process all plugins as audio FX (assuming audio input)
+
+    for (auto& plugin : plugins)
+    {
+        if (plugin != nullptr)
+        {
+            // Process this plugin
+            // Note: processBlock expects the full buffer, not just a section
+            // We're processing in-place
+            plugin->processBlock(buffer, pluginMidiBuffer);
+        }
+    }
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples)

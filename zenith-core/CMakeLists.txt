@@ -95,6 +95,14 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Phase 3: Plugin hosting
+    Source/engine/PluginHost.h
+    Source/engine/PluginHost.cpp
+
+    # Phase 3: Plugin UI
+    Source/ui/PluginEditorWindow.h
+    Source/ui/PluginEditorWindow.cpp
 )
 
 # ============================================================================
@@ -104,6 +112,7 @@ target_sources(ZenithDAW PRIVATE
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui
 )
 
 # ============================================================================
@@ -160,8 +169,9 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Disable JUCE splash screen (requires Pro license for commercial use)
     # JUCE_DISPLAY_SPLASH_SCREEN=0
 
-    # VST3 hosting (will enable when we add plugin hosting)
-    # JUCE_PLUGINHOST_VST3=1
+    # Phase 3: VST3 hosting enabled
+    JUCE_PLUGINHOST_VST3=1
+    # Audio Unit hosting (macOS only, will enable in future)
     # JUCE_PLUGINHOST_AU=1
 
     # Don't auto-open plugin windows

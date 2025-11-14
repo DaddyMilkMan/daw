@@ -32,6 +32,8 @@ namespace zenith {
     class Track;
     class Clip;
     class MixerChannel;
+    class PluginHost;
+    class PluginEditorWindowManager;
 }
 
 //==============================================================================
@@ -153,6 +155,31 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Plugin Hosting (Phase 3: VST3 hosting MVP)
+    //==========================================================================
+
+    /**
+     * @brief Get the plugin host manager
+     * @return Reference to PluginHost
+     * @note Use only from message thread
+     */
+    zenith::PluginHost& getPluginHost() noexcept;
+
+    /**
+     * @brief Scan for plugins in default locations
+     * @return Number of plugins found
+     * @note MESSAGE THREAD ONLY - blocking operation
+     */
+    int scanForPlugins();
+
+    /**
+     * @brief Get the plugin editor window manager
+     * @return Reference to PluginEditorWindowManager
+     * @note Use only from message thread
+     */
+    zenith::PluginEditorWindowManager& getPluginEditorWindowManager() noexcept;
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -244,6 +271,10 @@ private:
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    // Phase 3: Plugin hosting
+    std::unique_ptr<zenith::PluginHost> pluginHost_;
+    std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

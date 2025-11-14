@@ -23,6 +23,9 @@
 
 namespace zenith {
 
+// Forward declaration
+class PluginHost;
+
 //==============================================================================
 /**
     Represents an audio or MIDI track in the DAW.
@@ -87,13 +90,14 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Plugin chain management - TODO(Phase 2: plugin hosting)
-    // Stubbed for now; will implement in Phase 2 with VST3/AU support
-    void addPlugin(void* plugin) { (void)plugin; /* stub */ }
-    void removePlugin(int pluginIndex) { (void)pluginIndex; /* stub */ }
-    void clearPlugins() { /* stub */ }
-    int getNumPlugins() const { return 0; }
-    void* getPlugin(int index) const { (void)index; return nullptr; }
+    // Plugin chain management (Phase 3: VST3 hosting MVP)
+    // MESSAGE THREAD ONLY for add/remove/clear
+    // Audio thread can process existing plugins safely (no modifications during playback)
+    void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+    void removePlugin(int pluginIndex);
+    void clearPlugins();
+    int getNumPlugins() const;
+    juce::AudioPluginInstance* getPlugin(int index) const;
 
     //==============================================================================
     // Clip management
@@ -116,6 +120,17 @@ public:
     // State management
     juce::ValueTree getState() const;
     void loadState(const juce::ValueTree& state);
+
+    /**
+     * @brief Load plugin states from ValueTree
+     *
+     * This must be called AFTER loadState() and requires access to PluginHost
+     * to recreate plugin instances.
+     *
+     * @param state The track state ValueTree
+     * @param pluginHost Reference to PluginHost for plugin instantiation
+     */
+    void loadPluginStates(const juce::ValueTree& state, PluginHost& pluginHost);
 
 private:
     //==============================================================================
@@ -144,10 +159,12 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Plugin chain - TODO(Phase 2: plugin hosting)
-    // Placeholder for future VST3/AU hosting
-    juce::CriticalSection pluginLock;
-    juce::AudioBuffer<float> pluginBuffer;
+    // Plugin chain (Phase 3: VST3 hosting MVP)
+    // Plugins are modified on message thread, processed on audio thread
+    // No lock needed during processing (plugins vector is only modified on message thread when stopped)
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
+    juce::CriticalSection pluginLock;  // Only for add/remove operations
+    juce::MidiBuffer pluginMidiBuffer;  // Temp MIDI buffer for plugin processing
 
     //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)
