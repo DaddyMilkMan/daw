@@ -12,14 +12,18 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, ProjectState& state)
+    : engine(eng), projectState(state)
 {
     // Set size
     setSize(1400, 800);
 
+    // Register as key listener for undo/redo shortcuts
+    addKeyListener(this);
+    setWantsKeyboardFocus(true);
+
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 5: Wingman v0", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 6: Undo/Redo + Clip Commands", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -72,7 +76,48 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api)
 
 MainComponent::~MainComponent()
 {
+    removeKeyListener(this);
     stopTimer();
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originatingComponent)
+{
+    juce::ignoreUnused(originatingComponent);
+
+    // Ctrl+Z or Cmd+Z for undo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && !key.getModifiers().isShiftDown())
+    {
+        if (projectState.canUndo())
+        {
+            projectState.undo();
+            DBG("Keyboard shortcut: Undo");
+            return true;
+        }
+    }
+
+    // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo");
+            return true;
+        }
+    }
+
+    // Ctrl+Y or Cmd+Y for redo (alternative)
+    if (key.isKeyCode(juce::KeyPress::yKey) && key.getModifiers().isCommandDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo (Y)");
+            return true;
+        }
+    }
+
+    return false;  // Key not handled
 }
 
 void MainComponent::paint(juce::Graphics& g)
@@ -174,8 +219,8 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 5: Create Wingman command API
     commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI);
+    // Create main content (Phase 6: pass ProjectState for undo/redo)
+    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);

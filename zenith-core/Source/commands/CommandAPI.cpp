@@ -46,6 +46,7 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
     DBG("CommandAPI: Executing command: " + command);
 
     // Route to appropriate handler
+    // Track commands
     if (command == "list_tracks")
         return listTracks(params);
     else if (command == "create_track")
@@ -54,18 +55,35 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         return deleteTrack(params);
     else if (command == "rename_track")
         return renameTrack(params);
-    else if (command == "list_clips")
-        return listClips(params);
-    else if (command == "split_clip")
-        return splitClip(params);
-    else if (command == "move_clip")
-        return moveClip(params);
     else if (command == "set_track_volume")
         return setTrackVolume(params);
     else if (command == "set_track_pan")
         return setTrackPan(params);
+
+    // Clip commands
+    else if (command == "list_clips")
+        return listClips(params);
+    else if (command == "create_clip")
+        return createClip(params);
+    else if (command == "delete_clip")
+        return deleteClip(params);
+    else if (command == "split_clip")
+        return splitClip(params);
+    else if (command == "move_clip")
+        return moveClip(params);
+
+    // Session/project commands
     else if (command == "get_session_graph")
         return getSessionGraph(params);
+
+    // Undo/redo commands
+    else if (command == "undo")
+        return undo(params);
+    else if (command == "redo")
+        return redo(params);
+    else if (command == "history")
+        return history(params);
+
     else
         return createErrorResponse("Unknown command: " + command);
 }
@@ -136,27 +154,15 @@ juce::var CommandAPI::createTrack(const juce::var& params)
     juce::String name = params.getProperty("name", "New Track").toString();
 
     // Validate type
-    Track::Type trackType;
-    if (type == "audio")
-        trackType = Track::Type::Audio;
-    else if (type == "midi")
-        trackType = Track::Type::MIDI;
-    else
+    if (type != "audio" && type != "midi")
         return createErrorResponse("Invalid type: must be 'audio' or 'midi'");
 
-    // Create track
-    auto newTrack = std::make_unique<Track>(name, trackType);
+    // Create track via ProjectState (undoable)
+    juce::String actionName = "Wingman: create_track '" + name + "'";
+    juce::String trackId = projectState.addTrack(name, type);
 
-    // Prepare it (use current engine sample rate)
-    newTrack->prepareToPlay(512, engine.getSampleRate());
-
-    // Get track ID before adding (will be index)
-    int trackIndex = engine.getNumTracks();
-    juce::String trackId = "track_" + juce::String(trackIndex);
-
-    // Add to engine (this modifies the tracks vector)
-    // Note: We're directly adding to engine for MVP. In future, this should go through ProjectState
-    const_cast<std::vector<std::unique_ptr<Track>>&>(engine.tracks()).push_back(std::move(newTrack));
+    if (trackId.isEmpty())
+        return createErrorResponse("Failed to create track");
 
     // Create result
     auto* resultObj = new juce::DynamicObject();
@@ -177,22 +183,14 @@ juce::var CommandAPI::deleteTrack(const juce::var& params)
 
     juce::String trackId = params["trackId"].toString();
 
-    // Find track
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
+    // Check if track exists in ProjectState
+    auto trackTree = projectState.getTrack(trackId);
+    if (!trackTree.isValid())
         return createErrorResponse("Track not found: " + trackId);
 
-    // Extract track index from ID (format: "track_N")
-    int trackIndex = trackId.fromLastOccurrenceOf("_", false, false).getIntValue();
-
-    // Validate index
-    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
-        return createErrorResponse("Invalid track index");
-
-    // Remove from engine
-    // Note: Direct vector manipulation for MVP
-    auto& tracks = const_cast<std::vector<std::unique_ptr<Track>>&>(engine.tracks());
-    tracks.erase(tracks.begin() + trackIndex);
+    // Delete via ProjectState (undoable)
+    juce::String actionName = "Wingman: delete_track " + trackId;
+    projectState.removeTrack(trackId);
 
     DBG("CommandAPI: Deleted track: " + trackId);
 
@@ -214,13 +212,14 @@ juce::var CommandAPI::renameTrack(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     juce::String newName = params["name"].toString();
 
-    // Find track
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
+    // Check if track exists in ProjectState
+    auto trackTree = projectState.getTrack(trackId);
+    if (!trackTree.isValid())
         return createErrorResponse("Track not found: " + trackId);
 
-    // Rename track
-    track->setName(newName);
+    // Rename via ProjectState (undoable)
+    juce::String actionName = "Wingman: rename_track " + trackId + " to '" + newName + "'";
+    projectState.renameTrack(trackId, newName, actionName);
 
     DBG("CommandAPI: Renamed track: " + trackId + " to " + newName);
 
@@ -306,66 +305,25 @@ juce::var CommandAPI::splitClip(const juce::var& params)
     juce::String clipId = params["clipId"].toString();
     juce::int64 splitSamples = params["splitSamples"];
 
-    // Find track and clip
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
-        return createErrorResponse("Track not found: " + trackId);
+    // Check if clip exists in ProjectState
+    auto clipTree = projectState.getClip(trackId, clipId);
+    if (!clipTree.isValid())
+        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
 
-    Track::Clip* clip = findClipById(track, clipId);
-    if (clip == nullptr)
-        return createErrorResponse("Clip not found: " + clipId);
+    // Split via ProjectState (undoable)
+    juce::String actionName = "Wingman: split_clip " + clipId + " at " + juce::String(splitSamples);
+    auto newClipIds = projectState.splitClip(trackId, clipId, splitSamples, actionName);
 
-    // Validate split position
-    juce::int64 clipStart = clip->getStartPosition();
-    juce::int64 clipEnd = clip->getEndPosition();
+    if (newClipIds.first.isEmpty() || newClipIds.second.isEmpty())
+        return createErrorResponse("Split failed - invalid split position");
 
-    if (splitSamples <= clipStart || splitSamples >= clipEnd)
-        return createErrorResponse("Split position must be within clip bounds");
-
-    // Create two new clips
-    auto leftClip = std::make_unique<Track::Clip>();
-    auto rightClip = std::make_unique<Track::Clip>();
-
-    leftClip->setType(clip->getType());
-    leftClip->setName(clip->getName() + " (L)");
-    leftClip->setStartPosition(clipStart);
-    leftClip->setLength(splitSamples - clipStart);
-    leftClip->setOffset(clip->getOffset());
-
-    rightClip->setType(clip->getType());
-    rightClip->setName(clip->getName() + " (R)");
-    rightClip->setStartPosition(splitSamples);
-    rightClip->setLength(clipEnd - splitSamples);
-    rightClip->setOffset(clip->getOffset() + (splitSamples - clipStart));
-
-    // Copy content (audio or MIDI)
-    if (clip->getType() == Track::Clip::Type::Audio && clip->getAudioBuffer() != nullptr)
-    {
-        leftClip->setAudioBuffer(*clip->getAudioBuffer());
-        rightClip->setAudioBuffer(*clip->getAudioBuffer());
-    }
-    else if (clip->getType() == Track::Clip::Type::MIDI && clip->getMidiSequence() != nullptr)
-    {
-        leftClip->setMidiSequence(*clip->getMidiSequence());
-        rightClip->setMidiSequence(*clip->getMidiSequence());
-    }
-
-    // Prepare clips
-    leftClip->prepareToPlay(512, engine.getSampleRate());
-    rightClip->prepareToPlay(512, engine.getSampleRate());
-
-    // Remove original clip and add new ones
-    track->removeClip(clip);
-    track->addClip(std::move(leftClip));
-    track->addClip(std::move(rightClip));
-
-    DBG("CommandAPI: Split clip: " + clipId + " at " + juce::String(splitSamples));
+    DBG("CommandAPI: Split clip: " + clipId + " into " + newClipIds.first + " and " + newClipIds.second);
 
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("originalClipId", clipId);
     resultObj->setProperty("splitSamples", splitSamples);
-    resultObj->setProperty("leftClipId", "clip_" + juce::String(track->getNumClips() - 2));
-    resultObj->setProperty("rightClipId", "clip_" + juce::String(track->getNumClips() - 1));
+    resultObj->setProperty("leftClipId", newClipIds.first);
+    resultObj->setProperty("rightClipId", newClipIds.second);
 
     return createSuccessResponse(juce::var(resultObj));
 }
@@ -384,26 +342,24 @@ juce::var CommandAPI::moveClip(const juce::var& params)
     juce::String clipId = params["clipId"].toString();
     juce::int64 newStartSamples = params["newStartSamples"];
 
-    // Find track and clip
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
-        return createErrorResponse("Track not found: " + trackId);
-
-    Track::Clip* clip = findClipById(track, clipId);
-    if (clip == nullptr)
-        return createErrorResponse("Clip not found: " + clipId);
+    // Check if clip exists in ProjectState
+    auto clipTree = projectState.getClip(trackId, clipId);
+    if (!clipTree.isValid())
+        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
 
     // Validate position (must be >= 0)
     if (newStartSamples < 0)
         return createErrorResponse("Clip position must be >= 0");
 
-    // Move clip
-    clip->setStartPosition(newStartSamples);
+    // Move via ProjectState (undoable)
+    juce::String actionName = "Wingman: move_clip " + clipId + " to " + juce::String(newStartSamples);
+    projectState.moveClip(trackId, clipId, newStartSamples, actionName);
 
     DBG("CommandAPI: Moved clip: " + clipId + " to " + juce::String(newStartSamples));
 
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("clipId", clipId);
+    resultObj->setProperty("trackId", trackId);
     resultObj->setProperty("newStartSamples", newStartSamples);
 
     return createSuccessResponse(juce::var(resultObj));
@@ -420,9 +376,9 @@ juce::var CommandAPI::setTrackVolume(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     double volumeDb = params["volumeDb"];
 
-    // Find track
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
+    // Check if track exists in ProjectState
+    auto trackTree = projectState.getTrack(trackId);
+    if (!trackTree.isValid())
         return createErrorResponse("Track not found: " + trackId);
 
     // Convert dB to linear gain
@@ -431,8 +387,9 @@ juce::var CommandAPI::setTrackVolume(const juce::var& params)
     // Clamp to reasonable range (0.0 to 2.0 linear = -inf to +6dB)
     gain = juce::jlimit(0.0f, 2.0f, gain);
 
-    // Set volume
-    track->setVolume(gain);
+    // Set volume via ProjectState (undoable)
+    juce::String actionName = "Wingman: set_track_volume " + trackId + " to " + juce::String(volumeDb, 1) + " dB";
+    projectState.setTrackVolume(trackId, gain, actionName);
 
     DBG("CommandAPI: Set track volume: " + trackId + " to " + juce::String(volumeDb) + " dB");
 
@@ -455,22 +412,115 @@ juce::var CommandAPI::setTrackPan(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     double pan = params["pan"];
 
-    // Find track
-    Track* track = findTrackById(trackId);
-    if (track == nullptr)
+    // Check if track exists in ProjectState
+    auto trackTree = projectState.getTrack(trackId);
+    if (!trackTree.isValid())
         return createErrorResponse("Track not found: " + trackId);
 
     // Clamp to valid range (-1.0 to 1.0)
     float panValue = juce::jlimit(-1.0f, 1.0f, (float)pan);
 
-    // Set pan
-    track->setPan(panValue);
+    // Set pan via ProjectState (undoable)
+    juce::String actionName = "Wingman: set_track_pan " + trackId + " to " + juce::String(panValue, 2);
+    projectState.setTrackPan(trackId, panValue, actionName);
 
     DBG("CommandAPI: Set track pan: " + trackId + " to " + juce::String(panValue));
 
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("trackId", trackId);
     resultObj->setProperty("pan", panValue);
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::createClip(const juce::var& params)
+{
+    // Validate params
+    if (!params.hasProperty("trackId"))
+        return createErrorResponse("Missing 'trackId' parameter");
+    if (!params.hasProperty("type"))
+        return createErrorResponse("Missing 'type' parameter (must be 'audio' or 'midi')");
+    if (!params.hasProperty("start"))
+        return createErrorResponse("Missing 'start' parameter (samples)");
+    if (!params.hasProperty("length"))
+        return createErrorResponse("Missing 'length' parameter (samples)");
+
+    juce::String trackId = params["trackId"].toString();
+    juce::String clipType = params["type"].toString().toLowerCase();
+    juce::int64 startSamples = params["start"];
+    juce::int64 lengthSamples = params["length"];
+    juce::String clipName = params.getProperty("name", "New Clip").toString();
+
+    // Validate type
+    if (clipType != "audio" && clipType != "midi")
+        return createErrorResponse("Invalid clip type: must be 'audio' or 'midi'");
+
+    // Check if track exists
+    auto trackTree = projectState.getTrack(trackId);
+    if (!trackTree.isValid())
+        return createErrorResponse("Track not found: " + trackId);
+
+    // For audio clips, require audioFile parameter
+    if (clipType == "audio" && !params.hasProperty("audioFile"))
+        return createErrorResponse("Audio clips require 'audioFile' parameter");
+
+    // Create clip via ProjectState (undoable)
+    juce::String actionName = "Wingman: create_clip '" + clipName + "' on " + trackId;
+    juce::String clipId = projectState.createClip(trackId, clipType, startSamples, lengthSamples,
+                                                   clipName, actionName);
+
+    if (clipId.isEmpty())
+        return createErrorResponse("Failed to create clip");
+
+    // If audio clip, set audio file property
+    if (clipType == "audio" && params.hasProperty("audioFile"))
+    {
+        juce::String audioFile = params["audioFile"].toString();
+        auto clip = projectState.getClip(trackId, clipId);
+        if (clip.isValid())
+            clip.setProperty(ProjectState::PROP_AUDIO_FILE, audioFile, &projectState.getUndoManager());
+    }
+
+    // Create result
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("clipId", clipId);
+    resultObj->setProperty("trackId", trackId);
+    resultObj->setProperty("name", clipName);
+    resultObj->setProperty("type", clipType);
+    resultObj->setProperty("startSamples", startSamples);
+    resultObj->setProperty("lengthSamples", lengthSamples);
+
+    DBG("CommandAPI: Created clip: " + clipId + " on track " + trackId);
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::deleteClip(const juce::var& params)
+{
+    // Validate params
+    if (!params.hasProperty("trackId"))
+        return createErrorResponse("Missing 'trackId' parameter");
+    if (!params.hasProperty("clipId"))
+        return createErrorResponse("Missing 'clipId' parameter");
+
+    juce::String trackId = params["trackId"].toString();
+    juce::String clipId = params["clipId"].toString();
+
+    // Check if clip exists
+    auto clip = projectState.getClip(trackId, clipId);
+    if (!clip.isValid())
+        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
+
+    // Delete via ProjectState (undoable)
+    juce::String actionName = "Wingman: delete_clip " + clipId + " from " + trackId;
+    projectState.deleteClip(trackId, clipId, actionName);
+
+    DBG("CommandAPI: Deleted clip: " + clipId + " from track " + trackId);
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("clipId", clipId);
+    resultObj->setProperty("trackId", trackId);
+    resultObj->setProperty("deleted", true);
 
     return createSuccessResponse(juce::var(resultObj));
 }
@@ -486,6 +536,61 @@ juce::var CommandAPI::getSessionGraph(const juce::var& params)
     DBG("CommandAPI: Generated session graph");
 
     return createSuccessResponse(graphData);
+}
+
+juce::var CommandAPI::undo(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    if (!projectState.canUndo())
+        return createErrorResponse("Nothing to undo");
+
+    // Get current action name (if available) before undoing
+    // Note: JUCE UndoManager doesn't expose action names easily,
+    // so we'll just report success
+    projectState.undo();
+
+    DBG("CommandAPI: Undo executed");
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("undone", true);
+    resultObj->setProperty("message", "Undo successful");
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::redo(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    if (!projectState.canRedo())
+        return createErrorResponse("Nothing to redo");
+
+    projectState.redo();
+
+    DBG("CommandAPI: Redo executed");
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("redone", true);
+    resultObj->setProperty("message", "Redo successful");
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::history(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    // JUCE UndoManager doesn't provide easy access to action history
+    // For now, return basic undo/redo availability
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("canUndo", projectState.canUndo());
+    resultObj->setProperty("canRedo", projectState.canRedo());
+    resultObj->setProperty("message", "Full history tracking not yet implemented");
+
+    DBG("CommandAPI: History query");
+
+    return createSuccessResponse(juce::var(resultObj));
 }
 
 //==============================================================================

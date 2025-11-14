@@ -88,6 +88,9 @@ public:
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
+    static const juce::Identifier PROP_OFFSET;
+    static const juce::Identifier PROP_AUDIO_FILE;
+    static const juce::Identifier PROP_ARMED;
 
     //==========================================================================
     ProjectState();
@@ -152,6 +155,127 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Rename a track (undoable)
+     * @param trackId Track ID
+     * @param newName New track name
+     * @param actionName Optional undo action name
+     */
+    void renameTrack(const juce::String& trackId, const juce::String& newName,
+                     const juce::String& actionName = "Rename track");
+
+    /**
+     * @brief Set track volume (undoable)
+     * @param trackId Track ID
+     * @param volumeLinear Volume (0.0 to 2.0)
+     * @param actionName Optional undo action name
+     */
+    void setTrackVolume(const juce::String& trackId, float volumeLinear,
+                        const juce::String& actionName = "Set track volume");
+
+    /**
+     * @brief Set track pan (undoable)
+     * @param trackId Track ID
+     * @param pan Pan (-1.0 to 1.0)
+     * @param actionName Optional undo action name
+     */
+    void setTrackPan(const juce::String& trackId, float pan,
+                     const juce::String& actionName = "Set track pan");
+
+    /**
+     * @brief Set track mute (undoable)
+     * @param trackId Track ID
+     * @param muted Mute state
+     * @param actionName Optional undo action name
+     */
+    void setTrackMute(const juce::String& trackId, bool muted,
+                      const juce::String& actionName = "Set track mute");
+
+    /**
+     * @brief Set track solo (undoable)
+     * @param trackId Track ID
+     * @param soloed Solo state
+     * @param actionName Optional undo action name
+     */
+    void setTrackSolo(const juce::String& trackId, bool soloed,
+                      const juce::String& actionName = "Set track solo");
+
+    /**
+     * @brief Set track armed (undoable)
+     * @param trackId Track ID
+     * @param armed Armed state
+     * @param actionName Optional undo action name
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed,
+                       const juce::String& actionName = "Set track armed");
+
+    //==========================================================================
+    // Clip Management
+    //==========================================================================
+
+    /**
+     * @brief Create a new clip (undoable)
+     * @param trackId Track ID
+     * @param clipType "audio" or "midi"
+     * @param startSamples Start position in samples
+     * @param lengthSamples Length in samples
+     * @param name Clip name
+     * @param actionName Optional undo action name
+     * @return Clip ID
+     */
+    juce::String createClip(const juce::String& trackId, const juce::String& clipType,
+                           juce::int64 startSamples, juce::int64 lengthSamples,
+                           const juce::String& name,
+                           const juce::String& actionName = "Create clip");
+
+    /**
+     * @brief Delete a clip (undoable)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param actionName Optional undo action name
+     */
+    void deleteClip(const juce::String& trackId, const juce::String& clipId,
+                    const juce::String& actionName = "Delete clip");
+
+    /**
+     * @brief Move a clip (undoable)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newStartSamples New start position in samples
+     * @param actionName Optional undo action name
+     */
+    void moveClip(const juce::String& trackId, const juce::String& clipId,
+                  juce::int64 newStartSamples,
+                  const juce::String& actionName = "Move clip");
+
+    /**
+     * @brief Split a clip (undoable)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param splitSamples Split position in samples
+     * @param actionName Optional undo action name
+     * @return Pair of new clip IDs (left, right)
+     */
+    std::pair<juce::String, juce::String> splitClip(const juce::String& trackId,
+                                                     const juce::String& clipId,
+                                                     juce::int64 splitSamples,
+                                                     const juce::String& actionName = "Split clip");
+
+    /**
+     * @brief Find a track ValueTree by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId) const;
+
+    /**
+     * @brief Find a clip ValueTree by ID
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @return Clip ValueTree (invalid if not found)
+     */
+    juce::ValueTree getClip(const juce::String& trackId, const juce::String& clipId) const;
 
     //==========================================================================
     // Undo/Redo

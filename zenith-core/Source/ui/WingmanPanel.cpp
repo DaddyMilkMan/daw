@@ -240,18 +240,33 @@ juce::String WingmanPanel::parseShorthand(const juce::String& input)
     {
         return "{\"command\":\"get_session_graph\",\"params\":{}}";
     }
+    else if (command == "undo" || command == "u")
+    {
+        return "{\"command\":\"undo\",\"params\":{}}";
+    }
+    else if (command == "redo" || command == "r")
+    {
+        return "{\"command\":\"redo\",\"params\":{}}";
+    }
+    else if (command == "history" || command == "h")
+    {
+        return "{\"command\":\"history\",\"params\":{}}";
+    }
     else if (command == "help")
     {
         // Special case: show help (no actual command)
         addMessage("Available shorthand commands:", false);
-        addMessage("  tracks", false);
-        addMessage("  create <audio|midi> <name>", false);
-        addMessage("  delete <trackId>", false);
-        addMessage("  rename <trackId> <newName>", false);
-        addMessage("  clips <trackId>", false);
-        addMessage("  volume <trackId> <volumeDb>", false);
-        addMessage("  pan <trackId> <pan>", false);
-        addMessage("  graph", false);
+        addMessage("  tracks                     → list all tracks", false);
+        addMessage("  create <audio|midi> <name> → create track", false);
+        addMessage("  delete <trackId>           → delete track", false);
+        addMessage("  rename <trackId> <name>    → rename track", false);
+        addMessage("  clips <trackId>            → list clips", false);
+        addMessage("  volume <trackId> <db>      → set volume", false);
+        addMessage("  pan <trackId> <value>      → set pan", false);
+        addMessage("  graph                      → session graph", false);
+        addMessage("  undo (or u)                → undo last action", false);
+        addMessage("  redo (or r)                → redo last action", false);
+        addMessage("  history (or h)             → show undo/redo status", false);
         return {};  // Don't execute
     }
     else if (command == "create" && tokens.size() >= 2)

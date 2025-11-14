@@ -38,11 +38,12 @@ namespace zenith {
  * - Wingman AI panel (future)
  */
 class MainComponent : public juce::Component,
-                      private juce::Timer
+                      private juce::Timer,
+                      public juce::KeyListener
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine, zenith::CommandAPI& api);
+    MainComponent(Engine& engine, zenith::CommandAPI& api, ProjectState& state);
     ~MainComponent() override;
 
     //==========================================================================
@@ -51,6 +52,12 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    //==========================================================================
+    // KeyListener interface (for undo/redo shortcuts)
+    //==========================================================================
+
+    bool keyPressed(const juce::KeyPress& key, Component* originatingComponent) override;
 
 private:
     //==========================================================================
@@ -70,6 +77,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;

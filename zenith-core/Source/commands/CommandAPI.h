@@ -88,16 +88,28 @@ private:
     //==============================================================================
     // Command handlers (all return juce::var response)
 
+    // Track commands
     juce::var listTracks(const juce::var& params);
     juce::var createTrack(const juce::var& params);
     juce::var deleteTrack(const juce::var& params);
     juce::var renameTrack(const juce::var& params);
-    juce::var listClips(const juce::var& params);
-    juce::var splitClip(const juce::var& params);
-    juce::var moveClip(const juce::var& params);
     juce::var setTrackVolume(const juce::var& params);
     juce::var setTrackPan(const juce::var& params);
+
+    // Clip commands
+    juce::var listClips(const juce::var& params);
+    juce::var createClip(const juce::var& params);
+    juce::var deleteClip(const juce::var& params);
+    juce::var splitClip(const juce::var& params);
+    juce::var moveClip(const juce::var& params);
+
+    // Session/project commands
     juce::var getSessionGraph(const juce::var& params);
+
+    // Undo/redo commands
+    juce::var undo(const juce::var& params);
+    juce::var redo(const juce::var& params);
+    juce::var history(const juce::var& params);
 
     //==============================================================================
     // Helper methods
