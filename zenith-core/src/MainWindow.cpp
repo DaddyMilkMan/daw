@@ -9,8 +9,8 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng), projectState(ps)
 {
     // Set size
     setSize(1400, 800);
@@ -54,6 +54,10 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
+
+    // Phase 11: Create mixer component
+    mixerComponent = std::make_unique<MixerComponent>(projectState, engine);
+    addAndMakeVisible(mixerComponent.get());
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -140,6 +144,13 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 11: Mixer component at bottom (above transport bar)
+    auto mixerArea = bounds.removeFromBottom(220);
+    if (mixerComponent != nullptr)
+    {
+        mixerComponent->setBounds(mixerArea);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -188,8 +199,24 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    // Phase 11: Add test tracks to both ProjectState and Engine
+    // This ensures we have matching tracks for the mixer to work with
+    DBG("MainWindow: Adding test tracks...");
+
+    for (int i = 0; i < 4; ++i)
+    {
+        // Add to ProjectState
+        projectState->addTrack("Track " + juce::String(i + 1), "audio");
+    }
+
+    // Add tracks to Engine
+    engine->addTestTracks(4);
+
+    // Phase 11: Create track state synchronizer
+    trackSynchronizer = std::make_unique<TrackStateSynchronizer>(*projectState, *engine);
+
+    // Create main content (now needs both engine and projectState)
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
@@ -207,11 +234,20 @@ MainWindow::MainWindow(const juce::String& name)
     // Initialize audio engine after window is visible
     engine->initialize();
 
+    // Phase 11: Initialize track synchronizer AFTER engine is initialized
+    // This ensures tracks are prepared for playback before syncing
+    trackSynchronizer->initialize();
+
     DBG("MainWindow created and initialized");
+    DBG("Phase 11: Mixer engine wiring active");
 }
 
 MainWindow::~MainWindow()
 {
+    // Phase 11: Shutdown track synchronizer first
+    if (trackSynchronizer)
+        trackSynchronizer->shutdown();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();

@@ -166,14 +166,119 @@ void Engine::addTestTracks(int count)
             "Track " + juce::String(tracks_.size() + 1),
             zenith::Track::Type::Audio);
 
-        // NOTE: Do NOT call prepareToPlay() here - these are detached test tracks
-        // They are NOT wired into the audio graph and will not be used in processAudio()
-        // This is purely for compile verification and UI testing
+        // Phase 11: Prepare track for audio processing if engine is already running
+        if (currentSampleRate.load() > 0)
+        {
+            track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+        }
 
         tracks_.push_back(std::move(track));
     }
 
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
+}
+
+//==============================================================================
+// Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+//==============================================================================
+
+void Engine::setTrackVolume(int trackIndex, float volume)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setVolume(volume);
+    }
+}
+
+void Engine::setTrackPan(int trackIndex, float pan)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setPan(pan);
+    }
+}
+
+void Engine::setTrackMute(int trackIndex, bool muted)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setMuted(muted);
+    }
+}
+
+void Engine::setTrackSolo(int trackIndex, bool solo)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setSolo(solo);
+    }
+}
+
+void Engine::setTrackArmed(int trackIndex, bool armed)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setArmed(armed);
+    }
+}
+
+//==============================================================================
+// Phase 11: Metering (MESSAGE THREAD SAFE)
+//==============================================================================
+
+float Engine::getTrackLevel(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        return tracks_[trackIndex]->getCurrentLevel();
+    }
+    return 0.0f;
+}
+
+float Engine::getTrackPeakLevel(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        return tracks_[trackIndex]->getPeakLevel();
+    }
+    return 0.0f;
+}
+
+float Engine::getMasterLevel() const
+{
+    return masterLevel_.load();
+}
+
+float Engine::getMasterPeakLevel() const
+{
+    return masterPeakLevel_.load();
+}
+
+void Engine::resetPeakMeters()
+{
+    // Reset master peak
+    masterPeakLevel_.store(0.0f);
+
+    // Reset all track peaks (message thread only)
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->resetPeakLevel();
+        }
+    }
 }
 
 //==============================================================================
@@ -192,14 +297,36 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     phase = 0.0;
     playbackPosition.store(0);
 
+    // Phase 11: Allocate master mix buffer (pre-allocate to avoid RT allocations)
+    masterMixBuffer_.setSize(2, currentBufferSize.load());
+
+    // Phase 11: Prepare all tracks for playback
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+        }
+    }
+
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+    DBG("  Tracks prepared: " + juce::String(tracks_.size()));
 }
 
 void Engine::audioDeviceStopped()
 {
     DBG("Engine: Audio device stopped");
+
+    // Phase 11: Release resources from all tracks
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->releaseResources();
+        }
+    }
 }
 
 void Engine::audioDeviceIOCallbackWithContext(
@@ -262,17 +389,90 @@ void Engine::processAudio(
     int numSamples)
 {
     // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
+    //
+    // Phase 11: Process all tracks and mix them down to master output
 
     juce::ignoreUnused(inputChannelData, numInputChannels);
 
-    // For Phase 0, generate a simple test tone (440 Hz sine wave)
-    // TODO: Replace with actual audio processing in Phase 1
+    // Clear master mix buffer
+    masterMixBuffer_.clear();
 
+    // Phase 11: Process each track and mix into master buffer
+    // Note: Track::getNextAudioBlock handles mute, volume, pan, and metering internally
+    const size_t numTracks = tracks_.size();
+
+    for (size_t i = 0; i < numTracks; ++i)
+    {
+        auto& track = tracks_[i];
+        if (track != nullptr)
+        {
+            // Create channel info for this track
+            juce::AudioSourceChannelInfo trackInfo;
+            trackInfo.buffer = &masterMixBuffer_;
+            trackInfo.startSample = 0;
+            trackInfo.numSamples = numSamples;
+
+            // Get audio from track (this also updates track meters)
+            track->getNextAudioBlock(trackInfo);
+        }
+    }
+
+    // Phase 11: Update master metering from mixed buffer
+    float maxLevel = 0.0f;
+    const int numChannels = juce::jmin(2, masterMixBuffer_.getNumChannels());
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const float* channelData = masterMixBuffer_.getReadPointer(ch);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float absValue = std::abs(channelData[i]);
+            if (absValue > maxLevel)
+            {
+                maxLevel = absValue;
+            }
+        }
+    }
+
+    // Update master level with smoothing
+    const float currentMasterLevel = masterLevel_.load();
+    const float smoothingFactor = 0.3f;
+    const float newMasterLevel = currentMasterLevel * (1.0f - smoothingFactor) + maxLevel * smoothingFactor;
+    masterLevel_.store(newMasterLevel);
+
+    // Update master peak
+    if (maxLevel > masterPeakLevel_.load())
+    {
+        masterPeakLevel_.store(maxLevel);
+    }
+
+    // Copy master mix buffer to output
+    for (int channel = 0; channel < numOutputChannels; ++channel)
+    {
+        if (outputChannelData[channel] != nullptr)
+        {
+            if (channel < masterMixBuffer_.getNumChannels())
+            {
+                // Copy from master mix buffer
+                juce::FloatVectorOperations::copy(
+                    outputChannelData[channel],
+                    masterMixBuffer_.getReadPointer(channel),
+                    numSamples);
+            }
+            else
+            {
+                // Clear extra output channels
+                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+            }
+        }
+    }
+
+    // Phase 0 test tone (disabled in Phase 11 - tracks are now the audio source)
+    // Keep this for future debugging if needed
     bool testToneEnabled = enableTestTone_.load();
-
     if (testToneEnabled)
     {
-        // Generate 440 Hz sine wave at -12 dB
+        // Generate 440 Hz sine wave at -12 dB and ADD to output (for testing)
         const double sampleRate = currentSampleRate.load();
         const double frequency = 440.0;  // A4
         const double amplitude = 0.25;   // -12 dB
@@ -282,12 +482,12 @@ void Engine::processAudio(
         {
             float value = static_cast<float>(std::sin(phase) * amplitude);
 
-            // Write to all output channels
+            // Add to all output channels (not replace)
             for (int channel = 0; channel < numOutputChannels; ++channel)
             {
                 if (outputChannelData[channel] != nullptr)
                 {
-                    outputChannelData[channel][sample] = value;
+                    outputChannelData[channel][sample] += value;
                 }
             }
 
@@ -297,17 +497,6 @@ void Engine::processAudio(
             // Wrap phase to avoid precision issues
             if (phase >= 2.0 * juce::MathConstants<double>::pi)
                 phase -= 2.0 * juce::MathConstants<double>::pi;
-        }
-    }
-    else
-    {
-        // Silent output
-        for (int channel = 0; channel < numOutputChannels; ++channel)
-        {
-            if (outputChannelData[channel] != nullptr)
-            {
-                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
-            }
         }
     }
 }

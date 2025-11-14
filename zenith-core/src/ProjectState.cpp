@@ -54,6 +54,7 @@ const juce::Identifier ProjectState::PROP_VOLUME("volume");
 const juce::Identifier ProjectState::PROP_PAN("pan");
 const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
+const juce::Identifier ProjectState::PROP_ARMED("armed");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
@@ -223,6 +224,7 @@ juce::String ProjectState::addTrack(const juce::String& name, const juce::String
     track.setProperty(PROP_PAN, 0.0, nullptr);
     track.setProperty(PROP_MUTE, false, nullptr);
     track.setProperty(PROP_SOLO, false, nullptr);
+    track.setProperty(PROP_ARMED, false, nullptr);
 
     // Create empty CLIPS node
     track.appendChild(juce::ValueTree(ID_CLIPS), nullptr);
@@ -256,6 +258,135 @@ int ProjectState::getNumTracks() const
         return tracksNode.getNumChildren();
 
     return 0;
+}
+
+juce::ValueTree ProjectState::getTrack(const juce::String& trackId) const
+{
+    return findTrack(trackId);
+}
+
+juce::ValueTree ProjectState::getTrackByIndex(int trackIndex) const
+{
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+
+    if (!tracksNode.isValid())
+        return {};
+
+    if (trackIndex >= 0 && trackIndex < tracksNode.getNumChildren())
+        return tracksNode.getChild(trackIndex);
+
+    return {};
+}
+
+//==============================================================================
+// Track Mixer API (Phase 10+11)
+//==============================================================================
+
+void ProjectState::setTrackVolume(const juce::String& trackId, float volume)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        volume = juce::jlimit(0.0f, 1.0f, volume);
+        track.setProperty(PROP_VOLUME, volume, &undoManager);
+    }
+}
+
+float ProjectState::getTrackVolume(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_VOLUME];
+    return 0.8f;  // Default
+}
+
+void ProjectState::setTrackPan(const juce::String& trackId, float pan)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        pan = juce::jlimit(-1.0f, 1.0f, pan);
+        track.setProperty(PROP_PAN, pan, &undoManager);
+    }
+}
+
+float ProjectState::getTrackPan(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_PAN];
+    return 0.0f;  // Default
+}
+
+void ProjectState::setTrackMute(const juce::String& trackId, bool muted)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        track.setProperty(PROP_MUTE, muted, &undoManager);
+}
+
+bool ProjectState::isTrackMuted(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_MUTE];
+    return false;
+}
+
+void ProjectState::setTrackSolo(const juce::String& trackId, bool solo)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        track.setProperty(PROP_SOLO, solo, &undoManager);
+}
+
+bool ProjectState::isTrackSolo(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_SOLO];
+    return false;
+}
+
+void ProjectState::setTrackArmed(const juce::String& trackId, bool armed)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        track.setProperty(PROP_ARMED, armed, &undoManager);
+}
+
+bool ProjectState::isTrackArmed(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_ARMED];
+    return false;
+}
+
+juce::String ProjectState::getTrackName(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_NAME].toString();
+    return {};
+}
+
+juce::String ProjectState::getTrackType(const juce::String& trackId) const
+{
+    auto track = findTrack(trackId);
+    if (track.isValid())
+        return track[PROP_TYPE].toString();
+    return "audio";
 }
 
 //==============================================================================

@@ -16,6 +16,8 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TrackStateSynchronizer.h"
+#include "MixerComponent.h"
 
 //==============================================================================
 /**
@@ -34,7 +36,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -62,6 +64,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +79,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 11: Mixer component
+    std::unique_ptr<MixerComponent> mixerComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -124,6 +130,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Phase 11: Track state synchronizer
+    std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;

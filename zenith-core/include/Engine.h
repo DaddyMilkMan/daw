@@ -153,6 +153,61 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Set track mixer controls (message thread only)
+     * @note These methods update the engine Track objects directly
+     * @note In Phase 11, these are called by TrackStateSynchronizer
+     */
+    void setTrackVolume(int trackIndex, float volume);
+    void setTrackPan(int trackIndex, float pan);
+    void setTrackMute(int trackIndex, bool muted);
+    void setTrackSolo(int trackIndex, bool solo);
+    void setTrackArmed(int trackIndex, bool armed);
+
+    //==========================================================================
+    // Phase 11: Metering (MESSAGE THREAD SAFE)
+    //==========================================================================
+
+    /**
+     * @brief Get current level for a track
+     * @param trackIndex Track index
+     * @return Current level (0.0 - 1.0+), or 0.0 if invalid
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getTrackLevel(int trackIndex) const;
+
+    /**
+     * @brief Get peak level for a track
+     * @param trackIndex Track index
+     * @return Peak level (0.0 - 1.0+), or 0.0 if invalid
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getTrackPeakLevel(int trackIndex) const;
+
+    /**
+     * @brief Get current master output level
+     * @return Master level (0.0 - 1.0+)
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getMasterLevel() const;
+
+    /**
+     * @brief Get peak master output level
+     * @return Master peak level (0.0 - 1.0+)
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getMasterPeakLevel() const;
+
+    /**
+     * @brief Reset all peak meters
+     * @note Safe to call from message thread
+     */
+    void resetPeakMeters();
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -242,8 +297,15 @@ private:
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
 
-    // C3: Donor track container (no audio thread access yet)
+    // C3: Donor track container (now wired into audio processing in Phase 11)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    // Phase 11: Master metering (atomic for lock-free GUI access)
+    std::atomic<float> masterLevel_{0.0f};
+    std::atomic<float> masterPeakLevel_{0.0f};
+
+    // Phase 11: Master mix buffer (pre-allocated, no RT allocation)
+    juce::AudioBuffer<float> masterMixBuffer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
