@@ -104,6 +104,85 @@ juce::String CommandAPI::executeCommandString(const juce::String& jsonRequest)
     return juce::JSON::toString(response);
 }
 
+juce::var CommandAPI::executeBatch(const juce::Array<juce::var>& commands,
+                                    const juce::String& batchName)
+{
+    if (commands.isEmpty())
+    {
+        return createErrorResponse("Empty command batch");
+    }
+
+    DBG("CommandAPI: Executing batch '" + batchName + "' with " + juce::String(commands.size()) + " commands");
+
+    // Begin a single undo transaction for the entire batch
+    projectState.getUndoManager().beginNewTransaction(batchName);
+
+    int successCount = 0;
+
+    for (int i = 0; i < commands.size(); ++i)
+    {
+        const auto& cmdVar = commands[i];
+
+        // Validate command structure
+        if (!cmdVar.isObject())
+        {
+            auto* errorObj = new juce::DynamicObject();
+            errorObj->setProperty("success", false);
+            errorObj->setProperty("error", "Command at index " + juce::String(i) + " is not a JSON object");
+            errorObj->setProperty("failedIndex", i);
+            errorObj->setProperty("failedCommand", cmdVar);
+            errorObj->setProperty("successCount", successCount);
+
+            return juce::var(errorObj);
+        }
+
+        if (!cmdVar.hasProperty("command"))
+        {
+            auto* errorObj = new juce::DynamicObject();
+            errorObj->setProperty("success", false);
+            errorObj->setProperty("error", "Command at index " + juce::String(i) + " missing 'command' field");
+            errorObj->setProperty("failedIndex", i);
+            errorObj->setProperty("failedCommand", cmdVar);
+            errorObj->setProperty("successCount", successCount);
+
+            return juce::var(errorObj);
+        }
+
+        // Execute command
+        juce::var response = executeCommand(cmdVar);
+
+        // Check for error
+        bool success = response.getProperty("success", false);
+
+        if (!success)
+        {
+            // Command failed - stop batch execution
+            juce::String error = response.getProperty("error", "Unknown error").toString();
+
+            auto* errorObj = new juce::DynamicObject();
+            errorObj->setProperty("success", false);
+            errorObj->setProperty("error", "Command failed: " + error);
+            errorObj->setProperty("failedIndex", i);
+            errorObj->setProperty("failedCommand", cmdVar);
+            errorObj->setProperty("successCount", successCount);
+
+            DBG("CommandAPI: Batch failed at command " + juce::String(i) + ": " + error);
+
+            return juce::var(errorObj);
+        }
+
+        successCount++;
+    }
+
+    // All commands succeeded
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("count", successCount);
+
+    DBG("CommandAPI: Batch completed successfully (" + juce::String(successCount) + " commands)");
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
 //==============================================================================
 // Command Handlers
 //==============================================================================

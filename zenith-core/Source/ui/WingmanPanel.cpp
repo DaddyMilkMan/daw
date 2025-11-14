@@ -3,20 +3,24 @@
 
     WingmanPanel.cpp
     Created: 2025-11-14
-    Author:  Zenith DAW - Phase 5: Wingman v0
+    Author:  Zenith DAW - Phase 7: Wingman AI Integration
 
-    In-DAW command console implementation
+    In-DAW command console implementation with AI mode
 
   ==============================================================================
 */
 
 #include "WingmanPanel.h"
 #include "commands/CommandAPI.h"
+#include "network/AIBridgeClient.h"
+#include "commands/SessionGraph.h"
 
 //==============================================================================
-WingmanPanel::WingmanPanel(zenith::CommandAPI& api)
-    : commandAPI(api)
+WingmanPanel::WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient)
+    : commandAPI(api), aiBridgeClient(aiClient)
 {
+    // Register as listener for AI responses
+    aiBridgeClient.addChangeListener(this);
     // Create history display (read-only, multi-line)
     historyDisplay = std::make_unique<juce::TextEditor>("History");
     historyDisplay->setMultiLine(true);
@@ -43,6 +47,20 @@ WingmanPanel::WingmanPanel(zenith::CommandAPI& api)
     commandInput->setTextToShowWhenEmpty("Enter command (JSON or shorthand)...", juce::Colours::grey);
     addAndMakeVisible(*commandInput);
 
+    // Create mode toggle buttons
+    commandModeButton = std::make_unique<juce::TextButton>("Command");
+    commandModeButton->setClickingTogglesState(true);
+    commandModeButton->setRadioGroupId(1);
+    commandModeButton->setToggleState(true, juce::dontSendNotification);
+    commandModeButton->onClick = [this]() { setMode(Mode::Command); };
+    addAndMakeVisible(*commandModeButton);
+
+    aiModeButton = std::make_unique<juce::TextButton>("AI");
+    aiModeButton->setClickingTogglesState(true);
+    aiModeButton->setRadioGroupId(1);
+    aiModeButton->onClick = [this]() { setMode(Mode::AI); };
+    addAndMakeVisible(*aiModeButton);
+
     // Create clear button
     clearButton = std::make_unique<juce::TextButton>("Clear");
     clearButton->onClick = [this]() { clearHistory(); };
@@ -50,8 +68,10 @@ WingmanPanel::WingmanPanel(zenith::CommandAPI& api)
 
     // Welcome message
     addMessage("╔════════════════════════════════════════════════════════════╗", false);
-    addMessage("║           Wingman v0 - AI Command Console                 ║", false);
+    addMessage("║           Wingman AI v1 - Command Console                 ║", false);
     addMessage("╚════════════════════════════════════════════════════════════╝", false);
+    addMessage("", false);
+    addMessage("Mode: [Command] | AI", false);
     addMessage("", false);
     addMessage("Available commands:", false);
     addMessage("  tracks                   → list all tracks", false);
@@ -75,6 +95,7 @@ WingmanPanel::WingmanPanel(zenith::CommandAPI& api)
 
 WingmanPanel::~WingmanPanel()
 {
+    aiBridgeClient.removeChangeListener(this);
     commandInput->removeListener(this);
 }
 
@@ -108,11 +129,18 @@ void WingmanPanel::resized()
     // Margin
     bounds.reduce(10, 10);
 
-    // Clear button (top right, 80x25)
-    auto clearBounds = bounds.removeFromTop(25);
-    clearButton->setBounds(clearBounds.removeFromRight(80));
+    // Top row: Mode toggle buttons + Clear button
+    auto topRow = bounds.removeFromTop(25);
 
-    // Space below clear button
+    // Mode toggle buttons (left side, 160px total)
+    auto modeBounds = topRow.removeFromLeft(160);
+    commandModeButton->setBounds(modeBounds.removeFromLeft(80));
+    aiModeButton->setBounds(modeBounds);
+
+    // Clear button (right side, 80px)
+    clearButton->setBounds(topRow.removeFromRight(80));
+
+    // Space below buttons
     bounds.removeFromTop(10);
 
     // Command input (bottom, 30px)
@@ -135,62 +163,98 @@ void WingmanPanel::executeCommand(const juce::String& input)
     if (input.trim().isEmpty())
         return;
 
-    // Add user input to history
-    addMessage("> " + input, true);
-
-    // Parse input (try shorthand first, then JSON)
-    juce::String jsonCommand;
-
-    if (input.trimStart().startsWith("{"))
+    // Check if we're in pending batch state
+    if (hasPendingBatch)
     {
-        // Already JSON
-        jsonCommand = input;
-    }
-    else
-    {
-        // Try shorthand parser
-        jsonCommand = parseShorthand(input);
+        juce::String lowerInput = input.trim().toLowerCase();
 
-        if (jsonCommand.isEmpty())
+        if (lowerInput == "yes" || lowerInput == "y")
         {
-            addMessage("ERROR: Could not parse command. Use 'help' for syntax.", false);
+            addMessage("> yes", true);
+            executePendingBatch();
+            return;
+        }
+        else if (lowerInput == "no" || lowerInput == "n")
+        {
+            addMessage("> no", true);
+            cancelPendingBatch();
+            return;
+        }
+        else
+        {
+            addMessage("> " + input, true);
+            addMessage("Please type 'yes' to apply the batch or 'no' to cancel.", false);
+            addMessage("", false);
             return;
         }
     }
 
-    // Execute command
-    juce::String response = commandAPI.executeCommandString(jsonCommand);
+    // Add user input to history
+    addMessage("> " + input, true);
 
-    // Parse response to check for success/error
-    juce::var responseVar;
-    auto parseResult = juce::JSON::parse(response, responseVar);
-
-    if (parseResult.failed())
+    // Route based on mode
+    if (currentMode == Mode::AI)
     {
-        addMessage("ERROR: Failed to parse response: " + parseResult.getErrorMessage(), false);
-        addMessage(response, false);
+        // AI mode: send natural language to AI bridge
+        executeAIRequest(input);
     }
     else
     {
-        bool success = responseVar.getProperty("success", false);
+        // Command mode: parse and execute locally
+        juce::String jsonCommand;
 
-        if (success)
+        if (input.trimStart().startsWith("{"))
         {
-            // Pretty-print result
-            juce::var result = responseVar.getProperty("result", juce::var());
-            juce::String resultString = juce::JSON::toString(result, true, 2);
-            addMessage("✓ Success:", false);
-            addMessage(resultString, false);
+            // Already JSON
+            jsonCommand = input;
         }
         else
         {
-            // Show error
-            juce::String error = responseVar.getProperty("error", "Unknown error").toString();
-            addMessage("✗ Error: " + error, false);
-        }
-    }
+            // Try shorthand parser
+            jsonCommand = parseShorthand(input);
 
-    addMessage("", false);  // Blank line for spacing
+            if (jsonCommand.isEmpty())
+            {
+                addMessage("ERROR: Could not parse command. Use 'help' for syntax.", false);
+                addMessage("", false);
+                return;
+            }
+        }
+
+        // Execute command
+        juce::String response = commandAPI.executeCommandString(jsonCommand);
+
+        // Parse response to check for success/error
+        juce::var responseVar;
+        auto parseResult = juce::JSON::parse(response, responseVar);
+
+        if (parseResult.failed())
+        {
+            addMessage("ERROR: Failed to parse response: " + parseResult.getErrorMessage(), false);
+            addMessage(response, false);
+        }
+        else
+        {
+            bool success = responseVar.getProperty("success", false);
+
+            if (success)
+            {
+                // Pretty-print result
+                juce::var result = responseVar.getProperty("result", juce::var());
+                juce::String resultString = juce::JSON::toString(result, true, 2);
+                addMessage("✓ Success:", false);
+                addMessage(resultString, false);
+            }
+            else
+            {
+                // Show error
+                juce::String error = responseVar.getProperty("error", "Unknown error").toString();
+                addMessage("✗ Error: " + error, false);
+            }
+        }
+
+        addMessage("", false);  // Blank line for spacing
+    }
 }
 
 void WingmanPanel::clearHistory()
@@ -330,4 +394,204 @@ void WingmanPanel::scrollHistoryToBottom()
 {
     historyDisplay->moveCaretToEnd();
     historyDisplay->scrollToMakeSureCursorIsVisible();
+}
+
+//==============================================================================
+// Mode Management
+//==============================================================================
+
+void WingmanPanel::setMode(Mode newMode)
+{
+    if (currentMode == newMode)
+        return;
+
+    currentMode = newMode;
+
+    // Cancel any pending batch when switching modes
+    if (hasPendingBatch)
+    {
+        cancelPendingBatch();
+    }
+
+    // Update UI
+    if (currentMode == Mode::Command)
+    {
+        commandInput->setTextToShowWhenEmpty("Enter command (JSON or shorthand)...", juce::Colours::grey);
+        addMessage("──────────────────────────────────────────────────────────", false);
+        addMessage("Mode switched to: COMMAND", false);
+        addMessage("Use JSON or shorthand commands.", false);
+        addMessage("", false);
+    }
+    else // Mode::AI
+    {
+        commandInput->setTextToShowWhenEmpty("Enter natural language request...", juce::Colours::grey);
+        addMessage("──────────────────────────────────────────────────────────", false);
+        addMessage("Mode switched to: AI", false);
+        addMessage("Type natural language requests (e.g., 'make a 4 bar drum loop').", false);
+        addMessage("Server: " + aiBridgeClient.getServerUrl(), false);
+        addMessage("", false);
+    }
+
+    DBG("WingmanPanel: Mode changed to " + juce::String(currentMode == Mode::Command ? "Command" : "AI"));
+}
+
+//==============================================================================
+// AI Mode Handlers
+//==============================================================================
+
+void WingmanPanel::executeAIRequest(const juce::String& naturalLanguage)
+{
+    addMessage("(Sending to AI bridge server...)", false);
+
+    // Get session graph by executing get_session_graph command
+    juce::String graphResponse = commandAPI.executeCommandString("{\"command\":\"get_session_graph\",\"params\":{}}");
+
+    juce::var graphVar;
+    auto parseResult = juce::JSON::parse(graphResponse, graphVar);
+
+    if (parseResult.failed())
+    {
+        addMessage("✗ Error: Failed to get session graph", false);
+        addMessage("", false);
+        return;
+    }
+
+    juce::var sessionGraph = graphVar.getProperty("result", juce::var());
+
+    // Send request to AI bridge
+    aiBridgeClient.sendRequest(naturalLanguage, sessionGraph, "zenith-core");
+
+    addMessage("(Waiting for AI response...)", false);
+    addMessage("", false);
+}
+
+void WingmanPanel::changeListenerCallback(juce::ChangeBroadcaster* source)
+{
+    if (source == &aiBridgeClient)
+    {
+        // AI response available
+        handleAIResponse();
+    }
+}
+
+void WingmanPanel::handleAIResponse()
+{
+    while (aiBridgeClient.hasPendingResponse())
+    {
+        auto response = aiBridgeClient.popNextResponse();
+
+        if (response.status == "error")
+        {
+            addMessage("✗ AI Error: " + response.errorMessage, false);
+            addMessage("", false);
+        }
+        else if (response.status == "ok")
+        {
+            // Show AI's thought process and proposed commands
+            showAIPlan(response.thought, response.commands);
+        }
+        else
+        {
+            addMessage("✗ Unknown AI response status: " + response.status, false);
+            addMessage("", false);
+        }
+    }
+}
+
+void WingmanPanel::showAIPlan(const juce::String& thought, const juce::Array<juce::var>& commands)
+{
+    // Display AI's reasoning
+    if (thought.isNotEmpty())
+    {
+        addMessage("──────────────────────────────────────────────────────────", false);
+        addMessage("AI Plan:", false);
+        addMessage(thought, false);
+        addMessage("", false);
+    }
+
+    // Display proposed commands
+    if (commands.isEmpty())
+    {
+        addMessage("✗ AI did not generate any commands.", false);
+        addMessage("", false);
+        return;
+    }
+
+    addMessage("Proposed commands (" + juce::String(commands.size()) + "):", false);
+
+    for (int i = 0; i < commands.size(); ++i)
+    {
+        juce::String cmdStr = juce::JSON::toString(commands[i], false);
+        addMessage("  " + juce::String(i + 1) + ". " + cmdStr, false);
+    }
+
+    addMessage("", false);
+
+    // Enter pending batch state
+    hasPendingBatch = true;
+    pendingCommands = commands;
+
+    addMessage("Type 'yes' to apply these commands, or 'no' to cancel.", false);
+    addMessage("", false);
+}
+
+void WingmanPanel::executePendingBatch()
+{
+    if (!hasPendingBatch || pendingCommands.isEmpty())
+    {
+        addMessage("✗ No pending batch to execute.", false);
+        addMessage("", false);
+        hasPendingBatch = false;
+        return;
+    }
+
+    addMessage("Executing batch (" + juce::String(pendingCommands.size()) + " commands)...", false);
+
+    // Execute batch via CommandAPI (single undo transaction)
+    juce::var batchResponse = commandAPI.executeBatch(pendingCommands, "Wingman AI batch");
+
+    // Clear pending state
+    int commandCount = pendingCommands.size();
+    hasPendingBatch = false;
+    pendingCommands.clear();
+
+    // Report results
+    bool success = batchResponse.getProperty("success", false);
+
+    if (!success)
+    {
+        // Batch failed
+        juce::String error = batchResponse.getProperty("error", "Unknown error").toString();
+        int failedIndex = batchResponse.getProperty("failedIndex", -1);
+        int successCount = batchResponse.getProperty("successCount", 0);
+
+        addMessage("✗ Batch failed at command #" + juce::String(failedIndex + 1) + ": " + error, false);
+        addMessage("  (" + juce::String(successCount) + " commands succeeded before failure)", false);
+    }
+    else
+    {
+        // Batch succeeded
+        int count = batchResponse.getProperty("result", juce::var()).getProperty("count", commandCount);
+        addMessage("✓ Batch completed successfully (" + juce::String(count) + " commands applied).", false);
+    }
+
+    addMessage("", false);
+
+    DBG("WingmanPanel: Batch execution completed (status: " + juce::String(success ? "success" : "failed") + ")");
+}
+
+void WingmanPanel::cancelPendingBatch()
+{
+    if (!hasPendingBatch)
+        return;
+
+    int commandCount = pendingCommands.size();
+
+    hasPendingBatch = false;
+    pendingCommands.clear();
+
+    addMessage("Batch cancelled (" + juce::String(commandCount) + " commands discarded).", false);
+    addMessage("", false);
+
+    DBG("WingmanPanel: Batch cancelled");
 }

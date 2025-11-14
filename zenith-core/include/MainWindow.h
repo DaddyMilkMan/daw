@@ -23,6 +23,7 @@ class WingmanPanel;
 
 namespace zenith {
     class CommandAPI;
+    class AIBridgeClient;
 }
 
 //==============================================================================
@@ -35,7 +36,7 @@ namespace zenith {
  * - Browser panel
  * - Arrangement view (Phase 4)
  * - Mixer panel
- * - Wingman AI panel (future)
+ * - Wingman AI panel (Phase 5+)
  */
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -43,7 +44,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine, zenith::CommandAPI& api, ProjectState& state);
+    MainComponent(Engine& engine, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state);
     ~MainComponent() override;
 
     //==========================================================================
@@ -149,6 +150,9 @@ private:
 
     // Phase 5: Wingman command API
     std::unique_ptr<zenith::CommandAPI> commandAPI;
+
+    // Phase 7: AI bridge client
+    std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;

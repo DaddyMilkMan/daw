@@ -84,6 +84,31 @@ public:
     */
     juce::String executeCommandString(const juce::String& jsonRequest);
 
+    /**
+        Execute a batch of commands in a single undo transaction
+
+        @param commands Array of command objects {command, params}
+        @param batchName Name for the undo transaction
+        @return Response with status and results
+
+        Response format (success):
+        {
+            "success": true,
+            "result": { "count": N }
+        }
+
+        Response format (error):
+        {
+            "success": false,
+            "error": "error message",
+            "failedIndex": N,
+            "failedCommand": {...},
+            "successCount": N
+        }
+    */
+    juce::var executeBatch(const juce::Array<juce::var>& commands,
+                           const juce::String& batchName = "Wingman AI batch");
+
 private:
     //==============================================================================
     // Command handlers (all return juce::var response)

@@ -117,6 +117,10 @@ target_sources(ZenithDAW PRIVATE
     Source/commands/SessionGraph.cpp
     Source/ui/WingmanPanel.h
     Source/ui/WingmanPanel.cpp
+
+    # Phase 7: Wingman AI Integration
+    Source/network/AIBridgeClient.h
+    Source/network/AIBridgeClient.cpp
 )
 
 # ============================================================================
@@ -128,6 +132,7 @@ target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/network
 )
 
 # ============================================================================

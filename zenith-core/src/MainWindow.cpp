@@ -7,12 +7,13 @@
 #include "ui/ArrangerComponent.h"
 #include "ui/WingmanPanel.h"
 #include "commands/CommandAPI.h"
+#include "network/AIBridgeClient.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, ProjectState& state)
+MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state)
     : engine(eng), projectState(state)
 {
     // Set size
@@ -23,7 +24,7 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, ProjectState&
     setWantsKeyboardFocus(true);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 6: Undo/Redo + Clip Commands", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 7: Wingman AI Integration", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -66,8 +67,8 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, ProjectState&
     arrangerComponent = std::make_unique<ArrangerComponent>(engine);
     addAndMakeVisible(arrangerComponent.get());
 
-    // Phase 5: Create Wingman console panel
-    wingmanPanel = std::make_unique<WingmanPanel>(api);
+    // Phase 7: Create Wingman AI console panel
+    wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
     addAndMakeVisible(wingmanPanel.get());
 
     // Start timer for CPU monitoring (60 Hz)
@@ -219,8 +220,11 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 5: Create Wingman command API
     commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
 
-    // Create main content (Phase 6: pass ProjectState for undo/redo)
-    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *projectState);
+    // Phase 7: Create AI bridge client
+    aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
+
+    // Create main content (Phase 7: pass AIBridgeClient for AI mode)
+    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
