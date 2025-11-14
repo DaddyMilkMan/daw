@@ -17,6 +17,9 @@
 #include "Engine.h"
 #include "ProjectState.h"
 
+// Forward declarations
+class ArrangerComponent;
+
 //==============================================================================
 /**
  * @class MainComponent
@@ -25,9 +28,9 @@
  * This component is the main content area and will contain:
  * - Transport bar
  * - Browser panel
- * - Arrangement view
+ * - Arrangement view (Phase 4)
  * - Mixer panel
- * - Wingman AI panel (Phase 2)
+ * - Wingman AI panel (future)
  */
 class MainComponent : public juce::Component,
                       private juce::Timer
@@ -76,6 +79,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 4: Arranger/Timeline view
+    std::unique_ptr<ArrangerComponent> arrangerComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

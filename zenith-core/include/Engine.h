@@ -99,6 +99,11 @@ public:
      */
     bool isPlaying() const { return isPlaying_.load(); }
 
+    /**
+     * @brief Get current playback position in samples
+     */
+    juce::int64 getPlaybackPosition() const { return playbackPosition.load(); }
+
     //==========================================================================
     // Audio Device Management
     //==========================================================================

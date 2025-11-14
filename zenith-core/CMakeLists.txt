@@ -103,6 +103,12 @@ target_sources(ZenithDAW PRIVATE
     # Phase 3: Plugin UI
     Source/ui/PluginEditorWindow.h
     Source/ui/PluginEditorWindow.cpp
+
+    # Phase 4: Timeline/Arranger UI
+    Source/ui/ArrangerComponent.h
+    Source/ui/ArrangerComponent.cpp
+    Source/ui/PianoRollComponent.h
+    Source/ui/PianoRollComponent.cpp
 )
 
 # ============================================================================
