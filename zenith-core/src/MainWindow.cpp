@@ -9,14 +9,22 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng), projectState(ps)
 {
     // Set size
     setSize(1400, 800);
 
+    // Phase 12: Create arranger component
+    arrangerComponent = std::make_unique<ArrangerComponent>(projectState);
+    addAndMakeVisible(arrangerComponent.get());
+
+    // Add keyboard listener for undo/redo
+    addKeyListener(this);
+    setWantsKeyboardFocus(true);
+
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 12: Recording UX", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -52,7 +60,19 @@ MainComponent::MainComponent(Engine& eng)
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Phase 1
+    recordButton.setClickingTogglesState(true);
+    recordButton.onClick = [this]() {
+        if (recordButton.getToggleState())
+        {
+            engine.startRecording();
+            DBG("Record button clicked - started recording");
+        }
+        else
+        {
+            engine.stopRecording();
+            DBG("Record button clicked - stopped recording");
+        }
+    };
     addAndMakeVisible(recordButton);
 
     // Start timer for CPU monitoring (60 Hz)
@@ -61,6 +81,7 @@ MainComponent::MainComponent(Engine& eng)
 
 MainComponent::~MainComponent()
 {
+    removeKeyListener(this);
     stopTimer();
 }
 
@@ -68,47 +89,6 @@ void MainComponent::paint(juce::Graphics& g)
 {
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
 }
 
 void MainComponent::resized()
@@ -140,6 +120,12 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 12: Arranger view fills the middle
+    if (arrangerComponent != nullptr)
+    {
+        arrangerComponent->setBounds(bounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -154,6 +140,23 @@ void MainComponent::timerCallback()
 
     // C4: Update track count (dirty-checked)
     refreshTrackCountLabel();
+
+    // Phase 12: Update record button state
+    bool isRecording = engine.isRecording();
+    if (recordButton.getToggleState() != isRecording)
+    {
+        recordButton.setToggleState(isRecording, juce::dontSendNotification);
+    }
+
+    // Update record button color
+    if (isRecording)
+    {
+        recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    }
+    else
+    {
+        recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    }
 }
 
 //==============================================================================
@@ -173,6 +176,65 @@ void MainComponent::refreshTrackCountLabel()
 }
 
 //==============================================================================
+// KeyListener interface
+//==============================================================================
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent)
+{
+    juce::ignoreUnused(originatingComponent);
+
+    // Cmd/Ctrl+Z: Undo
+    if (key.isKeyCode(juce::KeyPress::deleteKey) ||
+        (key.getModifiers().isCommandDown() && key.getKeyCode() == 'Z'))
+    {
+        if (!key.getModifiers().isShiftDown())
+        {
+            projectState.undo();
+            DBG("Undo");
+            return true;
+        }
+        else
+        {
+            // Cmd/Ctrl+Shift+Z: Redo
+            projectState.redo();
+            DBG("Redo");
+            return true;
+        }
+    }
+
+    // Cmd/Ctrl+Y: Redo (alternative)
+    if (key.getModifiers().isCommandDown() && key.getKeyCode() == 'Y')
+    {
+        projectState.redo();
+        DBG("Redo");
+        return true;
+    }
+
+    // R: Toggle record
+    if (key.getKeyCode() == 'R' && !key.getModifiers().isAnyModifierKeyDown())
+    {
+        recordButton.triggerClick();
+        return true;
+    }
+
+    // Space: Play/Stop
+    if (key.getKeyCode() == juce::KeyPress::spaceKey && !key.getModifiers().isAnyModifierKeyDown())
+    {
+        if (engine.isPlaying())
+        {
+            stopButton.triggerClick();
+        }
+        else
+        {
+            playButton.triggerClick();
+        }
+        return true;
+    }
+
+    return false;
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -188,8 +250,11 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Connect engine to project state
+    engine->setProjectState(projectState.get());
+
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
@@ -206,6 +271,18 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
+
+    // Phase 12: Create some test tracks for recording
+    projectState->addTrack("Audio 1", "audio");
+    projectState->addTrack("Audio 2", "audio");
+    projectState->addTrack("MIDI 1", "midi");
+
+    // Arm first audio track by default
+    auto trackIds = projectState->getTrackIds();
+    if (!trackIds.isEmpty())
+    {
+        projectState->setTrackArmed(trackIds[0], true);
+    }
 
     DBG("MainWindow created and initialized");
 }

@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ArrangerComponent.h"
 
 //==============================================================================
 /**
@@ -30,11 +31,12 @@
  * - Wingman AI panel (Phase 2)
  */
 class MainComponent : public juce::Component,
-                      private juce::Timer
+                      private juce::Timer,
+                      public juce::KeyListener
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -43,6 +45,12 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    //==========================================================================
+    // KeyListener interface
+    //==========================================================================
+
+    bool keyPressed(const juce::KeyPress& key, juce::Component* originatingComponent) override;
 
 private:
     //==========================================================================
@@ -62,6 +70,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +85,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 12: Arranger view
+    std::unique_ptr<ArrangerComponent> arrangerComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

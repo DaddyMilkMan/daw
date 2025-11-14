@@ -97,6 +97,33 @@ public:
      */
     bool isPlaying() const { return isPlaying_.load(); }
 
+    /**
+     * @brief Start recording on armed tracks
+     */
+    void startRecording();
+
+    /**
+     * @brief Stop recording and finalize recorded clips
+     * @return Array of recorded file paths (for audio tracks)
+     */
+    juce::StringArray stopRecording();
+
+    /**
+     * @brief Check if recording
+     */
+    bool isRecording() const { return isRecording_.load(); }
+
+    /**
+     * @brief Get the current playback/recording position in samples
+     */
+    int64_t getPlaybackPosition() const { return playbackPosition.load(); }
+
+    /**
+     * @brief Set project state (for creating clips after recording)
+     * @param state Project state reference
+     */
+    void setProjectState(ProjectState* state) { projectState_ = state; }
+
     //==========================================================================
     // Audio Device Management
     //==========================================================================
@@ -244,6 +271,30 @@ private:
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    //==========================================================================
+    // Recording (Phase 12)
+    //==========================================================================
+
+    // Recording state
+    std::atomic<int64_t> recordingStartPosition{0};
+    juce::File recordingsDirectory;
+
+    // Thread-safe FIFO for passing recorded audio from audio thread to disk writer thread
+    // Size: 10 seconds at 48kHz stereo = ~1MB
+    juce::AbstractFifo recordFifo{48000 * 10};
+    juce::AudioBuffer<float> recordBuffer;
+    juce::CriticalSection recordBufferLock;
+
+    // Background thread for writing audio to disk
+    class RecordingThread;
+    std::unique_ptr<RecordingThread> recordingThread;
+
+    // Recorded files (populated on stopRecording)
+    juce::StringArray recordedFiles;
+
+    // Project state (for creating clips after recording)
+    ProjectState* projectState_{nullptr};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

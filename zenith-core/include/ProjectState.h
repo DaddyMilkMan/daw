@@ -85,9 +85,11 @@ public:
     static const juce::Identifier PROP_PAN;
     static const juce::Identifier PROP_MUTE;
     static const juce::Identifier PROP_SOLO;
+    static const juce::Identifier PROP_ARMED;
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
+    static const juce::Identifier PROP_FILE_PATH;
 
     //==========================================================================
     ProjectState();
@@ -152,6 +154,82 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Get track type ("audio" or "midi")
+     * @param trackId Track ID
+     * @return Track type string
+     */
+    juce::String getTrackType(const juce::String& trackId) const;
+
+    /**
+     * @brief Check if track is audio type
+     * @param trackId Track ID
+     * @return true if audio track
+     */
+    bool isAudioTrack(const juce::String& trackId) const;
+
+    /**
+     * @brief Check if track is MIDI type
+     * @param trackId Track ID
+     * @return true if MIDI track
+     */
+    bool isMidiTrack(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track armed state
+     * @param trackId Track ID
+     * @param armed Armed state
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed);
+
+    /**
+     * @brief Get track armed state
+     * @param trackId Track ID
+     * @return true if track is armed
+     */
+    bool isTrackArmed(const juce::String& trackId) const;
+
+    //==========================================================================
+    // Clip Management
+    //==========================================================================
+
+    /**
+     * @brief Create an audio clip on a track
+     * @param trackId Track ID
+     * @param filePath Path to audio file
+     * @param startSamples Start position in samples
+     * @param lengthSamples Length in samples
+     * @return Clip ID
+     */
+    juce::String createAudioClip(const juce::String& trackId,
+                                  const juce::String& filePath,
+                                  int64_t startSamples,
+                                  int64_t lengthSamples);
+
+    /**
+     * @brief Create a MIDI clip on a track
+     * @param trackId Track ID
+     * @param startSamples Start position in samples
+     * @param lengthSamples Length in samples
+     * @return Clip ID
+     */
+    juce::String createMidiClip(const juce::String& trackId,
+                                 int64_t startSamples,
+                                 int64_t lengthSamples);
+
+    /**
+     * @brief Remove a clip from a track
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     */
+    void removeClip(const juce::String& trackId, const juce::String& clipId);
+
+    /**
+     * @brief Get all track IDs
+     * @return Array of track IDs
+     */
+    juce::StringArray getTrackIds() const;
 
     //==========================================================================
     // Undo/Redo

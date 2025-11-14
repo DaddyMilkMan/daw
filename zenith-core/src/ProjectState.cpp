@@ -54,9 +54,11 @@ const juce::Identifier ProjectState::PROP_VOLUME("volume");
 const juce::Identifier ProjectState::PROP_PAN("pan");
 const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
+const juce::Identifier ProjectState::PROP_ARMED("armed");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
+const juce::Identifier ProjectState::PROP_FILE_PATH("filePath");
 
 //==============================================================================
 ProjectState::ProjectState()
@@ -223,6 +225,7 @@ juce::String ProjectState::addTrack(const juce::String& name, const juce::String
     track.setProperty(PROP_PAN, 0.0, nullptr);
     track.setProperty(PROP_MUTE, false, nullptr);
     track.setProperty(PROP_SOLO, false, nullptr);
+    track.setProperty(PROP_ARMED, false, nullptr);
 
     // Create empty CLIPS node
     track.appendChild(juce::ValueTree(ID_CLIPS), nullptr);
@@ -256,6 +259,175 @@ int ProjectState::getNumTracks() const
         return tracksNode.getNumChildren();
 
     return 0;
+}
+
+juce::String ProjectState::getTrackType(const juce::String& trackId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+
+    if (track.isValid())
+        return track[PROP_TYPE].toString();
+
+    return {};
+}
+
+bool ProjectState::isAudioTrack(const juce::String& trackId) const
+{
+    return getTrackType(trackId) == "audio";
+}
+
+bool ProjectState::isMidiTrack(const juce::String& trackId) const
+{
+    return getTrackType(trackId) == "midi";
+}
+
+void ProjectState::setTrackArmed(const juce::String& trackId, bool armed)
+{
+    auto track = findTrack(trackId);
+
+    if (track.isValid())
+    {
+        track.setProperty(PROP_ARMED, armed, &undoManager);
+        DBG("ProjectState: Track " + trackId + " armed state set to " + juce::String(armed ? "true" : "false"));
+    }
+}
+
+bool ProjectState::isTrackArmed(const juce::String& trackId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+
+    if (track.isValid())
+        return track[PROP_ARMED];
+
+    return false;
+}
+
+//==============================================================================
+// Clip Management
+//==============================================================================
+
+juce::String ProjectState::createAudioClip(const juce::String& trackId,
+                                            const juce::String& filePath,
+                                            int64_t startSamples,
+                                            int64_t lengthSamples)
+{
+    auto track = findTrack(trackId);
+
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Cannot create clip - track not found: " + trackId);
+        return {};
+    }
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+
+    if (!clipsNode.isValid())
+    {
+        DBG("ProjectState: Cannot create clip - CLIPS node not found");
+        return {};
+    }
+
+    // Generate unique clip ID
+    auto clipId = generateUniqueId("clip");
+
+    // Create clip
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_TYPE, "audio", nullptr);
+    clip.setProperty(PROP_FILE_PATH, filePath, nullptr);
+    clip.setProperty(PROP_START, static_cast<int64>(startSamples), nullptr);
+    clip.setProperty(PROP_LENGTH, static_cast<int64>(lengthSamples), nullptr);
+
+    // Add to track
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Created audio clip " + clipId + " on track " + trackId);
+    DBG("  File: " + filePath);
+    DBG("  Start: " + juce::String(startSamples) + " samples");
+    DBG("  Length: " + juce::String(lengthSamples) + " samples");
+
+    return clipId;
+}
+
+juce::String ProjectState::createMidiClip(const juce::String& trackId,
+                                           int64_t startSamples,
+                                           int64_t lengthSamples)
+{
+    auto track = findTrack(trackId);
+
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Cannot create clip - track not found: " + trackId);
+        return {};
+    }
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+
+    if (!clipsNode.isValid())
+    {
+        DBG("ProjectState: Cannot create clip - CLIPS node not found");
+        return {};
+    }
+
+    // Generate unique clip ID
+    auto clipId = generateUniqueId("clip");
+
+    // Create clip
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_TYPE, "midi", nullptr);
+    clip.setProperty(PROP_START, static_cast<int64>(startSamples), nullptr);
+    clip.setProperty(PROP_LENGTH, static_cast<int64>(lengthSamples), nullptr);
+
+    // Add to track
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Created MIDI clip " + clipId + " on track " + trackId);
+    DBG("  Start: " + juce::String(startSamples) + " samples");
+    DBG("  Length: " + juce::String(lengthSamples) + " samples");
+
+    return clipId;
+}
+
+void ProjectState::removeClip(const juce::String& trackId, const juce::String& clipId)
+{
+    auto track = findTrack(trackId);
+
+    if (!track.isValid())
+        return;
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+
+    if (!clipsNode.isValid())
+        return;
+
+    // Find clip
+    for (auto clip : clipsNode)
+    {
+        if (clip[PROP_ID].toString() == clipId)
+        {
+            clipsNode.removeChild(clip, &undoManager);
+            DBG("ProjectState: Removed clip " + clipId + " from track " + trackId);
+            return;
+        }
+    }
+}
+
+juce::StringArray ProjectState::getTrackIds() const
+{
+    juce::StringArray ids;
+
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+
+    if (!tracksNode.isValid())
+        return ids;
+
+    for (auto track : tracksNode)
+    {
+        ids.add(track[PROP_ID].toString());
+    }
+
+    return ids;
 }
 
 //==============================================================================
