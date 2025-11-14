@@ -27,6 +27,10 @@
 #include <vector>
 #include <memory>
 
+// Forward declarations
+class ProjectState;
+class TrackAutomationSynchronizer;
+
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
     class Track;
@@ -55,6 +59,13 @@ public:
     //==========================================================================
     // Initialization / Shutdown
     //==========================================================================
+
+    /**
+     * @brief Set project state for automation synchronization
+     * @param state Pointer to project state (can be nullptr to disable automation)
+     * @note Must be called before initialize() or after automation is stopped
+     */
+    void setProjectState(ProjectState* state);
 
     /**
      * @brief Initialize the audio engine
@@ -244,6 +255,10 @@ private:
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    // Phase 13: Automation synchronizer
+    ProjectState* projectState_ = nullptr;
+    std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

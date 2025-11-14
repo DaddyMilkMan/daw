@@ -188,6 +188,9 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Phase 13: Connect project state to engine for automation
+    engine->setProjectState(projectState.get());
+
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
 
