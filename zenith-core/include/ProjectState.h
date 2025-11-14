@@ -85,6 +85,7 @@ public:
     static const juce::Identifier PROP_PAN;
     static const juce::Identifier PROP_MUTE;
     static const juce::Identifier PROP_SOLO;
+    static const juce::Identifier PROP_ARMED;
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
@@ -152,6 +153,106 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Get track ValueTree by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (may be invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId);
+
+    /**
+     * @brief Get track ValueTree by index
+     * @param index Track index
+     * @return Track ValueTree (may be invalid if out of range)
+     */
+    juce::ValueTree getTrackByIndex(int index);
+
+    //==========================================================================
+    // Track Mixer Properties
+    //==========================================================================
+
+    /**
+     * @brief Set track volume (undoable)
+     * @param trackId Track ID
+     * @param volume Volume (0.0 to 1.0)
+     * @param actionName Undo action name
+     */
+    void setTrackVolume(const juce::String& trackId, float volume, const juce::String& actionName = "Set track volume");
+
+    /**
+     * @brief Get track volume
+     * @param trackId Track ID
+     * @return Volume (0.0 to 1.0), or 1.0 if track not found
+     */
+    float getTrackVolume(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track pan (undoable)
+     * @param trackId Track ID
+     * @param pan Pan (-1.0 left to 1.0 right)
+     * @param actionName Undo action name
+     */
+    void setTrackPan(const juce::String& trackId, float pan, const juce::String& actionName = "Set track pan");
+
+    /**
+     * @brief Get track pan
+     * @param trackId Track ID
+     * @return Pan (-1.0 to 1.0), or 0.0 if track not found
+     */
+    float getTrackPan(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track mute (undoable)
+     * @param trackId Track ID
+     * @param mute Mute state
+     * @param actionName Undo action name
+     */
+    void setTrackMute(const juce::String& trackId, bool mute, const juce::String& actionName = "Set track mute");
+
+    /**
+     * @brief Get track mute state
+     * @param trackId Track ID
+     * @return Mute state, or false if track not found
+     */
+    bool isTrackMuted(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track solo (undoable)
+     * @param trackId Track ID
+     * @param solo Solo state
+     * @param actionName Undo action name
+     */
+    void setTrackSolo(const juce::String& trackId, bool solo, const juce::String& actionName = "Set track solo");
+
+    /**
+     * @brief Get track solo state
+     * @param trackId Track ID
+     * @return Solo state, or false if track not found
+     */
+    bool isTrackSolo(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track armed (undoable)
+     * @param trackId Track ID
+     * @param armed Armed state
+     * @param actionName Undo action name
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed, const juce::String& actionName = "Set track armed");
+
+    /**
+     * @brief Get track armed state
+     * @param trackId Track ID
+     * @return Armed state, or false if track not found
+     */
+    bool isTrackArmed(const juce::String& trackId) const;
+
+    /**
+     * @brief Get track name
+     * @param trackId Track ID
+     * @return Track name, or empty string if track not found
+     */
+    juce::String getTrackName(const juce::String& trackId) const;
 
     //==========================================================================
     // Undo/Redo

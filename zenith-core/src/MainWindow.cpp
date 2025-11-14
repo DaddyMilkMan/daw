@@ -9,14 +9,19 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
     : engine(eng)
+    , projectState(ps)
+    , mixerComponent(ps)
 {
     // Set size
     setSize(1400, 800);
 
+    // Add mixer component
+    addAndMakeVisible(mixerComponent);
+
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 10: Mixer MVP", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -82,7 +87,7 @@ void MainComponent::paint(juce::Graphics& g)
     // Draw phase info
     g.setFont(juce::Font(20.0f));
     g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
+    g.drawText("Phase 10: Mixer MVP - Track mixer controls operational",
                bounds.removeFromTop(40),
                juce::Justification::centred,
                true);
@@ -98,12 +103,11 @@ void MainComponent::paint(juce::Graphics& g)
         "✓ Transport controls (play/stop)\n"
         "✓ CPU monitoring\n"
         "✓ Project state management (ValueTree)\n"
+        "✓ Mixer panel with track strips\n"
+        "✓ Volume/Pan controls (undoable)\n"
+        "✓ Mute/Solo/Arm buttons\n"
         "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
+        "Add tracks from console or create test tracks to see mixer in action!";
 
     g.drawMultiLineText(features,
                        featuresBounds.getX(),
@@ -140,6 +144,13 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 10: Mixer panel at bottom (above transport bar)
+    auto mixerHeight = 220;
+    auto mixerArea = bounds.removeFromBottom(mixerHeight);
+    mixerComponent.setBounds(mixerArea);
+
+    // Remaining space is for future arranger/content area
 }
 
 void MainComponent::timerCallback()
@@ -188,8 +199,8 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    // Create main content (pass both engine and projectState)
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
