@@ -32,7 +32,11 @@ namespace zenith {
     class Track;
     class Clip;
     class MixerChannel;
+    class AudioFilePool;
 }
+
+// Forward declaration
+class ProjectState;
 
 //==============================================================================
 /**
@@ -97,6 +101,21 @@ public:
      */
     bool isPlaying() const { return isPlaying_.load(); }
 
+    /**
+     * @brief Start recording
+     */
+    void record();
+
+    /**
+     * @brief Stop recording
+     */
+    void stopRecording();
+
+    /**
+     * @brief Check if recording
+     */
+    bool isRecording() const { return isRecording_.load(); }
+
     //==========================================================================
     // Audio Device Management
     //==========================================================================
@@ -151,6 +170,26 @@ public:
      * @note Does NOT attach tracks to audio graph; for compile/UI testing only
      */
     void addTestTracks(int count);
+
+    //==========================================================================
+    // Phase 2D: Audio Recording
+    //==========================================================================
+
+    /**
+     * @brief Set project state (for tempo and recording metadata)
+     * @param state Pointer to project state (not owned)
+     */
+    void setProjectState(ProjectState* state) { projectState_ = state; }
+
+    /**
+     * @brief Get audio file pool for managing recorded audio
+     */
+    zenith::AudioFilePool& getAudioFilePool() { return *audioFilePool_; }
+
+    /**
+     * @brief Get playhead position in samples
+     */
+    juce::int64 getPlayheadSamples() const { return playheadSamples_.load(); }
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -216,6 +255,32 @@ private:
         int numOutputChannels,
         int numSamples);
 
+    /**
+     * @brief Process audio recording (AUDIO THREAD)
+     * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
+     */
+    void processAudioRecording(
+        const float* const* inputChannelData,
+        int numInputChannels,
+        int numSamples);
+
+    //==========================================================================
+    // Recording Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Convert a completed audio recording into an AudioClip
+     * @param track Track to add clip to
+     * @param file Recorded audio file
+     * @param recordingStartSamples Timeline position where recording started
+     * @param sampleRate Sample rate of recording
+     */
+    void bakeAudioRecordingIntoTrack(
+        zenith::Track& track,
+        const juce::File& file,
+        juce::int64 recordingStartSamples,
+        double sampleRate);
+
     //==========================================================================
     // Member Variables
     //==========================================================================
@@ -244,6 +309,36 @@ private:
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
+
+    //==========================================================================
+    // Phase 2D: Audio Recording Infrastructure
+    //==========================================================================
+
+    // Project state (not owned, used for tempo and metadata)
+    ProjectState* projectState_ = nullptr;
+
+    // Audio file pool for managing recorded audio
+    std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
+
+    // Background thread for audio file writing
+    std::unique_ptr<juce::TimeSliceThread> audioWriterThread_;
+
+    // Playhead position (for recording alignment)
+    std::atomic<juce::int64> playheadSamples_{0};
+
+    // Audio recording session (per-track)
+    struct AudioRecordingSession
+    {
+        std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+        juce::File file;
+        int numChannels = 0;
+        double sampleRate = 44100.0;
+        juce::int64 recordingStartSamples = 0;
+        int trackIndex = -1;  // Which track this session belongs to
+    };
+
+    // Active recording sessions (message thread creates, audio thread writes)
+    std::vector<AudioRecordingSession> audioRecordingSessions_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

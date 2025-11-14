@@ -95,6 +95,10 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Phase 2D: Audio recording infrastructure
+    Source/engine/AudioFilePool.h
+    Source/engine/AudioFilePool.cpp
 )
 
 # ============================================================================
