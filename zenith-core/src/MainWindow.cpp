@@ -9,8 +9,8 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& state)
+    : engine(eng), projectState(state)
 {
     // Set size
     setSize(1400, 800);
@@ -54,6 +54,13 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
+
+    // Phase 15: Create tempo and marker lanes
+    tempoLane = std::make_unique<TempoLaneComponent>(projectState);
+    addAndMakeVisible(*tempoLane);
+
+    markerLane = std::make_unique<MarkerLaneComponent>(projectState);
+    addAndMakeVisible(*markerLane);
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -125,6 +132,13 @@ void MainComponent::resized()
 
     cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
 
+    // Phase 15: Tempo and marker lanes (top of main area)
+    if (tempoLane)
+        tempoLane->setBounds(bounds.removeFromTop(60));
+
+    if (markerLane)
+        markerLane->setBounds(bounds.removeFromTop(50));
+
     // Bottom bar (transport + audio device)
     auto bottomBar = bounds.removeFromBottom(50);
 
@@ -191,8 +205,8 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 13: Connect project state to engine for automation
     engine->setProjectState(projectState.get());
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    // Create main content (Phase 15: pass ProjectState for tempo/marker lanes)
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);

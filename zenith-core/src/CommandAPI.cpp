@@ -18,6 +18,16 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("add_track", [this](const juce::var& p) { return cmd_addTrack(p); });
     registerCommand("get_project_info", [this](const juce::var& p) { return cmd_getProjectInfo(p); });
     registerCommand("set_tempo", [this](const juce::var& p) { return cmd_setTempo(p); });
+
+    // Phase 15: Tempo map and markers
+    registerCommand("add_tempo_point", [this](const juce::var& p) { return cmd_addTempoPoint(p); });
+    registerCommand("delete_tempo_point", [this](const juce::var& p) { return cmd_deleteTempoPoint(p); });
+    registerCommand("get_tempo_map", [this](const juce::var& p) { return cmd_getTempoMap(p); });
+    registerCommand("add_marker", [this](const juce::var& p) { return cmd_addMarker(p); });
+    registerCommand("move_marker", [this](const juce::var& p) { return cmd_moveMarker(p); });
+    registerCommand("rename_marker", [this](const juce::var& p) { return cmd_renameMarker(p); });
+    registerCommand("delete_marker", [this](const juce::var& p) { return cmd_deleteMarker(p); });
+    registerCommand("get_markers", [this](const juce::var& p) { return cmd_getMarkers(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -252,6 +262,154 @@ juce::var CommandAPI::cmd_setTempo(const juce::var& params)
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+//==============================================================================
+// Phase 15: Tempo Map Commands
+//==============================================================================
+
+juce::var CommandAPI::cmd_addTempoPoint(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "timeBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "bpm", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    double timeBeats = obj->getProperty("timeBeats");
+    double bpm = obj->getProperty("bpm");
+
+    // Add tempo point
+    juce::String pointId = projectState.addTempoPoint(timeBeats, bpm, "Add Tempo Point (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("pointId", pointId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_deleteTempoPoint(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "pointId", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String pointId = obj->getProperty("pointId").toString();
+
+    // Delete tempo point
+    bool success = projectState.deleteTempoPoint(pointId, "Delete Tempo Point (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getTempoMap(const juce::var& /* params */)
+{
+    auto tempoPoints = projectState.getTempoPoints();
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("points", tempoPoints);
+    return juce::var(result.get());
+}
+
+//==============================================================================
+// Phase 15: Marker Commands
+//==============================================================================
+
+juce::var CommandAPI::cmd_addMarker(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "timeBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "name", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    double timeBeats = obj->getProperty("timeBeats");
+    juce::String name = obj->getProperty("name").toString();
+
+    // Add marker
+    juce::String markerId = projectState.addMarker(timeBeats, name, "Add Marker (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("markerId", markerId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_moveMarker(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "markerId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "timeBeats", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String markerId = obj->getProperty("markerId").toString();
+    double timeBeats = obj->getProperty("timeBeats");
+
+    // Move marker
+    bool success = projectState.moveMarker(markerId, timeBeats, "Move Marker (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_renameMarker(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "markerId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "name", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String markerId = obj->getProperty("markerId").toString();
+    juce::String name = obj->getProperty("name").toString();
+
+    // Rename marker
+    bool success = projectState.renameMarker(markerId, name, "Rename Marker (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_deleteMarker(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "markerId", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String markerId = obj->getProperty("markerId").toString();
+
+    // Delete marker
+    bool success = projectState.deleteMarker(markerId, "Delete Marker (API)");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getMarkers(const juce::var& /* params */)
+{
+    auto markers = projectState.getMarkers();
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("markers", markers);
     return juce::var(result.get());
 }
 

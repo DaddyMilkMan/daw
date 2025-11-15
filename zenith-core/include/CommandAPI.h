@@ -122,6 +122,62 @@ private:
      */
     juce::var cmd_setTempo(const juce::var& params);
 
+    /**
+     * @brief Add tempo point (Phase 15)
+     * Params: { "timeBeats": 8.0, "bpm": 140.0 }
+     * Returns: { "pointId": "tempopoint_123" }
+     */
+    juce::var cmd_addTempoPoint(const juce::var& params);
+
+    /**
+     * @brief Delete tempo point (Phase 15)
+     * Params: { "pointId": "tempopoint_123" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_deleteTempoPoint(const juce::var& params);
+
+    /**
+     * @brief Get tempo map (Phase 15)
+     * Params: {}
+     * Returns: { "points": [ { "id": "...", "timeBeats": 0.0, "bpm": 120.0 }, ... ] }
+     */
+    juce::var cmd_getTempoMap(const juce::var& params);
+
+    /**
+     * @brief Add marker (Phase 15)
+     * Params: { "timeBeats": 16.0, "name": "Verse" }
+     * Returns: { "markerId": "marker_123" }
+     */
+    juce::var cmd_addMarker(const juce::var& params);
+
+    /**
+     * @brief Move marker (Phase 15)
+     * Params: { "markerId": "marker_123", "timeBeats": 20.0 }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_moveMarker(const juce::var& params);
+
+    /**
+     * @brief Rename marker (Phase 15)
+     * Params: { "markerId": "marker_123", "name": "Chorus" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_renameMarker(const juce::var& params);
+
+    /**
+     * @brief Delete marker (Phase 15)
+     * Params: { "markerId": "marker_123" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_deleteMarker(const juce::var& params);
+
+    /**
+     * @brief Get markers (Phase 15)
+     * Params: {}
+     * Returns: { "markers": [ { "id": "...", "timeBeats": 0.0, "name": "..." }, ... ] }
+     */
+    juce::var cmd_getMarkers(const juce::var& params);
+
     //==========================================================================
     // Helper methods
     //==========================================================================

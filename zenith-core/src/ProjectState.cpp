@@ -66,6 +66,13 @@ const juce::Identifier ProjectState::PROP_PARAM("param");
 const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
 
+// Phase 15: Tempo map and markers
+const juce::Identifier ProjectState::ID_TEMPO_MAP("TEMPO_MAP");
+const juce::Identifier ProjectState::ID_TEMPO_POINT("TEMPO_POINT");
+const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
+const juce::Identifier ProjectState::ID_MARKER("MARKER");
+const juce::Identifier ProjectState::PROP_BPM("bpm");
+
 //==============================================================================
 ProjectState::ProjectState()
 {
@@ -595,4 +602,371 @@ bool ProjectState::clearAutomation(const juce::String& trackId, const juce::Stri
     }
 
     return false;
+}
+
+//==============================================================================
+// Phase 15: Tempo Map Management
+//==============================================================================
+
+juce::ValueTree ProjectState::getOrCreateTempoMap()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto tempoMap = state.getChildWithName(ID_TEMPO_MAP);
+    if (!tempoMap.isValid())
+    {
+        tempoMap = juce::ValueTree(ID_TEMPO_MAP);
+        state.appendChild(tempoMap, nullptr);
+
+        // Create default tempo point at beat 0
+        juce::ValueTree point(ID_TEMPO_POINT);
+        point.setProperty(PROP_ID, generateUniqueId("tempopoint"), nullptr);
+        point.setProperty(PROP_TIME_BEATS, 0.0, nullptr);
+        point.setProperty(PROP_BPM, 120.0, nullptr);
+        tempoMap.appendChild(point, nullptr);
+
+        DBG("ProjectState: Created default tempo map");
+    }
+
+    return tempoMap;
+}
+
+juce::ValueTree ProjectState::getTempoMap() const
+{
+    return state.getChildWithName(ID_TEMPO_MAP);
+}
+
+juce::String ProjectState::addTempoPoint(double timeBeats, double bpm, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(timeBeats >= 0.0);
+
+    // Clamp BPM to valid range
+    bpm = juce::jlimit(40.0, 240.0, bpm);
+
+    auto tempoMap = getOrCreateTempoMap();
+
+    // Generate unique ID
+    auto pointId = generateUniqueId("tempopoint");
+
+    // Create point
+    juce::ValueTree point(ID_TEMPO_POINT);
+    point.setProperty(PROP_ID, pointId, nullptr);
+    point.setProperty(PROP_TIME_BEATS, timeBeats, nullptr);
+    point.setProperty(PROP_BPM, bpm, nullptr);
+
+    // Find insertion index (keep sorted by timeBeats)
+    int insertIndex = 0;
+    for (int i = 0; i < tempoMap.getNumChildren(); ++i)
+    {
+        auto existingPoint = tempoMap.getChild(i);
+        double existingTime = existingPoint[PROP_TIME_BEATS];
+        if (timeBeats >= existingTime)
+            insertIndex = i + 1;
+        else
+            break;
+    }
+
+    // Add to tempo map
+    tempoMap.addChild(point, insertIndex, &undoManager);
+
+    DBG("ProjectState: Added tempo point at " + juce::String(timeBeats) + " beats, " + juce::String(bpm) + " BPM");
+
+    return pointId;
+}
+
+bool ProjectState::moveTempoPoint(const juce::String& pointId, double newTimeBeats, double newBpm,
+                                   const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(newTimeBeats >= 0.0);
+
+    // Clamp BPM to valid range
+    newBpm = juce::jlimit(40.0, 240.0, newBpm);
+
+    auto tempoMap = getTempoMap();
+    if (!tempoMap.isValid())
+        return false;
+
+    // Find point
+    for (int i = 0; i < tempoMap.getNumChildren(); ++i)
+    {
+        auto point = tempoMap.getChild(i);
+        if (point[PROP_ID].toString() == pointId)
+        {
+            double oldTime = point[PROP_TIME_BEATS];
+
+            // Prevent moving the beat 0 tempo point to a different time
+            // (it can change BPM but must stay at beat 0)
+            if (oldTime == 0.0 && newTimeBeats != 0.0)
+            {
+                DBG("ProjectState: Cannot move beat 0 tempo point to a different time");
+                // Allow BPM update but not time
+                point.setProperty(PROP_BPM, newBpm, &undoManager);
+                return true;
+            }
+
+            // Update properties
+            point.setProperty(PROP_TIME_BEATS, newTimeBeats, &undoManager);
+            point.setProperty(PROP_BPM, newBpm, &undoManager);
+
+            // If time changed, re-sort
+            if (newTimeBeats != oldTime)
+            {
+                tempoMap.removeChild(i, &undoManager);
+
+                int insertIndex = 0;
+                for (int j = 0; j < tempoMap.getNumChildren(); ++j)
+                {
+                    auto existingPoint = tempoMap.getChild(j);
+                    double existingTime = existingPoint[PROP_TIME_BEATS];
+                    if (newTimeBeats >= existingTime)
+                        insertIndex = j + 1;
+                    else
+                        break;
+                }
+
+                tempoMap.addChild(point, insertIndex, &undoManager);
+            }
+
+            DBG("ProjectState: Moved tempo point " + pointId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::deleteTempoPoint(const juce::String& pointId, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto tempoMap = getTempoMap();
+    if (!tempoMap.isValid())
+        return false;
+
+    // Find and remove point
+    for (int i = 0; i < tempoMap.getNumChildren(); ++i)
+    {
+        auto point = tempoMap.getChild(i);
+        if (point[PROP_ID].toString() == pointId)
+        {
+            // Prevent deleting the beat 0 tempo point
+            double timeBeats = point[PROP_TIME_BEATS];
+            if (timeBeats == 0.0)
+            {
+                DBG("ProjectState: Cannot delete beat 0 tempo point");
+                return false;
+            }
+
+            tempoMap.removeChild(i, &undoManager);
+            DBG("ProjectState: Deleted tempo point " + pointId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::Array<juce::var> ProjectState::getTempoPoints() const
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    juce::Array<juce::var> points;
+
+    auto tempoMap = getTempoMap();
+    if (!tempoMap.isValid())
+        return points;
+
+    for (auto point : tempoMap)
+    {
+        if (point.hasType(ID_TEMPO_POINT))
+        {
+            auto* obj = new juce::DynamicObject();
+            obj->setProperty(PROP_ID, point[PROP_ID]);
+            obj->setProperty(PROP_TIME_BEATS, point[PROP_TIME_BEATS]);
+            obj->setProperty(PROP_BPM, point[PROP_BPM]);
+            points.add(juce::var(obj));
+        }
+    }
+
+    return points;
+}
+
+//==============================================================================
+// Phase 15: Marker Management
+//==============================================================================
+
+juce::ValueTree ProjectState::getOrCreateMarkers()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto markers = state.getChildWithName(ID_MARKERS);
+    if (!markers.isValid())
+    {
+        markers = juce::ValueTree(ID_MARKERS);
+        state.appendChild(markers, nullptr);
+        DBG("ProjectState: Created markers node");
+    }
+
+    return markers;
+}
+
+juce::ValueTree ProjectState::getMarkers() const
+{
+    return state.getChildWithName(ID_MARKERS);
+}
+
+juce::String ProjectState::addMarker(double timeBeats, const juce::String& name, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(timeBeats >= 0.0);
+
+    auto markers = getOrCreateMarkers();
+
+    // Generate unique ID
+    auto markerId = generateUniqueId("marker");
+
+    // Create marker
+    juce::ValueTree marker(ID_MARKER);
+    marker.setProperty(PROP_ID, markerId, nullptr);
+    marker.setProperty(PROP_TIME_BEATS, timeBeats, nullptr);
+    marker.setProperty(PROP_NAME, name, nullptr);
+
+    // Find insertion index (keep sorted by timeBeats)
+    int insertIndex = 0;
+    for (int i = 0; i < markers.getNumChildren(); ++i)
+    {
+        auto existingMarker = markers.getChild(i);
+        double existingTime = existingMarker[PROP_TIME_BEATS];
+        if (timeBeats >= existingTime)
+            insertIndex = i + 1;
+        else
+            break;
+    }
+
+    // Add to markers
+    markers.addChild(marker, insertIndex, &undoManager);
+
+    DBG("ProjectState: Added marker '" + name + "' at " + juce::String(timeBeats) + " beats");
+
+    return markerId;
+}
+
+bool ProjectState::moveMarker(const juce::String& markerId, double newTimeBeats, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(newTimeBeats >= 0.0);
+
+    auto markers = getMarkers();
+    if (!markers.isValid())
+        return false;
+
+    // Find marker
+    for (int i = 0; i < markers.getNumChildren(); ++i)
+    {
+        auto marker = markers.getChild(i);
+        if (marker[PROP_ID].toString() == markerId)
+        {
+            double oldTime = marker[PROP_TIME_BEATS];
+
+            // Update time
+            marker.setProperty(PROP_TIME_BEATS, newTimeBeats, &undoManager);
+
+            // If time changed, re-sort
+            if (newTimeBeats != oldTime)
+            {
+                markers.removeChild(i, &undoManager);
+
+                int insertIndex = 0;
+                for (int j = 0; j < markers.getNumChildren(); ++j)
+                {
+                    auto existingMarker = markers.getChild(j);
+                    double existingTime = existingMarker[PROP_TIME_BEATS];
+                    if (newTimeBeats >= existingTime)
+                        insertIndex = j + 1;
+                    else
+                        break;
+                }
+
+                markers.addChild(marker, insertIndex, &undoManager);
+            }
+
+            DBG("ProjectState: Moved marker " + markerId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::renameMarker(const juce::String& markerId, const juce::String& newName,
+                                 const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto markers = getMarkers();
+    if (!markers.isValid())
+        return false;
+
+    // Find and rename marker
+    for (auto marker : markers)
+    {
+        if (marker[PROP_ID].toString() == markerId)
+        {
+            marker.setProperty(PROP_NAME, newName, &undoManager);
+            DBG("ProjectState: Renamed marker " + markerId + " to '" + newName + "'");
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::deleteMarker(const juce::String& markerId, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto markers = getMarkers();
+    if (!markers.isValid())
+        return false;
+
+    // Find and remove marker
+    for (int i = 0; i < markers.getNumChildren(); ++i)
+    {
+        auto marker = markers.getChild(i);
+        if (marker[PROP_ID].toString() == markerId)
+        {
+            markers.removeChild(i, &undoManager);
+            DBG("ProjectState: Deleted marker " + markerId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::Array<juce::var> ProjectState::getMarkers() const
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    juce::Array<juce::var> markerList;
+
+    auto markers = getMarkers();
+    if (!markers.isValid())
+        return markerList;
+
+    for (auto marker : markers)
+    {
+        if (marker.hasType(ID_MARKER))
+        {
+            auto* obj = new juce::DynamicObject();
+            obj->setProperty(PROP_ID, marker[PROP_ID]);
+            obj->setProperty(PROP_TIME_BEATS, marker[PROP_TIME_BEATS]);
+            obj->setProperty(PROP_NAME, marker[PROP_NAME]);
+            markerList.add(juce::var(obj));
+        }
+    }
+
+    return markerList;
 }

@@ -90,6 +90,12 @@ public:
     static const juce::Identifier ID_ENVELOPE;
     static const juce::Identifier ID_POINT;
 
+    // Phase 15: Tempo map and markers
+    static const juce::Identifier ID_TEMPO_MAP;
+    static const juce::Identifier ID_TEMPO_POINT;
+    static const juce::Identifier ID_MARKERS;
+    static const juce::Identifier ID_MARKER;
+
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
     static const juce::Identifier PROP_TIME_SIG_NUM;
@@ -110,6 +116,9 @@ public:
     static const juce::Identifier PROP_PARAM;
     static const juce::Identifier PROP_TIME_BEATS;
     static const juce::Identifier PROP_VALUE;
+
+    // Phase 15: Tempo map and marker properties
+    static const juce::Identifier PROP_BPM;
 
     //==========================================================================
     ProjectState();
@@ -256,6 +265,127 @@ public:
      */
     bool clearAutomation(const juce::String& trackId, const juce::String& paramId,
                          const juce::String& actionName);
+
+    //==========================================================================
+    // Phase 15: Tempo Map Management
+    //==========================================================================
+
+    /**
+     * @brief Add tempo point
+     * @param timeBeats Time in beats
+     * @param bpm Tempo in BPM (40-240)
+     * @param actionName Undo action name
+     * @return Generated point ID
+     * @note Message thread only, undoable
+     */
+    juce::String addTempoPoint(double timeBeats, double bpm, const juce::String& actionName);
+
+    /**
+     * @brief Move tempo point
+     * @param pointId Point ID
+     * @param newTimeBeats New time in beats (must be >= 0; beat 0 tempo point cannot move)
+     * @param newBpm New BPM (40-240)
+     * @param actionName Undo action name
+     * @return true if point was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveTempoPoint(const juce::String& pointId, double newTimeBeats, double newBpm,
+                        const juce::String& actionName);
+
+    /**
+     * @brief Delete tempo point
+     * @param pointId Point ID
+     * @param actionName Undo action name
+     * @return true if point was found and deleted (cannot delete beat 0 point)
+     * @note Message thread only, undoable
+     */
+    bool deleteTempoPoint(const juce::String& pointId, const juce::String& actionName);
+
+    /**
+     * @brief Get all tempo points (sorted by timeBeats)
+     * @return Array of tempo point objects with id, timeBeats, bpm
+     * @note Message thread only
+     */
+    juce::Array<juce::var> getTempoPoints() const;
+
+    /**
+     * @brief Get tempo map ValueTree
+     * @return Tempo map ValueTree (creates if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getOrCreateTempoMap();
+
+    /**
+     * @brief Get tempo map ValueTree (const)
+     * @return Tempo map ValueTree (invalid if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getTempoMap() const;
+
+    //==========================================================================
+    // Phase 15: Marker Management
+    //==========================================================================
+
+    /**
+     * @brief Add marker
+     * @param timeBeats Time in beats
+     * @param name Marker name
+     * @param actionName Undo action name
+     * @return Generated marker ID
+     * @note Message thread only, undoable
+     */
+    juce::String addMarker(double timeBeats, const juce::String& name, const juce::String& actionName);
+
+    /**
+     * @brief Move marker
+     * @param markerId Marker ID
+     * @param newTimeBeats New time in beats
+     * @param actionName Undo action name
+     * @return true if marker was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveMarker(const juce::String& markerId, double newTimeBeats, const juce::String& actionName);
+
+    /**
+     * @brief Rename marker
+     * @param markerId Marker ID
+     * @param newName New name
+     * @param actionName Undo action name
+     * @return true if marker was found and renamed
+     * @note Message thread only, undoable
+     */
+    bool renameMarker(const juce::String& markerId, const juce::String& newName,
+                      const juce::String& actionName);
+
+    /**
+     * @brief Delete marker
+     * @param markerId Marker ID
+     * @param actionName Undo action name
+     * @return true if marker was found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteMarker(const juce::String& markerId, const juce::String& actionName);
+
+    /**
+     * @brief Get all markers (sorted by timeBeats)
+     * @return Array of marker objects with id, timeBeats, name
+     * @note Message thread only
+     */
+    juce::Array<juce::var> getMarkers() const;
+
+    /**
+     * @brief Get markers ValueTree
+     * @return Markers ValueTree (creates if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getOrCreateMarkers();
+
+    /**
+     * @brief Get markers ValueTree (const)
+     * @return Markers ValueTree (invalid if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getMarkers() const;
 
     //==========================================================================
     // Undo/Redo

@@ -6,6 +6,8 @@
 #include "../include/Engine.h"
 #include "../include/ProjectState.h"
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/TempoMap.h"
+#include "../include/TempoMapSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../Source/engine/Track.h"
@@ -16,6 +18,10 @@
 Engine::Engine()
 {
     DBG("Engine: Constructor");
+
+    // Phase 15: Create tempo map
+    tempoMap = std::make_unique<TempoMap>();
+    DBG("Engine: Created tempo map");
 }
 
 Engine::~Engine()
@@ -39,6 +45,13 @@ void Engine::setProjectState(ProjectState* state)
         automationSynchronizer.reset();
     }
 
+    // Stop tempo map synchronizer if running
+    if (tempoMapSynchronizer)
+    {
+        tempoMapSynchronizer->stop();
+        tempoMapSynchronizer.reset();
+    }
+
     projectState_ = state;
 
     // Create new automation synchronizer if we have a project state
@@ -46,6 +59,11 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Phase 15: Create and start tempo map synchronizer
+        tempoMapSynchronizer = std::make_unique<TempoMapSynchronizer>(*projectState_, *tempoMap);
+        tempoMapSynchronizer->start();
+        DBG("Engine: Created and started tempo map synchronizer");
     }
 }
 

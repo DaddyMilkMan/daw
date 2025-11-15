@@ -30,6 +30,8 @@
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
+class TempoMapSynchronizer;
+class TempoMap;
 
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
@@ -137,6 +139,24 @@ public:
      * @return CPU usage (0.0 - 100.0)
      */
     double getCpuUsage() const;
+
+    //==========================================================================
+    // Phase 15: Tempo Map Access
+    //==========================================================================
+
+    /**
+     * @brief Get tempo map
+     * @return Reference to engine's tempo map
+     * @note Thread-safe; can be called from any thread
+     */
+    TempoMap& getTempoMap() { return *tempoMap; }
+
+    /**
+     * @brief Get tempo map (const)
+     * @return Const reference to engine's tempo map
+     * @note Thread-safe; can be called from any thread
+     */
+    const TempoMap& getTempoMap() const { return *tempoMap; }
 
     //==========================================================================
     // C3: Minimal Engine Surface (compile-only, no audio wiring)
@@ -259,6 +279,10 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Phase 15: Tempo map
+    std::unique_ptr<TempoMap> tempoMap;
+    std::unique_ptr<TempoMapSynchronizer> tempoMapSynchronizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
