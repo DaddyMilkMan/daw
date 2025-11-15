@@ -61,8 +61,15 @@ void TrackAutomationSynchronizer::timerCallback()
 {
     // MESSAGE THREAD - Safe to access ValueTree and call Track setters
 
+    // For now, use a simple frame counter approach
+    // In a real implementation, Engine would expose playback position
+    static juce::int64 frameCounter = 0;
+
     if (!engine.isPlaying())
+    {
+        frameCounter = 0;  // Reset on stop to ensure automation starts from beginning
         return;  // Only update during playback
+    }
 
     // Get playback position in samples from engine
     // Note: Engine would need to expose this - for now we'll add a method
@@ -72,54 +79,43 @@ void TrackAutomationSynchronizer::timerCallback()
     double tempo = projectState.getTempo();
     double sampleRate = engine.getSampleRate();
 
-    // For now, use a simple frame counter approach
-    // In a real implementation, Engine would expose playback position
-    static juce::int64 frameCounter = 0;
+    // Estimate beats from samples
+    // beats = (samples / sampleRate) * (tempo / 60.0)
+    double playbackBeats = (frameCounter / sampleRate) * (tempo / 60.0);
 
-    if (engine.isPlaying())
+    // Update all tracks with automation
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid())
+        return;
+
+    int trackIndex = 0;
+    for (auto trackNode : tracksNode)
     {
-        // Estimate beats from samples
-        // beats = (samples / sampleRate) * (tempo / 60.0)
-        double playbackBeats = (frameCounter / sampleRate) * (tempo / 60.0);
+        if (!trackNode.hasType(ProjectState::ID_TRACK))
+            continue;
 
-        // Update all tracks with automation
-        auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-        if (!tracksNode.isValid())
-            return;
+        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
 
-        int trackIndex = 0;
-        for (auto trackNode : tracksNode)
+        // Get corresponding engine track
+        if (trackIndex < engine.getNumTracks())
         {
-            if (!trackNode.hasType(ProjectState::ID_TRACK))
-                continue;
-
-            juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-
-            // Get corresponding engine track
-            if (trackIndex < engine.getNumTracks())
+            auto& tracks = engine.tracks();
+            if (trackIndex < static_cast<int>(tracks.size()))
             {
-                auto& tracks = engine.tracks();
-                if (trackIndex < static_cast<int>(tracks.size()))
+                auto* track = tracks[trackIndex].get();
+                if (track != nullptr)
                 {
-                    auto* track = tracks[trackIndex].get();
-                    if (track != nullptr)
-                    {
-                        updateTrackAutomation(trackId, track, playbackBeats);
-                    }
+                    updateTrackAutomation(trackId, track, playbackBeats);
                 }
             }
-
-            ++trackIndex;
         }
 
-        // Increment frame counter (rough estimate)
-        // In real impl, this would come from Engine
-        frameCounter += static_cast<juce::int64>(sampleRate / 60.0);  // ~1/60 sec
+        ++trackIndex;
     }
-    else
-    {
-        frameCounter = 0;
-    }
+
+    // Increment frame counter (rough estimate)
+    // In real impl, this would come from Engine
+    frameCounter += static_cast<juce::int64>(sampleRate / 60.0);  // ~1/60 sec
 }
 
 //==============================================================================

@@ -520,7 +520,8 @@ bool ProjectState::moveAutomationPoint(const juce::String& trackId, const juce::
             if (newTimeBeats != oldTime)
             {
                 // Remove and re-insert in sorted position
-                envelope.removeChild(i, nullptr);
+                // Use undoManager for both operations to ensure proper undo/redo support
+                envelope.removeChild(i, &undoManager);
 
                 int insertIndex = 0;
                 for (int j = 0; j < envelope.getNumChildren(); ++j)
