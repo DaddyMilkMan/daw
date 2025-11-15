@@ -4,11 +4,13 @@
  */
 
 #include "../include/Engine.h"
+#include "../include/ProjectState.h"
+#include "../include/TrackAutomationSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "engine/Track.h"
-#include "engine/Clip.h"
-#include "engine/MixerChannel.h"
+#include "../Source/engine/Track.h"
+#include "../Source/engine/Clip.h"
+#include "../Source/engine/MixerChannel.h"
 
 //==============================================================================
 Engine::Engine()
@@ -25,6 +27,27 @@ Engine::~Engine()
 //==============================================================================
 // Initialization / Shutdown
 //==============================================================================
+
+void Engine::setProjectState(ProjectState* state)
+{
+    DBG("Engine: Setting project state");
+
+    // Stop automation if running
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->stop();
+        automationSynchronizer.reset();
+    }
+
+    projectState_ = state;
+
+    // Create new automation synchronizer if we have a project state
+    if (projectState_ != nullptr)
+    {
+        automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
+        DBG("Engine: Created automation synchronizer");
+    }
+}
 
 bool Engine::initialize()
 {
@@ -98,6 +121,13 @@ void Engine::play()
     // Enable test tone for Phase 0 testing
     // TODO: Remove this in Phase 1 when we have actual content
     enableTestTone_.store(true);
+
+    // Phase 13: Start automation synchronizer
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->start(60);  // 60 Hz update rate
+        DBG("Engine: Started automation synchronizer");
+    }
 }
 
 void Engine::stop()
@@ -105,6 +135,13 @@ void Engine::stop()
     DBG("Engine: Stop");
     isPlaying_.store(false);
     enableTestTone_.store(false);
+
+    // Phase 13: Stop automation synchronizer
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->stop();
+        DBG("Engine: Stopped automation synchronizer");
+    }
 }
 
 //==============================================================================

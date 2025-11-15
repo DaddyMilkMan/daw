@@ -88,6 +88,10 @@ target_sources(ZenithDAW PRIVATE
     src/Engine.cpp
     src/ProjectState.cpp
 
+    # Phase 13: Automation system
+    src/TrackAutomationSynchronizer.cpp
+    src/CommandAPI.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

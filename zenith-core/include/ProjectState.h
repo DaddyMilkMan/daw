@@ -8,6 +8,7 @@
  * - Clips
  * - Mixer state
  * - Plugin state
+ * - Automation (Phase 13)
  *
  * Benefits of ValueTree:
  * - Built-in undo/redo support
@@ -48,11 +49,24 @@
  * │   │   ├── pan: 0.0
  * │   │   ├── mute: false
  * │   │   ├── solo: false
- * │   │   └── CLIPS
- * │   │       └── CLIP
- * │   │           ├── id: "clip_1"
- * │   │           ├── start: 0.0
- * │   │           ├── length: 4.0
+ * │   │   ├── CLIPS
+ * │   │   │   └── CLIP
+ * │   │   │       ├── id: "clip_1"
+ * │   │   │       ├── start: 0.0
+ * │   │   │       ├── length: 4.0
+ * │   │   │       └── ...
+ * │   │   └── AUTOMATION (Phase 13)
+ * │   │       ├── ENVELOPE
+ * │   │       │   ├── param: "volume"
+ * │   │       │   └── POINT
+ * │   │       │       ├── id: "point_0"
+ * │   │       │       ├── timeBeats: 0.0
+ * │   │       │       └── value: 0.8
+ * │   │       ├── ENVELOPE
+ * │   │       │   ├── param: "pan"
+ * │   │       │   └── ...
+ * │   │       └── ENVELOPE
+ * │   │           ├── param: "mute"
  * │   │           └── ...
  * │   └── ...
  * └── MIXER
@@ -72,6 +86,9 @@ public:
     static const juce::Identifier ID_CLIPS;
     static const juce::Identifier ID_CLIP;
     static const juce::Identifier ID_MIXER;
+    static const juce::Identifier ID_AUTOMATION;
+    static const juce::Identifier ID_ENVELOPE;
+    static const juce::Identifier ID_POINT;
 
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
@@ -88,6 +105,11 @@ public:
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
+
+    // Phase 13: Automation properties
+    static const juce::Identifier PROP_PARAM;
+    static const juce::Identifier PROP_TIME_BEATS;
+    static const juce::Identifier PROP_VALUE;
 
     //==========================================================================
     ProjectState();
@@ -152,6 +174,88 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    //==========================================================================
+    // Phase 13: Automation Management
+    //==========================================================================
+
+    /**
+     * @brief Get or create automation envelope for a track parameter
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @return Envelope ValueTree (creates if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getOrCreateAutomationEnvelope(const juce::String& trackId, const juce::String& paramId);
+
+    /**
+     * @brief Get automation envelope for a track parameter
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @return Envelope ValueTree (invalid if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getAutomationEnvelope(const juce::String& trackId, const juce::String& paramId) const;
+
+    /**
+     * @brief Check if track has automation for a parameter
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @return true if automation exists
+     * @note Message thread only
+     */
+    bool hasAutomation(const juce::String& trackId, const juce::String& paramId) const;
+
+    /**
+     * @brief Add automation point
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @param timeBeats Time in beats
+     * @param value Normalized value (0-1 for volume, -1 to 1 for pan, 0/1 for mute)
+     * @param actionName Undo action name
+     * @return Generated point ID
+     * @note Message thread only, undoable
+     */
+    juce::String addAutomationPoint(const juce::String& trackId, const juce::String& paramId,
+                                     double timeBeats, double value, const juce::String& actionName);
+
+    /**
+     * @brief Move automation point
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @param pointId Point ID
+     * @param newTimeBeats New time in beats
+     * @param newValue New value
+     * @param actionName Undo action name
+     * @return true if point was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveAutomationPoint(const juce::String& trackId, const juce::String& paramId,
+                             const juce::String& pointId, double newTimeBeats, double newValue,
+                             const juce::String& actionName);
+
+    /**
+     * @brief Delete automation point
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @param pointId Point ID
+     * @param actionName Undo action name
+     * @return true if point was found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteAutomationPoint(const juce::String& trackId, const juce::String& paramId,
+                                const juce::String& pointId, const juce::String& actionName);
+
+    /**
+     * @brief Clear all automation for a parameter
+     * @param trackId Track ID
+     * @param paramId Parameter ID ("volume", "pan", or "mute")
+     * @param actionName Undo action name
+     * @return true if automation was found and cleared
+     * @note Message thread only, undoable
+     */
+    bool clearAutomation(const juce::String& trackId, const juce::String& paramId,
+                         const juce::String& actionName);
 
     //==========================================================================
     // Undo/Redo
