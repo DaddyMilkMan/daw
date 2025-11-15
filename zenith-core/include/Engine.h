@@ -30,6 +30,7 @@
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
+class TempoMap;
 
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
@@ -127,6 +128,41 @@ public:
      * @brief Get current buffer size
      */
     int getBufferSize() const { return currentBufferSize.load(); }
+
+    //==========================================================================
+    // Phase 15: Tempo Map Integration
+    //==========================================================================
+
+    /**
+     * @brief Rebuild tempo map from ProjectState
+     * @note Message thread only
+     * @note Atomically swaps the new tempo map for RT-safe access
+     */
+    void rebuildTempoMap();
+
+    /**
+     * @brief Convert sample position to beats using tempo map
+     * @param samplePos Sample position
+     * @return Position in beats
+     * @note Thread-safe; can be called from any thread
+     */
+    double samplesToBeats(juce::int64 samplePos) const;
+
+    /**
+     * @brief Convert beats to sample position using tempo map
+     * @param beats Position in beats
+     * @return Sample position
+     * @note Thread-safe; can be called from any thread
+     */
+    juce::int64 beatsToSamples(double beats) const;
+
+    /**
+     * @brief Get tempo at beat position
+     * @param beats Position in beats
+     * @return Tempo in BPM
+     * @note Thread-safe; can be called from any thread
+     */
+    double getTempoAtBeats(double beats) const;
 
     //==========================================================================
     // CPU Monitoring
@@ -259,6 +295,9 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Phase 15: Tempo map (RT-safe via atomic shared_ptr)
+    std::atomic<std::shared_ptr<const TempoMap>> tempoMap_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

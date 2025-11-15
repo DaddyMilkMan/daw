@@ -10,13 +10,14 @@
 //==============================================================================
 
 MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+    : engine(eng),
+      arrangerComponent(nullptr)  // Will be initialized in MainWindow after ProjectState is created
 {
     // Set size
     setSize(1400, 800);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 15: Tempo Map + Markers", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -69,7 +70,11 @@ void MainComponent::paint(juce::Graphics& g)
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 
-    // Draw welcome message
+    // Phase 15: If we have an arranger, let it paint instead of the welcome message
+    if (arrangerComponent != nullptr)
+        return;
+
+    // Draw welcome message (only shown if no arranger)
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(48.0f, juce::Font::bold));
 
@@ -82,7 +87,7 @@ void MainComponent::paint(juce::Graphics& g)
     // Draw phase info
     g.setFont(juce::Font(20.0f));
     g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
+    g.drawText("Phase 15: Tempo Map + Markers",
                bounds.removeFromTop(40),
                juce::Justification::centred,
                true);
@@ -98,12 +103,8 @@ void MainComponent::paint(juce::Graphics& g)
         "✓ Transport controls (play/stop)\n"
         "✓ CPU monitoring\n"
         "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
+        "✓ Tempo Map + Markers\n"
+        "✓ Timeline view with arranger";
 
     g.drawMultiLineText(features,
                        featuresBounds.getX(),
@@ -140,6 +141,12 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 15: Layout arranger component in remaining space
+    if (arrangerComponent != nullptr)
+    {
+        arrangerComponent->setBounds(bounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -193,6 +200,10 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
+
+    // Phase 15: Create arranger component and add to main component
+    mainComponent->arrangerComponent = std::make_unique<ArrangerComponent>(*projectState, *engine);
+    mainComponent->addAndMakeVisible(mainComponent->arrangerComponent.get());
 
     // Set up window
     setUsingNativeTitleBar(true);

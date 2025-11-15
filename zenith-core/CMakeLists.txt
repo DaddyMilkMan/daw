@@ -92,6 +92,10 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # Phase 15: Tempo Map + Markers
+    src/TempoMap.cpp
+    src/ArrangerComponent.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

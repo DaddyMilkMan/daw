@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ArrangerComponent.h"
 
 //==============================================================================
 /**
@@ -76,6 +77,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 15: Arranger component
+    std::unique_ptr<ArrangerComponent> arrangerComponent;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

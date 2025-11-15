@@ -6,6 +6,7 @@
 #include "../include/Engine.h"
 #include "../include/ProjectState.h"
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/TempoMap.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../Source/engine/Track.h"
@@ -46,6 +47,9 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Phase 15: Build initial tempo map
+        rebuildTempoMap();
     }
 }
 
@@ -348,3 +352,94 @@ void Engine::processAudio(
         }
     }
 }
+
+//==============================================================================
+// Phase 15: Tempo Map Integration
+//==============================================================================
+
+void Engine::rebuildTempoMap()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (projectState_ == nullptr)
+    {
+        DBG("Engine: Cannot rebuild tempo map without ProjectState");
+        return;
+    }
+
+    // Get tempo points from ProjectState
+    auto tempoPoints = projectState_->getTempoPoints();
+
+    if (tempoPoints.isEmpty())
+    {
+        DBG("Engine: No tempo points found, creating default");
+        // Create default tempo map (120 BPM)
+        tempoMap_.store(std::make_shared<TempoMap>());
+        return;
+    }
+
+    // Convert to TempoMap::TempoPoint format
+    std::vector<TempoMap::TempoPoint> points;
+    points.reserve(tempoPoints.size());
+
+    for (const auto& pt : tempoPoints)
+    {
+        TempoMap::TempoPoint point;
+        point.timeBeats = pt.timeBeats;
+        point.bpm = pt.bpm;
+        point.timeSigNum = pt.timeSigNum;
+        point.timeSigDen = pt.timeSigDen;
+        points.push_back(point);
+    }
+
+    // Build new tempo map
+    auto newTempoMap = std::make_shared<TempoMap>(points, currentSampleRate.load());
+
+    // Atomically swap (RCU-style)
+    tempoMap_.store(newTempoMap);
+
+    DBG("Engine: Rebuilt tempo map with " + juce::String(tempoPoints.size()) + " points");
+}
+
+double Engine::samplesToBeats(juce::int64 samplePos) const
+{
+    // Load tempo map snapshot (RT-safe)
+    auto map = tempoMap_.load(std::memory_order_acquire);
+
+    if (map)
+        return map->samplesToBeats(samplePos);
+
+    // Fallback: no tempo map, use simple 120 BPM calculation
+    const double sampleRate = currentSampleRate.load();
+    const double secondsPerBeat = 60.0 / 120.0;
+    const double samplesPerBeat = sampleRate * secondsPerBeat;
+    return static_cast<double>(samplePos) / samplesPerBeat;
+}
+
+juce::int64 Engine::beatsToSamples(double beats) const
+{
+    // Load tempo map snapshot (RT-safe)
+    auto map = tempoMap_.load(std::memory_order_acquire);
+
+    if (map)
+        return map->beatsToSamples(beats);
+
+    // Fallback: no tempo map, use simple 120 BPM calculation
+    const double sampleRate = currentSampleRate.load();
+    const double secondsPerBeat = 60.0 / 120.0;
+    const double samplesPerBeat = sampleRate * secondsPerBeat;
+    return static_cast<juce::int64>(std::round(beats * samplesPerBeat));
+}
+
+double Engine::getTempoAtBeats(double beats) const
+{
+    // Load tempo map snapshot (RT-safe)
+    auto map = tempoMap_.load(std::memory_order_acquire);
+
+    if (map)
+        return map->getTempoAtBeats(beats);
+
+    // Fallback: no tempo map
+    return 120.0;
+}
+
