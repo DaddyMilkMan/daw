@@ -16,6 +16,8 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TrackAutomationSynchronizer.h"
+#include "ArrangementComponent.h"
 
 //==============================================================================
 /**
@@ -25,7 +27,7 @@
  * This component is the main content area and will contain:
  * - Transport bar
  * - Browser panel
- * - Arrangement view
+ * - Arrangement view (Phase 14)
  * - Mixer panel
  * - Wingman AI panel (Phase 2)
  */
@@ -34,7 +36,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -62,6 +64,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +79,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 14: Arrangement view with automation
+    std::unique_ptr<ArrangementComponent> arrangementView;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -124,6 +130,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Automation synchronizer (Phase 13)
+    std::unique_ptr<TrackAutomationSynchronizer> automationSync;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;

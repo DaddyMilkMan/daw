@@ -87,6 +87,8 @@ target_sources(ZenithDAW PRIVATE
     src/MainWindow.cpp
     src/Engine.cpp
     src/ProjectState.cpp
+    src/TrackAutomationSynchronizer.cpp
+    src/ArrangementComponent.cpp
 
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
