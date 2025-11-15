@@ -6,6 +6,7 @@
 #include "../include/Engine.h"
 #include "../include/ProjectState.h"
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/TempoMapSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../Source/engine/Track.h"
@@ -39,6 +40,12 @@ void Engine::setProjectState(ProjectState* state)
         automationSynchronizer.reset();
     }
 
+    // Stop tempo map synchronizer if running
+    if (tempoMapSynchronizer)
+    {
+        tempoMapSynchronizer.reset();
+    }
+
     projectState_ = state;
 
     // Create new automation synchronizer if we have a project state
@@ -46,6 +53,11 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Create tempo map synchronizer
+        tempoMapSynchronizer = std::make_unique<TempoMapSynchronizer>(*projectState_, *this);
+        tempoMapSynchronizer->initialize();
+        DBG("Engine: Created tempo map synchronizer");
     }
 }
 
@@ -347,4 +359,166 @@ void Engine::processAudio(
             }
         }
     }
+}
+
+//==============================================================================
+// Phase 15: Tempo Map Runtime
+//==============================================================================
+
+void Engine::setTempoMap(const juce::Array<ProjectState::TempoChangeSpec>& tempoChanges)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (tempoChanges.isEmpty())
+    {
+        DBG("Engine: Empty tempo map, using default 120 BPM");
+
+        std::lock_guard<std::mutex> lock(tempoMapMutex_);
+        tempoSegments_.clear();
+
+        TempoSegment defaultSegment;
+        defaultSegment.startBeat = 0.0;
+        defaultSegment.bpm = 120.0;
+        defaultSegment.secondsAtStartBeat = 0.0;
+        defaultSegment.timeSigNumerator = 4;
+        defaultSegment.timeSigDenominator = 4;
+        tempoSegments_.push_back(defaultSegment);
+        return;
+    }
+
+    // Precompute segments for RT-safe access
+    std::vector<TempoSegment> newSegments;
+    newSegments.reserve(tempoChanges.size());
+
+    double accumulatedSeconds = 0.0;
+
+    for (int i = 0; i < tempoChanges.size(); ++i)
+    {
+        const auto& change = tempoChanges[i];
+
+        // If this isn't the first segment, calculate time elapsed since last change
+        if (i > 0)
+        {
+            const auto& prevChange = tempoChanges[i - 1];
+            double beatDelta = change.beatPosition - prevChange.beatPosition;
+            double secondsDelta = (beatDelta / prevChange.bpm) * 60.0;
+            accumulatedSeconds += secondsDelta;
+        }
+
+        TempoSegment segment;
+        segment.startBeat = change.beatPosition;
+        segment.bpm = change.bpm;
+        segment.secondsAtStartBeat = accumulatedSeconds;
+        segment.timeSigNumerator = change.timeSigNumerator;
+        segment.timeSigDenominator = change.timeSigDenominator;
+        newSegments.push_back(segment);
+    }
+
+    // Update the tempo segments (thread-safe swap)
+    {
+        std::lock_guard<std::mutex> lock(tempoMapMutex_);
+        tempoSegments_ = std::move(newSegments);
+    }
+
+    DBG("Engine: Updated tempo map with " + juce::String(tempoSegments_.size()) + " segments");
+}
+
+double Engine::getTempoAtSample(juce::int64 samplePos) const noexcept
+{
+    std::lock_guard<std::mutex> lock(tempoMapMutex_);
+
+    if (tempoSegments_.empty())
+        return 120.0;
+
+    double seconds = static_cast<double>(samplePos) / currentSampleRate.load();
+
+    // Find the segment that applies at this time
+    double currentBpm = tempoSegments_[0].bpm;
+    for (const auto& segment : tempoSegments_)
+    {
+        if (seconds >= segment.secondsAtStartBeat)
+            currentBpm = segment.bpm;
+        else
+            break;
+    }
+
+    return currentBpm;
+}
+
+double Engine::sampleToBeat(juce::int64 samplePos) const noexcept
+{
+    std::lock_guard<std::mutex> lock(tempoMapMutex_);
+
+    if (tempoSegments_.empty())
+    {
+        // Fallback: 120 BPM
+        double seconds = static_cast<double>(samplePos) / currentSampleRate.load();
+        return (seconds / 60.0) * 120.0;
+    }
+
+    double seconds = static_cast<double>(samplePos) / currentSampleRate.load();
+    double beat = 0.0;
+
+    for (size_t i = 0; i < tempoSegments_.size(); ++i)
+    {
+        const auto& segment = tempoSegments_[i];
+
+        // Calculate seconds at the next segment (or end of time if last segment)
+        double nextSeconds = (i + 1 < tempoSegments_.size())
+                           ? tempoSegments_[i + 1].secondsAtStartBeat
+                           : seconds + 1000.0;  // Large number
+
+        if (seconds <= nextSeconds || i + 1 >= tempoSegments_.size())
+        {
+            // Target is within this segment
+            double secondsInSegment = seconds - segment.secondsAtStartBeat;
+            double beatsInSegment = (secondsInSegment / 60.0) * segment.bpm;
+            beat = segment.startBeat + beatsInSegment;
+            break;
+        }
+    }
+
+    return beat;
+}
+
+juce::int64 Engine::beatToSample(double beat) const noexcept
+{
+    std::lock_guard<std::mutex> lock(tempoMapMutex_);
+
+    if (tempoSegments_.empty())
+    {
+        // Fallback: 120 BPM
+        double seconds = (beat / 120.0) * 60.0;
+        return static_cast<juce::int64>(seconds * currentSampleRate.load());
+    }
+
+    double seconds = 0.0;
+
+    for (size_t i = 0; i < tempoSegments_.size(); ++i)
+    {
+        const auto& segment = tempoSegments_[i];
+
+        // Calculate beat at the next segment (or target beat if last segment)
+        double nextBeat = (i + 1 < tempoSegments_.size())
+                        ? tempoSegments_[i + 1].startBeat
+                        : beat + 1000.0;  // Large number
+
+        if (beat <= nextBeat || i + 1 >= tempoSegments_.size())
+        {
+            // Target is within this segment
+            double beatDelta = beat - segment.startBeat;
+            double secondsDelta = (beatDelta / segment.bpm) * 60.0;
+            seconds = segment.secondsAtStartBeat + secondsDelta;
+            break;
+        }
+    }
+
+    return static_cast<juce::int64>(seconds * currentSampleRate.load());
+}
+
+void Engine::setPlayheadPosition(juce::int64 samplePos)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    playbackPosition.store(samplePos);
+    DBG("Engine: Set playhead to sample " + juce::String(samplePos));
 }

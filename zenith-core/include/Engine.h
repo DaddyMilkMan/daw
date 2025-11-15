@@ -30,6 +30,7 @@
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
+class TempoMapSynchronizer;
 
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
@@ -137,6 +138,65 @@ public:
      * @return CPU usage (0.0 - 100.0)
      */
     double getCpuUsage() const;
+
+    //==========================================================================
+    // Phase 15: Tempo Map Runtime (RT-safe)
+    //==========================================================================
+
+    /**
+     * @brief Tempo segment for RT-safe tempo queries
+     */
+    struct TempoSegment
+    {
+        double startBeat{0.0};           // Start beat of this segment
+        double bpm{120.0};                // BPM for this segment
+        double secondsAtStartBeat{0.0};   // Accumulated seconds at start beat
+        int timeSigNumerator{4};
+        int timeSigDenominator{4};
+    };
+
+    /**
+     * @brief Set tempo map from ProjectState (MESSAGE THREAD)
+     * @param tempoChanges Array of tempo changes from ProjectState
+     * @note Precomputes segments for RT-safe access
+     */
+    void setTempoMap(const juce::Array<ProjectState::TempoChangeSpec>& tempoChanges);
+
+    /**
+     * @brief Get tempo at a specific sample position (RT-SAFE)
+     * @param samplePos Sample position
+     * @return BPM at that position
+     * @note Can be called from audio thread
+     */
+    double getTempoAtSample(juce::int64 samplePos) const noexcept;
+
+    /**
+     * @brief Convert sample position to beat (RT-SAFE)
+     * @param samplePos Sample position
+     * @return Beat position
+     * @note Can be called from audio thread
+     */
+    double sampleToBeat(juce::int64 samplePos) const noexcept;
+
+    /**
+     * @brief Convert beat to sample position (RT-SAFE)
+     * @param beat Beat position
+     * @return Sample position
+     * @note Can be called from audio thread
+     */
+    juce::int64 beatToSample(double beat) const noexcept;
+
+    /**
+     * @brief Set playhead position (MESSAGE THREAD)
+     * @param samplePos Sample position to set playhead to
+     */
+    void setPlayheadPosition(juce::int64 samplePos);
+
+    /**
+     * @brief Get playhead position (RT-SAFE)
+     * @return Current playhead position in samples
+     */
+    juce::int64 getPlayheadPosition() const noexcept { return playbackPosition.load(); }
 
     //==========================================================================
     // C3: Minimal Engine Surface (compile-only, no audio wiring)
@@ -259,6 +319,11 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Phase 15: Tempo map runtime (RT-safe)
+    std::vector<TempoSegment> tempoSegments_;  // Precomputed tempo segments
+    mutable std::mutex tempoMapMutex_;         // Protect tempo map updates (message thread only)
+    std::unique_ptr<TempoMapSynchronizer> tempoMapSynchronizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

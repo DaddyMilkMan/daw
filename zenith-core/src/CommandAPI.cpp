@@ -18,6 +18,14 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("add_track", [this](const juce::var& p) { return cmd_addTrack(p); });
     registerCommand("get_project_info", [this](const juce::var& p) { return cmd_getProjectInfo(p); });
     registerCommand("set_tempo", [this](const juce::var& p) { return cmd_setTempo(p); });
+
+    // Phase 15: Tempo map and markers commands
+    registerCommand("add_tempo_change", [this](const juce::var& p) { return cmd_addTempoChange(p); });
+    registerCommand("get_tempo_map", [this](const juce::var& p) { return cmd_getTempoMap(p); });
+    registerCommand("add_marker", [this](const juce::var& p) { return cmd_addMarker(p); });
+    registerCommand("get_markers", [this](const juce::var& p) { return cmd_getMarkers(p); });
+    registerCommand("delete_marker", [this](const juce::var& p) { return cmd_deleteMarker(p); });
+    registerCommand("goto_marker", [this](const juce::var& p) { return cmd_gotoMarker(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -291,4 +299,131 @@ bool CommandAPI::validateParam(const juce::var& params, const juce::String& para
     }
 
     return true;
+}
+
+//==============================================================================
+// Phase 15: Tempo Map and Markers Commands
+//==============================================================================
+
+juce::var CommandAPI::cmd_addTempoChange(const juce::var& params)
+{
+    juce::String error;
+
+    if (!validateParam(params, "beatPosition", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "bpm", error)) throw std::runtime_error(error.toStdString());
+
+    double beatPosition = params["beatPosition"];
+    double bpm = params["bpm"];
+    int numerator = params.hasProperty("timeSigNumerator") ? (int)params["timeSigNumerator"] : 4;
+    int denominator = params.hasProperty("timeSigDenominator") ? (int)params["timeSigDenominator"] : 4;
+
+    auto tempoId = projectState.addTempoChange(beatPosition, bpm, numerator, denominator, "Add tempo change");
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("tempoId", tempoId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getTempoMap(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    auto tempoChanges = projectState.getTempoChanges();
+
+    juce::Array<juce::var> tempoArray;
+    for (const auto& tempo : tempoChanges)
+    {
+        juce::DynamicObject::Ptr tempoObj = new juce::DynamicObject();
+        tempoObj->setProperty("id", tempo.id);
+        tempoObj->setProperty("beatPosition", tempo.beatPosition);
+        tempoObj->setProperty("bpm", tempo.bpm);
+        tempoObj->setProperty("timeSigNumerator", tempo.timeSigNumerator);
+        tempoObj->setProperty("timeSigDenominator", tempo.timeSigDenominator);
+        tempoArray.add(juce::var(tempoObj.get()));
+    }
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("tempoChanges", tempoArray);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_addMarker(const juce::var& params)
+{
+    juce::String error;
+
+    if (!validateParam(params, "beatPosition", error)) throw std::runtime_error(error.toStdString());
+
+    double beatPosition = params["beatPosition"];
+    juce::String name = params.hasProperty("name") ? params["name"].toString() : "Marker";
+    juce::String color = params.hasProperty("color") ? params["color"].toString() : "#FFCC00";
+
+    auto markerId = projectState.addMarker(beatPosition, name, color, "Add marker");
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("markerId", markerId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getMarkers(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    auto markers = projectState.getMarkers();
+
+    juce::Array<juce::var> markerArray;
+    for (const auto& marker : markers)
+    {
+        juce::DynamicObject::Ptr markerObj = new juce::DynamicObject();
+        markerObj->setProperty("id", marker.id);
+        markerObj->setProperty("name", marker.name);
+        markerObj->setProperty("beatPosition", marker.beatPosition);
+        markerObj->setProperty("color", marker.color);
+        markerArray.add(juce::var(markerObj.get()));
+    }
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("markers", markerArray);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_deleteMarker(const juce::var& params)
+{
+    juce::String error;
+
+    if (!validateParam(params, "markerId", error)) throw std::runtime_error(error.toStdString());
+
+    juce::String markerId = params["markerId"].toString();
+    bool success = projectState.deleteMarker(markerId, "Delete marker");
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_gotoMarker(const juce::var& params)
+{
+    juce::String error;
+
+    if (!validateParam(params, "markerId", error)) throw std::runtime_error(error.toStdString());
+
+    juce::String markerId = params["markerId"].toString();
+
+    // Find marker
+    auto markers = projectState.getMarkers();
+    for (const auto& marker : markers)
+    {
+        if (marker.id == markerId)
+        {
+            // Convert beat to samples and set playhead
+            juce::int64 samplePos = engine.beatToSample(marker.beatPosition);
+            engine.setPlayheadPosition(samplePos);
+
+            juce::DynamicObject::Ptr result = new juce::DynamicObject();
+            result->setProperty("success", true);
+            result->setProperty("beatPosition", marker.beatPosition);
+            return juce::var(result.get());
+        }
+    }
+
+    throw std::runtime_error("Marker not found: " + markerId.toStdString());
 }

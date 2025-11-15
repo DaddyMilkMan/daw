@@ -123,6 +123,52 @@ private:
     juce::var cmd_setTempo(const juce::var& params);
 
     //==========================================================================
+    // Phase 15: Tempo map and markers commands
+    //==========================================================================
+
+    /**
+     * @brief Add tempo change
+     * Params: { "beatPosition": 8.0, "bpm": 140.0, "timeSigNumerator": 4, "timeSigDenominator": 4 }
+     * Returns: { "tempoId": "tempo_123" }
+     */
+    juce::var cmd_addTempoChange(const juce::var& params);
+
+    /**
+     * @brief Get tempo map
+     * Params: {}
+     * Returns: { "tempoChanges": [ { "id": "...", "beatPosition": 0.0, "bpm": 120.0, ... }, ... ] }
+     */
+    juce::var cmd_getTempoMap(const juce::var& params);
+
+    /**
+     * @brief Add marker
+     * Params: { "beatPosition": 4.0, "name": "Verse", "color": "#FFCC00" }
+     * Returns: { "markerId": "marker_123" }
+     */
+    juce::var cmd_addMarker(const juce::var& params);
+
+    /**
+     * @brief Get markers
+     * Params: {}
+     * Returns: { "markers": [ { "id": "...", "name": "...", "beatPosition": 0.0, "color": "..." }, ... ] }
+     */
+    juce::var cmd_getMarkers(const juce::var& params);
+
+    /**
+     * @brief Delete marker
+     * Params: { "markerId": "marker_123" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_deleteMarker(const juce::var& params);
+
+    /**
+     * @brief Go to marker (set playhead to marker position)
+     * Params: { "markerId": "marker_123" }
+     * Returns: { "success": true, "beatPosition": 4.0 }
+     */
+    juce::var cmd_gotoMarker(const juce::var& params);
+
+    //==========================================================================
     // Helper methods
     //==========================================================================
 

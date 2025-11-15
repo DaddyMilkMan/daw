@@ -90,6 +90,12 @@ public:
     static const juce::Identifier ID_ENVELOPE;
     static const juce::Identifier ID_POINT;
 
+    // Phase 15: Tempo map and markers
+    static const juce::Identifier ID_TEMPO_MAP;
+    static const juce::Identifier ID_TEMPO_CHANGE;
+    static const juce::Identifier ID_MARKERS;
+    static const juce::Identifier ID_MARKER;
+
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
     static const juce::Identifier PROP_TIME_SIG_NUM;
@@ -110,6 +116,13 @@ public:
     static const juce::Identifier PROP_PARAM;
     static const juce::Identifier PROP_TIME_BEATS;
     static const juce::Identifier PROP_VALUE;
+
+    // Phase 15: Tempo map and marker properties
+    static const juce::Identifier PROP_BEAT_POSITION;
+    static const juce::Identifier PROP_BPM;
+    static const juce::Identifier PROP_TIME_SIG_NUM_CHANGE;  // For tempo changes
+    static const juce::Identifier PROP_TIME_SIG_DEN_CHANGE;  // For tempo changes
+    static const juce::Identifier PROP_COLOR;
 
     //==========================================================================
     ProjectState();
@@ -174,6 +187,194 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    //==========================================================================
+    // Phase 15: Tempo Map Management
+    //==========================================================================
+
+    /**
+     * @brief Tempo change specification (for returning tempo map data)
+     */
+    struct TempoChangeSpec
+    {
+        juce::String id;
+        double beatPosition{0.0};
+        double bpm{120.0};
+        int timeSigNumerator{4};
+        int timeSigDenominator{4};
+    };
+
+    /**
+     * @brief Get the tempo map ValueTree (creates if missing)
+     * @return TEMPO_MAP ValueTree
+     * @note Message thread only
+     */
+    juce::ValueTree getTempoMapNode();
+
+    /**
+     * @brief Get all tempo changes (sorted by beat position)
+     * @return Array of tempo change specifications
+     * @note Message thread only
+     */
+    juce::Array<TempoChangeSpec> getTempoChanges() const;
+
+    /**
+     * @brief Add a tempo change
+     * @param beatPosition Beat position (>= 0.0)
+     * @param bpm Tempo in BPM (> 0.0)
+     * @param numerator Time signature numerator
+     * @param denominator Time signature denominator
+     * @param actionName Undo action name
+     * @return Generated tempo change ID
+     * @note Message thread only, undoable
+     */
+    juce::String addTempoChange(double beatPosition, double bpm,
+                                 int numerator, int denominator,
+                                 const juce::String& actionName);
+
+    /**
+     * @brief Move a tempo change to a new beat position
+     * @param tempoId Tempo change ID
+     * @param newBeatPosition New beat position
+     * @param actionName Undo action name
+     * @return true if found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveTempoChange(const juce::String& tempoId, double newBeatPosition,
+                         const juce::String& actionName);
+
+    /**
+     * @brief Set tempo change BPM
+     * @param tempoId Tempo change ID
+     * @param newBpm New BPM value
+     * @param actionName Undo action name
+     * @return true if found and updated
+     * @note Message thread only, undoable
+     */
+    bool setTempoChangeBpm(const juce::String& tempoId, double newBpm,
+                           const juce::String& actionName);
+
+    /**
+     * @brief Set tempo change time signature
+     * @param tempoId Tempo change ID
+     * @param numerator Time signature numerator
+     * @param denominator Time signature denominator
+     * @param actionName Undo action name
+     * @return true if found and updated
+     * @note Message thread only, undoable
+     */
+    bool setTempoChangeTimeSig(const juce::String& tempoId, int numerator, int denominator,
+                                const juce::String& actionName);
+
+    /**
+     * @brief Delete a tempo change
+     * @param tempoId Tempo change ID
+     * @param actionName Undo action name
+     * @return true if found and deleted
+     * @note Message thread only, undoable
+     * @note Ensures there is always a tempo at beat 0.0
+     */
+    bool deleteTempoChange(const juce::String& tempoId, const juce::String& actionName);
+
+    /**
+     * @brief Get tempo at a specific beat position
+     * @param beat Beat position
+     * @return BPM value at that position
+     * @note Message thread only
+     */
+    double getTempoAtBeat(double beat) const;
+
+    /**
+     * @brief Convert beats to seconds
+     * @param beat Beat position
+     * @return Time in seconds
+     * @note Message thread only
+     */
+    double beatToSeconds(double beat) const;
+
+    /**
+     * @brief Convert seconds to beats
+     * @param seconds Time in seconds
+     * @return Beat position
+     * @note Message thread only
+     */
+    double secondsToBeat(double seconds) const;
+
+    //==========================================================================
+    // Phase 15: Markers Management
+    //==========================================================================
+
+    /**
+     * @brief Marker specification (for returning marker data)
+     */
+    struct MarkerSpec
+    {
+        juce::String id;
+        juce::String name;
+        double beatPosition{0.0};
+        juce::String color{"#FFCC00"};
+    };
+
+    /**
+     * @brief Get all markers (sorted by beat position)
+     * @return Array of marker specifications
+     * @note Message thread only
+     */
+    juce::Array<MarkerSpec> getMarkers() const;
+
+    /**
+     * @brief Add a marker
+     * @param beatPosition Beat position (>= 0.0)
+     * @param name Marker name
+     * @param colorHex Color in hex format (e.g., "#FFCC00")
+     * @param actionName Undo action name
+     * @return Generated marker ID
+     * @note Message thread only, undoable
+     */
+    juce::String addMarker(double beatPosition, const juce::String& name,
+                           const juce::String& colorHex, const juce::String& actionName);
+
+    /**
+     * @brief Move a marker to a new beat position
+     * @param markerId Marker ID
+     * @param newBeatPosition New beat position
+     * @param actionName Undo action name
+     * @return true if found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveMarker(const juce::String& markerId, double newBeatPosition,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Rename a marker
+     * @param markerId Marker ID
+     * @param newName New name
+     * @param actionName Undo action name
+     * @return true if found and renamed
+     * @note Message thread only, undoable
+     */
+    bool renameMarker(const juce::String& markerId, const juce::String& newName,
+                      const juce::String& actionName);
+
+    /**
+     * @brief Recolor a marker
+     * @param markerId Marker ID
+     * @param newColorHex New color in hex format
+     * @param actionName Undo action name
+     * @return true if found and recolored
+     * @note Message thread only, undoable
+     */
+    bool recolorMarker(const juce::String& markerId, const juce::String& newColorHex,
+                       const juce::String& actionName);
+
+    /**
+     * @brief Delete a marker
+     * @param markerId Marker ID
+     * @param actionName Undo action name
+     * @return true if found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteMarker(const juce::String& markerId, const juce::String& actionName);
 
     //==========================================================================
     // Phase 13: Automation Management
