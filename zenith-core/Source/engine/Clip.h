@@ -61,6 +61,10 @@ public:
     const juce::String& getName() const { return clipName; }
     void setName(const juce::String& name) { clipName = name; }
 
+    // Unique clip ID (for ProjectState synchronization)
+    const juce::String& getClipId() const { return clipId; }
+    void setClipId(const juce::String& id) { clipId = id; }
+
     //==============================================================================
     // Timeline position (in samples)
     void setStartPosition(int64_t position);
@@ -132,6 +136,7 @@ private:
     // Clip properties
     Type clipType = Type::Audio;
     juce::String clipName{"Clip"};
+    juce::String clipId;  // Unique clip ID for ProjectState synchronization
     juce::Colour clipColor{juce::Colours::blue};
 
     //==============================================================================

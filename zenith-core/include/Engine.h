@@ -30,6 +30,7 @@
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
+class ClipSynchronizer;
 
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
@@ -259,6 +260,9 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Worker E: Clip synchronizer
+    std::unique_ptr<ClipSynchronizer> clipSynchronizer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

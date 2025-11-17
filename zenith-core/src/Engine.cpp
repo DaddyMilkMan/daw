@@ -6,6 +6,7 @@
 #include "../include/Engine.h"
 #include "../include/ProjectState.h"
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/ClipSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../Source/engine/Track.h"
@@ -39,6 +40,13 @@ void Engine::setProjectState(ProjectState* state)
         automationSynchronizer.reset();
     }
 
+    // Stop clip synchronizer if running
+    if (clipSynchronizer)
+    {
+        clipSynchronizer->stop();
+        clipSynchronizer.reset();
+    }
+
     projectState_ = state;
 
     // Create new automation synchronizer if we have a project state
@@ -46,6 +54,10 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Worker E: Create clip synchronizer
+        clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState_, *this);
+        DBG("Engine: Created clip synchronizer");
     }
 }
 
@@ -128,6 +140,13 @@ void Engine::play()
         automationSynchronizer->start(60);  // 60 Hz update rate
         DBG("Engine: Started automation synchronizer");
     }
+
+    // Worker E: Start clip synchronizer
+    if (clipSynchronizer)
+    {
+        clipSynchronizer->start(10);  // 10 Hz update rate (clips don't need rapid polling)
+        DBG("Engine: Started clip synchronizer");
+    }
 }
 
 void Engine::stop()
@@ -141,6 +160,13 @@ void Engine::stop()
     {
         automationSynchronizer->stop();
         DBG("Engine: Stopped automation synchronizer");
+    }
+
+    // Worker E: Stop clip synchronizer
+    if (clipSynchronizer)
+    {
+        clipSynchronizer->stop();
+        DBG("Engine: Stopped clip synchronizer");
     }
 }
 

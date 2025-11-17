@@ -60,6 +60,8 @@ const juce::Identifier ProjectState::PROP_SOLO("solo");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
+const juce::Identifier ProjectState::PROP_START_SAMPLES("startSamples");
+const juce::Identifier ProjectState::PROP_LENGTH_SAMPLES("lengthSamples");
 
 // Phase 13: Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
@@ -361,6 +363,176 @@ void ProjectState::rebuildIdCounter()
     scanTree(state);
 
     idCounter.store(highestId + 1);
+}
+
+//==============================================================================
+// Clip Management
+//==============================================================================
+
+bool ProjectState::addClip(const juce::String& trackId, const juce::String& clipId,
+                            const juce::String& type, double startBeats, double lengthBeats,
+                            int64_t startSamples, int64_t lengthSamples)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Track not found: " + trackId);
+        return false;
+    }
+
+    // Get or create CLIPS node
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+    {
+        clipsNode = juce::ValueTree(ID_CLIPS);
+        track.appendChild(clipsNode, nullptr);
+    }
+
+    // Create clip node
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_TYPE, type, nullptr);
+    clip.setProperty(PROP_START, startBeats, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+    clip.setProperty(PROP_START_SAMPLES, static_cast<juce::int64>(startSamples), nullptr);
+    clip.setProperty(PROP_LENGTH_SAMPLES, static_cast<juce::int64>(lengthSamples), nullptr);
+
+    clipsNode.appendChild(clip, nullptr);
+
+    DBG("ProjectState: Added clip " + clipId + " to track " + trackId +
+        " at " + juce::String(startBeats) + " beats");
+
+    return true;
+}
+
+juce::ValueTree ProjectState::findClip(const juce::String& clipId)
+{
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    if (!tracksNode.isValid())
+        return {};
+
+    // Search all tracks for the clip
+    for (auto track : tracksNode)
+    {
+        if (!track.hasType(ID_TRACK))
+            continue;
+
+        auto clipsNode = track.getChildWithName(ID_CLIPS);
+        if (!clipsNode.isValid())
+            continue;
+
+        // Search this track's clips
+        for (auto clip : clipsNode)
+        {
+            if (clip.hasType(ID_CLIP) && clip[PROP_ID].toString() == clipId)
+                return clip;
+        }
+    }
+
+    return {};
+}
+
+std::pair<juce::ValueTree, juce::ValueTree> ProjectState::findClipAndTrack(const juce::String& clipId)
+{
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    if (!tracksNode.isValid())
+        return {juce::ValueTree(), juce::ValueTree()};
+
+    // Search all tracks for the clip
+    for (auto track : tracksNode)
+    {
+        if (!track.hasType(ID_TRACK))
+            continue;
+
+        auto clipsNode = track.getChildWithName(ID_CLIPS);
+        if (!clipsNode.isValid())
+            continue;
+
+        // Search this track's clips
+        for (auto clip : clipsNode)
+        {
+            if (clip.hasType(ID_CLIP) && clip[PROP_ID].toString() == clipId)
+                return {track, clip};
+        }
+    }
+
+    return {juce::ValueTree(), juce::ValueTree()};
+}
+
+bool ProjectState::updateClipPosition(const juce::String& clipId, double startBeats, double lengthBeats)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto clip = findClip(clipId);
+    if (!clip.isValid())
+        return false;
+
+    clip.setProperty(PROP_START, startBeats, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+
+    DBG("ProjectState: Updated clip " + clipId + " position to " +
+        juce::String(startBeats) + " beats");
+
+    return true;
+}
+
+//==============================================================================
+// Debug Helpers
+//==============================================================================
+
+void ProjectState::dumpClipStructureToLog() const
+{
+    DBG("========================================");
+    DBG("ProjectState Clip Structure:");
+    DBG("========================================");
+
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    if (!tracksNode.isValid())
+    {
+        DBG("No tracks found");
+        return;
+    }
+
+    for (auto trackNode : tracksNode)
+    {
+        if (!trackNode.hasType(ID_TRACK))
+            continue;
+
+        juce::String trackId = trackNode[PROP_ID].toString();
+        juce::String trackName = trackNode[PROP_NAME].toString();
+
+        DBG("Track: " + trackName + " (ID: " + trackId + ")");
+
+        auto clipsNode = trackNode.getChildWithName(ID_CLIPS);
+        if (!clipsNode.isValid() || clipsNode.getNumChildren() == 0)
+        {
+            DBG("  No clips");
+            continue;
+        }
+
+        for (auto clipNode : clipsNode)
+        {
+            if (!clipNode.hasType(ID_CLIP))
+                continue;
+
+            juce::String clipId = clipNode[PROP_ID].toString();
+            juce::String clipType = clipNode[PROP_TYPE].toString();
+            double startBeats = clipNode[PROP_START];
+            double lengthBeats = clipNode[PROP_LENGTH];
+            int64_t startSamples = static_cast<int64_t>(clipNode[PROP_START_SAMPLES]);
+            int64_t lengthSamples = static_cast<int64_t>(clipNode[PROP_LENGTH_SAMPLES]);
+
+            DBG("  Clip: " + clipId + " (" + clipType + ")");
+            DBG("    Position: " + juce::String(startBeats) + " beats (" +
+                juce::String(startSamples) + " samples)");
+            DBG("    Length: " + juce::String(lengthBeats) + " beats (" +
+                juce::String(lengthSamples) + " samples)");
+        }
+    }
+
+    DBG("========================================");
 }
 
 //==============================================================================

@@ -201,6 +201,7 @@ juce::ValueTree Track::Clip::getState() const
 {
     juce::ValueTree state("Clip");
 
+    state.setProperty("id", clipId, nullptr);
     state.setProperty("name", clipName, nullptr);
     state.setProperty("type", static_cast<int>(clipType), nullptr);
     state.setProperty("startPosition", static_cast<int>(startPosition.load()), nullptr);
@@ -234,6 +235,7 @@ void Track::Clip::loadState(const juce::ValueTree& state)
     if (!state.hasType("Clip"))
         return;
 
+    clipId = state.getProperty("id", "");
     clipName = state.getProperty("name", "Clip");
     clipType = static_cast<Type>(static_cast<int>(state.getProperty("type", 0)));
     startPosition.store(state.getProperty("startPosition", 0));
