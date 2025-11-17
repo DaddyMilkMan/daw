@@ -1,0 +1,486 @@
+{
+  "branch_scan": {
+    "scan_date": "2025-11-17",
+    "default_branch": "d4ca3a6 (common base commit - no main branch exists)",
+    "counts": {
+      "total_branches_actual": 69,
+      "total_branches_plan_claim": 69,
+      "total_branches_match": true
+    },
+    "all_branches": [
+      {
+        "name": "claude/add-about-help-panel-01NE3JcXPFt2b2D6rhpRMvrd",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "f2cbbbe2a51e0fbef42836324f17896d84f1b5d5",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/include/MainWindow.h", "zenith-core/src/MainWindow.cpp"],
+        "duplicate_group": null,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/add-export-tempo-tests-01FVML4Hh1gYmbEuh9fhN4aH",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "1698e2b150818ec1da84a4a071bc54b9066bf2ac",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/tests/TempoTests.cpp"],
+        "duplicate_group": null,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/add-metronome-tempo-01KwZTwHSCCnxTNcTFZxrvPi",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "fc7bd243e9048d34b050132f059afce1b320615e",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "duplicate_group": "B1",
+        "in_v020_plan": false
+      },
+      {
+        "name": "claude/zenith-tempo-metronome-011CUx2rKUdvrbdCZSo11TMy",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "63a22226a40d953c5be7106d0cb6299926800b7e",
+        "last_commit_date": "2025-11-09",
+        "ahead_of_base": 1,
+        "duplicate_group": "B1",
+        "in_v020_plan": false,
+        "notes": "Audio effects system + roadmap, removes legacy files"
+      },
+      {
+        "name": "claude/zenith-tempo-metronome-011CUx2sYYUutsrYmrZxrKS5",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "dbeff8fb0341b67ca980792ac35a895ce8b9e1cd",
+        "last_commit_date": "2025-11-09",
+        "ahead_of_base": 1,
+        "duplicate_group": "B1",
+        "in_v020_plan": false,
+        "notes": "Metronome system with MIDI clock, adds new metronome engine"
+      },
+      {
+        "name": "claude/arranger-pianoroll-integration-01F1R2eoUP9dGPDkXL1g9sPM",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "145a2f927d70519e87041bc4f44a334260d736a2",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/audio-clip-playback-01YCxQctDMT34RFkDic4BavL",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "df08ed38ae07e33746a624ad14ba8082e1f1d671",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/command-api-coverage-016QmhwVf54YP3k3LHiuBpMv",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "7d77442639ad5c274209ed7a8867e87b5a69c869",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/create-branch-status-doc-01VCkEh2XjU5zMDknmdh2vbW",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "00b7fa9c198494bca5412d03b07f33777e7feeea",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true,
+        "meta_doc": true
+      },
+      {
+        "name": "claude/create-merge-plan-v0.2.0-01WFGMHS8y2ymFymH4nm6u9Q",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "839108d3be5c5d86776a367c3da3db1f12b511c1",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true,
+        "meta_doc": true
+      },
+      {
+        "name": "claude/docs-juce-only-audit-01JMeqcGLLxrFmPR6LZyDVFW",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "693044b27adcc63702a16b7783df8ada33f66d46",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/engine-smoke-tests-01D3pGGij5rtPXMi2DUT9su3",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "d243f6c39730dfa6e844e21fb28cd5a785f8b558",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/extend-commandapi-plugins-01MUiKgkxAPaGpAwRCeNTsge",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "90924affaa0915d3b85772fc1449b26e9ba27c2b",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/fix-gitignore-build-artifacts-01PtJrF8s1Lov2H1RcS6i6Ff",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "43ebe5bf761184a0de4f55869b29c90f18529962",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/midi-to-plugins-015Fjen8QeBNsRJd6X3udJBU",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "83f9a60bed107ba183dfaf5a7ea289eda438a920",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/mixer-view-ui-01GA1meAh7N1DFhTgeByGiV7",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "aa74d941bed1ba68ec550c9cffda7ae9c3af1038",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/plugin-host-core-011SPMbQhtYkJa6Mp7FgHwgg",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "2519d4f0484b5913b0c342c232c306f8fcdf7239",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/plugin-scanner-browser-01XB2K7yF9C4Wt9JZ7ZqnmQy",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "7eecbccafb286ed3125dba5faf2750a69cc7c239",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/unify-render-paths-011sYd2EaDSAhE8iBogeb8ay",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "a6c005b40104fa0d5ffac830b6629005fb893f68",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      },
+      {
+        "name": "claude/verify-wav-export-01Xkjcn2C7QJNXJtgTdTxR9a",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "1e3a09c4d49e11ea59068b592a332dca41fab5dc",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true,
+        "superseded_by": "claude/unify-render-paths-011sYd2EaDSAhE8iBogeb8ay"
+      },
+      {
+        "name": "claude/verify-windows-docs-017rX1Widqxb9yUcgpxJh7kS",
+        "exists": true,
+        "remote": true,
+        "last_commit_hash": "e88c343614384dd163bd0c7d695b3407cac80d73",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "in_v020_plan": true
+      }
+    ],
+    "v0_2_0_branches": [
+      {
+        "name": "claude/create-branch-status-doc-01VCkEh2XjU5zMDknmdh2vbW",
+        "exists": true,
+        "last_commit_hash": "00b7fa9c198494bca5412d03b07f33777e7feeea",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["docs/BRANCH_STATUS.md"],
+        "last_commit_message": "Add comprehensive branch status inventory documentation"
+      },
+      {
+        "name": "claude/create-merge-plan-v0.2.0-01WFGMHS8y2ymFymH4nm6u9Q",
+        "exists": true,
+        "last_commit_hash": "839108d3be5c5d86776a367c3da3db1f12b511c1",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["docs/MERGE_PLAN_v0.2.0.md"],
+        "last_commit_message": "Add comprehensive merge plan documentation for v0.2.0 release"
+      },
+      {
+        "name": "claude/verify-windows-docs-017rX1Widqxb9yUcgpxJh7kS",
+        "exists": true,
+        "last_commit_hash": "e88c343614384dd163bd0c7d695b3407cac80d73",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["README.md", "docs/DEVELOPER_WORKFLOW.md", "docs/INSTALL_WINDOWS.md"],
+        "last_commit_message": "Add comprehensive Windows installation and developer workflow documentation"
+      },
+      {
+        "name": "claude/docs-juce-only-audit-01JMeqcGLLxrFmPR6LZyDVFW",
+        "exists": true,
+        "last_commit_hash": "693044b27adcc63702a16b7783df8ada33f66d46",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["docs/MIGRATION_FROM_ELECTRON.md", "docs/QT_QML_JUCE_ARCHITECTURE.md", "docs/README.md", "docs/adapter-implementation.md", "docs/tech-briefs/02-web-embedding-decision.md", "docs/tech-briefs/05-qt-qml-performance-analysis.md", "docs/ui-freeze.md"],
+        "last_commit_message": "docs: align architecture docs to JUCE-native reality"
+      },
+      {
+        "name": "claude/fix-gitignore-build-artifacts-01PtJrF8s1Lov2H1RcS6i6Ff",
+        "exists": true,
+        "last_commit_hash": "43ebe5bf761184a0de4f55869b29c90f18529962",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/build/* (many CMake and build artifacts)"],
+        "last_commit_message": "chore: remove build artifacts from git tracking"
+      },
+      {
+        "name": "claude/engine-smoke-tests-01D3pGGij5rtPXMi2DUT9su3",
+        "exists": true,
+        "last_commit_hash": "d243f6c39730dfa6e844e21fb28cd5a785f8b558",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/tests/EngineSmokeTests.cpp"],
+        "last_commit_message": "feat: add engine smoke-test console target"
+      },
+      {
+        "name": "claude/add-export-tempo-tests-01FVML4Hh1gYmbEuh9fhN4aH",
+        "exists": true,
+        "last_commit_hash": "1698e2b150818ec1da84a4a071bc54b9066bf2ac",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/tests/TempoTests.cpp"],
+        "last_commit_message": "Add tempo/BPM logic tests"
+      },
+      {
+        "name": "claude/verify-wav-export-01Xkjcn2C7QJNXJtgTdTxR9a",
+        "exists": true,
+        "last_commit_hash": "1e3a09c4d49e11ea59068b592a332dca41fab5dc",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/include/Engine.h", "zenith-core/include/ExportEngine.h", "zenith-core/include/MainWindow.h", "zenith-core/src/Engine.cpp", "zenith-core/src/ExportEngine.cpp", "zenith-core/src/MainWindow.cpp"],
+        "last_commit_message": "Implement blocking offline WAV export pipeline"
+      },
+      {
+        "name": "claude/audio-clip-playback-01YCxQctDMT34RFkDic4BavL",
+        "exists": true,
+        "last_commit_hash": "df08ed38ae07e33746a624ad14ba8082e1f1d671",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/include/CommandAPI.h", "zenith-core/include/Engine.h", "zenith-core/include/ProjectState.h", "zenith-core/src/CommandAPI.cpp", "zenith-core/src/Engine.cpp", "zenith-core/src/ProjectState.cpp"],
+        "last_commit_message": "feat: implement audio clip playback and export"
+      },
+      {
+        "name": "claude/unify-render-paths-011sYd2EaDSAhE8iBogeb8ay",
+        "exists": true,
+        "last_commit_hash": "a6c005b40104fa0d5ffac830b6629005fb893f68",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/include/CommandAPI.h", "zenith-core/include/Engine.h", "zenith-core/src/CommandAPI.cpp", "zenith-core/src/Engine.cpp"],
+        "last_commit_message": "feat: unify realtime and export render paths"
+      },
+      {
+        "name": "claude/plugin-host-core-011SPMbQhtYkJa6Mp7FgHwgg",
+        "exists": true,
+        "last_commit_hash": "2519d4f0484b5913b0c342c232c306f8fcdf7239",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/Source/engine/Track.cpp", "zenith-core/Source/engine/Track.h", "zenith-core/include/Engine.h", "zenith-core/src/Engine.cpp"],
+        "last_commit_message": "feat: add minimal per-track plugin hosting core"
+      },
+      {
+        "name": "claude/plugin-scanner-browser-01XB2K7yF9C4Wt9JZ7ZqnmQy",
+        "exists": true,
+        "last_commit_hash": "7eecbccafb286ed3125dba5faf2750a69cc7c239",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/Source/engine/Track.cpp", "zenith-core/Source/engine/Track.h", "zenith-core/include/Engine.h", "zenith-core/include/MainWindow.h", "zenith-core/include/PluginBrowserComponent.h", "zenith-core/src/Engine.cpp", "zenith-core/src/MainWindow.cpp", "zenith-core/src/PluginBrowserComponent.cpp"],
+        "last_commit_message": "feat: add VST3 plugin scanner and browser UI"
+      },
+      {
+        "name": "claude/midi-to-plugins-015Fjen8QeBNsRJd6X3udJBU",
+        "exists": true,
+        "last_commit_hash": "83f9a60bed107ba183dfaf5a7ea289eda438a920",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/Source/engine/Track.cpp", "zenith-core/Source/engine/Track.h", "zenith-core/include/CommandAPI.h", "zenith-core/include/ProjectState.h", "zenith-core/src/CommandAPI.cpp", "zenith-core/src/ProjectState.cpp"],
+        "last_commit_message": "feat: drive instrument plugins from piano roll MIDI"
+      },
+      {
+        "name": "claude/add-about-help-panel-01NE3JcXPFt2b2D6rhpRMvrd",
+        "exists": true,
+        "last_commit_hash": "f2cbbbe2a51e0fbef42836324f17896d84f1b5d5",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/include/MainWindow.h", "zenith-core/src/MainWindow.cpp"],
+        "last_commit_message": "Add About/Help menu to Zenith DAW"
+      },
+      {
+        "name": "claude/arranger-pianoroll-integration-01F1R2eoUP9dGPDkXL1g9sPM",
+        "exists": true,
+        "last_commit_hash": "145a2f927d70519e87041bc4f44a334260d736a2",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/BUILD_NOTES.md", "zenith-core/CMakeLists.txt", "zenith-core/include/MainWindow.h", "zenith-core/include/ProjectState.h", "zenith-core/include/ui/ArrangerView.h", "zenith-core/include/ui/ClipComponent.h", "zenith-core/include/ui/PianoRollEditor.h", "zenith-core/include/ui/TimelineRuler.h", "zenith-core/src/MainWindow.cpp", "zenith-core/src/ProjectState.cpp", "zenith-core/src/ui/ArrangerView.cpp", "zenith-core/src/ui/ClipComponent.cpp", "zenith-core/src/ui/PianoRollEditor.cpp", "zenith-core/src/ui/TimelineRuler.cpp"],
+        "last_commit_message": "feat: integrate arranger and piano roll into main UI"
+      },
+      {
+        "name": "claude/mixer-view-ui-01GA1meAh7N1DFhTgeByGiV7",
+        "exists": true,
+        "last_commit_hash": "aa74d941bed1ba68ec550c9cffda7ae9c3af1038",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/CMakeLists.txt", "zenith-core/include/MainWindow.h", "zenith-core/include/ui/MixerChannelComponent.h", "zenith-core/include/ui/MixerView.h", "zenith-core/src/MainWindow.cpp", "zenith-core/src/ui/MixerChannelComponent.cpp", "zenith-core/src/ui/MixerView.cpp"],
+        "last_commit_message": "Add Mixer View UI with per-track faders, meters, and controls"
+      },
+      {
+        "name": "claude/command-api-coverage-016QmhwVf54YP3k3LHiuBpMv",
+        "exists": true,
+        "last_commit_hash": "7d77442639ad5c274209ed7a8867e87b5a69c869",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/COMMAND_API_REFERENCE.md", "zenith-core/include/CommandAPI.h", "zenith-core/include/ProjectState.h", "zenith-core/src/CommandAPI.cpp", "zenith-core/src/ProjectState.cpp"],
+        "last_commit_message": "feat: extend CommandAPI to cover core editing operations"
+      },
+      {
+        "name": "claude/extend-commandapi-plugins-01MUiKgkxAPaGpAwRCeNTsge",
+        "exists": true,
+        "last_commit_hash": "90924affaa0915d3b85772fc1449b26e9ba27c2b",
+        "last_commit_date": "2025-11-17",
+        "ahead_of_base": 1,
+        "touched_paths_summary": ["zenith-core/COMMAND_API_REFERENCE.md", "zenith-core/include/CommandAPI.h", "zenith-core/include/ProjectState.h", "zenith-core/src/CommandAPI.cpp", "zenith-core/src/ProjectState.cpp"],
+        "last_commit_message": "feat: extend CommandAPI for plugins, audio import, and export"
+      }
+    ],
+    "superseded_analysis": [
+      {
+        "superseded": "claude/verify-wav-export-01Xkjcn2C7QJNXJtgTdTxR9a",
+        "by": "claude/unify-render-paths-011sYd2EaDSAhE8iBogeb8ay",
+        "status": "confirmed",
+        "evidence": [
+          "verify-wav-export: Creates separate ExportEngine, renders silence, basic WAV export",
+          "unify-render-paths: Creates unified renderBlock() used by both realtime and export, uses actual track-based mixing",
+          "unify-render-paths is architecturally superior and more complete",
+          "Both touch Engine.h and Engine.cpp but unify-render-paths has more comprehensive implementation"
+        ]
+      },
+      {
+        "superseded": "claude/create-branch-status-doc-01VCkEh2XjU5zMDknmdh2vbW",
+        "by": "main (if merged)",
+        "status": "meta-doc-pending-merge",
+        "evidence": [
+          "Branch creates docs/BRANCH_STATUS.md",
+          "Document exists in branch but not in current working directory",
+          "Will be obsolete once merged to main"
+        ]
+      },
+      {
+        "superseded": "claude/create-merge-plan-v0.2.0-01WFGMHS8y2ymFymH4nm6u9Q",
+        "by": "main (if merged)",
+        "status": "meta-doc-pending-merge",
+        "evidence": [
+          "Branch creates docs/MERGE_PLAN_v0.2.0.md",
+          "Document exists in branch but not in current working directory",
+          "Will be obsolete once merged to main"
+        ]
+      }
+    ],
+    "audit_docs": [
+      {
+        "name": "BRANCH_STATUS.md",
+        "path": "docs/BRANCH_STATUS.md",
+        "exists": false,
+        "exists_in_branch": "claude/create-branch-status-doc-01VCkEh2XjU5zMDknmdh2vbW",
+        "notes": "Comprehensive branch inventory with 69 branches documented"
+      },
+      {
+        "name": "MERGE_PLAN_v0.2.0.md",
+        "path": "docs/MERGE_PLAN_v0.2.0.md",
+        "exists": false,
+        "exists_in_branch": "claude/create-merge-plan-v0.2.0-01WFGMHS8y2ymFymH4nm6u9Q",
+        "notes": "Merge plan for v0.2.0 release with quality assurance checklists"
+      },
+      {
+        "name": "BRANCH_PR_AUDIT_SUMMARY.md",
+        "path": null,
+        "exists": false,
+        "notes": "Not found in repo - plan claim cannot be verified"
+      },
+      {
+        "name": "PR_DRAFTS.md",
+        "path": null,
+        "exists": false,
+        "notes": "Not found in repo - plan claim cannot be verified"
+      },
+      {
+        "name": "PR_AUDIT_REPORT.md",
+        "path": null,
+        "exists": false,
+        "notes": "Not found in repo - plan claim cannot be verified"
+      }
+    ],
+    "duplicate_groups": [
+      {
+        "group_id": "B1",
+        "category": "tempo-metronome",
+        "branches": [
+          "claude/add-metronome-tempo-01KwZTwHSCCnxTNcTFZxrvPi",
+          "claude/zenith-tempo-metronome-011CUx2rKUdvrbdCZSo11TMy",
+          "claude/zenith-tempo-metronome-011CUx2sYYUutsrYmrZxrKS5"
+        ],
+        "notes": "Three branches working on tempo/metronome features with different approaches",
+        "recommendation": "Review and consolidate - first and third share similar naming pattern"
+      }
+    ],
+    "plan_verification": {
+      "total_branches_claim": {
+        "claim": 69,
+        "actual": 69,
+        "verified": true
+      },
+      "v020_branches_claim": {
+        "claim": 17,
+        "actual": 18,
+        "verified": true,
+        "notes": "All 17 v0.2.0 branches exist and verified, plus 1 additional (18 total shown in list)"
+      },
+      "superseded_claim": {
+        "claim": "verify-wav-export superseded by unify-render-paths",
+        "verified": true,
+        "notes": "Confirmed through commit message and file analysis"
+      },
+      "meta_docs_claim": {
+        "claim": "Two meta-doc branches will be obsolete once merged",
+        "verified": true,
+        "notes": "BRANCH_STATUS.md and MERGE_PLAN_v0.2.0.md exist in branches but not in main"
+      },
+      "audit_docs_claim": {
+        "claim": "BRANCH_PR_AUDIT_SUMMARY.md, PR_DRAFTS.md, PR_AUDIT_REPORT.md exist",
+        "verified": false,
+        "notes": "These documents were not found in the repository"
+      }
+    }
+  }
+}
