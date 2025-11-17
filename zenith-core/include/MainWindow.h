@@ -9,6 +9,9 @@
  * - Menu bar
  * - Status bar
  * - Audio engine integration
+ *
+ * Phase U5: Automation Lanes UI
+ * - AutomationLaneComponent testing
  */
 
 #pragma once
@@ -16,6 +19,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "AutomationLaneComponent.h"
 
 //==============================================================================
 /**
@@ -28,13 +32,14 @@
  * - Arrangement view
  * - Mixer panel
  * - Wingman AI panel (Phase 2)
+ * - Automation lane (Phase U5 - testing)
  */
 class MainComponent : public juce::Component,
                       private juce::Timer
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -62,6 +67,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +82,13 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase U5: Automation lane testing
+    std::unique_ptr<AutomationLaneComponent> automationLane;
+    juce::Label automationLabel;
+    juce::TextButton addPointButton;
+    juce::TextButton clearAutomationButton;
+    juce::String testTrackId;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

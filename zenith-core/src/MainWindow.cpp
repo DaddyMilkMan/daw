@@ -9,11 +9,28 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng),
+      projectState(ps)
 {
     // Set size
     setSize(1400, 800);
+
+    // Phase U5: Create a test track for automation testing
+    if (projectState.getNumTracks() == 0)
+    {
+        testTrackId = projectState.addTrack("Test Track", "audio");
+    }
+    else
+    {
+        // Use existing first track
+        auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+        if (tracksNode.isValid() && tracksNode.getNumChildren() > 0)
+        {
+            auto firstTrack = tracksNode.getChild(0);
+            testTrackId = firstTrack.getProperty(ProjectState::PROP_ID, "").toString();
+        }
+    }
 
     // Status label
     statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
@@ -54,6 +71,38 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
+
+    // Phase U5: Automation lane testing
+    automationLabel.setText("Automation Lane - Volume (Track: " + testTrackId + ")", juce::dontSendNotification);
+    automationLabel.setJustificationType(juce::Justification::centredLeft);
+    automationLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    addAndMakeVisible(automationLabel);
+
+    // Create automation lane
+    automationLane = std::make_unique<AutomationLaneComponent>(projectState, testTrackId, "volume");
+    automationLane->setPixelsPerBeat(50.0);  // Initial zoom
+    automationLane->setScrollOffsetBeats(0.0);
+    automationLane->setGridSnapEnabled(true, 1.0);  // Snap to quarter notes
+    addAndMakeVisible(automationLane.get());
+
+    // Test buttons
+    addPointButton.setButtonText("Add Test Points");
+    addPointButton.onClick = [this]() {
+        // Add some test automation points
+        projectState.addAutomationPoint(testTrackId, "volume", 0.0, 0.0, "Add Point");
+        projectState.addAutomationPoint(testTrackId, "volume", 4.0, 1.0, "Add Point");
+        projectState.addAutomationPoint(testTrackId, "volume", 8.0, 0.3, "Add Point");
+        projectState.addAutomationPoint(testTrackId, "volume", 12.0, 0.8, "Add Point");
+        DBG("Added test automation points");
+    };
+    addAndMakeVisible(addPointButton);
+
+    clearAutomationButton.setButtonText("Clear Automation");
+    clearAutomationButton.onClick = [this]() {
+        projectState.clearAutomation(testTrackId, "volume", "Clear Automation");
+        DBG("Cleared automation");
+    };
+    addAndMakeVisible(clearAutomationButton);
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -140,6 +189,24 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase U5: Automation lane section (below welcome text)
+    auto automationSection = bounds.removeFromBottom(250);
+
+    // Automation label at top
+    auto labelArea = automationSection.removeFromTop(30);
+    automationLabel.setBounds(labelArea.reduced(10, 5));
+
+    // Test buttons
+    auto buttonArea = automationSection.removeFromTop(40);
+    buttonArea = buttonArea.reduced(10, 5);
+    addPointButton.setBounds(buttonArea.removeFromLeft(150));
+    buttonArea.removeFromLeft(10);  // spacing
+    clearAutomationButton.setBounds(buttonArea.removeFromLeft(150));
+
+    // Automation lane
+    if (automationLane)
+        automationLane->setBounds(automationSection.reduced(10));
 }
 
 void MainComponent::timerCallback()
@@ -191,8 +258,8 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 13: Connect project state to engine for automation
     engine->setProjectState(projectState.get());
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    // Create main content (Phase U5: pass projectState for automation UI)
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
