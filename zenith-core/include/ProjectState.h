@@ -175,6 +175,66 @@ public:
      */
     int getNumTracks() const;
 
+    /**
+     * @brief Get track by index
+     * @param index Track index (0-based)
+     * @return Track ValueTree (invalid if out of range)
+     */
+    juce::ValueTree getTrack(int index);
+
+    /**
+     * @brief Get track by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrackById(const juce::String& trackId);
+
+    //==========================================================================
+    // Clip Management
+    //==========================================================================
+
+    /**
+     * @brief Add a clip to a track
+     * @param trackId Track ID
+     * @param startBeats Start time in beats
+     * @param lengthBeats Length in beats
+     * @param actionName Undo action name
+     * @return Clip ID
+     * @note Message thread only, undoable
+     */
+    juce::String addClip(const juce::String& trackId, double startBeats, double lengthBeats,
+                         const juce::String& actionName);
+
+    /**
+     * @brief Move a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newStartBeats New start time in beats
+     * @param actionName Undo action name
+     * @return true if clip was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveClip(const juce::String& trackId, const juce::String& clipId,
+                  double newStartBeats, const juce::String& actionName);
+
+    /**
+     * @brief Remove a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     * @return true if clip was found and removed
+     * @note Message thread only, undoable
+     */
+    bool removeClip(const juce::String& trackId, const juce::String& clipId,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Get clips for a track
+     * @param trackId Track ID
+     * @return CLIPS ValueTree (invalid if track not found)
+     */
+    juce::ValueTree getClips(const juce::String& trackId);
+
     //==========================================================================
     // Phase 13: Automation Management
     //==========================================================================

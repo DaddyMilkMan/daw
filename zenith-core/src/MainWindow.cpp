@@ -4,19 +4,21 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../include/ui/ArrangerView.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& projState)
     : engine(eng)
+    , projectState(projState)
 {
     // Set size
     setSize(1400, 800);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Arranger Timeline UI", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -55,6 +57,10 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Create arranger view (Phase 14)
+    arrangerView = std::make_unique<ArrangerView>(projectState);
+    addAndMakeVisible(arrangerView.get());
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -68,47 +74,6 @@ void MainComponent::paint(juce::Graphics& g)
 {
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
 }
 
 void MainComponent::resized()
@@ -140,6 +105,10 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Arranger view in the center
+    if (arrangerView)
+        arrangerView->setBounds(bounds);
 }
 
 void MainComponent::timerCallback()
@@ -188,11 +157,22 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Phase 14: Add demo tracks and clips for testing
+    auto track1 = projectState->addTrack("Audio 1", "audio");
+    auto track2 = projectState->addTrack("Audio 2", "audio");
+    auto track3 = projectState->addTrack("MIDI 1", "midi");
+
+    // Add some demo clips
+    projectState->addClip(track1, 0.0, 4.0, "Add Clip");    // Bar 1, 1 bar long
+    projectState->addClip(track1, 8.0, 2.0, "Add Clip");    // Bar 3, half bar
+    projectState->addClip(track2, 4.0, 4.0, "Add Clip");    // Bar 2, 1 bar long
+    projectState->addClip(track3, 2.0, 8.0, "Add Clip");    // Starts at beat 2, 2 bars long
+
     // Phase 13: Connect project state to engine for automation
     engine->setProjectState(projectState.get());
 
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
