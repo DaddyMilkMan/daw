@@ -164,8 +164,9 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Disable JUCE splash screen (requires Pro license for commercial use)
     # JUCE_DISPLAY_SPLASH_SCREEN=0
 
-    # VST3 hosting (will enable when we add plugin hosting)
-    # JUCE_PLUGINHOST_VST3=1
+    # VST3 hosting
+    JUCE_PLUGINHOST_VST3=1
+    # AU hosting (macOS only - will enable when needed)
     # JUCE_PLUGINHOST_AU=1
 
     # Don't auto-open plugin windows

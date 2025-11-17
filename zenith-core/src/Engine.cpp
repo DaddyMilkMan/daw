@@ -16,6 +16,11 @@
 Engine::Engine()
 {
     DBG("Engine: Constructor");
+
+    // Initialize plugin format manager with VST3 support
+    pluginFormatManager.addDefaultFormats();
+    DBG("Engine: Plugin format manager initialized with " +
+        juce::String(pluginFormatManager.getNumFormats()) + " formats");
 }
 
 Engine::~Engine()

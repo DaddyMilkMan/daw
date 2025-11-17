@@ -139,6 +139,24 @@ public:
     double getCpuUsage() const;
 
     //==========================================================================
+    // Plugin Hosting
+    //==========================================================================
+
+    /**
+     * @brief Get the plugin format manager for loading plugins
+     * @return Reference to plugin format manager
+     * @note Thread-safe; use from message thread only for plugin loading
+     */
+    juce::AudioPluginFormatManager& getPluginFormatManager() noexcept { return pluginFormatManager; }
+
+    /**
+     * @brief Get known plugin list for scanning/caching (future use)
+     * @return Reference to known plugin list
+     * @note Thread-safe; use from message thread only
+     */
+    juce::KnownPluginList& getKnownPluginList() noexcept { return knownPluginList; }
+
+    //==========================================================================
     // C3: Minimal Engine Surface (compile-only, no audio wiring)
     //==========================================================================
 
@@ -233,6 +251,10 @@ private:
 
     // Audio device manager
     juce::AudioDeviceManager deviceManager;
+
+    // Plugin hosting
+    juce::AudioPluginFormatManager pluginFormatManager;
+    juce::KnownPluginList knownPluginList;
 
     // Transport state (std::atomic for thread-safe access)
     std::atomic<bool> isPlaying_{false};

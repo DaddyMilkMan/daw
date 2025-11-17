@@ -87,13 +87,77 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Plugin chain management - TODO(Phase 2: plugin hosting)
-    // Stubbed for now; will implement in Phase 2 with VST3/AU support
-    void addPlugin(void* plugin) { (void)plugin; /* stub */ }
-    void removePlugin(int pluginIndex) { (void)pluginIndex; /* stub */ }
-    void clearPlugins() { /* stub */ }
-    int getNumPlugins() const { return 0; }
-    void* getPlugin(int index) const { (void)index; return nullptr; }
+    // Plugin chain management
+    // VST3 hosting with RT-safe processing
+    //
+    // NOTE: All plugin management methods MUST be called from MESSAGE THREAD only!
+    // The audio thread only reads the plugin chain during processPluginChain().
+    //
+    // TODO: Future enhancements:
+    // - AU support (macOS)
+    // - Plugin preset/parameter persistence
+    // - Plugin GUI management
+    // - Plugin scanning UI
+
+    /**
+     * @brief Add a plugin to the track's plugin chain
+     * @param pluginDescription Plugin description from format manager
+     * @param formatManager Plugin format manager to create instance
+     * @param sampleRate Current sample rate
+     * @param blockSize Current block size
+     * @param errorMessage Output error message if loading fails
+     * @return true if plugin was added successfully
+     * @note MESSAGE THREAD ONLY! Not RT-safe.
+     */
+    bool addPlugin(const juce::PluginDescription& pluginDescription,
+                   juce::AudioPluginFormatManager& formatManager,
+                   double sampleRate,
+                   int blockSize,
+                   juce::String& errorMessage);
+
+    /**
+     * @brief Remove a plugin from the chain
+     * @param pluginIndex Index of plugin to remove (0-based)
+     * @note MESSAGE THREAD ONLY! Not RT-safe.
+     */
+    void removePlugin(int pluginIndex);
+
+    /**
+     * @brief Clear all plugins from the chain
+     * @note MESSAGE THREAD ONLY! Not RT-safe.
+     */
+    void clearPlugins();
+
+    /**
+     * @brief Get number of plugins in the chain
+     * @return Plugin count
+     * @note Thread-safe (uses lock)
+     */
+    int getNumPlugins() const;
+
+    /**
+     * @brief Set plugin bypass state
+     * @param pluginIndex Index of plugin (0-based)
+     * @param bypassed true to bypass, false to enable
+     * @note MESSAGE THREAD ONLY for now (could be made RT-safe with atomic)
+     */
+    void setPluginBypassed(int pluginIndex, bool bypassed);
+
+    /**
+     * @brief Check if plugin is bypassed
+     * @param pluginIndex Index of plugin (0-based)
+     * @return true if bypassed
+     * @note Thread-safe (uses lock)
+     */
+    bool isPluginBypassed(int pluginIndex) const;
+
+    /**
+     * @brief Get plugin description for persistence
+     * @param pluginIndex Index of plugin (0-based)
+     * @return Plugin description (empty if invalid index)
+     * @note Thread-safe (uses lock)
+     */
+    juce::PluginDescription getPluginDescription(int pluginIndex) const;
 
     //==============================================================================
     // Clip management
@@ -116,6 +180,20 @@ public:
     // State management
     juce::ValueTree getState() const;
     void loadState(const juce::ValueTree& state);
+
+    /**
+     * @brief Load plugins from saved state
+     * @param state ValueTree containing plugin state (from getState())
+     * @param formatManager Plugin format manager to create instances
+     * @param sampleRate Current sample rate
+     * @param blockSize Current block size
+     * @note MESSAGE THREAD ONLY! Call after loadState() to instantiate plugins.
+     * @note This is a workaround because loadState() doesn't have access to Engine.
+     */
+    void loadPluginsFromState(const juce::ValueTree& state,
+                              juce::AudioPluginFormatManager& formatManager,
+                              double sampleRate,
+                              int blockSize);
 
 private:
     //==============================================================================
@@ -144,10 +222,22 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Plugin chain - TODO(Phase 2: plugin hosting)
-    // Placeholder for future VST3/AU hosting
+    // Plugin chain
+    // RT-safe design: plugins are created/destroyed on MESSAGE THREAD only,
+    // and only read (processBlock) on AUDIO THREAD
+    struct PluginSlot
+    {
+        std::unique_ptr<juce::AudioPluginInstance> instance;
+        juce::PluginDescription description;
+        bool bypassed = false;
+    };
+
+    std::vector<PluginSlot> pluginChain;
     juce::CriticalSection pluginLock;
     juce::AudioBuffer<float> pluginBuffer;
+
+    // TODO: Future enhancement - store plugin state (presets/parameters)
+    // For now, we only persist plugin identifiers for reloading
 
     //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)

@@ -46,7 +46,18 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
 
-    // TODO(Phase 2: plugin hosting) - Prepare all plugins
+    // Prepare all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& slot : pluginChain)
+        {
+            if (slot.instance != nullptr)
+            {
+                slot.instance->prepareToPlay(sampleRate, samplesPerBlockExpected);
+                slot.instance->setNonRealtime(false);
+            }
+        }
+    }
 
     // Prepare all clips
     {
@@ -63,7 +74,17 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
-    // TODO(Phase 2: plugin hosting) - Release all plugins
+    // Release all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& slot : pluginChain)
+        {
+            if (slot.instance != nullptr)
+            {
+                slot.instance->releaseResources();
+            }
+        }
+    }
 
     // Release all clips
     {
@@ -195,8 +216,131 @@ void Track::setEnabled(bool shouldBeEnabled)
 }
 
 //==============================================================================
-// Plugin management - TODO(Phase 2: plugin hosting)
-// Stubbed for now; will implement VST3/AU support in Phase 2
+// Plugin management
+//==============================================================================
+
+bool Track::addPlugin(const juce::PluginDescription& pluginDescription,
+                      juce::AudioPluginFormatManager& formatManager,
+                      double sampleRate,
+                      int blockSize,
+                      juce::String& errorMessage)
+{
+    // MESSAGE THREAD ONLY!
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Find the appropriate format for this plugin
+    auto* format = formatManager.findFormatForDescription(pluginDescription, errorMessage);
+    if (format == nullptr)
+    {
+        errorMessage = "Could not find format for plugin: " + pluginDescription.name;
+        return false;
+    }
+
+    // Create the plugin instance (this is a blocking call)
+    auto instance = format->createInstanceFromDescription(pluginDescription, sampleRate, blockSize);
+    if (instance == nullptr)
+    {
+        errorMessage = "Failed to create plugin instance: " + pluginDescription.name;
+        return false;
+    }
+
+    // Prepare the plugin for playback
+    instance->prepareToPlay(sampleRate, blockSize);
+    instance->setNonRealtime(false);
+
+    // Add to plugin chain
+    {
+        const juce::ScopedLock sl(pluginLock);
+
+        PluginSlot slot;
+        slot.instance = std::move(instance);
+        slot.description = pluginDescription;
+        slot.bypassed = false;
+
+        pluginChain.push_back(std::move(slot));
+    }
+
+    sendChangeMessage();
+    return true;
+}
+
+void Track::removePlugin(int pluginIndex)
+{
+    // MESSAGE THREAD ONLY!
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginChain.size()))
+    {
+        auto& slot = pluginChain[pluginIndex];
+        if (slot.instance != nullptr)
+        {
+            slot.instance->releaseResources();
+        }
+        pluginChain.erase(pluginChain.begin() + pluginIndex);
+        sendChangeMessage();
+    }
+}
+
+void Track::clearPlugins()
+{
+    // MESSAGE THREAD ONLY!
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    const juce::ScopedLock sl(pluginLock);
+
+    for (auto& slot : pluginChain)
+    {
+        if (slot.instance != nullptr)
+        {
+            slot.instance->releaseResources();
+        }
+    }
+
+    pluginChain.clear();
+    sendChangeMessage();
+}
+
+int Track::getNumPlugins() const
+{
+    const juce::ScopedLock sl(pluginLock);
+    return static_cast<int>(pluginChain.size());
+}
+
+void Track::setPluginBypassed(int pluginIndex, bool bypassed)
+{
+    // MESSAGE THREAD ONLY!
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginChain.size()))
+    {
+        pluginChain[pluginIndex].bypassed = bypassed;
+        sendChangeMessage();
+    }
+}
+
+bool Track::isPluginBypassed(int pluginIndex) const
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginChain.size()))
+        return pluginChain[pluginIndex].bypassed;
+
+    return false;
+}
+
+juce::PluginDescription Track::getPluginDescription(int pluginIndex) const
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginChain.size()))
+        return pluginChain[pluginIndex].description;
+
+    return juce::PluginDescription();
+}
 
 //==============================================================================
 void Track::addClip(std::unique_ptr<Clip> clip)
@@ -297,7 +441,39 @@ juce::ValueTree Track::getState() const
     state.setProperty("armed", armed.load(), nullptr);
     state.setProperty("enabled", enabled.load(), nullptr);
 
-    // TODO(Phase 2: plugin hosting) - Save plugin states
+    // Save plugin chain
+    juce::ValueTree pluginsState("Plugins");
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (size_t i = 0; i < pluginChain.size(); ++i)
+        {
+            const auto& slot = pluginChain[i];
+
+            juce::ValueTree pluginState("Plugin");
+            pluginState.setProperty("name", slot.description.name, nullptr);
+            pluginState.setProperty("descriptiveName", slot.description.descriptiveName, nullptr);
+            pluginState.setProperty("pluginFormatName", slot.description.pluginFormatName, nullptr);
+            pluginState.setProperty("category", slot.description.category, nullptr);
+            pluginState.setProperty("manufacturerName", slot.description.manufacturerName, nullptr);
+            pluginState.setProperty("version", slot.description.version, nullptr);
+            pluginState.setProperty("fileOrIdentifier", slot.description.fileOrIdentifier, nullptr);
+            pluginState.setProperty("lastFileModTime", slot.description.lastFileModTime.toMilliseconds(), nullptr);
+            pluginState.setProperty("lastInfoUpdateTime", slot.description.lastInfoUpdateTime.toMilliseconds(), nullptr);
+            pluginState.setProperty("uid", slot.description.uid, nullptr);
+            pluginState.setProperty("isInstrument", slot.description.isInstrument, nullptr);
+            pluginState.setProperty("numInputChannels", slot.description.numInputChannels, nullptr);
+            pluginState.setProperty("numOutputChannels", slot.description.numOutputChannels, nullptr);
+            pluginState.setProperty("hasSharedContainer", slot.description.hasSharedContainer, nullptr);
+            pluginState.setProperty("bypassed", slot.bypassed, nullptr);
+
+            // TODO: Save plugin state (preset/parameter values)
+            // For now, we only save the plugin identifier for reloading
+            // Future: Use slot.instance->getStateInformation() to save full state
+
+            pluginsState.appendChild(pluginState, nullptr);
+        }
+    }
+    state.appendChild(pluginsState, nullptr);
 
     // Save clip states
     juce::ValueTree clipsState("Clips");
@@ -330,7 +506,20 @@ void Track::loadState(const juce::ValueTree& state)
     armed.store(state.getProperty("armed", false));
     enabled.store(state.getProperty("enabled", true));
 
-    // TODO(Phase 2: plugin hosting) - Load plugin states
+    // Load plugin chain descriptions (but don't instantiate yet)
+    // To actually load plugins, call loadPluginsFromState() with format manager
+    // TODO: This is a limitation - we save plugin descriptions but need external
+    // call to actually instantiate them. Future: Store Engine reference in Track?
+    auto pluginsState = state.getChildWithName("Plugins");
+    if (pluginsState.isValid())
+    {
+        // For now, just clear the plugin chain
+        // The caller needs to call loadPluginsFromState() with format manager
+        clearPlugins();
+
+        // NOTE: Plugin instances will be created by loadPluginsFromState()
+        // which must be called separately with the format manager
+    }
 
     // Load clip states
     auto clipsState = state.getChildWithName("Clips");
@@ -349,12 +538,94 @@ void Track::loadState(const juce::ValueTree& state)
     sendChangeMessage();
 }
 
+void Track::loadPluginsFromState(const juce::ValueTree& state,
+                                  juce::AudioPluginFormatManager& formatManager,
+                                  double sampleRate,
+                                  int blockSize)
+{
+    // MESSAGE THREAD ONLY!
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto pluginsState = state.getChildWithName("Plugins");
+    if (!pluginsState.isValid())
+        return;
+
+    // Clear existing plugins first
+    clearPlugins();
+
+    // Load each plugin
+    for (int i = 0; i < pluginsState.getNumChildren(); ++i)
+    {
+        auto pluginState = pluginsState.getChild(i);
+        if (!pluginState.hasType("Plugin"))
+            continue;
+
+        // Reconstruct plugin description
+        juce::PluginDescription desc;
+        desc.name = pluginState.getProperty("name", "");
+        desc.descriptiveName = pluginState.getProperty("descriptiveName", "");
+        desc.pluginFormatName = pluginState.getProperty("pluginFormatName", "");
+        desc.category = pluginState.getProperty("category", "");
+        desc.manufacturerName = pluginState.getProperty("manufacturerName", "");
+        desc.version = pluginState.getProperty("version", "");
+        desc.fileOrIdentifier = pluginState.getProperty("fileOrIdentifier", "");
+        desc.lastFileModTime = juce::Time(static_cast<juce::int64>(pluginState.getProperty("lastFileModTime", 0)));
+        desc.lastInfoUpdateTime = juce::Time(static_cast<juce::int64>(pluginState.getProperty("lastInfoUpdateTime", 0)));
+        desc.uid = pluginState.getProperty("uid", 0);
+        desc.isInstrument = pluginState.getProperty("isInstrument", false);
+        desc.numInputChannels = pluginState.getProperty("numInputChannels", 0);
+        desc.numOutputChannels = pluginState.getProperty("numOutputChannels", 0);
+        desc.hasSharedContainer = pluginState.getProperty("hasSharedContainer", false);
+
+        bool bypassed = pluginState.getProperty("bypassed", false);
+
+        // Try to add the plugin
+        juce::String errorMessage;
+        if (addPlugin(desc, formatManager, sampleRate, blockSize, errorMessage))
+        {
+            // Set bypass state if needed
+            if (bypassed)
+                setPluginBypassed(getNumPlugins() - 1, true);
+        }
+        else
+        {
+            DBG("Failed to load plugin: " + desc.name + " - " + errorMessage);
+            // Continue loading other plugins even if one fails
+        }
+
+        // TODO: Load plugin state (preset/parameter values)
+        // Future: Use slot.instance->setStateInformation()
+    }
+}
+
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
-    (void)buffer;
-    (void)numSamples;
-    // TODO(Phase 2: plugin hosting) - Process plugin chain
+    // AUDIO THREAD - must be RT-safe!
+    // We use a CriticalSection here which is NOT ideal for RT-safety,
+    // but acceptable for now since plugin operations are rare.
+    // Future enhancement: Use lock-free swap for plugin chain updates.
+
+    const juce::ScopedTryLock stl(pluginLock);
+
+    // If we can't get the lock, skip plugin processing this time
+    // (better to have a small glitch than to block the audio thread)
+    if (!stl.isLocked())
+        return;
+
+    // Process each plugin in the chain
+    for (auto& slot : pluginChain)
+    {
+        if (slot.instance == nullptr || slot.bypassed)
+            continue;
+
+        // Create a MIDI buffer (empty for now, will add MIDI support later)
+        juce::MidiBuffer midiBuffer;
+
+        // Process the plugin
+        // Note: This modifies the buffer in-place
+        slot.instance->processBlock(buffer, midiBuffer);
+    }
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples)
