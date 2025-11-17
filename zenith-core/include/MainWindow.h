@@ -105,16 +105,32 @@ public:
 
     void closeButtonPressed() override;
 
+private:
     //==========================================================================
     // Menu bar
     //==========================================================================
 
     /**
-     * @brief Creates the menu bar
+     * @brief Menu bar model for the main window
      */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    class MenuBarModel : public juce::MenuBarModel
+    {
+    public:
+        explicit MenuBarModel(MainWindow& owner);
 
-private:
+        juce::StringArray getMenuBarNames() override;
+        juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
+        void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+    private:
+        MainWindow& owner_;
+    };
+
+    /**
+     * @brief Handle export menu action
+     */
+    void handleExportMixdown();
+
     //==========================================================================
     // Member variables
     //==========================================================================
@@ -127,6 +143,17 @@ private:
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
+
+    // Menu bar
+    std::unique_ptr<MenuBarModel> menuBarModel;
+    juce::MenuBarComponent menuBar;
+
+    // Menu item IDs
+    enum MenuItemIDs
+    {
+        exportMixdownID = 1000,
+        quitID = 1001
+    };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

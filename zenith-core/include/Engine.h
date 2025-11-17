@@ -164,6 +164,35 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Export
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file (blocking operation)
+     *
+     * This is a SYNCHRONOUS, BLOCKING export that runs on the message thread.
+     * The export will:
+     * 1. Stop playback if active
+     * 2. Render the project offline to a 24-bit stereo WAV file
+     * 3. Restore playback state when done
+     *
+     * @param file Output WAV file path
+     * @param startSeconds Start time in seconds (typically 0.0)
+     * @param endSeconds End time in seconds (0 = auto-detect from project)
+     * @param errorMessage Output error message if export fails
+     * @return true if export succeeded, false otherwise
+     *
+     * @note MESSAGE THREAD ONLY - will assert in debug builds
+     * @note BLOCKS until export completes (user waits for completion)
+     * @note Sample rate: 44.1 kHz, Format: 24-bit PCM stereo
+     */
+    bool exportProjectToWav(
+        const juce::File& file,
+        double startSeconds,
+        double endSeconds,
+        juce::String& errorMessage);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 

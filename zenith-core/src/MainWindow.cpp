@@ -194,6 +194,11 @@ MainWindow::MainWindow(const juce::String& name)
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
 
+    // Create menu bar
+    menuBarModel = std::make_unique<MenuBarModel>(*this);
+    menuBar.setModel(menuBarModel.get());
+    setMenuBar(&menuBar);
+
     // Set up window
     setUsingNativeTitleBar(true);
     setContentOwned(mainComponent.get(), true);
@@ -215,6 +220,10 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Remove menu bar before destroying components
+    setMenuBar(nullptr);
+    menuBarModel.reset();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -231,4 +240,112 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+//==============================================================================
+// Menu Bar Implementation
+//==============================================================================
+
+MainWindow::MenuBarModel::MenuBarModel(MainWindow& owner)
+    : owner_(owner)
+{
+}
+
+juce::StringArray MainWindow::MenuBarModel::getMenuBarNames()
+{
+    return { "File", "Edit", "View", "Help" };
+}
+
+juce::PopupMenu MainWindow::MenuBarModel::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0) // File menu
+    {
+        menu.addSubMenu("Export", []() {
+            juce::PopupMenu exportMenu;
+            exportMenu.addItem(MainWindow::exportMixdownID, "Export Mixdown (WAV...)");
+            return exportMenu;
+        }());
+        menu.addSeparator();
+        menu.addItem(MainWindow::quitID, "Quit", true, false);
+    }
+    else if (topLevelMenuIndex == 1) // Edit menu
+    {
+        menu.addItem(2000, "Undo", false);
+        menu.addItem(2001, "Redo", false);
+    }
+    else if (topLevelMenuIndex == 2) // View menu
+    {
+        menu.addItem(3000, "Mixer", false);
+        menu.addItem(3001, "Arrangement", false);
+    }
+    else if (topLevelMenuIndex == 3) // Help menu
+    {
+        menu.addItem(4000, "About", false);
+    }
+
+    return menu;
+}
+
+void MainWindow::MenuBarModel::menuItemSelected(int menuItemID, int topLevelMenuIndex)
+{
+    juce::ignoreUnused(topLevelMenuIndex);
+
+    switch (menuItemID)
+    {
+        case MainWindow::exportMixdownID:
+            owner_.handleExportMixdown();
+            break;
+
+        case MainWindow::quitID:
+            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            break;
+
+        default:
+            break;
+    }
+}
+
+void MainWindow::handleExportMixdown()
+{
+    DBG("MainWindow: Export mixdown requested");
+
+    // TODO: Replace with FileChooser for proper file selection
+    // For now, use a hard-coded path with timestamp to avoid overwriting
+    auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+    auto outputPath = juce::File::getSpecialLocation(juce::File::userDesktopDirectory)
+        .getChildFile("zenith_export_" + timestamp + ".wav");
+
+    DBG("MainWindow: Exporting to " + outputPath.getFullPathName());
+
+    // Show a message that export is starting
+    // (In a production app, this would be a progress dialog)
+    // For now, just log it
+
+    // Call engine export (blocking)
+    juce::String errorMessage;
+    bool success = engine->exportProjectToWav(
+        outputPath,
+        0.0,    // Start at beginning
+        0.0,    // Auto-detect end (or default to 10s if no clips)
+        errorMessage);
+
+    // Show result to user
+    if (success)
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::InfoIcon,
+            "Export Complete",
+            "Project exported successfully to:\n" + outputPath.getFullPathName(),
+            "OK");
+    }
+    else
+    {
+        juce::AlertWindow::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Export Failed",
+            "Failed to export project:\n" + errorMessage,
+            "OK");
+    }
 }

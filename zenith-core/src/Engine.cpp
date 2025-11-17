@@ -11,6 +11,7 @@
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
+#include "../Source/engine/ExportEngine.h"
 
 //==============================================================================
 Engine::Engine()
@@ -211,6 +212,46 @@ void Engine::addTestTracks(int count)
     }
 
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
+}
+
+//==============================================================================
+// Export
+//==============================================================================
+
+bool Engine::exportProjectToWav(
+    const juce::File& file,
+    double startSeconds,
+    double endSeconds,
+    juce::String& errorMessage)
+{
+    // MESSAGE THREAD ONLY
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    DBG("Engine: Export requested");
+    DBG("  File: " + file.getFullPathName());
+    DBG("  Start: " + juce::String(startSeconds) + "s");
+    DBG("  End: " + juce::String(endSeconds) + "s");
+
+    // Create export engine and run export
+    ExportEngine exporter;
+    bool success = exporter.exportToWav(
+        *this,
+        file,
+        startSeconds,
+        endSeconds,
+        projectState_,
+        errorMessage);
+
+    if (success)
+    {
+        DBG("Engine: Export completed successfully");
+    }
+    else
+    {
+        DBG("Engine: Export failed - " + errorMessage);
+    }
+
+    return success;
 }
 
 //==============================================================================

@@ -99,6 +99,10 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Export engine
+    Source/engine/ExportEngine.h
+    Source/engine/ExportEngine.cpp
 )
 
 # ============================================================================
