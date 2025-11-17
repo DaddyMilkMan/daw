@@ -17,6 +17,9 @@
 #include "Engine.h"
 #include "ProjectState.h"
 
+// Forward declarations
+class MixerView;
+
 //==============================================================================
 /**
  * @class MainComponent
@@ -76,6 +79,11 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Mixer view
+    std::unique_ptr<MixerView> mixerView_;
+    juce::TextButton mixerToggleButton_;
+    bool mixerVisible_ = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

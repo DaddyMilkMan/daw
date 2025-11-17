@@ -92,6 +92,12 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # UI components (Mixer view)
+    include/ui/MixerView.h
+    src/ui/MixerView.cpp
+    include/ui/MixerChannelComponent.h
+    src/ui/MixerChannelComponent.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp
@@ -107,6 +113,7 @@ target_sources(ZenithDAW PRIVATE
 
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/ui
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
 )
 

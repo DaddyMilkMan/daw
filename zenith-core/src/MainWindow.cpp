@@ -4,6 +4,7 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../include/ui/MixerView.h"
 
 //==============================================================================
 // MainComponent Implementation
@@ -55,6 +56,26 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Mixer toggle button
+    mixerToggleButton_.setButtonText("Mixer");
+    mixerToggleButton_.setClickingTogglesState(true);
+    mixerToggleButton_.onClick = [this]() {
+        mixerVisible_ = mixerToggleButton_.getToggleState();
+        if (mixerVisible_ && !mixerView_)
+        {
+            // Create mixer view on first show
+            mixerView_ = std::make_unique<MixerView>(engine);
+            addAndMakeVisible(mixerView_.get());
+        }
+        if (mixerView_)
+        {
+            mixerView_->setVisible(mixerVisible_);
+        }
+        resized();
+        repaint();
+    };
+    addAndMakeVisible(mixerToggleButton_);
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -69,46 +90,51 @@ void MainComponent::paint(juce::Graphics& g)
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
+    // Only draw welcome message if mixer is not visible
+    if (!mixerVisible_)
+    {
+        // Draw welcome message
+        g.setColour(juce::Colours::white);
+        g.setFont(juce::Font(48.0f, juce::Font::bold));
 
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
+        auto bounds = getLocalBounds().reduced(40);
+        g.drawText("Welcome to Zenith DAW",
+                   bounds.removeFromTop(100),
+                   juce::Justification::centred,
+                   true);
 
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
+        // Draw phase info
+        g.setFont(juce::Font(20.0f));
+        g.setColour(juce::Colours::lightgrey);
+        g.drawText("Phase 0: Foundation - Basic audio engine operational",
+                   bounds.removeFromTop(40),
+                   juce::Justification::centred,
+                   true);
 
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
+        // Draw feature list
+        g.setFont(juce::Font(16.0f));
+        g.setColour(juce::Colours::grey);
 
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
+        auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
+        juce::String features =
+            "✓ JUCE 8.0.9 audio engine\n"
+            "✓ Audio device management\n"
+            "✓ Transport controls (play/stop)\n"
+            "✓ CPU monitoring\n"
+            "✓ Project state management (ValueTree)\n"
+            "✓ Mixer view with faders, meters, mute/solo\n"
+            "\n"
+            "Coming in Phase 1:\n"
+            "• Multi-track recording\n"
+            "• VST3 plugin hosting\n"
+            "• MIDI support\n"
+            "• Timeline view";
 
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
+        g.drawMultiLineText(features,
+                           featuresBounds.getX(),
+                           featuresBounds.getY(),
+                           featuresBounds.getWidth());
+    }
 }
 
 void MainComponent::resized()
@@ -131,6 +157,10 @@ void MainComponent::resized()
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
 
+    // Mixer toggle button (left of transport buttons)
+    auto mixerButtonArea = bottomBar.removeFromLeft(100);
+    mixerToggleButton_.setBounds(mixerButtonArea.reduced(10, 8));
+
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
     int buttonWidth = 100;
@@ -140,6 +170,13 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Mixer view (if visible) - takes up bottom portion
+    if (mixerView_ && mixerVisible_)
+    {
+        auto mixerArea = bounds.removeFromBottom(450);
+        mixerView_->setBounds(mixerArea);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -209,6 +246,11 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
+
+    // Add test tracks for mixer demonstration
+    // (In production, tracks would be created via UI or loaded from project)
+    engine->addTestTracks(4);
+    DBG("MainWindow: Added 4 test tracks for mixer demonstration");
 
     DBG("MainWindow created and initialized");
 }
