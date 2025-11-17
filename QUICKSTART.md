@@ -1,8 +1,8 @@
-# Vexel DAW - Quick Start Guide
+# Zenith DAW - Quick Start Guide
 
-**Qt/QML + JUCE Hybrid Architecture**
+**Pure JUCE Native Architecture**
 
-This guide will get you up and running with the new Qt/QML-based Vexel DAW in under 10 minutes.
+This guide will get you up and running with Zenith DAW in under 5 minutes.
 
 ---
 
@@ -26,61 +26,33 @@ run.bat
 
 | Software | Version | Download |
 |----------|---------|----------|
-| **Qt** | 6.5+ | https://www.qt.io/download-qt-installer |
 | **CMake** | 3.22+ | https://cmake.org/download/ |
-| **C++ Compiler** | C++17 | See below |
+| **C++ Compiler** | C++20 | See below |
 
 ### Platform-Specific Compilers
 
 **Windows:**
 - Visual Studio 2022 (Community Edition is fine)
 - Download: https://visualstudio.microsoft.com/downloads/
+- Select "Desktop development with C++" workload
 
 **macOS:**
-- Xcode 14+ (includes Clang)
+- Xcode 13+ (includes Clang)
 - Install: `xcode-select --install`
 
 **Linux:**
-- GCC 11+ or Clang 14+
+- GCC 10+ or Clang 12+
 - Install: `sudo apt install build-essential cmake`
 
-### Optional (for full audio functionality)
+### What About JUCE?
 
-| Software | Purpose |
-|----------|---------|
-| **JUCE 8.0+** | Professional audio engine |
-| **ASIO Drivers** | Low-latency audio (Windows) |
+**JUCE 8.0.9 is automatically fetched by CMake** - no manual installation needed!
 
 ---
 
 ## 🚀 Installation
 
-### Step 1: Install Qt
-
-#### Option A: Qt Online Installer (Recommended)
-
-1. Download Qt installer: https://www.qt.io/download-qt-installer
-2. Run installer and select:
-   - Qt 6.5 or later
-   - Qt Quick components
-   - Your compiler kit (MSVC 2022, MinGW, Clang, GCC)
-
-#### Option B: Package Manager
-
-**Linux (Ubuntu/Debian):**
-```bash
-sudo apt install qt6-base-dev qt6-declarative-dev qt6-multimedia-dev
-```
-
-**macOS (Homebrew):**
-```bash
-brew install qt@6
-```
-
-**Windows:**
-Use the Qt Online Installer (Option A)
-
-### Step 2: Install CMake
+### Step 1: Install CMake
 
 **Linux:**
 ```bash
@@ -95,21 +67,14 @@ brew install cmake
 **Windows:**
 Download from https://cmake.org/download/ and run installer
 
-### Step 3: Clone Repository
+### Step 2: Clone Repository
 
 ```bash
 git clone <repository-url>
 cd daw
 ```
 
-### Step 4: (Optional) Add JUCE
-
-For full audio functionality, add JUCE as a submodule:
-
-```bash
-git submodule add https://github.com/juce-framework/JUCE.git
-git submodule update --init --recursive
-```
+That's it! No Qt, no Electron, no Node.js, no npm install.
 
 ---
 
@@ -129,22 +94,22 @@ build.bat           # Release build
 build.bat Debug     # Debug build
 ```
 
+The build script will:
+1. Fetch JUCE 8.0.9 automatically (first run only)
+2. Configure CMake
+3. Build the native application
+
 ### Manual Build
 
 ```bash
-# Create build directory
-mkdir build
-cd build
+# Navigate to zenith-core
+cd zenith-core
 
-# Configure
-cmake .. -DCMAKE_BUILD_TYPE=Release
+# Configure (JUCE auto-fetches)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 
 # Build
-cmake --build . --config Release -j
-
-# Run
-./bin/VexelDAW  # Linux/macOS
-bin\Release\VexelDAW.exe  # Windows
+cmake --build build --config Release -j
 ```
 
 ---
@@ -165,64 +130,59 @@ run.bat
 
 ### Direct Execution
 
-**Linux/macOS:**
+**Linux:**
 ```bash
-./build/bin/VexelDAW
+./zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW
+```
+
+**macOS:**
+```bash
+open ./zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW.app
 ```
 
 **Windows:**
 ```cmd
-build\bin\Release\VexelDAW.exe
+zenith-core\build\ZenithDAW_artefacts\Release\ZenithDAW.exe
 ```
 
 ---
 
 ## 🎯 First Launch
 
-When you first run Vexel DAW:
+When you first run Zenith DAW:
 
-1. **UI appears** - Modern dark theme with tri-pane layout
-2. **Demo tracks** - 5 demo tracks are pre-loaded
-3. **Transport controls** - Top bar with play, stop, record buttons
-4. **Audio settings** - Check Settings → Audio to select your audio device
+1. **Window opens** - Modern dark JUCE UI (1400x800)
+2. **Audio engine initializes** - Connects to default audio device
+3. **Transport controls** - Play/Stop buttons at bottom
+4. **System info** - Check console for CPU, memory, audio device info
 
-### Test the UI
+### Test the Features
 
-- ✅ Click **Play** button - Transport state changes
-- ✅ Adjust **Tempo** - Changes reflect in status bar
-- ✅ Right-click track - Context menu appears
-- ✅ Move **Volume faders** in mixer - Smooth animations
-- ✅ Press **Space** - Toggles play/pause
+- ✅ Click **Play** button - Transport starts
+- ✅ Click **Stop** button - Transport stops
+- ✅ Watch **CPU meter** - Updates in real-time (top-right)
+- ✅ Check **Track count** - Displays number of tracks (top-right)
+- ✅ View **Audio device** - Shows current audio device (bottom-left)
 
 ---
 
 ## 🔧 Configuration
 
+### CMake Build Options
+
+Located in `zenith-core/CMakeLists.txt`:
+
+```bash
+# Create 8 demo tracks at startup (Debug builds only)
+cmake -B build -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON
+```
+
 ### Audio Device Selection
 
-When JUCE is integrated, you can select your audio device:
-
-```cpp
-// Will be available in Settings → Audio
-audioEngine.setAudioDeviceType("ASIO");     // Windows - Professional
-audioEngine.setAudioDeviceType("WASAPI");   // Windows - Modern
-audioEngine.setAudioDeviceType("CoreAudio"); // macOS
-audioEngine.setAudioDeviceType("ALSA");     // Linux
-```
-
-### Qt Environment Variables
-
-If Qt is not found automatically, set:
-
-**Linux/macOS:**
-```bash
-export CMAKE_PREFIX_PATH=/path/to/Qt/6.x/gcc_64
-```
-
-**Windows:**
-```cmd
-set CMAKE_PREFIX_PATH=C:\Qt\6.x\msvc2022_64
-```
+Audio device is auto-selected based on platform:
+- **Windows:** WASAPI (Shared/Exclusive) or ASIO
+- **macOS:** CoreAudio
+- **Linux:** ALSA
 
 ---
 
@@ -230,34 +190,27 @@ set CMAKE_PREFIX_PATH=C:\Qt\6.x\msvc2022_64
 
 ```
 /daw
-├── CMakeLists.txt           # Root build configuration
+├── CMakeLists.txt           # Root build config (delegates to zenith-core)
 ├── build.sh / build.bat     # Build scripts
 ├── run.sh / run.bat         # Run scripts
-├── src/
-│   ├── qt-qml/              # Qt/QML UI application ⭐ NEW
-│   │   ├── main.cpp         # Application entry point
-│   │   ├── qml/             # QML UI files
-│   │   └── bridge/          # Qt/JUCE integration
-│   └── juce-engine/         # JUCE audio engine ⭐ NEW
-│       └── Source/          # Audio processing code
-└── vexel-daw/               # Old Electron code (legacy)
+└── zenith-core/             ⭐ MAIN PROJECT
+    ├── CMakeLists.txt       # JUCE app configuration
+    ├── src/
+    │   ├── Main.cpp         # Application entry point (ZenithApplication)
+    │   ├── MainWindow.cpp   # Main window and UI component
+    │   ├── Engine.cpp       # Audio engine
+    │   ├── ProjectState.cpp # ValueTree project state
+    │   ├── TrackAutomationSynchronizer.cpp
+    │   └── CommandAPI.cpp   # Command interface
+    ├── Source/
+    │   └── engine/          # Track, Clip, MixerChannel primitives
+    ├── include/             # Public headers
+    └── tests/               # Unit tests
 ```
 
 ---
 
 ## 🐛 Troubleshooting
-
-### "Qt not found"
-
-**Fix:**
-```bash
-# Set Qt path
-export CMAKE_PREFIX_PATH=/path/to/Qt/6.x/gcc_64
-
-# Or install Qt via package manager
-sudo apt install qt6-base-dev qt6-declarative-dev  # Linux
-brew install qt@6                                    # macOS
-```
 
 ### "CMake version too old"
 
@@ -269,52 +222,64 @@ brew install cmake      # macOS
 # Or download from: https://cmake.org/download/
 ```
 
-### "JUCE not found"
+### "C++ compiler not found"
 
-**This is OK!** JUCE is optional. The app will use placeholder audio implementation.
+**Windows:** Install Visual Studio 2022 with "Desktop development with C++" workload
 
-**To add JUCE:**
-```bash
-git submodule add https://github.com/juce-framework/JUCE.git
-```
+**macOS:** Run `xcode-select --install`
 
-### "Failed to load QML file"
+**Linux:** Run `sudo apt install build-essential`
+
+### "JUCE fetch failed"
 
 **Fix:**
 ```bash
-# Clean rebuild
+# Clear CMake cache and retry
+cd zenith-core
 rm -rf build
-./build.sh
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 ```
 
 ### "No audio devices found"
 
-**Windows:** Install ASIO drivers for your audio interface, or use WASAPI (built-in)
+**Windows:**
+- WASAPI is built-in, should work automatically
+- For pro audio, install ASIO drivers for your interface
 
-**macOS:** CoreAudio is built-in, should work automatically
+**macOS:**
+- CoreAudio is built-in, should work automatically
 
-**Linux:** Install ALSA: `sudo apt install libasound2-dev`
+**Linux:**
+- Install ALSA: `sudo apt install libasound2-dev`
+- For JACK: `sudo apt install libjack-jackd2-dev`
+
+### "Window is blank/black"
+
+This is normal for the Phase 0 foundation. The window shows:
+- Welcome message in the center
+- Status bar at top
+- Transport controls at bottom
+- Audio device info
 
 ---
 
-## 🆚 Old vs New Architecture
+## 🆚 Architecture Evolution
 
-### Electron (Old) - `vexel-daw/`
+### Electron (Removed) ❌
+- Web-based UI (Chromium + React + TypeScript)
+- High memory usage
+- Not suitable for real-time audio
 
-❌ **Deprecated** - Web-based UI (Chromium + React + Node.js)
-- Located in `/vexel-daw/`
-- Not recommended for new development
-- Kept for reference only
+### Qt/QML (Removed) ❌
+- Native UI but hybrid architecture
+- Complex Qt/JUCE bridge layer
+- Extra dependencies
 
-### Qt/QML + JUCE (New) - `src/`
-
-✅ **Active Development** - Native UI + professional audio
-- Located in `/src/qt-qml/` and `/src/juce-engine/`
-- Modern, hardware-accelerated UI
-- Professional audio performance
-- Industry-standard architecture
-
-**Use the new architecture for all development!**
+### Pure JUCE Native (Current) ✅
+- **100% C++ JUCE** - No web stack, no Qt
+- **Low latency** - Direct audio device access
+- **Small footprint** - No embedded browser or Qt runtime
+- **Industry standard** - Same framework as major DAWs
 
 ---
 
@@ -323,76 +288,86 @@ rm -rf build
 ### Learn More
 
 1. **[README.md](./README.md)** - Full project overview
-2. **[QT_QML_JUCE_ARCHITECTURE.md](./docs/QT_QML_JUCE_ARCHITECTURE.md)** - Technical architecture
-3. **[WINDOWS_AUDIO_APIS_GUIDE.md](./docs/WINDOWS_AUDIO_APIS_GUIDE.md)** - Windows audio setup
-4. **[MIGRATION_FROM_ELECTRON.md](./docs/MIGRATION_FROM_ELECTRON.md)** - Migration guide
+2. **[zenith-core/README.md](./zenith-core/README.md)** - Core engine documentation
+3. **JUCE Documentation** - https://docs.juce.com/
 
 ### Start Developing
 
-**UI Development (QML):**
-- Edit files in `src/qt-qml/qml/`
-- QML supports hot-reload for rapid iteration
-- See Qt Quick documentation: https://doc.qt.io/qt-6/qtquick-index.html
+**Adding UI Components:**
+- Edit `zenith-core/src/MainWindow.cpp`
+- Add new JUCE components to `MainComponent`
+- JUCE uses immediate-mode GUI (paint + resized callbacks)
 
-**Audio Development (C++):**
-- Edit files in `src/juce-engine/Source/`
-- Rebuild after changes: `./build.sh`
-- See JUCE documentation: https://docs.juce.com/
+**Audio Engine:**
+- Core logic in `zenith-core/src/Engine.cpp`
+- Audio primitives in `zenith-core/Source/engine/`
+- ValueTree state in `zenith-core/src/ProjectState.cpp`
 
-**Qt/JUCE Bridge:**
-- Edit `src/qt-qml/bridge/AudioEngineInterface.h/cpp`
-- Exposes audio engine to QML via Qt properties
+**Testing:**
+```bash
+cd zenith-core/build
+ctest  # Run unit tests
+```
 
 ---
 
 ## 🎉 You're Ready!
 
-You now have a professional-grade DAW running with:
-- ✅ Modern Qt/QML UI with hardware-accelerated animations
-- ✅ Professional audio engine foundation (JUCE)
+You now have a professional-grade native DAW running with:
+- ✅ Pure C++ JUCE native UI
+- ✅ Real-time audio engine (JUCE 8.0.9)
 - ✅ Cross-platform support (Windows, macOS, Linux)
-- ✅ All Windows audio APIs (ASIO, WASAPI, DirectSound, MME)
+- ✅ ValueTree-based project state
+- ✅ Track automation system
+- ✅ Zero web dependencies
 
 **Happy developing! 🎵🚀**
 
 ---
 
-## 💡 Tips
+## 💡 Development Tips
 
-### Development Workflow
+### Build Performance
 
-1. **Edit QML files** - UI changes
-2. **Rebuild if needed** - `./build.sh`
-3. **Run** - `./run.sh`
-4. **Iterate** - Repeat
-
-### Performance
-
-- Build in **Release** mode for performance
-- Build in **Debug** mode for debugging
-- Use `ccache` to speed up rebuilds (Linux/macOS)
+- **Use Release mode** for performance testing
+- **Use Debug mode** for development and debugging
+- **Incremental builds** are fast (only changed files rebuild)
 
 ### IDE Setup
 
-**Qt Creator (Recommended):**
-1. Open `CMakeLists.txt` as project
-2. Configure kit (Qt 6.5+)
+**CLion (Recommended for JUCE):**
+1. Open `zenith-core/CMakeLists.txt` as project
+2. Configure CMake
 3. Build and run
 
 **VS Code:**
 1. Install CMake Tools extension
-2. Install Qt extension
-3. Configure CMake kit
-4. Build and debug
+2. Install C++ extension
+3. Open `zenith-core` folder
+4. Select kit and build
 
 **Visual Studio:**
-1. Open folder (`daw/`)
+1. Open folder (`zenith-core/`)
 2. CMake auto-configures
 3. Build and run
+
+**Xcode (macOS):**
+```bash
+cd zenith-core
+cmake -B build -G Xcode
+open build/ZenithDAW.xcodeproj
+```
+
+### Hot Tips
+
+- **JUCE Projucer** is NOT needed - we use CMake
+- **Console output** shows useful debug info (DBG() macros)
+- **Audio thread** is separate from UI thread (JUCE handles this)
+- **ValueTree** is the source of truth for project state
 
 ---
 
 **Questions?** Open an issue on GitHub or check the documentation.
 
-**Last Updated:** 2025-11-10
-**Version:** 1.0
+**Last Updated:** 2025-11-16
+**Version:** 2.0 (Pure JUCE Native)

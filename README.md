@@ -101,40 +101,55 @@ zenith-core/
    └─ windows/
       └─ mmcss_audio_priority.md
 
-Building (Windows)
+Building
 
-Prereqs
+Quick Start (All Platforms)
 
-Visual Studio 2022 Desktop development with C++ workload
+```bash
+./build.sh          # Linux/macOS
+build.bat           # Windows
+```
 
-CMake ≥ 3.22
+Or use CMake directly:
 
-Windows SDK (installed with VS)
+```bash
+# Navigate to zenith-core directory
+cd zenith-core
 
-Configure & Build
+# Configure (JUCE will be auto-fetched)
+cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-# Debug and Release builds
-cmake -S . -B build/Debug  -DCMAKE_BUILD_TYPE=Debug
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
+# Build
+cmake --build build --config Release -j
+```
 
-cmake --build build/Debug  -j
-cmake --build build/Release -j
+Prerequisites
+
+- CMake ≥ 3.22
+- C++20 compiler:
+  - **Windows**: Visual Studio 2022 (Desktop development with C++)
+  - **macOS**: Xcode 13+ or Clang
+  - **Linux**: GCC 10+ or Clang 12+
+- JUCE 8.0.9 (auto-fetched by CMake)
 
 
-CMake Options
+CMake Options (zenith-core)
 
--DZENITH_ENABLE_MMCSS=ON (default): enable MMCSS “Pro Audio” boost
-
--DZENITH_LTCG=OFF (default): link-time codegen toggle for Release
-
--DZENITH_WERROR_CI=OFF (local default): treat warnings as errors in CI only
-
-PDBs are generated in all configs; Release uses /DEBUG:FULL. Debug uses /DEBUG:FASTLINK.
+- `ZENITH_ENGINE_SEED_DEBUG_TRACKS=ON/OFF`: Create 8 demo tracks at startup (Debug builds)
 
 Running
 
-After building, launch the standalone app from your build output (.exe).
-Initial tests: Transport controls (play/stop/record), TrackView scrolling/zoom, Sidebar tabs, BPM entry/tap, HiDPI on mixed-scaling monitors.
+```bash
+./run.sh            # Linux/macOS
+run.bat             # Windows
+```
+
+Or run directly:
+- **Windows**: `zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW.exe`
+- **macOS**: `zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW.app`
+- **Linux**: `zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW`
+
+Initial tests: Transport controls (play/stop), audio device initialization, track automation, CPU monitoring.
 
 Performance Notes
 

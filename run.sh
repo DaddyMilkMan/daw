@@ -1,34 +1,47 @@
 #!/bin/bash
-# Run Script for Vexel DAW Qt/QML Application
+# Run Script for Zenith DAW (Pure JUCE Native)
 #
-# This script runs the Qt/QML + JUCE hybrid DAW application
+# This script runs the native JUCE DAW application
 # It will build first if needed
 
 set -e
 
-# Check if built
-if [ ! -f "build/bin/VexelDAW" ] && [ ! -f "build/VexelDAW" ]; then
-    echo "Application not built yet. Building now..."
-    ./build.sh Release
-fi
-
-# Find executable
+# Find executable in common build locations
 EXECUTABLE=""
-if [ -f "build/bin/VexelDAW" ]; then
-    EXECUTABLE="build/bin/VexelDAW"
-elif [ -f "build/VexelDAW" ]; then
-    EXECUTABLE="build/VexelDAW"
+BUILD_TYPE="${1:-Release}"
+
+# Check Release build
+if [ -f "zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW" ]; then
+    EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW"
+# Check Debug build
+elif [ -f "zenith-core/build/ZenithDAW_artefacts/Debug/ZenithDAW" ]; then
+    EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/Debug/ZenithDAW"
+# Check macOS app bundle
+elif [ -d "zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW.app" ]; then
+    EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/Release/ZenithDAW.app/Contents/MacOS/ZenithDAW"
+elif [ -d "zenith-core/build/ZenithDAW_artefacts/Debug/ZenithDAW.app" ]; then
+    EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/Debug/ZenithDAW.app/Contents/MacOS/ZenithDAW"
 fi
 
 if [ -z "$EXECUTABLE" ]; then
-    echo "❌ ERROR: VexelDAW executable not found"
-    exit 1
+    echo "Application not built yet. Building now..."
+    ./build.sh "$BUILD_TYPE"
+
+    # Try to find executable again
+    if [ -f "zenith-core/build/ZenithDAW_artefacts/$BUILD_TYPE/ZenithDAW" ]; then
+        EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/$BUILD_TYPE/ZenithDAW"
+    elif [ -d "zenith-core/build/ZenithDAW_artefacts/$BUILD_TYPE/ZenithDAW.app" ]; then
+        EXECUTABLE="zenith-core/build/ZenithDAW_artefacts/$BUILD_TYPE/ZenithDAW.app/Contents/MacOS/ZenithDAW"
+    else
+        echo "❌ ERROR: ZenithDAW executable not found after build"
+        exit 1
+    fi
 fi
 
 echo "================================="
-echo "Starting Vexel DAW..."
+echo "Starting Zenith DAW (Native JUCE)"
 echo "================================="
 echo ""
 
 # Run application
-$EXECUTABLE "$@"
+$EXECUTABLE

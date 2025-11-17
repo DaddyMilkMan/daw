@@ -1,37 +1,21 @@
 #!/bin/bash
-# Build Script for Vexel DAW Qt/QML Application
+# Build Script for Zenith DAW (Pure JUCE Native)
 #
-# This script builds the Qt/QML + JUCE hybrid DAW application
+# This script builds the native JUCE DAW application
 # Usage: ./build.sh [Debug|Release]
 
 set -e  # Exit on error
 
 # Configuration
 BUILD_TYPE="${1:-Release}"
-BUILD_DIR="build"
+BUILD_DIR="zenith-core/build"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 echo "================================="
-echo "Vexel DAW - Qt/QML + JUCE Build"
+echo "Zenith DAW - Pure JUCE Native Build"
 echo "================================="
 echo "Build type: $BUILD_TYPE"
 echo "Jobs: $JOBS"
-echo ""
-
-# Check for Qt
-echo "Checking for Qt..."
-if ! command -v qmake &> /dev/null; then
-    echo "❌ ERROR: Qt not found!"
-    echo ""
-    echo "Please install Qt 6.5+ from: https://www.qt.io/download-qt-installer"
-    echo ""
-    echo "Or set Qt path:"
-    echo "  export CMAKE_PREFIX_PATH=/path/to/Qt/6.x/gcc_64"
-    exit 1
-fi
-
-QT_VERSION=$(qmake -query QT_VERSION)
-echo "✅ Found Qt version: $QT_VERSION"
 echo ""
 
 # Check for CMake
@@ -46,15 +30,6 @@ CMAKE_VERSION=$(cmake --version | head -n1)
 echo "✅ Found $CMAKE_VERSION"
 echo ""
 
-# Check for JUCE (optional - will use placeholders if not available)
-if [ -d "JUCE" ]; then
-    echo "✅ Found JUCE framework"
-else
-    echo "⚠️  JUCE not found - using placeholder implementation"
-    echo "   To add JUCE: git submodule add https://github.com/juce-framework/JUCE.git"
-fi
-echo ""
-
 # Create build directory
 echo "Creating build directory..."
 mkdir -p "$BUILD_DIR"
@@ -62,13 +37,14 @@ cd "$BUILD_DIR"
 
 # Configure with CMake
 echo "Configuring CMake..."
+echo "  - Fetching JUCE 8.0.9 (if needed)..."
 cmake .. \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
 # Build
 echo ""
-echo "Building..."
+echo "Building Zenith DAW..."
 cmake --build . --config "$BUILD_TYPE" -j"$JOBS"
 
 # Success
@@ -77,8 +53,14 @@ echo "================================="
 echo "✅ Build completed successfully!"
 echo "================================="
 echo ""
+echo "Architecture: Pure C++ JUCE Native"
+echo "  - No Electron"
+echo "  - No React/TypeScript"
+echo "  - No Qt/QML"
+echo "  - Pure JUCE GUI"
+echo ""
 echo "To run the application:"
-echo "  ./build/bin/VexelDAW"
+echo "  ./zenith-core/build/ZenithDAW_artefacts/$BUILD_TYPE/ZenithDAW"
 echo ""
 echo "Or use: ./run.sh"
 echo ""
