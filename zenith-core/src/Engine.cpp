@@ -213,6 +213,36 @@ void Engine::addTestTracks(int count)
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
 }
 
+juce::String Engine::createTrack(const juce::String& name, const juce::String& type)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (!projectState_)
+    {
+        DBG("Engine: Cannot create track - no ProjectState attached");
+        return {};
+    }
+
+    // Add track to ProjectState (this will trigger ArrangerView to create UI)
+    juce::String trackId = projectState_->addTrack(name, type);
+
+    // Create corresponding Engine track
+    zenith::Track::Type trackType = (type == "midi") ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio;
+    auto track = std::make_unique<zenith::Track>(name, trackType);
+
+    // Prepare the track if audio is already running
+    if (currentSampleRate.load() > 0)
+    {
+        track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+    }
+
+    tracks_.push_back(std::move(track));
+
+    DBG("Engine: Created track '" + name + "' with ID " + trackId);
+
+    return trackId;
+}
+
 //==============================================================================
 // AudioIODeviceCallback Implementation
 //==============================================================================

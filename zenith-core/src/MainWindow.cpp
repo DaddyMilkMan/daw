@@ -9,11 +9,15 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng), projectState_(ps)
 {
     // Set size
     setSize(1400, 800);
+
+    // Create arranger view
+    arrangerView = std::make_unique<ArrangerView>(projectState_);
+    addAndMakeVisible(*arrangerView);
 
     // Status label
     statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
@@ -68,47 +72,6 @@ void MainComponent::paint(juce::Graphics& g)
 {
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
 }
 
 void MainComponent::resized()
@@ -140,6 +103,10 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Arranger view takes the remaining space
+    if (arrangerView)
+        arrangerView->setBounds(bounds);
 }
 
 void MainComponent::timerCallback()
@@ -192,7 +159,7 @@ MainWindow::MainWindow(const juce::String& name)
     engine->setProjectState(projectState.get());
 
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);

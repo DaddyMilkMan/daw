@@ -102,6 +102,8 @@ public:
     static const juce::Identifier PROP_PAN;
     static const juce::Identifier PROP_MUTE;
     static const juce::Identifier PROP_SOLO;
+    static const juce::Identifier PROP_ARMED;
+    static const juce::Identifier PROP_COLOUR;
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
@@ -174,6 +176,62 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Get track node by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId);
+
+    //==========================================================================
+    // Track Properties (Header Controls)
+    //==========================================================================
+
+    /**
+     * @brief Set track name
+     * @param trackId Track ID
+     * @param name New track name
+     * @param actionName Undo action name
+     * @note Message thread only, undoable
+     */
+    void setTrackName(const juce::String& trackId, const juce::String& name, const juce::String& actionName);
+
+    /**
+     * @brief Set track colour
+     * @param trackId Track ID
+     * @param colour Track colour
+     * @param actionName Undo action name
+     * @note Message thread only, undoable
+     */
+    void setTrackColour(const juce::String& trackId, juce::Colour colour, const juce::String& actionName);
+
+    /**
+     * @brief Set track mute state
+     * @param trackId Track ID
+     * @param muted Mute state
+     * @param actionName Undo action name
+     * @note Message thread only, undoable
+     */
+    void setTrackMute(const juce::String& trackId, bool muted, const juce::String& actionName);
+
+    /**
+     * @brief Set track solo state
+     * @param trackId Track ID
+     * @param soloed Solo state
+     * @param actionName Undo action name
+     * @note Message thread only, undoable
+     */
+    void setTrackSolo(const juce::String& trackId, bool soloed, const juce::String& actionName);
+
+    /**
+     * @brief Set track armed state
+     * @param trackId Track ID
+     * @param armed Armed state
+     * @param actionName Undo action name
+     * @note Message thread only, undoable
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed, const juce::String& actionName);
 
     //==========================================================================
     // Phase 13: Automation Management

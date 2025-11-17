@@ -163,6 +163,15 @@ public:
      */
     void addTestTracks(int count);
 
+    /**
+     * @brief Create a new track in both Engine and ProjectState
+     * @param name Track name
+     * @param type Track type ("audio" or "midi")
+     * @return Track ID from ProjectState
+     * @note Message thread only; use this instead of addTestTracks for real tracks
+     */
+    juce::String createTrack(const juce::String& name, const juce::String& type);
+
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================

@@ -57,6 +57,8 @@ const juce::Identifier ProjectState::PROP_VOLUME("volume");
 const juce::Identifier ProjectState::PROP_PAN("pan");
 const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
+const juce::Identifier ProjectState::PROP_ARMED("armed");
+const juce::Identifier ProjectState::PROP_COLOUR("colour");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
@@ -231,6 +233,8 @@ juce::String ProjectState::addTrack(const juce::String& name, const juce::String
     track.setProperty(PROP_PAN, 0.0, nullptr);
     track.setProperty(PROP_MUTE, false, nullptr);
     track.setProperty(PROP_SOLO, false, nullptr);
+    track.setProperty(PROP_ARMED, false, nullptr);
+    track.setProperty(PROP_COLOUR, static_cast<int>(juce::Colour(0xff808080).getARGB()), nullptr);  // Default grey
 
     // Create empty CLIPS node
     track.appendChild(juce::ValueTree(ID_CLIPS), nullptr);
@@ -264,6 +268,75 @@ int ProjectState::getNumTracks() const
         return tracksNode.getNumChildren();
 
     return 0;
+}
+
+juce::ValueTree ProjectState::getTrack(const juce::String& trackId)
+{
+    return findTrack(trackId);
+}
+
+//==============================================================================
+// Track Properties (Header Controls)
+//==============================================================================
+
+void ProjectState::setTrackName(const juce::String& trackId, const juce::String& name, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_NAME, name, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " name to '" + name + "'");
+    }
+}
+
+void ProjectState::setTrackColour(const juce::String& trackId, juce::Colour colour, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_COLOUR, static_cast<int>(colour.getARGB()), &undoManager);
+        DBG("ProjectState: Set track " + trackId + " colour");
+    }
+}
+
+void ProjectState::setTrackMute(const juce::String& trackId, bool muted, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_MUTE, muted, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " mute to " + juce::String(muted));
+    }
+}
+
+void ProjectState::setTrackSolo(const juce::String& trackId, bool soloed, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_SOLO, soloed, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " solo to " + juce::String(soloed));
+    }
+}
+
+void ProjectState::setTrackArmed(const juce::String& trackId, bool armed, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_ARMED, armed, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " armed to " + juce::String(armed));
+    }
 }
 
 //==============================================================================

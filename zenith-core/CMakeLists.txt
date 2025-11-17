@@ -92,6 +92,10 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # UI Components (Track Header)
+    src/ui/TrackHeaderComponent.cpp
+    src/ui/ArrangerView.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

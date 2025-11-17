@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ui/ArrangerView.h"
 
 //==============================================================================
 /**
@@ -34,7 +35,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -62,6 +63,7 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState_;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +78,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Arranger view with track headers
+    std::unique_ptr<ArrangerView> arrangerView;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
