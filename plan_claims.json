@@ -1,0 +1,1309 @@
+{
+  "claims": [
+    {
+      "id": "C001",
+      "section_id": "1",
+      "section_title": "Executive Summary - Current State",
+      "text": "Repository contains 59.5% Makefile code (bloated from generated build artifacts)",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/build/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C002",
+      "section_id": "1",
+      "section_title": "Executive Summary - Current State",
+      "text": "TypeScript comprises 18.9% of codebase (too dominant for auxiliary features)",
+      "mode": "descriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G1"
+    },
+    {
+      "id": "C003",
+      "section_id": "1",
+      "section_title": "Executive Summary - Current State",
+      "text": "CMake is 12.0% of codebase (fragmented across multiple projects)",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/CMakeLists.txt", "vexel-daw/CMakeLists.txt", "VexelDAW-Native/CMakeLists.txt"]
+      },
+      "duplicate_group": "G2"
+    },
+    {
+      "id": "C004",
+      "section_id": "1",
+      "section_title": "Executive Summary - Current State",
+      "text": "C++/C code is only ~7.3% of repository (critically low for a DAW)",
+      "mode": "descriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G3"
+    },
+    {
+      "id": "C005",
+      "section_id": "1",
+      "section_title": "Executive Summary - Target State",
+      "text": "Target: C++ Audio Engine should comprise 50-60% of codebase",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C006",
+      "section_id": "1",
+      "section_title": "Executive Summary - Target State",
+      "text": "Target: Build tooling should be <15% of codebase",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["cmake/", "CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C007",
+      "section_id": "1",
+      "section_title": "Executive Summary - Target State",
+      "text": "Target: TypeScript/JS should be <15% of codebase (auxiliary UI only)",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/webui/"]
+      },
+      "duplicate_group": "G1"
+    },
+    {
+      "id": "C008",
+      "section_id": "1",
+      "section_title": "Executive Summary - Target State",
+      "text": "Target: Lua scripting layer should be 5-10% of codebase",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C009",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "140MB zenith-core/build/ directory with generated Makefiles is checked into repository",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/build/"]
+      },
+      "duplicate_group": "G4"
+    },
+    {
+      "id": "C010",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "Three separate CMake projects exist (zenith-core, vexel-daw, VexelDAW-Native)",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/CMakeLists.txt", "vexel-daw/CMakeLists.txt", "VexelDAW-Native/CMakeLists.txt"]
+      },
+      "duplicate_group": "G2"
+    },
+    {
+      "id": "C011",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "JUCE FetchContent is redundantly declared in multiple CMake files",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C012",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "Plan: Unified CMake architecture with /cmake/ directory for modular scripts",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["cmake/AudioDrivers.cmake", "cmake/JUCEConfig.cmake", "cmake/CompilerWarnings.cmake"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C013",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "Plan: Single CMakeLists.txt at root as source of truth for JUCE dependency",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C014",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": "Plan: Build artifacts must be excluded from repository via .gitignore",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": [".gitignore"]
+      },
+      "duplicate_group": "G4"
+    },
+    {
+      "id": "C015",
+      "section_id": "2",
+      "section_title": "Phase 1: Build System Consolidation",
+      "text": ".gitignore must exclude build/, */build/, cmake-build-*, CMakeFiles/, CMakeCache.txt, Makefile",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": [".gitignore"]
+      },
+      "duplicate_group": "G4"
+    },
+    {
+      "id": "C016",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: /src/audio/ directory structure for core audio engine",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C017",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: AudioEngine.{h,cpp} implements main engine coordinator",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/AudioEngine.h", "src/audio/AudioEngine.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C018",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: AudioDevice.{h,cpp} provides device abstraction layer",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/AudioDevice.h", "src/audio/AudioDevice.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C019",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: MidiRouter.{h,cpp} handles MIDI I/O routing and MIDI learn",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/MidiRouter.h", "src/audio/MidiRouter.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C020",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: DSPGraph.{h,cpp} and DSPNode.{h,cpp} implement modular processing graph",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/DSPGraph.h", "src/audio/DSPGraph.cpp", "src/audio/DSPNode.h", "src/audio/DSPNode.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C021",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: Track system with AudioTrack and MidiTrack implementations",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/Track.h", "src/audio/Track.cpp", "src/audio/AudioTrack.h", "src/audio/AudioTrack.cpp", "src/audio/MidiTrack.h", "src/audio/MidiTrack.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C022",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: Clip system with AudioClip and MidiClip implementations",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/Clip.h", "src/audio/Clip.cpp", "src/audio/AudioClip.h", "src/audio/AudioClip.cpp", "src/audio/MidiClip.h", "src/audio/MidiClip.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C023",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: PluginHost.{h,cpp} for VST3/AU hosting",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/PluginHost.h", "src/audio/PluginHost.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C024",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: PluginScanner.{h,cpp} for plugin discovery",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/PluginScanner.h", "src/audio/PluginScanner.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C025",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: MixerChannel and MixerBus for mixer/routing system",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/MixerChannel.h", "src/audio/MixerChannel.cpp", "src/audio/MixerBus.h", "src/audio/MixerBus.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C026",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Plan: Built-in DSP nodes in src/audio/nodes/ (Oscillator, Filter, Gain, Delay, Reverb)",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/nodes/OscillatorNode.h", "src/audio/nodes/FilterNode.h", "src/audio/nodes/GainNode.h", "src/audio/nodes/DelayNode.h", "src/audio/nodes/ReverbNode.h"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C027",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Architecture: Audio callback must be real-time safe (lock-free, no allocations)",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/AudioEngine.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C028",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Architecture: Transport state must use atomic operations",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/AudioEngine.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C029",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "Architecture: CPU usage monitoring and xrun detection must be implemented",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/AudioEngine.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C030",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "MidiRouter supports multi-device MIDI input with flexible routing matrix",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/MidiRouter.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C031",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "MidiRouter implements MIDI learn for parameter automation",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/MidiRouter.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C032",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "AudioDrivers.cmake detects platform-specific drivers (ASIO/WASAPI/DirectSound on Windows)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["cmake/AudioDrivers.cmake"]
+      },
+      "duplicate_group": "G5"
+    },
+    {
+      "id": "C033",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "AudioDrivers.cmake detects CoreAudio on macOS",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["cmake/AudioDrivers.cmake"]
+      },
+      "duplicate_group": "G5"
+    },
+    {
+      "id": "C034",
+      "section_id": "3",
+      "section_title": "Phase 2: C++ Audio Engine Expansion",
+      "text": "AudioDrivers.cmake detects ALSA/JACK/PulseAudio on Linux",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["cmake/AudioDrivers.cmake"]
+      },
+      "duplicate_group": "G5"
+    },
+    {
+      "id": "C035",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: /src/ui/ directory structure for JUCE native UI",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C036",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: MainWindow.{h,cpp} implements application window",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/MainWindow.h", "src/ui/MainWindow.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C037",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: ArrangementView in src/ui/arrangement/ for timeline/clips view",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/arrangement/ArrangementView.h", "src/ui/arrangement/TrackHeader.h", "src/ui/arrangement/ClipComponent.h"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C038",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: MixerPanel in src/ui/mixer/ with ChannelStrip and MeterComponent",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/mixer/MixerPanel.h", "src/ui/mixer/ChannelStrip.h", "src/ui/mixer/MeterComponent.h"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C039",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: FileBrowser and PluginBrowser in src/ui/browser/",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/browser/FileBrowser.h", "src/ui/browser/PluginBrowser.h"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C040",
+      "section_id": "4",
+      "section_title": "Phase 3: Native UI Layer (JUCE-based)",
+      "text": "Plan: TransportBar in src/ui/transport/ for play/stop/record controls",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/ui/transport/TransportBar.h"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C041",
+      "section_id": "5",
+      "section_title": "Phase 4: Auxiliary Web UI",
+      "text": "Strategy: Web UI only handles non-critical, latency-tolerant features",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C042",
+      "section_id": "5",
+      "section_title": "Phase 4: Auxiliary Web UI",
+      "text": "Plan: /src/webui/ directory for marketplace, cloud-sync, tutorials, analytics",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/webui/marketplace/", "src/webui/cloud-sync/", "src/webui/tutorials/", "src/webui/analytics/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C043",
+      "section_id": "5",
+      "section_title": "Phase 4: Auxiliary Web UI",
+      "text": "WebUIBridge exposes C++ API via embedded web server",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C044",
+      "section_id": "5",
+      "section_title": "Phase 4: Auxiliary Web UI",
+      "text": "Architecture: Core DAW logic stays in C++, web UI is only view layer",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C045",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Plan: Lua integration with LuaJIT support",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C046",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Plan: ScriptEngine.{h,cpp} wraps Lua VM",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/ScriptEngine.h", "scripts/ScriptEngine.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C047",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Plan: AudioEngineBindings.{h,cpp} provides C++ → Lua bindings",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/AudioEngineBindings.h", "scripts/AudioEngineBindings.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C048",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Example Lua scripts in scripts/examples/ (automate_volume.lua, create_tracks.lua, midi_mapper.lua)",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/examples/automate_volume.lua", "scripts/examples/create_tracks.lua", "scripts/examples/midi_mapper.lua"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C049",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Lua bindings expose transport control (play, stop, setTempo)",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/AudioEngineBindings.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C050",
+      "section_id": "6",
+      "section_title": "Phase 5: Scripting & Automation (Lua)",
+      "text": "Lua bindings expose track management (addAudioTrack, setTrackVolume, setTrackPan)",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["scripts/AudioEngineBindings.cpp"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C051",
+      "section_id": "7",
+      "section_title": "Phase 6: Repository Restructuring",
+      "text": "Migration: Consolidate C++ code from VexelDAW-Native/Source/Audio/, zenith-core/src/Engine.cpp, src/juce-engine/Source/ to src/audio/",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/audio/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C052",
+      "section_id": "7",
+      "section_title": "Phase 6: Repository Restructuring",
+      "text": "Migration: Remove fragmented CMakeLists.txt files (zenith-core/CMakeLists.txt, VexelDAW-Native/CMakeLists.txt)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/CMakeLists.txt", "VexelDAW-Native/CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C053",
+      "section_id": "7",
+      "section_title": "Phase 6: Repository Restructuring",
+      "text": "Migration: Clean build artifacts (remove zenith-core/build/, build/)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["zenith-core/build/", "build/"]
+      },
+      "duplicate_group": "G4"
+    },
+    {
+      "id": "C054",
+      "section_id": "7",
+      "section_title": "Phase 6: Repository Restructuring",
+      "text": "Migration: Move TypeScript web UI to src/webui/ auxiliary location",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["src/webui/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C055",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Before refactor: Makefile comprises 59.5% (~180,000 lines)",
+      "mode": "descriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G3"
+    },
+    {
+      "id": "C056",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Before refactor: TypeScript comprises 18.9% (~57,000 lines)",
+      "mode": "descriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G1"
+    },
+    {
+      "id": "C057",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Before refactor: C++ comprises only 6.0% (~18,000 lines)",
+      "mode": "descriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G3"
+    },
+    {
+      "id": "C058",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "After refactor target: C++ should be 55.0% (~165,000 lines)",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G3"
+    },
+    {
+      "id": "C059",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "After refactor target: CMake should be 10.0% (~30,000 lines)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C060",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "After refactor target: Lua should be 8.3% (~25,000 lines)",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C061",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "After refactor target: TypeScript should be 11.7% (~35,000 lines)",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G1"
+    },
+    {
+      "id": "C062",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "After refactor target: Makefile should be reduced to 5.0% (~15,000 lines)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C063",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Projection: C++ expansion requires +147,000 lines",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C064",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Projection: Build system reduction of -156,000 lines (remove generated Makefiles, consolidate CMake)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C065",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "Projection: TypeScript reduction of -22,000 lines",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C066",
+      "section_id": "8",
+      "section_title": "Phase 7: Language Distribution Projection",
+      "text": "C++ expansion breakdown: AudioEngine (~12k), DSP nodes (~8k), MIDI (~6k), Track/Clip (~10k), Plugin hosting (~15k), Mixer (~8k), UI (~45k), Tests (~25k)",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C067",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 1-2: Consolidate CMake build system and update .gitignore",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C068",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 3-6: Implement AudioEngine, MidiRouter, DSPNode framework, and Track/Clip system",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C069",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 7-10: Implement plugin hosting (VST3/AU), plugin scanner, and mixer system",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C070",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 11-14: Implement JUCE UI layer (MainWindow, ArrangementView, MixerPanel, TransportBar)",
+      "mode": "prescriptive",
+      "domain": "ui-ux",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C071",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 15-16: Integrate Lua scripting with C++ bindings and example scripts",
+      "mode": "prescriptive",
+      "domain": "command-api",
+      "check_target": "n/a",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C072",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 17-18: Testing & polish (50%+ unit test coverage, performance profiling, memory leak checks)",
+      "mode": "prescriptive",
+      "domain": "tests-ci",
+      "check_target": "tests",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["tests/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C073",
+      "section_id": "9",
+      "section_title": "Implementation Roadmap",
+      "text": "Week 19-20: Documentation (API reference, architecture guide, user manual)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "docs",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["docs/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C074",
+      "section_id": "10",
+      "section_title": "Build Instructions & Requirements",
+      "text": "Build requires CMake 3.22+",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "docs",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C075",
+      "section_id": "10",
+      "section_title": "Build Instructions & Requirements",
+      "text": "Build requires C++20 compiler (GCC 10+, Clang 12+, MSVC 2019+)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "docs",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C076",
+      "section_id": "10",
+      "section_title": "Build Instructions & Requirements",
+      "text": "Windows build optionally requires ASIO SDK for low-latency audio",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "docs",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C077",
+      "section_id": "10",
+      "section_title": "Build Instructions & Requirements",
+      "text": "Linux build requires libasound2-dev (ALSA), optionally libjack-dev and libpulse-dev",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "docs",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C078",
+      "section_id": "10",
+      "section_title": "Build Instructions & Requirements",
+      "text": "CMake build options: VEXEL_BUILD_TESTS, VEXEL_ENABLE_LUA, VEXEL_BUILD_WEBUI, ASIO_SDK_DIR",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["CMakeLists.txt"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C079",
+      "section_id": "10",
+      "section_title": "Testing",
+      "text": "Tests runnable via ctest --output-on-failure",
+      "mode": "prescriptive",
+      "domain": "tests-ci",
+      "check_target": "tests",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["tests/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C080",
+      "section_id": "10",
+      "section_title": "Testing",
+      "text": "Specific test suites: audio_engine_tests, dsp_node_tests, midi_router_tests",
+      "mode": "prescriptive",
+      "domain": "tests-ci",
+      "check_target": "tests",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": ["tests/audio/", "tests/dsp/", "tests/midi/"]
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C081",
+      "section_id": "10",
+      "section_title": "Performance Targets",
+      "text": "Target: CPU usage <10% at 48kHz, 128 samples buffer",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "runtime",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C082",
+      "section_id": "10",
+      "section_title": "Performance Targets",
+      "text": "Target: Latency <5ms with ASIO driver",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "runtime",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C083",
+      "section_id": "10",
+      "section_title": "Performance Targets",
+      "text": "Target: Support 100+ tracks before dropout",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "runtime",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C084",
+      "section_id": "10",
+      "section_title": "Performance Targets",
+      "text": "Target: Support 50+ plugin instances",
+      "mode": "prescriptive",
+      "domain": "plugins-midi",
+      "check_target": "runtime",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C085",
+      "section_id": "10",
+      "section_title": "Performance Targets",
+      "text": "Target: Memory footprint <500MB",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "runtime",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    },
+    {
+      "id": "C086",
+      "section_id": "10",
+      "section_title": "Conclusion",
+      "text": "Repository should achieve C++ dominance at 55% (up from 6%)",
+      "mode": "prescriptive",
+      "domain": "engine-core",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": "G3"
+    },
+    {
+      "id": "C087",
+      "section_id": "10",
+      "section_title": "Conclusion",
+      "text": "Repository should reduce build tooling to 10% (down from 72%)",
+      "mode": "prescriptive",
+      "domain": "docs-infra",
+      "check_target": "code",
+      "targets": {
+        "repos": ["zenith-core"],
+        "branches": [],
+        "files": []
+      },
+      "duplicate_group": null
+    }
+  ]
+}
