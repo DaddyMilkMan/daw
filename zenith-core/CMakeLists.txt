@@ -219,6 +219,35 @@ target_compile_definitions(ProjectStateTests PRIVATE
 add_test(NAME ProjectStateTests COMMAND ProjectStateTests)
 
 # ============================================================================
+# Tempo/BPM Logic Tests
+# ============================================================================
+
+juce_add_console_app(TempoTests
+    PRODUCT_NAME "TempoTests"
+)
+
+target_sources(TempoTests PRIVATE
+    tests/TempoTests.cpp
+    src/ProjectState.cpp
+)
+
+target_include_directories(TempoTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+target_link_libraries(TempoTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+)
+
+target_compile_definitions(TempoTests PRIVATE
+    JUCE_USE_CURL=0
+)
+
+add_test(NAME TempoTests COMMAND TempoTests)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 
