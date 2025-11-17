@@ -1,8 +1,35 @@
-# Migration from Electron to Qt/QML + JUCE
+# ⚠️ DEPRECATED: Migration from Electron to Qt/QML + JUCE
 
-## Overview
+---
 
-This document outlines the comprehensive migration strategy from the current Electron-based architecture to a professional Qt/QML + JUCE hybrid architecture.
+## ⚠️ DEPRECATION NOTICE
+
+**This document is OBSOLETE and retained for historical reference only.**
+
+**What Actually Happened:** Zenith DAW migrated from Electron/React prototypes directly to **100% native JUCE 8**. The Qt/QML hybrid approach described here was never implemented.
+
+**Current Architecture:**
+- Pure JUCE C++ application (`zenith-core/`)
+- Native JUCE Components for all UI (MainWindow, Arranger, Mixer, Piano Roll, etc.)
+- No Qt/QML, no Electron, no web technologies
+
+**Why This Path Was Rejected:**
+- Qt/QML adds complexity without benefits for DAW development
+- JUCE provides complete audio + UI framework
+- Simpler to learn, maintain, and deploy as single framework
+
+**See instead:**
+- `/zenith-core/` for the current JUCE-native implementation
+- Project root `README.md` for actual architecture
+- `docs/tech-briefs/05-qt-qml-performance-analysis.md` for why JUCE was chosen
+
+---
+
+## Original Overview (Deprecated)
+
+This document outlined a comprehensive migration strategy from Electron to a Qt/QML + JUCE hybrid architecture.
+
+**This migration never happened. The project went directly to pure JUCE instead.**
 
 ---
 

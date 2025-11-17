@@ -1,20 +1,39 @@
-# Web Embedding Strategy: CEF vs WebView2 vs WKWebView
-
-**Decision Document for Wingman AI Panel Embedding**
-**Version:** 1.0
-**Date:** 2025-11-10
+# ⚠️ DEPRECATED: Web Embedding Strategy: CEF vs WebView2 vs WKWebView
 
 ---
 
-## Executive Summary
+## ⚠️ DEPRECATION NOTICE
 
-This document evaluates three web embedding technologies for the Wingman AI panel in Zenith DAW:
+**This document is OBSOLETE and retained for historical reference only.**
+
+**Current Reality:** Zenith DAW uses **100% native JUCE 8** for all UI components. No web embedding (CEF/WebView2/WKWebView) is used.
+
+**What Changed:**
+- No "Wingman AI panel" or other web-based UI exists
+- All UI is built with JUCE Components (C++)
+- No plans to embed web technologies
+
+**Why Deprecated:**
+- Web embedding adds 80-100MB to deployment size (CEF)
+- Introduces security and update maintenance burden
+- JUCE Components provide sufficient UI capabilities
+- Performance and consistency benefits from pure native code
+
+**See instead:**
+- `/zenith-core/Source/ui/` for actual JUCE UI implementation
+- Project root `README.md` for current architecture
+
+---
+
+## Original Executive Summary (Deprecated)
+
+This document evaluated three web embedding technologies for a "Wingman AI panel":
 
 1. **CEF (Chromium Embedded Framework)** - Full-featured, cross-platform
 2. **WebView2** - Windows-native, lightweight
 3. **WKWebView** - macOS-native, sandboxed
 
-**Recommendation:** Use **CEF as the default** for identical cross-platform behavior, with platform-specific WebView2/WKWebView as an optional optimization if willing to maintain dual implementations.
+**This evaluation is moot. No web embedding is used in Zenith.**
 
 ---
 

@@ -1,12 +1,33 @@
-# Qt/QML + JUCE Hybrid Architecture
+# ⚠️ DEPRECATED: Qt/QML + JUCE Hybrid Architecture
 
-## Executive Summary
+---
 
-This DAW project uses a **hybrid architecture** combining the strengths of two industry-standard frameworks:
+## ⚠️ DEPRECATION NOTICE
+
+**This document is OBSOLETE and retained for historical reference only.**
+
+**Current Architecture:** Zenith DAW uses **100% native JUCE 8** for all UI and audio components. No Qt/QML is used.
+
+**Why Deprecated:**
+- Qt/QML adds unnecessary complexity and deployment size
+- JUCE Components provide complete UI functionality for DAWs
+- Plugin hosting integration is simpler with pure JUCE
+- Industry-standard DAWs use native frameworks (JUCE, custom C++)
+
+**See instead:**
+- `/zenith-core/` for the current JUCE-native implementation
+- `docs/tech-briefs/01-juce-framework-guide.md` for JUCE guidance
+- Project root `README.md` for current architecture overview
+
+---
+
+## Original Executive Summary (Deprecated)
+
+This document described a **hybrid architecture** combining:
 - **JUCE** - Professional audio engine with VST/AU/AAX plugin support
 - **Qt/QML** - Modern, fluid, hardware-accelerated UI framework
 
-This approach is used by professional audio software companies and provides the optimal balance between audio performance and UI flexibility.
+**This approach was explored but rejected in favor of pure JUCE.**
 
 ---
 

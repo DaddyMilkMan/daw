@@ -8,11 +8,13 @@
 
 This documentation suite provides research-backed, source-cited guidance for building **Zenith DAW**, a professional Digital Audio Workstation using:
 
-- **C++20 + JUCE 8.0.9** for the audio engine and core UI (~85%)
-- **HTML/CSS + TypeScript (CEF)** for the Wingman AI panel (~10%)
-- **C/SIMD kernels** for DSP hotspots (~5%)
+- **C++17 + JUCE 8.x** for the complete application (audio engine, UI, all components)
+- **100% native JUCE Components** for all UI (no web tech, no Qt/QML, no Electron)
+- **C/SIMD kernels** for DSP hotspots when needed
 
 All documents include **official documentation links**, **community best practices**, and **actionable implementation checklists**.
+
+**Note:** Earlier architectural explorations considered Qt/QML, Electron, and CEF for UI. These approaches have been **deprecated** in favor of a pure JUCE-native architecture. See legacy docs (marked as deprecated) for historical context.
 
 ---
 
@@ -40,24 +42,16 @@ All documents include **official documentation links**, **community best practic
 
 ---
 
-### 🌐 02. Web Embedding Decision
+### 🌐 02. Web Embedding Decision ⚠️ **DEPRECATED**
 **File:** [`tech-briefs/02-web-embedding-decision.md`](tech-briefs/02-web-embedding-decision.md)
 
-**Purpose:** Evaluate CEF vs WebView2 vs WKWebView for the Wingman AI panel
+**Status:** **DEPRECATED** - This exploration is obsolete. Zenith uses 100% native JUCE UI.
 
-**Topics:**
-- Feature comparison (custom protocols, DevTools, sandboxing, footprint)
-- Platform coverage (CEF: all platforms; WebView2: Windows-only; WKWebView: macOS-only)
-- JavaScript bridge patterns (JSON-over-WebSocket recommended)
-- Security model (localhost binding, origin checks, token auth)
-- JUCE + CEF integration sketch
+**Original Purpose:** Evaluate CEF vs WebView2 vs WKWebView for a web-based UI panel
 
-**Deliverables:**
-- Trade-off table
-- JUCE + CEF integration code stubs
-- Risk matrix with mitigations
+**Why Deprecated:** The project migrated to a pure JUCE-native architecture. No web embedding is used or planned.
 
-**Key Takeaway:** Use **CEF** for cross-platform consistency. WebView2/WKWebView only if willing to maintain dual implementations.
+**Historical Context:** This document evaluated web technologies for UI panels, but performance and integration concerns led to adopting pure JUCE Components instead.
 
 ---
 
@@ -104,23 +98,16 @@ All documents include **official documentation links**, **community best practic
 
 ---
 
-### 🖼️ 05. Qt/QML Performance Analysis
+### 🖼️ 05. Qt/QML Performance Analysis ⚠️ **DEPRECATED**
 **File:** [`tech-briefs/05-qt-qml-performance-analysis.md`](tech-briefs/05-qt-qml-performance-analysis.md)
 
-**Purpose:** Reality check on Qt Quick/QML for DAW development
+**Status:** **DEPRECATED** - This analysis is historical. Decision already made: pure JUCE.
 
-**Topics:**
-- What QML does well (modern UI aesthetics, GPU-accelerated scene graph)
-- Where QML struggles (audio engine integration, event system latency, plugin GUI hosting)
-- JUCE vs Qt/QML comparison table
-- Why JUCE is renowned for audio
-- Risk matrix
+**Original Purpose:** Evaluate Qt Quick/QML as UI framework for DAW development
 
-**Deliverables:**
-- Concise decision brief explaining when QML is acceptable vs when JUCE is preferred
-- Risk matrix comparing Qt/QML and JUCE
+**Conclusion Reached:** Use **JUCE for the entire native UI**. Qt/QML adds no value for DAW development.
 
-**Key Takeaway:** Use **JUCE for the entire native UI**. Qt/QML adds no value for DAW development and creates integration headaches.
+**Why Deprecated:** The analysis correctly concluded that JUCE is superior for DAW UI. This document remains for reference but is not part of the current architecture.
 
 ---
 
@@ -242,9 +229,10 @@ cmake --build .
 3. Document 02: Web Embedding Decision (understand Wingman AI architecture)
 
 **For UI Designers:**
-1. Document 01: JUCE Framework Guide (understand UI constraints)
-2. Document 05: Qt/QML Performance Analysis (understand why not using QML)
-3. Document 02: Web Embedding Decision (understand web tech is isolated to AI panel)
+1. Document 01: JUCE Framework Guide (understand JUCE UI framework)
+2. Document 06: Audio Thread Safety Policy (understand UI/audio thread separation)
+3. ~~Document 05: Qt/QML Performance Analysis~~ (deprecated - historical)
+4. ~~Document 02: Web Embedding Decision~~ (deprecated - not used)
 
 ---
 
@@ -252,34 +240,30 @@ cmake --build .
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Zenith DAW (C++ / JUCE)                                        │
+│  Zenith DAW (100% C++ / JUCE 8)                                 │
 │  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Core UI (JUCE Components)                                │   │
-│  │  - Timeline / Arrangement (zoomable)                     │   │
+│  │ JUCE Components UI (Native)                              │   │
+│  │  - MainWindow / MainComponent                            │   │
+│  │  - Arranger (timeline, tracks, clips)                    │   │
 │  │  - Mixer (meters, inserts, sends)                        │   │
-│  │  - Piano Roll                                            │   │
+│  │  - Piano Roll (MIDI editor)                              │   │
 │  │  - Inspector / Browser                                   │   │
+│  │  - Custom ZenithLookAndFeel (dark theme, vectors)        │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │ Audio Engine (Real-Time)                                 │   │
+│  │  - AudioDeviceManager (ASIO, CoreAudio, WASAPI)          │   │
 │  │  - AudioProcessorGraph (mixer, routing)                  │   │
 │  │  - Plugin Hosting (VST3, AU)                             │   │
-│  │  - Audio I/O (ASIO, CoreAudio, WASAPI)                   │   │
 │  │  - MIDI Processing                                       │   │
+│  │  - Track Automation System                               │   │
 │  └──────────────────────────────────────────────────────────┘   │
 │                                                                  │
 │  ┌──────────────────────────────────────────────────────────┐   │
 │  │ Project State (ValueTree + UndoManager)                  │   │
 │  │  - Tracks, Clips, Automation, Settings                   │   │
 │  │  - Save/Load (XML serialization)                         │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│                                                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Wingman AI Panel (CEF / React + TS)                      │   │
-│  │  - Chat interface                                        │   │
-│  │  - Command preview/diff                                  │   │
-│  │  - WebSocket bridge to native (JSON)                     │   │
 │  └──────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -290,12 +274,13 @@ cmake --build .
 
 | **Layer** | **Technology** | **Percentage** | **Purpose** |
 |-----------|---------------|----------------|-------------|
-| **Audio Engine** | C++20 + JUCE 8.0.9 | ~60% | Real-time audio processing, plugin hosting |
-| **Core UI** | JUCE Components | ~25% | Timeline, mixer, piano roll, browser |
-| **Wingman AI Panel** | CEF + React/TS | ~10% | AI chat interface (isolated from audio) |
-| **DSP Kernels** | C/SIMD | ~5% | Hotspot optimizations (FFT, filters) |
+| **Audio Engine** | C++17 + JUCE 8.x | ~50% | Real-time audio processing, plugin hosting |
+| **UI Layer** | JUCE Components | ~45% | All UI (arranger, mixer, piano roll, browser, inspector) |
+| **DSP Kernels** | C/SIMD | ~5% | Hotspot optimizations when needed (FFT, filters) |
 
-**Total Lines of Code (Estimated):** ~150,000-200,000 LOC for a commercial DAW
+**Current Implementation:** See `zenith-core/` directory for the JUCE-native codebase.
+
+**Total Lines of Code (Estimated):** ~100,000-150,000 LOC for commercial-grade DAW with native UI
 
 ---
 

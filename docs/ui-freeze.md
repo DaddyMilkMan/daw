@@ -1,13 +1,36 @@
-# UI Freeze Documentation
-
-**Date**: 2025-11-10
-**Purpose**: Freeze Electron/React UI and establish adapter layer for future native engine integration
+# ⚠️ LEGACY: UI Freeze Documentation (Electron/React Prototype)
 
 ---
 
-## Overview
+## ⚠️ LEGACY DOCUMENT NOTICE
 
-This document captures the complete state of the Vexel DAW UI at the time of the engine adapter freeze. After this point, all state mutations must go through the Engine Client adapter, ensuring we can swap the backend engine without touching UI code.
+**This document describes an OBSOLETE Electron/React prototype that was never shipped.**
+
+**Current Reality:** Zenith DAW is a **100% native JUCE 8 C++ application**. No Electron, no React, no web UI exists.
+
+**What This Doc Describes:**
+- Early Electron/React UI prototype for experimentation
+- Mock audio engine (no real audio processing)
+- UI state management via IPC to Electron main process
+
+**Why This Exists:**
+- Historical record of early prototyping phase
+- Documents lessons learned before migrating to JUCE
+- Reference for understanding architectural evolution
+
+**See instead:**
+- `/zenith-core/` for the current JUCE-native implementation
+- Project root `README.md` for actual architecture
+- `docs/tech-briefs/01-juce-framework-guide.md` for JUCE patterns
+
+---
+
+## Original Overview (Legacy Prototype)
+
+**Date**: 2025-11-10
+**Purpose**: Documented the Electron/React UI prototype state before considering migration paths.
+
+This document captured the complete state of an early Electron-based DAW UI prototype. **This prototype was superseded by the JUCE-native implementation.**
 
 ---
 
