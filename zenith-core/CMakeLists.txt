@@ -219,6 +219,51 @@ target_compile_definitions(ProjectStateTests PRIVATE
 add_test(NAME ProjectStateTests COMMAND ProjectStateTests)
 
 # ============================================================================
+# Engine Smoke Tests
+# ============================================================================
+
+juce_add_console_app(EngineSmokeTests
+    PRODUCT_NAME "EngineSmokeTests"
+)
+
+target_sources(EngineSmokeTests PRIVATE
+    tests/EngineSmokeTests.cpp
+    src/Engine.cpp
+    src/ProjectState.cpp
+    src/TrackAutomationSynchronizer.cpp
+    src/CommandAPI.cpp
+    Source/engine/Track.cpp
+    Source/engine/Clip.cpp
+    Source/engine/MixerChannel.cpp
+)
+
+target_include_directories(EngineSmokeTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+)
+
+target_link_libraries(EngineSmokeTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+)
+
+target_compile_definitions(EngineSmokeTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_OGGVORBIS=1
+    JUCE_USE_FLAC=1
+    JUCE_USE_MP3AUDIOFORMAT=1
+)
+
+add_test(NAME EngineSmokeTests COMMAND EngineSmokeTests)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 
