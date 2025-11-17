@@ -4,13 +4,15 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../include/ui/ArrangerView.h"
+#include "../include/ui/PianoRollEditor.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng), projectState(ps)
 {
     // Set size
     setSize(1400, 800);
@@ -55,6 +57,59 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Test buttons for UI
+    addTrackButton.setButtonText("Add MIDI Track");
+    addTrackButton.onClick = [this]() {
+        auto trackId = projectState.addTrack("MIDI " + juce::String(projectState.getNumTracks() + 1), "midi");
+        DBG("Added track: " + trackId);
+    };
+    addAndMakeVisible(addTrackButton);
+
+    testPianoRollButton.setButtonText("Test Piano Roll");
+    testPianoRollButton.onClick = [this]() {
+        // Create a test track and clip if none exist
+        if (projectState.getNumTracks() == 0)
+        {
+            auto trackId = projectState.addTrack("Test MIDI", "midi");
+            auto clipId = projectState.addClip(trackId, 0.0, 8.0, "Test Clip");
+            openPianoRoll(trackId, clipId);
+        }
+        else
+        {
+            // Find first MIDI clip
+            auto state = projectState.getState();
+            auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+            for (auto track : tracksNode)
+            {
+                if (track[ProjectState::PROP_TYPE].toString() == "midi")
+                {
+                    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+                    if (clipsNode.isValid() && clipsNode.getNumChildren() > 0)
+                    {
+                        auto clip = clipsNode.getChild(0);
+                        openPianoRoll(track[ProjectState::PROP_ID].toString(),
+                                    clip[ProjectState::PROP_ID].toString());
+                        return;
+                    }
+                    else
+                    {
+                        // Create a clip on this track
+                        auto trackId = track[ProjectState::PROP_ID].toString();
+                        auto clipId = projectState.addClip(trackId, 0.0, 8.0, "Test Clip");
+                        openPianoRoll(trackId, clipId);
+                        return;
+                    }
+                }
+            }
+            DBG("No MIDI tracks found");
+        }
+    };
+    addAndMakeVisible(testPianoRollButton);
+
+    // Create arranger view
+    arrangerView = std::make_unique<ArrangerView>(projectState);
+    addAndMakeVisible(*arrangerView);
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -66,49 +121,8 @@ MainComponent::~MainComponent()
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
+    // Background (arranger fills most of the space now)
+    g.fillAll(juce::Colour(0xff1e1e1e));
 }
 
 void MainComponent::resized()
@@ -117,7 +131,11 @@ void MainComponent::resized()
 
     // Top bar (status)
     auto topBar = bounds.removeFromTop(40);
-    statusLabel.setBounds(topBar.removeFromLeft(500).reduced(10, 8));
+    statusLabel.setBounds(topBar.removeFromLeft(300).reduced(10, 8));
+
+    // Test buttons
+    addTrackButton.setBounds(topBar.removeFromLeft(120).reduced(5, 5));
+    testPianoRollButton.setBounds(topBar.removeFromLeft(120).reduced(5, 5));
 
     // C4: Track count label sits on the right side of the top bar (after CPU)
     auto trackCountArea = topBar.removeFromRight(120);
@@ -140,6 +158,10 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Arranger view fills the center
+    if (arrangerView)
+        arrangerView->setBounds(bounds);
 }
 
 void MainComponent::timerCallback()
@@ -172,6 +194,31 @@ void MainComponent::refreshTrackCountLabel()
     trackCountLabel.setText("Tracks: " + juce::String(count), juce::dontSendNotification);
 }
 
+void MainComponent::openPianoRoll(const juce::String& trackId, const juce::String& clipId)
+{
+    // Close existing piano roll window if open
+    if (pianoRollWindow)
+        pianoRollWindow.reset();
+
+    // Create new piano roll editor
+    auto pianoRoll = std::make_unique<PianoRollEditor>(projectState, trackId, clipId);
+
+    // Create window
+    pianoRollWindow = std::make_unique<juce::DocumentWindow>(
+        "Piano Roll - " + clipId,
+        juce::Colours::darkgrey,
+        juce::DocumentWindow::allButtons
+    );
+
+    pianoRollWindow->setContentOwned(pianoRoll.release(), true);
+    pianoRollWindow->setResizable(true, false);
+    pianoRollWindow->setUsingNativeTitleBar(true);
+    pianoRollWindow->centreWithSize(800, 600);
+    pianoRollWindow->setVisible(true);
+
+    DBG("Opened piano roll for clip " + clipId);
+}
+
 //==============================================================================
 // MainWindow Implementation
 //==============================================================================
@@ -192,7 +239,7 @@ MainWindow::MainWindow(const juce::String& name)
     engine->setProjectState(projectState.get());
 
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);

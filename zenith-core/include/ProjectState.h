@@ -89,6 +89,8 @@ public:
     static const juce::Identifier ID_AUTOMATION;
     static const juce::Identifier ID_ENVELOPE;
     static const juce::Identifier ID_POINT;
+    static const juce::Identifier ID_NOTES;  // Container for MIDI notes
+    static const juce::Identifier ID_NOTE;   // Individual MIDI note
 
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
@@ -105,11 +107,17 @@ public:
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
+    static const juce::Identifier PROP_START_BEATS;   // Clip start in beats
+    static const juce::Identifier PROP_LENGTH_BEATS;  // Clip length in beats
 
     // Phase 13: Automation properties
     static const juce::Identifier PROP_PARAM;
     static const juce::Identifier PROP_TIME_BEATS;
     static const juce::Identifier PROP_VALUE;
+
+    // MIDI note properties
+    static const juce::Identifier PROP_NOTE_NUMBER;   // MIDI note number (0-127)
+    static const juce::Identifier PROP_VELOCITY;      // MIDI velocity (0-127)
 
     //==========================================================================
     ProjectState();
@@ -174,6 +182,98 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Get track by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId) const;
+
+    //==========================================================================
+    // Clip Management (beat-based for UI)
+    //==========================================================================
+
+    /**
+     * @brief Add a clip to a track
+     * @param trackId Track ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Length in beats
+     * @param actionName Undo action name
+     * @return Clip ID
+     * @note Message thread only, undoable
+     */
+    juce::String addClip(const juce::String& trackId, double startBeats, double lengthBeats,
+                         const juce::String& actionName);
+
+    /**
+     * @brief Move a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newStartBeats New start position in beats
+     * @param actionName Undo action name
+     * @return true if clip was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveClip(const juce::String& trackId, const juce::String& clipId,
+                  double newStartBeats, const juce::String& actionName);
+
+    /**
+     * @brief Delete a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     * @return true if clip was found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteClip(const juce::String& trackId, const juce::String& clipId,
+                    const juce::String& actionName);
+
+    //==========================================================================
+    // MIDI Note Management (beat-based for UI)
+    //==========================================================================
+
+    /**
+     * @brief Add a MIDI note to a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param startBeats Start position in beats (relative to clip start)
+     * @param lengthBeats Length in beats
+     * @param noteNumber MIDI note number (0-127)
+     * @param velocity MIDI velocity (0-127)
+     * @param actionName Undo action name
+     * @return Note ID
+     * @note Message thread only, undoable
+     */
+    juce::String addNote(const juce::String& trackId, const juce::String& clipId,
+                         double startBeats, double lengthBeats, int noteNumber, int velocity,
+                         const juce::String& actionName);
+
+    /**
+     * @brief Move/resize a MIDI note
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newStartBeats New start position in beats
+     * @param newLengthBeats New length in beats
+     * @param actionName Undo action name
+     * @return true if note was found and moved
+     * @note Message thread only, undoable
+     */
+    bool moveNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
+                  double newStartBeats, double newLengthBeats, const juce::String& actionName);
+
+    /**
+     * @brief Delete a MIDI note
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param actionName Undo action name
+     * @return true if note was found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
+                    const juce::String& actionName);
 
     //==========================================================================
     // Phase 13: Automation Management
@@ -319,6 +419,11 @@ private:
      * @brief Find track by ID
      */
     juce::ValueTree findTrack(const juce::String& trackId);
+
+    /**
+     * @brief Find clip by ID within a track
+     */
+    juce::ValueTree findClip(const juce::ValueTree& track, const juce::String& clipId);
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree

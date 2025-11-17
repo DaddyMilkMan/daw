@@ -18,6 +18,10 @@
 #include "ProjectState.h"
 
 //==============================================================================
+// Forward declarations
+class ArrangerView;
+class PianoRollEditor;
+
 /**
  * @class MainComponent
  * @brief Main content component that holds the UI
@@ -34,7 +38,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -43,6 +47,15 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    //==========================================================================
+    // UI actions
+    //==========================================================================
+
+    /**
+     * @brief Open piano roll editor for a MIDI clip
+     */
+    void openPianoRoll(const juce::String& trackId, const juce::String& clipId);
 
 private:
     //==========================================================================
@@ -62,8 +75,9 @@ private:
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
-    // UI Components (will add more in Phase 1)
+    // UI Components
     juce::Label statusLabel;
     juce::Label cpuLabel;
     juce::TextButton playButton;
@@ -76,6 +90,14 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Arranger and Piano Roll
+    std::unique_ptr<ArrangerView> arrangerView;
+    std::unique_ptr<juce::DocumentWindow> pianoRollWindow;
+
+    // Test buttons
+    juce::TextButton addTrackButton;
+    juce::TextButton testPianoRollButton;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
