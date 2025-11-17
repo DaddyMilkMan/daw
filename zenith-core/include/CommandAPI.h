@@ -122,6 +122,34 @@ private:
      */
     juce::var cmd_setTempo(const juce::var& params);
 
+    /**
+     * @brief Add a clip to a track
+     * Params: { "trackId": "track_1", "startBeats": 0.0, "lengthBeats": 4.0 }
+     * Returns: { "clipId": "clip_123" }
+     */
+    juce::var cmd_addClip(const juce::var& params);
+
+    /**
+     * @brief Set audio file for a clip
+     * Params: { "trackId": "track_1", "clipId": "clip_1", "audioFilePath": "/path/to/audio.wav" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_setClipAudioFile(const juce::var& params);
+
+    /**
+     * @brief Get clips for a track
+     * Params: { "trackId": "track_1" }
+     * Returns: { "clips": [ { "id": "...", "start": 0.0, "length": 4.0, "audioFile": "..." }, ... ] }
+     */
+    juce::var cmd_getClips(const juce::var& params);
+
+    /**
+     * @brief Sync engine with project state (reload tracks/clips)
+     * Params: {}
+     * Returns: { "success": true, "numTracks": 3 }
+     */
+    juce::var cmd_syncEngine(const juce::var& params);
+
     //==========================================================================
     // Helper methods
     //==========================================================================

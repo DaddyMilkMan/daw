@@ -60,6 +60,7 @@ const juce::Identifier ProjectState::PROP_SOLO("solo");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
+const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
 
 // Phase 13: Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
@@ -264,6 +265,120 @@ int ProjectState::getNumTracks() const
         return tracksNode.getNumChildren();
 
     return 0;
+}
+
+juce::ValueTree ProjectState::getTrack(const juce::String& trackId) const
+{
+    return const_cast<ProjectState*>(this)->findTrack(trackId);
+}
+
+//==============================================================================
+// Clip Management
+//==============================================================================
+
+juce::String ProjectState::addClip(const juce::String& trackId, double startBeats, double lengthBeats, const juce::String& actionName)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Track not found: " + trackId);
+        return {};
+    }
+
+    // Get or create CLIPS node
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+    {
+        clipsNode = juce::ValueTree(ID_CLIPS);
+        track.appendChild(clipsNode, &undoManager);
+    }
+
+    // Generate unique clip ID
+    auto clipId = generateUniqueId("clip");
+
+    // Create clip
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_START, startBeats, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+    clip.setProperty(PROP_TYPE, "audio", nullptr);
+
+    // Add to track
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Added clip " + clipId + " to track " + trackId);
+    return clipId;
+}
+
+bool ProjectState::removeClip(const juce::String& trackId, const juce::String& clipId, const juce::String& actionName)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+        return false;
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return false;
+
+    // Find and remove clip
+    for (int i = 0; i < clipsNode.getNumChildren(); ++i)
+    {
+        auto clip = clipsNode.getChild(i);
+        if (clip[PROP_ID].toString() == clipId)
+        {
+            clipsNode.removeChild(i, &undoManager);
+            DBG("ProjectState: Removed clip " + clipId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::setClipAudioFile(const juce::String& trackId, const juce::String& clipId, const juce::File& audioFile, const juce::String& actionName)
+{
+    auto clip = getClip(trackId, clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + trackId + "/" + clipId);
+        return false;
+    }
+
+    // Store absolute path for now
+    // TODO: Make relative to project file when project is saved
+    clip.setProperty(PROP_AUDIO_FILE, audioFile.getFullPathName(), &undoManager);
+
+    DBG("ProjectState: Set audio file for clip " + clipId + ": " + audioFile.getFileName());
+    return true;
+}
+
+juce::String ProjectState::getClipAudioFile(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto clip = getClip(trackId, clipId);
+    if (!clip.isValid())
+        return {};
+
+    return clip[PROP_AUDIO_FILE].toString();
+}
+
+juce::ValueTree ProjectState::getClip(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return {};
+
+    // Find clip
+    for (auto clip : clipsNode)
+    {
+        if (clip[PROP_ID].toString() == clipId)
+            return clip;
+    }
+
+    return {};
 }
 
 //==============================================================================

@@ -105,6 +105,7 @@ public:
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
+    static const juce::Identifier PROP_AUDIO_FILE;
 
     // Phase 13: Automation properties
     static const juce::Identifier PROP_PARAM;
@@ -174,6 +175,62 @@ public:
      * @brief Get number of tracks
      */
     int getNumTracks() const;
+
+    /**
+     * @brief Get track ValueTree by ID
+     * @param trackId Track ID
+     * @return Track ValueTree (invalid if not found)
+     */
+    juce::ValueTree getTrack(const juce::String& trackId) const;
+
+    //==========================================================================
+    // Clip Management
+    //==========================================================================
+
+    /**
+     * @brief Add a clip to a track
+     * @param trackId Track ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Length in beats
+     * @param actionName Undo action name
+     * @return Clip ID
+     */
+    juce::String addClip(const juce::String& trackId, double startBeats, double lengthBeats, const juce::String& actionName);
+
+    /**
+     * @brief Remove a clip from a track
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     * @return true if clip was found and removed
+     */
+    bool removeClip(const juce::String& trackId, const juce::String& clipId, const juce::String& actionName);
+
+    /**
+     * @brief Set audio file for a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param audioFile Audio file path (will be stored as relative to project file if possible)
+     * @param actionName Undo action name
+     * @return true if clip was found and updated
+     */
+    bool setClipAudioFile(const juce::String& trackId, const juce::String& clipId, const juce::File& audioFile, const juce::String& actionName);
+
+    /**
+     * @brief Get audio file for a clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @return Audio file path (empty if not set or clip not found)
+     */
+    juce::String getClipAudioFile(const juce::String& trackId, const juce::String& clipId) const;
+
+    /**
+     * @brief Get clip ValueTree
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @return Clip ValueTree (invalid if not found)
+     */
+    juce::ValueTree getClip(const juce::String& trackId, const juce::String& clipId) const;
 
     //==========================================================================
     // Phase 13: Automation Management

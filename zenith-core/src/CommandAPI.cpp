@@ -18,6 +18,10 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("add_track", [this](const juce::var& p) { return cmd_addTrack(p); });
     registerCommand("get_project_info", [this](const juce::var& p) { return cmd_getProjectInfo(p); });
     registerCommand("set_tempo", [this](const juce::var& p) { return cmd_setTempo(p); });
+    registerCommand("add_clip", [this](const juce::var& p) { return cmd_addClip(p); });
+    registerCommand("set_clip_audio_file", [this](const juce::var& p) { return cmd_setClipAudioFile(p); });
+    registerCommand("get_clips", [this](const juce::var& p) { return cmd_getClips(p); });
+    registerCommand("sync_engine", [this](const juce::var& p) { return cmd_syncEngine(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -252,6 +256,132 @@ juce::var CommandAPI::cmd_setTempo(const juce::var& params)
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_addClip(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "startBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "lengthBeats", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    double startBeats = obj->getProperty("startBeats");
+    double lengthBeats = obj->getProperty("lengthBeats");
+
+    // Add clip
+    juce::String clipId = projectState.addClip(trackId, startBeats, lengthBeats, "Add clip");
+
+    if (clipId.isEmpty())
+    {
+        throw std::runtime_error("Failed to add clip. Check trackId.");
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("clipId", clipId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_setClipAudioFile(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "clipId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "audioFilePath", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String clipId = obj->getProperty("clipId").toString();
+    juce::String audioFilePath = obj->getProperty("audioFilePath").toString();
+
+    // Validate file exists
+    juce::File audioFile(audioFilePath);
+    if (!audioFile.existsAsFile())
+    {
+        throw std::runtime_error("Audio file not found: " + audioFilePath.toStdString());
+    }
+
+    // Set audio file
+    bool success = projectState.setClipAudioFile(trackId, clipId, audioFile, "Set clip audio file");
+
+    if (!success)
+    {
+        throw std::runtime_error("Failed to set clip audio file. Check trackId and clipId.");
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getClips(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+
+    // Get track
+    auto track = projectState.getTrack(trackId);
+    if (!track.isValid())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    // Get clips node
+    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+
+    // Build clips array
+    juce::Array<juce::var> clipsArray;
+
+    if (clipsNode.isValid())
+    {
+        for (auto clip : clipsNode)
+        {
+            juce::DynamicObject::Ptr clipObj = new juce::DynamicObject();
+            clipObj->setProperty("id", clip[ProjectState::PROP_ID].toString());
+            clipObj->setProperty("start", clip[ProjectState::PROP_START]);
+            clipObj->setProperty("length", clip[ProjectState::PROP_LENGTH]);
+            clipObj->setProperty("type", clip[ProjectState::PROP_TYPE].toString());
+
+            // Add audio file if present
+            if (clip.hasProperty(ProjectState::PROP_AUDIO_FILE))
+            {
+                clipObj->setProperty("audioFile", clip[ProjectState::PROP_AUDIO_FILE].toString());
+            }
+
+            clipsArray.add(juce::var(clipObj.get()));
+        }
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("clips", clipsArray);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_syncEngine(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    // Sync engine with project state
+    engine.syncWithProjectState();
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("numTracks", engine.getNumTracks());
     return juce::var(result.get());
 }
 
