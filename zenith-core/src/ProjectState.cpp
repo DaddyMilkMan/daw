@@ -44,6 +44,8 @@ const juce::Identifier ProjectState::ID_MIXER("MIXER");
 const juce::Identifier ProjectState::ID_AUTOMATION("AUTOMATION");
 const juce::Identifier ProjectState::ID_ENVELOPE("ENVELOPE");
 const juce::Identifier ProjectState::ID_POINT("POINT");
+const juce::Identifier ProjectState::ID_NOTES("NOTES");
+const juce::Identifier ProjectState::ID_NOTE("NOTE");
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -60,11 +62,16 @@ const juce::Identifier ProjectState::PROP_SOLO("solo");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
+const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
 
 // Phase 13: Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
 const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
+
+// MIDI Note properties
+const juce::Identifier ProjectState::PROP_NOTE_NUMBER("noteNumber");
+const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
 
 //==============================================================================
 ProjectState::ProjectState()
@@ -595,4 +602,206 @@ bool ProjectState::clearAutomation(const juce::String& trackId, const juce::Stri
     }
 
     return false;
+}
+
+//==============================================================================
+// Clip Management
+//==============================================================================
+
+juce::String ProjectState::createClip(const juce::String& trackId, double startBeats, double lengthBeats,
+                                       const juce::String& type, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Track not found: " + trackId);
+        return {};
+    }
+
+    // Get or create CLIPS node
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+    {
+        clipsNode = juce::ValueTree(ID_CLIPS);
+        track.appendChild(clipsNode, &undoManager);
+        DBG("ProjectState: Created CLIPS node for track " + trackId);
+    }
+
+    // Create new clip
+    juce::ValueTree clip(ID_CLIP);
+    juce::String clipId = generateUniqueId("clip");
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_TYPE, type, nullptr);
+    clip.setProperty(PROP_START, startBeats, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+
+    // Add clip to track
+    undoManager.beginNewTransaction(actionName);
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Created clip " + clipId + " on track " + trackId);
+    return clipId;
+}
+
+bool ProjectState::deleteClip(const juce::String& trackId, const juce::String& clipId,
+                               const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+        return false;
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return false;
+
+    // Find and remove clip
+    for (int i = 0; i < clipsNode.getNumChildren(); ++i)
+    {
+        auto clip = clipsNode.getChild(i);
+        if (clip[PROP_ID].toString() == clipId)
+        {
+            undoManager.beginNewTransaction(actionName);
+            clipsNode.removeChild(i, &undoManager);
+            DBG("ProjectState: Deleted clip " + clipId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::ValueTree ProjectState::getTrackClips(const juce::String& trackId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    return track.getChildWithName(ID_CLIPS);
+}
+
+bool ProjectState::setClipAudioFile(const juce::String& trackId, const juce::String& clipId,
+                                     const juce::String& audioFilePath, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + clipId);
+        return false;
+    }
+
+    undoManager.beginNewTransaction(actionName);
+    clip.setProperty(PROP_AUDIO_FILE, audioFilePath, &undoManager);
+
+    DBG("ProjectState: Set audio file for clip " + clipId + ": " + audioFilePath);
+    return true;
+}
+
+//==============================================================================
+// MIDI Note Management
+//==============================================================================
+
+juce::String ProjectState::createNote(const juce::String& trackId, const juce::String& clipId,
+                                       int noteNumber, int velocity, double startBeats, double lengthBeats,
+                                       const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + clipId);
+        return {};
+    }
+
+    // Get or create NOTES node
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (!notesNode.isValid())
+    {
+        notesNode = juce::ValueTree(ID_NOTES);
+        clip.appendChild(notesNode, &undoManager);
+        DBG("ProjectState: Created NOTES node for clip " + clipId);
+    }
+
+    // Create new note
+    juce::ValueTree note(ID_NOTE);
+    juce::String noteId = generateUniqueId("note");
+    note.setProperty(PROP_ID, noteId, nullptr);
+    note.setProperty(PROP_NOTE_NUMBER, noteNumber, nullptr);
+    note.setProperty(PROP_VELOCITY, velocity, nullptr);
+    note.setProperty(PROP_START, startBeats, nullptr);
+    note.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+
+    // Add note to clip
+    undoManager.beginNewTransaction(actionName);
+    notesNode.appendChild(note, &undoManager);
+
+    DBG("ProjectState: Created note " + noteId + " in clip " + clipId);
+    return noteId;
+}
+
+bool ProjectState::deleteNote(const juce::String& trackId, const juce::String& clipId,
+                               const juce::String& noteId, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+        return false;
+
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (!notesNode.isValid())
+        return false;
+
+    // Find and remove note
+    for (int i = 0; i < notesNode.getNumChildren(); ++i)
+    {
+        auto note = notesNode.getChild(i);
+        if (note[PROP_ID].toString() == noteId)
+        {
+            undoManager.beginNewTransaction(actionName);
+            notesNode.removeChild(i, &undoManager);
+            DBG("ProjectState: Deleted note " + noteId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::ValueTree ProjectState::getClipNotes(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto clip = const_cast<ProjectState*>(this)->findClip(trackId, clipId);
+    if (!clip.isValid())
+        return {};
+
+    return clip.getChildWithName(ID_NOTES);
+}
+
+//==============================================================================
+// Helper Methods (Clip-related)
+//==============================================================================
+
+juce::ValueTree ProjectState::findClip(const juce::String& trackId, const juce::String& clipId)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return {};
+
+    for (auto clip : clipsNode)
+    {
+        if (clip[PROP_ID].toString() == clipId)
+            return clip;
+    }
+
+    return {};
 }
