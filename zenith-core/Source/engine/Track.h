@@ -60,6 +60,9 @@ public:
     const juce::String& getName() const { return trackName; }
     void setName(const juce::String& newName);
 
+    const juce::String& getTrackId() const { return trackId; }
+    void setTrackId(const juce::String& id) { trackId = id; }
+
     Type getType() const { return trackType; }
     juce::String getTypeString() const;
 
@@ -87,13 +90,30 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Plugin chain management - TODO(Phase 2: plugin hosting)
-    // Stubbed for now; will implement in Phase 2 with VST3/AU support
-    void addPlugin(void* plugin) { (void)plugin; /* stub */ }
-    void removePlugin(int pluginIndex) { (void)pluginIndex; /* stub */ }
-    void clearPlugins() { /* stub */ }
-    int getNumPlugins() const { return 0; }
-    void* getPlugin(int index) const { (void)index; return nullptr; }
+    // Plugin chain management
+    void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+    void removePlugin(int pluginIndex);
+    void clearPlugins();
+    int getNumPlugins() const;
+    juce::AudioPluginInstance* getPlugin(int index) const;
+
+    //==============================================================================
+    // MIDI Scheduling
+    /**
+     * @brief Generate MIDI events for the current audio block from NOTES in clips
+     * @param trackState ValueTree for this track from ProjectState
+     * @param tempo Current tempo in BPM
+     * @param sampleRate Current sample rate
+     * @param blockStartSample Transport position at start of block
+     * @param blockSize Number of samples in block
+     * @param midiOut MIDI buffer to fill with events
+     */
+    void generateMidiForBlock(const juce::ValueTree& trackState,
+                               double tempo,
+                               double sampleRate,
+                               juce::int64 blockStartSample,
+                               int blockSize,
+                               juce::MidiBuffer& midiOut);
 
     //==============================================================================
     // Clip management
@@ -121,6 +141,7 @@ private:
     //==============================================================================
     // Track properties
     juce::String trackName;
+    juce::String trackId;
     Type trackType;
     int trackIndex = -1;
 
@@ -144,10 +165,11 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Plugin chain - TODO(Phase 2: plugin hosting)
-    // Placeholder for future VST3/AU hosting
+    // Plugin chain
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
     juce::CriticalSection pluginLock;
     juce::AudioBuffer<float> pluginBuffer;
+    juce::MidiBuffer midiBuffer;  // For MIDI events to plugins
 
     //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)
@@ -156,9 +178,19 @@ private:
 
     //==============================================================================
     // Helper methods
-    void processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processPluginChain(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples);
     void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples);
     void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples);
+
+    // MIDI Scheduler state
+    struct ActiveNote
+    {
+        int pitch;
+        int channel;
+        juce::String noteId;  // For tracking which ValueTree note this came from
+    };
+    std::vector<ActiveNote> activeNotes;
+    juce::int64 lastProcessedSample = 0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)

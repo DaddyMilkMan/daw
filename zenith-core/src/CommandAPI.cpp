@@ -18,6 +18,10 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("add_track", [this](const juce::var& p) { return cmd_addTrack(p); });
     registerCommand("get_project_info", [this](const juce::var& p) { return cmd_getProjectInfo(p); });
     registerCommand("set_tempo", [this](const juce::var& p) { return cmd_setTempo(p); });
+    registerCommand("add_note", [this](const juce::var& p) { return cmd_addNote(p); });
+    registerCommand("move_note", [this](const juce::var& p) { return cmd_moveNote(p); });
+    registerCommand("delete_note", [this](const juce::var& p) { return cmd_deleteNote(p); });
+    registerCommand("get_notes", [this](const juce::var& p) { return cmd_getNotes(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -252,6 +256,118 @@ juce::var CommandAPI::cmd_setTempo(const juce::var& params)
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_addNote(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "clipId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "startBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "lengthBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "pitch", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "velocity", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String clipId = obj->getProperty("clipId").toString();
+    double startBeats = obj->getProperty("startBeats");
+    double lengthBeats = obj->getProperty("lengthBeats");
+    int pitch = obj->getProperty("pitch");
+    int velocity = obj->getProperty("velocity");
+
+    // Add note
+    juce::String noteId = projectState.addNote(clipId, startBeats, lengthBeats, pitch, velocity, "Add Note");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("noteId", noteId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_moveNote(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "clipId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "noteId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "startBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "lengthBeats", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "pitch", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "velocity", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String clipId = obj->getProperty("clipId").toString();
+    juce::String noteId = obj->getProperty("noteId").toString();
+    double startBeats = obj->getProperty("startBeats");
+    double lengthBeats = obj->getProperty("lengthBeats");
+    int pitch = obj->getProperty("pitch");
+    int velocity = obj->getProperty("velocity");
+
+    // Move note
+    bool success = projectState.moveNote(clipId, noteId, startBeats, lengthBeats, pitch, velocity, "Move Note");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_deleteNote(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "clipId", error)) throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "noteId", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String clipId = obj->getProperty("clipId").toString();
+    juce::String noteId = obj->getProperty("noteId").toString();
+
+    // Delete note
+    bool success = projectState.deleteNote(clipId, noteId, "Delete Note");
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", success);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getNotes(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "clipId", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String clipId = obj->getProperty("clipId").toString();
+
+    // Get notes
+    auto notesTree = projectState.getNotes(clipId);
+
+    // Build notes array
+    juce::Array<juce::var> notesArray;
+    if (notesTree.isValid())
+    {
+        for (auto note : notesTree)
+        {
+            juce::DynamicObject::Ptr noteObj = new juce::DynamicObject();
+            noteObj->setProperty("id", note.getProperty("id", "").toString());
+            noteObj->setProperty("startBeats", note.getProperty("startBeats", 0.0));
+            noteObj->setProperty("lengthBeats", note.getProperty("lengthBeats", 0.0));
+            noteObj->setProperty("pitch", note.getProperty("pitch", 60));
+            noteObj->setProperty("velocity", note.getProperty("velocity", 100));
+            notesArray.add(juce::var(noteObj.get()));
+        }
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("notes", notesArray);
     return juce::var(result.get());
 }
 

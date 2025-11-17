@@ -122,6 +122,34 @@ private:
      */
     juce::var cmd_setTempo(const juce::var& params);
 
+    /**
+     * @brief Add MIDI note
+     * Params: { "clipId": "clip_1", "startBeats": 0.0, "lengthBeats": 1.0, "pitch": 60, "velocity": 100 }
+     * Returns: { "noteId": "note_123" }
+     */
+    juce::var cmd_addNote(const juce::var& params);
+
+    /**
+     * @brief Move/edit MIDI note
+     * Params: { "clipId": "clip_1", "noteId": "note_1", "startBeats": 0.0, "lengthBeats": 1.0, "pitch": 60, "velocity": 100 }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_moveNote(const juce::var& params);
+
+    /**
+     * @brief Delete MIDI note
+     * Params: { "clipId": "clip_1", "noteId": "note_1" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_deleteNote(const juce::var& params);
+
+    /**
+     * @brief Get all notes for a clip
+     * Params: { "clipId": "clip_1" }
+     * Returns: { "notes": [ { "id": "...", "startBeats": 0.0, "lengthBeats": 1.0, "pitch": 60, "velocity": 100 }, ... ] }
+     */
+    juce::var cmd_getNotes(const juce::var& params);
+
     //==========================================================================
     // Helper methods
     //==========================================================================
