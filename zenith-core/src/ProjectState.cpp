@@ -44,6 +44,8 @@ const juce::Identifier ProjectState::ID_MIXER("MIXER");
 const juce::Identifier ProjectState::ID_AUTOMATION("AUTOMATION");
 const juce::Identifier ProjectState::ID_ENVELOPE("ENVELOPE");
 const juce::Identifier ProjectState::ID_POINT("POINT");
+const juce::Identifier ProjectState::ID_NOTES("NOTES");
+const juce::Identifier ProjectState::ID_NOTE("NOTE");
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -65,6 +67,12 @@ const juce::Identifier ProjectState::PROP_LENGTH("length");
 const juce::Identifier ProjectState::PROP_PARAM("param");
 const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
+
+// MIDI Note properties
+const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
+const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
+const juce::Identifier ProjectState::PROP_PITCH("pitch");
+const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
 
 //==============================================================================
 ProjectState::ProjectState()
@@ -361,6 +369,152 @@ void ProjectState::rebuildIdCounter()
     scanTree(state);
 
     idCounter.store(highestId + 1);
+}
+
+juce::ValueTree ProjectState::findClip(const juce::String& trackId, const juce::String& clipId)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return {};
+
+    for (auto clip : clipsNode)
+    {
+        if (clip[PROP_ID].toString() == clipId)
+            return clip;
+    }
+
+    return {};
+}
+
+//==============================================================================
+// MIDI Note Management
+//==============================================================================
+
+juce::String ProjectState::addNote(const juce::String& trackId, const juce::String& clipId,
+                                    double startBeats, double lengthBeats, int pitch, int velocity,
+                                    const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(startBeats >= 0.0);
+    jassert(lengthBeats > 0.0);
+
+    // Clamp values
+    pitch = juce::jlimit(0, 127, pitch);
+    velocity = juce::jlimit(0, 127, velocity);
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + clipId);
+        return {};
+    }
+
+    // Get or create NOTES node
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (!notesNode.isValid())
+    {
+        notesNode = juce::ValueTree(ID_NOTES);
+        clip.appendChild(notesNode, &undoManager);
+        DBG("ProjectState: Created NOTES node for clip " + clipId);
+    }
+
+    // Generate unique note ID
+    auto noteId = generateUniqueId("note");
+
+    // Create note
+    juce::ValueTree note(ID_NOTE);
+    note.setProperty(PROP_ID, noteId, nullptr);
+    note.setProperty(PROP_START_BEATS, startBeats, nullptr);
+    note.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+    note.setProperty(PROP_PITCH, pitch, nullptr);
+    note.setProperty(PROP_VELOCITY, velocity, nullptr);
+
+    // Add to notes node
+    notesNode.appendChild(note, &undoManager);
+
+    DBG("ProjectState: Added note " + noteId + " at " + juce::String(startBeats) + " beats, pitch " + juce::String(pitch));
+    return noteId;
+}
+
+bool ProjectState::moveNote(const juce::String& trackId, const juce::String& clipId,
+                             const juce::String& noteId, double newStartBeats, double newLengthBeats,
+                             int newPitch, int newVelocity, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(newStartBeats >= 0.0);
+    jassert(newLengthBeats > 0.0);
+
+    // Clamp values
+    newPitch = juce::jlimit(0, 127, newPitch);
+    newVelocity = juce::jlimit(0, 127, newVelocity);
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+        return false;
+
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (!notesNode.isValid())
+        return false;
+
+    // Find note
+    for (int i = 0; i < notesNode.getNumChildren(); ++i)
+    {
+        auto note = notesNode.getChild(i);
+        if (note[PROP_ID].toString() == noteId)
+        {
+            // Update properties
+            note.setProperty(PROP_START_BEATS, newStartBeats, &undoManager);
+            note.setProperty(PROP_LENGTH_BEATS, newLengthBeats, &undoManager);
+            note.setProperty(PROP_PITCH, newPitch, &undoManager);
+            note.setProperty(PROP_VELOCITY, newVelocity, &undoManager);
+
+            DBG("ProjectState: Moved note " + noteId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::removeNote(const juce::String& trackId, const juce::String& clipId,
+                               const juce::String& noteId, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto clip = findClip(trackId, clipId);
+    if (!clip.isValid())
+        return false;
+
+    auto notesNode = clip.getChildWithName(ID_NOTES);
+    if (!notesNode.isValid())
+        return false;
+
+    // Find and remove note
+    for (int i = 0; i < notesNode.getNumChildren(); ++i)
+    {
+        auto note = notesNode.getChild(i);
+        if (note[PROP_ID].toString() == noteId)
+        {
+            notesNode.removeChild(i, &undoManager);
+            DBG("ProjectState: Removed note " + noteId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+juce::ValueTree ProjectState::getNotesForClip(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto clip = const_cast<ProjectState*>(this)->findClip(trackId, clipId);
+    if (!clip.isValid())
+        return {};
+
+    return clip.getChildWithName(ID_NOTES);
 }
 
 //==============================================================================

@@ -9,8 +9,8 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& state)
+    : engine(eng), projectState(state)
 {
     // Set size
     setSize(1400, 800);
@@ -54,6 +54,13 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
+
+    // Piano Roll button
+    pianoRollButton.setButtonText("Open Demo Piano Roll");
+    pianoRollButton.onClick = [this]() {
+        openDemoPianoRoll();
+    };
+    addAndMakeVisible(pianoRollButton);
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -140,6 +147,16 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Piano Roll button on the right
+    pianoRollButton.setBounds(bottomBar.removeFromRight(200).reduced(10, 8));
+
+    // Piano Roll editor (if visible)
+    if (pianoRollEditor)
+    {
+        // Take the center area
+        pianoRollEditor->setBounds(bounds.reduced(10));
+    }
 }
 
 void MainComponent::timerCallback()
@@ -173,6 +190,71 @@ void MainComponent::refreshTrackCountLabel()
 }
 
 //==============================================================================
+// Piano Roll
+//==============================================================================
+
+void MainComponent::openPianoRollForClip(const juce::String& trackId, const juce::String& clipId)
+{
+    DBG("MainComponent: Opening Piano Roll for track " + trackId + ", clip " + clipId);
+
+    // Create piano roll editor
+    pianoRollEditor = std::make_unique<PianoRollEditor>(projectState, trackId, clipId);
+    addAndMakeVisible(pianoRollEditor.get());
+
+    // Trigger resize
+    resized();
+}
+
+void MainComponent::openDemoPianoRoll()
+{
+    // Create a demo MIDI track and clip if they don't exist
+    // This is just for testing purposes
+
+    // Check if we have a MIDI track
+    juce::String trackId;
+    juce::String clipId;
+
+    // For simplicity, just create a new track and clip each time
+    trackId = projectState.addTrack("MIDI Demo", "midi");
+    DBG("Created demo track: " + trackId);
+
+    // Create a clip manually by accessing the state tree
+    auto track = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (track.isValid())
+    {
+        for (auto t : track)
+        {
+            if (t[ProjectState::PROP_ID].toString() == trackId)
+            {
+                auto clipsNode = t.getChildWithName(ProjectState::ID_CLIPS);
+                if (clipsNode.isValid())
+                {
+                    juce::ValueTree clip(ProjectState::ID_CLIP);
+                    clipId = "clip_demo_" + juce::String(juce::Random::getSystemRandom().nextInt());
+                    clip.setProperty(ProjectState::PROP_ID, clipId, nullptr);
+                    clip.setProperty(ProjectState::PROP_START, 0.0, nullptr);
+                    clip.setProperty(ProjectState::PROP_LENGTH, 16.0, nullptr);
+                    clip.setProperty(ProjectState::PROP_TYPE, "midi", nullptr);
+
+                    clipsNode.appendChild(clip, &projectState.getUndoManager());
+                    DBG("Created demo clip: " + clipId);
+                }
+                break;
+            }
+        }
+    }
+
+    if (!trackId.isEmpty() && !clipId.isEmpty())
+    {
+        openPianoRollForClip(trackId, clipId);
+    }
+    else
+    {
+        DBG("Failed to create demo track/clip");
+    }
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -192,7 +274,7 @@ MainWindow::MainWindow(const juce::String& name)
     engine->setProjectState(projectState.get());
 
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);

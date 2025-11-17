@@ -92,6 +92,9 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # U4.3: Piano Roll Editor
+    src/ui/PianoRollEditor.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

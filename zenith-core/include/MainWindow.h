@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ui/PianoRollEditor.h"
 
 //==============================================================================
 /**
@@ -34,7 +35,7 @@ class MainComponent : public juce::Component,
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -58,10 +59,18 @@ private:
     void refreshTrackCountLabel();
 
     //==========================================================================
+    // Piano Roll
+    //==========================================================================
+
+    void openPianoRollForClip(const juce::String& trackId, const juce::String& clipId);
+    void openDemoPianoRoll();
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
     // UI Components (will add more in Phase 1)
     juce::Label statusLabel;
@@ -76,6 +85,12 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Piano Roll button
+    juce::TextButton pianoRollButton;
+
+    // Piano Roll editor
+    std::unique_ptr<PianoRollEditor> pianoRollEditor;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
