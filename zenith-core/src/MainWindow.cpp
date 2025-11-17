@@ -55,6 +55,29 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Tempo slider
+    tempoSlider.setRange(40.0, 240.0, 0.1);
+    tempoSlider.setValue(120.0);
+    tempoSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    tempoSlider.setTextBoxStyle(juce::Slider::TextBoxRight, false, 60, 20);
+    tempoSlider.onValueChange = [this]() {
+        engine.setBpm(tempoSlider.getValue());
+        tempoLabel.setText("BPM: " + juce::String(tempoSlider.getValue(), 1), juce::dontSendNotification);
+    };
+    addAndMakeVisible(tempoSlider);
+
+    // Tempo label
+    tempoLabel.setText("BPM: 120.0", juce::dontSendNotification);
+    tempoLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(tempoLabel);
+
+    // Metronome toggle button
+    metronomeButton.setButtonText("Metronome");
+    metronomeButton.onClick = [this]() {
+        engine.setMetronomeEnabled(metronomeButton.getToggleState());
+    };
+    addAndMakeVisible(metronomeButton);
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -125,11 +148,24 @@ void MainComponent::resized()
 
     cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
 
-    // Bottom bar (transport + audio device)
+    // Bottom bar (transport + audio device + tempo)
     auto bottomBar = bounds.removeFromBottom(50);
 
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
+
+    // Tempo and metronome section on the right
+    auto tempoSection = bottomBar.removeFromRight(350);
+    auto tempoArea = tempoSection.reduced(10, 8);
+
+    // Layout tempo label
+    tempoLabel.setBounds(tempoArea.removeFromLeft(80));
+
+    // Layout tempo slider
+    tempoSlider.setBounds(tempoArea.removeFromLeft(180));
+
+    // Layout metronome button
+    metronomeButton.setBounds(tempoArea.removeFromLeft(90).reduced(5, 0));
 
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);

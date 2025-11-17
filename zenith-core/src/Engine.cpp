@@ -118,6 +118,9 @@ void Engine::play()
     isPlaying_.store(true);
     playbackPosition.store(0);
 
+    // Reset metronome state
+    lastMetronomeSample = 0;
+
     // Enable test tone for Phase 0 testing
     // TODO: Remove this in Phase 1 when we have actual content
     enableTestTone_.store(true);
@@ -170,6 +173,34 @@ juce::String Engine::getAudioDeviceInfo() const
 double Engine::getCpuUsage() const
 {
     return deviceManager.getCpuUsage() * 100.0;
+}
+
+//==============================================================================
+// Tempo and Metronome
+//==============================================================================
+
+void Engine::setBpm(double newBpm)
+{
+    // Clamp to reasonable range (40-240 BPM)
+    newBpm = juce::jlimit(40.0, 240.0, newBpm);
+    bpm_.store(newBpm);
+    DBG("Engine: BPM set to " + juce::String(newBpm, 1));
+}
+
+double Engine::getBpm() const
+{
+    return bpm_.load();
+}
+
+void Engine::setMetronomeEnabled(bool shouldBeOn)
+{
+    metronomeEnabled_.store(shouldBeOn);
+    DBG("Engine: Metronome " + juce::String(shouldBeOn ? "enabled" : "disabled"));
+}
+
+bool Engine::isMetronomeEnabled() const
+{
+    return metronomeEnabled_.load();
 }
 
 //==============================================================================
@@ -228,6 +259,7 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     // Reset state
     phase = 0.0;
     playbackPosition.store(0);
+    lastMetronomeSample = 0;
 
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
@@ -345,6 +377,55 @@ void Engine::processAudio(
             {
                 juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
             }
+        }
+    }
+
+    // Add metronome clicks if enabled
+    bool metronomeOn = metronomeEnabled_.load();
+    if (metronomeOn)
+    {
+        const double sampleRate = currentSampleRate.load();
+        const double bpm = bpm_.load();
+        const double samplesPerBeat = sampleRate * 60.0 / bpm;
+
+        // Get current playback position (updated in parent callback)
+        juce::int64 currentPos = playbackPosition.load();
+
+        for (int sample = 0; sample < numSamples; ++sample)
+        {
+            juce::int64 samplePos = currentPos + sample;
+
+            // Check if we've crossed a beat boundary
+            juce::int64 currentBeat = static_cast<juce::int64>(samplePos / samplesPerBeat);
+            juce::int64 lastBeat = static_cast<juce::int64>(lastMetronomeSample / samplesPerBeat);
+
+            if (currentBeat > lastBeat)
+            {
+                // Generate click: short 1000 Hz sine burst (2ms duration)
+                const int clickDuration = static_cast<int>(sampleRate * 0.002);  // 2ms
+                const double clickFreq = 1000.0;
+                const double clickAmplitude = 0.5;
+                const double clickPhaseInc = clickFreq * 2.0 * juce::MathConstants<double>::pi / sampleRate;
+
+                for (int i = 0; i < clickDuration && (sample + i) < numSamples; ++i)
+                {
+                    double clickPhase = i * clickPhaseInc;
+                    // Apply envelope to avoid clicks
+                    double envelope = 1.0 - (static_cast<double>(i) / clickDuration);
+                    float clickValue = static_cast<float>(std::sin(clickPhase) * clickAmplitude * envelope);
+
+                    // Mix into all output channels
+                    for (int channel = 0; channel < numOutputChannels; ++channel)
+                    {
+                        if (outputChannelData[channel] != nullptr)
+                        {
+                            outputChannelData[channel][sample + i] += clickValue;
+                        }
+                    }
+                }
+            }
+
+            lastMetronomeSample = samplePos;
         }
     }
 }

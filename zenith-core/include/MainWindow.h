@@ -77,6 +77,11 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
+    // Tempo and metronome controls
+    juce::Slider tempoSlider;
+    juce::Label tempoLabel;
+    juce::ToggleButton metronomeButton;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 

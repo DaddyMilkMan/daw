@@ -139,6 +139,38 @@ public:
     double getCpuUsage() const;
 
     //==========================================================================
+    // Tempo and Metronome
+    //==========================================================================
+
+    /**
+     * @brief Set global tempo (BPM)
+     * @param newBpm Tempo in beats per minute (40-240)
+     * @note Thread-safe; can be called from any thread
+     */
+    void setBpm(double newBpm);
+
+    /**
+     * @brief Get current tempo (BPM)
+     * @return Tempo in beats per minute
+     * @note Thread-safe; can be called from any thread
+     */
+    double getBpm() const;
+
+    /**
+     * @brief Enable or disable metronome
+     * @param shouldBeOn true to enable metronome, false to disable
+     * @note Thread-safe; can be called from any thread
+     */
+    void setMetronomeEnabled(bool shouldBeOn);
+
+    /**
+     * @brief Check if metronome is enabled
+     * @return true if metronome is enabled
+     * @note Thread-safe; can be called from any thread
+     */
+    bool isMetronomeEnabled() const;
+
+    //==========================================================================
     // C3: Minimal Engine Surface (compile-only, no audio wiring)
     //==========================================================================
 
@@ -248,6 +280,11 @@ private:
 
     // Playback position (in samples)
     std::atomic<juce::int64> playbackPosition{0};
+
+    // Tempo and metronome
+    std::atomic<double> bpm_{120.0};
+    std::atomic<bool> metronomeEnabled_{false};
+    juce::int64 lastMetronomeSample{0};  // Audio thread only
 
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
