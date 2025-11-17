@@ -22,6 +22,30 @@ Remove the small, persistent UX pain points reviewers complain about.
 
 Ship a moddable platform with a clean theme system and future scripting/SDK hooks.
 
+Windows Quick Start
+
+**Native Windows • No WSL • No MSYS2 • JUCE Auto-Fetched**
+
+New to Zenith? Get started in minutes:
+
+1. Install Visual Studio 2022 (Desktop development with C++), CMake ≥ 3.22, and Git
+2. Clone: git clone https://github.com/DaddyMilkMan/daw.git
+3. Build:
+cd daw/zenith-core
+cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
+cmake --build build/Release -j
+4. Run: .\build\Release\ZenithDAW_artefacts\Release\"Zenith DAW.exe"
+
+Detailed guides:
+
+docs/INSTALL_WINDOWS.md — Step-by-step Windows installation
+
+docs/DEVELOPER_WORKFLOW.md — Development workflow, coding standards, testing
+
+docs/WINDOWS_AUDIO_APIS_GUIDE.md — Audio API selection (ASIO/WASAPI)
+
+No WSL, MSYS2, or vcpkg required. JUCE is automatically fetched by CMake.
+
 Architecture
 
 Current UI Stack: 100% native JUCE 8 Components (C++).
@@ -76,11 +100,17 @@ Extension SDK for deep hooks (C++/Rust).
 
 Windows Support
 
+Native Windows Development • No WSL Required
+
 Compiler/IDE: Visual Studio 2022 (v143), CMake ≥ 3.22
 
 Audio APIs: WASAPI (Shared/Exclusive), ASIO (if available)
 
-Threading: MMCSS “Pro Audio” priority helper (toggle via CMake)
+Threading: MMCSS "Pro Audio" priority helper (toggle via CMake)
+
+Framework: JUCE 8.0.9 (auto-fetched via CMake FetchContent)
+
+See docs/INSTALL_WINDOWS.md and docs/DEVELOPER_WORKFLOW.md for full setup.
 
 Project Structure (current)
 zenith-core/
@@ -103,33 +133,20 @@ zenith-core/
 
 Building (Windows)
 
-Prereqs
+Quick build (native JUCE application):
 
-Visual Studio 2022 Desktop development with C++ workload
-
-CMake ≥ 3.22
-
-Windows SDK (installed with VS)
-
-Configure & Build
-
-# Debug and Release builds
-cmake -S . -B build/Debug  -DCMAKE_BUILD_TYPE=Debug
+cd zenith-core
 cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-
-cmake --build build/Debug  -j
 cmake --build build/Release -j
 
 
-CMake Options
+See docs/INSTALL_WINDOWS.md for detailed instructions, troubleshooting, and Visual Studio integration.
 
--DZENITH_ENABLE_MMCSS=ON (default): enable MMCSS “Pro Audio” boost
+Build Options
 
--DZENITH_LTCG=OFF (default): link-time codegen toggle for Release
+-DZENITH_ENABLE_MMCSS=ON (default): enable MMCSS "Pro Audio" boost for audio thread
 
--DZENITH_WERROR_CI=OFF (local default): treat warnings as errors in CI only
-
-PDBs are generated in all configs; Release uses /DEBUG:FULL. Debug uses /DEBUG:FASTLINK.
+-DZENITH_ENGINE_SEED_DEBUG_TRACKS=OFF: create 8 demo tracks at startup (Debug builds only)
 
 Running
 
