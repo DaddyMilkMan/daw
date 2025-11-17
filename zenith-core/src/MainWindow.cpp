@@ -194,6 +194,9 @@ MainWindow::MainWindow(const juce::String& name)
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
 
+    // Set up menu bar
+    setMenuBar(this);
+
     // Set up window
     setUsingNativeTitleBar(true);
     setContentOwned(mainComponent.get(), true);
@@ -215,6 +218,9 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Remove menu bar
+    setMenuBar(nullptr);
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -231,4 +237,111 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+//==============================================================================
+// MenuBarModel Implementation
+//==============================================================================
+
+juce::StringArray MainWindow::getMenuBarNames()
+{
+    return {"File"};
+}
+
+juce::PopupMenu MainWindow::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File menu
+    {
+        menu.addItem(menuExportToWav, "Export to WAV...");
+        menu.addSeparator();
+        menu.addItem(menuQuit, "Quit");
+    }
+
+    return menu;
+}
+
+void MainWindow::menuItemSelected(int menuItemID, int topLevelMenuIndex)
+{
+    juce::ignoreUnused(topLevelMenuIndex);
+
+    switch (menuItemID)
+    {
+        case menuExportToWav:
+            handleExportToWav();
+            break;
+
+        case menuQuit:
+            closeButtonPressed();
+            break;
+
+        default:
+            break;
+    }
+}
+
+//==============================================================================
+// Menu Handlers
+//==============================================================================
+
+void MainWindow::handleExportToWav()
+{
+    DBG("MainWindow: Export to WAV requested");
+
+    // Use FileChooser to pick destination
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Export Project to WAV",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        "*.wav"
+    );
+
+    auto flags = juce::FileBrowserComponent::saveMode
+               | juce::FileBrowserComponent::canSelectFiles
+               | juce::FileBrowserComponent::warnAboutOverwriting;
+
+    chooser->launchAsync(flags, [this, chooser](const juce::FileChooser& fc)
+    {
+        auto file = fc.getResult();
+
+        if (file == juce::File())
+        {
+            DBG("MainWindow: Export cancelled");
+            return;
+        }
+
+        // Ensure .wav extension
+        if (!file.hasFileExtension(".wav"))
+            file = file.withFileExtension(".wav");
+
+        DBG("MainWindow: Exporting to " + file.getFullPathName());
+
+        // TODO: Get actual project duration from ProjectState
+        // For now, export 10 seconds (0.0 - 10.0)
+        const double startTime = 0.0;
+        const double endTime = 10.0;
+
+        juce::String errorMessage;
+        bool success = engine->exportProjectToWav(file, startTime, endTime, errorMessage);
+
+        // Show result to user
+        if (success)
+        {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Export Complete",
+                "Project exported successfully to:\n" + file.getFullPathName(),
+                "OK"
+            );
+        }
+        else
+        {
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::WarningIcon,
+                "Export Failed",
+                "Failed to export project:\n" + errorMessage,
+                "OK"
+            );
+        }
+    });
 }

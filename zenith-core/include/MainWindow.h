@@ -92,7 +92,8 @@ private:
  * - Audio engine
  * - Project state
  */
-class MainWindow : public juce::DocumentWindow
+class MainWindow : public juce::DocumentWindow,
+                   public juce::MenuBarModel
 {
 public:
     //==========================================================================
@@ -106,15 +107,23 @@ public:
     void closeButtonPressed() override;
 
     //==========================================================================
-    // Menu bar
+    // MenuBarModel interface
+    //==========================================================================
+
+    juce::StringArray getMenuBarNames() override;
+    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
+    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+private:
+    //==========================================================================
+    // Menu handlers
     //==========================================================================
 
     /**
-     * @brief Creates the menu bar
+     * @brief Handle File → Export to WAV menu item
      */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    void handleExportToWav();
 
-private:
     //==========================================================================
     // Member variables
     //==========================================================================
@@ -127,6 +136,13 @@ private:
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
+
+    // Menu item IDs
+    enum MenuItemIDs
+    {
+        menuExportToWav = 1000,
+        menuQuit = 1001
+    };
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

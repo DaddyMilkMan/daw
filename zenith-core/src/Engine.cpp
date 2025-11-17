@@ -6,6 +6,7 @@
 #include "../include/Engine.h"
 #include "../include/ProjectState.h"
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/ExportEngine.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../Source/engine/Track.h"
@@ -347,4 +348,51 @@ void Engine::processAudio(
             }
         }
     }
+}
+
+//==============================================================================
+// Export API
+//==============================================================================
+
+bool Engine::exportProjectToWav(
+    const juce::File& outputFile,
+    double startTime,
+    double endTime,
+    juce::String& errorMessage)
+{
+    // ⚠️ MESSAGE THREAD ONLY - Verify we're on the correct thread
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    DBG("Engine: Starting WAV export");
+
+    // Stop playback if playing
+    const bool wasPlaying = isPlaying();
+    if (wasPlaying)
+    {
+        DBG("Engine: Stopping playback for export");
+        stop();
+    }
+
+    // Create export engine and perform export
+    ExportEngine exporter;
+    const bool success = exporter.exportToWav(*this, outputFile, startTime, endTime, errorMessage);
+
+    // Optionally restore playback state
+    // (Currently we don't restore - user must manually restart playback)
+    // if (wasPlaying)
+    // {
+    //     DBG("Engine: Restoring playback state");
+    //     play();
+    // }
+
+    if (success)
+    {
+        DBG("Engine: WAV export completed successfully");
+    }
+    else
+    {
+        DBG("Engine: WAV export failed: " + errorMessage);
+    }
+
+    return success;
 }

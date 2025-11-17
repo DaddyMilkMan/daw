@@ -164,6 +164,33 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Export API
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file (blocking operation)
+     *
+     * This method:
+     * 1. Stops playback if playing
+     * 2. Delegates to ExportEngine for offline rendering
+     * 3. Returns when export is complete
+     *
+     * ⚠️ BLOCKING: This will freeze the UI during export!
+     * ⚠️ MESSAGE THREAD ONLY: Must be called from message thread!
+     *
+     * @param outputFile Destination WAV file
+     * @param startTime Start time in seconds (default: 0.0)
+     * @param endTime End time in seconds (default: 10.0)
+     * @param errorMessage Output parameter for error messages
+     * @return true if export succeeded, false otherwise
+     */
+    bool exportProjectToWav(
+        const juce::File& outputFile,
+        double startTime,
+        double endTime,
+        juce::String& errorMessage);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
