@@ -36,6 +36,7 @@ namespace zenith {
     class Track;
     class Clip;
     class MixerChannel;
+    class RecordingManager;
 }
 
 //==============================================================================
@@ -49,7 +50,8 @@ namespace zenith {
  * 3. Audio routing and mixing
  * 4. CPU usage monitoring
  */
-class Engine : public juce::AudioIODeviceCallback
+class Engine : public juce::AudioIODeviceCallback,
+               public juce::Timer
 {
 public:
     //==========================================================================
@@ -107,6 +109,21 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+    /**
+     * @brief Start recording on armed tracks
+     */
+    void startRecording();
+
+    /**
+     * @brief Stop recording and create clips
+     */
+    void stopRecording();
+
+    /**
+     * @brief Check if recording
+     */
+    bool isRecording() const { return isRecording_.load(); }
 
     //==========================================================================
     // Audio Device Management
@@ -259,6 +276,15 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Phase U3: Recording manager
+    std::unique_ptr<zenith::RecordingManager> recordingManager_;
+
+    // Phase U3: Pre-allocated mix buffer for track mixing (audio thread only)
+    juce::AudioBuffer<float> trackMixBuffer_;
+
+    // Timer callback for processing recorded audio (runs on message thread)
+    void timerCallback() override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

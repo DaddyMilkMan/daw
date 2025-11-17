@@ -52,8 +52,57 @@ MainComponent::MainComponent(Engine& eng)
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Phase 1
+    recordButton.onClick = [this]() {
+        if (engine.isRecording())
+        {
+            engine.stopRecording();
+            recordButton.setButtonText("Record");
+            DBG("Recording stopped");
+        }
+        else
+        {
+            engine.startRecording();
+            recordButton.setButtonText("Stop Recording");
+            DBG("Recording started");
+        }
+    };
     addAndMakeVisible(recordButton);
+
+    // Phase U3: Add Track button
+    addTrackButton.setButtonText("Add Track");
+    addTrackButton.onClick = [this]() {
+        engine.addTestTracks(1);
+        DBG("Added track");
+    };
+    addAndMakeVisible(addTrackButton);
+
+    // Phase U3: Arm Track button
+    armTrackButton.setButtonText("Arm Track 1");
+    armTrackButton.onClick = [this]() {
+        // Arm the first track if it exists
+        if (engine.getNumTracks() > 0)
+        {
+            auto& tracks = engine.tracks();
+            if (!tracks.empty() && tracks[0])
+            {
+                bool isArmed = tracks[0]->isArmed();
+                tracks[0]->setArmed(!isArmed);
+                armTrackButton.setButtonText(isArmed ? "Arm Track 1" : "Disarm Track 1");
+                DBG(isArmed ? "Track 1 disarmed" : "Track 1 armed");
+            }
+        }
+        else
+        {
+            DBG("No tracks to arm - create a track first");
+        }
+    };
+    addAndMakeVisible(armTrackButton);
+
+    // Phase U3: Recording status label
+    recordingStatusLabel.setText("Ready", juce::dontSendNotification);
+    recordingStatusLabel.setJustificationType(juce::Justification::centred);
+    recordingStatusLabel.setFont(juce::Font(14.0f, juce::Font::bold));
+    addAndMakeVisible(recordingStatusLabel);
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -125,15 +174,24 @@ void MainComponent::resized()
 
     cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
 
-    // Bottom bar (transport + audio device)
+    // Phase U3: Recording status bar (below top bar)
+    auto recordingBar = bounds.removeFromTop(30);
+    recordingStatusLabel.setBounds(recordingBar.reduced(10, 4));
+
+    // Bottom bar (transport + audio device + recording controls)
     auto bottomBar = bounds.removeFromBottom(50);
 
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
 
+    // Phase U3: Track controls on the right
+    auto trackControlsSection = bottomBar.removeFromRight(240);
+    addTrackButton.setBounds(trackControlsSection.removeFromLeft(110).reduced(5, 8));
+    armTrackButton.setBounds(trackControlsSection.removeFromLeft(120).reduced(5, 8));
+
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
-    int buttonWidth = 100;
+    int buttonWidth = 120;
     int totalWidth = buttonWidth * 3 + 20;  // 3 buttons + spacing
     int startX = transportSection.getCentreX() - totalWidth / 2;
 
@@ -154,6 +212,23 @@ void MainComponent::timerCallback()
 
     // C4: Update track count (dirty-checked)
     refreshTrackCountLabel();
+
+    // Phase U3: Update recording status
+    if (engine.isRecording())
+    {
+        recordingStatusLabel.setText("🔴 RECORDING", juce::dontSendNotification);
+        recordingStatusLabel.setColour(juce::Label::textColourId, juce::Colours::red);
+    }
+    else if (engine.isPlaying())
+    {
+        recordingStatusLabel.setText("▶ PLAYING", juce::dontSendNotification);
+        recordingStatusLabel.setColour(juce::Label::textColourId, juce::Colours::green);
+    }
+    else
+    {
+        recordingStatusLabel.setText("Ready", juce::dontSendNotification);
+        recordingStatusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    }
 }
 
 //==============================================================================

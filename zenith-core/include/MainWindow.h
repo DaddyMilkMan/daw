@@ -77,6 +77,11 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
+    // Phase U3: Recording controls
+    juce::TextButton addTrackButton;
+    juce::TextButton armTrackButton;
+    juce::Label recordingStatusLabel;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 
