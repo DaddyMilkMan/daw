@@ -12,7 +12,34 @@ Zenith — Professional Digital Audio Workstation
 Overview
 
 Zenith is a professional DAW focused on native performance, modern visuals, and an integrated assistant (Wingman) that helps with editing, arrangement, and session ops.
-We’ve migrated away from web UIs and hybrid stacks to a pure C++ / JUCE 8 interface for predictable CPU usage, smooth rendering, and rock-solid real-time behavior.
+We've migrated away from web UIs and hybrid stacks to a pure C++ / JUCE 8 interface for predictable CPU usage, smooth rendering, and rock-solid real-time behavior.
+
+## Windows Quick Start
+
+**Want to build Zenith on Windows? It's easy!**
+
+- **Windows 10/11** (64-bit)
+- **Visual Studio 2022** with "Desktop development with C++"
+- **No WSL, no MSYS2, no package managers required**
+- **JUCE is fetched automatically** — no manual setup
+
+**Three-step install:**
+
+```cmd
+git clone https://github.com/DaddyMilkMan/zenith-core.git
+cd zenith-core
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug -j
+```
+
+**Run it:**
+```cmd
+build\Debug\Zenith.exe
+```
+
+**Full Windows installation guide:** [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md)
+
+**Developer workflow (IDE setup, debugging, profiling):** [docs/DEVELOPER_WORKFLOW.md](docs/DEVELOPER_WORKFLOW.md)
 
 Goals
 
@@ -76,11 +103,15 @@ Extension SDK for deep hooks (C++/Rust).
 
 Windows Support
 
+**Native Windows development — no WSL or Linux subsystem required!**
+
 Compiler/IDE: Visual Studio 2022 (v143), CMake ≥ 3.22
 
 Audio APIs: WASAPI (Shared/Exclusive), ASIO (if available)
 
-Threading: MMCSS “Pro Audio” priority helper (toggle via CMake)
+Threading: MMCSS "Pro Audio" priority helper (toggle via CMake)
+
+**Installation guide:** [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md)
 
 Project Structure (current)
 zenith-core/
@@ -101,27 +132,20 @@ zenith-core/
    └─ windows/
       └─ mmcss_audio_priority.md
 
-Building (Windows)
+Building on Windows
 
-Prereqs
+**For the easiest installation experience, see:** [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md)
 
-Visual Studio 2022 Desktop development with C++ workload
+**Quick build commands:**
 
-CMake ≥ 3.22
+```cmd
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug -j
+```
 
-Windows SDK (installed with VS)
+**That's it!** JUCE is fetched automatically via CMake FetchContent.
 
-Configure & Build
-
-# Debug and Release builds
-cmake -S . -B build/Debug  -DCMAKE_BUILD_TYPE=Debug
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-
-cmake --build build/Debug  -j
-cmake --build build/Release -j
-
-
-CMake Options
+### CMake Options
 
 -DZENITH_ENABLE_MMCSS=ON (default): enable MMCSS “Pro Audio” boost
 
