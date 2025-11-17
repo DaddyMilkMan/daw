@@ -122,6 +122,13 @@ private:
      */
     juce::var cmd_setTempo(const juce::var& params);
 
+    /**
+     * @brief Export project to WAV file
+     * Params: { "outputPath": "/path/to/output.wav", "durationSeconds": 10.0, "sampleRate": 44100.0 }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_exportWav(const juce::var& params);
+
     //==========================================================================
     // Helper methods
     //==========================================================================

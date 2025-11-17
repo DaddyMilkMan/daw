@@ -164,6 +164,43 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Unified Render Path
+    //==========================================================================
+
+    /**
+     * @brief Unified render function used by both realtime and offline paths
+     *
+     * This is the single source of truth for audio rendering:
+     * - Realtime callback calls this with live transport position
+     * - Export calls this with offline transport position
+     *
+     * @param outputBuffer Pre-allocated stereo buffer to fill
+     * @param transportPosition Current playback position in samples
+     * @param numSamples Number of samples to render
+     * @note Can run on AUDIO THREAD - must be real-time safe!
+     * @note Uses pre-allocated track buffers to avoid allocation
+     */
+    void renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                     juce::int64 transportPosition,
+                     int numSamples);
+
+    /**
+     * @brief Export project to WAV file using unified render path
+     *
+     * This uses the SAME renderBlock() function as realtime playback,
+     * ensuring bit-identical output.
+     *
+     * @param outputFilePath Path to output WAV file
+     * @param durationSeconds Duration to export (0 = auto-detect from project)
+     * @param sampleRate Sample rate for export (0 = use current engine rate)
+     * @return true if export succeeded
+     * @note Runs on MESSAGE THREAD
+     */
+    bool exportProjectToWav(const juce::String& outputFilePath,
+                           double durationSeconds = 10.0,
+                           double sampleRate = 0.0);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -259,6 +296,10 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Unified render path: Pre-allocated track buffers (avoid allocation in audio thread)
+    std::vector<juce::AudioBuffer<float>> trackBuffers_;
+    juce::AudioBuffer<float> masterBuffer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
