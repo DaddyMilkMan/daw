@@ -221,8 +221,10 @@ juce::ValueTree Track::Clip::getState() const
         const juce::ScopedLock sl(midiLock);
 
         // Save MIDI sequence as base64
+        juce::MidiFile midiFile;
+        midiFile.addTrack(midiSequence);
         juce::MemoryOutputStream stream;
-        midiSequence.createMidiFile(stream, 0);
+        midiFile.writeTo(stream);
         state.setProperty("midiData", stream.getMemoryBlock().toBase64Encoding(), nullptr);
     }
 
@@ -236,14 +238,16 @@ void Track::Clip::loadState(const juce::ValueTree& state)
 
     clipName = state.getProperty("name", "Clip");
     clipType = static_cast<Type>(static_cast<int>(state.getProperty("type", 0)));
-    startPosition.store(state.getProperty("startPosition", 0));
-    clipLength.store(state.getProperty("length", 0));
-    clipOffset.store(state.getProperty("offset", 0));
-    fadeInLength.store(state.getProperty("fadeIn", 0));
-    fadeOutLength.store(state.getProperty("fadeOut", 0));
-    gain.store(state.getProperty("gain", 1.0f));
-    looping.store(state.getProperty("looping", false));
-    clipColor = juce::Colour::fromString(state.getProperty("color", juce::Colours::blue.toString()));
+
+    // Cast juce::var to int64_t explicitly
+    startPosition.store(static_cast<int64_t>(static_cast<juce::int64>(state.getProperty("startPosition", 0))));
+    clipLength.store(static_cast<int64_t>(static_cast<juce::int64>(state.getProperty("length", 0))));
+    clipOffset.store(static_cast<int64_t>(static_cast<juce::int64>(state.getProperty("offset", 0))));
+    fadeInLength.store(static_cast<int64_t>(static_cast<juce::int64>(state.getProperty("fadeIn", 0))));
+    fadeOutLength.store(static_cast<int64_t>(static_cast<juce::int64>(state.getProperty("fadeOut", 0))));
+    gain.store(static_cast<float>(state.getProperty("gain", 1.0f)));
+    looping.store(static_cast<bool>(state.getProperty("looping", false)));
+    clipColor = juce::Colour::fromString(state.getProperty("color", juce::Colours::blue.toString()).toString());
 
     if (clipType == Type::Audio)
     {
@@ -262,7 +266,8 @@ void Track::Clip::loadState(const juce::ValueTree& state)
             midiData.fromBase64Encoding(midiDataBase64);
 
             juce::MidiFile midiFile;
-            midiFile.readFrom(midiData.begin(), midiData.getSize());
+            juce::MemoryInputStream midiStream(midiData, false);
+            midiFile.readFrom(midiStream);
 
             if (midiFile.getNumTracks() > 0)
             {

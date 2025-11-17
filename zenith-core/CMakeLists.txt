@@ -99,6 +99,10 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # U3: Recording engine
+    Source/engine/RecordingEngine.h
+    Source/engine/RecordingEngine.cpp
 )
 
 # ============================================================================

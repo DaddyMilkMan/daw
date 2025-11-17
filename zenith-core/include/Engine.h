@@ -36,6 +36,7 @@ namespace zenith {
     class Track;
     class Clip;
     class MixerChannel;
+    class RecordingEngine;
 }
 
 //==============================================================================
@@ -107,6 +108,22 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+    /**
+     * @brief Start recording on armed tracks
+     * @note Automatically starts playback if not already playing
+     */
+    void startRecording();
+
+    /**
+     * @brief Stop recording and create clips
+     */
+    void stopRecording();
+
+    /**
+     * @brief Check if recording
+     */
+    bool isRecording() const { return isRecording_.load(); }
 
     //==========================================================================
     // Audio Device Management
@@ -259,6 +276,9 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // U3: Recording engine
+    std::unique_ptr<zenith::RecordingEngine> recordingEngine_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

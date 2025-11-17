@@ -77,6 +77,13 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
+    // U3: Track management UI
+    juce::TextButton createTrackButton;
+    juce::Viewport trackListViewport;
+    juce::Component trackListContent;
+    std::vector<std::unique_ptr<juce::Component>> trackRows_;
+    void rebuildTrackList();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 

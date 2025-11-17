@@ -12,6 +12,9 @@
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
 
+// U3: Recording engine
+#include "../Source/engine/RecordingEngine.h"
+
 //==============================================================================
 Engine::Engine()
 {
@@ -46,6 +49,10 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // U3: Create recording engine
+        recordingEngine_ = std::make_unique<zenith::RecordingEngine>(*projectState_, *this);
+        DBG("Engine: Created recording engine");
     }
 }
 
@@ -133,6 +140,13 @@ void Engine::play()
 void Engine::stop()
 {
     DBG("Engine: Stop");
+
+    // U3: Stop recording first (if active)
+    if (isRecording())
+    {
+        stopRecording();
+    }
+
     isPlaying_.store(false);
     enableTestTone_.store(false);
 
@@ -142,6 +156,41 @@ void Engine::stop()
         automationSynchronizer->stop();
         DBG("Engine: Stopped automation synchronizer");
     }
+}
+
+void Engine::startRecording()
+{
+    DBG("Engine: Start Recording");
+
+    if (!recordingEngine_)
+    {
+        DBG("Engine: ERROR - RecordingEngine not initialized!");
+        return;
+    }
+
+    // Start playback if not already playing
+    if (!isPlaying())
+    {
+        play();
+    }
+
+    // Start recording with current device settings
+    const double sampleRate = currentSampleRate.load();
+    const int numChannels = 2;  // Hardcode stereo for now
+
+    recordingEngine_->startRecording(sampleRate, numChannels);
+    isRecording_.store(true);
+}
+
+void Engine::stopRecording()
+{
+    DBG("Engine: Stop Recording");
+
+    if (!recordingEngine_)
+        return;
+
+    recordingEngine_->stopRecording();
+    isRecording_.store(false);
 }
 
 //==============================================================================
@@ -260,10 +309,17 @@ void Engine::audioDeviceIOCallbackWithContext(
     // - Read/write std::atomic values
     // - Use pre-allocated buffers
 
-    juce::ignoreUnused(inputChannelData, numInputChannels, context);
+    juce::ignoreUnused(context);
 
     // Check if playing
     bool playing = isPlaying_.load();
+    bool recording = isRecording_.load();
+
+    // U3: Capture audio input when recording (RT-safe!)
+    if (recording && recordingEngine_ && inputChannelData && numInputChannels > 0)
+    {
+        recordingEngine_->pushAudioInput(inputChannelData, numInputChannels, numSamples);
+    }
 
     if (playing)
     {

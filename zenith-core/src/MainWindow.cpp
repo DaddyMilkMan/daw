@@ -4,6 +4,7 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../Source/engine/Track.h"  // U3: For track arm UI
 
 //==============================================================================
 // MainComponent Implementation
@@ -52,8 +53,36 @@ MainComponent::MainComponent(Engine& eng)
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Phase 1
+    recordButton.onClick = [this]() {
+        // Toggle recording
+        if (engine.isRecording())
+        {
+            engine.stopRecording();
+            DBG("Record button clicked: Stop");
+        }
+        else
+        {
+            engine.startRecording();
+            DBG("Record button clicked: Start");
+        }
+    };
     addAndMakeVisible(recordButton);
+
+    // U3: Create Track button
+    createTrackButton.setButtonText("+ Track");
+    createTrackButton.onClick = [this]() {
+        engine.addTestTracks(1);
+        rebuildTrackList();
+        DBG("Created new track");
+    };
+    addAndMakeVisible(createTrackButton);
+
+    // U3: Track list viewport
+    trackListViewport.setViewedComponent(&trackListContent, false);
+    addAndMakeVisible(trackListViewport);
+
+    // Build initial track list
+    rebuildTrackList();
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -140,6 +169,15 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // U3: Left panel for tracks (200px wide)
+    auto leftPanel = bounds.removeFromLeft(250);
+
+    // Create Track button at top of left panel
+    createTrackButton.setBounds(leftPanel.removeFromTop(40).reduced(10, 5));
+
+    // Track list viewport takes remaining space
+    trackListViewport.setBounds(leftPanel);
 }
 
 void MainComponent::timerCallback()
@@ -154,6 +192,18 @@ void MainComponent::timerCallback()
 
     // C4: Update track count (dirty-checked)
     refreshTrackCountLabel();
+
+    // U3: Update recording button state
+    if (engine.isRecording())
+    {
+        recordButton.setButtonText("Recording...");
+        recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+    }
+    else
+    {
+        recordButton.setButtonText("Record");
+        recordButton.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+    }
 }
 
 //==============================================================================
@@ -170,6 +220,72 @@ void MainComponent::refreshTrackCountLabel()
     lastTrackCount_ = count;
     // No heavy formatting, no repaint storm
     trackCountLabel.setText("Tracks: " + juce::String(count), juce::dontSendNotification);
+}
+
+//==============================================================================
+// U3: Track list UI
+//==============================================================================
+
+void MainComponent::rebuildTrackList()
+{
+    // Clear existing track rows
+    trackRows_.clear();
+
+    const auto& tracks = engine.tracks();
+    const int rowHeight = 40;
+    int yPos = 0;
+
+    for (size_t i = 0; i < tracks.size(); ++i)
+    {
+        auto* track = tracks[i].get();
+        if (track == nullptr)
+            continue;
+
+        // Create a container for this track row
+        auto trackRow = std::make_unique<juce::Component>();
+
+        // Track name label
+        auto* nameLabel = new juce::Label();
+        nameLabel->setText(track->getName(), juce::dontSendNotification);
+        nameLabel->setBounds(5, 5, 120, 30);
+        trackRow->addAndMakeVisible(nameLabel);
+
+        // Arm toggle button
+        auto* armButton = new juce::TextButton();
+        armButton->setButtonText(track->isArmed() ? "ARM" : "arm");
+        armButton->setClickingTogglesState(true);
+        armButton->setToggleState(track->isArmed(), juce::dontSendNotification);
+        armButton->setBounds(130, 5, 60, 30);
+
+        // Color armed button red
+        if (track->isArmed())
+            armButton->setColour(juce::TextButton::buttonColourId, juce::Colours::red);
+
+        // Wire up toggle
+        armButton->onClick = [track, armButton]() {
+            bool isArmed = armButton->getToggleState();
+            const_cast<zenith::Track*>(track)->setArmed(isArmed);
+
+            // Update button appearance
+            armButton->setButtonText(isArmed ? "ARM" : "arm");
+            armButton->setColour(juce::TextButton::buttonColourId,
+                                isArmed ? juce::Colours::red : juce::Colours::darkgrey);
+
+            DBG("Track " + track->getName() + " armed: " + juce::String(isArmed ? "YES" : "NO"));
+        };
+
+        trackRow->addAndMakeVisible(armButton);
+
+        // Position the row
+        trackRow->setBounds(0, yPos, 240, rowHeight);
+        trackListContent.addAndMakeVisible(trackRow.get());
+
+        trackRows_.push_back(std::move(trackRow));
+        yPos += rowHeight;
+    }
+
+    // Set content size
+    trackListContent.setSize(240, yPos);
 }
 
 //==============================================================================
