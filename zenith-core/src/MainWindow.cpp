@@ -194,6 +194,10 @@ MainWindow::MainWindow(const juce::String& name)
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
 
+    // Create menu bar
+    menuBar = std::make_unique<ZenithMenuBar>(*this);
+    setMenuBar(menuBar.get());
+
     // Set up window
     setUsingNativeTitleBar(true);
     setContentOwned(mainComponent.get(), true);
@@ -215,6 +219,10 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Clear menu bar first
+    setMenuBar(nullptr);
+    menuBar.reset();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -231,4 +239,72 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+void MainWindow::showAboutDialog()
+{
+    juce::String aboutMessage;
+    aboutMessage << "Zenith DAW\n\n";
+    aboutMessage << "A professional digital audio workstation\n\n";
+    aboutMessage << "Version: 0.1.0\n";
+    aboutMessage << "Built with JUCE 8.0.9\n\n";
+    aboutMessage << "For documentation and installation instructions, see:\n";
+    aboutMessage << "• docs/README.md\n";
+    aboutMessage << "• docs/INSTALL_WINDOWS.md";
+
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::MessageBoxIconType::InfoIcon,
+        "About Zenith DAW",
+        aboutMessage,
+        "OK"
+    );
+}
+
+//==============================================================================
+// ZenithMenuBar Implementation
+//==============================================================================
+
+MainWindow::ZenithMenuBar::ZenithMenuBar(MainWindow& mainWindow)
+    : owner(mainWindow)
+{
+}
+
+juce::StringArray MainWindow::ZenithMenuBar::getMenuBarNames()
+{
+    return { "File", "Help" };
+}
+
+juce::PopupMenu MainWindow::ZenithMenuBar::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File menu
+    {
+        #if ! (JUCE_IOS || JUCE_ANDROID)
+            menu.addItem(quit, "Quit", true, false);
+        #endif
+    }
+    else if (topLevelMenuIndex == 1)  // Help menu
+    {
+        menu.addItem(aboutZenith, "About Zenith DAW...", true, false);
+    }
+
+    return menu;
+}
+
+void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
+{
+    switch (menuItemID)
+    {
+        case aboutZenith:
+            owner.showAboutDialog();
+            break;
+
+        case quit:
+            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            break;
+
+        default:
+            break;
+    }
 }
