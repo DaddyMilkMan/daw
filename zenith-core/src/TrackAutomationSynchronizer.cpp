@@ -75,13 +75,9 @@ void TrackAutomationSynchronizer::timerCallback()
     // Note: Engine would need to expose this - for now we'll add a method
     // For MVP, we can use a simplified approach
 
-    // Get tempo and sample rate
-    double tempo = projectState.getTempo();
+    // Phase 15: Use TempoMap for samples → beats conversion (handles variable tempo)
     double sampleRate = engine.getSampleRate();
-
-    // Estimate beats from samples
-    // beats = (samples / sampleRate) * (tempo / 60.0)
-    double playbackBeats = (frameCounter / sampleRate) * (tempo / 60.0);
+    double playbackBeats = engine.getTempoMap().samplesToBeats(frameCounter, sampleRate);
 
     // Update all tracks with automation
     auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
