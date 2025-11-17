@@ -18,6 +18,7 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("add_track", [this](const juce::var& p) { return cmd_addTrack(p); });
     registerCommand("get_project_info", [this](const juce::var& p) { return cmd_getProjectInfo(p); });
     registerCommand("set_tempo", [this](const juce::var& p) { return cmd_setTempo(p); });
+    registerCommand("export_wav", [this](const juce::var& p) { return cmd_exportWav(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -252,6 +253,36 @@ juce::var CommandAPI::cmd_setTempo(const juce::var& params)
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_exportWav(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "outputPath", error)) throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String outputPath = obj->getProperty("outputPath").toString();
+
+    // Optional params
+    double durationSeconds = obj->getProperty("durationSeconds", 10.0);
+    double sampleRate = obj->getProperty("sampleRate", 0.0);  // 0 = use current engine rate
+
+    // Export to WAV using unified render path
+    bool success = engine.exportProjectToWav(outputPath, durationSeconds, sampleRate);
+
+    if (!success)
+    {
+        throw std::runtime_error("Failed to export WAV file");
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("outputPath", outputPath);
+    result->setProperty("durationSeconds", durationSeconds);
     return juce::var(result.get());
 }
 
