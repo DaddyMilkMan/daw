@@ -164,6 +164,24 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Offline Export
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file with offline rendering
+     * @param outputFile Path to output WAV file
+     * @param sampleRate Sample rate for export (default: 44100)
+     * @param bitDepth Bit depth for export (16, 24, or 32)
+     * @param durationInSeconds Duration to export (0 = auto-detect from project)
+     * @return true if export succeeded
+     * @note Runs on MESSAGE THREAD - not real-time safe
+     */
+    bool exportProjectToWav(const juce::File& outputFile,
+                           double sampleRate = 44100.0,
+                           int bitDepth = 24,
+                           double durationInSeconds = 0.0);
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -228,6 +246,29 @@ private:
         int numSamples);
 
     //==========================================================================
+    // Offline Rendering Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Prepare per-track buffers for offline rendering
+     * @param blockSize Block size for offline rendering (e.g., 4096 samples)
+     * @param numChannels Number of channels per track
+     * @note Must be called before renderBlock() during offline export
+     */
+    void prepareBuffersForOfflineRender(int blockSize, int numChannels);
+
+    /**
+     * @brief Render a block of audio into the output buffer
+     * @param outputBuffer Buffer to render into
+     * @param numSamples Number of samples to render
+     * @param playheadPosition Current playhead position in samples
+     * @note MESSAGE THREAD - used for offline rendering only
+     */
+    void renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                    int numSamples,
+                    juce::int64 playheadPosition);
+
+    //==========================================================================
     // Member Variables
     //==========================================================================
 
@@ -259,6 +300,11 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Offline rendering buffers (MESSAGE THREAD only)
+    // Pre-allocated per-track buffers for offline rendering
+    // Must be resized via prepareBuffersForOfflineRender() before use
+    std::vector<juce::AudioBuffer<float>> trackBuffers_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

@@ -348,3 +348,193 @@ void Engine::processAudio(
         }
     }
 }
+
+//==============================================================================
+// Offline Export Implementation
+//==============================================================================
+
+void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels)
+{
+    DBG("Engine: Preparing buffers for offline render - blockSize=" + juce::String(blockSize) +
+        ", numChannels=" + juce::String(numChannels) +
+        ", numTracks=" + juce::String(tracks_.size()));
+
+    // Resize trackBuffers_ to match the number of tracks
+    trackBuffers_.resize(tracks_.size());
+
+    // Allocate each track buffer with the specified block size and channel count
+    for (size_t i = 0; i < trackBuffers_.size(); ++i)
+    {
+        trackBuffers_[i].setSize(numChannels, blockSize, false, true, false);
+        trackBuffers_[i].clear();
+    }
+
+    DBG("Engine: Buffers prepared successfully");
+}
+
+void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                        int numSamples,
+                        juce::int64 playheadPosition)
+{
+    juce::ignoreUnused(playheadPosition);
+
+    // Clear output buffer
+    outputBuffer.clear();
+
+    // Validate buffer sizes to prevent the bug described in the issue
+    // Skip any track whose preallocated buffer is smaller than the requested block
+    for (size_t trackIdx = 0; trackIdx < tracks_.size(); ++trackIdx)
+    {
+        // Check if we have a buffer for this track
+        if (trackIdx >= trackBuffers_.size())
+        {
+            DBG("Engine::renderBlock - Warning: No buffer allocated for track " + juce::String(trackIdx));
+            continue;
+        }
+
+        auto& trackBuffer = trackBuffers_[trackIdx];
+
+        // THIS IS THE CRITICAL CHECK mentioned in lines 353-357 of the bug report
+        // If the preallocated buffer is smaller than the requested block, skip this track
+        if (trackBuffer.getNumSamples() < numSamples)
+        {
+            DBG("Engine::renderBlock - Warning: Track " + juce::String(trackIdx) +
+                " buffer size (" + juce::String(trackBuffer.getNumSamples()) +
+                ") is smaller than requested block size (" + juce::String(numSamples) +
+                ") - SKIPPING TRACK");
+            continue;
+        }
+
+        // Clear track buffer
+        trackBuffer.clear();
+
+        // TODO: When tracks have actual audio content, render it here
+        // For now, tracks don't have clips or audio sources yet (Phase 0)
+        // In future phases:
+        // - Get track clips that overlap playheadPosition
+        // - Render clip audio into trackBuffer
+        // - Apply track volume, pan, mute, solo
+        // - Apply track effects chain
+
+        // Mix track buffer into output buffer
+        for (int channel = 0; channel < juce::jmin(outputBuffer.getNumChannels(),
+                                                    trackBuffer.getNumChannels()); ++channel)
+        {
+            outputBuffer.addFrom(channel, 0,
+                               trackBuffer.getReadPointer(channel),
+                               numSamples);
+        }
+    }
+
+    // TODO: Apply master bus effects when implemented
+}
+
+bool Engine::exportProjectToWav(const juce::File& outputFile,
+                                double sampleRate,
+                                int bitDepth,
+                                double durationInSeconds)
+{
+    DBG("Engine: Starting WAV export to " + outputFile.getFullPathName());
+    DBG("  Sample Rate: " + juce::String(sampleRate) + " Hz");
+    DBG("  Bit Depth: " + juce::String(bitDepth));
+    DBG("  Duration: " + juce::String(durationInSeconds) + " seconds");
+
+    // Validate parameters
+    if (sampleRate <= 0.0)
+    {
+        DBG("Engine: Error - Invalid sample rate");
+        return false;
+    }
+
+    if (bitDepth != 16 && bitDepth != 24 && bitDepth != 32)
+    {
+        DBG("Engine: Error - Invalid bit depth (must be 16, 24, or 32)");
+        return false;
+    }
+
+    // Auto-detect duration if not specified
+    // For Phase 0, use 10 seconds as default
+    // TODO: In future phases, detect from project content (clips, automation, etc.)
+    if (durationInSeconds <= 0.0)
+    {
+        durationInSeconds = 10.0;  // Default duration
+        DBG("Engine: Auto-detected duration: " + juce::String(durationInSeconds) + " seconds");
+    }
+
+    // Calculate total samples
+    const juce::int64 totalSamples = static_cast<juce::int64>(durationInSeconds * sampleRate);
+
+    // Use 4096-sample blocks for efficient offline rendering
+    // This is the block size mentioned in the bug report
+    constexpr int offlineBlockSize = 4096;
+    const int numChannels = 2;  // Stereo output
+
+    DBG("Engine: Using offline block size of " + juce::String(offlineBlockSize) + " samples");
+
+    // CRITICAL: Prepare buffers for offline rendering BEFORE calling renderBlock
+    // This fixes the bug where trackBuffers_ would be sized for the audio device
+    // buffer (typically 512/1024) and all tracks would be skipped when rendering
+    // 4096-sample blocks
+    prepareBuffersForOfflineRender(offlineBlockSize, numChannels);
+
+    // Create WAV file writer
+    juce::WavAudioFormat wavFormat;
+    std::unique_ptr<juce::AudioFormatWriter> writer;
+
+    writer.reset(wavFormat.createWriterFor(
+        new juce::FileOutputStream(outputFile),
+        sampleRate,
+        static_cast<unsigned int>(numChannels),
+        bitDepth,
+        {},  // metadata
+        0    // quality option (not used for WAV)
+    ));
+
+    if (writer == nullptr)
+    {
+        DBG("Engine: Error - Failed to create WAV writer");
+        return false;
+    }
+
+    // Create render buffer
+    juce::AudioBuffer<float> renderBuffer(numChannels, offlineBlockSize);
+
+    // Render loop
+    juce::int64 samplesRendered = 0;
+
+    while (samplesRendered < totalSamples)
+    {
+        // Calculate how many samples to render in this block
+        const int samplesToRender = static_cast<int>(
+            juce::jmin(static_cast<juce::int64>(offlineBlockSize),
+                      totalSamples - samplesRendered));
+
+        // Render this block
+        // The renderBlock() method will skip any track whose buffer is too small
+        // But since we called prepareBuffersForOfflineRender() with offlineBlockSize,
+        // all track buffers are >= offlineBlockSize, so no tracks will be skipped
+        renderBlock(renderBuffer, samplesToRender, samplesRendered);
+
+        // Write to file
+        if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender))
+        {
+            DBG("Engine: Error - Failed to write audio data");
+            return false;
+        }
+
+        samplesRendered += samplesToRender;
+
+        // Log progress every second
+        if (samplesRendered % static_cast<juce::int64>(sampleRate) == 0)
+        {
+            double progress = static_cast<double>(samplesRendered) / totalSamples * 100.0;
+            DBG("Engine: Export progress: " + juce::String(progress, 1) + "%");
+        }
+    }
+
+    // Flush and close writer
+    writer.reset();
+
+    DBG("Engine: Export complete - " + juce::String(samplesRendered) + " samples written");
+    return true;
+}
