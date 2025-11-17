@@ -46,7 +46,18 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
 
-    // TODO(Phase 2: plugin hosting) - Prepare all plugins
+    // Prepare all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& plugin : plugins)
+        {
+            if (plugin != nullptr)
+            {
+                plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
+                plugin->setNonRealtime(false);
+            }
+        }
+    }
 
     // Prepare all clips
     {
@@ -63,7 +74,17 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
-    // TODO(Phase 2: plugin hosting) - Release all plugins
+    // Release all plugins
+    {
+        const juce::ScopedLock sl(pluginLock);
+        for (auto& plugin : plugins)
+        {
+            if (plugin != nullptr)
+            {
+                plugin->releaseResources();
+            }
+        }
+    }
 
     // Release all clips
     {
@@ -195,8 +216,72 @@ void Track::setEnabled(bool shouldBeEnabled)
 }
 
 //==============================================================================
-// Plugin management - TODO(Phase 2: plugin hosting)
-// Stubbed for now; will implement VST3/AU support in Phase 2
+// Plugin management
+//==============================================================================
+
+void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin)
+{
+    if (plugin == nullptr)
+        return;
+
+    const juce::ScopedLock sl(pluginLock);
+
+    // Prepare the plugin if we're already initialized
+    if (currentSampleRate > 0)
+    {
+        plugin->prepareToPlay(currentSampleRate, currentBlockSize);
+        plugin->setNonRealtime(false);
+    }
+
+    plugins.push_back(std::move(plugin));
+    sendChangeMessage();
+}
+
+void Track::removePlugin(int pluginIndex)
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    if (pluginIndex >= 0 && pluginIndex < static_cast<int>(plugins.size()))
+    {
+        auto& plugin = plugins[pluginIndex];
+        if (plugin != nullptr)
+        {
+            plugin->releaseResources();
+        }
+        plugins.erase(plugins.begin() + pluginIndex);
+        sendChangeMessage();
+    }
+}
+
+void Track::clearPlugins()
+{
+    const juce::ScopedLock sl(pluginLock);
+
+    for (auto& plugin : plugins)
+    {
+        if (plugin != nullptr)
+        {
+            plugin->releaseResources();
+        }
+    }
+
+    plugins.clear();
+    sendChangeMessage();
+}
+
+int Track::getNumPlugins() const
+{
+    const juce::ScopedLock sl(pluginLock);
+    return static_cast<int>(plugins.size());
+}
+
+juce::AudioPluginInstance* Track::getPlugin(int index) const
+{
+    const juce::ScopedLock sl(pluginLock);
+    if (index >= 0 && index < static_cast<int>(plugins.size()))
+        return plugins[index].get();
+    return nullptr;
+}
 
 //==============================================================================
 void Track::addClip(std::unique_ptr<Clip> clip)
@@ -352,9 +437,20 @@ void Track::loadState(const juce::ValueTree& state)
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
-    (void)buffer;
-    (void)numSamples;
-    // TODO(Phase 2: plugin hosting) - Process plugin chain
+    const juce::ScopedLock sl(pluginLock);
+
+    // Process each plugin in the chain
+    for (auto& plugin : plugins)
+    {
+        if (plugin != nullptr)
+        {
+            // Create MIDI buffer (empty for now, TODO: add MIDI support)
+            juce::MidiBuffer midiMessages;
+
+            // Process the plugin
+            plugin->processBlock(buffer, midiMessages);
+        }
+    }
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples)

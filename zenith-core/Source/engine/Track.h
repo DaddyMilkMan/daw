@@ -87,13 +87,38 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Plugin chain management - TODO(Phase 2: plugin hosting)
-    // Stubbed for now; will implement in Phase 2 with VST3/AU support
-    void addPlugin(void* plugin) { (void)plugin; /* stub */ }
-    void removePlugin(int pluginIndex) { (void)pluginIndex; /* stub */ }
-    void clearPlugins() { /* stub */ }
-    int getNumPlugins() const { return 0; }
-    void* getPlugin(int index) const { (void)index; return nullptr; }
+    // Plugin chain management
+    /**
+     * @brief Add a plugin to the end of the chain
+     * @param plugin The plugin instance to add (ownership transferred)
+     * @note Must be called from message thread only
+     */
+    void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+
+    /**
+     * @brief Remove a plugin from the chain
+     * @param pluginIndex Index of plugin to remove
+     * @note Must be called from message thread only
+     */
+    void removePlugin(int pluginIndex);
+
+    /**
+     * @brief Clear all plugins from the chain
+     * @note Must be called from message thread only
+     */
+    void clearPlugins();
+
+    /**
+     * @brief Get number of plugins in the chain
+     */
+    int getNumPlugins() const;
+
+    /**
+     * @brief Get plugin at index (raw pointer, ownership retained by Track)
+     * @param index Plugin index
+     * @return Plugin instance or nullptr if invalid index
+     */
+    juce::AudioPluginInstance* getPlugin(int index) const;
 
     //==============================================================================
     // Clip management
@@ -144,10 +169,10 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Plugin chain - TODO(Phase 2: plugin hosting)
-    // Placeholder for future VST3/AU hosting
+    // Plugin chain
     juce::CriticalSection pluginLock;
     juce::AudioBuffer<float> pluginBuffer;
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
 
     //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)

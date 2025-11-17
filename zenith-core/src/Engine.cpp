@@ -16,6 +16,20 @@
 Engine::Engine()
 {
     DBG("Engine: Constructor");
+
+    // Initialize plugin format manager with VST3 only
+    pluginFormatManager.addDefaultFormats();
+    DBG("Engine: Plugin format manager initialized");
+
+    // Try to load known plugin list from disk
+    if (loadKnownPluginList())
+    {
+        DBG("Engine: Loaded " + juce::String(knownPluginList.getNumTypes()) + " plugins from cache");
+    }
+    else
+    {
+        DBG("Engine: No cached plugin list found");
+    }
 }
 
 Engine::~Engine()
@@ -347,4 +361,114 @@ void Engine::processAudio(
             }
         }
     }
+}
+
+//==============================================================================
+// Plugin Management
+//==============================================================================
+
+void Engine::scanForPlugins(std::function<void(const juce::String&, float)> callback)
+{
+    DBG("Engine: Scanning for plugins...");
+
+    // Clear existing list
+    knownPluginList.clear();
+
+    // Get VST3 format
+    juce::AudioPluginFormat* vst3Format = nullptr;
+    for (int i = 0; i < pluginFormatManager.getNumFormats(); ++i)
+    {
+        auto* format = pluginFormatManager.getFormat(i);
+        if (format->getName() == "VST3")
+        {
+            vst3Format = format;
+            break;
+        }
+    }
+
+    if (vst3Format == nullptr)
+    {
+        DBG("Engine: VST3 format not available!");
+        if (callback)
+            callback("VST3 format not available", 1.0f);
+        return;
+    }
+
+    // Get default VST3 search paths
+    auto searchPaths = vst3Format->getDefaultLocationsToSearch();
+
+    DBG("Engine: Scanning " + juce::String(searchPaths.getNumPaths()) + " VST3 locations");
+    for (int i = 0; i < searchPaths.getNumPaths(); ++i)
+    {
+        DBG("  " + searchPaths[i].getFullPathName());
+    }
+
+    // Scan for plugins
+    juce::PluginDirectoryScanner scanner(
+        knownPluginList,
+        *vst3Format,
+        searchPaths,
+        true,  // recursive search
+        juce::File());  // dead plugins file (none)
+
+    juce::String pluginBeingScanned;
+    while (scanner.scanNextFile(true, pluginBeingScanned))
+    {
+        float progress = scanner.getProgress();
+        DBG("Engine: Scanning (" + juce::String(progress * 100.0f, 1) + "%): " + pluginBeingScanned);
+
+        if (callback)
+            callback(pluginBeingScanned, progress);
+    }
+
+    DBG("Engine: Scan complete! Found " + juce::String(knownPluginList.getNumTypes()) + " plugins");
+
+    // Save to disk
+    saveKnownPluginList();
+
+    if (callback)
+        callback("Scan complete", 1.0f);
+}
+
+bool Engine::loadKnownPluginList()
+{
+    auto file = getPluginListFile();
+
+    if (!file.existsAsFile())
+        return false;
+
+    auto xml = juce::XmlDocument::parse(file);
+    if (xml == nullptr)
+        return false;
+
+    knownPluginList.recreateFromXml(*xml);
+    return knownPluginList.getNumTypes() > 0;
+}
+
+void Engine::saveKnownPluginList()
+{
+    auto file = getPluginListFile();
+
+    // Create parent directory if needed
+    file.getParentDirectory().createDirectory();
+
+    // Save to XML
+    auto xml = knownPluginList.createXml();
+    if (xml != nullptr)
+    {
+        xml->writeTo(file);
+        DBG("Engine: Saved plugin list to " + file.getFullPathName());
+    }
+}
+
+juce::File Engine::getPluginListFile() const
+{
+    // Use JUCE's standard user application data directory
+    // On Linux: ~/.config/ZenithDAW/
+    // On macOS: ~/Library/Application Support/ZenithDAW/
+    // On Windows: %APPDATA%/ZenithDAW/
+    auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+                          .getChildFile("ZenithDAW");
+
+    return appDataDir.getChildFile("plugins.xml");
 }

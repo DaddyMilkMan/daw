@@ -164,6 +164,43 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Plugin Management
+    //==========================================================================
+
+    /**
+     * @brief Scan for VST3 plugins in standard locations
+     * @param callback Optional callback for progress updates (pluginName, progress 0-1)
+     * @note Runs on message thread, may take several seconds
+     */
+    void scanForPlugins(std::function<void(const juce::String&, float)> callback = nullptr);
+
+    /**
+     * @brief Load known plugin list from disk
+     * @return true if loaded successfully
+     */
+    bool loadKnownPluginList();
+
+    /**
+     * @brief Save known plugin list to disk
+     */
+    void saveKnownPluginList();
+
+    /**
+     * @brief Get plugin format manager (for creating plugin instances)
+     */
+    juce::AudioPluginFormatManager& getPluginFormatManager() { return pluginFormatManager; }
+
+    /**
+     * @brief Get known plugin list (for browsing available plugins)
+     */
+    juce::KnownPluginList& getKnownPluginList() { return knownPluginList; }
+
+    /**
+     * @brief Get the file path where plugin list is stored
+     */
+    juce::File getPluginListFile() const;
+
+    //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
 
@@ -259,6 +296,10 @@ private:
     // Phase 13: Automation synchronizer
     ProjectState* projectState_ = nullptr;
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Plugin hosting infrastructure
+    juce::AudioPluginFormatManager pluginFormatManager;
+    juce::KnownPluginList knownPluginList;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

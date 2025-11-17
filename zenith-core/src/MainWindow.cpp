@@ -207,6 +207,9 @@ MainWindow::MainWindow(const juce::String& name)
 
     setVisible(true);
 
+    // Set up menu bar
+    setMenuBar(this);
+
     // Initialize audio engine after window is visible
     engine->initialize();
 
@@ -215,6 +218,12 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Remove menu bar
+    setMenuBar(nullptr);
+
+    // Close plugin browser if open
+    pluginBrowserWindow.reset();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -231,4 +240,155 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+//==============================================================================
+// MenuBarModel interface
+//==============================================================================
+
+juce::StringArray MainWindow::getMenuBarNames()
+{
+    return { "File", "Plugins", "Help" };
+}
+
+juce::PopupMenu MainWindow::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File
+    {
+        menu.addItem(100, "New Project");
+        menu.addItem(101, "Open Project...");
+        menu.addSeparator();
+        menu.addItem(102, "Save Project");
+        menu.addItem(103, "Save Project As...");
+        menu.addSeparator();
+        menu.addItem(104, "Exit");
+    }
+    else if (topLevelMenuIndex == 1)  // Plugins
+    {
+        menu.addItem(MenuScanPlugins, "Scan for Plugins...");
+        menu.addItem(MenuOpenPluginBrowser, "Open Plugin Browser");
+    }
+    else if (topLevelMenuIndex == 2)  // Help
+    {
+        menu.addItem(200, "About Zenith DAW");
+    }
+
+    return menu;
+}
+
+void MainWindow::menuItemSelected(int menuItemID, int topLevelMenuIndex)
+{
+    juce::ignoreUnused(topLevelMenuIndex);
+
+    switch (menuItemID)
+    {
+        case MenuScanPlugins:
+            scanForPlugins();
+            break;
+
+        case MenuOpenPluginBrowser:
+            openPluginBrowser();
+            break;
+
+        case 104:  // Exit
+            closeButtonPressed();
+            break;
+
+        case 200:  // About
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "About Zenith DAW",
+                "Zenith DAW\nVersion: Phase 0 (Foundation)\n\nA modern JUCE-based DAW",
+                "OK");
+            break;
+
+        default:
+            break;
+    }
+}
+
+//==============================================================================
+// Menu actions
+//==============================================================================
+
+void MainWindow::openPluginBrowser()
+{
+    if (pluginBrowserWindow == nullptr)
+    {
+        pluginBrowserWindow = std::make_unique<PluginBrowserWindow>(*engine);
+    }
+
+    pluginBrowserWindow->setVisible(true);
+    pluginBrowserWindow->toFront(true);
+
+    // Refresh to show current track list
+    if (auto* browser = pluginBrowserWindow->getBrowserComponent())
+    {
+        browser->refresh();
+    }
+}
+
+void MainWindow::scanForPlugins()
+{
+    // Show progress dialog
+    auto* progressWindow = new juce::AlertWindow(
+        "Scanning Plugins",
+        "Scanning for VST3 plugins...\n\nThis may take a few minutes.",
+        juce::AlertWindow::NoIcon);
+
+    progressWindow->addButton("Cancel", 0);
+    progressWindow->enterModalState(true, juce::ModalCallbackFunction::create(
+        [progressWindow](int result)
+        {
+            delete progressWindow;
+        }));
+
+    // Scan asynchronously
+    juce::Thread::launch([this, progressWindow]()
+    {
+        engine->scanForPlugins([progressWindow](const juce::String& pluginName, float progress)
+        {
+            // Update progress message
+            juce::MessageManager::callAsync([progressWindow, pluginName, progress]()
+            {
+                if (progressWindow != nullptr)
+                {
+                    progressWindow->setMessage(
+                        "Scanning for VST3 plugins...\n\n" +
+                        juce::String(progress * 100.0f, 1) + "%\n\n" +
+                        pluginName);
+                }
+            });
+        });
+
+        // Close progress window and show result
+        juce::MessageManager::callAsync([this, progressWindow]()
+        {
+            if (progressWindow != nullptr)
+            {
+                progressWindow->exitModalState(1);
+                delete progressWindow;
+            }
+
+            int numPlugins = engine->getKnownPluginList().getNumTypes();
+
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::InfoIcon,
+                "Scan Complete",
+                "Found " + juce::String(numPlugins) + " VST3 plugins.\n\n" +
+                "Plugin list saved to:\n" + engine->getPluginListFile().getFullPathName(),
+                "OK");
+
+            // Refresh plugin browser if open
+            if (pluginBrowserWindow != nullptr)
+            {
+                if (auto* browser = pluginBrowserWindow->getBrowserComponent())
+                {
+                    browser->refresh();
+                }
+            }
+        });
+    });
 }

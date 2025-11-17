@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "PluginBrowserComponent.h"
 
 //==============================================================================
 /**
@@ -92,7 +93,8 @@ private:
  * - Audio engine
  * - Project state
  */
-class MainWindow : public juce::DocumentWindow
+class MainWindow : public juce::DocumentWindow,
+                   private juce::MenuBarModel
 {
 public:
     //==========================================================================
@@ -106,15 +108,31 @@ public:
     void closeButtonPressed() override;
 
     //==========================================================================
-    // Menu bar
+    // MenuBarModel interface
     //==========================================================================
 
-    /**
-     * @brief Creates the menu bar
-     */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    juce::StringArray getMenuBarNames() override;
+    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
+    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+    //==========================================================================
+    // Menu actions
+    //==========================================================================
+
+    void openPluginBrowser();
+    void scanForPlugins();
 
 private:
+    //==========================================================================
+    // Menu item IDs
+    //==========================================================================
+
+    enum MenuItemIDs
+    {
+        MenuScanPlugins = 1,
+        MenuOpenPluginBrowser = 2
+    };
+
     //==========================================================================
     // Member variables
     //==========================================================================
@@ -127,6 +145,9 @@ private:
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
+
+    // Plugin browser window
+    std::unique_ptr<PluginBrowserWindow> pluginBrowserWindow;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

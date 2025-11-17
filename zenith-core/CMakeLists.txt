@@ -92,6 +92,9 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # Plugin browser
+    src/PluginBrowserComponent.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp
@@ -164,9 +167,8 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Disable JUCE splash screen (requires Pro license for commercial use)
     # JUCE_DISPLAY_SPLASH_SCREEN=0
 
-    # VST3 hosting (will enable when we add plugin hosting)
-    # JUCE_PLUGINHOST_VST3=1
-    # JUCE_PLUGINHOST_AU=1
+    # VST3 hosting
+    JUCE_PLUGINHOST_VST3=1
 
     # Don't auto-open plugin windows
     JUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0
