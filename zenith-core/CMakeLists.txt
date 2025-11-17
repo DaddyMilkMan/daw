@@ -92,6 +92,14 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # Integration: UI components and synchronizers
+    src/ClipSynchronizer.cpp
+    src/ArrangerView.cpp
+    src/PianoRollEditor.cpp
+    include/ClipSynchronizer.h
+    include/ArrangerView.h
+    include/PianoRollEditor.h
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp
