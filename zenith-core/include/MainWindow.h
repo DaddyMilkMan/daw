@@ -110,9 +110,14 @@ public:
     //==========================================================================
 
     /**
-     * @brief Creates the menu bar
+     * @brief Get menu bar model
      */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    juce::MenuBarModel* getMenuBarModel() { return menuBarModel.get(); }
+
+    /**
+     * @brief Menu callbacks
+     */
+    void handleExportToWav();
 
 private:
     //==========================================================================
@@ -128,5 +133,35 @@ private:
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
 
+    // Menu bar model
+    std::unique_ptr<juce::MenuBarModel> menuBarModel;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
+};
+
+//==============================================================================
+/**
+ * @class MainMenuModel
+ * @brief Menu bar model for the main window
+ */
+class MainMenuModel : public juce::MenuBarModel
+{
+public:
+    MainMenuModel(MainWindow& owner);
+    ~MainMenuModel() override = default;
+
+    juce::StringArray getMenuBarNames() override;
+    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
+    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+private:
+    MainWindow& owner_;
+
+    enum MenuItemIDs
+    {
+        exportToWav = 1,
+        quit = 2
+    };
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainMenuModel)
 };

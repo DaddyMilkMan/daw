@@ -139,6 +139,28 @@ public:
     double getCpuUsage() const;
 
     //==========================================================================
+    // Export / Bounce
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file (offline render)
+     *
+     * This performs an offline render of the entire project:
+     * - Computes project duration from clips in ProjectState
+     * - Renders all tracks offline (not using audio thread)
+     * - Writes stereo WAV file
+     *
+     * @param outputFile File to write WAV to
+     * @param startSeconds Start time in seconds (default: 0.0)
+     * @param endSeconds End time in seconds (default: auto-detect from clips)
+     * @return true if export succeeded, false if failed
+     * @note Message thread only (blocks until complete)
+     */
+    bool exportProjectToWav(const juce::File& outputFile,
+                            double startSeconds = 0.0,
+                            double endSeconds = -1.0);
+
+    //==========================================================================
     // C3: Minimal Engine Surface (compile-only, no audio wiring)
     //==========================================================================
 
@@ -226,6 +248,28 @@ private:
         float* const* outputChannelData,
         int numOutputChannels,
         int numSamples);
+
+    //==========================================================================
+    // Export Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Compute project duration in seconds from ProjectState clips
+     * @return Duration in seconds, or 10.0 if no clips found
+     * @note Message thread only
+     */
+    double computeProjectDuration() const;
+
+    /**
+     * @brief Render a block of audio offline (for export)
+     * @param outputBuffer Buffer to fill with rendered audio
+     * @param startSample Sample position in project timeline
+     * @param numSamples Number of samples to render
+     * @note Message thread only - NOT real-time safe!
+     */
+    void renderOfflineBlock(juce::AudioBuffer<float>& outputBuffer,
+                           int64_t startSample,
+                           int numSamples);
 
     //==========================================================================
     // Member Variables

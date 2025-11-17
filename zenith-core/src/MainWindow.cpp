@@ -194,6 +194,10 @@ MainWindow::MainWindow(const juce::String& name)
     // Create main content
     mainComponent = std::make_unique<MainComponent>(*engine);
 
+    // Create menu bar
+    menuBarModel = std::make_unique<MainMenuModel>(*this);
+    setMenuBar(menuBarModel.get());
+
     // Set up window
     setUsingNativeTitleBar(true);
     setContentOwned(mainComponent.get(), true);
@@ -215,6 +219,9 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Remove menu bar before destroying components
+    setMenuBar(nullptr);
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -231,4 +238,101 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+void MainWindow::handleExportToWav()
+{
+    DBG("MainWindow: Export to WAV requested");
+
+    // Show file chooser for output file
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Export to WAV",
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+        "*.wav");
+
+    auto flags = juce::FileBrowserComponent::saveMode
+               | juce::FileBrowserComponent::canSelectFiles
+               | juce::FileBrowserComponent::warnAboutOverwriting;
+
+    chooser->launchAsync(flags, [this, chooser](const juce::FileChooser& fc)
+    {
+        auto file = fc.getResult();
+        if (file == juce::File())
+        {
+            DBG("MainWindow: Export cancelled");
+            return;
+        }
+
+        // Ensure .wav extension
+        if (!file.hasFileExtension(".wav"))
+            file = file.withFileExtension(".wav");
+
+        DBG("MainWindow: Exporting to " + file.getFullPathName());
+
+        // Export project
+        if (engine)
+        {
+            bool success = engine->exportProjectToWav(file);
+            if (!success)
+            {
+                DBG("MainWindow: Export failed");
+            }
+        }
+        else
+        {
+            DBG("MainWindow: No engine available for export");
+            juce::AlertWindow::showMessageBoxAsync(
+                juce::AlertWindow::WarningIcon,
+                "Export Error",
+                "Audio engine not available",
+                "OK");
+        }
+    });
+}
+
+//==============================================================================
+// MainMenuModel Implementation
+//==============================================================================
+
+MainMenuModel::MainMenuModel(MainWindow& owner)
+    : owner_(owner)
+{
+}
+
+juce::StringArray MainMenuModel::getMenuBarNames()
+{
+    return { "File" };
+}
+
+juce::PopupMenu MainMenuModel::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File menu
+    {
+        menu.addItem(exportToWav, "Export to WAV...");
+        menu.addSeparator();
+        menu.addItem(quit, "Quit", true, false, juce::ModifierKeys::commandModifier);
+    }
+
+    return menu;
+}
+
+void MainMenuModel::menuItemSelected(int menuItemID, int topLevelMenuIndex)
+{
+    juce::ignoreUnused(topLevelMenuIndex);
+
+    switch (menuItemID)
+    {
+        case exportToWav:
+            owner_.handleExportToWav();
+            break;
+
+        case quit:
+            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            break;
+
+        default:
+            break;
+    }
 }
