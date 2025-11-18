@@ -1,28 +1,33 @@
 /**
- * @file ZenithPolySynthEditor.cpp
- * @brief Implementation of ZenithPolySynthEditor
+ * @file ZenithSamplerEditor.cpp
+ * @brief Implementation of ZenithSamplerEditor
  */
 
-#include "../../include/instruments/ZenithPolySynthEditor.h"
+#include "ZenithSamplerEditor.h"
 
 namespace zenith {
 
 //==============================================================================
-ZenithPolySynthEditor::ZenithPolySynthEditor(ZenithPolySynth& p)
+ZenithSamplerEditor::ZenithSamplerEditor(ZenithSampler& p)
     : AudioProcessorEditor(&p), processor_(p)
 {
     // Set editor size
     setSize(600, 500);
 
+    // Setup load sample button
+    addAndMakeVisible(loadSampleButton_);
+    loadSampleButton_.setButtonText("Load Sample...");
+    loadSampleButton_.onClick = [this] { loadSampleFile(); };
+
     // Setup regular parameter controls
-    setupSlider(waveformSlider_, waveformLabel_, "Waveform", "osc_wave");
-    setupSlider(detuneSlider_, detuneLabel_, "Detune", "osc_detune");
+    setupSlider(sampleStartSlider_, sampleStartLabel_, "Start", "sample_start");
+    setupSlider(sampleEndSlider_, sampleEndLabel_, "End", "sample_end");
     setupSlider(filterCutoffSlider_, filterCutoffLabel_, "Cutoff", "filter_cutoff");
     setupSlider(filterResonanceSlider_, filterResonanceLabel_, "Resonance", "filter_resonance");
-    setupSlider(attackSlider_, attackLabel_, "Attack", "amp_attack");
-    setupSlider(decaySlider_, decayLabel_, "Decay", "amp_decay");
-    setupSlider(sustainSlider_, sustainLabel_, "Sustain", "amp_sustain");
-    setupSlider(releaseSlider_, releaseLabel_, "Release", "amp_release");
+    setupSlider(attackSlider_, attackLabel_, "Attack", "env_attack");
+    setupSlider(decaySlider_, decayLabel_, "Decay", "env_decay");
+    setupSlider(sustainSlider_, sustainLabel_, "Sustain", "env_sustain");
+    setupSlider(releaseSlider_, releaseLabel_, "Release", "env_release");
     setupSlider(volumeSlider_, volumeLabel_, "Volume", "master_volume");
 
     // Setup macro knobs
@@ -30,8 +35,8 @@ ZenithPolySynthEditor::ZenithPolySynthEditor(ZenithPolySynth& p)
 }
 
 //==============================================================================
-void ZenithPolySynthEditor::setupSlider(juce::Slider& slider, juce::Label& label,
-                                       const juce::String& labelText, const juce::String& paramId)
+void ZenithSamplerEditor::setupSlider(juce::Slider& slider, juce::Label& label,
+                                     const juce::String& labelText, const juce::String& paramId)
 {
     addAndMakeVisible(slider);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -48,7 +53,7 @@ void ZenithPolySynthEditor::setupSlider(juce::Slider& slider, juce::Label& label
 }
 
 //==============================================================================
-void ZenithPolySynthEditor::setupMacroKnobs()
+void ZenithSamplerEditor::setupMacroKnobs()
 {
     const auto& metadata = processor_.getInstrumentMetadata();
 
@@ -80,7 +85,48 @@ void ZenithPolySynthEditor::setupMacroKnobs()
 }
 
 //==============================================================================
-void ZenithPolySynthEditor::paint(juce::Graphics& g)
+void ZenithSamplerEditor::loadSampleFile()
+{
+    juce::FileChooser chooser("Select a sample file...",
+                             juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+                             "*.wav;*.aif;*.aiff;*.mp3;*.ogg;*.flac");
+
+    if (chooser.browseForFileToOpen())
+    {
+        auto file = chooser.getResult();
+        processor_.loadSample(file);
+    }
+}
+
+//==============================================================================
+bool ZenithSamplerEditor::isInterestedInFileDrag(const juce::StringArray& files)
+{
+    for (const auto& file : files)
+    {
+        if (file.endsWithIgnoreCase(".wav") ||
+            file.endsWithIgnoreCase(".aif") ||
+            file.endsWithIgnoreCase(".aiff") ||
+            file.endsWithIgnoreCase(".mp3") ||
+            file.endsWithIgnoreCase(".ogg") ||
+            file.endsWithIgnoreCase(".flac"))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+void ZenithSamplerEditor::filesDropped(const juce::StringArray& files, int, int)
+{
+    if (files.size() > 0)
+    {
+        juce::File file(files[0]);
+        processor_.loadSample(file);
+    }
+}
+
+//==============================================================================
+void ZenithSamplerEditor::paint(juce::Graphics& g)
 {
     // Background
     g.fillAll(juce::Colour(0xff1a1a1a));
@@ -88,14 +134,14 @@ void ZenithPolySynthEditor::paint(juce::Graphics& g)
     // Title
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(24.0f, juce::Font::bold));
-    g.drawText("Zenith PolySynth", 0, 10, getWidth(), 30, juce::Justification::centred);
+    g.drawText("Zenith Sampler", 0, 10, getWidth(), 30, juce::Justification::centred);
 
     // Section labels
     g.setFont(juce::Font(14.0f, juce::Font::bold));
     g.setColour(juce::Colour(0xffaaaaaa));
-    g.drawText("OSCILLATOR", 20, 60, 160, 20, juce::Justification::centredLeft);
-    g.drawText("FILTER", 200, 60, 160, 20, juce::Justification::centredLeft);
-    g.drawText("ENVELOPE", 20, 200, 200, 20, juce::Justification::centredLeft);
+    g.drawText("SAMPLE", 20, 90, 160, 20, juce::Justification::centredLeft);
+    g.drawText("FILTER", 200, 90, 160, 20, juce::Justification::centredLeft);
+    g.drawText("ENVELOPE", 20, 230, 200, 20, juce::Justification::centredLeft);
 
     // Macro section
     g.setColour(juce::Colour(0xff4a9eff));
@@ -105,31 +151,39 @@ void ZenithPolySynthEditor::paint(juce::Graphics& g)
     // Separator line
     g.setColour(juce::Colour(0xff333333));
     g.fillRect(20, 355, getWidth() - 40, 2);
+
+    // Drag and drop hint
+    g.setColour(juce::Colour(0xff666666));
+    g.setFont(juce::Font(12.0f));
+    g.drawText("Drag & drop audio files here", 0, 50, getWidth(), 20, juce::Justification::centred);
 }
 
 //==============================================================================
-void ZenithPolySynthEditor::resized()
+void ZenithSamplerEditor::resized()
 {
     const int knobSize = 80;
     const int labelHeight = 20;
     const int spacing = 20;
 
-    // Oscillator section
-    waveformSlider_.setBounds(20, 100, knobSize, knobSize);
-    detuneSlider_.setBounds(120, 100, knobSize, knobSize);
+    // Load sample button
+    loadSampleButton_.setBounds(20, 50, 120, 30);
+
+    // Sample section
+    sampleStartSlider_.setBounds(20, 130, knobSize, knobSize);
+    sampleEndSlider_.setBounds(120, 130, knobSize, knobSize);
 
     // Filter section
-    filterCutoffSlider_.setBounds(220, 100, knobSize, knobSize);
-    filterResonanceSlider_.setBounds(320, 100, knobSize, knobSize);
+    filterCutoffSlider_.setBounds(220, 130, knobSize, knobSize);
+    filterResonanceSlider_.setBounds(320, 130, knobSize, knobSize);
 
     // Envelope section
-    attackSlider_.setBounds(20, 240, knobSize, knobSize);
-    decaySlider_.setBounds(120, 240, knobSize, knobSize);
-    sustainSlider_.setBounds(220, 240, knobSize, knobSize);
-    releaseSlider_.setBounds(320, 240, knobSize, knobSize);
+    attackSlider_.setBounds(20, 270, knobSize, knobSize);
+    decaySlider_.setBounds(120, 270, knobSize, knobSize);
+    sustainSlider_.setBounds(220, 270, knobSize, knobSize);
+    releaseSlider_.setBounds(320, 270, knobSize, knobSize);
 
     // Volume
-    volumeSlider_.setBounds(500, 100, knobSize, knobSize);
+    volumeSlider_.setBounds(500, 130, knobSize, knobSize);
 
     // Macro knobs at bottom - centered and evenly spaced
     const int macroKnobSize = 90;
