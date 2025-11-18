@@ -5,14 +5,15 @@
 namespace zenith {
 
 //==============================================================================
-// Patch data structure for async loading
+// Sample bank data structure for async loading
 //==============================================================================
 
-struct ZenithSamplerProcessor::PatchData
+struct ZenithSamplerProcessor::SampleBankData
 {
-    juce::String patchName;
+    juce::String bankName;
+    juce::String category; // "drums", "808", "keys", "fx"
 
-    struct SampleInfo
+    struct SampleRegion
     {
         juce::File file;
         int rootNote = 60;
@@ -20,10 +21,12 @@ struct ZenithSamplerProcessor::PatchData
         int highNote = 127;
         int lowVelocity = 0;
         int highVelocity = 127;
+        ZenithSamplerSound::LoopMode loopMode = ZenithSamplerSound::LoopMode::None;
         float gain = 1.0f;
+        float tune = 0.0f; // Per-sample tuning in semitones
     };
 
-    std::vector<SampleInfo> samples;
+    std::vector<SampleRegion> regions;
 
     // Default parameters
     float attack = 0.01f;
@@ -32,8 +35,11 @@ struct ZenithSamplerProcessor::PatchData
     float release = 0.3f;
     float filterCutoff = 1.0f;
     float filterResonance = 0.0f;
-    float tune = 0.0f;
-    float gain = 0.8f;
+    float sampleStartOffset = 0.0f;
+    float pitchFine = 0.0f;
+    float pitchSemitones = 0.0f;
+    float globalPan = 0.5f;
+    float globalGain = 0.8f;
 };
 
 //==============================================================================
@@ -100,14 +106,31 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZenithSamplerProcessor::crea
         juce::NormalisableRange<float>(0.0f, 1.0f),
         0.0f));
 
-    // Global controls
+    // Sample controls
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "tune", "Tune",
-        juce::NormalisableRange<float>(-12.0f, 12.0f, 0.01f),
-        0.0f, "semitones"));
+        "sampleStartOffset", "Sample Start",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.0f));
+
+    // Pitch controls
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "pitchFine", "Fine Tune",
+        juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f),
+        0.0f, "cents"));
 
     layout.add(std::make_unique<juce::AudioParameterFloat>(
-        "gain", "Gain",
+        "pitchSemitones", "Pitch",
+        juce::NormalisableRange<float>(-24.0f, 24.0f, 1.0f),
+        0.0f, "semitones"));
+
+    // Global controls
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "globalPan", "Pan",
+        juce::NormalisableRange<float>(0.0f, 1.0f),
+        0.5f));
+
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "globalGain", "Gain",
         juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
         0.8f));
 
@@ -139,8 +162,11 @@ void ZenithSamplerProcessor::prepareToPlay(double sampleRate, int samplesPerBloc
                 parameters.getRawParameterValue("release"),
                 parameters.getRawParameterValue("filterCutoff"),
                 parameters.getRawParameterValue("filterResonance"),
-                parameters.getRawParameterValue("tune"),
-                parameters.getRawParameterValue("gain"));
+                parameters.getRawParameterValue("sampleStartOffset"),
+                parameters.getRawParameterValue("pitchFine"),
+                parameters.getRawParameterValue("pitchSemitones"),
+                parameters.getRawParameterValue("globalPan"),
+                parameters.getRawParameterValue("globalGain"));
         }
     }
 }
@@ -218,36 +244,42 @@ void ZenithSamplerProcessor::setStateInformation(const void* data, int sizeInByt
 }
 
 //==============================================================================
-// Patch management
+// Sample bank management
 //==============================================================================
 
-bool ZenithSamplerProcessor::loadPatch(const juce::File& patchFile)
+bool ZenithSamplerProcessor::loadSampleBank(const juce::File& bankFile)
 {
-    if (!patchFile.existsAsFile())
+    if (!bankFile.existsAsFile())
         return false;
 
-    loadPatchAsync(patchFile);
+    loadBankAsync(bankFile);
     return true;
 }
 
-bool ZenithSamplerProcessor::loadPatchByName(const juce::String& patchName)
+bool ZenithSamplerProcessor::loadSampleBankByName(const juce::String& bankName)
 {
-    auto patchFile = ContentPaths::getInstance()
-        .getPatchFile("ZenithSampler", patchName);
+    auto bankFile = ContentPaths::getInstance()
+        .getPatchFile("ZenithSampler", bankName);
 
-    return loadPatch(patchFile);
+    return loadSampleBank(bankFile);
 }
 
-juce::StringArray ZenithSamplerProcessor::getAvailablePatches() const
+bool ZenithSamplerProcessor::loadSampleBankFromJson(const juce::String& jsonString, const juce::String& bankName)
+{
+    loadBankFromJsonAsync(jsonString, bankName);
+    return true;
+}
+
+juce::StringArray ZenithSamplerProcessor::getAvailableBanks() const
 {
     return ContentPaths::getInstance().getAvailablePatches("ZenithSampler");
 }
 
 //==============================================================================
-// Async patch loading
+// Async bank loading
 //==============================================================================
 
-void ZenithSamplerProcessor::loadPatchAsync(const juce::File& patchFile)
+void ZenithSamplerProcessor::loadBankAsync(const juce::File& bankFile)
 {
     // Stop any existing loading thread
     if (loadingThread != nullptr && loadingThread->isThreadRunning())
@@ -261,58 +293,119 @@ void ZenithSamplerProcessor::loadPatchAsync(const juce::File& patchFile)
     class LoadingThread : public juce::Thread
     {
     public:
-        LoadingThread(ZenithSampler& owner, const juce::File& file)
-            : juce::Thread("PatchLoader"), sampler(owner), patchFile(file)
+        LoadingThread(ZenithSamplerProcessor& owner, const juce::File& file)
+            : juce::Thread("BankLoader"), processor(owner), bankFile(file)
         {
         }
 
         void run() override
         {
-            auto patchData = std::make_unique<PatchData>();
+            auto bankData = std::make_unique<SampleBankData>();
 
-            if (sampler.parsePatchFile(patchFile, *patchData))
+            if (processor.parseBankFile(bankFile, *bankData))
             {
                 // Apply on message thread
-                juce::MessageManager::callAsync([this, data = std::move(patchData)]() mutable {
-                    sampler.applyPatchData(std::move(data));
-                    sampler.isLoadingPatch.store(false);
+                juce::MessageManager::callAsync([this, data = std::move(bankData)]() mutable {
+                    processor.applyBankData(std::move(data));
+                    processor.isLoadingPatch.store(false);
                 });
             }
             else
             {
-                sampler.isLoadingPatch.store(false);
-                DBG("Failed to load patch: " << patchFile.getFullPathName());
+                processor.isLoadingPatch.store(false);
+                DBG("Failed to load bank: " << bankFile.getFullPathName());
             }
         }
 
     private:
-        ZenithSampler& sampler;
-        juce::File patchFile;
+        ZenithSamplerProcessor& processor;
+        juce::File bankFile;
     };
 
-    loadingThread = std::make_unique<LoadingThread>(*this, patchFile);
+    loadingThread = std::make_unique<LoadingThread>(*this, bankFile);
     loadingThread->startThread();
 }
 
-bool ZenithSamplerProcessor::parsePatchFile(const juce::File& patchFile, PatchData& outData)
+void ZenithSamplerProcessor::loadBankFromJsonAsync(const juce::String& jsonString, const juce::String& bankName)
 {
-    // Parse JSON patch file
-    auto jsonText = patchFile.loadFileAsString();
+    // Stop any existing loading thread
+    if (loadingThread != nullptr && loadingThread->isThreadRunning())
+    {
+        loadingThread->stopThread(1000);
+    }
+
+    isLoadingPatch.store(true);
+
+    // Create a loading thread
+    class JsonLoadingThread : public juce::Thread
+    {
+    public:
+        JsonLoadingThread(ZenithSamplerProcessor& owner, const juce::String& json, const juce::String& name)
+            : juce::Thread("JsonBankLoader"), processor(owner), jsonString(json), bankName(name)
+        {
+        }
+
+        void run() override
+        {
+            auto bankData = std::make_unique<SampleBankData>();
+            bankData->bankName = bankName;
+
+            auto json = juce::JSON::parse(jsonString);
+            if (json.isObject())
+            {
+                // For built-in banks, samples are in the built-in content directory
+                auto baseDir = ContentPaths::getInstance().getInstrumentTypeDirectory("ZenithSampler");
+
+                if (processor.parseBankJson(json, baseDir, *bankData))
+                {
+                    // Apply on message thread
+                    juce::MessageManager::callAsync([this, data = std::move(bankData)]() mutable {
+                        processor.applyBankData(std::move(data));
+                        processor.isLoadingPatch.store(false);
+                    });
+                    return;
+                }
+            }
+
+            processor.isLoadingPatch.store(false);
+            DBG("Failed to load JSON bank: " << bankName);
+        }
+
+    private:
+        ZenithSamplerProcessor& processor;
+        juce::String jsonString;
+        juce::String bankName;
+    };
+
+    loadingThread = std::make_unique<JsonLoadingThread>(*this, jsonString, bankName);
+    loadingThread->startThread();
+}
+
+bool ZenithSamplerProcessor::parseBankFile(const juce::File& bankFile, SampleBankData& outData)
+{
+    // Parse JSON bank file
+    auto jsonText = bankFile.loadFileAsString();
     auto json = juce::JSON::parse(jsonText);
 
     if (!json.isObject())
         return false;
 
+    auto baseDir = bankFile.getParentDirectory();
+    return parseBankJson(json, baseDir, outData);
+}
+
+bool ZenithSamplerProcessor::parseBankJson(const juce::var& json, const juce::File& baseDir, SampleBankData& outData)
+{
     auto* obj = json.getDynamicObject();
     if (obj == nullptr)
         return false;
 
-    // Read patch name
-    outData.patchName = obj->getProperty("name").toString();
-    if (outData.patchName.isEmpty())
+    // Read bank metadata
+    if (outData.bankName.isEmpty())
     {
-        outData.patchName = patchFile.getFileNameWithoutExtension();
+        outData.bankName = obj->getProperty("name").toString();
     }
+    outData.category = obj->getProperty("category").toString();
 
     // Read default parameters
     if (auto* params = obj->getProperty("parameters").getDynamicObject())
@@ -323,94 +416,147 @@ bool ZenithSamplerProcessor::parsePatchFile(const juce::File& patchFile, PatchDa
         outData.release = params->getProperty("release");
         outData.filterCutoff = params->getProperty("filterCutoff");
         outData.filterResonance = params->getProperty("filterResonance");
-        outData.tune = params->getProperty("tune");
-        outData.gain = params->getProperty("gain");
+        outData.sampleStartOffset = params->getProperty("sampleStartOffset");
+        outData.pitchFine = params->getProperty("pitchFine");
+        outData.pitchSemitones = params->getProperty("pitchSemitones");
+        outData.globalPan = params->getProperty("globalPan");
+        outData.globalGain = params->getProperty("globalGain");
     }
 
-    // Read samples
-    auto* samplesArray = obj->getProperty("samples").getArray();
-    if (samplesArray == nullptr)
+    // Read sample regions
+    auto* regionsArray = obj->getProperty("regions").getArray();
+    if (regionsArray == nullptr)
         return false;
 
-    auto samplesDir = patchFile.getParentDirectory().getChildFile("Samples");
+    auto samplesDir = baseDir.getChildFile("Samples");
 
-    for (int i = 0; i < samplesArray->size(); ++i)
+    for (int i = 0; i < regionsArray->size(); ++i)
     {
-        auto* sampleObj = (*samplesArray)[i].getDynamicObject();
-        if (sampleObj == nullptr)
+        auto* regionObj = (*regionsArray)[i].getDynamicObject();
+        if (regionObj == nullptr)
             continue;
 
-        PatchData::SampleInfo info;
-        info.file = samplesDir.getChildFile(sampleObj->getProperty("file").toString());
-        info.rootNote = sampleObj->getProperty("rootNote");
-        info.lowNote = sampleObj->getProperty("lowNote");
-        info.highNote = sampleObj->getProperty("highNote");
-        info.lowVelocity = sampleObj->getProperty("lowVelocity");
-        info.highVelocity = sampleObj->getProperty("highVelocity");
-        info.gain = sampleObj->getProperty("gain");
+        SampleBankData::SampleRegion region;
+        region.file = samplesDir.getChildFile(regionObj->getProperty("filePath").toString());
+        region.rootNote = regionObj->getProperty("rootNote");
+        region.lowNote = regionObj->getProperty("lowNote");
+        region.highNote = regionObj->getProperty("highNote");
+        region.lowVelocity = regionObj->getProperty("lowVel");
+        region.highVelocity = regionObj->getProperty("highVel");
+        region.gain = regionObj->getProperty("gain");
+        region.tune = regionObj->getProperty("tune");
 
-        if (info.file.existsAsFile())
+        // Parse loop mode
+        auto loopModeStr = regionObj->getProperty("loopMode").toString().toLowerCase();
+        if (loopModeStr == "forward")
+            region.loopMode = ZenithSamplerSound::LoopMode::Forward;
+        else if (loopModeStr == "pingpong" || loopModeStr == "ping-pong")
+            region.loopMode = ZenithSamplerSound::LoopMode::PingPong;
+        else
+            region.loopMode = ZenithSamplerSound::LoopMode::None;
+
+        if (region.file.existsAsFile())
         {
-            outData.samples.push_back(info);
+            outData.regions.push_back(region);
         }
         else
         {
-            DBG("Sample file not found: " << info.file.getFullPathName());
+            DBG("Sample file not found: " << region.file.getFullPathName());
         }
     }
 
-    return !outData.samples.empty();
+    return !outData.regions.empty();
 }
 
-void ZenithSamplerProcessor::applyPatchData(std::unique_ptr<PatchData> patchData)
+void ZenithSamplerProcessor::applyBankData(std::unique_ptr<SampleBankData> bankData)
 {
-    if (patchData == nullptr)
+    if (bankData == nullptr)
         return;
 
     // Clear existing sounds
     synth.clearSounds();
 
-    // Load all samples
-    juce::AudioFormatManager formatManager;
-    formatManager.registerBasicFormats();
-
-    for (const auto& sampleInfo : patchData->samples)
+    // Load all sample regions
+    if (audioFilePool_ != nullptr)
     {
-        std::unique_ptr<juce::AudioFormatReader> reader(
-            formatManager.createReaderFor(sampleInfo.file));
-
-        if (reader != nullptr)
+        // Use AudioFilePool for RT-safe loading
+        for (const auto& region : bankData->regions)
         {
-            juce::BigInteger midiNotes;
-            midiNotes.setRange(sampleInfo.lowNote, sampleInfo.highNote - sampleInfo.lowNote + 1, true);
+            juce::String errorMessage;
+            auto audioHandle = audioFilePool_->loadFile(region.file, errorMessage);
 
-            synth.addSound(new ZenithSamplerSound(
-                sampleInfo.file.getFileNameWithoutExtension(),
-                *reader,
-                midiNotes,
-                sampleInfo.rootNote,
-                sampleInfo.lowVelocity,
-                sampleInfo.highVelocity,
-                patchData->attack,
-                patchData->release,
-                10.0)); // Max 10 seconds
+            if (audioHandle)
+            {
+                juce::BigInteger midiNotes;
+                midiNotes.setRange(region.lowNote, region.highNote - region.lowNote + 1, true);
+
+                synth.addSound(new ZenithSamplerSound(
+                    region.file.getFileNameWithoutExtension(),
+                    audioHandle,
+                    midiNotes,
+                    region.rootNote,
+                    region.lowVelocity,
+                    region.highVelocity,
+                    region.loopMode,
+                    region.gain,
+                    region.tune));
+            }
+            else
+            {
+                DBG("Failed to load sample from pool: " << region.file.getFullPathName()
+                    << " - " << errorMessage);
+            }
+        }
+    }
+    else
+    {
+        // Fallback: direct loading (for standalone mode)
+        juce::AudioFormatManager formatManager;
+        formatManager.registerBasicFormats();
+
+        for (const auto& region : bankData->regions)
+        {
+            std::unique_ptr<juce::AudioFormatReader> reader(
+                formatManager.createReaderFor(region.file));
+
+            if (reader != nullptr)
+            {
+                juce::BigInteger midiNotes;
+                midiNotes.setRange(region.lowNote, region.highNote - region.lowNote + 1, true);
+
+                synth.addSound(new ZenithSamplerSound(
+                    region.file.getFileNameWithoutExtension(),
+                    *reader,
+                    midiNotes,
+                    region.rootNote,
+                    region.lowVelocity,
+                    region.highVelocity,
+                    0.01, 0.3, 10.0, // attack, release, max length
+                    region.loopMode,
+                    region.gain,
+                    region.tune));
+            }
         }
     }
 
     // Update parameters
-    *parameters.getRawParameterValue("attack") = patchData->attack;
-    *parameters.getRawParameterValue("decay") = patchData->decay;
-    *parameters.getRawParameterValue("sustain") = patchData->sustain;
-    *parameters.getRawParameterValue("release") = patchData->release;
-    *parameters.getRawParameterValue("filterCutoff") = patchData->filterCutoff;
-    *parameters.getRawParameterValue("filterResonance") = patchData->filterResonance;
-    *parameters.getRawParameterValue("tune") = patchData->tune;
-    *parameters.getRawParameterValue("gain") = patchData->gain;
+    *parameters.getRawParameterValue("attack") = bankData->attack;
+    *parameters.getRawParameterValue("decay") = bankData->decay;
+    *parameters.getRawParameterValue("sustain") = bankData->sustain;
+    *parameters.getRawParameterValue("release") = bankData->release;
+    *parameters.getRawParameterValue("filterCutoff") = bankData->filterCutoff;
+    *parameters.getRawParameterValue("filterResonance") = bankData->filterResonance;
+    *parameters.getRawParameterValue("sampleStartOffset") = bankData->sampleStartOffset;
+    *parameters.getRawParameterValue("pitchFine") = bankData->pitchFine;
+    *parameters.getRawParameterValue("pitchSemitones") = bankData->pitchSemitones;
+    *parameters.getRawParameterValue("globalPan") = bankData->globalPan;
+    *parameters.getRawParameterValue("globalGain") = bankData->globalGain;
 
-    // Store patch name
-    currentPatchName = patchData->patchName;
+    // Store bank name
+    currentPatchName = bankData->bankName;
 
-    DBG("Loaded patch: " << currentPatchName << " with " << synth.getNumSounds() << " samples");
+    DBG("Loaded bank: " << currentPatchName << " (" << bankData->category << ") with "
+        << synth.getNumSounds() << " samples");
 }
 
 //==============================================================================
@@ -434,24 +580,56 @@ ZenithSamplerSound::ZenithSamplerSound(const juce::String& name,
                                        int highVel,
                                        double attackTimeSecs,
                                        double releaseTimeSecs,
-                                       double maxSampleLengthSeconds)
+                                       double maxSampleLengthSeconds,
+                                       LoopMode loop,
+                                       float sampleGain,
+                                       float sampleTune)
     : soundName(name),
       midiNotes(notes),
       rootNote(midiNoteForNormalPitch),
       lowVelocity(lowVel),
       highVelocity(highVel),
-      attackTime(attackTimeSecs),
-      releaseTime(releaseTimeSecs)
+      loopMode(loop),
+      gain(sampleGain),
+      tune(sampleTune)
 {
     sourceSampleRate = source.sampleRate;
 
     auto lengthInSamples = (int)std::min((int64)source.lengthInSamples,
                                          (int64)(maxSampleLengthSeconds * sourceSampleRate));
 
-    data = std::make_unique<juce::AudioBuffer<float>>(
+    ownedData = std::make_unique<juce::AudioBuffer<float>>(
         (int)source.numChannels, lengthInSamples + 4);
 
-    source.read(data.get(), 0, lengthInSamples + 4, 0, true, true);
+    source.read(ownedData.get(), 0, lengthInSamples + 4, 0, true, true);
+    data = ownedData.get();
+}
+
+ZenithSamplerSound::ZenithSamplerSound(const juce::String& name,
+                                       AudioFilePool::HandlePtr audioHandle,
+                                       const juce::BigInteger& notes,
+                                       int midiNoteForNormalPitch,
+                                       int lowVel,
+                                       int highVel,
+                                       LoopMode loop,
+                                       float sampleGain,
+                                       float sampleTune)
+    : soundName(name),
+      poolHandle(audioHandle),
+      midiNotes(notes),
+      rootNote(midiNoteForNormalPitch),
+      lowVelocity(lowVel),
+      highVelocity(highVel),
+      loopMode(loop),
+      gain(sampleGain),
+      tune(sampleTune)
+{
+    if (poolHandle)
+    {
+        sourceSampleRate = poolHandle->sampleRate;
+        // Point to the pool's buffer (const_cast is safe as we only read)
+        data = const_cast<juce::AudioBuffer<float>*>(&poolHandle->buffer);
+    }
 }
 
 ZenithSamplerSound::~ZenithSamplerSound()
@@ -488,7 +666,8 @@ bool ZenithSamplerVoice::canPlaySound(juce::SynthesiserSound* sound)
 
 void ZenithSamplerVoice::setParameters(float* attack, float* decay, float* sustain, float* release,
                                        float* filterCutoff, float* filterResonance,
-                                       float* tune, float* gain)
+                                       float* sampleStartOffset, float* pitchFine, float* pitchSemitones,
+                                       float* globalPan, float* globalGain)
 {
     attackParam = attack;
     decayParam = decay;
@@ -496,8 +675,11 @@ void ZenithSamplerVoice::setParameters(float* attack, float* decay, float* susta
     releaseParam = release;
     filterCutoffParam = filterCutoff;
     filterResonanceParam = filterResonance;
-    tuneParam = tune;
-    gainParam = gain;
+    sampleStartOffsetParam = sampleStartOffset;
+    pitchFineParam = pitchFine;
+    pitchSemitonesParam = pitchSemitones;
+    globalPanParam = globalPan;
+    globalGainParam = globalGain;
 }
 
 void ZenithSamplerVoice::startNote(int midiNoteNumber, float vel,
@@ -516,15 +698,31 @@ void ZenithSamplerVoice::startNote(int midiNoteNumber, float vel,
 
         velocity = vel;
 
-        // Calculate pitch ratio using the sample's actual root note
+        // Calculate pitch ratio using the sample's actual root note and per-sample tuning
         auto cyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         auto cyclesPerSample = cyclesPerSecond / sound->getSampleRate();
 
-        auto rootCyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(sound->getRootNote());
+        // Apply per-sample tuning
+        float sampleTuneSemitones = sound->getTune();
+        auto rootCyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(sound->getRootNote())
+                                  * std::pow(2.0f, sampleTuneSemitones / 12.0f);
         auto rootCyclesPerSample = rootCyclesPerSecond / sound->getSampleRate();
 
         pitchRatio = cyclesPerSample / rootCyclesPerSample;
-        sourceSamplePosition = 0.0;
+
+        // Apply sample start offset
+        float startOffset = sampleStartOffsetParam ? *sampleStartOffsetParam : 0.0f;
+        auto* audioData = sound->getAudioData();
+        if (audioData)
+        {
+            sourceSamplePosition = startOffset * audioData->getNumSamples();
+        }
+        else
+        {
+            sourceSamplePosition = 0.0;
+        }
+
+        loopDirection = true; // Reset loop direction for ping-pong
 
         // Update envelope
         if (attackParam != nullptr && releaseParam != nullptr)
@@ -574,12 +772,18 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 {
     if (auto* sound = dynamic_cast<ZenithSamplerSound*>(getCurrentlyPlayingSound().get()))
     {
-        auto& data = *sound->getAudioData();
+        auto* audioData = sound->getAudioData();
+        if (!audioData)
+            return;
+
+        auto& data = *audioData;
         const int dataLength = data.getNumSamples();
 
-        // Apply tuning
-        float tuning = tuneParam ? *tuneParam : 0.0f;
-        float pitchMultiplier = std::pow(2.0f, tuning / 12.0f);
+        // Apply global pitch control (semitones + fine cents)
+        float pitchSemitones = pitchSemitonesParam ? *pitchSemitonesParam : 0.0f;
+        float pitchFine = pitchFineParam ? *pitchFineParam : 0.0f;
+        float totalPitchShift = pitchSemitones + (pitchFine / 100.0f);
+        float pitchMultiplier = std::pow(2.0f, totalPitchShift / 12.0f);
         double finalPitchRatio = pitchRatio * pitchMultiplier;
 
         // Get filter parameters
@@ -591,14 +795,48 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         filter.setCutoffFrequency(cutoffHz);
         filter.setResonance(resonance * 0.9f + 0.1f); // 0.1 - 1.0
 
-        // Get gain
-        float gainValue = gainParam ? *gainParam : 0.8f;
+        // Get global controls
+        float gainValue = globalGainParam ? *globalGainParam : 0.8f;
+        float pan = globalPanParam ? *globalPanParam : 0.5f; // 0 = left, 0.5 = center, 1 = right
+
+        // Apply per-sample gain
+        gainValue *= sound->getGain();
+
+        // Calculate pan gains (constant power)
+        float leftGain = std::cos(pan * juce::MathConstants<float>::halfPi);
+        float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
+
+        auto loopMode = sound->getLoopMode();
 
         for (int i = 0; i < numSamples; ++i)
         {
             auto pos = (int)sourceSamplePosition;
 
-            if (pos >= dataLength)
+            // Handle looping
+            if (loopMode == ZenithSamplerSound::LoopMode::Forward && pos >= dataLength - 1)
+            {
+                sourceSamplePosition = 0.0;
+                pos = 0;
+            }
+            else if (loopMode == ZenithSamplerSound::LoopMode::PingPong)
+            {
+                if (pos >= dataLength - 1 && loopDirection)
+                {
+                    loopDirection = false; // Reverse
+                }
+                else if (pos <= 0 && !loopDirection)
+                {
+                    loopDirection = true; // Forward
+                }
+            }
+            else if (loopMode == ZenithSamplerSound::LoopMode::None && pos >= dataLength - 1)
+            {
+                stopNote(0.0f, false);
+                break;
+            }
+
+            // Ensure we're in bounds
+            if (pos < 0 || pos >= dataLength - 1)
             {
                 stopNote(0.0f, false);
                 break;
@@ -608,13 +846,16 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
             auto alpha = (float)(sourceSamplePosition - pos);
             auto invAlpha = 1.0f - alpha;
 
+            // Get envelope value once per sample
+            float envValue = ampEnvelope.getNextSample();
+
             for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
             {
                 auto* channelData = data.getReadPointer(ch % data.getNumChannels());
                 auto sample = (channelData[pos] * invAlpha + channelData[pos + 1] * alpha);
 
                 // Apply envelope
-                sample *= ampEnvelope.getNextSample();
+                sample *= envValue;
 
                 // Apply velocity
                 sample *= velocity;
@@ -625,11 +866,25 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                 // Apply gain
                 sample *= gainValue;
 
+                // Apply pan (only for stereo output)
+                if (outputBuffer.getNumChannels() >= 2)
+                {
+                    sample *= (ch == 0) ? leftGain : rightGain;
+                }
+
                 // Add to output
                 outputBuffer.addSample(ch, startSample + i, sample);
             }
 
-            sourceSamplePosition += finalPitchRatio;
+            // Update position based on direction (for ping-pong)
+            if (loopMode == ZenithSamplerSound::LoopMode::PingPong && !loopDirection)
+            {
+                sourceSamplePosition -= finalPitchRatio;
+            }
+            else
+            {
+                sourceSamplePosition += finalPitchRatio;
+            }
 
             if (!ampEnvelope.isActive())
             {
@@ -654,11 +909,14 @@ ZenithSampler::ZenithSampler()
     mapParameter("release", ZenithSamplerProcessor::Release);
     mapParameter("filter_cutoff", ZenithSamplerProcessor::FilterCutoff);
     mapParameter("filter_resonance", ZenithSamplerProcessor::FilterResonance);
-    mapParameter("tune", ZenithSamplerProcessor::Tune);
-    mapParameter("gain", ZenithSamplerProcessor::Gain);
+    mapParameter("sample_start_offset", ZenithSamplerProcessor::SampleStartOffset);
+    mapParameter("pitch_fine", ZenithSamplerProcessor::PitchFine);
+    mapParameter("pitch_semitones", ZenithSamplerProcessor::PitchSemitones);
+    mapParameter("global_pan", ZenithSamplerProcessor::GlobalPan);
+    mapParameter("global_gain", ZenithSamplerProcessor::GlobalGain);
     mapParameter("character", ZenithSamplerProcessor::Character);
 
-    // Register presets (patches)
+    // Register presets (sample banks)
     registerPresets();
 }
 
@@ -676,8 +934,9 @@ InstrumentMetadata ZenithSampler::createMetadata()
     InstrumentMetadata metadata;
     metadata.instrumentId = "zenith_sampler";
     metadata.name = "Zenith Sampler";
-    metadata.category = "Sampler";
-    metadata.description = "Multi-sample instrument with envelope, filter, and velocity layers";
+    metadata.category = "sampler";
+    metadata.description = "Multi-sample instrument for drums, 808s, pianos, and one-shot FX with RT-safe sample loading";
+    metadata.tags = {"drums", "808", "keys", "fx", "sampler"};
 
     // Envelope parameters
     {
@@ -755,29 +1014,69 @@ InstrumentMetadata ZenithSampler::createMetadata()
         metadata.parameters.push_back(param);
     }
 
-    // Global parameters
+    // Sample controls
     {
         ParameterMetadata param;
-        param.id = "tune";
-        param.name = "Tune";
-        param.category = "Global";
+        param.id = "sample_start_offset";
+        param.name = "Sample Start";
+        param.category = "Sample";
         param.type = ParameterMetadata::Type::Float;
         param.defaultValue = 0.0f;
-        param.minValue = -1.0f;
+        param.minValue = 0.0f;
         param.maxValue = 1.0f;
-        param.units = "semitones";
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+
+    // Pitch controls
+    {
+        ParameterMetadata param;
+        param.id = "pitch_fine";
+        param.name = "Fine Tune";
+        param.category = "Pitch";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.0f;
+        param.minValue = -100.0f;
+        param.maxValue = 100.0f;
+        param.units = "cents";
         metadata.parameters.push_back(param);
     }
     {
         ParameterMetadata param;
-        param.id = "gain";
+        param.id = "pitch_semitones";
+        param.name = "Pitch";
+        param.category = "Pitch";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.0f;
+        param.minValue = -24.0f;
+        param.maxValue = 24.0f;
+        param.units = "semitones";
+        metadata.parameters.push_back(param);
+    }
+
+    // Global parameters
+    {
+        ParameterMetadata param;
+        param.id = "global_pan";
+        param.name = "Pan";
+        param.category = "Global";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.5f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "global_gain";
         param.name = "Gain";
         param.category = "Global";
         param.type = ParameterMetadata::Type::Float;
         param.defaultValue = 0.8f;
         param.minValue = 0.0f;
-        param.maxValue = 1.0f;
-        param.units = "%";
+        param.maxValue = 2.0f;
+        param.units = "";
         metadata.parameters.push_back(param);
     }
     {
@@ -786,7 +1085,7 @@ InstrumentMetadata ZenithSampler::createMetadata()
         param.name = "Character";
         param.category = "Global";
         param.type = ParameterMetadata::Type::Float;
-        param.defaultValue = 0.0f;
+        param.defaultValue = 0.5f;
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "%";
@@ -818,8 +1117,88 @@ InstrumentMetadata ZenithSampler::createMetadata()
 
 void ZenithSampler::registerPresets()
 {
-    // TODO: Load .zpatch files from content directory and register as presets
-    // For now, just register a default preset
+    // Register built-in sample banks as presets
+    // Note: These are stubs - actual sample files would need to be in the content directory
+
+    // Built-in bank: 808 Essentials
+    const char* bank808Json = R"({
+        "name": "808 Essentials",
+        "category": "808",
+        "parameters": {
+            "attack": 0.001,
+            "decay": 0.2,
+            "sustain": 0.0,
+            "release": 0.5,
+            "filterCutoff": 0.8,
+            "filterResonance": 0.2,
+            "sampleStartOffset": 0.0,
+            "pitchFine": 0.0,
+            "pitchSemitones": 0.0,
+            "globalPan": 0.5,
+            "globalGain": 0.9
+        },
+        "regions": [
+            { "filePath": "808-kick.wav", "rootNote": 36, "lowNote": 36, "highNote": 36, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "808-snare.wav", "rootNote": 38, "lowNote": 38, "highNote": 38, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "808-hihat-closed.wav", "rootNote": 42, "lowNote": 42, "highNote": 42, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 0.8, "tune": 0.0 },
+            { "filePath": "808-hihat-open.wav", "rootNote": 46, "lowNote": 46, "highNote": 46, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 0.8, "tune": 0.0 },
+            { "filePath": "808-bass.wav", "rootNote": 48, "lowNote": 24, "highNote": 72, "lowVel": 0, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 }
+        ]
+    })";
+
+    // Built-in bank: LoFi Keys
+    const char* bankLoFiKeysJson = R"({
+        "name": "LoFi Keys",
+        "category": "keys",
+        "parameters": {
+            "attack": 0.05,
+            "decay": 0.3,
+            "sustain": 0.6,
+            "release": 0.8,
+            "filterCutoff": 0.7,
+            "filterResonance": 0.1,
+            "sampleStartOffset": 0.0,
+            "pitchFine": 0.0,
+            "pitchSemitones": 0.0,
+            "globalPan": 0.5,
+            "globalGain": 0.85
+        },
+        "regions": [
+            { "filePath": "lofi-piano-C3.wav", "rootNote": 48, "lowNote": 42, "highNote": 53, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "lofi-piano-C4.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "lofi-piano-C5.wav", "rootNote": 72, "lowNote": 66, "highNote": 84, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "lofi-piano-C3-hard.wav", "rootNote": 48, "lowNote": 42, "highNote": 53, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "lofi-piano-C4-hard.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "lofi-piano-C5-hard.wav", "rootNote": 72, "lowNote": 66, "highNote": 84, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 }
+        ]
+    })";
+
+    // Built-in bank: FX Hits
+    const char* bankFXJson = R"({
+        "name": "FX Hits",
+        "category": "fx",
+        "parameters": {
+            "attack": 0.01,
+            "decay": 0.5,
+            "sustain": 0.3,
+            "release": 1.5,
+            "filterCutoff": 1.0,
+            "filterResonance": 0.3,
+            "sampleStartOffset": 0.0,
+            "pitchFine": 0.0,
+            "pitchSemitones": 0.0,
+            "globalPan": 0.5,
+            "globalGain": 0.8
+        },
+        "regions": [
+            { "filePath": "fx-riser.wav", "rootNote": 60, "lowNote": 60, "highNote": 60, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "fx-impact.wav", "rootNote": 62, "lowNote": 62, "highNote": 62, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "fx-reverse.wav", "rootNote": 64, "lowNote": 64, "highNote": 64, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
+            { "filePath": "fx-whoosh.wav", "rootNote": 65, "lowNote": 65, "highNote": 65, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 }
+        ]
+    })";
+
+    // Register default preset with updated parameter names
     std::map<juce::String, float> defaultPreset;
     defaultPreset["attack"] = 0.01f;
     defaultPreset["decay"] = 0.1f;
@@ -827,11 +1206,21 @@ void ZenithSampler::registerPresets()
     defaultPreset["release"] = 0.3f;
     defaultPreset["filter_cutoff"] = 1.0f;
     defaultPreset["filter_resonance"] = 0.0f;
-    defaultPreset["tune"] = 0.0f;
-    defaultPreset["gain"] = 0.8f;
-    defaultPreset["character"] = 0.0f;
+    defaultPreset["sample_start_offset"] = 0.0f;
+    defaultPreset["pitch_fine"] = 0.0f;
+    defaultPreset["pitch_semitones"] = 0.0f;
+    defaultPreset["global_pan"] = 0.5f;
+    defaultPreset["global_gain"] = 0.8f;
+    defaultPreset["character"] = 0.5f;
 
     registerPreset("default", "Default", defaultPreset);
+
+    // Note: To actually load these banks, you would need to:
+    // 1. Create the sample files in the content directory structure
+    // 2. Call loadSampleBankFromJson() with the JSON strings above
+    // For example:
+    //   auto* proc = dynamic_cast<ZenithSamplerProcessor*>(getAudioProcessor());
+    //   if (proc) proc->loadSampleBankFromJson(bank808Json, "808 Essentials");
 }
 
 } // namespace zenith
