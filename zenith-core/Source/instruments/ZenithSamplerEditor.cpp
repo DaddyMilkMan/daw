@@ -4,13 +4,73 @@
 namespace zenith {
 
 //==============================================================================
-ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& proc)
-    : juce::AudioProcessorEditor(&proc),
-      sampler(proc)
+ZenithSamplerEditor::ZenithSamplerEditor(
+    ZenithSamplerProcessor& proc,
+    ZenithSampler& instrument,
+    ZenithPresetManager& presetManager)
+    : juce::AudioProcessorEditor(&proc)
+    , sampler(proc)
+    , instrument_(instrument)
+    , presetManager_(presetManager)
 {
-    setSize(700, 450);
+    setSize(900, 600);
 
-    // Preset group
+    // Toggle preset browser button
+    addAndMakeVisible(togglePresetBrowserButton_);
+    togglePresetBrowserButton_.setButtonText("Show Presets");
+    togglePresetBrowserButton_.onClick = [this]
+    {
+        presetBrowserVisible_ = !presetBrowserVisible_;
+        togglePresetBrowserButton_.setButtonText(presetBrowserVisible_ ? "Hide Presets" : "Show Presets");
+
+        if (presetBrowser_)
+            presetBrowser_->setVisible(presetBrowserVisible_);
+
+        resized();
+    };
+
+    // Create preset browser
+    presetBrowser_ = std::make_unique<PresetBrowserComponent>(
+        instrument_.getMetadata().instrumentId,
+        presetManager_);
+
+    presetBrowser_->setLoadPresetCallback([this](const ZenithInstrumentPreset& preset)
+    {
+        onPresetLoaded(preset);
+    });
+
+    presetBrowser_->setCaptureStateCallback([this]() -> std::map<std::string, float>
+    {
+        return captureCurrentState();
+    });
+
+    addAndMakeVisible(*presetBrowser_);
+    presetBrowser_->setVisible(presetBrowserVisible_);
+
+    // Sample map section
+    addAndMakeVisible(sampleMapGroup);
+    sampleMapGroup.setText("Sample Map");
+    sampleMapGroup.setTextLabelPosition(juce::Justification::centredTop);
+
+    // Sample map table
+    sampleMapTableModel_ = std::make_unique<SampleMapTableModel>(*this);
+    sampleMapTable_.setModel(sampleMapTableModel_.get());
+    sampleMapTable_.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff1e1e1e));
+
+    // Add columns
+    sampleMapTable_.getHeader().addColumn("File", 1, 200, 50, 400);
+    sampleMapTable_.getHeader().addColumn("Key Range", 2, 100, 60, 150);
+    sampleMapTable_.getHeader().addColumn("Vel Range", 3, 100, 60, 150);
+    sampleMapTable_.getHeader().addColumn("Root", 4, 60, 40, 80);
+
+    addAndMakeVisible(sampleMapTable_);
+
+    // Refresh button
+    addAndMakeVisible(refreshSamplesButton_);
+    refreshSamplesButton_.setButtonText("Refresh");
+    refreshSamplesButton_.onClick = [this] { loadSampleMapData(); };
+
+    // Legacy preset section (for patches)
     addAndMakeVisible(presetGroup);
     presetGroup.setText("Patch");
     presetGroup.setTextLabelPosition(juce::Justification::centredTop);
@@ -39,7 +99,6 @@ ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& proc)
         addAndMakeVisible(label);
         label.setText(text, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
-        label.attachToComponent(&slider, false);
     };
 
     setupSlider(attackSlider, attackLabel, "Attack");
@@ -79,6 +138,9 @@ ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& proc)
     // Update patch list
     updatePatchList();
 
+    // Load sample map data
+    loadSampleMapData();
+
     // Start timer for status updates
     startTimer(100);
 }
@@ -92,7 +154,7 @@ ZenithSamplerEditor::~ZenithSamplerEditor()
 void ZenithSamplerEditor::paint(juce::Graphics& g)
 {
     g.fillAll(juce::Colour(0xff1e1e1e));
-    
+
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(20.0f, juce::Font::bold));
     g.drawText("Zenith Sampler", 0, 10, getWidth(), 30, juce::Justification::centred);
@@ -103,62 +165,92 @@ void ZenithSamplerEditor::resized()
     auto bounds = getLocalBounds().reduced(10);
     bounds.removeFromTop(40); // Title space
 
-    // Preset section (left)
-    auto presetBounds = bounds.removeFromLeft(150);
-    presetGroup.setBounds(presetBounds);
-    
-    auto presetContent = presetBounds.reduced(10);
+    // Toggle button
+    auto topRow = bounds.removeFromTop(30);
+    togglePresetBrowserButton_.setBounds(topRow.removeFromRight(120).reduced(2));
+    bounds.removeFromTop(5);
+
+    // Preset browser (if visible)
+    if (presetBrowserVisible_ && presetBrowser_)
+    {
+        auto presetBounds = bounds.removeFromTop(200);
+        presetBrowser_->setBounds(presetBounds);
+        bounds.removeFromTop(10);
+    }
+
+    // Main layout: Sample map on left, controls on right
+    auto sampleMapBounds = bounds.removeFromLeft(380);
+    sampleMapGroup.setBounds(sampleMapBounds);
+
+    auto sampleMapContent = sampleMapBounds.reduced(10);
+    sampleMapContent.removeFromTop(20); // Group label
+
+    auto refreshButtonBounds = sampleMapContent.removeFromBottom(30);
+    refreshSamplesButton_.setBounds(refreshButtonBounds);
+    sampleMapContent.removeFromBottom(5);
+
+    sampleMapTable_.setBounds(sampleMapContent);
+
+    bounds.removeFromLeft(10); // Spacing
+
+    // Right side: Preset selector + Envelope/Filter/Global
+    auto presetSelectorBounds = bounds.removeFromTop(100);
+    presetGroup.setBounds(presetSelectorBounds);
+
+    auto presetContent = presetSelectorBounds.reduced(10);
     presetContent.removeFromTop(20); // Group label
     presetLabel.setBounds(presetContent.removeFromTop(25));
     presetComboBox.setBounds(presetContent.removeFromTop(30));
-    presetContent.removeFromTop(10);
+    presetContent.removeFromTop(5);
     statusLabel.setBounds(presetContent.removeFromTop(25));
 
-    bounds.removeFromLeft(10); // Spacing
+    bounds.removeFromTop(10);
 
-    // Envelope section (middle-left)
-    auto envBounds = bounds.removeFromLeft(240);
+    // Envelope section
+    auto envBounds = bounds.removeFromTop(140);
     envelopeGroup.setBounds(envBounds);
-    
+
     auto envContent = envBounds.reduced(10);
     envContent.removeFromTop(20); // Group label
-    
-    auto envTop = envContent.removeFromTop(100);
-    attackSlider.setBounds(envTop.removeFromLeft(60));
-    envTop.removeFromLeft(10);
-    decaySlider.setBounds(envTop.removeFromLeft(60));
-    envTop.removeFromLeft(10);
-    sustainSlider.setBounds(envTop.removeFromLeft(60));
-    
-    envContent.removeFromTop(10);
-    releaseSlider.setBounds(envContent.removeFromTop(100).removeFromLeft(60));
 
-    bounds.removeFromLeft(10); // Spacing
+    int knobSize = 60;
+    attackSlider.setBounds(envContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    envContent.removeFromLeft(5);
+    decaySlider.setBounds(envContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    envContent.removeFromLeft(5);
+    sustainSlider.setBounds(envContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    envContent.removeFromLeft(5);
+    releaseSlider.setBounds(envContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
 
-    // Filter section (middle-right)
-    auto filterBounds = bounds.removeFromLeft(130);
+    bounds.removeFromTop(10);
+
+    // Filter and Global in a row
+    auto bottomRow = bounds;
+
+    auto filterBounds = bottomRow.removeFromLeft(bottomRow.getWidth() / 2);
+    filterBounds.removeFromRight(5);
     filterGroup.setBounds(filterBounds);
-    
+
     auto filterContent = filterBounds.reduced(10);
     filterContent.removeFromTop(20); // Group label
-    
-    filterCutoffSlider.setBounds(filterContent.removeFromTop(100).removeFromLeft(60));
-    filterContent.removeFromTop(10);
-    filterResonanceSlider.setBounds(filterContent.removeFromTop(100).removeFromLeft(60));
 
-    bounds.removeFromLeft(10); // Spacing
+    filterCutoffSlider.setBounds(filterContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    filterContent.removeFromLeft(5);
+    filterResonanceSlider.setBounds(filterContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
 
-    // Global section (right)
-    globalGroup.setBounds(bounds);
-    
-    auto globalContent = bounds.reduced(10);
+    bottomRow.removeFromLeft(5);
+
+    auto globalBounds = bottomRow;
+    globalGroup.setBounds(globalBounds);
+
+    auto globalContent = globalBounds.reduced(10);
     globalContent.removeFromTop(20); // Group label
-    
-    tuneSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
-    globalContent.removeFromTop(10);
-    gainSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
-    globalContent.removeFromTop(10);
-    characterSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
+
+    tuneSlider.setBounds(globalContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    globalContent.removeFromLeft(5);
+    gainSlider.setBounds(globalContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
+    globalContent.removeFromLeft(5);
+    characterSlider.setBounds(globalContent.removeFromLeft(knobSize + 20).removeFromTop(knobSize + 30));
 }
 
 //==============================================================================
@@ -181,7 +273,7 @@ void ZenithSamplerEditor::timerCallback()
 void ZenithSamplerEditor::updatePatchList()
 {
     presetComboBox.clear();
-    
+
     auto patches = sampler.getAvailablePatches();
     for (int i = 0; i < patches.size(); ++i)
     {
@@ -205,7 +297,112 @@ void ZenithSamplerEditor::onPatchSelected()
     {
         juce::String patchName = presetComboBox.getItemText(selectedId - 1);
         sampler.loadPatchByName(patchName);
+
+        // Reload sample map
+        loadSampleMapData();
     }
+}
+
+void ZenithSamplerEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
+{
+    // Apply all parameters from preset
+    for (const auto& [paramId, value] : preset.parameters)
+    {
+        instrument_.setParameter(juce::String(paramId), value);
+    }
+}
+
+std::map<std::string, float> ZenithSamplerEditor::captureCurrentState()
+{
+    std::map<std::string, float> state;
+
+    // Capture all parameters from metadata
+    const auto& metadata = instrument_.getMetadata();
+    for (const auto& param : metadata.parameters)
+    {
+        float value = instrument_.getParameter(param.id);
+        state[param.id.toStdString()] = value;
+    }
+
+    return state;
+}
+
+void ZenithSamplerEditor::loadSampleMapData()
+{
+    // Clear existing data
+    sampleMapData_.clear();
+
+    // TODO: Load actual sample map from current patch
+    // For now, show placeholder data
+    SampleInfo placeholder;
+    placeholder.fileName = "No samples loaded";
+    placeholder.lowKey = 0;
+    placeholder.highKey = 127;
+    placeholder.lowVelocity = 0;
+    placeholder.highVelocity = 127;
+    placeholder.rootNote = 60;
+    sampleMapData_.push_back(placeholder);
+
+    sampleMapTable_.updateContent();
+}
+
+//==============================================================================
+// SampleMapTableModel
+//==============================================================================
+
+ZenithSamplerEditor::SampleMapTableModel::SampleMapTableModel(ZenithSamplerEditor& owner)
+    : owner_(owner)
+{
+}
+
+int ZenithSamplerEditor::SampleMapTableModel::getNumRows()
+{
+    return (int)owner_.sampleMapData_.size();
+}
+
+void ZenithSamplerEditor::SampleMapTableModel::paintRowBackground(
+    juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected)
+{
+    if (rowIsSelected)
+        g.fillAll(juce::Colour(0xff4a9eff));
+    else if (rowNumber % 2 == 0)
+        g.fillAll(juce::Colour(0xff242424));
+    else
+        g.fillAll(juce::Colour(0xff1e1e1e));
+}
+
+void ZenithSamplerEditor::SampleMapTableModel::paintCell(
+    juce::Graphics& g, int rowNumber, int columnId,
+    int width, int height, bool rowIsSelected)
+{
+    if (rowNumber < 0 || rowNumber >= (int)owner_.sampleMapData_.size())
+        return;
+
+    const auto& sample = owner_.sampleMapData_[rowNumber];
+
+    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colour(0xffcccccc));
+    g.setFont(juce::Font(13.0f));
+
+    juce::String text;
+    switch (columnId)
+    {
+        case 1: // File
+            text = sample.fileName;
+            break;
+        case 2: // Key Range
+            text = juce::MidiMessage::getMidiNoteName(sample.lowKey, true, true, 4) +
+                   " - " +
+                   juce::MidiMessage::getMidiNoteName(sample.highKey, true, true, 4);
+            break;
+        case 3: // Velocity Range
+            text = juce::String(sample.lowVelocity) + " - " + juce::String(sample.highVelocity);
+            break;
+        case 4: // Root
+            text = juce::MidiMessage::getMidiNoteName(sample.rootNote, true, true, 4);
+            break;
+    }
+
+    g.drawText(text, 2, 0, width - 4, height, juce::Justification::centredLeft, true);
 }
 
 } // namespace zenith
