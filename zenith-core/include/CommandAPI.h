@@ -130,6 +130,180 @@ private:
     juce::var cmd_exportWav(const juce::var& params);
 
     //==========================================================================
+    // Transport commands
+    //==========================================================================
+
+    /**
+     * @brief Start playback
+     * Params: {}
+     * Returns: { "success": true }
+     */
+    juce::var cmd_play(const juce::var& params);
+
+    /**
+     * @brief Stop playback
+     * Params: {}
+     * Returns: { "success": true }
+     */
+    juce::var cmd_stop(const juce::var& params);
+
+    /**
+     * @brief Toggle recording state
+     * Params: { "enabled": true }
+     * Returns: { "success": true, "recording": true }
+     */
+    juce::var cmd_record(const juce::var& params);
+
+    /**
+     * @brief Toggle loop state
+     * Params: { "enabled": true }
+     * Returns: { "success": true, "looping": true }
+     */
+    juce::var cmd_loop(const juce::var& params);
+
+    /**
+     * @brief Set playback position
+     * Params: { "positionBeats": 8.0 }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_setPosition(const juce::var& params);
+
+    //==========================================================================
+    // Undo/Redo commands
+    //==========================================================================
+
+    /**
+     * @brief Undo last action
+     * Params: {}
+     * Returns: { "success": true }
+     */
+    juce::var cmd_undo(const juce::var& params);
+
+    /**
+     * @brief Redo last undone action
+     * Params: {}
+     * Returns: { "success": true }
+     */
+    juce::var cmd_redo(const juce::var& params);
+
+    //==========================================================================
+    // Clip management commands
+    //==========================================================================
+
+    /**
+     * @brief Create a clip on a track
+     * Params: { "trackId": "track_0", "startBeats": 0.0, "lengthBeats": 4.0 }
+     * Returns: { "clipId": "clip_123" }
+     */
+    juce::var cmd_createClip(const juce::var& params);
+
+    /**
+     * @brief Delete a clip
+     * Params: { "trackId": "track_0", "clipId": "clip_123" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_deleteClip(const juce::var& params);
+
+    /**
+     * @brief Get clips on a track
+     * Params: { "trackId": "track_0" }
+     * Returns: { "clips": [ { "id": "...", "startBeats": 0.0, "lengthBeats": 4.0 }, ... ] }
+     */
+    juce::var cmd_getTrackClips(const juce::var& params);
+
+    /**
+     * @brief Set audio file for a clip
+     * Params: { "trackId": "track_0", "clipId": "clip_123", "path": "/path/to/audio.wav" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_setClipAudioFile(const juce::var& params);
+
+    /**
+     * @brief Create audio clip with file in one step
+     * Params: { "trackId": "track_0", "startBeats": 0.0, "lengthBeats": 4.0, "path": "/path/to/audio.wav" }
+     * Returns: { "clipId": "clip_123" }
+     */
+    juce::var cmd_createAudioClip(const juce::var& params);
+
+    //==========================================================================
+    // MIDI note commands (stubbed - awaiting ProjectState MIDI note API)
+    //==========================================================================
+
+    /**
+     * @brief Create MIDI note in a clip
+     * Params: { "trackId": "track_0", "clipId": "clip_123", "note": 60, "velocity": 100, "startBeats": 0.0, "lengthBeats": 1.0 }
+     * Returns: { "success": false, "message": "MIDI note API not yet implemented in ProjectState" }
+     */
+    juce::var cmd_createNote(const juce::var& params);
+
+    /**
+     * @brief Delete MIDI note
+     * Params: { "trackId": "track_0", "clipId": "clip_123", "noteId": "note_123" }
+     * Returns: { "success": false, "message": "MIDI note API not yet implemented in ProjectState" }
+     */
+    juce::var cmd_deleteNote(const juce::var& params);
+
+    /**
+     * @brief Get MIDI notes in a clip
+     * Params: { "trackId": "track_0", "clipId": "clip_123" }
+     * Returns: { "notes": [] }
+     */
+    juce::var cmd_getClipNotes(const juce::var& params);
+
+    //==========================================================================
+    // Plugin commands (stubbed - plugins not yet implemented)
+    //==========================================================================
+
+    /**
+     * @brief Scan for plugins
+     * Params: { "force": true } (optional)
+     * Returns: { "count": 0, "message": "Plugin system not yet implemented" }
+     */
+    juce::var cmd_scanPlugins(const juce::var& params);
+
+    /**
+     * @brief Get available plugins
+     * Params: { "type": "instrument"|"effect", "searchTerm": "..." } (all optional)
+     * Returns: { "plugins": [] }
+     */
+    juce::var cmd_getPlugins(const juce::var& params);
+
+    /**
+     * @brief Add plugin to track
+     * Params: { "trackId": "track_0", "pluginId": "some-plugin-id" }
+     * Returns: { "success": false, "message": "Plugin system not yet implemented" }
+     */
+    juce::var cmd_addTrackPlugin(const juce::var& params);
+
+    /**
+     * @brief Remove plugin from track
+     * Params: { "trackId": "track_0", "pluginIndex": 0 }
+     * Returns: { "success": false, "message": "Plugin system not yet implemented" }
+     */
+    juce::var cmd_removeTrackPlugin(const juce::var& params);
+
+    /**
+     * @brief Set plugin bypassed state
+     * Params: { "trackId": "track_0", "pluginIndex": 0, "bypassed": true }
+     * Returns: { "success": false, "message": "Plugin system not yet implemented" }
+     */
+    juce::var cmd_setTrackPluginBypassed(const juce::var& params);
+
+    /**
+     * @brief Get track's plugin chain
+     * Params: { "trackId": "track_0" }
+     * Returns: { "plugins": [] }
+     */
+    juce::var cmd_getTrackPlugins(const juce::var& params);
+
+    /**
+     * @brief Export project to WAV
+     * Params: { "path": "/path/to/output.wav", "startBeats": 0.0, "endBeats": 16.0 } (start/end optional)
+     * Returns: { "success": true, "outputPath": "..." }
+     */
+    juce::var cmd_exportProject(const juce::var& params);
+
+    //==========================================================================
     // Helper methods
     //==========================================================================
 
