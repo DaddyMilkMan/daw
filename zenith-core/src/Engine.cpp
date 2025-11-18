@@ -11,16 +11,23 @@
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
+#include "../Source/engine/AudioFilePool.h"
 
 //==============================================================================
 Engine::Engine()
+    : audioFilePool_(std::make_unique<zenith::AudioFilePool>())
 {
     DBG("Engine: Constructor");
+    DBG("Engine: AudioFilePool created");
 }
 
 Engine::~Engine()
 {
     DBG("Engine: Destructor");
+
+    // Phase 2A: Disable MIDI input
+    disableMidiInput();
+
     shutdown();
 }
 
@@ -198,6 +205,9 @@ bool Engine::initialize()
     // Add this engine as the audio callback
     deviceManager.addAudioCallback(this);
 
+    // Phase 2A: Enable MIDI input
+    enableMidiInput();
+
     // C3: Optional debug seed (disabled by default; enable with -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
 #if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
     DBG("Engine: Seeding debug tracks (ZENITH_ENGINE_SEED_DEBUG_TRACKS enabled)");
@@ -221,6 +231,12 @@ void Engine::shutdown()
     // Close audio device
     deviceManager.closeAudioDevice();
 
+    // Clear audio file pool
+    if (audioFilePool_)
+    {
+        audioFilePool_->clear();
+    }
+
     DBG("Engine: Shutdown complete");
 }
 
@@ -232,10 +248,19 @@ void Engine::play()
 {
     DBG("Engine: Play");
     isPlaying_.store(true);
-    playbackPosition.store(0);
 
-    // Enable test tone for Phase 0 testing
-    // TODO: Remove this in Phase 1 when we have actual content
+    // Phase 1.3: Use new playhead system
+    // If playhead is at or past loop end, reset to loop start or 0
+    const juce::int64 loopEnd = loopEndSamples_.load();
+    const juce::int64 loopStart = loopStartSamples_.load();
+    const juce::int64 currentPos = playheadSamples_.load();
+
+    if (loopEnd > 0 && currentPos >= loopEnd)
+    {
+        playheadSamples_.store(loopStart);
+    }
+
+    // Enable test tone for Phase 0 fallback (when no tracks)
     enableTestTone_.store(true);
 
     // Phase 13: Start automation synchronizer
@@ -249,11 +274,15 @@ void Engine::play()
 void Engine::stop()
 {
     DBG("Engine: Stop");
+
+    // Phase 2C: If recording, bake recordings into clips first
+    if (isRecording_.load())
+    {
+        stopRecording();
+    }
+
     isPlaying_.store(false);
     enableTestTone_.store(false);
-
-    // Reset playback position
-    playbackPosition.store(0);
 
     // Phase 13: Stop automation synchronizer
     if (automationSynchronizer)
@@ -270,13 +299,87 @@ double Engine::getPlaybackPositionBeats() const
 
     const double tempo = projectState_->getTempo();
     const double sampleRate = currentSampleRate.load();
-    const juce::int64 positionSamples = playbackPosition.load();
+    const juce::int64 positionSamples = playheadSamples_.load();
 
     // Convert samples to beats
     const double seconds = static_cast<double>(positionSamples) / sampleRate;
     const double beats = (seconds * tempo) / 60.0;
 
     return beats;
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording
+//==============================================================================
+
+void Engine::record()
+{
+    DBG("Engine: Record");
+
+    // Set recording start position to current playhead
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.recordingStartSamples = playheadSamples_.load();
+
+        // Resize recording buffers to match track count
+        midiRecording_.trackRecordings.resize(tracks_.size());
+
+        // Clear all track recordings
+        for (auto& trackRecording : midiRecording_.trackRecordings)
+        {
+            trackRecording.clear();
+        }
+    }
+
+    // Enable recording
+    isRecording_.store(true);
+
+    // Start playback if not already playing
+    if (!isPlaying_.load())
+    {
+        play();
+    }
+
+    DBG("Engine: Recording started at sample " + juce::String(midiRecording_.recordingStartSamples));
+}
+
+void Engine::stopRecording()
+{
+    DBG("Engine: Stop recording");
+
+    // Disable recording first (stops new MIDI from being recorded)
+    isRecording_.store(false);
+
+    // Bake recordings into clips (with quantization enabled)
+    bakeMidiRecordingsIntoClips(true);
+
+    // Clear recording buffers
+    clearMidiRecordings();
+
+    DBG("Engine: Recording stopped, clips created");
+}
+
+//==============================================================================
+// Phase 1.3: Transport Position & Looping
+//==============================================================================
+
+void Engine::setPlayheadSamples(juce::int64 position)
+{
+    playheadSamples_.store(juce::jmax(int64_t(0), position));
+}
+
+void Engine::setLooping(bool shouldLoop)
+{
+    isLooping_.store(shouldLoop);
+    DBG("Engine: Looping " + juce::String(shouldLoop ? "enabled" : "disabled"));
+}
+
+void Engine::setLoopRegion(juce::int64 start, juce::int64 end)
+{
+    loopStartSamples_.store(juce::jmax(int64_t(0), start));
+    loopEndSamples_.store(juce::jmax(int64_t(0), end));
+
+    DBG("Engine: Loop region set: " + juce::String(start) + " - " + juce::String(end) + " samples");
 }
 
 //==============================================================================
@@ -338,14 +441,30 @@ void Engine::addTestTracks(int count)
             "Track " + juce::String(tracks_.size() + 1),
             zenith::Track::Type::Audio);
 
-        // NOTE: Do NOT call prepareToPlay() here - these are detached test tracks
-        // They are NOT wired into the audio graph and will not be used in processAudio()
-        // This is purely for compile verification and UI testing
+        // Phase 1: Tracks are now wired to audio processing!
+        // They will be prepared when audioDeviceAboutToStart() is called
 
         tracks_.push_back(std::move(track));
     }
 
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
+
+    // Re-prepare tracks if audio device is already running
+    auto* device = deviceManager.getCurrentAudioDevice();
+    if (device != nullptr)
+    {
+        prepareTracks(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
+    }
+}
+
+//==============================================================================
+// Phase 1.2: Audio File Pool
+//==============================================================================
+
+zenith::AudioFilePool& Engine::getAudioFilePool()
+{
+    jassert(audioFilePool_ != nullptr);
+    return *audioFilePool_;
 }
 
 //==============================================================================
@@ -362,7 +481,10 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 
     // Reset state
     phase = 0.0;
-    playbackPosition.store(0);
+    playheadSamples_.store(0);  // Phase 1.3: Reset playhead
+
+    // Phase 1: Prepare tracks for audio processing
+    prepareTracks(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
 
     // Prepare track buffers for unified render path
     const int bufferSize = currentBufferSize.load();
@@ -394,6 +516,7 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
     DBG("  Track Buffers: " + juce::String(trackBuffers_.size()));
+    DBG("  Tracks Prepared: " + juce::String(tracks_.size()));
 }
 
 void Engine::audioDeviceStopped()
@@ -433,8 +556,32 @@ void Engine::audioDeviceIOCallbackWithContext(
         processAudio(inputChannelData, numInputChannels,
                     outputChannelData, numOutputChannels, numSamples);
 
-        // Update playback position
-        playbackPosition.fetch_add(numSamples);
+        // Phase 1.3: Advance playhead with looping support
+        juce::int64 newPosition = playheadSamples_.load() + numSamples;
+        const bool looping = isLooping_.load();
+        const juce::int64 loopEnd = loopEndSamples_.load();
+        const juce::int64 loopStart = loopStartSamples_.load();
+
+        if (looping && loopEnd > 0 && newPosition >= loopEnd)
+        {
+            // Handle loop wrap
+            const juce::int64 loopLength = loopEnd - loopStart;
+            if (loopLength > 0)
+            {
+                // Wrap position within loop
+                while (newPosition >= loopEnd)
+                {
+                    newPosition -= loopLength;
+                }
+                // Ensure we're not before loop start
+                if (newPosition < loopStart)
+                {
+                    newPosition = loopStart;
+                }
+            }
+        }
+
+        playheadSamples_.store(newPosition);
     }
     else
     {
@@ -627,7 +774,7 @@ void Engine::processAudio(
     juce::AudioBuffer<float> outputBuffer(outputChannelData, numOutputChannels, numSamples);
 
     // Get current transport position
-    juce::int64 position = playbackPosition.load();
+    juce::int64 position = playheadSamples_.load();
 
     // Update transport position for all clips in all tracks
     for (auto& track : tracks_)
@@ -677,4 +824,239 @@ void Engine::processAudio(
                 phase -= 2.0 * juce::MathConstants<double>::pi;
         }
     }
+}
+
+//==============================================================================
+// Track Management (MESSAGE THREAD)
+//==============================================================================
+
+void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate)
+{
+    DBG("Engine: Preparing " + juce::String(tracks_.size()) + " tracks");
+
+    // Prepare each track
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(samplesPerBlockExpected, sampleRate);
+            DBG("  Prepared: " + track->getName());
+        }
+    }
+}
+
+//==============================================================================
+// Phase 2A: MIDI Input Handling
+//==============================================================================
+
+void Engine::enableMidiInput()
+{
+    DBG("Engine: Enabling MIDI input...");
+
+    // Get list of available MIDI input devices
+    auto midiInputs = juce::MidiInput::getAvailableDevices();
+
+    if (midiInputs.isEmpty())
+    {
+        DBG("Engine: No MIDI input devices available");
+        return;
+    }
+
+    // Open the first available MIDI input device
+    const auto& firstInput = midiInputs[0];
+    DBG("Engine: Opening MIDI input: " + firstInput.name);
+
+    midiInput_ = juce::MidiInput::openDevice(firstInput.identifier, this);
+
+    if (midiInput_ != nullptr)
+    {
+        midiInput_->start();
+        DBG("Engine: MIDI input started: " + firstInput.name);
+    }
+    else
+    {
+        DBG("Engine: Failed to open MIDI input");
+    }
+
+    // Initialize MIDI recording buffers for all tracks
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.trackRecordings.resize(tracks_.size());
+    }
+}
+
+void Engine::disableMidiInput()
+{
+    if (midiInput_ != nullptr)
+    {
+        DBG("Engine: Stopping MIDI input...");
+        midiInput_->stop();
+        midiInput_.reset();
+        DBG("Engine: MIDI input stopped");
+    }
+}
+
+void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message)
+{
+    juce::ignoreUnused(source);
+
+    // This runs on MIDI input thread (NOT audio thread or message thread)
+    // Buffer the message for processing in audio callback
+
+    // Add message to incoming buffer with current timestamp
+    {
+        const juce::ScopedLock sl(midiInputLock_);
+        incomingMidiBuffer_.addEvent(message, 0);  // Will be time-adjusted in audio callback
+    }
+
+    // Phase 2A: MIDI recording - if recording is active, store with playhead timestamp
+    if (isRecording_.load())
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+
+        // Get current playhead position
+        const juce::int64 playhead = playheadSamples_.load();
+        const juce::int64 recordStart = midiRecording_.recordingStartSamples;
+
+        // Calculate position relative to recording start
+        const double positionInSeconds = static_cast<double>(playhead - recordStart) / currentSampleRate.load();
+
+        // Add to all armed MIDI/Instrument tracks
+        for (size_t i = 0; i < tracks_.size() && i < midiRecording_.trackRecordings.size(); ++i)
+        {
+            auto* track = tracks_[i].get();
+            if (track != nullptr && track->isArmed() &&
+                (track->getType() == zenith::Track::Type::MIDI ||
+                 track->getType() == zenith::Track::Type::Instrument))
+            {
+                // Create timestamped message
+                juce::MidiMessage timestampedMessage(message);
+                timestampedMessage.setTimeStamp(positionInSeconds);
+
+                // Add to track's recording buffer
+                midiRecording_.trackRecordings[i].addEvent(timestampedMessage);
+            }
+        }
+    }
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording Baking
+//==============================================================================
+
+void Engine::bakeMidiRecordingsIntoClips(bool quantize)
+{
+    DBG("Engine: Baking MIDI recordings into clips (quantize=" + juce::String(quantize ? "true" : "false") + ")");
+
+    // Get project tempo for quantization (default to 120 BPM if no project state)
+    const double tempo = (projectState_ != nullptr) ? projectState_->getTempo() : 120.0;
+
+    // Copy recording data while locked (minimize lock time)
+    std::vector<juce::MidiMessageSequence> recordingsCopy;
+    juce::int64 recordStart = 0;
+
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        recordingsCopy = midiRecording_.trackRecordings;
+        recordStart = midiRecording_.recordingStartSamples;
+    }
+
+    // Process each track's recording (unlocked)
+    for (size_t i = 0; i < recordingsCopy.size() && i < tracks_.size(); ++i)
+    {
+        auto& recording = recordingsCopy[i];
+
+        // Skip empty recordings
+        if (recording.getNumEvents() == 0)
+            continue;
+
+        // Quantize if requested
+        juce::MidiMessageSequence finalSequence = recording;
+        if (quantize)
+        {
+            finalSequence = quantizeMidiSequence(recording, tempo, 0.25);  // 1/16 note grid
+        }
+
+        // Ensure note-off events are properly matched
+        finalSequence.updateMatchedPairs();
+
+        // Calculate clip length from sequence end time
+        const double endTimeSeconds = finalSequence.getEndTime();
+        const juce::int64 clipLengthSamples = static_cast<juce::int64>(
+            endTimeSeconds * currentSampleRate.load());
+
+        // Create MIDI clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::MIDI);
+        clip->setName("MIDI Recording");
+        clip->setMidiSequence(finalSequence);
+        clip->setStartPosition(recordStart);
+        clip->setLength(clipLengthSamples);
+
+        // Add clip to track
+        auto* track = tracks_[i].get();
+        if (track != nullptr)
+        {
+            track->addClip(std::move(clip));
+            DBG("Engine: Created MIDI clip on track " + juce::String(i) +
+                " (start=" + juce::String(recordStart) +
+                ", length=" + juce::String(clipLengthSamples) +
+                ", events=" + juce::String(finalSequence.getNumEvents()) + ")");
+        }
+    }
+
+    DBG("Engine: Baking complete");
+}
+
+void Engine::clearMidiRecordings()
+{
+    const juce::ScopedLock sl(midiRecordingLock_);
+
+    for (auto& recording : midiRecording_.trackRecordings)
+    {
+        recording.clear();
+    }
+
+    midiRecording_.recordingStartSamples = 0;
+
+    DBG("Engine: MIDI recordings cleared");
+}
+
+juce::MidiMessageSequence Engine::quantizeMidiSequence(
+    const juce::MidiMessageSequence& input,
+    double tempo,
+    double quantizeGrid)
+{
+    // Calculate grid spacing in seconds
+    const double beatsPerSecond = tempo / 60.0;
+    const double quarterNoteSeconds = 1.0 / beatsPerSecond;
+    const double gridSeconds = quarterNoteSeconds * quantizeGrid;
+
+    juce::MidiMessageSequence output;
+
+    // Quantize each event
+    for (int i = 0; i < input.getNumEvents(); ++i)
+    {
+        auto* event = input.getEventPointer(i);
+        if (event == nullptr)
+            continue;
+
+        double timestamp = event->message.getTimeStamp();
+
+        // Quantize to nearest grid point
+        double quantized = std::round(timestamp / gridSeconds) * gridSeconds;
+
+        // Ensure non-negative timestamps
+        quantized = juce::jmax(0.0, quantized);
+
+        // Create quantized message
+        juce::MidiMessage msg(event->message);
+        msg.setTimeStamp(quantized);
+        output.addEvent(msg);
+    }
+
+    // Update note-on/note-off pairing after quantization
+    output.updateMatchedPairs();
+
+    return output;
 }

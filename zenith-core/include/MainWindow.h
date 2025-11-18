@@ -87,6 +87,9 @@ private:
     juce::TextButton stopButton;
     juce::TextButton recordButton;
 
+    // Phase 1: Import Audio button
+    juce::TextButton importButton;
+
     // Audio device info
     juce::Label audioDeviceLabel;
 
@@ -100,6 +103,12 @@ private:
     // Integration: Show automation buttons (per track)
     std::map<juce::String, std::unique_ptr<juce::TextButton>> automationButtons;
     juce::Component automationButtonsContainer;
+
+    //==========================================================================
+    // Phase 1: Audio import
+    //==========================================================================
+
+    void handleImportAudio();
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

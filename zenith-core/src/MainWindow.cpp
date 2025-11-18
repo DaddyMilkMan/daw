@@ -5,6 +5,7 @@
 
 #include "../include/MainWindow.h"
 #include "../include/PianoRollEditor.h"
+#include "../Source/engine/Track.h"
 
 //==============================================================================
 // MainComponent Implementation
@@ -55,6 +56,13 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
+
+    // Phase 1: Import Audio button
+    importButton.setButtonText("Import Audio...");
+    importButton.onClick = [this]() {
+        handleImportAudio();
+    };
+    addAndMakeVisible(importButton);
 
     // Integration: Create ArrangerView
     arrangerView = std::make_unique<ArrangerView>(projectState);
@@ -120,6 +128,10 @@ void MainComponent::resized()
 
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
+
+    // Phase 1: Import button on the left
+    auto importSection = bottomBar.removeFromLeft(140);
+    importButton.setBounds(importSection.reduced(10, 8));
 
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
@@ -193,6 +205,76 @@ void MainComponent::openPianoRoll(const juce::String& trackId, const juce::Strin
     // Create new piano roll editor window
     // Note: Window deletes itself when closed (see PianoRollEditor::closeButtonPressed)
     new PianoRollEditor(projectState, trackId, clipId);
+}
+
+//==============================================================================
+// Phase 1: Audio Import
+//==============================================================================
+
+void MainComponent::handleImportAudio()
+{
+    // Create file chooser for audio files
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Import Audio File",
+        juce::File{},
+        "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg");
+
+    // Open file chooser (async)
+    auto chooserFlags = juce::FileBrowserComponent::openMode
+                      | juce::FileBrowserComponent::canSelectFiles;
+
+    chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc)
+    {
+        auto file = fc.getResult();
+        if (!file.existsAsFile())
+            return;
+
+        DBG("Importing audio file: " + file.getFullPathName());
+
+        // Ensure we have at least one track
+        if (engine.getNumTracks() == 0)
+        {
+            DBG("Creating first track for audio import");
+            engine.addTestTracks(1);
+        }
+
+        // Get the first track
+        const auto& tracks = engine.tracks();
+        if (tracks.empty())
+        {
+            DBG("ERROR: Failed to get track after creation");
+            return;
+        }
+
+        auto* track = tracks[0].get();
+        if (track == nullptr)
+        {
+            DBG("ERROR: Track is null");
+            return;
+        }
+
+        // Create a new clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::Audio);
+        clip->setName(file.getFileNameWithoutExtension());
+
+        // Load audio file through pool (message thread - safe to do I/O)
+        auto& pool = engine.getAudioFilePool();
+        clip->setAudioFileFromPool(file, pool);
+
+        // Set clip timing: start at position 0, play immediately
+        clip->setStartPosition(0);
+        clip->setPlaying(true);
+
+        DBG("Clip created: " + clip->getName() +
+            ", length: " + juce::String(clip->getLength()) + " samples");
+
+        // Add clip to track
+        track->addClip(std::move(clip));
+
+        DBG("Audio import complete! Track now has " +
+            juce::String(track->getNumClips()) + " clip(s)");
+    });
 }
 
 //==============================================================================
