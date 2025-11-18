@@ -662,6 +662,15 @@ ZenithSampler::ZenithSampler()
     registerPresets();
 }
 
+juce::AudioProcessorValueTreeState* ZenithSampler::getParameterState()
+{
+    if (auto* proc = dynamic_cast<ZenithSamplerProcessor*>(getAudioProcessor()))
+    {
+        return &proc->getParameters();
+    }
+    return nullptr;
+}
+
 InstrumentMetadata ZenithSampler::createMetadata()
 {
     InstrumentMetadata metadata;

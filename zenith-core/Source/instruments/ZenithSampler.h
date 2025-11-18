@@ -63,6 +63,11 @@ public:
     ZenithSamplerProcessor();
     ~ZenithSamplerProcessor() override;
 
+    /**
+     * @brief Get the AudioProcessorValueTreeState for parameter attachments
+     */
+    juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
+
     //==========================================================================
     // AudioProcessor overrides
     //==========================================================================
@@ -216,6 +221,11 @@ public:
      * @brief Create metadata for this instrument
      */
     static InstrumentMetadata createMetadata();
+
+    /**
+     * @brief Get the AudioProcessorValueTreeState for parameter attachments in editor
+     */
+    juce::AudioProcessorValueTreeState* getParameterState();
 
 private:
     void registerPresets();
