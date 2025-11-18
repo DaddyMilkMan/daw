@@ -86,6 +86,10 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     // Phase 1: Pre-allocate clip buffer to avoid RT allocations
     clipBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
 
+    // Prepare plugin buffer
+    pluginBuffer.setSize(2, samplesPerBlockExpected);
+    midiBuffer.clear();
+
     // Prepare instrument if present
     if (instrument_ != nullptr)
     {
@@ -249,9 +253,8 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
         }
     }
 
-    // Process through plugin chain
-    // TODO(Phase 2B: plugin hosting) - Pass midiBuffer_ to plugins
-    processPluginChain(localBuffer, bufferToFill.numSamples);
+    // Process through plugin chain with MIDI support
+    processPluginChain(localBuffer, midiBuffer, bufferToFill.numSamples);
 
     // Apply volume and pan
     applyGainAndPan(localBuffer, bufferToFill.numSamples);
@@ -670,7 +673,7 @@ void Track::loadPluginStates(const juce::ValueTree& state, PluginHost& pluginHos
 }
 
 //==============================================================================
-void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
+void Track::processPluginChain(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples)
 {
     // Phase 3: Process plugin chain
     // RT-SAFE: We only read the plugins vector here, no modifications
@@ -679,15 +682,9 @@ void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
     if (plugins.empty())
         return;
 
-    // Clear MIDI buffer (for audio tracks, empty MIDI; for instrument tracks, would contain MIDI)
-    pluginMidiBuffer.clear();
-
     // For MVP: Simple linear plugin chain processing
     // Audio tracks: audio in → plugins → audio out
-    // Instrument tracks (future): MIDI in → first plugin (synth) → audio → remaining plugins → audio out
-
-    // TODO(Phase 3+): Distinguish instrument vs audio tracks properly
-    // For now, we process all plugins as audio FX (assuming audio input)
+    // Instrument tracks: MIDI in → first plugin (synth) → audio → remaining plugins → audio out
 
     for (auto& plugin : plugins)
     {
@@ -713,7 +710,10 @@ void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
             // Process this plugin
             // Note: processBlock expects the full buffer, not just a section
             // We're processing in-place
-            plugin->processBlock(pluginView, pluginMidiBuffer);
+            // MIDI buffer is passed through the chain:
+            // - Instrument plugins consume note-on/off events
+            // - Effect plugins typically ignore MIDI (but some use it for modulation)
+            plugin->processBlock(pluginView, midi);
         }
     }
 }
@@ -769,6 +769,105 @@ void Track::updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSam
     if (maxLevel > peakLevel.load())
     {
         peakLevel.store(maxLevel);
+    }
+}
+
+//==============================================================================
+// MIDI Scheduling
+//==============================================================================
+
+void Track::generateMidiForBlock(const juce::ValueTree& trackState,
+                                   double tempo,
+                                   double sampleRate,
+                                   juce::int64 blockStartSample,
+                                   int blockSize,
+                                   juce::MidiBuffer& midiOut)
+{
+    // Calculate block boundaries in samples
+    juce::int64 blockEndSample = blockStartSample + blockSize;
+
+    // Convert to beats
+    // Formula: beats = (samples / sampleRate) * (tempo / 60)
+    double beatsPerSample = (tempo / 60.0) / sampleRate;
+    double blockStartBeats = blockStartSample * beatsPerSample;
+    double blockEndBeats = blockEndSample * beatsPerSample;
+
+    // Get CLIPS node from track state
+    auto clipsNode = trackState.getChildWithName(juce::Identifier("CLIPS"));
+    if (!clipsNode.isValid())
+        return;
+
+    // Process each clip
+    for (auto clip : clipsNode)
+    {
+        // Get clip position (in beats or samples - need to check)
+        // For now, assume clip.start is in beats
+        double clipStartBeats = clip.getProperty("start", 0.0);
+        double clipLengthBeats = clip.getProperty("length", 0.0);
+
+        // Skip clips that don't overlap this block
+        if (clipStartBeats + clipLengthBeats < blockStartBeats || clipStartBeats > blockEndBeats)
+            continue;
+
+        // Get NOTES node from clip
+        auto notesNode = clip.getChildWithName(juce::Identifier("NOTES"));
+        if (!notesNode.isValid())
+            continue;
+
+        // Process each note in the clip
+        for (auto note : notesNode)
+        {
+            // Get note properties
+            double noteStartBeats = note.getProperty("startBeats", 0.0);
+            double noteLengthBeats = note.getProperty("lengthBeats", 0.0);
+            int pitch = note.getProperty("pitch", 60);
+            int velocity = note.getProperty("velocity", 100);
+            juce::String noteId = note.getProperty("id", "");
+
+            // Convert note times to absolute timeline beats (relative to clip)
+            double absNoteStartBeats = clipStartBeats + noteStartBeats;
+            double absNoteEndBeats = absNoteStartBeats + noteLengthBeats;
+
+            // Convert to samples
+            double samplesPerBeat = sampleRate * 60.0 / tempo;
+            juce::int64 noteStartSample = static_cast<juce::int64>(absNoteStartBeats * samplesPerBeat);
+            juce::int64 noteEndSample = static_cast<juce::int64>(absNoteEndBeats * samplesPerBeat);
+
+            // Check if note-on happens in this block
+            if (noteStartSample >= blockStartSample && noteStartSample < blockEndSample)
+            {
+                // Calculate offset within this block
+                int sampleOffset = static_cast<int>(noteStartSample - blockStartSample);
+
+                // Create note-on event
+                juce::MidiMessage noteOn = juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity));
+                midiOut.addEvent(noteOn, sampleOffset);
+
+                // Track this note as active
+                ActiveNote activeNote;
+                activeNote.pitch = pitch;
+                activeNote.channel = 1;
+                activeNote.noteId = noteId;
+                activeNotes.push_back(activeNote);
+            }
+
+            // Check if note-off happens in this block
+            if (noteEndSample >= blockStartSample && noteEndSample < blockEndSample)
+            {
+                // Calculate offset within this block
+                int sampleOffset = static_cast<int>(noteEndSample - blockStartSample);
+
+                // Create note-off event
+                juce::MidiMessage noteOff = juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
+                midiOut.addEvent(noteOff, sampleOffset);
+
+                // Remove from active notes
+                activeNotes.erase(
+                    std::remove_if(activeNotes.begin(), activeNotes.end(),
+                        [&](const ActiveNote& n) { return n.noteId == noteId; }),
+                    activeNotes.end());
+            }
+        }
     }
 }
 

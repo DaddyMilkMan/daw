@@ -71,6 +71,9 @@ public:
     const juce::String& getName() const { return trackName; }
     void setName(const juce::String& newName);
 
+    const juce::String& getTrackId() const { return trackId; }
+    void setTrackId(const juce::String& id) { trackId = id; }
+
     Type getType() const { return trackType; }
     juce::String getTypeString() const;
 
@@ -129,6 +132,24 @@ public:
     juce::AudioPluginInstance* getPlugin(int index) const;
 
     //==============================================================================
+    // MIDI Scheduling
+    /**
+     * @brief Generate MIDI events for the current audio block from NOTES in clips
+     * @param trackState ValueTree for this track from ProjectState
+     * @param tempo Current tempo in BPM
+     * @param sampleRate Current sample rate
+     * @param blockStartSample Transport position at start of block
+     * @param blockSize Number of samples in block
+     * @param midiOut MIDI buffer to fill with events
+     */
+    void generateMidiForBlock(const juce::ValueTree& trackState,
+                               double tempo,
+                               double sampleRate,
+                               juce::int64 blockStartSample,
+                               int blockSize,
+                               juce::MidiBuffer& midiOut);
+
+    //==============================================================================
     // Clip management
     class Clip;  // Forward declaration
 
@@ -165,6 +186,7 @@ private:
     //==============================================================================
     // Track properties
     juce::String trackName;
+    juce::String trackId;
     Type trackType;
     int trackIndex = -1;
 
@@ -199,6 +221,8 @@ private:
     // No lock needed during processing (plugins vector is only modified on message thread when stopped)
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
     juce::CriticalSection pluginLock;  // Only for add/remove operations
+    juce::AudioBuffer<float> pluginBuffer;
+    juce::MidiBuffer midiBuffer;  // For MIDI events to plugins
     juce::MidiBuffer pluginMidiBuffer;  // Temp MIDI buffer for plugin processing
 
     //==============================================================================
@@ -242,9 +266,19 @@ private:
 
     //==============================================================================
     // Helper methods
-    void processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples);
+    void processPluginChain(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples);
     void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples);
     void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples);
+
+    // MIDI Scheduler state
+    struct ActiveNote
+    {
+        int pitch;
+        int channel;
+        juce::String noteId;  // For tracking which ValueTree note this came from
+    };
+    std::vector<ActiveNote> activeNotes;
+    juce::int64 lastProcessedSample = 0;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
