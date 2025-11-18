@@ -90,7 +90,6 @@ target_sources(ZenithDAW PRIVATE
 
     # Phase 13: Automation system
     src/TrackAutomationSynchronizer.cpp
-    src/CommandAPI.cpp
 
     # Integration: UI components and synchronizers
     src/ClipSynchronizer.cpp
@@ -151,8 +150,6 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/RegisterBuiltInInstruments.cpp
     Source/instruments/ZenithPolySynthEditor.h
     Source/instruments/ZenithPolySynthEditor.cpp
-    Source/instruments/ZenithSamplerEditor.h
-    Source/instruments/ZenithSamplerEditor.cpp
     include/InstrumentCommandHelpers.h
 )
 
