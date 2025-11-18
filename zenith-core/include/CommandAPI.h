@@ -30,6 +30,8 @@
 #include <JuceHeader.h>
 #include "ProjectState.h"
 #include "Engine.h"
+#include <functional>
+#include <map>
 #include <memory>
 
 //==============================================================================
