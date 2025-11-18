@@ -318,6 +318,52 @@ juce_generate_juce_header(RecordingAutomationTests)
 add_test(NAME RecordingAutomationTests COMMAND RecordingAutomationTests)
 
 # ============================================================================
+# Instrument Validation Tests
+# ============================================================================
+
+juce_add_console_app(InstrumentValidationTests
+    PRODUCT_NAME "InstrumentValidationTests"
+)
+
+target_sources(InstrumentValidationTests PRIVATE
+    tests/InstrumentValidationTests.cpp
+
+    # Instrument system
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/ZenithSampler.cpp
+    Source/instruments/RegisterBuiltInInstruments.cpp
+)
+
+target_include_directories(InstrumentValidationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
+)
+
+target_link_libraries(InstrumentValidationTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_dsp
+)
+
+target_compile_definitions(InstrumentValidationTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(InstrumentValidationTests)
+
+add_test(NAME InstrumentValidationTests COMMAND InstrumentValidationTests)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 
