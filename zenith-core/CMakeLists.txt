@@ -240,6 +240,41 @@ target_compile_definitions(ProjectStateTests PRIVATE
 add_test(NAME ProjectStateTests COMMAND ProjectStateTests)
 
 # ============================================================================
+# Recording & Automation Tests
+# ============================================================================
+
+juce_add_console_app(RecordingAutomationTests
+    PRODUCT_NAME "RecordingAutomationTests"
+)
+
+target_sources(RecordingAutomationTests PRIVATE
+    tests/RecordingAutomationTests.cpp
+    src/ProjectState.cpp
+)
+
+target_include_directories(RecordingAutomationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+)
+
+target_link_libraries(RecordingAutomationTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+)
+
+target_compile_definitions(RecordingAutomationTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(RecordingAutomationTests)
+
+add_test(NAME RecordingAutomationTests COMMAND RecordingAutomationTests)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 
