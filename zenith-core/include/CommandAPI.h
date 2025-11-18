@@ -325,6 +325,52 @@ private:
     juce::var cmd_exportProject(const juce::var& params);
 
     //==========================================================================
+    // Instrument commands
+    //==========================================================================
+
+    /**
+     * @brief List all available instruments
+     * Params: {}
+     * Returns: { "instruments": [{ "id": "...", "name": "...", "category": "..." }, ...] }
+     */
+    juce::var cmd_listInstruments(const juce::var& params);
+
+    /**
+     * @brief List presets for an instrument
+     * Params: { "instrumentId": "zenith_poly_synth", "category": "...", "tag": "..." } (category/tag optional)
+     * Returns: { "presets": [{ "id": "...", "name": "...", "category": "...", "tags": [...] }, ...] }
+     */
+    juce::var cmd_listPresets(const juce::var& params);
+
+    /**
+     * @brief Load preset on a track's instrument
+     * Params: { "trackId": "track_0", "instrumentId": "...", "presetId": "..." } (instrumentId optional if track has instrument)
+     * Returns: { "success": true }
+     */
+    juce::var cmd_loadPreset(const juce::var& params);
+
+    /**
+     * @brief Save current instrument state as preset
+     * Params: { "trackId": "track_0", "name": "My Preset", "category": "...", "tags": [...] } (category/tags optional)
+     * Returns: { "success": true, "presetId": "..." }
+     */
+    juce::var cmd_savePreset(const juce::var& params);
+
+    /**
+     * @brief Get all instrument parameters for a track
+     * Params: { "trackId": "track_0" }
+     * Returns: { "parameters": [{ "id": "...", "name": "...", "min": 0, "max": 1, "default": 0.5, "value": 0.7, "tags": [...] }, ...] }
+     */
+    juce::var cmd_getInstrumentParameters(const juce::var& params);
+
+    /**
+     * @brief Set multiple instrument parameters at once
+     * Params: { "trackId": "track_0", "params": { "filter_cutoff": 0.8, "filter_resonance": 0.3 } }
+     * Returns: { "success": true, "updated": ["filter_cutoff", "filter_resonance"] }
+     */
+    juce::var cmd_setInstrumentParameters(const juce::var& params);
+
+    //==========================================================================
     // Helper methods
     //==========================================================================
 
