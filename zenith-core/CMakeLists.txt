@@ -364,6 +364,38 @@ juce_generate_juce_header(InstrumentValidationTests)
 add_test(NAME InstrumentValidationTests COMMAND InstrumentValidationTests)
 
 # ============================================================================
+# Preset Generator Tool
+# ============================================================================
+
+juce_add_console_app(GeneratePolySynthPresets
+    PRODUCT_NAME "GeneratePolySynthPresets"
+)
+
+target_sources(GeneratePolySynthPresets PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../tools/GeneratePolySynthPresets.cpp
+)
+
+target_include_directories(GeneratePolySynthPresets PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
+)
+
+target_link_libraries(GeneratePolySynthPresets PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+)
+
+target_compile_definitions(GeneratePolySynthPresets PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+)
+
+# Generate JuceHeader.h for this tool
+juce_generate_juce_header(GeneratePolySynthPresets)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 
