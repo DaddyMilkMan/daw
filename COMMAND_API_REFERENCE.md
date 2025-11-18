@@ -269,6 +269,150 @@ All commands follow the standard CommandAPI request/response format:
 
 ---
 
+### set_instrument_on_track
+
+**Description:** Assign an instrument to a track. Creates the instrument and attaches it to the specified track.
+
+**Request:**
+```json
+{
+  "command": "set_instrument_on_track",
+  "params": {
+    "trackId": "track_0",
+    "instrumentId": "zenith_poly_synth"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "instrumentId": "zenith_poly_synth"
+  }
+}
+```
+
+**Notes:**
+- Creates an undo transaction with name "Set instrument {instrumentId} on {trackId}"
+- If track already has an instrument, it will be replaced
+- The instrument is created using the InstrumentRegistry
+- Track type does not need to be "instrument" - MIDI tracks can have instruments
+
+---
+
+### set_instrument_param
+
+**Description:** Set a single instrument parameter. Use this for individual parameter tweaks.
+
+**Request:**
+```json
+{
+  "command": "set_instrument_param",
+  "params": {
+    "trackId": "track_0",
+    "paramId": "filter_cutoff",
+    "value": 0.8
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "paramId": "filter_cutoff",
+    "value": 0.8
+  }
+}
+```
+
+**Notes:**
+- Creates an undo transaction with name "Set {paramId} to {value}"
+- Parameter ID is validated against the instrument's metadata
+- Value is automatically clamped to the valid range [min, max]
+- Returns the actual value set (after clamping)
+
+---
+
+### get_instrument_param
+
+**Description:** Get a single instrument parameter's current value and metadata.
+
+**Request:**
+```json
+{
+  "command": "get_instrument_param",
+  "params": {
+    "trackId": "track_0",
+    "paramId": "filter_cutoff"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "data": {
+    "paramId": "filter_cutoff",
+    "name": "Filter Cutoff",
+    "value": 0.65,
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.8
+  }
+}
+```
+
+**Notes:**
+- Returns full parameter metadata along with current value
+- Useful for understanding parameter ranges before setting
+- No undo transaction created (read-only operation)
+
+---
+
+### randomize_instrument_params
+
+**Description:** Randomize all instrument parameters with safe ranges. Useful for sound exploration and variation.
+
+**Request:**
+```json
+{
+  "command": "randomize_instrument_params",
+  "params": {
+    "trackId": "track_0",
+    "intensity": 0.5
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "randomized": ["filter_cutoff", "filter_resonance", "attack", "decay", "sustain", "release"],
+    "intensity": 0.5
+  }
+}
+```
+
+**Notes:**
+- Creates an undo transaction with name "Randomize instrument parameters"
+- `intensity` parameter is optional (default: 0.7, range: 0.0-1.0)
+- Intensity controls how far from current values parameters can deviate
+- At intensity=0.5, parameters can change by up to ±25% of their total range
+- All values are clamped to valid parameter ranges
+- Returns list of successfully randomized parameters
+
+---
+
 ## Track Management Commands
 
 ### add_track
@@ -706,13 +850,278 @@ Final command:
 
 ---
 
+### Example 3: Complete Workflow - Create Track, Assign Instrument, Load Preset, Tweak Parameters
+
+This workflow demonstrates the full instrument setup process from track creation to parameter tweaking.
+
+**Step 1: Create a MIDI track for the instrument**
+```json
+{
+  "command": "add_track",
+  "params": {
+    "name": "Synth Lead",
+    "type": "midi"
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "trackId": "track_0"
+  }
+}
+```
+
+**Step 2: Assign ZenithPolySynth to the track**
+```json
+{
+  "command": "set_instrument_on_track",
+  "params": {
+    "trackId": "track_0",
+    "instrumentId": "zenith_poly_synth"
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "instrumentId": "zenith_poly_synth"
+  }
+}
+```
+
+**Step 3: List available presets**
+```json
+{
+  "command": "list_presets",
+  "params": {
+    "instrumentId": "zenith_poly_synth"
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "presets": [
+      {
+        "id": "init_basic_pad_1234567890",
+        "name": "Basic Pad",
+        "category": "Factory",
+        "tags": ["pad", "warm", "lush"]
+      },
+      {
+        "id": "bright_pluck_1234567891",
+        "name": "Bright Pluck",
+        "category": "Factory",
+        "tags": ["pluck", "bright", "lead"]
+      }
+    ]
+  }
+}
+```
+
+**Step 4: Load a preset**
+```json
+{
+  "command": "load_preset",
+  "params": {
+    "trackId": "track_0",
+    "presetId": "init_basic_pad_1234567890"
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true
+  }
+}
+```
+
+**Step 5: Tweak filter cutoff**
+```json
+{
+  "command": "set_instrument_param",
+  "params": {
+    "trackId": "track_0",
+    "paramId": "filter_cutoff",
+    "value": 0.85
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "paramId": "filter_cutoff",
+    "value": 0.85
+  }
+}
+```
+
+**Step 6: Adjust envelope parameters**
+```json
+{
+  "command": "set_instrument_parameters",
+  "params": {
+    "trackId": "track_0",
+    "params": {
+      "attack": 0.05,
+      "decay": 0.3,
+      "sustain": 0.6,
+      "release": 0.4
+    }
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "updated": ["attack", "decay", "sustain", "release"]
+  }
+}
+```
+
+**Complete Command Sequence:**
+```json
+[
+  {
+    "command": "add_track",
+    "params": { "name": "Synth Lead", "type": "midi" }
+  },
+  {
+    "command": "set_instrument_on_track",
+    "params": { "trackId": "track_0", "instrumentId": "zenith_poly_synth" }
+  },
+  {
+    "command": "load_preset",
+    "params": { "trackId": "track_0", "presetId": "init_basic_pad_1234567890" }
+  },
+  {
+    "command": "set_instrument_param",
+    "params": { "trackId": "track_0", "paramId": "filter_cutoff", "value": 0.85 }
+  },
+  {
+    "command": "set_instrument_parameters",
+    "params": {
+      "trackId": "track_0",
+      "params": {
+        "attack": 0.05,
+        "decay": 0.3,
+        "sustain": 0.6,
+        "release": 0.4
+      }
+    }
+  }
+]
+```
+
+---
+
+### Example 4: Sound Exploration with Randomization
+
+This workflow demonstrates using randomization to explore sound variations quickly.
+
+**Step 1: Randomize with low intensity for subtle variations**
+```json
+{
+  "command": "randomize_instrument_params",
+  "params": {
+    "trackId": "track_0",
+    "intensity": 0.3
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "randomized": ["filter_cutoff", "filter_resonance", "attack", "decay", "sustain", "release", "osc1_level", "osc2_level"],
+    "intensity": 0.3
+  }
+}
+```
+
+**Step 2: Check a specific parameter after randomization**
+```json
+{
+  "command": "get_instrument_param",
+  "params": {
+    "trackId": "track_0",
+    "paramId": "filter_cutoff"
+  }
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "paramId": "filter_cutoff",
+    "name": "Filter Cutoff",
+    "value": 0.73,
+    "min": 0.0,
+    "max": 1.0,
+    "default": 0.8
+  }
+}
+```
+
+**Step 3: If you don't like the result, undo and try again**
+```json
+{
+  "command": "undo",
+  "params": {}
+}
+```
+
+Response:
+```json
+{
+  "status": "ok",
+  "data": {
+    "success": true,
+    "canUndo": true,
+    "canRedo": true
+  }
+}
+```
+
+---
+
 ## Best Practices for AI Agents
 
 1. **Discovery First**: Always use `list_instruments` and `list_presets` before making assumptions about available resources
 
-2. **Validate Before Set**: Use `get_instrument_parameters` to understand available parameters before calling `set_instrument_parameters`
+2. **Validate Before Set**: Use `get_instrument_parameters` or `get_instrument_param` to understand available parameters before setting
 
-3. **Batch Parameter Updates**: Use `set_instrument_parameters` instead of individual parameter commands for efficiency
+3. **Batch vs. Single Parameter Updates**:
+   - Use `set_instrument_parameters` for multiple parameters at once (more efficient)
+   - Use `set_instrument_param` for single parameter tweaks (creates cleaner undo history)
 
 4. **Handle Errors Gracefully**: Check response status and handle errors appropriately
 
@@ -720,4 +1129,8 @@ Final command:
 
 6. **Leverage Undo**: All instrument commands create undo transactions automatically - no need to manage this manually
 
-7. **Normalized Values**: All parameter values are normalized to [0, 1] range. The system handles conversion to actual units internally.
+7. **Normalized Values**: All parameter values are normalized to [0, 1] range. The system handles conversion to actual units internally
+
+8. **Randomization for Exploration**: Use `randomize_instrument_params` with varying intensities to discover interesting sounds quickly
+
+9. **Track Setup Sequence**: Follow the pattern: create track → set instrument → load preset → tweak parameters
