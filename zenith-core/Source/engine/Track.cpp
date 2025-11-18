@@ -17,6 +17,7 @@
 
 #include "Track.h"
 #include "Clip.h"
+#include "../instruments/Instrument.h"
 #include <algorithm>
 
 namespace zenith {
@@ -43,6 +44,20 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlockExpected;
 
+    // Prepare instrument buffer
+    instrumentBuffer_.setSize(2, samplesPerBlockExpected);
+
+    // Prepare instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, sampleRate, samplesPerBlockExpected);
+            processor->prepareToPlay(sampleRate, samplesPerBlockExpected);
+        }
+    }
+
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
 
@@ -63,6 +78,16 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
+    // Release instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
     // TODO(Phase 2: plugin hosting) - Release all plugins
 
     // Release all clips
@@ -129,6 +154,30 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         bufferToFill.startSample,
         bufferToFill.numSamples);
 
+    // Process instrument if present (for Instrument tracks)
+    if (instrument_ != nullptr && trackType == Type::Instrument)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            // Clear instrument buffer
+            instrumentBuffer_.setSize(2, bufferToFill.numSamples, false, true, true);
+            instrumentBuffer_.clear();
+
+            // Process instrument
+            processor->processBlock(instrumentBuffer_, midiBuffer_);
+
+            // Mix instrument output into track buffer
+            for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(), instrumentBuffer_.getNumChannels()); ++ch)
+            {
+                localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, bufferToFill.numSamples);
+            }
+
+            // Clear MIDI buffer for next block
+            midiBuffer_.clear();
+        }
+    }
+
     // Process through plugin chain
     processPluginChain(localBuffer, bufferToFill.numSamples);
 
@@ -191,6 +240,41 @@ void Track::setArmed(bool shouldBeArmed)
 void Track::setEnabled(bool shouldBeEnabled)
 {
     enabled.store(shouldBeEnabled);
+    sendChangeMessage();
+}
+
+//==============================================================================
+// Instrument management
+//==============================================================================
+
+void Track::setInstrument(std::unique_ptr<Instrument> instrument)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Release old instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
+    // Set new instrument
+    instrument_ = std::move(instrument);
+
+    // Prepare new instrument if audio is running
+    if (instrument_ != nullptr && currentSampleRate > 0)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
+            processor->prepareToPlay(currentSampleRate, currentBlockSize);
+        }
+    }
+
     sendChangeMessage();
 }
 
