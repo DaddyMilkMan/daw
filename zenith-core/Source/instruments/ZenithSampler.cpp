@@ -3,13 +3,12 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 
 namespace zenith {
-namespace instruments {
 
 //==============================================================================
 // Patch data structure for async loading
 //==============================================================================
 
-struct ZenithSampler::PatchData
+struct ZenithSamplerProcessor::PatchData
 {
     juce::String patchName;
 
@@ -41,7 +40,7 @@ struct ZenithSampler::PatchData
 // ZenithSampler
 //==============================================================================
 
-ZenithSampler::ZenithSampler()
+ZenithSamplerProcessor::ZenithSamplerProcessor()
     : AudioProcessor(BusesProperties()
                          .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
       parameters(*this, nullptr, "Parameters", createParameterLayout())
@@ -53,7 +52,7 @@ ZenithSampler::ZenithSampler()
     }
 }
 
-ZenithSampler::~ZenithSampler()
+ZenithSamplerProcessor::~ZenithSamplerProcessor()
 {
     if (loadingThread != nullptr && loadingThread->isThreadRunning())
     {
@@ -65,7 +64,7 @@ ZenithSampler::~ZenithSampler()
 // Parameter layout
 //==============================================================================
 
-juce::AudioProcessorValueTreeState::ParameterLayout ZenithSampler::createParameterLayout()
+juce::AudioProcessorValueTreeState::ParameterLayout ZenithSamplerProcessor::createParameterLayout()
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
@@ -124,7 +123,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZenithSampler::createParamet
 // Audio processing
 //==============================================================================
 
-void ZenithSampler::prepareToPlay(double sampleRate, int samplesPerBlock)
+void ZenithSamplerProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
 
@@ -146,12 +145,12 @@ void ZenithSampler::prepareToPlay(double sampleRate, int samplesPerBlock)
     }
 }
 
-void ZenithSampler::releaseResources()
+void ZenithSamplerProcessor::releaseResources()
 {
     // Nothing to release
 }
 
-void ZenithSampler::processBlock(juce::AudioBuffer<float>& buffer,
+void ZenithSamplerProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                  juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
@@ -186,7 +185,7 @@ void ZenithSampler::processBlock(juce::AudioBuffer<float>& buffer,
 // State save/load
 //==============================================================================
 
-void ZenithSampler::getStateInformation(juce::MemoryBlock& destData)
+void ZenithSamplerProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     auto state = parameters.copyState();
 
@@ -197,7 +196,7 @@ void ZenithSampler::getStateInformation(juce::MemoryBlock& destData)
     copyXmlToBinary(*xml, destData);
 }
 
-void ZenithSampler::setStateInformation(const void* data, int sizeInBytes)
+void ZenithSamplerProcessor::setStateInformation(const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xmlState(getXmlFromBinary(data, sizeInBytes));
 
@@ -222,7 +221,7 @@ void ZenithSampler::setStateInformation(const void* data, int sizeInBytes)
 // Patch management
 //==============================================================================
 
-bool ZenithSampler::loadPatch(const juce::File& patchFile)
+bool ZenithSamplerProcessor::loadPatch(const juce::File& patchFile)
 {
     if (!patchFile.existsAsFile())
         return false;
@@ -231,7 +230,7 @@ bool ZenithSampler::loadPatch(const juce::File& patchFile)
     return true;
 }
 
-bool ZenithSampler::loadPatchByName(const juce::String& patchName)
+bool ZenithSamplerProcessor::loadPatchByName(const juce::String& patchName)
 {
     auto patchFile = ContentPaths::getInstance()
         .getPatchFile("ZenithSampler", patchName);
@@ -239,7 +238,7 @@ bool ZenithSampler::loadPatchByName(const juce::String& patchName)
     return loadPatch(patchFile);
 }
 
-juce::StringArray ZenithSampler::getAvailablePatches() const
+juce::StringArray ZenithSamplerProcessor::getAvailablePatches() const
 {
     return ContentPaths::getInstance().getAvailablePatches("ZenithSampler");
 }
@@ -248,7 +247,7 @@ juce::StringArray ZenithSampler::getAvailablePatches() const
 // Async patch loading
 //==============================================================================
 
-void ZenithSampler::loadPatchAsync(const juce::File& patchFile)
+void ZenithSamplerProcessor::loadPatchAsync(const juce::File& patchFile)
 {
     // Stop any existing loading thread
     if (loadingThread != nullptr && loadingThread->isThreadRunning())
@@ -295,7 +294,7 @@ void ZenithSampler::loadPatchAsync(const juce::File& patchFile)
     loadingThread->startThread();
 }
 
-bool ZenithSampler::parsePatchFile(const juce::File& patchFile, PatchData& outData)
+bool ZenithSamplerProcessor::parsePatchFile(const juce::File& patchFile, PatchData& outData)
 {
     // Parse JSON patch file
     auto jsonText = patchFile.loadFileAsString();
@@ -363,7 +362,7 @@ bool ZenithSampler::parsePatchFile(const juce::File& patchFile, PatchData& outDa
     return !outData.samples.empty();
 }
 
-void ZenithSampler::applyPatchData(std::unique_ptr<PatchData> patchData)
+void ZenithSamplerProcessor::applyPatchData(std::unique_ptr<PatchData> patchData)
 {
     if (patchData == nullptr)
         return;
@@ -418,7 +417,7 @@ void ZenithSampler::applyPatchData(std::unique_ptr<PatchData> patchData)
 // Editor
 //==============================================================================
 
-juce::AudioProcessorEditor* ZenithSampler::createEditor()
+juce::AudioProcessorEditor* ZenithSamplerProcessor::createEditor()
 {
     return new ZenithSamplerEditor(*this);
 }
@@ -641,5 +640,189 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     }
 }
 
-} // namespace instruments
+//==============================================================================
+// ZenithSampler (Instrument Wrapper)
+//==============================================================================
+
+ZenithSampler::ZenithSampler()
+    : InstrumentBase(std::make_unique<ZenithSamplerProcessor>(), createMetadata())
+{
+    // Map parameter IDs to JUCE indices
+    mapParameter("attack", ZenithSamplerProcessor::Attack);
+    mapParameter("decay", ZenithSamplerProcessor::Decay);
+    mapParameter("sustain", ZenithSamplerProcessor::Sustain);
+    mapParameter("release", ZenithSamplerProcessor::Release);
+    mapParameter("filter_cutoff", ZenithSamplerProcessor::FilterCutoff);
+    mapParameter("filter_resonance", ZenithSamplerProcessor::FilterResonance);
+    mapParameter("tune", ZenithSamplerProcessor::Tune);
+    mapParameter("gain", ZenithSamplerProcessor::Gain);
+    mapParameter("character", ZenithSamplerProcessor::Character);
+
+    // Register presets (patches)
+    registerPresets();
+}
+
+InstrumentMetadata ZenithSampler::createMetadata()
+{
+    InstrumentMetadata metadata;
+    metadata.instrumentId = "zenith_sampler";
+    metadata.name = "Zenith Sampler";
+    metadata.category = "Sampler";
+    metadata.description = "Multi-sample instrument with envelope, filter, and velocity layers";
+
+    // Envelope parameters
+    {
+        ParameterMetadata param;
+        param.id = "attack";
+        param.name = "Attack";
+        param.category = "Envelope";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.01f;
+        param.minValue = 0.001f;
+        param.maxValue = 5.0f;
+        param.units = "s";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "decay";
+        param.name = "Decay";
+        param.category = "Envelope";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.1f;
+        param.minValue = 0.001f;
+        param.maxValue = 5.0f;
+        param.units = "s";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "sustain";
+        param.name = "Sustain";
+        param.category = "Envelope";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.7f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "release";
+        param.name = "Release";
+        param.category = "Envelope";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.3f;
+        param.minValue = 0.001f;
+        param.maxValue = 10.0f;
+        param.units = "s";
+        metadata.parameters.push_back(param);
+    }
+
+    // Filter parameters
+    {
+        ParameterMetadata param;
+        param.id = "filter_cutoff";
+        param.name = "Filter Cutoff";
+        param.category = "Filter";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 1.0f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "filter_resonance";
+        param.name = "Filter Resonance";
+        param.category = "Filter";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.0f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+
+    // Global parameters
+    {
+        ParameterMetadata param;
+        param.id = "tune";
+        param.name = "Tune";
+        param.category = "Global";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.0f;
+        param.minValue = -1.0f;
+        param.maxValue = 1.0f;
+        param.units = "semitones";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "gain";
+        param.name = "Gain";
+        param.category = "Global";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.8f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+    {
+        ParameterMetadata param;
+        param.id = "character";
+        param.name = "Character";
+        param.category = "Global";
+        param.type = ParameterMetadata::Type::Float;
+        param.defaultValue = 0.0f;
+        param.minValue = 0.0f;
+        param.maxValue = 1.0f;
+        param.units = "%";
+        metadata.parameters.push_back(param);
+    }
+
+    // Macros for high-level control
+    {
+        MacroMetadata macro;
+        macro.id = "macro_brightness";
+        macro.name = "Brightness";
+        macro.description = "Controls filter cutoff and character";
+        macro.targets.push_back({.parameterId = "filter_cutoff", .amount = 0.8f});
+        macro.targets.push_back({.parameterId = "character", .amount = 0.5f});
+        metadata.macros.push_back(macro);
+    }
+    {
+        MacroMetadata macro;
+        macro.id = "macro_response";
+        macro.name = "Response";
+        macro.description = "Controls envelope attack and release";
+        macro.targets.push_back({.parameterId = "attack", .amount = 0.7f});
+        macro.targets.push_back({.parameterId = "release", .amount = 0.7f});
+        metadata.macros.push_back(macro);
+    }
+
+    return metadata;
+}
+
+void ZenithSampler::registerPresets()
+{
+    // TODO: Load .zpatch files from content directory and register as presets
+    // For now, just register a default preset
+    std::map<juce::String, float> defaultPreset;
+    defaultPreset["attack"] = 0.01f;
+    defaultPreset["decay"] = 0.1f;
+    defaultPreset["sustain"] = 0.7f;
+    defaultPreset["release"] = 0.3f;
+    defaultPreset["filter_cutoff"] = 1.0f;
+    defaultPreset["filter_resonance"] = 0.0f;
+    defaultPreset["tune"] = 0.0f;
+    defaultPreset["gain"] = 0.8f;
+    defaultPreset["character"] = 0.0f;
+
+    registerPreset("default", "Default", defaultPreset);
+}
+
 } // namespace zenith

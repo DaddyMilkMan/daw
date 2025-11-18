@@ -3,7 +3,6 @@
 #include <juce_core/juce_core.h>
 
 namespace zenith {
-namespace instruments {
 
 /**
  * @brief Cross-platform content path resolver for Zenith instruments
@@ -205,5 +204,5 @@ private:
     juce::File customContentRoot;
 };
 
-} // namespace instruments
+
 } // namespace zenith

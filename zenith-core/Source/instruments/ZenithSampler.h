@@ -3,12 +3,16 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ContentPaths.h"
+#include "Instrument.h"
 
 namespace zenith {
-namespace instruments {
+
+// Forward declarations for voice/sound classes
+class ZenithSamplerSound;
+class ZenithSamplerVoice;
 
 /**
- * @brief Sample-based instrument for Zenith DAW
+ * @brief Sample-based AudioProcessor for Zenith DAW
  *
  * Features:
  * - Multi-sample playback with key ranges and velocity layers
@@ -19,15 +23,32 @@ namespace instruments {
  *
  * Patch format: .zpatch (JSON-based)
  */
-class ZenithSampler : public juce::AudioProcessor
+class ZenithSamplerProcessor : public juce::AudioProcessor
 {
 public:
+    //==========================================================================
+    // Parameter indices
+    //==========================================================================
+    enum Parameters
+    {
+        Attack = 0,
+        Decay,
+        Sustain,
+        Release,
+        FilterCutoff,
+        FilterResonance,
+        Tune,
+        Gain,
+        Character,
+        NumParameters
+    };
+
     //==========================================================================
     // Constructor / Destructor
     //==========================================================================
 
-    ZenithSampler();
-    ~ZenithSampler() override;
+    ZenithSamplerProcessor();
+    ~ZenithSamplerProcessor() override;
 
     //==========================================================================
     // AudioProcessor overrides
@@ -124,7 +145,7 @@ public:
     // Parameter access (for UI)
     //==========================================================================
 
-    juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
+    juce::AudioProcessorValueTreeState& getAPVTS() { return parameters; }
 
 private:
     //==========================================================================
@@ -160,9 +181,36 @@ private:
     std::unique_ptr<juce::Thread> loadingThread;
 
     //==========================================================================
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerProcessor)
+};
+
+//==============================================================================
+/**
+    Zenith Sampler instrument wrapper
+
+    Wraps ZenithSamplerProcessor with InstrumentBase to provide:
+    - Metadata (parameters, macros)
+    - Preset management
+    - CommandAPI integration
+*/
+class ZenithSampler : public InstrumentBase
+{
+public:
+    ZenithSampler();
+    ~ZenithSampler() override = default;
+
+    /**
+     * @brief Create metadata for this instrument
+     */
+    static InstrumentMetadata createMetadata();
+
+private:
+    void registerPresets();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSampler)
 };
 
+//==============================================================================
 /**
  * @brief Custom sampler sound with key range and velocity range
  */
@@ -206,6 +254,7 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerSound)
 };
 
+//==============================================================================
 /**
  * @brief Custom sampler voice with filter and envelope
  */
@@ -259,5 +308,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerVoice)
 };
 
-} // namespace instruments
 } // namespace zenith

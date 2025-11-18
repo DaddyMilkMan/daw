@@ -4,7 +4,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
-namespace instruments {
 
 // Forward declaration
 class ZenithSamplerProcessor;
@@ -71,5 +70,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerEditor)
 };
 
-} // namespace instruments
 } // namespace zenith

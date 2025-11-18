@@ -2,7 +2,6 @@
 #include "instruments/ZenithSampler.h"
 
 namespace zenith {
-namespace instruments {
 
 //==============================================================================
 // Constants
@@ -114,7 +113,7 @@ ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& processor)
     // Parameter Attachments
     //==========================================================================
 
-    auto& params = sampler.getParameters();
+    auto& params = sampler.getAPVTS();
 
     attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
         params, "attack", attackSlider);
@@ -284,5 +283,5 @@ void ZenithSamplerEditor::timerCallback()
     }
 }
 
-} // namespace instruments
+
 } // namespace zenith
