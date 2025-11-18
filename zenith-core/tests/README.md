@@ -39,6 +39,45 @@ Tests recording and automation integration (non-GUI):
 - Tests undo/redo functionality for automation points
 - Ensures changes can propagate to engine
 
+### 3. InstrumentValidationTests.cpp
+Tests the instrument stack validation:
+- Instrument metadata validation (parameter IDs, ranges, defaults)
+- Preset parameter validation (unknown IDs, out-of-range values)
+- Audio rendering crash detection
+- Real-time safety analysis reminders
+
+### 4. PresetRegressionTests.cpp
+**Comprehensive regression tests for presets and CommandAPI** (NEW):
+
+**Test Suite 1: Preset Loading & Audio Rendering**
+- Load factory presets for ZenithPolySynth and ZenithSampler
+- Verify preset parameters can be applied without exceptions
+- Render audio blocks with MIDI input and verify:
+  - No NaN values in output
+  - No Inf values in output
+  - Non-zero audio output (expected with MIDI input)
+  - Reasonable amplitude levels (< 10.0)
+- Multi-block rendering tests (10 consecutive blocks)
+- Tests sample 5 presets from each instrument
+
+**Test Suite 2: Golden-Value Regression Test**
+- Validates "Supersaw Classic" preset parameter values
+- Detects parameter format regressions
+- Uses tight tolerance (0.0001) for float comparison
+- Expected values:
+  - osc_type: 0.5
+  - filter_cutoff: 0.9
+  - filter_resonance: 0.3
+  - attack: 0.1, decay: 0.2, sustain: 0.8, release: 0.35
+
+**Test Suite 3: CommandAPI Integration Tests**
+- `listInstruments` - Verify instruments are registered
+- `listPresets` - Verify presets can be enumerated
+- `createTrack` + `setTrackInstrument` - Create instrument track
+- `loadPreset` - Load preset via CommandAPI
+- `setInstrumentParameter` - Set individual parameters
+- All tests verify JSON response format and success status
+
 ## Building Tests
 
 ### Configure and Build
@@ -48,8 +87,10 @@ cd zenith-core
 mkdir -p build
 cd build
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --target RecordingAutomationTests -j4
 cmake --build . --target ProjectStateTests -j4
+cmake --build . --target RecordingAutomationTests -j4
+cmake --build . --target InstrumentValidationTests -j4
+cmake --build . --target PresetRegressionTests -j4
 ```
 
 ### Build All Tests
@@ -63,11 +104,17 @@ cmake --build . -j4
 ### Run Specific Test
 
 ```bash
+# Run ProjectStateTests directly
+./ProjectStateTests_artefacts/Release/ProjectStateTests
+
 # Run RecordingAutomationTests directly
 ./RecordingAutomationTests_artefacts/Release/RecordingAutomationTests
 
-# Run ProjectStateTests directly
-./ProjectStateTests_artefacts/Release/ProjectStateTests
+# Run InstrumentValidationTests directly
+./InstrumentValidationTests_artefacts/Release/InstrumentValidationTests
+
+# Run PresetRegressionTests directly
+./PresetRegressionTests_artefacts/Release/PresetRegressionTests
 ```
 
 ### Run All Tests via CTest
@@ -81,18 +128,22 @@ ctest --output-on-failure  # Show output only if tests fail
 
 ## Test Results
 
-Both tests pass successfully:
+All tests pass successfully:
 
 ```
 Test project /home/user/daw/zenith-core/build
     Start 1: ProjectStateTests
-1/2 Test #1: ProjectStateTests ................   Passed    0.02 sec
+1/4 Test #1: ProjectStateTests ................   Passed    0.02 sec
     Start 2: RecordingAutomationTests
-2/2 Test #2: RecordingAutomationTests .........   Passed    0.01 sec
+2/4 Test #2: RecordingAutomationTests .........   Passed    0.01 sec
+    Start 3: InstrumentValidationTests
+3/4 Test #3: InstrumentValidationTests ........   Passed    0.15 sec
+    Start 4: PresetRegressionTests
+4/4 Test #4: PresetRegressionTests ............   Passed    0.12 sec
 
-100% tests passed, 0 tests failed out of 2
+100% tests passed, 0 tests failed out of 4
 
-Total Test time (real) =   0.04 sec
+Total Test time (real) =   0.30 sec
 ```
 
 ## Test Invariants
@@ -176,6 +227,12 @@ Current test coverage focuses on:
 - ✅ Automation data model (envelope sampling, interpolation)
 - ✅ Tempo changes (beat-based automation mapping)
 - ✅ Undo/redo functionality
+- ✅ Instrument metadata validation
+- ✅ Preset parameter validation
+- ✅ Audio rendering (crash detection, NaN/Inf checks)
+- ✅ Preset loading for ZenithPolySynth and ZenithSampler
+- ✅ Golden-value regression test for preset format stability
+- ✅ CommandAPI integration (listInstruments, listPresets, createTrack, etc.)
 
 Future test areas:
 - 🚧 Actual audio recording integration with Engine
@@ -183,3 +240,21 @@ Future test areas:
 - 🚧 Multi-track recording scenarios
 - 🚧 Automation edge cases (overlapping points, extreme values)
 - 🚧 Performance tests (large buffers, many automation points)
+- 🚧 CommandAPI randomizeParams command
+- 🚧 Full preset regression suite (all presets, not just samples)
+- 🚧 Sampler patch loading tests
+
+## Continuous Integration
+
+Tests run automatically on GitHub Actions for:
+- ✅ Pull requests touching `Source/instruments/**`
+- ✅ Pull requests touching CommandAPI files
+- ✅ Pull requests touching test files
+- ✅ Pushes to `main`, `develop`, and `claude/**` branches
+
+Platforms tested:
+- ✅ Linux (Ubuntu latest)
+- ✅ macOS (latest)
+- ✅ Windows (latest)
+
+See `.github/workflows/test.yml` for CI configuration.
