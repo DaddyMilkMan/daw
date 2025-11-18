@@ -23,7 +23,7 @@ void registerBuiltInInstruments()
 
     // Register ZenithPolySynth
     registry.registerInstrument(
-        "zenith_poly_synth",
+        "zenith.poly_synth",
         ZenithPolySynth::createMetadata(),
         []() { return std::make_unique<ZenithPolySynth>(); }
     );
