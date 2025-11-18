@@ -172,17 +172,17 @@ void Track::Clip::getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples)
     if (clipType != Type::MIDI)
         return;
 
-    if (!isPlaying_.load() || midiSequence.getNumEvents() == 0)
+    if (!playing.load() || midiSequence.getNumEvents() == 0)
         return;
 
     const juce::ScopedLock sl(midiLock);
 
     // Calculate time range for this block
-    const int64_t currentPos = playbackPosition_.load();
-    const int64_t clipOffset = clipOffsetInSamples.load();
+    const int64_t currentPos = transportPosition.load();
+    const int64_t clipOffsetSamples = clipOffset.load();
 
     // Position within the clip's MIDI sequence (accounting for offset)
-    const int64_t posInClip = currentPos - clipOffset;
+    const int64_t posInClip = currentPos - clipOffsetSamples;
 
     if (posInClip < 0)
         return; // Clip hasn't started yet

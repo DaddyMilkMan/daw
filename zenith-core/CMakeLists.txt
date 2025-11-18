@@ -100,17 +100,19 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
 
-    # Built-in instruments infrastructure
-    include/instruments/InstrumentRegistry.h
-    src/instruments/InstrumentRegistry.cpp
-
-    # Built-in instruments - ZenithPolySynth
-    include/instruments/ZenithPolySynth.h
-    src/instruments/ZenithPolySynth.cpp
-    include/instruments/ZenithPolySynthVoice.h
-    src/instruments/ZenithPolySynthVoice.cpp
-    include/instruments/ZenithPolySynthEditor.h
-    src/instruments/ZenithPolySynthEditor.cpp
+    # Instrument system
+    Source/instruments/InstrumentMetadata.h
+    Source/instruments/Instrument.h
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.h
+    Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ZenithPolySynth.h
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/ZenithSampler.h
+    Source/instruments/ZenithSampler.cpp
+    Source/instruments/RegisterBuiltInInstruments.h
+    Source/instruments/RegisterBuiltInInstruments.cpp
+    include/InstrumentCommandHelpers.h
 )
 
 # ============================================================================
@@ -120,6 +122,7 @@ target_sources(ZenithDAW PRIVATE
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
 )
 
 # ============================================================================

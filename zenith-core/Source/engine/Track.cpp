@@ -17,6 +17,7 @@
 
 #include "Track.h"
 #include "Clip.h"
+#include "../instruments/Instrument.h"
 #include <algorithm>
 
 namespace zenith {
@@ -30,41 +31,40 @@ Track::Track(const juce::String& name, Type type)
 Track::~Track()
 {
     // Ensure we're not in the middle of audio processing
-    const juce::ScopedLock sl1(instrumentLock);
-    const juce::ScopedLock sl2(pluginLock);
-    const juce::ScopedLock sl3(clipsLock);
-
-    // Release instrument
-    if (instrument != nullptr)
-    {
-        instrument->releaseResources();
-        instrument.reset();
-    }
+    const juce::ScopedLock sl1(pluginLock);
+    const juce::ScopedLock sl2(clipsLock);
 
     // Clips are automatically destroyed via std::unique_ptr
     clips.clear();
 }
 
 //==============================================================================
-// Built-in instrument support
-
-void Track::setInstrument(std::unique_ptr<juce::AudioProcessor> newInstrument)
+void Track::setInstrument(std::unique_ptr<Instrument> instrument)
 {
-    const juce::ScopedLock sl(instrumentLock);
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Release old instrument if it exists
-    if (instrument != nullptr)
+    // Release old instrument if present
+    if (instrument_ != nullptr)
     {
-        instrument->releaseResources();
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
     }
 
     // Set new instrument
-    instrument = std::move(newInstrument);
+    instrument_ = std::move(instrument);
 
-    // Prepare new instrument if we're already initialized
-    if (instrument != nullptr && currentSampleRate > 0.0)
+    // Prepare new instrument if audio is running
+    if (instrument_ != nullptr && currentSampleRate > 0)
     {
-        instrument->prepareToPlay(currentSampleRate, currentBlockSize);
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
+            processor->prepareToPlay(currentSampleRate, currentBlockSize);
+        }
     }
 
     sendChangeMessage();
@@ -76,17 +76,22 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlockExpected;
 
-    // Prepare plugin buffer
-    pluginBuffer.setSize(2, samplesPerBlockExpected);
+    // Prepare instrument buffer
+    instrumentBuffer_.setSize(2, samplesPerBlockExpected);
 
-    // Prepare built-in instrument
+    // Prepare instrument if present
+    if (instrument_ != nullptr)
     {
-        const juce::ScopedLock sl(instrumentLock);
-        if (instrument != nullptr)
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
         {
-            instrument->prepareToPlay(sampleRate, samplesPerBlockExpected);
+            processor->setPlayConfigDetails(0, 2, sampleRate, samplesPerBlockExpected);
+            processor->prepareToPlay(sampleRate, samplesPerBlockExpected);
         }
     }
+
+    // Prepare plugin buffer
+    pluginBuffer.setSize(2, samplesPerBlockExpected);
 
     // TODO(Phase 2: plugin hosting) - Prepare all plugins
 
@@ -105,12 +110,13 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
-    // Release built-in instrument
+    // Release instrument if present
+    if (instrument_ != nullptr)
     {
-        const juce::ScopedLock sl(instrumentLock);
-        if (instrument != nullptr)
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
         {
-            instrument->releaseResources();
+            processor->releaseResources();
         }
     }
 
@@ -191,9 +197,29 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         bufferToFill.startSample,
         bufferToFill.numSamples);
 
-    // Process through built-in instrument (if present)
-    // This converts MIDI → audio
-    processInstrument(localBuffer, midiBuffer, bufferToFill.numSamples);
+    // Process instrument if present (for Instrument tracks)
+    if (instrument_ != nullptr && trackType == Type::Instrument)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            // Clear instrument buffer
+            instrumentBuffer_.setSize(2, bufferToFill.numSamples, false, true, true);
+            instrumentBuffer_.clear();
+
+            // Process instrument
+            processor->processBlock(instrumentBuffer_, midiBuffer_);
+
+            // Mix instrument output into track buffer
+            for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(), instrumentBuffer_.getNumChannels()); ++ch)
+            {
+                localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, bufferToFill.numSamples);
+            }
+
+            // Clear MIDI buffer for next block
+            midiBuffer_.clear();
+        }
+    }
 
     // Process through plugin chain
     processPluginChain(localBuffer, bufferToFill.numSamples);
@@ -257,6 +283,41 @@ void Track::setArmed(bool shouldBeArmed)
 void Track::setEnabled(bool shouldBeEnabled)
 {
     enabled.store(shouldBeEnabled);
+    sendChangeMessage();
+}
+
+//==============================================================================
+// Instrument management
+//==============================================================================
+
+void Track::setInstrument(std::unique_ptr<Instrument> instrument)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Release old instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
+    // Set new instrument
+    instrument_ = std::move(instrument);
+
+    // Prepare new instrument if audio is running
+    if (instrument_ != nullptr && currentSampleRate > 0)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
+            processor->prepareToPlay(currentSampleRate, currentBlockSize);
+        }
+    }
+
     sendChangeMessage();
 }
 
@@ -416,20 +477,6 @@ void Track::loadState(const juce::ValueTree& state)
 }
 
 //==============================================================================
-void Track::processInstrument(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples)
-{
-    const juce::ScopedLock sl(instrumentLock);
-
-    if (instrument == nullptr)
-        return;
-
-    // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
-    // Process the instrument with MIDI input
-    instrument->processBlock(buffer, midi);
-
-    (void)numSamples; // Unused but kept for API consistency
-}
-
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
     (void)buffer;

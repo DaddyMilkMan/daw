@@ -265,16 +265,6 @@ private:
         int numSamples);
 
     //==========================================================================
-    // Built-in Instruments
-    //==========================================================================
-
-    /**
-     * @brief Register all built-in instruments with the InstrumentRegistry
-     * @note Called during initialize()
-     */
-    void registerBuiltInInstruments();
-
-    //==========================================================================
     // Member Variables
     //==========================================================================
 

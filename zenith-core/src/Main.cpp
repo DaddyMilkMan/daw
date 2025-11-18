@@ -12,6 +12,7 @@
 
 #include <JuceHeader.h>
 #include "../include/MainWindow.h"
+#include "../Source/instruments/RegisterBuiltInInstruments.h"
 
 //==============================================================================
 /**
@@ -78,6 +79,10 @@ public:
 
         // Log system info
         logSystemInfo();
+
+        // Register built-in instruments
+        DBG("Registering built-in instruments...");
+        zenith::registerBuiltInInstruments();
 
         // Create main window
         mainWindow = std::make_unique<MainWindow>(getApplicationName());

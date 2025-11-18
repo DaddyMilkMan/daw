@@ -21,6 +21,11 @@
 #include <memory>
 #include <vector>
 
+// Forward declarations
+namespace zenith {
+    class Instrument;
+}
+
 namespace zenith {
 
 //==============================================================================
@@ -87,10 +92,25 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Built-in instrument support (for Instrument tracks)
-    void setInstrument(std::unique_ptr<juce::AudioProcessor> newInstrument);
-    juce::AudioProcessor* getInstrument() const { return instrument.get(); }
-    bool hasInstrument() const { return instrument != nullptr; }
+    // Instrument management (for Instrument tracks)
+    /**
+     * @brief Set the instrument for this track
+     * @param instrument Instrument instance (must be non-null)
+     * @note Message thread only
+     */
+    void setInstrument(std::unique_ptr<Instrument> instrument);
+
+    /**
+     * @brief Get the current instrument (if any)
+     * @return Pointer to instrument, or nullptr if no instrument set
+     * @note Message thread only
+     */
+    Instrument* getInstrument() const { return instrument_.get(); }
+
+    /**
+     * @brief Check if track has an instrument
+     */
+    bool hasInstrument() const { return instrument_ != nullptr; }
 
     //==============================================================================
     // Plugin chain management - TODO(Phase 2: plugin hosting)
@@ -150,10 +170,10 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Built-in instrument (for Instrument tracks)
-    std::unique_ptr<juce::AudioProcessor> instrument;
-    juce::CriticalSection instrumentLock;
-    juce::MidiBuffer midiBuffer; // For collecting MIDI to send to instrument
+    // Instrument (for Instrument tracks)
+    std::unique_ptr<Instrument> instrument_;
+    juce::AudioBuffer<float> instrumentBuffer_;
+    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
     // Plugin chain - TODO(Phase 2: plugin hosting)
@@ -168,7 +188,6 @@ private:
 
     //==============================================================================
     // Helper methods
-    void processInstrument(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples);
     void processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples);
     void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples);
     void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples);
