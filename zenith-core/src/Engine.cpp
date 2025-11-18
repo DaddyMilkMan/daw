@@ -371,7 +371,7 @@ void Engine::stopRecording()
 
 void Engine::setPlayheadSamples(juce::int64 position)
 {
-    playheadSamples_.store(juce::jmax(int64_t(0), position));
+    playheadSamples_.store(juce::jmax(juce::int64(0), position));
 }
 
 void Engine::setLooping(bool shouldLoop)
@@ -382,8 +382,8 @@ void Engine::setLooping(bool shouldLoop)
 
 void Engine::setLoopRegion(juce::int64 start, juce::int64 end)
 {
-    loopStartSamples_.store(juce::jmax(int64_t(0), start));
-    loopEndSamples_.store(juce::jmax(int64_t(0), end));
+    loopStartSamples_.store(juce::jmax(juce::int64(0), start));
+    loopEndSamples_.store(juce::jmax(juce::int64(0), end));
 
     DBG("Engine: Loop region set: " + juce::String(start) + " - " + juce::String(end) + " samples");
 }

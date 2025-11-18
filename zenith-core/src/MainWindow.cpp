@@ -4,12 +4,13 @@
  */
 
 #include "../include/MainWindow.h"
-#include "ui/ArrangerComponent.h"
-#include "ui/WingmanPanel.h"
-#include "commands/CommandAPI.h"
-#include "network/AIBridgeClient.h"
+#include "ArrangerComponent.h"
+#include "WingmanPanel.h"
+#include "CommandAPI.h"
+#include "AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
 #include "../Source/engine/Track.h"
+#include "../Source/engine/Clip.h"
 
 //==============================================================================
 // MainComponent Implementation

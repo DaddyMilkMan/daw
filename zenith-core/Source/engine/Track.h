@@ -213,7 +213,6 @@ private:
     // Instrument (for Instrument tracks)
     std::unique_ptr<Instrument> instrument_;
     juce::AudioBuffer<float> instrumentBuffer_;
-    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
     // Plugin chain (Phase 3: VST3 hosting MVP)
@@ -222,8 +221,6 @@ private:
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
     juce::CriticalSection pluginLock;  // Only for add/remove operations
     juce::AudioBuffer<float> pluginBuffer;
-    juce::MidiBuffer midiBuffer;  // For MIDI events to plugins
-    juce::MidiBuffer pluginMidiBuffer;  // Temp MIDI buffer for plugin processing
 
     //==============================================================================
     // Phase 2A: Lock-free clip list using RCU-style atomic snapshot
@@ -261,7 +258,7 @@ private:
     // Phase 1: Pre-allocated clip buffer to avoid RT allocations
     juce::AudioBuffer<float> clipBuffer_;
 
-    // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback
+    // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback and instruments
     juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
