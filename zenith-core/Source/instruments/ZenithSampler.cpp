@@ -20,7 +20,8 @@ namespace zenith {
 
 ZenithSamplerProcessor::ZenithSamplerProcessor()
     : AudioProcessor(BusesProperties()
-                     .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+                     .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
+      parameters_(*this, nullptr, "Parameters", createParameterLayout())
 {
     // Add sampler voices
     for (int i = 0; i < 8; ++i)
@@ -28,14 +29,38 @@ ZenithSamplerProcessor::ZenithSamplerProcessor()
 
     // For now, no samples loaded (would need sample loading system)
     // This is a stub for demonstration
+}
 
-    // Create parameters
-    addParameter(new juce::AudioParameterFloat("attack", "Attack", 0.0f, 1.0f, 0.01f));
-    addParameter(new juce::AudioParameterFloat("decay", "Decay", 0.0f, 1.0f, 0.1f));
-    addParameter(new juce::AudioParameterFloat("sustain", "Sustain", 0.0f, 1.0f, 1.0f));
-    addParameter(new juce::AudioParameterFloat("release", "Release", 0.0f, 1.0f, 0.1f));
-    addParameter(new juce::AudioParameterFloat("filterCutoff", "Filter Cutoff", 0.0f, 1.0f, 1.0f));
-    addParameter(new juce::AudioParameterFloat("filterResonance", "Filter Resonance", 0.0f, 1.0f, 0.0f));
+juce::AudioProcessorValueTreeState::ParameterLayout ZenithSamplerProcessor::createParameterLayout()
+{
+    std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "env_attack", "Attack", 0.0f, 1.0f, 0.01f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "env_decay", "Decay", 0.0f, 1.0f, 0.1f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "env_sustain", "Sustain", 0.0f, 1.0f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "env_release", "Release", 0.0f, 1.0f, 0.1f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "filter_cutoff", "Filter Cutoff", 0.0f, 1.0f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "filter_resonance", "Filter Resonance", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "sample_start", "Sample Start", 0.0f, 1.0f, 0.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "sample_end", "Sample End", 0.0f, 1.0f, 1.0f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "master_volume", "Volume", 0.0f, 1.0f, 0.7f));
+
+    // Macro parameters (must match metadata macro IDs - currently only 2 defined)
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_brightness", "Brightness", 0.0f, 1.0f, 0.5f));
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_envelope_speed", "Envelope Speed", 0.0f, 1.0f, 0.5f));
+
+    return { params.begin(), params.end() };
 }
 
 void ZenithSamplerProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -63,16 +88,20 @@ void ZenithSamplerProcessor::processBlock(juce::AudioBuffer<float>& buffer, juce
 ZenithSampler::ZenithSampler()
     : InstrumentBase(std::make_unique<ZenithSamplerProcessor>(), createMetadata())
 {
-    // Map parameter IDs to JUCE indices
-    mapParameter("attack", ZenithSamplerProcessor::Attack);
-    mapParameter("decay", ZenithSamplerProcessor::Decay);
-    mapParameter("sustain", ZenithSamplerProcessor::Sustain);
-    mapParameter("release", ZenithSamplerProcessor::Release);
-    mapParameter("filter_cutoff", ZenithSamplerProcessor::FilterCutoff);
-    mapParameter("filter_resonance", ZenithSamplerProcessor::FilterResonance);
+    // Parameters are now managed by APVTS in ZenithSamplerProcessor
+    // The parameter IDs in APVTS match the metadata parameter IDs
 
     // Register presets
     registerPresets();
+}
+
+juce::AudioProcessorValueTreeState* ZenithSampler::getParameterState()
+{
+    if (auto* proc = dynamic_cast<ZenithSamplerProcessor*>(getAudioProcessor()))
+    {
+        return &proc->getParameters();
+    }
+    return nullptr;
 }
 
 InstrumentMetadata ZenithSampler::createMetadata()

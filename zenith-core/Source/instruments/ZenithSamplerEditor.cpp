@@ -48,8 +48,7 @@ void ZenithSamplerEditor::setupSlider(juce::Slider& slider, juce::Label& label,
     label.attachToComponent(&slider, false);
 
     // Create attachment
-    auto* audioProcessor = processor_.getAudioProcessor();
-    if (auto* apvts = dynamic_cast<juce::AudioProcessorValueTreeState*>(audioProcessor))
+    if (auto* apvts = processor_.getParameterState())
     {
         attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
             *apvts, paramId, slider));
@@ -79,8 +78,7 @@ void ZenithSamplerEditor::setupMacroKnobs()
         addAndMakeVisible(*label);
 
         // Create attachment using actual macro ID from metadata
-        auto* audioProcessor = processor_.getAudioProcessor();
-        if (auto* apvts = dynamic_cast<juce::AudioProcessorValueTreeState*>(audioProcessor))
+        if (auto* apvts = processor_.getParameterState())
         {
             attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
                 *apvts, macroInfo.id, *knob));

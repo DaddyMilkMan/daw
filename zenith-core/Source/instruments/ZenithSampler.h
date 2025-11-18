@@ -43,6 +43,11 @@ public:
     ZenithSamplerProcessor();
     ~ZenithSamplerProcessor() override = default;
 
+    /**
+     * @brief Get the AudioProcessorValueTreeState for parameter attachments
+     */
+    juce::AudioProcessorValueTreeState& getParameters() { return parameters_; }
+
     //==========================================================================
     // AudioProcessor interface
     //==========================================================================
@@ -68,6 +73,9 @@ public:
     void setStateInformation(const void*, int) override {}
 
 private:
+    juce::AudioProcessorValueTreeState parameters_;
+    juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerProcessor)
 };
 
@@ -85,6 +93,11 @@ public:
      * @brief Create metadata for this instrument
      */
     static InstrumentMetadata createMetadata();
+
+    /**
+     * @brief Get the AudioProcessorValueTreeState for parameter attachments in editor
+     */
+    juce::AudioProcessorValueTreeState* getParameterState();
 
 private:
     void registerPresets();
