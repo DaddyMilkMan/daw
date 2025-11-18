@@ -15,6 +15,7 @@
 
 #include <JuceHeader.h>
 #include "InstrumentMetadata.h"
+#include "InstrumentPreset.h"
 #include <memory>
 #include <map>
 
@@ -105,6 +106,19 @@ public:
      */
     virtual juce::String getCurrentPresetId() const = 0;
 
+    /**
+     * @brief Apply a preset to this instrument
+     * @param preset Preset to apply (must match instrumentId)
+     * @return true if preset was applied successfully
+     */
+    virtual bool applyPreset(const ZenithInstrumentPreset& preset) = 0;
+
+    /**
+     * @brief Capture current instrument state as a preset
+     * @param preset Preset object to fill with current state
+     */
+    virtual void capturePreset(ZenithInstrumentPreset& preset) const = 0;
+
 protected:
     Instrument() = default;
 
@@ -141,6 +155,9 @@ public:
     juce::StringArray getPresetIds() const override;
     bool loadPreset(const juce::String& presetId) override;
     juce::String getCurrentPresetId() const override { return currentPresetId_; }
+
+    bool applyPreset(const ZenithInstrumentPreset& preset) override;
+    void capturePreset(ZenithInstrumentPreset& preset) const override;
 
 protected:
     //==========================================================================
