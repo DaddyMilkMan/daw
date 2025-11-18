@@ -99,6 +99,14 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Built-in instruments
+    include/instruments/ContentPaths.h
+    include/instruments/InstrumentRegistry.h
+    include/instruments/ZenithSampler.h
+    include/instruments/ZenithSamplerEditor.h
+    src/instruments/ZenithSampler.cpp
+    src/instruments/ZenithSamplerEditor.cpp
 )
 
 # ============================================================================
@@ -108,6 +116,7 @@ target_sources(ZenithDAW PRIVATE
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/instruments
 )
 
 # ============================================================================
