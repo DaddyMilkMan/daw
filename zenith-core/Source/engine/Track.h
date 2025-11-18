@@ -21,6 +21,11 @@
 #include <memory>
 #include <vector>
 
+// Forward declarations
+namespace zenith {
+    class Instrument;
+}
+
 namespace zenith {
 
 //==============================================================================
@@ -87,6 +92,27 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
+    // Instrument management (for Instrument tracks)
+    /**
+     * @brief Set the instrument for this track
+     * @param instrument Instrument instance (must be non-null)
+     * @note Message thread only
+     */
+    void setInstrument(std::unique_ptr<Instrument> instrument);
+
+    /**
+     * @brief Get the current instrument (if any)
+     * @return Pointer to instrument, or nullptr if no instrument set
+     * @note Message thread only
+     */
+    Instrument* getInstrument() const { return instrument_.get(); }
+
+    /**
+     * @brief Check if track has an instrument
+     */
+    bool hasInstrument() const { return instrument_ != nullptr; }
+
+    //==============================================================================
     // Plugin chain management - TODO(Phase 2: plugin hosting)
     // Stubbed for now; will implement in Phase 2 with VST3/AU support
     void addPlugin(void* plugin) { (void)plugin; /* stub */ }
@@ -142,6 +168,12 @@ private:
     // Level monitoring (atomic for lock-free access)
     std::atomic<float> currentLevel{0.0f};
     std::atomic<float> peakLevel{0.0f};
+
+    //==============================================================================
+    // Instrument (for Instrument tracks)
+    std::unique_ptr<Instrument> instrument_;
+    juce::AudioBuffer<float> instrumentBuffer_;
+    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
     // Plugin chain - TODO(Phase 2: plugin hosting)

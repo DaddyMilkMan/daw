@@ -130,6 +130,59 @@ private:
     juce::var cmd_exportWav(const juce::var& params);
 
     //==========================================================================
+    // Instrument commands
+    //==========================================================================
+
+    /**
+     * @brief List all available instruments
+     * Params: {}
+     * Returns: { "success": true, "instruments": [ { "id": "...", "name": "...", "category": "..." }, ... ] }
+     */
+    juce::var cmd_listInstruments(const juce::var& params);
+
+    /**
+     * @brief Describe an instrument (full metadata)
+     * Params: { "instrumentId": "zenith_poly_synth" }
+     * Returns: { "success": true, "instrument": { ... metadata ... } }
+     */
+    juce::var cmd_describeInstrument(const juce::var& params);
+
+    /**
+     * @brief List presets for an instrument
+     * Params: { "instrumentId": "zenith_poly_synth" }
+     * Returns: { "success": true, "presets": [ "preset_id_1", "preset_id_2", ... ] }
+     */
+    juce::var cmd_listInstrumentPresets(const juce::var& params);
+
+    /**
+     * @brief Set instrument on a track
+     * Params: { "trackId": "track_1", "instrumentId": "zenith_poly_synth", "presetId": "init_basic_pad" }
+     * Returns: { "success": true, "instrument": { ... metadata ... } }
+     */
+    juce::var cmd_setTrackInstrument(const juce::var& params);
+
+    /**
+     * @brief Set instrument parameter
+     * Params: { "trackId": "track_1", "parameterId": "filter_cutoff", "value": 0.65 }
+     * Returns: { "success": true, "value": 0.65 }
+     */
+    juce::var cmd_setInstrumentParam(const juce::var& params);
+
+    /**
+     * @brief Set instrument macro
+     * Params: { "trackId": "track_1", "macroId": "macro_warmth", "value": 0.9 }
+     * Returns: { "success": true, "value": 0.9 }
+     */
+    juce::var cmd_setInstrumentMacro(const juce::var& params);
+
+    /**
+     * @brief Load instrument preset
+     * Params: { "trackId": "track_1", "presetId": "lofi_keys_01" }
+     * Returns: { "success": true, "presetId": "lofi_keys_01" }
+     */
+    juce::var cmd_loadInstrumentPreset(const juce::var& params);
+
+    //==========================================================================
     // Helper methods
     //==========================================================================
 

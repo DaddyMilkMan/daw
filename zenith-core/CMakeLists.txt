@@ -100,26 +100,23 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
 
-    # Instrument system (master's implementation with CommandAPI)
+    # Instrument system
     Source/instruments/InstrumentMetadata.h
     Source/instruments/Instrument.h
     Source/instruments/Instrument.cpp
     Source/instruments/InstrumentRegistry.h
     Source/instruments/InstrumentRegistry.cpp
-    Source/instruments/RegisterBuiltInInstruments.h
-    Source/instruments/RegisterBuiltInInstruments.cpp
-
-    # Enhanced features (macro/preset system + UI editors)
-    Source/instruments/ZenithPolySynthEditor.h
-    Source/instruments/ZenithPolySynthEditor.cpp
-    Source/instruments/ZenithSamplerEditor.h
-    Source/instruments/ZenithSamplerEditor.cpp
-
-    # Built-in instruments (using master's versions for now)
     Source/instruments/ZenithPolySynth.h
     Source/instruments/ZenithPolySynth.cpp
     Source/instruments/ZenithSampler.h
     Source/instruments/ZenithSampler.cpp
+    Source/instruments/RegisterBuiltInInstruments.h
+    Source/instruments/RegisterBuiltInInstruments.cpp
+    Source/instruments/ZenithPolySynthEditor.h
+    Source/instruments/ZenithPolySynthEditor.cpp
+    Source/instruments/ZenithSamplerEditor.h
+    Source/instruments/ZenithSamplerEditor.cpp
+    include/InstrumentCommandHelpers.h
 )
 
 # ============================================================================
