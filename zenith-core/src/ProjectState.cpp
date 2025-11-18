@@ -62,6 +62,9 @@ const juce::Identifier ProjectState::PROP_SOLO("solo");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
+const juce::Identifier ProjectState::PROP_OFFSET("offset");
+const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
+const juce::Identifier ProjectState::PROP_ARMED("armed");
 
 // Phase 13: Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
@@ -274,6 +277,120 @@ int ProjectState::getNumTracks() const
     return 0;
 }
 
+juce::ValueTree ProjectState::getTrack(const juce::String& trackId) const
+{
+    return const_cast<ProjectState*>(this)->findTrack(trackId);
+}
+
+//==============================================================================
+// Clip Management
+//==============================================================================
+
+juce::String ProjectState::addClip(const juce::String& trackId, double startBeats, double lengthBeats, const juce::String& actionName)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Track not found: " + trackId);
+        return {};
+    }
+
+    // Get or create CLIPS node
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+    {
+        clipsNode = juce::ValueTree(ID_CLIPS);
+        track.appendChild(clipsNode, &undoManager);
+    }
+
+    // Generate unique clip ID
+    auto clipId = generateUniqueId("clip");
+
+    // Create clip
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_START, startBeats, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+    clip.setProperty(PROP_TYPE, "audio", nullptr);
+
+    // Add to track
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Added clip " + clipId + " to track " + trackId);
+    return clipId;
+}
+
+bool ProjectState::removeClip(const juce::String& trackId, const juce::String& clipId, const juce::String& actionName)
+{
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+        return false;
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return false;
+
+    // Find and remove clip
+    for (int i = 0; i < clipsNode.getNumChildren(); ++i)
+    {
+        auto clip = clipsNode.getChild(i);
+        if (clip[PROP_ID].toString() == clipId)
+        {
+            clipsNode.removeChild(i, &undoManager);
+            DBG("ProjectState: Removed clip " + clipId);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool ProjectState::setClipAudioFile(const juce::String& trackId, const juce::String& clipId, const juce::File& audioFile, const juce::String& actionName)
+{
+    auto clip = getClip(trackId, clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + trackId + "/" + clipId);
+        return false;
+    }
+
+    // Store absolute path for now
+    // TODO: Make relative to project file when project is saved
+    clip.setProperty(PROP_AUDIO_FILE, audioFile.getFullPathName(), &undoManager);
+
+    DBG("ProjectState: Set audio file for clip " + clipId + ": " + audioFile.getFileName());
+    return true;
+}
+
+juce::String ProjectState::getClipAudioFile(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto clip = getClip(trackId, clipId);
+    if (!clip.isValid())
+        return {};
+
+    return clip[PROP_AUDIO_FILE].toString();
+}
+
+juce::ValueTree ProjectState::getClip(const juce::String& trackId, const juce::String& clipId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+    if (!track.isValid())
+        return {};
+
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+        return {};
+
+    // Find clip
+    for (auto clip : clipsNode)
+    {
+        if (clip[PROP_ID].toString() == clipId)
+            return clip;
+    }
+
+    return {};
+}
+
 //==============================================================================
 // Undo/Redo
 //==============================================================================
@@ -369,6 +486,233 @@ void ProjectState::rebuildIdCounter()
     scanTree(state);
 
     idCounter.store(highestId + 1);
+}
+
+//==============================================================================
+// Track Property Management (Undoable)
+//==============================================================================
+
+void ProjectState::renameTrack(const juce::String& trackId, const juce::String& newName,
+                                const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_NAME, newName, &undoManager);
+        DBG("ProjectState: Renamed track " + trackId + " to '" + newName + "'");
+    }
+}
+
+void ProjectState::setTrackVolume(const juce::String& trackId, float volumeLinear,
+                                   const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_VOLUME, volumeLinear, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " volume to " + juce::String(volumeLinear));
+    }
+}
+
+void ProjectState::setTrackPan(const juce::String& trackId, float pan,
+                                const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_PAN, pan, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " pan to " + juce::String(pan));
+    }
+}
+
+void ProjectState::setTrackMute(const juce::String& trackId, bool muted,
+                                 const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_MUTE, muted, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " mute to " + juce::String(muted));
+    }
+}
+
+void ProjectState::setTrackSolo(const juce::String& trackId, bool soloed,
+                                 const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_SOLO, soloed, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " solo to " + juce::String(soloed));
+    }
+}
+
+void ProjectState::setTrackArmed(const juce::String& trackId, bool armed,
+                                  const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (track.isValid())
+    {
+        track.setProperty(PROP_ARMED, armed, &undoManager);
+        DBG("ProjectState: Set track " + trackId + " armed to " + juce::String(armed));
+    }
+}
+
+//==============================================================================
+// Clip Management (Undoable)
+//==============================================================================
+
+juce::String ProjectState::createClip(const juce::String& trackId, const juce::String& clipType,
+                                       juce::int64 startSamples, juce::int64 lengthSamples,
+                                       const juce::String& name,
+                                       const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto track = findTrack(trackId);
+    if (!track.isValid())
+    {
+        DBG("ProjectState: Track not found: " + trackId);
+        return {};
+    }
+
+    // Get or create CLIPS node
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+    {
+        clipsNode = juce::ValueTree(ID_CLIPS);
+        track.appendChild(clipsNode, &undoManager);
+    }
+
+    // Generate unique clip ID
+    auto clipId = generateUniqueId("clip");
+
+    // Create clip ValueTree
+    juce::ValueTree clip(ID_CLIP);
+    clip.setProperty(PROP_ID, clipId, nullptr);
+    clip.setProperty(PROP_NAME, name, nullptr);
+    clip.setProperty(PROP_TYPE, clipType, nullptr);
+    clip.setProperty(PROP_START, startSamples, nullptr);
+    clip.setProperty(PROP_LENGTH, lengthSamples, nullptr);
+    clip.setProperty(PROP_OFFSET, 0, nullptr);
+
+    // Add to track
+    clipsNode.appendChild(clip, &undoManager);
+
+    DBG("ProjectState: Created clip '" + name + "' with ID " + clipId + " on track " + trackId);
+
+    return clipId;
+}
+
+void ProjectState::deleteClip(const juce::String& trackId, const juce::String& clipId,
+                               const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto clip = getClip(trackId, clipId);
+    if (clip.isValid())
+    {
+        auto clipsNode = clip.getParent();
+        clipsNode.removeChild(clip, &undoManager);
+
+        DBG("ProjectState: Deleted clip " + clipId + " from track " + trackId);
+    }
+}
+
+void ProjectState::moveClip(const juce::String& trackId, const juce::String& clipId,
+                             juce::int64 newStartSamples,
+                             const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto clip = getClip(trackId, clipId);
+    if (clip.isValid())
+    {
+        clip.setProperty(PROP_START, newStartSamples, &undoManager);
+        DBG("ProjectState: Moved clip " + clipId + " to " + juce::String(newStartSamples));
+    }
+}
+
+std::pair<juce::String, juce::String> ProjectState::splitClip(const juce::String& trackId,
+                                                                const juce::String& clipId,
+                                                                juce::int64 splitSamples,
+                                                                const juce::String& actionName)
+{
+    undoManager.beginNewTransaction(actionName);
+
+    auto originalClip = getClip(trackId, clipId);
+    if (!originalClip.isValid())
+    {
+        DBG("ProjectState: Clip not found: " + clipId);
+        return {};
+    }
+
+    // Get original clip properties
+    juce::String clipName = originalClip[PROP_NAME].toString();
+    juce::String clipType = originalClip[PROP_TYPE].toString();
+    juce::int64 clipStart = originalClip[PROP_START];
+    juce::int64 clipLength = originalClip[PROP_LENGTH];
+    juce::int64 clipOffset = originalClip[PROP_OFFSET];
+    juce::int64 clipEnd = clipStart + clipLength;
+
+    // Validate split position
+    if (splitSamples <= clipStart || splitSamples >= clipEnd)
+    {
+        DBG("ProjectState: Invalid split position");
+        return {};
+    }
+
+    // Calculate left and right clip properties
+    juce::int64 leftLength = splitSamples - clipStart;
+    juce::int64 rightLength = clipEnd - splitSamples;
+    juce::int64 rightOffset = clipOffset + leftLength;
+
+    // Create left clip
+    juce::String leftClipId = createClip(trackId, clipType, clipStart, leftLength,
+                                         clipName + " (L)", "");
+
+    // Create right clip
+    juce::String rightClipId = createClip(trackId, clipType, splitSamples, rightLength,
+                                          clipName + " (R)", "");
+
+    // Set offsets
+    auto leftClip = getClip(trackId, leftClipId);
+    auto rightClip = getClip(trackId, rightClipId);
+
+    if (leftClip.isValid())
+        leftClip.setProperty(PROP_OFFSET, clipOffset, &undoManager);
+
+    if (rightClip.isValid())
+        rightClip.setProperty(PROP_OFFSET, rightOffset, &undoManager);
+
+    // Copy audio file property if present
+    if (originalClip.hasProperty(PROP_AUDIO_FILE))
+    {
+        juce::String audioFile = originalClip[PROP_AUDIO_FILE].toString();
+        if (leftClip.isValid())
+            leftClip.setProperty(PROP_AUDIO_FILE, audioFile, &undoManager);
+        if (rightClip.isValid())
+            rightClip.setProperty(PROP_AUDIO_FILE, audioFile, &undoManager);
+    }
+
+    // Delete original clip
+    deleteClip(trackId, clipId, "");
+
+    DBG("ProjectState: Split clip " + clipId + " into " + leftClipId + " and " + rightClipId);
+
+    return {leftClipId, rightClipId};
 }
 
 //==============================================================================

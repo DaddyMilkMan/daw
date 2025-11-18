@@ -11,16 +11,29 @@
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
+#include "../Source/engine/AudioFilePool.h"
+#include "../Source/engine/PluginHost.h"
+#include "../Source/ui/PluginEditorWindow.h"
 
 //==============================================================================
 Engine::Engine()
+    : audioFilePool_(std::make_unique<zenith::AudioFilePool>())
 {
     DBG("Engine: Constructor");
+    DBG("Engine: AudioFilePool created");
+
+    // Phase 3: Initialize plugin host and editor window manager
+    pluginHost_ = std::make_unique<zenith::PluginHost>();
+    pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();
 }
 
 Engine::~Engine()
 {
     DBG("Engine: Destructor");
+
+    // Phase 2A: Disable MIDI input
+    disableMidiInput();
+
     shutdown();
 }
 
@@ -46,7 +59,123 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Sync tracks with project state
+        syncWithProjectState();
     }
+}
+
+void Engine::syncWithProjectState()
+{
+    DBG("Engine: Syncing with project state");
+
+    if (projectState_ == nullptr)
+    {
+        DBG("Engine: No project state, clearing tracks");
+        tracks_.clear();
+        return;
+    }
+
+    // Clear existing tracks
+    tracks_.clear();
+
+    // Get tracks from project state
+    auto& state = projectState_->getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+
+    if (!tracksNode.isValid())
+    {
+        DBG("Engine: No tracks in project state");
+        return;
+    }
+
+    const double sampleRate = currentSampleRate.load();
+    const int bufferSize = currentBufferSize.load();
+    const double tempo = projectState_->getTempo();
+
+    // Helper: convert beats to samples
+    auto beatsToSamples = [tempo, sampleRate](double beats) -> juce::int64
+    {
+        const double secondsPerBeat = 60.0 / tempo;
+        const double seconds = beats * secondsPerBeat;
+        return static_cast<juce::int64>(seconds * sampleRate);
+    };
+
+    // Create engine tracks from project state
+    for (auto trackNode : tracksNode)
+    {
+        juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
+        juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+
+        // Create track
+        auto track = std::make_unique<zenith::Track>(
+            trackName,
+            trackType == "midi" ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio);
+
+        // Set mixer properties
+        track->setVolume(trackNode[ProjectState::PROP_VOLUME]);
+        track->setPan(trackNode[ProjectState::PROP_PAN]);
+        track->setMuted(trackNode[ProjectState::PROP_MUTE]);
+        track->setSolo(trackNode[ProjectState::PROP_SOLO]);
+
+        // Prepare track for playback
+        if (sampleRate > 0)
+        {
+            track->prepareToPlay(bufferSize, sampleRate);
+        }
+
+        // Load clips
+        auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
+        if (clipsNode.isValid())
+        {
+            for (auto clipNode : clipsNode)
+            {
+                // Create clip
+                auto clip = std::make_unique<zenith::Track::Clip>();
+
+                // Set basic properties
+                double startBeats = clipNode[ProjectState::PROP_START];
+                double lengthBeats = clipNode[ProjectState::PROP_LENGTH];
+
+                clip->setStartPosition(beatsToSamples(startBeats));
+                clip->setLength(beatsToSamples(lengthBeats));
+
+                // Load audio file if present
+                juce::String audioFilePath = clipNode[ProjectState::PROP_AUDIO_FILE].toString();
+                if (audioFilePath.isNotEmpty())
+                {
+                    juce::File audioFile(audioFilePath);
+                    if (audioFile.existsAsFile())
+                    {
+                        clip->setAudioFile(audioFile);
+                        clip->setType(zenith::Track::Clip::Type::Audio);
+                        DBG("Engine: Loaded audio file: " + audioFile.getFileName());
+                    }
+                    else
+                    {
+                        DBG("Engine: Warning - audio file not found: " + audioFilePath);
+                    }
+                }
+
+                // Prepare clip
+                if (sampleRate > 0)
+                {
+                    clip->prepareToPlay(bufferSize, sampleRate);
+                }
+
+                // Set clip as playing (so it's active during playback)
+                clip->setPlaying(true);
+
+                // Add clip to track
+                track->addClip(std::move(clip));
+            }
+        }
+
+        // Add track to engine
+        tracks_.push_back(std::move(track));
+    }
+
+    DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
 }
 
 bool Engine::initialize()
@@ -82,6 +211,9 @@ bool Engine::initialize()
     // Add this engine as the audio callback
     deviceManager.addAudioCallback(this);
 
+    // Phase 2A: Enable MIDI input
+    enableMidiInput();
+
     // C3: Optional debug seed (disabled by default; enable with -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
 #if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
     DBG("Engine: Seeding debug tracks (ZENITH_ENGINE_SEED_DEBUG_TRACKS enabled)");
@@ -105,6 +237,12 @@ void Engine::shutdown()
     // Close audio device
     deviceManager.closeAudioDevice();
 
+    // Clear audio file pool
+    if (audioFilePool_)
+    {
+        audioFilePool_->clear();
+    }
+
     DBG("Engine: Shutdown complete");
 }
 
@@ -116,10 +254,19 @@ void Engine::play()
 {
     DBG("Engine: Play");
     isPlaying_.store(true);
-    playbackPosition.store(0);
 
-    // Enable test tone for Phase 0 testing
-    // TODO: Remove this in Phase 1 when we have actual content
+    // Phase 1.3: Use new playhead system
+    // If playhead is at or past loop end, reset to loop start or 0
+    const juce::int64 loopEnd = loopEndSamples_.load();
+    const juce::int64 loopStart = loopStartSamples_.load();
+    const juce::int64 currentPos = playheadSamples_.load();
+
+    if (loopEnd > 0 && currentPos >= loopEnd)
+    {
+        playheadSamples_.store(loopStart);
+    }
+
+    // Enable test tone for Phase 0 fallback (when no tracks)
     enableTestTone_.store(true);
 
     // Phase 13: Start automation synchronizer
@@ -133,6 +280,13 @@ void Engine::play()
 void Engine::stop()
 {
     DBG("Engine: Stop");
+
+    // Phase 2C: If recording, bake recordings into clips first
+    if (isRecording_.load())
+    {
+        stopRecording();
+    }
+
     isPlaying_.store(false);
     enableTestTone_.store(false);
 
@@ -142,6 +296,96 @@ void Engine::stop()
         automationSynchronizer->stop();
         DBG("Engine: Stopped automation synchronizer");
     }
+}
+
+double Engine::getPlaybackPositionBeats() const
+{
+    if (projectState_ == nullptr)
+        return 0.0;
+
+    const double tempo = projectState_->getTempo();
+    const double sampleRate = currentSampleRate.load();
+    const juce::int64 positionSamples = playheadSamples_.load();
+
+    // Convert samples to beats
+    const double seconds = static_cast<double>(positionSamples) / sampleRate;
+    const double beats = (seconds * tempo) / 60.0;
+
+    return beats;
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording
+//==============================================================================
+
+void Engine::record()
+{
+    DBG("Engine: Record");
+
+    // Set recording start position to current playhead
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.recordingStartSamples = playheadSamples_.load();
+
+        // Resize recording buffers to match track count
+        midiRecording_.trackRecordings.resize(tracks_.size());
+
+        // Clear all track recordings
+        for (auto& trackRecording : midiRecording_.trackRecordings)
+        {
+            trackRecording.clear();
+        }
+    }
+
+    // Enable recording
+    isRecording_.store(true);
+
+    // Start playback if not already playing
+    if (!isPlaying_.load())
+    {
+        play();
+    }
+
+    DBG("Engine: Recording started at sample " + juce::String(midiRecording_.recordingStartSamples));
+}
+
+void Engine::stopRecording()
+{
+    DBG("Engine: Stop recording");
+
+    // Disable recording first (stops new MIDI from being recorded)
+    isRecording_.store(false);
+
+    // Bake recordings into clips (with quantization enabled)
+    bakeMidiRecordingsIntoClips(true);
+
+    // Clear recording buffers
+    clearMidiRecordings();
+
+    DBG("Engine: Recording stopped, clips created");
+}
+
+//==============================================================================
+// Phase 1.3: Transport Position & Looping
+//==============================================================================
+
+void Engine::setPlayheadSamples(juce::int64 position)
+{
+    playheadSamples_.store(juce::jmax(int64_t(0), position));
+}
+
+void Engine::setLooping(bool shouldLoop)
+{
+    isLooping_.store(shouldLoop);
+    DBG("Engine: Looping " + juce::String(shouldLoop ? "enabled" : "disabled"));
+}
+
+void Engine::setLoopRegion(juce::int64 start, juce::int64 end)
+{
+    loopStartSamples_.store(juce::jmax(int64_t(0), start));
+    loopEndSamples_.store(juce::jmax(int64_t(0), end));
+
+    DBG("Engine: Loop region set: " + juce::String(start) + " - " + juce::String(end) + " samples");
 }
 
 //==============================================================================
@@ -203,14 +447,61 @@ void Engine::addTestTracks(int count)
             "Track " + juce::String(tracks_.size() + 1),
             zenith::Track::Type::Audio);
 
-        // NOTE: Do NOT call prepareToPlay() here - these are detached test tracks
-        // They are NOT wired into the audio graph and will not be used in processAudio()
-        // This is purely for compile verification and UI testing
+        // Phase 1: Tracks are now wired to audio processing!
+        // They will be prepared when audioDeviceAboutToStart() is called
 
         tracks_.push_back(std::move(track));
     }
 
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
+
+    // Re-prepare tracks if audio device is already running
+    auto* device = deviceManager.getCurrentAudioDevice();
+    if (device != nullptr)
+    {
+        prepareTracks(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
+    }
+}
+
+//==============================================================================
+// Phase 1.2: Audio File Pool
+//==============================================================================
+
+zenith::AudioFilePool& Engine::getAudioFilePool()
+{
+    jassert(audioFilePool_ != nullptr);
+    return *audioFilePool_;
+}
+
+//==============================================================================
+// Plugin Hosting (Phase 3: VST3 hosting MVP)
+//==============================================================================
+
+zenith::PluginHost& Engine::getPluginHost() noexcept
+{
+    jassert(pluginHost_ != nullptr);
+    return *pluginHost_;
+}
+
+int Engine::scanForPlugins()
+{
+    if (pluginHost_ == nullptr)
+    {
+        DBG("Engine: PluginHost not initialized");
+        return 0;
+    }
+
+    DBG("Engine: Scanning for plugins...");
+    int count = pluginHost_->scanDefaultLocations();
+    DBG("Engine: Plugin scan complete - found " + juce::String(count) + " plugins");
+
+    return count;
+}
+
+zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexcept
+{
+    jassert(pluginEditorWindowManager_ != nullptr);
+    return *pluginEditorWindowManager_;
 }
 
 //==============================================================================
@@ -227,11 +518,42 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 
     // Reset state
     phase = 0.0;
-    playbackPosition.store(0);
+    playheadSamples_.store(0);  // Phase 1.3: Reset playhead
+
+    // Phase 1: Prepare tracks for audio processing
+    prepareTracks(device->getCurrentBufferSizeSamples(), device->getCurrentSampleRate());
+
+    // Prepare track buffers for unified render path
+    const int bufferSize = currentBufferSize.load();
+    const int numTracks = static_cast<int>(tracks_.size());
+
+    DBG("Engine: Preparing " + juce::String(numTracks) + " track buffers");
+
+    trackBuffers_.clear();
+    trackBuffers_.resize(numTracks);
+
+    for (int i = 0; i < numTracks; ++i)
+    {
+        // Allocate stereo buffer for each track
+        trackBuffers_[i].setSize(2, bufferSize);
+        trackBuffers_[i].clear();
+
+        // Prepare track for playback
+        if (tracks_[i] != nullptr)
+        {
+            tracks_[i]->prepareToPlay(bufferSize, currentSampleRate.load());
+        }
+    }
+
+    // Prepare master buffer
+    masterBuffer_.setSize(2, bufferSize);
+    masterBuffer_.clear();
 
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+    DBG("  Track Buffers: " + juce::String(trackBuffers_.size()));
+    DBG("  Tracks Prepared: " + juce::String(tracks_.size()));
 }
 
 void Engine::audioDeviceStopped()
@@ -271,8 +593,32 @@ void Engine::audioDeviceIOCallbackWithContext(
         processAudio(inputChannelData, numInputChannels,
                     outputChannelData, numOutputChannels, numSamples);
 
-        // Update playback position
-        playbackPosition.fetch_add(numSamples);
+        // Phase 1.3: Advance playhead with looping support
+        juce::int64 newPosition = playheadSamples_.load() + numSamples;
+        const bool looping = isLooping_.load();
+        const juce::int64 loopEnd = loopEndSamples_.load();
+        const juce::int64 loopStart = loopStartSamples_.load();
+
+        if (looping && loopEnd > 0 && newPosition >= loopEnd)
+        {
+            // Handle loop wrap
+            const juce::int64 loopLength = loopEnd - loopStart;
+            if (loopLength > 0)
+            {
+                // Wrap position within loop
+                while (newPosition >= loopEnd)
+                {
+                    newPosition -= loopLength;
+                }
+                // Ensure we're not before loop start
+                if (newPosition < loopStart)
+                {
+                    newPosition = loopStart;
+                }
+            }
+        }
+
+        playheadSamples_.store(newPosition);
     }
     else
     {
@@ -285,6 +631,165 @@ void Engine::audioDeviceIOCallbackWithContext(
             }
         }
     }
+}
+
+//==============================================================================
+// Unified Render Path
+//==============================================================================
+
+void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                         juce::int64 transportPosition,
+                         int numSamples)
+{
+    // ⚠️ CAN RUN ON AUDIO THREAD - MUST BE REAL-TIME SAFE!
+    //
+    // This is the single unified render path used by:
+    // 1. Real-time audio callback (with live transport position)
+    // 2. Offline export (with offline transport position)
+
+    juce::ignoreUnused(transportPosition);  // TODO: Pass to clips for timeline-based rendering
+
+    // Clear output buffer
+    outputBuffer.clear();
+
+    // Render each track and mix into master
+    const int numTracks = static_cast<int>(tracks_.size());
+
+    for (int trackIdx = 0; trackIdx < numTracks; ++trackIdx)
+    {
+        auto* track = tracks_[trackIdx].get();
+
+        if (track == nullptr)
+            continue;
+
+        // Skip disabled or muted tracks (Track checks this internally, but we can optimize)
+        // Note: We still call getNextAudioBlock even if muted, to maintain plugin state
+
+        // Ensure track buffer is sized correctly
+        if (trackIdx >= static_cast<int>(trackBuffers_.size()))
+            continue;  // Safety check; should not happen if audioDeviceAboutToStart() was called
+
+        auto& trackBuffer = trackBuffers_[trackIdx];
+
+        // Ensure buffer is large enough
+        if (trackBuffer.getNumSamples() < numSamples)
+            continue;  // Safety check
+
+        // Clear track buffer
+        trackBuffer.clear();
+
+        // Get audio from track (clips + plugins + gain/pan)
+        juce::AudioSourceChannelInfo info(&trackBuffer, 0, numSamples);
+        track->getNextAudioBlock(info);
+
+        // Mix track into master output
+        // Support both mono and stereo tracks
+        const int trackChannels = trackBuffer.getNumChannels();
+        const int outputChannels = outputBuffer.getNumChannels();
+
+        if (trackChannels == 1 && outputChannels >= 2)
+        {
+            // Mono track -> Stereo output (copy to both L/R)
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);  // L
+            outputBuffer.addFrom(1, 0, trackBuffer, 0, 0, numSamples);  // R
+        }
+        else if (trackChannels >= 2 && outputChannels >= 2)
+        {
+            // Stereo track -> Stereo output
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);  // L
+            outputBuffer.addFrom(1, 0, trackBuffer, 1, 0, numSamples);  // R
+        }
+        else if (trackChannels == 1 && outputChannels == 1)
+        {
+            // Mono track -> Mono output
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);
+        }
+        // else: Channel count mismatch, skip this track
+    }
+
+    // TODO: Apply master effects here (Phase N)
+    // TODO: Apply master volume/limiter (Phase N)
+}
+
+bool Engine::exportProjectToWav(const juce::String& outputFilePath,
+                                double durationSeconds,
+                                double sampleRate)
+{
+    DBG("Engine: Exporting to WAV: " + outputFilePath);
+    DBG("  Duration: " + juce::String(durationSeconds) + " seconds");
+
+    // Use current engine sample rate if not specified
+    if (sampleRate <= 0.0)
+        sampleRate = currentSampleRate.load();
+
+    DBG("  Sample Rate: " + juce::String(sampleRate) + " Hz");
+
+    // Calculate total samples
+    const juce::int64 totalSamples = static_cast<juce::int64>(durationSeconds * sampleRate);
+    const int blockSize = 4096;  // Use larger block size for offline rendering
+
+    // Create output file
+    juce::File outputFile(outputFilePath);
+    outputFile.deleteFile();  // Remove existing file
+
+    // Create WAV writer
+    juce::WavAudioFormat wavFormat;
+    std::unique_ptr<juce::AudioFormatWriter> writer;
+
+    writer.reset(wavFormat.createWriterFor(
+        new juce::FileOutputStream(outputFile),
+        sampleRate,
+        2,  // Stereo
+        16, // 16-bit
+        {},
+        0));
+
+    if (writer == nullptr)
+    {
+        DBG("Engine: Failed to create WAV writer");
+        return false;
+    }
+
+    // Prepare tracks for offline rendering
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(blockSize, sampleRate);
+        }
+    }
+
+    // Create offline render buffer
+    juce::AudioBuffer<float> offlineBuffer(2, blockSize);
+
+    // Render loop
+    juce::int64 currentPosition = 0;
+
+    while (currentPosition < totalSamples)
+    {
+        const int samplesThisBlock = juce::jmin(
+            blockSize,
+            static_cast<int>(totalSamples - currentPosition));
+
+        // Clear buffer
+        offlineBuffer.clear();
+
+        // Render this block using the SAME renderBlock() function as realtime!
+        renderBlock(offlineBuffer, currentPosition, samplesThisBlock);
+
+        // Write to WAV file
+        writer->writeFromAudioSampleBuffer(offlineBuffer, 0, samplesThisBlock);
+
+        currentPosition += samplesThisBlock;
+    }
+
+    // Flush and close
+    writer.reset();
+
+    DBG("Engine: Export complete!");
+    DBG("  Wrote " + juce::String(totalSamples) + " samples");
+
+    return true;
 }
 
 //==============================================================================
@@ -302,14 +807,38 @@ void Engine::processAudio(
 
     juce::ignoreUnused(inputChannelData, numInputChannels);
 
-    // For Phase 0, generate a simple test tone (440 Hz sine wave)
-    // TODO: Replace with actual audio processing in Phase 1
+    // Wrap output buffer for unified render path
+    juce::AudioBuffer<float> outputBuffer(outputChannelData, numOutputChannels, numSamples);
 
+    // Get current transport position
+    juce::int64 position = playheadSamples_.load();
+
+    // Update transport position for all clips in all tracks
+    for (auto& track : tracks_)
+    {
+        if (track == nullptr)
+            continue;
+
+        for (int i = 0; i < track->getNumClips(); ++i)
+        {
+            auto* clip = track->getClip(i);
+            if (clip != nullptr)
+            {
+                clip->setTransportPosition(position);
+            }
+        }
+    }
+
+    // Use unified render path
+    renderBlock(outputBuffer, position, numSamples);
+
+    // Fallback: If no tracks or all tracks are silent, optionally enable test tone
+    // (Only if explicitly enabled via enableTestTone_)
     bool testToneEnabled = enableTestTone_.load();
 
-    if (testToneEnabled)
+    if (testToneEnabled && tracks_.empty())
     {
-        // Generate 440 Hz sine wave at -12 dB
+        // Generate 440 Hz sine wave at -12 dB (only if no tracks exist)
         const double sampleRate = currentSampleRate.load();
         const double frequency = 440.0;  // A4
         const double amplitude = 0.25;   // -12 dB
@@ -319,32 +848,252 @@ void Engine::processAudio(
         {
             float value = static_cast<float>(std::sin(phase) * amplitude);
 
-            // Write to all output channels
             for (int channel = 0; channel < numOutputChannels; ++channel)
             {
                 if (outputChannelData[channel] != nullptr)
                 {
-                    outputChannelData[channel][sample] = value;
+                    outputChannelData[channel][sample] += value;  // Add instead of replace
                 }
             }
 
-            // Increment phase
             phase += phaseIncrement;
-
-            // Wrap phase to avoid precision issues
             if (phase >= 2.0 * juce::MathConstants<double>::pi)
                 phase -= 2.0 * juce::MathConstants<double>::pi;
         }
     }
+}
+
+//==============================================================================
+// Track Management (MESSAGE THREAD)
+//==============================================================================
+
+void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate)
+{
+    DBG("Engine: Preparing " + juce::String(tracks_.size()) + " tracks");
+
+    // Prepare each track
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(samplesPerBlockExpected, sampleRate);
+            DBG("  Prepared: " + track->getName());
+        }
+    }
+}
+
+//==============================================================================
+// Phase 2A: MIDI Input Handling
+//==============================================================================
+
+void Engine::enableMidiInput()
+{
+    DBG("Engine: Enabling MIDI input...");
+
+    // Get list of available MIDI input devices
+    auto midiInputs = juce::MidiInput::getAvailableDevices();
+
+    if (midiInputs.isEmpty())
+    {
+        DBG("Engine: No MIDI input devices available");
+        return;
+    }
+
+    // Open the first available MIDI input device
+    const auto& firstInput = midiInputs[0];
+    DBG("Engine: Opening MIDI input: " + firstInput.name);
+
+    midiInput_ = juce::MidiInput::openDevice(firstInput.identifier, this);
+
+    if (midiInput_ != nullptr)
+    {
+        midiInput_->start();
+        DBG("Engine: MIDI input started: " + firstInput.name);
+    }
     else
     {
-        // Silent output
-        for (int channel = 0; channel < numOutputChannels; ++channel)
+        DBG("Engine: Failed to open MIDI input");
+    }
+
+    // Initialize MIDI recording buffers for all tracks
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        midiRecording_.trackRecordings.resize(tracks_.size());
+    }
+}
+
+void Engine::disableMidiInput()
+{
+    if (midiInput_ != nullptr)
+    {
+        DBG("Engine: Stopping MIDI input...");
+        midiInput_->stop();
+        midiInput_.reset();
+        DBG("Engine: MIDI input stopped");
+    }
+}
+
+void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::MidiMessage& message)
+{
+    juce::ignoreUnused(source);
+
+    // This runs on MIDI input thread (NOT audio thread or message thread)
+    // Buffer the message for processing in audio callback
+
+    // Add message to incoming buffer with current timestamp
+    {
+        const juce::ScopedLock sl(midiInputLock_);
+        incomingMidiBuffer_.addEvent(message, 0);  // Will be time-adjusted in audio callback
+    }
+
+    // Phase 2A: MIDI recording - if recording is active, store with playhead timestamp
+    if (isRecording_.load())
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+
+        // Get current playhead position
+        const juce::int64 playhead = playheadSamples_.load();
+        const juce::int64 recordStart = midiRecording_.recordingStartSamples;
+
+        // Calculate position relative to recording start
+        const double positionInSeconds = static_cast<double>(playhead - recordStart) / currentSampleRate.load();
+
+        // Add to all armed MIDI/Instrument tracks
+        for (size_t i = 0; i < tracks_.size() && i < midiRecording_.trackRecordings.size(); ++i)
         {
-            if (outputChannelData[channel] != nullptr)
+            auto* track = tracks_[i].get();
+            if (track != nullptr && track->isArmed() &&
+                (track->getType() == zenith::Track::Type::MIDI ||
+                 track->getType() == zenith::Track::Type::Instrument))
             {
-                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
+                // Create timestamped message
+                juce::MidiMessage timestampedMessage(message);
+                timestampedMessage.setTimeStamp(positionInSeconds);
+
+                // Add to track's recording buffer
+                midiRecording_.trackRecordings[i].addEvent(timestampedMessage);
             }
         }
     }
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording Baking
+//==============================================================================
+
+void Engine::bakeMidiRecordingsIntoClips(bool quantize)
+{
+    DBG("Engine: Baking MIDI recordings into clips (quantize=" + juce::String(quantize ? "true" : "false") + ")");
+
+    // Get project tempo for quantization (default to 120 BPM if no project state)
+    const double tempo = (projectState_ != nullptr) ? projectState_->getTempo() : 120.0;
+
+    // Copy recording data while locked (minimize lock time)
+    std::vector<juce::MidiMessageSequence> recordingsCopy;
+    juce::int64 recordStart = 0;
+
+    {
+        const juce::ScopedLock sl(midiRecordingLock_);
+        recordingsCopy = midiRecording_.trackRecordings;
+        recordStart = midiRecording_.recordingStartSamples;
+    }
+
+    // Process each track's recording (unlocked)
+    for (size_t i = 0; i < recordingsCopy.size() && i < tracks_.size(); ++i)
+    {
+        auto& recording = recordingsCopy[i];
+
+        // Skip empty recordings
+        if (recording.getNumEvents() == 0)
+            continue;
+
+        // Quantize if requested
+        juce::MidiMessageSequence finalSequence = recording;
+        if (quantize)
+        {
+            finalSequence = quantizeMidiSequence(recording, tempo, 0.25);  // 1/16 note grid
+        }
+
+        // Ensure note-off events are properly matched
+        finalSequence.updateMatchedPairs();
+
+        // Calculate clip length from sequence end time
+        const double endTimeSeconds = finalSequence.getEndTime();
+        const juce::int64 clipLengthSamples = static_cast<juce::int64>(
+            endTimeSeconds * currentSampleRate.load());
+
+        // Create MIDI clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::MIDI);
+        clip->setName("MIDI Recording");
+        clip->setMidiSequence(finalSequence);
+        clip->setStartPosition(recordStart);
+        clip->setLength(clipLengthSamples);
+
+        // Add clip to track
+        auto* track = tracks_[i].get();
+        if (track != nullptr)
+        {
+            track->addClip(std::move(clip));
+            DBG("Engine: Created MIDI clip on track " + juce::String(i) +
+                " (start=" + juce::String(recordStart) +
+                ", length=" + juce::String(clipLengthSamples) +
+                ", events=" + juce::String(finalSequence.getNumEvents()) + ")");
+        }
+    }
+
+    DBG("Engine: Baking complete");
+}
+
+void Engine::clearMidiRecordings()
+{
+    const juce::ScopedLock sl(midiRecordingLock_);
+
+    for (auto& recording : midiRecording_.trackRecordings)
+    {
+        recording.clear();
+    }
+
+    midiRecording_.recordingStartSamples = 0;
+
+    DBG("Engine: MIDI recordings cleared");
+}
+
+juce::MidiMessageSequence Engine::quantizeMidiSequence(
+    const juce::MidiMessageSequence& input,
+    double tempo,
+    double quantizeGrid)
+{
+    // Calculate grid spacing in seconds
+    const double beatsPerSecond = tempo / 60.0;
+    const double quarterNoteSeconds = 1.0 / beatsPerSecond;
+    const double gridSeconds = quarterNoteSeconds * quantizeGrid;
+
+    juce::MidiMessageSequence output;
+
+    // Quantize each event
+    for (int i = 0; i < input.getNumEvents(); ++i)
+    {
+        auto* event = input.getEventPointer(i);
+        if (event == nullptr)
+            continue;
+
+        double timestamp = event->message.getTimeStamp();
+
+        // Quantize to nearest grid point
+        double quantized = std::round(timestamp / gridSeconds) * gridSeconds;
+
+        // Ensure non-negative timestamps
+        quantized = juce::jmax(0.0, quantized);
+
+        // Create quantized message
+        juce::MidiMessage msg(event->message);
+        msg.setTimeStamp(quantized);
+        output.addEvent(msg);
+    }
+
+    // Update note-on/note-off pairing after quantization
+    output.updateMatchedPairs();
+
+    return output;
 }

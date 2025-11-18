@@ -21,7 +21,15 @@
 #include <memory>
 #include <vector>
 
+// Forward declarations
 namespace zenith {
+    class Instrument;
+}
+
+namespace zenith {
+
+// Forward declaration
+class PluginHost;
 
 //==============================================================================
 /**
@@ -54,6 +62,9 @@ public:
     void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
     void releaseResources() override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
+
+    // Phase 1.3: Version that takes explicit playhead position
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
 
     //==============================================================================
     // Track properties
@@ -90,7 +101,30 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
-    // Plugin chain management
+    // Instrument management (for Instrument tracks)
+    /**
+     * @brief Set the instrument for this track
+     * @param instrument Instrument instance (must be non-null)
+     * @note Message thread only
+     */
+    void setInstrument(std::unique_ptr<Instrument> instrument);
+
+    /**
+     * @brief Get the current instrument (if any)
+     * @return Pointer to instrument, or nullptr if no instrument set
+     * @note Message thread only
+     */
+    Instrument* getInstrument() const { return instrument_.get(); }
+
+    /**
+     * @brief Check if track has an instrument
+     */
+    bool hasInstrument() const { return instrument_ != nullptr; }
+
+    //==============================================================================
+    // Plugin chain management (Phase 3: VST3 hosting MVP)
+    // MESSAGE THREAD ONLY for add/remove/clear
+    // Audio thread can process existing plugins safely (no modifications during playback)
     void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
     void removePlugin(int pluginIndex);
     void clearPlugins();
@@ -137,6 +171,17 @@ public:
     juce::ValueTree getState() const;
     void loadState(const juce::ValueTree& state);
 
+    /**
+     * @brief Load plugin states from ValueTree
+     *
+     * This must be called AFTER loadState() and requires access to PluginHost
+     * to recreate plugin instances.
+     *
+     * @param state The track state ValueTree
+     * @param pluginHost Reference to PluginHost for plugin instantiation
+     */
+    void loadPluginStates(const juce::ValueTree& state, PluginHost& pluginHost);
+
 private:
     //==============================================================================
     // Track properties
@@ -165,16 +210,59 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
-    // Plugin chain
-    std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
-    juce::CriticalSection pluginLock;
-    juce::AudioBuffer<float> pluginBuffer;
-    juce::MidiBuffer midiBuffer;  // For MIDI events to plugins
+    // Instrument (for Instrument tracks)
+    std::unique_ptr<Instrument> instrument_;
+    juce::AudioBuffer<float> instrumentBuffer_;
+    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
-    // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)
-    std::vector<std::unique_ptr<Clip>> clips;
-    juce::CriticalSection clipsLock;
+    // Plugin chain (Phase 3: VST3 hosting MVP)
+    // Plugins are modified on message thread, processed on audio thread
+    // No lock needed during processing (plugins vector is only modified on message thread when stopped)
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
+    juce::CriticalSection pluginLock;  // Only for add/remove operations
+    juce::AudioBuffer<float> pluginBuffer;
+    juce::MidiBuffer midiBuffer;  // For MIDI events to plugins
+    juce::MidiBuffer pluginMidiBuffer;  // Temp MIDI buffer for plugin processing
+
+    //==============================================================================
+    // Phase 2A: Lock-free clip list using RCU-style atomic snapshot
+    //
+    // Pattern:
+    // - Track owns clips via std::vector<std::unique_ptr<Clip>> (message thread only)
+    // - ClipSnapshot holds raw Clip* pointers for audio thread to iterate
+    // - Audio thread loads snapshot atomically, iterates without locking
+    // - Message thread creates new snapshot when modifying clips, swaps atomically
+    //
+    // This eliminates clipsLock from the audio thread (RT-safe).
+
+    struct ClipSnapshot
+    {
+        std::vector<Clip*> clips;  // Raw pointers (non-owning)
+
+        ClipSnapshot() = default;
+        explicit ClipSnapshot(const std::vector<std::unique_ptr<Clip>>& ownedClips)
+        {
+            clips.reserve(ownedClips.size());
+            for (const auto& clip : ownedClips)
+                clips.push_back(clip.get());
+        }
+    };
+
+    // Clip ownership (message thread only)
+    std::vector<std::unique_ptr<Clip>> clipsOwned_;
+
+    // Atomic snapshot for audio thread (RT-safe read)
+    std::atomic<std::shared_ptr<const ClipSnapshot>> clipsSnapshot_;
+
+    // Helper: Create new snapshot from current ownership
+    void updateClipSnapshot();
+
+    // Phase 1: Pre-allocated clip buffer to avoid RT allocations
+    juce::AudioBuffer<float> clipBuffer_;
+
+    // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback
+    juce::MidiBuffer midiBuffer_;
 
     //==============================================================================
     // Helper methods

@@ -90,7 +90,14 @@ target_sources(ZenithDAW PRIVATE
 
     # Phase 13: Automation system
     src/TrackAutomationSynchronizer.cpp
-    src/CommandAPI.cpp
+
+    # Integration: UI components and synchronizers
+    src/ClipSynchronizer.cpp
+    src/ArrangerView.cpp
+    src/PianoRollEditor.cpp
+    include/ClipSynchronizer.h
+    include/ArrangerView.h
+    include/PianoRollEditor.h
 
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
@@ -99,6 +106,55 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Phase 1.2: Audio File Pool
+    Source/engine/AudioFilePool.h
+    Source/engine/AudioFilePool.cpp
+
+    # Phase 3: Plugin hosting
+    Source/engine/PluginHost.h
+    Source/engine/PluginHost.cpp
+
+    # Phase 3: Plugin UI
+    Source/ui/PluginEditorWindow.h
+    Source/ui/PluginEditorWindow.cpp
+
+    # Phase 4: Timeline/Arranger UI
+    Source/ui/ArrangerComponent.h
+    Source/ui/ArrangerComponent.cpp
+    Source/ui/PianoRollComponent.h
+    Source/ui/PianoRollComponent.cpp
+
+    # Phase 5: Wingman v0 (AI Command Console)
+    Source/commands/CommandAPI.h
+    Source/commands/CommandAPI.cpp
+    Source/commands/SessionGraph.h
+    Source/commands/SessionGraph.cpp
+    Source/ui/WingmanPanel.h
+    Source/ui/WingmanPanel.cpp
+
+    # Phase 7: Wingman AI Integration
+    Source/network/AIBridgeClient.h
+    Source/network/AIBridgeClient.cpp
+
+    # Instrument system
+    Source/instruments/InstrumentMetadata.h
+    Source/instruments/Instrument.h
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.h
+    Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ContentPaths.h
+    Source/instruments/ZenithPolySynth.h
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/ZenithSampler.h
+    Source/instruments/ZenithSampler.cpp
+    Source/instruments/ZenithSamplerEditor.h
+    Source/instruments/ZenithSamplerEditor.cpp
+    Source/instruments/RegisterBuiltInInstruments.h
+    Source/instruments/RegisterBuiltInInstruments.cpp
+    Source/instruments/ZenithPolySynthEditor.h
+    Source/instruments/ZenithPolySynthEditor.cpp
+    include/InstrumentCommandHelpers.h
 )
 
 # ============================================================================
@@ -108,6 +164,10 @@ target_sources(ZenithDAW PRIVATE
 target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/commands
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/network
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
 )
 
 # ============================================================================
@@ -121,6 +181,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_audio_utils
+
+    # DSP (for built-in instruments)
+    juce::juce_dsp
 
     # Core functionality
     juce::juce_core
@@ -164,8 +227,9 @@ target_compile_definitions(ZenithDAW PRIVATE
     # Disable JUCE splash screen (requires Pro license for commercial use)
     # JUCE_DISPLAY_SPLASH_SCREEN=0
 
-    # VST3 hosting (will enable when we add plugin hosting)
-    # JUCE_PLUGINHOST_VST3=1
+    # Phase 3: VST3 hosting enabled
+    JUCE_PLUGINHOST_VST3=1
+    # Audio Unit hosting (macOS only, will enable in future)
     # JUCE_PLUGINHOST_AU=1
 
     # Don't auto-open plugin windows
@@ -217,6 +281,41 @@ target_compile_definitions(ProjectStateTests PRIVATE
 )
 
 add_test(NAME ProjectStateTests COMMAND ProjectStateTests)
+
+# ============================================================================
+# Recording & Automation Tests
+# ============================================================================
+
+juce_add_console_app(RecordingAutomationTests
+    PRODUCT_NAME "RecordingAutomationTests"
+)
+
+target_sources(RecordingAutomationTests PRIVATE
+    tests/RecordingAutomationTests.cpp
+    src/ProjectState.cpp
+)
+
+target_include_directories(RecordingAutomationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+)
+
+target_link_libraries(RecordingAutomationTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+)
+
+target_compile_definitions(RecordingAutomationTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(RecordingAutomationTests)
+
+add_test(NAME RecordingAutomationTests COMMAND RecordingAutomationTests)
 
 # ============================================================================
 # Compiler Warnings
