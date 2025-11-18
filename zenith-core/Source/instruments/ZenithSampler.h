@@ -17,6 +17,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ContentPaths.h"
 #include "Instrument.h"
+#include "engine/AudioFilePool.h"
 
 namespace zenith {
 
@@ -50,8 +51,11 @@ public:
         Release,
         FilterCutoff,
         FilterResonance,
-        Tune,
-        Gain,
+        SampleStartOffset,
+        PitchFine,
+        PitchSemitones,
+        GlobalPan,
+        GlobalGain,
         Character,
         NumParameters
     };
@@ -67,6 +71,13 @@ public:
      * @brief Get the AudioProcessorValueTreeState for parameter attachments
      */
     juce::AudioProcessorValueTreeState& getParameters() { return parameters; }
+
+    /**
+     * @brief Set the AudioFilePool for RT-safe sample loading
+     *
+     * @param pool Pointer to the audio file pool (can be nullptr for standalone mode)
+     */
+    void setAudioFilePool(AudioFilePool* pool) { audioFilePool_ = pool; }
 
     //==========================================================================
     // AudioProcessor overrides
@@ -123,7 +134,7 @@ public:
     //==========================================================================
 
     /**
-     * @brief Load a patch from a .zpatch file
+     * @brief Load a sample bank from a .zpatch file
      *
      * This operation happens asynchronously on a background thread.
      * The audio thread continues processing with the old patch until
@@ -132,32 +143,43 @@ public:
      * @param patchFile Path to .zpatch file
      * @return bool True if loading started successfully
      */
-    bool loadPatch(const juce::File& patchFile);
+    bool loadSampleBank(const juce::File& patchFile);
 
     /**
-     * @brief Load a patch by name
+     * @brief Load a sample bank by name
      *
      * Looks for the patch in the standard content directory.
      *
-     * @param patchName Name of the patch to load
+     * @param bankName Name of the bank to load
      * @return bool True if loading started successfully
      */
-    bool loadPatchByName(const juce::String& patchName);
+    bool loadSampleBankByName(const juce::String& bankName);
 
     /**
-     * @brief Get the name of the currently loaded patch
+     * @brief Load a sample bank from JSON string
+     *
+     * For built-in banks embedded in the binary.
+     *
+     * @param jsonString JSON description of the sample bank
+     * @param bankName Name for the bank
+     * @return bool True if loading started successfully
      */
-    juce::String getCurrentPatchName() const { return currentPatchName; }
+    bool loadSampleBankFromJson(const juce::String& jsonString, const juce::String& bankName);
 
     /**
-     * @brief Check if a patch is currently loading
+     * @brief Get the name of the currently loaded sample bank
+     */
+    juce::String getCurrentBankName() const { return currentPatchName; }
+
+    /**
+     * @brief Check if a bank is currently loading
      */
     bool isLoading() const { return isLoadingPatch.load(); }
 
     /**
-     * @brief Get available patches from the content directory
+     * @brief Get available sample banks from the content directory
      */
-    juce::StringArray getAvailablePatches() const;
+    juce::StringArray getAvailableBanks() const;
 
     //==========================================================================
     // Parameter access (for UI)
@@ -173,13 +195,15 @@ private:
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
 
     //==========================================================================
-    // Patch loading (background thread)
+    // Sample bank loading (background thread)
     //==========================================================================
 
-    struct PatchData;
-    void loadPatchAsync(const juce::File& patchFile);
-    bool parsePatchFile(const juce::File& patchFile, PatchData& outData);
-    void applyPatchData(std::unique_ptr<PatchData> patchData);
+    struct SampleBankData;
+    void loadBankAsync(const juce::File& bankFile);
+    void loadBankFromJsonAsync(const juce::String& jsonString, const juce::String& bankName);
+    bool parseBankFile(const juce::File& bankFile, SampleBankData& outData);
+    bool parseBankJson(const juce::var& json, const juce::File& baseDir, SampleBankData& outData);
+    void applyBankData(std::unique_ptr<SampleBankData> bankData);
 
     //==========================================================================
     // Member variables
@@ -190,6 +214,9 @@ private:
 
     // Synthesiser engine
     juce::Synthesiser synth;
+
+    // AudioFilePool integration (optional, can be nullptr)
+    AudioFilePool* audioFilePool_ = nullptr;
 
     // Current patch
     juce::String currentPatchName;
@@ -235,11 +262,18 @@ private:
 
 //==============================================================================
 /**
- * @brief Custom sampler sound with key range and velocity range
+ * @brief Custom sampler sound with key range, velocity range, and loop mode
  */
 class ZenithSamplerSound : public juce::SynthesiserSound
 {
 public:
+    enum class LoopMode
+    {
+        None,
+        Forward,
+        PingPong
+    };
+
     ZenithSamplerSound(const juce::String& name,
                        juce::AudioFormatReader& source,
                        const juce::BigInteger& midiNotes,
@@ -248,7 +282,21 @@ public:
                        int highVelocity,
                        double attackTimeSecs,
                        double releaseTimeSecs,
-                       double maxSampleLengthSeconds);
+                       double maxSampleLengthSeconds,
+                       LoopMode loopMode = LoopMode::None,
+                       float gain = 1.0f,
+                       float tune = 0.0f);
+
+    // Constructor that uses AudioFilePool handle
+    ZenithSamplerSound(const juce::String& name,
+                       AudioFilePool::HandlePtr audioHandle,
+                       const juce::BigInteger& midiNotes,
+                       int midiNoteForNormalPitch,
+                       int lowVelocity,
+                       int highVelocity,
+                       LoopMode loopMode = LoopMode::None,
+                       float gain = 1.0f,
+                       float tune = 0.0f);
 
     ~ZenithSamplerSound() override;
 
@@ -256,9 +304,12 @@ public:
     bool appliesToChannel(int midiChannel) override;
 
     juce::String getName() const { return soundName; }
-    juce::AudioBuffer<float>* getAudioData() { return data.get(); }
+    juce::AudioBuffer<float>* getAudioData() { return data; }
     double getSampleRate() const { return sourceSampleRate; }
     int getRootNote() const { return rootNote; }
+    LoopMode getLoopMode() const { return loopMode; }
+    float getGain() const { return gain; }
+    float getTune() const { return tune; }
 
     bool appliesToVelocity(int midiVelocity) const
     {
@@ -267,12 +318,19 @@ public:
 
 private:
     juce::String soundName;
-    std::unique_ptr<juce::AudioBuffer<float>> data;
+
+    // Can hold audio data directly or via pool handle
+    std::unique_ptr<juce::AudioBuffer<float>> ownedData;
+    AudioFilePool::HandlePtr poolHandle;
+    juce::AudioBuffer<float>* data = nullptr; // Points to either ownedData or poolHandle->buffer
+
     double sourceSampleRate;
     juce::BigInteger midiNotes;
     int rootNote;
     int lowVelocity, highVelocity;
-    double attackTime, releaseTime;
+    LoopMode loopMode;
+    float gain;
+    float tune;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerSound)
 };
@@ -303,7 +361,8 @@ public:
 
     void setParameters(float* attack, float* decay, float* sustain, float* release,
                       float* filterCutoff, float* filterResonance,
-                      float* tune, float* gain);
+                      float* sampleStartOffset, float* pitchFine, float* pitchSemitones,
+                      float* globalPan, float* globalGain);
 
 private:
     // Envelope
@@ -317,6 +376,7 @@ private:
     double pitchRatio = 0.0;
     double sourceSamplePosition = 0.0;
     float velocity = 0.0f;
+    bool loopDirection = true; // true = forward, false = backward (for ping-pong)
 
     // Parameter pointers (from APVTS)
     std::atomic<float>* attackParam = nullptr;
@@ -325,8 +385,11 @@ private:
     std::atomic<float>* releaseParam = nullptr;
     std::atomic<float>* filterCutoffParam = nullptr;
     std::atomic<float>* filterResonanceParam = nullptr;
-    std::atomic<float>* tuneParam = nullptr;
-    std::atomic<float>* gainParam = nullptr;
+    std::atomic<float>* sampleStartOffsetParam = nullptr;
+    std::atomic<float>* pitchFineParam = nullptr;
+    std::atomic<float>* pitchSemitonesParam = nullptr;
+    std::atomic<float>* globalPanParam = nullptr;
+    std::atomic<float>* globalGainParam = nullptr;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerVoice)
 };
