@@ -88,7 +88,6 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
-    midiBuffer.clear();
 
     // Prepare instrument if present
     if (instrument_ != nullptr)
@@ -254,7 +253,7 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
     }
 
     // Process through plugin chain with MIDI support
-    processPluginChain(localBuffer, midiBuffer, bufferToFill.numSamples);
+    processPluginChain(localBuffer, midiBuffer_, bufferToFill.numSamples);
 
     // Apply volume and pan
     applyGainAndPan(localBuffer, bufferToFill.numSamples);

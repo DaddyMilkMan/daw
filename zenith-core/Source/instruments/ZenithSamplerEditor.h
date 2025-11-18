@@ -2,17 +2,21 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "InstrumentPreset.h"
+#include "ui/PresetBrowserComponent.h"
 
 namespace zenith {
 
-// Forward declaration
+// Forward declarations
 class ZenithSamplerProcessor;
+class ZenithSampler;
 
 /**
- * @brief Custom editor for ZenithSamplerProcessor
+ * @brief Comprehensive editor for ZenithSamplerProcessor
  *
  * Layout:
- *   [Left]   Preset selector
+ *   [Top]    Preset browser (toggleable)
+ *   [Left]   Sample map table
  *   [Middle] Envelope + Filter controls
  *   [Right]  Global controls (tune, gain, character)
  */
@@ -20,24 +24,102 @@ class ZenithSamplerEditor : public juce::AudioProcessorEditor,
                             private juce::Timer
 {
 public:
-    ZenithSamplerEditor(ZenithSamplerProcessor& processor);
+    ZenithSamplerEditor(ZenithSamplerProcessor& processor,
+                       ZenithSampler& instrument,
+                       ZenithPresetManager& presetManager);
     ~ZenithSamplerEditor() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
 private:
+    //==========================================================================
+    // Timer & Update
+    //==========================================================================
+
     void timerCallback() override;
     void updatePatchList();
     void onPatchSelected();
 
-    ZenithSamplerProcessor& sampler;
+    //==========================================================================
+    // Preset Management
+    //==========================================================================
 
+    void onPresetLoaded(const ZenithInstrumentPreset& preset);
+    std::map<std::string, float> captureCurrentState();
+    void loadSampleMapData();
+
+    //==========================================================================
+    // Member Variables
+    //==========================================================================
+
+    ZenithSamplerProcessor& sampler;
+    ZenithSampler& instrument_;
+    ZenithPresetManager& presetManager_;
+
+    //==========================================================================
+    // Preset Browser
+    //==========================================================================
+
+    std::unique_ptr<PresetBrowserComponent> presetBrowser_;
+    juce::TextButton togglePresetBrowserButton_;
+    bool presetBrowserVisible_ = false;
+
+    //==========================================================================
     // UI sections
-    juce::GroupComponent presetGroup;
+    //==========================================================================
+
+    juce::GroupComponent sampleMapGroup;
     juce::GroupComponent envelopeGroup;
     juce::GroupComponent filterGroup;
     juce::GroupComponent globalGroup;
+
+    //==========================================================================
+    // Sample Map Table
+    //==========================================================================
+
+    juce::TableListBox sampleMapTable_;
+    juce::TextButton refreshSamplesButton_;
+
+    // Sample map data
+    struct SampleInfo
+    {
+        juce::String fileName;
+        int lowKey = 0;
+        int highKey = 127;
+        int lowVelocity = 0;
+        int highVelocity = 127;
+        int rootNote = 60;
+    };
+
+    std::vector<SampleInfo> sampleMapData_;
+
+    //==========================================================================
+    // Sample Map Table Model
+    //==========================================================================
+
+    class SampleMapTableModel : public juce::TableListBoxModel
+    {
+    public:
+        SampleMapTableModel(ZenithSamplerEditor& owner);
+
+        int getNumRows() override;
+        void paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height,
+                               bool rowIsSelected) override;
+        void paintCell(juce::Graphics& g, int rowNumber, int columnId,
+                      int width, int height, bool rowIsSelected) override;
+
+    private:
+        ZenithSamplerEditor& owner_;
+    };
+
+    std::unique_ptr<SampleMapTableModel> sampleMapTableModel_;
+
+    //==========================================================================
+    // Legacy preset selector
+    //==========================================================================
+
+    juce::GroupComponent presetGroup;
 
     // Preset selector
     juce::Label presetLabel;

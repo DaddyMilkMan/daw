@@ -35,6 +35,7 @@ struct ZenithInstrumentPreset
     std::string instrumentId;           ///< Target instrument (e.g., "zenith_poly_synth")
 
     // Metadata
+    std::string category;               ///< Category (e.g., "Bass", "Lead", "Pad", "808")
     std::string author;                 ///< Preset author
     std::string description;            ///< Detailed description
     std::vector<std::string> tags;      ///< Tags for searching (e.g., "pad", "warm", "lush")
@@ -106,6 +107,7 @@ struct ZenithInstrumentPreset
         tree.setProperty("id", id, nullptr);
         tree.setProperty("name", name, nullptr);
         tree.setProperty("instrumentId", instrumentId, nullptr);
+        tree.setProperty("category", category, nullptr);
         tree.setProperty("author", author, nullptr);
         tree.setProperty("description", description, nullptr);
         tree.setProperty("version", version, nullptr);
@@ -155,6 +157,7 @@ struct ZenithInstrumentPreset
         preset.id = tree.getProperty("id", "").toString().toStdString();
         preset.name = tree.getProperty("name", "Untitled").toString().toStdString();
         preset.instrumentId = tree.getProperty("instrumentId", "").toString().toStdString();
+        preset.category = tree.getProperty("category", "").toString().toStdString();
         preset.author = tree.getProperty("author", "Unknown").toString().toStdString();
         preset.description = tree.getProperty("description", "").toString().toStdString();
         preset.version = tree.getProperty("version", "1.0.0").toString().toStdString();
@@ -227,6 +230,139 @@ struct ZenithInstrumentPreset
         return ZenithInstrumentPreset();
     }
 
+    /**
+     * @brief Convert to JSON object (AI-friendly format)
+     */
+    juce::var toJson() const
+    {
+        auto* obj = new juce::DynamicObject();
+
+        // Basic info
+        obj->setProperty("id", id);
+        obj->setProperty("name", name);
+        obj->setProperty("instrumentId", instrumentId);
+        obj->setProperty("category", category);
+        obj->setProperty("author", author);
+        obj->setProperty("description", description);
+        obj->setProperty("version", version);
+
+        // Tags array
+        juce::Array<juce::var> tagsArray;
+        for (const auto& tag : tags)
+            tagsArray.add(tag);
+        obj->setProperty("tags", tagsArray);
+
+        // Parameters object
+        auto* paramsObj = new juce::DynamicObject();
+        for (const auto& [paramId, value] : parameters)
+            paramsObj->setProperty(paramId, value);
+        obj->setProperty("params", juce::var(paramsObj));
+
+        // Macros object (optional)
+        if (!macros.empty())
+        {
+            auto* macrosObj = new juce::DynamicObject();
+            for (const auto& [macroId, value] : macros)
+                macrosObj->setProperty(macroId, value);
+            obj->setProperty("macros", juce::var(macrosObj));
+        }
+
+        return juce::var(obj);
+    }
+
+    /**
+     * @brief Load from JSON object
+     */
+    static ZenithInstrumentPreset fromJson(const juce::var& json)
+    {
+        ZenithInstrumentPreset preset;
+
+        if (!json.isObject())
+            return preset;
+
+        auto obj = json.getDynamicObject();
+        if (!obj)
+            return preset;
+
+        // Basic info
+        preset.id = obj->getProperty("id").toString().toStdString();
+        preset.name = obj->getProperty("name").toString().toStdString();
+        preset.instrumentId = obj->getProperty("instrumentId").toString().toStdString();
+        preset.category = obj->getProperty("category").toString().toStdString();
+        preset.author = obj->getProperty("author").toString().toStdString();
+        preset.description = obj->getProperty("description").toString().toStdString();
+        preset.version = obj->getProperty("version").toString().toStdString();
+
+        // Tags array
+        if (obj->hasProperty("tags"))
+        {
+            auto tagsVar = obj->getProperty("tags");
+            if (tagsVar.isArray())
+            {
+                auto* tagsArray = tagsVar.getArray();
+                for (const auto& tag : *tagsArray)
+                    preset.tags.push_back(tag.toString().toStdString());
+            }
+        }
+
+        // Parameters object
+        if (obj->hasProperty("params"))
+        {
+            auto paramsVar = obj->getProperty("params");
+            if (paramsVar.isObject())
+            {
+                auto paramsObj = paramsVar.getDynamicObject();
+                for (const auto& prop : paramsObj->getProperties())
+                {
+                    std::string paramId = prop.name.toString().toStdString();
+                    float value = static_cast<float>(prop.value);
+                    // Clamp to [0, 1] range
+                    value = juce::jlimit(0.0f, 1.0f, value);
+                    preset.parameters[paramId] = value;
+                }
+            }
+        }
+
+        // Macros object (optional)
+        if (obj->hasProperty("macros"))
+        {
+            auto macrosVar = obj->getProperty("macros");
+            if (macrosVar.isObject())
+            {
+                auto macrosObj = macrosVar.getDynamicObject();
+                for (const auto& prop : macrosObj->getProperties())
+                {
+                    std::string macroId = prop.name.toString().toStdString();
+                    float value = static_cast<float>(prop.value);
+                    value = juce::jlimit(0.0f, 1.0f, value);
+                    preset.macros[macroId] = value;
+                }
+            }
+        }
+
+        return preset;
+    }
+
+    /**
+     * @brief Save to JSON file (AI-friendly format)
+     */
+    bool saveToJsonFile(const juce::File& file) const
+    {
+        auto json = toJson();
+        juce::String jsonStr = juce::JSON::toString(json, true);  // true = pretty print
+        return file.replaceWithText(jsonStr);
+    }
+
+    /**
+     * @brief Load from JSON file
+     */
+    static ZenithInstrumentPreset loadFromJsonFile(const juce::File& file)
+    {
+        juce::String jsonStr = file.loadFileAsString();
+        auto json = juce::JSON::parse(jsonStr);
+        return fromJson(json);
+    }
+
 private:
     /**
      * @brief Generate unique preset ID
@@ -279,35 +415,117 @@ public:
     {
         std::vector<ZenithInstrumentPreset> presets;
 
-        // Load factory presets
+        // Load factory presets (both XML and JSON formats)
         auto factoryDir = getInstrumentPresetsDir(instrumentId, true);
         if (factoryDir.exists())
         {
-            auto files = factoryDir.findChildFiles(
+            // Load XML presets (.zpreset)
+            auto xmlFiles = factoryDir.findChildFiles(
                 juce::File::findFiles, false, "*.zpreset");
-            for (const auto& file : files)
+            for (const auto& file : xmlFiles)
             {
                 auto preset = ZenithInstrumentPreset::loadFromFile(file);
                 if (preset.instrumentId == instrumentId)
                     presets.push_back(preset);
             }
+
+            // Load JSON presets (.json)
+            auto jsonFiles = factoryDir.findChildFiles(
+                juce::File::findFiles, false, "*.json");
+            for (const auto& file : jsonFiles)
+            {
+                auto preset = ZenithInstrumentPreset::loadFromJsonFile(file);
+                if (preset.instrumentId == instrumentId)
+                    presets.push_back(preset);
+            }
         }
 
-        // Load user presets
+        // Load user presets (both XML and JSON formats)
         auto userDir = getInstrumentPresetsDir(instrumentId, false);
         if (userDir.exists())
         {
-            auto files = userDir.findChildFiles(
+            // Load XML presets (.zpreset)
+            auto xmlFiles = userDir.findChildFiles(
                 juce::File::findFiles, false, "*.zpreset");
-            for (const auto& file : files)
+            for (const auto& file : xmlFiles)
             {
                 auto preset = ZenithInstrumentPreset::loadFromFile(file);
+                if (preset.instrumentId == instrumentId)
+                    presets.push_back(preset);
+            }
+
+            // Load JSON presets (.json)
+            auto jsonFiles = userDir.findChildFiles(
+                juce::File::findFiles, false, "*.json");
+            for (const auto& file : jsonFiles)
+            {
+                auto preset = ZenithInstrumentPreset::loadFromJsonFile(file);
                 if (preset.instrumentId == instrumentId)
                     presets.push_back(preset);
             }
         }
 
         return presets;
+    }
+
+    /**
+     * @brief Find presets by tag
+     * @param instrumentId Instrument ID
+     * @param tag Tag to search for (case-insensitive)
+     * @return Vector of matching presets
+     */
+    std::vector<ZenithInstrumentPreset> findPresetsByTag(
+        const std::string& instrumentId,
+        const std::string& tag) const
+    {
+        std::vector<ZenithInstrumentPreset> results;
+        auto allPresets = getPresetsForInstrument(instrumentId);
+
+        juce::String searchTag = tag;
+        searchTag = searchTag.toLowerCase();
+
+        for (const auto& preset : allPresets)
+        {
+            for (const auto& presetTag : preset.tags)
+            {
+                juce::String presetTagStr = presetTag;
+                if (presetTagStr.toLowerCase() == searchTag)
+                {
+                    results.push_back(preset);
+                    break;
+                }
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * @brief Find presets by category
+     * @param instrumentId Instrument ID
+     * @param category Category to search for (case-insensitive)
+     * @return Vector of matching presets
+     */
+    std::vector<ZenithInstrumentPreset> findPresetsByCategory(
+        const std::string& instrumentId,
+        const std::string& category) const
+    {
+        std::vector<ZenithInstrumentPreset> results;
+        auto allPresets = getPresetsForInstrument(instrumentId);
+
+        juce::String searchCategory = category;
+        searchCategory = searchCategory.toLowerCase();
+
+        for (const auto& preset : allPresets)
+        {
+            juce::String presetCategory = preset.category;
+            if (presetCategory.toLowerCase() == searchCategory)
+            {
+                results.push_back(preset);
+            }
+        }
+
+        return results;
     }
 
     /**

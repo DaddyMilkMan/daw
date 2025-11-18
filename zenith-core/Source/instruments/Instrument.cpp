@@ -126,6 +126,57 @@ bool InstrumentBase::loadPreset(const juce::String& presetId)
     return true;
 }
 
+bool InstrumentBase::applyPreset(const ZenithInstrumentPreset& preset)
+{
+    // Verify preset is for this instrument
+    juce::String presetInstrumentId = preset.instrumentId;
+    juce::String thisInstrumentId = metadata_.id;
+
+    if (presetInstrumentId != thisInstrumentId)
+        return false;
+
+    // Apply all parameter values from preset
+    for (const auto& [paramId, value] : preset.parameters)
+    {
+        juce::String paramIdStr = paramId;
+        setParameter(paramIdStr, value);
+    }
+
+    // Apply macro values if present
+    for (const auto& [macroId, value] : preset.macros)
+    {
+        juce::String macroIdStr = macroId;
+        setMacro(macroIdStr, value);
+    }
+
+    // Update current preset ID
+    currentPresetId_ = preset.id;
+
+    return true;
+}
+
+void InstrumentBase::capturePreset(ZenithInstrumentPreset& preset) const
+{
+    // Set basic info
+    preset.instrumentId = metadata_.id.toStdString();
+
+    // Capture all parameter values
+    preset.parameters.clear();
+    for (const auto& paramMetadata : metadata_.parameters)
+    {
+        float value = getParameter(paramMetadata.id);
+        preset.parameters[paramMetadata.id.toStdString()] = value;
+    }
+
+    // Capture all macro values
+    preset.macros.clear();
+    for (const auto& macroMetadata : metadata_.macros)
+    {
+        float value = getMacro(macroMetadata.id);
+        preset.macros[macroMetadata.id.toStdString()] = value;
+    }
+}
+
 //==============================================================================
 void InstrumentBase::registerPreset(const juce::String& presetId,
                                    const juce::String& presetName,

@@ -4,6 +4,9 @@
  */
 
 #include "../include/CommandAPI.h"
+#include "../Source/instruments/InstrumentRegistry.h"
+#include "../Source/instruments/InstrumentPreset.h"
+#include "../Source/engine/Track.h"
 
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
@@ -62,6 +65,14 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     // Export
     registerCommand("export_wav", [this](const juce::var& p) { return cmd_exportWav(p); });
     registerCommand("export_project", [this](const juce::var& p) { return cmd_exportProject(p); });
+
+    // Instrument commands
+    registerCommand("list_instruments", [this](const juce::var& p) { return cmd_listInstruments(p); });
+    registerCommand("list_presets", [this](const juce::var& p) { return cmd_listPresets(p); });
+    registerCommand("load_preset", [this](const juce::var& p) { return cmd_loadPreset(p); });
+    registerCommand("save_preset", [this](const juce::var& p) { return cmd_savePreset(p); });
+    registerCommand("get_instrument_parameters", [this](const juce::var& p) { return cmd_getInstrumentParameters(p); });
+    registerCommand("set_instrument_parameters", [this](const juce::var& p) { return cmd_setInstrumentParameters(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -876,5 +887,356 @@ juce::var CommandAPI::cmd_exportProject(const juce::var& params)
     result->setProperty("success", true);
     result->setProperty("outputPath", outputPath);
     result->setProperty("durationSeconds", durationSeconds);
+    return juce::var(result.get());
+}
+
+//==============================================================================
+// Instrument Commands
+//==============================================================================
+
+juce::var CommandAPI::cmd_listInstruments(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    // Get list from InstrumentRegistry
+    auto& registry = zenith::InstrumentRegistry::getInstance();
+    auto instruments = registry.getInstrumentList();
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("instruments", instruments);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_listPresets(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "instrumentId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String instrumentId = obj->getProperty("instrumentId").toString();
+
+    // Optional filters
+    juce::String categoryFilter = obj->getProperty("category", "").toString();
+    juce::String tagFilter = obj->getProperty("tag", "").toString();
+
+    // Get presets from preset manager
+    zenith::ZenithPresetManager presetManager;
+    auto presets = presetManager.getPresetsForInstrument(instrumentId.toStdString());
+
+    // Build response array with filtering
+    juce::Array<juce::var> presetsArray;
+    for (const auto& preset : presets)
+    {
+        // Apply category filter if specified
+        if (categoryFilter.isNotEmpty() && preset.author != categoryFilter.toStdString())
+            continue;
+
+        // Apply tag filter if specified
+        if (tagFilter.isNotEmpty())
+        {
+            bool hasTag = false;
+            for (const auto& tag : preset.tags)
+            {
+                if (tag == tagFilter.toStdString())
+                {
+                    hasTag = true;
+                    break;
+                }
+            }
+            if (!hasTag)
+                continue;
+        }
+
+        // Build preset object
+        juce::DynamicObject::Ptr presetObj = new juce::DynamicObject();
+        presetObj->setProperty("id", preset.id);
+        presetObj->setProperty("name", preset.name);
+        presetObj->setProperty("category", preset.author);  // Using author as category for now
+
+        // Convert tags to array
+        juce::Array<juce::var> tagsArray;
+        for (const auto& tag : preset.tags)
+            tagsArray.add(tag);
+        presetObj->setProperty("tags", tagsArray);
+
+        presetsArray.add(juce::var(presetObj.get()));
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("presets", presetsArray);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_loadPreset(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "presetId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String presetId = obj->getProperty("presetId").toString();
+    juce::String instrumentIdOpt = obj->getProperty("instrumentId", "").toString();
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    // If no instrument on track and instrumentId provided, create one
+    if (instrument == nullptr && instrumentIdOpt.isNotEmpty())
+    {
+        auto& registry = zenith::InstrumentRegistry::getInstance();
+        auto newInstrument = registry.createInstrument(instrumentIdOpt);
+        if (newInstrument == nullptr)
+        {
+            throw std::runtime_error("Unknown instrument: " + instrumentIdOpt.toStdString());
+        }
+        track->setInstrument(std::move(newInstrument));
+        instrument = track->getInstrument();
+    }
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument and no instrumentId provided");
+    }
+
+    // Load preset on instrument
+    bool success = instrument->loadPreset(presetId);
+    if (!success)
+    {
+        throw std::runtime_error("Failed to load preset: " + presetId.toStdString());
+    }
+
+    // Create undo transaction if UndoManager is available
+    projectState.beginNewTransaction("Load preset " + presetId);
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_savePreset(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "name", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String name = obj->getProperty("name").toString();
+    juce::String category = obj->getProperty("category", "User").toString();
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Create preset from current instrument state
+    zenith::ZenithInstrumentPreset preset(
+        name.toStdString(),
+        instrument->getMetadata().instrumentId.toStdString(),
+        category.toStdString()
+    );
+
+    // Get parameter values from instrument
+    const auto& metadata = instrument->getMetadata();
+    for (const auto& param : metadata.parameters)
+    {
+        float value = instrument->getParameter(param.id);
+        preset.setParameter(param.id.toStdString(), value);
+    }
+
+    // Get macro values
+    for (const auto& macro : metadata.macros)
+    {
+        float value = instrument->getMacro(macro.id);
+        preset.setMacro(macro.id.toStdString(), value);
+    }
+
+    // Parse tags if provided
+    auto tagsVar = obj->getProperty("tags");
+    if (tagsVar.isArray())
+    {
+        auto* tagsArray = tagsVar.getArray();
+        for (int i = 0; i < tagsArray->size(); ++i)
+        {
+            preset.tags.push_back((*tagsArray)[i].toString().toStdString());
+        }
+    }
+
+    // Save preset
+    zenith::ZenithPresetManager presetManager;
+    bool success = presetManager.saveUserPreset(preset);
+
+    if (!success)
+    {
+        throw std::runtime_error("Failed to save preset");
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("presetId", preset.id);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getInstrumentParameters(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Get metadata and build parameter array
+    const auto& metadata = instrument->getMetadata();
+    juce::Array<juce::var> paramsArray;
+
+    for (const auto& param : metadata.parameters)
+    {
+        juce::DynamicObject::Ptr paramObj = new juce::DynamicObject();
+        paramObj->setProperty("id", param.id);
+        paramObj->setProperty("name", param.name);
+        paramObj->setProperty("min", param.minValue);
+        paramObj->setProperty("max", param.maxValue);
+        paramObj->setProperty("default", param.defaultValue);
+        paramObj->setProperty("value", instrument->getParameter(param.id));
+
+        // Add tags (empty for now, could be extended)
+        juce::Array<juce::var> tagsArray;
+        paramObj->setProperty("tags", tagsArray);
+
+        paramsArray.add(juce::var(paramObj.get()));
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("parameters", paramsArray);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_setInstrumentParameters(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "params", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    auto paramsObj = obj->getProperty("params");
+
+    if (!paramsObj.isObject())
+    {
+        throw std::runtime_error("'params' must be an object");
+    }
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Begin undo transaction
+    projectState.beginNewTransaction("AI tweak parameters");
+
+    // Set each parameter
+    juce::Array<juce::var> updatedParams;
+    auto* paramsDynObj = paramsObj.getDynamicObject();
+
+    if (paramsDynObj != nullptr)
+    {
+        const auto& metadata = instrument->getMetadata();
+        auto propNames = paramsDynObj->getProperties();
+
+        for (int i = 0; i < propNames.size(); ++i)
+        {
+            juce::String paramId = propNames.getName(i).toString();
+            float value = (float)propNames.getValueAt(i);
+
+            // Validate parameter exists
+            const auto* paramMeta = metadata.findParameter(paramId);
+            if (paramMeta == nullptr)
+            {
+                DBG("Warning: Unknown parameter '" + paramId + "', skipping");
+                continue;
+            }
+
+            // Clamp value to valid range
+            value = juce::jlimit(paramMeta->minValue, paramMeta->maxValue, value);
+
+            // Set parameter
+            bool success = instrument->setParameter(paramId, value);
+            if (success)
+            {
+                updatedParams.add(paramId);
+            }
+        }
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("updated", updatedParams);
     return juce::var(result.get());
 }
