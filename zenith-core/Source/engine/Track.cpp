@@ -39,6 +39,38 @@ Track::~Track()
 }
 
 //==============================================================================
+void Track::setInstrument(std::unique_ptr<Instrument> instrument)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Release old instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
+    // Set new instrument
+    instrument_ = std::move(instrument);
+
+    // Prepare new instrument if audio is running
+    if (instrument_ != nullptr && currentSampleRate > 0)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
+            processor->prepareToPlay(currentSampleRate, currentBlockSize);
+        }
+    }
+
+    sendChangeMessage();
+}
+
+//==============================================================================
 void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     currentSampleRate = sampleRate;
@@ -115,7 +147,10 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         return;
     }
 
-    // Get audio from all clips and mix them together
+    // Clear MIDI buffer for this block
+    midiBuffer.clear();
+
+    // Get audio/MIDI from all clips and mix them together
     {
         const juce::ScopedLock sl(clipsLock);
 
@@ -123,25 +158,33 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         {
             if (clip != nullptr && clip->isActive())
             {
-                // Create a temporary buffer for this clip
-                juce::AudioBuffer<float> clipBuffer(
-                    bufferToFill.buffer->getNumChannels(),
-                    bufferToFill.numSamples);
-                clipBuffer.clear();
-
-                juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
-                clip->getNextAudioBlock(clipInfo);
-
-                // Mix clip into main buffer
-                for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                // For audio clips, create a temporary buffer and mix
+                if (clip->getClipType() == Clip::Type::Audio)
                 {
-                    bufferToFill.buffer->addFrom(
-                        ch,
-                        bufferToFill.startSample,
-                        clipBuffer,
-                        ch,
-                        0,
+                    juce::AudioBuffer<float> clipBuffer(
+                        bufferToFill.buffer->getNumChannels(),
                         bufferToFill.numSamples);
+                    clipBuffer.clear();
+
+                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
+                    clip->getNextAudioBlock(clipInfo);
+
+                    // Mix clip into main buffer
+                    for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                    {
+                        bufferToFill.buffer->addFrom(
+                            ch,
+                            bufferToFill.startSample,
+                            clipBuffer,
+                            ch,
+                            0,
+                            bufferToFill.numSamples);
+                    }
+                }
+                // For MIDI clips, collect MIDI events
+                else if (clip->getClipType() == Clip::Type::MIDI)
+                {
+                    clip->getMidiEvents(midiBuffer, bufferToFill.numSamples);
                 }
             }
         }

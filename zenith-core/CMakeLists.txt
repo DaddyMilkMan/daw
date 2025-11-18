@@ -137,6 +137,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_processors
     juce::juce_audio_utils
 
+    # DSP (for built-in instruments)
+    juce::juce_dsp
+
     # Core functionality
     juce::juce_core
     juce::juce_data_structures
