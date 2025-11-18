@@ -171,6 +171,11 @@ struct InstrumentMetadata
     std::vector<ParameterMetadata> parameters;
     std::vector<MacroMetadata> macros;
 
+    // Default preset categories for this instrument
+    // Used by ZenithPresetManager to organize presets
+    // Examples: "Bass", "Lead", "Pad", "Keys", "FX", "808"
+    juce::StringArray defaultPresetCategories;
+
     /**
      * @brief Find parameter by ID
      */
@@ -213,6 +218,15 @@ struct InstrumentMetadata
         for (const auto& macro : macros)
             macrosArray.add(macro.toVar());
         obj->setProperty("macros", macrosArray);
+
+        // Default preset categories
+        if (!defaultPresetCategories.isEmpty())
+        {
+            juce::Array<juce::var> categoriesArray;
+            for (const auto& cat : defaultPresetCategories)
+                categoriesArray.add(cat);
+            obj->setProperty("defaultPresetCategories", categoriesArray);
+        }
 
         return juce::var(obj);
     }
