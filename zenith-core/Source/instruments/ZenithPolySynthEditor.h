@@ -19,7 +19,7 @@ namespace zenith {
  * - 4 macro knobs with labels at the bottom
  * - Preset browser
  */
-class ZenithPolySynthEditor : public juce::AudioProcessorEditor
+class ZenithPolySynthEditor : public juce::Component
 {
 public:
     explicit ZenithPolySynthEditor(ZenithPolySynth& processor);

@@ -9,7 +9,7 @@ namespace zenith {
 
 //==============================================================================
 ZenithSamplerEditor::ZenithSamplerEditor(ZenithSampler& p)
-    : AudioProcessorEditor(&p), processor_(p)
+    : processor_(p)
 {
     // Set editor size
     setSize(600, 500);
@@ -48,14 +48,18 @@ void ZenithSamplerEditor::setupSlider(juce::Slider& slider, juce::Label& label,
     label.attachToComponent(&slider, false);
 
     // Create attachment
-    attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        processor_.getParameters(), paramId, slider));
+    auto* audioProcessor = processor_.getAudioProcessor();
+    if (auto* apvts = dynamic_cast<juce::AudioProcessorValueTreeState*>(audioProcessor))
+    {
+        attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+            *apvts, paramId, slider));
+    }
 }
 
 //==============================================================================
 void ZenithSamplerEditor::setupMacroKnobs()
 {
-    const auto& metadata = processor_.getInstrumentMetadata();
+    const auto& metadata = processor_.getMetadata();
 
     for (size_t i = 0; i < metadata.macros.size(); ++i)
     {
@@ -75,8 +79,12 @@ void ZenithSamplerEditor::setupMacroKnobs()
         addAndMakeVisible(*label);
 
         // Create attachment using actual macro ID from metadata
-        attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor_.getParameters(), macroInfo.id, *knob));
+        auto* audioProcessor = processor_.getAudioProcessor();
+        if (auto* apvts = dynamic_cast<juce::AudioProcessorValueTreeState*>(audioProcessor))
+        {
+            attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+                *apvts, macroInfo.id, *knob));
+        }
 
         // Store knob and label
         macroKnobs_.push_back(std::move(knob));
@@ -94,7 +102,8 @@ void ZenithSamplerEditor::loadSampleFile()
     if (chooser.browseForFileToOpen())
     {
         auto file = chooser.getResult();
-        processor_.loadSample(file);
+        // TODO: Implement loadSample method in ZenithSampler
+        // processor_.loadSample(file);
     }
 }
 
@@ -121,7 +130,8 @@ void ZenithSamplerEditor::filesDropped(const juce::StringArray& files, int, int)
     if (files.size() > 0)
     {
         juce::File file(files[0]);
-        processor_.loadSample(file);
+        // TODO: Implement loadSample method in ZenithSampler
+        // processor_.loadSample(file);
     }
 }
 

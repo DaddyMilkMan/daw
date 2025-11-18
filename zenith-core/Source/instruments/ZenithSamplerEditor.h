@@ -19,7 +19,7 @@ namespace zenith {
  * - Parameter controls grouped by category
  * - 4 macro knobs with labels at the bottom
  */
-class ZenithSamplerEditor : public juce::AudioProcessorEditor,
+class ZenithSamplerEditor : public juce::Component,
                            public juce::FileDragAndDropTarget
 {
 public:
