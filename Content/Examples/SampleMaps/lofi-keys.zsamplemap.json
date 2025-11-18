@@ -1,0 +1,103 @@
+{
+  "name": "LoFi Keys",
+  "category": "keys",
+  "description": "Lo-fi piano with vintage character and tape saturation - velocity layered",
+  "author": "Zenith DAW",
+  "version": "1.0.0",
+
+  "parameters": {
+    "attack": 0.05,
+    "decay": 0.3,
+    "sustain": 0.6,
+    "release": 0.8,
+    "filterCutoff": 0.7,
+    "filterResonance": 0.1,
+    "sampleStartOffset": 0.0,
+    "pitchFine": 0.0,
+    "pitchSemitones": 0.0,
+    "globalPan": 0.5,
+    "globalGain": 0.85
+  },
+
+  "regions": [
+    {
+      "filePath": "lofi-piano-C3-soft.wav",
+      "rootNote": 48,
+      "lowNote": 42,
+      "highNote": 53,
+      "lowVel": 0,
+      "highVel": 63,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Soft velocity layer - C3 sample covering F#2-F3"
+    },
+    {
+      "filePath": "lofi-piano-C4-soft.wav",
+      "rootNote": 60,
+      "lowNote": 54,
+      "highNote": 65,
+      "lowVel": 0,
+      "highVel": 63,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Soft velocity layer - C4 sample covering F#3-F4"
+    },
+    {
+      "filePath": "lofi-piano-C5-soft.wav",
+      "rootNote": 72,
+      "lowNote": 66,
+      "highNote": 84,
+      "lowVel": 0,
+      "highVel": 63,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Soft velocity layer - C5 sample covering F#4-C6"
+    },
+    {
+      "filePath": "lofi-piano-C3-hard.wav",
+      "rootNote": 48,
+      "lowNote": 42,
+      "highNote": 53,
+      "lowVel": 64,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Hard velocity layer - C3 sample covering F#2-F3"
+    },
+    {
+      "filePath": "lofi-piano-C4-hard.wav",
+      "rootNote": 60,
+      "lowNote": 54,
+      "highNote": 65,
+      "lowVel": 64,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Hard velocity layer - C4 sample covering F#3-F4"
+    },
+    {
+      "filePath": "lofi-piano-C5-hard.wav",
+      "rootNote": 72,
+      "lowNote": 66,
+      "highNote": 84,
+      "lowVel": 64,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Hard velocity layer - C5 sample covering F#4-C6"
+    }
+  ],
+
+  "notes": {
+    "usage": "This demonstrates velocity layering - same notes mapped to different samples based on MIDI velocity (0-63 = soft, 64-127 = hard)",
+    "keyRanges": "Each sample covers ~12 notes (one octave) to minimize CPU usage while maintaining good quality",
+    "loopMode": "forward loop allows sustain pedal to work naturally",
+    "character": "Increase the 'character' parameter for more vintage tape saturation"
+  }
+}
