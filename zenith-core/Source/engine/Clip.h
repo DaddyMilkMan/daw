@@ -152,6 +152,11 @@ public:
     juce::ValueTree getState() const;
     void loadState(const juce::ValueTree& state);
 
+    //==============================================================================
+    // Allow Track to access processing methods
+    //==============================================================================
+    friend class Track;
+
 private:
     //==============================================================================
     // Clip properties
