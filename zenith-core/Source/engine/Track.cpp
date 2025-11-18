@@ -76,8 +76,11 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlockExpected;
 
-    // Prepare instrument buffer
-    instrumentBuffer_.setSize(2, samplesPerBlockExpected);
+    // Prepare instrument buffer (fixed size, no reallocation on audio thread)
+    instrumentBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
+
+    // Prepare clip buffer (preallocated for RT-safe clip mixing)
+    clipBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
 
     // Prepare instrument if present
     if (instrument_ != nullptr)
@@ -151,6 +154,8 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
     midiBuffer.clear();
 
     // Get audio/MIDI from all clips and mix them together
+    // NOTE: clipsLock is still used here - NOT fully RT-safe yet
+    // TODO: Implement lock-free ClipSnapshot pattern for full RT-safety
     {
         const juce::ScopedLock sl(clipsLock);
 
@@ -158,27 +163,32 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         {
             if (clip != nullptr && clip->isActive())
             {
-                // For audio clips, create a temporary buffer and mix
+                // For audio clips, use preallocated buffer (RT-safe, no allocation)
                 if (clip->getClipType() == Clip::Type::Audio)
                 {
-                    juce::AudioBuffer<float> clipBuffer(
-                        bufferToFill.buffer->getNumChannels(),
-                        bufferToFill.numSamples);
-                    clipBuffer.clear();
+                    // Ensure clipBuffer_ has correct dimensions (should already be sized from prepareToPlay)
+                    const int numChannels = bufferToFill.buffer->getNumChannels();
+                    const int numSamples = bufferToFill.numSamples;
 
-                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
+                    // Clear the preallocated buffer for reuse
+                    for (int ch = 0; ch < juce::jmin(numChannels, clipBuffer_.getNumChannels()); ++ch)
+                    {
+                        clipBuffer_.clear(ch, 0, numSamples);
+                    }
+
+                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, numSamples);
                     clip->getNextAudioBlock(clipInfo);
 
                     // Mix clip into main buffer
-                    for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                    for (int ch = 0; ch < numChannels; ++ch)
                     {
                         bufferToFill.buffer->addFrom(
                             ch,
                             bufferToFill.startSample,
-                            clipBuffer,
+                            clipBuffer_,
                             ch,
                             0,
-                            bufferToFill.numSamples);
+                            numSamples);
                     }
                 }
                 // For MIDI clips, collect MIDI events
@@ -203,17 +213,20 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         auto* processor = instrument_->getAudioProcessor();
         if (processor != nullptr)
         {
-            // Clear instrument buffer
-            instrumentBuffer_.setSize(2, bufferToFill.numSamples, false, true, true);
+            // Use preallocated buffer (RT-safe, no reallocation)
+            // instrumentBuffer_ was sized in prepareToPlay
+            const int numSamples = bufferToFill.numSamples;
+
+            // Clear instrument buffer for this block
             instrumentBuffer_.clear();
 
-            // Process instrument
+            // Process instrument (RT-safe as long as numSamples <= currentBlockSize)
             processor->processBlock(instrumentBuffer_, midiBuffer_);
 
             // Mix instrument output into track buffer
             for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(), instrumentBuffer_.getNumChannels()); ++ch)
             {
-                localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, bufferToFill.numSamples);
+                localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, numSamples);
             }
 
             // Clear MIDI buffer for next block
@@ -283,41 +296,6 @@ void Track::setArmed(bool shouldBeArmed)
 void Track::setEnabled(bool shouldBeEnabled)
 {
     enabled.store(shouldBeEnabled);
-    sendChangeMessage();
-}
-
-//==============================================================================
-// Instrument management
-//==============================================================================
-
-void Track::setInstrument(std::unique_ptr<Instrument> instrument)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    // Release old instrument if present
-    if (instrument_ != nullptr)
-    {
-        auto* processor = instrument_->getAudioProcessor();
-        if (processor != nullptr)
-        {
-            processor->releaseResources();
-        }
-    }
-
-    // Set new instrument
-    instrument_ = std::move(instrument);
-
-    // Prepare new instrument if audio is running
-    if (instrument_ != nullptr && currentSampleRate > 0)
-    {
-        auto* processor = instrument_->getAudioProcessor();
-        if (processor != nullptr)
-        {
-            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
-            processor->prepareToPlay(currentSampleRate, currentBlockSize);
-        }
-    }
-
     sendChangeMessage();
 }
 
@@ -479,9 +457,32 @@ void Track::loadState(const juce::ValueTree& state)
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
-    (void)buffer;
     (void)numSamples;
     // TODO(Phase 2: plugin hosting) - Process plugin chain
+    // For now, this is a placeholder that will iterate over plugins when implemented
+
+    // Example of correct buffer sizing for when plugins are added:
+    // When processing plugins, especially instrument plugins (0 inputs, >0 outputs),
+    // we must size the buffer view using max(inputs, outputs) to ensure synths
+    // have writable channels instead of receiving an empty buffer.
+    //
+    // for (auto& plugin : pluginChain)
+    // {
+    //     const int bufferChannels = buffer.getNumChannels();
+    //     const int pluginInputs = plugin->getTotalNumInputChannels();
+    //     const int pluginOutputs = plugin->getTotalNumOutputChannels();
+    //
+    //     // Use max(inputs, outputs) so instrument plugins (0 in, >0 out) get actual audio
+    //     const int numChannels = juce::jmin(bufferChannels, juce::jmax(pluginInputs, pluginOutputs));
+    //
+    //     juce::AudioBuffer<float> pluginView(
+    //         buffer.getArrayOfWritePointers(),
+    //         numChannels,
+    //         0,
+    //         numSamples);
+    //
+    //     plugin->processBlock(pluginView, midiBuffer_);
+    // }
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples)
