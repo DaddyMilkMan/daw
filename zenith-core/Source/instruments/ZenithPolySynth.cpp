@@ -1061,6 +1061,15 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         metadata.macros.push_back(macro);
     }
 
+    // Default preset categories for ZenithPolySynth
+    metadata.defaultPresetCategories.add("Bass");
+    metadata.defaultPresetCategories.add("Lead");
+    metadata.defaultPresetCategories.add("Pad");
+    metadata.defaultPresetCategories.add("Keys");
+    metadata.defaultPresetCategories.add("Pluck");
+    metadata.defaultPresetCategories.add("FX");
+    metadata.defaultPresetCategories.add("808");
+
     return metadata;
 }
 
