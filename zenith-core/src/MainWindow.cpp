@@ -9,6 +9,7 @@
 #include "commands/CommandAPI.h"
 #include "network/AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
+#include "../Source/engine/Track.h"
 
 //==============================================================================
 // MainComponent Implementation
@@ -63,6 +64,13 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     recordButton.setButtonText("Record");
     recordButton.setEnabled(false);  // Future: recording UI
     addAndMakeVisible(recordButton);
+
+    // Phase 1: Import Audio button
+    importButton.setButtonText("Import Audio...");
+    importButton.onClick = [this]() {
+        handleImportAudio();
+    };
+    addAndMakeVisible(importButton);
 
     // Phase 4: Arranger (now using ArrangerView from master for better automation integration)
     // arrangerComponent = std::make_unique<ArrangerComponent>(engine);  // Disabled - using ArrangerView instead
@@ -178,6 +186,10 @@ void MainComponent::resized()
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
 
+    // Phase 1: Import button on the left
+    auto importSection = bottomBar.removeFromLeft(140);
+    importButton.setBounds(importSection.reduced(10, 8));
+
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
     int buttonWidth = 100;
@@ -260,6 +272,76 @@ void MainComponent::openPianoRoll(const juce::String& trackId, const juce::Strin
 }
 
 //==============================================================================
+// Phase 1: Audio Import
+//==============================================================================
+
+void MainComponent::handleImportAudio()
+{
+    // Create file chooser for audio files
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Import Audio File",
+        juce::File{},
+        "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg");
+
+    // Open file chooser (async)
+    auto chooserFlags = juce::FileBrowserComponent::openMode
+                      | juce::FileBrowserComponent::canSelectFiles;
+
+    chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc)
+    {
+        auto file = fc.getResult();
+        if (!file.existsAsFile())
+            return;
+
+        DBG("Importing audio file: " + file.getFullPathName());
+
+        // Ensure we have at least one track
+        if (engine.getNumTracks() == 0)
+        {
+            DBG("Creating first track for audio import");
+            engine.addTestTracks(1);
+        }
+
+        // Get the first track
+        const auto& tracks = engine.tracks();
+        if (tracks.empty())
+        {
+            DBG("ERROR: Failed to get track after creation");
+            return;
+        }
+
+        auto* track = tracks[0].get();
+        if (track == nullptr)
+        {
+            DBG("ERROR: Track is null");
+            return;
+        }
+
+        // Create a new clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::Audio);
+        clip->setName(file.getFileNameWithoutExtension());
+
+        // Load audio file through pool (message thread - safe to do I/O)
+        auto& pool = engine.getAudioFilePool();
+        clip->setAudioFileFromPool(file, pool);
+
+        // Set clip timing: start at position 0, play immediately
+        clip->setStartPosition(0);
+        clip->setPlaying(true);
+
+        DBG("Clip created: " + clip->getName() +
+            ", length: " + juce::String(clip->getLength()) + " samples");
+
+        // Add clip to track
+        track->addClip(std::move(clip));
+
+        DBG("Audio import complete! Track now has " +
+            juce::String(track->getNumClips()) + " clip(s)");
+    });
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -296,6 +378,10 @@ MainWindow::MainWindow(const juce::String& name)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
 
 
+    // Create menu bar
+    menuBar = std::make_unique<ZenithMenuBar>(*this);
+    setMenuBar(menuBar.get());
+
     // Set up window
     setUsingNativeTitleBar(true);
     setContentOwned(mainComponent.get(), true);
@@ -321,6 +407,10 @@ MainWindow::MainWindow(const juce::String& name)
 
 MainWindow::~MainWindow()
 {
+    // Clear menu bar first
+    setMenuBar(nullptr);
+    menuBar.reset();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -337,4 +427,72 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+void MainWindow::showAboutDialog()
+{
+    juce::String aboutMessage;
+    aboutMessage << "Zenith DAW\n\n";
+    aboutMessage << "A professional digital audio workstation\n\n";
+    aboutMessage << "Version: 0.1.0\n";
+    aboutMessage << "Built with JUCE 8.0.9\n\n";
+    aboutMessage << "For documentation and installation instructions, see:\n";
+    aboutMessage << "• docs/README.md\n";
+    aboutMessage << "• docs/INSTALL_WINDOWS.md";
+
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::MessageBoxIconType::InfoIcon,
+        "About Zenith DAW",
+        aboutMessage,
+        "OK"
+    );
+}
+
+//==============================================================================
+// ZenithMenuBar Implementation
+//==============================================================================
+
+MainWindow::ZenithMenuBar::ZenithMenuBar(MainWindow& mainWindow)
+    : owner(mainWindow)
+{
+}
+
+juce::StringArray MainWindow::ZenithMenuBar::getMenuBarNames()
+{
+    return { "File", "Help" };
+}
+
+juce::PopupMenu MainWindow::ZenithMenuBar::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File menu
+    {
+        #if ! (JUCE_IOS || JUCE_ANDROID)
+            menu.addItem(quit, "Quit", true, false);
+        #endif
+    }
+    else if (topLevelMenuIndex == 1)  // Help menu
+    {
+        menu.addItem(aboutZenith, "About Zenith DAW...", true, false);
+    }
+
+    return menu;
+}
+
+void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
+{
+    switch (menuItemID)
+    {
+        case aboutZenith:
+            owner.showAboutDialog();
+            break;
+
+        case quit:
+            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            break;
+
+        default:
+            break;
+    }
 }
