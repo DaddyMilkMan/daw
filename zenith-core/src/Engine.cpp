@@ -4,13 +4,15 @@
  */
 
 #include "../include/Engine.h"
+#include "../include/ProjectState.h"
+#include "../include/TrackAutomationSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "engine/Track.h"
-#include "engine/Clip.h"
-#include "engine/MixerChannel.h"
-#include "engine/PluginHost.h"
-#include "ui/PluginEditorWindow.h"
+#include "../Source/engine/Track.h"
+#include "../Source/engine/Clip.h"
+#include "../Source/engine/MixerChannel.h"
+#include "../Source/engine/PluginHost.h"
+#include "../Source/ui/PluginEditorWindow.h"
 
 //==============================================================================
 Engine::Engine()
@@ -31,6 +33,143 @@ Engine::~Engine()
 //==============================================================================
 // Initialization / Shutdown
 //==============================================================================
+
+void Engine::setProjectState(ProjectState* state)
+{
+    DBG("Engine: Setting project state");
+
+    // Stop automation if running
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->stop();
+        automationSynchronizer.reset();
+    }
+
+    projectState_ = state;
+
+    // Create new automation synchronizer if we have a project state
+    if (projectState_ != nullptr)
+    {
+        automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
+        DBG("Engine: Created automation synchronizer");
+
+        // Sync tracks with project state
+        syncWithProjectState();
+    }
+}
+
+void Engine::syncWithProjectState()
+{
+    DBG("Engine: Syncing with project state");
+
+    if (projectState_ == nullptr)
+    {
+        DBG("Engine: No project state, clearing tracks");
+        tracks_.clear();
+        return;
+    }
+
+    // Clear existing tracks
+    tracks_.clear();
+
+    // Get tracks from project state
+    auto& state = projectState_->getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+
+    if (!tracksNode.isValid())
+    {
+        DBG("Engine: No tracks in project state");
+        return;
+    }
+
+    const double sampleRate = currentSampleRate.load();
+    const int bufferSize = currentBufferSize.load();
+    const double tempo = projectState_->getTempo();
+
+    // Helper: convert beats to samples
+    auto beatsToSamples = [tempo, sampleRate](double beats) -> juce::int64
+    {
+        const double secondsPerBeat = 60.0 / tempo;
+        const double seconds = beats * secondsPerBeat;
+        return static_cast<juce::int64>(seconds * sampleRate);
+    };
+
+    // Create engine tracks from project state
+    for (auto trackNode : tracksNode)
+    {
+        juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
+        juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+
+        // Create track
+        auto track = std::make_unique<zenith::Track>(
+            trackName,
+            trackType == "midi" ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio);
+
+        // Set mixer properties
+        track->setVolume(trackNode[ProjectState::PROP_VOLUME]);
+        track->setPan(trackNode[ProjectState::PROP_PAN]);
+        track->setMuted(trackNode[ProjectState::PROP_MUTE]);
+        track->setSolo(trackNode[ProjectState::PROP_SOLO]);
+
+        // Prepare track for playback
+        if (sampleRate > 0)
+        {
+            track->prepareToPlay(bufferSize, sampleRate);
+        }
+
+        // Load clips
+        auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
+        if (clipsNode.isValid())
+        {
+            for (auto clipNode : clipsNode)
+            {
+                // Create clip
+                auto clip = std::make_unique<zenith::Track::Clip>();
+
+                // Set basic properties
+                double startBeats = clipNode[ProjectState::PROP_START];
+                double lengthBeats = clipNode[ProjectState::PROP_LENGTH];
+
+                clip->setStartPosition(beatsToSamples(startBeats));
+                clip->setLength(beatsToSamples(lengthBeats));
+
+                // Load audio file if present
+                juce::String audioFilePath = clipNode[ProjectState::PROP_AUDIO_FILE].toString();
+                if (audioFilePath.isNotEmpty())
+                {
+                    juce::File audioFile(audioFilePath);
+                    if (audioFile.existsAsFile())
+                    {
+                        clip->setAudioFile(audioFile);
+                        clip->setType(zenith::Track::Clip::Type::Audio);
+                        DBG("Engine: Loaded audio file: " + audioFile.getFileName());
+                    }
+                    else
+                    {
+                        DBG("Engine: Warning - audio file not found: " + audioFilePath);
+                    }
+                }
+
+                // Prepare clip
+                if (sampleRate > 0)
+                {
+                    clip->prepareToPlay(bufferSize, sampleRate);
+                }
+
+                // Set clip as playing (so it's active during playback)
+                clip->setPlaying(true);
+
+                // Add clip to track
+                track->addClip(std::move(clip));
+            }
+        }
+
+        // Add track to engine
+        tracks_.push_back(std::move(track));
+    }
+
+    DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
+}
 
 bool Engine::initialize()
 {
@@ -104,6 +243,13 @@ void Engine::play()
     // Enable test tone for Phase 0 testing
     // TODO: Remove this in Phase 1 when we have actual content
     enableTestTone_.store(true);
+
+    // Phase 13: Start automation synchronizer
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->start(60);  // 60 Hz update rate
+        DBG("Engine: Started automation synchronizer");
+    }
 }
 
 void Engine::stop()
@@ -111,6 +257,32 @@ void Engine::stop()
     DBG("Engine: Stop");
     isPlaying_.store(false);
     enableTestTone_.store(false);
+
+    // Reset playback position
+    playbackPosition.store(0);
+
+    // Phase 13: Stop automation synchronizer
+    if (automationSynchronizer)
+    {
+        automationSynchronizer->stop();
+        DBG("Engine: Stopped automation synchronizer");
+    }
+}
+
+double Engine::getPlaybackPositionBeats() const
+{
+    if (projectState_ == nullptr)
+        return 0.0;
+
+    const double tempo = projectState_->getTempo();
+    const double sampleRate = currentSampleRate.load();
+    const juce::int64 positionSamples = playbackPosition.load();
+
+    // Convert samples to beats
+    const double seconds = static_cast<double>(positionSamples) / sampleRate;
+    const double beats = (seconds * tempo) / 60.0;
+
+    return beats;
 }
 
 //==============================================================================
@@ -229,9 +401,36 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     phase = 0.0;
     playbackPosition.store(0);
 
+    // Prepare track buffers for unified render path
+    const int bufferSize = currentBufferSize.load();
+    const int numTracks = static_cast<int>(tracks_.size());
+
+    DBG("Engine: Preparing " + juce::String(numTracks) + " track buffers");
+
+    trackBuffers_.clear();
+    trackBuffers_.resize(numTracks);
+
+    for (int i = 0; i < numTracks; ++i)
+    {
+        // Allocate stereo buffer for each track
+        trackBuffers_[i].setSize(2, bufferSize);
+        trackBuffers_[i].clear();
+
+        // Prepare track for playback
+        if (tracks_[i] != nullptr)
+        {
+            tracks_[i]->prepareToPlay(bufferSize, currentSampleRate.load());
+        }
+    }
+
+    // Prepare master buffer
+    masterBuffer_.setSize(2, bufferSize);
+    masterBuffer_.clear();
+
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
+    DBG("  Track Buffers: " + juce::String(trackBuffers_.size()));
 }
 
 void Engine::audioDeviceStopped()
@@ -288,6 +487,165 @@ void Engine::audioDeviceIOCallbackWithContext(
 }
 
 //==============================================================================
+// Unified Render Path
+//==============================================================================
+
+void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                         juce::int64 transportPosition,
+                         int numSamples)
+{
+    // ⚠️ CAN RUN ON AUDIO THREAD - MUST BE REAL-TIME SAFE!
+    //
+    // This is the single unified render path used by:
+    // 1. Real-time audio callback (with live transport position)
+    // 2. Offline export (with offline transport position)
+
+    juce::ignoreUnused(transportPosition);  // TODO: Pass to clips for timeline-based rendering
+
+    // Clear output buffer
+    outputBuffer.clear();
+
+    // Render each track and mix into master
+    const int numTracks = static_cast<int>(tracks_.size());
+
+    for (int trackIdx = 0; trackIdx < numTracks; ++trackIdx)
+    {
+        auto* track = tracks_[trackIdx].get();
+
+        if (track == nullptr)
+            continue;
+
+        // Skip disabled or muted tracks (Track checks this internally, but we can optimize)
+        // Note: We still call getNextAudioBlock even if muted, to maintain plugin state
+
+        // Ensure track buffer is sized correctly
+        if (trackIdx >= static_cast<int>(trackBuffers_.size()))
+            continue;  // Safety check; should not happen if audioDeviceAboutToStart() was called
+
+        auto& trackBuffer = trackBuffers_[trackIdx];
+
+        // Ensure buffer is large enough
+        if (trackBuffer.getNumSamples() < numSamples)
+            continue;  // Safety check
+
+        // Clear track buffer
+        trackBuffer.clear();
+
+        // Get audio from track (clips + plugins + gain/pan)
+        juce::AudioSourceChannelInfo info(&trackBuffer, 0, numSamples);
+        track->getNextAudioBlock(info);
+
+        // Mix track into master output
+        // Support both mono and stereo tracks
+        const int trackChannels = trackBuffer.getNumChannels();
+        const int outputChannels = outputBuffer.getNumChannels();
+
+        if (trackChannels == 1 && outputChannels >= 2)
+        {
+            // Mono track -> Stereo output (copy to both L/R)
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);  // L
+            outputBuffer.addFrom(1, 0, trackBuffer, 0, 0, numSamples);  // R
+        }
+        else if (trackChannels >= 2 && outputChannels >= 2)
+        {
+            // Stereo track -> Stereo output
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);  // L
+            outputBuffer.addFrom(1, 0, trackBuffer, 1, 0, numSamples);  // R
+        }
+        else if (trackChannels == 1 && outputChannels == 1)
+        {
+            // Mono track -> Mono output
+            outputBuffer.addFrom(0, 0, trackBuffer, 0, 0, numSamples);
+        }
+        // else: Channel count mismatch, skip this track
+    }
+
+    // TODO: Apply master effects here (Phase N)
+    // TODO: Apply master volume/limiter (Phase N)
+}
+
+bool Engine::exportProjectToWav(const juce::String& outputFilePath,
+                                double durationSeconds,
+                                double sampleRate)
+{
+    DBG("Engine: Exporting to WAV: " + outputFilePath);
+    DBG("  Duration: " + juce::String(durationSeconds) + " seconds");
+
+    // Use current engine sample rate if not specified
+    if (sampleRate <= 0.0)
+        sampleRate = currentSampleRate.load();
+
+    DBG("  Sample Rate: " + juce::String(sampleRate) + " Hz");
+
+    // Calculate total samples
+    const juce::int64 totalSamples = static_cast<juce::int64>(durationSeconds * sampleRate);
+    const int blockSize = 4096;  // Use larger block size for offline rendering
+
+    // Create output file
+    juce::File outputFile(outputFilePath);
+    outputFile.deleteFile();  // Remove existing file
+
+    // Create WAV writer
+    juce::WavAudioFormat wavFormat;
+    std::unique_ptr<juce::AudioFormatWriter> writer;
+
+    writer.reset(wavFormat.createWriterFor(
+        new juce::FileOutputStream(outputFile),
+        sampleRate,
+        2,  // Stereo
+        16, // 16-bit
+        {},
+        0));
+
+    if (writer == nullptr)
+    {
+        DBG("Engine: Failed to create WAV writer");
+        return false;
+    }
+
+    // Prepare tracks for offline rendering
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(blockSize, sampleRate);
+        }
+    }
+
+    // Create offline render buffer
+    juce::AudioBuffer<float> offlineBuffer(2, blockSize);
+
+    // Render loop
+    juce::int64 currentPosition = 0;
+
+    while (currentPosition < totalSamples)
+    {
+        const int samplesThisBlock = juce::jmin(
+            blockSize,
+            static_cast<int>(totalSamples - currentPosition));
+
+        // Clear buffer
+        offlineBuffer.clear();
+
+        // Render this block using the SAME renderBlock() function as realtime!
+        renderBlock(offlineBuffer, currentPosition, samplesThisBlock);
+
+        // Write to WAV file
+        writer->writeFromAudioSampleBuffer(offlineBuffer, 0, samplesThisBlock);
+
+        currentPosition += samplesThisBlock;
+    }
+
+    // Flush and close
+    writer.reset();
+
+    DBG("Engine: Export complete!");
+    DBG("  Wrote " + juce::String(totalSamples) + " samples");
+
+    return true;
+}
+
+//==============================================================================
 // Audio Processing (AUDIO THREAD)
 //==============================================================================
 
@@ -302,14 +660,38 @@ void Engine::processAudio(
 
     juce::ignoreUnused(inputChannelData, numInputChannels);
 
-    // For Phase 0, generate a simple test tone (440 Hz sine wave)
-    // TODO: Replace with actual audio processing in Phase 1
+    // Wrap output buffer for unified render path
+    juce::AudioBuffer<float> outputBuffer(outputChannelData, numOutputChannels, numSamples);
 
+    // Get current transport position
+    juce::int64 position = playbackPosition.load();
+
+    // Update transport position for all clips in all tracks
+    for (auto& track : tracks_)
+    {
+        if (track == nullptr)
+            continue;
+
+        for (int i = 0; i < track->getNumClips(); ++i)
+        {
+            auto* clip = track->getClip(i);
+            if (clip != nullptr)
+            {
+                clip->setTransportPosition(position);
+            }
+        }
+    }
+
+    // Use unified render path
+    renderBlock(outputBuffer, position, numSamples);
+
+    // Fallback: If no tracks or all tracks are silent, optionally enable test tone
+    // (Only if explicitly enabled via enableTestTone_)
     bool testToneEnabled = enableTestTone_.load();
 
-    if (testToneEnabled)
+    if (testToneEnabled && tracks_.empty())
     {
-        // Generate 440 Hz sine wave at -12 dB
+        // Generate 440 Hz sine wave at -12 dB (only if no tracks exist)
         const double sampleRate = currentSampleRate.load();
         const double frequency = 440.0;  // A4
         const double amplitude = 0.25;   // -12 dB
@@ -319,32 +701,17 @@ void Engine::processAudio(
         {
             float value = static_cast<float>(std::sin(phase) * amplitude);
 
-            // Write to all output channels
             for (int channel = 0; channel < numOutputChannels; ++channel)
             {
                 if (outputChannelData[channel] != nullptr)
                 {
-                    outputChannelData[channel][sample] = value;
+                    outputChannelData[channel][sample] += value;  // Add instead of replace
                 }
             }
 
-            // Increment phase
             phase += phaseIncrement;
-
-            // Wrap phase to avoid precision issues
             if (phase >= 2.0 * juce::MathConstants<double>::pi)
                 phase -= 2.0 * juce::MathConstants<double>::pi;
-        }
-    }
-    else
-    {
-        // Silent output
-        for (int channel = 0; channel < numOutputChannels; ++channel)
-        {
-            if (outputChannelData[channel] != nullptr)
-            {
-                juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
-            }
         }
     }
 }

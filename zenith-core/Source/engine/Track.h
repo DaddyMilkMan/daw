@@ -21,6 +21,11 @@
 #include <memory>
 #include <vector>
 
+// Forward declarations
+namespace zenith {
+    class Instrument;
+}
+
 namespace zenith {
 
 // Forward declaration
@@ -88,6 +93,27 @@ public:
 
     void setEnabled(bool shouldBeEnabled);
     bool isEnabled() const { return enabled.load(); }
+
+    //==============================================================================
+    // Instrument management (for Instrument tracks)
+    /**
+     * @brief Set the instrument for this track
+     * @param instrument Instrument instance (must be non-null)
+     * @note Message thread only
+     */
+    void setInstrument(std::unique_ptr<Instrument> instrument);
+
+    /**
+     * @brief Get the current instrument (if any)
+     * @return Pointer to instrument, or nullptr if no instrument set
+     * @note Message thread only
+     */
+    Instrument* getInstrument() const { return instrument_.get(); }
+
+    /**
+     * @brief Check if track has an instrument
+     */
+    bool hasInstrument() const { return instrument_ != nullptr; }
 
     //==============================================================================
     // Plugin chain management (Phase 3: VST3 hosting MVP)
@@ -159,12 +185,22 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
+    // Instrument (for Instrument tracks)
+    std::unique_ptr<Instrument> instrument_;
+    juce::AudioBuffer<float> instrumentBuffer_;
+    juce::MidiBuffer midiBuffer_;
+
+    //==============================================================================
     // Plugin chain (Phase 3: VST3 hosting MVP)
     // Plugins are modified on message thread, processed on audio thread
     // No lock needed during processing (plugins vector is only modified on message thread when stopped)
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
     juce::CriticalSection pluginLock;  // Only for add/remove operations
     juce::MidiBuffer pluginMidiBuffer;  // Temp MIDI buffer for plugin processing
+
+    //==============================================================================
+    // Preallocated buffer for clip processing (RT-safe, no allocation on audio thread)
+    juce::AudioBuffer<float> clipBuffer_;
 
     //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)

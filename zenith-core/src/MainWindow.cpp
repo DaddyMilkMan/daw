@@ -8,6 +8,7 @@
 #include "ui/WingmanPanel.h"
 #include "commands/CommandAPI.h"
 #include "network/AIBridgeClient.h"
+#include "../include/PianoRollEditor.h"
 
 //==============================================================================
 // MainComponent Implementation
@@ -70,6 +71,36 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     // Phase 7: Create Wingman AI console panel
     wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
     addAndMakeVisible(wingmanPanel.get());
+
+    // Integration: Create ArrangerView
+    arrangerView = std::make_unique<ArrangerView>(projectState);
+    arrangerView->setOpenPianoRollCallback([this](juce::String trackId, juce::String clipId) {
+        openPianoRoll(trackId, clipId);
+    });
+    addAndMakeVisible(arrangerView.get());
+
+    // Integration: Create automation buttons container
+    addAndMakeVisible(automationButtonsContainer);
+
+    // Create automation toggle buttons for demo tracks
+    // (In real implementation, would create dynamically as tracks are added)
+    auto& state = projectState.getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+    if (tracksNode.isValid())
+    {
+        for (auto track : tracksNode)
+        {
+            juce::String trackId = track[ProjectState::PROP_ID].toString();
+            auto button = std::make_unique<juce::TextButton>("A");
+            button->setTooltip("Toggle automation for " + track[ProjectState::PROP_NAME].toString());
+            button->onClick = [this, trackId]() {
+                bool visible = arrangerView->isTrackAutomationVisible(trackId);
+                arrangerView->setTrackAutomationVisible(trackId, !visible);
+            };
+            automationButtonsContainer.addAndMakeVisible(button.get());
+            automationButtons[trackId] = std::move(button);
+        }
+    }
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -169,6 +200,26 @@ void MainComponent::resized()
     {
         arrangerComponent->setBounds(bounds);
     }
+
+    // Integration: ArrangerView takes remaining space
+    auto arrangerBounds = bounds;
+
+    // Automation buttons (left side, 30 pixels wide)
+    auto automationButtonArea = arrangerBounds.removeFromLeft(30);
+    automationButtonsContainer.setBounds(automationButtonArea);
+
+    // Layout automation buttons vertically
+    int buttonY = 0;
+    for (auto& [trackId, button] : automationButtons)
+    {
+        button->setBounds(0, buttonY, 30, 30);
+        buttonY += 60;  // Match track height from ArrangerView
+    }
+
+    if (arrangerView)
+    {
+        arrangerView->setBounds(arrangerBounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -202,6 +253,19 @@ void MainComponent::refreshTrackCountLabel()
 }
 
 //==============================================================================
+// Integration: Piano roll opener
+//==============================================================================
+
+void MainComponent::openPianoRoll(const juce::String& trackId, const juce::String& clipId)
+{
+    DBG("MainComponent: Opening piano roll for " + trackId + "/" + clipId);
+
+    // Create new piano roll editor window
+    // Note: Window deletes itself when closed (see PianoRollEditor::closeButtonPressed)
+    new PianoRollEditor(projectState, trackId, clipId);
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -223,8 +287,20 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 7: Create AI bridge client
     aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
 
+    // Phase 13: Connect project state to engine for automation
+    engine->setProjectState(projectState.get());
+
+    // Integration: Create clip synchronizer
+    clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState, *engine);
+
+    // Add some demo tracks for testing UI integration
+    projectState->addTrack("MIDI Track 1", "midi");
+    projectState->addTrack("Audio Track 1", "audio");
+    projectState->addTrack("MIDI Track 2", "midi");
+
     // Create main content (Phase 7: pass AIBridgeClient for AI mode)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
+
 
     // Set up window
     setUsingNativeTitleBar(true);
@@ -241,6 +317,10 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
+
+    // Integration: Start clip synchronizer
+    // (In real implementation, would start when recording is enabled)
+    // clipSynchronizer->start(30);  // 30 Hz update rate
 
     DBG("MainWindow created and initialized");
 }

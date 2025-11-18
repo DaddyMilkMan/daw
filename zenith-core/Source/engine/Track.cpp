@@ -18,6 +18,7 @@
 #include "Track.h"
 #include "Clip.h"
 #include "PluginHost.h"
+#include "../instruments/Instrument.h"
 #include <algorithm>
 
 namespace zenith {
@@ -39,10 +40,59 @@ Track::~Track()
 }
 
 //==============================================================================
+void Track::setInstrument(std::unique_ptr<Instrument> instrument)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Release old instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
+    // Set new instrument
+    instrument_ = std::move(instrument);
+
+    // Prepare new instrument if audio is running
+    if (instrument_ != nullptr && currentSampleRate > 0)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, currentSampleRate, currentBlockSize);
+            processor->prepareToPlay(currentSampleRate, currentBlockSize);
+        }
+    }
+
+    sendChangeMessage();
+}
+
+//==============================================================================
 void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 {
     currentSampleRate = sampleRate;
     currentBlockSize = samplesPerBlockExpected;
+
+    // Prepare instrument buffer (fixed size, no reallocation on audio thread)
+    instrumentBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
+
+    // Prepare clip buffer (preallocated for RT-safe clip mixing)
+    clipBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
+
+    // Prepare instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->setPlayConfigDetails(0, 2, sampleRate, samplesPerBlockExpected);
+            processor->prepareToPlay(sampleRate, samplesPerBlockExpected);
+        }
+    }
 
     // Phase 3: Prepare all plugins
     {
@@ -72,6 +122,16 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
+    // Release instrument if present
+    if (instrument_ != nullptr)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            processor->releaseResources();
+        }
+    }
+
     // Phase 3: Release all plugins
     {
         const juce::ScopedLock sl(pluginLock);
@@ -109,7 +169,12 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         return;
     }
 
-    // Get audio from all clips and mix them together
+    // Clear MIDI buffer for this block
+    midiBuffer.clear();
+
+    // Get audio/MIDI from all clips and mix them together
+    // NOTE: clipsLock is still used here - NOT fully RT-safe yet
+    // TODO: Implement lock-free ClipSnapshot pattern for full RT-safety
     {
         const juce::ScopedLock sl(clipsLock);
 
@@ -117,25 +182,38 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         {
             if (clip != nullptr && clip->isActive())
             {
-                // Create a temporary buffer for this clip
-                juce::AudioBuffer<float> clipBuffer(
-                    bufferToFill.buffer->getNumChannels(),
-                    bufferToFill.numSamples);
-                clipBuffer.clear();
-
-                juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
-                clip->getNextAudioBlock(clipInfo);
-
-                // Mix clip into main buffer
-                for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                // For audio clips, use preallocated buffer (RT-safe, no allocation)
+                if (clip->getClipType() == Clip::Type::Audio)
                 {
-                    bufferToFill.buffer->addFrom(
-                        ch,
-                        bufferToFill.startSample,
-                        clipBuffer,
-                        ch,
-                        0,
-                        bufferToFill.numSamples);
+                    // Ensure clipBuffer_ has correct dimensions (should already be sized from prepareToPlay)
+                    const int numChannels = bufferToFill.buffer->getNumChannels();
+                    const int numSamples = bufferToFill.numSamples;
+
+                    // Clear the preallocated buffer for reuse
+                    for (int ch = 0; ch < juce::jmin(numChannels, clipBuffer_.getNumChannels()); ++ch)
+                    {
+                        clipBuffer_.clear(ch, 0, numSamples);
+                    }
+
+                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer_, 0, numSamples);
+                    clip->getNextAudioBlock(clipInfo);
+
+                    // Mix clip into main buffer
+                    for (int ch = 0; ch < numChannels; ++ch)
+                    {
+                        bufferToFill.buffer->addFrom(
+                            ch,
+                            bufferToFill.startSample,
+                            clipBuffer_,
+                            ch,
+                            0,
+                            numSamples);
+                    }
+                }
+                // For MIDI clips, collect MIDI events
+                else if (clip->getClipType() == Clip::Type::MIDI)
+                {
+                    clip->getMidiEvents(midiBuffer, bufferToFill.numSamples);
                 }
             }
         }
@@ -147,6 +225,33 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         bufferToFill.buffer->getNumChannels(),
         bufferToFill.startSample,
         bufferToFill.numSamples);
+
+    // Process instrument if present (for Instrument tracks)
+    if (instrument_ != nullptr && trackType == Type::Instrument)
+    {
+        auto* processor = instrument_->getAudioProcessor();
+        if (processor != nullptr)
+        {
+            // Use preallocated buffer (RT-safe, no reallocation)
+            // instrumentBuffer_ was sized in prepareToPlay
+            const int numSamples = bufferToFill.numSamples;
+
+            // Clear instrument buffer for this block
+            instrumentBuffer_.clear();
+
+            // Process instrument (RT-safe as long as numSamples <= currentBlockSize)
+            processor->processBlock(instrumentBuffer_, midiBuffer_);
+
+            // Mix instrument output into track buffer
+            for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(), instrumentBuffer_.getNumChannels()); ++ch)
+            {
+                localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, numSamples);
+            }
+
+            // Clear MIDI buffer for next block
+            midiBuffer_.clear();
+        }
+    }
 
     // Process through plugin chain
     processPluginChain(localBuffer, bufferToFill.numSamples);
@@ -561,10 +666,27 @@ void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
     {
         if (plugin != nullptr)
         {
+            // CODEX FEEDBACK APPLIED: Use max(inputs, outputs) for channel sizing
+            // This ensures instrument plugins (0 inputs, >0 outputs) get writable channels
+            // instead of receiving an empty buffer.
+            const int bufferChannels = buffer.getNumChannels();
+            const int pluginInputs = plugin->getTotalNumInputChannels();
+            const int pluginOutputs = plugin->getTotalNumOutputChannels();
+
+            // Use max(inputs, outputs) so instrument plugins (0 in, >0 out) get actual audio
+            const int numChannels = juce::jmin(bufferChannels, juce::jmax(pluginInputs, pluginOutputs));
+
+            // Create a view of the buffer with the correct number of channels
+            juce::AudioBuffer<float> pluginView(
+                buffer.getArrayOfWritePointers(),
+                numChannels,
+                0,
+                numSamples);
+
             // Process this plugin
             // Note: processBlock expects the full buffer, not just a section
             // We're processing in-place
-            plugin->processBlock(buffer, pluginMidiBuffer);
+            plugin->processBlock(pluginView, pluginMidiBuffer);
         }
     }
 }

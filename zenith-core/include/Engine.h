@@ -27,6 +27,10 @@
 #include <vector>
 #include <memory>
 
+// Forward declarations
+class ProjectState;
+class TrackAutomationSynchronizer;
+
 // C3: Forward declarations for donor engine primitives
 namespace zenith {
     class Track;
@@ -57,6 +61,19 @@ public:
     //==========================================================================
     // Initialization / Shutdown
     //==========================================================================
+
+    /**
+     * @brief Set project state for automation synchronization
+     * @param state Pointer to project state (can be nullptr to disable automation)
+     * @note Must be called before initialize() or after automation is stopped
+     */
+    void setProjectState(ProjectState* state);
+
+    /**
+     * @brief Synchronize engine tracks with project state
+     * @note Message thread only - rebuilds track list from ProjectState
+     */
+    void syncWithProjectState();
 
     /**
      * @brief Initialize the audio engine
@@ -104,6 +121,10 @@ public:
      */
     juce::int64 getPlaybackPosition() const { return playbackPosition.load(); }
 
+    /**
+     * @brief Get current playback position in beats
+     */
+    double getPlaybackPositionBeats() const;
     //==========================================================================
     // Audio Device Management
     //==========================================================================
@@ -183,6 +204,43 @@ public:
      * @note Use only from message thread
      */
     zenith::PluginEditorWindowManager& getPluginEditorWindowManager() noexcept;
+
+    //==========================================================================
+    // Unified Render Path
+    //==========================================================================
+
+    /**
+     * @brief Unified render function used by both realtime and offline paths
+     *
+     * This is the single source of truth for audio rendering:
+     * - Realtime callback calls this with live transport position
+     * - Export calls this with offline transport position
+     *
+     * @param outputBuffer Pre-allocated stereo buffer to fill
+     * @param transportPosition Current playback position in samples
+     * @param numSamples Number of samples to render
+     * @note Can run on AUDIO THREAD - must be real-time safe!
+     * @note Uses pre-allocated track buffers to avoid allocation
+     */
+    void renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                     juce::int64 transportPosition,
+                     int numSamples);
+
+    /**
+     * @brief Export project to WAV file using unified render path
+     *
+     * This uses the SAME renderBlock() function as realtime playback,
+     * ensuring bit-identical output.
+     *
+     * @param outputFilePath Path to output WAV file
+     * @param durationSeconds Duration to export (0 = auto-detect from project)
+     * @param sampleRate Sample rate for export (0 = use current engine rate)
+     * @return true if export succeeded
+     * @note Runs on MESSAGE THREAD
+     */
+    bool exportProjectToWav(const juce::String& outputFilePath,
+                           double durationSeconds = 10.0,
+                           double sampleRate = 0.0);
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -274,12 +332,23 @@ private:
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
 
+    // Audio processing buffer (for track mixing)
+    juce::AudioBuffer<float> mixBuffer;
+
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
 
     // Phase 3: Plugin hosting
     std::unique_ptr<zenith::PluginHost> pluginHost_;
     std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
+
+    // Phase 13: Automation synchronizer
+    ProjectState* projectState_ = nullptr;
+    std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Unified render path: Pre-allocated track buffers (avoid allocation in audio thread)
+    std::vector<juce::AudioBuffer<float>> trackBuffers_;
+    juce::AudioBuffer<float> masterBuffer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

@@ -16,6 +16,8 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ArrangerView.h"
+#include "ClipSynchronizer.h"
 
 // Forward declarations
 class ArrangerComponent;
@@ -31,12 +33,16 @@ namespace zenith {
  * @class MainComponent
  * @brief Main content component that holds the UI
  *
- * This component is the main content area and will contain:
- * - Transport bar
- * - Browser panel
- * - Arrangement view (Phase 4)
- * - Mixer panel
+ * This component is the main content area and contains:
+ * - Transport bar (play/stop/record)
+ * - ArrangerView (timeline with clips and automation)
+ * - Status displays (CPU, device info, track count)
  * - Wingman AI panel (Phase 5+)
+ *
+ * Integration points:
+ * - Hosts ArrangerView which displays ProjectState clips
+ * - Opens PianoRollEditor when user double-clicks MIDI clip
+ * - Provides "Show Automation" buttons per track
  */
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -74,13 +80,24 @@ private:
     void refreshTrackCountLabel();
 
     //==========================================================================
+    // Integration: Piano roll opener
+    //==========================================================================
+
+    /**
+     * @brief Open piano roll editor for a MIDI clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     */
+    void openPianoRoll(const juce::String& trackId, const juce::String& clipId);
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
     Engine& engine;
     ProjectState& projectState;
 
-    // UI Components (will add more in Phase 1)
+    // UI Components
     juce::Label statusLabel;
     juce::Label cpuLabel;
     juce::TextButton playButton;
@@ -99,6 +116,13 @@ private:
 
     // Phase 5: Wingman command console
     std::unique_ptr<WingmanPanel> wingmanPanel;
+
+    // Integration: ArrangerView
+    std::unique_ptr<ArrangerView> arrangerView;
+
+    // Integration: Show automation buttons (per track)
+    std::map<juce::String, std::unique_ptr<juce::TextButton>> automationButtons;
+    juce::Component automationButtonsContainer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -153,6 +177,9 @@ private:
 
     // Phase 7: AI bridge client
     std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
+
+    // Integration: Clip synchronizer
+    std::unique_ptr<ClipSynchronizer> clipSynchronizer;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;

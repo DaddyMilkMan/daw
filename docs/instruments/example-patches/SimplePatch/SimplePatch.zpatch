@@ -1,0 +1,26 @@
+{
+  "name": "SimplePatch",
+  "version": "1.0",
+  "description": "Example patch for Zenith Sampler - replace with your own samples",
+  "parameters": {
+    "attack": 0.01,
+    "decay": 0.1,
+    "sustain": 0.7,
+    "release": 0.3,
+    "filterCutoff": 1.0,
+    "filterResonance": 0.0,
+    "tune": 0.0,
+    "gain": 0.8
+  },
+  "samples": [
+    {
+      "file": "example_c3.wav",
+      "rootNote": 60,
+      "lowNote": 0,
+      "highNote": 127,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    }
+  ]
+}
