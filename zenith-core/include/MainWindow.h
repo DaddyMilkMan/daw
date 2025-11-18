@@ -24,6 +24,10 @@ class ArrangerComponent;
 class WingmanPanel;
 
 namespace zenith {
+    class InstrumentBrowserPanel;
+}
+
+namespace zenith {
     class CommandAPI;
     class AIBridgeClient;
 }
@@ -119,6 +123,9 @@ private:
 
     // Phase 5: Wingman command console
     std::unique_ptr<WingmanPanel> wingmanPanel;
+
+    // Instrument & Preset Browser
+    std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
 
     // Integration: ArrangerView
     std::unique_ptr<ArrangerView> arrangerView;
