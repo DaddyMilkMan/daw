@@ -99,6 +99,18 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/Clip.cpp
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
+
+    # Built-in instruments infrastructure
+    include/instruments/InstrumentRegistry.h
+    src/instruments/InstrumentRegistry.cpp
+
+    # Built-in instruments - ZenithPolySynth
+    include/instruments/ZenithPolySynth.h
+    src/instruments/ZenithPolySynth.cpp
+    include/instruments/ZenithPolySynthVoice.h
+    src/instruments/ZenithPolySynthVoice.cpp
+    include/instruments/ZenithPolySynthEditor.h
+    src/instruments/ZenithPolySynthEditor.cpp
 )
 
 # ============================================================================
@@ -121,6 +133,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_audio_utils
+
+    # DSP (for built-in instruments)
+    juce::juce_dsp
 
     # Core functionality
     juce::juce_core

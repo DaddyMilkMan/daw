@@ -30,11 +30,44 @@ Track::Track(const juce::String& name, Type type)
 Track::~Track()
 {
     // Ensure we're not in the middle of audio processing
-    const juce::ScopedLock sl1(pluginLock);
-    const juce::ScopedLock sl2(clipsLock);
+    const juce::ScopedLock sl1(instrumentLock);
+    const juce::ScopedLock sl2(pluginLock);
+    const juce::ScopedLock sl3(clipsLock);
+
+    // Release instrument
+    if (instrument != nullptr)
+    {
+        instrument->releaseResources();
+        instrument.reset();
+    }
 
     // Clips are automatically destroyed via std::unique_ptr
     clips.clear();
+}
+
+//==============================================================================
+// Built-in instrument support
+
+void Track::setInstrument(std::unique_ptr<juce::AudioProcessor> newInstrument)
+{
+    const juce::ScopedLock sl(instrumentLock);
+
+    // Release old instrument if it exists
+    if (instrument != nullptr)
+    {
+        instrument->releaseResources();
+    }
+
+    // Set new instrument
+    instrument = std::move(newInstrument);
+
+    // Prepare new instrument if we're already initialized
+    if (instrument != nullptr && currentSampleRate > 0.0)
+    {
+        instrument->prepareToPlay(currentSampleRate, currentBlockSize);
+    }
+
+    sendChangeMessage();
 }
 
 //==============================================================================
@@ -45,6 +78,15 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
     // Prepare plugin buffer
     pluginBuffer.setSize(2, samplesPerBlockExpected);
+
+    // Prepare built-in instrument
+    {
+        const juce::ScopedLock sl(instrumentLock);
+        if (instrument != nullptr)
+        {
+            instrument->prepareToPlay(sampleRate, samplesPerBlockExpected);
+        }
+    }
 
     // TODO(Phase 2: plugin hosting) - Prepare all plugins
 
@@ -63,6 +105,15 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate)
 
 void Track::releaseResources()
 {
+    // Release built-in instrument
+    {
+        const juce::ScopedLock sl(instrumentLock);
+        if (instrument != nullptr)
+        {
+            instrument->releaseResources();
+        }
+    }
+
     // TODO(Phase 2: plugin hosting) - Release all plugins
 
     // Release all clips
@@ -90,7 +141,10 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         return;
     }
 
-    // Get audio from all clips and mix them together
+    // Clear MIDI buffer for this block
+    midiBuffer.clear();
+
+    // Get audio/MIDI from all clips and mix them together
     {
         const juce::ScopedLock sl(clipsLock);
 
@@ -98,25 +152,33 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         {
             if (clip != nullptr && clip->isActive())
             {
-                // Create a temporary buffer for this clip
-                juce::AudioBuffer<float> clipBuffer(
-                    bufferToFill.buffer->getNumChannels(),
-                    bufferToFill.numSamples);
-                clipBuffer.clear();
-
-                juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
-                clip->getNextAudioBlock(clipInfo);
-
-                // Mix clip into main buffer
-                for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                // For audio clips, create a temporary buffer and mix
+                if (clip->getClipType() == Clip::Type::Audio)
                 {
-                    bufferToFill.buffer->addFrom(
-                        ch,
-                        bufferToFill.startSample,
-                        clipBuffer,
-                        ch,
-                        0,
+                    juce::AudioBuffer<float> clipBuffer(
+                        bufferToFill.buffer->getNumChannels(),
                         bufferToFill.numSamples);
+                    clipBuffer.clear();
+
+                    juce::AudioSourceChannelInfo clipInfo(&clipBuffer, 0, bufferToFill.numSamples);
+                    clip->getNextAudioBlock(clipInfo);
+
+                    // Mix clip into main buffer
+                    for (int ch = 0; ch < bufferToFill.buffer->getNumChannels(); ++ch)
+                    {
+                        bufferToFill.buffer->addFrom(
+                            ch,
+                            bufferToFill.startSample,
+                            clipBuffer,
+                            ch,
+                            0,
+                            bufferToFill.numSamples);
+                    }
+                }
+                // For MIDI clips, collect MIDI events
+                else if (clip->getClipType() == Clip::Type::MIDI)
+                {
+                    clip->getMidiEvents(midiBuffer, bufferToFill.numSamples);
                 }
             }
         }
@@ -128,6 +190,10 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill)
         bufferToFill.buffer->getNumChannels(),
         bufferToFill.startSample,
         bufferToFill.numSamples);
+
+    // Process through built-in instrument (if present)
+    // This converts MIDI → audio
+    processInstrument(localBuffer, midiBuffer, bufferToFill.numSamples);
 
     // Process through plugin chain
     processPluginChain(localBuffer, bufferToFill.numSamples);
@@ -350,6 +416,20 @@ void Track::loadState(const juce::ValueTree& state)
 }
 
 //==============================================================================
+void Track::processInstrument(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples)
+{
+    const juce::ScopedLock sl(instrumentLock);
+
+    if (instrument == nullptr)
+        return;
+
+    // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
+    // Process the instrument with MIDI input
+    instrument->processBlock(buffer, midi);
+
+    (void)numSamples; // Unused but kept for API consistency
+}
+
 void Track::processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples)
 {
     (void)buffer;

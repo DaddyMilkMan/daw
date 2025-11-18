@@ -167,6 +167,46 @@ void Track::Clip::setMidiSequence(const juce::MidiMessageSequence& sequence)
     }
 }
 
+void Track::Clip::getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples)
+{
+    if (clipType != Type::MIDI)
+        return;
+
+    if (!isPlaying_.load() || midiSequence.getNumEvents() == 0)
+        return;
+
+    const juce::ScopedLock sl(midiLock);
+
+    // Calculate time range for this block
+    const int64_t currentPos = playbackPosition_.load();
+    const int64_t clipOffset = clipOffsetInSamples.load();
+
+    // Position within the clip's MIDI sequence (accounting for offset)
+    const int64_t posInClip = currentPos - clipOffset;
+
+    if (posInClip < 0)
+        return; // Clip hasn't started yet
+
+    const double startTime = static_cast<double>(posInClip) / currentSampleRate;
+    const double endTime = static_cast<double>(posInClip + numSamples) / currentSampleRate;
+
+    // Find and add all MIDI events in this time range
+    for (int i = 0; i < midiSequence.getNumEvents(); ++i)
+    {
+        auto* event = midiSequence.getEventPointer(i);
+        const double eventTime = event->message.getTimeStamp();
+
+        if (eventTime >= startTime && eventTime < endTime)
+        {
+            // Calculate sample offset within this block
+            const int sampleOffset = static_cast<int>((eventTime - startTime) * currentSampleRate);
+
+            // Add the MIDI message to the buffer
+            midiBuffer.addEvent(event->message, sampleOffset);
+        }
+    }
+}
+
 //==============================================================================
 void Track::Clip::setFadeIn(int64_t fadeInSamples)
 {

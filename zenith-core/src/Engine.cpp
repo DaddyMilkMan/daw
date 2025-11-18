@@ -12,6 +12,10 @@
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
 
+// Built-in instruments
+#include "instruments/InstrumentRegistry.h"
+#include "instruments/ZenithPolySynth.h"
+
 //==============================================================================
 Engine::Engine()
 {
@@ -49,9 +53,32 @@ void Engine::setProjectState(ProjectState* state)
     }
 }
 
+void Engine::registerBuiltInInstruments()
+{
+    DBG("Engine: Registering built-in instruments...");
+
+    auto& registry = zenith::InstrumentRegistry::getInstance();
+
+    // Register ZenithPolySynth
+    zenith::InstrumentDefinition polySynthDef(
+        "zenith_poly_synth",
+        "Zenith Poly Synth",
+        "Synth",
+        "poly",
+        "Polyphonic subtractive synthesizer with dual oscillators, filter, and ADSR envelope",
+        &zenith::instruments::createZenithPolySynth
+    );
+    registry.registerInstrument(polySynthDef);
+
+    DBG("Engine: Registered " + juce::String(registry.getAllDefinitions().size()) + " built-in instrument(s)");
+}
+
 bool Engine::initialize()
 {
     DBG("Engine: Initializing...");
+
+    // Register built-in instruments
+    registerBuiltInInstruments();
 
     // Initialize audio device manager
     auto error = deviceManager.initialiseWithDefaultDevices(2, 2);  // 2 in, 2 out

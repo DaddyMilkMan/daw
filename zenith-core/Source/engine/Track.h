@@ -87,6 +87,12 @@ public:
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
+    // Built-in instrument support (for Instrument tracks)
+    void setInstrument(std::unique_ptr<juce::AudioProcessor> newInstrument);
+    juce::AudioProcessor* getInstrument() const { return instrument.get(); }
+    bool hasInstrument() const { return instrument != nullptr; }
+
+    //==============================================================================
     // Plugin chain management - TODO(Phase 2: plugin hosting)
     // Stubbed for now; will implement in Phase 2 with VST3/AU support
     void addPlugin(void* plugin) { (void)plugin; /* stub */ }
@@ -144,6 +150,12 @@ private:
     std::atomic<float> peakLevel{0.0f};
 
     //==============================================================================
+    // Built-in instrument (for Instrument tracks)
+    std::unique_ptr<juce::AudioProcessor> instrument;
+    juce::CriticalSection instrumentLock;
+    juce::MidiBuffer midiBuffer; // For collecting MIDI to send to instrument
+
+    //==============================================================================
     // Plugin chain - TODO(Phase 2: plugin hosting)
     // Placeholder for future VST3/AU hosting
     juce::CriticalSection pluginLock;
@@ -156,6 +168,7 @@ private:
 
     //==============================================================================
     // Helper methods
+    void processInstrument(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples);
     void processPluginChain(juce::AudioBuffer<float>& buffer, int numSamples);
     void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples);
     void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples);
