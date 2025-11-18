@@ -133,12 +133,17 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/WingmanPanel.h
     Source/ui/WingmanPanel.cpp
 
+    # Instrument Browser UI
+    Source/ui/InstrumentBrowserPanel.h
+    Source/ui/InstrumentBrowserPanel.cpp
+
     # Phase 7: Wingman AI Integration
     Source/network/AIBridgeClient.h
     Source/network/AIBridgeClient.cpp
 
     # Instrument system
     Source/instruments/InstrumentMetadata.h
+    Source/instruments/InstrumentPreset.h
     Source/instruments/Instrument.h
     Source/instruments/Instrument.cpp
     Source/instruments/InstrumentRegistry.h
