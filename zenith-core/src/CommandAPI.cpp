@@ -1238,5 +1238,12 @@ juce::var CommandAPI::cmd_setInstrumentParameters(const juce::var& params)
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
     result->setProperty("updated", updatedParams);
+=======
+    juce::ignoreUnused(params);
+
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", false);
+    result->setProperty("message", "Export functionality not yet implemented");
+>>>>>>> origin/claude/extend-commandapi-plugins-01MUiKgkxAPaGpAwRCeNTsge
     return juce::var(result.get());
 }

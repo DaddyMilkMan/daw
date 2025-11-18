@@ -30,6 +30,8 @@
 #include <JuceHeader.h>
 #include "ProjectState.h"
 #include "Engine.h"
+#include <functional>
+#include <map>
 #include <memory>
 
 //==============================================================================
@@ -274,6 +276,7 @@ private:
     //==========================================================================
     // Plugin commands (stubbed - plugins not yet implemented)
     //==========================================================================
+
 
     /**
      * @brief Scan for plugins
