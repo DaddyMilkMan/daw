@@ -364,6 +364,56 @@ juce_generate_juce_header(InstrumentValidationTests)
 add_test(NAME InstrumentValidationTests COMMAND InstrumentValidationTests)
 
 # ============================================================================
+# Track + Instrument Integration Tests
+# ============================================================================
+
+juce_add_console_app(TrackInstrumentIntegrationTests
+    PRODUCT_NAME "TrackInstrumentIntegrationTests"
+)
+
+target_sources(TrackInstrumentIntegrationTests PRIVATE
+    tests/TrackInstrumentIntegrationTests.cpp
+
+    # Track system
+    Source/engine/Track.cpp
+    Source/engine/Clip.cpp
+
+    # Instrument system
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/ZenithSampler.cpp
+    Source/instruments/RegisterBuiltInInstruments.cpp
+)
+
+target_include_directories(TrackInstrumentIntegrationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
+)
+
+target_link_libraries(TrackInstrumentIntegrationTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_dsp
+)
+
+target_compile_definitions(TrackInstrumentIntegrationTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(TrackInstrumentIntegrationTests)
+
+add_test(NAME TrackInstrumentIntegrationTests COMMAND TrackInstrumentIntegrationTests)
+
+# ============================================================================
 # Compiler Warnings
 # ============================================================================
 

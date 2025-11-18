@@ -200,7 +200,7 @@ bool testAudioRendering(Instrument* instrument,
                         const juce::String& instrumentId,
                         const std::string& presetName)
 {
-    auto* processor = instrument->getProcessor();
+    auto* processor = instrument->getAudioProcessor();
     if (processor == nullptr)
     {
         reportFailure(instrumentId.toStdString(), presetName, "Audio Rendering",
@@ -351,7 +351,7 @@ bool testInstrumentPresets(const juce::String& instrumentId,
         {
             for (const auto& [paramId, value] : preset.parameters)
             {
-                instrument->setParameterValue(paramId, value);
+                instrument->setParameter(juce::String(paramId), value);
             }
         }
         catch (const std::exception& e)
