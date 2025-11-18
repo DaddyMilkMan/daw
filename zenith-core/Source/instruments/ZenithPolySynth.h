@@ -54,6 +54,17 @@ enum class FilterType
 };
 
 /**
+    Quality preset for CPU optimization
+*/
+enum class QualityPreset
+{
+    Low = 0,    // Max 3 unison voices, optimized for CPU
+    Medium,     // Max 5 unison voices, balanced
+    High,       // Max 7 unison voices, full quality
+    NumPresets
+};
+
+/**
     LFO target parameters
 */
 enum class LFOTarget
@@ -187,8 +198,15 @@ public:
 
     void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
     void setMonoMode(bool mono) { monoMode_ = mono; }
+    void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
 
     void setSampleRate(double sampleRate);
+
+    /**
+     * @brief Get current output amplitude for voice stealing
+     * @return Current amplitude level (0-1)
+     */
+    float getCurrentAmplitude() const { return currentAmplitude_; }
 
 private:
     //==========================================================================
@@ -254,6 +272,8 @@ private:
     float glideTime_ = 0.0f;
     bool monoMode_ = false;
     float velocity_ = 1.0f;
+    QualityPreset qualityPreset_ = QualityPreset::High;
+    float currentAmplitude_ = 0.0f; // For voice stealing prioritization
 
     //==========================================================================
     // Helper methods
@@ -344,6 +364,10 @@ public:
         MonoMode,
         MasterGain,
 
+        // CPU Optimization
+        MaxVoices,
+        QualitySetting,
+
         NumParameters
     };
 
@@ -375,13 +399,35 @@ public:
     void getStateInformation(juce::MemoryBlock& destData) override;
     void setStateInformation(const void* data, int sizeInBytes) override;
 
+protected:
+    //==========================================================================
+    // Custom voice stealing - override to steal quietest voice
+    //==========================================================================
+    juce::SynthesiserVoice* findFreeVoice(juce::SynthesiserSound* soundToPlay,
+                                           int midiChannel,
+                                           int midiNoteNumber,
+                                           bool stealIfNoneAvailable) override;
+
 private:
     //==========================================================================
     // Update voices with current parameters (called from audio thread)
     //==========================================================================
     void updateVoiceParameters();
+    void updateVoiceCount();
 
     juce::SmoothedValue<float> masterGainSmoothed_;
+    int currentMaxVoices_ = 16;
+
+#if JUCE_DEBUG
+    //==========================================================================
+    // Debug profiling helpers
+    //==========================================================================
+    int maxActiveVoices_ = 0;
+    double maxBlockProcessingTime_ = 0.0;
+    int blockCount_ = 0;
+
+    void logCPUStats();
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthProcessor)
 };
