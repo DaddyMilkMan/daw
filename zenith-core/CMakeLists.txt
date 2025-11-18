@@ -100,12 +100,22 @@ target_sources(ZenithDAW PRIVATE
     Source/engine/MixerChannel.h
     Source/engine/MixerChannel.cpp
 
-    # Built-in instruments
+    # Instrument system
+    Source/instruments/InstrumentMetadata.h
+    Source/instruments/Instrument.h
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.h
+    Source/instruments/InstrumentRegistry.cpp
     Source/instruments/ContentPaths.h
+    Source/instruments/ZenithPolySynth.h
+    Source/instruments/ZenithPolySynth.cpp
     Source/instruments/ZenithSampler.h
     Source/instruments/ZenithSampler.cpp
     Source/instruments/ZenithSamplerEditor.h
     Source/instruments/ZenithSamplerEditor.cpp
+    Source/instruments/RegisterBuiltInInstruments.h
+    Source/instruments/RegisterBuiltInInstruments.cpp
+    include/InstrumentCommandHelpers.h
 )
 
 # ============================================================================
@@ -129,6 +139,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_audio_utils
+
+    # DSP (for built-in instruments)
+    juce::juce_dsp
 
     # Core functionality
     juce::juce_core

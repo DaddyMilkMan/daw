@@ -1,3 +1,16 @@
+/*
+  ==============================================================================
+
+    ZenithSampler.h
+    Created: 2025-11-18
+    Author:  Zenith DAW
+
+    Comprehensive sampler instrument with multi-sample playback,
+    velocity layers, envelope, filter, and async patch loading.
+
+  ==============================================================================
+*/
+
 #pragma once
 
 #include <juce_audio_processors/juce_audio_processors.h>
