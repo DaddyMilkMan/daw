@@ -1,5 +1,6 @@
 wingman/
 vexel-daw/node_modules/
+ai-bridge-server/node_modules/
 vexel-daw/dist/
 vexel-daw/dist-electron/
 VexelDAW-Native/build/
