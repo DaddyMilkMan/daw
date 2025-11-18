@@ -167,6 +167,7 @@ struct InstrumentMetadata
     juce::String name;            // Human-readable name
     juce::String category;        // Category (e.g., "Synth", "Sampler")
     juce::String description;     // Brief description
+    juce::StringArray tags;       // Search tags (e.g., "drums", "808", "vintage")
 
     std::vector<ParameterMetadata> parameters;
     std::vector<MacroMetadata> macros;
@@ -203,6 +204,15 @@ struct InstrumentMetadata
         obj->setProperty("name", name);
         obj->setProperty("category", category);
         obj->setProperty("description", description);
+
+        // Add tags array
+        if (!tags.isEmpty())
+        {
+            juce::Array<juce::var> tagsArray;
+            for (const auto& tag : tags)
+                tagsArray.add(tag);
+            obj->setProperty("tags", tagsArray);
+        }
 
         juce::Array<juce::var> paramsArray;
         for (const auto& param : parameters)
