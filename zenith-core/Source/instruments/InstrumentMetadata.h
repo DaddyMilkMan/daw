@@ -47,6 +47,15 @@ struct ParameterMetadata
     // For Choice parameters
     juce::StringArray choices;
 
+    // Extended metadata for AI preset design
+    juce::String group;           // Functional group (e.g., "Oscillator", "Filter", "Envelope", "LFO", "FX")
+    juce::String role;            // Semantic role (e.g., "tone", "mod", "time", "level", "stereo", "distortion")
+    float recommendedStep = 0.01f;// Recommended step size for UI/automation
+
+    // Safe range for randomization (optional, defaults to full range)
+    float minSafeRange = -1.0f;   // -1 means use minValue
+    float maxSafeRange = -1.0f;   // -1 means use maxValue
+
     /**
      * @brief Convert to JSON var for CommandAPI
      */
@@ -68,6 +77,22 @@ struct ParameterMetadata
             for (const auto& choice : choices)
                 choicesArray.add(choice);
             obj->setProperty("choices", choicesArray);
+        }
+
+        // Extended metadata for AI preset design
+        if (group.isNotEmpty())
+            obj->setProperty("group", group);
+        if (role.isNotEmpty())
+            obj->setProperty("role", role);
+        obj->setProperty("recommendedStep", recommendedStep);
+
+        // Safe range for randomization (only include if specified)
+        if (minSafeRange >= 0.0f || maxSafeRange >= 0.0f)
+        {
+            auto* safeRange = new juce::DynamicObject();
+            safeRange->setProperty("min", minSafeRange >= 0.0f ? minSafeRange : minValue);
+            safeRange->setProperty("max", maxSafeRange >= 0.0f ? maxSafeRange : maxValue);
+            obj->setProperty("safeRangeForRandomisation", juce::var(safeRange));
         }
 
         return juce::var(obj);

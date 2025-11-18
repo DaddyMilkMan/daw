@@ -16,6 +16,7 @@
 #include "../ProjectState.h"
 #include "engine/Track.h"
 #include "engine/Clip.h"
+#include "../instruments/InstrumentRegistry.h"
 
 namespace zenith {
 
@@ -83,6 +84,10 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         return redo(params);
     else if (command == "history")
         return history(params);
+
+    // Instrument commands
+    else if (command == "describe_instrument")
+        return describeInstrument(params);
 
     else
         return createErrorResponse("Unknown command: " + command);
@@ -670,6 +675,30 @@ juce::var CommandAPI::history(const juce::var& params)
     DBG("CommandAPI: History query");
 
     return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::describeInstrument(const juce::var& params)
+{
+    // Validate params
+    if (!params.hasProperty("instrumentId"))
+        return createErrorResponse("Missing 'instrumentId' parameter");
+
+    juce::String instrumentId = params["instrumentId"].toString();
+
+    // Get InstrumentRegistry
+    auto& registry = InstrumentRegistry::getInstance();
+
+    // Check if instrument exists
+    const auto* metadata = registry.getMetadata(instrumentId);
+    if (metadata == nullptr)
+        return createErrorResponse("Instrument not found: " + instrumentId);
+
+    // Convert metadata to JSON
+    juce::var result = metadata->toVar();
+
+    DBG("CommandAPI: Described instrument: " + instrumentId);
+
+    return createSuccessResponse(result);
 }
 
 //==============================================================================

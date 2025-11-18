@@ -169,6 +169,9 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 2.0f;
         param.choices = juce::StringArray{"Sine", "Saw", "Square"};
+        param.group = "Oscillator";
+        param.role = "tone";
+        param.recommendedStep = 1.0f;  // Discrete steps for choices
         metadata.parameters.push_back(param);
     }
     {
@@ -181,6 +184,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "%";
+        param.group = "Filter";
+        param.role = "tone";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.2f;  // Avoid extreme low cutoff for randomization
+        param.maxSafeRange = 0.95f; // Avoid extreme high cutoff for randomization
         metadata.parameters.push_back(param);
     }
     {
@@ -193,6 +201,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "%";
+        param.group = "Filter";
+        param.role = "tone";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.1f;  // Avoid zero resonance
+        param.maxSafeRange = 0.8f;  // Avoid excessive resonance
         metadata.parameters.push_back(param);
     }
     {
@@ -205,6 +218,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "s";
+        param.group = "Envelope";
+        param.role = "time";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.0f;   // Fast attack is safe
+        param.maxSafeRange = 0.7f;   // Avoid extremely slow attacks
         metadata.parameters.push_back(param);
     }
     {
@@ -217,6 +235,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "s";
+        param.group = "Envelope";
+        param.role = "time";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.05f;  // Very short decay can sound clicky
+        param.maxSafeRange = 0.8f;
         metadata.parameters.push_back(param);
     }
     {
@@ -229,6 +252,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "%";
+        param.group = "Envelope";
+        param.role = "level";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.3f;   // Avoid too quiet sustain
+        param.maxSafeRange = 1.0f;
         metadata.parameters.push_back(param);
     }
     {
@@ -241,6 +269,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
         param.minValue = 0.0f;
         param.maxValue = 1.0f;
         param.units = "s";
+        param.group = "Envelope";
+        param.role = "time";
+        param.recommendedStep = 0.01f;
+        param.minSafeRange = 0.05f;  // Very short release can sound clicky
+        param.maxSafeRange = 0.9f;
         metadata.parameters.push_back(param);
     }
 
