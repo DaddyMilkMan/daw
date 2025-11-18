@@ -160,14 +160,22 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZenithPolySynth::createParam
         "master_volume", "Volume",
         juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
 
-    // Macro parameters
-    for (size_t i = 0; i < 4; ++i)
-    {
-        auto macroId = "macro_" + std::to_string(i);
-        params.push_back(std::make_unique<juce::AudioParameterFloat>(
-            macroId, "Macro " + juce::String(i + 1),
-            juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
-    }
+    // Macro parameters - use actual macro IDs from metadata
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_warmth", "Warmth",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_space", "Space",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_bite", "Bite",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        "macro_movement", "Movement",
+        juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
 
     return { params.begin(), params.end() };
 }
@@ -195,10 +203,11 @@ void ZenithPolySynth::processBlock(juce::AudioBuffer<float>& buffer, juce::MidiB
 {
     juce::ScopedNoDenormals noDenormals;
 
-    // Update macro values from parameters
-    for (size_t i = 0; i < 4; ++i)
+    // Update macro values from parameters - use actual macro IDs from metadata
+    const auto& macros = metadata_.macros;
+    for (size_t i = 0; i < macros.size(); ++i)
     {
-        auto macroId = "macro_" + std::to_string(i);
+        const auto& macroId = macros[i].id;
         float macroValue = *parameters_.getRawParameterValue(macroId);
         macroEngine_.setMacroValue(i, macroValue);
     }

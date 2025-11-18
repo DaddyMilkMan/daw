@@ -69,10 +69,9 @@ void ZenithPolySynthEditor::setupMacroKnobs()
         label->attachToComponent(knob.get(), false);
         addAndMakeVisible(*label);
 
-        // Create attachment
-        auto macroParamId = "macro_" + std::to_string(i);
+        // Create attachment using actual macro ID from metadata
         attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            processor_.getParameters(), macroParamId, *knob));
+            processor_.getParameters(), macroInfo.id, *knob));
 
         // Store knob and label
         macroKnobs_.push_back(std::move(knob));
