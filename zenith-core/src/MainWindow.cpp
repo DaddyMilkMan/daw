@@ -4,13 +4,14 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../include/PianoRollEditor.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng)
-    : engine(eng)
+MainComponent::MainComponent(Engine& eng, ProjectState& ps)
+    : engine(eng), projectState(ps)
 {
     // Set size
     setSize(1400, 800);
@@ -55,6 +56,36 @@ MainComponent::MainComponent(Engine& eng)
     recordButton.setEnabled(false);  // Phase 1
     addAndMakeVisible(recordButton);
 
+    // Integration: Create ArrangerView
+    arrangerView = std::make_unique<ArrangerView>(projectState);
+    arrangerView->setOpenPianoRollCallback([this](juce::String trackId, juce::String clipId) {
+        openPianoRoll(trackId, clipId);
+    });
+    addAndMakeVisible(arrangerView.get());
+
+    // Integration: Create automation buttons container
+    addAndMakeVisible(automationButtonsContainer);
+
+    // Create automation toggle buttons for demo tracks
+    // (In real implementation, would create dynamically as tracks are added)
+    auto& state = projectState.getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+    if (tracksNode.isValid())
+    {
+        for (auto track : tracksNode)
+        {
+            juce::String trackId = track[ProjectState::PROP_ID].toString();
+            auto button = std::make_unique<juce::TextButton>("A");
+            button->setTooltip("Toggle automation for " + track[ProjectState::PROP_NAME].toString());
+            button->onClick = [this, trackId]() {
+                bool visible = arrangerView->isTrackAutomationVisible(trackId);
+                arrangerView->setTrackAutomationVisible(trackId, !visible);
+            };
+            automationButtonsContainer.addAndMakeVisible(button.get());
+            automationButtons[trackId] = std::move(button);
+        }
+    }
+
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
@@ -68,47 +99,6 @@ void MainComponent::paint(juce::Graphics& g)
 {
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 0: Foundation - Basic audio engine operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "\n"
-        "Coming in Phase 1:\n"
-        "• Multi-track recording\n"
-        "• VST3 plugin hosting\n"
-        "• MIDI support\n"
-        "• Timeline view";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
 }
 
 void MainComponent::resized()
@@ -140,6 +130,26 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Integration: ArrangerView takes remaining space
+    auto arrangerBounds = bounds;
+
+    // Automation buttons (left side, 30 pixels wide)
+    auto automationButtonArea = arrangerBounds.removeFromLeft(30);
+    automationButtonsContainer.setBounds(automationButtonArea);
+
+    // Layout automation buttons vertically
+    int buttonY = 0;
+    for (auto& [trackId, button] : automationButtons)
+    {
+        button->setBounds(0, buttonY, 30, 30);
+        buttonY += 60;  // Match track height from ArrangerView
+    }
+
+    if (arrangerView)
+    {
+        arrangerView->setBounds(arrangerBounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -173,6 +183,19 @@ void MainComponent::refreshTrackCountLabel()
 }
 
 //==============================================================================
+// Integration: Piano roll opener
+//==============================================================================
+
+void MainComponent::openPianoRoll(const juce::String& trackId, const juce::String& clipId)
+{
+    DBG("MainComponent: Opening piano roll for " + trackId + "/" + clipId);
+
+    // Create new piano roll editor window
+    // Note: Window deletes itself when closed (see PianoRollEditor::closeButtonPressed)
+    new PianoRollEditor(projectState, trackId, clipId);
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -191,8 +214,16 @@ MainWindow::MainWindow(const juce::String& name)
     // Phase 13: Connect project state to engine for automation
     engine->setProjectState(projectState.get());
 
+    // Integration: Create clip synchronizer
+    clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState, *engine);
+
+    // Add some demo tracks for testing UI integration
+    projectState->addTrack("MIDI Track 1", "midi");
+    projectState->addTrack("Audio Track 1", "audio");
+    projectState->addTrack("MIDI Track 2", "midi");
+
     // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine);
+    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
 
     // Set up window
     setUsingNativeTitleBar(true);
@@ -209,6 +240,10 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
+
+    // Integration: Start clip synchronizer
+    // (In real implementation, would start when recording is enabled)
+    // clipSynchronizer->start(30);  // 30 Hz update rate
 
     DBG("MainWindow created and initialized");
 }

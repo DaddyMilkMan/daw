@@ -92,6 +92,14 @@ target_sources(ZenithDAW PRIVATE
     src/TrackAutomationSynchronizer.cpp
     src/CommandAPI.cpp
 
+    # Integration: UI components and synchronizers
+    src/ClipSynchronizer.cpp
+    src/ArrangerView.cpp
+    src/PianoRollEditor.cpp
+    include/ClipSynchronizer.h
+    include/ArrangerView.h
+    include/PianoRollEditor.h
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp
@@ -106,10 +114,13 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/Instrument.cpp
     Source/instruments/InstrumentRegistry.h
     Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ContentPaths.h
     Source/instruments/ZenithPolySynth.h
     Source/instruments/ZenithPolySynth.cpp
     Source/instruments/ZenithSampler.h
     Source/instruments/ZenithSampler.cpp
+    Source/instruments/ZenithSamplerEditor.h
+    Source/instruments/ZenithSamplerEditor.cpp
     Source/instruments/RegisterBuiltInInstruments.h
     Source/instruments/RegisterBuiltInInstruments.cpp
     Source/instruments/ZenithPolySynthEditor.h
@@ -140,6 +151,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_formats
     juce::juce_audio_processors
     juce::juce_audio_utils
+
+    # DSP (for built-in instruments)
+    juce::juce_dsp
 
     # Core functionality
     juce::juce_core
@@ -236,6 +250,41 @@ target_compile_definitions(ProjectStateTests PRIVATE
 )
 
 add_test(NAME ProjectStateTests COMMAND ProjectStateTests)
+
+# ============================================================================
+# Recording & Automation Tests
+# ============================================================================
+
+juce_add_console_app(RecordingAutomationTests
+    PRODUCT_NAME "RecordingAutomationTests"
+)
+
+target_sources(RecordingAutomationTests PRIVATE
+    tests/RecordingAutomationTests.cpp
+    src/ProjectState.cpp
+)
+
+target_include_directories(RecordingAutomationTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+)
+
+target_link_libraries(RecordingAutomationTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+)
+
+target_compile_definitions(RecordingAutomationTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(RecordingAutomationTests)
+
+add_test(NAME RecordingAutomationTests COMMAND RecordingAutomationTests)
 
 # ============================================================================
 # Compiler Warnings

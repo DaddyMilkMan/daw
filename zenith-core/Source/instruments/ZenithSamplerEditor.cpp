@@ -1,209 +1,210 @@
-/**
- * @file ZenithSamplerEditor.cpp
- * @brief Implementation of ZenithSamplerEditor
- */
-
-#include "ZenithSamplerEditor.h"
+#include "instruments/ZenithSamplerEditor.h"
+#include "instruments/ZenithSampler.h"
 
 namespace zenith {
 
 //==============================================================================
-ZenithSamplerEditor::ZenithSamplerEditor(ZenithSampler& p)
-    : processor_(p)
+ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& proc)
+    : juce::AudioProcessorEditor(&proc),
+      sampler(proc)
 {
-    // Set editor size
-    setSize(600, 500);
+    setSize(700, 450);
 
-    // Setup load sample button
-    addAndMakeVisible(loadSampleButton_);
-    loadSampleButton_.setButtonText("Load Sample...");
-    loadSampleButton_.onClick = [this] { loadSampleFile(); };
+    // Preset group
+    addAndMakeVisible(presetGroup);
+    presetGroup.setText("Patch");
+    presetGroup.setTextLabelPosition(juce::Justification::centredTop);
 
-    // Setup regular parameter controls
-    setupSlider(sampleStartSlider_, sampleStartLabel_, "Start", "sample_start");
-    setupSlider(sampleEndSlider_, sampleEndLabel_, "End", "sample_end");
-    setupSlider(filterCutoffSlider_, filterCutoffLabel_, "Cutoff", "filter_cutoff");
-    setupSlider(filterResonanceSlider_, filterResonanceLabel_, "Resonance", "filter_resonance");
-    setupSlider(attackSlider_, attackLabel_, "Attack", "env_attack");
-    setupSlider(decaySlider_, decayLabel_, "Decay", "env_decay");
-    setupSlider(sustainSlider_, sustainLabel_, "Sustain", "env_sustain");
-    setupSlider(releaseSlider_, releaseLabel_, "Release", "env_release");
-    setupSlider(volumeSlider_, volumeLabel_, "Volume", "master_volume");
+    addAndMakeVisible(presetLabel);
+    presetLabel.setText("Preset:", juce::dontSendNotification);
 
-    // Setup macro knobs
-    setupMacroKnobs();
+    addAndMakeVisible(presetComboBox);
+    presetComboBox.onChange = [this] { onPatchSelected(); };
+
+    addAndMakeVisible(statusLabel);
+    statusLabel.setText("Ready", juce::dontSendNotification);
+    statusLabel.setJustificationType(juce::Justification::centred);
+
+    // Envelope group
+    addAndMakeVisible(envelopeGroup);
+    envelopeGroup.setText("Envelope");
+    envelopeGroup.setTextLabelPosition(juce::Justification::centredTop);
+
+    auto setupSlider = [this](juce::Slider& slider, juce::Label& label, const juce::String& text)
+    {
+        addAndMakeVisible(slider);
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+
+        addAndMakeVisible(label);
+        label.setText(text, juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        label.attachToComponent(&slider, false);
+    };
+
+    setupSlider(attackSlider, attackLabel, "Attack");
+    setupSlider(decaySlider, decayLabel, "Decay");
+    setupSlider(sustainSlider, sustainLabel, "Sustain");
+    setupSlider(releaseSlider, releaseLabel, "Release");
+
+    // Filter group
+    addAndMakeVisible(filterGroup);
+    filterGroup.setText("Filter");
+    filterGroup.setTextLabelPosition(juce::Justification::centredTop);
+
+    setupSlider(filterCutoffSlider, filterCutoffLabel, "Cutoff");
+    setupSlider(filterResonanceSlider, filterResonanceLabel, "Resonance");
+
+    // Global group
+    addAndMakeVisible(globalGroup);
+    globalGroup.setText("Global");
+    globalGroup.setTextLabelPosition(juce::Justification::centredTop);
+
+    setupSlider(tuneSlider, tuneLabel, "Tune");
+    setupSlider(gainSlider, gainLabel, "Gain");
+    setupSlider(characterSlider, characterLabel, "Character");
+
+    // Create parameter attachments
+    auto& apvts = sampler.getAPVTS();
+    attackAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "attack", attackSlider);
+    decayAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "decay", decaySlider);
+    sustainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "sustain", sustainSlider);
+    releaseAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "release", releaseSlider);
+    filterCutoffAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "filterCutoff", filterCutoffSlider);
+    filterResonanceAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "filterResonance", filterResonanceSlider);
+    tuneAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "tune", tuneSlider);
+    gainAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "gain", gainSlider);
+    characterAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts, "character", characterSlider);
+
+    // Update patch list
+    updatePatchList();
+
+    // Start timer for status updates
+    startTimer(100);
 }
 
-//==============================================================================
-void ZenithSamplerEditor::setupSlider(juce::Slider& slider, juce::Label& label,
-                                     const juce::String& labelText, const juce::String& paramId)
+ZenithSamplerEditor::~ZenithSamplerEditor()
 {
-    addAndMakeVisible(slider);
-    slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-
-    addAndMakeVisible(label);
-    label.setText(labelText, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.attachToComponent(&slider, false);
-
-    // Create attachment
-    if (auto* apvts = processor_.getParameterState())
-    {
-        attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-            *apvts, paramId, slider));
-    }
-}
-
-//==============================================================================
-void ZenithSamplerEditor::setupMacroKnobs()
-{
-    const auto& metadata = processor_.getMetadata();
-
-    for (size_t i = 0; i < metadata.macros.size(); ++i)
-    {
-        const auto& macroInfo = metadata.macros[i];
-
-        // Create knob
-        auto knob = std::make_unique<juce::Slider>();
-        knob->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        knob->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 80, 20);
-        addAndMakeVisible(*knob);
-
-        // Create label
-        auto label = std::make_unique<juce::Label>();
-        label->setText(macroInfo.name, juce::dontSendNotification);
-        label->setJustificationType(juce::Justification::centred);
-        label->attachToComponent(knob.get(), false);
-        addAndMakeVisible(*label);
-
-        // Create attachment using actual macro ID from metadata
-        if (auto* apvts = processor_.getParameterState())
-        {
-            attachments_.push_back(std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-                *apvts, macroInfo.id, *knob));
-        }
-
-        // Store knob and label
-        macroKnobs_.push_back(std::move(knob));
-        macroLabels_.push_back(std::move(label));
-    }
-}
-
-//==============================================================================
-void ZenithSamplerEditor::loadSampleFile()
-{
-    juce::FileChooser chooser("Select a sample file...",
-                             juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-                             "*.wav;*.aif;*.aiff;*.mp3;*.ogg;*.flac");
-
-    if (chooser.browseForFileToOpen())
-    {
-        auto file = chooser.getResult();
-        // TODO: Implement loadSample method in ZenithSampler
-        // processor_.loadSample(file);
-    }
-}
-
-//==============================================================================
-bool ZenithSamplerEditor::isInterestedInFileDrag(const juce::StringArray& files)
-{
-    for (const auto& file : files)
-    {
-        if (file.endsWithIgnoreCase(".wav") ||
-            file.endsWithIgnoreCase(".aif") ||
-            file.endsWithIgnoreCase(".aiff") ||
-            file.endsWithIgnoreCase(".mp3") ||
-            file.endsWithIgnoreCase(".ogg") ||
-            file.endsWithIgnoreCase(".flac"))
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
-void ZenithSamplerEditor::filesDropped(const juce::StringArray& files, int, int)
-{
-    if (files.size() > 0)
-    {
-        juce::File file(files[0]);
-        // TODO: Implement loadSample method in ZenithSampler
-        // processor_.loadSample(file);
-    }
+    stopTimer();
 }
 
 //==============================================================================
 void ZenithSamplerEditor::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff1a1a1a));
-
-    // Title
+    g.fillAll(juce::Colour(0xff1e1e1e));
+    
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(24.0f, juce::Font::bold));
+    g.setFont(juce::Font(20.0f, juce::Font::bold));
     g.drawText("Zenith Sampler", 0, 10, getWidth(), 30, juce::Justification::centred);
+}
 
-    // Section labels
-    g.setFont(juce::Font(14.0f, juce::Font::bold));
-    g.setColour(juce::Colour(0xffaaaaaa));
-    g.drawText("SAMPLE", 20, 90, 160, 20, juce::Justification::centredLeft);
-    g.drawText("FILTER", 200, 90, 160, 20, juce::Justification::centredLeft);
-    g.drawText("ENVELOPE", 20, 230, 200, 20, juce::Justification::centredLeft);
+void ZenithSamplerEditor::resized()
+{
+    auto bounds = getLocalBounds().reduced(10);
+    bounds.removeFromTop(40); // Title space
 
-    // Macro section
-    g.setColour(juce::Colour(0xff4a9eff));
-    g.setFont(juce::Font(16.0f, juce::Font::bold));
-    g.drawText("SMART MACROS", 0, 360, getWidth(), 25, juce::Justification::centred);
+    // Preset section (left)
+    auto presetBounds = bounds.removeFromLeft(150);
+    presetGroup.setBounds(presetBounds);
+    
+    auto presetContent = presetBounds.reduced(10);
+    presetContent.removeFromTop(20); // Group label
+    presetLabel.setBounds(presetContent.removeFromTop(25));
+    presetComboBox.setBounds(presetContent.removeFromTop(30));
+    presetContent.removeFromTop(10);
+    statusLabel.setBounds(presetContent.removeFromTop(25));
 
-    // Separator line
-    g.setColour(juce::Colour(0xff333333));
-    g.fillRect(20, 355, getWidth() - 40, 2);
+    bounds.removeFromLeft(10); // Spacing
 
-    // Drag and drop hint
-    g.setColour(juce::Colour(0xff666666));
-    g.setFont(juce::Font(12.0f));
-    g.drawText("Drag & drop audio files here", 0, 50, getWidth(), 20, juce::Justification::centred);
+    // Envelope section (middle-left)
+    auto envBounds = bounds.removeFromLeft(240);
+    envelopeGroup.setBounds(envBounds);
+    
+    auto envContent = envBounds.reduced(10);
+    envContent.removeFromTop(20); // Group label
+    
+    auto envTop = envContent.removeFromTop(100);
+    attackSlider.setBounds(envTop.removeFromLeft(60));
+    envTop.removeFromLeft(10);
+    decaySlider.setBounds(envTop.removeFromLeft(60));
+    envTop.removeFromLeft(10);
+    sustainSlider.setBounds(envTop.removeFromLeft(60));
+    
+    envContent.removeFromTop(10);
+    releaseSlider.setBounds(envContent.removeFromTop(100).removeFromLeft(60));
+
+    bounds.removeFromLeft(10); // Spacing
+
+    // Filter section (middle-right)
+    auto filterBounds = bounds.removeFromLeft(130);
+    filterGroup.setBounds(filterBounds);
+    
+    auto filterContent = filterBounds.reduced(10);
+    filterContent.removeFromTop(20); // Group label
+    
+    filterCutoffSlider.setBounds(filterContent.removeFromTop(100).removeFromLeft(60));
+    filterContent.removeFromTop(10);
+    filterResonanceSlider.setBounds(filterContent.removeFromTop(100).removeFromLeft(60));
+
+    bounds.removeFromLeft(10); // Spacing
+
+    // Global section (right)
+    globalGroup.setBounds(bounds);
+    
+    auto globalContent = bounds.reduced(10);
+    globalContent.removeFromTop(20); // Group label
+    
+    tuneSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
+    globalContent.removeFromTop(10);
+    gainSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
+    globalContent.removeFromTop(10);
+    characterSlider.setBounds(globalContent.removeFromTop(100).removeFromLeft(60));
 }
 
 //==============================================================================
-void ZenithSamplerEditor::resized()
+void ZenithSamplerEditor::timerCallback()
 {
-    const int knobSize = 80;
-    const int labelHeight = 20;
-    const int spacing = 20;
-
-    // Load sample button
-    loadSampleButton_.setBounds(20, 50, 120, 30);
-
-    // Sample section
-    sampleStartSlider_.setBounds(20, 130, knobSize, knobSize);
-    sampleEndSlider_.setBounds(120, 130, knobSize, knobSize);
-
-    // Filter section
-    filterCutoffSlider_.setBounds(220, 130, knobSize, knobSize);
-    filterResonanceSlider_.setBounds(320, 130, knobSize, knobSize);
-
-    // Envelope section
-    attackSlider_.setBounds(20, 270, knobSize, knobSize);
-    decaySlider_.setBounds(120, 270, knobSize, knobSize);
-    sustainSlider_.setBounds(220, 270, knobSize, knobSize);
-    releaseSlider_.setBounds(320, 270, knobSize, knobSize);
-
-    // Volume
-    volumeSlider_.setBounds(500, 130, knobSize, knobSize);
-
-    // Macro knobs at bottom - centered and evenly spaced
-    const int macroKnobSize = 90;
-    const int macroSpacing = 30;
-    const int totalMacroWidth = (macroKnobSize * 4) + (macroSpacing * 3);
-    const int macroStartX = (getWidth() - totalMacroWidth) / 2;
-    const int macroY = 390;
-
-    for (size_t i = 0; i < macroKnobs_.size(); ++i)
+    if (sampler.isLoading())
     {
-        int x = macroStartX + i * (macroKnobSize + macroSpacing);
-        macroKnobs_[i]->setBounds(x, macroY, macroKnobSize, macroKnobSize);
+        statusLabel.setText("Loading...", juce::dontSendNotification);
+    }
+    else
+    {
+        auto patchName = sampler.getCurrentPatchName();
+        if (patchName.isEmpty())
+            statusLabel.setText("No patch loaded", juce::dontSendNotification);
+        else
+            statusLabel.setText("Loaded: " + patchName, juce::dontSendNotification);
+    }
+}
+
+void ZenithSamplerEditor::updatePatchList()
+{
+    presetComboBox.clear();
+    
+    auto patches = sampler.getAvailablePatches();
+    for (int i = 0; i < patches.size(); ++i)
+    {
+        presetComboBox.addItem(patches[i], i + 1);
+    }
+
+    // Select current patch
+    auto currentPatch = sampler.getCurrentPatchName();
+    if (currentPatch.isNotEmpty())
+    {
+        int index = patches.indexOf(currentPatch);
+        if (index >= 0)
+            presetComboBox.setSelectedId(index + 1, juce::dontSendNotification);
+    }
+}
+
+void ZenithSamplerEditor::onPatchSelected()
+{
+    int selectedId = presetComboBox.getSelectedId();
+    if (selectedId > 0)
+    {
+        juce::String patchName = presetComboBox.getItemText(selectedId - 1);
+        sampler.loadPatchByName(patchName);
     }
 }
 

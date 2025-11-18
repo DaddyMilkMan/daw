@@ -99,6 +99,15 @@ public:
     void setMidiSequence(const juce::MidiMessageSequence& sequence);
     const juce::MidiMessageSequence* getMidiSequence() const { return &midiSequence; }
 
+    /**
+     * Extract MIDI events for the current playback position into a MIDI buffer.
+     * Used for routing MIDI to instrument plugins.
+     *
+     * @param midiBuffer The MIDI buffer to add events to
+     * @param numSamples The number of samples in this block
+     */
+    void getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples);
+
     //==============================================================================
     // Fades (in samples)
     void setFadeIn(int64_t fadeInSamples);

@@ -1,77 +1,71 @@
-/**
- * @file ZenithSamplerEditor.h
- * @brief Custom editor for ZenithSampler with macro knobs
- */
-
 #pragma once
 
-#include <JuceHeader.h>
-#include "ZenithSampler.h"
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
-//==============================================================================
+// Forward declaration
+class ZenithSamplerProcessor;
+
 /**
- * @brief Custom editor for ZenithSampler
+ * @brief Custom editor for ZenithSamplerProcessor
  *
- * Features:
- * - Sample load button
- * - Parameter controls grouped by category
- * - 4 macro knobs with labels at the bottom
+ * Layout:
+ *   [Left]   Preset selector
+ *   [Middle] Envelope + Filter controls
+ *   [Right]  Global controls (tune, gain, character)
  */
-class ZenithSamplerEditor : public juce::Component,
-                           public juce::FileDragAndDropTarget
+class ZenithSamplerEditor : public juce::AudioProcessorEditor,
+                            private juce::Timer
 {
 public:
-    explicit ZenithSamplerEditor(ZenithSampler& processor);
-    ~ZenithSamplerEditor() override = default;
+    ZenithSamplerEditor(ZenithSamplerProcessor& processor);
+    ~ZenithSamplerEditor() override;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-    // FileDragAndDropTarget
-    bool isInterestedInFileDrag(const juce::StringArray& files) override;
-    void filesDropped(const juce::StringArray& files, int x, int y) override;
-
 private:
-    ZenithSampler& processor_;
+    void timerCallback() override;
+    void updatePatchList();
+    void onPatchSelected();
 
-    // Load sample button
-    juce::TextButton loadSampleButton_;
+    ZenithSamplerProcessor& sampler;
 
-    // Parameter sliders
-    juce::Slider sampleStartSlider_;
-    juce::Slider sampleEndSlider_;
-    juce::Slider filterCutoffSlider_;
-    juce::Slider filterResonanceSlider_;
-    juce::Slider attackSlider_;
-    juce::Slider decaySlider_;
-    juce::Slider sustainSlider_;
-    juce::Slider releaseSlider_;
-    juce::Slider volumeSlider_;
+    // UI sections
+    juce::GroupComponent presetGroup;
+    juce::GroupComponent envelopeGroup;
+    juce::GroupComponent filterGroup;
+    juce::GroupComponent globalGroup;
 
-    // Labels
-    juce::Label sampleStartLabel_;
-    juce::Label sampleEndLabel_;
-    juce::Label filterCutoffLabel_;
-    juce::Label filterResonanceLabel_;
-    juce::Label attackLabel_;
-    juce::Label decayLabel_;
-    juce::Label sustainLabel_;
-    juce::Label releaseLabel_;
-    juce::Label volumeLabel_;
+    // Preset selector
+    juce::Label presetLabel;
+    juce::ComboBox presetComboBox;
+    juce::Label statusLabel;
 
-    // Macro knobs
-    std::vector<std::unique_ptr<juce::Slider>> macroKnobs_;
-    std::vector<std::unique_ptr<juce::Label>> macroLabels_;
+    // Envelope controls
+    juce::Label attackLabel, decayLabel, sustainLabel, releaseLabel;
+    juce::Slider attackSlider, decaySlider, sustainSlider, releaseSlider;
 
-    // Attachments
-    std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> attachments_;
+    // Filter controls
+    juce::Label filterCutoffLabel, filterResonanceLabel;
+    juce::Slider filterCutoffSlider, filterResonanceSlider;
 
-    void setupSlider(juce::Slider& slider, juce::Label& label,
-                    const juce::String& labelText, const juce::String& paramId);
-    void setupMacroKnobs();
-    void loadSampleFile();
+    // Global controls
+    juce::Label tuneLabel, gainLabel, characterLabel;
+    juce::Slider tuneSlider, gainSlider, characterSlider;
+
+    // Parameter attachments
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> decayAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> sustainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> releaseAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterCutoffAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> filterResonanceAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> tuneAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> gainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> characterAttachment;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerEditor)
 };

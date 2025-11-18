@@ -16,25 +16,30 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "ArrangerView.h"
+#include "ClipSynchronizer.h"
 
 //==============================================================================
 /**
  * @class MainComponent
  * @brief Main content component that holds the UI
  *
- * This component is the main content area and will contain:
- * - Transport bar
- * - Browser panel
- * - Arrangement view
- * - Mixer panel
- * - Wingman AI panel (Phase 2)
+ * This component is the main content area and contains:
+ * - Transport bar (play/stop/record)
+ * - ArrangerView (timeline with clips and automation)
+ * - Status displays (CPU, device info, track count)
+ *
+ * Integration points:
+ * - Hosts ArrangerView which displays ProjectState clips
+ * - Opens PianoRollEditor when user double-clicks MIDI clip
+ * - Provides "Show Automation" buttons per track
  */
 class MainComponent : public juce::Component,
                       private juce::Timer
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine);
+    MainComponent(Engine& engine, ProjectState& projectState);
     ~MainComponent() override;
 
     //==========================================================================
@@ -58,12 +63,24 @@ private:
     void refreshTrackCountLabel();
 
     //==========================================================================
+    // Integration: Piano roll opener
+    //==========================================================================
+
+    /**
+     * @brief Open piano roll editor for a MIDI clip
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     */
+    void openPianoRoll(const juce::String& trackId, const juce::String& clipId);
+
+    //==========================================================================
     // Member variables
     //==========================================================================
 
     Engine& engine;
+    ProjectState& projectState;
 
-    // UI Components (will add more in Phase 1)
+    // UI Components
     juce::Label statusLabel;
     juce::Label cpuLabel;
     juce::TextButton playButton;
@@ -76,6 +93,13 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Integration: ArrangerView
+    std::unique_ptr<ArrangerView> arrangerView;
+
+    // Integration: Show automation buttons (per track)
+    std::map<juce::String, std::unique_ptr<juce::TextButton>> automationButtons;
+    juce::Component automationButtonsContainer;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -124,6 +148,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Integration: Clip synchronizer
+    std::unique_ptr<ClipSynchronizer> clipSynchronizer;
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
