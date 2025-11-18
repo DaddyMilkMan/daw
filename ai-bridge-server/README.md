@@ -1,4 +1,4 @@
-# Vexel AI Bridge Server
+# Zenith AI Bridge Server
 
 Example WebSocket server implementation for communication between Vexel DAW and external AI services.
 
@@ -256,7 +256,7 @@ udpServer.bind(8766);
 ```
 ┌──────────────┐         WebSocket/UDP        ┌──────────────┐
 │              │◄──────────────────────────────►│              │
-│  Vexel DAW   │                               │  AI Bridge   │
+│  Zenith DAW   │                               │  AI Bridge   │
 │  (Client)    │  Request/Response Protocol    │   Server     │
 │              │◄──────────────────────────────►│              │
 └──────────────┘                               └──────┬───────┘
