@@ -64,9 +64,9 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     recordButton.setEnabled(false);  // Future: recording UI
     addAndMakeVisible(recordButton);
 
-    // Phase 4: Create arranger component
-    arrangerComponent = std::make_unique<ArrangerComponent>(engine);
-    addAndMakeVisible(arrangerComponent.get());
+    // Phase 4: Arranger (now using ArrangerView from master for better automation integration)
+    // arrangerComponent = std::make_unique<ArrangerComponent>(engine);  // Disabled - using ArrangerView instead
+    // addAndMakeVisible(arrangerComponent.get());
 
     // Phase 7: Create Wingman AI console panel
     wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
@@ -195,13 +195,7 @@ void MainComponent::resized()
         wingmanPanel->setBounds(wingmanBounds);
     }
 
-    // Phase 4: Layout arranger in remaining space
-    if (arrangerComponent != nullptr)
-    {
-        arrangerComponent->setBounds(bounds);
-    }
-
-    // Integration: ArrangerView takes remaining space
+    // Integration: ArrangerView takes remaining space (combines Phase 4 arranger + automation)
     auto arrangerBounds = bounds;
 
     // Automation buttons (left side, 30 pixels wide)
