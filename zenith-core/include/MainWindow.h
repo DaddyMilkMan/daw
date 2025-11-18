@@ -138,16 +138,40 @@ public:
 
     void closeButtonPressed() override;
 
+private:
     //==========================================================================
-    // Menu bar
+    // Menu bar model
     //==========================================================================
 
     /**
-     * @brief Creates the menu bar
+     * @class ZenithMenuBar
+     * @brief Menu bar model for the application
      */
-    std::unique_ptr<juce::MenuBarModel> createMenuBar();
+    class ZenithMenuBar : public juce::MenuBarModel
+    {
+    public:
+        explicit ZenithMenuBar(MainWindow& owner);
 
-private:
+        juce::StringArray getMenuBarNames() override;
+        juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
+        void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+
+    private:
+        MainWindow& owner;
+
+        enum MenuItems
+        {
+            aboutZenith = 1,
+            quit = 2
+        };
+    };
+
+    //==========================================================================
+    // Menu handlers
+    //==========================================================================
+
+    void showAboutDialog();
+
     //==========================================================================
     // Member variables
     //==========================================================================
@@ -163,6 +187,9 @@ private:
 
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
+
+    // Menu bar
+    std::unique_ptr<ZenithMenuBar> menuBar;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
