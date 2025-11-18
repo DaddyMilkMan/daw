@@ -173,6 +173,8 @@ public:
                        juce::AudioFormatReader& source,
                        const juce::BigInteger& midiNotes,
                        int midiNoteForNormalPitch,
+                       int lowVelocity,
+                       int highVelocity,
                        double attackTimeSecs,
                        double releaseTimeSecs,
                        double maxSampleLengthSeconds);
@@ -185,6 +187,12 @@ public:
     juce::String getName() const { return soundName; }
     juce::AudioBuffer<float>* getAudioData() { return data.get(); }
     double getSampleRate() const { return sourceSampleRate; }
+    int getRootNote() const { return rootNote; }
+
+    bool appliesToVelocity(int midiVelocity) const
+    {
+        return midiVelocity >= lowVelocity && midiVelocity <= highVelocity;
+    }
 
 private:
     juce::String soundName;
@@ -192,6 +200,7 @@ private:
     double sourceSampleRate;
     juce::BigInteger midiNotes;
     int rootNote;
+    int lowVelocity, highVelocity;
     double attackTime, releaseTime;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerSound)

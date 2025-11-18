@@ -1,14 +1,16 @@
 #pragma once
 
-#include "ZenithSampler.h"
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 namespace instruments {
 
+// Forward declaration
+class ZenithSamplerProcessor;
+
 /**
- * @brief Custom editor for ZenithSampler
+ * @brief Custom editor for ZenithSamplerProcessor
  *
  * Layout:
  *   [Left]   Preset selector
@@ -19,7 +21,7 @@ class ZenithSamplerEditor : public juce::AudioProcessorEditor,
                             private juce::Timer
 {
 public:
-    ZenithSamplerEditor(ZenithSampler& processor);
+    ZenithSamplerEditor(ZenithSamplerProcessor& processor);
     ~ZenithSamplerEditor() override;
 
     void paint(juce::Graphics& g) override;
@@ -30,7 +32,7 @@ private:
     void updatePatchList();
     void onPatchSelected();
 
-    ZenithSampler& sampler;
+    ZenithSamplerProcessor& sampler;
 
     // UI sections
     juce::GroupComponent presetGroup;

@@ -1,4 +1,5 @@
 #include "instruments/ZenithSamplerEditor.h"
+#include "instruments/ZenithSampler.h"
 
 namespace zenith {
 namespace instruments {
@@ -25,7 +26,7 @@ namespace
 // ZenithSamplerEditor
 //==============================================================================
 
-ZenithSamplerEditor::ZenithSamplerEditor(ZenithSampler& processor)
+ZenithSamplerEditor::ZenithSamplerEditor(ZenithSamplerProcessor& processor)
     : AudioProcessorEditor(&processor), sampler(processor)
 {
     setSize(EDITOR_WIDTH, EDITOR_HEIGHT);

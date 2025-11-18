@@ -390,6 +390,8 @@ void ZenithSampler::applyPatchData(std::unique_ptr<PatchData> patchData)
                 *reader,
                 midiNotes,
                 sampleInfo.rootNote,
+                sampleInfo.lowVelocity,
+                sampleInfo.highVelocity,
                 patchData->attack,
                 patchData->release,
                 10.0)); // Max 10 seconds
@@ -429,12 +431,16 @@ ZenithSamplerSound::ZenithSamplerSound(const juce::String& name,
                                        juce::AudioFormatReader& source,
                                        const juce::BigInteger& notes,
                                        int midiNoteForNormalPitch,
+                                       int lowVel,
+                                       int highVel,
                                        double attackTimeSecs,
                                        double releaseTimeSecs,
                                        double maxSampleLengthSeconds)
     : soundName(name),
       midiNotes(notes),
       rootNote(midiNoteForNormalPitch),
+      lowVelocity(lowVel),
+      highVelocity(highVel),
       attackTime(attackTimeSecs),
       releaseTime(releaseTimeSecs)
 {
@@ -501,13 +507,21 @@ void ZenithSamplerVoice::startNote(int midiNoteNumber, float vel,
 {
     if (auto* sound = dynamic_cast<ZenithSamplerSound*>(s))
     {
+        // Check velocity layer
+        int midiVelocity = static_cast<int>(vel * 127.0f);
+        if (!sound->appliesToVelocity(midiVelocity))
+        {
+            clearCurrentNote();
+            return;
+        }
+
         velocity = vel;
 
-        // Calculate pitch ratio
+        // Calculate pitch ratio using the sample's actual root note
         auto cyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
         auto cyclesPerSample = cyclesPerSecond / sound->getSampleRate();
 
-        auto rootCyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(60); // Assume C4 root
+        auto rootCyclesPerSecond = juce::MidiMessage::getMidiNoteInHertz(sound->getRootNote());
         auto rootCyclesPerSample = rootCyclesPerSecond / sound->getSampleRate();
 
         pitchRatio = cyclesPerSample / rootCyclesPerSample;
@@ -605,6 +619,9 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
                 // Apply velocity
                 sample *= velocity;
+
+                // Apply filter
+                sample = filter.processSample(ch, sample);
 
                 // Apply gain
                 sample *= gainValue;
