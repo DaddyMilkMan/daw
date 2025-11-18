@@ -108,10 +108,8 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/InstrumentRegistry.cpp
     Source/instruments/RegisterBuiltInInstruments.h
     Source/instruments/RegisterBuiltInInstruments.cpp
-    include/InstrumentCommandHelpers.h
 
     # Enhanced features (macro/preset system + UI editors)
-    Source/instruments/InstrumentPreset.h
     Source/instruments/ZenithPolySynthEditor.h
     Source/instruments/ZenithPolySynthEditor.cpp
     Source/instruments/ZenithSamplerEditor.h
