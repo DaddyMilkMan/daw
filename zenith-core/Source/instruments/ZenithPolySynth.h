@@ -16,6 +16,57 @@
     - Glide (portamento)
     - RT-safe: all buffers preallocated, no locks in audio thread
 
+    //==========================================================================
+    // AI-FRIENDLY MODULATION MATRIX + MACROS
+    //==========================================================================
+
+    This synthesizer provides TWO ways for AI to create expressive sounds:
+
+    1. MACRO CONTROLS (Recommended for AI)
+       - 8 high-level semantic controls with human-readable names
+       - Each macro affects multiple related parameters automatically
+       - Easy to reason about musically
+
+       Available Macros:
+       - Brightness:  Filter cutoff and resonance (brighter/darker tone)
+       - Thickness:   Unison voices and oscillator layering (thin/thick sound)
+       - Movement:    LFO modulation amounts (static/dynamic)
+       - Attack:      Envelope attack times (slow fade/instant punch)
+       - Release:     Envelope release times (short/long tail)
+       - Warmth:      Filter character and saturation (cold/warm analog tone)
+       - Detune:      Oscillator detuning (tight/chorus-like width)
+       - Depth:       Modulation envelope intensity (subtle/pronounced evolution)
+
+       Usage from CommandAPI:
+         setMacro("macro_brightness", 0.8);  // Increase brightness to 80%
+         setMacro("macro_thickness", 0.6);   // Add some thickness
+         setMacro("macro_movement", 0.4);    // Add subtle movement
+
+    2. MODULATION MATRIX (Advanced)
+       - Flexible routing of sources to destinations
+       - 8 modulation slots for custom routing
+
+       Sources:  LFO1, LFO2, Env1, Env2, Velocity, ModWheel, Aftertouch
+       Destinations: FilterCutoff, FilterResonance, Osc1/2/3Pitch,
+                     WavetablePos, Pan, Volume, Osc1/2/3Mix
+
+       Usage Examples:
+       - Route LFO1 to filter cutoff for wobble bass:
+         setModulationSlot(0, LFO1, FilterCutoff, 0.5);
+
+       - Route velocity to filter cutoff for dynamic response:
+         setModulationSlot(1, Velocity, FilterCutoff, 0.7);
+
+       - Route Env2 to oscillator pitch for plucky sounds:
+         setModulationSlot(2, Env2, Osc1Pitch, 0.3);
+
+    AI DESIGN RECOMMENDATIONS:
+    - For quick sound design, use macros (easier to reason about)
+    - For advanced modulation, use the modulation matrix
+    - Combine both: use macros for basic tone, matrix for special effects
+    - Macros are centered at 0.5 (neutral), 0.0 (minimum), 1.0 (maximum)
+    - Modulation matrix amounts are bipolar: -1.0 to +1.0
+
   ==============================================================================
 */
 
@@ -54,7 +105,7 @@ enum class FilterType
 };
 
 /**
-    LFO target parameters
+    LFO target parameters (legacy - now part of modulation matrix)
 */
 enum class LFOTarget
 {
@@ -64,6 +115,108 @@ enum class LFOTarget
     Osc1Mix,
     Osc2Mix,
     NumTargets
+};
+
+//==============================================================================
+/**
+    Modulation Matrix System
+
+    AI-FRIENDLY MODULATION SYSTEM:
+    This modulation matrix allows flexible routing of modulation sources to
+    multiple destinations. AI agents can use this to create expressive sounds
+    by routing LFOs, envelopes, velocity, and MIDI controllers to various
+    synthesis parameters.
+
+    Usage from AI:
+    - Route LFO1 to filter cutoff for wobble bass effects
+    - Route Velocity to filter cutoff for dynamic response
+    - Route ModWheel to vibrato depth for expressive performance
+    - Route Env2 to wavetable position for evolving timbres
+*/
+
+/**
+    Modulation sources available in the matrix
+*/
+enum class ModulationSource
+{
+    None = 0,       // No modulation
+    LFO1,           // Low-frequency oscillator 1 (sine wave, -1 to +1)
+    LFO2,           // Low-frequency oscillator 2 (sine wave, -1 to +1)
+    Env1,           // Amplitude envelope (0 to 1, ADSR)
+    Env2,           // Modulation envelope (0 to 1, ADSR)
+    Velocity,       // Note-on velocity (0 to 1)
+    ModWheel,       // MIDI mod wheel CC#1 (0 to 1)
+    Aftertouch,     // MIDI channel pressure (0 to 1)
+    NumSources
+};
+
+/**
+    Modulation destinations available in the matrix
+*/
+enum class ModulationDestination
+{
+    None = 0,           // No destination
+    FilterCutoff,       // Filter cutoff frequency
+    FilterResonance,    // Filter resonance/Q
+    Osc1Pitch,          // Oscillator 1 pitch (semitones)
+    Osc2Pitch,          // Oscillator 2 pitch (semitones)
+    Osc3Pitch,          // Oscillator 3 pitch (semitones)
+    WavetablePos,       // Wavetable/phase position (0 to 1)
+    Pan,                // Stereo panning (-1 left to +1 right)
+    Volume,             // Output volume/gain
+    Osc1Mix,            // Oscillator 1 mix level
+    Osc2Mix,            // Oscillator 2 mix level
+    Osc3Mix,            // Oscillator 3 mix level
+    NumDestinations
+};
+
+/**
+    Single modulation routing slot
+
+    Each slot defines: source -> destination with an amount
+    Example: LFO1 -> FilterCutoff with amount 0.5 (50% modulation depth)
+*/
+struct ModulationSlot
+{
+    ModulationSource source = ModulationSource::None;
+    ModulationDestination destination = ModulationDestination::None;
+    float amount = 0.0f;  // Modulation depth/amount (-1 to +1)
+
+    bool isActive() const {
+        return source != ModulationSource::None &&
+               destination != ModulationDestination::None;
+    }
+};
+
+/**
+    RT-safe modulation state per voice
+
+    Stores computed modulation values for each destination.
+    Updated once per audio buffer to avoid redundant calculations.
+*/
+struct ModulationState
+{
+    // Pre-computed modulation amounts for each destination
+    std::array<float, static_cast<size_t>(ModulationDestination::NumDestinations)> values;
+
+    ModulationState() { reset(); }
+
+    void reset() { values.fill(0.0f); }
+
+    float get(ModulationDestination dest) const
+    {
+        return values[static_cast<size_t>(dest)];
+    }
+
+    void set(ModulationDestination dest, float value)
+    {
+        values[static_cast<size_t>(dest)] = value;
+    }
+
+    void add(ModulationDestination dest, float value)
+    {
+        values[static_cast<size_t>(dest)] += value;
+    }
 };
 
 //==============================================================================
@@ -153,7 +306,8 @@ public:
     void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition) override;
     void stopNote(float velocity, bool allowTailOff) override;
     void pitchWheelMoved(int newPitchWheelValue) override;
-    void controllerMoved(int controllerNumber, int newControllerValue) override {}
+    void controllerMoved(int controllerNumber, int newControllerValue) override;
+    void channelPressureChanged(int newChannelPressureValue) override;
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
     //==========================================================================
@@ -189,6 +343,26 @@ public:
     void setMonoMode(bool mono) { monoMode_ = mono; }
 
     void setSampleRate(double sampleRate);
+
+    //==========================================================================
+    // Modulation Matrix Control
+    //==========================================================================
+
+    /**
+     * @brief Set a modulation slot
+     * @param slotIndex Slot index (0-7)
+     * @param source Modulation source
+     * @param destination Modulation destination
+     * @param amount Modulation amount (-1 to +1)
+     */
+    void setModulationSlot(int slotIndex, ModulationSource source,
+                          ModulationDestination destination, float amount);
+
+    /**
+     * @brief Set MIDI controller values (called from controllerMoved)
+     */
+    void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
+    void setAftertouch(float value) { aftertouch_ = juce::jlimit(0.0f, 1.0f, value); }
 
 private:
     //==========================================================================
@@ -256,10 +430,47 @@ private:
     float velocity_ = 1.0f;
 
     //==========================================================================
+    // Modulation Matrix
+    //==========================================================================
+
+    // Fixed-size modulation slots (pre-allocated for RT-safety)
+    static constexpr int kNumModSlots = 8;
+    std::array<ModulationSlot, kNumModSlots> modulationSlots_;
+
+    // Computed modulation state (updated per buffer)
+    ModulationState modulationState_;
+
+    // MIDI controller values
+    float modWheel_ = 0.0f;      // CC#1
+    float aftertouch_ = 0.0f;    // Channel pressure
+    float pan_ = 0.0f;           // Stereo pan (-1 to +1)
+    float wavetablePos_ = 0.0f;  // Wavetable position (0 to 1)
+
+    //==========================================================================
     // Helper methods
     //==========================================================================
     void updateFrequency();
     float applyLFOs();
+
+    /**
+     * @brief Compute modulation matrix values for current sample
+     *
+     * This method:
+     * 1. Reads all modulation sources (LFOs, envelopes, velocity, MIDI)
+     * 2. Computes contributions to each destination
+     * 3. Stores results in modulationState_ for RT-safe access
+     *
+     * Called once per audio buffer before processing samples.
+     * RT-safe: no allocations, uses pre-allocated arrays.
+     */
+    void computeModulation();
+
+    /**
+     * @brief Get modulation source value
+     * @param source Source to read
+     * @return Value in appropriate range for source type
+     */
+    float getModulationSourceValue(ModulationSource source) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthVoice)
 };
