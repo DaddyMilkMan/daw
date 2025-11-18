@@ -73,6 +73,10 @@ CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)
     registerCommand("save_preset", [this](const juce::var& p) { return cmd_savePreset(p); });
     registerCommand("get_instrument_parameters", [this](const juce::var& p) { return cmd_getInstrumentParameters(p); });
     registerCommand("set_instrument_parameters", [this](const juce::var& p) { return cmd_setInstrumentParameters(p); });
+    registerCommand("set_instrument_on_track", [this](const juce::var& p) { return cmd_setInstrumentOnTrack(p); });
+    registerCommand("set_instrument_param", [this](const juce::var& p) { return cmd_setInstrumentParam(p); });
+    registerCommand("get_instrument_param", [this](const juce::var& p) { return cmd_getInstrumentParam(p); });
+    registerCommand("randomize_instrument_params", [this](const juce::var& p) { return cmd_randomizeInstrumentParams(p); });
 }
 
 CommandAPI::~CommandAPI()
@@ -1238,12 +1242,240 @@ juce::var CommandAPI::cmd_setInstrumentParameters(const juce::var& params)
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
     result->setProperty("updated", updatedParams);
-=======
-    juce::ignoreUnused(params);
+    return juce::var(result.get());
+}
 
+//==============================================================================
+// New Instrument Commands
+//==============================================================================
+
+juce::var CommandAPI::cmd_setInstrumentOnTrack(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "instrumentId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String instrumentId = obj->getProperty("instrumentId").toString();
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+
+    // Create instrument using registry
+    auto& registry = zenith::InstrumentRegistry::getInstance();
+    auto newInstrument = registry.createInstrument(instrumentId);
+
+    if (newInstrument == nullptr)
+    {
+        throw std::runtime_error("Unknown instrument: " + instrumentId.toStdString());
+    }
+
+    // Set instrument on track
+    track->setInstrument(std::move(newInstrument));
+
+    // Begin undo transaction
+    projectState.beginNewTransaction("Set instrument " + instrumentId + " on " + trackId);
+
+    // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
-    result->setProperty("success", false);
-    result->setProperty("message", "Export functionality not yet implemented");
->>>>>>> origin/claude/extend-commandapi-plugins-01MUiKgkxAPaGpAwRCeNTsge
+    result->setProperty("success", true);
+    result->setProperty("instrumentId", instrumentId);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_setInstrumentParam(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "paramId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "value", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String paramId = obj->getProperty("paramId").toString();
+    float value = (float)obj->getProperty("value");
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Get metadata to validate parameter
+    const auto& metadata = instrument->getMetadata();
+    const auto* paramMeta = metadata.findParameter(paramId);
+
+    if (paramMeta == nullptr)
+    {
+        throw std::runtime_error("Unknown parameter: " + paramId.toStdString());
+    }
+
+    // Clamp value to valid range
+    value = juce::jlimit(paramMeta->minValue, paramMeta->maxValue, value);
+
+    // Set parameter
+    bool success = instrument->setParameter(paramId, value);
+
+    if (!success)
+    {
+        throw std::runtime_error("Failed to set parameter: " + paramId.toStdString());
+    }
+
+    // Begin undo transaction
+    projectState.beginNewTransaction("Set " + paramId + " to " + juce::String(value, 2));
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("paramId", paramId);
+    result->setProperty("value", value);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_getInstrumentParam(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+    if (!validateParam(params, "paramId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+    juce::String paramId = obj->getProperty("paramId").toString();
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Get metadata to validate parameter
+    const auto& metadata = instrument->getMetadata();
+    const auto* paramMeta = metadata.findParameter(paramId);
+
+    if (paramMeta == nullptr)
+    {
+        throw std::runtime_error("Unknown parameter: " + paramId.toStdString());
+    }
+
+    // Get parameter value
+    float value = instrument->getParameter(paramId);
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("paramId", paramId);
+    result->setProperty("name", paramMeta->name);
+    result->setProperty("value", value);
+    result->setProperty("min", paramMeta->minValue);
+    result->setProperty("max", paramMeta->maxValue);
+    result->setProperty("default", paramMeta->defaultValue);
+    return juce::var(result.get());
+}
+
+juce::var CommandAPI::cmd_randomizeInstrumentParams(const juce::var& params)
+{
+    juce::String error;
+
+    // Validate required params
+    if (!validateParam(params, "trackId", error))
+        throw std::runtime_error(error.toStdString());
+
+    auto* obj = params.getDynamicObject();
+    juce::String trackId = obj->getProperty("trackId").toString();
+
+    // Optional intensity parameter (0.0 = no change, 1.0 = full random range)
+    float intensity = obj->getProperty("intensity", 0.7f);
+    intensity = juce::jlimit(0.0f, 1.0f, intensity);
+
+    // Find track
+    int trackIndex = trackId.getTrailingIntValue();
+    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
+    {
+        throw std::runtime_error("Track not found: " + trackId.toStdString());
+    }
+
+    auto* track = const_cast<zenith::Track*>(engine.tracks()[trackIndex].get());
+    auto* instrument = track->getInstrument();
+
+    if (instrument == nullptr)
+    {
+        throw std::runtime_error("Track has no instrument");
+    }
+
+    // Begin undo transaction
+    projectState.beginNewTransaction("Randomize instrument parameters");
+
+    // Get metadata and randomize parameters
+    const auto& metadata = instrument->getMetadata();
+    juce::Array<juce::var> randomizedParams;
+    juce::Random random;
+
+    for (const auto& param : metadata.parameters)
+    {
+        // Get current value
+        float currentValue = instrument->getParameter(param.id);
+
+        // Calculate random offset based on intensity
+        float range = param.maxValue - param.minValue;
+        float maxOffset = range * intensity * 0.5f;  // Max 50% of range at full intensity
+
+        // Generate random offset
+        float offset = random.nextFloat() * maxOffset * 2.0f - maxOffset;
+
+        // Calculate new value and clamp
+        float newValue = currentValue + offset;
+        newValue = juce::jlimit(param.minValue, param.maxValue, newValue);
+
+        // Set parameter
+        bool success = instrument->setParameter(param.id, newValue);
+
+        if (success)
+        {
+            randomizedParams.add(param.id);
+        }
+    }
+
+    // Return result
+    juce::DynamicObject::Ptr result = new juce::DynamicObject();
+    result->setProperty("success", true);
+    result->setProperty("randomized", randomizedParams);
+    result->setProperty("intensity", intensity);
     return juce::var(result.get());
 }
