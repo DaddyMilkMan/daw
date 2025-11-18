@@ -106,10 +106,13 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/Instrument.cpp
     Source/instruments/InstrumentRegistry.h
     Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ContentPaths.h
     Source/instruments/ZenithPolySynth.h
     Source/instruments/ZenithPolySynth.cpp
     Source/instruments/ZenithSampler.h
     Source/instruments/ZenithSampler.cpp
+    Source/instruments/ZenithSamplerEditor.h
+    Source/instruments/ZenithSamplerEditor.cpp
     Source/instruments/RegisterBuiltInInstruments.h
     Source/instruments/RegisterBuiltInInstruments.cpp
     include/InstrumentCommandHelpers.h
