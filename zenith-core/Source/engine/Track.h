@@ -182,6 +182,10 @@ private:
     juce::AudioBuffer<float> pluginBuffer;
 
     //==============================================================================
+    // Preallocated buffer for clip processing (RT-safe, no allocation on audio thread)
+    juce::AudioBuffer<float> clipBuffer_;
+
+    //==============================================================================
     // Clips (JUCE 8 adaptation: OwnedArray → std::vector<std::unique_ptr<>>)
     std::vector<std::unique_ptr<Clip>> clips;
     juce::CriticalSection clipsLock;
