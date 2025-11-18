@@ -46,7 +46,123 @@ void Engine::setProjectState(ProjectState* state)
     {
         automationSynchronizer = std::make_unique<TrackAutomationSynchronizer>(*projectState_, *this);
         DBG("Engine: Created automation synchronizer");
+
+        // Sync tracks with project state
+        syncWithProjectState();
     }
+}
+
+void Engine::syncWithProjectState()
+{
+    DBG("Engine: Syncing with project state");
+
+    if (projectState_ == nullptr)
+    {
+        DBG("Engine: No project state, clearing tracks");
+        tracks_.clear();
+        return;
+    }
+
+    // Clear existing tracks
+    tracks_.clear();
+
+    // Get tracks from project state
+    auto& state = projectState_->getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+
+    if (!tracksNode.isValid())
+    {
+        DBG("Engine: No tracks in project state");
+        return;
+    }
+
+    const double sampleRate = currentSampleRate.load();
+    const int bufferSize = currentBufferSize.load();
+    const double tempo = projectState_->getTempo();
+
+    // Helper: convert beats to samples
+    auto beatsToSamples = [tempo, sampleRate](double beats) -> juce::int64
+    {
+        const double secondsPerBeat = 60.0 / tempo;
+        const double seconds = beats * secondsPerBeat;
+        return static_cast<juce::int64>(seconds * sampleRate);
+    };
+
+    // Create engine tracks from project state
+    for (auto trackNode : tracksNode)
+    {
+        juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
+        juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+
+        // Create track
+        auto track = std::make_unique<zenith::Track>(
+            trackName,
+            trackType == "midi" ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio);
+
+        // Set mixer properties
+        track->setVolume(trackNode[ProjectState::PROP_VOLUME]);
+        track->setPan(trackNode[ProjectState::PROP_PAN]);
+        track->setMuted(trackNode[ProjectState::PROP_MUTE]);
+        track->setSolo(trackNode[ProjectState::PROP_SOLO]);
+
+        // Prepare track for playback
+        if (sampleRate > 0)
+        {
+            track->prepareToPlay(bufferSize, sampleRate);
+        }
+
+        // Load clips
+        auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
+        if (clipsNode.isValid())
+        {
+            for (auto clipNode : clipsNode)
+            {
+                // Create clip
+                auto clip = std::make_unique<zenith::Track::Clip>();
+
+                // Set basic properties
+                double startBeats = clipNode[ProjectState::PROP_START];
+                double lengthBeats = clipNode[ProjectState::PROP_LENGTH];
+
+                clip->setStartPosition(beatsToSamples(startBeats));
+                clip->setLength(beatsToSamples(lengthBeats));
+
+                // Load audio file if present
+                juce::String audioFilePath = clipNode[ProjectState::PROP_AUDIO_FILE].toString();
+                if (audioFilePath.isNotEmpty())
+                {
+                    juce::File audioFile(audioFilePath);
+                    if (audioFile.existsAsFile())
+                    {
+                        clip->setAudioFile(audioFile);
+                        clip->setType(zenith::Track::Clip::Type::Audio);
+                        DBG("Engine: Loaded audio file: " + audioFile.getFileName());
+                    }
+                    else
+                    {
+                        DBG("Engine: Warning - audio file not found: " + audioFilePath);
+                    }
+                }
+
+                // Prepare clip
+                if (sampleRate > 0)
+                {
+                    clip->prepareToPlay(bufferSize, sampleRate);
+                }
+
+                // Set clip as playing (so it's active during playback)
+                clip->setPlaying(true);
+
+                // Add clip to track
+                track->addClip(std::move(clip));
+            }
+        }
+
+        // Add track to engine
+        tracks_.push_back(std::move(track));
+    }
+
+    DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
 }
 
 bool Engine::initialize()
@@ -136,12 +252,31 @@ void Engine::stop()
     isPlaying_.store(false);
     enableTestTone_.store(false);
 
+    // Reset playback position
+    playbackPosition.store(0);
+
     // Phase 13: Stop automation synchronizer
     if (automationSynchronizer)
     {
         automationSynchronizer->stop();
         DBG("Engine: Stopped automation synchronizer");
     }
+}
+
+double Engine::getPlaybackPositionBeats() const
+{
+    if (projectState_ == nullptr)
+        return 0.0;
+
+    const double tempo = projectState_->getTempo();
+    const double sampleRate = currentSampleRate.load();
+    const juce::int64 positionSamples = playbackPosition.load();
+
+    // Convert samples to beats
+    const double seconds = static_cast<double>(positionSamples) / sampleRate;
+    const double beats = (seconds * tempo) / 60.0;
+
+    return beats;
 }
 
 //==============================================================================
@@ -494,6 +629,22 @@ void Engine::processAudio(
     // Get current transport position
     juce::int64 position = playbackPosition.load();
 
+    // Update transport position for all clips in all tracks
+    for (auto& track : tracks_)
+    {
+        if (track == nullptr)
+            continue;
+
+        for (int i = 0; i < track->getNumClips(); ++i)
+        {
+            auto* clip = track->getClip(i);
+            if (clip != nullptr)
+            {
+                clip->setTransportPosition(position);
+            }
+        }
+    }
+
     // Use unified render path
     renderBlock(outputBuffer, position, numSamples);
 
@@ -513,7 +664,6 @@ void Engine::processAudio(
         {
             float value = static_cast<float>(std::sin(phase) * amplitude);
 
-            // Write to all output channels
             for (int channel = 0; channel < numOutputChannels; ++channel)
             {
                 if (outputChannelData[channel] != nullptr)
@@ -522,10 +672,7 @@ void Engine::processAudio(
                 }
             }
 
-            // Increment phase
             phase += phaseIncrement;
-
-            // Wrap phase to avoid precision issues
             if (phase >= 2.0 * juce::MathConstants<double>::pi)
                 phase -= 2.0 * juce::MathConstants<double>::pi;
         }

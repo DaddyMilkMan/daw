@@ -68,6 +68,12 @@ public:
     void setProjectState(ProjectState* state);
 
     /**
+     * @brief Synchronize engine tracks with project state
+     * @note Message thread only - rebuilds track list from ProjectState
+     */
+    void syncWithProjectState();
+
+    /**
      * @brief Initialize the audio engine
      *
      * This:
@@ -107,6 +113,16 @@ public:
      * @brief Check if playing
      */
     bool isPlaying() const { return isPlaying_.load(); }
+
+    /**
+     * @brief Get current playback position in samples
+     */
+    juce::int64 getPlaybackPosition() const { return playbackPosition.load(); }
+
+    /**
+     * @brief Get current playback position in beats
+     */
+    double getPlaybackPositionBeats() const;
 
     //==========================================================================
     // Audio Device Management
@@ -289,6 +305,9 @@ private:
     // Test tone generator (Phase 0 testing)
     double phase{0.0};
     std::atomic<bool> enableTestTone_{false};
+
+    // Audio processing buffer (for track mixing)
+    juce::AudioBuffer<float> mixBuffer;
 
     // C3: Donor track container (no audio thread access yet)
     std::vector<std::unique_ptr<zenith::Track>> tracks_;
