@@ -292,6 +292,26 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     if (!isVoiceActive())
         return;
 
+    // Prevent denormals from killing CPU
+    juce::ScopedNoDenormals noDenormals;
+
+    // Apply quality preset to unison voices
+    int effectiveUnisonVoices = unisonVoices_;
+    switch (qualityPreset_)
+    {
+        case QualityPreset::Low:
+            effectiveUnisonVoices = juce::jmin(effectiveUnisonVoices, 3);
+            break;
+        case QualityPreset::Medium:
+            effectiveUnisonVoices = juce::jmin(effectiveUnisonVoices, 5);
+            break;
+        case QualityPreset::High:
+            // No limit
+            break;
+        default:
+            break;
+    }
+
     for (int sample = 0; sample < numSamples; ++sample)
     {
         // Update glide/portamento
@@ -318,17 +338,17 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             oscOutput += osc3_.getNextSample(currentFrequency_) * osc3Mix_;
         }
 
-        // Unison (supersaw) voices
-        if (unisonVoices_ > 1)
+        // Unison (supersaw) voices - respect quality setting
+        if (effectiveUnisonVoices > 1)
         {
             float unisonOutput = 0.0f;
-            for (int v = 0; v < unisonVoices_; ++v)
+            for (int v = 0; v < effectiveUnisonVoices; ++v)
             {
-                float detune = (v - unisonVoices_ / 2.0f) * unisonDetune_;
+                float detune = (v - effectiveUnisonVoices / 2.0f) * unisonDetune_;
                 unisonOscillators_[v].setDetune(detune);
                 unisonOutput += unisonOscillators_[v].getNextSample(currentFrequency_);
             }
-            oscOutput += unisonOutput / static_cast<float>(unisonVoices_) * 0.5f;
+            oscOutput += unisonOutput / static_cast<float>(effectiveUnisonVoices) * 0.5f;
         }
 
         // Normalize oscillator mix
@@ -358,6 +378,9 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         // Apply amplitude envelope and velocity
         float ampEnvValue = ampEnvelope_.getNextSample();
         float finalOutput = filteredOutput * ampEnvValue * velocity_;
+
+        // Track current amplitude for voice stealing (RMS approximation)
+        currentAmplitude_ = 0.9f * currentAmplitude_ + 0.1f * std::abs(finalOutput);
 
         // Mix into output buffer (stereo)
         for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
@@ -528,6 +551,11 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     addParameter(new juce::AudioParameterBool("mono_mode", "Mono Mode", false));
     addParameter(new juce::AudioParameterFloat("master_gain", "Master Gain",
         juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 0.7f));
+
+    // CPU Optimization
+    addParameter(new juce::AudioParameterInt("max_voices", "Max Voices", 4, 32, 16));
+    addParameter(new juce::AudioParameterChoice("quality", "Quality",
+        juce::StringArray{"Low", "Medium", "High"}, 2)); // Default: High
 }
 
 void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -535,6 +563,9 @@ void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     juce::ignoreUnused(samplesPerBlock);
 
     setCurrentPlaybackSampleRate(sampleRate);
+
+    // Update voice count if parameter changed (safe to allocate here)
+    updateVoiceCount();
 
     // Initialize all voices
     for (int i = 0; i < getNumVoices(); ++i)
@@ -560,8 +591,16 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     buffer.clear();
 
+#if JUCE_DEBUG
+    // Track processing time for profiling
+    auto startTime = juce::Time::getMillisecondCounterHiRes();
+#endif
+
     // Update voice parameters before rendering
     updateVoiceParameters();
+
+    // NOTE: Voice count changes are handled in prepareToPlay, not here,
+    // to maintain RT-safety (no allocations in audio thread)
 
     // Render synthesizer
     juce::Synthesiser::renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
@@ -578,6 +617,31 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             channelData[sample] *= masterGainSmoothed_.getNextValue();
         }
     }
+
+#if JUCE_DEBUG
+    // Track CPU usage
+    auto endTime = juce::Time::getMillisecondCounterHiRes();
+    double blockTime = endTime - startTime;
+    maxBlockProcessingTime_ = juce::jmax(maxBlockProcessingTime_, blockTime);
+
+    // Track active voices
+    int activeVoices = 0;
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        if (getVoice(i)->isVoiceActive())
+            ++activeVoices;
+    }
+    maxActiveVoices_ = juce::jmax(maxActiveVoices_, activeVoices);
+
+    // Log stats every 1000 blocks (~23 seconds at 44.1kHz/512 buffer)
+    if (++blockCount_ >= 1000)
+    {
+        logCPUStats();
+        blockCount_ = 0;
+        maxActiveVoices_ = 0;
+        maxBlockProcessingTime_ = 0.0;
+    }
+#endif
 }
 
 void ZenithPolySynthProcessor::updateVoiceParameters()
@@ -624,6 +688,8 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
     auto glideTime = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[GlideTime])->get();
     auto monoMode = dynamic_cast<juce::AudioParameterBool*>(getParameters()[MonoMode])->get();
 
+    auto quality = static_cast<QualityPreset>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[QualitySetting])->getIndex());
+
     // Update all voices
     for (int i = 0; i < getNumVoices(); ++i)
     {
@@ -663,9 +729,102 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
             // Global
             voice->setGlideTime(glideTime);
             voice->setMonoMode(monoMode);
+
+            // CPU Optimization
+            voice->setQualityPreset(quality);
         }
     }
 }
+
+juce::SynthesiserVoice* ZenithPolySynthProcessor::findFreeVoice(juce::SynthesiserSound* soundToPlay,
+                                                                 int midiChannel,
+                                                                 int midiNoteNumber,
+                                                                 bool stealIfNoneAvailable)
+{
+    // First, try to find a completely free voice
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        auto* voice = getVoice(i);
+        if (voice->canPlaySound(soundToPlay) && !voice->isVoiceActive())
+            return voice;
+    }
+
+    // If no free voice and stealing is not allowed, return nullptr
+    if (!stealIfNoneAvailable)
+        return nullptr;
+
+    // Custom voice stealing: steal the quietest voice
+    // This is more musical than LRU (least recently used)
+    ZenithPolySynthVoice* quietestVoice = nullptr;
+    float lowestAmplitude = std::numeric_limits<float>::max();
+
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
+        {
+            if (voice->canPlaySound(soundToPlay) && voice->isVoiceActive())
+            {
+                float amplitude = voice->getCurrentAmplitude();
+                if (amplitude < lowestAmplitude)
+                {
+                    lowestAmplitude = amplitude;
+                    quietestVoice = voice;
+                }
+            }
+        }
+    }
+
+    return quietestVoice;
+}
+
+void ZenithPolySynthProcessor::updateVoiceCount()
+{
+    // Get max voices from parameter
+    int newMaxVoices = dynamic_cast<juce::AudioParameterInt*>(getParameters()[MaxVoices])->get();
+
+    // Only update if changed (avoid repeated allocations)
+    if (newMaxVoices != currentMaxVoices_)
+    {
+        // Clear existing voices
+        clearVoices();
+
+        // Add new voices
+        for (int i = 0; i < newMaxVoices; ++i)
+        {
+            addVoice(new ZenithPolySynthVoice());
+        }
+
+        // Re-initialize voices with current sample rate
+        for (int i = 0; i < getNumVoices(); ++i)
+        {
+            if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
+            {
+                voice->setSampleRate(getSampleRate());
+            }
+        }
+
+        currentMaxVoices_ = newMaxVoices;
+
+#if JUCE_DEBUG
+        DBG("ZenithPolySynth: Voice count updated to " << newMaxVoices);
+#endif
+    }
+}
+
+#if JUCE_DEBUG
+void ZenithPolySynthProcessor::logCPUStats()
+{
+    DBG("=== ZenithPolySynth CPU Stats ===");
+    DBG("Max Active Voices: " << maxActiveVoices_ << " / " << currentMaxVoices_);
+    DBG("Max Block Time: " << juce::String(maxBlockProcessingTime_, 3) << " ms");
+
+    // Calculate estimated CPU usage (assuming 512 samples at 44.1kHz = ~11.6ms per block)
+    double blockDuration = 512.0 / 44100.0 * 1000.0; // ms
+    double cpuPercent = (maxBlockProcessingTime_ / blockDuration) * 100.0;
+    DBG("Estimated CPU: " << juce::String(cpuPercent, 1) << "%");
+    DBG("================================");
+}
+#endif
 
 void ZenithPolySynthProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
@@ -751,6 +910,9 @@ ZenithPolySynth::ZenithPolySynth()
     mapParameter("mono_mode", ZenithPolySynthProcessor::MonoMode);
     mapParameter("master_gain", ZenithPolySynthProcessor::MasterGain);
 
+    mapParameter("max_voices", ZenithPolySynthProcessor::MaxVoices);
+    mapParameter("quality", ZenithPolySynthProcessor::QualitySetting);
+
     // Register factory presets
     registerPresets();
 }
@@ -835,6 +997,11 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
     addParam("glide_time", "Glide Time", "Global", ParameterMetadata::Type::Float, 0.0f, 0.0f, 1.0f, "s");
     addParam("mono_mode", "Mono Mode", "Global", ParameterMetadata::Type::Bool, 0.0f, 0.0f, 1.0f, "");
     addParam("master_gain", "Master Gain", "Global", ParameterMetadata::Type::Float, 0.7f, 0.0f, 1.0f, "dB");
+
+    // CPU Optimization
+    addParam("max_voices", "Max Voices", "Performance", ParameterMetadata::Type::Float, 0.5f, 0.0f, 1.0f, "voices");
+    addParam("quality", "Quality", "Performance", ParameterMetadata::Type::Choice, 0.67f, 0.0f, 1.0f, "",
+             juce::StringArray{"Low", "Medium", "High"});
 
     // Add macros for AI-friendly control
     {
