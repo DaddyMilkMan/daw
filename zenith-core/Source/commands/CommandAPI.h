@@ -24,6 +24,7 @@
     - set_track_volume: Adjust track volume (dB)
     - set_track_pan: Adjust track pan (-1.0 to 1.0)
     - get_session_graph: Export full project state as JSON
+    - describe_instrument: Get parameter schema for an instrument
 
   ==============================================================================
 */
@@ -135,6 +136,9 @@ private:
     juce::var undo(const juce::var& params);
     juce::var redo(const juce::var& params);
     juce::var history(const juce::var& params);
+
+    // Instrument commands
+    juce::var describeInstrument(const juce::var& params);
 
     //==============================================================================
     // Helper methods
