@@ -12,6 +12,8 @@
 #include "../Source/engine/Clip.h"
 #include "../Source/engine/MixerChannel.h"
 #include "../Source/engine/AudioFilePool.h"
+#include "../Source/engine/PluginHost.h"
+#include "../Source/ui/PluginEditorWindow.h"
 
 //==============================================================================
 Engine::Engine()
@@ -19,6 +21,10 @@ Engine::Engine()
 {
     DBG("Engine: Constructor");
     DBG("Engine: AudioFilePool created");
+
+    // Phase 3: Initialize plugin host and editor window manager
+    pluginHost_ = std::make_unique<zenith::PluginHost>();
+    pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();
 }
 
 Engine::~Engine()
@@ -465,6 +471,37 @@ zenith::AudioFilePool& Engine::getAudioFilePool()
 {
     jassert(audioFilePool_ != nullptr);
     return *audioFilePool_;
+}
+
+//==============================================================================
+// Plugin Hosting (Phase 3: VST3 hosting MVP)
+//==============================================================================
+
+zenith::PluginHost& Engine::getPluginHost() noexcept
+{
+    jassert(pluginHost_ != nullptr);
+    return *pluginHost_;
+}
+
+int Engine::scanForPlugins()
+{
+    if (pluginHost_ == nullptr)
+    {
+        DBG("Engine: PluginHost not initialized");
+        return 0;
+    }
+
+    DBG("Engine: Scanning for plugins...");
+    int count = pluginHost_->scanDefaultLocations();
+    DBG("Engine: Plugin scan complete - found " + juce::String(count) + " plugins");
+
+    return count;
+}
+
+zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexcept
+{
+    jassert(pluginEditorWindowManager_ != nullptr);
+    return *pluginEditorWindowManager_;
 }
 
 //==============================================================================

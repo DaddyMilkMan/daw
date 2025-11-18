@@ -44,6 +44,8 @@ namespace zenith {
     class Clip;
     class MixerChannel;
     class AudioFilePool;
+    class PluginHost;
+    class PluginEditorWindowManager;
 }
 
 //==============================================================================
@@ -257,6 +259,31 @@ public:
     zenith::AudioFilePool& getAudioFilePool();
 
     //==========================================================================
+    // Plugin Hosting (Phase 3: VST3 hosting MVP)
+    //==========================================================================
+
+    /**
+     * @brief Get the plugin host manager
+     * @return Reference to PluginHost
+     * @note Use only from message thread
+     */
+    zenith::PluginHost& getPluginHost() noexcept;
+
+    /**
+     * @brief Scan for plugins in default locations
+     * @return Number of plugins found
+     * @note MESSAGE THREAD ONLY - blocking operation
+     */
+    int scanForPlugins();
+
+    /**
+     * @brief Get the plugin editor window manager
+     * @return Reference to PluginEditorWindowManager
+     * @note Use only from message thread
+     */
+    zenith::PluginEditorWindowManager& getPluginEditorWindowManager() noexcept;
+
+    //==========================================================================
     // Unified Render Path
     //==========================================================================
 
@@ -438,6 +465,10 @@ private:
 
     // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for access)
     std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
+
+    // Phase 3: Plugin hosting
+    std::unique_ptr<zenith::PluginHost> pluginHost_;
+    std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
 
     // Project state reference (non-owning, for tempo/time sig/automation access)
     ProjectState* projectState_ = nullptr;

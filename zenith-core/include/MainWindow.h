@@ -19,6 +19,15 @@
 #include "ArrangerView.h"
 #include "ClipSynchronizer.h"
 
+// Forward declarations
+class ArrangerComponent;
+class WingmanPanel;
+
+namespace zenith {
+    class CommandAPI;
+    class AIBridgeClient;
+}
+
 //==============================================================================
 /**
  * @class MainComponent
@@ -28,6 +37,7 @@
  * - Transport bar (play/stop/record)
  * - ArrangerView (timeline with clips and automation)
  * - Status displays (CPU, device info, track count)
+ * - Wingman AI panel (Phase 5+)
  *
  * Integration points:
  * - Hosts ArrangerView which displays ProjectState clips
@@ -35,11 +45,12 @@
  * - Provides "Show Automation" buttons per track
  */
 class MainComponent : public juce::Component,
-                      private juce::Timer
+                      private juce::Timer,
+                      public juce::KeyListener
 {
 public:
     //==========================================================================
-    MainComponent(Engine& engine, ProjectState& projectState);
+    MainComponent(Engine& engine, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state);
     ~MainComponent() override;
 
     //==========================================================================
@@ -48,6 +59,12 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+    //==========================================================================
+    // KeyListener interface (for undo/redo shortcuts)
+    //==========================================================================
+
+    bool keyPressed(const juce::KeyPress& key, Component* originatingComponent) override;
 
 private:
     //==========================================================================
@@ -96,6 +113,12 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 4: Arranger/Timeline view
+    std::unique_ptr<ArrangerComponent> arrangerComponent;
+
+    // Phase 5: Wingman command console
+    std::unique_ptr<WingmanPanel> wingmanPanel;
 
     // Integration: ArrangerView
     std::unique_ptr<ArrangerView> arrangerView;
@@ -181,6 +204,12 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Phase 5: Wingman command API
+    std::unique_ptr<zenith::CommandAPI> commandAPI;
+
+    // Phase 7: AI bridge client
+    std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
     // Integration: Clip synchronizer
     std::unique_ptr<ClipSynchronizer> clipSynchronizer;

@@ -4,6 +4,10 @@
  */
 
 #include "../include/MainWindow.h"
+#include "ui/ArrangerComponent.h"
+#include "ui/WingmanPanel.h"
+#include "commands/CommandAPI.h"
+#include "network/AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
 #include "../Source/engine/Track.h"
 
@@ -11,14 +15,18 @@
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng, ProjectState& ps)
-    : engine(eng), projectState(ps)
+MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state)
+    : engine(eng), projectState(state)
 {
     // Set size
     setSize(1400, 800);
 
+    // Register as key listener for undo/redo shortcuts
+    addKeyListener(this);
+    setWantsKeyboardFocus(true);
+
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 0: Foundation", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 7: Wingman AI Integration", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -54,7 +62,7 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Phase 1
+    recordButton.setEnabled(false);  // Future: recording UI
     addAndMakeVisible(recordButton);
 
     // Phase 1: Import Audio button
@@ -63,6 +71,14 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
         handleImportAudio();
     };
     addAndMakeVisible(importButton);
+
+    // Phase 4: Arranger (now using ArrangerView from master for better automation integration)
+    // arrangerComponent = std::make_unique<ArrangerComponent>(engine);  // Disabled - using ArrangerView instead
+    // addAndMakeVisible(arrangerComponent.get());
+
+    // Phase 7: Create Wingman AI console panel
+    wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
+    addAndMakeVisible(wingmanPanel.get());
 
     // Integration: Create ArrangerView
     arrangerView = std::make_unique<ArrangerView>(projectState);
@@ -100,12 +116,53 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
 
 MainComponent::~MainComponent()
 {
+    removeKeyListener(this);
     stopTimer();
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originatingComponent)
+{
+    juce::ignoreUnused(originatingComponent);
+
+    // Ctrl+Z or Cmd+Z for undo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && !key.getModifiers().isShiftDown())
+    {
+        if (projectState.canUndo())
+        {
+            projectState.undo();
+            DBG("Keyboard shortcut: Undo");
+            return true;
+        }
+    }
+
+    // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo");
+            return true;
+        }
+    }
+
+    // Ctrl+Y or Cmd+Y for redo (alternative)
+    if (key.isKeyCode(juce::KeyPress::yKey) && key.getModifiers().isCommandDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo (Y)");
+            return true;
+        }
+    }
+
+    return false;  // Key not handled
 }
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background
+    // Background (arranger handles its own painting)
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 }
 
@@ -143,7 +200,14 @@ void MainComponent::resized()
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
 
-    // Integration: ArrangerView takes remaining space
+    // Phase 5: Layout Wingman panel on the right (300px width)
+    if (wingmanPanel != nullptr)
+    {
+        auto wingmanBounds = bounds.removeFromRight(400);
+        wingmanPanel->setBounds(wingmanBounds);
+    }
+
+    // Integration: ArrangerView takes remaining space (combines Phase 4 arranger + automation)
     auto arrangerBounds = bounds;
 
     // Automation buttons (left side, 30 pixels wide)
@@ -293,6 +357,12 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Phase 5: Create Wingman command API
+    commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
+
+    // Phase 7: Create AI bridge client
+    aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
+
     // Phase 13: Connect project state to engine for automation
     engine->setProjectState(projectState.get());
 
@@ -304,8 +374,9 @@ MainWindow::MainWindow(const juce::String& name)
     projectState->addTrack("Audio Track 1", "audio");
     projectState->addTrack("MIDI Track 2", "midi");
 
-    // Create main content
-    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
+    // Create main content (Phase 7: pass AIBridgeClient for AI mode)
+    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
+
 
     // Create menu bar
     menuBar = std::make_unique<ZenithMenuBar>(*this);
