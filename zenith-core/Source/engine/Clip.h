@@ -7,6 +7,12 @@
 
     Audio/MIDI clip with transport synchronization and playback control
 
+    CANONICAL IMPLEMENTATION: This supersedes VexelDAW-Native/Source/Audio/Clip.*
+    Phase 1.4 implementation (2025-11-13)
+
+    Key Design: Playhead-driven timing (parameter-based) instead of internal
+    transportPosition member. Integrates with AudioFilePool for RT-safe buffer access.
+
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - Kept as Track::Clip (nested class)
@@ -21,6 +27,23 @@
 #include "Track.h"
 
 namespace zenith {
+
+//==============================================================================
+/**
+ * @brief MIDI note specification (Phase 8)
+ * Matches ProjectState::MidiNoteSpec for compatibility
+ */
+struct MidiNoteSpec
+{
+    juce::String id;         // Unique note ID
+    int pitch;               // MIDI note number (0-127)
+    double startBeats;       // Start time in beats (relative to clip start)
+    double lengthBeats;      // Duration in beats
+    int velocity;            // Note velocity (0-127)
+    bool muted;              // Muted flag
+
+    MidiNoteSpec() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false) {}
+};
 
 //==============================================================================
 /**
@@ -83,11 +106,21 @@ public:
     void setPlaying(bool shouldPlay);
     bool isPlaying() const { return playing.load(); }
 
-    // Check if clip is active at current transport position
+    // Check if clip is active at given playhead position (Phase 1.3: uses Engine playhead)
+    bool isActiveAt(int64_t playheadSamples) const;
+
+    // Legacy: check if clip is active at stored transport position
     bool isActive() const;
 
     //==============================================================================
     // Audio clip specific
+
+    // Phase 1.2: Use AudioFilePool for RT-safe file access
+    // Forward declaration
+    class AudioFilePool;
+    void setAudioFileFromPool(const juce::File& file, AudioFilePool& pool);
+
+    // Legacy method (deprecated - loads file directly without pool)
     void setAudioFile(const juce::File& file);
     juce::File getAudioFile() const { return audioFile; }
 
@@ -98,6 +131,28 @@ public:
     // MIDI clip specific
     void setMidiSequence(const juce::MidiMessageSequence& sequence);
     const juce::MidiMessageSequence* getMidiSequence() const { return &midiSequence; }
+
+    /**
+     * @brief Rebuild MIDI sequence from note specifications (Phase 8)
+     * @param notes Array of note specs from ProjectState
+     * @param clipStartBeats Clip start time in beats (for absolute positioning)
+     * @param tempo Project tempo (for beat-to-time conversion)
+     *
+     * This method should be called from the message thread whenever MIDI notes change.
+     * It rebuilds the cached midiSequence that the audio thread reads.
+     */
+    void buildMidiSequenceFromNotes(const juce::Array<MidiNoteSpec>& notes,
+                                     double clipStartBeats,
+                                     double tempo);
+
+    /**
+     * Extract MIDI events for the current playback position into a MIDI buffer.
+     * Used for routing MIDI to instrument plugins.
+     *
+     * @param midiBuffer The MIDI buffer to add events to
+     * @param numSamples The number of samples in this block
+     */
+    void getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples);
 
     //==============================================================================
     // Fades (in samples)
@@ -127,6 +182,11 @@ public:
     juce::ValueTree getState() const;
     void loadState(const juce::ValueTree& state);
 
+    //==============================================================================
+    // Allow Track to access processing methods
+    //==============================================================================
+    friend class Track;
+
 private:
     //==============================================================================
     // Clip properties
@@ -152,9 +212,12 @@ private:
     //==============================================================================
     // Audio data
     juce::File audioFile;
-    juce::AudioBuffer<float> audioBuffer;
-    std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
+    juce::AudioBuffer<float> audioBuffer;  // Legacy: for setAudioBuffer()
+    std::unique_ptr<juce::AudioFormatReaderSource> audioSource;  // Unused legacy
     juce::CriticalSection audioLock;
+
+    // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
+    std::shared_ptr<const void> audioFileHandle_;  // Type-erased to avoid forward decl issues
 
     //==============================================================================
     // MIDI data
@@ -168,8 +231,17 @@ private:
 
     //==============================================================================
     // Helper methods
+    // Phase 1.3: Process audio clip with explicit playhead position
+    void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+
+    // Phase 2A: Process MIDI clip with explicit playhead position
+    void processMidiClip(juce::MidiBuffer& midiBuffer, int64_t playheadSamples, int numSamples);
+
+    // Legacy overloads (use internal transportPosition)
     void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill);
+    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
     void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill);
+
     float calculateFadeMultiplier(int64_t positionInClip) const;
 
     //==============================================================================

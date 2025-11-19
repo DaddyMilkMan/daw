@@ -277,11 +277,10 @@ After resolving conflicts, test:
 ### Pattern 1: Import Merging
 ```typescript
 // ❌ Conflict
-<<<<<<< HEAD
+// Version A
 import { A } from './a';
-=======
+// Version B
 import { B } from './b';
->>>>>>>
 
 // ✅ Resolution
 import { A } from './a';
@@ -291,11 +290,10 @@ import { B } from './b';
 ### Pattern 2: Props Merging
 ```typescript
 // ❌ Conflict
-<<<<<<< HEAD
+// Version A
 interface Props { a: string; }
-=======
+// Version B
 interface Props { b: number; }
->>>>>>>
 
 // ✅ Resolution
 interface Props {
@@ -307,11 +305,10 @@ interface Props {
 ### Pattern 3: Function Handler Merging
 ```typescript
 // ❌ Conflict
-<<<<<<< HEAD
+// Version A
 const handler = () => { featureA(); };
-=======
+// Version B
 const handler = () => { featureB(); };
->>>>>>>
 
 // ✅ Resolution
 const handler = () => {
