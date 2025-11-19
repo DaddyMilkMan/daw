@@ -1,6 +1,6 @@
 # Wingman AI Integration Guide
 
-This document describes the Wingman AI integration in Vexel DAW, including the MagentaService for AI music generation and the AI Bridge for communication with external AI services.
+This document describes the Wingman AI integration in Zenith DAW, including the MagentaService for AI music generation and the AI Bridge for communication with external AI services.
 
 ## Table of Contents
 
