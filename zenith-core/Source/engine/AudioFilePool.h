@@ -51,9 +51,12 @@ public:
         AudioFileHandle() = default;
         AudioFileHandle(const AudioFileHandle&) = delete;
         AudioFileHandle& operator=(const AudioFileHandle&) = delete;
+
+        bool isValid() const { return numChannels > 0 && lengthInSamples > 0; }
     };
 
     using HandlePtr = std::shared_ptr<const AudioFileHandle>;
+
 
     //==============================================================================
     AudioFilePool();
@@ -70,6 +73,11 @@ public:
      * Thread Safety: MUST be called from MESSAGE THREAD (does file I/O)
      */
     HandlePtr loadFile(const juce::File& file, juce::String& errorMessage);
+
+    /**
+     * Overload without errorMessage for compatibility
+     */
+    HandlePtr loadFile(const juce::File& file);
 
     /**
      * Get a previously loaded file (thread-safe)
@@ -116,6 +124,7 @@ private:
 
     // Audio format manager for loading files
     juce::AudioFormatManager formatManager_;
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioFilePool)

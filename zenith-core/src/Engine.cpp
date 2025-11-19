@@ -17,24 +17,53 @@
 
 //==============================================================================
 Engine::Engine()
-    : audioFilePool_(std::make_unique<zenith::AudioFilePool>())
 {
     DBG("Engine: Constructor");
+
+    // Phase 1.2: Initialize audio file pool
+    audioFilePool_ = std::make_unique<zenith::AudioFilePool>();
     DBG("Engine: AudioFilePool created");
 
     // Phase 3: Initialize plugin host and editor window manager
     pluginHost_ = std::make_unique<zenith::PluginHost>();
     pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();
+
+    // Phase 2D: Initialize audio recording infrastructure
+    // Create background thread for audio file writing
+    // Priority 5 = normal priority, suitable for disk I/O
+    audioWriterThread_ = std::make_unique<juce::TimeSliceThread>("Audio Writer Thread");
+    audioWriterThread_->startThread(5);
+
+    DBG("Engine: Audio recording infrastructure initialized");
 }
 
 Engine::~Engine()
 {
     DBG("Engine: Destructor");
 
+    // CODEX FIX P2: Set shutdown flag to prevent async callbacks
+    isShuttingDown_.store(true);
+
     // Phase 2A: Disable MIDI input
     disableMidiInput();
 
     shutdown();
+
+    // Phase 2D: Cleanup audio recording infrastructure
+    // Stop writer thread
+    if (audioWriterThread_ != nullptr)
+    {
+        audioWriterThread_->stopThread(1000);  // Wait up to 1 second
+        audioWriterThread_.reset();
+    }
+
+    // Clear audio file pool
+    if (audioFilePool_ != nullptr)
+    {
+        audioFilePool_.reset();
+    }
+
+    DBG("Engine: Audio recording infrastructure cleaned up");
 }
 
 //==============================================================================
@@ -315,17 +344,29 @@ double Engine::getPlaybackPositionBeats() const
 }
 
 //==============================================================================
-// Phase 2C: MIDI Recording
+// Phase 2C/2D: MIDI and Audio Recording
 //==============================================================================
 
 void Engine::record()
 {
     DBG("Engine: Record");
 
-    // Set recording start position to current playhead
+    // Start playback if not already playing
+    if (!isPlaying_.load())
+    {
+        play();
+    }
+
+    // Get current sample rate and start position
+    const double sampleRate = currentSampleRate.load();
+    const juce::int64 recordStartSamples = playheadSamples_.load();
+
+    // ==========================================================================
+    // Phase 2C: Setup MIDI recording
+    // ==========================================================================
     {
         const juce::ScopedLock sl(midiRecordingLock_);
-        midiRecording_.recordingStartSamples = playheadSamples_.load();
+        midiRecording_.recordingStartSamples = recordStartSamples;
 
         // Resize recording buffers to match track count
         midiRecording_.trackRecordings.resize(tracks_.size());
@@ -337,32 +378,170 @@ void Engine::record()
         }
     }
 
-    // Enable recording
-    isRecording_.store(true);
+    // ==========================================================================
+    // Phase 2D: Setup Audio recording
+    // ==========================================================================
 
-    // Start playback if not already playing
-    if (!isPlaying_.load())
+    // Create recordings directory
+    // TODO: Use project path when available; for now use a temp directory
+    juce::File recordingsDir = juce::File::getSpecialLocation(
+        juce::File::userDocumentsDirectory).getChildFile("ZenithDAW/Recordings");
+
+    if (!recordingsDir.exists())
     {
-        play();
+        recordingsDir.createDirectory();
     }
 
-    DBG("Engine: Recording started at sample " + juce::String(midiRecording_.recordingStartSamples));
+    // Create recording sessions for all armed audio tracks
+    audioRecordingSessions_.clear();
+
+    for (size_t i = 0; i < tracks_.size(); ++i)
+    {
+        auto& track = tracks_[i];
+
+        // Skip if not armed or not an audio track
+        if (!track->isArmed() || track->getType() != zenith::Track::Type::Audio)
+            continue;
+
+        DBG("Engine: Creating recording session for track " + juce::String(i) +
+            " (" + track->getName() + ")");
+
+        // Create unique filename with timestamp
+        juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+        juce::String filename = track->getName().replaceCharacter(' ', '_') +
+                               "_" + timestamp + ".wav";
+        juce::File recordFile = recordingsDir.getChildFile(filename);
+
+        // Determine number of channels for this track
+        // TODO: Implement proper input routing matrix
+        // For now: assume mono recording (1 channel per track)
+        const int numChannels = 1;
+
+        // Create WAV writer
+        juce::WavAudioFormat wavFormat;
+        std::unique_ptr<juce::FileOutputStream> fileStream(
+            new juce::FileOutputStream(recordFile));
+
+        if (!fileStream->openedOk())
+        {
+            DBG("Engine: Failed to create output stream for " + recordFile.getFullPathName());
+            continue;
+        }
+
+        std::unique_ptr<juce::AudioFormatWriter> writer(
+            wavFormat.createWriterFor(
+                fileStream.release(),
+                sampleRate,
+                static_cast<unsigned int>(numChannels),
+                24,  // 24-bit depth
+                {},  // Default metadata
+                0    // Default quality
+            ));
+
+        if (writer == nullptr)
+        {
+            DBG("Engine: Failed to create audio writer for " + recordFile.getFullPathName());
+            continue;
+        }
+
+        // Wrap in ThreadedWriter for RT-safe writing
+        auto threadedWriter = std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
+            writer.release(),
+            *audioWriterThread_,
+            32768  // 32KB FIFO buffer
+        );
+
+        // Create session
+        AudioRecordingSession session;
+        session.writer = std::move(threadedWriter);
+        session.file = recordFile;
+        session.numChannels = numChannels;
+        session.sampleRate = sampleRate;
+        session.recordingStartSamples = recordStartSamples;
+        session.trackIndex = static_cast<int>(i);
+
+        audioRecordingSessions_.push_back(std::move(session));
+
+        DBG("Engine: Recording to " + recordFile.getFullPathName());
+    }
+
+    // ==========================================================================
+    // CODEX FIX P1: Enable recording flag AFTER sessions are set up
+    // This prevents the audio thread from accessing sessions before they're ready
+    // ==========================================================================
+    isRecording_.store(true);
+
+    DBG("Engine: Recording started at sample " + juce::String(recordStartSamples));
+    DBG("Engine: Audio sessions: " + juce::String(audioRecordingSessions_.size()));
 }
 
 void Engine::stopRecording()
 {
     DBG("Engine: Stop recording");
 
-    // Disable recording first (stops new MIDI from being recorded)
+    // Stop accepting new samples immediately
     isRecording_.store(false);
 
-    // Bake recordings into clips (with quantization enabled)
-    bakeMidiRecordingsIntoClips(true);
+    // ==========================================================================
+    // CODEX FIX P2: Guard async callback against use-after-free
+    // Check if we're shutting down before posting async operations
+    // ==========================================================================
+    if (isShuttingDown_.load())
+    {
+        DBG("Engine: Shutdown in progress, skipping async recording cleanup");
+        return;
+    }
 
-    // Clear recording buffers
+    // ==========================================================================
+    // Phase 2C: Bake MIDI recordings into clips
+    // ==========================================================================
+    bakeMidiRecordingsIntoClips(true);  // With quantization
     clearMidiRecordings();
 
-    DBG("Engine: Recording stopped, clips created");
+    // ==========================================================================
+    // Phase 2D: Process audio recordings asynchronously
+    // This MUST be async because we need to flush writers on the message thread
+    // ==========================================================================
+    juce::MessageManager::callAsync([this]()
+    {
+        // Double-check we're not shutting down
+        if (isShuttingDown_.load())
+        {
+            DBG("Engine: Shutdown detected in async callback, aborting");
+            return;
+        }
+
+        DBG("Engine: Flushing and closing " +
+            juce::String(audioRecordingSessions_.size()) + " recording sessions");
+
+        // Flush and close all writers, then create clips
+        for (auto& session : audioRecordingSessions_)
+        {
+            // Flush and delete writer (triggers file close)
+            session.writer.reset();
+
+            DBG("Engine: Closed recording: " + session.file.getFullPathName());
+
+            // Create audio clip from recording
+            if (session.trackIndex >= 0 &&
+                session.trackIndex < static_cast<int>(tracks_.size()))
+            {
+                auto& track = tracks_[session.trackIndex];
+                bakeAudioRecordingIntoTrack(
+                    *track,
+                    session.file,
+                    session.recordingStartSamples,
+                    session.sampleRate);
+            }
+        }
+
+        // Clear sessions
+        audioRecordingSessions_.clear();
+
+        DBG("Engine: All recording sessions processed");
+    });
+
+    DBG("Engine: Recording stopped, processing clips");
 }
 
 //==============================================================================
@@ -586,6 +765,7 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     // Check if playing
     bool playing = isPlaying_.load();
+    bool recording = isRecording_.load();
 
     if (playing)
     {
@@ -630,6 +810,12 @@ void Engine::audioDeviceIOCallbackWithContext(
                 juce::FloatVectorOperations::clear(outputChannelData[channel], numSamples);
             }
         }
+    }
+
+    // Phase 2D: Process recording (can record even when not playing, but typically we start playback)
+    if (recording)
+    {
+        processAudioRecording(inputChannelData, numInputChannels, numSamples);
     }
 }
 
@@ -978,7 +1164,114 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
 }
 
 //==============================================================================
-// Phase 2C: MIDI Recording Baking
+// Phase 2D: Audio Recording (AUDIO THREAD)
+//==============================================================================
+
+void Engine::processAudioRecording(
+    const float* const* inputChannelData,
+    int numInputChannels,
+    int numSamples)
+{
+    // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
+    //
+    // This function writes audio input to ThreadedWriter instances,
+    // which use a lock-free FIFO. This is RT-safe.
+    //
+    // NO allocations, NO locks, NO system calls here!
+
+    if (inputChannelData == nullptr || numInputChannels == 0)
+        return;
+
+    // Write to each active recording session
+    for (auto& session : audioRecordingSessions_)
+    {
+        if (session.writer == nullptr)
+            continue;
+
+        // TODO: Implement proper input routing matrix
+        // For now: simple mapping - session track index maps to input channel
+        // If we have more sessions than input channels, they'll share channels
+
+        // Determine which input channel(s) to use for this session
+        // Simplified: track index % numInputChannels
+        const int inputChannel = session.trackIndex % numInputChannels;
+
+        if (inputChannel >= numInputChannels || inputChannelData[inputChannel] == nullptr)
+            continue;
+
+        // For mono recording: write single channel
+        if (session.numChannels == 1)
+        {
+            // Write samples to the threaded writer
+            // This is RT-safe - just pushes to a FIFO
+            const float* channelData[1] = { inputChannelData[inputChannel] };
+            session.writer->write(channelData, numSamples);
+        }
+        // For stereo recording: write two channels
+        else if (session.numChannels == 2 && numInputChannels >= 2)
+        {
+            const float* channelData[2] = {
+                inputChannelData[0],
+                inputChannelData[1]
+            };
+            session.writer->write(channelData, numSamples);
+        }
+    }
+}
+
+//==============================================================================
+// Phase 2D: Audio Recording Helpers (MESSAGE THREAD)
+//==============================================================================
+
+void Engine::bakeAudioRecordingIntoTrack(
+    zenith::Track& track,
+    const juce::File& file,
+    juce::int64 recordingStartSamples,
+    double sampleRate)
+{
+    DBG("Engine: Baking audio recording into track '" + track.getName() + "'");
+    DBG("  File: " + file.getFullPathName());
+    DBG("  Start: " + juce::String(recordingStartSamples) + " samples");
+
+    if (!file.existsAsFile())
+    {
+        DBG("Engine: Recording file does not exist!");
+        return;
+    }
+
+    // Load file into AudioFilePool
+    auto fileHandle = audioFilePool_->loadFile(file);
+
+    if (fileHandle == nullptr || !fileHandle->isValid())
+    {
+        DBG("Engine: Failed to load recording into AudioFilePool");
+        return;
+    }
+
+    // Create a new audio clip
+    auto clip = std::make_unique<zenith::Track::Clip>();
+    clip->setType(zenith::Track::Clip::Type::Audio);
+    clip->setName(file.getFileNameWithoutExtension());
+
+    // Set timeline position
+    clip->setStartPosition(recordingStartSamples);
+
+    // Set clip length from file
+    clip->setLength(fileHandle->lengthInSamples);
+
+    // Load audio data into clip
+    clip->setAudioFile(file);
+
+    // Add clip to track
+    track.addClip(std::move(clip));
+
+    DBG("Engine: Audio clip created successfully");
+    DBG("  Length: " + juce::String(fileHandle->lengthInSamples) + " samples (" +
+        juce::String(fileHandle->lengthInSamples / sampleRate, 2) + " seconds)");
+}
+
+//==============================================================================
+// Phase 2C: MIDI Recording Baking (MESSAGE THREAD)
 //==============================================================================
 
 void Engine::bakeMidiRecordingsIntoClips(bool quantize)

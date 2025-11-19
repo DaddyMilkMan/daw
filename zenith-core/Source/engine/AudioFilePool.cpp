@@ -91,6 +91,12 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File& file, juce::S
     return handle;
 }
 
+AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File& file)
+{
+    juce::String errorMessage;
+    return loadFile(file, errorMessage);
+}
+
 AudioFilePool::HandlePtr AudioFilePool::getFile(const juce::File& file) const
 {
     const juce::ScopedLock sl(cacheLock_);

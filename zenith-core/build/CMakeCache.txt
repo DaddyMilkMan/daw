@@ -20,8 +20,9 @@ CMAKE_ADDR2LINE:FILEPATH=/usr/bin/addr2line
 //Path to a program.
 CMAKE_AR:FILEPATH=/usr/bin/ar
 
-//Build type
-CMAKE_BUILD_TYPE:STRING=Release
+//Choose the type of build, options are: None Debug Release RelWithDebInfo
+// MinSizeRel ...
+CMAKE_BUILD_TYPE:STRING=Debug
 
 //Enable/Disable color output during build.
 CMAKE_COLOR_MAKEFILE:BOOL=ON
@@ -255,22 +256,12 @@ GIT_EXECUTABLE:FILEPATH=/usr/bin/git
 //Value Computed by CMake
 JUCE_BINARY_DIR:STATIC=/home/user/daw/zenith-core/build/_deps/juce-build
 
-//Add build targets for the DemoRunner and PIPs
-JUCE_BUILD_EXAMPLES:BOOL=OFF
-
-//Add build targets for the Projucer and other tools
-JUCE_BUILD_EXTRAS:BOOL=OFF
-
 //Whether or not plugins should be installed to the system after
 // building
 JUCE_COPY_PLUGIN_AFTER_BUILD:BOOL=OFF
 
 //Show all module sources in IDE projects
 JUCE_ENABLE_MODULE_SOURCE_GROUPS:BOOL=OFF
-
-//The location, relative to the install prefix, where the JUCE
-// config file will be installed
-JUCE_INSTALL_DESTINATION:STRING=lib/cmake/JUCE-8.0.9
 
 //Value Computed by CMake
 JUCE_IS_TOP_LEVEL:STATIC=OFF
@@ -281,19 +272,20 @@ JUCE_MODULES_ONLY:BOOL=OFF
 //Value Computed by CMake
 JUCE_SOURCE_DIR:STATIC=/home/user/daw/zenith-core/build/_deps/juce-src
 
-//The location, relative to the install prefix, where juceaide
-// will be installed
-JUCE_TOOL_INSTALL_DIR:STRING=bin/JUCE-8.0.9
-
-//Location that overrides the default directory where our FindWebView2
-// script is looking for the *Microsoft.Web.WebView2* directory
-JUCE_WEBVIEW2_PACKAGE_LOCATION:BOOL=OFF
-
 //Arguments to supply to pkg-config
 PKG_CONFIG_ARGN:STRING=
 
 //pkg-config executable
 PKG_CONFIG_EXECUTABLE:FILEPATH=/usr/bin/pkg-config
+
+//Enable src/audio skeleton (Phase 1 - not ready)
+ZENITH_ENABLE_PHASE1_AUDIO:BOOL=OFF
+
+//Enable donor compile checks from VexelDAW-Native
+ZENITH_ENABLE_VEXEL_DONOR:BOOL=OFF
+
+//Create 8 demo tracks at startup in Debug builds
+ZENITH_ENGINE_SEED_DEBUG_TRACKS:BOOL=OFF
 
 //Value Computed by CMake
 ZenithDAW_BINARY_DIR:STATIC=/home/user/daw/zenith-core/build
@@ -305,16 +297,10 @@ ZenithDAW_IS_TOP_LEVEL:STATIC=ON
 ZenithDAW_SOURCE_DIR:STATIC=/home/user/daw/zenith-core
 
 //Path to a library.
-pkgcfg_lib_juce_audio_devices_LINUX_DEPS_asound:FILEPATH=/usr/lib/x86_64-linux-gnu/libasound.so
-
-//Path to a library.
 pkgcfg_lib_juce_graphics_LINUX_DEPS_fontconfig:FILEPATH=/usr/lib/x86_64-linux-gnu/libfontconfig.so
 
 //Path to a library.
 pkgcfg_lib_juce_graphics_LINUX_DEPS_freetype:FILEPATH=/usr/lib/x86_64-linux-gnu/libfreetype.so
-
-//Path to a library.
-pkgcfg_lib_juce_opengl_LINUX_DEPS_GL:FILEPATH=/usr/lib/x86_64-linux-gnu/libGL.so
 
 
 ########################
@@ -526,8 +512,6 @@ JUCE_CURL_LINUX_DEPS_libcurl_INCLUDEDIR:INTERNAL=
 JUCE_CURL_LINUX_DEPS_libcurl_LIBDIR:INTERNAL=
 JUCE_CURL_LINUX_DEPS_libcurl_PREFIX:INTERNAL=
 JUCE_CURL_LINUX_DEPS_libcurl_VERSION:INTERNAL=
-//The name of the juceaide program
-JUCE_JUCEAIDE_NAME:INTERNAL=juceaide
 //The path to JUCE modules
 JUCE_MODULES_DIR:INTERNAL=/home/user/daw/zenith-core/build/_deps/juce-src/modules
 //The target architecture, used to name internal folders in VST3
@@ -539,9 +523,7 @@ PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
 //linker supports push/pop state
 _CMAKE_LINKER_PUSHPOP_STATE_SUPPORTED:INTERNAL=TRUE
-__pkg_config_arguments_juce_audio_devices_LINUX_DEPS:INTERNAL=alsa
 __pkg_config_arguments_juce_graphics_LINUX_DEPS:INTERNAL=freetype2;fontconfig
-__pkg_config_arguments_juce_opengl_LINUX_DEPS:INTERNAL=gl
 __pkg_config_checked_JUCE_BROWSER_LINUX_DEPS:INTERNAL=1
 __pkg_config_checked_JUCE_CURL_LINUX_DEPS:INTERNAL=1
 __pkg_config_checked_juce_audio_devices_LINUX_DEPS:INTERNAL=1
@@ -549,38 +531,28 @@ __pkg_config_checked_juce_graphics_LINUX_DEPS:INTERNAL=1
 __pkg_config_checked_juce_opengl_LINUX_DEPS:INTERNAL=1
 __pkg_config_checked_package_to_be_found:INTERNAL=1
 //Result of TRY_COMPILE
-compile_result:INTERNAL=TRUE
-juce_audio_devices_LINUX_DEPS_CFLAGS:INTERNAL=-I/usr/include
+compile_result:INTERNAL=FALSE
+juce_audio_devices_LINUX_DEPS_CFLAGS:INTERNAL=
 juce_audio_devices_LINUX_DEPS_CFLAGS_I:INTERNAL=
 juce_audio_devices_LINUX_DEPS_CFLAGS_OTHER:INTERNAL=
-juce_audio_devices_LINUX_DEPS_FOUND:INTERNAL=1
-juce_audio_devices_LINUX_DEPS_INCLUDEDIR:INTERNAL=/usr/include
-juce_audio_devices_LINUX_DEPS_INCLUDE_DIRS:INTERNAL=/usr/include
-juce_audio_devices_LINUX_DEPS_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lasound
-juce_audio_devices_LINUX_DEPS_LDFLAGS_OTHER:INTERNAL=
-juce_audio_devices_LINUX_DEPS_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
-juce_audio_devices_LINUX_DEPS_LIBRARIES:INTERNAL=asound
-juce_audio_devices_LINUX_DEPS_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+juce_audio_devices_LINUX_DEPS_FOUND:INTERNAL=
+juce_audio_devices_LINUX_DEPS_INCLUDEDIR:INTERNAL=
+juce_audio_devices_LINUX_DEPS_LIBDIR:INTERNAL=
 juce_audio_devices_LINUX_DEPS_LIBS:INTERNAL=
 juce_audio_devices_LINUX_DEPS_LIBS_L:INTERNAL=
 juce_audio_devices_LINUX_DEPS_LIBS_OTHER:INTERNAL=
 juce_audio_devices_LINUX_DEPS_LIBS_PATHS:INTERNAL=
-juce_audio_devices_LINUX_DEPS_MODULE_NAME:INTERNAL=alsa
-juce_audio_devices_LINUX_DEPS_PREFIX:INTERNAL=/usr
-juce_audio_devices_LINUX_DEPS_STATIC_CFLAGS:INTERNAL=-I/usr/include
+juce_audio_devices_LINUX_DEPS_MODULE_NAME:INTERNAL=
+juce_audio_devices_LINUX_DEPS_PREFIX:INTERNAL=
+juce_audio_devices_LINUX_DEPS_STATIC_CFLAGS:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_CFLAGS_I:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_CFLAGS_OTHER:INTERNAL=
-juce_audio_devices_LINUX_DEPS_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include
-juce_audio_devices_LINUX_DEPS_STATIC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lasound;-lm;-lpthread;-lrt
-juce_audio_devices_LINUX_DEPS_STATIC_LDFLAGS_OTHER:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_LIBDIR:INTERNAL=
-juce_audio_devices_LINUX_DEPS_STATIC_LIBRARIES:INTERNAL=asound;m;pthread;rt
-juce_audio_devices_LINUX_DEPS_STATIC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
 juce_audio_devices_LINUX_DEPS_STATIC_LIBS:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_LIBS_L:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_LIBS_OTHER:INTERNAL=
 juce_audio_devices_LINUX_DEPS_STATIC_LIBS_PATHS:INTERNAL=
-juce_audio_devices_LINUX_DEPS_VERSION:INTERNAL=1.2.11
+juce_audio_devices_LINUX_DEPS_VERSION:INTERNAL=
 juce_audio_devices_LINUX_DEPS_alsa_INCLUDEDIR:INTERNAL=
 juce_audio_devices_LINUX_DEPS_alsa_LIBDIR:INTERNAL=
 juce_audio_devices_LINUX_DEPS_alsa_PREFIX:INTERNAL=
@@ -626,37 +598,27 @@ juce_graphics_LINUX_DEPS_freetype2_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
 juce_graphics_LINUX_DEPS_freetype2_MODULE_NAME:INTERNAL=freetype2
 juce_graphics_LINUX_DEPS_freetype2_PREFIX:INTERNAL=/usr
 juce_graphics_LINUX_DEPS_freetype2_VERSION:INTERNAL=26.1.20
-juce_opengl_LINUX_DEPS_CFLAGS:INTERNAL=-I/usr/include
+juce_opengl_LINUX_DEPS_CFLAGS:INTERNAL=
 juce_opengl_LINUX_DEPS_CFLAGS_I:INTERNAL=
 juce_opengl_LINUX_DEPS_CFLAGS_OTHER:INTERNAL=
-juce_opengl_LINUX_DEPS_FOUND:INTERNAL=1
-juce_opengl_LINUX_DEPS_INCLUDEDIR:INTERNAL=/usr/include
-juce_opengl_LINUX_DEPS_INCLUDE_DIRS:INTERNAL=/usr/include
-juce_opengl_LINUX_DEPS_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lGL
-juce_opengl_LINUX_DEPS_LDFLAGS_OTHER:INTERNAL=
-juce_opengl_LINUX_DEPS_LIBDIR:INTERNAL=/usr/lib/x86_64-linux-gnu
-juce_opengl_LINUX_DEPS_LIBRARIES:INTERNAL=GL
-juce_opengl_LINUX_DEPS_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
+juce_opengl_LINUX_DEPS_FOUND:INTERNAL=
+juce_opengl_LINUX_DEPS_INCLUDEDIR:INTERNAL=
+juce_opengl_LINUX_DEPS_LIBDIR:INTERNAL=
 juce_opengl_LINUX_DEPS_LIBS:INTERNAL=
 juce_opengl_LINUX_DEPS_LIBS_L:INTERNAL=
 juce_opengl_LINUX_DEPS_LIBS_OTHER:INTERNAL=
 juce_opengl_LINUX_DEPS_LIBS_PATHS:INTERNAL=
-juce_opengl_LINUX_DEPS_MODULE_NAME:INTERNAL=gl
-juce_opengl_LINUX_DEPS_PREFIX:INTERNAL=/usr
-juce_opengl_LINUX_DEPS_STATIC_CFLAGS:INTERNAL=-I/usr/include
+juce_opengl_LINUX_DEPS_MODULE_NAME:INTERNAL=
+juce_opengl_LINUX_DEPS_PREFIX:INTERNAL=
+juce_opengl_LINUX_DEPS_STATIC_CFLAGS:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_CFLAGS_I:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_CFLAGS_OTHER:INTERNAL=
-juce_opengl_LINUX_DEPS_STATIC_INCLUDE_DIRS:INTERNAL=/usr/include
-juce_opengl_LINUX_DEPS_STATIC_LDFLAGS:INTERNAL=-L/usr/lib/x86_64-linux-gnu;-lGL
-juce_opengl_LINUX_DEPS_STATIC_LDFLAGS_OTHER:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_LIBDIR:INTERNAL=
-juce_opengl_LINUX_DEPS_STATIC_LIBRARIES:INTERNAL=GL
-juce_opengl_LINUX_DEPS_STATIC_LIBRARY_DIRS:INTERNAL=/usr/lib/x86_64-linux-gnu
 juce_opengl_LINUX_DEPS_STATIC_LIBS:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_LIBS_L:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_LIBS_OTHER:INTERNAL=
 juce_opengl_LINUX_DEPS_STATIC_LIBS_PATHS:INTERNAL=
-juce_opengl_LINUX_DEPS_VERSION:INTERNAL=1.2
+juce_opengl_LINUX_DEPS_VERSION:INTERNAL=
 juce_opengl_LINUX_DEPS_gl_INCLUDEDIR:INTERNAL=
 juce_opengl_LINUX_DEPS_gl_LIBDIR:INTERNAL=
 juce_opengl_LINUX_DEPS_gl_PREFIX:INTERNAL=
@@ -686,13 +648,9 @@ package_to_be_found_webkit2gtk-4.1_INCLUDEDIR:INTERNAL=
 package_to_be_found_webkit2gtk-4.1_LIBDIR:INTERNAL=
 package_to_be_found_webkit2gtk-4.1_PREFIX:INTERNAL=
 package_to_be_found_webkit2gtk-4.1_VERSION:INTERNAL=
-//ADVANCED property for variable: pkgcfg_lib_juce_audio_devices_LINUX_DEPS_asound
-pkgcfg_lib_juce_audio_devices_LINUX_DEPS_asound-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_juce_graphics_LINUX_DEPS_fontconfig
 pkgcfg_lib_juce_graphics_LINUX_DEPS_fontconfig-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_juce_graphics_LINUX_DEPS_freetype
 pkgcfg_lib_juce_graphics_LINUX_DEPS_freetype-ADVANCED:INTERNAL=1
-//ADVANCED property for variable: pkgcfg_lib_juce_opengl_LINUX_DEPS_GL
-pkgcfg_lib_juce_opengl_LINUX_DEPS_GL-ADVANCED:INTERNAL=1
 prefix_result:INTERNAL=/usr/lib/x86_64-linux-gnu
 

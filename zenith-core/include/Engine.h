@@ -11,6 +11,7 @@
  * - Atomic playhead tracking with loop support
  * - AudioFilePool integration for audio file caching
  * - MIDI input routing and recording (Phase 2A/2C)
+ * - Audio input recording (Phase 2D)
  * - Pre-allocated buffers (trackBuffers_, clipBuffer_)
  *
  * Manages:
@@ -18,6 +19,7 @@
  * - Audio processing callback
  * - Transport state (play/stop/record)
  * - MIDI input routing
+ * - Audio input recording
  * - CPU usage monitoring
  * - Sample rate and buffer size
  *
@@ -58,7 +60,8 @@ namespace zenith {
  * 2. Transport (play/stop/record)
  * 3. Audio routing and mixing
  * 4. MIDI input routing (Phase 2A)
- * 5. CPU usage monitoring
+ * 5. Audio input recording (Phase 2D)
+ * 6. CPU usage monitoring
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback
@@ -127,13 +130,13 @@ public:
     bool isPlaying() const { return isPlaying_.load(); }
 
     /**
-     * @brief Start recording
+     * @brief Start recording (both MIDI and audio)
      * @note MESSAGE THREAD ONLY - Starts recording on armed tracks
      */
     void record();
 
     /**
-     * @brief Stop recording and bake MIDI clips
+     * @brief Stop recording and bake clips
      * @note MESSAGE THREAD ONLY - Converts recordings to clips
      */
     void stopRecording();
@@ -395,6 +398,32 @@ private:
         int numOutputChannels,
         int numSamples);
 
+    /**
+     * @brief Process audio recording (AUDIO THREAD)
+     * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
+     */
+    void processAudioRecording(
+        const float* const* inputChannelData,
+        int numInputChannels,
+        int numSamples);
+
+    //==========================================================================
+    // Recording Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Convert a completed audio recording into an AudioClip
+     * @param track Track to add clip to
+     * @param file Recorded audio file
+     * @param recordingStartSamples Timeline position where recording started
+     * @param sampleRate Sample rate of recording
+     */
+    void bakeAudioRecordingIntoTrack(
+        zenith::Track& track,
+        const juce::File& file,
+        juce::int64 recordingStartSamples,
+        double sampleRate);
+
     //==========================================================================
     // Phase 2C: MIDI Recording Helpers (MESSAGE THREAD)
     //==========================================================================
@@ -493,6 +522,30 @@ private:
     };
     MidiRecordingBuffer midiRecording_;
     juce::CriticalSection midiRecordingLock_;
+
+    //==========================================================================
+    // Phase 2D: Audio Recording Infrastructure
+    //==========================================================================
+
+    // Background thread for audio file writing
+    std::unique_ptr<juce::TimeSliceThread> audioWriterThread_;
+
+    // Audio recording session (per-track)
+    struct AudioRecordingSession
+    {
+        std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+        juce::File file;
+        int numChannels = 0;
+        double sampleRate = 44100.0;
+        juce::int64 recordingStartSamples = 0;
+        int trackIndex = -1;  // Which track this session belongs to
+    };
+
+    // Active recording sessions (message thread creates, audio thread writes)
+    std::vector<AudioRecordingSession> audioRecordingSessions_;
+
+    // Flag to prevent use-after-free in async callbacks
+    std::atomic<bool> isShuttingDown_{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
