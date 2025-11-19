@@ -1,5 +1,5 @@
 # ============================================================================
-# Vexel Scripting Layer - Lua Bindings for Automation
+# Zenith Scripting Layer - Lua Bindings for Automation
 # ============================================================================
 
 if(NOT VEXEL_ENABLE_LUA)
@@ -17,20 +17,20 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(LuaBridge)
 
 # Scripting engine library
-add_library(VexelScripting STATIC
+add_library(ZenithScripting STATIC
     ScriptEngine.cpp
     ScriptEngine.h
     AudioEngineBindings.cpp
     AudioEngineBindings.h
 )
 
-target_include_directories(VexelScripting PUBLIC
+target_include_directories(ZenithScripting PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${LUA_INCLUDE_DIR}
 )
 
-target_link_libraries(VexelScripting PUBLIC
-    VexelAudioEngine
+target_link_libraries(ZenithScripting PUBLIC
+    ZenithAudioEngine
     ${LUA_LIBRARIES}
 )
 
@@ -39,5 +39,5 @@ install(FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/automate_volume.lua
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/create_tracks.lua
     ${CMAKE_CURRENT_SOURCE_DIR}/examples/midi_mapper.lua
-    DESTINATION share/vexel/scripts/examples
+    DESTINATION share/zenith/scripts/examples
 )

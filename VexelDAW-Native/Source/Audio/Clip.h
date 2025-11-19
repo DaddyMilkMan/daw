@@ -3,7 +3,7 @@
 
     Clip.h
     Created: 2025-11-11
-    Author:  Vexel DAW
+    Author:  Zenith DAW
 
     Audio/MIDI clip with transport synchronization and playback control
 

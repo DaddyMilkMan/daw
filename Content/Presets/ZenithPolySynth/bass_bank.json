@@ -1,0 +1,1899 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Bass Bank",
+  "category": "Bass",
+  "version": "1.0",
+  "preset_count": 90,
+  "presets": [
+    {
+      "id": "clean_sub_808",
+      "name": "Clean Sub 808",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Pure sine sub bass for 808-style patterns",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.4,
+        "filter_resonance": 0.1,
+        "attack": 0.005,
+        "decay": 0.4,
+        "sustain": 0.0,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "clean_sub_808_01",
+      "name": "Clean Sub 808 01",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Variation of Clean Sub 808",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.442,
+        "filter_resonance": 0.132,
+        "attack": 0.003,
+        "decay": 0.382,
+        "sustain": 0.02,
+        "release": 0.251
+      }
+    },
+    {
+      "id": "clean_sub_808_02",
+      "name": "Clean Sub 808 02",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Variation of Clean Sub 808",
+      "parameters": {
+        "osc_type": 0.058,
+        "filter_cutoff": 0.37,
+        "filter_resonance": 0.043,
+        "attack": 0.05,
+        "decay": 0.335,
+        "sustain": 0.0,
+        "release": 0.275
+      }
+    },
+    {
+      "id": "clean_sub_808_03",
+      "name": "Clean Sub 808 03",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Variation of Clean Sub 808",
+      "parameters": {
+        "osc_type": 0.137,
+        "filter_cutoff": 0.476,
+        "filter_resonance": 0.121,
+        "attack": 0.059,
+        "decay": 0.439,
+        "sustain": 0.0,
+        "release": 0.13
+      }
+    },
+    {
+      "id": "clean_sub_808_04",
+      "name": "Clean Sub 808 04",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Variation of Clean Sub 808",
+      "parameters": {
+        "osc_type": 0.017,
+        "filter_cutoff": 0.365,
+        "filter_resonance": 0.082,
+        "attack": 0.0,
+        "decay": 0.398,
+        "sustain": 0.0,
+        "release": 0.132
+      }
+    },
+    {
+      "id": "clean_sub_808_05",
+      "name": "Clean Sub 808 05",
+      "category": "Bass",
+      "tags": [
+        "trap",
+        "808",
+        "sub",
+        "bass"
+      ],
+      "description": "Variation of Clean Sub 808",
+      "parameters": {
+        "osc_type": 0.079,
+        "filter_cutoff": 0.365,
+        "filter_resonance": 0.044,
+        "attack": 0.009,
+        "decay": 0.347,
+        "sustain": 0.0,
+        "release": 0.144
+      }
+    },
+    {
+      "id": "warm_sub_bass",
+      "name": "Warm Sub Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Warm sine sub with gentle attack",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.2,
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.6,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "warm_sub_bass_01",
+      "name": "Warm Sub Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Variation of Warm Sub Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.483,
+        "filter_resonance": 0.189,
+        "attack": 0.09,
+        "decay": 0.357,
+        "sustain": 0.614,
+        "release": 0.365
+      }
+    },
+    {
+      "id": "warm_sub_bass_02",
+      "name": "Warm Sub Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Variation of Warm Sub Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.547,
+        "filter_resonance": 0.279,
+        "attack": 0.0,
+        "decay": 0.322,
+        "sustain": 0.602,
+        "release": 0.328
+      }
+    },
+    {
+      "id": "warm_sub_bass_03",
+      "name": "Warm Sub Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Variation of Warm Sub Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.531,
+        "filter_resonance": 0.165,
+        "attack": 0.0,
+        "decay": 0.356,
+        "sustain": 0.564,
+        "release": 0.33
+      }
+    },
+    {
+      "id": "warm_sub_bass_04",
+      "name": "Warm Sub Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Variation of Warm Sub Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.543,
+        "filter_resonance": 0.127,
+        "attack": 0.063,
+        "decay": 0.239,
+        "sustain": 0.646,
+        "release": 0.231
+      }
+    },
+    {
+      "id": "warm_sub_bass_05",
+      "name": "Warm Sub Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "warm",
+        "hip-hop"
+      ],
+      "description": "Variation of Warm Sub Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.535,
+        "filter_resonance": 0.158,
+        "attack": 0.0,
+        "decay": 0.351,
+        "sustain": 0.635,
+        "release": 0.303
+      }
+    },
+    {
+      "id": "reese_growl",
+      "name": "Reese Growl",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Classic Reese bass with movement",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.35,
+        "filter_resonance": 0.7,
+        "attack": 0.02,
+        "decay": 0.3,
+        "sustain": 0.8,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "reese_growl_01",
+      "name": "Reese Growl 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Variation of Reese Growl",
+      "parameters": {
+        "osc_type": 1.037,
+        "filter_cutoff": 0.402,
+        "filter_resonance": 0.646,
+        "attack": 0.0,
+        "decay": 0.332,
+        "sustain": 0.768,
+        "release": 0.177
+      }
+    },
+    {
+      "id": "reese_growl_02",
+      "name": "Reese Growl 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Variation of Reese Growl",
+      "parameters": {
+        "osc_type": 1.038,
+        "filter_cutoff": 0.302,
+        "filter_resonance": 0.768,
+        "attack": 0.09,
+        "decay": 0.257,
+        "sustain": 0.797,
+        "release": 0.139
+      }
+    },
+    {
+      "id": "reese_growl_03",
+      "name": "Reese Growl 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Variation of Reese Growl",
+      "parameters": {
+        "osc_type": 0.854,
+        "filter_cutoff": 0.292,
+        "filter_resonance": 0.696,
+        "attack": 0.047,
+        "decay": 0.245,
+        "sustain": 0.81,
+        "release": 0.221
+      }
+    },
+    {
+      "id": "reese_growl_04",
+      "name": "Reese Growl 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Variation of Reese Growl",
+      "parameters": {
+        "osc_type": 1.051,
+        "filter_cutoff": 0.349,
+        "filter_resonance": 0.638,
+        "attack": 0.059,
+        "decay": 0.365,
+        "sustain": 0.736,
+        "release": 0.205
+      }
+    },
+    {
+      "id": "reese_growl_05",
+      "name": "Reese Growl 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "reese",
+        "dnb",
+        "dubstep"
+      ],
+      "description": "Variation of Reese Growl",
+      "parameters": {
+        "osc_type": 0.998,
+        "filter_cutoff": 0.373,
+        "filter_resonance": 0.649,
+        "attack": 0.007,
+        "decay": 0.309,
+        "sustain": 0.849,
+        "release": 0.277
+      }
+    },
+    {
+      "id": "fm_donk",
+      "name": "FM Donk",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Punchy saw bass with quick decay",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.5,
+        "attack": 0.001,
+        "decay": 0.15,
+        "sustain": 0.0,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "fm_donk_01",
+      "name": "FM Donk 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Variation of FM Donk",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.613,
+        "filter_resonance": 0.479,
+        "attack": 0.0,
+        "decay": 0.072,
+        "sustain": 0.062,
+        "release": 0.169
+      }
+    },
+    {
+      "id": "fm_donk_02",
+      "name": "FM Donk 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Variation of FM Donk",
+      "parameters": {
+        "osc_type": 1.15,
+        "filter_cutoff": 0.542,
+        "filter_resonance": 0.578,
+        "attack": 0.07,
+        "decay": 0.209,
+        "sustain": 0.008,
+        "release": 0.155
+      }
+    },
+    {
+      "id": "fm_donk_03",
+      "name": "FM Donk 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Variation of FM Donk",
+      "parameters": {
+        "osc_type": 0.86,
+        "filter_cutoff": 0.673,
+        "filter_resonance": 0.462,
+        "attack": 0.028,
+        "decay": 0.085,
+        "sustain": 0.0,
+        "release": 0.064
+      }
+    },
+    {
+      "id": "fm_donk_04",
+      "name": "FM Donk 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Variation of FM Donk",
+      "parameters": {
+        "osc_type": 0.908,
+        "filter_cutoff": 0.582,
+        "filter_resonance": 0.473,
+        "attack": 0.069,
+        "decay": 0.122,
+        "sustain": 0.0,
+        "release": 0.128
+      }
+    },
+    {
+      "id": "fm_donk_05",
+      "name": "FM Donk 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "donk",
+        "edm",
+        "aggressive"
+      ],
+      "description": "Variation of FM Donk",
+      "parameters": {
+        "osc_type": 1.122,
+        "filter_cutoff": 0.549,
+        "filter_resonance": 0.509,
+        "attack": 0.0,
+        "decay": 0.175,
+        "sustain": 0.0,
+        "release": 0.041
+      }
+    },
+    {
+      "id": "acid_bass",
+      "name": "Acid Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Resonant acid bass",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.3,
+        "filter_resonance": 0.85,
+        "attack": 0.005,
+        "decay": 0.25,
+        "sustain": 0.4,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "acid_bass_01",
+      "name": "Acid Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Variation of Acid Bass",
+      "parameters": {
+        "osc_type": 0.904,
+        "filter_cutoff": 0.331,
+        "filter_resonance": 0.929,
+        "attack": 0.0,
+        "decay": 0.173,
+        "sustain": 0.408,
+        "release": 0.228
+      }
+    },
+    {
+      "id": "acid_bass_02",
+      "name": "Acid Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Variation of Acid Bass",
+      "parameters": {
+        "osc_type": 1.15,
+        "filter_cutoff": 0.225,
+        "filter_resonance": 0.779,
+        "attack": 0.0,
+        "decay": 0.285,
+        "sustain": 0.468,
+        "release": 0.138
+      }
+    },
+    {
+      "id": "acid_bass_03",
+      "name": "Acid Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Variation of Acid Bass",
+      "parameters": {
+        "osc_type": 0.86,
+        "filter_cutoff": 0.332,
+        "filter_resonance": 0.872,
+        "attack": 0.0,
+        "decay": 0.202,
+        "sustain": 0.479,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "acid_bass_04",
+      "name": "Acid Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Variation of Acid Bass",
+      "parameters": {
+        "osc_type": 0.942,
+        "filter_cutoff": 0.268,
+        "filter_resonance": 0.812,
+        "attack": 0.049,
+        "decay": 0.199,
+        "sustain": 0.449,
+        "release": 0.207
+      }
+    },
+    {
+      "id": "acid_bass_05",
+      "name": "Acid Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "acid",
+        "techno",
+        "303"
+      ],
+      "description": "Variation of Acid Bass",
+      "parameters": {
+        "osc_type": 0.869,
+        "filter_cutoff": 0.267,
+        "filter_resonance": 0.78,
+        "attack": 0.032,
+        "decay": 0.295,
+        "sustain": 0.435,
+        "release": 0.196
+      }
+    },
+    {
+      "id": "deep_sub",
+      "name": "Deep Sub",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Ultra deep sine sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.35,
+        "filter_resonance": 0.05,
+        "attack": 0.01,
+        "decay": 0.5,
+        "sustain": 0.8,
+        "release": 0.4
+      }
+    },
+    {
+      "id": "deep_sub_01",
+      "name": "Deep Sub 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Variation of Deep Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.381,
+        "filter_resonance": 0.102,
+        "attack": 0.052,
+        "decay": 0.532,
+        "sustain": 0.867,
+        "release": 0.438
+      }
+    },
+    {
+      "id": "deep_sub_02",
+      "name": "Deep Sub 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Variation of Deep Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.355,
+        "filter_resonance": 0.081,
+        "attack": 0.0,
+        "decay": 0.434,
+        "sustain": 0.841,
+        "release": 0.353
+      }
+    },
+    {
+      "id": "deep_sub_03",
+      "name": "Deep Sub 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Variation of Deep Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.383,
+        "filter_resonance": 0.124,
+        "attack": 0.0,
+        "decay": 0.528,
+        "sustain": 0.834,
+        "release": 0.333
+      }
+    },
+    {
+      "id": "deep_sub_04",
+      "name": "Deep Sub 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Variation of Deep Sub",
+      "parameters": {
+        "osc_type": 0.121,
+        "filter_cutoff": 0.356,
+        "filter_resonance": 0.014,
+        "attack": 0.0,
+        "decay": 0.473,
+        "sustain": 0.723,
+        "release": 0.438
+      }
+    },
+    {
+      "id": "deep_sub_05",
+      "name": "Deep Sub 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "deep",
+        "minimal"
+      ],
+      "description": "Variation of Deep Sub",
+      "parameters": {
+        "osc_type": 0.117,
+        "filter_cutoff": 0.404,
+        "filter_resonance": 0.002,
+        "attack": 0.088,
+        "decay": 0.506,
+        "sustain": 0.841,
+        "release": 0.395
+      }
+    },
+    {
+      "id": "square_bass",
+      "name": "Square Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Hollow square wave bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.45,
+        "filter_resonance": 0.3,
+        "attack": 0.005,
+        "decay": 0.3,
+        "sustain": 0.6,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "square_bass_01",
+      "name": "Square Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Variation of Square Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.447,
+        "filter_resonance": 0.278,
+        "attack": 0.0,
+        "decay": 0.305,
+        "sustain": 0.545,
+        "release": 0.224
+      }
+    },
+    {
+      "id": "square_bass_02",
+      "name": "Square Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Variation of Square Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.473,
+        "filter_resonance": 0.361,
+        "attack": 0.071,
+        "decay": 0.365,
+        "sustain": 0.65,
+        "release": 0.155
+      }
+    },
+    {
+      "id": "square_bass_03",
+      "name": "Square Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Variation of Square Bass",
+      "parameters": {
+        "osc_type": 1.854,
+        "filter_cutoff": 0.397,
+        "filter_resonance": 0.282,
+        "attack": 0.0,
+        "decay": 0.28,
+        "sustain": 0.569,
+        "release": 0.151
+      }
+    },
+    {
+      "id": "square_bass_04",
+      "name": "Square Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Variation of Square Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.382,
+        "filter_resonance": 0.242,
+        "attack": 0.035,
+        "decay": 0.241,
+        "sustain": 0.558,
+        "release": 0.269
+      }
+    },
+    {
+      "id": "square_bass_05",
+      "name": "Square Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "square",
+        "retro",
+        "gameboy"
+      ],
+      "description": "Variation of Square Bass",
+      "parameters": {
+        "osc_type": 1.997,
+        "filter_cutoff": 0.469,
+        "filter_resonance": 0.372,
+        "attack": 0.0,
+        "decay": 0.37,
+        "sustain": 0.636,
+        "release": 0.131
+      }
+    },
+    {
+      "id": "wobble_bass",
+      "name": "Wobble Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Resonant wobble bass foundation",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.4,
+        "filter_resonance": 0.75,
+        "attack": 0.01,
+        "decay": 0.2,
+        "sustain": 0.7,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "wobble_bass_01",
+      "name": "Wobble Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Variation of Wobble Bass",
+      "parameters": {
+        "osc_type": 1.144,
+        "filter_cutoff": 0.365,
+        "filter_resonance": 0.724,
+        "attack": 0.0,
+        "decay": 0.121,
+        "sustain": 0.717,
+        "release": 0.201
+      }
+    },
+    {
+      "id": "wobble_bass_02",
+      "name": "Wobble Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Variation of Wobble Bass",
+      "parameters": {
+        "osc_type": 0.916,
+        "filter_cutoff": 0.334,
+        "filter_resonance": 0.725,
+        "attack": 0.0,
+        "decay": 0.138,
+        "sustain": 0.752,
+        "release": 0.073
+      }
+    },
+    {
+      "id": "wobble_bass_03",
+      "name": "Wobble Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Variation of Wobble Bass",
+      "parameters": {
+        "osc_type": 0.918,
+        "filter_cutoff": 0.34,
+        "filter_resonance": 0.714,
+        "attack": 0.075,
+        "decay": 0.192,
+        "sustain": 0.692,
+        "release": 0.221
+      }
+    },
+    {
+      "id": "wobble_bass_04",
+      "name": "Wobble Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Variation of Wobble Bass",
+      "parameters": {
+        "osc_type": 1.051,
+        "filter_cutoff": 0.369,
+        "filter_resonance": 0.733,
+        "attack": 0.016,
+        "decay": 0.185,
+        "sustain": 0.65,
+        "release": 0.128
+      }
+    },
+    {
+      "id": "wobble_bass_05",
+      "name": "Wobble Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "wobble",
+        "dubstep",
+        "edm"
+      ],
+      "description": "Variation of Wobble Bass",
+      "parameters": {
+        "osc_type": 0.866,
+        "filter_cutoff": 0.47,
+        "filter_resonance": 0.735,
+        "attack": 0.0,
+        "decay": 0.222,
+        "sustain": 0.661,
+        "release": 0.219
+      }
+    },
+    {
+      "id": "soft_sub",
+      "name": "Soft Sub",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Gentle sine sub with slow attack",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.55,
+        "filter_resonance": 0.15,
+        "attack": 0.05,
+        "decay": 0.4,
+        "sustain": 0.75,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "soft_sub_01",
+      "name": "Soft Sub 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Variation of Soft Sub",
+      "parameters": {
+        "osc_type": 0.122,
+        "filter_cutoff": 0.518,
+        "filter_resonance": 0.169,
+        "attack": 0.122,
+        "decay": 0.348,
+        "sustain": 0.683,
+        "release": 0.509
+      }
+    },
+    {
+      "id": "soft_sub_02",
+      "name": "Soft Sub 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Variation of Soft Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.546,
+        "filter_resonance": 0.112,
+        "attack": 0.023,
+        "decay": 0.394,
+        "sustain": 0.829,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "soft_sub_03",
+      "name": "Soft Sub 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Variation of Soft Sub",
+      "parameters": {
+        "osc_type": 0.082,
+        "filter_cutoff": 0.481,
+        "filter_resonance": 0.198,
+        "attack": 0.0,
+        "decay": 0.405,
+        "sustain": 0.739,
+        "release": 0.421
+      }
+    },
+    {
+      "id": "soft_sub_04",
+      "name": "Soft Sub 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Variation of Soft Sub",
+      "parameters": {
+        "osc_type": 0.141,
+        "filter_cutoff": 0.554,
+        "filter_resonance": 0.177,
+        "attack": 0.039,
+        "decay": 0.416,
+        "sustain": 0.711,
+        "release": 0.425
+      }
+    },
+    {
+      "id": "soft_sub_05",
+      "name": "Soft Sub 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "soft",
+        "ambient"
+      ],
+      "description": "Variation of Soft Sub",
+      "parameters": {
+        "osc_type": 0.024,
+        "filter_cutoff": 0.485,
+        "filter_resonance": 0.23,
+        "attack": 0.069,
+        "decay": 0.464,
+        "sustain": 0.824,
+        "release": 0.468
+      }
+    },
+    {
+      "id": "punchy_saw_bass",
+      "name": "Punchy Saw Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Aggressive saw bass with punch",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.4,
+        "attack": 0.002,
+        "decay": 0.2,
+        "sustain": 0.5,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "punchy_saw_bass_01",
+      "name": "Punchy Saw Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Variation of Punchy Saw Bass",
+      "parameters": {
+        "osc_type": 1.044,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.448,
+        "attack": 0.068,
+        "decay": 0.127,
+        "sustain": 0.462,
+        "release": 0.174
+      }
+    },
+    {
+      "id": "punchy_saw_bass_02",
+      "name": "Punchy Saw Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Variation of Punchy Saw Bass",
+      "parameters": {
+        "osc_type": 1.1,
+        "filter_cutoff": 0.551,
+        "filter_resonance": 0.352,
+        "attack": 0.007,
+        "decay": 0.202,
+        "sustain": 0.459,
+        "release": 0.138
+      }
+    },
+    {
+      "id": "punchy_saw_bass_03",
+      "name": "Punchy Saw Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Variation of Punchy Saw Bass",
+      "parameters": {
+        "osc_type": 1.01,
+        "filter_cutoff": 0.485,
+        "filter_resonance": 0.386,
+        "attack": 0.0,
+        "decay": 0.123,
+        "sustain": 0.431,
+        "release": 0.137
+      }
+    },
+    {
+      "id": "punchy_saw_bass_04",
+      "name": "Punchy Saw Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Variation of Punchy Saw Bass",
+      "parameters": {
+        "osc_type": 1.021,
+        "filter_cutoff": 0.426,
+        "filter_resonance": 0.465,
+        "attack": 0.0,
+        "decay": 0.239,
+        "sustain": 0.522,
+        "release": 0.108
+      }
+    },
+    {
+      "id": "punchy_saw_bass_05",
+      "name": "Punchy Saw Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "saw",
+        "punchy",
+        "edm"
+      ],
+      "description": "Variation of Punchy Saw Bass",
+      "parameters": {
+        "osc_type": 1.087,
+        "filter_cutoff": 0.43,
+        "filter_resonance": 0.337,
+        "attack": 0.012,
+        "decay": 0.203,
+        "sustain": 0.496,
+        "release": 0.153
+      }
+    },
+    {
+      "id": "vintage_sub",
+      "name": "Vintage Sub",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Warm vintage-style sub bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.48,
+        "filter_resonance": 0.25,
+        "attack": 0.008,
+        "decay": 0.35,
+        "sustain": 0.7,
+        "release": 0.35
+      }
+    },
+    {
+      "id": "vintage_sub_01",
+      "name": "Vintage Sub 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Variation of Vintage Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.504,
+        "filter_resonance": 0.205,
+        "attack": 0.0,
+        "decay": 0.425,
+        "sustain": 0.742,
+        "release": 0.399
+      }
+    },
+    {
+      "id": "vintage_sub_02",
+      "name": "Vintage Sub 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Variation of Vintage Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.42,
+        "filter_resonance": 0.258,
+        "attack": 0.02,
+        "decay": 0.318,
+        "sustain": 0.632,
+        "release": 0.328
+      }
+    },
+    {
+      "id": "vintage_sub_03",
+      "name": "Vintage Sub 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Variation of Vintage Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.439,
+        "filter_resonance": 0.175,
+        "attack": 0.083,
+        "decay": 0.327,
+        "sustain": 0.655,
+        "release": 0.34
+      }
+    },
+    {
+      "id": "vintage_sub_04",
+      "name": "Vintage Sub 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Variation of Vintage Sub",
+      "parameters": {
+        "osc_type": 0.031,
+        "filter_cutoff": 0.483,
+        "filter_resonance": 0.276,
+        "attack": 0.0,
+        "decay": 0.311,
+        "sustain": 0.743,
+        "release": 0.323
+      }
+    },
+    {
+      "id": "vintage_sub_05",
+      "name": "Vintage Sub 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sub",
+        "vintage",
+        "analog"
+      ],
+      "description": "Variation of Vintage Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.456,
+        "filter_resonance": 0.261,
+        "attack": 0.068,
+        "decay": 0.375,
+        "sustain": 0.765,
+        "release": 0.283
+      }
+    },
+    {
+      "id": "gritty_bass",
+      "name": "Gritty Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Gritty square bass with bite",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.6,
+        "attack": 0.003,
+        "decay": 0.25,
+        "sustain": 0.5,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "gritty_bass_01",
+      "name": "Gritty Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Variation of Gritty Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.576,
+        "filter_resonance": 0.614,
+        "attack": 0.0,
+        "decay": 0.224,
+        "sustain": 0.42,
+        "release": 0.12
+      }
+    },
+    {
+      "id": "gritty_bass_02",
+      "name": "Gritty Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Variation of Gritty Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.634,
+        "filter_resonance": 0.616,
+        "attack": 0.036,
+        "decay": 0.227,
+        "sustain": 0.514,
+        "release": 0.175
+      }
+    },
+    {
+      "id": "gritty_bass_03",
+      "name": "Gritty Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Variation of Gritty Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.668,
+        "filter_resonance": 0.592,
+        "attack": 0.0,
+        "decay": 0.298,
+        "sustain": 0.461,
+        "release": 0.235
+      }
+    },
+    {
+      "id": "gritty_bass_04",
+      "name": "Gritty Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Variation of Gritty Bass",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.527,
+        "filter_resonance": 0.597,
+        "attack": 0.0,
+        "decay": 0.247,
+        "sustain": 0.431,
+        "release": 0.278
+      }
+    },
+    {
+      "id": "gritty_bass_05",
+      "name": "Gritty Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "gritty",
+        "aggressive",
+        "distorted"
+      ],
+      "description": "Variation of Gritty Bass",
+      "parameters": {
+        "osc_type": 1.999,
+        "filter_cutoff": 0.64,
+        "filter_resonance": 0.612,
+        "attack": 0.007,
+        "decay": 0.298,
+        "sustain": 0.446,
+        "release": 0.218
+      }
+    },
+    {
+      "id": "smooth_sine_bass",
+      "name": "Smooth Sine Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Smooth sine bass with sustain",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.2,
+        "attack": 0.015,
+        "decay": 0.3,
+        "sustain": 0.8,
+        "release": 0.4
+      }
+    },
+    {
+      "id": "smooth_sine_bass_01",
+      "name": "Smooth Sine Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Variation of Smooth Sine Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.181,
+        "attack": 0.0,
+        "decay": 0.309,
+        "sustain": 0.876,
+        "release": 0.447
+      }
+    },
+    {
+      "id": "smooth_sine_bass_02",
+      "name": "Smooth Sine Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Variation of Smooth Sine Bass",
+      "parameters": {
+        "osc_type": 0.149,
+        "filter_cutoff": 0.624,
+        "filter_resonance": 0.201,
+        "attack": 0.0,
+        "decay": 0.326,
+        "sustain": 0.879,
+        "release": 0.42
+      }
+    },
+    {
+      "id": "smooth_sine_bass_03",
+      "name": "Smooth Sine Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Variation of Smooth Sine Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.658,
+        "filter_resonance": 0.214,
+        "attack": 0.023,
+        "decay": 0.321,
+        "sustain": 0.821,
+        "release": 0.419
+      }
+    },
+    {
+      "id": "smooth_sine_bass_04",
+      "name": "Smooth Sine Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Variation of Smooth Sine Bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.631,
+        "filter_resonance": 0.198,
+        "attack": 0.0,
+        "decay": 0.249,
+        "sustain": 0.741,
+        "release": 0.42
+      }
+    },
+    {
+      "id": "smooth_sine_bass_05",
+      "name": "Smooth Sine Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "sine",
+        "smooth",
+        "clean"
+      ],
+      "description": "Variation of Smooth Sine Bass",
+      "parameters": {
+        "osc_type": 0.084,
+        "filter_cutoff": 0.644,
+        "filter_resonance": 0.143,
+        "attack": 0.03,
+        "decay": 0.267,
+        "sustain": 0.774,
+        "release": 0.327
+      }
+    },
+    {
+      "id": "trap_sub",
+      "name": "Trap Sub",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Modern trap sub bass",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.42,
+        "filter_resonance": 0.15,
+        "attack": 0.003,
+        "decay": 0.45,
+        "sustain": 0.0,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "trap_sub_01",
+      "name": "Trap Sub 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Variation of Trap Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.444,
+        "filter_resonance": 0.199,
+        "attack": 0.009,
+        "decay": 0.383,
+        "sustain": 0.0,
+        "release": 0.286
+      }
+    },
+    {
+      "id": "trap_sub_02",
+      "name": "Trap Sub 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Variation of Trap Sub",
+      "parameters": {
+        "osc_type": 0.138,
+        "filter_cutoff": 0.434,
+        "filter_resonance": 0.164,
+        "attack": 0.028,
+        "decay": 0.493,
+        "sustain": 0.054,
+        "release": 0.294
+      }
+    },
+    {
+      "id": "trap_sub_03",
+      "name": "Trap Sub 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Variation of Trap Sub",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.473,
+        "filter_resonance": 0.202,
+        "attack": 0.022,
+        "decay": 0.42,
+        "sustain": 0.044,
+        "release": 0.216
+      }
+    },
+    {
+      "id": "trap_sub_04",
+      "name": "Trap Sub 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Variation of Trap Sub",
+      "parameters": {
+        "osc_type": 0.148,
+        "filter_cutoff": 0.453,
+        "filter_resonance": 0.12,
+        "attack": 0.05,
+        "decay": 0.372,
+        "sustain": 0.005,
+        "release": 0.24
+      }
+    },
+    {
+      "id": "trap_sub_05",
+      "name": "Trap Sub 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "trap",
+        "sub",
+        "modern"
+      ],
+      "description": "Variation of Trap Sub",
+      "parameters": {
+        "osc_type": 0.013,
+        "filter_cutoff": 0.449,
+        "filter_resonance": 0.213,
+        "attack": 0.0,
+        "decay": 0.474,
+        "sustain": 0.0,
+        "release": 0.224
+      }
+    },
+    {
+      "id": "dark_saw_bass",
+      "name": "Dark Saw Bass",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Dark filtered saw bass",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.28,
+        "filter_resonance": 0.35,
+        "attack": 0.01,
+        "decay": 0.35,
+        "sustain": 0.65,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "dark_saw_bass_01",
+      "name": "Dark Saw Bass 01",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Variation of Dark Saw Bass",
+      "parameters": {
+        "osc_type": 1.12,
+        "filter_cutoff": 0.246,
+        "filter_resonance": 0.295,
+        "attack": 0.0,
+        "decay": 0.37,
+        "sustain": 0.591,
+        "release": 0.32
+      }
+    },
+    {
+      "id": "dark_saw_bass_02",
+      "name": "Dark Saw Bass 02",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Variation of Dark Saw Bass",
+      "parameters": {
+        "osc_type": 1.078,
+        "filter_cutoff": 0.219,
+        "filter_resonance": 0.4,
+        "attack": 0.0,
+        "decay": 0.335,
+        "sustain": 0.729,
+        "release": 0.28
+      }
+    },
+    {
+      "id": "dark_saw_bass_03",
+      "name": "Dark Saw Bass 03",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Variation of Dark Saw Bass",
+      "parameters": {
+        "osc_type": 0.882,
+        "filter_cutoff": 0.318,
+        "filter_resonance": 0.274,
+        "attack": 0.0,
+        "decay": 0.288,
+        "sustain": 0.662,
+        "release": 0.269
+      }
+    },
+    {
+      "id": "dark_saw_bass_04",
+      "name": "Dark Saw Bass 04",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Variation of Dark Saw Bass",
+      "parameters": {
+        "osc_type": 1.152,
+        "filter_cutoff": 0.354,
+        "filter_resonance": 0.299,
+        "attack": 0.0,
+        "decay": 0.358,
+        "sustain": 0.584,
+        "release": 0.367
+      }
+    },
+    {
+      "id": "dark_saw_bass_05",
+      "name": "Dark Saw Bass 05",
+      "category": "Bass",
+      "tags": [
+        "bass",
+        "dark",
+        "saw",
+        "mysterious"
+      ],
+      "description": "Variation of Dark Saw Bass",
+      "parameters": {
+        "osc_type": 1.089,
+        "filter_cutoff": 0.262,
+        "filter_resonance": 0.318,
+        "attack": 0.013,
+        "decay": 0.313,
+        "sustain": 0.691,
+        "release": 0.282
+      }
+    }
+  ]
+}

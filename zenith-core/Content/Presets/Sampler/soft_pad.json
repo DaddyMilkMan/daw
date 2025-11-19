@@ -1,0 +1,31 @@
+{
+  "id": "soft_pad_preset_001",
+  "name": "Soft Pad",
+  "instrumentId": "zenith_sampler",
+  "category": "Pad",
+  "author": "Factory",
+  "description": "Gentle, ambient pad with slow attack and long release. Ideal for atmospheric textures.",
+  "version": "1.0.0",
+  "tags": [
+    "pad",
+    "soft",
+    "ambient",
+    "gentle",
+    "atmospheric"
+  ],
+  "params": {
+    "attack": 0.7,
+    "decay": 0.5,
+    "sustain": 0.85,
+    "release": 0.8,
+    "filter_cutoff": 0.6,
+    "filter_resonance": 0.15,
+    "tune": 0.5,
+    "gain": 0.65,
+    "character": 0.3
+  },
+  "macros": {
+    "macro_brightness": 0.5,
+    "macro_response": 0.25
+  }
+}
