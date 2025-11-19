@@ -412,10 +412,14 @@ void Engine::record()
                                "_" + timestamp + ".wav";
         juce::File recordFile = recordingsDir.getChildFile(filename);
 
-        // Determine number of channels for this track
-        // TODO: Implement proper input routing matrix
-        // For now: assume mono recording (1 channel per track)
-        const int numChannels = 1;
+        // CODEX P1 FIX: Respect actual input channel count instead of hardcoding
+        // Get the number of active input channels from the device
+        auto* device = deviceManager.getCurrentAudioDevice();
+        const int deviceInputChannels = device ? device->getActiveInputChannels().countNumberOfSetBits() : 1;
+
+        // For now: use mono (1 channel) or stereo (2 channels) based on device capability
+        // Clamp to min(2, deviceInputChannels) to avoid exceeding device capabilities
+        const int numChannels = juce::jmin(2, juce::jmax(1, deviceInputChannels));
 
         // Create WAV writer
         juce::WavAudioFormat wavFormat;
