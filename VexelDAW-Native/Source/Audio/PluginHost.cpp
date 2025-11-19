@@ -3,7 +3,7 @@
 
     PluginHost.cpp
     Created: 2025-11-11
-    Author:  Vexel DAW
+    Author:  Zenith DAW
 
     Plugin host implementation
 
@@ -274,14 +274,14 @@ void PluginHost::loadPluginList()
 juce::File PluginHost::getPluginListFile() const
 {
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    auto vexelDir = appDataDir.getChildFile("VexelDAW");
+    auto zenithDir = appDataDir.getChildFile("ZenithDAW");
 
-    if (!vexelDir.exists())
+    if (!zenithDir.exists())
     {
-        vexelDir.createDirectory();
+        zenithDir.createDirectory();
     }
 
-    return vexelDir.getChildFile("PluginList.xml");
+    return zenithDir.getChildFile("PluginList.xml");
 }
 
 //==============================================================================

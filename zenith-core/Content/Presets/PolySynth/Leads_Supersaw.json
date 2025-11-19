@@ -1,0 +1,787 @@
+{
+  "bank_name": "Supersaw Leads - EDM & Festival",
+  "bank_description": "Bright, wide supersaw leads optimized for EDM and festival anthems. Sidechain-ready with powerful unison sounds.",
+  "instrument_id": "zenith_poly_synth",
+  "category": "Lead",
+  "presets": [
+    {
+      "name": "Festival Anthem",
+      "author": "Zenith Factory",
+      "description": "Classic festival lead - bright and massive",
+      "tags": ["supersaw", "edm", "festival", "anthem", "bigroom"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.35,
+        "attack": 0.15,
+        "decay": 0.25,
+        "sustain": 0.85,
+        "release": 0.4
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.5
+      }
+    },
+    {
+      "name": "Supersaw Classic",
+      "author": "Zenith Factory",
+      "description": "The quintessential supersaw sound",
+      "tags": ["supersaw", "edm", "classic", "trance"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.3,
+        "attack": 0.1,
+        "decay": 0.2,
+        "sustain": 0.8,
+        "release": 0.35
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.45
+      }
+    },
+    {
+      "name": "Ultra Wide Lead",
+      "author": "Zenith Factory",
+      "description": "Maximum width and brightness",
+      "tags": ["supersaw", "wide", "bright", "edm", "progressive"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.4,
+        "attack": 0.08,
+        "decay": 0.3,
+        "sustain": 0.9,
+        "release": 0.5
+      },
+      "macros": {
+        "macro_brightness": 0.9,
+        "macro_envelope_speed": 0.4
+      }
+    },
+    {
+      "name": "Sidechain Ready",
+      "author": "Zenith Factory",
+      "description": "Perfect for sidechain compression",
+      "tags": ["supersaw", "sidechain", "edm", "house"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.25,
+        "attack": 0.02,
+        "decay": 0.15,
+        "sustain": 0.75,
+        "release": 0.3
+      },
+      "macros": {
+        "macro_brightness": 0.7,
+        "macro_envelope_speed": 0.3
+      }
+    },
+    {
+      "name": "Bigroom Monster",
+      "author": "Zenith Factory",
+      "description": "Massive bigroom lead",
+      "tags": ["supersaw", "bigroom", "festival", "massive", "edm"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.45,
+        "attack": 0.2,
+        "decay": 0.35,
+        "sustain": 0.9,
+        "release": 0.6
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.6
+      }
+    },
+    {
+      "name": "Progressive Euphoria",
+      "author": "Zenith Factory",
+      "description": "Euphoric progressive house lead",
+      "tags": ["supersaw", "progressive", "euphoric", "house"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.38,
+        "attack": 0.12,
+        "decay": 0.28,
+        "sustain": 0.82,
+        "release": 0.45
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.48
+      }
+    },
+    {
+      "name": "Trance Gate",
+      "author": "Zenith Factory",
+      "description": "Quick attack for gated trance leads",
+      "tags": ["supersaw", "trance", "gated", "uplifting"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.32,
+        "attack": 0.01,
+        "decay": 0.1,
+        "sustain": 0.7,
+        "release": 0.15
+      },
+      "macros": {
+        "macro_brightness": 0.72,
+        "macro_envelope_speed": 0.2
+      }
+    },
+    {
+      "name": "Arena Lead",
+      "author": "Zenith Factory",
+      "description": "Built for stadium-filling drops",
+      "tags": ["supersaw", "arena", "festival", "bigroom"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.42,
+        "attack": 0.18,
+        "decay": 0.32,
+        "sustain": 0.88,
+        "release": 0.55
+      },
+      "macros": {
+        "macro_brightness": 0.82,
+        "macro_envelope_speed": 0.55
+      }
+    },
+    {
+      "name": "Warm Supersaw",
+      "author": "Zenith Factory",
+      "description": "Warmer, less harsh supersaw",
+      "tags": ["supersaw", "warm", "smooth", "house"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.2,
+        "attack": 0.15,
+        "decay": 0.25,
+        "sustain": 0.8,
+        "release": 0.4
+      },
+      "macros": {
+        "macro_brightness": 0.6,
+        "macro_envelope_speed": 0.5
+      }
+    },
+    {
+      "name": "Punchy EDM Lead",
+      "author": "Zenith Factory",
+      "description": "Fast attack for punchy sequences",
+      "tags": ["supersaw", "punchy", "edm", "sequence"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.35,
+        "attack": 0.005,
+        "decay": 0.18,
+        "sustain": 0.75,
+        "release": 0.25
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Melodic Anthem",
+      "author": "Zenith Factory",
+      "description": "Perfect for melodic drops",
+      "tags": ["supersaw", "melodic", "anthem", "festival"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.36,
+        "attack": 0.14,
+        "decay": 0.26,
+        "sustain": 0.84,
+        "release": 0.42
+      },
+      "macros": {
+        "macro_brightness": 0.77,
+        "macro_envelope_speed": 0.47
+      }
+    },
+    {
+      "name": "Electro Supersaw",
+      "author": "Zenith Factory",
+      "description": "Aggressive electro house lead",
+      "tags": ["supersaw", "electro", "aggressive", "house"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.97,
+        "filter_resonance": 0.5,
+        "attack": 0.03,
+        "decay": 0.2,
+        "sustain": 0.78,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.35
+      }
+    },
+    {
+      "name": "Future Rave",
+      "author": "Zenith Factory",
+      "description": "Modern future rave sound",
+      "tags": ["supersaw", "future-rave", "modern", "techno"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.28,
+        "attack": 0.06,
+        "decay": 0.22,
+        "sustain": 0.76,
+        "release": 0.32
+      },
+      "macros": {
+        "macro_brightness": 0.68,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Stadium Chord",
+      "author": "Zenith Factory",
+      "description": "For massive chord progressions",
+      "tags": ["supersaw", "chords", "stadium", "festival"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.4,
+        "attack": 0.25,
+        "decay": 0.4,
+        "sustain": 0.9,
+        "release": 0.7
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.65
+      }
+    },
+    {
+      "name": "Bright Riser",
+      "author": "Zenith Factory",
+      "description": "Bright lead perfect for filter sweeps",
+      "tags": ["supersaw", "bright", "riser", "buildup"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.6,
+        "attack": 0.1,
+        "decay": 0.3,
+        "sustain": 0.85,
+        "release": 0.5
+      },
+      "macros": {
+        "macro_brightness": 0.95,
+        "macro_envelope_speed": 0.5
+      }
+    },
+    {
+      "name": "Compressed Power",
+      "author": "Zenith Factory",
+      "description": "Tight and compressed for maximum energy",
+      "tags": ["supersaw", "compressed", "tight", "energy"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.91,
+        "filter_resonance": 0.33,
+        "attack": 0.02,
+        "decay": 0.12,
+        "sustain": 0.72,
+        "release": 0.22
+      },
+      "macros": {
+        "macro_brightness": 0.73,
+        "macro_envelope_speed": 0.28
+      }
+    },
+    {
+      "name": "Evolving Lead",
+      "author": "Zenith Factory",
+      "description": "Evolving texture for progressive tracks",
+      "tags": ["supersaw", "evolving", "progressive", "texture"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.45,
+        "attack": 0.2,
+        "decay": 0.45,
+        "sustain": 0.8,
+        "release": 0.6
+      },
+      "macros": {
+        "macro_brightness": 0.7,
+        "macro_envelope_speed": 0.7
+      }
+    },
+    {
+      "name": "Peak Time",
+      "author": "Zenith Factory",
+      "description": "Peak time techno lead",
+      "tags": ["supersaw", "techno", "peak-time", "driving"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.87,
+        "filter_resonance": 0.3,
+        "attack": 0.04,
+        "decay": 0.16,
+        "sustain": 0.74,
+        "release": 0.26
+      },
+      "macros": {
+        "macro_brightness": 0.65,
+        "macro_envelope_speed": 0.32
+      }
+    },
+    {
+      "name": "Mainstage Ready",
+      "author": "Zenith Factory",
+      "description": "Festival mainstage sound",
+      "tags": ["supersaw", "mainstage", "festival", "professional"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.38,
+        "attack": 0.16,
+        "decay": 0.28,
+        "sustain": 0.86,
+        "release": 0.48
+      },
+      "macros": {
+        "macro_brightness": 0.79,
+        "macro_envelope_speed": 0.52
+      }
+    },
+    {
+      "name": "Supersonic",
+      "author": "Zenith Factory",
+      "description": "Ultra-fast attack for rapid sequences",
+      "tags": ["supersaw", "fast", "rapid", "sequence"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.34,
+        "attack": 0.001,
+        "decay": 0.15,
+        "sustain": 0.7,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.74,
+        "macro_envelope_speed": 0.18
+      }
+    },
+    {
+      "name": "Dreamy Wide",
+      "author": "Zenith Factory",
+      "description": "Wide and dreamy for breakdowns",
+      "tags": ["supersaw", "dreamy", "wide", "breakdown"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.83,
+        "filter_resonance": 0.25,
+        "attack": 0.3,
+        "decay": 0.5,
+        "sustain": 0.85,
+        "release": 0.8
+      },
+      "macros": {
+        "macro_brightness": 0.65,
+        "macro_envelope_speed": 0.75
+      }
+    },
+    {
+      "name": "Drop Bomb",
+      "author": "Zenith Factory",
+      "description": "Maximum impact for the drop",
+      "tags": ["supersaw", "drop", "impact", "massive"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.99,
+        "filter_resonance": 0.48,
+        "attack": 0.01,
+        "decay": 0.25,
+        "sustain": 0.88,
+        "release": 0.4
+      },
+      "macros": {
+        "macro_brightness": 0.88,
+        "macro_envelope_speed": 0.42
+      }
+    },
+    {
+      "name": "Uplifting Trance",
+      "author": "Zenith Factory",
+      "description": "Classic uplifting trance lead",
+      "tags": ["supersaw", "trance", "uplifting", "classic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.32,
+        "attack": 0.11,
+        "decay": 0.24,
+        "sustain": 0.81,
+        "release": 0.38
+      },
+      "macros": {
+        "macro_brightness": 0.76,
+        "macro_envelope_speed": 0.44
+      }
+    },
+    {
+      "name": "Festival Chord Stab",
+      "author": "Zenith Factory",
+      "description": "Short and punchy chord stabs",
+      "tags": ["supersaw", "stab", "chord", "festival"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.4,
+        "attack": 0.01,
+        "decay": 0.2,
+        "sustain": 0.5,
+        "release": 0.15
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Smooth Operator",
+      "author": "Zenith Factory",
+      "description": "Smooth and controlled supersaw",
+      "tags": ["supersaw", "smooth", "controlled", "house"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.22,
+        "attack": 0.18,
+        "decay": 0.3,
+        "sustain": 0.78,
+        "release": 0.45
+      },
+      "macros": {
+        "macro_brightness": 0.62,
+        "macro_envelope_speed": 0.5
+      }
+    },
+    {
+      "name": "Digital Love",
+      "author": "Zenith Factory",
+      "description": "Clean digital sound",
+      "tags": ["supersaw", "digital", "clean", "modern"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.35,
+        "attack": 0.08,
+        "decay": 0.2,
+        "sustain": 0.8,
+        "release": 0.35
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.4
+      }
+    },
+    {
+      "name": "Neon Nights",
+      "author": "Zenith Factory",
+      "description": "Retro-futuristic lead",
+      "tags": ["supersaw", "retro", "neon", "synthwave"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.3,
+        "attack": 0.13,
+        "decay": 0.27,
+        "sustain": 0.82,
+        "release": 0.43
+      },
+      "macros": {
+        "macro_brightness": 0.72,
+        "macro_envelope_speed": 0.48
+      }
+    },
+    {
+      "name": "Hyper Pop Lead",
+      "author": "Zenith Factory",
+      "description": "Bright hyper pop sound",
+      "tags": ["supersaw", "hyperpop", "bright", "modern"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.5,
+        "attack": 0.02,
+        "decay": 0.18,
+        "sustain": 0.75,
+        "release": 0.3
+      },
+      "macros": {
+        "macro_brightness": 0.92,
+        "macro_envelope_speed": 0.35
+      }
+    },
+    {
+      "name": "Melodic Techno",
+      "author": "Zenith Factory",
+      "description": "Deep melodic techno lead",
+      "tags": ["supersaw", "melodic", "techno", "deep"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.28,
+        "attack": 0.15,
+        "decay": 0.35,
+        "sustain": 0.75,
+        "release": 0.5
+      },
+      "macros": {
+        "macro_brightness": 0.58,
+        "macro_envelope_speed": 0.55
+      }
+    },
+    {
+      "name": "Bass House Lead",
+      "author": "Zenith Factory",
+      "description": "Aggressive bass house lead",
+      "tags": ["supersaw", "bass-house", "aggressive", "grimy"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.55,
+        "attack": 0.01,
+        "decay": 0.15,
+        "sustain": 0.7,
+        "release": 0.25
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Rave Siren",
+      "author": "Zenith Factory",
+      "description": "Classic rave siren sound",
+      "tags": ["supersaw", "rave", "siren", "classic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.65,
+        "attack": 0.05,
+        "decay": 0.2,
+        "sustain": 0.78,
+        "release": 0.35
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.4
+      }
+    },
+    {
+      "name": "Crystal Lead",
+      "author": "Zenith Factory",
+      "description": "Crystal clear and pristine",
+      "tags": ["supersaw", "crystal", "clear", "pristine"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.38,
+        "attack": 0.09,
+        "decay": 0.22,
+        "sustain": 0.83,
+        "release": 0.4
+      },
+      "macros": {
+        "macro_brightness": 0.82,
+        "macro_envelope_speed": 0.43
+      }
+    },
+    {
+      "name": "Power Chord",
+      "author": "Zenith Factory",
+      "description": "Powerful chord lead",
+      "tags": ["supersaw", "power", "chord", "anthem"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.42,
+        "attack": 0.2,
+        "decay": 0.35,
+        "sustain": 0.87,
+        "release": 0.6
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.6
+      }
+    },
+    {
+      "name": "Liquid Trance",
+      "author": "Zenith Factory",
+      "description": "Flowing trance lead",
+      "tags": ["supersaw", "trance", "liquid", "flowing"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.3,
+        "attack": 0.17,
+        "decay": 0.32,
+        "sustain": 0.8,
+        "release": 0.5
+      },
+      "macros": {
+        "macro_brightness": 0.7,
+        "macro_envelope_speed": 0.53
+      }
+    },
+    {
+      "name": "Festival Euphoria",
+      "author": "Zenith Factory",
+      "description": "Ultimate festival euphoria",
+      "tags": ["supersaw", "festival", "euphoria", "ultimate"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.97,
+        "filter_resonance": 0.4,
+        "attack": 0.15,
+        "decay": 0.3,
+        "sustain": 0.88,
+        "release": 0.55
+      },
+      "macros": {
+        "macro_brightness": 0.84,
+        "macro_envelope_speed": 0.54
+      }
+    },
+    {
+      "name": "Future Classic",
+      "author": "Zenith Factory",
+      "description": "Modern future bass influenced supersaw",
+      "tags": ["supersaw", "future-bass", "modern", "classic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.91,
+        "filter_resonance": 0.36,
+        "attack": 0.12,
+        "decay": 0.25,
+        "sustain": 0.82,
+        "release": 0.42
+      },
+      "macros": {
+        "macro_brightness": 0.76,
+        "macro_envelope_speed": 0.46
+      }
+    },
+    {
+      "name": "Anthem Builder",
+      "author": "Zenith Factory",
+      "description": "Build epic anthems with this",
+      "tags": ["supersaw", "anthem", "builder", "epic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.38,
+        "attack": 0.18,
+        "decay": 0.33,
+        "sustain": 0.86,
+        "release": 0.52
+      },
+      "macros": {
+        "macro_brightness": 0.81,
+        "macro_envelope_speed": 0.56
+      }
+    },
+    {
+      "name": "Peak Hour",
+      "author": "Zenith Factory",
+      "description": "Peak hour energy lead",
+      "tags": ["supersaw", "peak-hour", "energy", "club"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.35,
+        "attack": 0.07,
+        "decay": 0.2,
+        "sustain": 0.79,
+        "release": 0.33
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Sunset Rave",
+      "author": "Zenith Factory",
+      "description": "Warm sunset festival vibe",
+      "tags": ["supersaw", "sunset", "festival", "warm"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.28,
+        "attack": 0.22,
+        "decay": 0.38,
+        "sustain": 0.84,
+        "release": 0.58
+      },
+      "macros": {
+        "macro_brightness": 0.68,
+        "macro_envelope_speed": 0.58
+      }
+    },
+    {
+      "name": "Laser Show",
+      "author": "Zenith Factory",
+      "description": "Cutting through like lasers",
+      "tags": ["supersaw", "laser", "cutting", "bright"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.55,
+        "attack": 0.01,
+        "decay": 0.18,
+        "sustain": 0.76,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.95,
+        "macro_envelope_speed": 0.32
+      }
+    },
+    {
+      "name": "Stadium Anthem",
+      "author": "Zenith Factory",
+      "description": "Fill the stadium with this massive sound",
+      "tags": ["supersaw", "stadium", "anthem", "massive"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.43,
+        "attack": 0.19,
+        "decay": 0.34,
+        "sustain": 0.89,
+        "release": 0.62
+      },
+      "macros": {
+        "macro_brightness": 0.83,
+        "macro_envelope_speed": 0.59
+      }
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 /*
   ==============================================================================
 
-    Vexel DAW - Native C++/JUCE Application
+    Zenith DAW - Native C++/JUCE Application
     Main entry point
 
   ==============================================================================
@@ -11,11 +11,11 @@
 #include "MainComponent.h"
 
 //==============================================================================
-class VexelDAWApplication  : public juce::JUCEApplication
+class ZenithDAWApplication  : public juce::JUCEApplication
 {
 public:
     //==============================================================================
-    VexelDAWApplication() {}
+    ZenithDAWApplication() {}
 
     const juce::String getApplicationName() override       { return ProjectInfo::projectName; }
     const juce::String getApplicationVersion() override    { return ProjectInfo::versionString; }
@@ -103,4 +103,4 @@ private:
 
 //==============================================================================
 // This macro generates the main() routine that launches the app.
-START_JUCE_APPLICATION (VexelDAWApplication)
+START_JUCE_APPLICATION (ZenithDAWApplication)

@@ -138,7 +138,7 @@ endif()
 # Summary Function
 # ============================================================================
 
-function(vexel_print_audio_config)
+function(zenith_print_audio_config)
     message(STATUS "")
     message(STATUS "═══════════════════════════════════════")
     message(STATUS "Audio Driver Configuration Summary")

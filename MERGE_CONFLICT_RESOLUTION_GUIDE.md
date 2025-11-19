@@ -12,11 +12,11 @@ This guide documents the merge conflicts found across 7 branches when attempting
 **Status:** 5 files with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/renderer/App.tsx`
-2. `vexel-daw/src/renderer/components/CenterPanel.tsx`
-3. `vexel-daw/src/renderer/components/RightPanel.tsx`
-4. `vexel-daw/src/renderer/components/TransportBar.tsx`
-5. `vexel-daw/src/renderer/components/WingmanSidebar.tsx`
+1. `zenith-daw/src/renderer/App.tsx`
+2. `zenith-daw/src/renderer/components/CenterPanel.tsx`
+3. `zenith-daw/src/renderer/components/RightPanel.tsx`
+4. `zenith-daw/src/renderer/components/TransportBar.tsx`
+5. `zenith-daw/src/renderer/components/WingmanSidebar.tsx`
 
 **Conflict Nature:**
 - Branch uses old `useAudioStore` architecture
@@ -74,8 +74,8 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 2 files with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/renderer/App.tsx`
-2. `vexel-daw/src/renderer/components/CenterPanel.tsx`
+1. `zenith-daw/src/renderer/App.tsx`
+2. `zenith-daw/src/renderer/components/CenterPanel.tsx`
 
 **Conflict Nature:**
 - Similar to Branch 1 - old architecture vs new
@@ -91,7 +91,7 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 1 file with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/package.json`
+1. `zenith-daw/package.json`
 
 **Conflict Nature:**
 - Dependency version conflicts
@@ -109,10 +109,10 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 4 files with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/main/index.js`
-2. `vexel-daw/src/main/preload.js`
-3. `vexel-daw/src/renderer/App.tsx`
-4. `vexel-daw/src/renderer/types/electron.d.ts`
+1. `zenith-daw/src/main/index.js`
+2. `zenith-daw/src/main/preload.js`
+3. `zenith-daw/src/renderer/App.tsx`
+4. `zenith-daw/src/renderer/types/electron.d.ts`
 
 **Conflict Nature:**
 - Adds Electron IPC handlers for save/load
@@ -130,7 +130,7 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 1 file with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/renderer/components/RightPanel.tsx`
+1. `zenith-daw/src/renderer/components/RightPanel.tsx`
 
 **Conflict Nature:**
 - Adds plugin UI to RightPanel
@@ -147,9 +147,9 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 3 files with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/renderer/App.tsx`
-2. `vexel-daw/src/renderer/components/CenterPanel.tsx`
-3. `vexel-daw/src/renderer/components/TransportBar.tsx`
+1. `zenith-daw/src/renderer/App.tsx`
+2. `zenith-daw/src/renderer/components/CenterPanel.tsx`
+3. `zenith-daw/src/renderer/components/TransportBar.tsx`
 
 **Conflict Nature:**
 - Adds tempo/metronome features
@@ -166,8 +166,8 @@ projectState.isPlaying // instead of transport.isPlaying
 **Status:** 2 files with conflicts
 
 **Conflicting Files:**
-1. `vexel-daw/src/renderer/App.tsx`
-2. `vexel-daw/src/renderer/components/TransportBar.tsx`
+1. `zenith-daw/src/renderer/App.tsx`
+2. `zenith-daw/src/renderer/components/TransportBar.tsx`
 
 **Conflict Nature:**
 - Duplicate of Branch 6 (different session)
