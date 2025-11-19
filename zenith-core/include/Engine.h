@@ -11,6 +11,7 @@
  * - Atomic playhead tracking with loop support
  * - AudioFilePool integration for audio file caching
  * - MIDI input routing and recording (Phase 2A/2C)
+ * - Audio input recording (Phase 2D)
  * - Pre-allocated buffers (trackBuffers_, clipBuffer_)
  *
  * Manages:
@@ -18,6 +19,7 @@
  * - Audio processing callback
  * - Transport state (play/stop/record)
  * - MIDI input routing
+ * - Audio input recording
  * - CPU usage monitoring
  * - Sample rate and buffer size
  *
@@ -48,9 +50,6 @@ namespace zenith {
     class PluginEditorWindowManager;
 }
 
-// Forward declaration
-class ProjectState;
-
 //==============================================================================
 /**
  * @class Engine
@@ -61,7 +60,8 @@ class ProjectState;
  * 2. Transport (play/stop/record)
  * 3. Audio routing and mixing
  * 4. MIDI input routing (Phase 2A)
- * 5. CPU usage monitoring
+ * 5. Audio input recording (Phase 2D)
+ * 6. CPU usage monitoring
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback
@@ -195,7 +195,6 @@ public:
      */
     juce::int64 getLoopEnd() const { return loopEndSamples_.load(); }
 
-
     //==========================================================================
     // Audio Device Management
     //==========================================================================
@@ -323,7 +322,6 @@ public:
     bool exportProjectToWav(const juce::String& outputFilePath,
                            double durationSeconds = 10.0,
                            double sampleRate = 0.0);
-
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -546,6 +544,8 @@ private:
     // Active recording sessions (message thread creates, audio thread writes)
     std::vector<AudioRecordingSession> audioRecordingSessions_;
 
+    // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
+    std::atomic<bool> isShuttingDown_{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
