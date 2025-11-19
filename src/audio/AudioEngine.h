@@ -1,6 +1,6 @@
 /**
  * AudioEngine.h
- * Core audio processing engine for Vexel DAW
+ * Core audio processing engine for Zenith DAW
  *
  * Handles real-time audio I/O, plugin hosting, routing, and DSP graph management.
  * Thread-safe design with lock-free queues for audio/UI communication.
@@ -18,7 +18,7 @@
 #include "Track.h"
 #include "PluginHost.h"
 
-namespace vexel {
+namespace zenith {
 
 /**
  * Transport state for playback control
@@ -219,4 +219,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioEngine)
 };
 
-} // namespace vexel
+} // namespace zenith

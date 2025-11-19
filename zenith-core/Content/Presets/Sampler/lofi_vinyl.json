@@ -1,0 +1,31 @@
+{
+  "id": "lofi_vinyl_preset_001",
+  "name": "LoFi Vinyl",
+  "instrumentId": "zenith_sampler",
+  "category": "LoFi",
+  "author": "Factory",
+  "description": "Vintage, warm sound with reduced filter cutoff and high character. Perfect for nostalgic, lo-fi vibes.",
+  "version": "1.0.0",
+  "tags": [
+    "lofi",
+    "vintage",
+    "warm",
+    "nostalgic",
+    "vinyl"
+  ],
+  "params": {
+    "attack": 0.05,
+    "decay": 0.35,
+    "sustain": 0.65,
+    "release": 0.4,
+    "filter_cutoff": 0.4,
+    "filter_resonance": 0.2,
+    "tune": 0.48,
+    "gain": 0.6,
+    "character": 0.8
+  },
+  "macros": {
+    "macro_brightness": 0.3,
+    "macro_response": 0.4
+  }
+}
