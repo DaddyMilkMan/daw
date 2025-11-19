@@ -18,17 +18,20 @@
 //==============================================================================
 
 MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state)
-    : engine(eng), projectState(state)
+    : engine(eng), projectState(state), mixerComponent(state)
 {
     // Set size
     setSize(1400, 800);
+
+    // Add mixer component
+    addAndMakeVisible(mixerComponent);
 
     // Register as key listener for undo/redo shortcuts
     addKeyListener(this);
     setWantsKeyboardFocus(true);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 9: Arranger MVP + Wingman AI", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 10: Mixer + Phase 9: Arranger MVP", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -175,6 +178,11 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Phase 10: Mixer panel at bottom (above transport bar)
+    auto mixerHeight = 220;
+    auto mixerArea = bounds.removeFromBottom(mixerHeight);
+    mixerComponent.setBounds(mixerArea);
 
     // Phase 7: Layout Wingman panel on the right (400px width)
     if (wingmanPanel != nullptr)
@@ -341,7 +349,7 @@ MainWindow::MainWindow(const juce::String& name)
     projectState->addTrack("MIDI 1", "midi");
     projectState->addTrack("Audio 2", "audio");
 
-    // Create main content (Phase 7 + Phase 9: Arranger + Wingman AI)
+    // Create main content (Phase 10: Mixer + Phase 9: Arranger + Wingman AI)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
 
     // Create menu bar

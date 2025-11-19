@@ -87,6 +87,7 @@ target_sources(ZenithDAW PRIVATE
     src/MainWindow.cpp
     src/Engine.cpp
     src/ProjectState.cpp
+    src/MixerComponent.cpp
 
     # Phase 13: Automation system
     src/TrackAutomationSynchronizer.cpp

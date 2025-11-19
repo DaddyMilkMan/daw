@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "MixerComponent.h"
 #include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
 
@@ -117,6 +118,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 10: Mixer panel
+    MixerComponent mixerComponent;
 
     // Phase 9: Arranger component with interactive clip editing
     std::unique_ptr<ArrangerComponent> arrangerComponent;
