@@ -12,7 +12,7 @@ extern "C" {
 #include <lauxlib.h>
 }
 
-namespace vexel {
+namespace zenith {
 
 // Global pointer to engine (accessed by Lua C functions)
 static AudioEngine* g_engine = nullptr;
@@ -235,4 +235,4 @@ void registerAudioEngine(lua_State* L, AudioEngine* engine)
     lua_setglobal(L, "daw");
 }
 
-} // namespace vexel
+} // namespace zenith

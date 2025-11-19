@@ -1,0 +1,824 @@
+{
+  "presets": [
+    {
+      "name": "Soft Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "soft",
+        "trap"
+      ],
+      "description": "Soft bell tone perfect for trap beats",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.45,
+        "attack": 0.01,
+        "decay": 0.35,
+        "sustain": 0.3,
+        "release": 0.28
+      }
+    },
+    {
+      "name": "Soft Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "soft",
+        "trap",
+        "variation"
+      ],
+      "description": "Soft bell tone perfect for trap beats",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7767699453039136,
+        "filter_resonance": 0.33600258125344007,
+        "attack": 0.002,
+        "decay": 0.2968564617245739,
+        "sustain": 0.337835394266242,
+        "release": 0.31392630158519896
+      }
+    },
+    {
+      "name": "Metallic Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "metallic",
+        "bright"
+      ],
+      "description": "Bright metallic bell with resonance",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.62,
+        "attack": 0.005,
+        "decay": 0.42,
+        "sustain": 0.22,
+        "release": 0.32
+      }
+    },
+    {
+      "name": "Metallic Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "metallic",
+        "bright",
+        "variation"
+      ],
+      "description": "Bright metallic bell with resonance",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.9552984769993303,
+        "filter_resonance": 0.5208653198310599,
+        "attack": 0.002,
+        "decay": 0.3297210661321095,
+        "sustain": 0.17498207596857654,
+        "release": 0.3210282153158456
+      }
+    },
+    {
+      "name": "Trap Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "trap",
+        "modern"
+      ],
+      "description": "Modern trap bell with punch",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.55,
+        "attack": 0.008,
+        "decay": 0.38,
+        "sustain": 0.25,
+        "release": 0.3
+      }
+    },
+    {
+      "name": "Trap Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "trap",
+        "modern",
+        "variation"
+      ],
+      "description": "Modern trap bell with punch",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7290949061793017,
+        "filter_resonance": 0.47772103616479566,
+        "attack": 0.03198151004472372,
+        "decay": 0.3886287642758176,
+        "sustain": 0.20527049952651147,
+        "release": 0.31713901130417443
+      }
+    },
+    {
+      "name": "Glass Mallet",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "glassy",
+        "delicate"
+      ],
+      "description": "Delicate glass mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.68,
+        "attack": 0.003,
+        "decay": 0.3,
+        "sustain": 0.18,
+        "release": 0.25
+      }
+    },
+    {
+      "name": "Glass Mallet 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "glassy",
+        "delicate",
+        "variation"
+      ],
+      "description": "Delicate glass mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.9594106476821427,
+        "filter_resonance": 0.5615597023227347,
+        "attack": 0.05193108029324928,
+        "decay": 0.33804276383773957,
+        "sustain": 0.15444008264287867,
+        "release": 0.18385206396386206
+      }
+    },
+    {
+      "name": "Chill Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "chill",
+        "mellow"
+      ],
+      "description": "Mellow bell for chill productions",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.72,
+        "filter_resonance": 0.42,
+        "attack": 0.012,
+        "decay": 0.4,
+        "sustain": 0.28,
+        "release": 0.35
+      }
+    },
+    {
+      "name": "Chill Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "chill",
+        "mellow",
+        "variation"
+      ],
+      "description": "Mellow bell for chill productions",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.807784909863702,
+        "filter_resonance": 0.3807826908270304,
+        "attack": 0.002,
+        "decay": 0.3225695443520251,
+        "sustain": 0.3355990986155936,
+        "release": 0.36991539802244305
+      }
+    },
+    {
+      "name": "Crystal Chime",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "crystal",
+        "ethereal"
+      ],
+      "description": "Ethereal crystal chime tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.7,
+        "attack": 0.002,
+        "decay": 0.28,
+        "sustain": 0.15,
+        "release": 0.22
+      }
+    },
+    {
+      "name": "Crystal Chime 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "crystal",
+        "ethereal",
+        "variation"
+      ],
+      "description": "Ethereal crystal chime tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.978968628468681,
+        "filter_resonance": 0.7551356288065163,
+        "attack": 0.007796494632752114,
+        "decay": 0.3708382266840392,
+        "sustain": 0.13056550035333656,
+        "release": 0.22999180120445958
+      }
+    },
+    {
+      "name": "Dark Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "dark",
+        "moody"
+      ],
+      "description": "Dark moody bell for atmospheric trap",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.48,
+        "attack": 0.01,
+        "decay": 0.45,
+        "sustain": 0.32,
+        "release": 0.38
+      }
+    },
+    {
+      "name": "Dark Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "dark",
+        "moody",
+        "variation"
+      ],
+      "description": "Dark moody bell for atmospheric trap",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.643245695536575,
+        "filter_resonance": 0.5084447405674191,
+        "attack": 0.06787310404972437,
+        "decay": 0.46485161188929836,
+        "sustain": 0.3527314937943878,
+        "release": 0.29279828166188715
+      }
+    },
+    {
+      "name": "Music Box",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "music box",
+        "delicate"
+      ],
+      "description": "Delicate music box-like bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.52,
+        "attack": 0.006,
+        "decay": 0.32,
+        "sustain": 0.2,
+        "release": 0.26
+      }
+    },
+    {
+      "name": "Music Box 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "music box",
+        "delicate",
+        "variation"
+      ],
+      "description": "Delicate music box-like bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.727756468925097,
+        "filter_resonance": 0.46945311126450573,
+        "attack": 0.002,
+        "decay": 0.2686958501813178,
+        "sustain": 0.13616022870555666,
+        "release": 0.21737093179713768
+      }
+    },
+    {
+      "name": "Glock Hit",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "glockenspiel",
+        "percussive"
+      ],
+      "description": "Percussive glockenspiel-style hit",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.58,
+        "attack": 0.004,
+        "decay": 0.25,
+        "sustain": 0.12,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Glock Hit 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "glockenspiel",
+        "percussive",
+        "variation"
+      ],
+      "description": "Percussive glockenspiel-style hit",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8760514132987648,
+        "filter_resonance": 0.5475597229528202,
+        "attack": 0.002,
+        "decay": 0.19422534990812562,
+        "sustain": 0.08271645152785813,
+        "release": 0.28383768084079886
+      }
+    },
+    {
+      "name": "Mallet Bounce",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "bouncy",
+        "playful"
+      ],
+      "description": "Bouncy playful mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.5,
+        "attack": 0.008,
+        "decay": 0.35,
+        "sustain": 0.24,
+        "release": 0.28
+      }
+    },
+    {
+      "name": "Mallet Bounce 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "bouncy",
+        "playful",
+        "variation"
+      ],
+      "description": "Bouncy playful mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.828422793967346,
+        "filter_resonance": 0.5261914413600772,
+        "attack": 0.002,
+        "decay": 0.39399234520646703,
+        "sustain": 0.18614439900190852,
+        "release": 0.2568554448174684
+      }
+    },
+    {
+      "name": "Ice Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "icy",
+        "cold"
+      ],
+      "description": "Cold icy bell tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.72,
+        "attack": 0.003,
+        "decay": 0.22,
+        "sustain": 0.1,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Ice Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "icy",
+        "cold",
+        "variation"
+      ],
+      "description": "Cold icy bell tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.7535999423649823,
+        "attack": 0.012111959003943403,
+        "decay": 0.25544593619005596,
+        "sustain": 0.15485630723036956,
+        "release": 0.232991983016879
+      }
+    },
+    {
+      "name": "Warm Chime",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "warm",
+        "inviting"
+      ],
+      "description": "Warm inviting chime sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.4,
+        "attack": 0.01,
+        "decay": 0.38,
+        "sustain": 0.28,
+        "release": 0.32
+      }
+    },
+    {
+      "name": "Warm Chime 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "warm",
+        "inviting",
+        "variation"
+      ],
+      "description": "Warm inviting chime sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.647977229817108,
+        "filter_resonance": 0.2877040585369691,
+        "attack": 0.002,
+        "decay": 0.33540624818733494,
+        "sustain": 0.23375725497381225,
+        "release": 0.40503866515233045
+      }
+    },
+    {
+      "name": "Square Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "synthetic",
+        "digital"
+      ],
+      "description": "Synthetic square wave bell",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.76,
+        "filter_resonance": 0.54,
+        "attack": 0.006,
+        "decay": 0.3,
+        "sustain": 0.2,
+        "release": 0.24
+      }
+    },
+    {
+      "name": "Square Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "synthetic",
+        "digital",
+        "variation"
+      ],
+      "description": "Synthetic square wave bell",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.8322625842827525,
+        "filter_resonance": 0.49552269139163474,
+        "attack": 0.030870186447180807,
+        "decay": 0.2799613250036475,
+        "sustain": 0.26632761435848695,
+        "release": 0.23209955569678056
+      }
+    },
+    {
+      "name": "Resonant Strike",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "resonant",
+        "ringing"
+      ],
+      "description": "Highly resonant ringing bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.75,
+        "attack": 0.004,
+        "decay": 0.48,
+        "sustain": 0.35,
+        "release": 0.4
+      }
+    },
+    {
+      "name": "Resonant Strike 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "resonant",
+        "ringing",
+        "variation"
+      ],
+      "description": "Highly resonant ringing bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.774856991967626,
+        "filter_resonance": 0.689190601846556,
+        "attack": 0.013818901466104132,
+        "decay": 0.4344463888364036,
+        "sustain": 0.36353375843576646,
+        "release": 0.4763819936516756
+      }
+    },
+    {
+      "name": "Dreamy Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "dreamy",
+        "ambient"
+      ],
+      "description": "Dreamy ambient bell tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.46,
+        "attack": 0.015,
+        "decay": 0.42,
+        "sustain": 0.3,
+        "release": 0.36
+      }
+    },
+    {
+      "name": "Dreamy Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "dreamy",
+        "ambient",
+        "variation"
+      ],
+      "description": "Dreamy ambient bell tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7206848969869563,
+        "filter_resonance": 0.392636982197748,
+        "attack": 0.09460601703921766,
+        "decay": 0.4218290483858812,
+        "sustain": 0.234545505947807,
+        "release": 0.27304634408154904
+      }
+    },
+    {
+      "name": "Kalimba Vibe",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "kalimba",
+        "organic"
+      ],
+      "description": "Organic kalimba-inspired tone",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.38,
+        "attack": 0.008,
+        "decay": 0.36,
+        "sustain": 0.22,
+        "release": 0.28
+      }
+    },
+    {
+      "name": "Kalimba Vibe 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "kalimba",
+        "organic",
+        "variation"
+      ],
+      "description": "Organic kalimba-inspired tone",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6050526330273266,
+        "filter_resonance": 0.4105870500087416,
+        "attack": 0.05473269829807428,
+        "decay": 0.3450547136255393,
+        "sustain": 0.15016443298431315,
+        "release": 0.2572709030092551
+      }
+    },
+    {
+      "name": "Xylophone",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "xylophone",
+        "wooden"
+      ],
+      "description": "Xylophone-style mallet tone",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.72,
+        "filter_resonance": 0.42,
+        "attack": 0.005,
+        "decay": 0.28,
+        "sustain": 0.16,
+        "release": 0.22
+      }
+    },
+    {
+      "name": "Xylophone 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "xylophone",
+        "wooden",
+        "variation"
+      ],
+      "description": "Xylophone-style mallet tone",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.8152553050060986,
+        "filter_resonance": 0.42698744282379286,
+        "attack": 0.08037254041817893,
+        "decay": 0.3492697028290237,
+        "sustain": 0.08183696351085112,
+        "release": 0.2623785893171574
+      }
+    },
+    {
+      "name": "Celeste Bell",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "celeste",
+        "heavenly"
+      ],
+      "description": "Heavenly celeste-like bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.6,
+        "attack": 0.012,
+        "decay": 0.4,
+        "sustain": 0.26,
+        "release": 0.34
+      }
+    },
+    {
+      "name": "Celeste Bell 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "celeste",
+        "heavenly",
+        "variation"
+      ],
+      "description": "Heavenly celeste-like bell",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8948883908531023,
+        "filter_resonance": 0.6088728792981108,
+        "attack": 0.002,
+        "decay": 0.4270646653273232,
+        "sustain": 0.19784834777534022,
+        "release": 0.3274749281284682
+      }
+    },
+    {
+      "name": "Vibraphone Mallet",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "vibraphone",
+        "jazzy"
+      ],
+      "description": "Jazzy vibraphone mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.48,
+        "attack": 0.01,
+        "decay": 0.5,
+        "sustain": 0.38,
+        "release": 0.42
+      }
+    },
+    {
+      "name": "Vibraphone Mallet 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "vibraphone",
+        "jazzy",
+        "variation"
+      ],
+      "description": "Jazzy vibraphone mallet sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7911149516152077,
+        "filter_resonance": 0.5889158226050593,
+        "attack": 0.07013647046051107,
+        "decay": 0.45457069774420944,
+        "sustain": 0.38009377808804773,
+        "release": 0.3583011610617852
+      }
+    },
+    {
+      "name": "Marimba Hit",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "marimba",
+        "woody"
+      ],
+      "description": "Woody marimba hit",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.35,
+        "attack": 0.007,
+        "decay": 0.32,
+        "sustain": 0.18,
+        "release": 0.25
+      }
+    },
+    {
+      "name": "Marimba Hit 01",
+      "category": "Keys",
+      "tags": [
+        "bell",
+        "mallet",
+        "marimba",
+        "woody",
+        "variation"
+      ],
+      "description": "Woody marimba hit",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7292245451542055,
+        "filter_resonance": 0.43892445676082403,
+        "attack": 0.002,
+        "decay": 0.346678303014273,
+        "sustain": 0.19743523383010758,
+        "release": 0.18334513956152987
+      }
+    }
+  ]
+}
