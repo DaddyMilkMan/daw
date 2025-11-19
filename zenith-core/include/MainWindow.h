@@ -27,9 +27,6 @@ class WingmanPanel;
 
 namespace zenith {
     class InstrumentBrowserPanel;
-}
-
-namespace zenith {
     class CommandAPI;
     class AIBridgeClient;
 }
