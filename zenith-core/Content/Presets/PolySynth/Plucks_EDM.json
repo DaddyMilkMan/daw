@@ -1,0 +1,388 @@
+{
+  "bank_name": "EDM Plucks - Generic",
+  "bank_description": "Short, simple EDM plucks perfect for sequences, arpeggios, and melodic patterns across all EDM genres.",
+  "instrument_id": "zenith_poly_synth",
+  "category": "Pluck",
+  "presets": [
+    {
+      "name": "EDM Basic",
+      "author": "Zenith Factory",
+      "description": "Basic EDM pluck sound",
+      "tags": ["edm", "pluck", "basic", "simple", "clean"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.25,
+        "attack": 0.01,
+        "decay": 0.25,
+        "sustain": 0.15,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.3
+      }
+    },
+    {
+      "name": "Short Pluck",
+      "author": "Zenith Factory",
+      "description": "Very short pluck",
+      "tags": ["edm", "pluck", "short", "tight", "quick"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.22,
+        "attack": 0.005,
+        "decay": 0.18,
+        "sustain": 0.1,
+        "release": 0.15
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.24
+      }
+    },
+    {
+      "name": "House Pluck",
+      "author": "Zenith Factory",
+      "description": "Simple house pluck",
+      "tags": ["edm", "pluck", "house", "groove", "simple"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.28,
+        "attack": 0.012,
+        "decay": 0.22,
+        "sustain": 0.14,
+        "release": 0.18
+      },
+      "macros": {
+        "macro_brightness": 0.72,
+        "macro_envelope_speed": 0.28
+      }
+    },
+    {
+      "name": "Techno Stab",
+      "author": "Zenith Factory",
+      "description": "Techno stab pluck",
+      "tags": ["edm", "pluck", "techno", "stab", "percussive"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.3,
+        "attack": 0.002,
+        "decay": 0.2,
+        "sustain": 0.08,
+        "release": 0.16
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Clean Arp",
+      "author": "Zenith Factory",
+      "description": "Clean arpeggio pluck",
+      "tags": ["edm", "pluck", "arpeggio", "clean", "sequence"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.87,
+        "filter_resonance": 0.24,
+        "attack": 0.008,
+        "decay": 0.24,
+        "sustain": 0.12,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.77,
+        "macro_envelope_speed": 0.29
+      }
+    },
+    {
+      "name": "Bright Seq",
+      "author": "Zenith Factory",
+      "description": "Bright sequence pluck",
+      "tags": ["edm", "pluck", "bright", "sequence", "clear"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.28,
+        "attack": 0.01,
+        "decay": 0.23,
+        "sustain": 0.13,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.82,
+        "macro_envelope_speed": 0.3
+      }
+    },
+    {
+      "name": "Trance Pluck",
+      "author": "Zenith Factory",
+      "description": "Trance-style pluck",
+      "tags": ["edm", "pluck", "trance", "uplifting", "melodic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.26,
+        "attack": 0.015,
+        "decay": 0.26,
+        "sustain": 0.16,
+        "release": 0.22
+      },
+      "macros": {
+        "macro_brightness": 0.76,
+        "macro_envelope_speed": 0.32
+      }
+    },
+    {
+      "name": "Electro Pluck",
+      "author": "Zenith Factory",
+      "description": "Electro house pluck",
+      "tags": ["edm", "pluck", "electro", "house", "punchy"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.32,
+        "attack": 0.005,
+        "decay": 0.21,
+        "sustain": 0.11,
+        "release": 0.17
+      },
+      "macros": {
+        "macro_brightness": 0.79,
+        "macro_envelope_speed": 0.27
+      }
+    },
+    {
+      "name": "Minimal Pluck",
+      "author": "Zenith Factory",
+      "description": "Minimal techno pluck",
+      "tags": ["edm", "pluck", "minimal", "techno", "subtle"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.2,
+        "attack": 0.01,
+        "decay": 0.2,
+        "sustain": 0.12,
+        "release": 0.18
+      },
+      "macros": {
+        "macro_brightness": 0.65,
+        "macro_envelope_speed": 0.28
+      }
+    },
+    {
+      "name": "Progressive Pluck",
+      "author": "Zenith Factory",
+      "description": "Progressive house pluck",
+      "tags": ["edm", "pluck", "progressive", "house", "melodic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.27,
+        "attack": 0.013,
+        "decay": 0.25,
+        "sustain": 0.15,
+        "release": 0.21
+      },
+      "macros": {
+        "macro_brightness": 0.74,
+        "macro_envelope_speed": 0.31
+      }
+    },
+    {
+      "name": "Simple Saw",
+      "author": "Zenith Factory",
+      "description": "Simple saw pluck",
+      "tags": ["edm", "pluck", "saw", "simple", "basic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.23,
+        "attack": 0.01,
+        "decay": 0.22,
+        "sustain": 0.13,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.7,
+        "macro_envelope_speed": 0.29
+      }
+    },
+    {
+      "name": "Quick Hit",
+      "author": "Zenith Factory",
+      "description": "Quick hit pluck",
+      "tags": ["edm", "pluck", "quick", "hit", "percussive"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.26,
+        "attack": 0.001,
+        "decay": 0.19,
+        "sustain": 0.09,
+        "release": 0.16
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Sequence Pro",
+      "author": "Zenith Factory",
+      "description": "Professional sequence pluck",
+      "tags": ["edm", "pluck", "sequence", "professional", "clean"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.25,
+        "attack": 0.008,
+        "decay": 0.23,
+        "sustain": 0.12,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.76,
+        "macro_envelope_speed": 0.29
+      }
+    },
+    {
+      "name": "Dance Pluck",
+      "author": "Zenith Factory",
+      "description": "Generic dance pluck",
+      "tags": ["edm", "pluck", "dance", "general", "versatile"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.83,
+        "filter_resonance": 0.24,
+        "attack": 0.011,
+        "decay": 0.24,
+        "sustain": 0.14,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.73,
+        "macro_envelope_speed": 0.3
+      }
+    },
+    {
+      "name": "Festival Pluck",
+      "author": "Zenith Factory",
+      "description": "Festival-ready pluck",
+      "tags": ["edm", "pluck", "festival", "bright", "energetic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.91,
+        "filter_resonance": 0.3,
+        "attack": 0.009,
+        "decay": 0.25,
+        "sustain": 0.14,
+        "release": 0.21
+      },
+      "macros": {
+        "macro_brightness": 0.81,
+        "macro_envelope_speed": 0.31
+      }
+    },
+    {
+      "name": "Sine Pluck",
+      "author": "Zenith Factory",
+      "description": "Simple sine pluck",
+      "tags": ["edm", "pluck", "sine", "clean", "pure"],
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.2,
+        "attack": 0.01,
+        "decay": 0.28,
+        "sustain": 0.12,
+        "release": 0.22
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.34
+      }
+    },
+    {
+      "name": "Square Pluck",
+      "author": "Zenith Factory",
+      "description": "Square wave pluck",
+      "tags": ["edm", "pluck", "square", "digital", "retro"],
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.28,
+        "attack": 0.008,
+        "decay": 0.23,
+        "sustain": 0.13,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.72,
+        "macro_envelope_speed": 0.29
+      }
+    },
+    {
+      "name": "Club Pluck",
+      "author": "Zenith Factory",
+      "description": "Club-ready pluck",
+      "tags": ["edm", "pluck", "club", "dance", "pumping"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.87,
+        "filter_resonance": 0.27,
+        "attack": 0.007,
+        "decay": 0.22,
+        "sustain": 0.13,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.77,
+        "macro_envelope_speed": 0.28
+      }
+    },
+    {
+      "name": "Rave Pluck",
+      "author": "Zenith Factory",
+      "description": "Classic rave pluck",
+      "tags": ["edm", "pluck", "rave", "classic", "energetic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.89,
+        "filter_resonance": 0.29,
+        "attack": 0.006,
+        "decay": 0.21,
+        "sustain": 0.11,
+        "release": 0.17
+      },
+      "macros": {
+        "macro_brightness": 0.79,
+        "macro_envelope_speed": 0.27
+      }
+    },
+    {
+      "name": "Generic EDM",
+      "author": "Zenith Factory",
+      "description": "All-purpose EDM pluck",
+      "tags": ["edm", "pluck", "generic", "versatile", "standard"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.25,
+        "attack": 0.01,
+        "decay": 0.24,
+        "sustain": 0.13,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.3
+      }
+    }
+  ]
+}

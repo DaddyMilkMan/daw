@@ -1,0 +1,128 @@
+{
+  "name": "FX & Impacts",
+  "category": "fx",
+  "description": "Cinematic sound effects - risers, impacts, whooshes, and hits",
+  "author": "Zenith DAW",
+  "version": "1.0.0",
+
+  "parameters": {
+    "attack": 0.01,
+    "decay": 0.5,
+    "sustain": 0.3,
+    "release": 1.5,
+    "filterCutoff": 1.0,
+    "filterResonance": 0.3,
+    "sampleStartOffset": 0.0,
+    "pitchFine": 0.0,
+    "pitchSemitones": 0.0,
+    "globalPan": 0.5,
+    "globalGain": 0.8
+  },
+
+  "regions": [
+    {
+      "filePath": "fx-riser-short.wav",
+      "rootNote": 60,
+      "lowNote": 60,
+      "highNote": 60,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "C4 - Short riser (1-2 bars)"
+    },
+    {
+      "filePath": "fx-riser-long.wav",
+      "rootNote": 61,
+      "lowNote": 61,
+      "highNote": 61,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "C#4 - Long riser (4 bars)"
+    },
+    {
+      "filePath": "fx-impact-soft.wav",
+      "rootNote": 62,
+      "lowNote": 62,
+      "highNote": 62,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "D4 - Soft impact"
+    },
+    {
+      "filePath": "fx-impact-hard.wav",
+      "rootNote": 63,
+      "lowNote": 63,
+      "highNote": 63,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.1,
+      "tune": 0.0,
+      "comment": "D#4 - Hard impact"
+    },
+    {
+      "filePath": "fx-reverse-cymbal.wav",
+      "rootNote": 64,
+      "lowNote": 64,
+      "highNote": 64,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "E4 - Reverse cymbal"
+    },
+    {
+      "filePath": "fx-whoosh-left.wav",
+      "rootNote": 65,
+      "lowNote": 65,
+      "highNote": 65,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "F4 - Whoosh (left to right)"
+    },
+    {
+      "filePath": "fx-whoosh-right.wav",
+      "rootNote": 66,
+      "lowNote": 66,
+      "highNote": 66,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "F#4 - Whoosh (right to left)"
+    },
+    {
+      "filePath": "fx-sub-drop.wav",
+      "rootNote": 67,
+      "lowNote": 67,
+      "highNote": 67,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.2,
+      "tune": 0.0,
+      "comment": "G4 - Sub bass drop"
+    }
+  ],
+
+  "notes": {
+    "usage": "One-shot FX samples mapped to individual MIDI notes for easy triggering",
+    "loopMode": "none - these are typically timed effects that play once",
+    "filterCutoff": "Wide open (1.0) to preserve high-frequency detail in impacts and risers",
+    "release": "Long release (1.5s) allows natural tail-off of reverb and effects",
+    "pitchControl": "Use pitchSemitones parameter to dramatically alter FX character"
+  }
+}

@@ -1,8 +1,8 @@
 # ============================================================================
-# Vexel Audio Engine - Core DSP and Audio Processing
+# Zenith Audio Engine - Core DSP and Audio Processing
 # ============================================================================
 
-add_library(VexelAudioEngine STATIC
+add_library(ZenithAudioEngine STATIC
     # Core Engine
     AudioEngine.cpp
     AudioEngine.h
@@ -70,31 +70,31 @@ add_library(VexelAudioEngine STATIC
     SampleRateConverter.h
 )
 
-target_include_directories(VexelAudioEngine PUBLIC
+target_include_directories(ZenithAudioEngine PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 # Link JUCE audio modules
-vexel_add_audio_engine_library(VexelAudioEngine)
+zenith_add_audio_engine_library(ZenithAudioEngine)
 
 # Link platform audio drivers
 if(VEXEL_AUDIO_ALSA)
-    target_link_libraries(VexelAudioEngine PRIVATE alsa_driver)
+    target_link_libraries(ZenithAudioEngine PRIVATE alsa_driver)
 endif()
 
 if(VEXEL_AUDIO_JACK)
-    target_link_libraries(VexelAudioEngine PRIVATE jack_driver)
+    target_link_libraries(ZenithAudioEngine PRIVATE jack_driver)
 endif()
 
 if(VEXEL_AUDIO_COREAUDIO)
-    target_link_libraries(VexelAudioEngine PRIVATE coreaudio_driver)
+    target_link_libraries(ZenithAudioEngine PRIVATE coreaudio_driver)
 endif()
 
 # Compiler warnings
 if(MSVC)
-    target_compile_options(VexelAudioEngine PRIVATE /W4 /WX)
+    target_compile_options(ZenithAudioEngine PRIVATE /W4 /WX)
 else()
-    target_compile_options(VexelAudioEngine PRIVATE
+    target_compile_options(ZenithAudioEngine PRIVATE
         -Wall -Wextra -Wpedantic -Werror
         -Wno-unused-parameter  # JUCE callbacks
     )
@@ -102,6 +102,6 @@ endif()
 
 # Export headers
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
-    DESTINATION include/vexel/audio
+    DESTINATION include/zenith/audio
     FILES_MATCHING PATTERN "*.h"
 )
