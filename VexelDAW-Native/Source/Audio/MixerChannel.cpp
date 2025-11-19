@@ -3,7 +3,7 @@
 
     MixerChannel.cpp
     Created: 2025-11-11
-    Author:  Vexel DAW
+    Author:  Zenith DAW
 
     Mixer channel strip implementation
 

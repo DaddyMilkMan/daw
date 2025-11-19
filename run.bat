@@ -1,11 +1,11 @@
 @echo off
-REM Run Script for Vexel DAW Qt/QML Application (Windows)
+REM Run Script for Zenith DAW Qt/QML Application (Windows)
 
 setlocal
 
 REM Check if built
-if not exist "build\bin\Release\VexelDAW.exe" (
-    if not exist "build\bin\Debug\VexelDAW.exe" (
+if not exist "build\bin\Release\ZenithDAW.exe" (
+    if not exist "build\bin\Debug\ZenithDAW.exe" (
         echo Application not built yet. Building now...
         call build.bat Release
     )
@@ -13,19 +13,19 @@ if not exist "build\bin\Release\VexelDAW.exe" (
 
 REM Find executable
 set EXECUTABLE=
-if exist "build\bin\Release\VexelDAW.exe" (
-    set EXECUTABLE=build\bin\Release\VexelDAW.exe
-) else if exist "build\bin\Debug\VexelDAW.exe" (
-    set EXECUTABLE=build\bin\Debug\VexelDAW.exe
+if exist "build\bin\Release\ZenithDAW.exe" (
+    set EXECUTABLE=build\bin\Release\ZenithDAW.exe
+) else if exist "build\bin\Debug\ZenithDAW.exe" (
+    set EXECUTABLE=build\bin\Debug\ZenithDAW.exe
 )
 
 if "%EXECUTABLE%"=="" (
-    echo ERROR: VexelDAW executable not found
+    echo ERROR: ZenithDAW executable not found
     exit /b 1
 )
 
 echo =================================
-echo Starting Vexel DAW...
+echo Starting Zenith DAW...
 echo =================================
 echo.
 

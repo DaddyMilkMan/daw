@@ -1,5 +1,5 @@
 /**
- * Vexel DAW - Main Application Window
+ * Zenith DAW - Main Application Window
  *
  * This is the main QML entry point for the DAW UI.
  * It defines the overall application layout with:
@@ -24,7 +24,7 @@ ApplicationWindow {
     width: 1920
     height: 1080
     visible: true
-    title: "Vexel DAW - Professional Digital Audio Workstation"
+    title: "Zenith DAW - Professional Digital Audio Workstation"
 
     // Dark theme colors
     color: "#1a1a1a"
@@ -256,7 +256,7 @@ ApplicationWindow {
                 spacing: 20
 
                 Label {
-                    text: "Welcome to Vexel DAW"
+                    text: "Welcome to Zenith DAW"
                     font.pixelSize: 28
                     font.bold: true
                     color: theme.textColor
@@ -345,7 +345,7 @@ ApplicationWindow {
 
     // Component initialization
     Component.onCompleted: {
-        console.log("Vexel DAW main window loaded")
+        console.log("Zenith DAW main window loaded")
         console.log("Qt version:", Qt.application.version)
         console.log("Audio engine initialized:", audioEngine !== null)
     }

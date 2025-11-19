@@ -7,7 +7,7 @@
 
 #include <JuceHeader.h>
 
-namespace vexel {
+namespace zenith {
 
 /**
  * Extended MIDI event with timing and metadata
@@ -88,4 +88,4 @@ private:
     std::vector<MidiEvent> m_events;
 };
 
-} // namespace vexel
+} // namespace zenith

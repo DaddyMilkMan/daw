@@ -1,4 +1,4 @@
-# CommandParser - Natural Language Interface for Vexel DAW
+# CommandParser - Natural Language Interface for Zenith DAW
 
 The CommandParser is a natural language processing module that converts text commands into structured DAW actions. It enables users to control the DAW using conversational language instead of clicking through menus.
 
@@ -454,4 +454,4 @@ const handleSend = async () => {
 
 ## License
 
-Part of Vexel DAW - An AI-Native Digital Audio Workstation
+Part of Zenith DAW - An AI-Native Digital Audio Workstation

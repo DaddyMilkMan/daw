@@ -1,0 +1,460 @@
+{
+  "description": "Example JSON command payloads for AI service integration with Zenith DAW",
+  "examples": [
+    {
+      "name": "Transform Basic Pad into Future Bass Pluck",
+      "description": "Complete workflow to create a Future Bass pluck sound from a basic pad preset",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Create a new MIDI track",
+          "command": {
+            "command": "add_track",
+            "params": {
+              "name": "Future Bass Lead",
+              "type": "midi"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "trackId": "track_0"
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "Load the basic pad preset as starting point",
+          "command": {
+            "command": "load_preset",
+            "params": {
+              "trackId": "track_0",
+              "instrumentId": "zenith_poly_synth",
+              "presetId": "init_basic_pad"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true
+            }
+          }
+        },
+        {
+          "step": 3,
+          "description": "Transform into pluck with bright filter and fast envelope",
+          "command": {
+            "command": "set_instrument_parameters",
+            "params": {
+              "trackId": "track_0",
+              "params": {
+                "filter_cutoff": 0.95,
+                "filter_resonance": 0.7,
+                "attack": 0.0,
+                "decay": 0.15,
+                "sustain": 0.3,
+                "release": 0.2
+              }
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true,
+              "updated": ["filter_cutoff", "filter_resonance", "attack", "decay", "sustain", "release"]
+            }
+          }
+        },
+        {
+          "step": 4,
+          "description": "Save the new sound as a preset",
+          "command": {
+            "command": "save_preset",
+            "params": {
+              "trackId": "track_0",
+              "name": "Future Bass Pluck",
+              "category": "User",
+              "tags": ["pluck", "future bass", "bright", "punchy"]
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true,
+              "presetId": "future_bass_pluck_1234567890"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Swap Track Preset to Random 808",
+      "description": "Discover and load a random 808 preset on a track",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Query all 808 presets",
+          "command": {
+            "command": "list_presets",
+            "params": {
+              "instrumentId": "zenith_sampler",
+              "tag": "808"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "presets": [
+                {
+                  "id": "808_kick_classic",
+                  "name": "808 Kick Classic",
+                  "category": "Factory",
+                  "tags": ["808", "kick", "bass"]
+                },
+                {
+                  "id": "808_snare_short",
+                  "name": "808 Snare Short",
+                  "category": "Factory",
+                  "tags": ["808", "snare", "percussion"]
+                },
+                {
+                  "id": "808_hihat_closed",
+                  "name": "808 Hi-Hat Closed",
+                  "category": "Factory",
+                  "tags": ["808", "hihat", "percussion"]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "AI picks random preset from list (e.g., 808_kick_classic)",
+          "ai_logic": "const randomPreset = presets[Math.floor(Math.random() * presets.length)];"
+        },
+        {
+          "step": 3,
+          "description": "Load the randomly selected preset",
+          "command": {
+            "command": "load_preset",
+            "params": {
+              "trackId": "track_2",
+              "presetId": "808_kick_classic"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Warm Ambient Pad",
+      "description": "Start from scratch and build a warm ambient pad sound",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Discover available instruments",
+          "command": {
+            "command": "list_instruments",
+            "params": {}
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "instruments": [
+                {
+                  "id": "zenith_poly_synth",
+                  "name": "Zenith Poly Synth",
+                  "category": "Synth"
+                },
+                {
+                  "id": "zenith_sampler",
+                  "name": "Zenith Sampler",
+                  "category": "Sampler"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "Add a track with poly synth",
+          "command": {
+            "command": "add_track",
+            "params": {
+              "name": "Ambient Pad",
+              "type": "midi"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "trackId": "track_1"
+            }
+          }
+        },
+        {
+          "step": 3,
+          "description": "Load an init preset",
+          "command": {
+            "command": "load_preset",
+            "params": {
+              "trackId": "track_1",
+              "instrumentId": "zenith_poly_synth",
+              "presetId": "init_basic_pad"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true
+            }
+          }
+        },
+        {
+          "step": 4,
+          "description": "Inspect current parameters",
+          "command": {
+            "command": "get_instrument_parameters",
+            "params": {
+              "trackId": "track_1"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "parameters": [
+                {
+                  "id": "filter_cutoff",
+                  "name": "Filter Cutoff",
+                  "min": 0.0,
+                  "max": 1.0,
+                  "default": 0.8,
+                  "value": 0.8,
+                  "tags": []
+                },
+                {
+                  "id": "attack",
+                  "name": "Attack",
+                  "min": 0.0,
+                  "max": 1.0,
+                  "default": 0.3,
+                  "value": 0.3,
+                  "tags": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 5,
+          "description": "Tweak for warmth: lower cutoff, slow attack, long release",
+          "command": {
+            "command": "set_instrument_parameters",
+            "params": {
+              "trackId": "track_1",
+              "params": {
+                "filter_cutoff": 0.4,
+                "filter_resonance": 0.2,
+                "attack": 0.6,
+                "release": 0.8
+              }
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true,
+              "updated": ["filter_cutoff", "filter_resonance", "attack", "release"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Brighten Existing Sound",
+      "description": "Take an existing track and make it brighter by tweaking filter",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Get current parameter values",
+          "command": {
+            "command": "get_instrument_parameters",
+            "params": {
+              "trackId": "track_3"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "parameters": [
+                {
+                  "id": "filter_cutoff",
+                  "name": "Filter Cutoff",
+                  "value": 0.5
+                },
+                {
+                  "id": "filter_resonance",
+                  "name": "Filter Resonance",
+                  "value": 0.3
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "AI calculates: increase cutoff by 20%, increase resonance by 10%",
+          "ai_logic": "new_cutoff = Math.min(1.0, current_cutoff * 1.2); new_resonance = Math.min(1.0, current_resonance * 1.1);"
+        },
+        {
+          "step": 3,
+          "description": "Apply calculated adjustments",
+          "command": {
+            "command": "set_instrument_parameters",
+            "params": {
+              "trackId": "track_3",
+              "params": {
+                "filter_cutoff": 0.6,
+                "filter_resonance": 0.33
+              }
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true,
+              "updated": ["filter_cutoff", "filter_resonance"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Copy Sound from One Track to Another",
+      "description": "Extract parameters from one track and apply to another",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Get parameters from source track",
+          "command": {
+            "command": "get_instrument_parameters",
+            "params": {
+              "trackId": "track_1"
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "parameters": [
+                {
+                  "id": "filter_cutoff",
+                  "value": 0.7
+                },
+                {
+                  "id": "attack",
+                  "value": 0.2
+                }
+              ]
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "AI extracts parameter values from response",
+          "ai_logic": "const params = response.data.parameters.reduce((acc, p) => { acc[p.id] = p.value; return acc; }, {});"
+        },
+        {
+          "step": 3,
+          "description": "Apply to destination track",
+          "command": {
+            "command": "set_instrument_parameters",
+            "params": {
+              "trackId": "track_4",
+              "params": {
+                "filter_cutoff": 0.7,
+                "attack": 0.2
+              }
+            }
+          },
+          "expected_response": {
+            "status": "ok",
+            "data": {
+              "success": true,
+              "updated": ["filter_cutoff", "attack"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Create Variation of Existing Preset",
+      "description": "Load a preset and create a slight variation",
+      "steps": [
+        {
+          "step": 1,
+          "description": "Load base preset",
+          "command": {
+            "command": "load_preset",
+            "params": {
+              "trackId": "track_2",
+              "presetId": "warm_pad_classic"
+            }
+          }
+        },
+        {
+          "step": 2,
+          "description": "Get current parameters",
+          "command": {
+            "command": "get_instrument_parameters",
+            "params": {
+              "trackId": "track_2"
+            }
+          }
+        },
+        {
+          "step": 3,
+          "description": "AI applies random variation (±10% on key parameters)",
+          "ai_logic": "variation = { filter_cutoff: current * (0.9 + Math.random() * 0.2), attack: current * (0.9 + Math.random() * 0.2) }"
+        },
+        {
+          "step": 4,
+          "description": "Apply variation",
+          "command": {
+            "command": "set_instrument_parameters",
+            "params": {
+              "trackId": "track_2",
+              "params": {
+                "filter_cutoff": 0.72,
+                "attack": 0.44
+              }
+            }
+          }
+        },
+        {
+          "step": 5,
+          "description": "Save as new preset",
+          "command": {
+            "command": "save_preset",
+            "params": {
+              "trackId": "track_2",
+              "name": "Warm Pad Variation 1",
+              "category": "User",
+              "tags": ["pad", "warm", "variation"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "notes": {
+    "thread_safety": "All commands run on the MESSAGE THREAD and are thread-safe",
+    "undo_support": "Commands that modify state (load_preset, set_instrument_parameters) create automatic undo transactions",
+    "value_ranges": "All parameter values are normalized to [0, 1]. The DAW handles conversion to actual units",
+    "error_handling": "Always check response.status === 'ok' before processing response.data"
+  }
+}
