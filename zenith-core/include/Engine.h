@@ -130,14 +130,14 @@ public:
     bool isPlaying() const { return isPlaying_.load(); }
 
     /**
-     * @brief Start recording (both MIDI and audio)
-     * @note MESSAGE THREAD ONLY - Starts recording on armed tracks
+     * @brief Start recording
+     * @note MESSAGE THREAD ONLY - Starts recording on armed tracks (both MIDI and audio)
      */
     void record();
 
     /**
      * @brief Stop recording and bake clips
-     * @note MESSAGE THREAD ONLY - Converts recordings to clips
+     * @note MESSAGE THREAD ONLY - Converts recordings to clips (both MIDI and audio)
      */
     void stopRecording();
 
@@ -544,7 +544,7 @@ private:
     // Active recording sessions (message thread creates, audio thread writes)
     std::vector<AudioRecordingSession> audioRecordingSessions_;
 
-    // Flag to prevent use-after-free in async callbacks
+    // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
     std::atomic<bool> isShuttingDown_{false};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
