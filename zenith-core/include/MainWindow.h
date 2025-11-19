@@ -17,6 +17,7 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
+#include "TrackStateSynchronizer.h"
 #include "ArrangementComponent.h"
 #include "MixerComponent.h"
 #include "ArrangerComponent.h"
@@ -123,7 +124,7 @@ private:
     // Phase 14: Arrangement view with automation
     std::unique_ptr<ArrangementComponent> arrangementView;
 
-    // Phase 10: Mixer panel
+    // Phase 10/11: Mixer panel (direct member for efficiency)
     MixerComponent mixerComponent;
 
     // Phase 9: Arranger component with interactive clip editing
@@ -213,7 +214,10 @@ private:
     // Project state
     std::unique_ptr<ProjectState> projectState;
 
-    // Automation synchronizer (Phase 13)
+    // Phase 11: Track state synchronizer (general track state sync)
+    std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
+
+    // Phase 13: Automation synchronizer (automation-specific sync)
     std::unique_ptr<TrackAutomationSynchronizer> automationSync;
 
     // Phase 5: Wingman command API

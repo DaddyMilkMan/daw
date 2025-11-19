@@ -107,6 +107,10 @@ target_sources(ZenithDAW PRIVATE
     src/PianoRollComponent.cpp
     src/ArrangerComponent.cpp
 
+    # Phase 11: Mixer → Engine wiring
+    src/TrackStateSynchronizer.cpp
+    src/MixerComponent.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

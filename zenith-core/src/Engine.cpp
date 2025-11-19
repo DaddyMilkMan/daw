@@ -412,10 +412,14 @@ void Engine::record()
                                "_" + timestamp + ".wav";
         juce::File recordFile = recordingsDir.getChildFile(filename);
 
-        // Determine number of channels for this track
-        // TODO: Implement proper input routing matrix
-        // For now: assume mono recording (1 channel per track)
-        const int numChannels = 1;
+        // CODEX P1 FIX: Respect actual input channel count instead of hardcoding
+        // Get the number of active input channels from the device
+        auto* device = deviceManager.getCurrentAudioDevice();
+        const int deviceInputChannels = device ? device->getActiveInputChannels().countNumberOfSetBits() : 1;
+
+        // For now: use mono (1 channel) or stereo (2 channels) based on device capability
+        // Clamp to min(2, deviceInputChannels) to avoid exceeding device capabilities
+        const int numChannels = juce::jmin(2, juce::jmax(1, deviceInputChannels));
 
         // Create WAV writer
         juce::WavAudioFormat wavFormat;
@@ -626,8 +630,11 @@ void Engine::addTestTracks(int count)
             "Track " + juce::String(tracks_.size() + 1),
             zenith::Track::Type::Audio);
 
-        // Phase 1: Tracks are now wired to audio processing!
-        // They will be prepared when audioDeviceAboutToStart() is called
+        // Phase 11: Prepare track for audio processing if engine is already running
+        if (currentSampleRate.load() > 0)
+        {
+            track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+        }
 
         tracks_.push_back(std::move(track));
     }
@@ -684,6 +691,109 @@ zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexce
 }
 
 //==============================================================================
+// Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+//==============================================================================
+
+void Engine::setTrackVolume(int trackIndex, float volume)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setVolume(volume);
+    }
+}
+
+void Engine::setTrackPan(int trackIndex, float pan)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setPan(pan);
+    }
+}
+
+void Engine::setTrackMute(int trackIndex, bool muted)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setMuted(muted);
+    }
+}
+
+void Engine::setTrackSolo(int trackIndex, bool solo)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setSolo(solo);
+    }
+}
+
+void Engine::setTrackArmed(int trackIndex, bool armed)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setArmed(armed);
+    }
+}
+
+//==============================================================================
+// Phase 11: Metering (MESSAGE THREAD SAFE)
+//==============================================================================
+
+float Engine::getTrackLevel(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        return tracks_[trackIndex]->getCurrentLevel();
+    }
+    return 0.0f;
+}
+
+float Engine::getTrackPeakLevel(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        return tracks_[trackIndex]->getPeakLevel();
+    }
+    return 0.0f;
+}
+
+float Engine::getMasterLevel() const
+{
+    return masterLevel_.load();
+}
+
+float Engine::getMasterPeakLevel() const
+{
+    return masterPeakLevel_.load();
+}
+
+void Engine::resetPeakMeters()
+{
+    // Reset master peak
+    masterPeakLevel_.store(0.0f);
+
+    // Reset all track peaks (message thread only)
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->resetPeakLevel();
+        }
+    }
+}
+
+//==============================================================================
 // AudioIODeviceCallback Implementation
 //==============================================================================
 
@@ -728,6 +838,18 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     masterBuffer_.setSize(2, bufferSize);
     masterBuffer_.clear();
 
+    // Phase 11: Allocate master mix buffer (pre-allocate to avoid RT allocations)
+    masterMixBuffer_.setSize(2, currentBufferSize.load());
+
+    // Phase 11: Prepare all tracks for playback
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
+        }
+    }
+
     DBG("Engine: Audio device started");
     DBG("  Sample Rate: " + juce::String(currentSampleRate.load()) + " Hz");
     DBG("  Buffer Size: " + juce::String(currentBufferSize.load()) + " samples");
@@ -738,6 +860,15 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
 void Engine::audioDeviceStopped()
 {
     DBG("Engine: Audio device stopped");
+
+    // Phase 11: Release resources from all tracks
+    for (auto& track : tracks_)
+    {
+        if (track != nullptr)
+        {
+            track->releaseResources();
+        }
+    }
 }
 
 void Engine::audioDeviceIOCallbackWithContext(
@@ -893,6 +1024,35 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         // else: Channel count mismatch, skip this track
     }
 
+    // Phase 11: Update master metering from output buffer
+    float maxLevel = 0.0f;
+    const int numChannels = juce::jmin(2, outputBuffer.getNumChannels());
+
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const float* channelData = outputBuffer.getReadPointer(ch);
+        for (int i = 0; i < numSamples; ++i)
+        {
+            const float absValue = std::abs(channelData[i]);
+            if (absValue > maxLevel)
+            {
+                maxLevel = absValue;
+            }
+        }
+    }
+
+    // Update master level with smoothing
+    const float currentMasterLevel = masterLevel_.load();
+    const float smoothingFactor = 0.3f;
+    const float newMasterLevel = currentMasterLevel * (1.0f - smoothingFactor) + maxLevel * smoothingFactor;
+    masterLevel_.store(newMasterLevel);
+
+    // Update master peak
+    if (maxLevel > masterPeakLevel_.load())
+    {
+        masterPeakLevel_.store(maxLevel);
+    }
+
     // TODO: Apply master effects here (Phase N)
     // TODO: Apply master volume/limiter (Phase N)
 }
@@ -990,6 +1150,8 @@ void Engine::processAudio(
     int numSamples)
 {
     // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
+    //
+    // Phase 11: Process all tracks and mix them down to master output
 
     juce::ignoreUnused(inputChannelData, numInputChannels);
 
