@@ -195,6 +195,51 @@ public:
     juce::ValueTree getTrack(const juce::String& trackId) const;
 
     /**
+
+     * @brief Get track node by index
+     * @param trackIndex Track index (0-based)
+     * @return ValueTree for the track (invalid if not found)
+     */
+    juce::ValueTree getTrackByIndex(int trackIndex) const;
+
+    //===================================================================
+    // Track Mixer API (Phase 10+11) - MESSAGE THREAD ONLY
+    //===================================================================
+
+    /**
+     * @brief Set track volume (0.0 - 1.0)
+     * @note Undoable, message thread only
+     */
+    void setTrackVolume(const juce::String& trackId, float volume);
+    float getTrackVolume(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track pan (-1.0 = left, +1.0 = right)
+     * @note Undoable, message thread only
+     */
+    void setTrackPan(const juce::String& trackId, float pan);
+    float getTrackPan(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track mute state
+     * @note Undoable, message thread only
+     */
+    void setTrackMute(const juce::String& trackId, bool muted);
+    bool isTrackMuted(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track solo state
+     * @note Undoable, message thread only
+     */
+    void setTrackSolo(const juce::String& trackId, bool solo);
+    bool isTrackSolo(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track armed state (for recording)
+     * @note Undoable, message thread only
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed);
+
      * @brief Get track ValueTree by index
      * @param index Track index
      * @return Track ValueTree (may be invalid if out of range)
@@ -210,9 +255,9 @@ public:
     void renameTrack(const juce::String& trackId, const juce::String& newName,
                      const juce::String& actionName = "Rename track");
 
-    //==========================================================================
+    //===================================================================
     // Track Mixer Properties
-    //==========================================================================
+    //===================================================================
 
     /**
      * @brief Set track volume (undoable)
@@ -300,6 +345,13 @@ public:
      * @return Track name, or empty string if track not found
      */
     juce::String getTrackName(const juce::String& trackId) const;
+
+    /**
+     * @brief Get track type
+     * @param trackId Track ID
+     * @return Track type ("audio", "midi", etc.), or empty string if track not found
+     */
+    juce::String getTrackType(const juce::String& trackId) const;
 
     //==========================================================================
     // Clip Management

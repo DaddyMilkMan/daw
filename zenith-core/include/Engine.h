@@ -251,6 +251,61 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+    //==========================================================================
+
+    /**
+     * @brief Set track mixer controls (message thread only)
+     * @note These methods update the engine Track objects directly
+     * @note In Phase 11, these are called by TrackStateSynchronizer
+     */
+    void setTrackVolume(int trackIndex, float volume);
+    void setTrackPan(int trackIndex, float pan);
+    void setTrackMute(int trackIndex, bool muted);
+    void setTrackSolo(int trackIndex, bool solo);
+    void setTrackArmed(int trackIndex, bool armed);
+
+    //==========================================================================
+    // Phase 11: Metering (MESSAGE THREAD SAFE)
+    //==========================================================================
+
+    /**
+     * @brief Get current level for a track
+     * @param trackIndex Track index
+     * @return Current level (0.0 - 1.0+), or 0.0 if invalid
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getTrackLevel(int trackIndex) const;
+
+    /**
+     * @brief Get peak level for a track
+     * @param trackIndex Track index
+     * @return Peak level (0.0 - 1.0+), or 0.0 if invalid
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getTrackPeakLevel(int trackIndex) const;
+
+    /**
+     * @brief Get current master output level
+     * @return Master level (0.0 - 1.0+)
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getMasterLevel() const;
+
+    /**
+     * @brief Get peak master output level
+     * @return Master peak level (0.0 - 1.0+)
+     * @note Safe to call from message thread (reads from atomic)
+     */
+    float getMasterPeakLevel() const;
+
+    /**
+     * @brief Reset all peak meters
+     * @note Safe to call from message thread
+     */
+    void resetPeakMeters();
+
+    //==========================================================================
     // Phase 1.2: Audio File Pool
     //==========================================================================
 
@@ -508,6 +563,10 @@ private:
     // Unified render path: Pre-allocated track buffers (avoid allocation in audio thread)
     std::vector<juce::AudioBuffer<float>> trackBuffers_;
     juce::AudioBuffer<float> masterBuffer_;
+
+    // Phase 11: Master metering (atomic for lock-free GUI access)
+    std::atomic<float> masterLevel_{0.0f};
+    std::atomic<float> masterPeakLevel_{0.0f};
 
     // Phase 2A: MIDI input handling
     std::unique_ptr<juce::MidiInput> midiInput_;

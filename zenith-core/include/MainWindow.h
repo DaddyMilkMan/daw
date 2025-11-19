@@ -16,6 +16,7 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TrackStateSynchronizer.h"
 #include "MixerComponent.h"
 #include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
@@ -119,8 +120,8 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
-    // Phase 10: Mixer panel
-    MixerComponent mixerComponent;
+    // Phase 11: Mixer component
+    std::unique_ptr<MixerComponent> mixerComponent;
 
     // Phase 9: Arranger component with interactive clip editing
     std::unique_ptr<ArrangerComponent> arrangerComponent;
@@ -208,6 +209,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Phase 11: Track state synchronizer
+    std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
 
     // Phase 5: Wingman command API
     std::unique_ptr<zenith::CommandAPI> commandAPI;
