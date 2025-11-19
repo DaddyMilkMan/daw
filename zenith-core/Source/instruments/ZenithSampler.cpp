@@ -237,7 +237,7 @@ void ZenithSamplerProcessor::setStateInformation(const void* data, int sizeInByt
             juce::String patchName = state.getProperty("currentPatch", "");
             if (patchName.isNotEmpty())
             {
-                loadPatchByName(patchName);
+                loadSampleBankByName(patchName);
             }
         }
     }

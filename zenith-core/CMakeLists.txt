@@ -133,12 +133,17 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/WingmanPanel.h
     Source/ui/WingmanPanel.cpp
 
+    # Instrument Browser UI
+    Source/ui/InstrumentBrowserPanel.h
+    Source/ui/InstrumentBrowserPanel.cpp
+
     # Phase 7: Wingman AI Integration
     Source/network/AIBridgeClient.h
     Source/network/AIBridgeClient.cpp
 
     # Instrument system
     Source/instruments/InstrumentMetadata.h
+    Source/instruments/InstrumentPreset.h
     Source/instruments/Instrument.h
     Source/instruments/Instrument.cpp
     Source/instruments/InstrumentRegistry.h
@@ -362,6 +367,69 @@ target_compile_definitions(InstrumentValidationTests PRIVATE
 juce_generate_juce_header(InstrumentValidationTests)
 
 add_test(NAME InstrumentValidationTests COMMAND InstrumentValidationTests)
+
+# ============================================================================
+# Preset & CommandAPI Regression Tests
+# ============================================================================
+
+juce_add_console_app(PresetRegressionTests
+    PRODUCT_NAME "PresetRegressionTests"
+)
+
+target_sources(PresetRegressionTests PRIVATE
+    tests/PresetRegressionTests.cpp
+
+    # Engine
+    src/Engine.cpp
+    src/ProjectState.cpp
+
+    # CommandAPI
+    src/CommandAPI.cpp
+
+    # Track and audio engine
+    Source/engine/Track.cpp
+    Source/engine/Clip.cpp
+    Source/engine/MixerChannel.cpp
+    Source/engine/AudioFilePool.cpp
+    Source/engine/PluginHost.cpp
+
+    # Instrument system
+    Source/instruments/Instrument.cpp
+    Source/instruments/InstrumentRegistry.cpp
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/ZenithSampler.cpp
+    Source/instruments/RegisterBuiltInInstruments.cpp
+)
+
+target_include_directories(PresetRegressionTests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/commands
+)
+
+target_link_libraries(PresetRegressionTests PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_audio_devices
+    juce::juce_dsp
+)
+
+target_compile_definitions(PresetRegressionTests PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+    JUCE_VST3_CAN_REPLACE_VST2=0
+)
+
+# Generate JuceHeader.h for this test target
+juce_generate_juce_header(PresetRegressionTests)
+
+add_test(NAME PresetRegressionTests COMMAND PresetRegressionTests)
 
 # ============================================================================
 # Preset Generator Tool
