@@ -16,7 +16,9 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
+#include "ArrangementComponent.h"
 #include "MixerComponent.h"
 #include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
@@ -26,9 +28,6 @@ class WingmanPanel;
 
 namespace zenith {
     class InstrumentBrowserPanel;
-}
-
-namespace zenith {
     class CommandAPI;
     class AIBridgeClient;
 }
@@ -41,6 +40,8 @@ namespace zenith {
  * This component is the main content area and contains:
  * - Transport bar (play/stop/record)
  * - ArrangerComponent (Phase 9 - interactive clip editing)
+ * - Arrangement view (Phase 14 - automation display)
+ * - Mixer panel (Phase 10)
  * - Status displays (CPU, device info, track count)
  * - Wingman AI panel (Phase 7)
  * - Instrument browser panel
@@ -120,8 +121,11 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
-    // Phase 11: Mixer component
-    std::unique_ptr<MixerComponent> mixerComponent;
+    // Phase 14: Arrangement view with automation
+    std::unique_ptr<ArrangementComponent> arrangementView;
+
+    // Phase 10/11: Mixer panel (direct member for efficiency)
+    MixerComponent mixerComponent;
 
     // Phase 9: Arranger component with interactive clip editing
     std::unique_ptr<ArrangerComponent> arrangerComponent;
@@ -210,8 +214,11 @@ private:
     // Project state
     std::unique_ptr<ProjectState> projectState;
 
-    // Phase 11: Track state synchronizer
+    // Phase 11: Track state synchronizer (general track state sync)
     std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
+
+    // Phase 13: Automation synchronizer (automation-specific sync)
+    std::unique_ptr<TrackAutomationSynchronizer> automationSync;
 
     // Phase 5: Wingman command API
     std::unique_ptr<zenith::CommandAPI> commandAPI;
