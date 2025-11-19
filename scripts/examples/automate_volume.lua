@@ -2,7 +2,7 @@
     automate_volume.lua
     Example script: Automate track volume with fade-in effect
 
-    Usage: Load this script in Vexel DAW and run to create automated volume fade
+    Usage: Load this script in Zenith DAW and run to create automated volume fade
 ]]
 
 log("Starting volume automation script")

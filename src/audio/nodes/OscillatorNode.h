@@ -8,7 +8,7 @@
 #include "../DSPNode.h"
 #include <JuceHeader.h>
 
-namespace vexel {
+namespace zenith {
 
 enum class OscillatorWaveform {
     Sine,
@@ -62,4 +62,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(OscillatorNode)
 };
 
-} // namespace vexel
+} // namespace zenith

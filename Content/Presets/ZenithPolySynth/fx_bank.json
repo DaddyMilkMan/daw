@@ -1,0 +1,1017 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "FX Bank",
+  "category": "FX",
+  "version": "1.0",
+  "preset_count": 48,
+  "presets": [
+    {
+      "id": "riser_noise",
+      "name": "Riser Noise",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Building noise riser",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.3,
+        "filter_resonance": 0.6,
+        "attack": 0.9,
+        "decay": 0.1,
+        "sustain": 0.9,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "riser_noise_01",
+      "name": "Riser Noise 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser Noise",
+      "parameters": {
+        "osc_type": 0.853,
+        "filter_cutoff": 0.333,
+        "filter_resonance": 0.532,
+        "attack": 0.82,
+        "decay": 0.091,
+        "sustain": 0.847,
+        "release": 0.57
+      }
+    },
+    {
+      "id": "riser_noise_02",
+      "name": "Riser Noise 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser Noise",
+      "parameters": {
+        "osc_type": 1.018,
+        "filter_cutoff": 0.301,
+        "filter_resonance": 0.535,
+        "attack": 0.836,
+        "decay": 0.05,
+        "sustain": 0.918,
+        "release": 0.43
+      }
+    },
+    {
+      "id": "riser_noise_03",
+      "name": "Riser Noise 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser Noise",
+      "parameters": {
+        "osc_type": 1.04,
+        "filter_cutoff": 0.335,
+        "filter_resonance": 0.645,
+        "attack": 0.879,
+        "decay": 0.156,
+        "sustain": 0.848,
+        "release": 0.557
+      }
+    },
+    {
+      "id": "riser_noise_04",
+      "name": "Riser Noise 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser Noise",
+      "parameters": {
+        "osc_type": 0.852,
+        "filter_cutoff": 0.287,
+        "filter_resonance": 0.55,
+        "attack": 0.877,
+        "decay": 0.131,
+        "sustain": 0.965,
+        "release": 0.578
+      }
+    },
+    {
+      "id": "riser_noise_05",
+      "name": "Riser Noise 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser Noise",
+      "parameters": {
+        "osc_type": 0.892,
+        "filter_cutoff": 0.331,
+        "filter_resonance": 0.673,
+        "attack": 0.951,
+        "decay": 0.12,
+        "sustain": 0.95,
+        "release": 0.506
+      }
+    },
+    {
+      "id": "downlifter",
+      "name": "Downlifter",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Falling transition FX",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.4,
+        "attack": 0.001,
+        "decay": 0.8,
+        "sustain": 0.1,
+        "release": 0.4
+      }
+    },
+    {
+      "id": "downlifter_01",
+      "name": "Downlifter 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Variation of Downlifter",
+      "parameters": {
+        "osc_type": 1.086,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.48,
+        "attack": 0.055,
+        "decay": 0.818,
+        "sustain": 0.166,
+        "release": 0.36
+      }
+    },
+    {
+      "id": "downlifter_02",
+      "name": "Downlifter 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Variation of Downlifter",
+      "parameters": {
+        "osc_type": 0.997,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.429,
+        "attack": 0.078,
+        "decay": 0.841,
+        "sustain": 0.138,
+        "release": 0.429
+      }
+    },
+    {
+      "id": "downlifter_03",
+      "name": "Downlifter 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Variation of Downlifter",
+      "parameters": {
+        "osc_type": 0.945,
+        "filter_cutoff": 0.991,
+        "filter_resonance": 0.369,
+        "attack": 0.01,
+        "decay": 0.788,
+        "sustain": 0.154,
+        "release": 0.378
+      }
+    },
+    {
+      "id": "downlifter_04",
+      "name": "Downlifter 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Variation of Downlifter",
+      "parameters": {
+        "osc_type": 0.905,
+        "filter_cutoff": 0.899,
+        "filter_resonance": 0.419,
+        "attack": 0.022,
+        "decay": 0.84,
+        "sustain": 0.048,
+        "release": 0.324
+      }
+    },
+    {
+      "id": "downlifter_05",
+      "name": "Downlifter 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "down",
+        "transition",
+        "fall"
+      ],
+      "description": "Variation of Downlifter",
+      "parameters": {
+        "osc_type": 0.954,
+        "filter_cutoff": 0.934,
+        "filter_resonance": 0.463,
+        "attack": 0.003,
+        "decay": 0.839,
+        "sustain": 0.062,
+        "release": 0.392
+      }
+    },
+    {
+      "id": "impact_boom",
+      "name": "Impact Boom",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Low impact hit",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.35,
+        "filter_resonance": 0.3,
+        "attack": 0.001,
+        "decay": 0.5,
+        "sustain": 0.0,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "impact_boom_01",
+      "name": "Impact Boom 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.002,
+        "filter_cutoff": 0.34,
+        "filter_resonance": 0.292,
+        "attack": 0.073,
+        "decay": 0.433,
+        "sustain": 0.017,
+        "release": 0.378
+      }
+    },
+    {
+      "id": "impact_boom_02",
+      "name": "Impact Boom 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.409,
+        "filter_resonance": 0.286,
+        "attack": 0.0,
+        "decay": 0.448,
+        "sustain": 0.061,
+        "release": 0.276
+      }
+    },
+    {
+      "id": "impact_boom_03",
+      "name": "Impact Boom 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.025,
+        "filter_cutoff": 0.313,
+        "filter_resonance": 0.254,
+        "attack": 0.0,
+        "decay": 0.474,
+        "sustain": 0.078,
+        "release": 0.278
+      }
+    },
+    {
+      "id": "impact_boom_04",
+      "name": "Impact Boom 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.284,
+        "filter_resonance": 0.242,
+        "attack": 0.0,
+        "decay": 0.531,
+        "sustain": 0.032,
+        "release": 0.253
+      }
+    },
+    {
+      "id": "impact_boom_05",
+      "name": "Impact Boom 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "boom"
+      ],
+      "description": "Variation of Impact Boom",
+      "parameters": {
+        "osc_type": 0.028,
+        "filter_cutoff": 0.379,
+        "filter_resonance": 0.343,
+        "attack": 0.039,
+        "decay": 0.423,
+        "sustain": 0.0,
+        "release": 0.297
+      }
+    },
+    {
+      "id": "sweep_whoosh",
+      "name": "Sweep Whoosh",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Filter sweep whoosh",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.7,
+        "attack": 0.01,
+        "decay": 0.4,
+        "sustain": 0.2,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "sweep_whoosh_01",
+      "name": "Sweep Whoosh 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 0.887,
+        "filter_cutoff": 0.463,
+        "filter_resonance": 0.741,
+        "attack": 0.088,
+        "decay": 0.437,
+        "sustain": 0.205,
+        "release": 0.231
+      }
+    },
+    {
+      "id": "sweep_whoosh_02",
+      "name": "Sweep Whoosh 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.094,
+        "filter_cutoff": 0.543,
+        "filter_resonance": 0.657,
+        "attack": 0.0,
+        "decay": 0.342,
+        "sustain": 0.138,
+        "release": 0.331
+      }
+    },
+    {
+      "id": "sweep_whoosh_03",
+      "name": "Sweep Whoosh 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.027,
+        "filter_cutoff": 0.506,
+        "filter_resonance": 0.694,
+        "attack": 0.085,
+        "decay": 0.443,
+        "sustain": 0.213,
+        "release": 0.236
+      }
+    },
+    {
+      "id": "sweep_whoosh_04",
+      "name": "Sweep Whoosh 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 0.944,
+        "filter_cutoff": 0.508,
+        "filter_resonance": 0.718,
+        "attack": 0.0,
+        "decay": 0.412,
+        "sustain": 0.226,
+        "release": 0.241
+      }
+    },
+    {
+      "id": "sweep_whoosh_05",
+      "name": "Sweep Whoosh 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "sweep",
+        "whoosh",
+        "transition"
+      ],
+      "description": "Variation of Sweep Whoosh",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.47,
+        "filter_resonance": 0.758,
+        "attack": 0.084,
+        "decay": 0.348,
+        "sustain": 0.151,
+        "release": 0.22
+      }
+    },
+    {
+      "id": "zap",
+      "name": "Zap",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Quick zap sound",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.6,
+        "attack": 0.001,
+        "decay": 0.15,
+        "sustain": 0.0,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "zap_01",
+      "name": "Zap 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Variation of Zap",
+      "parameters": {
+        "osc_type": 1.866,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.68,
+        "attack": 0.0,
+        "decay": 0.128,
+        "sustain": 0.0,
+        "release": 0.063
+      }
+    },
+    {
+      "id": "zap_02",
+      "name": "Zap 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.802,
+        "filter_resonance": 0.548,
+        "attack": 0.0,
+        "decay": 0.222,
+        "sustain": 0.051,
+        "release": 0.094
+      }
+    },
+    {
+      "id": "zap_03",
+      "name": "Zap 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Variation of Zap",
+      "parameters": {
+        "osc_type": 1.902,
+        "filter_cutoff": 0.809,
+        "filter_resonance": 0.556,
+        "attack": 0.0,
+        "decay": 0.153,
+        "sustain": 0.0,
+        "release": 0.039
+      }
+    },
+    {
+      "id": "zap_04",
+      "name": "Zap 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.638,
+        "attack": 0.0,
+        "decay": 0.189,
+        "sustain": 0.0,
+        "release": 0.097
+      }
+    },
+    {
+      "id": "zap_05",
+      "name": "Zap 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "zap",
+        "laser",
+        "sci-fi"
+      ],
+      "description": "Variation of Zap",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.775,
+        "filter_resonance": 0.537,
+        "attack": 0.071,
+        "decay": 0.199,
+        "sustain": 0.027,
+        "release": 0.04
+      }
+    },
+    {
+      "id": "atmosphere",
+      "name": "Atmosphere",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Background atmosphere",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.4,
+        "attack": 0.7,
+        "decay": 0.5,
+        "sustain": 0.85,
+        "release": 0.9
+      }
+    },
+    {
+      "id": "atmosphere_01",
+      "name": "Atmosphere 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.394,
+        "filter_cutoff": 0.576,
+        "filter_resonance": 0.356,
+        "attack": 0.713,
+        "decay": 0.481,
+        "sustain": 0.802,
+        "release": 0.828
+      }
+    },
+    {
+      "id": "atmosphere_02",
+      "name": "Atmosphere 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.471,
+        "filter_cutoff": 0.666,
+        "filter_resonance": 0.358,
+        "attack": 0.707,
+        "decay": 0.514,
+        "sustain": 0.826,
+        "release": 0.882
+      }
+    },
+    {
+      "id": "atmosphere_03",
+      "name": "Atmosphere 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.616,
+        "filter_cutoff": 0.646,
+        "filter_resonance": 0.474,
+        "attack": 0.76,
+        "decay": 0.509,
+        "sustain": 0.882,
+        "release": 0.917
+      }
+    },
+    {
+      "id": "atmosphere_04",
+      "name": "Atmosphere 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.555,
+        "filter_cutoff": 0.588,
+        "filter_resonance": 0.332,
+        "attack": 0.743,
+        "decay": 0.486,
+        "sustain": 0.833,
+        "release": 0.976
+      }
+    },
+    {
+      "id": "atmosphere_05",
+      "name": "Atmosphere 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "atmosphere",
+        "ambient",
+        "background"
+      ],
+      "description": "Variation of Atmosphere",
+      "parameters": {
+        "osc_type": 0.598,
+        "filter_cutoff": 0.645,
+        "filter_resonance": 0.364,
+        "attack": 0.727,
+        "decay": 0.498,
+        "sustain": 0.921,
+        "release": 0.923
+      }
+    },
+    {
+      "id": "drone_fx",
+      "name": "Drone FX",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Resonant drone FX",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.45,
+        "filter_resonance": 0.8,
+        "attack": 0.6,
+        "decay": 0.5,
+        "sustain": 0.9,
+        "release": 0.8
+      }
+    },
+    {
+      "id": "drone_fx_01",
+      "name": "Drone FX 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Variation of Drone FX",
+      "parameters": {
+        "osc_type": 1.111,
+        "filter_cutoff": 0.518,
+        "filter_resonance": 0.812,
+        "attack": 0.593,
+        "decay": 0.568,
+        "sustain": 0.942,
+        "release": 0.756
+      }
+    },
+    {
+      "id": "drone_fx_02",
+      "name": "Drone FX 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Variation of Drone FX",
+      "parameters": {
+        "osc_type": 0.904,
+        "filter_cutoff": 0.504,
+        "filter_resonance": 0.733,
+        "attack": 0.532,
+        "decay": 0.563,
+        "sustain": 0.913,
+        "release": 0.808
+      }
+    },
+    {
+      "id": "drone_fx_03",
+      "name": "Drone FX 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Variation of Drone FX",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.377,
+        "filter_resonance": 0.764,
+        "attack": 0.558,
+        "decay": 0.495,
+        "sustain": 0.962,
+        "release": 0.791
+      }
+    },
+    {
+      "id": "drone_fx_04",
+      "name": "Drone FX 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Variation of Drone FX",
+      "parameters": {
+        "osc_type": 1.051,
+        "filter_cutoff": 0.482,
+        "filter_resonance": 0.752,
+        "attack": 0.558,
+        "decay": 0.47,
+        "sustain": 0.95,
+        "release": 0.743
+      }
+    },
+    {
+      "id": "drone_fx_05",
+      "name": "Drone FX 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "drone",
+        "resonant",
+        "texture"
+      ],
+      "description": "Variation of Drone FX",
+      "parameters": {
+        "osc_type": 1.037,
+        "filter_cutoff": 0.461,
+        "filter_resonance": 0.863,
+        "attack": 0.628,
+        "decay": 0.484,
+        "sustain": 0.906,
+        "release": 0.829
+      }
+    },
+    {
+      "id": "static_burst",
+      "name": "Static Burst",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Short noise burst",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.5,
+        "attack": 0.001,
+        "decay": 0.08,
+        "sustain": 0.0,
+        "release": 0.05
+      }
+    },
+    {
+      "id": "static_burst_01",
+      "name": "Static Burst 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Variation of Static Burst",
+      "parameters": {
+        "osc_type": 1.042,
+        "filter_cutoff": 0.623,
+        "filter_resonance": 0.56,
+        "attack": 0.023,
+        "decay": 0.127,
+        "sustain": 0.0,
+        "release": 0.032
+      }
+    },
+    {
+      "id": "static_burst_02",
+      "name": "Static Burst 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Variation of Static Burst",
+      "parameters": {
+        "osc_type": 1.077,
+        "filter_cutoff": 0.687,
+        "filter_resonance": 0.559,
+        "attack": 0.008,
+        "decay": 0.092,
+        "sustain": 0.0,
+        "release": 0.07
+      }
+    },
+    {
+      "id": "static_burst_03",
+      "name": "Static Burst 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Variation of Static Burst",
+      "parameters": {
+        "osc_type": 1.066,
+        "filter_cutoff": 0.673,
+        "filter_resonance": 0.474,
+        "attack": 0.081,
+        "decay": 0.134,
+        "sustain": 0.0,
+        "release": 0.075
+      }
+    },
+    {
+      "id": "static_burst_04",
+      "name": "Static Burst 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Variation of Static Burst",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.453,
+        "attack": 0.0,
+        "decay": 0.025,
+        "sustain": 0.0,
+        "release": 0.047
+      }
+    },
+    {
+      "id": "static_burst_05",
+      "name": "Static Burst 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "static",
+        "burst",
+        "glitch"
+      ],
+      "description": "Variation of Static Burst",
+      "parameters": {
+        "osc_type": 0.989,
+        "filter_cutoff": 0.629,
+        "filter_resonance": 0.546,
+        "attack": 0.0,
+        "decay": 0.086,
+        "sustain": 0.0,
+        "release": 0.003
+      }
+    }
+  ]
+}

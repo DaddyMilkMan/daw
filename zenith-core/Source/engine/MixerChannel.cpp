@@ -2,8 +2,8 @@
   ==============================================================================
 
     MixerChannel.cpp
-    Ported from: VexelDAW-Native/Source/Audio/MixerChannel.cpp (2025-11-11)
-    Author:  Vexel DAW → Zenith DAW
+    Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.cpp (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
 
     Mixer channel strip implementation
 

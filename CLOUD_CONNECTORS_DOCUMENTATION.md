@@ -202,7 +202,7 @@ Cloud Connector System
 ### File Structure
 
 ```
-vexel-daw/
+zenith-daw/
 ├── src/renderer/
 │   ├── types/
 │   │   └── connectors.ts (Types & interfaces)

@@ -1,0 +1,204 @@
+{
+  "name": "Multi-Sampled Piano - Bright",
+  "parameters": {
+    "attack": 0.001,
+    "decay": 0.4,
+    "sustain": 0.5,
+    "release": 0.5,
+    "filterCutoff": 1.0,
+    "filterResonance": 0.0,
+    "tune": 0.0,
+    "gain": 0.8
+  },
+  "samples": [
+    {
+      "file": "Content/Samples/Keys/piano_C1.wav",
+      "rootNote": 36,
+      "lowNote": 0,
+      "highNote": 37,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Eb1.wav",
+      "rootNote": 39,
+      "lowNote": 38,
+      "highNote": 40,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Gb1.wav",
+      "rootNote": 42,
+      "lowNote": 41,
+      "highNote": 43,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_A1.wav",
+      "rootNote": 45,
+      "lowNote": 44,
+      "highNote": 46,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_C2.wav",
+      "rootNote": 48,
+      "lowNote": 47,
+      "highNote": 49,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Eb2.wav",
+      "rootNote": 51,
+      "lowNote": 50,
+      "highNote": 52,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Gb2.wav",
+      "rootNote": 54,
+      "lowNote": 53,
+      "highNote": 55,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_A2.wav",
+      "rootNote": 57,
+      "lowNote": 56,
+      "highNote": 58,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_C3.wav",
+      "rootNote": 60,
+      "lowNote": 59,
+      "highNote": 61,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Eb3.wav",
+      "rootNote": 63,
+      "lowNote": 62,
+      "highNote": 64,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Gb3.wav",
+      "rootNote": 66,
+      "lowNote": 65,
+      "highNote": 67,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_A3.wav",
+      "rootNote": 69,
+      "lowNote": 68,
+      "highNote": 70,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_C4.wav",
+      "rootNote": 72,
+      "lowNote": 71,
+      "highNote": 73,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Eb4.wav",
+      "rootNote": 75,
+      "lowNote": 74,
+      "highNote": 76,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Gb4.wav",
+      "rootNote": 78,
+      "lowNote": 77,
+      "highNote": 79,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_A4.wav",
+      "rootNote": 81,
+      "lowNote": 80,
+      "highNote": 82,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_C5.wav",
+      "rootNote": 84,
+      "lowNote": 83,
+      "highNote": 85,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Eb5.wav",
+      "rootNote": 87,
+      "lowNote": 86,
+      "highNote": 88,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_Gb5.wav",
+      "rootNote": 90,
+      "lowNote": 89,
+      "highNote": 91,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_A5.wav",
+      "rootNote": 93,
+      "lowNote": 92,
+      "highNote": 94,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    },
+    {
+      "file": "Content/Samples/Keys/piano_C6.wav",
+      "rootNote": 96,
+      "lowNote": 95,
+      "highNote": 127,
+      "lowVelocity": 0,
+      "highVelocity": 127,
+      "gain": 1.0
+    }
+  ]
+}
