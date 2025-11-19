@@ -1,0 +1,1044 @@
+{
+  "instrument": "zenith_sampler",
+  "bank_name": "808 Bank",
+  "category": "808",
+  "version": "1.0",
+  "preset_count": 45,
+  "presets": [
+    {
+      "id": "classic_808_kit",
+      "name": "Classic 808 Kit",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "TR-808 drum machine sounds",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.0,
+        "release": 0.2,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "classic_808_kit_01",
+      "name": "Classic 808 Kit 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.097,
+        "release": 0.07,
+        "filter_cutoff": 0.867,
+        "filter_resonance": 0.265,
+        "tune": 0.36,
+        "gain": 0.88,
+        "character": 0.459
+      }
+    },
+    {
+      "id": "classic_808_kit_02",
+      "name": "Classic 808 Kit 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.222,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.828,
+        "filter_resonance": 0.253,
+        "tune": -0.432,
+        "gain": 0.838,
+        "character": 0.355
+      }
+    },
+    {
+      "id": "classic_808_kit_03",
+      "name": "Classic 808 Kit 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.28,
+        "sustain": 0.07,
+        "release": 0.001,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.102,
+        "tune": 1.223,
+        "gain": 0.875,
+        "character": 0.485
+      }
+    },
+    {
+      "id": "classic_808_kit_04",
+      "name": "Classic 808 Kit 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.065,
+        "decay": 0.648,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.826,
+        "filter_resonance": 0.107,
+        "tune": -2.3,
+        "gain": 0.91,
+        "character": 0.48
+      }
+    },
+    {
+      "id": "classic_808_kit_05",
+      "name": "Classic 808 Kit 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.387,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.71,
+        "filter_resonance": 0.137,
+        "tune": 1.652,
+        "gain": 1.067,
+        "character": 0.404
+      }
+    },
+    {
+      "id": "classic_808_kit_06",
+      "name": "Classic 808 Kit 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.319,
+        "decay": 0.093,
+        "sustain": 0.044,
+        "release": 0.001,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.215,
+        "tune": 1.214,
+        "gain": 0.775,
+        "character": 0.345
+      }
+    },
+    {
+      "id": "classic_808_kit_07",
+      "name": "Classic 808 Kit 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.782,
+        "sustain": 0.0,
+        "release": 0.568,
+        "filter_cutoff": 0.73,
+        "filter_resonance": 0.173,
+        "tune": -0.433,
+        "gain": 0.865,
+        "character": 0.443
+      }
+    },
+    {
+      "id": "classic_808_kit_08",
+      "name": "Classic 808 Kit 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.146,
+        "decay": 0.511,
+        "sustain": 0.0,
+        "release": 0.456,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.213,
+        "tune": 0.084,
+        "gain": 0.953,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "sub_808",
+      "name": "Sub 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Deep sub 808",
+      "parameters": {
+        "attack": 0.002,
+        "decay": 0.5,
+        "sustain": 0.0,
+        "release": 0.3,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.15,
+        "tune": -2.0,
+        "gain": 1.0,
+        "character": 0.3
+      }
+    },
+    {
+      "id": "sub_808_01",
+      "name": "Sub 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.763,
+        "sustain": 0.0,
+        "release": 0.68,
+        "filter_cutoff": 0.547,
+        "filter_resonance": 0.123,
+        "tune": -3.943,
+        "gain": 1.074,
+        "character": 0.219
+      }
+    },
+    {
+      "id": "sub_808_02",
+      "name": "Sub 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.518,
+        "sustain": 0.0,
+        "release": 0.187,
+        "filter_cutoff": 0.525,
+        "filter_resonance": 0.202,
+        "tune": -1.224,
+        "gain": 1.151,
+        "character": 0.288
+      }
+    },
+    {
+      "id": "sub_808_03",
+      "name": "Sub 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.098,
+        "decay": 0.435,
+        "sustain": 0.024,
+        "release": 0.001,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.136,
+        "tune": -2.974,
+        "gain": 0.965,
+        "character": 0.398
+      }
+    },
+    {
+      "id": "sub_808_04",
+      "name": "Sub 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.947,
+        "sustain": 0.0,
+        "release": 0.151,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.225,
+        "tune": -1.42,
+        "gain": 0.917,
+        "character": 0.361
+      }
+    },
+    {
+      "id": "sub_808_05",
+      "name": "Sub 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.954,
+        "sustain": 0.0,
+        "release": 0.742,
+        "filter_cutoff": 0.413,
+        "filter_resonance": 0.077,
+        "tune": -2.151,
+        "gain": 1.142,
+        "character": 0.23
+      }
+    },
+    {
+      "id": "sub_808_06",
+      "name": "Sub 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.641,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.099,
+        "tune": -0.063,
+        "gain": 1.104,
+        "character": 0.206
+      }
+    },
+    {
+      "id": "sub_808_07",
+      "name": "Sub 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.27,
+        "decay": 0.131,
+        "sustain": 0.0,
+        "release": 0.122,
+        "filter_cutoff": 0.584,
+        "filter_resonance": 0.19,
+        "tune": -3.859,
+        "gain": 0.995,
+        "character": 0.332
+      }
+    },
+    {
+      "id": "sub_808_08",
+      "name": "Sub 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.42,
+        "decay": 0.657,
+        "sustain": 0.034,
+        "release": 0.94,
+        "filter_cutoff": 0.568,
+        "filter_resonance": 0.245,
+        "tune": -2.737,
+        "gain": 1.131,
+        "character": 0.322
+      }
+    },
+    {
+      "id": "punchy_808",
+      "name": "Punchy 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Punchy 808 with attack",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.25,
+        "sustain": 0.0,
+        "release": 0.15,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.25,
+        "tune": 0.0,
+        "gain": 0.95,
+        "character": 0.6
+      }
+    },
+    {
+      "id": "punchy_808_01",
+      "name": "Punchy 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.114,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.618,
+        "filter_resonance": 0.299,
+        "tune": 1.528,
+        "gain": 0.898,
+        "character": 0.606
+      }
+    },
+    {
+      "id": "punchy_808_02",
+      "name": "Punchy 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.08,
+        "decay": 0.182,
+        "sustain": 0.083,
+        "release": 0.001,
+        "filter_cutoff": 0.797,
+        "filter_resonance": 0.221,
+        "tune": 1.34,
+        "gain": 1.104,
+        "character": 0.583
+      }
+    },
+    {
+      "id": "punchy_808_03",
+      "name": "Punchy 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.036,
+        "sustain": 0.0,
+        "release": 0.358,
+        "filter_cutoff": 0.612,
+        "filter_resonance": 0.264,
+        "tune": 0.982,
+        "gain": 0.857,
+        "character": 0.501
+      }
+    },
+    {
+      "id": "punchy_808_04",
+      "name": "Punchy 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.442,
+        "decay": 0.446,
+        "sustain": 0.061,
+        "release": 0.293,
+        "filter_cutoff": 0.735,
+        "filter_resonance": 0.206,
+        "tune": 1.566,
+        "gain": 0.933,
+        "character": 0.617
+      }
+    },
+    {
+      "id": "punchy_808_05",
+      "name": "Punchy 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.231,
+        "sustain": 0.044,
+        "release": 0.203,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.22,
+        "tune": 1.794,
+        "gain": 1.074,
+        "character": 0.61
+      }
+    },
+    {
+      "id": "punchy_808_06",
+      "name": "Punchy 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.174,
+        "decay": 0.001,
+        "sustain": 0.01,
+        "release": 0.666,
+        "filter_cutoff": 0.722,
+        "filter_resonance": 0.272,
+        "tune": -1.486,
+        "gain": 0.995,
+        "character": 0.674
+      }
+    },
+    {
+      "id": "punchy_808_07",
+      "name": "Punchy 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.024,
+        "decay": 0.275,
+        "sustain": 0.005,
+        "release": 0.001,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.309,
+        "tune": -0.632,
+        "gain": 1.091,
+        "character": 0.511
+      }
+    },
+    {
+      "id": "punchy_808_08",
+      "name": "Punchy 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.255,
+        "sustain": 0.079,
+        "release": 1.024,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.21,
+        "tune": 0.284,
+        "gain": 0.76,
+        "character": 0.605
+      }
+    },
+    {
+      "id": "long_808",
+      "name": "Long 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Sustained 808",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.8,
+        "sustain": 0.0,
+        "release": 0.5,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.35
+      }
+    },
+    {
+      "id": "long_808_01",
+      "name": "Long 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.327,
+        "decay": 1.103,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.67,
+        "filter_resonance": 0.258,
+        "tune": 2.083,
+        "gain": 1.014,
+        "character": 0.272
+      }
+    },
+    {
+      "id": "long_808_02",
+      "name": "Long 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.179,
+        "decay": 0.614,
+        "sustain": 0.041,
+        "release": 1.023,
+        "filter_cutoff": 0.657,
+        "filter_resonance": 0.234,
+        "tune": 1.474,
+        "gain": 0.972,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "long_808_03",
+      "name": "Long 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.515,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.642,
+        "filter_resonance": 0.138,
+        "tune": -2.339,
+        "gain": 0.732,
+        "character": 0.263
+      }
+    },
+    {
+      "id": "long_808_04",
+      "name": "Long 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.565,
+        "sustain": 0.01,
+        "release": 1.075,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.247,
+        "tune": -1.865,
+        "gain": 1.002,
+        "character": 0.31
+      }
+    },
+    {
+      "id": "long_808_05",
+      "name": "Long 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.383,
+        "decay": 0.701,
+        "sustain": 0.0,
+        "release": 0.939,
+        "filter_cutoff": 0.566,
+        "filter_resonance": 0.222,
+        "tune": -2.342,
+        "gain": 0.817,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "long_808_06",
+      "name": "Long 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.233,
+        "decay": 0.484,
+        "sustain": 0.013,
+        "release": 0.967,
+        "filter_cutoff": 0.551,
+        "filter_resonance": 0.116,
+        "tune": -1.308,
+        "gain": 1.073,
+        "character": 0.379
+      }
+    },
+    {
+      "id": "long_808_07",
+      "name": "Long 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.037,
+        "decay": 0.573,
+        "sustain": 0.018,
+        "release": 1.252,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.241,
+        "tune": -1.675,
+        "gain": 0.995,
+        "character": 0.367
+      }
+    },
+    {
+      "id": "long_808_08",
+      "name": "Long 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.596,
+        "sustain": 0.0,
+        "release": 0.054,
+        "filter_cutoff": 0.504,
+        "filter_resonance": 0.103,
+        "tune": -2.2,
+        "gain": 1.086,
+        "character": 0.315
+      }
+    },
+    {
+      "id": "distorted_808",
+      "name": "Distorted 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Gritty distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.4,
+        "sustain": 0.0,
+        "release": 0.25,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.3,
+        "tune": 0.0,
+        "gain": 1.1,
+        "character": 0.8
+      }
+    },
+    {
+      "id": "distorted_808_01",
+      "name": "Distorted 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.273,
+        "sustain": 0.088,
+        "release": 0.001,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.261,
+        "tune": 1.919,
+        "gain": 1.031,
+        "character": 0.792
+      }
+    },
+    {
+      "id": "distorted_808_02",
+      "name": "Distorted 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.076,
+        "release": 0.872,
+        "filter_cutoff": 0.792,
+        "filter_resonance": 0.302,
+        "tune": -2.279,
+        "gain": 1.036,
+        "character": 0.765
+      }
+    },
+    {
+      "id": "distorted_808_03",
+      "name": "Distorted 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.248,
+        "decay": 0.613,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.352,
+        "tune": -0.988,
+        "gain": 0.995,
+        "character": 0.714
+      }
+    },
+    {
+      "id": "distorted_808_04",
+      "name": "Distorted 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.199,
+        "decay": 0.751,
+        "sustain": 0.0,
+        "release": 0.952,
+        "filter_cutoff": 0.831,
+        "filter_resonance": 0.258,
+        "tune": 0.897,
+        "gain": 1.126,
+        "character": 0.877
+      }
+    },
+    {
+      "id": "distorted_808_05",
+      "name": "Distorted 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.093,
+        "decay": 0.068,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.329,
+        "tune": 2.007,
+        "gain": 1.077,
+        "character": 0.839
+      }
+    },
+    {
+      "id": "distorted_808_06",
+      "name": "Distorted 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.448,
+        "sustain": 0.014,
+        "release": 0.001,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.319,
+        "tune": 0.316,
+        "gain": 1.063,
+        "character": 0.743
+      }
+    },
+    {
+      "id": "distorted_808_07",
+      "name": "Distorted 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.596,
+        "sustain": 0.0,
+        "release": 0.116,
+        "filter_cutoff": 0.835,
+        "filter_resonance": 0.229,
+        "tune": 0.955,
+        "gain": 1.145,
+        "character": 0.884
+      }
+    },
+    {
+      "id": "distorted_808_08",
+      "name": "Distorted 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.082,
+        "release": 1.128,
+        "filter_cutoff": 0.769,
+        "filter_resonance": 0.346,
+        "tune": 0.821,
+        "gain": 1.269,
+        "character": 0.723
+      }
+    }
+  ]
+}

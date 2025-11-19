@@ -1,8 +1,8 @@
-# Vexel DAW - Native C++/JUCE Version
+# Zenith DAW - Native C++/JUCE Version
 
 **Professional Digital Audio Workstation built with C++ and JUCE**
 
-This is the native C++/JUCE version of Vexel DAW, converted from the web-based Electron prototype. This version delivers professional-grade performance with sub-millisecond latency, VST/AU plugin support, and native audio driver access.
+This is the native C++/JUCE version of Zenith DAW, converted from the web-based Electron prototype. This version delivers professional-grade performance with sub-millisecond latency, VST/AU plugin support, and native audio driver access.
 
 ## 🚀 Performance Benefits
 
@@ -60,7 +60,7 @@ sudo apt-get install libasound2-dev libjack-jackd2-dev \
 ### 1. Clone the Repository
 ```bash
 git clone https://github.com/DaddyMilkMan/daw.git
-cd daw/VexelDAW-Native
+cd daw/ZenithDAW-Native
 ```
 
 ### 2. Create Build Directory
@@ -84,19 +84,19 @@ cmake .. -G "Visual Studio 17 2022" -A x64
 cmake --build . --config Release
 
 # Windows
-cmake --build . --config Release --target VexelDAW
+cmake --build . --config Release --target ZenithDAW
 ```
 
 ### 5. Run the Application
 ```bash
 # macOS
-./VexelDAW_artefacts/Release/VexelDAW.app/Contents/MacOS/VexelDAW
+./ZenithDAW_artefacts/Release/ZenithDAW.app/Contents/MacOS/ZenithDAW
 
 # Linux
-./VexelDAW_artefacts/Release/VexelDAW
+./ZenithDAW_artefacts/Release/ZenithDAW
 
 # Windows
-.\\VexelDAW_artefacts\\Release\\VexelDAW.exe
+.\\ZenithDAW_artefacts\\Release\\ZenithDAW.exe
 ```
 
 ## 🎵 Quick Start Guide
@@ -142,7 +142,7 @@ cmake --build . --config Release --target VexelDAW
 ## 📁 Project Structure
 
 ```
-VexelDAW-Native/
+ZenithDAW-Native/
 ├── Source/
 │   ├── Main.cpp                    # Application entry point
 │   ├── MainComponent.h/cpp         # Main window component
@@ -232,7 +232,7 @@ UndoManager
 
 3. **Update CMakeLists.txt:**
    ```cmake
-   target_sources(VexelDAW PRIVATE
+   target_sources(ZenithDAW PRIVATE
        Source/MyFeature.cpp
        Source/MyFeature.h
    )
@@ -252,13 +252,13 @@ ctest --output-on-failure
 ### Debugging
 ```bash
 # macOS
-lldb ./VexelDAW_artefacts/Debug/VexelDAW.app/Contents/MacOS/VexelDAW
+lldb ./ZenithDAW_artefacts/Debug/ZenithDAW.app/Contents/MacOS/ZenithDAW
 
 # Linux
-gdb ./VexelDAW_artefacts/Debug/VexelDAW
+gdb ./ZenithDAW_artefacts/Debug/ZenithDAW
 
 # Windows (Visual Studio)
-# Open VexelDAW.sln and press F5
+# Open ZenithDAW.sln and press F5
 ```
 
 ## 🐛 Troubleshooting
@@ -357,7 +357,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file.
 
 - **Issues:** [GitHub Issues](https://github.com/DaddyMilkMan/daw/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/DaddyMilkMan/daw/discussions)
-- **Email:** support@vexeldaw.com
+- **Email:** support@zenithdaw.com
 
 ---
 

@@ -1,5 +1,5 @@
 @echo off
-REM Build Script for Vexel DAW Qt/QML Application (Windows)
+REM Build Script for Zenith DAW Qt/QML Application (Windows)
 REM
 REM This script builds the Qt/QML + JUCE hybrid DAW application
 REM Usage: build.bat [Debug|Release]
@@ -16,7 +16,7 @@ if "%1"=="" (
 set BUILD_DIR=build
 
 echo =================================
-echo Vexel DAW - Qt/QML + JUCE Build
+echo Zenith DAW - Qt/QML + JUCE Build
 echo =================================
 echo Build type: %BUILD_TYPE%
 echo.
@@ -84,7 +84,7 @@ echo Build completed successfully!
 echo =================================
 echo.
 echo To run the application:
-echo   build\bin\%BUILD_TYPE%\VexelDAW.exe
+echo   build\bin\%BUILD_TYPE%\ZenithDAW.exe
 echo.
 echo Or use: run.bat
 echo.

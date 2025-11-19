@@ -5,7 +5,7 @@
 
 #include "OscillatorNode.h"
 
-namespace vexel {
+namespace zenith {
 
 OscillatorNode::OscillatorNode()
     : DSPNode("Oscillator", 0, 2)  // 0 inputs, 2 outputs (stereo)
@@ -118,4 +118,4 @@ float OscillatorNode::generateSample()
     }
 }
 
-} // namespace vexel
+} // namespace zenith

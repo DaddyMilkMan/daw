@@ -1,0 +1,1269 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Pad Bank",
+  "category": "Pad",
+  "version": "1.0",
+  "preset_count": 60,
+  "presets": [
+    {
+      "id": "warm_analog_pad",
+      "name": "Warm Analog Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Lush warm pad with slow attack",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.3,
+        "attack": 0.5,
+        "decay": 0.4,
+        "sustain": 0.85,
+        "release": 0.8
+      }
+    },
+    {
+      "id": "warm_analog_pad_01",
+      "name": "Warm Analog Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Variation of Warm Analog Pad",
+      "parameters": {
+        "osc_type": 0.872,
+        "filter_cutoff": 0.63,
+        "filter_resonance": 0.307,
+        "attack": 0.574,
+        "decay": 0.407,
+        "sustain": 0.795,
+        "release": 0.811
+      }
+    },
+    {
+      "id": "warm_analog_pad_02",
+      "name": "Warm Analog Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Variation of Warm Analog Pad",
+      "parameters": {
+        "osc_type": 0.977,
+        "filter_cutoff": 0.541,
+        "filter_resonance": 0.28,
+        "attack": 0.425,
+        "decay": 0.437,
+        "sustain": 0.798,
+        "release": 0.854
+      }
+    },
+    {
+      "id": "warm_analog_pad_03",
+      "name": "Warm Analog Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Variation of Warm Analog Pad",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.588,
+        "filter_resonance": 0.379,
+        "attack": 0.517,
+        "decay": 0.348,
+        "sustain": 0.895,
+        "release": 0.784
+      }
+    },
+    {
+      "id": "warm_analog_pad_04",
+      "name": "Warm Analog Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Variation of Warm Analog Pad",
+      "parameters": {
+        "osc_type": 0.946,
+        "filter_cutoff": 0.616,
+        "filter_resonance": 0.243,
+        "attack": 0.537,
+        "decay": 0.37,
+        "sustain": 0.914,
+        "release": 0.734
+      }
+    },
+    {
+      "id": "warm_analog_pad_05",
+      "name": "Warm Analog Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "warm",
+        "analog",
+        "lush"
+      ],
+      "description": "Variation of Warm Analog Pad",
+      "parameters": {
+        "osc_type": 1.066,
+        "filter_cutoff": 0.567,
+        "filter_resonance": 0.243,
+        "attack": 0.462,
+        "decay": 0.459,
+        "sustain": 0.799,
+        "release": 0.811
+      }
+    },
+    {
+      "id": "airy_digital_pad",
+      "name": "Airy Digital Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Bright airy pad",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.25,
+        "attack": 0.4,
+        "decay": 0.3,
+        "sustain": 0.8,
+        "release": 0.7
+      }
+    },
+    {
+      "id": "airy_digital_pad_01",
+      "name": "Airy Digital Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Variation of Airy Digital Pad",
+      "parameters": {
+        "osc_type": 0.527,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.279,
+        "attack": 0.355,
+        "decay": 0.263,
+        "sustain": 0.752,
+        "release": 0.729
+      }
+    },
+    {
+      "id": "airy_digital_pad_02",
+      "name": "Airy Digital Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Variation of Airy Digital Pad",
+      "parameters": {
+        "osc_type": 0.365,
+        "filter_cutoff": 0.696,
+        "filter_resonance": 0.292,
+        "attack": 0.461,
+        "decay": 0.31,
+        "sustain": 0.757,
+        "release": 0.719
+      }
+    },
+    {
+      "id": "airy_digital_pad_03",
+      "name": "Airy Digital Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Variation of Airy Digital Pad",
+      "parameters": {
+        "osc_type": 0.466,
+        "filter_cutoff": 0.704,
+        "filter_resonance": 0.308,
+        "attack": 0.376,
+        "decay": 0.279,
+        "sustain": 0.84,
+        "release": 0.707
+      }
+    },
+    {
+      "id": "airy_digital_pad_04",
+      "name": "Airy Digital Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Variation of Airy Digital Pad",
+      "parameters": {
+        "osc_type": 0.577,
+        "filter_cutoff": 0.773,
+        "filter_resonance": 0.306,
+        "attack": 0.413,
+        "decay": 0.337,
+        "sustain": 0.878,
+        "release": 0.75
+      }
+    },
+    {
+      "id": "airy_digital_pad_05",
+      "name": "Airy Digital Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "airy",
+        "bright",
+        "digital"
+      ],
+      "description": "Variation of Airy Digital Pad",
+      "parameters": {
+        "osc_type": 0.645,
+        "filter_cutoff": 0.806,
+        "filter_resonance": 0.227,
+        "attack": 0.344,
+        "decay": 0.314,
+        "sustain": 0.803,
+        "release": 0.743
+      }
+    },
+    {
+      "id": "dark_pad",
+      "name": "Dark Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Deep dark atmospheric pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.4,
+        "filter_resonance": 0.2,
+        "attack": 0.6,
+        "decay": 0.5,
+        "sustain": 0.9,
+        "release": 0.9
+      }
+    },
+    {
+      "id": "dark_pad_01",
+      "name": "Dark Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Variation of Dark Pad",
+      "parameters": {
+        "osc_type": 0.046,
+        "filter_cutoff": 0.452,
+        "filter_resonance": 0.173,
+        "attack": 0.575,
+        "decay": 0.538,
+        "sustain": 0.836,
+        "release": 0.929
+      }
+    },
+    {
+      "id": "dark_pad_02",
+      "name": "Dark Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Variation of Dark Pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.338,
+        "filter_resonance": 0.227,
+        "attack": 0.636,
+        "decay": 0.546,
+        "sustain": 0.875,
+        "release": 0.854
+      }
+    },
+    {
+      "id": "dark_pad_03",
+      "name": "Dark Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Variation of Dark Pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.384,
+        "filter_resonance": 0.147,
+        "attack": 0.552,
+        "decay": 0.549,
+        "sustain": 0.971,
+        "release": 0.87
+      }
+    },
+    {
+      "id": "dark_pad_04",
+      "name": "Dark Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Variation of Dark Pad",
+      "parameters": {
+        "osc_type": 0.004,
+        "filter_cutoff": 0.348,
+        "filter_resonance": 0.2,
+        "attack": 0.546,
+        "decay": 0.46,
+        "sustain": 0.913,
+        "release": 0.883
+      }
+    },
+    {
+      "id": "dark_pad_05",
+      "name": "Dark Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "dark",
+        "deep",
+        "atmospheric"
+      ],
+      "description": "Variation of Dark Pad",
+      "parameters": {
+        "osc_type": 0.101,
+        "filter_cutoff": 0.424,
+        "filter_resonance": 0.18,
+        "attack": 0.64,
+        "decay": 0.434,
+        "sustain": 0.92,
+        "release": 0.908
+      }
+    },
+    {
+      "id": "evolving_drone",
+      "name": "Evolving Drone",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Slowly evolving drone pad",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.5,
+        "attack": 0.7,
+        "decay": 0.6,
+        "sustain": 0.95,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "evolving_drone_01",
+      "name": "Evolving Drone 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Variation of Evolving Drone",
+      "parameters": {
+        "osc_type": 1.013,
+        "filter_cutoff": 0.573,
+        "filter_resonance": 0.426,
+        "attack": 0.772,
+        "decay": 0.622,
+        "sustain": 0.874,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "evolving_drone_02",
+      "name": "Evolving Drone 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Variation of Evolving Drone",
+      "parameters": {
+        "osc_type": 1.022,
+        "filter_cutoff": 0.489,
+        "filter_resonance": 0.547,
+        "attack": 0.777,
+        "decay": 0.626,
+        "sustain": 0.937,
+        "release": 0.945
+      }
+    },
+    {
+      "id": "evolving_drone_03",
+      "name": "Evolving Drone 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Variation of Evolving Drone",
+      "parameters": {
+        "osc_type": 1.017,
+        "filter_cutoff": 0.54,
+        "filter_resonance": 0.544,
+        "attack": 0.763,
+        "decay": 0.652,
+        "sustain": 1.0,
+        "release": 0.963
+      }
+    },
+    {
+      "id": "evolving_drone_04",
+      "name": "Evolving Drone 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Variation of Evolving Drone",
+      "parameters": {
+        "osc_type": 1.12,
+        "filter_cutoff": 0.459,
+        "filter_resonance": 0.489,
+        "attack": 0.651,
+        "decay": 0.571,
+        "sustain": 0.909,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "evolving_drone_05",
+      "name": "Evolving Drone 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "drone",
+        "evolving",
+        "ambient"
+      ],
+      "description": "Variation of Evolving Drone",
+      "parameters": {
+        "osc_type": 1.157,
+        "filter_cutoff": 0.465,
+        "filter_resonance": 0.433,
+        "attack": 0.623,
+        "decay": 0.661,
+        "sustain": 0.945,
+        "release": 0.957
+      }
+    },
+    {
+      "id": "soft_sine_pad",
+      "name": "Soft Sine Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Ultra soft sine pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.15,
+        "attack": 0.45,
+        "decay": 0.35,
+        "sustain": 0.82,
+        "release": 0.75
+      }
+    },
+    {
+      "id": "soft_sine_pad_01",
+      "name": "Soft Sine Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Variation of Soft Sine Pad",
+      "parameters": {
+        "osc_type": 0.073,
+        "filter_cutoff": 0.571,
+        "filter_resonance": 0.199,
+        "attack": 0.5,
+        "decay": 0.342,
+        "sustain": 0.774,
+        "release": 0.792
+      }
+    },
+    {
+      "id": "soft_sine_pad_02",
+      "name": "Soft Sine Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Variation of Soft Sine Pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.727,
+        "filter_resonance": 0.103,
+        "attack": 0.465,
+        "decay": 0.329,
+        "sustain": 0.87,
+        "release": 0.677
+      }
+    },
+    {
+      "id": "soft_sine_pad_03",
+      "name": "Soft Sine Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Variation of Soft Sine Pad",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.677,
+        "filter_resonance": 0.126,
+        "attack": 0.372,
+        "decay": 0.39,
+        "sustain": 0.8,
+        "release": 0.775
+      }
+    },
+    {
+      "id": "soft_sine_pad_04",
+      "name": "Soft Sine Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Variation of Soft Sine Pad",
+      "parameters": {
+        "osc_type": 0.118,
+        "filter_cutoff": 0.652,
+        "filter_resonance": 0.172,
+        "attack": 0.46,
+        "decay": 0.325,
+        "sustain": 0.845,
+        "release": 0.792
+      }
+    },
+    {
+      "id": "soft_sine_pad_05",
+      "name": "Soft Sine Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "soft",
+        "sine",
+        "gentle"
+      ],
+      "description": "Variation of Soft Sine Pad",
+      "parameters": {
+        "osc_type": 0.058,
+        "filter_cutoff": 0.697,
+        "filter_resonance": 0.152,
+        "attack": 0.457,
+        "decay": 0.415,
+        "sustain": 0.864,
+        "release": 0.77
+      }
+    },
+    {
+      "id": "saw_pad",
+      "name": "Saw Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Classic saw pad",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.32,
+        "attack": 0.5,
+        "decay": 0.4,
+        "sustain": 0.85,
+        "release": 0.8
+      }
+    },
+    {
+      "id": "saw_pad_01",
+      "name": "Saw Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Variation of Saw Pad",
+      "parameters": {
+        "osc_type": 1.06,
+        "filter_cutoff": 0.509,
+        "filter_resonance": 0.249,
+        "attack": 0.567,
+        "decay": 0.34,
+        "sustain": 0.927,
+        "release": 0.725
+      }
+    },
+    {
+      "id": "saw_pad_02",
+      "name": "Saw Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Variation of Saw Pad",
+      "parameters": {
+        "osc_type": 0.911,
+        "filter_cutoff": 0.595,
+        "filter_resonance": 0.243,
+        "attack": 0.453,
+        "decay": 0.368,
+        "sustain": 0.905,
+        "release": 0.797
+      }
+    },
+    {
+      "id": "saw_pad_03",
+      "name": "Saw Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Variation of Saw Pad",
+      "parameters": {
+        "osc_type": 1.041,
+        "filter_cutoff": 0.636,
+        "filter_resonance": 0.25,
+        "attack": 0.464,
+        "decay": 0.387,
+        "sustain": 0.774,
+        "release": 0.813
+      }
+    },
+    {
+      "id": "saw_pad_04",
+      "name": "Saw Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Variation of Saw Pad",
+      "parameters": {
+        "osc_type": 1.033,
+        "filter_cutoff": 0.646,
+        "filter_resonance": 0.355,
+        "attack": 0.539,
+        "decay": 0.454,
+        "sustain": 0.886,
+        "release": 0.756
+      }
+    },
+    {
+      "id": "saw_pad_05",
+      "name": "Saw Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "saw",
+        "classic",
+        "rich"
+      ],
+      "description": "Variation of Saw Pad",
+      "parameters": {
+        "osc_type": 0.998,
+        "filter_cutoff": 0.635,
+        "filter_resonance": 0.358,
+        "attack": 0.437,
+        "decay": 0.423,
+        "sustain": 0.808,
+        "release": 0.85
+      }
+    },
+    {
+      "id": "hollow_pad",
+      "name": "Hollow Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Hollow square pad",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.55,
+        "filter_resonance": 0.3,
+        "attack": 0.55,
+        "decay": 0.45,
+        "sustain": 0.88,
+        "release": 0.85
+      }
+    },
+    {
+      "id": "hollow_pad_01",
+      "name": "Hollow Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Variation of Hollow Pad",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.567,
+        "filter_resonance": 0.295,
+        "attack": 0.475,
+        "decay": 0.453,
+        "sustain": 0.926,
+        "release": 0.871
+      }
+    },
+    {
+      "id": "hollow_pad_02",
+      "name": "Hollow Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Variation of Hollow Pad",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.597,
+        "filter_resonance": 0.367,
+        "attack": 0.619,
+        "decay": 0.43,
+        "sustain": 0.802,
+        "release": 0.919
+      }
+    },
+    {
+      "id": "hollow_pad_03",
+      "name": "Hollow Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Variation of Hollow Pad",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.518,
+        "filter_resonance": 0.245,
+        "attack": 0.575,
+        "decay": 0.38,
+        "sustain": 0.81,
+        "release": 0.854
+      }
+    },
+    {
+      "id": "hollow_pad_04",
+      "name": "Hollow Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Variation of Hollow Pad",
+      "parameters": {
+        "osc_type": 1.937,
+        "filter_cutoff": 0.483,
+        "filter_resonance": 0.356,
+        "attack": 0.523,
+        "decay": 0.425,
+        "sustain": 0.802,
+        "release": 0.918
+      }
+    },
+    {
+      "id": "hollow_pad_05",
+      "name": "Hollow Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "hollow",
+        "square",
+        "ethereal"
+      ],
+      "description": "Variation of Hollow Pad",
+      "parameters": {
+        "osc_type": 1.964,
+        "filter_cutoff": 0.604,
+        "filter_resonance": 0.251,
+        "attack": 0.617,
+        "decay": 0.5,
+        "sustain": 0.875,
+        "release": 0.905
+      }
+    },
+    {
+      "id": "sweeping_pad",
+      "name": "Sweeping Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Pad with resonant sweep character",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.45,
+        "filter_resonance": 0.65,
+        "attack": 0.6,
+        "decay": 0.5,
+        "sustain": 0.9,
+        "release": 0.9
+      }
+    },
+    {
+      "id": "sweeping_pad_01",
+      "name": "Sweeping Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Variation of Sweeping Pad",
+      "parameters": {
+        "osc_type": 1.113,
+        "filter_cutoff": 0.491,
+        "filter_resonance": 0.589,
+        "attack": 0.676,
+        "decay": 0.545,
+        "sustain": 0.963,
+        "release": 0.913
+      }
+    },
+    {
+      "id": "sweeping_pad_02",
+      "name": "Sweeping Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Variation of Sweeping Pad",
+      "parameters": {
+        "osc_type": 1.06,
+        "filter_cutoff": 0.392,
+        "filter_resonance": 0.633,
+        "attack": 0.58,
+        "decay": 0.488,
+        "sustain": 0.852,
+        "release": 0.82
+      }
+    },
+    {
+      "id": "sweeping_pad_03",
+      "name": "Sweeping Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Variation of Sweeping Pad",
+      "parameters": {
+        "osc_type": 0.867,
+        "filter_cutoff": 0.514,
+        "filter_resonance": 0.603,
+        "attack": 0.545,
+        "decay": 0.545,
+        "sustain": 0.868,
+        "release": 0.846
+      }
+    },
+    {
+      "id": "sweeping_pad_04",
+      "name": "Sweeping Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Variation of Sweeping Pad",
+      "parameters": {
+        "osc_type": 0.947,
+        "filter_cutoff": 0.477,
+        "filter_resonance": 0.631,
+        "attack": 0.648,
+        "decay": 0.451,
+        "sustain": 0.925,
+        "release": 0.978
+      }
+    },
+    {
+      "id": "sweeping_pad_05",
+      "name": "Sweeping Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "sweep",
+        "movement",
+        "dynamic"
+      ],
+      "description": "Variation of Sweeping Pad",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.462,
+        "filter_resonance": 0.61,
+        "attack": 0.534,
+        "decay": 0.488,
+        "sustain": 0.931,
+        "release": 0.854
+      }
+    },
+    {
+      "id": "ambient_wash",
+      "name": "Ambient Wash",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Atmospheric ambient wash",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.2,
+        "attack": 0.8,
+        "decay": 0.6,
+        "sustain": 0.92,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "ambient_wash_01",
+      "name": "Ambient Wash 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Variation of Ambient Wash",
+      "parameters": {
+        "osc_type": 0.468,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.241,
+        "attack": 0.81,
+        "decay": 0.549,
+        "sustain": 0.972,
+        "release": 0.958
+      }
+    },
+    {
+      "id": "ambient_wash_02",
+      "name": "Ambient Wash 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Variation of Ambient Wash",
+      "parameters": {
+        "osc_type": 0.401,
+        "filter_cutoff": 0.647,
+        "filter_resonance": 0.193,
+        "attack": 0.848,
+        "decay": 0.624,
+        "sustain": 0.953,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "ambient_wash_03",
+      "name": "Ambient Wash 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Variation of Ambient Wash",
+      "parameters": {
+        "osc_type": 0.357,
+        "filter_cutoff": 0.656,
+        "filter_resonance": 0.265,
+        "attack": 0.764,
+        "decay": 0.661,
+        "sustain": 0.998,
+        "release": 0.949
+      }
+    },
+    {
+      "id": "ambient_wash_04",
+      "name": "Ambient Wash 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Variation of Ambient Wash",
+      "parameters": {
+        "osc_type": 0.596,
+        "filter_cutoff": 0.758,
+        "filter_resonance": 0.146,
+        "attack": 0.787,
+        "decay": 0.546,
+        "sustain": 0.994,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "ambient_wash_05",
+      "name": "Ambient Wash 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "ambient",
+        "wash",
+        "texture"
+      ],
+      "description": "Variation of Ambient Wash",
+      "parameters": {
+        "osc_type": 0.568,
+        "filter_cutoff": 0.677,
+        "filter_resonance": 0.249,
+        "attack": 0.72,
+        "decay": 0.595,
+        "sustain": 0.868,
+        "release": 1.0
+      }
+    },
+    {
+      "id": "vintage_pad",
+      "name": "Vintage Pad",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Vintage analog pad",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.52,
+        "filter_resonance": 0.35,
+        "attack": 0.48,
+        "decay": 0.38,
+        "sustain": 0.84,
+        "release": 0.78
+      }
+    },
+    {
+      "id": "vintage_pad_01",
+      "name": "Vintage Pad 01",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Variation of Vintage Pad",
+      "parameters": {
+        "osc_type": 0.968,
+        "filter_cutoff": 0.523,
+        "filter_resonance": 0.355,
+        "attack": 0.475,
+        "decay": 0.425,
+        "sustain": 0.892,
+        "release": 0.803
+      }
+    },
+    {
+      "id": "vintage_pad_02",
+      "name": "Vintage Pad 02",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Variation of Vintage Pad",
+      "parameters": {
+        "osc_type": 0.88,
+        "filter_cutoff": 0.513,
+        "filter_resonance": 0.318,
+        "attack": 0.411,
+        "decay": 0.338,
+        "sustain": 0.779,
+        "release": 0.76
+      }
+    },
+    {
+      "id": "vintage_pad_03",
+      "name": "Vintage Pad 03",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Variation of Vintage Pad",
+      "parameters": {
+        "osc_type": 1.155,
+        "filter_cutoff": 0.498,
+        "filter_resonance": 0.321,
+        "attack": 0.463,
+        "decay": 0.393,
+        "sustain": 0.874,
+        "release": 0.798
+      }
+    },
+    {
+      "id": "vintage_pad_04",
+      "name": "Vintage Pad 04",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Variation of Vintage Pad",
+      "parameters": {
+        "osc_type": 1.154,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.293,
+        "attack": 0.514,
+        "decay": 0.407,
+        "sustain": 0.87,
+        "release": 0.776
+      }
+    },
+    {
+      "id": "vintage_pad_05",
+      "name": "Vintage Pad 05",
+      "category": "Pad",
+      "tags": [
+        "pad",
+        "vintage",
+        "analog",
+        "retro"
+      ],
+      "description": "Variation of Vintage Pad",
+      "parameters": {
+        "osc_type": 0.89,
+        "filter_cutoff": 0.572,
+        "filter_resonance": 0.322,
+        "attack": 0.522,
+        "decay": 0.378,
+        "sustain": 0.761,
+        "release": 0.833
+      }
+    }
+  ]
+}

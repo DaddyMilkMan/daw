@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build Script for Vexel DAW Qt/QML Application
+# Build Script for Zenith DAW Qt/QML Application
 #
 # This script builds the Qt/QML + JUCE hybrid DAW application
 # Usage: ./build.sh [Debug|Release]
@@ -12,7 +12,7 @@ BUILD_DIR="build"
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 echo "================================="
-echo "Vexel DAW - Qt/QML + JUCE Build"
+echo "Zenith DAW - Qt/QML + JUCE Build"
 echo "================================="
 echo "Build type: $BUILD_TYPE"
 echo "Jobs: $JOBS"
@@ -78,7 +78,7 @@ echo "✅ Build completed successfully!"
 echo "================================="
 echo ""
 echo "To run the application:"
-echo "  ./build/bin/VexelDAW"
+echo "  ./build/bin/ZenithDAW"
 echo ""
 echo "Or use: ./run.sh"
 echo ""

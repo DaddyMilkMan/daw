@@ -1,0 +1,765 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Keys Bank",
+  "category": "Keys",
+  "version": "1.0",
+  "preset_count": 36,
+  "presets": [
+    {
+      "id": "electric_piano",
+      "name": "Electric Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Warm electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.25,
+        "attack": 0.005,
+        "decay": 0.3,
+        "sustain": 0.5,
+        "release": 0.4
+      }
+    },
+    {
+      "id": "electric_piano_01",
+      "name": "Electric Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Variation of Electric Piano",
+      "parameters": {
+        "osc_type": 0.424,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.189,
+        "attack": 0.0,
+        "decay": 0.319,
+        "sustain": 0.494,
+        "release": 0.367
+      }
+    },
+    {
+      "id": "electric_piano_02",
+      "name": "Electric Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Variation of Electric Piano",
+      "parameters": {
+        "osc_type": 0.382,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.327,
+        "attack": 0.009,
+        "decay": 0.306,
+        "sustain": 0.483,
+        "release": 0.323
+      }
+    },
+    {
+      "id": "electric_piano_03",
+      "name": "Electric Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Variation of Electric Piano",
+      "parameters": {
+        "osc_type": 0.386,
+        "filter_cutoff": 0.673,
+        "filter_resonance": 0.316,
+        "attack": 0.025,
+        "decay": 0.253,
+        "sustain": 0.517,
+        "release": 0.408
+      }
+    },
+    {
+      "id": "electric_piano_04",
+      "name": "Electric Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Variation of Electric Piano",
+      "parameters": {
+        "osc_type": 0.471,
+        "filter_cutoff": 0.687,
+        "filter_resonance": 0.176,
+        "attack": 0.075,
+        "decay": 0.37,
+        "sustain": 0.561,
+        "release": 0.408
+      }
+    },
+    {
+      "id": "electric_piano_05",
+      "name": "Electric Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric-piano",
+        "warm",
+        "vintage"
+      ],
+      "description": "Variation of Electric Piano",
+      "parameters": {
+        "osc_type": 0.587,
+        "filter_cutoff": 0.668,
+        "filter_resonance": 0.189,
+        "attack": 0.0,
+        "decay": 0.247,
+        "sustain": 0.567,
+        "release": 0.415
+      }
+    },
+    {
+      "id": "bell_keys",
+      "name": "Bell Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Bright bell-like keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.4,
+        "attack": 0.002,
+        "decay": 0.35,
+        "sustain": 0.3,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "bell_keys_01",
+      "name": "Bell Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Variation of Bell Keys",
+      "parameters": {
+        "osc_type": 0.038,
+        "filter_cutoff": 0.915,
+        "filter_resonance": 0.448,
+        "attack": 0.0,
+        "decay": 0.393,
+        "sustain": 0.314,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "bell_keys_02",
+      "name": "Bell Keys 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Variation of Bell Keys",
+      "parameters": {
+        "osc_type": 0.106,
+        "filter_cutoff": 0.81,
+        "filter_resonance": 0.466,
+        "attack": 0.0,
+        "decay": 0.315,
+        "sustain": 0.364,
+        "release": 0.552
+      }
+    },
+    {
+      "id": "bell_keys_03",
+      "name": "Bell Keys 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Variation of Bell Keys",
+      "parameters": {
+        "osc_type": 0.085,
+        "filter_cutoff": 0.786,
+        "filter_resonance": 0.367,
+        "attack": 0.0,
+        "decay": 0.36,
+        "sustain": 0.251,
+        "release": 0.491
+      }
+    },
+    {
+      "id": "bell_keys_04",
+      "name": "Bell Keys 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Variation of Bell Keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.354,
+        "attack": 0.076,
+        "decay": 0.306,
+        "sustain": 0.289,
+        "release": 0.515
+      }
+    },
+    {
+      "id": "bell_keys_05",
+      "name": "Bell Keys 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "melodic"
+      ],
+      "description": "Variation of Bell Keys",
+      "parameters": {
+        "osc_type": 0.064,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.431,
+        "attack": 0.0,
+        "decay": 0.408,
+        "sustain": 0.339,
+        "release": 0.489
+      }
+    },
+    {
+      "id": "marimba",
+      "name": "Marimba",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Wooden marimba tone",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.3,
+        "attack": 0.001,
+        "decay": 0.25,
+        "sustain": 0.1,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "marimba_01",
+      "name": "Marimba 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Variation of Marimba",
+      "parameters": {
+        "osc_type": 1.057,
+        "filter_cutoff": 0.658,
+        "filter_resonance": 0.276,
+        "attack": 0.0,
+        "decay": 0.318,
+        "sustain": 0.069,
+        "release": 0.24
+      }
+    },
+    {
+      "id": "marimba_02",
+      "name": "Marimba 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Variation of Marimba",
+      "parameters": {
+        "osc_type": 1.063,
+        "filter_cutoff": 0.71,
+        "filter_resonance": 0.362,
+        "attack": 0.033,
+        "decay": 0.187,
+        "sustain": 0.142,
+        "release": 0.357
+      }
+    },
+    {
+      "id": "marimba_03",
+      "name": "Marimba 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Variation of Marimba",
+      "parameters": {
+        "osc_type": 0.919,
+        "filter_cutoff": 0.616,
+        "filter_resonance": 0.286,
+        "attack": 0.005,
+        "decay": 0.322,
+        "sustain": 0.14,
+        "release": 0.284
+      }
+    },
+    {
+      "id": "marimba_04",
+      "name": "Marimba 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Variation of Marimba",
+      "parameters": {
+        "osc_type": 1.135,
+        "filter_cutoff": 0.598,
+        "filter_resonance": 0.31,
+        "attack": 0.0,
+        "decay": 0.188,
+        "sustain": 0.048,
+        "release": 0.351
+      }
+    },
+    {
+      "id": "marimba_05",
+      "name": "Marimba 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "marimba",
+        "wood",
+        "percussive"
+      ],
+      "description": "Variation of Marimba",
+      "parameters": {
+        "osc_type": 0.959,
+        "filter_cutoff": 0.576,
+        "filter_resonance": 0.28,
+        "attack": 0.024,
+        "decay": 0.225,
+        "sustain": 0.135,
+        "release": 0.221
+      }
+    },
+    {
+      "id": "soft_piano",
+      "name": "Soft Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Gentle piano sound",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.2,
+        "attack": 0.008,
+        "decay": 0.4,
+        "sustain": 0.4,
+        "release": 0.6
+      }
+    },
+    {
+      "id": "soft_piano_01",
+      "name": "Soft Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Variation of Soft Piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.736,
+        "filter_resonance": 0.134,
+        "attack": 0.0,
+        "decay": 0.388,
+        "sustain": 0.396,
+        "release": 0.662
+      }
+    },
+    {
+      "id": "soft_piano_02",
+      "name": "Soft Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Variation of Soft Piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.122,
+        "attack": 0.0,
+        "decay": 0.466,
+        "sustain": 0.333,
+        "release": 0.617
+      }
+    },
+    {
+      "id": "soft_piano_03",
+      "name": "Soft Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Variation of Soft Piano",
+      "parameters": {
+        "osc_type": 0.082,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.232,
+        "attack": 0.067,
+        "decay": 0.421,
+        "sustain": 0.357,
+        "release": 0.642
+      }
+    },
+    {
+      "id": "soft_piano_04",
+      "name": "Soft Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Variation of Soft Piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.196,
+        "attack": 0.065,
+        "decay": 0.332,
+        "sustain": 0.414,
+        "release": 0.548
+      }
+    },
+    {
+      "id": "soft_piano_05",
+      "name": "Soft Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "soft",
+        "gentle"
+      ],
+      "description": "Variation of Soft Piano",
+      "parameters": {
+        "osc_type": 0.093,
+        "filter_cutoff": 0.685,
+        "filter_resonance": 0.272,
+        "attack": 0.0,
+        "decay": 0.344,
+        "sustain": 0.452,
+        "release": 0.667
+      }
+    },
+    {
+      "id": "vibes",
+      "name": "Vibes",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Vibraphone tone",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.35,
+        "attack": 0.003,
+        "decay": 0.4,
+        "sustain": 0.25,
+        "release": 0.5
+      }
+    },
+    {
+      "id": "vibes_01",
+      "name": "Vibes 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Variation of Vibes",
+      "parameters": {
+        "osc_type": 0.633,
+        "filter_cutoff": 0.792,
+        "filter_resonance": 0.283,
+        "attack": 0.002,
+        "decay": 0.435,
+        "sustain": 0.262,
+        "release": 0.483
+      }
+    },
+    {
+      "id": "vibes_02",
+      "name": "Vibes 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Variation of Vibes",
+      "parameters": {
+        "osc_type": 0.368,
+        "filter_cutoff": 0.734,
+        "filter_resonance": 0.367,
+        "attack": 0.083,
+        "decay": 0.38,
+        "sustain": 0.182,
+        "release": 0.494
+      }
+    },
+    {
+      "id": "vibes_03",
+      "name": "Vibes 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Variation of Vibes",
+      "parameters": {
+        "osc_type": 0.594,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.374,
+        "attack": 0.0,
+        "decay": 0.445,
+        "sustain": 0.21,
+        "release": 0.432
+      }
+    },
+    {
+      "id": "vibes_04",
+      "name": "Vibes 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Variation of Vibes",
+      "parameters": {
+        "osc_type": 0.443,
+        "filter_cutoff": 0.833,
+        "filter_resonance": 0.3,
+        "attack": 0.074,
+        "decay": 0.368,
+        "sustain": 0.287,
+        "release": 0.55
+      }
+    },
+    {
+      "id": "vibes_05",
+      "name": "Vibes 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "vibes",
+        "mallet",
+        "jazz"
+      ],
+      "description": "Variation of Vibes",
+      "parameters": {
+        "osc_type": 0.526,
+        "filter_cutoff": 0.752,
+        "filter_resonance": 0.274,
+        "attack": 0.045,
+        "decay": 0.324,
+        "sustain": 0.175,
+        "release": 0.481
+      }
+    },
+    {
+      "id": "music_box",
+      "name": "Music Box",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Delicate music box",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.3,
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.05,
+        "release": 0.4
+      }
+    },
+    {
+      "id": "music_box_01",
+      "name": "Music Box 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Music Box",
+      "parameters": {
+        "osc_type": 0.105,
+        "filter_cutoff": 0.856,
+        "filter_resonance": 0.35,
+        "attack": 0.075,
+        "decay": 0.313,
+        "sustain": 0.001,
+        "release": 0.414
+      }
+    },
+    {
+      "id": "music_box_02",
+      "name": "Music Box 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Music Box",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.839,
+        "filter_resonance": 0.283,
+        "attack": 0.05,
+        "decay": 0.312,
+        "sustain": 0.083,
+        "release": 0.333
+      }
+    },
+    {
+      "id": "music_box_03",
+      "name": "Music Box 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Music Box",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.855,
+        "filter_resonance": 0.273,
+        "attack": 0.034,
+        "decay": 0.258,
+        "sustain": 0.104,
+        "release": 0.456
+      }
+    },
+    {
+      "id": "music_box_04",
+      "name": "Music Box 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Music Box",
+      "parameters": {
+        "osc_type": 0.116,
+        "filter_cutoff": 0.883,
+        "filter_resonance": 0.377,
+        "attack": 0.0,
+        "decay": 0.261,
+        "sustain": 0.023,
+        "release": 0.328
+      }
+    },
+    {
+      "id": "music_box_05",
+      "name": "Music Box 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "music-box",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Music Box",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.84,
+        "filter_resonance": 0.281,
+        "attack": 0.044,
+        "decay": 0.247,
+        "sustain": 0.091,
+        "release": 0.391
+      }
+    }
+  ]
+}
