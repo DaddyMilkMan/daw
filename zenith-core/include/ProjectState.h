@@ -820,6 +820,16 @@ private:
     juce::ValueTree findMidiNote(const juce::String& clipId, const juce::String& noteId);
 
     /**
+     * @brief Find track by ID (const version)
+     */
+    juce::ValueTree findTrack(const juce::String& trackId) const;
+
+    /**
+     * @brief Find automation point by ID
+     */
+    juce::ValueTree findAutomationPoint(const juce::ValueTree& envelope, const juce::String& pointId) const;
+
+    /**
      * @brief Rebuilds the ID counter based on the current state tree
      */
     void rebuildIdCounter();

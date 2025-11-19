@@ -31,10 +31,14 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     setWantsKeyboardFocus(true);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 10: Mixer + Phase 9: Arranger MVP", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 14: Automation Lanes + Phase 10: Mixer", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
+
+    // Phase 14: Create arrangement view
+    arrangementView = std::make_unique<ArrangementComponent>(projectState, engine);
+    addAndMakeVisible(arrangementView.get());
 
     // CPU usage label
     cpuLabel.setText("CPU: 0%", juce::dontSendNotification);
@@ -198,6 +202,10 @@ void MainComponent::resized()
         instrumentBrowserPanel->setBounds(browserBounds);
     }
 
+    // Phase 14: Arrangement view with automation lanes
+    if (arrangementView)
+        arrangementView->setBounds(bounds);
+
     // Phase 9: ArrangerComponent takes the remaining central area
     if (arrangerComponent != nullptr)
         arrangerComponent->setBounds(bounds);
@@ -332,6 +340,9 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
+    // Phase 13: Create automation synchronizer
+    automationSync = std::make_unique<TrackAutomationSynchronizer>(*projectState, *engine);
+
     // Phase 5: Create Wingman command API
     commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
 
@@ -349,7 +360,7 @@ MainWindow::MainWindow(const juce::String& name)
     projectState->addTrack("MIDI 1", "midi");
     projectState->addTrack("Audio 2", "audio");
 
-    // Create main content (Phase 10: Mixer + Phase 9: Arranger + Wingman AI)
+    // Create main content (Phase 14: Automation + Phase 10: Mixer + Phase 9: Arranger + Wingman AI)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
 
     // Create menu bar
@@ -371,6 +382,9 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
+
+    // Start automation synchronizer (Phase 13)
+    automationSync->start(60); // 60 Hz update rate
 
     DBG("MainWindow created and initialized");
 }
