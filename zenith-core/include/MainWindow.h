@@ -16,11 +16,10 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
-#include "ArrangerView.h"
+#include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
 
 // Forward declarations
-class ArrangerComponent;
 class WingmanPanel;
 
 namespace zenith {
@@ -39,14 +38,15 @@ namespace zenith {
  *
  * This component is the main content area and contains:
  * - Transport bar (play/stop/record)
- * - ArrangerView (timeline with clips and automation)
+ * - ArrangerComponent (Phase 9 - interactive clip editing)
  * - Status displays (CPU, device info, track count)
- * - Wingman AI panel (Phase 5+)
+ * - Wingman AI panel (Phase 7)
+ * - Instrument browser panel
  *
  * Integration points:
- * - Hosts ArrangerView which displays ProjectState clips
- * - Opens PianoRollEditor when user double-clicks MIDI clip
- * - Provides "Show Automation" buttons per track
+ * - Hosts ArrangerComponent which displays ProjectState clips
+ * - Supports piano roll editing for MIDI clips
+ * - Automation display and editing
  */
 class MainComponent : public juce::Component,
                       private juce::Timer,
@@ -118,21 +118,14 @@ private:
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
 
-    // Phase 4: Arranger/Timeline view
+    // Phase 9: Arranger component with interactive clip editing
     std::unique_ptr<ArrangerComponent> arrangerComponent;
 
-    // Phase 5: Wingman command console
+    // Phase 7: Wingman command console
     std::unique_ptr<WingmanPanel> wingmanPanel;
 
     // Instrument & Preset Browser
     std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
-
-    // Integration: ArrangerView
-    std::unique_ptr<ArrangerView> arrangerView;
-
-    // Integration: Show automation buttons (per track)
-    std::map<juce::String, std::unique_ptr<juce::TextButton>> automationButtons;
-    juce::Component automationButtonsContainer;
 
     //==========================================================================
     // Phase 1: Audio import
