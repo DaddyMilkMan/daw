@@ -1,0 +1,1521 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Lead Bank",
+  "category": "Lead",
+  "version": "1.0",
+  "preset_count": 72,
+  "presets": [
+    {
+      "id": "festival_supersaw",
+      "name": "Festival Supersaw",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Bright saw lead for big room drops",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.3,
+        "attack": 0.05,
+        "decay": 0.2,
+        "sustain": 0.8,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "festival_supersaw_01",
+      "name": "Festival Supersaw 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.16,
+        "filter_cutoff": 0.958,
+        "filter_resonance": 0.314,
+        "attack": 0.083,
+        "decay": 0.255,
+        "sustain": 0.874,
+        "release": 0.228
+      }
+    },
+    {
+      "id": "festival_supersaw_02",
+      "name": "Festival Supersaw 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 0.978,
+        "filter_cutoff": 0.852,
+        "filter_resonance": 0.286,
+        "attack": 0.082,
+        "decay": 0.271,
+        "sustain": 0.878,
+        "release": 0.284
+      }
+    },
+    {
+      "id": "festival_supersaw_03",
+      "name": "Festival Supersaw 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.036,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.287,
+        "attack": 0.068,
+        "decay": 0.239,
+        "sustain": 0.731,
+        "release": 0.301
+      }
+    },
+    {
+      "id": "festival_supersaw_04",
+      "name": "Festival Supersaw 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.031,
+        "filter_cutoff": 0.915,
+        "filter_resonance": 0.233,
+        "attack": 0.078,
+        "decay": 0.143,
+        "sustain": 0.757,
+        "release": 0.324
+      }
+    },
+    {
+      "id": "festival_supersaw_05",
+      "name": "Festival Supersaw 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "edm",
+        "supersaw",
+        "festival"
+      ],
+      "description": "Variation of Festival Supersaw",
+      "parameters": {
+        "osc_type": 1.087,
+        "filter_cutoff": 0.903,
+        "filter_resonance": 0.289,
+        "attack": 0.0,
+        "decay": 0.182,
+        "sustain": 0.76,
+        "release": 0.307
+      }
+    },
+    {
+      "id": "mono_screamer",
+      "name": "Mono Screamer",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Aggressive mono lead with bite",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.5,
+        "attack": 0.01,
+        "decay": 0.15,
+        "sustain": 0.9,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "mono_screamer_01",
+      "name": "Mono Screamer 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 1.079,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.431,
+        "attack": 0.025,
+        "decay": 0.082,
+        "sustain": 0.911,
+        "release": 0.202
+      }
+    },
+    {
+      "id": "mono_screamer_02",
+      "name": "Mono Screamer 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 1.034,
+        "filter_cutoff": 0.841,
+        "filter_resonance": 0.545,
+        "attack": 0.087,
+        "decay": 0.125,
+        "sustain": 0.855,
+        "release": 0.097
+      }
+    },
+    {
+      "id": "mono_screamer_03",
+      "name": "Mono Screamer 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 0.897,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.498,
+        "attack": 0.008,
+        "decay": 0.131,
+        "sustain": 0.913,
+        "release": 0.213
+      }
+    },
+    {
+      "id": "mono_screamer_04",
+      "name": "Mono Screamer 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 0.945,
+        "filter_cutoff": 0.884,
+        "filter_resonance": 0.543,
+        "attack": 0.066,
+        "decay": 0.165,
+        "sustain": 0.842,
+        "release": 0.175
+      }
+    },
+    {
+      "id": "mono_screamer_05",
+      "name": "Mono Screamer 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "mono",
+        "aggressive",
+        "edm"
+      ],
+      "description": "Variation of Mono Screamer",
+      "parameters": {
+        "osc_type": 1.017,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.506,
+        "attack": 0.0,
+        "decay": 0.106,
+        "sustain": 0.849,
+        "release": 0.093
+      }
+    },
+    {
+      "id": "vocal_lead",
+      "name": "Vocal Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Vocal-like lead with formant character",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.7,
+        "attack": 0.03,
+        "decay": 0.2,
+        "sustain": 0.85,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "vocal_lead_01",
+      "name": "Vocal Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 0.877,
+        "filter_cutoff": 0.616,
+        "filter_resonance": 0.696,
+        "attack": 0.08,
+        "decay": 0.157,
+        "sustain": 0.793,
+        "release": 0.258
+      }
+    },
+    {
+      "id": "vocal_lead_02",
+      "name": "Vocal Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 0.969,
+        "filter_cutoff": 0.618,
+        "filter_resonance": 0.748,
+        "attack": 0.0,
+        "decay": 0.159,
+        "sustain": 0.79,
+        "release": 0.191
+      }
+    },
+    {
+      "id": "vocal_lead_03",
+      "name": "Vocal Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.712,
+        "filter_resonance": 0.725,
+        "attack": 0.097,
+        "decay": 0.246,
+        "sustain": 0.781,
+        "release": 0.245
+      }
+    },
+    {
+      "id": "vocal_lead_04",
+      "name": "Vocal Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 1.122,
+        "filter_cutoff": 0.653,
+        "filter_resonance": 0.655,
+        "attack": 0.0,
+        "decay": 0.202,
+        "sustain": 0.771,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "vocal_lead_05",
+      "name": "Vocal Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "vocal",
+        "singing",
+        "expressive"
+      ],
+      "description": "Variation of Vocal Lead",
+      "parameters": {
+        "osc_type": 1.085,
+        "filter_cutoff": 0.605,
+        "filter_resonance": 0.629,
+        "attack": 0.081,
+        "decay": 0.163,
+        "sustain": 0.832,
+        "release": 0.22
+      }
+    },
+    {
+      "id": "glide_lead",
+      "name": "Glide Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Smooth lead for portamento",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.35,
+        "attack": 0.02,
+        "decay": 0.25,
+        "sustain": 0.8,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "glide_lead_01",
+      "name": "Glide Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Variation of Glide Lead",
+      "parameters": {
+        "osc_type": 0.949,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.32,
+        "attack": 0.008,
+        "decay": 0.327,
+        "sustain": 0.863,
+        "release": 0.249
+      }
+    },
+    {
+      "id": "glide_lead_02",
+      "name": "Glide Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Variation of Glide Lead",
+      "parameters": {
+        "osc_type": 1.061,
+        "filter_cutoff": 0.762,
+        "filter_resonance": 0.344,
+        "attack": 0.067,
+        "decay": 0.324,
+        "sustain": 0.838,
+        "release": 0.213
+      }
+    },
+    {
+      "id": "glide_lead_03",
+      "name": "Glide Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Variation of Glide Lead",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.685,
+        "filter_resonance": 0.33,
+        "attack": 0.0,
+        "decay": 0.254,
+        "sustain": 0.757,
+        "release": 0.174
+      }
+    },
+    {
+      "id": "glide_lead_04",
+      "name": "Glide Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Variation of Glide Lead",
+      "parameters": {
+        "osc_type": 0.88,
+        "filter_cutoff": 0.812,
+        "filter_resonance": 0.392,
+        "attack": 0.064,
+        "decay": 0.29,
+        "sustain": 0.832,
+        "release": 0.275
+      }
+    },
+    {
+      "id": "glide_lead_05",
+      "name": "Glide Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "glide",
+        "smooth",
+        "melodic"
+      ],
+      "description": "Variation of Glide Lead",
+      "parameters": {
+        "osc_type": 1.039,
+        "filter_cutoff": 0.703,
+        "filter_resonance": 0.362,
+        "attack": 0.0,
+        "decay": 0.241,
+        "sustain": 0.797,
+        "release": 0.121
+      }
+    },
+    {
+      "id": "bright_square_lead",
+      "name": "Bright Square Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Retro square wave lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.25,
+        "attack": 0.015,
+        "decay": 0.15,
+        "sustain": 0.75,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "bright_square_lead_01",
+      "name": "Bright Square Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Variation of Bright Square Lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.833,
+        "filter_resonance": 0.189,
+        "attack": 0.084,
+        "decay": 0.175,
+        "sustain": 0.673,
+        "release": 0.127
+      }
+    },
+    {
+      "id": "bright_square_lead_02",
+      "name": "Bright Square Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Variation of Bright Square Lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.868,
+        "filter_resonance": 0.276,
+        "attack": 0.081,
+        "decay": 0.135,
+        "sustain": 0.75,
+        "release": 0.191
+      }
+    },
+    {
+      "id": "bright_square_lead_03",
+      "name": "Bright Square Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Variation of Bright Square Lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.315,
+        "attack": 0.0,
+        "decay": 0.201,
+        "sustain": 0.761,
+        "release": 0.162
+      }
+    },
+    {
+      "id": "bright_square_lead_04",
+      "name": "Bright Square Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Variation of Bright Square Lead",
+      "parameters": {
+        "osc_type": 1.872,
+        "filter_cutoff": 0.868,
+        "filter_resonance": 0.324,
+        "attack": 0.0,
+        "decay": 0.139,
+        "sustain": 0.695,
+        "release": 0.222
+      }
+    },
+    {
+      "id": "bright_square_lead_05",
+      "name": "Bright Square Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "square",
+        "retro",
+        "chiptune"
+      ],
+      "description": "Variation of Bright Square Lead",
+      "parameters": {
+        "osc_type": 1.912,
+        "filter_cutoff": 0.794,
+        "filter_resonance": 0.19,
+        "attack": 0.031,
+        "decay": 0.105,
+        "sustain": 0.797,
+        "release": 0.184
+      }
+    },
+    {
+      "id": "saw_stack_lead",
+      "name": "Saw Stack Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Thick stacked saw lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.4,
+        "attack": 0.04,
+        "decay": 0.18,
+        "sustain": 0.85,
+        "release": 0.28
+      }
+    },
+    {
+      "id": "saw_stack_lead_01",
+      "name": "Saw Stack Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 0.933,
+        "filter_cutoff": 0.891,
+        "filter_resonance": 0.435,
+        "attack": 0.115,
+        "decay": 0.162,
+        "sustain": 0.776,
+        "release": 0.327
+      }
+    },
+    {
+      "id": "saw_stack_lead_02",
+      "name": "Saw Stack Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 1.119,
+        "filter_cutoff": 0.884,
+        "filter_resonance": 0.321,
+        "attack": 0.0,
+        "decay": 0.198,
+        "sustain": 0.822,
+        "release": 0.29
+      }
+    },
+    {
+      "id": "saw_stack_lead_03",
+      "name": "Saw Stack Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 0.874,
+        "filter_cutoff": 0.76,
+        "filter_resonance": 0.386,
+        "attack": 0.088,
+        "decay": 0.162,
+        "sustain": 0.803,
+        "release": 0.312
+      }
+    },
+    {
+      "id": "saw_stack_lead_04",
+      "name": "Saw Stack Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 0.85,
+        "filter_cutoff": 0.808,
+        "filter_resonance": 0.353,
+        "attack": 0.0,
+        "decay": 0.144,
+        "sustain": 0.816,
+        "release": 0.354
+      }
+    },
+    {
+      "id": "saw_stack_lead_05",
+      "name": "Saw Stack Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "saw",
+        "thick",
+        "trance"
+      ],
+      "description": "Variation of Saw Stack Lead",
+      "parameters": {
+        "osc_type": 0.98,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.394,
+        "attack": 0.0,
+        "decay": 0.204,
+        "sustain": 0.854,
+        "release": 0.284
+      }
+    },
+    {
+      "id": "soft_sine_lead",
+      "name": "Soft Sine Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Gentle sine lead for melodies",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.2,
+        "attack": 0.025,
+        "decay": 0.2,
+        "sustain": 0.8,
+        "release": 0.3
+      }
+    },
+    {
+      "id": "soft_sine_lead_01",
+      "name": "Soft Sine Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.12,
+        "filter_cutoff": 0.66,
+        "filter_resonance": 0.25,
+        "attack": 0.007,
+        "decay": 0.276,
+        "sustain": 0.765,
+        "release": 0.223
+      }
+    },
+    {
+      "id": "soft_sine_lead_02",
+      "name": "Soft Sine Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.092,
+        "filter_cutoff": 0.703,
+        "filter_resonance": 0.129,
+        "attack": 0.086,
+        "decay": 0.129,
+        "sustain": 0.802,
+        "release": 0.278
+      }
+    },
+    {
+      "id": "soft_sine_lead_03",
+      "name": "Soft Sine Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.029,
+        "filter_cutoff": 0.682,
+        "filter_resonance": 0.196,
+        "attack": 0.0,
+        "decay": 0.17,
+        "sustain": 0.761,
+        "release": 0.223
+      }
+    },
+    {
+      "id": "soft_sine_lead_04",
+      "name": "Soft Sine Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.774,
+        "filter_resonance": 0.183,
+        "attack": 0.0,
+        "decay": 0.162,
+        "sustain": 0.751,
+        "release": 0.261
+      }
+    },
+    {
+      "id": "soft_sine_lead_05",
+      "name": "Soft Sine Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sine",
+        "soft",
+        "melodic"
+      ],
+      "description": "Variation of Soft Sine Lead",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.126,
+        "attack": 0.063,
+        "decay": 0.221,
+        "sustain": 0.751,
+        "release": 0.259
+      }
+    },
+    {
+      "id": "trance_lead",
+      "name": "Trance Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Classic trance lead with resonance",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.6,
+        "attack": 0.02,
+        "decay": 0.22,
+        "sustain": 0.82,
+        "release": 0.32
+      }
+    },
+    {
+      "id": "trance_lead_01",
+      "name": "Trance Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Variation of Trance Lead",
+      "parameters": {
+        "osc_type": 0.874,
+        "filter_cutoff": 0.909,
+        "filter_resonance": 0.651,
+        "attack": 0.065,
+        "decay": 0.145,
+        "sustain": 0.866,
+        "release": 0.26
+      }
+    },
+    {
+      "id": "trance_lead_02",
+      "name": "Trance Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Variation of Trance Lead",
+      "parameters": {
+        "osc_type": 1.054,
+        "filter_cutoff": 0.832,
+        "filter_resonance": 0.522,
+        "attack": 0.041,
+        "decay": 0.244,
+        "sustain": 0.85,
+        "release": 0.353
+      }
+    },
+    {
+      "id": "trance_lead_03",
+      "name": "Trance Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Variation of Trance Lead",
+      "parameters": {
+        "osc_type": 0.934,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.574,
+        "attack": 0.056,
+        "decay": 0.229,
+        "sustain": 0.782,
+        "release": 0.242
+      }
+    },
+    {
+      "id": "trance_lead_04",
+      "name": "Trance Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Variation of Trance Lead",
+      "parameters": {
+        "osc_type": 1.027,
+        "filter_cutoff": 0.942,
+        "filter_resonance": 0.671,
+        "attack": 0.007,
+        "decay": 0.216,
+        "sustain": 0.797,
+        "release": 0.305
+      }
+    },
+    {
+      "id": "trance_lead_05",
+      "name": "Trance Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "trance",
+        "uplifting",
+        "euphoric"
+      ],
+      "description": "Variation of Trance Lead",
+      "parameters": {
+        "osc_type": 0.931,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.623,
+        "attack": 0.031,
+        "decay": 0.251,
+        "sustain": 0.801,
+        "release": 0.319
+      }
+    },
+    {
+      "id": "dirty_lead",
+      "name": "Dirty Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Gritty distorted lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.65,
+        "attack": 0.008,
+        "decay": 0.18,
+        "sustain": 0.85,
+        "release": 0.18
+      }
+    },
+    {
+      "id": "dirty_lead_01",
+      "name": "Dirty Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Variation of Dirty Lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.728,
+        "filter_resonance": 0.716,
+        "attack": 0.005,
+        "decay": 0.124,
+        "sustain": 0.795,
+        "release": 0.19
+      }
+    },
+    {
+      "id": "dirty_lead_02",
+      "name": "Dirty Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Variation of Dirty Lead",
+      "parameters": {
+        "osc_type": 1.841,
+        "filter_cutoff": 0.733,
+        "filter_resonance": 0.694,
+        "attack": 0.064,
+        "decay": 0.238,
+        "sustain": 0.772,
+        "release": 0.115
+      }
+    },
+    {
+      "id": "dirty_lead_03",
+      "name": "Dirty Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Variation of Dirty Lead",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.723,
+        "attack": 0.0,
+        "decay": 0.235,
+        "sustain": 0.874,
+        "release": 0.253
+      }
+    },
+    {
+      "id": "dirty_lead_04",
+      "name": "Dirty Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Variation of Dirty Lead",
+      "parameters": {
+        "osc_type": 1.968,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.691,
+        "attack": 0.018,
+        "decay": 0.212,
+        "sustain": 0.897,
+        "release": 0.166
+      }
+    },
+    {
+      "id": "dirty_lead_05",
+      "name": "Dirty Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "dirty",
+        "distorted",
+        "aggressive"
+      ],
+      "description": "Variation of Dirty Lead",
+      "parameters": {
+        "osc_type": 1.85,
+        "filter_cutoff": 0.72,
+        "filter_resonance": 0.693,
+        "attack": 0.0,
+        "decay": 0.213,
+        "sustain": 0.873,
+        "release": 0.157
+      }
+    },
+    {
+      "id": "breathy_lead",
+      "name": "Breathy Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Airy lead with gentle attack",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.3,
+        "attack": 0.06,
+        "decay": 0.25,
+        "sustain": 0.75,
+        "release": 0.35
+      }
+    },
+    {
+      "id": "breathy_lead_01",
+      "name": "Breathy Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.561,
+        "filter_cutoff": 0.759,
+        "filter_resonance": 0.242,
+        "attack": 0.071,
+        "decay": 0.244,
+        "sustain": 0.693,
+        "release": 0.301
+      }
+    },
+    {
+      "id": "breathy_lead_02",
+      "name": "Breathy Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.585,
+        "filter_cutoff": 0.776,
+        "filter_resonance": 0.353,
+        "attack": 0.079,
+        "decay": 0.284,
+        "sustain": 0.771,
+        "release": 0.297
+      }
+    },
+    {
+      "id": "breathy_lead_03",
+      "name": "Breathy Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.631,
+        "filter_cutoff": 0.765,
+        "filter_resonance": 0.286,
+        "attack": 0.092,
+        "decay": 0.292,
+        "sustain": 0.727,
+        "release": 0.413
+      }
+    },
+    {
+      "id": "breathy_lead_04",
+      "name": "Breathy Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.468,
+        "filter_cutoff": 0.818,
+        "filter_resonance": 0.256,
+        "attack": 0.0,
+        "decay": 0.207,
+        "sustain": 0.729,
+        "release": 0.317
+      }
+    },
+    {
+      "id": "breathy_lead_05",
+      "name": "Breathy Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "breathy",
+        "airy",
+        "soft"
+      ],
+      "description": "Variation of Breathy Lead",
+      "parameters": {
+        "osc_type": 0.626,
+        "filter_cutoff": 0.747,
+        "filter_resonance": 0.338,
+        "attack": 0.053,
+        "decay": 0.232,
+        "sustain": 0.765,
+        "release": 0.277
+      }
+    },
+    {
+      "id": "sync_lead",
+      "name": "Sync Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Sharp resonant sync-style lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.75,
+        "attack": 0.005,
+        "decay": 0.15,
+        "sustain": 0.8,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "sync_lead_01",
+      "name": "Sync Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Sync Lead",
+      "parameters": {
+        "osc_type": 0.9,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.758,
+        "attack": 0.0,
+        "decay": 0.072,
+        "sustain": 0.842,
+        "release": 0.271
+      }
+    },
+    {
+      "id": "sync_lead_02",
+      "name": "Sync Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Sync Lead",
+      "parameters": {
+        "osc_type": 0.859,
+        "filter_cutoff": 0.873,
+        "filter_resonance": 0.712,
+        "attack": 0.053,
+        "decay": 0.113,
+        "sustain": 0.8,
+        "release": 0.233
+      }
+    },
+    {
+      "id": "sync_lead_03",
+      "name": "Sync Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Sync Lead",
+      "parameters": {
+        "osc_type": 1.038,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.755,
+        "attack": 0.075,
+        "decay": 0.178,
+        "sustain": 0.878,
+        "release": 0.279
+      }
+    },
+    {
+      "id": "sync_lead_04",
+      "name": "Sync Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Sync Lead",
+      "parameters": {
+        "osc_type": 0.886,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.728,
+        "attack": 0.004,
+        "decay": 0.1,
+        "sustain": 0.778,
+        "release": 0.253
+      }
+    },
+    {
+      "id": "sync_lead_05",
+      "name": "Sync Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "sync",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Sync Lead",
+      "parameters": {
+        "osc_type": 1.12,
+        "filter_cutoff": 0.802,
+        "filter_resonance": 0.763,
+        "attack": 0.0,
+        "decay": 0.122,
+        "sustain": 0.802,
+        "release": 0.272
+      }
+    },
+    {
+      "id": "classic_lead",
+      "name": "Classic Lead",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Versatile classic saw lead",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.38,
+        "attack": 0.018,
+        "decay": 0.2,
+        "sustain": 0.8,
+        "release": 0.25
+      }
+    },
+    {
+      "id": "classic_lead_01",
+      "name": "Classic Lead 01",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Variation of Classic Lead",
+      "parameters": {
+        "osc_type": 1.034,
+        "filter_cutoff": 0.719,
+        "filter_resonance": 0.379,
+        "attack": 0.001,
+        "decay": 0.175,
+        "sustain": 0.725,
+        "release": 0.28
+      }
+    },
+    {
+      "id": "classic_lead_02",
+      "name": "Classic Lead 02",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Variation of Classic Lead",
+      "parameters": {
+        "osc_type": 1.149,
+        "filter_cutoff": 0.815,
+        "filter_resonance": 0.368,
+        "attack": 0.039,
+        "decay": 0.138,
+        "sustain": 0.87,
+        "release": 0.215
+      }
+    },
+    {
+      "id": "classic_lead_03",
+      "name": "Classic Lead 03",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Variation of Classic Lead",
+      "parameters": {
+        "osc_type": 0.864,
+        "filter_cutoff": 0.749,
+        "filter_resonance": 0.45,
+        "attack": 0.041,
+        "decay": 0.144,
+        "sustain": 0.787,
+        "release": 0.326
+      }
+    },
+    {
+      "id": "classic_lead_04",
+      "name": "Classic Lead 04",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Variation of Classic Lead",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.437,
+        "attack": 0.0,
+        "decay": 0.237,
+        "sustain": 0.797,
+        "release": 0.233
+      }
+    },
+    {
+      "id": "classic_lead_05",
+      "name": "Classic Lead 05",
+      "category": "Lead",
+      "tags": [
+        "lead",
+        "classic",
+        "versatile",
+        "analog"
+      ],
+      "description": "Variation of Classic Lead",
+      "parameters": {
+        "osc_type": 1.098,
+        "filter_cutoff": 0.843,
+        "filter_resonance": 0.385,
+        "attack": 0.0,
+        "decay": 0.229,
+        "sustain": 0.865,
+        "release": 0.21
+      }
+    }
+  ]
+}

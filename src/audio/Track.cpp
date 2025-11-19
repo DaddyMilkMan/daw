@@ -5,7 +5,7 @@
 
 #include "Track.h"
 
-namespace vexel {
+namespace zenith {
 
 void AudioTrack::process(const float* const* input, float* const* output,
                         int numInputs, int numOutputs, int numSamples,
@@ -47,4 +47,4 @@ void MidiTrack::process(const float* const* input, float* const* output,
     }
 }
 
-} // namespace vexel
+} // namespace zenith

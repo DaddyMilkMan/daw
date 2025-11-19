@@ -1,406 +1,338 @@
 /**
  * @file PianoRollEditor.cpp
- * @brief Piano Roll editor implementation
+ * @brief Piano roll editor implementation
  */
 
 #include "../../include/ui/PianoRollEditor.h"
 
-//==============================================================================
-PianoRollEditor::PianoRollEditor(ProjectState& state,
-                                 const juce::String& tid,
-                                 const juce::String& cid)
-    : projectState(state),
-      trackId(tid),
-      clipId(cid)
+PianoRollEditor::PianoRollEditor(ProjectState& ps, const juce::String& tid, const juce::String& cid)
+    : projectState(ps), trackId(tid), clipId(cid)
 {
-    DBG("PianoRollEditor: Opening editor for track " + trackId + ", clip " + clipId);
-
-    // Get the notes node for this clip
-    notesNode = projectState.getNotesForClip(trackId, clipId);
-
-    // If notes node exists, listen to it
-    if (notesNode.isValid())
+    // Find clip node
+    auto track = projectState.getTrack(trackId);
+    if (track.isValid())
     {
-        notesNode.addListener(this);
-        rebuildNotes();
+        auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+        if (clipsNode.isValid())
+        {
+            for (auto clip : clipsNode)
+            {
+                if (clip[ProjectState::PROP_ID].toString() == clipId)
+                {
+                    clipNode = clip;
+                    break;
+                }
+            }
+        }
     }
-    else
+
+    if (clipNode.isValid())
     {
-        DBG("PianoRollEditor: No notes node yet (will be created on first note add)");
+        clipNode.addListener(this);
     }
+
+    // Add ruler
+    addAndMakeVisible(ruler);
+    ruler.setVisibleRange(viewStartBeat, viewLengthBeats);
+
+    setSize(800, 600);
 }
 
 PianoRollEditor::~PianoRollEditor()
 {
-    if (notesNode.isValid())
-        notesNode.removeListener(this);
-
-    DBG("PianoRollEditor: Destroyed");
+    if (clipNode.isValid())
+        clipNode.removeListener(this);
 }
-
-//==============================================================================
-// Component interface
-//==============================================================================
 
 void PianoRollEditor::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
+    bounds.removeFromTop(RULER_HEIGHT);
+    bounds.removeFromLeft(PIANO_WIDTH);
 
     // Background
     g.fillAll(juce::Colour(0xff1e1e1e));
 
-    // Piano keys area
-    auto pianoKeysArea = bounds.removeFromLeft(pianoKeysWidth);
-    drawPianoKeys(g, pianoKeysArea);
+    // Piano keys (left side)
+    int numNotes = highestNote - lowestNote + 1;
+    for (int i = 0; i < numNotes; ++i)
+    {
+        int noteNumber = highestNote - i;
+        int y = RULER_HEIGHT + i * noteHeight;
 
-    // Grid and notes area
-    auto gridArea = bounds;
-    drawGrid(g, gridArea);
-    drawNotes(g, gridArea);
+        // Determine if black or white key
+        int noteInOctave = noteNumber % 12;
+        bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 ||
+                          noteInOctave == 8 || noteInOctave == 10);
+
+        // Piano key color
+        if (isBlackKey)
+            g.setColour(juce::Colour(0xff3a3a3a));
+        else
+            g.setColour(juce::Colour(0xff2a2a2a));
+
+        g.fillRect(0, y, PIANO_WIDTH, noteHeight);
+
+        // Key border
+        g.setColour(juce::Colour(0xff404040));
+        g.drawLine(0, y + noteHeight - 1.0f, static_cast<float>(PIANO_WIDTH),
+                   y + noteHeight - 1.0f, 1.0f);
+
+        // Note name for C notes
+        if (noteInOctave == 0)
+        {
+            g.setColour(juce::Colours::white);
+            g.setFont(juce::Font(10.0f));
+            g.drawText("C" + juce::String(noteNumber / 12 - 2), 2, y, PIANO_WIDTH - 4, noteHeight,
+                      juce::Justification::centredLeft, false);
+        }
+    }
+
+    // Grid background
+    for (int i = 0; i < numNotes; ++i)
+    {
+        int noteNumber = highestNote - i;
+        int y = RULER_HEIGHT + i * noteHeight;
+        int noteInOctave = noteNumber % 12;
+
+        // Alternating row colors (highlight C rows)
+        if (noteInOctave == 0)
+            g.setColour(juce::Colour(0xff252525));
+        else
+            g.setColour(juce::Colour(0xff1e1e1e));
+
+        g.fillRect(PIANO_WIDTH, y, getWidth() - PIANO_WIDTH, noteHeight);
+
+        // Row separator
+        g.setColour(juce::Colour(0xff303030));
+        g.drawLine(PIANO_WIDTH, y + noteHeight - 1.0f, static_cast<float>(getWidth()),
+                   y + noteHeight - 1.0f, 1.0f);
+    }
+
+    // Beat grid
+    g.setColour(juce::Colour(0xff303030));
+    int startBeat = static_cast<int>(std::floor(viewStartBeat));
+    int endBeat = static_cast<int>(std::ceil(viewStartBeat + viewLengthBeats));
+
+    for (int beat = startBeat; beat <= endBeat; ++beat)
+    {
+        int x = getXForBeat(beat);
+
+        if (x < PIANO_WIDTH || x > getWidth())
+            continue;
+
+        // Measure lines (every 4 beats)
+        if (beat % 4 == 0)
+        {
+            g.setColour(juce::Colour(0xff404040));
+            g.drawLine(static_cast<float>(x), RULER_HEIGHT,
+                      static_cast<float>(x), static_cast<float>(getHeight()), 1.0f);
+        }
+        else
+        {
+            g.setColour(juce::Colour(0xff303030));
+            g.drawLine(static_cast<float>(x), RULER_HEIGHT,
+                      static_cast<float>(x), static_cast<float>(getHeight()), 1.0f);
+        }
+    }
+
+    // Draw MIDI notes
+    if (!clipNode.isValid())
+        return;
+
+    auto notesNode = clipNode.getChildWithName(ProjectState::ID_NOTES);
+    if (!notesNode.isValid())
+        return;
+
+    g.setColour(juce::Colours::green.withAlpha(0.7f));
+
+    for (auto note : notesNode)
+    {
+        double startBeats = note[ProjectState::PROP_START_BEATS];
+        double lengthBeats = note[ProjectState::PROP_LENGTH_BEATS];
+        int noteNumber = note[ProjectState::PROP_NOTE_NUMBER];
+
+        int x = getXForBeat(startBeats);
+        int y = getYForNote(noteNumber);
+        int width = static_cast<int>(lengthBeats * pixelsPerBeat);
+
+        if (x + width < PIANO_WIDTH || x > getWidth())
+            continue;
+
+        // Note rectangle
+        g.fillRoundedRectangle(static_cast<float>(x), static_cast<float>(y),
+                              static_cast<float>(width), static_cast<float>(noteHeight - 2), 2.0f);
+
+        // Note border
+        g.setColour(juce::Colours::green);
+        g.drawRoundedRectangle(static_cast<float>(x), static_cast<float>(y),
+                              static_cast<float>(width), static_cast<float>(noteHeight - 2), 2.0f, 1.0f);
+
+        g.setColour(juce::Colours::green.withAlpha(0.7f));
+    }
 }
 
 void PianoRollEditor::resized()
 {
-    // No child components yet
+    // Position ruler
+    ruler.setBounds(PIANO_WIDTH, 0, getWidth() - PIANO_WIDTH, RULER_HEIGHT);
+
+    // Update view length based on width
+    if (pixelsPerBeat > 0)
+        viewLengthBeats = (getWidth() - PIANO_WIDTH) / pixelsPerBeat;
+
+    ruler.setVisibleRange(viewStartBeat, viewLengthBeats);
 }
 
-void PianoRollEditor::mouseDown(const juce::MouseEvent& e)
+void PianoRollEditor::mouseDown(const juce::MouseEvent& event)
 {
-    auto pos = e.position;
-
-    // Skip if clicking on piano keys
-    if (pos.x < pianoKeysWidth)
+    if (event.x < PIANO_WIDTH || event.y < RULER_HEIGHT)
         return;
 
-    // Adjust for piano keys offset
-    pos.x -= pianoKeysWidth;
+    int noteNumber = getNoteAtY(event.y);
+    double beat = getBeatAtX(event.x);
 
-    // Check if clicking on an existing note
-    int noteIndex = findNoteAt(pos);
+    // Check if clicking on existing note
+    draggedNote = findNoteAtPosition(event.x, event.y);
 
-    if (noteIndex >= 0)
+    if (draggedNote.isValid())
     {
-        // Start dragging the note
-        interactionMode = InteractionMode::DraggingNote;
-        draggedNoteIndex = noteIndex;
-        dragStartPosition = pos;
-
-        auto& note = noteVisuals[noteIndex];
-        dragStartBeats = note.startBeats;
-        dragStartPitch = note.pitch;
-
-        DBG("PianoRollEditor: Started dragging note " + note.noteId);
+        // Start dragging existing note
+        dragStartPos = event.getPosition();
+        dragStartBeats = draggedNote[ProjectState::PROP_START_BEATS];
+        dragStartNoteNumber = draggedNote[ProjectState::PROP_NOTE_NUMBER];
     }
     else
     {
-        // Create new note
-        double startBeats = quantize(positionToBeats(pos.x));
-        int pitch = positionToPitch(pos.y);
-        double lengthBeats = gridDivision; // Default to one grid division
-        int velocity = 100; // Default velocity
+        // Add new note (snap to grid)
+        double snappedBeat = std::round(beat * 4.0) / 4.0; // Snap to 1/4 beat
+        double noteLength = 1.0; // Default 1 beat
 
-        auto noteId = projectState.addNote(trackId, clipId, startBeats, lengthBeats, pitch, velocity, "Add Note");
-
-        if (!noteId.isEmpty())
-        {
-            DBG("PianoRollEditor: Created note " + noteId + " at " + juce::String(startBeats) + " beats, pitch " + juce::String(pitch));
-
-            // Rebuild notes if needed (in case notes node was just created)
-            if (!notesNode.isValid())
-            {
-                notesNode = projectState.getNotesForClip(trackId, clipId);
-                if (notesNode.isValid())
-                    notesNode.addListener(this);
-            }
-
-            repaint();
-        }
+        projectState.addNote(trackId, clipId, snappedBeat, noteLength, noteNumber, 100, "Add Note");
+        DBG("Added note " + juce::String(noteNumber) + " at beat " + juce::String(snappedBeat));
     }
 }
 
-void PianoRollEditor::mouseDrag(const juce::MouseEvent& e)
+void PianoRollEditor::mouseDrag(const juce::MouseEvent& event)
 {
-    if (interactionMode == InteractionMode::DraggingNote && draggedNoteIndex >= 0)
-    {
-        auto pos = e.position;
-        pos.x -= pianoKeysWidth;
-
-        // Calculate new position
-        auto delta = pos - dragStartPosition;
-        double deltaBeats = delta.x / pixelsPerBeat;
-        int deltaPitch = -static_cast<int>(delta.y / pixelsPerNote);
-
-        double newStartBeats = quantize(dragStartBeats + deltaBeats);
-        int newPitch = juce::jlimit(0, 127, dragStartPitch + deltaPitch);
-
-        // Keep the same length and velocity
-        auto& note = noteVisuals[draggedNoteIndex];
-        double lengthBeats = note.lengthBeats;
-        int velocity = note.velocity;
-
-        // Update the note
-        projectState.moveNote(trackId, clipId, note.noteId,
-                              newStartBeats, lengthBeats, newPitch, velocity,
-                              "Move Note");
-    }
-}
-
-void PianoRollEditor::mouseUp(const juce::MouseEvent& e)
-{
-    interactionMode = InteractionMode::None;
-    draggedNoteIndex = -1;
-}
-
-void PianoRollEditor::mouseDoubleClick(const juce::MouseEvent& e)
-{
-    auto pos = e.position;
-
-    // Skip if clicking on piano keys
-    if (pos.x < pianoKeysWidth)
+    if (!draggedNote.isValid())
         return;
 
-    // Adjust for piano keys offset
-    pos.x -= pianoKeysWidth;
+    // Calculate delta in beats and semitones
+    int deltaX = event.x - dragStartPos.x;
+    int deltaY = event.y - dragStartPos.y;
 
-    // Find note at position
-    int noteIndex = findNoteAt(pos);
+    double deltaBeat = deltaX / pixelsPerBeat;
+    int deltaSemitones = -deltaY / noteHeight;
 
-    if (noteIndex >= 0)
+    double newStartBeats = juce::jmax(0.0, dragStartBeats + deltaBeat);
+    int newNoteNumber = juce::jlimit(0, 127, dragStartNoteNumber + deltaSemitones);
+
+    // Snap to grid
+    newStartBeats = std::round(newStartBeats * 4.0) / 4.0;
+
+    // Update note in state
+    double lengthBeats = draggedNote[ProjectState::PROP_LENGTH_BEATS];
+    juce::String noteId = draggedNote[ProjectState::PROP_ID].toString();
+
+    // Set note number directly (moveNote doesn't change pitch)
+    draggedNote.setProperty(ProjectState::PROP_NOTE_NUMBER, newNoteNumber, &projectState.getUndoManager());
+
+    projectState.moveNote(trackId, clipId, noteId, newStartBeats, lengthBeats, "Move Note");
+}
+
+void PianoRollEditor::mouseDoubleClick(const juce::MouseEvent& event)
+{
+    if (event.x < PIANO_WIDTH || event.y < RULER_HEIGHT)
+        return;
+
+    // Find and delete note
+    auto note = findNoteAtPosition(event.x, event.y);
+    if (note.isValid())
     {
-        // Delete the note
-        auto& note = noteVisuals[noteIndex];
-        projectState.removeNote(trackId, clipId, note.noteId, "Delete Note");
-
-        DBG("PianoRollEditor: Deleted note " + note.noteId);
+        juce::String noteId = note[ProjectState::PROP_ID].toString();
+        projectState.deleteNote(trackId, clipId, noteId, "Delete Note");
+        DBG("Deleted note " + noteId);
     }
 }
 
-//==============================================================================
-// Zoom and scroll
-//==============================================================================
+//==========================================================================
+// ValueTree::Listener implementation
+//==========================================================================
 
-void PianoRollEditor::setPixelsPerBeat(double ppb)
+void PianoRollEditor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
-    pixelsPerBeat = juce::jlimit(10.0, 200.0, ppb);
-    rebuildNotes();
     repaint();
 }
-
-void PianoRollEditor::setPixelsPerNote(int ppn)
-{
-    pixelsPerNote = juce::jlimit(4, 32, ppn);
-    rebuildNotes();
-    repaint();
-}
-
-//==============================================================================
-// ValueTree::Listener
-//==============================================================================
 
 void PianoRollEditor::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent == notesNode && child.hasType(ProjectState::ID_NOTE))
-    {
-        DBG("PianoRollEditor: Note added to clip");
-        rebuildNotes();
-        repaint();
-    }
+    repaint();
 }
 
 void PianoRollEditor::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
 {
-    if (parent == notesNode)
-    {
-        DBG("PianoRollEditor: Note removed from clip");
-        rebuildNotes();
-        repaint();
-    }
+    repaint();
 }
 
-void PianoRollEditor::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
-{
-    // Not used for notes
-}
-
-void PianoRollEditor::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
-{
-    if (tree.hasType(ProjectState::ID_NOTE))
-    {
-        DBG("PianoRollEditor: Note property changed");
-        rebuildNotes();
-        repaint();
-    }
-}
-
-//==============================================================================
+//==========================================================================
 // Helper methods
-//==============================================================================
+//==========================================================================
 
-void PianoRollEditor::rebuildNotes()
+int PianoRollEditor::getNoteAtY(int y) const
 {
-    noteVisuals.clear();
+    if (y < RULER_HEIGHT)
+        return -1;
 
+    int noteY = y - RULER_HEIGHT;
+    int noteIndex = noteY / noteHeight;
+
+    return highestNote - noteIndex;
+}
+
+double PianoRollEditor::getBeatAtX(int x) const
+{
+    if (x < PIANO_WIDTH)
+        return 0.0;
+
+    int gridX = x - PIANO_WIDTH;
+    return viewStartBeat + (gridX / pixelsPerBeat);
+}
+
+int PianoRollEditor::getYForNote(int noteNumber) const
+{
+    int noteIndex = highestNote - noteNumber;
+    return RULER_HEIGHT + noteIndex * noteHeight + 1;
+}
+
+int PianoRollEditor::getXForBeat(double beat) const
+{
+    return PIANO_WIDTH + static_cast<int>((beat - viewStartBeat) * pixelsPerBeat);
+}
+
+juce::ValueTree PianoRollEditor::findNoteAtPosition(int x, int y)
+{
+    if (!clipNode.isValid())
+        return {};
+
+    auto notesNode = clipNode.getChildWithName(ProjectState::ID_NOTES);
     if (!notesNode.isValid())
-        return;
+        return {};
 
-    for (auto noteTree : notesNode)
+    int noteNumber = getNoteAtY(y);
+    double beat = getBeatAtX(x);
+
+    for (auto note : notesNode)
     {
-        if (!noteTree.hasType(ProjectState::ID_NOTE))
-            continue;
+        int nn = note[ProjectState::PROP_NOTE_NUMBER];
+        double startBeats = note[ProjectState::PROP_START_BEATS];
+        double lengthBeats = note[ProjectState::PROP_LENGTH_BEATS];
 
-        NoteVisual nv;
-        nv.noteId = noteTree[ProjectState::PROP_ID].toString();
-        nv.startBeats = noteTree[ProjectState::PROP_START_BEATS];
-        nv.lengthBeats = noteTree[ProjectState::PROP_LENGTH_BEATS];
-        nv.pitch = noteTree[ProjectState::PROP_PITCH];
-        nv.velocity = noteTree[ProjectState::PROP_VELOCITY];
-        nv.bounds = noteToBounds(nv.startBeats, nv.lengthBeats, nv.pitch);
-
-        noteVisuals.push_back(nv);
-    }
-
-    DBG("PianoRollEditor: Rebuilt " + juce::String(noteVisuals.size()) + " notes");
-}
-
-juce::Rectangle<float> PianoRollEditor::noteToBounds(double startBeats, double lengthBeats, int pitch) const
-{
-    float x = static_cast<float>(startBeats * pixelsPerBeat);
-    float y = static_cast<float>((highestNote - pitch) * pixelsPerNote);
-    float w = static_cast<float>(lengthBeats * pixelsPerBeat);
-    float h = static_cast<float>(pixelsPerNote);
-
-    return juce::Rectangle<float>(x, y, w, h);
-}
-
-double PianoRollEditor::positionToBeats(float x) const
-{
-    return x / pixelsPerBeat;
-}
-
-int PianoRollEditor::positionToPitch(float y) const
-{
-    int pitch = highestNote - static_cast<int>(y / pixelsPerNote);
-    return juce::jlimit(0, 127, pitch);
-}
-
-double PianoRollEditor::quantize(double beats) const
-{
-    if (gridDivision <= 0.0)
-        return beats;
-
-    return std::round(beats / gridDivision) * gridDivision;
-}
-
-int PianoRollEditor::findNoteAt(juce::Point<float> position)
-{
-    for (int i = 0; i < static_cast<int>(noteVisuals.size()); ++i)
-    {
-        if (noteVisuals[i].bounds.contains(position))
-            return i;
-    }
-
-    return -1;
-}
-
-void PianoRollEditor::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> area)
-{
-    g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRect(area);
-
-    // Draw piano keys
-    for (int pitch = lowestNote; pitch <= highestNote; ++pitch)
-    {
-        int noteInOctave = pitch % 12;
-        bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 || noteInOctave == 8 || noteInOctave == 10);
-
-        float y = static_cast<float>((highestNote - pitch) * pixelsPerNote);
-        auto keyRect = juce::Rectangle<float>(0.0f, y, static_cast<float>(area.getWidth()), static_cast<float>(pixelsPerNote));
-
-        if (isBlackKey)
+        if (nn == noteNumber && beat >= startBeats && beat < startBeats + lengthBeats)
         {
-            g.setColour(juce::Colour(0xff1a1a1a));
-            g.fillRect(keyRect);
-        }
-        else
-        {
-            g.setColour(juce::Colour(0xff3a3a3a));
-            g.fillRect(keyRect);
-        }
-
-        // Draw divider
-        g.setColour(juce::Colour(0xff000000));
-        g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(area.getWidth()));
-
-        // Draw note name for C notes
-        if (noteInOctave == 0 && pixelsPerNote >= 10)
-        {
-            g.setColour(juce::Colours::white);
-            g.setFont(10.0f);
-            int octave = (pitch / 12) - 1;
-            g.drawText("C" + juce::String(octave), keyRect.reduced(2), juce::Justification::centredLeft, false);
+            return note;
         }
     }
-}
 
-void PianoRollEditor::drawGrid(juce::Graphics& g, juce::Rectangle<int> area)
-{
-    // Draw horizontal lines (pitch)
-    for (int pitch = lowestNote; pitch <= highestNote; ++pitch)
-    {
-        int noteInOctave = pitch % 12;
-        bool isC = (noteInOctave == 0);
-
-        float y = static_cast<float>((highestNote - pitch) * pixelsPerNote);
-
-        if (isC)
-            g.setColour(juce::Colour(0xff404040));
-        else
-            g.setColour(juce::Colour(0xff2a2a2a));
-
-        g.drawHorizontalLine(static_cast<int>(y), 0.0f, static_cast<float>(area.getWidth()));
-    }
-
-    // Draw vertical lines (beats)
-    int maxBeats = area.getWidth() / static_cast<int>(pixelsPerBeat) + 2;
-    for (int beat = 0; beat < maxBeats; ++beat)
-    {
-        float x = static_cast<float>(beat * pixelsPerBeat);
-
-        // Draw beat lines
-        if (beat % 4 == 0)
-            g.setColour(juce::Colour(0xff505050)); // Bar lines
-        else
-            g.setColour(juce::Colour(0xff303030)); // Beat lines
-
-        g.drawVerticalLine(static_cast<int>(x), 0.0f, static_cast<float>(area.getHeight()));
-
-        // Draw sub-divisions
-        if (gridDivision < 1.0)
-        {
-            int subdivisions = static_cast<int>(1.0 / gridDivision);
-            for (int sub = 1; sub < subdivisions; ++sub)
-            {
-                float subX = x + static_cast<float>(sub * gridDivision * pixelsPerBeat);
-                g.setColour(juce::Colour(0xff252525));
-                g.drawVerticalLine(static_cast<int>(subX), 0.0f, static_cast<float>(area.getHeight()));
-            }
-        }
-    }
-}
-
-void PianoRollEditor::drawNotes(juce::Graphics& g, juce::Rectangle<int> area)
-{
-    for (const auto& note : noteVisuals)
-    {
-        // Map velocity to color brightness
-        float brightness = juce::jmap(static_cast<float>(note.velocity), 0.0f, 127.0f, 0.3f, 0.9f);
-
-        // Use a nice blue color
-        g.setColour(juce::Colour::fromHSV(0.6f, 0.6f, brightness, 1.0f));
-        g.fillRect(note.bounds.reduced(1.0f));
-
-        // Border
-        g.setColour(juce::Colour::fromHSV(0.6f, 0.4f, brightness + 0.1f, 1.0f));
-        g.drawRect(note.bounds, 1.0f);
-    }
+    return {};
 }

@@ -1,8 +1,8 @@
-# Vexel DAW: Web to Native C++/JUCE Migration Plan
+# Zenith DAW: Web to Native C++/JUCE Migration Plan
 
 ## Executive Summary
 
-This document outlines the complete migration of the Vexel DAW from a web-based Electron/React application to a professional native C++/JUCE application, following industry-standard DAW architecture patterns used by Pro Tools, Ableton Live, and FL Studio.
+This document outlines the complete migration of the Zenith DAW from a web-based Electron/React application to a professional native C++/JUCE application, following industry-standard DAW architecture patterns used by Pro Tools, Ableton Live, and FL Studio.
 
 ## Why Migrate to C++/JUCE?
 
@@ -71,7 +71,7 @@ JUCE Application
 
 ### 1.1 JUCE Project Structure
 ```
-VexelDAW/
+ZenithDAW/
 ├── CMakeLists.txt
 ├── Source/
 │   ├── Main.cpp
@@ -109,22 +109,22 @@ VexelDAW/
 ```cmake
 # CMakeLists.txt
 cmake_minimum_required(VERSION 3.15)
-project(VexelDAW VERSION 0.1.0)
+project(ZenithDAW VERSION 0.1.0)
 
 # JUCE setup
 add_subdirectory(JUCE)
 
-juce_add_gui_app(VexelDAW
-    PRODUCT_NAME "Vexel DAW"
+juce_add_gui_app(ZenithDAW
+    PRODUCT_NAME "Zenith DAW"
     COMPANY_NAME "DaddyMilkMan"
-    BUNDLE_ID com.daddymilkman.vexeldaw
+    BUNDLE_ID com.daddymilkman.zenithdaw
     ICON_BIG Resources/icon.png
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
     IS_SYNTH FALSE
     IS_MIDI_EFFECT FALSE)
 
-target_sources(VexelDAW PRIVATE
+target_sources(ZenithDAW PRIVATE
     Source/Main.cpp
     Source/MainComponent.cpp
     Source/Audio/AudioEngine.cpp
@@ -132,13 +132,13 @@ target_sources(VexelDAW PRIVATE
     # ... more sources
 )
 
-target_compile_definitions(VexelDAW PRIVATE
+target_compile_definitions(ZenithDAW PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
-    JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:VexelDAW,JUCE_PRODUCT_NAME>"
-    JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:VexelDAW,JUCE_VERSION>")
+    JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:ZenithDAW,JUCE_PRODUCT_NAME>"
+    JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:ZenithDAW,JUCE_VERSION>")
 
-target_link_libraries(VexelDAW PRIVATE
+target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_basics
     juce::juce_audio_devices
     juce::juce_audio_formats
@@ -162,7 +162,7 @@ PUBLIC
 
 #### Current Web Audio (JavaScript)
 ```javascript
-// vexel-daw/src/renderer/audio/AudioEngine.ts
+// zenith-daw/src/renderer/audio/AudioEngine.ts
 class AudioEngine {
   private audioContext: AudioContext;
   private tracks: AudioTrack[] = [];
@@ -484,7 +484,7 @@ void Track::applyPanning(juce::AudioBuffer<float>& buffer)
 
 #### Current (React)
 ```tsx
-// vexel-daw/src/renderer/App.tsx
+// zenith-daw/src/renderer/App.tsx
 function App() {
   return (
     <div className="h-screen flex flex-col">
@@ -823,7 +823,7 @@ void TransportComponent::updateCpuUsage()
 
 #### Current (Zustand)
 ```typescript
-// vexel-daw/src/renderer/lib/store.ts
+// zenith-daw/src/renderer/lib/store.ts
 export const useStore = create<Store>((set) => ({
   projectState: {
     tracks: [],
@@ -1011,7 +1011,7 @@ PluginHost::PluginHost()
 
     // Load cached plugin list
     auto savedPlugins = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("VexelDAW")
+        .getChildFile("ZenithDAW")
         .getChildFile("PluginCache.xml");
 
     if (savedPlugins.existsAsFile())
@@ -1026,7 +1026,7 @@ PluginHost::~PluginHost()
 {
     // Save plugin cache
     auto savedPlugins = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-        .getChildFile("VexelDAW")
+        .getChildFile("ZenithDAW")
         .getChildFile("PluginCache.xml");
 
     savedPlugins.getParentDirectory().createDirectory();
@@ -1282,7 +1282,7 @@ static AudioEngineTests audioEngineTests;
 
 ## Conclusion
 
-This migration will transform Vexel DAW from a web-based prototype into a professional-grade native application capable of competing with industry-standard DAWs. The use of C++/JUCE provides:
+This migration will transform Zenith DAW from a web-based prototype into a professional-grade native application capable of competing with industry-standard DAWs. The use of C++/JUCE provides:
 
 1. **10-100x performance improvement**
 2. **Professional plugin compatibility**

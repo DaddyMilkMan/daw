@@ -8,7 +8,7 @@
 #include "../DSPNode.h"
 #include <JuceHeader.h>
 
-namespace vexel {
+namespace zenith {
 
 enum class FilterMode {
     LowPass,
@@ -66,4 +66,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FilterNode)
 };
 
-} // namespace vexel
+} // namespace zenith

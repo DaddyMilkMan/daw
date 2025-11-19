@@ -1,0 +1,578 @@
+{
+  "bank_name": "Future Bass Plucks",
+  "bank_description": "Wide, bright plucks with snappy envelopes optimized for Future Bass chord progressions and melodic sequences.",
+  "instrument_id": "zenith_poly_synth",
+  "category": "Pluck",
+  "presets": [
+    {
+      "name": "FB Classic Pluck",
+      "author": "Zenith Factory",
+      "description": "Classic future bass pluck sound",
+      "tags": ["future-bass", "pluck", "chords", "bright", "wide"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.3,
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.2,
+        "release": 0.25
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.35
+      }
+    },
+    {
+      "name": "Crystal Pluck",
+      "author": "Zenith Factory",
+      "description": "Crystalline bright pluck",
+      "tags": ["future-bass", "pluck", "crystal", "bright", "clear"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.35,
+        "attack": 0.005,
+        "decay": 0.28,
+        "sustain": 0.15,
+        "release": 0.22
+      },
+      "macros": {
+        "macro_brightness": 0.92,
+        "macro_envelope_speed": 0.32
+      }
+    },
+    {
+      "name": "Wide Chords",
+      "author": "Zenith Factory",
+      "description": "Super wide chord plucks",
+      "tags": ["future-bass", "pluck", "chords", "wide", "stereo"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.28,
+        "attack": 0.015,
+        "decay": 0.32,
+        "sustain": 0.18,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.82,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Snappy FB",
+      "author": "Zenith Factory",
+      "description": "Extra snappy pluck",
+      "tags": ["future-bass", "pluck", "snappy", "fast", "punchy"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.32,
+        "attack": 0.001,
+        "decay": 0.2,
+        "sustain": 0.1,
+        "release": 0.18
+      },
+      "macros": {
+        "macro_brightness": 0.88,
+        "macro_envelope_speed": 0.25
+      }
+    },
+    {
+      "name": "Dreamy Pluck",
+      "author": "Zenith Factory",
+      "description": "Dreamy atmospheric pluck",
+      "tags": ["future-bass", "pluck", "dreamy", "atmospheric", "soft"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.25,
+        "attack": 0.02,
+        "decay": 0.35,
+        "sustain": 0.22,
+        "release": 0.3
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.42
+      }
+    },
+    {
+      "name": "Sparkle Pluck",
+      "author": "Zenith Factory",
+      "description": "Sparkling bright pluck",
+      "tags": ["future-bass", "pluck", "sparkle", "bright", "shimmer"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.4,
+        "attack": 0.008,
+        "decay": 0.26,
+        "sustain": 0.16,
+        "release": 0.24
+      },
+      "macros": {
+        "macro_brightness": 0.9,
+        "macro_envelope_speed": 0.34
+      }
+    },
+    {
+      "name": "Melodic Pluck",
+      "author": "Zenith Factory",
+      "description": "Perfect for melodies",
+      "tags": ["future-bass", "pluck", "melodic", "lead", "clear"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.3,
+        "attack": 0.01,
+        "decay": 0.28,
+        "sustain": 0.18,
+        "release": 0.26
+      },
+      "macros": {
+        "macro_brightness": 0.84,
+        "macro_envelope_speed": 0.36
+      }
+    },
+    {
+      "name": "Chord Stacker",
+      "author": "Zenith Factory",
+      "description": "Stacked chord plucks",
+      "tags": ["future-bass", "pluck", "chords", "stacked", "thick"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.32,
+        "attack": 0.012,
+        "decay": 0.33,
+        "sustain": 0.2,
+        "release": 0.29
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.4
+      }
+    },
+    {
+      "name": "Bright Keys",
+      "author": "Zenith Factory",
+      "description": "Key-like pluck sound",
+      "tags": ["future-bass", "pluck", "keys", "bright", "piano"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.28,
+        "attack": 0.005,
+        "decay": 0.32,
+        "sustain": 0.15,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.86,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Future Chords",
+      "author": "Zenith Factory",
+      "description": "Futuristic chord plucks",
+      "tags": ["future-bass", "pluck", "chords", "futuristic", "modern"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.35,
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.19,
+        "release": 0.27
+      },
+      "macros": {
+        "macro_brightness": 0.83,
+        "macro_envelope_speed": 0.37
+      }
+    },
+    {
+      "name": "Punchy Pluck",
+      "author": "Zenith Factory",
+      "description": "Punchy attack pluck",
+      "tags": ["future-bass", "pluck", "punchy", "attack", "sharp"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.97,
+        "filter_resonance": 0.38,
+        "attack": 0.002,
+        "decay": 0.22,
+        "sustain": 0.12,
+        "release": 0.2
+      },
+      "macros": {
+        "macro_brightness": 0.87,
+        "macro_envelope_speed": 0.28
+      }
+    },
+    {
+      "name": "Soft FB Pluck",
+      "author": "Zenith Factory",
+      "description": "Softer future bass pluck",
+      "tags": ["future-bass", "pluck", "soft", "gentle", "smooth"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.24,
+        "attack": 0.02,
+        "decay": 0.35,
+        "sustain": 0.24,
+        "release": 0.32
+      },
+      "macros": {
+        "macro_brightness": 0.75,
+        "macro_envelope_speed": 0.43
+      }
+    },
+    {
+      "name": "Arpeggio Pluck",
+      "author": "Zenith Factory",
+      "description": "Perfect for arpeggios",
+      "tags": ["future-bass", "pluck", "arpeggio", "sequence", "melodic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.31,
+        "attack": 0.008,
+        "decay": 0.25,
+        "sustain": 0.14,
+        "release": 0.23
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.33
+      }
+    },
+    {
+      "name": "Hyper Pluck",
+      "author": "Zenith Factory",
+      "description": "Hyper bright pluck",
+      "tags": ["future-bass", "pluck", "hyper", "bright", "intense"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.42,
+        "attack": 0.003,
+        "decay": 0.24,
+        "sustain": 0.13,
+        "release": 0.21
+      },
+      "macros": {
+        "macro_brightness": 0.94,
+        "macro_envelope_speed": 0.31
+      }
+    },
+    {
+      "name": "Mallet Pluck",
+      "author": "Zenith Factory",
+      "description": "Mallet-like pluck tone",
+      "tags": ["future-bass", "pluck", "mallet", "percussive", "tonal"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.35,
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.1,
+        "release": 0.25
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.35
+      }
+    },
+    {
+      "name": "Glassy Pluck",
+      "author": "Zenith Factory",
+      "description": "Glass-like texture",
+      "tags": ["future-bass", "pluck", "glassy", "delicate", "clear"],
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.3,
+        "attack": 0.01,
+        "decay": 0.35,
+        "sustain": 0.15,
+        "release": 0.3
+      },
+      "macros": {
+        "macro_brightness": 0.88,
+        "macro_envelope_speed": 0.42
+      }
+    },
+    {
+      "name": "Shimmer Chords",
+      "author": "Zenith Factory",
+      "description": "Shimmering chord plucks",
+      "tags": ["future-bass", "pluck", "shimmer", "chords", "bright"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.36,
+        "attack": 0.015,
+        "decay": 0.32,
+        "sustain": 0.2,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.86,
+        "macro_envelope_speed": 0.39
+      }
+    },
+    {
+      "name": "Quick Attack",
+      "author": "Zenith Factory",
+      "description": "Ultra-quick attack pluck",
+      "tags": ["future-bass", "pluck", "fast", "quick", "instant"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.94,
+        "filter_resonance": 0.33,
+        "attack": 0.001,
+        "decay": 0.26,
+        "sustain": 0.12,
+        "release": 0.22
+      },
+      "macros": {
+        "macro_brightness": 0.84,
+        "macro_envelope_speed": 0.32
+      }
+    },
+    {
+      "name": "Bouncy Pluck",
+      "author": "Zenith Factory",
+      "description": "Bouncy energetic pluck",
+      "tags": ["future-bass", "pluck", "bouncy", "energetic", "playful"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.92,
+        "filter_resonance": 0.34,
+        "attack": 0.01,
+        "decay": 0.28,
+        "sustain": 0.16,
+        "release": 0.24
+      },
+      "macros": {
+        "macro_brightness": 0.82,
+        "macro_envelope_speed": 0.34
+      }
+    },
+    {
+      "name": "Digital Pluck",
+      "author": "Zenith Factory",
+      "description": "Clean digital pluck",
+      "tags": ["future-bass", "pluck", "digital", "clean", "precise"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.32,
+        "attack": 0.005,
+        "decay": 0.27,
+        "sustain": 0.14,
+        "release": 0.23
+      },
+      "macros": {
+        "macro_brightness": 0.88,
+        "macro_envelope_speed": 0.33
+      }
+    },
+    {
+      "name": "Warm Pluck",
+      "author": "Zenith Factory",
+      "description": "Warmer future bass pluck",
+      "tags": ["future-bass", "pluck", "warm", "smooth", "rich"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.82,
+        "filter_resonance": 0.26,
+        "attack": 0.018,
+        "decay": 0.34,
+        "sustain": 0.22,
+        "release": 0.3
+      },
+      "macros": {
+        "macro_brightness": 0.72,
+        "macro_envelope_speed": 0.41
+      }
+    },
+    {
+      "name": "Staccato Pluck",
+      "author": "Zenith Factory",
+      "description": "Short staccato pluck",
+      "tags": ["future-bass", "pluck", "staccato", "short", "tight"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.3,
+        "attack": 0.002,
+        "decay": 0.18,
+        "sustain": 0.08,
+        "release": 0.15
+      },
+      "macros": {
+        "macro_brightness": 0.85,
+        "macro_envelope_speed": 0.26
+      }
+    },
+    {
+      "name": "Lush Pluck",
+      "author": "Zenith Factory",
+      "description": "Lush wide pluck",
+      "tags": ["future-bass", "pluck", "lush", "wide", "rich"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.28,
+        "attack": 0.015,
+        "decay": 0.36,
+        "sustain": 0.24,
+        "release": 0.32
+      },
+      "macros": {
+        "macro_brightness": 0.8,
+        "macro_envelope_speed": 0.44
+      }
+    },
+    {
+      "name": "Bell Pluck",
+      "author": "Zenith Factory",
+      "description": "Bell-like pluck tone",
+      "tags": ["future-bass", "pluck", "bell", "tonal", "resonant"],
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.96,
+        "filter_resonance": 0.38,
+        "attack": 0.008,
+        "decay": 0.38,
+        "sustain": 0.18,
+        "release": 0.35
+      },
+      "macros": {
+        "macro_brightness": 0.86,
+        "macro_envelope_speed": 0.46
+      }
+    },
+    {
+      "name": "Vintage FB",
+      "author": "Zenith Factory",
+      "description": "Vintage-style FB pluck",
+      "tags": ["future-bass", "pluck", "vintage", "retro", "classic"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.28,
+        "attack": 0.02,
+        "decay": 0.32,
+        "sustain": 0.2,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.68,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Neon Pluck",
+      "author": "Zenith Factory",
+      "description": "Neon bright pluck",
+      "tags": ["future-bass", "pluck", "neon", "bright", "colorful"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.99,
+        "filter_resonance": 0.4,
+        "attack": 0.006,
+        "decay": 0.26,
+        "sustain": 0.15,
+        "release": 0.24
+      },
+      "macros": {
+        "macro_brightness": 0.89,
+        "macro_envelope_speed": 0.34
+      }
+    },
+    {
+      "name": "Chorus Pluck",
+      "author": "Zenith Factory",
+      "description": "Chorus-effect style pluck",
+      "tags": ["future-bass", "pluck", "chorus", "wide", "modulated"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.91,
+        "filter_resonance": 0.3,
+        "attack": 0.012,
+        "decay": 0.3,
+        "sustain": 0.19,
+        "release": 0.27
+      },
+      "macros": {
+        "macro_brightness": 0.81,
+        "macro_envelope_speed": 0.37
+      }
+    },
+    {
+      "name": "Electric Pluck",
+      "author": "Zenith Factory",
+      "description": "Electric guitar-like pluck",
+      "tags": ["future-bass", "pluck", "electric", "guitar", "bright"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.36,
+        "attack": 0.003,
+        "decay": 0.32,
+        "sustain": 0.16,
+        "release": 0.28
+      },
+      "macros": {
+        "macro_brightness": 0.83,
+        "macro_envelope_speed": 0.38
+      }
+    },
+    {
+      "name": "Cosmic Pluck",
+      "author": "Zenith Factory",
+      "description": "Cosmic spacey pluck",
+      "tags": ["future-bass", "pluck", "cosmic", "space", "atmospheric"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.32,
+        "attack": 0.02,
+        "decay": 0.38,
+        "sustain": 0.22,
+        "release": 0.35
+      },
+      "macros": {
+        "macro_brightness": 0.78,
+        "macro_envelope_speed": 0.45
+      }
+    },
+    {
+      "name": "Razor Pluck",
+      "author": "Zenith Factory",
+      "description": "Sharp razor-like pluck",
+      "tags": ["future-bass", "pluck", "sharp", "cutting", "bright"],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.45,
+        "attack": 0.001,
+        "decay": 0.22,
+        "sustain": 0.11,
+        "release": 0.19
+      },
+      "macros": {
+        "macro_brightness": 0.92,
+        "macro_envelope_speed": 0.29
+      }
+    }
+  ]
+}
