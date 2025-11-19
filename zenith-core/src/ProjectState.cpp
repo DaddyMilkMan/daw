@@ -1096,6 +1096,7 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     {
         if (track[PROP_ID].toString() == trackId)
             return track;
+<<<<<<< HEAD
     }
 
     return {};

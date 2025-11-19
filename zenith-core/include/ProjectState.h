@@ -24,9 +24,16 @@
 
 #pragma once
 
+<<<<<<< HEAD
+#include <atomic>
+
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+=======
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <atomic>
+>>>>>>> origin/master
 
 //==============================================================================
 /**
@@ -828,6 +835,11 @@ private:
      * @brief Find automation point by ID
      */
     juce::ValueTree findAutomationPoint(const juce::ValueTree& envelope, const juce::String& pointId) const;
+
+    /**
+     * @brief Rebuilds the ID counter based on the current state tree
+     */
+    void rebuildIdCounter();
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree
