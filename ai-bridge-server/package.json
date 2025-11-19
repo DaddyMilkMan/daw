@@ -1,7 +1,7 @@
 {
-  "name": "vexel-ai-bridge-server",
+  "name": "zenith-ai-bridge-server",
   "version": "1.0.0",
-  "description": "AI Bridge WebSocket server for Vexel DAW - Example implementation",
+  "description": "AI Bridge WebSocket server for Zenith DAW - Example implementation",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

@@ -1,0 +1,91 @@
+{
+  "name": "Trap Pluck",
+  "category": "synth",
+  "description": "Modern trap pluck synth - short attack, punchy release",
+  "author": "Zenith DAW",
+  "version": "1.0.0",
+
+  "parameters": {
+    "attack": 0.001,
+    "decay": 0.15,
+    "sustain": 0.3,
+    "release": 0.2,
+    "filterCutoff": 0.85,
+    "filterResonance": 0.4,
+    "sampleStartOffset": 0.0,
+    "pitchFine": 0.0,
+    "pitchSemitones": 0.0,
+    "globalPan": 0.5,
+    "globalGain": 0.9
+  },
+
+  "regions": [
+    {
+      "filePath": "trap-pluck-C2.wav",
+      "rootNote": 36,
+      "lowNote": 24,
+      "highNote": 41,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Low register sample"
+    },
+    {
+      "filePath": "trap-pluck-C3.wav",
+      "rootNote": 48,
+      "lowNote": 42,
+      "highNote": 53,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Mid-low register sample"
+    },
+    {
+      "filePath": "trap-pluck-C4.wav",
+      "rootNote": 60,
+      "lowNote": 54,
+      "highNote": 65,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Mid register sample"
+    },
+    {
+      "filePath": "trap-pluck-C5.wav",
+      "rootNote": 72,
+      "lowNote": 66,
+      "highNote": 77,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "High register sample"
+    },
+    {
+      "filePath": "trap-pluck-C6.wav",
+      "rootNote": 84,
+      "lowNote": 78,
+      "highNote": 96,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "Top register sample"
+    }
+  ],
+
+  "notes": {
+    "usage": "One-shot pluck samples, no looping needed",
+    "filterCutoff": "High cutoff (0.85) with resonance (0.4) for bright, modern sound",
+    "envelopeShape": "Fast attack + medium decay/sustain + short release = plucky character",
+    "tuning": "Per-sample tune parameter can be used to fix out-of-tune samples"
+  }
+}

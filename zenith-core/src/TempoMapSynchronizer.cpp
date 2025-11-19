@@ -6,113 +6,147 @@
 #include "../include/TempoMapSynchronizer.h"
 
 //==============================================================================
-TempoMapSynchronizer::TempoMapSynchronizer(ProjectState& ps, Engine& eng)
-    : projectState(ps), engine(eng)
+TempoMapSynchronizer::TempoMapSynchronizer(ProjectState& state, TempoMap& map)
+    : projectState(state), tempoMap(map)
 {
     DBG("TempoMapSynchronizer: Constructor");
 }
 
 TempoMapSynchronizer::~TempoMapSynchronizer()
 {
+    stop();
     DBG("TempoMapSynchronizer: Destructor");
-
-    // Remove listener
-    projectState.getState().removeListener(this);
 }
 
-//==============================================================================
-void TempoMapSynchronizer::initialize()
+void TempoMapSynchronizer::start()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Listen to the entire ProjectState tree for tempo map changes
+    if (isActive)
+        return;
+
+    DBG("TempoMapSynchronizer: Starting");
+
+    // Listen to ProjectState changes
     projectState.getState().addListener(this);
 
-    // Do initial update
+    // Initial update
     forceUpdate();
 
-    DBG("TempoMapSynchronizer: Initialized");
+    isActive = true;
+}
+
+void TempoMapSynchronizer::stop()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (!isActive)
+        return;
+
+    DBG("TempoMapSynchronizer: Stopping");
+
+    // Stop listening
+    projectState.getState().removeListener(this);
+
+    isActive = false;
 }
 
 void TempoMapSynchronizer::forceUpdate()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    updateEngineTempoMap();
+    updateTempoMap();
 }
 
 //==============================================================================
-// ValueTree::Listener (MESSAGE THREAD)
+// ValueTree::Listener Implementation
 //==============================================================================
 
 void TempoMapSynchronizer::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
-    // Check if this is a tempo map property change
-    if (tree.hasType(ProjectState::ID_TEMPO_CHANGE))
+    // If a tempo point property changed, update
+    if (isTempoMapNode(tree))
     {
-        if (property == ProjectState::PROP_BEAT_POSITION ||
-            property == ProjectState::PROP_BPM ||
-            property == ProjectState::PROP_TIME_SIG_NUM_CHANGE ||
-            property == ProjectState::PROP_TIME_SIG_DEN_CHANGE)
-        {
-            updateEngineTempoMap();
-        }
+        DBG("TempoMapSynchronizer: Tempo map property changed");
+        updateTempoMap();
     }
 }
 
 void TempoMapSynchronizer::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    juce::ignoreUnused(parent);
-
-    // If tempo map node or tempo change added, update
-    if (child.hasType(ProjectState::ID_TEMPO_MAP) ||
-        child.hasType(ProjectState::ID_TEMPO_CHANGE))
+    // If a tempo point was added, update
+    if (isTempoMapNode(parent) || isTempoMapNode(child))
     {
-        updateEngineTempoMap();
+        DBG("TempoMapSynchronizer: Tempo point added");
+        updateTempoMap();
     }
 }
 
-void TempoMapSynchronizer::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
+void TempoMapSynchronizer::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int /* index */)
 {
-    juce::ignoreUnused(parent, index);
-
-    // If tempo change removed, update
-    if (child.hasType(ProjectState::ID_TEMPO_CHANGE))
+    // If a tempo point was removed, update
+    if (isTempoMapNode(parent) || isTempoMapNode(child))
     {
-        updateEngineTempoMap();
+        DBG("TempoMapSynchronizer: Tempo point removed");
+        updateTempoMap();
     }
 }
 
-void TempoMapSynchronizer::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
+void TempoMapSynchronizer::valueTreeChildOrderChanged(juce::ValueTree& parent, int /* oldIndex */, int /* newIndex */)
 {
-    juce::ignoreUnused(oldIndex, newIndex);
-
-    // If tempo map children reordered, update
-    if (parent.hasType(ProjectState::ID_TEMPO_MAP))
+    // If tempo points were reordered, update
+    if (isTempoMapNode(parent))
     {
-        updateEngineTempoMap();
+        DBG("TempoMapSynchronizer: Tempo points reordered");
+        updateTempoMap();
     }
 }
 
-void TempoMapSynchronizer::valueTreeParentChanged(juce::ValueTree& tree)
+void TempoMapSynchronizer::valueTreeParentChanged(juce::ValueTree& /* tree */)
 {
-    juce::ignoreUnused(tree);
+    // Not relevant for tempo map
 }
 
 //==============================================================================
 // Helper Methods
 //==============================================================================
 
-void TempoMapSynchronizer::updateEngineTempoMap()
+void TempoMapSynchronizer::updateTempoMap()
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Get tempo changes from ProjectState
-    auto tempoChanges = projectState.getTempoChanges();
+    auto tempoMapTree = projectState.getTempoMap();
 
-    // Update Engine tempo map
-    engine.setTempoMap(tempoChanges);
+    if (tempoMapTree.isValid())
+    {
+        tempoMap.updateFromValueTree(tempoMapTree);
+    }
+    else
+    {
+        // No tempo map: use default tempo from project
+        double defaultTempo = projectState.getTempo();
+        tempoMap.setSingleTempo(defaultTempo);
+    }
+}
 
-    DBG("TempoMapSynchronizer: Updated Engine tempo map with " +
-        juce::String(tempoChanges.size()) + " tempo changes");
+bool TempoMapSynchronizer::isTempoMapNode(const juce::ValueTree& tree) const
+{
+    if (!tree.isValid())
+        return false;
+
+    // Check if this is the tempo map itself or a tempo point
+    if (tree.hasType(ProjectState::ID_TEMPO_MAP) ||
+        tree.hasType(ProjectState::ID_TEMPO_POINT))
+    {
+        return true;
+    }
+
+    // Check if parent is tempo map
+    auto parent = tree.getParent();
+    if (parent.isValid() && parent.hasType(ProjectState::ID_TEMPO_MAP))
+    {
+        return true;
+    }
+
+    return false;
 }

@@ -1,0 +1,1017 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Arp Bank",
+  "category": "Arp",
+  "version": "1.0",
+  "preset_count": 48,
+  "presets": [
+    {
+      "id": "gate_chord_seq",
+      "name": "Gate Chord Seq",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Gated chord sequence",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.3,
+        "attack": 0.002,
+        "decay": 0.1,
+        "sustain": 0.8,
+        "release": 0.05
+      }
+    },
+    {
+      "id": "gate_chord_seq_01",
+      "name": "Gate Chord Seq 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Variation of Gate Chord Seq",
+      "parameters": {
+        "osc_type": 0.994,
+        "filter_cutoff": 0.721,
+        "filter_resonance": 0.342,
+        "attack": 0.008,
+        "decay": 0.09,
+        "sustain": 0.779,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "gate_chord_seq_02",
+      "name": "Gate Chord Seq 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Variation of Gate Chord Seq",
+      "parameters": {
+        "osc_type": 0.95,
+        "filter_cutoff": 0.627,
+        "filter_resonance": 0.329,
+        "attack": 0.064,
+        "decay": 0.1,
+        "sustain": 0.791,
+        "release": 0.05
+      }
+    },
+    {
+      "id": "gate_chord_seq_03",
+      "name": "Gate Chord Seq 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Variation of Gate Chord Seq",
+      "parameters": {
+        "osc_type": 1.086,
+        "filter_cutoff": 0.628,
+        "filter_resonance": 0.302,
+        "attack": 0.0,
+        "decay": 0.117,
+        "sustain": 0.875,
+        "release": 0.076
+      }
+    },
+    {
+      "id": "gate_chord_seq_04",
+      "name": "Gate Chord Seq 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Variation of Gate Chord Seq",
+      "parameters": {
+        "osc_type": 1.143,
+        "filter_cutoff": 0.739,
+        "filter_resonance": 0.282,
+        "attack": 0.035,
+        "decay": 0.118,
+        "sustain": 0.731,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "gate_chord_seq_05",
+      "name": "Gate Chord Seq 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "gate",
+        "chords",
+        "sequence"
+      ],
+      "description": "Variation of Gate Chord Seq",
+      "parameters": {
+        "osc_type": 1.1,
+        "filter_cutoff": 0.632,
+        "filter_resonance": 0.359,
+        "attack": 0.0,
+        "decay": 0.074,
+        "sustain": 0.813,
+        "release": 0.112
+      }
+    },
+    {
+      "id": "trance_arp",
+      "name": "Trance Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Classic trance arpeggio",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.45,
+        "attack": 0.005,
+        "decay": 0.15,
+        "sustain": 0.3,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "trance_arp_01",
+      "name": "Trance Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Variation of Trance Arp",
+      "parameters": {
+        "osc_type": 1.025,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.512,
+        "attack": 0.0,
+        "decay": 0.2,
+        "sustain": 0.341,
+        "release": 0.127
+      }
+    },
+    {
+      "id": "trance_arp_02",
+      "name": "Trance Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Variation of Trance Arp",
+      "parameters": {
+        "osc_type": 0.965,
+        "filter_cutoff": 0.813,
+        "filter_resonance": 0.387,
+        "attack": 0.049,
+        "decay": 0.165,
+        "sustain": 0.249,
+        "release": 0.042
+      }
+    },
+    {
+      "id": "trance_arp_03",
+      "name": "Trance Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Variation of Trance Arp",
+      "parameters": {
+        "osc_type": 0.985,
+        "filter_cutoff": 0.792,
+        "filter_resonance": 0.393,
+        "attack": 0.013,
+        "decay": 0.076,
+        "sustain": 0.379,
+        "release": 0.029
+      }
+    },
+    {
+      "id": "trance_arp_04",
+      "name": "Trance Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Variation of Trance Arp",
+      "parameters": {
+        "osc_type": 0.93,
+        "filter_cutoff": 0.771,
+        "filter_resonance": 0.452,
+        "attack": 0.0,
+        "decay": 0.223,
+        "sustain": 0.245,
+        "release": 0.038
+      }
+    },
+    {
+      "id": "trance_arp_05",
+      "name": "Trance Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trance",
+        "uplifting",
+        "melodic"
+      ],
+      "description": "Variation of Trance Arp",
+      "parameters": {
+        "osc_type": 1.126,
+        "filter_cutoff": 0.814,
+        "filter_resonance": 0.487,
+        "attack": 0.056,
+        "decay": 0.2,
+        "sustain": 0.298,
+        "release": 0.035
+      }
+    },
+    {
+      "id": "trap_triplet_arp",
+      "name": "Trap Triplet Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Staccato arp for trap patterns",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.4,
+        "attack": 0.001,
+        "decay": 0.08,
+        "sustain": 0.0,
+        "release": 0.06
+      }
+    },
+    {
+      "id": "trap_triplet_arp_01",
+      "name": "Trap Triplet Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Variation of Trap Triplet Arp",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.322,
+        "attack": 0.0,
+        "decay": 0.099,
+        "sustain": 0.0,
+        "release": 0.047
+      }
+    },
+    {
+      "id": "trap_triplet_arp_02",
+      "name": "Trap Triplet Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Variation of Trap Triplet Arp",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.798,
+        "filter_resonance": 0.328,
+        "attack": 0.0,
+        "decay": 0.014,
+        "sustain": 0.0,
+        "release": 0.113
+      }
+    },
+    {
+      "id": "trap_triplet_arp_03",
+      "name": "Trap Triplet Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Variation of Trap Triplet Arp",
+      "parameters": {
+        "osc_type": 1.939,
+        "filter_cutoff": 0.741,
+        "filter_resonance": 0.421,
+        "attack": 0.0,
+        "decay": 0.002,
+        "sustain": 0.016,
+        "release": 0.048
+      }
+    },
+    {
+      "id": "trap_triplet_arp_04",
+      "name": "Trap Triplet Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Variation of Trap Triplet Arp",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.694,
+        "filter_resonance": 0.357,
+        "attack": 0.0,
+        "decay": 0.09,
+        "sustain": 0.053,
+        "release": 0.138
+      }
+    },
+    {
+      "id": "trap_triplet_arp_05",
+      "name": "Trap Triplet Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "trap",
+        "triplet",
+        "staccato"
+      ],
+      "description": "Variation of Trap Triplet Arp",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.684,
+        "filter_resonance": 0.416,
+        "attack": 0.007,
+        "decay": 0.009,
+        "sustain": 0.02,
+        "release": 0.031
+      }
+    },
+    {
+      "id": "soft_arp",
+      "name": "Soft Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Gentle melodic arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.25,
+        "attack": 0.01,
+        "decay": 0.2,
+        "sustain": 0.4,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "soft_arp_01",
+      "name": "Soft Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Variation of Soft Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.617,
+        "filter_resonance": 0.189,
+        "attack": 0.0,
+        "decay": 0.265,
+        "sustain": 0.394,
+        "release": 0.154
+      }
+    },
+    {
+      "id": "soft_arp_02",
+      "name": "Soft Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Variation of Soft Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.282,
+        "attack": 0.044,
+        "decay": 0.142,
+        "sustain": 0.448,
+        "release": 0.216
+      }
+    },
+    {
+      "id": "soft_arp_03",
+      "name": "Soft Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Variation of Soft Arp",
+      "parameters": {
+        "osc_type": 0.035,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.28,
+        "attack": 0.0,
+        "decay": 0.235,
+        "sustain": 0.363,
+        "release": 0.135
+      }
+    },
+    {
+      "id": "soft_arp_04",
+      "name": "Soft Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Variation of Soft Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.617,
+        "filter_resonance": 0.174,
+        "attack": 0.0,
+        "decay": 0.142,
+        "sustain": 0.363,
+        "release": 0.165
+      }
+    },
+    {
+      "id": "soft_arp_05",
+      "name": "Soft Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "soft",
+        "melodic",
+        "gentle"
+      ],
+      "description": "Variation of Soft Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.193,
+        "attack": 0.005,
+        "decay": 0.213,
+        "sustain": 0.332,
+        "release": 0.204
+      }
+    },
+    {
+      "id": "percussive_arp",
+      "name": "Percussive Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Short percussive arp",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.5,
+        "attack": 0.001,
+        "decay": 0.12,
+        "sustain": 0.0,
+        "release": 0.08
+      }
+    },
+    {
+      "id": "percussive_arp_01",
+      "name": "Percussive Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Variation of Percussive Arp",
+      "parameters": {
+        "osc_type": 1.067,
+        "filter_cutoff": 0.827,
+        "filter_resonance": 0.468,
+        "attack": 0.0,
+        "decay": 0.105,
+        "sustain": 0.078,
+        "release": 0.027
+      }
+    },
+    {
+      "id": "percussive_arp_02",
+      "name": "Percussive Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Variation of Percussive Arp",
+      "parameters": {
+        "osc_type": 1.127,
+        "filter_cutoff": 0.841,
+        "filter_resonance": 0.544,
+        "attack": 0.058,
+        "decay": 0.147,
+        "sustain": 0.05,
+        "release": 0.033
+      }
+    },
+    {
+      "id": "percussive_arp_03",
+      "name": "Percussive Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Variation of Percussive Arp",
+      "parameters": {
+        "osc_type": 0.866,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.44,
+        "attack": 0.0,
+        "decay": 0.078,
+        "sustain": 0.078,
+        "release": 0.009
+      }
+    },
+    {
+      "id": "percussive_arp_04",
+      "name": "Percussive Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Variation of Percussive Arp",
+      "parameters": {
+        "osc_type": 0.922,
+        "filter_cutoff": 0.725,
+        "filter_resonance": 0.544,
+        "attack": 0.0,
+        "decay": 0.125,
+        "sustain": 0.011,
+        "release": 0.155
+      }
+    },
+    {
+      "id": "percussive_arp_05",
+      "name": "Percussive Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "percussive",
+        "short",
+        "rhythmic"
+      ],
+      "description": "Variation of Percussive Arp",
+      "parameters": {
+        "osc_type": 1.119,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.512,
+        "attack": 0.0,
+        "decay": 0.054,
+        "sustain": 0.054,
+        "release": 0.036
+      }
+    },
+    {
+      "id": "sine_arp",
+      "name": "Sine Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Clean sine arpeggio",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.2,
+        "attack": 0.003,
+        "decay": 0.18,
+        "sustain": 0.2,
+        "release": 0.12
+      }
+    },
+    {
+      "id": "sine_arp_01",
+      "name": "Sine Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Variation of Sine Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.685,
+        "filter_resonance": 0.135,
+        "attack": 0.0,
+        "decay": 0.189,
+        "sustain": 0.24,
+        "release": 0.067
+      }
+    },
+    {
+      "id": "sine_arp_02",
+      "name": "Sine Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Variation of Sine Arp",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.642,
+        "filter_resonance": 0.268,
+        "attack": 0.003,
+        "decay": 0.157,
+        "sustain": 0.158,
+        "release": 0.137
+      }
+    },
+    {
+      "id": "sine_arp_03",
+      "name": "Sine Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Variation of Sine Arp",
+      "parameters": {
+        "osc_type": 0.157,
+        "filter_cutoff": 0.758,
+        "filter_resonance": 0.231,
+        "attack": 0.012,
+        "decay": 0.124,
+        "sustain": 0.192,
+        "release": 0.158
+      }
+    },
+    {
+      "id": "sine_arp_04",
+      "name": "Sine Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Variation of Sine Arp",
+      "parameters": {
+        "osc_type": 0.121,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.183,
+        "attack": 0.0,
+        "decay": 0.183,
+        "sustain": 0.126,
+        "release": 0.179
+      }
+    },
+    {
+      "id": "sine_arp_05",
+      "name": "Sine Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "sine",
+        "clean",
+        "pure"
+      ],
+      "description": "Variation of Sine Arp",
+      "parameters": {
+        "osc_type": 0.066,
+        "filter_cutoff": 0.721,
+        "filter_resonance": 0.208,
+        "attack": 0.0,
+        "decay": 0.243,
+        "sustain": 0.217,
+        "release": 0.175
+      }
+    },
+    {
+      "id": "resonant_arp",
+      "name": "Resonant Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "High resonance arp",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.75,
+        "attack": 0.002,
+        "decay": 0.14,
+        "sustain": 0.15,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "resonant_arp_01",
+      "name": "Resonant Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Resonant Arp",
+      "parameters": {
+        "osc_type": 0.862,
+        "filter_cutoff": 0.594,
+        "filter_resonance": 0.793,
+        "attack": 0.0,
+        "decay": 0.082,
+        "sustain": 0.102,
+        "release": 0.139
+      }
+    },
+    {
+      "id": "resonant_arp_02",
+      "name": "Resonant Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Resonant Arp",
+      "parameters": {
+        "osc_type": 1.069,
+        "filter_cutoff": 0.551,
+        "filter_resonance": 0.787,
+        "attack": 0.049,
+        "decay": 0.157,
+        "sustain": 0.213,
+        "release": 0.032
+      }
+    },
+    {
+      "id": "resonant_arp_03",
+      "name": "Resonant Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Resonant Arp",
+      "parameters": {
+        "osc_type": 0.985,
+        "filter_cutoff": 0.525,
+        "filter_resonance": 0.809,
+        "attack": 0.0,
+        "decay": 0.155,
+        "sustain": 0.117,
+        "release": 0.063
+      }
+    },
+    {
+      "id": "resonant_arp_04",
+      "name": "Resonant Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Resonant Arp",
+      "parameters": {
+        "osc_type": 0.982,
+        "filter_cutoff": 0.649,
+        "filter_resonance": 0.736,
+        "attack": 0.0,
+        "decay": 0.126,
+        "sustain": 0.102,
+        "release": 0.134
+      }
+    },
+    {
+      "id": "resonant_arp_05",
+      "name": "Resonant Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "resonant",
+        "sharp",
+        "cutting"
+      ],
+      "description": "Variation of Resonant Arp",
+      "parameters": {
+        "osc_type": 1.058,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.813,
+        "attack": 0.001,
+        "decay": 0.153,
+        "sustain": 0.175,
+        "release": 0.137
+      }
+    },
+    {
+      "id": "house_arp",
+      "name": "House Arp",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Classic house arpeggio",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.38,
+        "attack": 0.004,
+        "decay": 0.16,
+        "sustain": 0.25,
+        "release": 0.12
+      }
+    },
+    {
+      "id": "house_arp_01",
+      "name": "House Arp 01",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Variation of House Arp",
+      "parameters": {
+        "osc_type": 0.973,
+        "filter_cutoff": 0.814,
+        "filter_resonance": 0.385,
+        "attack": 0.068,
+        "decay": 0.085,
+        "sustain": 0.314,
+        "release": 0.054
+      }
+    },
+    {
+      "id": "house_arp_02",
+      "name": "House Arp 02",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Variation of House Arp",
+      "parameters": {
+        "osc_type": 0.979,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.367,
+        "attack": 0.041,
+        "decay": 0.085,
+        "sustain": 0.229,
+        "release": 0.089
+      }
+    },
+    {
+      "id": "house_arp_03",
+      "name": "House Arp 03",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Variation of House Arp",
+      "parameters": {
+        "osc_type": 0.937,
+        "filter_cutoff": 0.824,
+        "filter_resonance": 0.335,
+        "attack": 0.001,
+        "decay": 0.092,
+        "sustain": 0.181,
+        "release": 0.167
+      }
+    },
+    {
+      "id": "house_arp_04",
+      "name": "House Arp 04",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Variation of House Arp",
+      "parameters": {
+        "osc_type": 1.138,
+        "filter_cutoff": 0.858,
+        "filter_resonance": 0.406,
+        "attack": 0.061,
+        "decay": 0.104,
+        "sustain": 0.267,
+        "release": 0.159
+      }
+    },
+    {
+      "id": "house_arp_05",
+      "name": "House Arp 05",
+      "category": "Arp",
+      "tags": [
+        "arp",
+        "house",
+        "dance",
+        "groovy"
+      ],
+      "description": "Variation of House Arp",
+      "parameters": {
+        "osc_type": 0.841,
+        "filter_cutoff": 0.749,
+        "filter_resonance": 0.323,
+        "attack": 0.0,
+        "decay": 0.129,
+        "sustain": 0.213,
+        "release": 0.142
+      }
+    }
+  ]
+}
