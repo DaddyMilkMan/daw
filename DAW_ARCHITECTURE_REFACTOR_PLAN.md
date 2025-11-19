@@ -1,4 +1,4 @@
-# Vexel DAW - Professional Architecture Refactoring Plan
+# Zenith DAW - Professional Architecture Refactoring Plan
 
 **Date:** 2025-11-11
 **Objective:** Transform repository from build-script-heavy (59.5%) to audio-engine-focused (50-60%) commercial DAW architecture
@@ -37,7 +37,7 @@
 ### Problems Identified
 
 1. **140MB `zenith-core/build/` directory** with generated Makefiles checked into repo
-2. **3 separate CMake projects** (`zenith-core`, `vexel-daw`, `VexelDAW-Native`)
+2. **3 separate CMake projects** (`zenith-core`, `zenith-daw`, `ZenithDAW-Native`)
 3. **Redundant JUCE FetchContent** in multiple locations
 4. **Makefile dominance** from build artifacts
 
@@ -227,14 +227,14 @@ Our `AudioDrivers.cmake` module detects:
 include(AudioDrivers)
 
 if(VEXEL_AUDIO_ASIO)
-    target_link_libraries(VexelAudioEngine PRIVATE asio_sdk)
+    target_link_libraries(ZenithAudioEngine PRIVATE asio_sdk)
 endif()
 
 if(VEXEL_AUDIO_COREAUDIO)
-    target_link_libraries(VexelAudioEngine PRIVATE coreaudio_driver)
+    target_link_libraries(ZenithAudioEngine PRIVATE coreaudio_driver)
 endif()
 
-vexel_print_audio_config()  # Summary table
+zenith_print_audio_config()  # Summary table
 ```
 
 ---
@@ -470,7 +470,7 @@ log("Ready to record at " .. daw.getTempo() .. " BPM")
 ### New Directory Layout
 
 ```
-vexel-daw/
+zenith-daw/
 │
 ├── CMakeLists.txt                   # 🔧 Root build configuration
 ├── .gitignore                       # ✅ Properly configured
@@ -531,7 +531,7 @@ vexel-daw/
 1. **Consolidate C++ Code**
    ```bash
    # Move existing audio code to new structure
-   mv VexelDAW-Native/Source/Audio/* src/audio/
+   mv ZenithDAW-Native/Source/Audio/* src/audio/
    mv zenith-core/src/Engine.cpp src/audio/
    mv src/juce-engine/Source/* src/audio/
    ```
@@ -540,7 +540,7 @@ vexel-daw/
    ```bash
    # Replace fragmented build files
    rm zenith-core/CMakeLists.txt
-   rm VexelDAW-Native/CMakeLists.txt
+   rm ZenithDAW-Native/CMakeLists.txt
    mv CMakeLists.txt.new CMakeLists.txt
    ```
 
@@ -555,7 +555,7 @@ vexel-daw/
    ```bash
    # Move web UI to auxiliary location
    mkdir -p src/webui
-   mv vexel-daw/src/renderer/services/connectors/* src/webui/cloud-sync/
+   mv zenith-daw/src/renderer/services/connectors/* src/webui/cloud-sync/
    ```
 
 ---
@@ -699,8 +699,8 @@ sudo apt install liblua5.4-dev   # Lua scripting
 
 ```bash
 # Clone repository
-git clone https://github.com/YourOrg/vexel-daw.git
-cd vexel-daw
+git clone https://github.com/YourOrg/zenith-daw.git
+cd zenith-daw
 
 # Configure
 cmake -B build -DCMAKE_BUILD_TYPE=Release \
@@ -711,7 +711,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release \
 cmake --build build --config Release -j8
 
 # Run
-./build/bin/VexelDAW
+./build/bin/ZenithDAW
 ```
 
 ### Build Options
@@ -754,7 +754,7 @@ ctest --output-on-failure
 
 ## Conclusion
 
-This refactoring transforms Vexel DAW from a build-script-heavy prototype into a professional-grade audio workstation:
+This refactoring transforms Zenith DAW from a build-script-heavy prototype into a professional-grade audio workstation:
 
 ✅ **C++ dominance** (55%) establishes audio engine credibility
 ✅ **Modular architecture** enables rapid feature development

@@ -1,5 +1,5 @@
 /**
- * Vexel DAW - Qt/QML Main Application Entry Point
+ * Zenith DAW - Qt/QML Main Application Entry Point
  *
  * This is the main entry point for the Qt/QML-based DAW application.
  * It initializes the Qt application, creates the QML engine, and sets up
@@ -25,9 +25,9 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     // Application metadata
-    app.setOrganizationName("Vexel");
-    app.setOrganizationDomain("vexel.com");
-    app.setApplicationName("Vexel DAW");
+    app.setOrganizationName("Zenith");
+    app.setOrganizationDomain("zenith.com");
+    app.setApplicationName("Zenith DAW");
     app.setApplicationVersion("1.0.0");
 
     // Set application icon
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("audioEngine", &audioEngine);
 
     // Load main QML file
-    const QUrl url(QStringLiteral("qrc:/qt/qml/VexelDAW/qml/main.qml"));
+    const QUrl url(QStringLiteral("qrc:/qt/qml/ZenithDAW/qml/main.qml"));
 
     // Connect to objectCreated signal for error handling
     QObject::connect(
@@ -82,7 +82,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    qInfo() << "Vexel DAW started successfully";
+    qInfo() << "Zenith DAW started successfully";
     qInfo() << "Qt version:" << QT_VERSION_STR;
     qInfo() << "Audio engine initialized";
 

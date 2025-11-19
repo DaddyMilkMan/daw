@@ -1,0 +1,384 @@
+{
+  "presets": [
+    {
+      "name": "Reese Classic",
+      "category": "Bass",
+      "description": "Classic detuned Reese bass",
+      "tags": [
+        "reese",
+        "classic",
+        "dnb"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.45,
+        "filter_resonance": 0.7,
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.9,
+        "release": 0.15
+      }
+    },
+    {
+      "name": "Reese Dark",
+      "category": "Bass",
+      "description": "Dark Reese with low cutoff",
+      "tags": [
+        "reese",
+        "dark",
+        "deep"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.35,
+        "filter_resonance": 0.65,
+        "attack": 0.015,
+        "decay": 0.25,
+        "sustain": 0.85,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Reese Bright",
+      "category": "Bass",
+      "description": "Bright aggressive Reese",
+      "tags": [
+        "reese",
+        "bright",
+        "aggressive"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.75,
+        "attack": 0.005,
+        "decay": 0.2,
+        "sustain": 0.95,
+        "release": 0.12
+      }
+    },
+    {
+      "name": "Growl Heavy",
+      "category": "Bass",
+      "description": "Heavy growling bass",
+      "tags": [
+        "growl",
+        "heavy",
+        "aggressive"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.42,
+        "filter_resonance": 0.8,
+        "attack": 0.008,
+        "decay": 0.28,
+        "sustain": 0.88,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Growl Wobble",
+      "category": "Bass",
+      "description": "Wobble-ready growl bass",
+      "tags": [
+        "growl",
+        "wobble",
+        "dubstep"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.85,
+        "attack": 0.005,
+        "decay": 0.15,
+        "sustain": 0.92,
+        "release": 0.1
+      }
+    },
+    {
+      "name": "Reese Smooth",
+      "category": "Bass",
+      "description": "Smooth liquid Reese",
+      "tags": [
+        "reese",
+        "smooth",
+        "liquid"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.4,
+        "filter_resonance": 0.55,
+        "attack": 0.02,
+        "decay": 0.35,
+        "sustain": 0.8,
+        "release": 0.25
+      }
+    },
+    {
+      "name": "Reese Tight",
+      "category": "Bass",
+      "description": "Tight punchy Reese",
+      "tags": [
+        "reese",
+        "tight",
+        "punchy"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.48,
+        "filter_resonance": 0.72,
+        "attack": 0.002,
+        "decay": 0.18,
+        "sustain": 0.9,
+        "release": 0.08
+      }
+    },
+    {
+      "name": "Growl Nasty",
+      "category": "Bass",
+      "description": "Nasty brutal growl",
+      "tags": [
+        "growl",
+        "nasty",
+        "brutal"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.55,
+        "filter_resonance": 0.9,
+        "attack": 0.003,
+        "decay": 0.22,
+        "sustain": 0.95,
+        "release": 0.12
+      }
+    },
+    {
+      "name": "Reese Wide",
+      "category": "Bass",
+      "description": "Wide stereo Reese",
+      "tags": [
+        "reese",
+        "wide",
+        "stereo"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.52,
+        "filter_resonance": 0.68,
+        "attack": 0.012,
+        "decay": 0.3,
+        "sustain": 0.87,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Growl Gritty",
+      "category": "Bass",
+      "description": "Gritty dirty growl",
+      "tags": [
+        "growl",
+        "gritty",
+        "dirty"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.46,
+        "filter_resonance": 0.82,
+        "attack": 0.006,
+        "decay": 0.2,
+        "sustain": 0.91,
+        "release": 0.14
+      }
+    },
+    {
+      "name": "Reese Neurofunk",
+      "category": "Bass",
+      "description": "Neurofunk style Reese",
+      "tags": [
+        "reese",
+        "neurofunk",
+        "tech"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.78,
+        "attack": 0.004,
+        "decay": 0.16,
+        "sustain": 0.93,
+        "release": 0.09
+      }
+    },
+    {
+      "name": "Growl Sub",
+      "category": "Bass",
+      "description": "Deep sub growl",
+      "tags": [
+        "growl",
+        "sub",
+        "deep"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.38,
+        "filter_resonance": 0.7,
+        "attack": 0.01,
+        "decay": 0.32,
+        "sustain": 0.85,
+        "release": 0.22
+      }
+    },
+    {
+      "name": "Reese Modulated",
+      "category": "Bass",
+      "description": "Evolving modulated Reese",
+      "tags": [
+        "reese",
+        "modulated",
+        "evolving"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.75,
+        "attack": 0.007,
+        "decay": 0.24,
+        "sustain": 0.89,
+        "release": 0.16
+      }
+    },
+    {
+      "name": "Growl Mid",
+      "category": "Bass",
+      "description": "Mid-range growl with presence",
+      "tags": [
+        "growl",
+        "mid",
+        "presence"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.54,
+        "filter_resonance": 0.8,
+        "attack": 0.005,
+        "decay": 0.19,
+        "sustain": 0.9,
+        "release": 0.11
+      }
+    },
+    {
+      "name": "Reese Vintage",
+      "category": "Bass",
+      "description": "Vintage Reese character",
+      "tags": [
+        "reese",
+        "vintage",
+        "classic"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.43,
+        "filter_resonance": 0.62,
+        "attack": 0.015,
+        "decay": 0.28,
+        "sustain": 0.82,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Growl Scream",
+      "category": "Bass",
+      "description": "Screaming intense growl",
+      "tags": [
+        "growl",
+        "scream",
+        "intense"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.62,
+        "filter_resonance": 0.88,
+        "attack": 0.002,
+        "decay": 0.14,
+        "sustain": 0.94,
+        "release": 0.08
+      }
+    },
+    {
+      "name": "Reese Rolling",
+      "category": "Bass",
+      "description": "Rolling drum and bass Reese",
+      "tags": [
+        "reese",
+        "rolling",
+        "dnb"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.47,
+        "filter_resonance": 0.7,
+        "attack": 0.008,
+        "decay": 0.26,
+        "sustain": 0.86,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Growl Thick",
+      "category": "Bass",
+      "description": "Thick fat growl",
+      "tags": [
+        "growl",
+        "thick",
+        "fat"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.44,
+        "filter_resonance": 0.76,
+        "attack": 0.01,
+        "decay": 0.3,
+        "sustain": 0.88,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Reese Square",
+      "category": "Bass",
+      "description": "Square-wave Reese variation",
+      "tags": [
+        "reese",
+        "square",
+        "hollow"
+      ],
+      "parameters": {
+        "osc_type": 0.75,
+        "filter_cutoff": 0.48,
+        "filter_resonance": 0.68,
+        "attack": 0.009,
+        "decay": 0.27,
+        "sustain": 0.84,
+        "release": 0.17
+      }
+    },
+    {
+      "name": "Growl Filter",
+      "category": "Bass",
+      "description": "High resonance filter growl",
+      "tags": [
+        "growl",
+        "filter",
+        "resonant"
+      ],
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.92,
+        "attack": 0.004,
+        "decay": 0.2,
+        "sustain": 0.92,
+        "release": 0.1
+      }
+    }
+  ]
+}

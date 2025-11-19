@@ -1,7 +1,7 @@
 /**
  * AI Bridge Server - Example Implementation
  *
- * WebSocket server for communication between Vexel DAW and external AI services.
+ * WebSocket server for communication between Zenith DAW and external AI services.
  * This is a reference implementation showing how to build an AI Bridge server.
  *
  * Usage:
@@ -12,10 +12,13 @@
  */
 
 const WebSocket = require('ws');
+const { InstrumentAIAdapter } = require('./InstrumentAIAdapter');
 
 // Configuration
 const PORT = 8765;
 const HOST = 'localhost';
+const COMMAND_API_URL = process.env.COMMAND_API_URL || 'http://localhost:8080/command';
+const LLM_PROVIDER = process.env.LLM_PROVIDER || 'mock'; // 'openai', 'anthropic', or 'mock'
 
 // Message types
 const MessageType = {
@@ -23,6 +26,8 @@ const MessageType = {
   GENERATE_CHORDS: 'generate_chords',
   GENERATE_DRUMS: 'generate_drums',
   GENERATE_BASS: 'generate_bass',
+  SUGGEST_PRESET: 'suggest_preset',
+  TWEAK_PRESET: 'tweak_preset',
   PLAY: 'play',
   STOP: 'stop',
   PAUSE: 'pause',
@@ -35,6 +40,8 @@ const MessageType = {
   STATUS: 'status',
   CAPABILITIES: 'capabilities',
   GENERATION_COMPLETE: 'generation_complete',
+  PRESET_SUGGESTION: 'preset_suggestion',
+  PRESET_TWEAKS: 'preset_tweaks',
 };
 
 // Server state
@@ -46,6 +53,36 @@ let serverState = {
   scale: 'major',
   activeModels: ['melody', 'chords', 'drums'],
 };
+
+// Initialize InstrumentAIAdapter
+const instrumentAdapter = new InstrumentAIAdapter({
+  sendCommand: async (command) => {
+    console.log(`📤 Sending CommandAPI request: ${command.command}`);
+    try {
+      const response = await fetch(COMMAND_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(command),
+      });
+      const data = await response.json();
+      console.log(`📥 CommandAPI response: ${data.status}`);
+      return data;
+    } catch (error) {
+      console.error('❌ CommandAPI error:', error);
+      throw new Error(`CommandAPI unreachable: ${error.message}`);
+    }
+  },
+  callLLM: async (prompt) => {
+    console.log(`🤖 Calling LLM (${LLM_PROVIDER})...`);
+
+    // For now, use mock LLM responses
+    // TODO: Replace with actual LLM integration (OpenAI, Anthropic, etc.)
+    return mockLLMCall(prompt);
+  },
+});
+
+console.log(`🤖 LLM Provider: ${LLM_PROVIDER}`);
+console.log(`🔌 CommandAPI URL: ${COMMAND_API_URL}`);
 
 // Create WebSocket server
 const wss = new WebSocket.Server({ port: PORT, host: HOST });
@@ -146,6 +183,12 @@ async function handleMessage(message) {
 
     case MessageType.GET_CAPABILITIES:
       return handleGetCapabilities(id);
+
+    case MessageType.SUGGEST_PRESET:
+      return await handleSuggestPreset(id, payload);
+
+    case MessageType.TWEAK_PRESET:
+      return await handleTweakPreset(id, payload);
 
     default:
       return {
@@ -430,8 +473,152 @@ function handleGetCapabilities(requestId) {
       maxSequenceLength: 512,
       supportedScales: ['major', 'minor', 'pentatonic', 'blues'],
       supportedDrumStyles: ['trap', 'house', 'techno', 'rock'],
+      instrumentAI: {
+        suggestPreset: true,
+        tweakPreset: true,
+        supportedInstruments: ['zenith_poly_synth', 'zenith_sampler'],
+      },
     },
   };
+}
+
+/**
+ * Suggest preset based on musical intent
+ */
+async function handleSuggestPreset(requestId, payload) {
+  console.log(`🎹 Suggesting preset: genre=${payload.genre}, mood=${payload.mood}, role=${payload.role}`);
+
+  try {
+    const suggestion = await instrumentAdapter.suggestPreset({
+      genre: payload.genre,
+      mood: payload.mood,
+      role: payload.role,
+      instrumentId: payload.instrumentId || 'zenith_poly_synth',
+      trackId: payload.trackId,
+    });
+
+    return {
+      type: MessageType.PRESET_SUGGESTION,
+      requestId,
+      timestamp: Date.now(),
+      payload: {
+        presetId: suggestion.presetId,
+        presetName: suggestion.presetName,
+        reasoning: suggestion.reasoning,
+        genre: payload.genre,
+        mood: payload.mood,
+        role: payload.role,
+      },
+    };
+  } catch (error) {
+    console.error('❌ Preset suggestion error:', error);
+    return {
+      type: MessageType.ERROR,
+      requestId,
+      timestamp: Date.now(),
+      payload: {
+        code: 'PRESET_SUGGESTION_ERROR',
+        message: error.message,
+      },
+    };
+  }
+}
+
+/**
+ * Tweak preset with natural language
+ */
+async function handleTweakPreset(requestId, payload) {
+  console.log(`🎛️  Tweaking preset: trackId=${payload.trackId}, instructions="${payload.instructions}"`);
+
+  try {
+    const tweaks = await instrumentAdapter.tweakPreset({
+      trackId: payload.trackId,
+      instructions: payload.instructions,
+    });
+
+    return {
+      type: MessageType.PRESET_TWEAKS,
+      requestId,
+      timestamp: Date.now(),
+      payload: {
+        parameters: tweaks.parameters,
+        reasoning: tweaks.reasoning,
+        commands: tweaks.commands,
+        instructions: payload.instructions,
+      },
+    };
+  } catch (error) {
+    console.error('❌ Preset tweak error:', error);
+    return {
+      type: MessageType.ERROR,
+      requestId,
+      timestamp: Date.now(),
+      payload: {
+        code: 'PRESET_TWEAK_ERROR',
+        message: error.message,
+      },
+    };
+  }
+}
+
+/**
+ * Mock LLM implementation for testing
+ * Replace this with actual LLM API calls (OpenAI, Anthropic, etc.)
+ */
+function mockLLMCall(prompt) {
+  console.log('🤖 Mock LLM processing...');
+
+  // Detect if this is a preset selection or parameter tweak request
+  if (prompt.systemPrompt.includes('select the most appropriate preset')) {
+    // Preset selection mock
+    return JSON.stringify({
+      presetId: 'bright_pluck_1234567891', // Default to first preset in most cases
+      reasoning: 'This preset matches the requested genre, mood, and role based on its tags and characteristics.',
+    });
+  } else if (prompt.systemPrompt.includes('translate natural language instructions')) {
+    // Parameter tweak mock - parse instructions and generate sensible defaults
+    const instructions = prompt.userPrompt.toLowerCase();
+    const params = {};
+
+    // Simple keyword matching for common instructions
+    if (instructions.includes('dark') || instructions.includes('darker')) {
+      params.filter_cutoff = 0.35;
+    }
+    if (instructions.includes('bright') || instructions.includes('brighter')) {
+      params.filter_cutoff = 0.85;
+    }
+    if (instructions.includes('detune') || instructions.includes('wide') || instructions.includes('chorus')) {
+      params.unison_detune = 0.45;
+    }
+    if (instructions.includes('reverb') || instructions.includes('space') || instructions.includes('depth')) {
+      params.reverb_send = 0.3;
+    }
+    if (instructions.includes('aggressive') || instructions.includes('harsh')) {
+      params.filter_resonance = 0.7;
+      params.saturation = 0.6;
+    }
+    if (instructions.includes('smooth') || instructions.includes('soft')) {
+      params.filter_resonance = 0.2;
+      params.attack = 0.05;
+    }
+    if (instructions.includes('punch') || instructions.includes('punchy')) {
+      params.attack = 0.001;
+      params.release = 0.15;
+    }
+    if (instructions.includes('movement') || instructions.includes('modulation')) {
+      params.lfo_depth = 0.25;
+    }
+
+    return JSON.stringify({
+      parameters: params,
+      reasoning: `Interpreted instructions to adjust parameters based on keywords: ${Object.keys(params).join(', ')}`,
+    });
+  }
+
+  // Fallback
+  return JSON.stringify({
+    error: 'Unknown prompt type',
+  });
 }
 
 // Helper
