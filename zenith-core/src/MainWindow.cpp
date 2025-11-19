@@ -28,7 +28,7 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     setWantsKeyboardFocus(true);
 
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 7: Wingman AI Integration", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 9: Arranger MVP + Wingman AI", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -74,9 +74,9 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     };
     addAndMakeVisible(importButton);
 
-    // Phase 4: Arranger (now using ArrangerView from master for better automation integration)
-    // arrangerComponent = std::make_unique<ArrangerComponent>(engine);  // Disabled - using ArrangerView instead
-    // addAndMakeVisible(arrangerComponent.get());
+    // Phase 9: Create ArrangerComponent with interactive clip editing
+    arrangerComponent = std::make_unique<ArrangerComponent>(projectState);
+    addAndMakeVisible(arrangerComponent.get());
 
     // Phase 7: Create Wingman AI console panel
     wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
@@ -85,36 +85,6 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     // Create Instrument Browser Panel
     instrumentBrowserPanel = std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
     addAndMakeVisible(instrumentBrowserPanel.get());
-
-    // Integration: Create ArrangerView
-    arrangerView = std::make_unique<ArrangerView>(projectState);
-    arrangerView->setOpenPianoRollCallback([this](juce::String trackId, juce::String clipId) {
-        openPianoRoll(trackId, clipId);
-    });
-    addAndMakeVisible(arrangerView.get());
-
-    // Integration: Create automation buttons container
-    addAndMakeVisible(automationButtonsContainer);
-
-    // Create automation toggle buttons for demo tracks
-    // (In real implementation, would create dynamically as tracks are added)
-    auto& state = projectState.getState();
-    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
-    if (tracksNode.isValid())
-    {
-        for (auto track : tracksNode)
-        {
-            juce::String trackId = track[ProjectState::PROP_ID].toString();
-            auto button = std::make_unique<juce::TextButton>("A");
-            button->setTooltip("Toggle automation for " + track[ProjectState::PROP_NAME].toString());
-            button->onClick = [this, trackId]() {
-                bool visible = arrangerView->isTrackAutomationVisible(trackId);
-                arrangerView->setTrackAutomationVisible(trackId, !visible);
-            };
-            automationButtonsContainer.addAndMakeVisible(button.get());
-            automationButtons[trackId] = std::move(button);
-        }
-    }
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -168,7 +138,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background (arranger handles its own painting)
+    // Background (ArrangerComponent handles its own painting)
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 }
 
@@ -206,7 +176,7 @@ void MainComponent::resized()
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
 
-    // Phase 5: Layout Wingman panel on the right (400px width)
+    // Phase 7: Layout Wingman panel on the right (400px width)
     if (wingmanPanel != nullptr)
     {
         auto wingmanBounds = bounds.removeFromRight(400);
@@ -220,25 +190,9 @@ void MainComponent::resized()
         instrumentBrowserPanel->setBounds(browserBounds);
     }
 
-    // Integration: ArrangerView takes remaining space (combines Phase 4 arranger + automation)
-    auto arrangerBounds = bounds;
-
-    // Automation buttons (left side, 30 pixels wide)
-    auto automationButtonArea = arrangerBounds.removeFromLeft(30);
-    automationButtonsContainer.setBounds(automationButtonArea);
-
-    // Layout automation buttons vertically
-    int buttonY = 0;
-    for (auto& [trackId, button] : automationButtons)
-    {
-        button->setBounds(0, buttonY, 30, 30);
-        buttonY += 60;  // Match track height from ArrangerView
-    }
-
-    if (arrangerView)
-    {
-        arrangerView->setBounds(arrangerBounds);
-    }
+    // Phase 9: ArrangerComponent takes the remaining central area
+    if (arrangerComponent != nullptr)
+        arrangerComponent->setBounds(bounds);
 }
 
 void MainComponent::timerCallback()
@@ -382,14 +336,13 @@ MainWindow::MainWindow(const juce::String& name)
     // Integration: Create clip synchronizer
     clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState, *engine);
 
-    // Add some demo tracks for testing UI integration
-    projectState->addTrack("MIDI Track 1", "midi");
-    projectState->addTrack("Audio Track 1", "audio");
-    projectState->addTrack("MIDI Track 2", "midi");
+    // Add some demo tracks for testing (Phase 9 + existing features)
+    projectState->addTrack("Audio 1", "audio");
+    projectState->addTrack("MIDI 1", "midi");
+    projectState->addTrack("Audio 2", "audio");
 
-    // Create main content (Phase 7: pass AIBridgeClient for AI mode)
+    // Create main content (Phase 7 + Phase 9: Arranger + Wingman AI)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
-
 
     // Create menu bar
     menuBar = std::make_unique<ZenithMenuBar>(*this);
@@ -410,10 +363,6 @@ MainWindow::MainWindow(const juce::String& name)
 
     // Initialize audio engine after window is visible
     engine->initialize();
-
-    // Integration: Start clip synchronizer
-    // (In real implementation, would start when recording is enabled)
-    // clipSynchronizer->start(30);  // 30 Hz update rate
 
     DBG("MainWindow created and initialized");
 }
