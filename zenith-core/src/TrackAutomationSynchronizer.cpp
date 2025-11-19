@@ -1,39 +1,44 @@
 /**
  * @file TrackAutomationSynchronizer.cpp
- * @brief Implementation of RT-safe automation synchronization
+ * @brief Automation synchronizer implementation
  */
 
 #include "../include/TrackAutomationSynchronizer.h"
-#include "../include/ProjectState.h"
-#include "../include/Engine.h"
+
+// Forward declare Track from namespace
 #include "../Source/engine/Track.h"
 
 //==============================================================================
 TrackAutomationSynchronizer::TrackAutomationSynchronizer(ProjectState& ps, Engine& eng)
-    : projectState(ps)
-    , engine(eng)
+    : projectState(ps), engine(eng)
 {
-    DBG("TrackAutomationSynchronizer: Created");
+    DBG("TrackAutomationSynchronizer: Constructor");
+
+    // Listen to the entire ProjectState tree for automation changes
+    projectState.getState().addListener(this);
+
+    // Build initial track mapping
+    rebuildListeners();
 }
 
 TrackAutomationSynchronizer::~TrackAutomationSynchronizer()
 {
-    stop();
-    DBG("TrackAutomationSynchronizer: Destroyed");
+    DBG("TrackAutomationSynchronizer: Destructor");
+
+    // Stop timer
+    stopTimer();
+
+    // Remove listener
+    projectState.getState().removeListener(this);
 }
 
 //==============================================================================
-// Control
-//==============================================================================
-
 void TrackAutomationSynchronizer::start(int updateRateHz)
 {
-    if (isTimerRunning())
-        return;
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    jassert(updateRateHz > 0 && updateRateHz <= 1000);
 
-    rebuildTrackIdMap();
-
-    int intervalMs = juce::jmax(1, 1000 / updateRateHz);
+    int intervalMs = 1000 / updateRateHz;
     startTimer(intervalMs);
 
     DBG("TrackAutomationSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
@@ -41,196 +46,244 @@ void TrackAutomationSynchronizer::start(int updateRateHz)
 
 void TrackAutomationSynchronizer::stop()
 {
-    if (!isTimerRunning())
-        return;
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     stopTimer();
+
     DBG("TrackAutomationSynchronizer: Stopped");
 }
 
 //==============================================================================
-// Timer Callback
+// Timer Callback (MESSAGE THREAD)
 //==============================================================================
 
 void TrackAutomationSynchronizer::timerCallback()
 {
-    // MESSAGE THREAD ONLY
+    // MESSAGE THREAD - Safe to access ValueTree and call Track setters
 
-    // Check if track count changed (need to rebuild ID map)
-    int currentTrackCount = engine.getNumTracks();
-    if (currentTrackCount != lastTrackCount)
+    // For now, use a simple frame counter approach
+    // In a real implementation, Engine would expose playback position
+    static juce::int64 frameCounter = 0;
+
+    if (!engine.isPlaying())
     {
-        rebuildTrackIdMap();
-        lastTrackCount = currentTrackCount;
+        frameCounter = 0;  // Reset on stop to ensure automation starts from beginning
+        return;  // Only update during playback
     }
 
-    // Get current playback position in beats
-    // For now, we'll use a simple conversion from samples to beats
-    // In a full implementation, this would come from the Engine's transport
-    double sampleRate = engine.getSampleRate();
+    // Get playback position in samples from engine
+    // Note: Engine would need to expose this - for now we'll add a method
+    // For MVP, we can use a simplified approach
+
+    // Get tempo and sample rate
     double tempo = projectState.getTempo();
+    double sampleRate = engine.getSampleRate();
 
-    // Calculate beats per second
-    double beatsPerSecond = tempo / 60.0;
+    // Estimate beats from samples
+    // beats = (samples / sampleRate) * (tempo / 60.0)
+    double playbackBeats = (frameCounter / sampleRate) * (tempo / 60.0);
 
-    // For now, always start from beat 0 if not playing
-    // TODO: Wire this to actual Engine playback position
-    double timeBeats = 0.0;
+    // Update all tracks with automation
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid())
+        return;
 
-    if (engine.isPlaying())
+    int trackIndex = 0;
+    for (auto trackNode : tracksNode)
     {
-        // Simplified: in a real implementation, Engine would expose playbackPosition in beats
-        // For now, we'll just increment based on time
-        // This is a placeholder - actual implementation should read from Engine
-        static double lastTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
-        double currentTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
-        double deltaTime = currentTime - lastTime;
+        if (!trackNode.hasType(ProjectState::ID_TRACK))
+            continue;
 
-        static double accumulatedBeats = 0.0;
-        accumulatedBeats += deltaTime * beatsPerSecond;
-        timeBeats = accumulatedBeats;
+        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
 
-        lastTime = currentTime;
-    }
-    else
-    {
-        // Reset when stopped
-        static double lastTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
-        lastTime = juce::Time::getMillisecondCounterHiRes() / 1000.0;
-        static double& accumulatedBeats = *new double(0.0);
-        accumulatedBeats = 0.0;
-    }
-
-    // Sample automation for each track
-    const auto& tracks = engine.tracks();
-    for (size_t i = 0; i < tracks.size() && i < trackIdMap.size(); ++i)
-    {
-        if (tracks[i] != nullptr)
+        // Get corresponding engine track
+        if (trackIndex < engine.getNumTracks())
         {
-            sampleTrackAutomation(tracks[i].get(), trackIdMap[i], timeBeats);
+            auto& tracks = engine.tracks();
+            if (trackIndex < static_cast<int>(tracks.size()))
+            {
+                auto* track = tracks[trackIndex].get();
+                if (track != nullptr)
+                {
+                    updateTrackAutomation(trackId, track, playbackBeats);
+                }
+            }
         }
+
+        ++trackIndex;
     }
+
+    // Increment frame counter (rough estimate)
+    // In real impl, this would come from Engine
+    frameCounter += static_cast<juce::int64>(sampleRate / 60.0);  // ~1/60 sec
+}
+
+//==============================================================================
+// ValueTree::Listener (MESSAGE THREAD)
+//==============================================================================
+
+void TrackAutomationSynchronizer::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    juce::ignoreUnused(tree, property);
+    // Could optimize here to only rebuild on automation changes
+}
+
+void TrackAutomationSynchronizer::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    juce::ignoreUnused(parent);
+
+    // If automation node or envelope added, rebuild
+    if (child.hasType(ProjectState::ID_AUTOMATION) ||
+        child.hasType(ProjectState::ID_ENVELOPE) ||
+        child.hasType(ProjectState::ID_POINT))
+    {
+        rebuildListeners();
+    }
+}
+
+void TrackAutomationSynchronizer::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
+{
+    juce::ignoreUnused(parent, index);
+
+    // If automation node or envelope removed, rebuild
+    if (child.hasType(ProjectState::ID_AUTOMATION) ||
+        child.hasType(ProjectState::ID_ENVELOPE) ||
+        child.hasType(ProjectState::ID_POINT))
+    {
+        rebuildListeners();
+    }
+}
+
+void TrackAutomationSynchronizer::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
+{
+    juce::ignoreUnused(parent, oldIndex, newIndex);
+}
+
+void TrackAutomationSynchronizer::valueTreeParentChanged(juce::ValueTree& tree)
+{
+    juce::ignoreUnused(tree);
 }
 
 //==============================================================================
 // Helper Methods
 //==============================================================================
 
-void TrackAutomationSynchronizer::sampleTrackAutomation(zenith::Track* track,
-                                                        const juce::String& trackId,
-                                                        double timeBeats)
+double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelope, double timeBeats) const
 {
-    if (track == nullptr)
-        return;
+    if (!envelope.isValid() || envelope.getNumChildren() == 0)
+        return -1.0;  // No automation
 
-    // Sample volume automation
-    if (projectState.hasAutomation(trackId, "volume"))
+    // Get all points sorted by time (they should already be sorted)
+    int numPoints = envelope.getNumChildren();
+
+    // Find the two points that bracket the current time
+    juce::ValueTree prevPoint, nextPoint;
+
+    for (int i = 0; i < numPoints; ++i)
     {
-        double value = sampleAutomationValue(trackId, "volume", timeBeats);
-        track->setVolume(static_cast<float>(value));
-    }
+        auto point = envelope.getChild(i);
+        if (!point.hasType(ProjectState::ID_POINT))
+            continue;
 
-    // Sample pan automation
-    if (projectState.hasAutomation(trackId, "pan"))
-    {
-        double value = sampleAutomationValue(trackId, "pan", timeBeats);
-        track->setPan(static_cast<float>(value));
-    }
-
-    // Sample mute automation
-    if (projectState.hasAutomation(trackId, "mute"))
-    {
-        double value = sampleAutomationValue(trackId, "mute", timeBeats);
-        track->setMuted(value > 0.5); // 0 = unmuted, 1 = muted
-    }
-}
-
-double TrackAutomationSynchronizer::sampleAutomationValue(const juce::String& trackId,
-                                                          const juce::String& paramId,
-                                                          double timeBeats)
-{
-    auto envelope = projectState.getAutomationEnvelope(trackId, paramId);
-    if (!envelope.isValid())
-        return 0.0;
-
-    auto pointsNode = envelope.getChildWithName(ProjectState::ID_POINTS);
-    if (!pointsNode.isValid() || pointsNode.getNumChildren() == 0)
-        return 0.0;
-
-    // Find the two points surrounding the current time
-    juce::ValueTree prevPoint;
-    juce::ValueTree nextPoint;
-
-    for (int i = 0; i < pointsNode.getNumChildren(); ++i)
-    {
-        auto point = pointsNode.getChild(i);
         double pointTime = point[ProjectState::PROP_TIME_BEATS];
 
         if (pointTime <= timeBeats)
         {
             prevPoint = point;
         }
-        else
+        else if (!nextPoint.isValid())
         {
             nextPoint = point;
             break;
         }
     }
 
-    // If we're before the first point, use first point's value
+    // No points before current time - use first point value
     if (!prevPoint.isValid() && nextPoint.isValid())
-    {
         return nextPoint[ProjectState::PROP_VALUE];
-    }
 
-    // If we're after the last point, use last point's value
+    // No points after current time - hold last value
     if (prevPoint.isValid() && !nextPoint.isValid())
-    {
         return prevPoint[ProjectState::PROP_VALUE];
-    }
 
-    // If we have both points, interpolate
-    if (prevPoint.isValid() && nextPoint.isValid())
-    {
-        double time1 = prevPoint[ProjectState::PROP_TIME_BEATS];
-        double value1 = prevPoint[ProjectState::PROP_VALUE];
-        double time2 = nextPoint[ProjectState::PROP_TIME_BEATS];
-        double value2 = nextPoint[ProjectState::PROP_VALUE];
+    // No points at all
+    if (!prevPoint.isValid() && !nextPoint.isValid())
+        return -1.0;
 
-        return interpolate(time1, value1, time2, value2, timeBeats);
-    }
+    // Interpolate between two points
+    double prevTime = prevPoint[ProjectState::PROP_TIME_BEATS];
+    double prevValue = prevPoint[ProjectState::PROP_VALUE];
+    double nextTime = nextPoint[ProjectState::PROP_TIME_BEATS];
+    double nextValue = nextPoint[ProjectState::PROP_VALUE];
 
-    return 0.0;
-}
-
-double TrackAutomationSynchronizer::interpolate(double time1, double value1,
-                                                double time2, double value2,
-                                                double currentTime)
-{
-    if (time2 <= time1)
-        return value1;
-
-    double t = (currentTime - time1) / (time2 - time1);
+    // Linear interpolation
+    double t = (timeBeats - prevTime) / (nextTime - prevTime);
     t = juce::jlimit(0.0, 1.0, t);
 
-    return value1 + t * (value2 - value1);
+    return prevValue + t * (nextValue - prevValue);
 }
 
-void TrackAutomationSynchronizer::rebuildTrackIdMap()
+void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trackId,
+                                                         zenith::Track* track,
+                                                         double playbackBeats)
 {
-    trackIdMap.clear();
+    if (track == nullptr)
+        return;
 
-    // Get tracks from ProjectState
+    // Sample and apply volume automation
+    if (projectState.hasAutomation(trackId, "volume"))
+    {
+        auto envelope = projectState.getAutomationEnvelope(trackId, "volume");
+        double value = sampleEnvelope(envelope, playbackBeats);
+        if (value >= 0.0)
+        {
+            track->setVolume(static_cast<float>(value));
+        }
+    }
+
+    // Sample and apply pan automation
+    if (projectState.hasAutomation(trackId, "pan"))
+    {
+        auto envelope = projectState.getAutomationEnvelope(trackId, "pan");
+        double value = sampleEnvelope(envelope, playbackBeats);
+        if (value >= -1.0)  // Valid pan values are -1 to 1
+        {
+            track->setPan(static_cast<float>(value));
+        }
+    }
+
+    // Sample and apply mute automation
+    if (projectState.hasAutomation(trackId, "mute"))
+    {
+        auto envelope = projectState.getAutomationEnvelope(trackId, "mute");
+        double value = sampleEnvelope(envelope, playbackBeats);
+        if (value >= 0.0)
+        {
+            track->setMuted(value >= 0.5);  // Binary: 0 or 1
+        }
+    }
+}
+
+void TrackAutomationSynchronizer::rebuildListeners()
+{
+    // Clear existing mapping
+    trackIdToIndex.clear();
+
+    // Rebuild mapping from ProjectState track IDs to Engine track indices
     auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
     if (!tracksNode.isValid())
         return;
 
-    for (auto track : tracksNode)
+    int index = 0;
+    for (auto trackNode : tracksNode)
     {
-        juce::String trackId = track[ProjectState::PROP_ID].toString();
-        trackIdMap.push_back(trackId);
+        if (trackNode.hasType(ProjectState::ID_TRACK))
+        {
+            juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+            trackIdToIndex[trackId] = index;
+            ++index;
+        }
     }
 
-    DBG("TrackAutomationSynchronizer: Rebuilt track ID map with " +
-        juce::String(trackIdMap.size()) + " tracks");
+    DBG("TrackAutomationSynchronizer: Rebuilt listeners for " + juce::String(trackIdToIndex.size()) + " tracks");
 }

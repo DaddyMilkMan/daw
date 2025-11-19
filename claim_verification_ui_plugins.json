@@ -1,0 +1,183 @@
+{
+  "verification_metadata": {
+    "timestamp": "2025-11-17T00:00:00Z",
+    "scope": "ui-ux, plugins-midi, command-api, branches-prs domains",
+    "total_claims_processed": 13,
+    "status_breakdown": {
+      "true": 10,
+      "partial": 3
+    }
+  },
+  "verified_claims": [
+    {
+      "claim_id": "ui-001",
+      "statement": "ArrangementView component exists for timeline/clips view",
+      "domain": "ui-ux",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Arrangement/ArrangementComponent.cpp",
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Arrangement/ArrangementComponent.h"
+      ],
+      "notes": "Found 2 matching files"
+    },
+    {
+      "claim_id": "ui-002",
+      "statement": "MixerComponent exists for mixer view",
+      "domain": "ui-ux",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/zenith-core/Source/engine/MixerChannel.cpp",
+        "/home/user/daw/VexelDAW-Native/Source/Audio/MixerChannel.cpp",
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Mixer/MixerComponent.cpp",
+        "/home/user/daw/zenith-core/Source/engine/MixerChannel.h",
+        "/home/user/daw/VexelDAW-Native/Source/Audio/MixerChannel.h",
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Mixer/MixerComponent.h"
+      ],
+      "notes": "Found 6 matching files"
+    },
+    {
+      "claim_id": "ui-003",
+      "statement": "MainWindow exists as application window",
+      "domain": "ui-ux",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/zenith-core/src/MainWindow.cpp",
+        "/home/user/daw/zenith-core/include/MainWindow.h",
+        "/home/user/daw/docs/code-templates/MainWindow.h"
+      ],
+      "notes": "Found 3 matching files"
+    },
+    {
+      "claim_id": "ui-004",
+      "statement": "TransportComponent exists for play/stop/record controls",
+      "domain": "ui-ux",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Transport/TransportComponent.cpp",
+        "/home/user/daw/VexelDAW-Native/Source/GUI/Transport/TransportComponent.h"
+      ],
+      "notes": "Found 2 matching files"
+    },
+    {
+      "claim_id": "plugin-001",
+      "statement": "PluginHost component exists for VST3/AU hosting",
+      "domain": "plugins-midi",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/VexelDAW-Native/Source/Audio/PluginHost.cpp",
+        "/home/user/daw/src/juce-engine/Source/PluginHost.cpp",
+        "/home/user/daw/VexelDAW-Native/Source/Audio/PluginHost.h",
+        "/home/user/daw/src/juce-engine/Source/PluginHost.h"
+      ],
+      "notes": "Found 4 matching files"
+    },
+    {
+      "claim_id": "plugin-002",
+      "statement": "MidiRouter exists for MIDI I/O routing",
+      "domain": "plugins-midi",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/src/audio/AudioEngine.cpp: L14: m_midiRouter = std::make_unique<MidiRouter>();, L377: m_midiRouter->addMidiEvent(message, source->getName());",
+        "/home/user/daw/src/audio/AudioEngine.h: L16: #include \"MidiRouter.h\", L137: MidiRouter* getMidiRouter() { return m_midiRouter.get(); }",
+        "/home/user/daw/src/audio/MidiRouter.h: L19: * MIDI routing destination, L57: // MIDI Routing"
+      ],
+      "notes": "Found references in 3 files"
+    },
+    {
+      "claim_id": "cmd-001",
+      "statement": "CommandAPI exists with track operations",
+      "domain": "command-api",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/zenith-core/src/CommandAPI.cpp",
+        "/home/user/daw/zenith-core/include/CommandAPI.h"
+      ],
+      "notes": "Found 2 matching files"
+    },
+    {
+      "claim_id": "cmd-002",
+      "statement": "CommandAPI supports transport operations",
+      "domain": "command-api",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/zenith-core/Source/engine/Clip.cpp: L33: void Track::Clip::prepareToPlay(int samplesPerBlockExpected, double sampleRate), L40: audioSource->prepareToPlay(samplesPerBlockExpected, sampleRate);",
+        "/home/user/daw/zenith-core/src/MainWindow.cpp: L47: stopButton.setButtonText(\"Stop\");, L48: stopButton.onClick = [this]() {",
+        "/home/user/daw/zenith-core/src/Engine.cpp: L35: // Stop automation if running, L38: automationSynchronizer->stop();",
+        "/home/user/daw/VexelDAW-Native/Source/Audio/Clip.cpp: L27: void Track::Clip::prepareToPlay(int samplesPerBlockExpected, double sampleRate), L34: audioSource->prepareToPlay(samplesPerBlockExpected, sampleRate);",
+        "/home/user/daw/VexelDAW-Native/Source/Audio/AudioEngine.cpp: L21: // Ensure we're stopped before destruction, L135: void AudioEngine::stop()"
+      ],
+      "notes": "Found references in 39 files"
+    },
+    {
+      "claim_id": "cmd-003",
+      "statement": "CommandAPI supports undo/redo operations",
+      "domain": "command-api",
+      "section": 3,
+      "status": "true",
+      "evidence": [
+        "/home/user/daw/zenith-core/src/ProjectState.cpp: L270: // Undo/Redo, L282: void ProjectState::redo()",
+        "/home/user/daw/VexelDAW-Native/Source/MainComponent.cpp: L129: commandManager.getKeyMappings()->addKeyPress (CommandIDs::redo,, L149: commands.add (CommandIDs::redo);",
+        "/home/user/daw/src/qt-qml/bridge/AudioEngineInterface.cpp: L567: // Undo/Redo stubs, L574: void AudioEngineInterface::redo()",
+        "/home/user/daw/docs/code-templates/ProjectState.cpp: L102: // Clear undo history (fresh start), L103: undoManager.clearUndoHistory();",
+        "/home/user/daw/zenith-core/include/ProjectState.h: L14: * - Built-in undo/redo support, L261: // Undo/Redo"
+      ],
+      "notes": "Found references in 9 files"
+    },
+    {
+      "claim_id": "hotspot-001",
+      "statement": "Engine.cpp is a CRITICAL conflict hotspot (touched by multiple branches)",
+      "domain": "branches-prs",
+      "section": 4,
+      "status": "true",
+      "evidence": [
+        "File exists: /home/user/daw/zenith-core/src/Engine.cpp, /home/user/daw/docs/code-templates/Engine.cpp",
+        "Touched by 2 branch(es): claude/juce-native-refactor-01B7w3xRPCy2nVYfdLA2fSVq, claude/verify-ui-plugins-hotspots-01MJHFZmDpzgHSp4s6dzkQoj"
+      ],
+      "notes": "Claimed CRITICAL risk; 2 branches touch this file"
+    },
+    {
+      "claim_id": "hotspot-002",
+      "statement": "MainWindow.* is a HIGH conflict hotspot",
+      "domain": "branches-prs",
+      "section": 4,
+      "status": "partial",
+      "evidence": [
+        "File exists: /home/user/daw/zenith-core/build/CMakeFiles/ZenithDAW.dir/src/MainWindow.cpp.o.d, /home/user/daw/zenith-core/build/CMakeFiles/ZenithDAW.dir/src/MainWindow.cpp.o, /home/user/daw/zenith-core/src/MainWindow.cpp",
+        "Touched by 2 branch(es): claude/juce-native-refactor-01B7w3xRPCy2nVYfdLA2fSVq, claude/verify-ui-plugins-hotspots-01MJHFZmDpzgHSp4s6dzkQoj"
+      ],
+      "notes": "Claimed HIGH risk; 2 branches touch this file"
+    },
+    {
+      "claim_id": "hotspot-003",
+      "statement": "CommandAPI.* is a HIGH conflict hotspot",
+      "domain": "branches-prs",
+      "section": 4,
+      "status": "partial",
+      "evidence": [
+        "File exists: /home/user/daw/zenith-core/src/CommandAPI.cpp, /home/user/daw/zenith-core/include/CommandAPI.h",
+        "Touched by 2 branch(es): claude/juce-native-refactor-01B7w3xRPCy2nVYfdLA2fSVq, claude/verify-ui-plugins-hotspots-01MJHFZmDpzgHSp4s6dzkQoj"
+      ],
+      "notes": "Claimed HIGH risk; 2 branches touch this file"
+    },
+    {
+      "claim_id": "hotspot-004",
+      "statement": "CMakeLists.txt is a MEDIUM conflict hotspot",
+      "domain": "branches-prs",
+      "section": 4,
+      "status": "partial",
+      "evidence": [
+        "File exists: /home/user/daw/zenith-core/build/_deps/juce-subbuild/CMakeLists.txt, /home/user/daw/zenith-core/CMakeLists.txt, /home/user/daw/VexelDAW-Native/CMakeLists.txt",
+        "Touched by 2 branch(es): claude/juce-native-refactor-01B7w3xRPCy2nVYfdLA2fSVq, claude/verify-ui-plugins-hotspots-01MJHFZmDpzgHSp4s6dzkQoj"
+      ],
+      "notes": "Claimed MEDIUM risk; 2 branches touch this file"
+    }
+  ]
+}
