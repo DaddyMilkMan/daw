@@ -1,1063 +1,865 @@
 /**
  * @file ArrangerComponent.cpp
- * @brief Implementation of ArrangerComponent for Phase 14
- *
- * Phase 14: Arranger Automation Lanes UI
+ * @brief Timeline/Arranger view implementation
  */
 
-#include "ArrangerComponent.h"
-#include <algorithm>
-#include <cmath>
+#include "../include/ArrangerComponent.h"
 
 //==============================================================================
+// Constructor / Destructor
+//==============================================================================
+
 ArrangerComponent::ArrangerComponent(ProjectState& ps)
     : projectState(ps)
 {
-    // Listen to ValueTree changes
-    projectState.getState().addListener(this);
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    // Add as key listener to handle Delete key
-    addKeyListener(this);
     setWantsKeyboardFocus(true);
 
-    // Set size
-    setSize(800, 600);
+    // Listen to ProjectState changes
+    projectState.getState().addListener(this);
+
+    // Initial clip view build
+    rebuildClipViews();
+
+    DBG("ArrangerComponent: Created");
 }
 
 ArrangerComponent::~ArrangerComponent()
 {
     projectState.getState().removeListener(this);
+    DBG("ArrangerComponent: Destroyed");
 }
 
 //==============================================================================
-// Component Interface
+// ValueTree::Listener interface
+//==============================================================================
+
+void ArrangerComponent::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
+{
+    juce::ignoreUnused(tree, property);
+    // Clip property changed (start, length, etc.)
+    rebuildClipViews();
+    repaint();
+}
+
+void ArrangerComponent::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    juce::ignoreUnused(parent, child);
+    // Track or clip added
+    rebuildClipViews();
+    repaint();
+}
+
+void ArrangerComponent::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
+{
+    juce::ignoreUnused(parent, child, index);
+    // Track or clip removed
+    rebuildClipViews();
+    repaint();
+}
+
+void ArrangerComponent::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
+{
+    juce::ignoreUnused(parent, oldIndex, newIndex);
+    rebuildClipViews();
+    repaint();
+}
+
+//==============================================================================
+// Clip view management
+//==============================================================================
+
+void ArrangerComponent::rebuildClipViews()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    clipViews.clear();
+
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid())
+        return;
+
+    int trackIndex = 0;
+    for (auto track : tracksNode)
+    {
+        auto trackId = track[ProjectState::PROP_ID].toString();
+        auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+
+        if (clipsNode.isValid())
+        {
+            for (auto clip : clipsNode)
+            {
+                ClipView view;
+                view.clipId = clip[ProjectState::PROP_ID].toString();
+                view.trackId = trackId;
+                view.startBeats = clip[ProjectState::PROP_START];
+                view.lengthBeats = clip[ProjectState::PROP_LENGTH];
+
+                auto clipType = clip[ProjectState::PROP_TYPE].toString();
+                view.isMidi = (clipType == "midi");
+
+                view.isSelected = selectedClipIds.contains(view.clipId);
+
+                clipViews.add(view);
+            }
+        }
+
+        trackIndex++;
+    }
+
+    recomputeClipBounds();
+}
+
+void ArrangerComponent::recomputeClipBounds()
+{
+    for (auto& clipView : clipViews)
+    {
+        // Find track index for this clip
+        int trackIndex = 0;
+        auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+        if (tracksNode.isValid())
+        {
+            for (auto track : tracksNode)
+            {
+                if (track[ProjectState::PROP_ID].toString() == clipView.trackId)
+                    break;
+                trackIndex++;
+            }
+        }
+
+        float x = beatsToX(clipView.startBeats);
+        float y = trackIndexToY(trackIndex);
+        float width = static_cast<float>(clipView.lengthBeats * pixelsPerBeat);
+        float height = static_cast<float>(trackHeight - 4); // 2px margin top/bottom
+
+        clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, height);
+    }
+}
+
+ClipView* ArrangerComponent::findClipView(const juce::String& clipId)
+{
+    for (auto& clipView : clipViews)
+    {
+        if (clipView.clipId == clipId)
+            return &clipView;
+    }
+    return nullptr;
+}
+
+ClipView* ArrangerComponent::findClipAtPoint(juce::Point<float> point)
+{
+    // Search in reverse order so topmost clips are hit first
+    for (int i = clipViews.size() - 1; i >= 0; --i)
+    {
+        if (clipViews.getReference(i).bounds.contains(point))
+            return &clipViews.getReference(i);
+    }
+    return nullptr;
+}
+
+//==============================================================================
+// Coordinate conversion
+//==============================================================================
+
+float ArrangerComponent::beatsToX(double beats) const
+{
+    return static_cast<float>((beats - viewStartBeats) * pixelsPerBeat);
+}
+
+double ArrangerComponent::xToBeats(float x) const
+{
+    return viewStartBeats + (x / pixelsPerBeat);
+}
+
+float ArrangerComponent::trackIndexToY(int trackIndex) const
+{
+    return rulerHeight + (trackIndex - firstVisibleTrackIndex) * trackHeight;
+}
+
+int ArrangerComponent::yToTrackIndex(float y) const
+{
+    if (y < rulerHeight)
+        return -1;
+
+    return firstVisibleTrackIndex + static_cast<int>((y - rulerHeight) / trackHeight);
+}
+
+double ArrangerComponent::snapToGrid(double beats) const
+{
+    return std::round(beats / gridSnapBeats) * gridSnapBeats;
+}
+
+//==============================================================================
+// Selection management
+//==============================================================================
+
+void ArrangerComponent::clearSelection()
+{
+    selectedClipIds.clear();
+    for (auto& clipView : clipViews)
+        clipView.isSelected = false;
+    repaint();
+}
+
+void ArrangerComponent::selectClip(const juce::String& clipId, bool addToSelection)
+{
+    if (!addToSelection)
+        clearSelection();
+
+    if (selectedClipIds.contains(clipId))
+    {
+        // Toggle off if adding to selection
+        if (addToSelection)
+        {
+            selectedClipIds.removeValue(clipId);
+            if (auto* view = findClipView(clipId))
+                view->isSelected = false;
+        }
+    }
+    else
+    {
+        selectedClipIds.add(clipId);
+        if (auto* view = findClipView(clipId))
+            view->isSelected = true;
+    }
+
+    repaint();
+}
+
+void ArrangerComponent::selectClipsInRect(juce::Rectangle<float> rect)
+{
+    for (auto& clipView : clipViews)
+    {
+        if (rect.intersects(clipView.bounds))
+        {
+            clipView.isSelected = true;
+            selectedClipIds.add(clipView.clipId);
+        }
+    }
+    repaint();
+}
+
+bool ArrangerComponent::isClipSelected(const juce::String& clipId) const
+{
+    return selectedClipIds.contains(clipId);
+}
+
+//==============================================================================
+// Clip operations
+//==============================================================================
+
+void ArrangerComponent::createClipAtPoint(juce::Point<float> point)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    int trackIndex = yToTrackIndex(point.y);
+    if (trackIndex < 0)
+        return;
+
+    // Get track at index
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
+        return;
+
+    auto track = tracksNode.getChild(trackIndex);
+    auto trackId = track[ProjectState::PROP_ID].toString();
+
+    // Calculate clip position
+    double startBeats = snapToGrid(xToBeats(point.x));
+    double lengthBeats = 4.0; // Default 4 beats (1 bar in 4/4)
+
+    // Create clip via ProjectState
+    projectState.createEmptyClip(trackId, startBeats, lengthBeats, true, "Clip", "Create clip");
+
+    DBG("ArrangerComponent: Created clip at " + juce::String(startBeats) + " beats on track " + trackId);
+}
+
+void ArrangerComponent::deleteSelectedClips()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (selectedClipIds.isEmpty())
+        return;
+
+    // Begin single undo transaction for all deletes
+    projectState.getUndoManager().beginNewTransaction("Delete clips");
+
+    // Delete all selected clips
+    for (const auto& clipId : selectedClipIds)
+    {
+        projectState.deleteClip(clipId, "Delete clips");
+    }
+
+    clearSelection();
+
+    DBG("ArrangerComponent: Deleted " + juce::String(selectedClipIds.size()) + " clips");
+}
+
+void ArrangerComponent::duplicateSelectedClips()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (selectedClipIds.isEmpty())
+        return;
+
+    // Begin single undo transaction
+    projectState.getUndoManager().beginNewTransaction("Duplicate clips");
+
+    juce::Array<juce::String> newClipIds;
+
+    // Duplicate each selected clip
+    for (const auto& clipId : selectedClipIds)
+    {
+        auto [track, clip] = projectState.findClip(clipId);
+        if (!clip.isValid())
+            continue;
+
+        auto trackId = track[ProjectState::PROP_ID].toString();
+        double startBeats = clip[ProjectState::PROP_START];
+        double lengthBeats = clip[ProjectState::PROP_LENGTH];
+        bool isMidi = (clip[ProjectState::PROP_TYPE].toString() == "midi");
+        auto name = clip[ProjectState::PROP_NAME].toString();
+
+        // Place duplicate after original
+        double newStart = startBeats + lengthBeats;
+
+        auto newClipId = projectState.createEmptyClip(trackId, newStart, lengthBeats, isMidi, name + " copy", "Duplicate clips");
+        newClipIds.add(newClipId);
+    }
+
+    // Select the new clips
+    clearSelection();
+    for (const auto& newId : newClipIds)
+        selectedClipIds.add(newId);
+
+    rebuildClipViews();
+
+    DBG("ArrangerComponent: Duplicated " + juce::String(newClipIds.size()) + " clips");
+}
+
+//==============================================================================
+// Component interface - Painting
 //==============================================================================
 
 void ArrangerComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff2b2b2b)); // Dark background
+    paintBackground(g);
+    paintTracks(g);
+    paintClips(g);
+    paintTimeRuler(g);
+    paintMarquee(g);
+}
 
-    // Get tracks
+void ArrangerComponent::paintBackground(juce::Graphics& g)
+{
+    g.fillAll(juce::Colour(0xff1e1e1e));
+}
+
+void ArrangerComponent::paintTimeRuler(juce::Graphics& g)
+{
+    g.setColour(juce::Colour(0xff2a2a2a));
+    g.fillRect(0, 0, getWidth(), rulerHeight);
+
+    g.setColour(juce::Colours::white);
+    g.setFont(12.0f);
+
+    // Draw beat markers
+    double startBeat = std::floor(viewStartBeats);
+    double endBeat = viewStartBeats + (getWidth() / pixelsPerBeat);
+
+    for (double beat = startBeat; beat <= endBeat; beat += 1.0)
+    {
+        float x = beatsToX(beat);
+        if (x < 0 || x > getWidth())
+            continue;
+
+        // Draw tick
+        g.setColour(gridLineColour);
+        g.drawLine(x, rulerHeight - 8.0f, x, static_cast<float>(rulerHeight), 1.0f);
+
+        // Draw beat number
+        g.setColour(juce::Colours::lightgrey);
+        g.drawText(juce::String(static_cast<int>(beat + 1)),
+                   static_cast<int>(x - 15), 2, 30, rulerHeight - 10,
+                   juce::Justification::centred, false);
+    }
+}
+
+void ArrangerComponent::paintTracks(juce::Graphics& g)
+{
     auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
     if (!tracksNode.isValid())
-    {
-        g.setColour(juce::Colours::white);
-        g.drawText("No tracks - use CommandAPI to add tracks", getLocalBounds(), juce::Justification::centred);
         return;
-    }
 
     int numTracks = tracksNode.getNumChildren();
 
-    // Draw each track
-    for (int i = 0; i < numTracks; ++i)
+    for (int i = firstVisibleTrackIndex; i < numTracks; ++i)
     {
-        auto trackNode = tracksNode.getChild(i);
-        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+        float y = trackIndexToY(i);
+        if (y > getHeight())
+            break;
 
-        // Get track bounds
-        auto trackBounds = getTrackLaneBounds(i);
+        // Alternate track colors
+        g.setColour(i % 2 == 0 ? trackLaneColour : trackLaneColour.darker(0.1f));
+        g.fillRect(0.0f, y, static_cast<float>(getWidth()), static_cast<float>(trackHeight));
 
-        // Draw track background
-        g.setColour(juce::Colour(0xff3a3a3a));
-        g.fillRect(trackBounds);
+        // Track divider
+        g.setColour(trackDividerColour);
+        g.drawLine(0.0f, y, static_cast<float>(getWidth()), y, 1.0f);
 
-        // Draw track border
-        g.setColour(juce::Colour(0xff505050));
-        g.drawRect(trackBounds);
+        // Draw vertical grid lines
+        double startBeat = std::floor(viewStartBeats);
+        double endBeat = viewStartBeats + (getWidth() / pixelsPerBeat);
 
-        // Split into header and timeline area
-        auto headerArea = trackBounds.removeFromLeft(TRACK_HEADER_WIDTH);
-        auto timelineArea = trackBounds;
-
-        // Paint track header
-        paintTrackHeader(g, i, headerArea);
-
-        // Paint automation lanes
-        auto& uiState = getOrCreateUIState(trackId);
-        int laneOffset = 0;
-
-        if (uiState.showVolumeLane)
+        g.setColour(gridLineColour.withAlpha(0.3f));
+        for (double beat = startBeat; beat <= endBeat; beat += 1.0)
         {
-            auto laneArea = getAutomationLaneBounds(i, "volume");
-            paintAutomationLane(g, i, "volume", laneArea);
-            laneOffset++;
+            float x = beatsToX(beat);
+            if (x >= 0 && x <= getWidth())
+                g.drawLine(x, y, x, y + trackHeight, 1.0f);
         }
 
-        if (uiState.showPanLane)
+        // Track name
+        auto track = tracksNode.getChild(i);
+        auto trackName = track[ProjectState::PROP_NAME].toString();
+
+        g.setColour(juce::Colours::white.withAlpha(0.7f));
+        g.setFont(14.0f);
+        g.drawText(trackName, 10, static_cast<int>(y + 5), 200, 20, juce::Justification::centredLeft, false);
+    }
+}
+
+void ArrangerComponent::paintClips(juce::Graphics& g)
+{
+    for (const auto& clipView : clipViews)
+    {
+        // Clip color
+        juce::Colour clipColour = clipView.isMidi ? midiClipColour : audioClipColour;
+
+        if (clipView.isSelected)
         {
-            auto laneArea = getAutomationLaneBounds(i, "pan");
-            paintAutomationLane(g, i, "pan", laneArea);
-            laneOffset++;
+            // Draw selection border
+            g.setColour(selectedClipColour);
+            g.drawRect(clipView.bounds, 2.0f);
+            clipColour = clipColour.brighter(0.2f);
         }
 
-        if (uiState.showMuteLane)
+        // Draw clip fill
+        g.setColour(clipColour);
+        g.fillRect(clipView.bounds.reduced(1.0f));
+
+        // Draw clip name
+        g.setColour(juce::Colours::black.withAlpha(0.8f));
+        g.setFont(12.0f);
+
+        auto textBounds = clipView.bounds.reduced(4.0f, 2.0f);
+        if (textBounds.getWidth() > 20.0f)
         {
-            auto laneArea = getAutomationLaneBounds(i, "mute");
-            paintAutomationLane(g, i, "mute", laneArea);
-            laneOffset++;
+            // Get clip name from ProjectState
+            auto [track, clip] = projectState.findClip(clipView.clipId);
+            if (clip.isValid())
+            {
+                auto clipName = clip[ProjectState::PROP_NAME].toString();
+                g.drawText(clipName, textBounds.toNearestInt(), juce::Justification::centredLeft, true);
+            }
         }
+    }
+}
+
+void ArrangerComponent::paintMarquee(juce::Graphics& g)
+{
+    if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty())
+    {
+        g.setColour(juce::Colours::white.withAlpha(0.1f));
+        g.fillRect(marqueeRect);
+
+        g.setColour(juce::Colours::white.withAlpha(0.5f));
+        g.drawRect(marqueeRect, 1.0f);
     }
 }
 
 void ArrangerComponent::resized()
 {
-    // Layout is done in paint() dynamically
+    recomputeClipBounds();
 }
 
 //==============================================================================
-// Track Header Painting
+// Component interface - Mouse handling
 //==============================================================================
 
-void ArrangerComponent::paintTrackHeader(juce::Graphics& g, int trackIndex, const juce::Rectangle<int>& area)
+void ArrangerComponent::mouseDown(const juce::MouseEvent& e)
 {
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
-        return;
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    auto trackNode = tracksNode.getChild(trackIndex);
-    juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
-    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+    grabKeyboardFocus();
 
-    auto& uiState = getOrCreateUIState(trackId);
+    dragStartPoint = e.position;
+    currentDragMode = DragMode::None;
 
-    // Draw background
-    g.setColour(juce::Colour(0xff454545));
-    g.fillRect(area);
+    auto* clip = findClipAtPoint(e.position);
 
-    // Draw track name
-    auto nameArea = area.reduced(4).removeFromTop(24);
-    g.setColour(juce::Colours::white);
-    g.setFont(14.0f);
-    g.drawText(trackName, nameArea, juce::Justification::centredLeft);
-
-    // Draw V/P/M toggle buttons
-    auto buttonArea = area.reduced(4);
-    buttonArea.removeFromTop(28); // Skip name area
-
-    int buttonY = buttonArea.getY();
-    int buttonX = buttonArea.getX();
-
-    // Volume button
+    if (clip != nullptr)
     {
-        juce::Rectangle<int> btn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-        g.setColour(uiState.showVolumeLane ? juce::Colour(0xff4a90e2) : juce::Colour(0xff666666));
-        g.fillRect(btn);
-        g.setColour(juce::Colours::white);
-        g.drawRect(btn);
-        g.setFont(12.0f);
-        g.drawText("V", btn, juce::Justification::centred);
-        buttonX += TOGGLE_BUTTON_SIZE + 4;
-    }
-
-    // Pan button
-    {
-        juce::Rectangle<int> btn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-        g.setColour(uiState.showPanLane ? juce::Colour(0xff4a90e2) : juce::Colour(0xff666666));
-        g.fillRect(btn);
-        g.setColour(juce::Colours::white);
-        g.drawRect(btn);
-        g.setFont(12.0f);
-        g.drawText("P", btn, juce::Justification::centred);
-        buttonX += TOGGLE_BUTTON_SIZE + 4;
-    }
-
-    // Mute button
-    {
-        juce::Rectangle<int> btn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-        g.setColour(uiState.showMuteLane ? juce::Colour(0xff4a90e2) : juce::Colour(0xff666666));
-        g.fillRect(btn);
-        g.setColour(juce::Colours::white);
-        g.drawRect(btn);
-        g.setFont(12.0f);
-        g.drawText("M", btn, juce::Justification::centred);
-    }
-}
-
-//==============================================================================
-// Automation Lane Painting
-//==============================================================================
-
-void ArrangerComponent::paintAutomationLane(juce::Graphics& g, int trackIndex, const juce::String& param,
-                                             const juce::Rectangle<float>& laneArea)
-{
-    // Get track ID
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
-        return;
-
-    auto trackNode = tracksNode.getChild(trackIndex);
-    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-
-    // Draw lane background
-    g.setColour(juce::Colour(0xff2f2f2f));
-    g.fillRect(laneArea);
-
-    // Draw lane border
-    g.setColour(juce::Colour(0xff555555));
-    g.drawRect(laneArea);
-
-    // Draw center line (for pan) or baseline (for volume)
-    if (param == "pan")
-    {
-        float centerY = laneArea.getCentreY();
-        g.setColour(juce::Colour(0xff666666));
-        g.drawHorizontalLine((int)centerY, laneArea.getX(), laneArea.getRight());
-    }
-    else
-    {
-        // Draw baseline at bottom for volume/mute
-        g.setColour(juce::Colour(0xff666666));
-        g.drawHorizontalLine((int)laneArea.getBottom() - 1, laneArea.getX(), laneArea.getRight());
-    }
-
-    // Draw parameter label
-    g.setColour(juce::Colours::lightgrey);
-    g.setFont(11.0f);
-    g.drawText(param, laneArea.reduced(4.0f), juce::Justification::topLeft);
-
-    // Get or rebuild automation curve
-    auto& curve = getOrCreateCurveView(trackId, param);
-    if (curve.needsRebuild)
-    {
-        rebuildAutomationCurve(trackId, param);
-        curve.needsRebuild = false;
-    }
-
-    // Paint curve and points
-    if (!curve.points.empty())
-    {
-        paintAutomationCurve(g, curve, laneArea, param);
-        paintAutomationPoints(g, curve, laneArea, param);
-    }
-}
-
-void ArrangerComponent::paintAutomationCurve(juce::Graphics& g, const AutomationCurveView& curve,
-                                              const juce::Rectangle<float>& laneArea, const juce::String& param)
-{
-    if (curve.points.size() < 2)
-        return;
-
-    // Draw curve as line segments
-    juce::Path path;
-
-    for (size_t i = 0; i < curve.points.size(); ++i)
-    {
-        const auto& point = curve.points[i];
-        float x = beatToX(point.timeBeats);
-        float y = valueToY(point.value, param, laneArea);
-
-        if (i == 0)
-            path.startNewSubPath(x, y);
-        else
-            path.lineTo(x, y);
-    }
-
-    g.setColour(juce::Colour(0xff4a90e2));
-    g.strokePath(path, juce::PathStrokeType(2.0f));
-}
-
-void ArrangerComponent::paintAutomationPoints(juce::Graphics& g, const AutomationCurveView& curve,
-                                               const juce::Rectangle<float>& laneArea, const juce::String& param)
-{
-    for (const auto& point : curve.points)
-    {
-        float x = beatToX(point.timeBeats);
-        float y = valueToY(point.value, param, laneArea);
-
-        // Check if this point is selected
-        bool isSelected = (selectedPoint.isValid &&
-                          selectedPoint.trackId == curve.trackId &&
-                          selectedPoint.param == curve.param &&
-                          selectedPoint.pointId == point.id);
-
-        // Check if this point is hovered
-        bool isHovered = (hoverPointId == point.id &&
-                         hoverTrackId == curve.trackId &&
-                         hoverParam == curve.param);
-
-        // Draw point
-        if (isSelected)
+        // Check for resize zones
+        if (clip->isInLeftResizeZone(e.position))
         {
-            g.setColour(juce::Colour(0xffffaa00)); // Orange for selected
-            g.fillEllipse(x - POINT_RADIUS - 1, y - POINT_RADIUS - 1,
-                         (POINT_RADIUS + 1) * 2, (POINT_RADIUS + 1) * 2);
+            currentDragMode = DragMode::ResizeClipLeft;
+            resizingClipId = clip->clipId;
+            resizeOriginalStart = clip->startBeats;
+            resizeOriginalLength = clip->lengthBeats;
+            DBG("ArrangerComponent: Start resize left");
         }
-        else if (isHovered)
+        else if (clip->isInRightResizeZone(e.position))
         {
-            g.setColour(juce::Colour(0xffffffff)); // White for hover
-            g.fillEllipse(x - POINT_RADIUS, y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2);
+            currentDragMode = DragMode::ResizeClipRight;
+            resizingClipId = clip->clipId;
+            resizeOriginalStart = clip->startBeats;
+            resizeOriginalLength = clip->lengthBeats;
+            DBG("ArrangerComponent: Start resize right");
         }
         else
         {
-            g.setColour(juce::Colour(0xff4a90e2)); // Blue for normal
-            g.fillEllipse(x - POINT_RADIUS, y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2);
-        }
+            // Move mode
+            currentDragMode = DragMode::MoveClips;
 
-        // Draw point border
-        g.setColour(juce::Colours::white);
-        g.drawEllipse(x - POINT_RADIUS, y - POINT_RADIUS, POINT_RADIUS * 2, POINT_RADIUS * 2, 1.0f);
-    }
-}
+            bool isCtrlOrCmd = e.mods.isCommandDown();
 
-//==============================================================================
-// Coordinate Conversion
-//==============================================================================
-
-float ArrangerComponent::beatToX(double beats) const
-{
-    return TRACK_HEADER_WIDTH + static_cast<float>(beats * PIXELS_PER_BEAT);
-}
-
-double ArrangerComponent::xToBeat(float x) const
-{
-    return (x - TRACK_HEADER_WIDTH) / PIXELS_PER_BEAT;
-}
-
-float ArrangerComponent::valueToY(double value, const juce::String& param, const juce::Rectangle<float>& laneArea) const
-{
-    if (param == "volume" || param == "mute")
-    {
-        // 0 at bottom, 1 at top
-        float normalized = juce::jlimit(0.0, 1.0, value);
-        return laneArea.getBottom() - (normalized * laneArea.getHeight());
-    }
-    else if (param == "pan")
-    {
-        // -1 at bottom, +1 at top
-        float normalized = (value + 1.0f) / 2.0f; // Map [-1, 1] to [0, 1]
-        normalized = juce::jlimit(0.0f, 1.0f, normalized);
-        return laneArea.getBottom() - (normalized * laneArea.getHeight());
-    }
-
-    return laneArea.getCentreY();
-}
-
-double ArrangerComponent::yToValue(float y, const juce::String& param, const juce::Rectangle<float>& laneArea) const
-{
-    // Invert Y (bottom = 0, top = 1)
-    float normalized = (laneArea.getBottom() - y) / laneArea.getHeight();
-    normalized = juce::jlimit(0.0f, 1.0f, normalized);
-
-    if (param == "volume" || param == "mute")
-    {
-        return normalized;
-    }
-    else if (param == "pan")
-    {
-        // Map [0, 1] back to [-1, 1]
-        return (normalized * 2.0) - 1.0;
-    }
-
-    return 0.0;
-}
-
-double ArrangerComponent::snapToGrid(double beats) const
-{
-    return std::round(beats / GRID_SNAP) * GRID_SNAP;
-}
-
-//==============================================================================
-// Track Lane Management
-//==============================================================================
-
-juce::Rectangle<int> ArrangerComponent::getTrackLaneBounds(int trackIndex) const
-{
-    int y = 0;
-
-    // Calculate Y position by summing heights of all previous tracks
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid())
-        return {};
-
-    for (int i = 0; i < trackIndex; ++i)
-    {
-        y += getTrackHeight(i);
-    }
-
-    int height = getTrackHeight(trackIndex);
-
-    return juce::Rectangle<int>(0, y, getWidth(), height);
-}
-
-juce::Rectangle<float> ArrangerComponent::getAutomationLaneBounds(int trackIndex, const juce::String& param) const
-{
-    auto trackBounds = getTrackLaneBounds(trackIndex);
-
-    // Get track ID
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
-        return {};
-
-    auto trackNode = tracksNode.getChild(trackIndex);
-    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-
-    // Find which lane this is (volume first, then pan, then mute)
-    auto* uiState = const_cast<ArrangerComponent*>(this)->findUIState(trackId);
-    if (!uiState)
-        return {};
-
-    int laneIndex = 0;
-    if (param == "volume" && uiState->showVolumeLane)
-    {
-        laneIndex = 0;
-    }
-    else if (param == "pan" && uiState->showPanLane)
-    {
-        laneIndex = uiState->showVolumeLane ? 1 : 0;
-    }
-    else if (param == "mute" && uiState->showMuteLane)
-    {
-        laneIndex = 0;
-        if (uiState->showVolumeLane) laneIndex++;
-        if (uiState->showPanLane) laneIndex++;
-    }
-    else
-    {
-        return {};
-    }
-
-    // Lane area starts after base track content
-    float laneY = trackBounds.getY() + TRACK_BASE_HEIGHT + (laneIndex * AUTOMATION_LANE_HEIGHT);
-    float laneX = TRACK_HEADER_WIDTH;
-
-    return juce::Rectangle<float>(laneX, laneY,
-                                   static_cast<float>(getWidth() - TRACK_HEADER_WIDTH),
-                                   static_cast<float>(AUTOMATION_LANE_HEIGHT));
-}
-
-int ArrangerComponent::getTrackIndexAtY(int y) const
-{
-    int currentY = 0;
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid())
-        return -1;
-
-    int numTracks = tracksNode.getNumChildren();
-
-    for (int i = 0; i < numTracks; ++i)
-    {
-        int height = getTrackHeight(i);
-        if (y >= currentY && y < currentY + height)
-            return i;
-        currentY += height;
-    }
-
-    return -1;
-}
-
-int ArrangerComponent::getTrackHeight(int trackIndex) const
-{
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
-        return TRACK_BASE_HEIGHT;
-
-    auto trackNode = tracksNode.getChild(trackIndex);
-    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-
-    // Find UI state (const-correct version)
-    int numLanes = 0;
-    for (const auto& state : trackUIStates)
-    {
-        if (state.trackId == trackId)
-        {
-            if (state.showVolumeLane) numLanes++;
-            if (state.showPanLane) numLanes++;
-            if (state.showMuteLane) numLanes++;
-            break;
-        }
-    }
-
-    return TRACK_BASE_HEIGHT + (numLanes * AUTOMATION_LANE_HEIGHT);
-}
-
-void ArrangerComponent::toggleAutomationLane(const juce::String& trackId, const juce::String& param)
-{
-    auto& uiState = getOrCreateUIState(trackId);
-
-    if (param == "volume")
-        uiState.showVolumeLane = !uiState.showVolumeLane;
-    else if (param == "pan")
-        uiState.showPanLane = !uiState.showPanLane;
-    else if (param == "mute")
-        uiState.showMuteLane = !uiState.showMuteLane;
-
-    repaint();
-}
-
-TrackAutomationUIState& ArrangerComponent::getOrCreateUIState(const juce::String& trackId)
-{
-    // Find existing
-    for (auto& state : trackUIStates)
-    {
-        if (state.trackId == trackId)
-            return state;
-    }
-
-    // Create new
-    TrackAutomationUIState newState;
-    newState.trackId = trackId;
-    trackUIStates.push_back(newState);
-    return trackUIStates.back();
-}
-
-TrackAutomationUIState* ArrangerComponent::findUIState(const juce::String& trackId)
-{
-    for (auto& state : trackUIStates)
-    {
-        if (state.trackId == trackId)
-            return &state;
-    }
-    return nullptr;
-}
-
-//==============================================================================
-// Automation Curve Cache
-//==============================================================================
-
-void ArrangerComponent::rebuildAutomationCurve(const juce::String& trackId, const juce::String& param)
-{
-    auto& curve = getOrCreateCurveView(trackId, param);
-    curve.points.clear();
-
-    // Get envelope from ProjectState
-    auto envelope = projectState.getAutomationEnvelope(trackId, param);
-    if (!envelope.isValid())
-        return;
-
-    // Build point list
-    for (int i = 0; i < envelope.getNumChildren(); ++i)
-    {
-        auto pointNode = envelope.getChild(i);
-        if (pointNode.hasType(ProjectState::ID_POINT))
-        {
-            juce::String id = pointNode[ProjectState::PROP_ID].toString();
-            double timeBeats = pointNode[ProjectState::PROP_TIME_BEATS];
-            double value = pointNode[ProjectState::PROP_VALUE];
-
-            curve.points.emplace_back(id, timeBeats, value);
-        }
-    }
-
-    // Sort by time
-    std::sort(curve.points.begin(), curve.points.end(),
-              [](const AutomationPointView& a, const AutomationPointView& b) {
-                  return a.timeBeats < b.timeBeats;
-              });
-
-    curve.needsRebuild = false;
-}
-
-AutomationCurveView& ArrangerComponent::getOrCreateCurveView(const juce::String& trackId, const juce::String& param)
-{
-    // Find existing
-    for (auto& curve : curveCache)
-    {
-        if (curve.trackId == trackId && curve.param == param)
-            return curve;
-    }
-
-    // Create new
-    curveCache.emplace_back(trackId, param);
-    curveCache.back().needsRebuild = true;
-    return curveCache.back();
-}
-
-AutomationCurveView* ArrangerComponent::findCurveView(const juce::String& trackId, const juce::String& param)
-{
-    for (auto& curve : curveCache)
-    {
-        if (curve.trackId == trackId && curve.param == param)
-            return &curve;
-    }
-    return nullptr;
-}
-
-void ArrangerComponent::markAllCurvesDirty()
-{
-    for (auto& curve : curveCache)
-    {
-        curve.needsRebuild = true;
-    }
-}
-
-//==============================================================================
-// Mouse Interaction
-//==============================================================================
-
-void ArrangerComponent::mouseDown(const juce::MouseEvent& event)
-{
-    auto pos = event.position;
-
-    // Check if click is in track header (V/P/M buttons)
-    if (pos.x < TRACK_HEADER_WIDTH)
-    {
-        int trackIndex = getTrackIndexAtY((int)pos.y);
-        if (trackIndex >= 0)
-        {
-            auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-            if (tracksNode.isValid() && trackIndex < tracksNode.getNumChildren())
+            // Handle selection
+            if (!clip->isSelected)
             {
-                auto trackNode = tracksNode.getChild(trackIndex);
-                juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+                selectClip(clip->clipId, isCtrlOrCmd);
+            }
+            else if (isCtrlOrCmd)
+            {
+                // Ctrl-click on selected clip = deselect
+                selectClip(clip->clipId, true);
+            }
 
-                auto trackBounds = getTrackLaneBounds(trackIndex);
-                auto headerArea = trackBounds.removeFromLeft(TRACK_HEADER_WIDTH).reduced(4);
-                headerArea.removeFromTop(28); // Skip name
-
-                int buttonY = headerArea.getY();
-                int buttonX = headerArea.getX();
-
-                // Check volume button
-                juce::Rectangle<int> vBtn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-                if (vBtn.contains(pos.toInt()))
+            // Cache original positions for all selected clips
+            clipDragStates.clear();
+            for (const auto& clipId : selectedClipIds)
+            {
+                if (auto* view = findClipView(clipId))
                 {
-                    toggleAutomationLane(trackId, "volume");
-                    return;
-                }
-                buttonX += TOGGLE_BUTTON_SIZE + 4;
-
-                // Check pan button
-                juce::Rectangle<int> pBtn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-                if (pBtn.contains(pos.toInt()))
-                {
-                    toggleAutomationLane(trackId, "pan");
-                    return;
-                }
-                buttonX += TOGGLE_BUTTON_SIZE + 4;
-
-                // Check mute button
-                juce::Rectangle<int> mBtn(buttonX, buttonY, TOGGLE_BUTTON_SIZE, TOGGLE_BUTTON_SIZE);
-                if (mBtn.contains(pos.toInt()))
-                {
-                    toggleAutomationLane(trackId, "mute");
-                    return;
-                }
-            }
-        }
-        return;
-    }
-
-    // Check if click is on an automation point
-    juce::String hitTrackId, hitParam, hitPointId;
-    if (hitTestAutomationPoint(pos, hitTrackId, hitParam, hitPointId))
-    {
-        // Start dragging this point
-        selectedPoint.set(hitTrackId, hitParam, hitPointId);
-        startDraggingPoint(hitTrackId, hitParam, hitPointId);
-        repaint();
-        return;
-    }
-
-    // Check if click is in an automation lane (add new point)
-    int trackIndex = getTrackIndexAtY((int)pos.y);
-    if (trackIndex >= 0)
-    {
-        auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-        if (tracksNode.isValid() && trackIndex < tracksNode.getNumChildren())
-        {
-            auto trackNode = tracksNode.getChild(trackIndex);
-            juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-            auto& uiState = getOrCreateUIState(trackId);
-
-            // Check which lane was clicked
-            if (uiState.showVolumeLane)
-            {
-                auto laneArea = getAutomationLaneBounds(trackIndex, "volume");
-                if (laneArea.contains(pos))
-                {
-                    addAutomationPointAt(pos, trackId, "volume");
-                    return;
-                }
-            }
-
-            if (uiState.showPanLane)
-            {
-                auto laneArea = getAutomationLaneBounds(trackIndex, "pan");
-                if (laneArea.contains(pos))
-                {
-                    addAutomationPointAt(pos, trackId, "pan");
-                    return;
-                }
-            }
-
-            if (uiState.showMuteLane)
-            {
-                auto laneArea = getAutomationLaneBounds(trackIndex, "mute");
-                if (laneArea.contains(pos))
-                {
-                    addAutomationPointAt(pos, trackId, "mute");
-                    return;
-                }
-            }
-        }
-    }
-
-    // Clear selection if clicked elsewhere
-    selectedPoint.clear();
-    repaint();
-}
-
-void ArrangerComponent::mouseDrag(const juce::MouseEvent& event)
-{
-    if (isDragging)
-    {
-        updateDraggedPoint(event.position);
-        repaint();
-    }
-}
-
-void ArrangerComponent::mouseUp(const juce::MouseEvent& event)
-{
-    if (isDragging)
-    {
-        finishDraggingPoint();
-    }
-}
-
-void ArrangerComponent::mouseMove(const juce::MouseEvent& event)
-{
-    // Update hover state
-    juce::String oldHoverTrackId = hoverTrackId;
-    juce::String oldHoverParam = hoverParam;
-    juce::String oldHoverPointId = hoverPointId;
-
-    hitTestAutomationPoint(event.position, hoverTrackId, hoverParam, hoverPointId);
-
-    // Repaint if hover changed
-    if (hoverTrackId != oldHoverTrackId || hoverParam != oldHoverParam || hoverPointId != oldHoverPointId)
-    {
-        repaint();
-    }
-}
-
-bool ArrangerComponent::hitTestAutomationPoint(const juce::Point<float>& pos,
-                                                juce::String& outTrackId,
-                                                juce::String& outParam,
-                                                juce::String& outPointId)
-{
-    outTrackId = "";
-    outParam = "";
-    outPointId = "";
-
-    // Check all visible automation lanes
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid())
-        return false;
-
-    int numTracks = tracksNode.getNumChildren();
-
-    for (int i = 0; i < numTracks; ++i)
-    {
-        auto trackNode = tracksNode.getChild(i);
-        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
-        auto& uiState = getOrCreateUIState(trackId);
-
-        // Check each visible lane
-        std::vector<juce::String> paramsToCheck;
-        if (uiState.showVolumeLane) paramsToCheck.push_back("volume");
-        if (uiState.showPanLane) paramsToCheck.push_back("pan");
-        if (uiState.showMuteLane) paramsToCheck.push_back("mute");
-
-        for (const auto& param : paramsToCheck)
-        {
-            auto laneArea = getAutomationLaneBounds(i, param);
-            if (!laneArea.contains(pos))
-                continue;
-
-            auto& curve = getOrCreateCurveView(trackId, param);
-            if (curve.needsRebuild)
-            {
-                rebuildAutomationCurve(trackId, param);
-                curve.needsRebuild = false;
-            }
-
-            // Check each point
-            for (const auto& point : curve.points)
-            {
-                float x = beatToX(point.timeBeats);
-                float y = valueToY(point.value, param, laneArea);
-
-                float dx = pos.x - x;
-                float dy = pos.y - y;
-                float distSq = dx * dx + dy * dy;
-
-                if (distSq <= HIT_TEST_RADIUS * HIT_TEST_RADIUS)
-                {
-                    outTrackId = trackId;
-                    outParam = param;
-                    outPointId = point.id;
-                    return true;
-                }
-            }
-        }
-    }
-
-    return false;
-}
-
-void ArrangerComponent::addAutomationPointAt(const juce::Point<float>& pos,
-                                              const juce::String& trackId,
-                                              const juce::String& param)
-{
-    // Find which track index this is
-    int trackIndex = -1;
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (tracksNode.isValid())
-    {
-        for (int i = 0; i < tracksNode.getNumChildren(); ++i)
-        {
-            auto trackNode = tracksNode.getChild(i);
-            if (trackNode[ProjectState::PROP_ID].toString() == trackId)
-            {
-                trackIndex = i;
-                break;
-            }
-        }
-    }
-
-    if (trackIndex < 0)
-        return;
-
-    auto laneArea = getAutomationLaneBounds(trackIndex, param);
-
-    double timeBeats = snapToGrid(xToBeat(pos.x));
-    double value = yToValue(pos.y, param, laneArea);
-
-    // Clamp value
-    if (param == "volume" || param == "mute")
-        value = juce::jlimit(0.0, 1.0, value);
-    else if (param == "pan")
-        value = juce::jlimit(-1.0, 1.0, value);
-
-    // Add via ProjectState API
-    juce::String pointId = projectState.addAutomationPoint(trackId, param, timeBeats, value,
-                                                            "Automation: Add " + param + " point");
-
-    // Select the new point
-    selectedPoint.set(trackId, param, pointId);
-
-    // Mark curve as needing rebuild
-    auto* curve = findCurveView(trackId, param);
-    if (curve)
-        curve->needsRebuild = true;
-
-    repaint();
-}
-
-void ArrangerComponent::startDraggingPoint(const juce::String& trackId,
-                                            const juce::String& param,
-                                            const juce::String& pointId)
-{
-    isDragging = true;
-    dragTrackId = trackId;
-    dragParam = param;
-    dragPointId = pointId;
-
-    // Find the point to get its current values
-    auto& curve = getOrCreateCurveView(trackId, param);
-    if (curve.needsRebuild)
-    {
-        rebuildAutomationCurve(trackId, param);
-        curve.needsRebuild = false;
-    }
-
-    for (const auto& point : curve.points)
-    {
-        if (point.id == pointId)
-        {
-            dragStartTimeBeats = point.timeBeats;
-            dragStartValue = point.value;
-            break;
-        }
-    }
-}
-
-void ArrangerComponent::updateDraggedPoint(const juce::Point<float>& pos)
-{
-    // This is a preview during drag - we don't update ProjectState until mouseUp
-    // For now, just update the visual position in the cache
-
-    // Find track index
-    int trackIndex = -1;
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (tracksNode.isValid())
-    {
-        for (int i = 0; i < tracksNode.getNumChildren(); ++i)
-        {
-            auto trackNode = tracksNode.getChild(i);
-            if (trackNode[ProjectState::PROP_ID].toString() == dragTrackId)
-            {
-                trackIndex = i;
-                break;
-            }
-        }
-    }
-
-    if (trackIndex < 0)
-        return;
-
-    auto laneArea = getAutomationLaneBounds(trackIndex, dragParam);
-
-    double newTimeBeats = snapToGrid(xToBeat(pos.x));
-    double newValue = yToValue(pos.y, dragParam, laneArea);
-
-    // Clamp value
-    if (dragParam == "volume" || dragParam == "mute")
-        newValue = juce::jlimit(0.0, 1.0, newValue);
-    else if (dragParam == "pan")
-        newValue = juce::jlimit(-1.0, 1.0, newValue);
-
-    // Update the point in the cache for immediate visual feedback
-    auto* curve = findCurveView(dragTrackId, dragParam);
-    if (curve)
-    {
-        for (auto& point : curve->points)
-        {
-            if (point.id == dragPointId)
-            {
-                point.timeBeats = newTimeBeats;
-                point.value = newValue;
-                break;
-            }
-        }
-
-        // Re-sort
-        std::sort(curve->points.begin(), curve->points.end(),
-                  [](const AutomationPointView& a, const AutomationPointView& b) {
-                      return a.timeBeats < b.timeBeats;
-                  });
-    }
-}
-
-void ArrangerComponent::finishDraggingPoint()
-{
-    if (!isDragging)
-        return;
-
-    // Find track index
-    int trackIndex = -1;
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-    if (tracksNode.isValid())
-    {
-        for (int i = 0; i < tracksNode.getNumChildren(); ++i)
-        {
-            auto trackNode = tracksNode.getChild(i);
-            if (trackNode[ProjectState::PROP_ID].toString() == dragTrackId)
-            {
-                trackIndex = i;
-                break;
-            }
-        }
-    }
-
-    if (trackIndex >= 0)
-    {
-        // Get final position from cache
-        auto* curve = findCurveView(dragTrackId, dragParam);
-        if (curve)
-        {
-            for (const auto& point : curve->points)
-            {
-                if (point.id == dragPointId)
-                {
-                    // Only update if actually changed
-                    if (point.timeBeats != dragStartTimeBeats || point.value != dragStartValue)
+                    // Find track index
+                    int trackIndex = 0;
+                    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+                    if (tracksNode.isValid())
                     {
-                        projectState.moveAutomationPoint(dragTrackId, dragParam, dragPointId,
-                                                         point.timeBeats, point.value,
-                                                         "Automation: Move " + dragParam + " point");
+                        for (auto track : tracksNode)
+                        {
+                            if (track[ProjectState::PROP_ID].toString() == view->trackId)
+                                break;
+                            trackIndex++;
+                        }
                     }
-                    break;
+
+                    ClipDragState state;
+                    state.clipId = clipId;
+                    state.originalStartBeats = view->startBeats;
+                    state.originalTrackIndex = trackIndex;
+                    clipDragStates.add(state);
                 }
             }
 
-            // Mark for rebuild to sync with actual ProjectState
-            curve->needsRebuild = true;
+            DBG("ArrangerComponent: Start move " + juce::String(clipDragStates.size()) + " clips");
         }
     }
-
-    isDragging = false;
-    dragTrackId = "";
-    dragParam = "";
-    dragPointId = "";
-
-    repaint();
-}
-
-void ArrangerComponent::deleteSelectedPoint()
-{
-    if (!selectedPoint.isValid)
-        return;
-
-    projectState.deleteAutomationPoint(selectedPoint.trackId, selectedPoint.param, selectedPoint.pointId,
-                                        "Automation: Delete " + selectedPoint.param + " point");
-
-    // Mark curve as needing rebuild
-    auto* curve = findCurveView(selectedPoint.trackId, selectedPoint.param);
-    if (curve)
-        curve->needsRebuild = true;
-
-    selectedPoint.clear();
-    repaint();
-}
-
-//==============================================================================
-// ValueTree Listener
-//==============================================================================
-
-void ArrangerComponent::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
-{
-    // Automation point property changed
-    if (tree.hasType(ProjectState::ID_POINT))
+    else
     {
-        // Mark all curves dirty (simpler than tracking which one changed)
-        markAllCurvesDirty();
+        // Clicked empty area
+        bool isShift = e.mods.isShiftDown();
+
+        if (isShift)
+        {
+            // Start marquee selection
+            currentDragMode = DragMode::Marquee;
+            marqueeRect = juce::Rectangle<float>(e.position, e.position);
+        }
+        else
+        {
+            // Clear selection
+            clearSelection();
+        }
+    }
+}
+
+void ArrangerComponent::mouseDrag(const juce::MouseEvent& e)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (currentDragMode == DragMode::MoveClips)
+    {
+        // Calculate delta
+        double deltaBeats = xToBeats(e.position.x) - xToBeats(dragStartPoint.x);
+        int deltaTrackIndex = yToTrackIndex(e.position.y) - yToTrackIndex(dragStartPoint.y);
+
+        // Update clip view positions for visual feedback
+        for (const auto& dragState : clipDragStates)
+        {
+            if (auto* view = findClipView(dragState.clipId))
+            {
+                double newStart = dragState.originalStartBeats + deltaBeats;
+                int newTrackIndex = dragState.originalTrackIndex + deltaTrackIndex;
+
+                // Clamp
+                newStart = juce::jmax(0.0, newStart);
+                newTrackIndex = juce::jmax(0, newTrackIndex);
+
+                // Update visual position
+                view->startBeats = newStart;
+
+                // Update track (if changed)
+                auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+                if (tracksNode.isValid() && newTrackIndex < tracksNode.getNumChildren())
+                {
+                    auto newTrack = tracksNode.getChild(newTrackIndex);
+                    view->trackId = newTrack[ProjectState::PROP_ID].toString();
+                }
+            }
+        }
+
+        recomputeClipBounds();
+        repaint();
+    }
+    else if (currentDragMode == DragMode::ResizeClipLeft)
+    {
+        if (auto* view = findClipView(resizingClipId))
+        {
+            double newStart = xToBeats(e.position.x);
+            double originalEnd = resizeOriginalStart + resizeOriginalLength;
+            double newLength = originalEnd - newStart;
+
+            // Enforce minimum length
+            if (newLength < 0.25)
+            {
+                newStart = originalEnd - 0.25;
+                newLength = 0.25;
+            }
+
+            view->startBeats = newStart;
+            view->lengthBeats = newLength;
+
+            recomputeClipBounds();
+            repaint();
+        }
+    }
+    else if (currentDragMode == DragMode::ResizeClipRight)
+    {
+        if (auto* view = findClipView(resizingClipId))
+        {
+            double newEnd = xToBeats(e.position.x);
+            double newLength = newEnd - resizeOriginalStart;
+
+            // Enforce minimum length
+            newLength = juce::jmax(0.25, newLength);
+
+            view->lengthBeats = newLength;
+
+            recomputeClipBounds();
+            repaint();
+        }
+    }
+    else if (currentDragMode == DragMode::Marquee)
+    {
+        marqueeRect = juce::Rectangle<float>(dragStartPoint, e.position);
         repaint();
     }
 }
 
-void ArrangerComponent::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+void ArrangerComponent::mouseUp(const juce::MouseEvent& e)
 {
-    // Track added or automation point added
-    if (child.hasType(ProjectState::ID_TRACK) || child.hasType(ProjectState::ID_POINT))
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    juce::ignoreUnused(e);
+
+    if (currentDragMode == DragMode::MoveClips)
     {
-        markAllCurvesDirty();
+        // Commit move to ProjectState
+        if (!clipDragStates.isEmpty())
+        {
+            projectState.getUndoManager().beginNewTransaction("Move clips");
+
+            for (const auto& dragState : clipDragStates)
+            {
+                if (auto* view = findClipView(dragState.clipId))
+                {
+                    double snappedStart = snapToGrid(view->startBeats);
+                    projectState.moveClip(dragState.clipId, view->trackId, snappedStart, "Move clips");
+                }
+            }
+
+            DBG("ArrangerComponent: Committed move for " + juce::String(clipDragStates.size()) + " clips");
+        }
+
+        clipDragStates.clear();
+    }
+    else if (currentDragMode == DragMode::ResizeClipLeft || currentDragMode == DragMode::ResizeClipRight)
+    {
+        // Commit resize to ProjectState
+        if (auto* view = findClipView(resizingClipId))
+        {
+            double snappedStart = snapToGrid(view->startBeats);
+            double snappedLength = snapToGrid(view->lengthBeats);
+
+            projectState.setClipRange(resizingClipId, snappedStart, snappedLength, "Resize clip");
+
+            DBG("ArrangerComponent: Committed resize for clip " + resizingClipId);
+        }
+
+        resizingClipId.clear();
+    }
+    else if (currentDragMode == DragMode::Marquee)
+    {
+        // Select clips in marquee
+        selectClipsInRect(marqueeRect);
+        marqueeRect = juce::Rectangle<float>();
+    }
+
+    currentDragMode = DragMode::None;
+    repaint();
+}
+
+void ArrangerComponent::mouseMove(const juce::MouseEvent& e)
+{
+    // Update cursor based on hover position
+    auto* clip = findClipAtPoint(e.position);
+
+    if (clip != nullptr)
+    {
+        if (clip->isInLeftResizeZone(e.position) || clip->isInRightResizeZone(e.position))
+            setMouseCursor(juce::MouseCursor::LeftRightResizeCursor);
+        else
+            setMouseCursor(juce::MouseCursor::DraggingHandCursor);
+    }
+    else
+    {
+        setMouseCursor(juce::MouseCursor::NormalCursor);
+    }
+}
+
+void ArrangerComponent::mouseDoubleClick(const juce::MouseEvent& e)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto* clip = findClipAtPoint(e.position);
+
+    if (clip == nullptr)
+    {
+        // Double-clicked empty area - create clip
+        createClipAtPoint(e.position);
+    }
+    // else: could open piano roll in future
+}
+
+void ArrangerComponent::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    bool isShift = e.mods.isShiftDown();
+    bool isCtrlOrCmd = e.mods.isCommandDown();
+
+    if (isCtrlOrCmd)
+    {
+        // Zoom horizontal
+        double zoomFactor = 1.0 + (wheel.deltaY * 0.5);
+        double oldPixelsPerBeat = pixelsPerBeat;
+        pixelsPerBeat *= zoomFactor;
+        pixelsPerBeat = juce::jlimit(10.0, 200.0, pixelsPerBeat);
+
+        // Zoom around mouse position
+        double beatsAtMouse = xToBeats(e.position.x);
+        double pixelsAtMouse = e.position.x;
+        viewStartBeats = beatsAtMouse - (pixelsAtMouse / pixelsPerBeat);
+        viewStartBeats = juce::jmax(0.0, viewStartBeats);
+
+        recomputeClipBounds();
+        repaint();
+    }
+    else if (isShift)
+    {
+        // Scroll horizontal
+        viewStartBeats -= wheel.deltaY * 2.0;
+        viewStartBeats = juce::jmax(0.0, viewStartBeats);
+
+        recomputeClipBounds();
+        repaint();
+    }
+    else
+    {
+        // Scroll vertical
+        firstVisibleTrackIndex -= static_cast<int>(wheel.deltaY * 2.0);
+
+        auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+        int maxTrackIndex = tracksNode.isValid() ? tracksNode.getNumChildren() - 1 : 0;
+        firstVisibleTrackIndex = juce::jlimit(0, maxTrackIndex, firstVisibleTrackIndex);
+
+        recomputeClipBounds();
         repaint();
     }
 }
 
-void ArrangerComponent::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int)
+//==============================================================================
+// Component interface - Keyboard handling
+//==============================================================================
+
+bool ArrangerComponent::keyPressed(const juce::KeyPress& key)
 {
-    // Track removed or automation point removed
-    if (child.hasType(ProjectState::ID_TRACK) || child.hasType(ProjectState::ID_POINT))
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Delete / Backspace
+    if (key.isKeyCode(juce::KeyPress::deleteKey) || key.isKeyCode(juce::KeyPress::backspaceKey))
     {
-        markAllCurvesDirty();
-        repaint();
+        deleteSelectedClips();
+        return true;
     }
-}
 
-void ArrangerComponent::valueTreeChildOrderChanged(juce::ValueTree&, int, int)
-{
-    markAllCurvesDirty();
-    repaint();
-}
-
-void ArrangerComponent::valueTreeParentChanged(juce::ValueTree&)
-{
-    markAllCurvesDirty();
-    repaint();
-}
-
-//==============================================================================
-// KeyListener
-//==============================================================================
-
-bool ArrangerComponent::keyPressed(const juce::KeyPress& key, juce::Component*)
-{
-    // Delete/Backspace key
-    if (key == juce::KeyPress::deleteKey || key == juce::KeyPress::backspaceKey)
+    // Ctrl/Cmd+D - Duplicate
+    if (key.getModifiers().isCommandDown() && key.getKeyCode() == 'D')
     {
-        deleteSelectedPoint();
+        duplicateSelectedClips();
+        return true;
+    }
+
+    // Ctrl/Cmd+Z - Undo
+    if (key.getModifiers().isCommandDown() && key.getKeyCode() == 'Z')
+    {
+        projectState.undo();
+        return true;
+    }
+
+    // Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y - Redo
+    if ((key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown() && key.getKeyCode() == 'Z') ||
+        (key.getModifiers().isCommandDown() && key.getKeyCode() == 'Y'))
+    {
+        projectState.redo();
+        return true;
+    }
+
+    // + key - Zoom in
+    if (key.getKeyCode() == '+' || key.getKeyCode() == '=')
+    {
+        pixelsPerBeat *= 1.2;
+        pixelsPerBeat = juce::jmin(200.0, pixelsPerBeat);
+        recomputeClipBounds();
+        repaint();
+        return true;
+    }
+
+    // - key - Zoom out
+    if (key.getKeyCode() == '-')
+    {
+        pixelsPerBeat /= 1.2;
+        pixelsPerBeat = juce::jmax(10.0, pixelsPerBeat);
+        recomputeClipBounds();
+        repaint();
+        return true;
+    }
+
+    // Escape - Clear selection
+    if (key.isKeyCode(juce::KeyPress::escapeKey))
+    {
+        clearSelection();
         return true;
     }
 

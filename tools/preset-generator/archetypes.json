@@ -1,0 +1,1338 @@
+{
+  "zenith_poly_synth": {
+    "parameters": {
+      "osc_type": { "min": 0.0, "max": 2.0, "default": 0.0 },
+      "filter_cutoff": { "min": 0.0, "max": 1.0, "default": 0.8 },
+      "filter_resonance": { "min": 0.0, "max": 1.0, "default": 0.5 },
+      "attack": { "min": 0.0, "max": 1.0, "default": 0.1 },
+      "decay": { "min": 0.0, "max": 1.0, "default": 0.2 },
+      "sustain": { "min": 0.0, "max": 1.0, "default": 0.7 },
+      "release": { "min": 0.0, "max": 1.0, "default": 0.3 }
+    },
+    "archetypes": {
+      "Bass": [
+        {
+          "name": "Clean Sub 808",
+          "description": "Pure sine sub bass for 808-style patterns",
+          "tags": ["trap", "808", "sub", "bass"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.4,
+            "filter_resonance": 0.1,
+            "attack": 0.005,
+            "decay": 0.4,
+            "sustain": 0.0,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Warm Sub Bass",
+          "description": "Warm sine sub with gentle attack",
+          "tags": ["bass", "sub", "warm", "hip-hop"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.2,
+            "attack": 0.01,
+            "decay": 0.3,
+            "sustain": 0.6,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Reese Growl",
+          "description": "Classic Reese bass with movement",
+          "tags": ["bass", "reese", "dnb", "dubstep"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.35,
+            "filter_resonance": 0.7,
+            "attack": 0.02,
+            "decay": 0.3,
+            "sustain": 0.8,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "FM Donk",
+          "description": "Punchy saw bass with quick decay",
+          "tags": ["bass", "donk", "edm", "aggressive"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.5,
+            "attack": 0.001,
+            "decay": 0.15,
+            "sustain": 0.0,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "Acid Bass",
+          "description": "Resonant acid bass",
+          "tags": ["bass", "acid", "techno", "303"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.3,
+            "filter_resonance": 0.85,
+            "attack": 0.005,
+            "decay": 0.25,
+            "sustain": 0.4,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Deep Sub",
+          "description": "Ultra deep sine sub",
+          "tags": ["bass", "sub", "deep", "minimal"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.35,
+            "filter_resonance": 0.05,
+            "attack": 0.01,
+            "decay": 0.5,
+            "sustain": 0.8,
+            "release": 0.4
+          }
+        },
+        {
+          "name": "Square Bass",
+          "description": "Hollow square wave bass",
+          "tags": ["bass", "square", "retro", "gameboy"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.45,
+            "filter_resonance": 0.3,
+            "attack": 0.005,
+            "decay": 0.3,
+            "sustain": 0.6,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Wobble Bass",
+          "description": "Resonant wobble bass foundation",
+          "tags": ["bass", "wobble", "dubstep", "edm"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.4,
+            "filter_resonance": 0.75,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.7,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Soft Sub",
+          "description": "Gentle sine sub with slow attack",
+          "tags": ["bass", "sub", "soft", "ambient"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.55,
+            "filter_resonance": 0.15,
+            "attack": 0.05,
+            "decay": 0.4,
+            "sustain": 0.75,
+            "release": 0.5
+          }
+        },
+        {
+          "name": "Punchy Saw Bass",
+          "description": "Aggressive saw bass with punch",
+          "tags": ["bass", "saw", "punchy", "edm"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.4,
+            "attack": 0.002,
+            "decay": 0.2,
+            "sustain": 0.5,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Vintage Sub",
+          "description": "Warm vintage-style sub bass",
+          "tags": ["bass", "sub", "vintage", "analog"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.48,
+            "filter_resonance": 0.25,
+            "attack": 0.008,
+            "decay": 0.35,
+            "sustain": 0.7,
+            "release": 0.35
+          }
+        },
+        {
+          "name": "Gritty Bass",
+          "description": "Gritty square bass with bite",
+          "tags": ["bass", "gritty", "aggressive", "distorted"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.6,
+            "attack": 0.003,
+            "decay": 0.25,
+            "sustain": 0.5,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Smooth Sine Bass",
+          "description": "Smooth sine bass with sustain",
+          "tags": ["bass", "sine", "smooth", "clean"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.2,
+            "attack": 0.015,
+            "decay": 0.3,
+            "sustain": 0.8,
+            "release": 0.4
+          }
+        },
+        {
+          "name": "Trap Sub",
+          "description": "Modern trap sub bass",
+          "tags": ["bass", "trap", "sub", "modern"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.42,
+            "filter_resonance": 0.15,
+            "attack": 0.003,
+            "decay": 0.45,
+            "sustain": 0.0,
+            "release": 0.25
+          }
+        },
+        {
+          "name": "Dark Saw Bass",
+          "description": "Dark filtered saw bass",
+          "tags": ["bass", "dark", "saw", "mysterious"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.28,
+            "filter_resonance": 0.35,
+            "attack": 0.01,
+            "decay": 0.35,
+            "sustain": 0.65,
+            "release": 0.3
+          }
+        }
+      ],
+      "Lead": [
+        {
+          "name": "Festival Supersaw",
+          "description": "Bright saw lead for big room drops",
+          "tags": ["lead", "edm", "supersaw", "festival"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.9,
+            "filter_resonance": 0.3,
+            "attack": 0.05,
+            "decay": 0.2,
+            "sustain": 0.8,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Mono Screamer",
+          "description": "Aggressive mono lead with bite",
+          "tags": ["lead", "mono", "aggressive", "edm"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.5,
+            "attack": 0.01,
+            "decay": 0.15,
+            "sustain": 0.9,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Vocal Lead",
+          "description": "Vocal-like lead with formant character",
+          "tags": ["lead", "vocal", "singing", "expressive"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.7,
+            "attack": 0.03,
+            "decay": 0.2,
+            "sustain": 0.85,
+            "release": 0.25
+          }
+        },
+        {
+          "name": "Glide Lead",
+          "description": "Smooth lead for portamento",
+          "tags": ["lead", "glide", "smooth", "melodic"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.35,
+            "attack": 0.02,
+            "decay": 0.25,
+            "sustain": 0.8,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Bright Square Lead",
+          "description": "Retro square wave lead",
+          "tags": ["lead", "square", "retro", "chiptune"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.25,
+            "attack": 0.015,
+            "decay": 0.15,
+            "sustain": 0.75,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Saw Stack Lead",
+          "description": "Thick stacked saw lead",
+          "tags": ["lead", "saw", "thick", "trance"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.82,
+            "filter_resonance": 0.4,
+            "attack": 0.04,
+            "decay": 0.18,
+            "sustain": 0.85,
+            "release": 0.28
+          }
+        },
+        {
+          "name": "Soft Sine Lead",
+          "description": "Gentle sine lead for melodies",
+          "tags": ["lead", "sine", "soft", "melodic"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.2,
+            "attack": 0.025,
+            "decay": 0.2,
+            "sustain": 0.8,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Trance Lead",
+          "description": "Classic trance lead with resonance",
+          "tags": ["lead", "trance", "uplifting", "euphoric"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.88,
+            "filter_resonance": 0.6,
+            "attack": 0.02,
+            "decay": 0.22,
+            "sustain": 0.82,
+            "release": 0.32
+          }
+        },
+        {
+          "name": "Dirty Lead",
+          "description": "Gritty distorted lead",
+          "tags": ["lead", "dirty", "distorted", "aggressive"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.65,
+            "attack": 0.008,
+            "decay": 0.18,
+            "sustain": 0.85,
+            "release": 0.18
+          }
+        },
+        {
+          "name": "Breathy Lead",
+          "description": "Airy lead with gentle attack",
+          "tags": ["lead", "breathy", "airy", "soft"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.3,
+            "attack": 0.06,
+            "decay": 0.25,
+            "sustain": 0.75,
+            "release": 0.35
+          }
+        },
+        {
+          "name": "Sync Lead",
+          "description": "Sharp resonant sync-style lead",
+          "tags": ["lead", "sync", "sharp", "cutting"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.75,
+            "attack": 0.005,
+            "decay": 0.15,
+            "sustain": 0.8,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Classic Lead",
+          "description": "Versatile classic saw lead",
+          "tags": ["lead", "classic", "versatile", "analog"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.78,
+            "filter_resonance": 0.38,
+            "attack": 0.018,
+            "decay": 0.2,
+            "sustain": 0.8,
+            "release": 0.25
+          }
+        }
+      ],
+      "Pluck": [
+        {
+          "name": "Future Bass Pluck",
+          "description": "Bright pluck for future bass chords",
+          "tags": ["pluck", "future-bass", "chords", "bright"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.9,
+            "filter_resonance": 0.4,
+            "attack": 0.005,
+            "decay": 0.25,
+            "sustain": 0.2,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Muted Pluck",
+          "description": "Damped pluck with quick decay",
+          "tags": ["pluck", "muted", "short", "percussive"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.3,
+            "attack": 0.002,
+            "decay": 0.12,
+            "sustain": 0.0,
+            "release": 0.08
+          }
+        },
+        {
+          "name": "Bell Pluck",
+          "description": "Resonant bell-like pluck",
+          "tags": ["pluck", "bell", "resonant", "melodic"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.6,
+            "attack": 0.001,
+            "decay": 0.3,
+            "sustain": 0.1,
+            "release": 0.2
+          }
+        },
+        {
+          "name": "Soft Pluck",
+          "description": "Gentle pluck for arpeggios",
+          "tags": ["pluck", "soft", "gentle", "arp"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.25,
+            "attack": 0.008,
+            "decay": 0.2,
+            "sustain": 0.15,
+            "release": 0.12
+          }
+        },
+        {
+          "name": "Stab Pluck",
+          "description": "Sharp stab for accents",
+          "tags": ["pluck", "stab", "accent", "sharp"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.5,
+            "attack": 0.001,
+            "decay": 0.15,
+            "sustain": 0.0,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "House Pluck",
+          "description": "Classic house pluck",
+          "tags": ["pluck", "house", "dance", "classic"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.35,
+            "attack": 0.003,
+            "decay": 0.18,
+            "sustain": 0.1,
+            "release": 0.12
+          }
+        },
+        {
+          "name": "Hollow Pluck",
+          "description": "Hollow square pluck",
+          "tags": ["pluck", "hollow", "square", "minimal"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.3,
+            "attack": 0.004,
+            "decay": 0.16,
+            "sustain": 0.05,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "Percussive Pluck",
+          "description": "Ultra short percussive pluck",
+          "tags": ["pluck", "percussive", "short", "tight"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.4,
+            "attack": 0.001,
+            "decay": 0.08,
+            "sustain": 0.0,
+            "release": 0.05
+          }
+        },
+        {
+          "name": "Warm Pluck",
+          "description": "Warm analog-style pluck",
+          "tags": ["pluck", "warm", "analog", "vintage"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.68,
+            "filter_resonance": 0.28,
+            "attack": 0.006,
+            "decay": 0.22,
+            "sustain": 0.12,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Crystal Pluck",
+          "description": "Bright crystalline pluck",
+          "tags": ["pluck", "crystal", "bright", "clean"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.95,
+            "filter_resonance": 0.35,
+            "attack": 0.002,
+            "decay": 0.28,
+            "sustain": 0.08,
+            "release": 0.18
+          }
+        }
+      ],
+      "Pad": [
+        {
+          "name": "Warm Analog Pad",
+          "description": "Lush warm pad with slow attack",
+          "tags": ["pad", "warm", "analog", "lush"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.3,
+            "attack": 0.5,
+            "decay": 0.4,
+            "sustain": 0.85,
+            "release": 0.8
+          }
+        },
+        {
+          "name": "Airy Digital Pad",
+          "description": "Bright airy pad",
+          "tags": ["pad", "airy", "bright", "digital"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.25,
+            "attack": 0.4,
+            "decay": 0.3,
+            "sustain": 0.8,
+            "release": 0.7
+          }
+        },
+        {
+          "name": "Dark Pad",
+          "description": "Deep dark atmospheric pad",
+          "tags": ["pad", "dark", "deep", "atmospheric"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.4,
+            "filter_resonance": 0.2,
+            "attack": 0.6,
+            "decay": 0.5,
+            "sustain": 0.9,
+            "release": 0.9
+          }
+        },
+        {
+          "name": "Evolving Drone",
+          "description": "Slowly evolving drone pad",
+          "tags": ["pad", "drone", "evolving", "ambient"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.5,
+            "attack": 0.7,
+            "decay": 0.6,
+            "sustain": 0.95,
+            "release": 1.0
+          }
+        },
+        {
+          "name": "Soft Sine Pad",
+          "description": "Ultra soft sine pad",
+          "tags": ["pad", "soft", "sine", "gentle"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.15,
+            "attack": 0.45,
+            "decay": 0.35,
+            "sustain": 0.82,
+            "release": 0.75
+          }
+        },
+        {
+          "name": "Saw Pad",
+          "description": "Classic saw pad",
+          "tags": ["pad", "saw", "classic", "rich"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.58,
+            "filter_resonance": 0.32,
+            "attack": 0.5,
+            "decay": 0.4,
+            "sustain": 0.85,
+            "release": 0.8
+          }
+        },
+        {
+          "name": "Hollow Pad",
+          "description": "Hollow square pad",
+          "tags": ["pad", "hollow", "square", "ethereal"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.55,
+            "filter_resonance": 0.3,
+            "attack": 0.55,
+            "decay": 0.45,
+            "sustain": 0.88,
+            "release": 0.85
+          }
+        },
+        {
+          "name": "Sweeping Pad",
+          "description": "Pad with resonant sweep character",
+          "tags": ["pad", "sweep", "movement", "dynamic"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.45,
+            "filter_resonance": 0.65,
+            "attack": 0.6,
+            "decay": 0.5,
+            "sustain": 0.9,
+            "release": 0.9
+          }
+        },
+        {
+          "name": "Ambient Wash",
+          "description": "Atmospheric ambient wash",
+          "tags": ["pad", "ambient", "wash", "texture"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.2,
+            "attack": 0.8,
+            "decay": 0.6,
+            "sustain": 0.92,
+            "release": 1.0
+          }
+        },
+        {
+          "name": "Vintage Pad",
+          "description": "Vintage analog pad",
+          "tags": ["pad", "vintage", "analog", "retro"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.52,
+            "filter_resonance": 0.35,
+            "attack": 0.48,
+            "decay": 0.38,
+            "sustain": 0.84,
+            "release": 0.78
+          }
+        }
+      ],
+      "Arp": [
+        {
+          "name": "Gate Chord Seq",
+          "description": "Gated chord sequence",
+          "tags": ["arp", "gate", "chords", "sequence"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.3,
+            "attack": 0.002,
+            "decay": 0.1,
+            "sustain": 0.8,
+            "release": 0.05
+          }
+        },
+        {
+          "name": "Trance Arp",
+          "description": "Classic trance arpeggio",
+          "tags": ["arp", "trance", "uplifting", "melodic"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.45,
+            "attack": 0.005,
+            "decay": 0.15,
+            "sustain": 0.3,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "Trap Triplet Arp",
+          "description": "Staccato arp for trap patterns",
+          "tags": ["arp", "trap", "triplet", "staccato"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.4,
+            "attack": 0.001,
+            "decay": 0.08,
+            "sustain": 0.0,
+            "release": 0.06
+          }
+        },
+        {
+          "name": "Soft Arp",
+          "description": "Gentle melodic arp",
+          "tags": ["arp", "soft", "melodic", "gentle"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.25,
+            "attack": 0.01,
+            "decay": 0.2,
+            "sustain": 0.4,
+            "release": 0.15
+          }
+        },
+        {
+          "name": "Percussive Arp",
+          "description": "Short percussive arp",
+          "tags": ["arp", "percussive", "short", "rhythmic"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.5,
+            "attack": 0.001,
+            "decay": 0.12,
+            "sustain": 0.0,
+            "release": 0.08
+          }
+        },
+        {
+          "name": "Sine Arp",
+          "description": "Clean sine arpeggio",
+          "tags": ["arp", "sine", "clean", "pure"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.2,
+            "attack": 0.003,
+            "decay": 0.18,
+            "sustain": 0.2,
+            "release": 0.12
+          }
+        },
+        {
+          "name": "Resonant Arp",
+          "description": "High resonance arp",
+          "tags": ["arp", "resonant", "sharp", "cutting"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.75,
+            "attack": 0.002,
+            "decay": 0.14,
+            "sustain": 0.15,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "House Arp",
+          "description": "Classic house arpeggio",
+          "tags": ["arp", "house", "dance", "groovy"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.78,
+            "filter_resonance": 0.38,
+            "attack": 0.004,
+            "decay": 0.16,
+            "sustain": 0.25,
+            "release": 0.12
+          }
+        }
+      ],
+      "FX": [
+        {
+          "name": "Riser Noise",
+          "description": "Building noise riser",
+          "tags": ["fx", "riser", "build", "tension"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.3,
+            "filter_resonance": 0.6,
+            "attack": 0.9,
+            "decay": 0.1,
+            "sustain": 0.9,
+            "release": 0.5
+          }
+        },
+        {
+          "name": "Downlifter",
+          "description": "Falling transition FX",
+          "tags": ["fx", "down", "transition", "fall"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.95,
+            "filter_resonance": 0.4,
+            "attack": 0.001,
+            "decay": 0.8,
+            "sustain": 0.1,
+            "release": 0.4
+          }
+        },
+        {
+          "name": "Impact Boom",
+          "description": "Low impact hit",
+          "tags": ["fx", "impact", "hit", "boom"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.35,
+            "filter_resonance": 0.3,
+            "attack": 0.001,
+            "decay": 0.5,
+            "sustain": 0.0,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Sweep Whoosh",
+          "description": "Filter sweep whoosh",
+          "tags": ["fx", "sweep", "whoosh", "transition"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.7,
+            "attack": 0.01,
+            "decay": 0.4,
+            "sustain": 0.2,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Zap",
+          "description": "Quick zap sound",
+          "tags": ["fx", "zap", "laser", "sci-fi"],
+          "params": {
+            "osc_type": 2.0,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.6,
+            "attack": 0.001,
+            "decay": 0.15,
+            "sustain": 0.0,
+            "release": 0.1
+          }
+        },
+        {
+          "name": "Atmosphere",
+          "description": "Background atmosphere",
+          "tags": ["fx", "atmosphere", "ambient", "background"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.4,
+            "attack": 0.7,
+            "decay": 0.5,
+            "sustain": 0.85,
+            "release": 0.9
+          }
+        },
+        {
+          "name": "Drone FX",
+          "description": "Resonant drone FX",
+          "tags": ["fx", "drone", "resonant", "texture"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.45,
+            "filter_resonance": 0.8,
+            "attack": 0.6,
+            "decay": 0.5,
+            "sustain": 0.9,
+            "release": 0.8
+          }
+        },
+        {
+          "name": "Static Burst",
+          "description": "Short noise burst",
+          "tags": ["fx", "static", "burst", "glitch"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.5,
+            "attack": 0.001,
+            "decay": 0.08,
+            "sustain": 0.0,
+            "release": 0.05
+          }
+        }
+      ],
+      "Keys": [
+        {
+          "name": "Electric Piano",
+          "description": "Warm electric piano",
+          "tags": ["keys", "electric-piano", "warm", "vintage"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.25,
+            "attack": 0.005,
+            "decay": 0.3,
+            "sustain": 0.5,
+            "release": 0.4
+          }
+        },
+        {
+          "name": "Bell Keys",
+          "description": "Bright bell-like keys",
+          "tags": ["keys", "bell", "bright", "melodic"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.4,
+            "attack": 0.002,
+            "decay": 0.35,
+            "sustain": 0.3,
+            "release": 0.5
+          }
+        },
+        {
+          "name": "Marimba",
+          "description": "Wooden marimba tone",
+          "tags": ["keys", "marimba", "wood", "percussive"],
+          "params": {
+            "osc_type": 1.0,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.3,
+            "attack": 0.001,
+            "decay": 0.25,
+            "sustain": 0.1,
+            "release": 0.3
+          }
+        },
+        {
+          "name": "Soft Piano",
+          "description": "Gentle piano sound",
+          "tags": ["keys", "piano", "soft", "gentle"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.2,
+            "attack": 0.008,
+            "decay": 0.4,
+            "sustain": 0.4,
+            "release": 0.6
+          }
+        },
+        {
+          "name": "Vibes",
+          "description": "Vibraphone tone",
+          "tags": ["keys", "vibes", "mallet", "jazz"],
+          "params": {
+            "osc_type": 0.5,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.35,
+            "attack": 0.003,
+            "decay": 0.4,
+            "sustain": 0.25,
+            "release": 0.5
+          }
+        },
+        {
+          "name": "Music Box",
+          "description": "Delicate music box",
+          "tags": ["keys", "music-box", "delicate", "whimsical"],
+          "params": {
+            "osc_type": 0.0,
+            "filter_cutoff": 0.9,
+            "filter_resonance": 0.3,
+            "attack": 0.001,
+            "decay": 0.3,
+            "sustain": 0.05,
+            "release": 0.4
+          }
+        }
+      ]
+    }
+  },
+  "zenith_sampler": {
+    "parameters": {
+      "attack": { "min": 0.001, "max": 5.0, "default": 0.01 },
+      "decay": { "min": 0.001, "max": 5.0, "default": 0.1 },
+      "sustain": { "min": 0.0, "max": 1.0, "default": 0.7 },
+      "release": { "min": 0.001, "max": 10.0, "default": 0.3 },
+      "filter_cutoff": { "min": 0.0, "max": 1.0, "default": 1.0 },
+      "filter_resonance": { "min": 0.0, "max": 1.0, "default": 0.0 },
+      "tune": { "min": -12.0, "max": 12.0, "default": 0.0 },
+      "gain": { "min": 0.0, "max": 2.0, "default": 0.8 },
+      "character": { "min": 0.0, "max": 1.0, "default": 0.5 }
+    },
+    "archetypes": {
+      "808": [
+        {
+          "name": "Classic 808 Kit",
+          "description": "TR-808 drum machine sounds",
+          "tags": ["808", "drums", "trap", "hip-hop"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.3,
+            "sustain": 0.0,
+            "release": 0.2,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.2,
+            "tune": 0.0,
+            "gain": 0.9,
+            "character": 0.4
+          }
+        },
+        {
+          "name": "Sub 808",
+          "description": "Deep sub 808",
+          "tags": ["808", "sub", "bass", "trap"],
+          "params": {
+            "attack": 0.002,
+            "decay": 0.5,
+            "sustain": 0.0,
+            "release": 0.3,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.15,
+            "tune": -2.0,
+            "gain": 1.0,
+            "character": 0.3
+          }
+        },
+        {
+          "name": "Punchy 808",
+          "description": "Punchy 808 with attack",
+          "tags": ["808", "punchy", "trap", "modern"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.25,
+            "sustain": 0.0,
+            "release": 0.15,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.25,
+            "tune": 0.0,
+            "gain": 0.95,
+            "character": 0.6
+          }
+        },
+        {
+          "name": "Long 808",
+          "description": "Sustained 808",
+          "tags": ["808", "long", "sustain", "bass"],
+          "params": {
+            "attack": 0.003,
+            "decay": 0.8,
+            "sustain": 0.0,
+            "release": 0.5,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.2,
+            "tune": 0.0,
+            "gain": 0.9,
+            "character": 0.35
+          }
+        },
+        {
+          "name": "Distorted 808",
+          "description": "Gritty distorted 808",
+          "tags": ["808", "distorted", "aggressive", "heavy"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.4,
+            "sustain": 0.0,
+            "release": 0.25,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.3,
+            "tune": 0.0,
+            "gain": 1.1,
+            "character": 0.8
+          }
+        }
+      ],
+      "Drums": [
+        {
+          "name": "Trap Clap",
+          "description": "Modern trap clap",
+          "tags": ["drums", "clap", "trap", "snare"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.08,
+            "sustain": 0.0,
+            "release": 0.05,
+            "filter_cutoff": 0.9,
+            "filter_resonance": 0.1,
+            "tune": 0.0,
+            "gain": 0.85,
+            "character": 0.5
+          }
+        },
+        {
+          "name": "Tight Snare",
+          "description": "Tight snare drum",
+          "tags": ["drums", "snare", "tight", "punchy"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.12,
+            "sustain": 0.0,
+            "release": 0.08,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.15,
+            "tune": 0.0,
+            "gain": 0.9,
+            "character": 0.45
+          }
+        },
+        {
+          "name": "Hi-Hat",
+          "description": "Crisp hi-hat",
+          "tags": ["drums", "hi-hat", "crisp", "percussion"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.05,
+            "sustain": 0.0,
+            "release": 0.03,
+            "filter_cutoff": 0.95,
+            "filter_resonance": 0.05,
+            "tune": 0.0,
+            "gain": 0.75,
+            "character": 0.3
+          }
+        },
+        {
+          "name": "Kick",
+          "description": "Punchy kick drum",
+          "tags": ["drums", "kick", "bass", "punchy"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.2,
+            "sustain": 0.0,
+            "release": 0.1,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.2,
+            "tune": 0.0,
+            "gain": 1.0,
+            "character": 0.5
+          }
+        },
+        {
+          "name": "Rim Shot",
+          "description": "Sharp rim shot",
+          "tags": ["drums", "rim", "percussion", "sharp"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.06,
+            "sustain": 0.0,
+            "release": 0.04,
+            "filter_cutoff": 0.88,
+            "filter_resonance": 0.12,
+            "tune": 0.0,
+            "gain": 0.8,
+            "character": 0.4
+          }
+        }
+      ],
+      "Keys": [
+        {
+          "name": "LoFi Piano",
+          "description": "Dusty lo-fi piano",
+          "tags": ["keys", "piano", "lofi", "dusty"],
+          "params": {
+            "attack": 0.005,
+            "decay": 0.5,
+            "sustain": 0.3,
+            "release": 0.8,
+            "filter_cutoff": 0.7,
+            "filter_resonance": 0.15,
+            "tune": 0.0,
+            "gain": 0.85,
+            "character": 0.6
+          }
+        },
+        {
+          "name": "Electric Keys",
+          "description": "Electric piano sound",
+          "tags": ["keys", "electric", "vintage", "warm"],
+          "params": {
+            "attack": 0.003,
+            "decay": 0.4,
+            "sustain": 0.4,
+            "release": 0.6,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.2,
+            "tune": 0.0,
+            "gain": 0.8,
+            "character": 0.5
+          }
+        },
+        {
+          "name": "Mallet",
+          "description": "Plucky mallet sound",
+          "tags": ["keys", "mallet", "plucky", "percussive"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.3,
+            "sustain": 0.2,
+            "release": 0.4,
+            "filter_cutoff": 0.8,
+            "filter_resonance": 0.25,
+            "tune": 0.0,
+            "gain": 0.82,
+            "character": 0.4
+          }
+        },
+        {
+          "name": "Bell Tone",
+          "description": "Bright bell sound",
+          "tags": ["keys", "bell", "bright", "resonant"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.6,
+            "sustain": 0.15,
+            "release": 0.9,
+            "filter_cutoff": 0.9,
+            "filter_resonance": 0.35,
+            "tune": 0.0,
+            "gain": 0.75,
+            "character": 0.35
+          }
+        },
+        {
+          "name": "Toy Piano",
+          "description": "Delicate toy piano",
+          "tags": ["keys", "toy", "delicate", "whimsical"],
+          "params": {
+            "attack": 0.002,
+            "decay": 0.25,
+            "sustain": 0.1,
+            "release": 0.35,
+            "filter_cutoff": 0.85,
+            "filter_resonance": 0.2,
+            "tune": 0.0,
+            "gain": 0.78,
+            "character": 0.45
+          }
+        }
+      ],
+      "FX": [
+        {
+          "name": "Impact Hit",
+          "description": "Heavy impact sound",
+          "tags": ["fx", "impact", "hit", "cinematic"],
+          "params": {
+            "attack": 0.001,
+            "decay": 0.5,
+            "sustain": 0.0,
+            "release": 0.8,
+            "filter_cutoff": 0.5,
+            "filter_resonance": 0.3,
+            "tune": 0.0,
+            "gain": 1.2,
+            "character": 0.7
+          }
+        },
+        {
+          "name": "Riser",
+          "description": "Tension riser",
+          "tags": ["fx", "riser", "build", "tension"],
+          "params": {
+            "attack": 0.5,
+            "decay": 1.0,
+            "sustain": 0.8,
+            "release": 1.5,
+            "filter_cutoff": 0.3,
+            "filter_resonance": 0.5,
+            "tune": 0.0,
+            "gain": 0.9,
+            "character": 0.6
+          }
+        },
+        {
+          "name": "Vox Shot",
+          "description": "Vocal sample hit",
+          "tags": ["fx", "vox", "vocal", "shot"],
+          "params": {
+            "attack": 0.002,
+            "decay": 0.15,
+            "sustain": 0.0,
+            "release": 0.12,
+            "filter_cutoff": 0.75,
+            "filter_resonance": 0.25,
+            "tune": 0.0,
+            "gain": 0.85,
+            "character": 0.55
+          }
+        },
+        {
+          "name": "Whoosh",
+          "description": "Transition whoosh",
+          "tags": ["fx", "whoosh", "transition", "sweep"],
+          "params": {
+            "attack": 0.01,
+            "decay": 0.4,
+            "sustain": 0.1,
+            "release": 0.5,
+            "filter_cutoff": 0.6,
+            "filter_resonance": 0.6,
+            "tune": 0.0,
+            "gain": 0.88,
+            "character": 0.5
+          }
+        },
+        {
+          "name": "Texture",
+          "description": "Atmospheric texture",
+          "tags": ["fx", "texture", "atmosphere", "ambient"],
+          "params": {
+            "attack": 0.3,
+            "decay": 0.8,
+            "sustain": 0.7,
+            "release": 1.2,
+            "filter_cutoff": 0.65,
+            "filter_resonance": 0.35,
+            "tune": 0.0,
+            "gain": 0.8,
+            "character": 0.45
+          }
+        }
+      ]
+    }
+  }
+}

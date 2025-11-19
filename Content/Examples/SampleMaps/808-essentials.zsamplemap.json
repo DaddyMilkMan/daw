@@ -1,0 +1,139 @@
+{
+  "name": "808 Essentials",
+  "category": "drums",
+  "description": "Classic 808 drum machine sounds - kick, snare, hi-hats, and bass",
+  "author": "Zenith DAW",
+  "version": "1.0.0",
+
+  "parameters": {
+    "attack": 0.001,
+    "decay": 0.2,
+    "sustain": 0.0,
+    "release": 0.5,
+    "filterCutoff": 0.8,
+    "filterResonance": 0.2,
+    "sampleStartOffset": 0.0,
+    "pitchFine": 0.0,
+    "pitchSemitones": 0.0,
+    "globalPan": 0.5,
+    "globalGain": 0.9
+  },
+
+  "regions": [
+    {
+      "filePath": "808-kick.wav",
+      "rootNote": 36,
+      "lowNote": 36,
+      "highNote": 36,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "C1 - Bass Drum"
+    },
+    {
+      "filePath": "808-snare.wav",
+      "rootNote": 38,
+      "lowNote": 38,
+      "highNote": 38,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "D1 - Snare"
+    },
+    {
+      "filePath": "808-hihat-closed.wav",
+      "rootNote": 42,
+      "lowNote": 42,
+      "highNote": 42,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.8,
+      "tune": 0.0,
+      "comment": "F#1 - Closed Hi-Hat"
+    },
+    {
+      "filePath": "808-hihat-open.wav",
+      "rootNote": 46,
+      "lowNote": 46,
+      "highNote": 46,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.8,
+      "tune": 0.0,
+      "comment": "A#1 - Open Hi-Hat"
+    },
+    {
+      "filePath": "808-clap.wav",
+      "rootNote": 39,
+      "lowNote": 39,
+      "highNote": 39,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "D#1 - Hand Clap"
+    },
+    {
+      "filePath": "808-tom-low.wav",
+      "rootNote": 41,
+      "lowNote": 41,
+      "highNote": 41,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "F1 - Low Tom"
+    },
+    {
+      "filePath": "808-tom-mid.wav",
+      "rootNote": 43,
+      "lowNote": 43,
+      "highNote": 43,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "G1 - Mid Tom"
+    },
+    {
+      "filePath": "808-tom-high.wav",
+      "rootNote": 45,
+      "lowNote": 45,
+      "highNote": 45,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "none",
+      "gain": 0.9,
+      "tune": 0.0,
+      "comment": "A1 - High Tom"
+    },
+    {
+      "filePath": "808-bass.wav",
+      "rootNote": 48,
+      "lowNote": 24,
+      "highNote": 72,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "C2-C4 - 808 Bass (pitched)"
+    }
+  ],
+
+  "notes": {
+    "usage": "This is a template for 808-style drum kits. Replace the .wav files in the Samples/ directory with your own 808 samples.",
+    "midiMapping": "Standard GM drum mapping for 808 sounds",
+    "loopModes": "none | forward | ping-pong",
+    "tuning": "tune is in semitones, applied per-sample before global pitch controls"
+  }
+}
