@@ -1,10 +1,10 @@
 # Zenith AI Bridge Server
 
-Example WebSocket server implementation for communication between zenith DAW and external AI services.
+Example WebSocket server implementation for communication between Zenith DAW and external AI services.
 
 ## Overview
 
-The AI Bridge enables real-time communication between the zenith DAW and external AI services. It supports:
+The AI Bridge enables real-time communication between the Zenith DAW and external AI music generation services. It supports:
 
 - **AI Music Generation**: Melody, chords, drums, and bass generation
 - **Intelligent Instrument Control** (NEW): Natural language preset suggestions and parameter tweaking via InstrumentAIAdapter

@@ -17,8 +17,8 @@ These branches have NO conflicts with `claude/daw-features-comparison-011CUv5Tyh
 #### 1. claude/zenith-plugin-system-011CUx28AkcQynMgXKqa7VRv
 
 **Conflicts:**
-- `vexel-daw/src/renderer/types/plugin.ts`
-- `vexel-daw/src/renderer/components/RightPanel.tsx`
+- `zenith-daw/src/renderer/types/plugin.ts`
+- `zenith-daw/src/renderer/components/RightPanel.tsx`
 
 **Resolution Applied:**
 1. **plugin.ts**: Merged WAM 2.0 standard (main) with legacy plugin system (feature):
@@ -43,9 +43,9 @@ These branches have NO conflicts with `claude/daw-features-comparison-011CUv5Tyh
 #### 2. claude/zenith-tempo-metronome-011CUx2rKUdvrbdCZSo11TMy
 
 **Conflicts:**
-- `vexel-daw/src/renderer/App.tsx` (1 conflict)
-- `vexel-daw/src/renderer/components/CenterPanel.tsx` (4 conflicts)
-- `vexel-daw/src/renderer/components/TransportBar.tsx` (4 conflicts)
+- `zenith-daw/src/renderer/App.tsx` (1 conflict)
+- `zenith-daw/src/renderer/components/CenterPanel.tsx` (4 conflicts)
+- `zenith-daw/src/renderer/components/TransportBar.tsx` (4 conflicts)
 
 **Resolution Strategy:**
 
@@ -158,8 +158,8 @@ const handleTimeSignatureChange = (numerator: number, denominator: number) => {
 #### 3. claude/zenith-tempo-metronome-011CUx2sYYUutsrYmrZxrKS5
 
 **Conflicts:**
-- `vexel-daw/src/renderer/App.tsx` (5 conflicts)
-- `vexel-daw/src/renderer/components/TransportBar.tsx` (2 conflicts)
+- `zenith-daw/src/renderer/App.tsx` (5 conflicts)
+- `zenith-daw/src/renderer/components/TransportBar.tsx` (2 conflicts)
 
 **Resolution Strategy:**
 Same as branch #2 above - merge metronome features with engineClient architecture.
@@ -246,7 +246,7 @@ After resolving conflicts, test:
    - Apply same fixes to tempo-metronome-s
 
 2. **Test Thoroughly:**
-   - Run build: `cd vexel-daw && npm run build`
+   - Run build: `cd zenith-daw && npm run build`
    - Check types: `npx tsc --noEmit`
    - Manual testing per checklist above
 

@@ -1,8 +1,9 @@
 wingman/
-vexel-daw/node_modules/
-vexel-daw/dist/
-vexel-daw/dist-electron/
-VexelDAW-Native/build/
+zenith-daw/node_modules/
+ai-bridge-server/node_modules/
+zenith-daw/dist/
+zenith-daw/dist-electron/
+ZenithDAW-Native/build/
 zenith-core/build/
 build/
 

@@ -2,8 +2,8 @@
   ==============================================================================
 
     Clip.h
-    Ported from: VexelDAW-Native/Source/Audio/Clip.h (2025-11-11)
-    Author:  Vexel DAW → Zenith DAW
+    Ported from: ZenithDAW-Native/Source/Audio/Clip.h (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
 
     Audio/MIDI clip with transport synchronization and playback control
 

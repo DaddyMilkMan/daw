@@ -1,6 +1,10 @@
 # Zenith DAW
 
+<<<<<<< HEAD
+(formerly “Zenith DAW”)
+=======
 **Professional native DAW built with JUCE 8 and modern C++20**
+>>>>>>> origin/master
 
 Zenith is a high-performance digital audio workstation focused on native performance, clean architecture, RT-safe audio processing, deep moddability, and AI-assisted workflows (Wingman). We've migrated to a pure C++ / JUCE 8 interface for predictable CPU usage, smooth rendering, and rock-solid real-time behavior.
 

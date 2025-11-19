@@ -19,7 +19,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Phase control flags for incremental integration
 option(ZENITH_ENABLE_PHASE1_AUDIO "Enable src/audio skeleton (Phase 1 - not ready)" OFF)
-option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from VexelDAW-Native" OFF)
+option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from ZenithDAW-Native" OFF)
 
 # C3: Optional debug seed for testing track integration (disabled by default)
 option(ZENITH_ENGINE_SEED_DEBUG_TRACKS "Create 8 demo tracks at startup in Debug builds" OFF)
@@ -103,6 +103,9 @@ target_sources(ZenithDAW PRIVATE
     # Phase 8: CommandAPI for Wingman MIDI commands
     src/CommandAPI.cpp
 
+<<<<<<< HEAD
+    # Engine primitives (ported from ZenithDAW-Native, Phase 2)
+=======
     # Phase 8.1: UI Components
     src/PianoRollComponent.cpp
     src/ArrangerComponent.cpp
@@ -112,6 +115,7 @@ target_sources(ZenithDAW PRIVATE
     src/MixerComponent.cpp
 
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
+>>>>>>> origin/master
     Source/engine/Track.h
     Source/engine/Track.cpp
     Source/engine/Clip.h

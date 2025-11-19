@@ -251,6 +251,23 @@ public:
     void addTestTracks(int count);
 
     //==========================================================================
+    // Offline Export
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file with offline rendering
+     * @param outputFile Path to output WAV file
+     * @param sampleRate Sample rate for export (default: 44100)
+     * @param bitDepth Bit depth for export (16, 24, or 32)
+     * @param durationInSeconds Duration to export (0 = auto-detect from project)
+     * @return true if export succeeded
+     * @note Runs on MESSAGE THREAD - not real-time safe
+     */
+    bool exportProjectToWav(const juce::File& outputFile,
+                           double sampleRate = 44100.0,
+                           int bitDepth = 24,
+                           double durationInSeconds = 0.0);
+
     // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
     //==========================================================================
 
@@ -340,43 +357,6 @@ public:
      * @note Use only from message thread
      */
     zenith::PluginEditorWindowManager& getPluginEditorWindowManager() noexcept;
-
-    //==========================================================================
-    // Unified Render Path
-    //==========================================================================
-
-    /**
-     * @brief Unified render function used by both realtime and offline paths
-     *
-     * This is the single source of truth for audio rendering:
-     * - Realtime callback calls this with live transport position
-     * - Export calls this with offline transport position
-     *
-     * @param outputBuffer Pre-allocated stereo buffer to fill
-     * @param transportPosition Current playback position in samples
-     * @param numSamples Number of samples to render
-     * @note Can run on AUDIO THREAD - must be real-time safe!
-     * @note Uses pre-allocated track buffers to avoid allocation
-     */
-    void renderBlock(juce::AudioBuffer<float>& outputBuffer,
-                     juce::int64 transportPosition,
-                     int numSamples);
-
-    /**
-     * @brief Export project to WAV file using unified render path
-     *
-     * This uses the SAME renderBlock() function as realtime playback,
-     * ensuring bit-identical output.
-     *
-     * @param outputFilePath Path to output WAV file
-     * @param durationSeconds Duration to export (0 = auto-detect from project)
-     * @param sampleRate Sample rate for export (0 = use current engine rate)
-     * @return true if export succeeded
-     * @note Runs on MESSAGE THREAD
-     */
-    bool exportProjectToWav(const juce::String& outputFilePath,
-                           double durationSeconds = 10.0,
-                           double sampleRate = 0.0);
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -514,6 +494,29 @@ private:
     // Phase 2A: MIDI input management (message thread only)
     void enableMidiInput();
     void disableMidiInput();
+
+    //==========================================================================
+    // Offline Rendering Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Prepare per-track buffers for offline rendering
+     * @param blockSize Block size for offline rendering (e.g., 4096 samples)
+     * @param numChannels Number of channels per track
+     * @note Must be called before renderBlock() during offline export
+     */
+    void prepareBuffersForOfflineRender(int blockSize, int numChannels);
+
+    /**
+     * @brief Render a block of audio into the output buffer
+     * @param outputBuffer Buffer to render into
+     * @param numSamples Number of samples to render
+     * @param playheadPosition Current playhead position in samples
+     * @note MESSAGE THREAD - used for offline rendering only
+     */
+    void renderBlock(juce::AudioBuffer<float>& outputBuffer,
+                    int numSamples,
+                    juce::int64 playheadPosition);
 
     //==========================================================================
     // Member Variables

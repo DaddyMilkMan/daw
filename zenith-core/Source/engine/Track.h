@@ -2,8 +2,8 @@
   ==============================================================================
 
     Track.h
-    Ported from: VexelDAW-Native/Source/Audio/Track.h (2025-11-11)
-    Author:  Vexel DAW → Zenith DAW
+    Ported from: ZenithDAW-Native/Source/Audio/Track.h (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
 
     Audio/MIDI track with clip playback, plugin chain, and mixer controls
 
