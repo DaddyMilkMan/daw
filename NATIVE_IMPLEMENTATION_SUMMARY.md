@@ -3,7 +3,7 @@
 ## Session: 2025-11-11
 
 ### 🎯 Objective
-Implement the complete audio engine core for the Vexel DAW native C++/JUCE application, including all fundamental audio processing classes, GUI component structure, and state management.
+Implement the complete audio engine core for the Zenith DAW native C++/JUCE application, including all fundamental audio processing classes, GUI component structure, and state management.
 
 ---
 

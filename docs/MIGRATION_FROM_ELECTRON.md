@@ -204,7 +204,7 @@ ApplicationWindow {
     width: 1920
     height: 1080
     visible: true
-    title: "Vexel DAW"
+    title: "Zenith DAW"
     color: "#1a1a1a"
 
     // Main layout
@@ -836,13 +836,13 @@ set(CMAKE_BUILD_TYPE Release)
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
 
 # macOS bundle
-set(MACOSX_BUNDLE_BUNDLE_NAME "Vexel DAW")
-set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.vexel.daw")
+set(MACOSX_BUNDLE_BUNDLE_NAME "Zenith DAW")
+set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.zenith.daw")
 set(MACOSX_BUNDLE_ICON_FILE "icon.icns")
 
 # Windows installer
-set(CPACK_NSIS_DISPLAY_NAME "Vexel DAW")
-set(CPACK_NSIS_PACKAGE_NAME "VexelDAW")
+set(CPACK_NSIS_DISPLAY_NAME "Zenith DAW")
+set(CPACK_NSIS_PACKAGE_NAME "ZenithDAW")
 ```
 
 #### Deployment Tasks:

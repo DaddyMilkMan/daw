@@ -1,50 +1,55 @@
 /**
  * @file ArrangerView.h
- * @brief Main arranger/timeline view for tracks and clips
+ * @brief Main arranger view with track headers and timeline
+ *
+ * Layout:
+ * ┌────────────┬─────────────────────────┐
+ * │ Headers    │ Timeline                │
+ * │ (~160px)   │ (rest of space)         │
+ * │            │                         │
+ * │  Track 1   │ ████████                │
+ * │  Track 2   │   ████                  │
+ * │  Track 3   │      ████████           │
+ * │            │                         │
+ * └────────────┴─────────────────────────┘
+ *
+ * For this phase, we focus on the track headers column.
+ * Timeline rendering is deferred to a future phase.
  */
 
 #pragma once
 
 #include <JuceHeader.h>
 #include "../ProjectState.h"
-#include "TimelineRuler.h"
-#include "ClipComponent.h"
+#include "TrackHeaderComponent.h"
+#include <vector>
+#include <memory>
 
+//==============================================================================
 /**
  * @class ArrangerView
- * @brief Main timeline view showing tracks and clips
+ * @brief Main arranger view with track headers
  *
- * Displays:
- * - Timeline ruler at top
- * - Track lanes with clips
- * - Horizontal scroll and zoom
- *
- * Operates on ProjectState ValueTree.
+ * Manages:
+ * - Track header components (left column)
+ * - Timeline view (right area - placeholder for now)
+ * - Synchronization with ProjectState tracks
  */
 class ArrangerView : public juce::Component,
-                     private juce::ValueTree::Listener
+                      private juce::ValueTree::Listener
 {
 public:
+    //==========================================================================
     /**
      * @brief Constructor
      * @param projectState Reference to project state
      */
-    ArrangerView(ProjectState& projectState);
+    explicit ArrangerView(ProjectState& projectState);
+
+    /**
+     * @brief Destructor
+     */
     ~ArrangerView() override;
-
-    //==========================================================================
-    // View control
-    //==========================================================================
-
-    /**
-     * @brief Set zoom level (pixels per beat)
-     */
-    void setZoom(double pixelsPerBeat);
-
-    /**
-     * @brief Scroll to a specific beat position
-     */
-    void scrollToBeat(double beat);
 
     //==========================================================================
     // Component interface
@@ -52,59 +57,44 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseDoubleClick(const juce::MouseEvent& event) override;
 
 private:
     //==========================================================================
-    // ValueTree::Listener interface
+    // ValueTree::Listener (MESSAGE THREAD)
     //==========================================================================
 
-    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override {}
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override {}
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
     void valueTreeParentChanged(juce::ValueTree& tree) override {}
 
     //==========================================================================
-    // Helper methods
+    // Helper Methods
     //==========================================================================
 
     /**
-     * @brief Rebuild all clip components from state
+     * @brief Rebuild track headers from ProjectState
      */
-    void rebuildClips();
+    void rebuildTrackHeaders();
 
     /**
-     * @brief Update clip positions and sizes
+     * @brief Layout track headers in vertical column
      */
-    void updateClipBounds();
-
-    /**
-     * @brief Get track index at Y position
-     */
-    int getTrackAtY(int y) const;
-
-    /**
-     * @brief Get beat position at X position
-     */
-    double getBeatAtX(int x) const;
+    void layoutTrackHeaders();
 
     //==========================================================================
-    // Member variables
+    // Member Variables
     //==========================================================================
 
-    ProjectState& projectState;
+    ProjectState& projectState_;
 
-    TimelineRuler ruler;
-    std::vector<std::unique_ptr<ClipComponent>> clipComponents;
+    // Track headers
+    std::vector<std::unique_ptr<TrackHeaderComponent>> trackHeaders_;
 
-    double viewStartBeat = 0.0;
-    double viewLengthBeats = 32.0;
-    double pixelsPerBeat = 20.0;
-
-    static constexpr int TRACK_HEIGHT = 80;
-    static constexpr int RULER_HEIGHT = 30;
+    // Layout constants
+    static constexpr int HEADER_WIDTH = 160;
+    static constexpr int TRACK_HEIGHT = 60;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerView)
 };

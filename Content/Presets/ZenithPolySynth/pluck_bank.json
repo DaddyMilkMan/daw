@@ -1,0 +1,1269 @@
+{
+  "instrument": "zenith_poly_synth",
+  "bank_name": "Pluck Bank",
+  "category": "Pluck",
+  "version": "1.0",
+  "preset_count": 60,
+  "presets": [
+    {
+      "id": "future_bass_pluck",
+      "name": "Future Bass Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Bright pluck for future bass chords",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.4,
+        "attack": 0.005,
+        "decay": 0.25,
+        "sustain": 0.2,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "future_bass_pluck_01",
+      "name": "Future Bass Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Variation of Future Bass Pluck",
+      "parameters": {
+        "osc_type": 0.963,
+        "filter_cutoff": 0.883,
+        "filter_resonance": 0.468,
+        "attack": 0.058,
+        "decay": 0.184,
+        "sustain": 0.253,
+        "release": 0.126
+      }
+    },
+    {
+      "id": "future_bass_pluck_02",
+      "name": "Future Bass Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Variation of Future Bass Pluck",
+      "parameters": {
+        "osc_type": 1.06,
+        "filter_cutoff": 0.846,
+        "filter_resonance": 0.425,
+        "attack": 0.0,
+        "decay": 0.19,
+        "sustain": 0.254,
+        "release": 0.225
+      }
+    },
+    {
+      "id": "future_bass_pluck_03",
+      "name": "Future Bass Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Variation of Future Bass Pluck",
+      "parameters": {
+        "osc_type": 0.881,
+        "filter_cutoff": 0.912,
+        "filter_resonance": 0.415,
+        "attack": 0.0,
+        "decay": 0.228,
+        "sustain": 0.179,
+        "release": 0.092
+      }
+    },
+    {
+      "id": "future_bass_pluck_04",
+      "name": "Future Bass Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Variation of Future Bass Pluck",
+      "parameters": {
+        "osc_type": 1.124,
+        "filter_cutoff": 0.972,
+        "filter_resonance": 0.375,
+        "attack": 0.07,
+        "decay": 0.293,
+        "sustain": 0.143,
+        "release": 0.21
+      }
+    },
+    {
+      "id": "future_bass_pluck_05",
+      "name": "Future Bass Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "future-bass",
+        "chords",
+        "bright"
+      ],
+      "description": "Variation of Future Bass Pluck",
+      "parameters": {
+        "osc_type": 1.083,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.469,
+        "attack": 0.042,
+        "decay": 0.171,
+        "sustain": 0.201,
+        "release": 0.199
+      }
+    },
+    {
+      "id": "muted_pluck",
+      "name": "Muted Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Damped pluck with quick decay",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.3,
+        "attack": 0.002,
+        "decay": 0.12,
+        "sustain": 0.0,
+        "release": 0.08
+      }
+    },
+    {
+      "id": "muted_pluck_01",
+      "name": "Muted Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Variation of Muted Pluck",
+      "parameters": {
+        "osc_type": 1.025,
+        "filter_cutoff": 0.549,
+        "filter_resonance": 0.358,
+        "attack": 0.0,
+        "decay": 0.077,
+        "sustain": 0.014,
+        "release": 0.114
+      }
+    },
+    {
+      "id": "muted_pluck_02",
+      "name": "Muted Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Variation of Muted Pluck",
+      "parameters": {
+        "osc_type": 1.025,
+        "filter_cutoff": 0.569,
+        "filter_resonance": 0.326,
+        "attack": 0.05,
+        "decay": 0.121,
+        "sustain": 0.063,
+        "release": 0.115
+      }
+    },
+    {
+      "id": "muted_pluck_03",
+      "name": "Muted Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Variation of Muted Pluck",
+      "parameters": {
+        "osc_type": 0.989,
+        "filter_cutoff": 0.632,
+        "filter_resonance": 0.23,
+        "attack": 0.0,
+        "decay": 0.196,
+        "sustain": 0.071,
+        "release": 0.047
+      }
+    },
+    {
+      "id": "muted_pluck_04",
+      "name": "Muted Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Variation of Muted Pluck",
+      "parameters": {
+        "osc_type": 0.87,
+        "filter_cutoff": 0.587,
+        "filter_resonance": 0.305,
+        "attack": 0.0,
+        "decay": 0.043,
+        "sustain": 0.0,
+        "release": 0.13
+      }
+    },
+    {
+      "id": "muted_pluck_05",
+      "name": "Muted Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "muted",
+        "short",
+        "percussive"
+      ],
+      "description": "Variation of Muted Pluck",
+      "parameters": {
+        "osc_type": 1.045,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.344,
+        "attack": 0.0,
+        "decay": 0.07,
+        "sustain": 0.0,
+        "release": 0.082
+      }
+    },
+    {
+      "id": "bell_pluck",
+      "name": "Bell Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Resonant bell-like pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.6,
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.1,
+        "release": 0.2
+      }
+    },
+    {
+      "id": "bell_pluck_01",
+      "name": "Bell Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Variation of Bell Pluck",
+      "parameters": {
+        "osc_type": 0.482,
+        "filter_cutoff": 0.891,
+        "filter_resonance": 0.52,
+        "attack": 0.053,
+        "decay": 0.251,
+        "sustain": 0.064,
+        "release": 0.249
+      }
+    },
+    {
+      "id": "bell_pluck_02",
+      "name": "Bell Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Variation of Bell Pluck",
+      "parameters": {
+        "osc_type": 0.607,
+        "filter_cutoff": 0.776,
+        "filter_resonance": 0.595,
+        "attack": 0.081,
+        "decay": 0.243,
+        "sustain": 0.099,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "bell_pluck_03",
+      "name": "Bell Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Variation of Bell Pluck",
+      "parameters": {
+        "osc_type": 0.347,
+        "filter_cutoff": 0.922,
+        "filter_resonance": 0.613,
+        "attack": 0.0,
+        "decay": 0.272,
+        "sustain": 0.052,
+        "release": 0.209
+      }
+    },
+    {
+      "id": "bell_pluck_04",
+      "name": "Bell Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Variation of Bell Pluck",
+      "parameters": {
+        "osc_type": 0.595,
+        "filter_cutoff": 0.894,
+        "filter_resonance": 0.628,
+        "attack": 0.0,
+        "decay": 0.353,
+        "sustain": 0.143,
+        "release": 0.206
+      }
+    },
+    {
+      "id": "bell_pluck_05",
+      "name": "Bell Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "bell",
+        "resonant",
+        "melodic"
+      ],
+      "description": "Variation of Bell Pluck",
+      "parameters": {
+        "osc_type": 0.539,
+        "filter_cutoff": 0.824,
+        "filter_resonance": 0.675,
+        "attack": 0.0,
+        "decay": 0.231,
+        "sustain": 0.143,
+        "release": 0.267
+      }
+    },
+    {
+      "id": "soft_pluck",
+      "name": "Soft Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Gentle pluck for arpeggios",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.25,
+        "attack": 0.008,
+        "decay": 0.2,
+        "sustain": 0.15,
+        "release": 0.12
+      }
+    },
+    {
+      "id": "soft_pluck_01",
+      "name": "Soft Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Variation of Soft Pluck",
+      "parameters": {
+        "osc_type": 0.019,
+        "filter_cutoff": 0.698,
+        "filter_resonance": 0.248,
+        "attack": 0.074,
+        "decay": 0.158,
+        "sustain": 0.105,
+        "release": 0.167
+      }
+    },
+    {
+      "id": "soft_pluck_02",
+      "name": "Soft Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Variation of Soft Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.223,
+        "attack": 0.024,
+        "decay": 0.21,
+        "sustain": 0.077,
+        "release": 0.077
+      }
+    },
+    {
+      "id": "soft_pluck_03",
+      "name": "Soft Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Variation of Soft Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.761,
+        "filter_resonance": 0.32,
+        "attack": 0.0,
+        "decay": 0.149,
+        "sustain": 0.212,
+        "release": 0.041
+      }
+    },
+    {
+      "id": "soft_pluck_04",
+      "name": "Soft Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Variation of Soft Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.684,
+        "filter_resonance": 0.177,
+        "attack": 0.0,
+        "decay": 0.151,
+        "sustain": 0.078,
+        "release": 0.083
+      }
+    },
+    {
+      "id": "soft_pluck_05",
+      "name": "Soft Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "soft",
+        "gentle",
+        "arp"
+      ],
+      "description": "Variation of Soft Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.651,
+        "filter_resonance": 0.307,
+        "attack": 0.0,
+        "decay": 0.219,
+        "sustain": 0.223,
+        "release": 0.117
+      }
+    },
+    {
+      "id": "stab_pluck",
+      "name": "Stab Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Sharp stab for accents",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.5,
+        "attack": 0.001,
+        "decay": 0.15,
+        "sustain": 0.0,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "stab_pluck_01",
+      "name": "Stab Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Variation of Stab Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.855,
+        "filter_resonance": 0.459,
+        "attack": 0.068,
+        "decay": 0.217,
+        "sustain": 0.076,
+        "release": 0.17
+      }
+    },
+    {
+      "id": "stab_pluck_02",
+      "name": "Stab Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Variation of Stab Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.803,
+        "filter_resonance": 0.517,
+        "attack": 0.062,
+        "decay": 0.095,
+        "sustain": 0.029,
+        "release": 0.107
+      }
+    },
+    {
+      "id": "stab_pluck_03",
+      "name": "Stab Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Variation of Stab Pluck",
+      "parameters": {
+        "osc_type": 1.954,
+        "filter_cutoff": 0.785,
+        "filter_resonance": 0.519,
+        "attack": 0.001,
+        "decay": 0.086,
+        "sustain": 0.038,
+        "release": 0.063
+      }
+    },
+    {
+      "id": "stab_pluck_04",
+      "name": "Stab Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Variation of Stab Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.527,
+        "attack": 0.008,
+        "decay": 0.213,
+        "sustain": 0.031,
+        "release": 0.131
+      }
+    },
+    {
+      "id": "stab_pluck_05",
+      "name": "Stab Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "stab",
+        "accent",
+        "sharp"
+      ],
+      "description": "Variation of Stab Pluck",
+      "parameters": {
+        "osc_type": 1.944,
+        "filter_cutoff": 0.847,
+        "filter_resonance": 0.503,
+        "attack": 0.0,
+        "decay": 0.192,
+        "sustain": 0.0,
+        "release": 0.068
+      }
+    },
+    {
+      "id": "house_pluck",
+      "name": "House Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Classic house pluck",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.35,
+        "attack": 0.003,
+        "decay": 0.18,
+        "sustain": 0.1,
+        "release": 0.12
+      }
+    },
+    {
+      "id": "house_pluck_01",
+      "name": "House Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Variation of House Pluck",
+      "parameters": {
+        "osc_type": 0.979,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.412,
+        "attack": 0.083,
+        "decay": 0.237,
+        "sustain": 0.09,
+        "release": 0.129
+      }
+    },
+    {
+      "id": "house_pluck_02",
+      "name": "House Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Variation of House Pluck",
+      "parameters": {
+        "osc_type": 1.115,
+        "filter_cutoff": 0.723,
+        "filter_resonance": 0.402,
+        "attack": 0.0,
+        "decay": 0.158,
+        "sustain": 0.151,
+        "release": 0.159
+      }
+    },
+    {
+      "id": "house_pluck_03",
+      "name": "House Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Variation of House Pluck",
+      "parameters": {
+        "osc_type": 0.904,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.278,
+        "attack": 0.044,
+        "decay": 0.133,
+        "sustain": 0.036,
+        "release": 0.118
+      }
+    },
+    {
+      "id": "house_pluck_04",
+      "name": "House Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Variation of House Pluck",
+      "parameters": {
+        "osc_type": 1.121,
+        "filter_cutoff": 0.781,
+        "filter_resonance": 0.294,
+        "attack": 0.025,
+        "decay": 0.105,
+        "sustain": 0.17,
+        "release": 0.169
+      }
+    },
+    {
+      "id": "house_pluck_05",
+      "name": "House Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "house",
+        "dance",
+        "classic"
+      ],
+      "description": "Variation of House Pluck",
+      "parameters": {
+        "osc_type": 1.01,
+        "filter_cutoff": 0.827,
+        "filter_resonance": 0.307,
+        "attack": 0.0,
+        "decay": 0.221,
+        "sustain": 0.128,
+        "release": 0.197
+      }
+    },
+    {
+      "id": "hollow_pluck",
+      "name": "Hollow Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Hollow square pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.3,
+        "attack": 0.004,
+        "decay": 0.16,
+        "sustain": 0.05,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "hollow_pluck_01",
+      "name": "Hollow Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Variation of Hollow Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.629,
+        "filter_resonance": 0.377,
+        "attack": 0.0,
+        "decay": 0.121,
+        "sustain": 0.117,
+        "release": 0.031
+      }
+    },
+    {
+      "id": "hollow_pluck_02",
+      "name": "Hollow Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Variation of Hollow Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.643,
+        "filter_resonance": 0.249,
+        "attack": 0.048,
+        "decay": 0.155,
+        "sustain": 0.082,
+        "release": 0.112
+      }
+    },
+    {
+      "id": "hollow_pluck_03",
+      "name": "Hollow Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Variation of Hollow Pluck",
+      "parameters": {
+        "osc_type": 1.952,
+        "filter_cutoff": 0.72,
+        "filter_resonance": 0.314,
+        "attack": 0.0,
+        "decay": 0.192,
+        "sustain": 0.005,
+        "release": 0.046
+      }
+    },
+    {
+      "id": "hollow_pluck_04",
+      "name": "Hollow Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Variation of Hollow Pluck",
+      "parameters": {
+        "osc_type": 1.854,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.332,
+        "attack": 0.076,
+        "decay": 0.233,
+        "sustain": 0.123,
+        "release": 0.03
+      }
+    },
+    {
+      "id": "hollow_pluck_05",
+      "name": "Hollow Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "hollow",
+        "square",
+        "minimal"
+      ],
+      "description": "Variation of Hollow Pluck",
+      "parameters": {
+        "osc_type": 2.0,
+        "filter_cutoff": 0.572,
+        "filter_resonance": 0.331,
+        "attack": 0.0,
+        "decay": 0.147,
+        "sustain": 0.048,
+        "release": 0.133
+      }
+    },
+    {
+      "id": "percussive_pluck",
+      "name": "Percussive Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Ultra short percussive pluck",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.4,
+        "attack": 0.001,
+        "decay": 0.08,
+        "sustain": 0.0,
+        "release": 0.05
+      }
+    },
+    {
+      "id": "percussive_pluck_01",
+      "name": "Percussive Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Variation of Percussive Pluck",
+      "parameters": {
+        "osc_type": 1.08,
+        "filter_cutoff": 0.755,
+        "filter_resonance": 0.382,
+        "attack": 0.0,
+        "decay": 0.071,
+        "sustain": 0.026,
+        "release": 0.05
+      }
+    },
+    {
+      "id": "percussive_pluck_02",
+      "name": "Percussive Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Variation of Percussive Pluck",
+      "parameters": {
+        "osc_type": 1.132,
+        "filter_cutoff": 0.672,
+        "filter_resonance": 0.351,
+        "attack": 0.0,
+        "decay": 0.148,
+        "sustain": 0.076,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "percussive_pluck_03",
+      "name": "Percussive Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Variation of Percussive Pluck",
+      "parameters": {
+        "osc_type": 1.138,
+        "filter_cutoff": 0.697,
+        "filter_resonance": 0.47,
+        "attack": 0.0,
+        "decay": 0.143,
+        "sustain": 0.005,
+        "release": 0.0
+      }
+    },
+    {
+      "id": "percussive_pluck_04",
+      "name": "Percussive Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Variation of Percussive Pluck",
+      "parameters": {
+        "osc_type": 1.008,
+        "filter_cutoff": 0.644,
+        "filter_resonance": 0.441,
+        "attack": 0.029,
+        "decay": 0.005,
+        "sustain": 0.0,
+        "release": 0.078
+      }
+    },
+    {
+      "id": "percussive_pluck_05",
+      "name": "Percussive Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "percussive",
+        "short",
+        "tight"
+      ],
+      "description": "Variation of Percussive Pluck",
+      "parameters": {
+        "osc_type": 1.093,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.477,
+        "attack": 0.0,
+        "decay": 0.156,
+        "sustain": 0.068,
+        "release": 0.056
+      }
+    },
+    {
+      "id": "warm_pluck",
+      "name": "Warm Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Warm analog-style pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.28,
+        "attack": 0.006,
+        "decay": 0.22,
+        "sustain": 0.12,
+        "release": 0.15
+      }
+    },
+    {
+      "id": "warm_pluck_01",
+      "name": "Warm Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Variation of Warm Pluck",
+      "parameters": {
+        "osc_type": 0.489,
+        "filter_cutoff": 0.673,
+        "filter_resonance": 0.287,
+        "attack": 0.0,
+        "decay": 0.207,
+        "sustain": 0.096,
+        "release": 0.128
+      }
+    },
+    {
+      "id": "warm_pluck_02",
+      "name": "Warm Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Variation of Warm Pluck",
+      "parameters": {
+        "osc_type": 0.544,
+        "filter_cutoff": 0.642,
+        "filter_resonance": 0.251,
+        "attack": 0.032,
+        "decay": 0.296,
+        "sustain": 0.042,
+        "release": 0.219
+      }
+    },
+    {
+      "id": "warm_pluck_03",
+      "name": "Warm Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Variation of Warm Pluck",
+      "parameters": {
+        "osc_type": 0.441,
+        "filter_cutoff": 0.614,
+        "filter_resonance": 0.283,
+        "attack": 0.0,
+        "decay": 0.218,
+        "sustain": 0.174,
+        "release": 0.109
+      }
+    },
+    {
+      "id": "warm_pluck_04",
+      "name": "Warm Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Variation of Warm Pluck",
+      "parameters": {
+        "osc_type": 0.387,
+        "filter_cutoff": 0.664,
+        "filter_resonance": 0.228,
+        "attack": 0.046,
+        "decay": 0.223,
+        "sustain": 0.064,
+        "release": 0.1
+      }
+    },
+    {
+      "id": "warm_pluck_05",
+      "name": "Warm Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "warm",
+        "analog",
+        "vintage"
+      ],
+      "description": "Variation of Warm Pluck",
+      "parameters": {
+        "osc_type": 0.65,
+        "filter_cutoff": 0.695,
+        "filter_resonance": 0.261,
+        "attack": 0.007,
+        "decay": 0.209,
+        "sustain": 0.069,
+        "release": 0.072
+      }
+    },
+    {
+      "id": "crystal_pluck",
+      "name": "Crystal Pluck",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Bright crystalline pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.35,
+        "attack": 0.002,
+        "decay": 0.28,
+        "sustain": 0.08,
+        "release": 0.18
+      }
+    },
+    {
+      "id": "crystal_pluck_01",
+      "name": "Crystal Pluck 01",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Variation of Crystal Pluck",
+      "parameters": {
+        "osc_type": 0.091,
+        "filter_cutoff": 0.969,
+        "filter_resonance": 0.424,
+        "attack": 0.039,
+        "decay": 0.326,
+        "sustain": 0.099,
+        "release": 0.101
+      }
+    },
+    {
+      "id": "crystal_pluck_02",
+      "name": "Crystal Pluck 02",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Variation of Crystal Pluck",
+      "parameters": {
+        "osc_type": 0.117,
+        "filter_cutoff": 0.872,
+        "filter_resonance": 0.304,
+        "attack": 0.051,
+        "decay": 0.258,
+        "sustain": 0.102,
+        "release": 0.206
+      }
+    },
+    {
+      "id": "crystal_pluck_03",
+      "name": "Crystal Pluck 03",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Variation of Crystal Pluck",
+      "parameters": {
+        "osc_type": 0.095,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.365,
+        "attack": 0.005,
+        "decay": 0.211,
+        "sustain": 0.029,
+        "release": 0.188
+      }
+    },
+    {
+      "id": "crystal_pluck_04",
+      "name": "Crystal Pluck 04",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Variation of Crystal Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.98,
+        "filter_resonance": 0.377,
+        "attack": 0.0,
+        "decay": 0.252,
+        "sustain": 0.107,
+        "release": 0.24
+      }
+    },
+    {
+      "id": "crystal_pluck_05",
+      "name": "Crystal Pluck 05",
+      "category": "Pluck",
+      "tags": [
+        "pluck",
+        "crystal",
+        "bright",
+        "clean"
+      ],
+      "description": "Variation of Crystal Pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.998,
+        "filter_resonance": 0.318,
+        "attack": 0.049,
+        "decay": 0.218,
+        "sustain": 0.046,
+        "release": 0.122
+      }
+    }
+  ]
+}

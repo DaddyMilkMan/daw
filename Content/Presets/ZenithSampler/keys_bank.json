@@ -1,0 +1,1044 @@
+{
+  "instrument": "zenith_sampler",
+  "bank_name": "Keys Bank",
+  "category": "Keys",
+  "version": "1.0",
+  "preset_count": 45,
+  "presets": [
+    {
+      "id": "lofi_piano",
+      "name": "LoFi Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Dusty lo-fi piano",
+      "parameters": {
+        "attack": 0.005,
+        "decay": 0.5,
+        "sustain": 0.3,
+        "release": 0.8,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.15,
+        "tune": 0.0,
+        "gain": 0.85,
+        "character": 0.6
+      }
+    },
+    {
+      "id": "lofi_piano_01",
+      "name": "LoFi Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.323,
+        "decay": 0.611,
+        "sustain": 0.318,
+        "release": 1.138,
+        "filter_cutoff": 0.714,
+        "filter_resonance": 0.236,
+        "tune": 0.966,
+        "gain": 0.991,
+        "character": 0.655
+      }
+    },
+    {
+      "id": "lofi_piano_02",
+      "name": "LoFi Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.123,
+        "decay": 0.943,
+        "sustain": 0.297,
+        "release": 0.12,
+        "filter_cutoff": 0.639,
+        "filter_resonance": 0.214,
+        "tune": -0.49,
+        "gain": 0.716,
+        "character": 0.536
+      }
+    },
+    {
+      "id": "lofi_piano_03",
+      "name": "LoFi Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.033,
+        "sustain": 0.372,
+        "release": 1.142,
+        "filter_cutoff": 0.672,
+        "filter_resonance": 0.147,
+        "tune": -0.221,
+        "gain": 0.991,
+        "character": 0.502
+      }
+    },
+    {
+      "id": "lofi_piano_04",
+      "name": "LoFi Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.271,
+        "decay": 0.026,
+        "sustain": 0.223,
+        "release": 1.219,
+        "filter_cutoff": 0.621,
+        "filter_resonance": 0.238,
+        "tune": 2.171,
+        "gain": 0.886,
+        "character": 0.62
+      }
+    },
+    {
+      "id": "lofi_piano_05",
+      "name": "LoFi Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.396,
+        "decay": 0.559,
+        "sustain": 0.386,
+        "release": 1.631,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.108,
+        "tune": 1.489,
+        "gain": 0.741,
+        "character": 0.65
+      }
+    },
+    {
+      "id": "lofi_piano_06",
+      "name": "LoFi Piano 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.299,
+        "sustain": 0.265,
+        "release": 0.932,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.098,
+        "tune": -0.353,
+        "gain": 0.657,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "lofi_piano_07",
+      "name": "LoFi Piano 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.131,
+        "sustain": 0.337,
+        "release": 0.001,
+        "filter_cutoff": 0.626,
+        "filter_resonance": 0.167,
+        "tune": 0.915,
+        "gain": 1.018,
+        "character": 0.686
+      }
+    },
+    {
+      "id": "lofi_piano_08",
+      "name": "LoFi Piano 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.489,
+        "decay": 0.234,
+        "sustain": 0.214,
+        "release": 0.161,
+        "filter_cutoff": 0.795,
+        "filter_resonance": 0.059,
+        "tune": 2.136,
+        "gain": 0.686,
+        "character": 0.698
+      }
+    },
+    {
+      "id": "electric_keys",
+      "name": "Electric Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Electric piano sound",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.4,
+        "sustain": 0.4,
+        "release": 0.6,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.8,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "electric_keys_01",
+      "name": "Electric Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.171,
+        "sustain": 0.471,
+        "release": 1.5,
+        "filter_cutoff": 0.722,
+        "filter_resonance": 0.276,
+        "tune": 0.039,
+        "gain": 0.867,
+        "character": 0.427
+      }
+    },
+    {
+      "id": "electric_keys_02",
+      "name": "Electric Keys 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.019,
+        "decay": 0.573,
+        "sustain": 0.325,
+        "release": 1.555,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.237,
+        "tune": -1.771,
+        "gain": 0.672,
+        "character": 0.532
+      }
+    },
+    {
+      "id": "electric_keys_03",
+      "name": "Electric Keys 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.216,
+        "decay": 0.14,
+        "sustain": 0.311,
+        "release": 0.848,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.171,
+        "tune": -0.096,
+        "gain": 0.621,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "electric_keys_04",
+      "name": "Electric Keys 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.236,
+        "decay": 0.001,
+        "sustain": 0.402,
+        "release": 0.001,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.134,
+        "tune": 0.049,
+        "gain": 0.976,
+        "character": 0.549
+      }
+    },
+    {
+      "id": "electric_keys_05",
+      "name": "Electric Keys 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.405,
+        "decay": 0.556,
+        "sustain": 0.418,
+        "release": 1.192,
+        "filter_cutoff": 0.707,
+        "filter_resonance": 0.165,
+        "tune": 2.058,
+        "gain": 0.642,
+        "character": 0.59
+      }
+    },
+    {
+      "id": "electric_keys_06",
+      "name": "Electric Keys 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.182,
+        "decay": 0.085,
+        "sustain": 0.479,
+        "release": 0.153,
+        "filter_cutoff": 0.683,
+        "filter_resonance": 0.207,
+        "tune": -0.623,
+        "gain": 0.862,
+        "character": 0.554
+      }
+    },
+    {
+      "id": "electric_keys_07",
+      "name": "Electric Keys 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.445,
+        "sustain": 0.363,
+        "release": 1.002,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.225,
+        "tune": -0.852,
+        "gain": 0.957,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "electric_keys_08",
+      "name": "Electric Keys 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.027,
+        "decay": 0.144,
+        "sustain": 0.312,
+        "release": 0.94,
+        "filter_cutoff": 0.843,
+        "filter_resonance": 0.183,
+        "tune": 2.216,
+        "gain": 0.682,
+        "character": 0.432
+      }
+    },
+    {
+      "id": "mallet",
+      "name": "Mallet",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Plucky mallet sound",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.2,
+        "release": 0.4,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.25,
+        "tune": 0.0,
+        "gain": 0.82,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "mallet_01",
+      "name": "Mallet 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.715,
+        "sustain": 0.208,
+        "release": 0.602,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.277,
+        "tune": 1.355,
+        "gain": 0.89,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "mallet_02",
+      "name": "Mallet 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.194,
+        "sustain": 0.266,
+        "release": 1.294,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.214,
+        "tune": -1.027,
+        "gain": 0.794,
+        "character": 0.48
+      }
+    },
+    {
+      "id": "mallet_03",
+      "name": "Mallet 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.494,
+        "sustain": 0.222,
+        "release": 1.175,
+        "filter_cutoff": 0.879,
+        "filter_resonance": 0.283,
+        "tune": -1.989,
+        "gain": 0.959,
+        "character": 0.461
+      }
+    },
+    {
+      "id": "mallet_04",
+      "name": "Mallet 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.379,
+        "decay": 0.512,
+        "sustain": 0.189,
+        "release": 0.001,
+        "filter_cutoff": 0.799,
+        "filter_resonance": 0.239,
+        "tune": -1.95,
+        "gain": 0.746,
+        "character": 0.371
+      }
+    },
+    {
+      "id": "mallet_05",
+      "name": "Mallet 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.795,
+        "sustain": 0.136,
+        "release": 0.719,
+        "filter_cutoff": 0.788,
+        "filter_resonance": 0.313,
+        "tune": 0.388,
+        "gain": 0.728,
+        "character": 0.36
+      }
+    },
+    {
+      "id": "mallet_06",
+      "name": "Mallet 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.115,
+        "sustain": 0.265,
+        "release": 0.732,
+        "filter_cutoff": 0.705,
+        "filter_resonance": 0.239,
+        "tune": -1.4,
+        "gain": 0.778,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "mallet_07",
+      "name": "Mallet 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.265,
+        "decay": 0.511,
+        "sustain": 0.19,
+        "release": 0.764,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.163,
+        "tune": -1.136,
+        "gain": 0.82,
+        "character": 0.472
+      }
+    },
+    {
+      "id": "mallet_08",
+      "name": "Mallet 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.147,
+        "decay": 0.543,
+        "sustain": 0.149,
+        "release": 0.001,
+        "filter_cutoff": 0.791,
+        "filter_resonance": 0.216,
+        "tune": -1.442,
+        "gain": 1.005,
+        "character": 0.419
+      }
+    },
+    {
+      "id": "bell_tone",
+      "name": "Bell Tone",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Bright bell sound",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.6,
+        "sustain": 0.15,
+        "release": 0.9,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.35,
+        "tune": 0.0,
+        "gain": 0.75,
+        "character": 0.35
+      }
+    },
+    {
+      "id": "bell_tone_01",
+      "name": "Bell Tone 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.293,
+        "sustain": 0.108,
+        "release": 1.631,
+        "filter_cutoff": 0.978,
+        "filter_resonance": 0.331,
+        "tune": -1.552,
+        "gain": 0.672,
+        "character": 0.285
+      }
+    },
+    {
+      "id": "bell_tone_02",
+      "name": "Bell Tone 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.333,
+        "decay": 0.852,
+        "sustain": 0.069,
+        "release": 0.335,
+        "filter_cutoff": 0.909,
+        "filter_resonance": 0.44,
+        "tune": 0.35,
+        "gain": 0.732,
+        "character": 0.356
+      }
+    },
+    {
+      "id": "bell_tone_03",
+      "name": "Bell Tone 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.334,
+        "decay": 0.245,
+        "sustain": 0.085,
+        "release": 0.968,
+        "filter_cutoff": 0.935,
+        "filter_resonance": 0.429,
+        "tune": 2.115,
+        "gain": 0.822,
+        "character": 0.42
+      }
+    },
+    {
+      "id": "bell_tone_04",
+      "name": "Bell Tone 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.49,
+        "sustain": 0.2,
+        "release": 1.184,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.435,
+        "tune": 2.356,
+        "gain": 0.844,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "bell_tone_05",
+      "name": "Bell Tone 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.308,
+        "decay": 0.665,
+        "sustain": 0.224,
+        "release": 1.322,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.375,
+        "tune": -2.187,
+        "gain": 0.688,
+        "character": 0.394
+      }
+    },
+    {
+      "id": "bell_tone_06",
+      "name": "Bell Tone 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.351,
+        "sustain": 0.2,
+        "release": 0.974,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.323,
+        "tune": -0.358,
+        "gain": 0.825,
+        "character": 0.337
+      }
+    },
+    {
+      "id": "bell_tone_07",
+      "name": "Bell Tone 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.547,
+        "sustain": 0.247,
+        "release": 1.866,
+        "filter_cutoff": 0.938,
+        "filter_resonance": 0.285,
+        "tune": 1.516,
+        "gain": 0.62,
+        "character": 0.369
+      }
+    },
+    {
+      "id": "bell_tone_08",
+      "name": "Bell Tone 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.431,
+        "sustain": 0.245,
+        "release": 1.362,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.448,
+        "tune": 0.655,
+        "gain": 0.594,
+        "character": 0.338
+      }
+    },
+    {
+      "id": "toy_piano",
+      "name": "Toy Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Delicate toy piano",
+      "parameters": {
+        "attack": 0.002,
+        "decay": 0.25,
+        "sustain": 0.1,
+        "release": 0.35,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.78,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "toy_piano_01",
+      "name": "Toy Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.366,
+        "decay": 0.001,
+        "sustain": 0.137,
+        "release": 0.922,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.164,
+        "tune": 0.126,
+        "gain": 0.871,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "toy_piano_02",
+      "name": "Toy Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.024,
+        "sustain": 0.016,
+        "release": 1.184,
+        "filter_cutoff": 0.893,
+        "filter_resonance": 0.287,
+        "tune": -0.789,
+        "gain": 0.876,
+        "character": 0.372
+      }
+    },
+    {
+      "id": "toy_piano_03",
+      "name": "Toy Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.453,
+        "sustain": 0.108,
+        "release": 0.001,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.168,
+        "tune": -2.176,
+        "gain": 0.847,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "toy_piano_04",
+      "name": "Toy Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.461,
+        "sustain": 0.099,
+        "release": 0.336,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.198,
+        "tune": 1.563,
+        "gain": 0.886,
+        "character": 0.474
+      }
+    },
+    {
+      "id": "toy_piano_05",
+      "name": "Toy Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.071,
+        "sustain": 0.011,
+        "release": 0.392,
+        "filter_cutoff": 0.816,
+        "filter_resonance": 0.116,
+        "tune": -0.696,
+        "gain": 0.682,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_06",
+      "name": "Toy Piano 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.095,
+        "decay": 0.493,
+        "sustain": 0.018,
+        "release": 1.161,
+        "filter_cutoff": 0.751,
+        "filter_resonance": 0.166,
+        "tune": 0.681,
+        "gain": 0.62,
+        "character": 0.546
+      }
+    },
+    {
+      "id": "toy_piano_07",
+      "name": "Toy Piano 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.364,
+        "decay": 0.001,
+        "sustain": 0.187,
+        "release": 0.001,
+        "filter_cutoff": 0.892,
+        "filter_resonance": 0.219,
+        "tune": -0.018,
+        "gain": 0.914,
+        "character": 0.441
+      }
+    },
+    {
+      "id": "toy_piano_08",
+      "name": "Toy Piano 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.138,
+        "release": 1.093,
+        "filter_cutoff": 0.772,
+        "filter_resonance": 0.146,
+        "tune": 0.4,
+        "gain": 0.709,
+        "character": 0.464
+      }
+    }
+  ]
+}

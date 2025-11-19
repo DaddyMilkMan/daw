@@ -1,0 +1,411 @@
+/**
+ * @file MixerComponent.cpp
+ * @brief Mixer component implementation
+ */
+
+#include "../include/MixerComponent.h"
+
+//==============================================================================
+MixerComponent::MixerComponent(ProjectState& ps)
+    : projectState(ps)
+{
+    // Listen to the entire state tree for changes
+    projectState.getState().addListener(this);
+
+    // Build initial track strips
+    rebuildTrackStrips();
+}
+
+MixerComponent::~MixerComponent()
+{
+    // Stop listening
+    projectState.getState().removeListener(this);
+
+    // Clear all strips (will destroy all child components)
+    trackStrips.clear();
+}
+
+//==============================================================================
+// Component interface
+//==============================================================================
+
+void MixerComponent::paint(juce::Graphics& g)
+{
+    // Background
+    g.fillAll(juce::Colour(0xff2a2a2a));  // Dark grey background
+
+    // Draw border
+    g.setColour(juce::Colour(0xff3a3a3a));
+    g.drawRect(getLocalBounds(), 1);
+
+    // If no tracks, show hint
+    if (trackStrips.empty())
+    {
+        g.setColour(juce::Colours::grey);
+        g.setFont(juce::Font(14.0f));
+        g.drawText("No tracks - Add a track to see mixer controls",
+                   getLocalBounds(),
+                   juce::Justification::centred,
+                   true);
+    }
+}
+
+void MixerComponent::resized()
+{
+    auto bounds = getLocalBounds().reduced(sideMargin, 0);
+    bounds.removeFromTop(topMargin);
+    bounds.removeFromBottom(bottomMargin);
+
+    int x = 0;
+
+    for (auto& strip : trackStrips)
+    {
+        if (!strip)
+            continue;
+
+        // Allocate space for this strip
+        strip->bounds = juce::Rectangle<int>(x, 0, stripWidth, bounds.getHeight());
+
+        // Layout components within the strip
+        auto area = strip->bounds.reduced(4);
+
+        // Name label at top (20px)
+        if (strip->nameLabel)
+        {
+            strip->nameLabel->setBounds(area.removeFromTop(20));
+        }
+
+        area.removeFromTop(4);  // Spacing
+
+        // Volume slider (takes most space)
+        if (strip->volumeSlider)
+        {
+            auto volumeArea = area.removeFromTop(juce::jmax(100, area.getHeight() - 90));
+            strip->volumeSlider->setBounds(volumeArea);
+        }
+
+        area.removeFromTop(4);  // Spacing
+
+        // Pan knob (60x60)
+        if (strip->panSlider)
+        {
+            auto panArea = area.removeFromTop(60);
+            strip->panSlider->setBounds(panArea);
+        }
+
+        area.removeFromTop(4);  // Spacing
+
+        // Buttons at bottom (20px each)
+        if (strip->muteButton)
+        {
+            strip->muteButton->setBounds(area.removeFromTop(20));
+            area.removeFromTop(2);
+        }
+
+        if (strip->soloButton)
+        {
+            strip->soloButton->setBounds(area.removeFromTop(20));
+            area.removeFromTop(2);
+        }
+
+        if (strip->armButton)
+        {
+            strip->armButton->setBounds(area.removeFromTop(20));
+        }
+
+        x += stripWidth + stripSpacing;
+    }
+}
+
+//==============================================================================
+// ValueTree::Listener interface
+//==============================================================================
+
+void MixerComponent::valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
+                                              const juce::Identifier& property)
+{
+    // Check if this is a track node
+    if (treeWhosePropertyHasChanged.getType() != ProjectState::ID_TRACK)
+        return;
+
+    // Get track ID
+    auto trackId = treeWhosePropertyHasChanged[ProjectState::PROP_ID].toString();
+
+    if (trackId.isEmpty())
+        return;
+
+    // Find the corresponding track strip
+    auto* strip = findTrackStrip(trackId);
+
+    if (!strip)
+        return;
+
+    // Update the strip from state (only if the property changed is relevant)
+    if (property == ProjectState::PROP_NAME ||
+        property == ProjectState::PROP_VOLUME ||
+        property == ProjectState::PROP_PAN ||
+        property == ProjectState::PROP_MUTE ||
+        property == ProjectState::PROP_SOLO ||
+        property == ProjectState::PROP_ARMED)
+    {
+        updatingFromState = true;
+        updateTrackStripFromState(*strip, treeWhosePropertyHasChanged);
+        updatingFromState = false;
+    }
+}
+
+void MixerComponent::valueTreeChildAdded(juce::ValueTree& parentTree,
+                                        juce::ValueTree& childWhichHasBeenAdded)
+{
+    // Check if a track was added
+    if (parentTree.getType() == ProjectState::ID_TRACKS &&
+        childWhichHasBeenAdded.getType() == ProjectState::ID_TRACK)
+    {
+        // Rebuild all strips
+        rebuildTrackStrips();
+        resized();
+        repaint();
+    }
+}
+
+void MixerComponent::valueTreeChildRemoved(juce::ValueTree& parentTree,
+                                          juce::ValueTree& childWhichHasBeenRemoved,
+                                          int indexFromWhichChildWasRemoved)
+{
+    // Check if a track was removed
+    if (parentTree.getType() == ProjectState::ID_TRACKS &&
+        childWhichHasBeenRemoved.getType() == ProjectState::ID_TRACK)
+    {
+        // Rebuild all strips
+        rebuildTrackStrips();
+        resized();
+        repaint();
+    }
+}
+
+void MixerComponent::valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved,
+                                               int oldIndex,
+                                               int newIndex)
+{
+    // If tracks were reordered, rebuild
+    if (parentTreeWhoseChildrenHaveMoved.getType() == ProjectState::ID_TRACKS)
+    {
+        rebuildTrackStrips();
+        resized();
+        repaint();
+    }
+}
+
+//==============================================================================
+// Helper methods
+//==============================================================================
+
+void MixerComponent::rebuildTrackStrips()
+{
+    // Clear existing strips
+    trackStrips.clear();
+
+    // Get tracks node
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+
+    if (!tracksNode.isValid())
+        return;
+
+    // Create a strip for each track
+    for (int i = 0; i < tracksNode.getNumChildren(); ++i)
+    {
+        auto trackNode = tracksNode.getChild(i);
+
+        if (trackNode.getType() != ProjectState::ID_TRACK)
+            continue;
+
+        auto strip = createTrackStrip(trackNode);
+
+        if (strip)
+            trackStrips.push_back(std::move(strip));
+    }
+
+    DBG("MixerComponent: Rebuilt " + juce::String(trackStrips.size()) + " track strips");
+}
+
+std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(const juce::ValueTree& trackNode)
+{
+    auto strip = std::make_unique<TrackStrip>();
+
+    // Get track info
+    strip->trackId = trackNode[ProjectState::PROP_ID].toString();
+    strip->trackName = trackNode[ProjectState::PROP_NAME].toString();
+
+    if (strip->trackId.isEmpty())
+        return nullptr;
+
+    // Create name label
+    strip->nameLabel = std::make_unique<juce::Label>();
+    strip->nameLabel->setText(strip->trackName, juce::dontSendNotification);
+    strip->nameLabel->setJustificationType(juce::Justification::centred);
+    strip->nameLabel->setFont(juce::Font(12.0f, juce::Font::bold));
+    strip->nameLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+    addAndMakeVisible(*strip->nameLabel);
+
+    // Create volume slider (vertical)
+    strip->volumeSlider = std::make_unique<juce::Slider>();
+    strip->volumeSlider->setSliderStyle(juce::Slider::LinearVertical);
+    strip->volumeSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+    strip->volumeSlider->setRange(0.0, 1.0, 0.01);
+    strip->volumeSlider->setValue(trackNode[ProjectState::PROP_VOLUME], juce::dontSendNotification);
+    strip->volumeSlider->onValueChange = [this, trackId = strip->trackId]()
+    {
+        if (!updatingFromState)
+            onVolumeChanged(trackId, (float)trackStrips[0]->volumeSlider->getValue());
+    };
+    // Capture trackId by value for the lambda
+    strip->volumeSlider->onValueChange = [this, trackId = strip->trackId, slider = strip->volumeSlider.get()]()
+    {
+        if (!updatingFromState)
+            onVolumeChanged(trackId, (float)slider->getValue());
+    };
+    addAndMakeVisible(*strip->volumeSlider);
+
+    // Create pan slider (rotary)
+    strip->panSlider = std::make_unique<juce::Slider>();
+    strip->panSlider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+    strip->panSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+    strip->panSlider->setRange(-1.0, 1.0, 0.01);
+    strip->panSlider->setValue(trackNode[ProjectState::PROP_PAN], juce::dontSendNotification);
+    strip->panSlider->onValueChange = [this, trackId = strip->trackId, slider = strip->panSlider.get()]()
+    {
+        if (!updatingFromState)
+            onPanChanged(trackId, (float)slider->getValue());
+    };
+    addAndMakeVisible(*strip->panSlider);
+
+    // Create mute button
+    strip->muteButton = std::make_unique<juce::ToggleButton>("M");
+    strip->muteButton->setClickingTogglesState(true);
+    strip->muteButton->setToggleState(trackNode[ProjectState::PROP_MUTE], juce::dontSendNotification);
+    strip->muteButton->onClick = [this, trackId = strip->trackId, button = strip->muteButton.get()]()
+    {
+        if (!updatingFromState)
+            onMuteClicked(trackId, button->getToggleState());
+    };
+    strip->muteButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    addAndMakeVisible(*strip->muteButton);
+
+    // Create solo button
+    strip->soloButton = std::make_unique<juce::ToggleButton>("S");
+    strip->soloButton->setClickingTogglesState(true);
+    strip->soloButton->setToggleState(trackNode[ProjectState::PROP_SOLO], juce::dontSendNotification);
+    strip->soloButton->onClick = [this, trackId = strip->trackId, button = strip->soloButton.get()]()
+    {
+        if (!updatingFromState)
+            onSoloClicked(trackId, button->getToggleState());
+    };
+    strip->soloButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    addAndMakeVisible(*strip->soloButton);
+
+    // Create arm button
+    strip->armButton = std::make_unique<juce::ToggleButton>("R");
+    strip->armButton->setClickingTogglesState(true);
+    strip->armButton->setToggleState(trackNode[ProjectState::PROP_ARMED], juce::dontSendNotification);
+    strip->armButton->onClick = [this, trackId = strip->trackId, button = strip->armButton.get()]()
+    {
+        if (!updatingFromState)
+            onArmClicked(trackId, button->getToggleState());
+    };
+    strip->armButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    addAndMakeVisible(*strip->armButton);
+
+    return strip;
+}
+
+void MixerComponent::updateTrackStripFromState(TrackStrip& strip, const juce::ValueTree& trackNode)
+{
+    // Update track name
+    auto newName = trackNode[ProjectState::PROP_NAME].toString();
+    if (newName != strip.trackName)
+    {
+        strip.trackName = newName;
+        if (strip.nameLabel)
+            strip.nameLabel->setText(newName, juce::dontSendNotification);
+    }
+
+    // Update volume slider
+    if (strip.volumeSlider)
+    {
+        float volume = trackNode[ProjectState::PROP_VOLUME];
+        if (std::abs(strip.volumeSlider->getValue() - volume) > 0.001)
+            strip.volumeSlider->setValue(volume, juce::dontSendNotification);
+    }
+
+    // Update pan slider
+    if (strip.panSlider)
+    {
+        float pan = trackNode[ProjectState::PROP_PAN];
+        if (std::abs(strip.panSlider->getValue() - pan) > 0.001)
+            strip.panSlider->setValue(pan, juce::dontSendNotification);
+    }
+
+    // Update mute button
+    if (strip.muteButton)
+    {
+        bool mute = trackNode[ProjectState::PROP_MUTE];
+        if (strip.muteButton->getToggleState() != mute)
+            strip.muteButton->setToggleState(mute, juce::dontSendNotification);
+    }
+
+    // Update solo button
+    if (strip.soloButton)
+    {
+        bool solo = trackNode[ProjectState::PROP_SOLO];
+        if (strip.soloButton->getToggleState() != solo)
+            strip.soloButton->setToggleState(solo, juce::dontSendNotification);
+    }
+
+    // Update arm button
+    if (strip.armButton)
+    {
+        bool armed = trackNode[ProjectState::PROP_ARMED];
+        if (strip.armButton->getToggleState() != armed)
+            strip.armButton->setToggleState(armed, juce::dontSendNotification);
+    }
+}
+
+MixerComponent::TrackStrip* MixerComponent::findTrackStrip(const juce::String& trackId)
+{
+    for (auto& strip : trackStrips)
+    {
+        if (strip && strip->trackId == trackId)
+            return strip.get();
+    }
+
+    return nullptr;
+}
+
+//==============================================================================
+// Control callbacks
+//==============================================================================
+
+void MixerComponent::onVolumeChanged(const juce::String& trackId, float value)
+{
+    projectState.setTrackVolume(trackId, value, "Set track volume");
+}
+
+void MixerComponent::onPanChanged(const juce::String& trackId, float value)
+{
+    projectState.setTrackPan(trackId, value, "Set track pan");
+}
+
+void MixerComponent::onMuteClicked(const juce::String& trackId, bool state)
+{
+    projectState.setTrackMute(trackId, state, "Set track mute");
+}
+
+void MixerComponent::onSoloClicked(const juce::String& trackId, bool state)
+{
+    projectState.setTrackSolo(trackId, state, "Set track solo");
+}
+
+void MixerComponent::onArmClicked(const juce::String& trackId, bool state)
+{
+    projectState.setTrackArmed(trackId, state, "Set track armed");
+}
