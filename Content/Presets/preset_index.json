@@ -1,0 +1,30 @@
+{
+  "version": "1.0",
+  "generated": "2025-11-18",
+  "total_presets": 594,
+  "instruments": {
+    "zenith_poly_synth": {
+      "name": "Zenith Poly Synth",
+      "total": 414,
+      "categories": {
+        "Bass": 90,
+        "Lead": 72,
+        "Pluck": 60,
+        "Pad": 60,
+        "Arp": 48,
+        "FX": 48,
+        "Keys": 36
+      }
+    },
+    "zenith_sampler": {
+      "name": "Zenith Sampler",
+      "total": 180,
+      "categories": {
+        "808": 45,
+        "Drums": 45,
+        "Keys": 45,
+        "FX": 45
+      }
+    }
+  }
+}

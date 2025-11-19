@@ -1,11 +1,11 @@
 # ============================================================================
-# Vexel DAW - Professional Digital Audio Workstation
+# Zenith DAW - Professional Digital Audio Workstation
 # ============================================================================
 # Unified build system replacing fragmented Makefiles
 
 cmake_minimum_required(VERSION 3.22)
 
-project(VexelDAW
+project(ZenithDAW
     VERSION 1.0.0
     DESCRIPTION "Professional Digital Audio Workstation"
     LANGUAGES CXX C
@@ -111,11 +111,11 @@ endif()
 # Configuration Summary
 # ============================================================================
 
-vexel_print_audio_config()
+zenith_print_audio_config()
 
 message(STATUS "")
 message(STATUS "═══════════════════════════════════════")
-message(STATUS "Vexel DAW Build Configuration")
+message(STATUS "Zenith DAW Build Configuration")
 message(STATUS "═══════════════════════════════════════")
 message(STATUS "Version:        ${PROJECT_VERSION}")
 message(STATUS "Build Type:     ${CMAKE_BUILD_TYPE}")

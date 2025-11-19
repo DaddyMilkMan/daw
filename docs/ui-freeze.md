@@ -7,7 +7,7 @@
 
 ## Overview
 
-This document captures the complete state of the Vexel DAW UI at the time of the engine adapter freeze. After this point, all state mutations must go through the Engine Client adapter, ensuring we can swap the backend engine without touching UI code.
+This document captures the complete state of the Zenith DAW UI at the time of the engine adapter freeze. After this point, all state mutations must go through the Engine Client adapter, ensuring we can swap the backend engine without touching UI code.
 
 ---
 
@@ -622,10 +622,10 @@ if (import.meta.env.ENGINE_MODE === 'mock') {
 
 ## References
 
-- Current codebase: `vexel-daw/src/renderer/`
-- Mock engine: `vexel-daw/src/main/index.js`
-- Type definitions: `vexel-daw/src/renderer/types/`
-- Hooks: `vexel-daw/src/renderer/hooks/useHistory.ts`
+- Current codebase: `zenith-daw/src/renderer/`
+- Mock engine: `zenith-daw/src/main/index.js`
+- Type definitions: `zenith-daw/src/renderer/types/`
+- Hooks: `zenith-daw/src/renderer/hooks/useHistory.ts`
 
 ---
 

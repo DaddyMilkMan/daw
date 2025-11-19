@@ -15,7 +15,7 @@ extern "C" {
 
 #include <iostream>
 
-namespace vexel {
+namespace zenith {
 
 ScriptEngine::ScriptEngine(AudioEngine* audioEngine)
     : m_audioEngine(audioEngine)
@@ -55,7 +55,7 @@ void ScriptEngine::registerAudioEngineBindings()
     if (!m_luaState || !m_audioEngine) return;
 
     // Register audio engine bindings (implemented in AudioEngineBindings.cpp)
-    vexel::registerAudioEngine(m_luaState, m_audioEngine);
+    zenith::registerAudioEngine(m_luaState, m_audioEngine);
 }
 
 void ScriptEngine::registerStandardLibrary()
@@ -87,7 +87,7 @@ void ScriptEngine::registerStandardLibrary()
             return value
         end
 
-        log("Vexel DAW Lua environment loaded")
+        log("Zenith DAW Lua environment loaded")
     )";
 
     std::string errorMsg;
@@ -200,4 +200,4 @@ void ScriptEngine::setGlobalBool(const std::string& name, bool value)
     }
 }
 
-} // namespace vexel
+} // namespace zenith
