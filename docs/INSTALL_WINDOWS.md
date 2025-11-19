@@ -1,246 +1,247 @@
-# Windows Installation Guide — Zenith DAW
+# Zenith DAW — Windows Installation Guide
 
-**Native Windows Development • No WSL Required • No MSYS2 Required • No vcpkg Required**
+**Fast, native Windows setup. No WSL, no MSYS2, no package managers.**
 
-Zenith DAW is built for native Windows development using Visual Studio 2022 and CMake. JUCE is automatically fetched during the CMake configure step—no manual dependency management needed.
+This guide covers installing and building Zenith DAW on Windows 10/11 using Visual Studio 2022 and CMake.
 
 ---
 
-## Requirements
+## Prerequisites
 
-### Required Software
+### 1. Operating System
+- **Windows 10** (64-bit) or **Windows 11** (64-bit)
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| **Windows** | 10 or 11 | Operating system |
-| **Visual Studio 2022** | Community/Pro/Enterprise | C++ compiler (MSVC v143) |
-| **CMake** | ≥ 3.22 | Build system generator |
-| **Git** | Latest | Version control |
+### 2. Visual Studio 2022
 
-### Visual Studio 2022 Setup
+You have two options:
 
-When installing Visual Studio 2022, ensure you select:
+**Option A: Visual Studio 2022 Community (Recommended for most users)**
+- Download from: https://visualstudio.microsoft.com/downloads/
+- During installation, select the **"Desktop development with C++"** workload
+- This includes:
+  - MSVC compiler (v143 toolchain)
+  - Windows SDK
+  - CMake (3.22 or later)
+  - Ninja build system
 
-- **Workload**: Desktop development with C++
-- **Individual Components** (automatically included):
-  - MSVC v143 (or latest)
-  - Windows 10/11 SDK
-  - C++ CMake tools for Windows
+**Option B: Build Tools for Visual Studio 2022 (Minimal installation)**
+- Download from: https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+- Select:
+  - **MSVC v143 - VS 2022 C++ x64/x86 build tools**
+  - **Windows SDK (latest version)**
+  - **CMake** (3.22 or later)
+  - **Ninja** (optional, for faster builds)
 
-> **No additional tools required**: WSL, MSYS2, vcpkg, and Cygwin are NOT needed.
+### 3. Git for Windows
+- Download from: https://git-scm.com/download/win
+- Use default installation options
+- Git Bash is optional (we'll use Command Prompt or PowerShell)
+
+### 4. JUCE (Handled Automatically)
+
+**No manual JUCE installation required!**
+
+Zenith uses CMake's `FetchContent` to automatically download and configure JUCE 8 during the build process. This ensures everyone uses the exact same JUCE version with zero manual setup.
 
 ---
 
 ## Installation Steps
 
-### 1. Install Prerequisites
+### Step 1: Clone the Repository
 
-#### Install Visual Studio 2022
+Open **Command Prompt** or **PowerShell** and run:
 
-1. Download from: https://visualstudio.microsoft.com/downloads/
-2. Run the installer
-3. Select **Desktop development with C++** workload
-4. Click **Install**
-
-#### Install CMake
-
-**Option A: Via Visual Studio Installer** (Recommended)
-- CMake is included with the "C++ CMake tools for Windows" component
-
-**Option B: Standalone Installer**
-1. Download from: https://cmake.org/download/
-2. Run installer and select "Add CMake to system PATH"
-
-**Option C: Via Chocolatey**
-```powershell
-choco install cmake
-```
-
-#### Install Git
-
-1. Download from: https://git-scm.com/download/win
-2. Run installer with default settings
-
-Or via Chocolatey:
-```powershell
-choco install git
-```
-
----
-
-### 2. Clone the Repository
-
-Open PowerShell or Command Prompt:
-
-```powershell
-# Clone the repository
-git clone https://github.com/DaddyMilkMan/daw.git
-cd daw
-```
-
----
-
-### 3. Configure and Build
-
-Zenith DAW's native JUCE UI is located in the `zenith-core/` directory.
-
-#### Configure the Build
-
-```powershell
-# Navigate to zenith-core
+```cmd
+git clone https://github.com/DaddyMilkMan/zenith-core.git
 cd zenith-core
-
-# Configure Debug build
-cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
-
-# Configure Release build
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
 ```
 
-**What happens during configure:**
-- CMake automatically fetches JUCE 8.0.9 from GitHub using `FetchContent`
-- No manual JUCE installation or submodule setup required
-- This may take a few minutes on first run (JUCE is ~150MB)
+### Step 2: Configure with CMake
 
-#### Build the Application
+Generate the Visual Studio solution files:
 
-```powershell
-# Build Debug
-cmake --build build/Debug -j
-
-# Build Release
-cmake --build build/Release -j
+```cmd
+cmake -B build -G "Visual Studio 17 2022"
 ```
 
-The `-j` flag enables parallel compilation for faster builds.
+**What this does:**
+- `-B build` — Creates a `build/` directory for generated files
+- `-G "Visual Studio 17 2022"` — Generates Visual Studio 2022 project files
+- CMake will automatically fetch JUCE 8 from GitHub (first run takes ~2 minutes)
+
+**Optional: Enable/Disable MMCSS Audio Priority**
+
+Zenith uses Windows MMCSS (Multimedia Class Scheduler Service) to boost the audio thread priority for better real-time performance. This is enabled by default.
+
+To disable it:
+```cmd
+cmake -B build -G "Visual Studio 17 2022" -DZENITH_ENABLE_MMCSS=OFF
+```
+
+### Step 3: Build the Project
+
+**Debug Build (recommended for development):**
+
+```cmd
+cmake --build build --config Debug
+```
+
+**Release Build (optimized, for testing performance):**
+
+```cmd
+cmake --build build --config Release
+```
+
+**Build both configurations:**
+
+```cmd
+cmake --build build --config Debug
+cmake --build build --config Release
+```
+
+**Faster parallel builds:**
+
+Add `-j` to use multiple CPU cores:
+
+```cmd
+cmake --build build --config Debug -j
+```
 
 ---
 
-### 4. Run Zenith DAW
+## Running Zenith
 
-After building, the executable will be located in:
+After building, the executable will be in:
 
-```
-zenith-core/build/Debug/ZenithDAW_artefacts/Debug/Zenith DAW.exe
-zenith-core/build/Release/ZenithDAW_artefacts/Release/Zenith DAW.exe
-```
+- **Debug:** `build/Debug/Zenith.exe`
+- **Release:** `build/Release/Zenith.exe`
 
-Run it directly:
+**To launch:**
 
-```powershell
-# Debug build
-.\build\Debug\ZenithDAW_artefacts\Debug\"Zenith DAW.exe"
-
-# Release build
-.\build\Release\ZenithDAW_artefacts\Release\"Zenith DAW.exe"
+```cmd
+build\Debug\Zenith.exe
 ```
 
-Or double-click the `.exe` in Windows Explorer.
+Or double-click `Zenith.exe` in File Explorer.
 
----
+### First Run Checklist
 
-## Build Options
+When you first launch Zenith:
 
-Zenith uses several CMake options for customization:
-
-```powershell
-# Enable MMCSS audio thread priority (Windows-specific, enabled by default)
-cmake -S . -B build -DZENITH_ENABLE_MMCSS=ON
-
-# Enable debug track seeding (creates 8 demo tracks at startup in Debug)
-cmake -S . -B build -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON
-
-# Enable experimental audio skeleton (Phase 1 - not ready)
-cmake -S . -B build -DZENITH_ENABLE_PHASE1_AUDIO=OFF
-```
+1. **Transport Controls** — Test Play/Stop/Record buttons
+2. **Track View** — Test scrolling and zooming
+3. **Sidebar** — Switch between tabs
+4. **BPM Entry** — Try setting tempo or using tap tempo
+5. **HiDPI** — If you have multiple monitors with different scaling, check for proper rendering
 
 ---
 
 ## Troubleshooting
 
-### "CMake not found"
+### "CMake is not recognized"
 
-**Solution:**
-- Ensure CMake is installed via Visual Studio Installer or standalone
-- Verify it's in your PATH: `cmake --version`
-- Restart your terminal after installation
+**Fix:** Add CMake to your PATH:
+1. Open **Visual Studio Installer**
+2. Click **Modify** on your VS 2022 installation
+3. Go to **Individual Components**
+4. Search for "CMake" and ensure it's checked
+5. Click **Modify** to install
+
+Or download standalone CMake from https://cmake.org/download/
 
 ### "MSVC compiler not found"
 
-**Solution:**
-- Open **Visual Studio Installer**
-- Modify your VS 2022 installation
-- Ensure **Desktop development with C++** is checked
-- Verify MSVC v143 toolset is installed
+**Fix:** Ensure you installed the **"Desktop development with C++"** workload in Visual Studio 2022.
 
-### "Cannot open include file 'JuceHeader.h'"
+### "fatal error C1083: Cannot open include file"
 
-**Solution:**
-- JUCE may not have been fetched correctly
-- Delete the build directory: `rmdir /s build`
-- Re-run CMake configure step
-- Check your internet connection (JUCE is fetched from GitHub)
+**Fix:** Let CMake finish fetching JUCE on first configure. If interrupted, delete the `build/` directory and run `cmake -B build -G "Visual Studio 17 2022"` again.
 
-### "Git fetch failed for JUCE"
+### Audio crackling or dropouts
 
-**Solution:**
-- Check your internet connection
-- Verify Git is installed: `git --version`
-- Try fetching JUCE manually:
-  ```powershell
-  git clone --depth 1 --branch 8.0.9 https://github.com/juce-framework/JUCE.git _deps/juce
-  ```
+**Check:**
+1. Ensure MMCSS is enabled (default): `cmake -B build -G "Visual Studio 17 2022" -DZENITH_ENABLE_MMCSS=ON`
+2. Rebuild: `cmake --build build --config Release -j`
+3. Use **Release** build for performance testing (Debug builds are slower)
+4. Close background apps (browsers, Discord, etc.)
+5. Check audio buffer size in Zenith's audio settings (once implemented)
 
-### Build is slow
+### Build hangs or takes forever
 
-**Solution:**
-- Use parallel builds: `cmake --build build -j`
-- Close other applications
-- Use Release build for production (Debug includes symbols)
-- Consider upgrading to an SSD if using HDD
+**Fix:**
+- Use parallel builds: `cmake --build build --config Debug -j`
+- Close other programs to free up RAM
+- On first build, JUCE is fetched and compiled (~5-10 minutes)
 
 ---
 
-## Opening in Visual Studio
+## Clean Rebuild
 
-You can open the project directly in Visual Studio 2022:
+If you encounter build errors after a `git pull` or branch switch:
 
-**Method 1: Open Folder**
-1. File → Open → Folder
-2. Select the `zenith-core/` directory
-3. Visual Studio will detect `CMakeLists.txt` automatically
-4. Use the CMake targets dropdown to select Debug/Release
-
-**Method 2: Generate Solution**
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022"
+```cmd
+rmdir /s /q build
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug -j
 ```
-Then open `build/ZenithDAW.sln`
+
+This deletes the build directory and starts fresh.
+
+---
+
+## Development Workflow
+
+See [DEVELOPER_WORKFLOW.md](DEVELOPER_WORKFLOW.md) for:
+- Using Visual Studio IDE for debugging
+- CMake GUI workflow
+- Recommended VS Code / CLion setups
+- Testing and profiling tools
 
 ---
 
 ## Next Steps
 
-- **Audio Configuration**: See [WINDOWS_AUDIO_APIS_GUIDE.md](WINDOWS_AUDIO_APIS_GUIDE.md) for ASIO/WASAPI setup
-- **Development Workflow**: See [DEVELOPER_WORKFLOW.md](DEVELOPER_WORKFLOW.md) for coding guidelines and best practices
-- **Architecture**: See the main [README.md](../README.md) for project structure and roadmap
+- **Read the Architecture Docs:** [docs/README.md](README.md)
+- **Explore MMCSS Audio Priority:** [docs/windows/mmcss_audio_priority.md](windows/mmcss_audio_priority.md)
+- **Windows Audio APIs Guide:** [docs/WINDOWS_AUDIO_APIS_GUIDE.md](WINDOWS_AUDIO_APIS_GUIDE.md)
+- **Contributing:** See main [README.md](../README.md#contributing)
 
 ---
 
-## Quick Reference
+## Common CMake Options
 
-```powershell
-# Full build from scratch
-cd zenith-core
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/Release -j
-.\build\Release\ZenithDAW_artefacts\Release\"Zenith DAW.exe"
+```cmd
+# Enable MMCSS audio thread priority boost (default: ON)
+-DZENITH_ENABLE_MMCSS=ON
+
+# Enable Link-Time Code Generation for Release builds (default: OFF)
+-DZENITH_LTCG=ON
+
+# Treat warnings as errors in CI builds (default: OFF locally)
+-DZENITH_WERROR_CI=ON
 ```
 
-**Build time (first run):** ~5-10 minutes (includes JUCE fetch + compile)
-**Build time (incremental):** ~10-30 seconds (depending on changes)
+Example with multiple options:
+
+```cmd
+cmake -B build -G "Visual Studio 17 2022" -DZENITH_ENABLE_MMCSS=ON -DZENITH_LTCG=ON
+```
 
 ---
 
-**Last Updated:** 2025-11-17
-**Tested With:** Windows 11, Visual Studio 2022 17.8+, CMake 3.27
+## Why No WSL / MSYS2 / vcpkg?
+
+**Zenith is a native Windows DAW.** We use:
+- **Visual Studio's MSVC compiler** (industry standard for Windows audio apps)
+- **CMake FetchContent** for dependencies (JUCE is fetched automatically)
+- **Native Windows APIs** (WASAPI, ASIO, MMCSS)
+
+This ensures:
+- Maximum performance
+- Compatibility with all Windows audio drivers
+- Simpler builds (no cross-compilation or compatibility layers)
+- Industry-standard toolchain used by professional audio software
+
+---
+
+**Need help?** Open an issue at: https://github.com/DaddyMilkMan/zenith-core/issues

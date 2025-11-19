@@ -2,13 +2,13 @@
 
 ## Overview
 
-This document provides a comprehensive guide to Windows audio APIs supported by the Vexel DAW, helping developers choose the right audio driver for different scenarios.
+This document provides a comprehensive guide to Windows audio APIs supported by the Zenith DAW, helping developers choose the right audio driver for different scenarios.
 
 ---
 
 ## Supported Windows Audio APIs
 
-The Vexel DAW supports **ALL major Windows audio APIs** through the JUCE framework:
+The Zenith DAW supports **ALL major Windows audio APIs** through the JUCE framework:
 
 | API | Introduced | Status | Latency | Use Case |
 |-----|-----------|--------|---------|----------|

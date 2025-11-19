@@ -22,12 +22,12 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(JUCE)
 
 # Create the GUI application
-juce_add_gui_app(VexelDAW
-    PRODUCT_NAME "Vexel DAW"
+juce_add_gui_app(ZenithDAW
+    PRODUCT_NAME "Zenith DAW"
     COMPANY_NAME "DaddyMilkMan"
     COMPANY_WEBSITE "https://github.com/DaddyMilkMan/daw"
-    COMPANY_EMAIL "support@vexeldaw.com"
-    BUNDLE_ID com.daddymilkman.vexeldaw
+    COMPANY_EMAIL "support@zenithdaw.com"
+    BUNDLE_ID com.daddymilkman.zenithdaw
 
     # Icon files
     # ICON_BIG Resources/icon.png
@@ -44,7 +44,7 @@ juce_add_gui_app(VexelDAW
 )
 
 # Source files
-target_sources(VexelDAW PRIVATE
+target_sources(ZenithDAW PRIVATE
     Source/Main.cpp
     Source/MainComponent.cpp
     Source/MainComponent.h
@@ -81,15 +81,15 @@ target_sources(VexelDAW PRIVATE
 )
 
 # Preprocessor definitions
-target_compile_definitions(VexelDAW PRIVATE
+target_compile_definitions(ZenithDAW PRIVATE
     # JUCE modules
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
 
     # Application info
-    JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:VexelDAW,JUCE_PRODUCT_NAME>"
-    JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:VexelDAW,JUCE_VERSION>"
+    JUCE_APPLICATION_NAME_STRING="$<TARGET_PROPERTY:ZenithDAW,JUCE_PRODUCT_NAME>"
+    JUCE_APPLICATION_VERSION_STRING="$<TARGET_PROPERTY:ZenithDAW,JUCE_VERSION>"
 
     # Plugin hosting
     JUCE_PLUGINHOST_VST3=1
@@ -102,7 +102,7 @@ target_compile_definitions(VexelDAW PRIVATE
 )
 
 # Link JUCE modules
-target_link_libraries(VexelDAW
+target_link_libraries(ZenithDAW
     PRIVATE
         # Audio modules
         juce::juce_audio_basics
@@ -129,30 +129,30 @@ target_link_libraries(VexelDAW
 
 # Platform-specific settings
 if(APPLE)
-    target_compile_definitions(VexelDAW PRIVATE
+    target_compile_definitions(ZenithDAW PRIVATE
         JUCE_PLUGINHOST_AU=1
     )
 endif()
 
 if(WIN32)
-    target_compile_definitions(VexelDAW PRIVATE
+    target_compile_definitions(ZenithDAW PRIVATE
         JUCE_WASAPI=1
         JUCE_DIRECTSOUND=1
     )
 endif()
 
 if(UNIX AND NOT APPLE)
-    target_compile_definitions(VexelDAW PRIVATE
+    target_compile_definitions(ZenithDAW PRIVATE
         JUCE_ALSA=1
         JUCE_JACK=1
     )
 endif()
 
 # Copy resources to build directory
-# add_custom_command(TARGET VexelDAW POST_BUILD
+# add_custom_command(TARGET ZenithDAW POST_BUILD
 #     COMMAND ${CMAKE_COMMAND} -E copy_directory
 #     ${CMAKE_SOURCE_DIR}/Resources
-#     $<TARGET_FILE_DIR:VexelDAW>/Resources
+#     $<TARGET_FILE_DIR:ZenithDAW>/Resources
 # )
 
 # Enable testing

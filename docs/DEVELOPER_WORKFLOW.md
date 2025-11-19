@@ -1,436 +1,528 @@
-# Developer Workflow — Zenith DAW
+# Zenith DAW — Developer Workflow Guide
 
-**Native Windows • No WSL • No MSYS2 • JUCE Auto-Fetched via CMake**
+**Windows-first development workflow for building, debugging, and testing Zenith DAW.**
 
-This guide covers the development workflow for contributing to Zenith DAW on Windows using Visual Studio 2022 and native tooling.
-
----
-
-## Development Philosophy
-
-Zenith DAW is built as a **native Windows application** using:
-
-- **Language**: C++20
-- **Framework**: JUCE 8.0.9 (auto-fetched via CMake FetchContent)
-- **Build System**: CMake ≥ 3.22
-- **Compiler**: MSVC v143 (Visual Studio 2022)
-- **Audio APIs**: WASAPI, ASIO (via JUCE)
-
-**We do NOT use:**
-- WSL (Windows Subsystem for Linux)
-- MSYS2 or MinGW
-- vcpkg or Conan
-- Qt (migrated away from Qt/QML to native JUCE)
+This guide covers the recommended development setup on Windows using Visual Studio 2022, CMake, and optional alternative IDEs.
 
 ---
 
-## Project Structure
+## Table of Contents
 
-```
-daw/
-├── zenith-core/              # Main native JUCE application
-│   ├── CMakeLists.txt        # JUCE build system (auto-fetches JUCE 8.0.9)
-│   ├── src/                  # C++ source files
-│   │   ├── Main.cpp          # Application entry point
-│   │   ├── MainWindow.cpp    # Main window and UI setup
-│   │   ├── Engine.cpp        # Audio engine coordination
-│   │   └── ProjectState.cpp  # Session/project state management
-│   ├── Source/engine/        # Core engine primitives
-│   │   ├── Track.h/.cpp      # Track representation
-│   │   ├── Clip.h/.cpp       # Audio/MIDI clips
-│   │   └── MixerChannel.h/.cpp # Mixer channel strips
-│   ├── include/              # Public headers
-│   ├── tests/                # Unit tests
-│   └── build/                # Build artifacts (gitignored)
-├── docs/                     # Documentation
-│   ├── INSTALL_WINDOWS.md    # Windows installation guide
-│   └── DEVELOPER_WORKFLOW.md # This file
-└── README.md                 # Project overview
-```
+1. [Windows-First Workflow](#windows-first-workflow)
+2. [Visual Studio 2022 Workflow](#visual-studio-2022-workflow-recommended)
+3. [CMake GUI Workflow](#cmake-gui-workflow)
+4. [Alternative IDEs](#alternative-ides-optional)
+5. [Testing and Debugging](#testing-and-debugging)
+6. [Profiling and Performance](#profiling-and-performance)
+7. [Git Workflow](#git-workflow)
 
 ---
 
-## Daily Development Workflow
+## Windows-First Workflow
 
-### 1. Setting Up Your Environment
+**We DO NOT require WSL or a Linux subsystem to build or run Zenith on Windows.**
 
-Follow the [Windows Installation Guide](INSTALL_WINDOWS.md) to install:
-- Visual Studio 2022 (Desktop development with C++)
-- CMake ≥ 3.22
-- Git
+Zenith is a native Windows application built with industry-standard tools:
+- **Visual Studio 2022** (MSVC v143 compiler)
+- **CMake** for build configuration
+- **Native Windows APIs** (WASAPI, ASIO, MMCSS)
 
-### 2. Clone and Configure
+### Why Native Windows Only?
 
-```powershell
-# Clone the repository
-git clone https://github.com/DaddyMilkMan/daw.git
-cd daw/zenith-core
+1. **Performance:** Direct access to Windows audio APIs without translation layers
+2. **Audio Driver Compatibility:** Full support for ASIO, WASAPI Exclusive, and MMCSS
+3. **Industry Standard:** Professional audio software on Windows uses MSVC
+4. **Simpler Builds:** No cross-compilation, no compatibility layers
+5. **Better Debugging:** Native debugging with Visual Studio's excellent C++ debugger
 
-# Configure Debug build (auto-fetches JUCE on first run)
-cmake -S . -B build/Debug -DCMAKE_BUILD_TYPE=Debug
+### Supported Development Environments
 
-# Configure Release build
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-```
-
-**Note**: The first CMake configure will fetch JUCE 8.0.9 from GitHub (~150MB). This is automatic and requires no manual intervention.
-
-### 3. Open in Visual Studio 2022
-
-**Recommended: Open Folder**
-
-1. **File → Open → Folder**
-2. Navigate to `zenith-core/`
-3. Visual Studio detects `CMakeLists.txt` automatically
-4. CMake integration is built-in—no extensions needed
-
-**Alternative: Generate Solution**
-
-```powershell
-cmake -S . -B build -G "Visual Studio 17 2022"
-start build/ZenithDAW.sln
-```
-
-### 4. Building
-
-**Via Visual Studio:**
-- **Build → Build All** (Ctrl+Shift+B)
-- Or right-click `ZenithDAW` target → **Build**
-
-**Via Command Line:**
-
-```powershell
-# Debug build (with symbols, slower runtime)
-cmake --build build/Debug -j
-
-# Release build (optimized, fast runtime)
-cmake --build build/Release -j
-```
-
-**Incremental builds** are fast (~10-30 seconds for small changes).
-
-### 5. Running and Debugging
-
-**From Visual Studio:**
-- **Debug → Start Debugging (F5)** — Launches with debugger attached
-- **Debug → Start Without Debugging (Ctrl+F5)** — Launches standalone
-
-**From Command Line:**
-
-```powershell
-# Run Debug build
-.\build\Debug\ZenithDAW_artefacts\Debug\"Zenith DAW.exe"
-
-# Run Release build
-.\build\Release\ZenithDAW_artefacts\Release\"Zenith DAW.exe"
-```
-
-**Debugging Tips:**
-- Set breakpoints in `.cpp` files
-- Use **Debug → Windows → Output** for logging
-- JUCE uses `DBG()` macro for debug output
-- Check the JUCE console window for assertions
+- **Primary:** Visual Studio 2022 (Community, Professional, or Enterprise)
+- **Minimal:** Build Tools for Visual Studio 2022 + CMake CLI
+- **Optional:** CLion, VS Code (see [Alternative IDEs](#alternative-ides-optional))
 
 ---
 
-## Coding Standards
+## Visual Studio 2022 Workflow (Recommended)
 
-### General Guidelines
+### Initial Setup
 
-- **C++ Standard**: C++20 (`CMAKE_CXX_STANDARD 20`)
-- **Naming**:
-  - Classes: `PascalCase` (e.g., `MainWindow`, `TrackView`)
-  - Functions/methods: `camelCase` (e.g., `updateTrackList()`)
-  - Member variables: `camelCase` (e.g., `trackHeight`, `isPlaying`)
-  - Constants: `UPPER_SNAKE_CASE` or `kPascalCase`
-- **JUCE Conventions**:
-  - Inherit from JUCE base classes (`Component`, `AudioProcessor`, etc.)
-  - Use `juce::` namespace explicitly
-  - Prefer `std::unique_ptr` and `std::shared_ptr` over raw pointers
-  - Use `juce::String` for text, `juce::File` for filesystem
+1. **Install Visual Studio 2022**
+   - Download: https://visualstudio.microsoft.com/downloads/
+   - Select **"Desktop development with C++"** workload
+   - Includes: MSVC compiler, Windows SDK, CMake, Ninja
 
-### Performance Rules
+2. **Clone the Repository**
+   ```cmd
+   git clone https://github.com/DaddyMilkMan/zenith-core.git
+   cd zenith-core
+   ```
 
-**Audio Thread Safety:**
-- **NEVER allocate** in audio callbacks (`getNextAudioBlock`, `processBlock`)
-- **NEVER lock mutexes** in audio thread (use lock-free structures)
-- Use `juce::SpinLock` or `juce::AbstractFifo` for cross-thread communication
-- See `Source/win/WinRtAudioPriority.cpp` for MMCSS thread priority setup
+3. **Open the Project in Visual Studio**
 
-**UI Thread Safety:**
-- **NEVER allocate** in `paint()` or `repaint()` hot paths
-- Cache geometry and pre-compute layouts
-- Use `MessageManager::callAsync()` for cross-thread UI updates
-- Virtualize large lists (e.g., `TrackView` only renders visible tracks)
+   **Method A: Open CMake Project Directly**
+   - Launch Visual Studio 2022
+   - **File** → **Open** → **CMake...**
+   - Select `CMakeLists.txt` in the `zenith-core/` folder
+   - Visual Studio will automatically configure the project
 
-### JUCE-Specific Patterns
+   **Method B: Open Folder**
+   - **File** → **Open** → **Folder...**
+   - Select the `zenith-core/` folder
+   - Visual Studio detects `CMakeLists.txt` automatically
 
-```cpp
-// Good: JUCE smart pointers
-std::unique_ptr<juce::AudioDeviceManager> deviceManager;
+### Building in Visual Studio
 
-// Good: JUCE callbacks
-void timerCallback() override {
-    // Safe to call from message thread
-}
+1. **Select Configuration**
+   - Top toolbar: Choose **Debug** or **Release** from the dropdown
 
-// Good: Lazy initialization
-juce::LazyInitialiser<ExpensiveResource> resource;
+2. **Build the Project**
+   - **Build** → **Build All** (or press `Ctrl+Shift+B`)
+   - Or right-click the project in Solution Explorer → **Build**
 
-// Bad: Raw pointers (use smart pointers instead)
-Component* comp = new Component();  // ❌
+3. **Output Location**
+   - Debug: `out/build/x64-Debug/Zenith.exe`
+   - Release: `out/build/x64-Release/Zenith.exe`
+   - (Path may vary based on VS configuration)
 
-// Bad: Direct audio thread access (use lock-free queues)
-std::vector<float> buffer;  // ❌ in audio callback
-```
+### Running and Debugging
 
----
+1. **Set Startup Item**
+   - Top toolbar: Select **Zenith.exe** from the startup item dropdown
 
-## Testing
+2. **Run Without Debugging**
+   - **Debug** → **Start Without Debugging** (or press `Ctrl+F5`)
 
-### Running Tests
+3. **Run With Debugging**
+   - **Debug** → **Start Debugging** (or press `F5`)
+   - Set breakpoints by clicking left margin in code editor
 
-Zenith includes unit tests built with JUCE's testing framework:
+### Debugging Tips
 
-```powershell
-# Build tests
-cmake --build build/Debug --target ProjectStateTests
+- **Breakpoints:** Click left margin or press `F9` on a line
+- **Watch Variables:** Hover over variables or add to Watch window
+- **Call Stack:** **Debug** → **Windows** → **Call Stack** (`Ctrl+Alt+C`)
+- **Autos Window:** **Debug** → **Windows** → **Autos** (shows local variables)
+- **Output Window:** **View** → **Output** (`Ctrl+Alt+O`) for build logs
 
-# Run tests
-.\build\Debug\ProjectStateTests_artefacts\Debug\ProjectStateTests.exe
-```
+### Visual Studio CMake Settings
 
-Or use CTest:
+To customize CMake options in Visual Studio:
 
-```powershell
-cd build/Debug
-ctest --output-on-failure
-```
-
-### Writing Tests
-
-Tests are located in `tests/`. Example:
-
-```cpp
-// tests/MyComponentTests.cpp
-#include <JuceHeader.h>
-
-class MyComponentTests : public juce::UnitTest {
-public:
-    MyComponentTests() : juce::UnitTest("MyComponent") {}
-
-    void runTest() override {
-        beginTest("Component initialization");
-        MyComponent comp;
-        expect(comp.isVisible() == false);
-    }
-};
-
-static MyComponentTests myComponentTests;
-```
+1. **Project** → **CMake Settings for Zenith**
+2. Or edit `CMakeSettings.json` directly
+3. Common options:
+   ```json
+   {
+     "configurations": [
+       {
+         "name": "x64-Debug",
+         "generator": "Ninja",
+         "configurationType": "Debug",
+         "cmakeCommandArgs": "-DZENITH_ENABLE_MMCSS=ON"
+       }
+     ]
+   }
+   ```
 
 ---
 
-## Git Workflow
+## CMake GUI Workflow
 
-### Branching Strategy
+For developers who prefer CMake GUI over Visual Studio integration:
 
-- **main**: Stable releases only
-- **Feature branches**: `feature/your-feature-name`
-- **Bug fixes**: `fix/issue-description`
+### Initial Configuration
 
-### Making Changes
+1. **Install CMake GUI**
+   - Included with Visual Studio 2022, or download from https://cmake.org/download/
 
-```powershell
-# Create feature branch
-git checkout -b feature/add-mixer-panel
+2. **Launch CMake GUI**
+   - **Where is the source code:** Browse to `zenith-core/`
+   - **Where to build the binaries:** Browse to `zenith-core/build/`
 
-# Make changes, test, commit
-git add src/MixerPanel.cpp
-git commit -m "Add mixer panel with level meters"
+3. **Configure**
+   - Click **Configure**
+   - Select generator: **Visual Studio 17 2022**
+   - Click **Finish**
+   - CMake will fetch JUCE automatically (first run takes ~2 minutes)
 
-# Push to remote
-git push origin feature/add-mixer-panel
+4. **Set Options** (optional)
+   - Modify options like `ZENITH_ENABLE_MMCSS` (default: ON)
+   - Click **Configure** again to apply changes
+
+5. **Generate**
+   - Click **Generate** to create Visual Studio solution files
+
+6. **Open in Visual Studio**
+   - Click **Open Project** to launch Visual Studio
+   - Or manually open `build/Zenith.sln`
+
+### Building from Command Line
+
+After generating with CMake GUI:
+
+```cmd
+cmake --build build --config Debug -j
 ```
 
-### Pull Request Guidelines
-
-- **Keep PRs small** (one feature or subsystem at a time)
-- **Test thoroughly** before submitting
-- **Describe changes** clearly in PR description
-- **Run tests** (`ctest`) before pushing
-- **Follow coding standards** (see above)
+Or use Visual Studio to build the generated solution.
 
 ---
 
-## CMake Build Options
+## Alternative IDEs (Optional)
 
-Customize your build with CMake options:
+### CLion (JetBrains)
 
-```powershell
-# Enable MMCSS audio thread priority (Windows default: ON)
-cmake -S . -B build -DZENITH_ENABLE_MMCSS=ON
+**Setup:**
+1. **File** → **Open** → Select `zenith-core/` folder
+2. CLion detects `CMakeLists.txt` automatically
+3. **File** → **Settings** → **Build, Execution, Deployment** → **Toolchains**
+   - Ensure **Visual Studio** toolchain is selected
+4. **File** → **Settings** → **Build, Execution, Deployment** → **CMake**
+   - Add CMake options: `-DZENITH_ENABLE_MMCSS=ON`
 
-# Enable debug track seeding (creates 8 demo tracks in Debug builds)
-cmake -S . -B build -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON
+**Building:**
+- **Build** → **Build Project** (`Ctrl+F9`)
+- **Run** → **Run 'Zenith'** (`Shift+F10`)
+- **Run** → **Debug 'Zenith'** (`Shift+F9`)
 
-# Enable experimental Phase 1 audio skeleton (not ready, default: OFF)
-cmake -S . -B build -DZENITH_ENABLE_PHASE1_AUDIO=OFF
-```
+**Notes:**
+- CLion uses its own CMake and Ninja (bundled)
+- Excellent C++ refactoring tools
+- Integrated debugger with visual breakpoints
 
-View all options in `zenith-core/CMakeLists.txt` lines 19-25.
+### Visual Studio Code
+
+**Setup:**
+1. Install extensions:
+   - **C/C++** (Microsoft)
+   - **CMake Tools** (Microsoft)
+   - **CMake** (twxs)
+
+2. Open `zenith-core/` folder in VS Code
+
+3. Configure CMake Kit:
+   - `Ctrl+Shift+P` → **CMake: Select a Kit**
+   - Choose **Visual Studio Community 2022 Release - amd64**
+
+4. Configure CMake:
+   - `Ctrl+Shift+P` → **CMake: Configure**
+   - CMake Tools will fetch JUCE automatically
+
+**Building:**
+- `Ctrl+Shift+P` → **CMake: Build** (or press `F7`)
+- Or click **Build** in the bottom status bar
+
+**Debugging:**
+- Set breakpoints (click left margin)
+- `F5` to start debugging
+- Or `Ctrl+Shift+P` → **CMake: Debug**
+
+**Notes:**
+- Lightweight alternative to Visual Studio
+- Requires manual setup compared to VS 2022
+- Good for quick edits and builds
+
+---
+
+## Testing and Debugging
+
+### Audio Thread Debugging
+
+**IMPORTANT:** The audio callback runs in a real-time thread with hard timing constraints.
+
+**Best Practices:**
+1. **DO NOT** set breakpoints in audio callback functions
+   - Breaks real-time guarantees
+   - Causes audio glitches and dropouts
+2. **Use logging** for audio thread debugging:
+   - Write to lock-free FIFO
+   - Process logs on message thread
+3. **Debug audio logic offline** with unit tests
+
+### Visual Studio Debugger Features
+
+**Conditional Breakpoints:**
+1. Set breakpoint (`F9`)
+2. Right-click breakpoint → **Conditions...**
+3. Add condition (e.g., `frameCounter > 1000`)
+
+**Data Breakpoints:**
+- Break when a variable changes value
+- Right-click variable → **Break When Value Changes**
+
+**Exception Settings:**
+- **Debug** → **Windows** → **Exception Settings** (`Ctrl+Alt+E`)
+- Enable "Break When Thrown" for C++ exceptions
+
+### Performance Debugging
+
+**Visual Studio Profiler:**
+1. **Debug** → **Performance Profiler** (`Alt+F2`)
+2. Select tools:
+   - **CPU Usage** (function-level profiling)
+   - **Memory Usage** (heap allocations)
+3. Click **Start**
+4. Interact with Zenith
+5. Click **Stop Collection**
+6. Analyze hot paths and allocations
+
+**ETW (Event Tracing for Windows):**
+- Use **Windows Performance Analyzer (WPA)** for deep profiling
+- See [Profiling and Performance](#profiling-and-performance)
 
 ---
 
 ## Profiling and Performance
 
-### Windows-Specific Tools
+### CPU Profiling
 
-**Event Tracing for Windows (ETW) / Windows Performance Analyzer (WPA):**
-- Capture system-wide traces (CPU, disk, audio thread timing)
-- Download: [Windows Performance Toolkit](https://docs.microsoft.com/en-us/windows-hardware/test/wpt/)
+**Visual Studio CPU Profiler (Quick):**
+- **Debug** → **Performance Profiler** → **CPU Usage**
+- Shows per-function CPU time
+- Good for finding hot paths
 
-**PresentMon:**
-- Monitor frame pacing and render latency
-- Download: [Intel PresentMon](https://github.com/GameTechDev/PresentMon)
+**ETW + WPA (Advanced):**
+1. Install **Windows Performance Toolkit** (included with Windows SDK)
+2. Record trace:
+   ```cmd
+   wpr -start CPU
+   # Run Zenith and perform operations
+   wpr -stop trace.etl
+   ```
+3. Open `trace.etl` in **Windows Performance Analyzer**
+4. Analyze CPU usage, context switches, scheduler events
 
-**Visual Studio Profiler:**
-- **Debug → Performance Profiler** (CPU Usage, Memory Usage, GPU Usage)
-- Use **Instrumentation** for detailed call trees
+### Memory Profiling
 
-### JUCE Profiling
+**Visual Studio Memory Profiler:**
+- **Debug** → **Performance Profiler** → **Memory Usage**
+- Take snapshots before/after operations
+- Compare snapshots to find leaks
 
-JUCE includes built-in profiling macros:
+**Heap Profiling:**
+- Enable **Allocation Profiling** in debug builds
+- Check for allocations on audio thread (NEVER allowed!)
 
-```cpp
-#include <juce_core/juce_core.h>
+### Audio Performance Metrics
 
-void expensiveOperation() {
-    JUCE_SCOPED_TRACE("expensiveOperation");
-    // ... code ...
-}
+**Track in Zenith Debug HUD (planned):**
+- Frame time (16.67ms target for 60fps)
+- Paint calls per second
+- Audio buffer underruns
+- CPU usage %
+
+**PresentMon (Frame Rate Analysis):**
+- Download: https://github.com/GameTechDev/PresentMon
+- Measure frame pacing and latency
+- Useful for UI performance tuning
+
+---
+
+## Git Workflow
+
+### Branching
+
+**Main Branches:**
+- `main` — Stable releases
+- `develop` — Integration branch for features
+
+**Feature Branches:**
+- Create from `develop`:
+  ```cmd
+  git checkout develop
+  git pull origin develop
+  git checkout -b feature/my-new-feature
+  ```
+
+**Branch Naming:**
+- `feature/feature-name` — New features
+- `fix/bug-description` — Bug fixes
+- `docs/topic` — Documentation updates
+- `refactor/component-name` — Code refactoring
+
+### Committing Changes
+
+**Commit Messages:**
+- Use present tense: "Add feature" not "Added feature"
+- Be specific: "Fix transport play button state sync" not "Fix bug"
+- Reference issues: "Fix #123: Audio dropout on buffer resize"
+
+**Example:**
+```cmd
+git add Source/ui/TransportBar.cpp
+git commit -m "Fix transport play button state sync
+
+- Update playButton toggle state on engine callback
+- Add test for play/pause state consistency
+- Resolves #123"
 ```
 
-Enable with `-DJUCE_ENABLE_ALLOCATION_HOOKS=1` in CMake.
+### Pulling Latest Changes
+
+```cmd
+git checkout develop
+git pull origin develop
+git checkout feature/my-feature
+git merge develop
+```
+
+Or use rebase for cleaner history:
+```cmd
+git checkout feature/my-feature
+git rebase develop
+```
+
+### Pushing and Pull Requests
+
+```cmd
+git push origin feature/my-feature
+```
+
+Then create a Pull Request on GitHub:
+- Base branch: `develop`
+- Compare branch: `feature/my-feature`
+- Fill in PR template with summary and test plan
 
 ---
 
-## Audio APIs on Windows
+## Code Style and Best Practices
 
-Zenith DAW supports all major Windows audio APIs via JUCE:
+### C++ Style
 
-| API | Latency | Best For |
-|-----|---------|----------|
-| **ASIO** | 1-10ms | Professional audio interfaces |
-| **WASAPI Exclusive** | 10-15ms | Modern Windows (Vista+) |
-| **WASAPI Shared** | 30-50ms | Background playback |
-| **DirectSound** | 50-80ms | Legacy compatibility |
+- **Follow JUCE conventions:**
+  - CamelCase for classes: `TrackView`, `TransportBar`
+  - camelCase for functions: `playButtonClicked()`, `updateMeters()`
+  - Use `jassert()` for debug assertions
 
-**Default priority**: ASIO → WASAPI → DirectSound → MME
+- **Real-time safety:**
+  - **NEVER** allocate/deallocate on audio thread
+  - **NEVER** lock mutexes on audio thread
+  - **NEVER** make system calls on audio thread
+  - See [docs/tech-briefs/06-audio-thread-safety-policy.md](tech-briefs/06-audio-thread-safety-policy.md)
 
-See [WINDOWS_AUDIO_APIS_GUIDE.md](WINDOWS_AUDIO_APIS_GUIDE.md) for details.
+### Pre-commit Checks
 
----
-
-## Common Tasks
-
-### Adding a New UI Component
-
-1. Create header/source in `src/ui/`:
-   ```cpp
-   // src/ui/MixerPanel.h
-   #pragma once
-   #include <JuceHeader.h>
-
-   class MixerPanel : public juce::Component {
-   public:
-       MixerPanel();
-       void paint(juce::Graphics&) override;
-       void resized() override;
-   };
-   ```
-
-2. Add to `CMakeLists.txt`:
-   ```cmake
-   target_sources(ZenithDAW PRIVATE
-       src/ui/MixerPanel.cpp
-   )
-   ```
-
-3. Rebuild:
-   ```powershell
-   cmake --build build/Debug -j
-   ```
-
-### Adding a New Engine Class
-
-1. Create in `Source/engine/`:
-   ```cpp
-   // Source/engine/Effect.h
-   #pragma once
-   class Effect {
-   public:
-       virtual void process(float* buffer, int numSamples) = 0;
-   };
-   ```
-
-2. Add to `CMakeLists.txt`:
-   ```cmake
-   target_sources(ZenithDAW PRIVATE
-       Source/engine/Effect.h
-       Source/engine/Effect.cpp
-   )
-   ```
-
-3. Include in your audio processing chain
-
-### Debugging Audio Issues
-
-1. **Enable MMCSS logging**:
-   - Check `Source/win/WinRtAudioPriority.cpp`
-   - Look for "Pro Audio priority enabled" in debug output
-
-2. **Check buffer underruns**:
-   - Use `juce::AudioDeviceManager::addAudioCallback()`
-   - Monitor `getXRunCount()` for dropouts
-
-3. **Profile audio thread**:
-   - Use ETW/WPA to capture audio thread timing
-   - Look for priority inversions or excessive CPU usage
+Before committing:
+1. **Build succeeds** (Debug and Release)
+2. **No compiler warnings** (warnings are errors in CI)
+3. **Code formatted** (clang-format, if configured)
+4. **Changes tested** manually or with unit tests
 
 ---
 
-## Resources
+## Troubleshooting Development Issues
 
-- **JUCE Documentation**: https://docs.juce.com/
-- **JUCE Forums**: https://forum.juce.com/
-- **Windows Audio APIs**: [WINDOWS_AUDIO_APIS_GUIDE.md](WINDOWS_AUDIO_APIS_GUIDE.md)
-- **Zenith README**: [README.md](../README.md)
-- **Zenith Roadmap**: See README.md "Roadmap" section
+### "CMake Error: Could not find JUCE"
+
+**Fix:** Delete `build/` and reconfigure:
+```cmd
+rmdir /s /q build
+cmake -B build -G "Visual Studio 17 2022"
+```
+
+### "LNK1104: cannot open file 'juce_*.lib'"
+
+**Fix:** Clean rebuild:
+```cmd
+cmake --build build --config Debug --clean-first
+```
+
+### Visual Studio Intellisense Errors (Red Squiggles)
+
+**Fix:**
+1. **Project** → **Rescan Solution**
+2. Or delete `.vs/` folder and reopen project
+3. Ensure CMake configuration succeeded (check Output window)
+
+### "Audio device initialization failed"
+
+**Fix:**
+1. Close other audio applications (DAWs, browsers with media)
+2. Check Windows audio settings (ensure device is enabled)
+3. Try different buffer size in Zenith audio settings
+4. Check MMCSS is enabled: `cmake -B build -DZENITH_ENABLE_MMCSS=ON`
 
 ---
 
-## FAQ
+## Additional Resources
 
-**Q: Do I need WSL to develop Zenith on Windows?**
-**A:** No. Zenith is a native Windows application built with MSVC. WSL is not required or recommended.
+### Official Documentation
+- **JUCE Tutorials:** https://docs.juce.com/master/tutorial_manage_plugins.html
+- **JUCE Forum:** https://forum.juce.com/
+- **Windows Audio APIs:** [docs/WINDOWS_AUDIO_APIS_GUIDE.md](WINDOWS_AUDIO_APIS_GUIDE.md)
+- **MMCSS Audio Priority:** [docs/windows/mmcss_audio_priority.md](windows/mmcss_audio_priority.md)
 
-**Q: Do I need to manually install JUCE?**
-**A:** No. CMake automatically fetches JUCE 8.0.9 via `FetchContent` during the configure step.
+### Community
+- **Audio Developer Conference:** https://audio.dev/
+- **KVR Audio DSP Forum:** https://www.kvraudio.com/forum/viewforum.php?f=33
 
-**Q: Can I use Visual Studio Code instead of Visual Studio?**
-**A:** Yes, but you'll need to install MSVC separately (via Build Tools for Visual Studio 2022) and configure CMake manually. Visual Studio 2022 is recommended for the best experience.
-
-**Q: Why is the first build so slow?**
-**A:** The first build compiles JUCE (~150MB of C++ code). Subsequent builds are incremental and much faster (~10-30 seconds).
-
-**Q: How do I switch between Debug and Release builds?**
-**A:** Use separate build directories (`build/Debug`, `build/Release`) or reconfigure with `-DCMAKE_BUILD_TYPE=Debug/Release`.
-
-**Q: Can I build for macOS or Linux?**
-**A:** Yes, Zenith is designed to be cross-platform (JUCE handles platform abstraction). However, Windows is the current development focus. macOS/Linux support is planned for later phases.
+### Books
+- *Designing Audio Effect Plugins in C++* by Will Pirkle
+- *The Audio Programming Book* by Richard Boulanger
 
 ---
 
-**Last Updated:** 2025-11-17
-**Maintainer:** DaddyMilkMan
+## Quick Reference
+
+### Common Commands
+
+```cmd
+# Clone repository
+git clone https://github.com/DaddyMilkMan/zenith-core.git
+
+# Configure CMake
+cmake -B build -G "Visual Studio 17 2022"
+
+# Build Debug
+cmake --build build --config Debug -j
+
+# Build Release
+cmake --build build --config Release -j
+
+# Clean rebuild
+rmdir /s /q build
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug -j
+
+# Run Debug build
+build\Debug\Zenith.exe
+
+# Run Release build
+build\Release\Zenith.exe
+```
+
+### CMake Options
+
+```cmd
+# Enable MMCSS audio priority (default: ON)
+-DZENITH_ENABLE_MMCSS=ON
+
+# Enable Link-Time Code Generation (default: OFF)
+-DZENITH_LTCG=ON
+
+# Treat warnings as errors (CI only, default: OFF)
+-DZENITH_WERROR_CI=ON
+```
+
+### Visual Studio Shortcuts
+
+| **Action** | **Shortcut** |
+|------------|--------------|
+| Build | `Ctrl+Shift+B` |
+| Start Debugging | `F5` |
+| Start Without Debugging | `Ctrl+F5` |
+| Toggle Breakpoint | `F9` |
+| Step Over | `F10` |
+| Step Into | `F11` |
+| Step Out | `Shift+F11` |
+| Go to Definition | `F12` |
+| Find in Files | `Ctrl+Shift+F` |
+| Solution Explorer | `Ctrl+Alt+L` |
+| Output Window | `Ctrl+Alt+O` |
+
+---
+
+**Questions or issues?** Open a GitHub issue or check the [main README](../README.md).
+
+**Happy coding!** 🎵

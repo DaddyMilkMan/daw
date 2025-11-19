@@ -472,7 +472,7 @@ Month 16-18: Launch Prep [=========================================] 100%
 
 ### Code Templates
 - `docs/code-templates/` - JUCE skeleton code
-- `vexel-daw/` - Existing prototype code
+- `zenith-daw/` - Existing prototype code
 - `ai-bridge-server/` - AI communication server
 
 ---

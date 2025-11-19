@@ -1,225 +1,195 @@
-Zenith — Professional Digital Audio Workstation
+# Zenith DAW
 
-(formerly “Vexel DAW”)
+<<<<<<< HEAD
+(formerly “Zenith DAW”)
+=======
+**Professional native DAW built with JUCE 8 and modern C++20**
+>>>>>>> origin/master
 
+Zenith is a high-performance digital audio workstation focused on native performance, clean architecture, RT-safe audio processing, deep moddability, and AI-assisted workflows (Wingman). We've migrated to a pure C++ / JUCE 8 interface for predictable CPU usage, smooth rendering, and rock-solid real-time behavior.
 
+---
 
+## 🏗️ Project Layout
 
+```
+zenith-core/          → Canonical Zenith DAW application (JUCE 8, C++20)
+├── Source/engine/    → Audio engine, tracks, clips, mixer, audio file pool
+├── Source/instruments/ → Built-in instruments (ZenithPolySynth, ZenithSampler)
+├── src/              → Main application (Engine, MainWindow, ProjectState)
+├── include/          → Public headers
+└── tests/            → Unit tests
 
+scripts/              → Lua/scripting experiments for future modding
+ai-bridge-server/     → Experimental AI/Wingman bridge (Node/WebSocket)
+docs/                 → Architecture documentation and design notes
+planning/             → Roadmaps, phase plans, feature specs
+```
 
+---
 
+## 🗂️ Legacy Code Removal
 
-Overview
+All older prototypes have been **removed from the active codebase**:
+- **VexelDAW-Native/** (donor reference code)
+- **src/audio/** (early C++ engine prototype)
+- **src/juce-engine/** (placeholder skeleton)
+- **src/qt-qml/** (Qt6/QML UI experiment)
 
-Zenith is a professional DAW focused on native performance, modern visuals, and an integrated assistant (Wingman) that helps with editing, arrangement, and session ops.
-We’ve migrated away from web UIs and hybrid stacks to a pure C++ / JUCE 8 interface for predictable CPU usage, smooth rendering, and rock-solid real-time behavior.
+These are available in git history prior to commit `[Cleanup] Remove legacy projects` if needed for reference.
 
-Goals
+---
 
-Combine the best workflows from major DAWs into one focused environment.
+## 🚀 Windows Quick Start
 
-Remove the small, persistent UX pain points reviewers complain about.
+**Want to build Zenith on Windows? It's easy!**
 
-Ship a moddable platform with a clean theme system and future scripting/SDK hooks.
+- **Windows 10/11** (64-bit)
+- **Visual Studio 2022** with "Desktop development with C++"
+- **No WSL, no MSYS2, no package managers required**
+- **JUCE is fetched automatically** — no manual setup
 
-Windows Quick Start
+**Three-step install:**
 
-**Native Windows • No WSL • No MSYS2 • JUCE Auto-Fetched**
-
-New to Zenith? Get started in minutes:
-
-1. Install Visual Studio 2022 (Desktop development with C++), CMake ≥ 3.22, and Git
-2. Clone: git clone https://github.com/DaddyMilkMan/daw.git
-3. Build:
-cd daw/zenith-core
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/Release -j
-4. Run: .\build\Release\ZenithDAW_artefacts\Release\"Zenith DAW.exe"
-
-Detailed guides:
-
-docs/INSTALL_WINDOWS.md — Step-by-step Windows installation
-
-docs/DEVELOPER_WORKFLOW.md — Development workflow, coding standards, testing
-
-docs/WINDOWS_AUDIO_APIS_GUIDE.md — Audio API selection (ASIO/WASAPI)
-
-No WSL, MSYS2, or vcpkg required. JUCE is automatically fetched by CMake.
-
-Architecture
-
-Current UI Stack: 100% native JUCE 8 Components (C++).
-No Electron. No Qt/QML. No embedded browsers.
-
-┌───────────────────────────────────────────────────────────┐
-│                     Zenith UI (JUCE 8)                    │
-│  • Custom LookAndFeel (dark theme, vector/SVG, animations)│
-│  • Components: TopBar, Sidebar, TrackView, TransportBar   │
-│  • High-DPI (Per-Monitor V2) aware                        │
-└───────────────▲───────────────────────────────────────────┘
-                │ clean callbacks / commands
-┌───────────────┴───────────────────────────────────────────┐
-│                 Engine & Platform Layer                   │
-│  • AudioDeviceManager, transport, session state           │
-│  • Windows: MMCSS (“Pro Audio”) thread priority           │
-│  • Lock-free comms for meters/events (WIP)                │
-└───────────────────────────────────────────────────────────┘
-
-
-Windows-first: We’re focusing on Windows (VS2022) for early hardening; macOS/Linux will follow.
-
-Key Features (current & planned)
-
-Native JUCE 8 UI with custom ZenithLookAndFeel (dark theme, vectors, subtle animations).
-
-Wingman (built-in assistant): edit/arrange operations with undo-aware diffs (scope expanding).
-
-Performance foundations:
-
-MMCSS “Pro Audio” for the audio thread (Windows).
-
-Paint-safe UI (no allocations in hot paths), TrackView virtualization (in progress).
-
-Per-monitor DPI correctness; Debug HUD for frame timing (planned).
-
-Best-of DAW workflows (roadmap):
-
-Ableton-style clip/launch view, FL-style piano roll ergonomics,
-
-Studio One-style Arranger/Scratchpad,
-
-Cubase-style articulation maps, Bitwig-like modular mindset.
-
-Moddability (roadmap):
-
-Tokenized theme system (live preview),
-
-Scripting (Lua/JS) sandbox for actions, panels, macros,
-
-Extension SDK for deep hooks (C++/Rust).
-
-Windows Support
-
-Native Windows Development • No WSL Required
-
-Compiler/IDE: Visual Studio 2022 (v143), CMake ≥ 3.22
-
-Audio APIs: WASAPI (Shared/Exclusive), ASIO (if available)
-
-Threading: MMCSS "Pro Audio" priority helper (toggle via CMake)
-
-Framework: JUCE 8.0.9 (auto-fetched via CMake FetchContent)
-
-See docs/INSTALL_WINDOWS.md and docs/DEVELOPER_WORKFLOW.md for full setup.
-
-Project Structure (current)
-zenith-core/
-├─ CMakeLists.txt
-├─ Source/
-│  ├─ ui/
-│  │  ├─ ZenithLookAndFeel.h/.cpp
-│  │  ├─ MainComponent.h/.cpp
-│  │  ├─ TopBar.h/.cpp
-│  │  ├─ Sidebar.h/.cpp
-│  │  ├─ TrackView.h/.cpp
-│  │  └─ TransportBar.h/.cpp
-│  ├─ win/
-│  │  ├─ WinRtAudioPriority.h/.cpp     # MMCSS RAII helper
-│  │  └─ (Windows-specific helpers)
-│  └─ (engine/, audio/, etc. as they land)
-└─ docs/
-   └─ windows/
-      └─ mmcss_audio_priority.md
-
-Building (Windows)
-
-Quick build (native JUCE application):
-
+```cmd
+git clone https://github.com/DaddyMilkMan/zenith-core.git
 cd zenith-core
-cmake -S . -B build/Release -DCMAKE_BUILD_TYPE=Release
-cmake --build build/Release -j
+cmake -B build -G "Visual Studio 17 2022"
+cmake --build build --config Debug -j
+```
 
+**Run it:**
+```cmd
+build\Debug\Zenith.exe
+```
 
-See docs/INSTALL_WINDOWS.md for detailed instructions, troubleshooting, and Visual Studio integration.
+**Full Windows installation guide:** [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md)
 
-Build Options
+**Developer workflow (IDE setup, debugging, profiling):** [docs/DEVELOPER_WORKFLOW.md](docs/DEVELOPER_WORKFLOW.md)
 
--DZENITH_ENABLE_MMCSS=ON (default): enable MMCSS "Pro Audio" boost for audio thread
+---
 
--DZENITH_ENGINE_SEED_DEBUG_TRACKS=OFF: create 8 demo tracks at startup (Debug builds only)
+## 🚀 Building (Cross-platform)
 
-Running
+### Prerequisites
 
-After building, launch the standalone app from your build output (.exe).
-Initial tests: Transport controls (play/stop/record), TrackView scrolling/zoom, Sidebar tabs, BPM entry/tap, HiDPI on mixed-scaling monitors.
+- **CMake** 3.22 or higher
+- **C++20** compatible compiler:
+  - macOS: Xcode 14+ / Clang
+  - Windows: Visual Studio 2022 (v143)
+  - Linux: GCC 11+ or Clang 14+
+- **JUCE 8.0.9** (automatically fetched by CMake)
 
-Performance Notes
+### Build Instructions
 
-The audio thread registers with MMCSS (“Pro Audio”) at startup (Windows).
+From the repository root:
 
-UI avoids allocations in paint(); heavy geometry/text is cached.
+```bash
+mkdir build
+cd build
+cmake ..
+cmake --build .
+```
 
-TrackView is being virtualized to render only visible rows/columns (reduce overdraw).
+The built application will be in:
+- **macOS:** `build/zenith-core/ZenithDAW_artefacts/Release/Zenith DAW.app`
+- **Windows:** `build/zenith-core/ZenithDAW_artefacts/Release/Zenith DAW.exe`
+- **Linux:** `build/zenith-core/ZenithDAW_artefacts/Release/Zenith DAW`
 
-A Debug HUD for frame time / paints-per-second is planned to help profile scroll/zoom.
+### Run Tests
 
-For deep profiling, we use ETW/WPA and PresentMon (docs coming).
+```bash
+cd build
+ctest
+```
 
-Wingman (Built-in Assistant)
+---
 
-Wingman is embedded—not a chat bolt-on. Early focus:
+## ✅ Current Status
 
-Undo-aware edit/arrange commands with clear diffs,
+**Canonical JUCE 8 Engine (Phase 1-2 Complete):**
+- ✅ RT-safe audio engine with unified render path
+- ✅ Track mixdown with pre-allocated buffers (no RT allocations)
+- ✅ AudioFilePool for shared audio file caching
+- ✅ Lock-free clip snapshots (RCU pattern)
+- ✅ Playhead-driven clip rendering with loop support
+- ✅ MIDI input routing and recording
+- ✅ MIDI clip playback with quantization
+- ✅ Instrument system (ZenithPolySynth, ZenithSampler)
+- ✅ Automation synchronizer
+- ✅ Project state management
+- ✅ Unified export path (WAV rendering)
 
-Session-graph awareness (tracks, regions, routing),
+**In Progress:**
+- VST3 plugin hosting
+- Timeline view with visual clip editing
+- Piano roll editor
+- Enhanced UI components (arranger view)
 
-Human-readable change logs inside the project.
+**Windows-specific:**
+- MMCSS "Pro Audio" thread priority
+- WASAPI (Shared/Exclusive) and ASIO support
+- Per-monitor DPI correctness
 
-Future: mix-assist (gain staging/loudness targets) once the mixer lands.
+---
 
-Moddability & Extensibility (Roadmap)
+## 📚 Documentation
 
-Theme tokens (colours, radii, spacing, fonts) with live reload.
+- **Architecture:** See `docs/` for engine design, threading model, RT-safety guidelines
+- **Roadmap:** See `planning/` for phase plans and feature timelines
+- **Code Organization:** All canonical implementations are in `zenith-core/`
 
-Scripting sandbox (Lua/JS) for actions, macros, and custom panels.
+---
 
-Extension SDK for deep integration (routing, editors, controller scripts).
+## 🎯 Philosophy
 
-Target: more moddable than Reaper or Ableton, with safer packaging and clearer APIs.
+**RT-Safety First:** No allocations, locks, or I/O on the audio thread. Ever.
 
-Roadmap (abridged)
+**Clean Architecture:** Single responsibility, explicit dependencies, no globals.
 
-W3: Windows audio settings panel (WASAPI Shared/Exclusive, sample rate, buffer).
+**Moddable by Design:** Lua scripting, extensible clip types, plugin-like architecture.
 
-Mixer: channel strips, meters, sends; lock-free metering pipeline.
+**AI-Assisted Workflows:** Wingman integration for intelligent assistance (future).
 
-Piano Roll: fast draw, scale helpers, velocity lanes.
+**Best-of-DAW Workflows:** Combining the best from Ableton, FL Studio, Cubase, Bitwig, and Studio One.
 
-Session/Launcher: clip-based creation.
+---
 
-Plugin Hosting: VST3 (AU later on macOS), crash isolation plan.
+## 🛠️ Key Features (current & planned)
 
-Interchange: project I/O groundwork; DAW-friendly export later.
+**Native JUCE 8 UI** with custom ZenithLookAndFeel (dark theme, vectors, subtle animations).
 
-Contributing
+**Wingman (built-in assistant):** Edit/arrange operations with undo-aware diffs (scope expanding).
+
+**Performance foundations:**
+- MMCSS "Pro Audio" for the audio thread (Windows)
+- Paint-safe UI (no allocations in hot paths), TrackView virtualization
+- Per-monitor DPI correctness; Debug HUD for frame timing (planned)
+
+**Moddability (roadmap):**
+- Tokenized theme system (live preview)
+- Scripting (Lua/JS) sandbox for actions, panels, macros
+- Extension SDK for deep hooks (C++/Rust)
+
+---
+
+## 🤝 Contributing
 
 PRs and discussions welcome.
 Please keep changes small and scoped (one component or subsystem at a time), and avoid touching audio-thread code unless necessary.
 
-Coding guidelines:
+**Coding guidelines:**
+- C++20, JUCE conventions
+- No allocations in audio callbacks or UI hot paths
+- Hook UI actions through ApplicationCommandManager and UndoManager as they land
 
-C++17, JUCE conventions.
+---
 
-No allocations in audio callbacks or UI hot paths.
-
-Hook UI actions through ApplicationCommandManager and UndoManager as they land.
-
-License
+## 📝 License
 
 TBD (likely dual: GPLv3 for open + commercial for closed-source).
 Framework licenses apply (JUCE, VST3 SDK, etc.).
 
-Project Status
+---
 
-Active development — Windows-first hardening in progress.
-Old Electron/React code is archived; Qt/QML references were removed to reflect the current native JUCE architecture.
+**Built with ❤️ and JUCE 8**

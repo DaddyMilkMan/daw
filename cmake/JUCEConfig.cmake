@@ -71,7 +71,7 @@ set(JUCE_DAW_MODULES
 # Helper Function: Add JUCE Audio Engine Library
 # ============================================================================
 
-function(vexel_add_audio_engine_library target)
+function(zenith_add_audio_engine_library target)
     target_link_libraries(${target} PRIVATE
         ${JUCE_AUDIO_ENGINE_MODULES}
         ${JUCE_DSP_MODULES}
@@ -91,13 +91,13 @@ endfunction()
 # Helper Function: Add JUCE GUI Application
 # ============================================================================
 
-function(vexel_add_gui_app target)
+function(zenith_add_gui_app target)
     juce_add_gui_app(${target}
         PRODUCT_NAME ${target}
-        COMPANY_NAME "VexelAudio"
-        BUNDLE_ID "com.vexelaudio.${target}"
+        COMPANY_NAME "ZenithAudio"
+        BUNDLE_ID "com.zenithaudio.${target}"
         MICROPHONE_PERMISSION_ENABLED TRUE
-        MICROPHONE_PERMISSION_TEXT "Vexel DAW needs microphone access for recording."
+        MICROPHONE_PERMISSION_TEXT "Zenith DAW needs microphone access for recording."
     )
 
     target_link_libraries(${target} PRIVATE
