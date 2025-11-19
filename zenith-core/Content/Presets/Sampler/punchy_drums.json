@@ -1,0 +1,31 @@
+{
+  "id": "punchy_drums_preset_001",
+  "name": "Punchy Drums",
+  "instrumentId": "zenith_sampler",
+  "category": "Drums",
+  "author": "Factory",
+  "description": "Hard-hitting drum sound with fast attack, tight decay, and enhanced character. Great for aggressive beats.",
+  "version": "1.0.0",
+  "tags": [
+    "drums",
+    "punchy",
+    "tight",
+    "aggressive",
+    "percussive"
+  ],
+  "params": {
+    "attack": 0.0,
+    "decay": 0.2,
+    "sustain": 0.3,
+    "release": 0.15,
+    "filter_cutoff": 0.9,
+    "filter_resonance": 0.3,
+    "tune": 0.5,
+    "gain": 0.85,
+    "character": 0.65
+  },
+  "macros": {
+    "macro_brightness": 0.8,
+    "macro_response": 0.75
+  }
+}

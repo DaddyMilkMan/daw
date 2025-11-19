@@ -4,15 +4,21 @@
  */
 
 #include "../include/MainWindow.h"
+#include "ArrangerComponent.h"
+#include "WingmanPanel.h"
+#include "InstrumentBrowserPanel.h"
+#include "CommandAPI.h"
+#include "AIBridgeClient.h"
+#include "../include/PianoRollEditor.h"
+#include "../Source/engine/Track.h"
+#include "../Source/engine/Clip.h"
 
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine& eng, ProjectState& ps)
-    : engine(eng)
-    , projectState(ps)
-    , mixerComponent(ps)
+MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state)
+    : engine(eng), projectState(state), mixerComponent(state)
 {
     // Set size
     setSize(1400, 800);
@@ -20,8 +26,12 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
     // Add mixer component
     addAndMakeVisible(mixerComponent);
 
+    // Register as key listener for undo/redo shortcuts
+    addKeyListener(this);
+    setWantsKeyboardFocus(true);
+
     // Status label
-    statusLabel.setText("Zenith DAW - Phase 10: Mixer MVP", juce::dontSendNotification);
+    statusLabel.setText("Zenith DAW - Phase 10: Mixer MVP + Wingman AI Integration", juce::dontSendNotification);
     statusLabel.setJustificationType(juce::Justification::centredLeft);
     statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
     addAndMakeVisible(statusLabel);
@@ -57,8 +67,57 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Phase 1
+    recordButton.setEnabled(false);  // Future: recording UI
     addAndMakeVisible(recordButton);
+
+    // Phase 1: Import Audio button
+    importButton.setButtonText("Import Audio...");
+    importButton.onClick = [this]() {
+        handleImportAudio();
+    };
+    addAndMakeVisible(importButton);
+
+    // Phase 4: Arranger (now using ArrangerView from master for better automation integration)
+    // arrangerComponent = std::make_unique<ArrangerComponent>(engine);  // Disabled - using ArrangerView instead
+    // addAndMakeVisible(arrangerComponent.get());
+
+    // Phase 7: Create Wingman AI console panel
+    wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
+    addAndMakeVisible(wingmanPanel.get());
+
+    // Create Instrument Browser Panel
+    instrumentBrowserPanel = std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
+    addAndMakeVisible(instrumentBrowserPanel.get());
+
+    // Integration: Create ArrangerView
+    arrangerView = std::make_unique<ArrangerView>(projectState);
+    arrangerView->setOpenPianoRollCallback([this](juce::String trackId, juce::String clipId) {
+        openPianoRoll(trackId, clipId);
+    });
+    addAndMakeVisible(arrangerView.get());
+
+    // Integration: Create automation buttons container
+    addAndMakeVisible(automationButtonsContainer);
+
+    // Create automation toggle buttons for demo tracks
+    // (In real implementation, would create dynamically as tracks are added)
+    auto& state = projectState.getState();
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+    if (tracksNode.isValid())
+    {
+        for (auto track : tracksNode)
+        {
+            juce::String trackId = track[ProjectState::PROP_ID].toString();
+            auto button = std::make_unique<juce::TextButton>("A");
+            button->setTooltip("Toggle automation for " + track[ProjectState::PROP_NAME].toString());
+            button->onClick = [this, trackId]() {
+                bool visible = arrangerView->isTrackAutomationVisible(trackId);
+                arrangerView->setTrackAutomationVisible(trackId, !visible);
+            };
+            automationButtonsContainer.addAndMakeVisible(button.get());
+            automationButtons[trackId] = std::move(button);
+        }
+    }
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -66,53 +125,54 @@ MainComponent::MainComponent(Engine& eng, ProjectState& ps)
 
 MainComponent::~MainComponent()
 {
+    removeKeyListener(this);
     stopTimer();
+}
+
+bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originatingComponent)
+{
+    juce::ignoreUnused(originatingComponent);
+
+    // Ctrl+Z or Cmd+Z for undo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && !key.getModifiers().isShiftDown())
+    {
+        if (projectState.canUndo())
+        {
+            projectState.undo();
+            DBG("Keyboard shortcut: Undo");
+            return true;
+        }
+    }
+
+    // Ctrl+Shift+Z or Cmd+Shift+Z for redo
+    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo");
+            return true;
+        }
+    }
+
+    // Ctrl+Y or Cmd+Y for redo (alternative)
+    if (key.isKeyCode(juce::KeyPress::yKey) && key.getModifiers().isCommandDown())
+    {
+        if (projectState.canRedo())
+        {
+            projectState.redo();
+            DBG("Keyboard shortcut: Redo (Y)");
+            return true;
+        }
+    }
+
+    return false;  // Key not handled
 }
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background
+    // Background (arranger handles its own painting)
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
-
-    // Draw welcome message
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(48.0f, juce::Font::bold));
-
-    auto bounds = getLocalBounds().reduced(40);
-    g.drawText("Welcome to Zenith DAW",
-               bounds.removeFromTop(100),
-               juce::Justification::centred,
-               true);
-
-    // Draw phase info
-    g.setFont(juce::Font(20.0f));
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText("Phase 10: Mixer MVP - Track mixer controls operational",
-               bounds.removeFromTop(40),
-               juce::Justification::centred,
-               true);
-
-    // Draw feature list
-    g.setFont(juce::Font(16.0f));
-    g.setColour(juce::Colours::grey);
-
-    auto featuresBounds = bounds.removeFromTop(200).reduced(100, 0);
-    juce::String features =
-        "✓ JUCE 8.0.9 audio engine\n"
-        "✓ Audio device management\n"
-        "✓ Transport controls (play/stop)\n"
-        "✓ CPU monitoring\n"
-        "✓ Project state management (ValueTree)\n"
-        "✓ Mixer panel with track strips\n"
-        "✓ Volume/Pan controls (undoable)\n"
-        "✓ Mute/Solo/Arm buttons\n"
-        "\n"
-        "Add tracks from console or create test tracks to see mixer in action!";
-
-    g.drawMultiLineText(features,
-                       featuresBounds.getX(),
-                       featuresBounds.getY(),
-                       featuresBounds.getWidth());
 }
 
 void MainComponent::resized()
@@ -135,6 +195,10 @@ void MainComponent::resized()
     auto deviceSection = bottomBar.removeFromLeft(400);
     audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
 
+    // Phase 1: Import button on the left
+    auto importSection = bottomBar.removeFromLeft(140);
+    importButton.setBounds(importSection.reduced(10, 8));
+
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
     int buttonWidth = 100;
@@ -150,7 +214,39 @@ void MainComponent::resized()
     auto mixerArea = bounds.removeFromBottom(mixerHeight);
     mixerComponent.setBounds(mixerArea);
 
-    // Remaining space is for future arranger/content area
+    // Phase 5: Layout Wingman panel on the right (400px width)
+    if (wingmanPanel != nullptr)
+    {
+        auto wingmanBounds = bounds.removeFromRight(400);
+        wingmanPanel->setBounds(wingmanBounds);
+    }
+
+    // Layout Instrument Browser panel on the left (300px width)
+    if (instrumentBrowserPanel != nullptr)
+    {
+        auto browserBounds = bounds.removeFromLeft(300);
+        instrumentBrowserPanel->setBounds(browserBounds);
+    }
+
+    // Integration: ArrangerView takes remaining space (combines Phase 4 arranger + automation)
+    auto arrangerBounds = bounds;
+
+    // Automation buttons (left side, 30 pixels wide)
+    auto automationButtonArea = arrangerBounds.removeFromLeft(30);
+    automationButtonsContainer.setBounds(automationButtonArea);
+
+    // Layout automation buttons vertically
+    int buttonY = 0;
+    for (auto& [trackId, button] : automationButtons)
+    {
+        button->setBounds(0, buttonY, 30, 30);
+        buttonY += 60;  // Match track height from ArrangerView
+    }
+
+    if (arrangerView)
+    {
+        arrangerView->setBounds(arrangerBounds);
+    }
 }
 
 void MainComponent::timerCallback()
@@ -184,6 +280,89 @@ void MainComponent::refreshTrackCountLabel()
 }
 
 //==============================================================================
+// Integration: Piano roll opener
+//==============================================================================
+
+void MainComponent::openPianoRoll(const juce::String& trackId, const juce::String& clipId)
+{
+    DBG("MainComponent: Opening piano roll for " + trackId + "/" + clipId);
+
+    // Create new piano roll editor window
+    // Note: Window deletes itself when closed (see PianoRollEditor::closeButtonPressed)
+    new PianoRollEditor(projectState, trackId, clipId);
+}
+
+//==============================================================================
+// Phase 1: Audio Import
+//==============================================================================
+
+void MainComponent::handleImportAudio()
+{
+    // Create file chooser for audio files
+    auto chooser = std::make_shared<juce::FileChooser>(
+        "Import Audio File",
+        juce::File{},
+        "*.wav;*.aiff;*.aif;*.flac;*.mp3;*.ogg");
+
+    // Open file chooser (async)
+    auto chooserFlags = juce::FileBrowserComponent::openMode
+                      | juce::FileBrowserComponent::canSelectFiles;
+
+    chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc)
+    {
+        auto file = fc.getResult();
+        if (!file.existsAsFile())
+            return;
+
+        DBG("Importing audio file: " + file.getFullPathName());
+
+        // Ensure we have at least one track
+        if (engine.getNumTracks() == 0)
+        {
+            DBG("Creating first track for audio import");
+            engine.addTestTracks(1);
+        }
+
+        // Get the first track
+        const auto& tracks = engine.tracks();
+        if (tracks.empty())
+        {
+            DBG("ERROR: Failed to get track after creation");
+            return;
+        }
+
+        auto* track = tracks[0].get();
+        if (track == nullptr)
+        {
+            DBG("ERROR: Track is null");
+            return;
+        }
+
+        // Create a new clip
+        auto clip = std::make_unique<zenith::Track::Clip>();
+        clip->setType(zenith::Track::Clip::Type::Audio);
+        clip->setName(file.getFileNameWithoutExtension());
+
+        // Load audio file through pool (message thread - safe to do I/O)
+        auto& pool = engine.getAudioFilePool();
+        clip->setAudioFileFromPool(file, pool);
+
+        // Set clip timing: start at position 0, play immediately
+        clip->setStartPosition(0);
+        clip->setPlaying(true);
+
+        DBG("Clip created: " + clip->getName() +
+            ", length: " + juce::String(clip->getLength()) + " samples");
+
+        // Add clip to track
+        track->addClip(std::move(clip));
+
+        DBG("Audio import complete! Track now has " +
+            juce::String(track->getNumClips()) + " clip(s)");
+    });
+}
+
+//==============================================================================
 // MainWindow Implementation
 //==============================================================================
 
@@ -199,8 +378,29 @@ MainWindow::MainWindow(const juce::String& name)
     // Create project state
     projectState = std::make_unique<ProjectState>();
 
-    // Create main content (pass both engine and projectState)
-    mainComponent = std::make_unique<MainComponent>(*engine, *projectState);
+    // Phase 5: Create Wingman command API
+    commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
+
+    // Phase 7: Create AI bridge client
+    aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
+
+    // Phase 13: Connect project state to engine for automation
+    engine->setProjectState(projectState.get());
+
+    // Integration: Create clip synchronizer
+    clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState, *engine);
+
+    // Add some demo tracks for testing UI integration
+    projectState->addTrack("MIDI Track 1", "midi");
+    projectState->addTrack("Audio Track 1", "audio");
+    projectState->addTrack("MIDI Track 2", "midi");
+
+    // Create main content (Phase 10: includes mixer + all other components)
+    mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
+
+    // Create menu bar
+    menuBar = std::make_unique<ZenithMenuBar>(*this);
+    setMenuBar(menuBar.get());
 
     // Set up window
     setUsingNativeTitleBar(true);
@@ -218,11 +418,19 @@ MainWindow::MainWindow(const juce::String& name)
     // Initialize audio engine after window is visible
     engine->initialize();
 
+    // Integration: Start clip synchronizer
+    // (In real implementation, would start when recording is enabled)
+    // clipSynchronizer->start(30);  // 30 Hz update rate
+
     DBG("MainWindow created and initialized");
 }
 
 MainWindow::~MainWindow()
 {
+    // Clear menu bar first
+    setMenuBar(nullptr);
+    menuBar.reset();
+
     // Shutdown audio engine before destroying components
     if (engine)
         engine->shutdown();
@@ -239,4 +447,72 @@ void MainWindow::closeButtonPressed()
     // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
+}
+
+void MainWindow::showAboutDialog()
+{
+    juce::String aboutMessage;
+    aboutMessage << "Zenith DAW\n\n";
+    aboutMessage << "A professional digital audio workstation\n\n";
+    aboutMessage << "Version: 0.1.0\n";
+    aboutMessage << "Built with JUCE 8.0.9\n\n";
+    aboutMessage << "For documentation and installation instructions, see:\n";
+    aboutMessage << "• docs/README.md\n";
+    aboutMessage << "• docs/INSTALL_WINDOWS.md";
+
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::MessageBoxIconType::InfoIcon,
+        "About Zenith DAW",
+        aboutMessage,
+        "OK"
+    );
+}
+
+//==============================================================================
+// ZenithMenuBar Implementation
+//==============================================================================
+
+MainWindow::ZenithMenuBar::ZenithMenuBar(MainWindow& mainWindow)
+    : owner(mainWindow)
+{
+}
+
+juce::StringArray MainWindow::ZenithMenuBar::getMenuBarNames()
+{
+    return { "File", "Help" };
+}
+
+juce::PopupMenu MainWindow::ZenithMenuBar::getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName)
+{
+    juce::PopupMenu menu;
+
+    if (topLevelMenuIndex == 0)  // File menu
+    {
+        #if ! (JUCE_IOS || JUCE_ANDROID)
+            menu.addItem(quit, "Quit", true, false);
+        #endif
+    }
+    else if (topLevelMenuIndex == 1)  // Help menu
+    {
+        menu.addItem(aboutZenith, "About Zenith DAW...", true, false);
+    }
+
+    return menu;
+}
+
+void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID, int /*topLevelMenuIndex*/)
+{
+    switch (menuItemID)
+    {
+        case aboutZenith:
+            owner.showAboutDialog();
+            break;
+
+        case quit:
+            juce::JUCEApplication::getInstance()->systemRequestedQuit();
+            break;
+
+        default:
+            break;
+    }
 }
