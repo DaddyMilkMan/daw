@@ -1,0 +1,4148 @@
+{
+  "instrument": "zenith_sampler",
+  "bank_name": "Master Bank",
+  "version": "1.0",
+  "preset_count": 180,
+  "presets": [
+    {
+      "id": "classic_808_kit",
+      "name": "Classic 808 Kit",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "TR-808 drum machine sounds",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.0,
+        "release": 0.2,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "classic_808_kit_01",
+      "name": "Classic 808 Kit 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.097,
+        "release": 0.07,
+        "filter_cutoff": 0.867,
+        "filter_resonance": 0.265,
+        "tune": 0.36,
+        "gain": 0.88,
+        "character": 0.459
+      }
+    },
+    {
+      "id": "classic_808_kit_02",
+      "name": "Classic 808 Kit 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.222,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.828,
+        "filter_resonance": 0.253,
+        "tune": -0.432,
+        "gain": 0.838,
+        "character": 0.355
+      }
+    },
+    {
+      "id": "classic_808_kit_03",
+      "name": "Classic 808 Kit 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.28,
+        "sustain": 0.07,
+        "release": 0.001,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.102,
+        "tune": 1.223,
+        "gain": 0.875,
+        "character": 0.485
+      }
+    },
+    {
+      "id": "classic_808_kit_04",
+      "name": "Classic 808 Kit 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.065,
+        "decay": 0.648,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.826,
+        "filter_resonance": 0.107,
+        "tune": -2.3,
+        "gain": 0.91,
+        "character": 0.48
+      }
+    },
+    {
+      "id": "classic_808_kit_05",
+      "name": "Classic 808 Kit 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.387,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.71,
+        "filter_resonance": 0.137,
+        "tune": 1.652,
+        "gain": 1.067,
+        "character": 0.404
+      }
+    },
+    {
+      "id": "classic_808_kit_06",
+      "name": "Classic 808 Kit 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.319,
+        "decay": 0.093,
+        "sustain": 0.044,
+        "release": 0.001,
+        "filter_cutoff": 0.718,
+        "filter_resonance": 0.215,
+        "tune": 1.214,
+        "gain": 0.775,
+        "character": 0.345
+      }
+    },
+    {
+      "id": "classic_808_kit_07",
+      "name": "Classic 808 Kit 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.782,
+        "sustain": 0.0,
+        "release": 0.568,
+        "filter_cutoff": 0.73,
+        "filter_resonance": 0.173,
+        "tune": -0.433,
+        "gain": 0.865,
+        "character": 0.443
+      }
+    },
+    {
+      "id": "classic_808_kit_08",
+      "name": "Classic 808 Kit 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "drums",
+        "trap",
+        "hip-hop"
+      ],
+      "description": "Variation of Classic 808 Kit",
+      "parameters": {
+        "attack": 0.146,
+        "decay": 0.511,
+        "sustain": 0.0,
+        "release": 0.456,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.213,
+        "tune": 0.084,
+        "gain": 0.953,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "sub_808",
+      "name": "Sub 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Deep sub 808",
+      "parameters": {
+        "attack": 0.002,
+        "decay": 0.5,
+        "sustain": 0.0,
+        "release": 0.3,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.15,
+        "tune": -2.0,
+        "gain": 1.0,
+        "character": 0.3
+      }
+    },
+    {
+      "id": "sub_808_01",
+      "name": "Sub 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.763,
+        "sustain": 0.0,
+        "release": 0.68,
+        "filter_cutoff": 0.547,
+        "filter_resonance": 0.123,
+        "tune": -3.943,
+        "gain": 1.074,
+        "character": 0.219
+      }
+    },
+    {
+      "id": "sub_808_02",
+      "name": "Sub 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.518,
+        "sustain": 0.0,
+        "release": 0.187,
+        "filter_cutoff": 0.525,
+        "filter_resonance": 0.202,
+        "tune": -1.224,
+        "gain": 1.151,
+        "character": 0.288
+      }
+    },
+    {
+      "id": "sub_808_03",
+      "name": "Sub 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.098,
+        "decay": 0.435,
+        "sustain": 0.024,
+        "release": 0.001,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.136,
+        "tune": -2.974,
+        "gain": 0.965,
+        "character": 0.398
+      }
+    },
+    {
+      "id": "sub_808_04",
+      "name": "Sub 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.947,
+        "sustain": 0.0,
+        "release": 0.151,
+        "filter_cutoff": 0.565,
+        "filter_resonance": 0.225,
+        "tune": -1.42,
+        "gain": 0.917,
+        "character": 0.361
+      }
+    },
+    {
+      "id": "sub_808_05",
+      "name": "Sub 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.954,
+        "sustain": 0.0,
+        "release": 0.742,
+        "filter_cutoff": 0.413,
+        "filter_resonance": 0.077,
+        "tune": -2.151,
+        "gain": 1.142,
+        "character": 0.23
+      }
+    },
+    {
+      "id": "sub_808_06",
+      "name": "Sub 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.641,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.558,
+        "filter_resonance": 0.099,
+        "tune": -0.063,
+        "gain": 1.104,
+        "character": 0.206
+      }
+    },
+    {
+      "id": "sub_808_07",
+      "name": "Sub 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.27,
+        "decay": 0.131,
+        "sustain": 0.0,
+        "release": 0.122,
+        "filter_cutoff": 0.584,
+        "filter_resonance": 0.19,
+        "tune": -3.859,
+        "gain": 0.995,
+        "character": 0.332
+      }
+    },
+    {
+      "id": "sub_808_08",
+      "name": "Sub 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "sub",
+        "bass",
+        "trap"
+      ],
+      "description": "Variation of Sub 808",
+      "parameters": {
+        "attack": 0.42,
+        "decay": 0.657,
+        "sustain": 0.034,
+        "release": 0.94,
+        "filter_cutoff": 0.568,
+        "filter_resonance": 0.245,
+        "tune": -2.737,
+        "gain": 1.131,
+        "character": 0.322
+      }
+    },
+    {
+      "id": "punchy_808",
+      "name": "Punchy 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Punchy 808 with attack",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.25,
+        "sustain": 0.0,
+        "release": 0.15,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.25,
+        "tune": 0.0,
+        "gain": 0.95,
+        "character": 0.6
+      }
+    },
+    {
+      "id": "punchy_808_01",
+      "name": "Punchy 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.114,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.618,
+        "filter_resonance": 0.299,
+        "tune": 1.528,
+        "gain": 0.898,
+        "character": 0.606
+      }
+    },
+    {
+      "id": "punchy_808_02",
+      "name": "Punchy 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.08,
+        "decay": 0.182,
+        "sustain": 0.083,
+        "release": 0.001,
+        "filter_cutoff": 0.797,
+        "filter_resonance": 0.221,
+        "tune": 1.34,
+        "gain": 1.104,
+        "character": 0.583
+      }
+    },
+    {
+      "id": "punchy_808_03",
+      "name": "Punchy 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.036,
+        "sustain": 0.0,
+        "release": 0.358,
+        "filter_cutoff": 0.612,
+        "filter_resonance": 0.264,
+        "tune": 0.982,
+        "gain": 0.857,
+        "character": 0.501
+      }
+    },
+    {
+      "id": "punchy_808_04",
+      "name": "Punchy 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.442,
+        "decay": 0.446,
+        "sustain": 0.061,
+        "release": 0.293,
+        "filter_cutoff": 0.735,
+        "filter_resonance": 0.206,
+        "tune": 1.566,
+        "gain": 0.933,
+        "character": 0.617
+      }
+    },
+    {
+      "id": "punchy_808_05",
+      "name": "Punchy 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.231,
+        "sustain": 0.044,
+        "release": 0.203,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.22,
+        "tune": 1.794,
+        "gain": 1.074,
+        "character": 0.61
+      }
+    },
+    {
+      "id": "punchy_808_06",
+      "name": "Punchy 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.174,
+        "decay": 0.001,
+        "sustain": 0.01,
+        "release": 0.666,
+        "filter_cutoff": 0.722,
+        "filter_resonance": 0.272,
+        "tune": -1.486,
+        "gain": 0.995,
+        "character": 0.674
+      }
+    },
+    {
+      "id": "punchy_808_07",
+      "name": "Punchy 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.024,
+        "decay": 0.275,
+        "sustain": 0.005,
+        "release": 0.001,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.309,
+        "tune": -0.632,
+        "gain": 1.091,
+        "character": 0.511
+      }
+    },
+    {
+      "id": "punchy_808_08",
+      "name": "Punchy 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "punchy",
+        "trap",
+        "modern"
+      ],
+      "description": "Variation of Punchy 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.255,
+        "sustain": 0.079,
+        "release": 1.024,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.21,
+        "tune": 0.284,
+        "gain": 0.76,
+        "character": 0.605
+      }
+    },
+    {
+      "id": "long_808",
+      "name": "Long 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Sustained 808",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.8,
+        "sustain": 0.0,
+        "release": 0.5,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.35
+      }
+    },
+    {
+      "id": "long_808_01",
+      "name": "Long 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.327,
+        "decay": 1.103,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.67,
+        "filter_resonance": 0.258,
+        "tune": 2.083,
+        "gain": 1.014,
+        "character": 0.272
+      }
+    },
+    {
+      "id": "long_808_02",
+      "name": "Long 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.179,
+        "decay": 0.614,
+        "sustain": 0.041,
+        "release": 1.023,
+        "filter_cutoff": 0.657,
+        "filter_resonance": 0.234,
+        "tune": 1.474,
+        "gain": 0.972,
+        "character": 0.401
+      }
+    },
+    {
+      "id": "long_808_03",
+      "name": "Long 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.515,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.642,
+        "filter_resonance": 0.138,
+        "tune": -2.339,
+        "gain": 0.732,
+        "character": 0.263
+      }
+    },
+    {
+      "id": "long_808_04",
+      "name": "Long 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.565,
+        "sustain": 0.01,
+        "release": 1.075,
+        "filter_cutoff": 0.674,
+        "filter_resonance": 0.247,
+        "tune": -1.865,
+        "gain": 1.002,
+        "character": 0.31
+      }
+    },
+    {
+      "id": "long_808_05",
+      "name": "Long 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.383,
+        "decay": 0.701,
+        "sustain": 0.0,
+        "release": 0.939,
+        "filter_cutoff": 0.566,
+        "filter_resonance": 0.222,
+        "tune": -2.342,
+        "gain": 0.817,
+        "character": 0.435
+      }
+    },
+    {
+      "id": "long_808_06",
+      "name": "Long 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.233,
+        "decay": 0.484,
+        "sustain": 0.013,
+        "release": 0.967,
+        "filter_cutoff": 0.551,
+        "filter_resonance": 0.116,
+        "tune": -1.308,
+        "gain": 1.073,
+        "character": 0.379
+      }
+    },
+    {
+      "id": "long_808_07",
+      "name": "Long 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.037,
+        "decay": 0.573,
+        "sustain": 0.018,
+        "release": 1.252,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.241,
+        "tune": -1.675,
+        "gain": 0.995,
+        "character": 0.367
+      }
+    },
+    {
+      "id": "long_808_08",
+      "name": "Long 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "long",
+        "sustain",
+        "bass"
+      ],
+      "description": "Variation of Long 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.596,
+        "sustain": 0.0,
+        "release": 0.054,
+        "filter_cutoff": 0.504,
+        "filter_resonance": 0.103,
+        "tune": -2.2,
+        "gain": 1.086,
+        "character": 0.315
+      }
+    },
+    {
+      "id": "distorted_808",
+      "name": "Distorted 808",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Gritty distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.4,
+        "sustain": 0.0,
+        "release": 0.25,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.3,
+        "tune": 0.0,
+        "gain": 1.1,
+        "character": 0.8
+      }
+    },
+    {
+      "id": "distorted_808_01",
+      "name": "Distorted 808 01",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.273,
+        "sustain": 0.088,
+        "release": 0.001,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.261,
+        "tune": 1.919,
+        "gain": 1.031,
+        "character": 0.792
+      }
+    },
+    {
+      "id": "distorted_808_02",
+      "name": "Distorted 808 02",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.076,
+        "release": 0.872,
+        "filter_cutoff": 0.792,
+        "filter_resonance": 0.302,
+        "tune": -2.279,
+        "gain": 1.036,
+        "character": 0.765
+      }
+    },
+    {
+      "id": "distorted_808_03",
+      "name": "Distorted 808 03",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.248,
+        "decay": 0.613,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.849,
+        "filter_resonance": 0.352,
+        "tune": -0.988,
+        "gain": 0.995,
+        "character": 0.714
+      }
+    },
+    {
+      "id": "distorted_808_04",
+      "name": "Distorted 808 04",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.199,
+        "decay": 0.751,
+        "sustain": 0.0,
+        "release": 0.952,
+        "filter_cutoff": 0.831,
+        "filter_resonance": 0.258,
+        "tune": 0.897,
+        "gain": 1.126,
+        "character": 0.877
+      }
+    },
+    {
+      "id": "distorted_808_05",
+      "name": "Distorted 808 05",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.093,
+        "decay": 0.068,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.329,
+        "tune": 2.007,
+        "gain": 1.077,
+        "character": 0.839
+      }
+    },
+    {
+      "id": "distorted_808_06",
+      "name": "Distorted 808 06",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.448,
+        "sustain": 0.014,
+        "release": 0.001,
+        "filter_cutoff": 0.823,
+        "filter_resonance": 0.319,
+        "tune": 0.316,
+        "gain": 1.063,
+        "character": 0.743
+      }
+    },
+    {
+      "id": "distorted_808_07",
+      "name": "Distorted 808 07",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.596,
+        "sustain": 0.0,
+        "release": 0.116,
+        "filter_cutoff": 0.835,
+        "filter_resonance": 0.229,
+        "tune": 0.955,
+        "gain": 1.145,
+        "character": 0.884
+      }
+    },
+    {
+      "id": "distorted_808_08",
+      "name": "Distorted 808 08",
+      "category": "808",
+      "tags": [
+        "808",
+        "distorted",
+        "aggressive",
+        "heavy"
+      ],
+      "description": "Variation of Distorted 808",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.082,
+        "release": 1.128,
+        "filter_cutoff": 0.769,
+        "filter_resonance": 0.346,
+        "tune": 0.821,
+        "gain": 1.269,
+        "character": 0.723
+      }
+    },
+    {
+      "id": "trap_clap",
+      "name": "Trap Clap",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Modern trap clap",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.08,
+        "sustain": 0.0,
+        "release": 0.05,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.1,
+        "tune": 0.0,
+        "gain": 0.85,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "trap_clap_01",
+      "name": "Trap Clap 01",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.218,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.119,
+        "filter_cutoff": 0.837,
+        "filter_resonance": 0.113,
+        "tune": 1.017,
+        "gain": 0.867,
+        "character": 0.522
+      }
+    },
+    {
+      "id": "trap_clap_02",
+      "name": "Trap Clap 02",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.46,
+        "decay": 0.57,
+        "sustain": 0.0,
+        "release": 0.931,
+        "filter_cutoff": 0.897,
+        "filter_resonance": 0.044,
+        "tune": -0.184,
+        "gain": 0.897,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "trap_clap_03",
+      "name": "Trap Clap 03",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.471,
+        "decay": 0.512,
+        "sustain": 0.078,
+        "release": 0.001,
+        "filter_cutoff": 0.803,
+        "filter_resonance": 0.024,
+        "tune": -0.221,
+        "gain": 1.025,
+        "character": 0.528
+      }
+    },
+    {
+      "id": "trap_clap_04",
+      "name": "Trap Clap 04",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.114,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.699,
+        "filter_cutoff": 0.802,
+        "filter_resonance": 0.041,
+        "tune": -0.658,
+        "gain": 0.96,
+        "character": 0.554
+      }
+    },
+    {
+      "id": "trap_clap_05",
+      "name": "Trap Clap 05",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.509,
+        "filter_cutoff": 0.956,
+        "filter_resonance": 0.066,
+        "tune": 0.651,
+        "gain": 0.747,
+        "character": 0.414
+      }
+    },
+    {
+      "id": "trap_clap_06",
+      "name": "Trap Clap 06",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.087,
+        "release": 0.001,
+        "filter_cutoff": 0.862,
+        "filter_resonance": 0.167,
+        "tune": -1.163,
+        "gain": 0.93,
+        "character": 0.461
+      }
+    },
+    {
+      "id": "trap_clap_07",
+      "name": "Trap Clap 07",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.137,
+        "decay": 0.453,
+        "sustain": 0.028,
+        "release": 0.256,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.013,
+        "tune": -0.165,
+        "gain": 0.859,
+        "character": 0.553
+      }
+    },
+    {
+      "id": "trap_clap_08",
+      "name": "Trap Clap 08",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "clap",
+        "trap",
+        "snare"
+      ],
+      "description": "Variation of Trap Clap",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.446,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.969,
+        "filter_resonance": 0.0,
+        "tune": -0.092,
+        "gain": 0.661,
+        "character": 0.463
+      }
+    },
+    {
+      "id": "tight_snare",
+      "name": "Tight Snare",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Tight snare drum",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.12,
+        "sustain": 0.0,
+        "release": 0.08,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.15,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "tight_snare_01",
+      "name": "Tight Snare 01",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.015,
+        "decay": 0.064,
+        "sustain": 0.014,
+        "release": 0.04,
+        "filter_cutoff": 0.754,
+        "filter_resonance": 0.098,
+        "tune": 0.417,
+        "gain": 0.828,
+        "character": 0.389
+      }
+    },
+    {
+      "id": "tight_snare_02",
+      "name": "Tight Snare 02",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.302,
+        "decay": 0.307,
+        "sustain": 0.08,
+        "release": 1.077,
+        "filter_cutoff": 0.86,
+        "filter_resonance": 0.242,
+        "tune": -0.721,
+        "gain": 0.746,
+        "character": 0.418
+      }
+    },
+    {
+      "id": "tight_snare_03",
+      "name": "Tight Snare 03",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.128,
+        "decay": 0.001,
+        "sustain": 0.006,
+        "release": 0.001,
+        "filter_cutoff": 0.941,
+        "filter_resonance": 0.139,
+        "tune": 0.358,
+        "gain": 0.924,
+        "character": 0.538
+      }
+    },
+    {
+      "id": "tight_snare_04",
+      "name": "Tight Snare 04",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.466,
+        "decay": 0.511,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.812,
+        "filter_resonance": 0.101,
+        "tune": 0.262,
+        "gain": 0.781,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "tight_snare_05",
+      "name": "Tight Snare 05",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.111,
+        "sustain": 0.047,
+        "release": 0.001,
+        "filter_cutoff": 0.931,
+        "filter_resonance": 0.153,
+        "tune": -0.219,
+        "gain": 1.008,
+        "character": 0.379
+      }
+    },
+    {
+      "id": "tight_snare_06",
+      "name": "Tight Snare 06",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.314,
+        "sustain": 0.092,
+        "release": 0.001,
+        "filter_cutoff": 0.774,
+        "filter_resonance": 0.21,
+        "tune": 0.437,
+        "gain": 1.04,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "tight_snare_07",
+      "name": "Tight Snare 07",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.505,
+        "sustain": 0.081,
+        "release": 0.001,
+        "filter_cutoff": 0.869,
+        "filter_resonance": 0.054,
+        "tune": -1.868,
+        "gain": 0.705,
+        "character": 0.371
+      }
+    },
+    {
+      "id": "tight_snare_08",
+      "name": "Tight Snare 08",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "snare",
+        "tight",
+        "punchy"
+      ],
+      "description": "Variation of Tight Snare",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.48,
+        "sustain": 0.056,
+        "release": 0.495,
+        "filter_cutoff": 0.902,
+        "filter_resonance": 0.059,
+        "tune": 1.71,
+        "gain": 0.832,
+        "character": 0.406
+      }
+    },
+    {
+      "id": "hi_hat",
+      "name": "Hi-Hat",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Crisp hi-hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.05,
+        "sustain": 0.0,
+        "release": 0.03,
+        "filter_cutoff": 0.95,
+        "filter_resonance": 0.05,
+        "tune": 0.0,
+        "gain": 0.75,
+        "character": 0.3
+      }
+    },
+    {
+      "id": "hi_hat_01",
+      "name": "Hi-Hat 01",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.262,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.987,
+        "filter_resonance": 0.0,
+        "tune": 1.977,
+        "gain": 0.666,
+        "character": 0.295
+      }
+    },
+    {
+      "id": "hi_hat_02",
+      "name": "Hi-Hat 02",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.212,
+        "decay": 0.001,
+        "sustain": 0.043,
+        "release": 0.237,
+        "filter_cutoff": 0.875,
+        "filter_resonance": 0.077,
+        "tune": 1.423,
+        "gain": 0.907,
+        "character": 0.339
+      }
+    },
+    {
+      "id": "hi_hat_03",
+      "name": "Hi-Hat 03",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.451,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.971,
+        "filter_resonance": 0.15,
+        "tune": -0.301,
+        "gain": 0.668,
+        "character": 0.211
+      }
+    },
+    {
+      "id": "hi_hat_04",
+      "name": "Hi-Hat 04",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.348,
+        "decay": 0.232,
+        "sustain": 0.004,
+        "release": 0.001,
+        "filter_cutoff": 0.99,
+        "filter_resonance": 0.137,
+        "tune": 0.625,
+        "gain": 0.924,
+        "character": 0.304
+      }
+    },
+    {
+      "id": "hi_hat_05",
+      "name": "Hi-Hat 05",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.916,
+        "filter_resonance": 0.099,
+        "tune": -1.425,
+        "gain": 0.776,
+        "character": 0.29
+      }
+    },
+    {
+      "id": "hi_hat_06",
+      "name": "Hi-Hat 06",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.078,
+        "release": 0.001,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.043,
+        "tune": 2.039,
+        "gain": 0.73,
+        "character": 0.303
+      }
+    },
+    {
+      "id": "hi_hat_07",
+      "name": "Hi-Hat 07",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.455,
+        "sustain": 0.007,
+        "release": 0.464,
+        "filter_cutoff": 1.0,
+        "filter_resonance": 0.0,
+        "tune": -0.886,
+        "gain": 0.767,
+        "character": 0.21
+      }
+    },
+    {
+      "id": "hi_hat_08",
+      "name": "Hi-Hat 08",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "hi-hat",
+        "crisp",
+        "percussion"
+      ],
+      "description": "Variation of Hi-Hat",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.017,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.939,
+        "filter_resonance": 0.0,
+        "tune": 2.319,
+        "gain": 0.628,
+        "character": 0.356
+      }
+    },
+    {
+      "id": "kick",
+      "name": "Kick",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Punchy kick drum",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.2,
+        "sustain": 0.0,
+        "release": 0.1,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 1.0,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "kick_01",
+      "name": "Kick 01",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.45,
+        "sustain": 0.0,
+        "release": 0.57,
+        "filter_cutoff": 0.528,
+        "filter_resonance": 0.198,
+        "tune": 0.382,
+        "gain": 1.08,
+        "character": 0.522
+      }
+    },
+    {
+      "id": "kick_02",
+      "name": "Kick 02",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.458,
+        "decay": 0.001,
+        "sustain": 0.021,
+        "release": 1.037,
+        "filter_cutoff": 0.678,
+        "filter_resonance": 0.18,
+        "tune": 2.149,
+        "gain": 1.171,
+        "character": 0.425
+      }
+    },
+    {
+      "id": "kick_03",
+      "name": "Kick 03",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.133,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.559,
+        "filter_resonance": 0.289,
+        "tune": -2.027,
+        "gain": 0.922,
+        "character": 0.589
+      }
+    },
+    {
+      "id": "kick_04",
+      "name": "Kick 04",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.487,
+        "decay": 0.153,
+        "sustain": 0.099,
+        "release": 0.001,
+        "filter_cutoff": 0.651,
+        "filter_resonance": 0.24,
+        "tune": 0.08,
+        "gain": 1.053,
+        "character": 0.545
+      }
+    },
+    {
+      "id": "kick_05",
+      "name": "Kick 05",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.027,
+        "decay": 0.077,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.566,
+        "filter_resonance": 0.11,
+        "tune": -1.196,
+        "gain": 0.81,
+        "character": 0.449
+      }
+    },
+    {
+      "id": "kick_06",
+      "name": "Kick 06",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.155,
+        "tune": -1.688,
+        "gain": 1.055,
+        "character": 0.502
+      }
+    },
+    {
+      "id": "kick_07",
+      "name": "Kick 07",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.445,
+        "decay": 0.001,
+        "sustain": 0.02,
+        "release": 0.001,
+        "filter_cutoff": 0.628,
+        "filter_resonance": 0.154,
+        "tune": -0.013,
+        "gain": 0.813,
+        "character": 0.423
+      }
+    },
+    {
+      "id": "kick_08",
+      "name": "Kick 08",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "kick",
+        "bass",
+        "punchy"
+      ],
+      "description": "Variation of Kick",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.409,
+        "filter_cutoff": 0.621,
+        "filter_resonance": 0.275,
+        "tune": -2.279,
+        "gain": 1.075,
+        "character": 0.406
+      }
+    },
+    {
+      "id": "rim_shot",
+      "name": "Rim Shot",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Sharp rim shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.06,
+        "sustain": 0.0,
+        "release": 0.04,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.12,
+        "tune": 0.0,
+        "gain": 0.8,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "rim_shot_01",
+      "name": "Rim Shot 01",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.104,
+        "sustain": 0.04,
+        "release": 0.076,
+        "filter_cutoff": 0.831,
+        "filter_resonance": 0.048,
+        "tune": -1.589,
+        "gain": 0.636,
+        "character": 0.494
+      }
+    },
+    {
+      "id": "rim_shot_02",
+      "name": "Rim Shot 02",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.154,
+        "decay": 0.002,
+        "sustain": 0.0,
+        "release": 0.829,
+        "filter_cutoff": 0.906,
+        "filter_resonance": 0.044,
+        "tune": 0.021,
+        "gain": 0.646,
+        "character": 0.424
+      }
+    },
+    {
+      "id": "rim_shot_03",
+      "name": "Rim Shot 03",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.216,
+        "decay": 0.001,
+        "sustain": 0.026,
+        "release": 0.001,
+        "filter_cutoff": 0.922,
+        "filter_resonance": 0.162,
+        "tune": 0.021,
+        "gain": 0.903,
+        "character": 0.432
+      }
+    },
+    {
+      "id": "rim_shot_04",
+      "name": "Rim Shot 04",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.115,
+        "decay": 0.037,
+        "sustain": 0.023,
+        "release": 1.007,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.133,
+        "tune": 1.486,
+        "gain": 0.645,
+        "character": 0.421
+      }
+    },
+    {
+      "id": "rim_shot_05",
+      "name": "Rim Shot 05",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.394,
+        "decay": 0.326,
+        "sustain": 0.0,
+        "release": 1.028,
+        "filter_cutoff": 0.975,
+        "filter_resonance": 0.129,
+        "tune": 0.502,
+        "gain": 0.765,
+        "character": 0.389
+      }
+    },
+    {
+      "id": "rim_shot_06",
+      "name": "Rim Shot 06",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.514,
+        "sustain": 0.0,
+        "release": 0.001,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.032,
+        "tune": -0.128,
+        "gain": 0.671,
+        "character": 0.43
+      }
+    },
+    {
+      "id": "rim_shot_07",
+      "name": "Rim Shot 07",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.73,
+        "filter_cutoff": 0.888,
+        "filter_resonance": 0.194,
+        "tune": -0.154,
+        "gain": 0.72,
+        "character": 0.426
+      }
+    },
+    {
+      "id": "rim_shot_08",
+      "name": "Rim Shot 08",
+      "category": "Drums",
+      "tags": [
+        "drums",
+        "rim",
+        "percussion",
+        "sharp"
+      ],
+      "description": "Variation of Rim Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.167,
+        "sustain": 0.0,
+        "release": 0.216,
+        "filter_cutoff": 0.855,
+        "filter_resonance": 0.02,
+        "tune": -0.484,
+        "gain": 0.728,
+        "character": 0.335
+      }
+    },
+    {
+      "id": "lofi_piano",
+      "name": "LoFi Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Dusty lo-fi piano",
+      "parameters": {
+        "attack": 0.005,
+        "decay": 0.5,
+        "sustain": 0.3,
+        "release": 0.8,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.15,
+        "tune": 0.0,
+        "gain": 0.85,
+        "character": 0.6
+      }
+    },
+    {
+      "id": "lofi_piano_01",
+      "name": "LoFi Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.323,
+        "decay": 0.611,
+        "sustain": 0.318,
+        "release": 1.138,
+        "filter_cutoff": 0.714,
+        "filter_resonance": 0.236,
+        "tune": 0.966,
+        "gain": 0.991,
+        "character": 0.655
+      }
+    },
+    {
+      "id": "lofi_piano_02",
+      "name": "LoFi Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.123,
+        "decay": 0.943,
+        "sustain": 0.297,
+        "release": 0.12,
+        "filter_cutoff": 0.639,
+        "filter_resonance": 0.214,
+        "tune": -0.49,
+        "gain": 0.716,
+        "character": 0.536
+      }
+    },
+    {
+      "id": "lofi_piano_03",
+      "name": "LoFi Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.033,
+        "sustain": 0.372,
+        "release": 1.142,
+        "filter_cutoff": 0.672,
+        "filter_resonance": 0.147,
+        "tune": -0.221,
+        "gain": 0.991,
+        "character": 0.502
+      }
+    },
+    {
+      "id": "lofi_piano_04",
+      "name": "LoFi Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.271,
+        "decay": 0.026,
+        "sustain": 0.223,
+        "release": 1.219,
+        "filter_cutoff": 0.621,
+        "filter_resonance": 0.238,
+        "tune": 2.171,
+        "gain": 0.886,
+        "character": 0.62
+      }
+    },
+    {
+      "id": "lofi_piano_05",
+      "name": "LoFi Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.396,
+        "decay": 0.559,
+        "sustain": 0.386,
+        "release": 1.631,
+        "filter_cutoff": 0.784,
+        "filter_resonance": 0.108,
+        "tune": 1.489,
+        "gain": 0.741,
+        "character": 0.65
+      }
+    },
+    {
+      "id": "lofi_piano_06",
+      "name": "LoFi Piano 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.299,
+        "sustain": 0.265,
+        "release": 0.932,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.098,
+        "tune": -0.353,
+        "gain": 0.657,
+        "character": 0.544
+      }
+    },
+    {
+      "id": "lofi_piano_07",
+      "name": "LoFi Piano 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.059,
+        "decay": 0.131,
+        "sustain": 0.337,
+        "release": 0.001,
+        "filter_cutoff": 0.626,
+        "filter_resonance": 0.167,
+        "tune": 0.915,
+        "gain": 1.018,
+        "character": 0.686
+      }
+    },
+    {
+      "id": "lofi_piano_08",
+      "name": "LoFi Piano 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "piano",
+        "lofi",
+        "dusty"
+      ],
+      "description": "Variation of LoFi Piano",
+      "parameters": {
+        "attack": 0.489,
+        "decay": 0.234,
+        "sustain": 0.214,
+        "release": 0.161,
+        "filter_cutoff": 0.795,
+        "filter_resonance": 0.059,
+        "tune": 2.136,
+        "gain": 0.686,
+        "character": 0.698
+      }
+    },
+    {
+      "id": "electric_keys",
+      "name": "Electric Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Electric piano sound",
+      "parameters": {
+        "attack": 0.003,
+        "decay": 0.4,
+        "sustain": 0.4,
+        "release": 0.6,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.8,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "electric_keys_01",
+      "name": "Electric Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.171,
+        "sustain": 0.471,
+        "release": 1.5,
+        "filter_cutoff": 0.722,
+        "filter_resonance": 0.276,
+        "tune": 0.039,
+        "gain": 0.867,
+        "character": 0.427
+      }
+    },
+    {
+      "id": "electric_keys_02",
+      "name": "Electric Keys 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.019,
+        "decay": 0.573,
+        "sustain": 0.325,
+        "release": 1.555,
+        "filter_cutoff": 0.737,
+        "filter_resonance": 0.237,
+        "tune": -1.771,
+        "gain": 0.672,
+        "character": 0.532
+      }
+    },
+    {
+      "id": "electric_keys_03",
+      "name": "Electric Keys 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.216,
+        "decay": 0.14,
+        "sustain": 0.311,
+        "release": 0.848,
+        "filter_cutoff": 0.834,
+        "filter_resonance": 0.171,
+        "tune": -0.096,
+        "gain": 0.621,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "electric_keys_04",
+      "name": "Electric Keys 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.236,
+        "decay": 0.001,
+        "sustain": 0.402,
+        "release": 0.001,
+        "filter_cutoff": 0.768,
+        "filter_resonance": 0.134,
+        "tune": 0.049,
+        "gain": 0.976,
+        "character": 0.549
+      }
+    },
+    {
+      "id": "electric_keys_05",
+      "name": "Electric Keys 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.405,
+        "decay": 0.556,
+        "sustain": 0.418,
+        "release": 1.192,
+        "filter_cutoff": 0.707,
+        "filter_resonance": 0.165,
+        "tune": 2.058,
+        "gain": 0.642,
+        "character": 0.59
+      }
+    },
+    {
+      "id": "electric_keys_06",
+      "name": "Electric Keys 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.182,
+        "decay": 0.085,
+        "sustain": 0.479,
+        "release": 0.153,
+        "filter_cutoff": 0.683,
+        "filter_resonance": 0.207,
+        "tune": -0.623,
+        "gain": 0.862,
+        "character": 0.554
+      }
+    },
+    {
+      "id": "electric_keys_07",
+      "name": "Electric Keys 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.445,
+        "sustain": 0.363,
+        "release": 1.002,
+        "filter_cutoff": 0.789,
+        "filter_resonance": 0.225,
+        "tune": -0.852,
+        "gain": 0.957,
+        "character": 0.584
+      }
+    },
+    {
+      "id": "electric_keys_08",
+      "name": "Electric Keys 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "electric",
+        "vintage",
+        "warm"
+      ],
+      "description": "Variation of Electric Keys",
+      "parameters": {
+        "attack": 0.027,
+        "decay": 0.144,
+        "sustain": 0.312,
+        "release": 0.94,
+        "filter_cutoff": 0.843,
+        "filter_resonance": 0.183,
+        "tune": 2.216,
+        "gain": 0.682,
+        "character": 0.432
+      }
+    },
+    {
+      "id": "mallet",
+      "name": "Mallet",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Plucky mallet sound",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.3,
+        "sustain": 0.2,
+        "release": 0.4,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.25,
+        "tune": 0.0,
+        "gain": 0.82,
+        "character": 0.4
+      }
+    },
+    {
+      "id": "mallet_01",
+      "name": "Mallet 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.053,
+        "decay": 0.715,
+        "sustain": 0.208,
+        "release": 0.602,
+        "filter_cutoff": 0.731,
+        "filter_resonance": 0.277,
+        "tune": 1.355,
+        "gain": 0.89,
+        "character": 0.467
+      }
+    },
+    {
+      "id": "mallet_02",
+      "name": "Mallet 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.194,
+        "sustain": 0.266,
+        "release": 1.294,
+        "filter_cutoff": 0.877,
+        "filter_resonance": 0.214,
+        "tune": -1.027,
+        "gain": 0.794,
+        "character": 0.48
+      }
+    },
+    {
+      "id": "mallet_03",
+      "name": "Mallet 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.494,
+        "sustain": 0.222,
+        "release": 1.175,
+        "filter_cutoff": 0.879,
+        "filter_resonance": 0.283,
+        "tune": -1.989,
+        "gain": 0.959,
+        "character": 0.461
+      }
+    },
+    {
+      "id": "mallet_04",
+      "name": "Mallet 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.379,
+        "decay": 0.512,
+        "sustain": 0.189,
+        "release": 0.001,
+        "filter_cutoff": 0.799,
+        "filter_resonance": 0.239,
+        "tune": -1.95,
+        "gain": 0.746,
+        "character": 0.371
+      }
+    },
+    {
+      "id": "mallet_05",
+      "name": "Mallet 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.795,
+        "sustain": 0.136,
+        "release": 0.719,
+        "filter_cutoff": 0.788,
+        "filter_resonance": 0.313,
+        "tune": 0.388,
+        "gain": 0.728,
+        "character": 0.36
+      }
+    },
+    {
+      "id": "mallet_06",
+      "name": "Mallet 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.115,
+        "sustain": 0.265,
+        "release": 0.732,
+        "filter_cutoff": 0.705,
+        "filter_resonance": 0.239,
+        "tune": -1.4,
+        "gain": 0.778,
+        "character": 0.445
+      }
+    },
+    {
+      "id": "mallet_07",
+      "name": "Mallet 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.265,
+        "decay": 0.511,
+        "sustain": 0.19,
+        "release": 0.764,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.163,
+        "tune": -1.136,
+        "gain": 0.82,
+        "character": 0.472
+      }
+    },
+    {
+      "id": "mallet_08",
+      "name": "Mallet 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "mallet",
+        "plucky",
+        "percussive"
+      ],
+      "description": "Variation of Mallet",
+      "parameters": {
+        "attack": 0.147,
+        "decay": 0.543,
+        "sustain": 0.149,
+        "release": 0.001,
+        "filter_cutoff": 0.791,
+        "filter_resonance": 0.216,
+        "tune": -1.442,
+        "gain": 1.005,
+        "character": 0.419
+      }
+    },
+    {
+      "id": "bell_tone",
+      "name": "Bell Tone",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Bright bell sound",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.6,
+        "sustain": 0.15,
+        "release": 0.9,
+        "filter_cutoff": 0.9,
+        "filter_resonance": 0.35,
+        "tune": 0.0,
+        "gain": 0.75,
+        "character": 0.35
+      }
+    },
+    {
+      "id": "bell_tone_01",
+      "name": "Bell Tone 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.293,
+        "sustain": 0.108,
+        "release": 1.631,
+        "filter_cutoff": 0.978,
+        "filter_resonance": 0.331,
+        "tune": -1.552,
+        "gain": 0.672,
+        "character": 0.285
+      }
+    },
+    {
+      "id": "bell_tone_02",
+      "name": "Bell Tone 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.333,
+        "decay": 0.852,
+        "sustain": 0.069,
+        "release": 0.335,
+        "filter_cutoff": 0.909,
+        "filter_resonance": 0.44,
+        "tune": 0.35,
+        "gain": 0.732,
+        "character": 0.356
+      }
+    },
+    {
+      "id": "bell_tone_03",
+      "name": "Bell Tone 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.334,
+        "decay": 0.245,
+        "sustain": 0.085,
+        "release": 0.968,
+        "filter_cutoff": 0.935,
+        "filter_resonance": 0.429,
+        "tune": 2.115,
+        "gain": 0.822,
+        "character": 0.42
+      }
+    },
+    {
+      "id": "bell_tone_04",
+      "name": "Bell Tone 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.49,
+        "sustain": 0.2,
+        "release": 1.184,
+        "filter_cutoff": 0.93,
+        "filter_resonance": 0.435,
+        "tune": 2.356,
+        "gain": 0.844,
+        "character": 0.38
+      }
+    },
+    {
+      "id": "bell_tone_05",
+      "name": "Bell Tone 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.308,
+        "decay": 0.665,
+        "sustain": 0.224,
+        "release": 1.322,
+        "filter_cutoff": 0.976,
+        "filter_resonance": 0.375,
+        "tune": -2.187,
+        "gain": 0.688,
+        "character": 0.394
+      }
+    },
+    {
+      "id": "bell_tone_06",
+      "name": "Bell Tone 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.351,
+        "sustain": 0.2,
+        "release": 0.974,
+        "filter_cutoff": 0.88,
+        "filter_resonance": 0.323,
+        "tune": -0.358,
+        "gain": 0.825,
+        "character": 0.337
+      }
+    },
+    {
+      "id": "bell_tone_07",
+      "name": "Bell Tone 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.547,
+        "sustain": 0.247,
+        "release": 1.866,
+        "filter_cutoff": 0.938,
+        "filter_resonance": 0.285,
+        "tune": 1.516,
+        "gain": 0.62,
+        "character": 0.369
+      }
+    },
+    {
+      "id": "bell_tone_08",
+      "name": "Bell Tone 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "bell",
+        "bright",
+        "resonant"
+      ],
+      "description": "Variation of Bell Tone",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.431,
+        "sustain": 0.245,
+        "release": 1.362,
+        "filter_cutoff": 0.952,
+        "filter_resonance": 0.448,
+        "tune": 0.655,
+        "gain": 0.594,
+        "character": 0.338
+      }
+    },
+    {
+      "id": "toy_piano",
+      "name": "Toy Piano",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Delicate toy piano",
+      "parameters": {
+        "attack": 0.002,
+        "decay": 0.25,
+        "sustain": 0.1,
+        "release": 0.35,
+        "filter_cutoff": 0.85,
+        "filter_resonance": 0.2,
+        "tune": 0.0,
+        "gain": 0.78,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "toy_piano_01",
+      "name": "Toy Piano 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.366,
+        "decay": 0.001,
+        "sustain": 0.137,
+        "release": 0.922,
+        "filter_cutoff": 0.928,
+        "filter_resonance": 0.164,
+        "tune": 0.126,
+        "gain": 0.871,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "toy_piano_02",
+      "name": "Toy Piano 02",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.024,
+        "sustain": 0.016,
+        "release": 1.184,
+        "filter_cutoff": 0.893,
+        "filter_resonance": 0.287,
+        "tune": -0.789,
+        "gain": 0.876,
+        "character": 0.372
+      }
+    },
+    {
+      "id": "toy_piano_03",
+      "name": "Toy Piano 03",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.453,
+        "sustain": 0.108,
+        "release": 0.001,
+        "filter_cutoff": 0.842,
+        "filter_resonance": 0.168,
+        "tune": -2.176,
+        "gain": 0.847,
+        "character": 0.496
+      }
+    },
+    {
+      "id": "toy_piano_04",
+      "name": "Toy Piano 04",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.461,
+        "sustain": 0.099,
+        "release": 0.336,
+        "filter_cutoff": 0.905,
+        "filter_resonance": 0.198,
+        "tune": 1.563,
+        "gain": 0.886,
+        "character": 0.474
+      }
+    },
+    {
+      "id": "toy_piano_05",
+      "name": "Toy Piano 05",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.071,
+        "sustain": 0.011,
+        "release": 0.392,
+        "filter_cutoff": 0.816,
+        "filter_resonance": 0.116,
+        "tune": -0.696,
+        "gain": 0.682,
+        "character": 0.471
+      }
+    },
+    {
+      "id": "toy_piano_06",
+      "name": "Toy Piano 06",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.095,
+        "decay": 0.493,
+        "sustain": 0.018,
+        "release": 1.161,
+        "filter_cutoff": 0.751,
+        "filter_resonance": 0.166,
+        "tune": 0.681,
+        "gain": 0.62,
+        "character": 0.546
+      }
+    },
+    {
+      "id": "toy_piano_07",
+      "name": "Toy Piano 07",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.364,
+        "decay": 0.001,
+        "sustain": 0.187,
+        "release": 0.001,
+        "filter_cutoff": 0.892,
+        "filter_resonance": 0.219,
+        "tune": -0.018,
+        "gain": 0.914,
+        "character": 0.441
+      }
+    },
+    {
+      "id": "toy_piano_08",
+      "name": "Toy Piano 08",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "toy",
+        "delicate",
+        "whimsical"
+      ],
+      "description": "Variation of Toy Piano",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.138,
+        "release": 1.093,
+        "filter_cutoff": 0.772,
+        "filter_resonance": 0.146,
+        "tune": 0.4,
+        "gain": 0.709,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "impact_hit",
+      "name": "Impact Hit",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Heavy impact sound",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.5,
+        "sustain": 0.0,
+        "release": 0.8,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.3,
+        "tune": 0.0,
+        "gain": 1.2,
+        "character": 0.7
+      }
+    },
+    {
+      "id": "impact_hit_01",
+      "name": "Impact Hit 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.229,
+        "decay": 0.683,
+        "sustain": 0.006,
+        "release": 1.505,
+        "filter_cutoff": 0.484,
+        "filter_resonance": 0.392,
+        "tune": 1.726,
+        "gain": 1.011,
+        "character": 0.728
+      }
+    },
+    {
+      "id": "impact_hit_02",
+      "name": "Impact Hit 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.27,
+        "decay": 0.416,
+        "sustain": 0.0,
+        "release": 1.311,
+        "filter_cutoff": 0.584,
+        "filter_resonance": 0.385,
+        "tune": 1.956,
+        "gain": 1.287,
+        "character": 0.755
+      }
+    },
+    {
+      "id": "impact_hit_03",
+      "name": "Impact Hit 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.328,
+        "sustain": 0.042,
+        "release": 0.001,
+        "filter_cutoff": 0.576,
+        "filter_resonance": 0.363,
+        "tune": -2.364,
+        "gain": 1.238,
+        "character": 0.616
+      }
+    },
+    {
+      "id": "impact_hit_04",
+      "name": "Impact Hit 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.176,
+        "decay": 0.575,
+        "sustain": 0.0,
+        "release": 0.708,
+        "filter_cutoff": 0.525,
+        "filter_resonance": 0.306,
+        "tune": 0.775,
+        "gain": 1.087,
+        "character": 0.742
+      }
+    },
+    {
+      "id": "impact_hit_05",
+      "name": "Impact Hit 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.49,
+        "sustain": 0.0,
+        "release": 1.411,
+        "filter_cutoff": 0.55,
+        "filter_resonance": 0.224,
+        "tune": 2.399,
+        "gain": 1.4,
+        "character": 0.627
+      }
+    },
+    {
+      "id": "impact_hit_06",
+      "name": "Impact Hit 06",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.944,
+        "sustain": 0.0,
+        "release": 0.533,
+        "filter_cutoff": 0.467,
+        "filter_resonance": 0.364,
+        "tune": 0.061,
+        "gain": 1.332,
+        "character": 0.762
+      }
+    },
+    {
+      "id": "impact_hit_07",
+      "name": "Impact Hit 07",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.4,
+        "decay": 0.408,
+        "sustain": 0.074,
+        "release": 1.432,
+        "filter_cutoff": 0.539,
+        "filter_resonance": 0.268,
+        "tune": 1.091,
+        "gain": 1.389,
+        "character": 0.615
+      }
+    },
+    {
+      "id": "impact_hit_08",
+      "name": "Impact Hit 08",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "impact",
+        "hit",
+        "cinematic"
+      ],
+      "description": "Variation of Impact Hit",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.729,
+        "sustain": 0.0,
+        "release": 1.312,
+        "filter_cutoff": 0.458,
+        "filter_resonance": 0.217,
+        "tune": -2.36,
+        "gain": 1.231,
+        "character": 0.764
+      }
+    },
+    {
+      "id": "riser",
+      "name": "Riser",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Tension riser",
+      "parameters": {
+        "attack": 0.5,
+        "decay": 1.0,
+        "sustain": 0.8,
+        "release": 1.5,
+        "filter_cutoff": 0.3,
+        "filter_resonance": 0.5,
+        "tune": 0.0,
+        "gain": 0.9,
+        "character": 0.6
+      }
+    },
+    {
+      "id": "riser_01",
+      "name": "Riser 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.397,
+        "decay": 0.935,
+        "sustain": 0.75,
+        "release": 2.331,
+        "filter_cutoff": 0.262,
+        "filter_resonance": 0.462,
+        "tune": -1.325,
+        "gain": 0.715,
+        "character": 0.687
+      }
+    },
+    {
+      "id": "riser_02",
+      "name": "Riser 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.497,
+        "decay": 1.08,
+        "sustain": 0.89,
+        "release": 2.059,
+        "filter_cutoff": 0.268,
+        "filter_resonance": 0.573,
+        "tune": 0.867,
+        "gain": 1.069,
+        "character": 0.631
+      }
+    },
+    {
+      "id": "riser_03",
+      "name": "Riser 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.377,
+        "decay": 0.899,
+        "sustain": 0.813,
+        "release": 2.415,
+        "filter_cutoff": 0.329,
+        "filter_resonance": 0.505,
+        "tune": -2.131,
+        "gain": 0.787,
+        "character": 0.607
+      }
+    },
+    {
+      "id": "riser_04",
+      "name": "Riser 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.637,
+        "decay": 1.419,
+        "sustain": 0.824,
+        "release": 0.576,
+        "filter_cutoff": 0.398,
+        "filter_resonance": 0.498,
+        "tune": -0.032,
+        "gain": 1.022,
+        "character": 0.658
+      }
+    },
+    {
+      "id": "riser_05",
+      "name": "Riser 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.188,
+        "decay": 1.198,
+        "sustain": 0.849,
+        "release": 0.84,
+        "filter_cutoff": 0.282,
+        "filter_resonance": 0.543,
+        "tune": 1.118,
+        "gain": 0.909,
+        "character": 0.61
+      }
+    },
+    {
+      "id": "riser_06",
+      "name": "Riser 06",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.955,
+        "decay": 1.44,
+        "sustain": 0.814,
+        "release": 2.458,
+        "filter_cutoff": 0.243,
+        "filter_resonance": 0.57,
+        "tune": -1.03,
+        "gain": 0.785,
+        "character": 0.662
+      }
+    },
+    {
+      "id": "riser_07",
+      "name": "Riser 07",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.425,
+        "decay": 0.502,
+        "sustain": 0.804,
+        "release": 2.276,
+        "filter_cutoff": 0.286,
+        "filter_resonance": 0.41,
+        "tune": -2.08,
+        "gain": 0.966,
+        "character": 0.661
+      }
+    },
+    {
+      "id": "riser_08",
+      "name": "Riser 08",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "riser",
+        "build",
+        "tension"
+      ],
+      "description": "Variation of Riser",
+      "parameters": {
+        "attack": 0.563,
+        "decay": 1.112,
+        "sustain": 0.896,
+        "release": 2.335,
+        "filter_cutoff": 0.268,
+        "filter_resonance": 0.59,
+        "tune": 0.196,
+        "gain": 0.807,
+        "character": 0.551
+      }
+    },
+    {
+      "id": "vox_shot",
+      "name": "Vox Shot",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Vocal sample hit",
+      "parameters": {
+        "attack": 0.002,
+        "decay": 0.15,
+        "sustain": 0.0,
+        "release": 0.12,
+        "filter_cutoff": 0.75,
+        "filter_resonance": 0.25,
+        "tune": 0.0,
+        "gain": 0.85,
+        "character": 0.55
+      }
+    },
+    {
+      "id": "vox_shot_01",
+      "name": "Vox Shot 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.465,
+        "sustain": 0.024,
+        "release": 0.001,
+        "filter_cutoff": 0.791,
+        "filter_resonance": 0.245,
+        "tune": -1.486,
+        "gain": 0.739,
+        "character": 0.454
+      }
+    },
+    {
+      "id": "vox_shot_02",
+      "name": "Vox Shot 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.293,
+        "decay": 0.589,
+        "sustain": 0.0,
+        "release": 1.105,
+        "filter_cutoff": 0.734,
+        "filter_resonance": 0.176,
+        "tune": -2.175,
+        "gain": 0.679,
+        "character": 0.57
+      }
+    },
+    {
+      "id": "vox_shot_03",
+      "name": "Vox Shot 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.007,
+        "decay": 0.071,
+        "sustain": 0.0,
+        "release": 0.243,
+        "filter_cutoff": 0.845,
+        "filter_resonance": 0.259,
+        "tune": 1.677,
+        "gain": 0.723,
+        "character": 0.482
+      }
+    },
+    {
+      "id": "vox_shot_04",
+      "name": "Vox Shot 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.257,
+        "decay": 0.282,
+        "sustain": 0.0,
+        "release": 0.622,
+        "filter_cutoff": 0.724,
+        "filter_resonance": 0.246,
+        "tune": -1.511,
+        "gain": 0.779,
+        "character": 0.522
+      }
+    },
+    {
+      "id": "vox_shot_05",
+      "name": "Vox Shot 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.0,
+        "release": 0.97,
+        "filter_cutoff": 0.692,
+        "filter_resonance": 0.255,
+        "tune": -1.39,
+        "gain": 1.02,
+        "character": 0.617
+      }
+    },
+    {
+      "id": "vox_shot_06",
+      "name": "Vox Shot 06",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.416,
+        "decay": 0.49,
+        "sustain": 0.0,
+        "release": 0.931,
+        "filter_cutoff": 0.745,
+        "filter_resonance": 0.275,
+        "tune": 0.104,
+        "gain": 0.705,
+        "character": 0.588
+      }
+    },
+    {
+      "id": "vox_shot_07",
+      "name": "Vox Shot 07",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.193,
+        "decay": 0.001,
+        "sustain": 0.077,
+        "release": 0.312,
+        "filter_cutoff": 0.684,
+        "filter_resonance": 0.168,
+        "tune": 2.075,
+        "gain": 0.987,
+        "character": 0.631
+      }
+    },
+    {
+      "id": "vox_shot_08",
+      "name": "Vox Shot 08",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "vox",
+        "vocal",
+        "shot"
+      ],
+      "description": "Variation of Vox Shot",
+      "parameters": {
+        "attack": 0.021,
+        "decay": 0.37,
+        "sustain": 0.0,
+        "release": 0.727,
+        "filter_cutoff": 0.716,
+        "filter_resonance": 0.163,
+        "tune": -2.224,
+        "gain": 0.728,
+        "character": 0.579
+      }
+    },
+    {
+      "id": "whoosh",
+      "name": "Whoosh",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Transition whoosh",
+      "parameters": {
+        "attack": 0.01,
+        "decay": 0.4,
+        "sustain": 0.1,
+        "release": 0.5,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.6,
+        "tune": 0.0,
+        "gain": 0.88,
+        "character": 0.5
+      }
+    },
+    {
+      "id": "whoosh_01",
+      "name": "Whoosh 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.367,
+        "decay": 0.359,
+        "sustain": 0.123,
+        "release": 0.001,
+        "filter_cutoff": 0.603,
+        "filter_resonance": 0.602,
+        "tune": 0.607,
+        "gain": 0.99,
+        "character": 0.548
+      }
+    },
+    {
+      "id": "whoosh_02",
+      "name": "Whoosh 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.49,
+        "decay": 0.332,
+        "sustain": 0.197,
+        "release": 0.001,
+        "filter_cutoff": 0.588,
+        "filter_resonance": 0.508,
+        "tune": -2.1,
+        "gain": 0.946,
+        "character": 0.464
+      }
+    },
+    {
+      "id": "whoosh_03",
+      "name": "Whoosh 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.284,
+        "decay": 0.606,
+        "sustain": 0.178,
+        "release": 0.368,
+        "filter_cutoff": 0.521,
+        "filter_resonance": 0.69,
+        "tune": -0.108,
+        "gain": 0.787,
+        "character": 0.485
+      }
+    },
+    {
+      "id": "whoosh_04",
+      "name": "Whoosh 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.001,
+        "sustain": 0.096,
+        "release": 0.001,
+        "filter_cutoff": 0.685,
+        "filter_resonance": 0.622,
+        "tune": 0.942,
+        "gain": 0.984,
+        "character": 0.463
+      }
+    },
+    {
+      "id": "whoosh_05",
+      "name": "Whoosh 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.138,
+        "decay": 0.429,
+        "sustain": 0.179,
+        "release": 0.91,
+        "filter_cutoff": 0.613,
+        "filter_resonance": 0.515,
+        "tune": -0.202,
+        "gain": 0.807,
+        "character": 0.498
+      }
+    },
+    {
+      "id": "whoosh_06",
+      "name": "Whoosh 06",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.108,
+        "decay": 0.853,
+        "sustain": 0.033,
+        "release": 0.001,
+        "filter_cutoff": 0.693,
+        "filter_resonance": 0.671,
+        "tune": -1.009,
+        "gain": 0.692,
+        "character": 0.576
+      }
+    },
+    {
+      "id": "whoosh_07",
+      "name": "Whoosh 07",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.203,
+        "decay": 0.001,
+        "sustain": 0.044,
+        "release": 0.623,
+        "filter_cutoff": 0.667,
+        "filter_resonance": 0.582,
+        "tune": -1.518,
+        "gain": 0.772,
+        "character": 0.49
+      }
+    },
+    {
+      "id": "whoosh_08",
+      "name": "Whoosh 08",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "whoosh",
+        "transition",
+        "sweep"
+      ],
+      "description": "Variation of Whoosh",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.167,
+        "sustain": 0.01,
+        "release": 0.178,
+        "filter_cutoff": 0.613,
+        "filter_resonance": 0.694,
+        "tune": -1.889,
+        "gain": 0.903,
+        "character": 0.59
+      }
+    },
+    {
+      "id": "texture",
+      "name": "Texture",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Atmospheric texture",
+      "parameters": {
+        "attack": 0.3,
+        "decay": 0.8,
+        "sustain": 0.7,
+        "release": 1.2,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.35,
+        "tune": 0.0,
+        "gain": 0.8,
+        "character": 0.45
+      }
+    },
+    {
+      "id": "texture_01",
+      "name": "Texture 01",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.28,
+        "decay": 1.114,
+        "sustain": 0.662,
+        "release": 1.767,
+        "filter_cutoff": 0.597,
+        "filter_resonance": 0.321,
+        "tune": -1.642,
+        "gain": 0.841,
+        "character": 0.39
+      }
+    },
+    {
+      "id": "texture_02",
+      "name": "Texture 02",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.41,
+        "decay": 0.793,
+        "sustain": 0.788,
+        "release": 1.351,
+        "filter_cutoff": 0.654,
+        "filter_resonance": 0.331,
+        "tune": -0.865,
+        "gain": 0.704,
+        "character": 0.385
+      }
+    },
+    {
+      "id": "texture_03",
+      "name": "Texture 03",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.98,
+        "sustain": 0.714,
+        "release": 2.178,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.292,
+        "tune": 0.727,
+        "gain": 0.971,
+        "character": 0.372
+      }
+    },
+    {
+      "id": "texture_04",
+      "name": "Texture 04",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 0.848,
+        "sustain": 0.772,
+        "release": 0.835,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.348,
+        "tune": -2.273,
+        "gain": 0.612,
+        "character": 0.358
+      }
+    },
+    {
+      "id": "texture_05",
+      "name": "Texture 05",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.743,
+        "decay": 0.389,
+        "sustain": 0.69,
+        "release": 1.301,
+        "filter_cutoff": 0.63,
+        "filter_resonance": 0.398,
+        "tune": 1.418,
+        "gain": 0.661,
+        "character": 0.513
+      }
+    },
+    {
+      "id": "texture_06",
+      "name": "Texture 06",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.451,
+        "decay": 0.355,
+        "sustain": 0.797,
+        "release": 1.192,
+        "filter_cutoff": 0.617,
+        "filter_resonance": 0.35,
+        "tune": -0.335,
+        "gain": 0.895,
+        "character": 0.486
+      }
+    },
+    {
+      "id": "texture_07",
+      "name": "Texture 07",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.576,
+        "decay": 0.518,
+        "sustain": 0.718,
+        "release": 1.365,
+        "filter_cutoff": 0.669,
+        "filter_resonance": 0.356,
+        "tune": -0.155,
+        "gain": 0.626,
+        "character": 0.351
+      }
+    },
+    {
+      "id": "texture_08",
+      "name": "Texture 08",
+      "category": "FX",
+      "tags": [
+        "fx",
+        "texture",
+        "atmosphere",
+        "ambient"
+      ],
+      "description": "Variation of Texture",
+      "parameters": {
+        "attack": 0.001,
+        "decay": 1.185,
+        "sustain": 0.774,
+        "release": 1.615,
+        "filter_cutoff": 0.562,
+        "filter_resonance": 0.421,
+        "tune": 0.193,
+        "gain": 0.72,
+        "character": 0.404
+      }
+    }
+  ]
+}

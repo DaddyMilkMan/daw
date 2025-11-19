@@ -1,0 +1,669 @@
+/*
+  ==============================================================================
+
+    ZenithPolySynth.h
+    Created: 2025-11-18
+    Author:  Zenith DAW
+
+    Multi-oscillator subtractive polyphonic synthesizer optimized for EDM/trap/future-bass.
+
+    Features:
+    - 2-3 oscillators with sine, saw, square, triangle, noise, and supersaw modes
+    - Multimode filter (lowpass, bandpass, highpass) with resonance and drive
+    - 2 ADSR envelopes (amplitude and modulation)
+    - 2 LFOs with multiple targets
+    - Unison/detune for supersaw
+    - Glide (portamento)
+    - RT-safe: all buffers preallocated, no locks in audio thread
+
+    //==========================================================================
+    // AI-FRIENDLY MODULATION MATRIX + MACROS
+    //==========================================================================
+
+    This synthesizer provides TWO ways for AI to create expressive sounds:
+
+    1. MACRO CONTROLS (Recommended for AI)
+       - 8 high-level semantic controls with human-readable names
+       - Each macro affects multiple related parameters automatically
+       - Easy to reason about musically
+
+       Available Macros:
+       - Brightness:  Filter cutoff and resonance (brighter/darker tone)
+       - Thickness:   Unison voices and oscillator layering (thin/thick sound)
+       - Movement:    LFO modulation amounts (static/dynamic)
+       - Attack:      Envelope attack times (slow fade/instant punch)
+       - Release:     Envelope release times (short/long tail)
+       - Warmth:      Filter character and saturation (cold/warm analog tone)
+       - Detune:      Oscillator detuning (tight/chorus-like width)
+       - Depth:       Modulation envelope intensity (subtle/pronounced evolution)
+
+       Usage from CommandAPI:
+         setMacro("macro_brightness", 0.8);  // Increase brightness to 80%
+         setMacro("macro_thickness", 0.6);   // Add some thickness
+         setMacro("macro_movement", 0.4);    // Add subtle movement
+
+    2. MODULATION MATRIX (Advanced)
+       - Flexible routing of sources to destinations
+       - 8 modulation slots for custom routing
+
+       Sources:  LFO1, LFO2, Env1, Env2, Velocity, ModWheel, Aftertouch
+       Destinations: FilterCutoff, FilterResonance, Osc1/2/3Pitch,
+                     WavetablePos, Pan, Volume, Osc1/2/3Mix
+
+       Usage Examples:
+       - Route LFO1 to filter cutoff for wobble bass:
+         setModulationSlot(0, LFO1, FilterCutoff, 0.5);
+
+       - Route velocity to filter cutoff for dynamic response:
+         setModulationSlot(1, Velocity, FilterCutoff, 0.7);
+
+       - Route Env2 to oscillator pitch for plucky sounds:
+         setModulationSlot(2, Env2, Osc1Pitch, 0.3);
+
+    AI DESIGN RECOMMENDATIONS:
+    - For quick sound design, use macros (easier to reason about)
+    - For advanced modulation, use the modulation matrix
+    - Combine both: use macros for basic tone, matrix for special effects
+    - Macros are centered at 0.5 (neutral), 0.0 (minimum), 1.0 (maximum)
+    - Modulation matrix amounts are bipolar: -1.0 to +1.0
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include <JuceHeader.h>
+#include "Instrument.h"
+#include <array>
+
+namespace zenith {
+
+//==============================================================================
+/**
+    Waveform types for oscillators
+*/
+enum class OscillatorWaveform
+{
+    Sine = 0,
+    Saw,
+    Square,
+    Triangle,
+    Noise,
+    Supersaw,
+    NumWaveforms
+};
+
+/**
+    Filter types
+*/
+enum class FilterType
+{
+    Lowpass = 0,
+    Bandpass,
+    Highpass,
+    NumTypes
+};
+
+/**
+    Quality preset for CPU optimization
+*/
+enum class QualityPreset
+{
+    Low = 0,    // Max 3 unison voices, optimized for CPU
+    Medium,     // Max 5 unison voices, balanced
+    High,       // Max 7 unison voices, full quality
+    NumPresets
+};
+
+/**
+    LFO target parameters (legacy - now part of modulation matrix)
+*/
+enum class LFOTarget
+{
+    FilterCutoff = 0,
+    Osc1Pitch,
+    Osc2Pitch,
+    Osc1Mix,
+    Osc2Mix,
+    NumTargets
+};
+
+//==============================================================================
+/**
+    Modulation Matrix System
+
+    AI-FRIENDLY MODULATION SYSTEM:
+    This modulation matrix allows flexible routing of modulation sources to
+    multiple destinations. AI agents can use this to create expressive sounds
+    by routing LFOs, envelopes, velocity, and MIDI controllers to various
+    synthesis parameters.
+
+    Usage from AI:
+    - Route LFO1 to filter cutoff for wobble bass effects
+    - Route Velocity to filter cutoff for dynamic response
+    - Route ModWheel to vibrato depth for expressive performance
+    - Route Env2 to wavetable position for evolving timbres
+*/
+
+/**
+    Modulation sources available in the matrix
+*/
+enum class ModulationSource
+{
+    None = 0,       // No modulation
+    LFO1,           // Low-frequency oscillator 1 (sine wave, -1 to +1)
+    LFO2,           // Low-frequency oscillator 2 (sine wave, -1 to +1)
+    Env1,           // Amplitude envelope (0 to 1, ADSR)
+    Env2,           // Modulation envelope (0 to 1, ADSR)
+    Velocity,       // Note-on velocity (0 to 1)
+    ModWheel,       // MIDI mod wheel CC#1 (0 to 1)
+    Aftertouch,     // MIDI channel pressure (0 to 1)
+    NumSources
+};
+
+/**
+    Modulation destinations available in the matrix
+*/
+enum class ModulationDestination
+{
+    None = 0,           // No destination
+    FilterCutoff,       // Filter cutoff frequency
+    FilterResonance,    // Filter resonance/Q
+    Osc1Pitch,          // Oscillator 1 pitch (semitones)
+    Osc2Pitch,          // Oscillator 2 pitch (semitones)
+    Osc3Pitch,          // Oscillator 3 pitch (semitones)
+    WavetablePos,       // Wavetable/phase position (0 to 1)
+    Pan,                // Stereo panning (-1 left to +1 right)
+    Volume,             // Output volume/gain
+    Osc1Mix,            // Oscillator 1 mix level
+    Osc2Mix,            // Oscillator 2 mix level
+    Osc3Mix,            // Oscillator 3 mix level
+    NumDestinations
+};
+
+/**
+    Single modulation routing slot
+
+    Each slot defines: source -> destination with an amount
+    Example: LFO1 -> FilterCutoff with amount 0.5 (50% modulation depth)
+*/
+struct ModulationSlot
+{
+    ModulationSource source = ModulationSource::None;
+    ModulationDestination destination = ModulationDestination::None;
+    float amount = 0.0f;  // Modulation depth/amount (-1 to +1)
+
+    bool isActive() const {
+        return source != ModulationSource::None &&
+               destination != ModulationDestination::None;
+    }
+};
+
+/**
+    RT-safe modulation state per voice
+
+    Stores computed modulation values for each destination.
+    Updated once per audio buffer to avoid redundant calculations.
+*/
+struct ModulationState
+{
+    // Pre-computed modulation amounts for each destination
+    std::array<float, static_cast<size_t>(ModulationDestination::NumDestinations)> values;
+
+    ModulationState() { reset(); }
+
+    void reset() { values.fill(0.0f); }
+
+    float get(ModulationDestination dest) const
+    {
+        return values[static_cast<size_t>(dest)];
+    }
+
+    void set(ModulationDestination dest, float value)
+    {
+        values[static_cast<size_t>(dest)] = value;
+    }
+
+    void add(ModulationDestination dest, float value)
+    {
+        values[static_cast<size_t>(dest)] += value;
+    }
+};
+
+//==============================================================================
+/**
+    Single oscillator with multiple waveforms and detune
+*/
+class ZenithOscillator
+{
+public:
+    ZenithOscillator() = default;
+
+    void setWaveform(OscillatorWaveform waveform) { waveform_ = waveform; }
+    void setDetune(float detuneCents) { detuneCents_ = detuneCents; }
+    void setSampleRate(double sampleRate) { sampleRate_ = sampleRate; }
+    void reset() { phase_ = 0.0; }
+
+    /**
+     * @brief Generate next sample
+     * @param frequency Base frequency in Hz
+     * @return Sample value in range [-1, 1]
+     */
+    float getNextSample(float frequency);
+
+private:
+    OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
+    double phase_ = 0.0;
+    double sampleRate_ = 44100.0;
+    float detuneCents_ = 0.0f;
+    juce::Random random_;
+
+    float processSine(float frequency);
+    float processSaw(float frequency);
+    float processSquare(float frequency);
+    float processTriangle(float frequency);
+    float processNoise();
+};
+
+//==============================================================================
+/**
+    Multimode filter with smoothed parameters
+*/
+class ZenithFilter
+{
+public:
+    ZenithFilter() = default;
+
+    void setType(FilterType type) { type_ = type; }
+    void setSampleRate(double sampleRate);
+    void setCutoff(float cutoffHz);
+    void setResonance(float resonance);
+    void setDrive(float drive) { drive_ = drive; }
+    void reset();
+
+    /**
+     * @brief Process one sample
+     * @param input Input sample
+     * @return Filtered sample
+     */
+    float processSample(float input);
+
+private:
+    FilterType type_ = FilterType::Lowpass;
+    double sampleRate_ = 44100.0;
+
+    // Smoothed parameters to avoid zipper noise
+    juce::SmoothedValue<float> cutoffSmoothed_;
+    juce::SmoothedValue<float> resonanceSmoothed_;
+
+    float drive_ = 1.0f;
+
+    // State variables filter implementation
+    float v0_ = 0.0f, v1_ = 0.0f, v2_ = 0.0f;
+    float ic1eq_ = 0.0f, ic2eq_ = 0.0f;
+};
+
+//==============================================================================
+/**
+    Voice for ZenithPolySynth - RT-safe polyphonic voice
+*/
+class ZenithPolySynthVoice : public juce::SynthesiserVoice
+{
+public:
+    ZenithPolySynthVoice();
+    ~ZenithPolySynthVoice() override = default;
+
+    bool canPlaySound(juce::SynthesiserSound* sound) override;
+    void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition) override;
+    void stopNote(float velocity, bool allowTailOff) override;
+    void pitchWheelMoved(int newPitchWheelValue) override;
+    void controllerMoved(int controllerNumber, int newControllerValue) override;
+    void channelPressureChanged(int newChannelPressureValue) override;
+    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
+
+    //==========================================================================
+    // Parameter setters (called from message thread or via atomic parameters)
+    //==========================================================================
+    void setOsc1Waveform(OscillatorWaveform waveform) { osc1_.setWaveform(waveform); }
+    void setOsc2Waveform(OscillatorWaveform waveform) { osc2_.setWaveform(waveform); }
+    void setOsc3Waveform(OscillatorWaveform waveform) { osc3_.setWaveform(waveform); }
+
+    void setOsc1Detune(float cents) { osc1_.setDetune(cents); }
+    void setOsc2Detune(float cents) { osc2_.setDetune(cents); }
+    void setOsc3Detune(float cents) { osc3_.setDetune(cents); }
+
+    void setOsc1Mix(float mix) { osc1Mix_ = mix; }
+    void setOsc2Mix(float mix) { osc2Mix_ = mix; }
+    void setOsc3Mix(float mix) { osc3Mix_ = mix; }
+
+    void setUnisonVoices(int voices) { unisonVoices_ = juce::jlimit(1, 7, voices); }
+    void setUnisonDetune(float cents) { unisonDetune_ = cents; }
+
+    void setFilterType(FilterType type) { filter_.setType(type); }
+    void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
+    void setFilterResonance(float resonance) { filter_.setResonance(resonance); }
+    void setFilterDrive(float drive) { filter_.setDrive(drive); }
+
+    void setAmpEnvelope(float attack, float decay, float sustain, float release);
+    void setModEnvelope(float attack, float decay, float sustain, float release);
+
+    void setLFO1(float rate, float amount, LFOTarget target);
+    void setLFO2(float rate, float amount, LFOTarget target);
+
+    void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
+    void setMonoMode(bool mono) { monoMode_ = mono; }
+    void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
+
+    void setSampleRate(double sampleRate);
+
+    //==========================================================================
+    // Modulation Matrix Control
+    //==========================================================================
+
+    /**
+     * @brief Set a modulation slot
+     * @param slotIndex Slot index (0-7)
+     * @param source Modulation source
+     * @param destination Modulation destination
+     * @param amount Modulation amount (-1 to +1)
+     */
+    void setModulationSlot(int slotIndex, ModulationSource source,
+                          ModulationDestination destination, float amount);
+
+    /**
+     * @brief Set MIDI controller values (called from controllerMoved)
+     */
+    void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
+    void setAftertouch(float value) { aftertouch_ = juce::jlimit(0.0f, 1.0f, value); }
+
+    /**
+     * @brief Get current output amplitude for voice stealing
+     * @return Current amplitude level (0-1)
+     */
+    float getCurrentAmplitude() const { return currentAmplitude_; }
+
+private:
+    //==========================================================================
+    // Oscillators
+    //==========================================================================
+    ZenithOscillator osc1_, osc2_, osc3_;
+    std::array<ZenithOscillator, 7> unisonOscillators_; // For supersaw unison
+
+    float osc1Mix_ = 1.0f;
+    float osc2Mix_ = 0.5f;
+    float osc3Mix_ = 0.0f;
+
+    int unisonVoices_ = 1;
+    float unisonDetune_ = 10.0f; // cents
+
+    //==========================================================================
+    // Filter
+    //==========================================================================
+    ZenithFilter filter_;
+    float filterCutoff_ = 2000.0f;
+    float filterEnvAmount_ = 0.0f;
+
+    //==========================================================================
+    // Envelopes
+    //==========================================================================
+    juce::ADSR ampEnvelope_;
+    juce::ADSR::Parameters ampEnvParams_;
+
+    juce::ADSR modEnvelope_;
+    juce::ADSR::Parameters modEnvParams_;
+
+    //==========================================================================
+    // LFOs
+    //==========================================================================
+    struct LFO
+    {
+        float phase = 0.0f;
+        float rate = 5.0f;      // Hz
+        float amount = 0.0f;
+        LFOTarget target = LFOTarget::FilterCutoff;
+
+        float getNextValue(double sampleRate)
+        {
+            float value = std::sin(phase * juce::MathConstants<float>::twoPi);
+            phase += rate / static_cast<float>(sampleRate);
+            if (phase >= 1.0f)
+                phase -= 1.0f;
+            return value * amount;
+        }
+
+        void reset() { phase = 0.0f; }
+    };
+
+    LFO lfo1_, lfo2_;
+
+    //==========================================================================
+    // Voice state
+    //==========================================================================
+    double sampleRate_ = 44100.0;
+    int currentMidiNote_ = 0;
+    float currentFrequency_ = 440.0f;
+    float targetFrequency_ = 440.0f;
+    float glideTime_ = 0.0f;
+    bool monoMode_ = false;
+    float velocity_ = 1.0f;
+    QualityPreset qualityPreset_ = QualityPreset::High;
+    float currentAmplitude_ = 0.0f; // For voice stealing prioritization
+
+    //==========================================================================
+    // Modulation Matrix
+    //==========================================================================
+
+    // Fixed-size modulation slots (pre-allocated for RT-safety)
+    static constexpr int kNumModSlots = 8;
+    std::array<ModulationSlot, kNumModSlots> modulationSlots_;
+
+    // Computed modulation state (updated per buffer)
+    ModulationState modulationState_;
+
+    // MIDI controller values
+    float modWheel_ = 0.0f;      // CC#1
+    float aftertouch_ = 0.0f;    // Channel pressure
+    float pan_ = 0.0f;           // Stereo pan (-1 to +1)
+    float wavetablePos_ = 0.0f;  // Wavetable position (0 to 1)
+
+    //==========================================================================
+    // Helper methods
+    //==========================================================================
+    void updateFrequency();
+    float applyLFOs();
+
+    /**
+     * @brief Compute modulation matrix values for current sample
+     *
+     * This method:
+     * 1. Reads all modulation sources (LFOs, envelopes, velocity, MIDI)
+     * 2. Computes contributions to each destination
+     * 3. Stores results in modulationState_ for RT-safe access
+     *
+     * Called once per audio buffer before processing samples.
+     * RT-safe: no allocations, uses pre-allocated arrays.
+     */
+    void computeModulation();
+
+    /**
+     * @brief Get modulation source value
+     * @param source Source to read
+     * @return Value in appropriate range for source type
+     */
+    float getModulationSourceValue(ModulationSource source) const;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthVoice)
+};
+
+//==============================================================================
+/**
+    Sound for ZenithPolySynth
+*/
+class ZenithPolySynthSound : public juce::SynthesiserSound
+{
+public:
+    ZenithPolySynthSound() = default;
+    ~ZenithPolySynthSound() override = default;
+
+    bool appliesToNote(int midiNoteNumber) override { return true; }
+    bool appliesToChannel(int midiChannel) override { return true; }
+
+private:
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthSound)
+};
+
+//==============================================================================
+/**
+    ZenithPolySynth AudioProcessor
+
+    Main synthesizer processor that manages voices and parameters.
+*/
+class ZenithPolySynthProcessor : public juce::Synthesiser,
+                                  public juce::AudioProcessor
+{
+public:
+    //==========================================================================
+    // Parameter indices - must match order in constructor
+    //==========================================================================
+    enum Parameters
+    {
+        // Oscillators
+        Osc1Wave = 0,
+        Osc1Detune,
+        Osc1Mix,
+        Osc2Wave,
+        Osc2Detune,
+        Osc2Mix,
+        Osc3Wave,
+        Osc3Detune,
+        Osc3Mix,
+
+        // Unison
+        UnisonVoices,
+        UnisonDetune,
+
+        // Filter
+        FilterType,
+        FilterCutoff,
+        FilterResonance,
+        FilterDrive,
+
+        // Amp Envelope
+        AmpAttack,
+        AmpDecay,
+        AmpSustain,
+        AmpRelease,
+
+        // Mod Envelope
+        ModAttack,
+        ModDecay,
+        ModSustain,
+        ModRelease,
+
+        // LFO 1
+        LFO1Rate,
+        LFO1Amount,
+        LFO1Target,
+
+        // LFO 2
+        LFO2Rate,
+        LFO2Amount,
+        LFO2Target,
+
+        // Global
+        GlideTime,
+        MonoMode,
+        MasterGain,
+
+        // CPU Optimization
+        MaxVoices,
+        QualitySetting,
+
+        NumParameters
+    };
+
+    //==========================================================================
+    ZenithPolySynthProcessor();
+    ~ZenithPolySynthProcessor() override = default;
+
+    //==========================================================================
+    // AudioProcessor interface
+    //==========================================================================
+    const juce::String getName() const override { return "Zenith Poly Synth"; }
+    bool acceptsMidi() const override { return true; }
+    bool producesMidi() const override { return false; }
+    double getTailLengthSeconds() const override { return 2.0; }
+
+    int getNumPrograms() override { return 1; }
+    int getCurrentProgram() override { return 0; }
+    void setCurrentProgram(int) override {}
+    const juce::String getProgramName(int) override { return "Default"; }
+    void changeProgramName(int, const juce::String&) override {}
+
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void releaseResources() override;
+    void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
+
+    juce::AudioProcessorEditor* createEditor() override { return nullptr; }
+    bool hasEditor() const override { return false; }
+
+    void getStateInformation(juce::MemoryBlock& destData) override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
+
+protected:
+    //==========================================================================
+    // Custom voice stealing - override to steal quietest voice
+    //==========================================================================
+    juce::SynthesiserVoice* findFreeVoice(juce::SynthesiserSound* soundToPlay,
+                                           int midiChannel,
+                                           int midiNoteNumber,
+                                           bool stealIfNoneAvailable) override;
+
+private:
+    //==========================================================================
+    // Update voices with current parameters (called from audio thread)
+    //==========================================================================
+    void updateVoiceParameters();
+    void updateVoiceCount();
+
+    juce::SmoothedValue<float> masterGainSmoothed_;
+    int currentMaxVoices_ = 16;
+
+#if JUCE_DEBUG
+    //==========================================================================
+    // Debug profiling helpers
+    //==========================================================================
+    int maxActiveVoices_ = 0;
+    double maxBlockProcessingTime_ = 0.0;
+    int blockCount_ = 0;
+
+    void logCPUStats();
+#endif
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthProcessor)
+};
+
+//==============================================================================
+/**
+    Zenith Poly Synth instrument wrapper
+
+    Exposes the synthesizer with comprehensive metadata and presets.
+*/
+class ZenithPolySynth : public InstrumentBase
+{
+public:
+    ZenithPolySynth();
+    ~ZenithPolySynth() override = default;
+
+    /**
+     * @brief Create metadata for this instrument
+     */
+    static InstrumentMetadata createMetadata();
+
+private:
+    void registerPresets();
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynth)
+};
+
+} // namespace zenith
