@@ -373,6 +373,34 @@ private:
      */
     juce::var cmd_setInstrumentParameters(const juce::var& params);
 
+    /**
+     * @brief Set instrument on a track
+     * Params: { "trackId": "track_0", "instrumentId": "zenith_poly_synth" }
+     * Returns: { "success": true }
+     */
+    juce::var cmd_setInstrumentOnTrack(const juce::var& params);
+
+    /**
+     * @brief Set a single instrument parameter
+     * Params: { "trackId": "track_0", "paramId": "filter_cutoff", "value": 0.8 }
+     * Returns: { "success": true, "value": 0.8 }
+     */
+    juce::var cmd_setInstrumentParam(const juce::var& params);
+
+    /**
+     * @brief Get a single instrument parameter value
+     * Params: { "trackId": "track_0", "paramId": "filter_cutoff" }
+     * Returns: { "paramId": "filter_cutoff", "value": 0.65, "min": 0.0, "max": 1.0 }
+     */
+    juce::var cmd_getInstrumentParam(const juce::var& params);
+
+    /**
+     * @brief Randomize instrument parameters with safe ranges
+     * Params: { "trackId": "track_0", "intensity": 0.5 } (intensity optional, 0.0-1.0)
+     * Returns: { "success": true, "randomized": ["filter_cutoff", "filter_resonance", ...] }
+     */
+    juce::var cmd_randomizeInstrumentParams(const juce::var& params);
+
     //==========================================================================
     // Helper methods
     //==========================================================================

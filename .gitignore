@@ -5,3 +5,8 @@ vexel-daw/dist-electron/
 VexelDAW-Native/build/
 zenith-core/build/
 build/
+
+# Compiled binaries
+GeneratePolySynthPresetsStandalone
+*.o
+*.exe

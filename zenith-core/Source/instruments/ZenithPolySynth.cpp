@@ -292,51 +292,88 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
     if (!isVoiceActive())
         return;
 
+    // Prevent denormals from killing CPU
+    juce::ScopedNoDenormals noDenormals;
+
+    // Compute modulation matrix once per buffer (RT-safe)
+    computeModulation();
+
+    // Apply quality preset to unison voices
+    int effectiveUnisonVoices = unisonVoices_;
+    switch (qualityPreset_)
+    {
+        case QualityPreset::Low:
+            effectiveUnisonVoices = juce::jmin(effectiveUnisonVoices, 3);
+            break;
+        case QualityPreset::Medium:
+            effectiveUnisonVoices = juce::jmin(effectiveUnisonVoices, 5);
+            break;
+        case QualityPreset::High:
+            // No limit
+            break;
+        default:
+            break;
+    }
+
     for (int sample = 0; sample < numSamples; ++sample)
     {
         // Update glide/portamento
         updateFrequency();
 
+        // Apply pitch modulation from modulation matrix
+        float pitchMod1 = modulationState_.get(ModulationDestination::Osc1Pitch) * 12.0f; // +/- 12 semitones
+        float pitchMod2 = modulationState_.get(ModulationDestination::Osc2Pitch) * 12.0f;
+        float pitchMod3 = modulationState_.get(ModulationDestination::Osc3Pitch) * 12.0f;
+
+        float osc1Freq = currentFrequency_ * std::pow(2.0f, pitchMod1 / 12.0f);
+        float osc2Freq = currentFrequency_ * std::pow(2.0f, pitchMod2 / 12.0f);
+        float osc3Freq = currentFrequency_ * std::pow(2.0f, pitchMod3 / 12.0f);
+
+        // Apply mix modulation from modulation matrix
+        float osc1MixMod = juce::jlimit(0.0f, 1.0f, osc1Mix_ + modulationState_.get(ModulationDestination::Osc1Mix));
+        float osc2MixMod = juce::jlimit(0.0f, 1.0f, osc2Mix_ + modulationState_.get(ModulationDestination::Osc2Mix));
+        float osc3MixMod = juce::jlimit(0.0f, 1.0f, osc3Mix_ + modulationState_.get(ModulationDestination::Osc3Mix));
+
         // Generate oscillator output
         float oscOutput = 0.0f;
 
         // Oscillator 1
-        if (osc1Mix_ > 0.0f)
+        if (osc1MixMod > 0.0f)
         {
-            oscOutput += osc1_.getNextSample(currentFrequency_) * osc1Mix_;
+            oscOutput += osc1_.getNextSample(osc1Freq) * osc1MixMod;
         }
 
         // Oscillator 2
-        if (osc2Mix_ > 0.0f)
+        if (osc2MixMod > 0.0f)
         {
-            oscOutput += osc2_.getNextSample(currentFrequency_) * osc2Mix_;
+            oscOutput += osc2_.getNextSample(osc2Freq) * osc2MixMod;
         }
 
         // Oscillator 3
-        if (osc3Mix_ > 0.0f)
+        if (osc3MixMod > 0.0f)
         {
-            oscOutput += osc3_.getNextSample(currentFrequency_) * osc3Mix_;
+            oscOutput += osc3_.getNextSample(osc3Freq) * osc3MixMod;
         }
 
-        // Unison (supersaw) voices
-        if (unisonVoices_ > 1)
+        // Unison (supersaw) voices - respect quality setting
+        if (effectiveUnisonVoices > 1)
         {
             float unisonOutput = 0.0f;
-            for (int v = 0; v < unisonVoices_; ++v)
+            for (int v = 0; v < effectiveUnisonVoices; ++v)
             {
-                float detune = (v - unisonVoices_ / 2.0f) * unisonDetune_;
+                float detune = (v - effectiveUnisonVoices / 2.0f) * unisonDetune_;
                 unisonOscillators_[v].setDetune(detune);
                 unisonOutput += unisonOscillators_[v].getNextSample(currentFrequency_);
             }
-            oscOutput += unisonOutput / static_cast<float>(unisonVoices_) * 0.5f;
+            oscOutput += unisonOutput / static_cast<float>(effectiveUnisonVoices) * 0.5f;
         }
 
         // Normalize oscillator mix
-        float totalMix = osc1Mix_ + osc2Mix_ + osc3Mix_;
+        float totalMix = osc1MixMod + osc2MixMod + osc3MixMod;
         if (totalMix > 0.0f)
             oscOutput /= totalMix;
 
-        // Apply LFO modulations
+        // Apply LFO modulations (legacy support)
         float lfo1Value = lfo1_.getNextValue(sampleRate_);
         float lfo2Value = lfo2_.getNextValue(sampleRate_);
 
@@ -344,25 +381,54 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         float modEnvValue = modEnvelope_.getNextSample();
         float filterCutoffMod = filterCutoff_ + (modEnvValue * 5000.0f); // Add up to 5kHz
 
-        // Apply LFO to filter if targeted
+        // Apply LFO to filter if targeted (legacy)
         if (lfo1_.target == LFOTarget::FilterCutoff)
             filterCutoffMod += lfo1Value * 2000.0f;
         if (lfo2_.target == LFOTarget::FilterCutoff)
             filterCutoffMod += lfo2Value * 2000.0f;
 
+        // Apply filter cutoff modulation from modulation matrix
+        filterCutoffMod += modulationState_.get(ModulationDestination::FilterCutoff) * 10000.0f; // +/- 10kHz
+
         filter_.setCutoff(filterCutoffMod);
+
+        // Apply filter resonance modulation from modulation matrix
+        float baseResonance = 0.3f; // Default resonance
+        float resonanceMod = juce::jlimit(0.0f, 1.0f,
+                                          baseResonance + modulationState_.get(ModulationDestination::FilterResonance));
+        filter_.setResonance(resonanceMod);
 
         // Filter the oscillator output
         float filteredOutput = filter_.processSample(oscOutput);
 
         // Apply amplitude envelope and velocity
         float ampEnvValue = ampEnvelope_.getNextSample();
-        float finalOutput = filteredOutput * ampEnvValue * velocity_;
 
-        // Mix into output buffer (stereo)
-        for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel)
+        // Apply volume modulation from modulation matrix
+        float volumeMod = juce::jlimit(0.0f, 2.0f, 1.0f + modulationState_.get(ModulationDestination::Volume));
+
+        float finalOutput = filteredOutput * ampEnvValue * velocity_ * volumeMod;
+
+        // Track current amplitude for voice stealing (RMS approximation)
+        currentAmplitude_ = 0.9f * currentAmplitude_ + 0.1f * std::abs(finalOutput);
+
+        // Apply pan modulation from modulation matrix
+        float panValue = juce::jlimit(-1.0f, 1.0f, pan_ + modulationState_.get(ModulationDestination::Pan));
+
+        // Mix into output buffer (stereo with pan)
+        if (outputBuffer.getNumChannels() >= 2)
         {
-            outputBuffer.addSample(channel, startSample + sample, finalOutput);
+            // Simple constant-power panning
+            float leftGain = std::cos((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+            float rightGain = std::sin((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+
+            outputBuffer.addSample(0, startSample + sample, finalOutput * leftGain);
+            outputBuffer.addSample(1, startSample + sample, finalOutput * rightGain);
+        }
+        else
+        {
+            // Mono output
+            outputBuffer.addSample(0, startSample + sample, finalOutput);
         }
 
         // Check if voice should be stopped
@@ -443,6 +509,99 @@ float ZenithPolySynthVoice::applyLFOs()
     // TODO: Apply LFOs to various targets based on routing
     // This will be expanded when tempo sync is added via ProjectState
     return 0.0f;
+}
+
+//==============================================================================
+// Modulation Matrix Implementation
+//==============================================================================
+
+void ZenithPolySynthVoice::setModulationSlot(int slotIndex, ModulationSource source,
+                                              ModulationDestination destination, float amount)
+{
+    if (slotIndex >= 0 && slotIndex < kNumModSlots)
+    {
+        modulationSlots_[slotIndex].source = source;
+        modulationSlots_[slotIndex].destination = destination;
+        modulationSlots_[slotIndex].amount = juce::jlimit(-1.0f, 1.0f, amount);
+    }
+}
+
+void ZenithPolySynthVoice::controllerMoved(int controllerNumber, int newControllerValue)
+{
+    // Convert MIDI 0-127 to 0-1
+    float normalizedValue = newControllerValue / 127.0f;
+
+    // Handle mod wheel (CC#1)
+    if (controllerNumber == 1)
+    {
+        setModWheel(normalizedValue);
+    }
+}
+
+void ZenithPolySynthVoice::channelPressureChanged(int newChannelPressureValue)
+{
+    // Convert MIDI 0-127 to 0-1
+    setAftertouch(newChannelPressureValue / 127.0f);
+}
+
+float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) const
+{
+    switch (source)
+    {
+        case ModulationSource::None:
+            return 0.0f;
+
+        case ModulationSource::LFO1:
+            // LFO returns -1 to +1 (sine wave)
+            return std::sin(lfo1_.phase * juce::MathConstants<float>::twoPi);
+
+        case ModulationSource::LFO2:
+            // LFO returns -1 to +1 (sine wave)
+            return std::sin(lfo2_.phase * juce::MathConstants<float>::twoPi);
+
+        case ModulationSource::Env1:
+            // Amp envelope is 0 to 1
+            return ampEnvelope_.isActive() ? ampEnvelope_.getNextSample() : 0.0f;
+
+        case ModulationSource::Env2:
+            // Mod envelope is 0 to 1
+            return modEnvelope_.isActive() ? modEnvelope_.getNextSample() : 0.0f;
+
+        case ModulationSource::Velocity:
+            // Note velocity 0 to 1
+            return velocity_;
+
+        case ModulationSource::ModWheel:
+            // MIDI mod wheel 0 to 1
+            return modWheel_;
+
+        case ModulationSource::Aftertouch:
+            // MIDI aftertouch 0 to 1
+            return aftertouch_;
+
+        default:
+            return 0.0f;
+    }
+}
+
+void ZenithPolySynthVoice::computeModulation()
+{
+    // Reset modulation state
+    modulationState_.reset();
+
+    // Process each modulation slot
+    for (const auto& slot : modulationSlots_)
+    {
+        if (!slot.isActive())
+            continue;
+
+        // Get source value
+        float sourceValue = getModulationSourceValue(slot.source);
+
+        // Apply amount and accumulate to destination
+        float contribution = sourceValue * slot.amount;
+        modulationState_.add(slot.destination, contribution);
+    }
 }
 
 //==============================================================================
@@ -528,6 +687,11 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     addParameter(new juce::AudioParameterBool("mono_mode", "Mono Mode", false));
     addParameter(new juce::AudioParameterFloat("master_gain", "Master Gain",
         juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f), 0.7f));
+
+    // CPU Optimization
+    addParameter(new juce::AudioParameterInt("max_voices", "Max Voices", 4, 32, 16));
+    addParameter(new juce::AudioParameterChoice("quality", "Quality",
+        juce::StringArray{"Low", "Medium", "High"}, 2)); // Default: High
 }
 
 void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
@@ -535,6 +699,9 @@ void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     juce::ignoreUnused(samplesPerBlock);
 
     setCurrentPlaybackSampleRate(sampleRate);
+
+    // Update voice count if parameter changed (safe to allocate here)
+    updateVoiceCount();
 
     // Initialize all voices
     for (int i = 0; i < getNumVoices(); ++i)
@@ -560,8 +727,16 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     buffer.clear();
 
+#if JUCE_DEBUG
+    // Track processing time for profiling
+    auto startTime = juce::Time::getMillisecondCounterHiRes();
+#endif
+
     // Update voice parameters before rendering
     updateVoiceParameters();
+
+    // NOTE: Voice count changes are handled in prepareToPlay, not here,
+    // to maintain RT-safety (no allocations in audio thread)
 
     // Render synthesizer
     juce::Synthesiser::renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
@@ -578,6 +753,31 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             channelData[sample] *= masterGainSmoothed_.getNextValue();
         }
     }
+
+#if JUCE_DEBUG
+    // Track CPU usage
+    auto endTime = juce::Time::getMillisecondCounterHiRes();
+    double blockTime = endTime - startTime;
+    maxBlockProcessingTime_ = juce::jmax(maxBlockProcessingTime_, blockTime);
+
+    // Track active voices
+    int activeVoices = 0;
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        if (getVoice(i)->isVoiceActive())
+            ++activeVoices;
+    }
+    maxActiveVoices_ = juce::jmax(maxActiveVoices_, activeVoices);
+
+    // Log stats every 1000 blocks (~23 seconds at 44.1kHz/512 buffer)
+    if (++blockCount_ >= 1000)
+    {
+        logCPUStats();
+        blockCount_ = 0;
+        maxActiveVoices_ = 0;
+        maxBlockProcessingTime_ = 0.0;
+    }
+#endif
 }
 
 void ZenithPolySynthProcessor::updateVoiceParameters()
@@ -624,6 +824,8 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
     auto glideTime = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[GlideTime])->get();
     auto monoMode = dynamic_cast<juce::AudioParameterBool*>(getParameters()[MonoMode])->get();
 
+    auto quality = static_cast<QualityPreset>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[QualitySetting])->getIndex());
+
     // Update all voices
     for (int i = 0; i < getNumVoices(); ++i)
     {
@@ -663,9 +865,102 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
             // Global
             voice->setGlideTime(glideTime);
             voice->setMonoMode(monoMode);
+
+            // CPU Optimization
+            voice->setQualityPreset(quality);
         }
     }
 }
+
+juce::SynthesiserVoice* ZenithPolySynthProcessor::findFreeVoice(juce::SynthesiserSound* soundToPlay,
+                                                                 int midiChannel,
+                                                                 int midiNoteNumber,
+                                                                 bool stealIfNoneAvailable)
+{
+    // First, try to find a completely free voice
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        auto* voice = getVoice(i);
+        if (voice->canPlaySound(soundToPlay) && !voice->isVoiceActive())
+            return voice;
+    }
+
+    // If no free voice and stealing is not allowed, return nullptr
+    if (!stealIfNoneAvailable)
+        return nullptr;
+
+    // Custom voice stealing: steal the quietest voice
+    // This is more musical than LRU (least recently used)
+    ZenithPolySynthVoice* quietestVoice = nullptr;
+    float lowestAmplitude = std::numeric_limits<float>::max();
+
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
+        {
+            if (voice->canPlaySound(soundToPlay) && voice->isVoiceActive())
+            {
+                float amplitude = voice->getCurrentAmplitude();
+                if (amplitude < lowestAmplitude)
+                {
+                    lowestAmplitude = amplitude;
+                    quietestVoice = voice;
+                }
+            }
+        }
+    }
+
+    return quietestVoice;
+}
+
+void ZenithPolySynthProcessor::updateVoiceCount()
+{
+    // Get max voices from parameter
+    int newMaxVoices = dynamic_cast<juce::AudioParameterInt*>(getParameters()[MaxVoices])->get();
+
+    // Only update if changed (avoid repeated allocations)
+    if (newMaxVoices != currentMaxVoices_)
+    {
+        // Clear existing voices
+        clearVoices();
+
+        // Add new voices
+        for (int i = 0; i < newMaxVoices; ++i)
+        {
+            addVoice(new ZenithPolySynthVoice());
+        }
+
+        // Re-initialize voices with current sample rate
+        for (int i = 0; i < getNumVoices(); ++i)
+        {
+            if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
+            {
+                voice->setSampleRate(getSampleRate());
+            }
+        }
+
+        currentMaxVoices_ = newMaxVoices;
+
+#if JUCE_DEBUG
+        DBG("ZenithPolySynth: Voice count updated to " << newMaxVoices);
+#endif
+    }
+}
+
+#if JUCE_DEBUG
+void ZenithPolySynthProcessor::logCPUStats()
+{
+    DBG("=== ZenithPolySynth CPU Stats ===");
+    DBG("Max Active Voices: " << maxActiveVoices_ << " / " << currentMaxVoices_);
+    DBG("Max Block Time: " << juce::String(maxBlockProcessingTime_, 3) << " ms");
+
+    // Calculate estimated CPU usage (assuming 512 samples at 44.1kHz = ~11.6ms per block)
+    double blockDuration = 512.0 / 44100.0 * 1000.0; // ms
+    double cpuPercent = (maxBlockProcessingTime_ / blockDuration) * 100.0;
+    DBG("Estimated CPU: " << juce::String(cpuPercent, 1) << "%");
+    DBG("================================");
+}
+#endif
 
 void ZenithPolySynthProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
@@ -750,6 +1045,9 @@ ZenithPolySynth::ZenithPolySynth()
     mapParameter("glide_time", ZenithPolySynthProcessor::GlideTime);
     mapParameter("mono_mode", ZenithPolySynthProcessor::MonoMode);
     mapParameter("master_gain", ZenithPolySynthProcessor::MasterGain);
+
+    mapParameter("max_voices", ZenithPolySynthProcessor::MaxVoices);
+    mapParameter("quality", ZenithPolySynthProcessor::QualitySetting);
 
     // Register factory presets
     registerPresets();
@@ -836,63 +1134,131 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
     addParam("mono_mode", "Mono Mode", "Global", ParameterMetadata::Type::Bool, 0.0f, 0.0f, 1.0f, "");
     addParam("master_gain", "Master Gain", "Global", ParameterMetadata::Type::Float, 0.7f, 0.0f, 1.0f, "dB");
 
-    // Add macros for AI-friendly control
+    // CPU Optimization
+    addParam("max_voices", "Max Voices", "Performance", ParameterMetadata::Type::Float, 0.5f, 0.0f, 1.0f, "voices");
+    addParam("quality", "Quality", "Performance", ParameterMetadata::Type::Choice, 0.67f, 0.0f, 1.0f, "",
+             juce::StringArray{"Low", "Medium", "High"});
+
+    //==========================================================================
+    // AI-FRIENDLY MACRO CONTROLS
+    //==========================================================================
+    //
+    // Macros provide high-level semantic controls that are easy for AI to reason about.
+    // Instead of tweaking dozens of low-level parameters, AI can use macros like:
+    //   - "Increase brightness" -> adjusts filter cutoff and resonance
+    //   - "Add more movement" -> adjusts LFO amounts
+    //   - "Make it thicker" -> adjusts unison and oscillator mix
+    //
+    // Each macro affects multiple parameters with pre-defined relationships.
+    // This makes it much easier for AI to create expressive, musical results.
+    //
+
+    // Macro 1: Brightness
     {
         MacroMetadata macro;
         macro.id = "macro_brightness";
         macro.name = "Brightness";
-        macro.description = "Controls overall tonal brightness (filter cutoff + resonance)";
+        macro.description = "Controls overall tonal brightness. Increases filter cutoff and adds subtle resonance for more sparkle.";
 
-        MacroTarget target1;
-        target1.parameterId = "filter_cutoff";
-        target1.amount = 0.8f;
-        macro.targets.push_back(target1);
-
-        MacroTarget target2;
-        target2.parameterId = "filter_resonance";
-        target2.amount = 0.5f;
-        macro.targets.push_back(target2);
-
+        macro.targets.push_back({"filter_cutoff", 0.8f});
+        macro.targets.push_back({"filter_resonance", 0.4f});
         metadata.macros.push_back(macro);
     }
 
+    // Macro 2: Thickness
     {
         MacroMetadata macro;
         macro.id = "macro_thickness";
         macro.name = "Thickness";
-        macro.description = "Controls sound thickness (unison + oscillator mix)";
+        macro.description = "Controls sound thickness and richness. Adds unison voices and increases oscillator layering for a fuller sound.";
 
-        MacroTarget target1;
-        target1.parameterId = "unison_voices";
-        target1.amount = 0.7f;
-        macro.targets.push_back(target1);
-
-        MacroTarget target2;
-        target2.parameterId = "osc2_mix";
-        target2.amount = 0.6f;
-        macro.targets.push_back(target2);
-
+        macro.targets.push_back({"unison_voices", 0.7f});
+        macro.targets.push_back({"osc2_mix", 0.6f});
+        macro.targets.push_back({"unison_detune", 0.5f});
         metadata.macros.push_back(macro);
     }
 
+    // Macro 3: Movement
     {
         MacroMetadata macro;
         macro.id = "macro_movement";
         macro.name = "Movement";
-        macro.description = "Controls modulation movement (LFO amounts)";
+        macro.description = "Controls modulation movement and motion. Increases LFO amounts for more dynamic, evolving sounds.";
 
-        MacroTarget target1;
-        target1.parameterId = "lfo1_amount";
-        target1.amount = 0.8f;
-        macro.targets.push_back(target1);
-
-        MacroTarget target2;
-        target2.parameterId = "lfo2_amount";
-        target2.amount = 0.6f;
-        macro.targets.push_back(target2);
-
+        macro.targets.push_back({"lfo1_amount", 0.8f});
+        macro.targets.push_back({"lfo2_amount", 0.6f});
         metadata.macros.push_back(macro);
     }
+
+    // Macro 4: Attack
+    {
+        MacroMetadata macro;
+        macro.id = "macro_attack";
+        macro.name = "Attack";
+        macro.description = "Controls how quickly the sound starts. Lower values create slow, gradual fades; higher values create instant, punchy attacks.";
+
+        macro.targets.push_back({"amp_attack", -0.9f});  // Negative: macro up = faster attack
+        macro.targets.push_back({"mod_attack", -0.7f});
+        metadata.macros.push_back(macro);
+    }
+
+    // Macro 5: Release
+    {
+        MacroMetadata macro;
+        macro.id = "macro_release";
+        macro.name = "Release";
+        macro.description = "Controls how long the sound takes to fade after note release. Higher values create longer, more sustaining tails.";
+
+        macro.targets.push_back({"amp_release", 0.8f});
+        macro.targets.push_back({"mod_release", 0.6f});
+        metadata.macros.push_back(macro);
+    }
+
+    // Macro 6: Warmth
+    {
+        MacroMetadata macro;
+        macro.id = "macro_warmth";
+        macro.name = "Warmth";
+        macro.description = "Controls tonal warmth and saturation. Reduces filter cutoff and adds subtle drive for analog-style warmth.";
+
+        macro.targets.push_back({"filter_cutoff", -0.6f});  // Negative: macro up = darker sound
+        macro.targets.push_back({"filter_drive", 0.5f});
+        metadata.macros.push_back(macro);
+    }
+
+    // Macro 7: Detune
+    {
+        MacroMetadata macro;
+        macro.id = "macro_detune";
+        macro.name = "Detune";
+        macro.description = "Controls oscillator detuning amount. Adds chorus-like effects and width by detuning oscillators against each other.";
+
+        macro.targets.push_back({"osc2_detune", 0.7f});
+        macro.targets.push_back({"osc3_detune", -0.7f});  // Negative: detune in opposite direction
+        macro.targets.push_back({"unison_detune", 0.6f});
+        metadata.macros.push_back(macro);
+    }
+
+    // Macro 8: Depth
+    {
+        MacroMetadata macro;
+        macro.id = "macro_depth";
+        macro.name = "Depth";
+        macro.description = "Controls modulation envelope depth and sustain. Increases how much the modulation envelope affects the sound over time.";
+
+        macro.targets.push_back({"mod_sustain", 0.7f});
+        macro.targets.push_back({"mod_decay", 0.6f});
+        metadata.macros.push_back(macro);
+    }
+
+    // Default preset categories for ZenithPolySynth
+    metadata.defaultPresetCategories.add("Bass");
+    metadata.defaultPresetCategories.add("Lead");
+    metadata.defaultPresetCategories.add("Pad");
+    metadata.defaultPresetCategories.add("Keys");
+    metadata.defaultPresetCategories.add("Pluck");
+    metadata.defaultPresetCategories.add("FX");
+    metadata.defaultPresetCategories.add("808");
 
     return metadata;
 }

@@ -6,6 +6,7 @@
 #include "../include/MainWindow.h"
 #include "ArrangerComponent.h"
 #include "WingmanPanel.h"
+#include "InstrumentBrowserPanel.h"
 #include "CommandAPI.h"
 #include "AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
@@ -80,6 +81,10 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     // Phase 7: Create Wingman AI console panel
     wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
     addAndMakeVisible(wingmanPanel.get());
+
+    // Create Instrument Browser Panel
+    instrumentBrowserPanel = std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
+    addAndMakeVisible(instrumentBrowserPanel.get());
 
     // Integration: Create ArrangerView
     arrangerView = std::make_unique<ArrangerView>(projectState);
@@ -201,11 +206,18 @@ void MainComponent::resized()
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
 
-    // Phase 5: Layout Wingman panel on the right (300px width)
+    // Phase 5: Layout Wingman panel on the right (400px width)
     if (wingmanPanel != nullptr)
     {
         auto wingmanBounds = bounds.removeFromRight(400);
         wingmanPanel->setBounds(wingmanBounds);
+    }
+
+    // Layout Instrument Browser panel on the left (300px width)
+    if (instrumentBrowserPanel != nullptr)
+    {
+        auto browserBounds = bounds.removeFromLeft(300);
+        instrumentBrowserPanel->setBounds(browserBounds);
     }
 
     // Integration: ArrangerView takes remaining space (combines Phase 4 arranger + automation)
