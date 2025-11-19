@@ -13,7 +13,7 @@
 #include <unordered_map>
 #include "MidiEvent.h"
 
-namespace vexel {
+namespace zenith {
 
 /**
  * MIDI routing destination
@@ -148,4 +148,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MidiRouter)
 };
 
-} // namespace vexel
+} // namespace zenith

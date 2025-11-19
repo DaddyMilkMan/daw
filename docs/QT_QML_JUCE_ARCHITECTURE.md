@@ -280,7 +280,7 @@ Canvas {
 
 ```cmake
 cmake_minimum_required(VERSION 3.21)
-project(VexelDAW VERSION 1.0.0 LANGUAGES CXX)
+project(ZenithDAW VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -326,7 +326,7 @@ add_subdirectory(src/qt-qml)
 
 ### Comprehensive Driver Support
 
-The Vexel DAW supports **ALL major Windows audio APIs** through JUCE, providing maximum compatibility and flexibility:
+The Zenith DAW supports **ALL major Windows audio APIs** through JUCE, providing maximum compatibility and flexibility:
 
 | API | Latency | Status | Use Case |
 |-----|---------|--------|----------|
@@ -405,8 +405,8 @@ cmake --build build --target juce-engine
 ### 3. Integration Testing
 ```bash
 # Build complete application
-cmake --build build --target VexelDAW
-./build/VexelDAW
+cmake --build build --target ZenithDAW
+./build/ZenithDAW
 ```
 
 ---

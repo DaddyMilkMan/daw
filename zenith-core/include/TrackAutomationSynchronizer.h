@@ -1,12 +1,14 @@
 /**
  * @file TrackAutomationSynchronizer.h
- * @brief Synchronizes automation data from ProjectState to Track atomics
+ * @brief RT-safe automation synchronization between ProjectState and Engine
  *
  * Phase 13: Track Automation MVP
  *
  * This class bridges the message-thread ProjectState (ValueTree) with the
  * audio-thread Track objects (atomics). It:
+ * - Runs on a Timer (60Hz on message thread)
  * - Listens to ProjectState automation changes
+ * - Reads ValueTree automation data (message thread only)
  * - Samples automation curves at the current playback position
  * - Updates Track volume/pan/mute atomics in an RT-safe manner
  *
@@ -14,6 +16,7 @@
  * - Listens to ValueTree on MESSAGE THREAD
  * - Writes to atomics from MESSAGE THREAD (via timer)
  * - Audio thread reads atomics (lock-free, safe)
+ * - Audio thread only reads atomics - no locks, no allocations
  */
 
 #pragma once
@@ -23,11 +26,20 @@
 #include "Engine.h"
 #include <map>
 #include <memory>
+#include <vector>
+
+namespace zenith {
+    class Track;
+}
 
 //==============================================================================
 /**
  * @class TrackAutomationSynchronizer
- * @brief Syncs automation from ProjectState to Engine tracks
+ * @brief Samples automation curves and updates track atomics (RT-safe)
+ *
+ * This class bridges the gap between:
+ * - ProjectState (ValueTree, message thread only)
+ * - Track atomics (read by audio thread, written by message thread)
  *
  * This class runs a timer on the message thread that:
  * 1. Gets the current playback position from Engine (in samples)
@@ -35,7 +47,10 @@
  * 3. Samples automation envelopes at that beat position
  * 4. Writes sampled values to Track atomics
  *
- * The audio thread then reads these atomics without any locking.
+ * Thread safety:
+ * - All methods run on MESSAGE THREAD only
+ * - Updates std::atomic values in Track objects
+ * - Audio thread reads those atomics lock-free
  */
 class TrackAutomationSynchronizer : public juce::Timer,
                                      private juce::ValueTree::Listener
@@ -91,6 +106,7 @@ private:
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
     void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
     void valueTreeParentChanged(juce::ValueTree& tree) override;
+
 
     //==========================================================================
     // Helper Methods

@@ -7,7 +7,7 @@
 
 struct lua_State;
 
-namespace vexel {
+namespace zenith {
 
 class AudioEngine;
 
@@ -17,4 +17,4 @@ class AudioEngine;
  */
 void registerAudioEngine(lua_State* L, AudioEngine* engine);
 
-} // namespace vexel
+} // namespace zenith

@@ -2,8 +2,8 @@
   ==============================================================================
 
     Clip.cpp
-    Ported from: VexelDAW-Native/Source/Audio/Clip.cpp (2025-11-11)
-    Author:  Vexel DAW → Zenith DAW
+    Ported from: ZenithDAW-Native/Source/Audio/Clip.cpp (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
 
     Audio/MIDI clip implementation
 
@@ -16,6 +16,7 @@
 
 #include "Track.h"
 #include "Clip.h"
+#include "AudioFilePool.h"
 
 namespace zenith {
 
@@ -95,6 +96,16 @@ void Track::Clip::setPlaying(bool shouldPlay)
     playing.store(shouldPlay);
 }
 
+// Phase 1.3: Check if active at given playhead position
+bool Track::Clip::isActiveAt(int64_t playheadSamples) const
+{
+    const int64_t start = startPosition.load();
+    const int64_t end = start + clipLength.load();
+
+    return playheadSamples >= start && playheadSamples < end;
+}
+
+// Legacy: Check if active at stored transport position
 bool Track::Clip::isActive() const
 {
     const int64_t pos = transportPosition.load();
@@ -105,13 +116,46 @@ bool Track::Clip::isActive() const
 }
 
 //==============================================================================
+// Phase 1.2: Set audio file using AudioFilePool (preferred method)
+void Track::Clip::setAudioFileFromPool(const juce::File& file, AudioFilePool& pool)
+{
+    const juce::ScopedLock sl(audioLock);
+
+    audioFile = file;
+
+    // Load file through pool (message thread, does I/O)
+    juce::String error;
+    auto handle = pool.loadFile(file, error);
+
+    if (handle)
+    {
+        // Store handle (shared_ptr is RT-safe for read)
+        audioFileHandle_ = handle;
+
+        // Set clip length to match audio file
+        clipLength.store(handle->lengthInSamples);
+
+        DBG("Clip: Loaded " + file.getFileName() +
+            " (" + juce::String(handle->lengthInSamples) + " samples)");
+    }
+    else
+    {
+        DBG("Clip: Failed to load " + file.getFileName() + ": " + error);
+        audioFileHandle_ = nullptr;
+    }
+
+    // Clear legacy audioSource (unused)
+    audioSource.reset();
+}
+
+// Legacy method (kept for backward compatibility, but not recommended)
 void Track::Clip::setAudioFile(const juce::File& file)
 {
     const juce::ScopedLock sl(audioLock);
 
     audioFile = file;
 
-    // Load the audio file
+    // Load the audio file (legacy path - loads directly without pool)
     juce::AudioFormatManager formatManager;
     formatManager.registerBasicFormats();
 
@@ -164,6 +208,105 @@ void Track::Clip::setMidiSequence(const juce::MidiMessageSequence& sequence)
         const double lastEventTime = midiSequence.getEndTime();
         const int64_t lengthInSamples = static_cast<int64_t>(lastEventTime * currentSampleRate);
         clipLength.store(lengthInSamples);
+    }
+}
+
+void Track::Clip::buildMidiSequenceFromNotes(const juce::Array<MidiNoteSpec>& notes,
+                                              double clipStartBeats,
+                                              double tempo)
+{
+    // This method must be called from the message thread only
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Create a new MIDI sequence
+    juce::MidiMessageSequence newSequence;
+
+    // Convert tempo to seconds per beat
+    const double secondsPerBeat = 60.0 / tempo;
+
+    // Build note-on and note-off events for each note
+    for (const auto& note : notes)
+    {
+        // Skip muted notes
+        if (note.muted)
+            continue;
+
+        // Convert beat times to seconds (relative to clip start)
+        const double noteStartSeconds = note.startBeats * secondsPerBeat;
+        const double noteEndSeconds = (note.startBeats + note.lengthBeats) * secondsPerBeat;
+
+        // Validate pitch and velocity
+        const int pitch = juce::jlimit(0, 127, note.pitch);
+        const int velocity = juce::jlimit(0, 127, note.velocity);
+
+        // Create note-on message
+        juce::MidiMessage noteOn = juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity));
+        noteOn.setTimeStamp(noteStartSeconds);
+        newSequence.addEvent(noteOn);
+
+        // Create note-off message
+        juce::MidiMessage noteOff = juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
+        noteOff.setTimeStamp(noteEndSeconds);
+        newSequence.addEvent(noteOff);
+    }
+
+    // Sort events by timestamp
+    newSequence.updateMatchedPairs();
+
+    // Replace the current sequence (thread-safe via lock)
+    {
+        const juce::ScopedLock sl(midiLock);
+        midiSequence = newSequence;
+
+        // Update clip length based on the last MIDI event
+        if (midiSequence.getNumEvents() > 0)
+        {
+            const double lastEventTime = midiSequence.getEndTime();
+            const int64_t lengthInSamples = static_cast<int64_t>(lastEventTime * currentSampleRate);
+            clipLength.store(lengthInSamples);
+        }
+    }
+
+    DBG("Clip: Rebuilt MIDI sequence with " + juce::String(notes.size()) + " notes");
+}
+
+void Track::Clip::getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples)
+{
+    if (clipType != Type::MIDI)
+        return;
+
+    if (!playing.load() || midiSequence.getNumEvents() == 0)
+        return;
+
+    const juce::ScopedLock sl(midiLock);
+
+    // Calculate time range for this block
+    const int64_t currentPos = transportPosition.load();
+    const int64_t clipOffsetSamples = clipOffset.load();
+
+    // Position within the clip's MIDI sequence (accounting for offset)
+    const int64_t posInClip = currentPos - clipOffsetSamples;
+
+    if (posInClip < 0)
+        return; // Clip hasn't started yet
+
+    const double startTime = static_cast<double>(posInClip) / currentSampleRate;
+    const double endTime = static_cast<double>(posInClip + numSamples) / currentSampleRate;
+
+    // Find and add all MIDI events in this time range
+    for (int i = 0; i < midiSequence.getNumEvents(); ++i)
+    {
+        auto* event = midiSequence.getEventPointer(i);
+        const double eventTime = event->message.getTimeStamp();
+
+        if (eventTime >= startTime && eventTime < endTime)
+        {
+            // Calculate sample offset within this block
+            const int sampleOffset = static_cast<int>((eventTime - startTime) * currentSampleRate);
+
+            // Add the MIDI message to the buffer
+            midiBuffer.addEvent(event->message, sampleOffset);
+        }
     }
 }
 
@@ -273,14 +416,35 @@ void Track::Clip::loadState(const juce::ValueTree& state)
 }
 
 //==============================================================================
-void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill)
+// Phase 1.3: Process audio clip with explicit playhead position
+void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
 {
-    const juce::ScopedLock sl(audioLock);
+    // Phase 1.2: Use AudioFilePool handle if available (RT-safe)
+    // Otherwise fall back to legacy audioBuffer
 
-    if (audioBuffer.getNumSamples() == 0)
+    // Get audio source buffer (RT-safe - no locks needed for shared_ptr read)
+    const juce::AudioBuffer<float>* sourceBuffer = nullptr;
+
+    if (audioFileHandle_)
+    {
+        // Cast type-erased handle back to AudioFileHandle
+        auto handle = std::static_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
+        sourceBuffer = &handle->buffer;
+    }
+    else
+    {
+        // Fall back to legacy buffer (for setAudioBuffer() method)
+        const juce::ScopedLock sl(audioLock);
+        if (audioBuffer.getNumSamples() > 0)
+        {
+            sourceBuffer = &audioBuffer;
+        }
+    }
+
+    if (!sourceBuffer || sourceBuffer->getNumSamples() == 0)
         return;
 
-    const int64_t transportPos = transportPosition.load();
+    const int64_t transportPos = playheadSamples;  // Use passed-in playhead
     const int64_t clipStart = startPosition.load();
     const int64_t clipLen = clipLength.load();
     const int64_t clipOff = clipOffset.load();
@@ -295,15 +459,15 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
     int64_t sourcePosition = positionInClip + clipOff;
 
     // Handle looping
-    if (looping.load() && sourcePosition >= audioBuffer.getNumSamples())
+    if (looping.load() && sourcePosition >= sourceBuffer->getNumSamples())
     {
-        sourcePosition = sourcePosition % audioBuffer.getNumSamples();
+        sourcePosition = sourcePosition % sourceBuffer->getNumSamples();
     }
 
     // Copy audio from buffer
     const int numSamplesToCopy = juce::jmin(
         bufferToFill.numSamples,
-        static_cast<int>(audioBuffer.getNumSamples() - sourcePosition),
+        static_cast<int>(sourceBuffer->getNumSamples() - sourcePosition),
         static_cast<int>(clipLen - positionInClip));
 
     if (numSamplesToCopy <= 0)
@@ -311,12 +475,12 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
 
     const float clipGain = gain.load();
 
-    for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(), audioBuffer.getNumChannels()); ++ch)
+    for (int ch = 0; ch < juce::jmin(bufferToFill.buffer->getNumChannels(), sourceBuffer->getNumChannels()); ++ch)
     {
         bufferToFill.buffer->copyFrom(
             ch,
             bufferToFill.startSample,
-            audioBuffer,
+            *sourceBuffer,
             ch,
             static_cast<int>(sourcePosition),
             numSamplesToCopy);
@@ -334,14 +498,85 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
     }
 }
 
+// Legacy overload: uses internal transportPosition
+void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill)
+{
+    processAudioClip(bufferToFill, transportPosition.load());
+}
+
+// Phase 2A: Process MIDI clip - schedule MIDI events into MidiBuffer
+void Track::Clip::processMidiClip(juce::MidiBuffer& midiBuffer, int64_t playheadSamples, int numSamples)
+{
+    // Get clip parameters (atomic loads)
+    const int64_t clipStart = startPosition.load();
+    const int64_t clipLen = clipLength.load();
+    const int64_t clipOff = clipOffset.load();
+
+    // Calculate position within clip
+    const int64_t positionInClip = playheadSamples - clipStart;
+
+    // Check if playhead is within clip bounds
+    if (positionInClip < 0 || positionInClip >= clipLen)
+        return;
+
+    // Calculate the range of samples we're rendering: [blockStart, blockEnd)
+    const int64_t blockStart = positionInClip;
+    const int64_t blockEnd = positionInClip + numSamples;
+
+    // Lock MIDI sequence for reading (RT-safe if sequence isn't being modified)
+    const juce::ScopedLock sl(midiLock);
+
+    // Iterate through MIDI events and schedule those that fall within this block
+    for (int i = 0; i < midiSequence.getNumEvents(); ++i)
+    {
+        auto* event = midiSequence.getEventPointer(i);
+        if (event == nullptr)
+            continue;
+
+        // Get event time in clip-relative samples
+        // MidiMessageSequence stores times in seconds, convert to samples
+        const double eventTimeSeconds = event->message.getTimeStamp();
+        const int64_t eventSamples = static_cast<int64_t>(eventTimeSeconds * currentSampleRate);
+
+        // Apply clip offset (trimming)
+        const int64_t eventInClip = eventSamples - clipOff;
+
+        // Handle looping
+        int64_t adjustedEventSamples = eventInClip;
+        if (looping.load() && clipLen > 0)
+        {
+            // Wrap event position into clip length
+            if (adjustedEventSamples < 0)
+                adjustedEventSamples = clipLen - ((-adjustedEventSamples) % clipLen);
+            else if (adjustedEventSamples >= clipLen)
+                adjustedEventSamples = adjustedEventSamples % clipLen;
+        }
+
+        // Check if event falls within current block
+        if (adjustedEventSamples >= blockStart && adjustedEventSamples < blockEnd)
+        {
+            // Calculate sample offset within the buffer (0 to numSamples-1)
+            const int sampleOffset = static_cast<int>(adjustedEventSamples - blockStart);
+
+            // Add event to MIDI buffer
+            midiBuffer.addEvent(event->message, sampleOffset);
+        }
+    }
+}
+
+// Legacy overload: uses internal transportPosition (for AudioSourceChannelInfo)
+void Track::Clip::processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
+{
+    juce::ignoreUnused(bufferToFill, playheadSamples);
+    // Legacy path - MIDI clips don't produce audio directly
+    // They need to be processed by instrument plugins
+    bufferToFill.clearActiveBufferRegion();
+}
+
+// Legacy overload: uses internal transportPosition
 void Track::Clip::processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill)
 {
-    // MIDI clips don't produce audio directly
-    // They would need to be processed by an instrument plugin
-    // For now, just clear the buffer
-    bufferToFill.clearActiveBufferRegion();
-
-    // TODO(Phase 2: plugin hosting) - Send MIDI events to parent track's instrument plugins
+    processMidiClip(bufferToFill, transportPosition.load());
 }
 
 float Track::Clip::calculateFadeMultiplier(int64_t positionInClip) const
