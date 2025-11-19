@@ -16,6 +16,8 @@
 #include <JuceHeader.h>
 #include "Engine.h"
 #include "ProjectState.h"
+#include "TrackAutomationSynchronizer.h"
+#include "ArrangementComponent.h"
 #include "MixerComponent.h"
 #include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
@@ -40,6 +42,8 @@ namespace zenith {
  * This component is the main content area and contains:
  * - Transport bar (play/stop/record)
  * - ArrangerComponent (Phase 9 - interactive clip editing)
+ * - Arrangement view (Phase 14 - automation display)
+ * - Mixer panel (Phase 10)
  * - Status displays (CPU, device info, track count)
  * - Wingman AI panel (Phase 7)
  * - Instrument browser panel
@@ -118,6 +122,9 @@ private:
     // C4: Track count label (read-only)
     juce::Label trackCountLabel;
     int lastTrackCount_ = -1;
+
+    // Phase 14: Arrangement view with automation
+    std::unique_ptr<ArrangementComponent> arrangementView;
 
     // Phase 10: Mixer panel
     MixerComponent mixerComponent;
@@ -208,6 +215,9 @@ private:
 
     // Project state
     std::unique_ptr<ProjectState> projectState;
+
+    // Automation synchronizer (Phase 13)
+    std::unique_ptr<TrackAutomationSynchronizer> automationSync;
 
     // Phase 5: Wingman command API
     std::unique_ptr<zenith::CommandAPI> commandAPI;
