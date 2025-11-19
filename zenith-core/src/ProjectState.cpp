@@ -78,6 +78,12 @@ const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
 const juce::Identifier ProjectState::PROP_PITCH("pitch");
 const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
 
+// Phase 8: MIDI note properties
+const juce::Identifier ProjectState::PROP_PITCH("pitch");
+const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
+const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
+const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
+
 //==============================================================================
 ProjectState::ProjectState()
 {
@@ -653,6 +659,195 @@ void ProjectState::redo()
 }
 
 //==============================================================================
+// MIDI Note Management (Phase 8)
+//==============================================================================
+
+juce::Array<ProjectState::MidiNoteSpec> ProjectState::getMidiNotesForClip(const juce::String& clipId) const
+{
+    juce::Array<MidiNoteSpec> notes;
+
+    auto clip = findClip(clipId);
+    if (!clip.isValid())
+        return notes;
+
+    auto midiNotesNode = clip.getChildWithName(ID_MIDI_NOTES);
+    if (!midiNotesNode.isValid())
+        return notes;
+
+    for (auto noteTree : midiNotesNode)
+    {
+        if (!noteTree.hasType(ID_MIDI_NOTE))
+            continue;
+
+        MidiNoteSpec note;
+        note.id = noteTree[PROP_ID].toString();
+        note.pitch = noteTree[PROP_PITCH];
+        note.startBeats = noteTree[PROP_START_BEATS];
+        note.lengthBeats = noteTree[PROP_LENGTH_BEATS];
+        note.velocity = noteTree[PROP_VELOCITY];
+        note.muted = noteTree.getProperty(PROP_MUTE, false);
+
+        notes.add(note);
+    }
+
+    return notes;
+}
+
+juce::String ProjectState::addMidiNote(const juce::String& clipId, const MidiNoteSpec& note, const juce::String& actionName)
+{
+    auto clip = findClip(clipId);
+    if (!clip.isValid())
+    {
+        DBG("ProjectState: Cannot add MIDI note - clip not found: " + clipId);
+        return {};
+    }
+
+    // Get or create MIDI_NOTES container
+    auto midiNotesNode = clip.getChildWithName(ID_MIDI_NOTES);
+    if (!midiNotesNode.isValid())
+    {
+        midiNotesNode = juce::ValueTree(ID_MIDI_NOTES);
+        clip.appendChild(midiNotesNode, &undoManager);
+    }
+
+    // Generate note ID if not provided
+    juce::String noteId = note.id;
+    if (noteId.isEmpty())
+        noteId = generateUniqueId("note");
+
+    // Validate note properties
+    int pitch = juce::jlimit(0, 127, note.pitch);
+    int velocity = juce::jlimit(0, 127, note.velocity);
+    double startBeats = juce::jmax(0.0, note.startBeats);
+    double lengthBeats = juce::jmax(0.0, note.lengthBeats);
+
+    // Create note tree
+    juce::ValueTree noteTree(ID_MIDI_NOTE);
+    noteTree.setProperty(PROP_ID, noteId, nullptr);
+    noteTree.setProperty(PROP_PITCH, pitch, nullptr);
+    noteTree.setProperty(PROP_START_BEATS, startBeats, nullptr);
+    noteTree.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
+    noteTree.setProperty(PROP_VELOCITY, velocity, nullptr);
+    if (note.muted)
+        noteTree.setProperty(PROP_MUTE, true, nullptr);
+
+    // Begin transaction
+    undoManager.beginNewTransaction(actionName);
+    midiNotesNode.appendChild(noteTree, &undoManager);
+
+    DBG("ProjectState: Added MIDI note " + noteId + " to clip " + clipId);
+
+    return noteId;
+}
+
+void ProjectState::removeMidiNote(const juce::String& clipId, const juce::String& noteId, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot remove MIDI note - note not found: " + noteId);
+        return;
+    }
+
+    auto parent = noteTree.getParent();
+    if (parent.isValid())
+    {
+        undoManager.beginNewTransaction(actionName);
+        parent.removeChild(noteTree, &undoManager);
+        DBG("ProjectState: Removed MIDI note " + noteId + " from clip " + clipId);
+    }
+}
+
+void ProjectState::moveMidiNote(const juce::String& clipId, const juce::String& noteId,
+                                double newStartBeats, int newPitch, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot move MIDI note - note not found: " + noteId);
+        return;
+    }
+
+    // Validate new values
+    int pitch = juce::jlimit(0, 127, newPitch);
+    double startBeats = juce::jmax(0.0, newStartBeats);
+
+    undoManager.beginNewTransaction(actionName);
+    noteTree.setProperty(PROP_PITCH, pitch, &undoManager);
+    noteTree.setProperty(PROP_START_BEATS, startBeats, &undoManager);
+
+    DBG("ProjectState: Moved MIDI note " + noteId + " in clip " + clipId);
+}
+
+void ProjectState::quantizeClip(const juce::String& clipId, double gridBeats, const juce::String& actionName)
+{
+    auto notes = getMidiNotesForClip(clipId);
+    if (notes.isEmpty())
+        return;
+
+    if (gridBeats <= 0.0)
+    {
+        DBG("ProjectState: Invalid grid size for quantization: " + juce::String(gridBeats));
+        return;
+    }
+
+    undoManager.beginNewTransaction(actionName);
+
+    for (const auto& note : notes)
+    {
+        // Quantize start time to nearest grid point
+        double quantizedStart = std::round(note.startBeats / gridBeats) * gridBeats;
+        quantizedStart = juce::jmax(0.0, quantizedStart);
+
+        auto noteTree = findMidiNote(clipId, note.id);
+        if (noteTree.isValid())
+        {
+            noteTree.setProperty(PROP_START_BEATS, quantizedStart, &undoManager);
+        }
+    }
+
+    DBG("ProjectState: Quantized clip " + clipId + " to grid " + juce::String(gridBeats) + " beats");
+}
+
+void ProjectState::setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
+                                        int newVelocity, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot set velocity - note not found: " + noteId);
+        return;
+    }
+
+    // Clamp velocity (1-127, never 0)
+    int velocity = juce::jlimit(1, 127, newVelocity);
+
+    undoManager.beginNewTransaction(actionName);
+    noteTree.setProperty(PROP_VELOCITY, velocity, &undoManager);
+
+    DBG("ProjectState: Set velocity for note " + noteId + " to " + juce::String(velocity));
+}
+
+void ProjectState::setMidiNoteLength(const juce::String& clipId, const juce::String& noteId,
+                                      double newLengthBeats, const juce::String& actionName)
+{
+    auto noteTree = findMidiNote(clipId, noteId);
+    if (!noteTree.isValid())
+    {
+        DBG("ProjectState: Cannot set length - note not found: " + noteId);
+        return;
+    }
+
+    // Ensure positive length (minimum 0.01 beats)
+    double lengthBeats = juce::jmax(0.01, newLengthBeats);
+
+    undoManager.beginNewTransaction(actionName);
+    noteTree.setProperty(PROP_LENGTH_BEATS, lengthBeats, &undoManager);
+
+    DBG("ProjectState: Set length for note " + noteId + " to " + juce::String(lengthBeats) + " beats");
+}
+
+//==============================================================================
 // Helper Methods
 //==============================================================================
 
@@ -696,6 +891,73 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     {
         if (track[PROP_ID].toString() == trackId)
             return track;
+    }
+
+    return {};
+}
+
+juce::ValueTree ProjectState::findClip(const juce::String& clipId)
+{
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    if (!tracksNode.isValid())
+        return {};
+
+    // Search through all tracks
+    for (auto track : tracksNode)
+    {
+        auto clipsNode = track.getChildWithName(ID_CLIPS);
+        if (!clipsNode.isValid())
+            continue;
+
+        // Search through clips in this track
+        for (auto clip : clipsNode)
+        {
+            if (clip[PROP_ID].toString() == clipId)
+                return clip;
+        }
+    }
+
+    return {};
+}
+
+juce::ValueTree ProjectState::findClip(const juce::String& clipId) const
+{
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    if (!tracksNode.isValid())
+        return {};
+
+    // Search through all tracks
+    for (auto track : tracksNode)
+    {
+        auto clipsNode = track.getChildWithName(ID_CLIPS);
+        if (!clipsNode.isValid())
+            continue;
+
+        // Search through clips in this track
+        for (auto clip : clipsNode)
+        {
+            if (clip[PROP_ID].toString() == clipId)
+                return clip;
+        }
+    }
+
+    return {};
+}
+
+juce::ValueTree ProjectState::findMidiNote(const juce::String& clipId, const juce::String& noteId)
+{
+    auto clip = findClip(clipId);
+    if (!clip.isValid())
+        return {};
+
+    auto midiNotesNode = clip.getChildWithName(ID_MIDI_NOTES);
+    if (!midiNotesNode.isValid())
+        return {};
+
+    for (auto noteTree : midiNotesNode)
+    {
+        if (noteTree.hasType(ID_MIDI_NOTE) && noteTree[PROP_ID].toString() == noteId)
+            return noteTree;
     }
 
     return {};

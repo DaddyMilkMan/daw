@@ -100,6 +100,13 @@ target_sources(ZenithDAW PRIVATE
     include/ArrangerView.h
     include/PianoRollEditor.h
 
+    # Phase 8: CommandAPI for Wingman MIDI commands
+    src/CommandAPI.cpp
+
+    # Phase 8.1: UI Components
+    src/PianoRollComponent.cpp
+    src/ArrangerComponent.cpp
+
     # Engine primitives (ported from VexelDAW-Native, Phase 2)
     Source/engine/Track.h
     Source/engine/Track.cpp

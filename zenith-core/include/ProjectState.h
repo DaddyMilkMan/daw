@@ -111,7 +111,6 @@ public:
     static const juce::Identifier PROP_LENGTH;
     static const juce::Identifier PROP_OFFSET;
     static const juce::Identifier PROP_AUDIO_FILE;
-    static const juce::Identifier PROP_ARMED;
 
     // Phase 13: Automation properties
     static const juce::Identifier PROP_PARAM;
@@ -599,6 +598,88 @@ public:
     juce::ValueTree getNotes(const juce::String& clipId) const;
 
     //==========================================================================
+    // MIDI Note Management (Phase 8)
+    //==========================================================================
+
+    /**
+     * @brief Specification for a MIDI note
+     */
+    struct MidiNoteSpec
+    {
+        juce::String id;         // Unique note ID (e.g., "note_42")
+        int pitch;               // MIDI note number (0-127)
+        double startBeats;       // Start time in beats (relative to clip start)
+        double lengthBeats;      // Duration in beats
+        int velocity;            // Note velocity (0-127)
+        bool muted;              // Muted flag (default false)
+
+        MidiNoteSpec() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false) {}
+    };
+
+    /**
+     * @brief Get all MIDI notes for a clip
+     * @param clipId Clip ID
+     * @return Array of note specifications
+     */
+    juce::Array<MidiNoteSpec> getMidiNotesForClip(const juce::String& clipId) const;
+
+    /**
+     * @brief Add a MIDI note to a clip
+     * @param clipId Clip ID
+     * @param note Note specification (id will be auto-generated if empty)
+     * @param actionName Undo action name
+     * @return The note ID (auto-generated or provided)
+     */
+    juce::String addMidiNote(const juce::String& clipId, const MidiNoteSpec& note, const juce::String& actionName);
+
+    /**
+     * @brief Remove a MIDI note from a clip
+     * @param clipId Clip ID
+     * @param noteId Note ID to remove
+     * @param actionName Undo action name
+     */
+    void removeMidiNote(const juce::String& clipId, const juce::String& noteId, const juce::String& actionName);
+
+    /**
+     * @brief Move/modify a MIDI note
+     * @param clipId Clip ID
+     * @param noteId Note ID to modify
+     * @param newStartBeats New start time in beats
+     * @param newPitch New pitch
+     * @param actionName Undo action name
+     */
+    void moveMidiNote(const juce::String& clipId, const juce::String& noteId,
+                      double newStartBeats, int newPitch, const juce::String& actionName);
+
+    /**
+     * @brief Quantize all notes in a clip to a grid
+     * @param clipId Clip ID
+     * @param gridBeats Grid size in beats (e.g., 0.25 for 1/16 at 4/4)
+     * @param actionName Undo action name
+     */
+    void quantizeClip(const juce::String& clipId, double gridBeats, const juce::String& actionName);
+
+    /**
+     * @brief Change a MIDI note's velocity (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newVelocity New velocity (1-127, clamped)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
+                             int newVelocity, const juce::String& actionName);
+
+    /**
+     * @brief Change a MIDI note's length (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newLengthBeats New duration in beats (must be > 0)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteLength(const juce::String& clipId, const juce::String& noteId,
+                           double newLengthBeats, const juce::String& actionName);
+
+    //==========================================================================
     // Undo/Redo
     //==========================================================================
 
@@ -665,6 +746,26 @@ private:
      * @brief Find clip by ID across all tracks
      */
     juce::ValueTree findClip(const juce::String& clipId);
+
+    /**
+     * @brief Find clip by ID (Phase 8)
+     * @param clipId Clip ID to search for
+     * @return ValueTree for the clip, or invalid tree if not found
+     */
+    juce::ValueTree findClip(const juce::String& clipId);
+
+    /**
+     * @brief Find clip by ID (const version)
+     */
+    juce::ValueTree findClip(const juce::String& clipId) const;
+
+    /**
+     * @brief Find MIDI note by ID within a clip (Phase 8)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @return ValueTree for the note, or invalid tree if not found
+     */
+    juce::ValueTree findMidiNote(const juce::String& clipId, const juce::String& noteId);
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree

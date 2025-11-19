@@ -211,6 +211,65 @@ void Track::Clip::setMidiSequence(const juce::MidiMessageSequence& sequence)
     }
 }
 
+void Track::Clip::buildMidiSequenceFromNotes(const juce::Array<MidiNoteSpec>& notes,
+                                              double clipStartBeats,
+                                              double tempo)
+{
+    // This method must be called from the message thread only
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    // Create a new MIDI sequence
+    juce::MidiMessageSequence newSequence;
+
+    // Convert tempo to seconds per beat
+    const double secondsPerBeat = 60.0 / tempo;
+
+    // Build note-on and note-off events for each note
+    for (const auto& note : notes)
+    {
+        // Skip muted notes
+        if (note.muted)
+            continue;
+
+        // Convert beat times to seconds (relative to clip start)
+        const double noteStartSeconds = note.startBeats * secondsPerBeat;
+        const double noteEndSeconds = (note.startBeats + note.lengthBeats) * secondsPerBeat;
+
+        // Validate pitch and velocity
+        const int pitch = juce::jlimit(0, 127, note.pitch);
+        const int velocity = juce::jlimit(0, 127, note.velocity);
+
+        // Create note-on message
+        juce::MidiMessage noteOn = juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity));
+        noteOn.setTimeStamp(noteStartSeconds);
+        newSequence.addEvent(noteOn);
+
+        // Create note-off message
+        juce::MidiMessage noteOff = juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
+        noteOff.setTimeStamp(noteEndSeconds);
+        newSequence.addEvent(noteOff);
+    }
+
+    // Sort events by timestamp
+    newSequence.updateMatchedPairs();
+
+    // Replace the current sequence (thread-safe via lock)
+    {
+        const juce::ScopedLock sl(midiLock);
+        midiSequence = newSequence;
+
+        // Update clip length based on the last MIDI event
+        if (midiSequence.getNumEvents() > 0)
+        {
+            const double lastEventTime = midiSequence.getEndTime();
+            const int64_t lengthInSamples = static_cast<int64_t>(lastEventTime * currentSampleRate);
+            clipLength.store(lengthInSamples);
+        }
+    }
+
+    DBG("Clip: Rebuilt MIDI sequence with " + juce::String(notes.size()) + " notes");
+}
+
 void Track::Clip::getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples)
 {
     if (clipType != Type::MIDI)
