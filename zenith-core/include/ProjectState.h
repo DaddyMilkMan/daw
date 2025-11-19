@@ -24,8 +24,16 @@
 
 #pragma once
 
+<<<<<<< HEAD
+#include <atomic>
+
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+=======
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <atomic>
+>>>>>>> origin/master
 
 //==============================================================================
 /**
@@ -85,12 +93,12 @@ public:
     static const juce::Identifier ID_TRACK;
     static const juce::Identifier ID_CLIPS;
     static const juce::Identifier ID_CLIP;
-    static const juce::Identifier ID_NOTES;
-    static const juce::Identifier ID_NOTE;
     static const juce::Identifier ID_MIXER;
     static const juce::Identifier ID_AUTOMATION;
     static const juce::Identifier ID_ENVELOPE;
     static const juce::Identifier ID_POINT;
+    static const juce::Identifier ID_NOTES;      // MIDI notes container
+    static const juce::Identifier ID_NOTE;       // Individual MIDI note
 
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
@@ -104,18 +112,23 @@ public:
     static const juce::Identifier PROP_PAN;
     static const juce::Identifier PROP_MUTE;
     static const juce::Identifier PROP_SOLO;
+    static const juce::Identifier PROP_ARMED;
 
     static const juce::Identifier PROP_START;
     static const juce::Identifier PROP_LENGTH;
-
-    // MIDI Note properties
-    static const juce::Identifier PROP_PITCH;
-    static const juce::Identifier PROP_VELOCITY;
+    static const juce::Identifier PROP_OFFSET;
+    static const juce::Identifier PROP_AUDIO_FILE;
 
     // Phase 13: Automation properties
     static const juce::Identifier PROP_PARAM;
     static const juce::Identifier PROP_TIME_BEATS;
     static const juce::Identifier PROP_VALUE;
+
+    // MIDI Note properties
+    static const juce::Identifier PROP_START_BEATS;   // Note start time in beats
+    static const juce::Identifier PROP_LENGTH_BEATS;  // Note length in beats
+    static const juce::Identifier PROP_PITCH;         // MIDI pitch (0-127)
+    static const juce::Identifier PROP_VELOCITY;      // MIDI velocity (0-127)
 
     //==========================================================================
     ProjectState();
@@ -182,131 +195,323 @@ public:
     int getNumTracks() const;
 
     /**
-     * @brief Get track by ID
+     * @brief Get track ValueTree by ID
      * @param trackId Track ID
      * @return Track ValueTree (invalid if not found)
      */
     juce::ValueTree getTrack(const juce::String& trackId) const;
 
     /**
-     * @brief Set track name
-     * @param trackId Track ID
-     * @param name New name
+
+     * @brief Get track node by index
+     * @param trackIndex Track index (0-based)
+     * @return ValueTree for the track (invalid if not found)
      */
-    void setTrackName(const juce::String& trackId, const juce::String& name);
+    juce::ValueTree getTrackByIndex(int trackIndex) const;
+
+    //===================================================================
+    // Track Mixer API (Phase 10+11) - MESSAGE THREAD ONLY
+    //===================================================================
 
     /**
-     * @brief Set track property
-     * @param trackId Track ID
-     * @param property Property identifier
-     * @param value Property value
+     * @brief Set track volume (0.0 - 1.0)
+     * @note Undoable, message thread only
      */
-    void setTrackProperty(const juce::String& trackId, const juce::Identifier& property, const juce::var& value);
+    void setTrackVolume(const juce::String& trackId, float volume);
+    float getTrackVolume(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track pan (-1.0 = left, +1.0 = right)
+     * @note Undoable, message thread only
+     */
+    void setTrackPan(const juce::String& trackId, float pan);
+    float getTrackPan(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track mute state
+     * @note Undoable, message thread only
+     */
+    void setTrackMute(const juce::String& trackId, bool muted);
+    bool isTrackMuted(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track solo state
+     * @note Undoable, message thread only
+     */
+    void setTrackSolo(const juce::String& trackId, bool solo);
+    bool isTrackSolo(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track armed state (for recording)
+     * @note Undoable, message thread only
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed);
+
+     * @brief Get track ValueTree by index
+     * @param index Track index
+     * @return Track ValueTree (may be invalid if out of range)
+     */
+    juce::ValueTree getTrackByIndex(int index);
+
+    /**
+     * @brief Rename a track (undoable)
+     * @param trackId Track ID
+     * @param newName New track name
+     * @param actionName Optional undo action name
+     */
+    void renameTrack(const juce::String& trackId, const juce::String& newName,
+                     const juce::String& actionName = "Rename track");
+
+    //===================================================================
+    // Track Mixer Properties
+    //===================================================================
+
+    /**
+     * @brief Set track volume (undoable)
+     * @param trackId Track ID
+     * @param volumeLinear Volume (0.0 to 2.0)
+     * @param actionName Optional undo action name
+     */
+    void setTrackVolume(const juce::String& trackId, float volumeLinear,
+                        const juce::String& actionName = "Set track volume");
+
+    /**
+     * @brief Get track volume
+     * @param trackId Track ID
+     * @return Volume (0.0 to 1.0), or 1.0 if track not found
+     */
+    float getTrackVolume(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track pan (undoable)
+     * @param trackId Track ID
+     * @param pan Pan (-1.0 to 1.0)
+     * @param actionName Optional undo action name
+     */
+    void setTrackPan(const juce::String& trackId, float pan,
+                     const juce::String& actionName = "Set track pan");
+
+    /**
+     * @brief Get track pan
+     * @param trackId Track ID
+     * @return Pan (-1.0 to 1.0), or 0.0 if track not found
+     */
+    float getTrackPan(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track mute (undoable)
+     * @param trackId Track ID
+     * @param muted Mute state
+     * @param actionName Optional undo action name
+     */
+    void setTrackMute(const juce::String& trackId, bool muted,
+                      const juce::String& actionName = "Set track mute");
+
+    /**
+     * @brief Get track mute state
+     * @param trackId Track ID
+     * @return Mute state, or false if track not found
+     */
+    bool isTrackMuted(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track solo (undoable)
+     * @param trackId Track ID
+     * @param soloed Solo state
+     * @param actionName Optional undo action name
+     */
+    void setTrackSolo(const juce::String& trackId, bool soloed,
+                      const juce::String& actionName = "Set track solo");
+
+    /**
+     * @brief Get track solo state
+     * @param trackId Track ID
+     * @return Solo state, or false if track not found
+     */
+    bool isTrackSolo(const juce::String& trackId) const;
+
+    /**
+     * @brief Set track armed (undoable)
+     * @param trackId Track ID
+     * @param armed Armed state
+     * @param actionName Optional undo action name
+     */
+    void setTrackArmed(const juce::String& trackId, bool armed,
+                       const juce::String& actionName = "Set track armed");
+
+    /**
+     * @brief Get track armed state
+     * @param trackId Track ID
+     * @return Armed state, or false if track not found
+     */
+    bool isTrackArmed(const juce::String& trackId) const;
+
+    /**
+     * @brief Get track name
+     * @param trackId Track ID
+     * @return Track name, or empty string if track not found
+     */
+    juce::String getTrackName(const juce::String& trackId) const;
+
+    /**
+     * @brief Get track type
+     * @param trackId Track ID
+     * @return Track type ("audio", "midi", etc.), or empty string if track not found
+     */
+    juce::String getTrackType(const juce::String& trackId) const;
 
     //==========================================================================
     // Clip Management
     //==========================================================================
 
     /**
+     * @brief Create a new clip (undoable, sample-based)
+     * @param trackId Track ID
+     * @param clipType "audio" or "midi"
+     * @param startSamples Start position in samples
+     * @param lengthSamples Length in samples
+     * @param name Clip name
+     * @param actionName Optional undo action name
+     * @return Clip ID
+     */
+    juce::String createClip(const juce::String& trackId, const juce::String& clipType,
+                           juce::int64 startSamples, juce::int64 lengthSamples,
+                           const juce::String& name,
+                           const juce::String& actionName = "Create clip");
+
+    /**
+     * @brief Create an empty clip on a track (undoable, beat-based - Phase 9)
+     * @param trackId Track ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Clip length in beats
+     * @param isMidi true for MIDI clip, false for audio clip
+     * @param name Clip name
+     * @param actionName Undo action name
+     * @return Clip ID
+     */
+    juce::String createEmptyClip(const juce::String& trackId,
+                                  double startBeats,
+                                  double lengthBeats,
+                                  bool isMidi,
+                                  const juce::String& name,
+                                  const juce::String& actionName);
+
+    /**
+     * @brief Delete a clip (undoable, with track ID)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param actionName Optional undo action name
+     */
+    void deleteClip(const juce::String& trackId, const juce::String& clipId,
+                    const juce::String& actionName = "Delete clip");
+
+    /**
+     * @brief Delete a clip (undoable, searches all tracks - Phase 9)
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     */
+    void deleteClip(const juce::String& clipId,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Move a clip (undoable, sample-based, same track)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newStartSamples New start position in samples
+     * @param actionName Optional undo action name
+     */
+    void moveClip(const juce::String& trackId, const juce::String& clipId,
+                  juce::int64 newStartSamples,
+                  const juce::String& actionName = "Move clip");
+
+    /**
+     * @brief Move a clip to a new track and/or time position (Phase 9)
+     * @param clipId Clip ID
+     * @param newTrackId Target track ID
+     * @param newStartBeats New start position in beats
+     * @param actionName Undo action name
+     */
+    void moveClip(const juce::String& clipId,
+                  const juce::String& newTrackId,
+                  double newStartBeats,
+                  const juce::String& actionName);
+
+    /**
+     * @brief Resize a clip (change start and/or length - Phase 9)
+     * @param clipId Clip ID
+     * @param newStartBeats New start position in beats
+     * @param newLengthBeats New length in beats
+     * @param actionName Undo action name
+     */
+    void setClipRange(const juce::String& clipId,
+                      double newStartBeats,
+                      double newLengthBeats,
+                      const juce::String& actionName);
+
+    /**
+     * @brief Split a clip (undoable)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param splitSamples Split position in samples
+     * @param actionName Optional undo action name
+     * @return Pair of new clip IDs (left, right)
+     */
+    std::pair<juce::String, juce::String> splitClip(const juce::String& trackId,
+                                                     const juce::String& clipId,
+                                                     juce::int64 splitSamples,
+                                                     const juce::String& actionName = "Split clip");
+
+    /**
      * @brief Add a clip to a track
      * @param trackId Track ID
      * @param startBeats Start position in beats
      * @param lengthBeats Length in beats
-     * @param clipType "audio" or "midi"
+     * @param actionName Undo action name
      * @return Clip ID
      */
-    juce::String addClip(const juce::String& trackId, double startBeats, double lengthBeats,
-                         const juce::String& clipType);
+    juce::String addClip(const juce::String& trackId, double startBeats, double lengthBeats, const juce::String& actionName);
 
     /**
-     * @brief Delete a clip
+     * @brief Remove a clip from a track
      * @param trackId Track ID
      * @param clipId Clip ID
-     * @return true if clip was found and deleted
+     * @param actionName Undo action name
+     * @return true if clip was found and removed
      */
-    bool deleteClip(const juce::String& trackId, const juce::String& clipId);
+    bool removeClip(const juce::String& trackId, const juce::String& clipId, const juce::String& actionName);
 
     /**
-     * @brief Move a clip
+     * @brief Set audio file for a clip
      * @param trackId Track ID
      * @param clipId Clip ID
-     * @param newStartBeats New start position in beats
-     * @return true if clip was found and moved
+     * @param audioFile Audio file path (will be stored as relative to project file if possible)
+     * @param actionName Undo action name
+     * @return true if clip was found and updated
      */
-    bool moveClip(const juce::String& trackId, const juce::String& clipId, double newStartBeats);
+    bool setClipAudioFile(const juce::String& trackId, const juce::String& clipId, const juce::File& audioFile, const juce::String& actionName);
 
     /**
-     * @brief Resize a clip
+     * @brief Get audio file for a clip
      * @param trackId Track ID
      * @param clipId Clip ID
-     * @param newLengthBeats New length in beats
-     * @return true if clip was found and resized
+     * @return Audio file path (empty if not set or clip not found)
      */
-    bool resizeClip(const juce::String& trackId, const juce::String& clipId, double newLengthBeats);
+    juce::String getClipAudioFile(const juce::String& trackId, const juce::String& clipId) const;
 
     /**
-     * @brief Get clips for a track
-     * @param trackId Track ID
-     * @return CLIPS ValueTree (invalid if track not found)
-     */
-    juce::ValueTree getClips(const juce::String& trackId) const;
-
-    //==========================================================================
-    // MIDI Note Management
-    //==========================================================================
-
-    /**
-     * @brief Add a MIDI note to a clip
+     * @brief Get clip ValueTree
      * @param trackId Track ID
      * @param clipId Clip ID
-     * @param startBeats Start position in beats (relative to clip)
-     * @param lengthBeats Note length in beats
-     * @param pitch MIDI note number (0-127)
-     * @param velocity Note velocity (0-127)
-     * @return Note ID
+     * @return Clip ValueTree (invalid if not found)
      */
-    juce::String addNote(const juce::String& trackId, const juce::String& clipId,
-                         double startBeats, double lengthBeats, int pitch, int velocity);
+    juce::ValueTree getClip(const juce::String& trackId, const juce::String& clipId) const;
 
     /**
-     * @brief Delete a MIDI note
-     * @param trackId Track ID
+     * @brief Find clip by ID across all tracks (Phase 9)
      * @param clipId Clip ID
-     * @param noteId Note ID
-     * @return true if note was found and deleted
+     * @return Pair of (track ValueTree, clip ValueTree) - both invalid if not found
      */
-    bool deleteNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId);
-
-    /**
-     * @brief Move a MIDI note
-     * @param trackId Track ID
-     * @param clipId Clip ID
-     * @param noteId Note ID
-     * @param newStartBeats New start position in beats
-     * @param newPitch New MIDI note number (0-127)
-     * @return true if note was found and moved
-     */
-    bool moveNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
-                  double newStartBeats, int newPitch);
-
-    /**
-     * @brief Resize a MIDI note
-     * @param trackId Track ID
-     * @param clipId Clip ID
-     * @param noteId Note ID
-     * @param newLengthBeats New length in beats
-     * @return true if note was found and resized
-     */
-    bool resizeNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
-                    double newLengthBeats);
-
-    /**
-     * @brief Get notes for a clip
-     * @param trackId Track ID
-     * @param clipId Clip ID
-     * @return NOTES ValueTree (invalid if clip not found)
-     */
-    juce::ValueTree getNotes(const juce::String& trackId, const juce::String& clipId) const;
+    std::pair<juce::ValueTree, juce::ValueTree> findClip(const juce::String& clipId);
 
     //==========================================================================
     // Phase 13: Automation Management
@@ -391,6 +596,149 @@ public:
                          const juce::String& actionName);
 
     //==========================================================================
+    // MIDI Note Management
+    //==========================================================================
+
+    /**
+     * @brief Get or create NOTES container for a clip
+     * @param clipId Clip ID
+     * @return NOTES ValueTree (creates if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getOrCreateNotesContainer(const juce::String& clipId);
+
+    /**
+     * @brief Add MIDI note to a clip
+     * @param clipId Clip ID
+     * @param startBeats Note start time in beats
+     * @param lengthBeats Note length in beats
+     * @param pitch MIDI pitch (0-127)
+     * @param velocity MIDI velocity (1-127)
+     * @param actionName Undo action name
+     * @return Generated note ID
+     * @note Message thread only, undoable
+     */
+    juce::String addNote(const juce::String& clipId, double startBeats, double lengthBeats,
+                         int pitch, int velocity, const juce::String& actionName);
+
+    /**
+     * @brief Move/edit MIDI note
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newStartBeats New start time in beats
+     * @param newLengthBeats New length in beats
+     * @param newPitch New MIDI pitch
+     * @param newVelocity New MIDI velocity
+     * @param actionName Undo action name
+     * @return true if note was found and modified
+     * @note Message thread only, undoable
+     */
+    bool moveNote(const juce::String& clipId, const juce::String& noteId,
+                  double newStartBeats, double newLengthBeats,
+                  int newPitch, int newVelocity, const juce::String& actionName);
+
+    /**
+     * @brief Delete MIDI note
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param actionName Undo action name
+     * @return true if note was found and deleted
+     * @note Message thread only, undoable
+     */
+    bool deleteNote(const juce::String& clipId, const juce::String& noteId,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Get all notes for a clip
+     * @param clipId Clip ID
+     * @return NOTES ValueTree (invalid if doesn't exist)
+     * @note Message thread only
+     */
+    juce::ValueTree getNotes(const juce::String& clipId) const;
+
+    //==========================================================================
+    // MIDI Note Management (Phase 8)
+    //==========================================================================
+
+    /**
+     * @brief Specification for a MIDI note
+     */
+    struct MidiNoteSpec
+    {
+        juce::String id;         // Unique note ID (e.g., "note_42")
+        int pitch;               // MIDI note number (0-127)
+        double startBeats;       // Start time in beats (relative to clip start)
+        double lengthBeats;      // Duration in beats
+        int velocity;            // Note velocity (0-127)
+        bool muted;              // Muted flag (default false)
+
+        MidiNoteSpec() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false) {}
+    };
+
+    /**
+     * @brief Get all MIDI notes for a clip
+     * @param clipId Clip ID
+     * @return Array of note specifications
+     */
+    juce::Array<MidiNoteSpec> getMidiNotesForClip(const juce::String& clipId) const;
+
+    /**
+     * @brief Add a MIDI note to a clip
+     * @param clipId Clip ID
+     * @param note Note specification (id will be auto-generated if empty)
+     * @param actionName Undo action name
+     * @return The note ID (auto-generated or provided)
+     */
+    juce::String addMidiNote(const juce::String& clipId, const MidiNoteSpec& note, const juce::String& actionName);
+
+    /**
+     * @brief Remove a MIDI note from a clip
+     * @param clipId Clip ID
+     * @param noteId Note ID to remove
+     * @param actionName Undo action name
+     */
+    void removeMidiNote(const juce::String& clipId, const juce::String& noteId, const juce::String& actionName);
+
+    /**
+     * @brief Move/modify a MIDI note
+     * @param clipId Clip ID
+     * @param noteId Note ID to modify
+     * @param newStartBeats New start time in beats
+     * @param newPitch New pitch
+     * @param actionName Undo action name
+     */
+    void moveMidiNote(const juce::String& clipId, const juce::String& noteId,
+                      double newStartBeats, int newPitch, const juce::String& actionName);
+
+    /**
+     * @brief Quantize all notes in a clip to a grid
+     * @param clipId Clip ID
+     * @param gridBeats Grid size in beats (e.g., 0.25 for 1/16 at 4/4)
+     * @param actionName Undo action name
+     */
+    void quantizeClip(const juce::String& clipId, double gridBeats, const juce::String& actionName);
+
+    /**
+     * @brief Change a MIDI note's velocity (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newVelocity New velocity (1-127, clamped)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
+                             int newVelocity, const juce::String& actionName);
+
+    /**
+     * @brief Change a MIDI note's length (Phase 8.2)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newLengthBeats New duration in beats (must be > 0)
+     * @param actionName Undo action name
+     */
+    void setMidiNoteLength(const juce::String& clipId, const juce::String& noteId,
+                           double newLengthBeats, const juce::String& actionName);
+
+    //==========================================================================
     // Undo/Redo
     //==========================================================================
 
@@ -449,9 +797,49 @@ private:
     juce::String generateUniqueId(const juce::String& prefix);
 
     /**
-     * @brief Find track by ID
+     * @brief Find track by ID (internal helper)
      */
-    juce::ValueTree findTrack(const juce::String& trackId);
+    juce::ValueTree findTrackInternal(const juce::String& trackId);
+
+    /**
+     * @brief Find clip by ID across all tracks
+     */
+    juce::ValueTree findClip(const juce::String& clipId);
+
+    /**
+     * @brief Find clip by ID (Phase 8)
+     * @param clipId Clip ID to search for
+     * @return ValueTree for the clip, or invalid tree if not found
+     */
+    juce::ValueTree findClip(const juce::String& clipId);
+
+    /**
+     * @brief Find clip by ID (const version)
+     */
+    juce::ValueTree findClip(const juce::String& clipId) const;
+
+    /**
+     * @brief Find MIDI note by ID within a clip (Phase 8)
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @return ValueTree for the note, or invalid tree if not found
+     */
+    juce::ValueTree findMidiNote(const juce::String& clipId, const juce::String& noteId);
+
+    /**
+     * @brief Find track by ID (const version)
+     */
+    juce::ValueTree findTrack(const juce::String& trackId) const;
+
+    /**
+     * @brief Find automation point by ID
+     */
+    juce::ValueTree findAutomationPoint(const juce::ValueTree& envelope, const juce::String& pointId) const;
+
+    /**
+     * @brief Rebuilds the ID counter based on the current state tree
+     */
+    void rebuildIdCounter();
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree

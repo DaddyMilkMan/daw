@@ -124,8 +124,51 @@ void TrackAutomationSynchronizer::timerCallback()
 
 void TrackAutomationSynchronizer::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
-    juce::ignoreUnused(tree, property);
-    // Could optimize here to only rebuild on automation changes
+    // If a track property changed (mute, solo, armed, volume, pan), trigger immediate sync
+    if (tree.hasType(ProjectState::ID_TRACK))
+    {
+        if (property == ProjectState::PROP_MUTE ||
+            property == ProjectState::PROP_SOLO ||
+            property == ProjectState::PROP_ARMED ||
+            property == ProjectState::PROP_VOLUME ||
+            property == ProjectState::PROP_PAN)
+        {
+            // Get track ID
+            juce::String trackId = tree[ProjectState::PROP_ID].toString();
+
+            // Find corresponding engine track
+            auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+            if (!tracksNode.isValid())
+                return;
+
+            int trackIndex = 0;
+            for (auto trackNode : tracksNode)
+            {
+                if (trackNode.hasType(ProjectState::ID_TRACK))
+                {
+                    if (trackNode[ProjectState::PROP_ID].toString() == trackId)
+                    {
+                        // Found the track, update it immediately
+                        if (trackIndex < engine.getNumTracks())
+                        {
+                            auto& tracks = engine.tracks();
+                            if (trackIndex < static_cast<int>(tracks.size()))
+                            {
+                                auto* track = tracks[trackIndex].get();
+                                if (track != nullptr)
+                                {
+                                    // Sync this track immediately (don't wait for timer)
+                                    updateTrackAutomation(trackId, track, 0.0);
+                                }
+                            }
+                        }
+                        break;
+                    }
+                    ++trackIndex;
+                }
+            }
+        }
+    }
 }
 
 void TrackAutomationSynchronizer::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
@@ -230,6 +273,32 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
     if (track == nullptr)
         return;
 
+    // Get track node from ProjectState
+    auto trackNode = projectState.getTrack(trackId);
+    if (!trackNode.isValid())
+        return;
+
+    // First, sync basic track properties (always apply these)
+    // These come from the track header controls, not automation
+    bool hasMuteAutomation = projectState.hasAutomation(trackId, "mute");
+
+    // Only apply static mute/solo/armed if there's no automation for them
+    if (!hasMuteAutomation)
+    {
+        bool muted = trackNode[ProjectState::PROP_MUTE];
+        if (track->isMuted() != muted)
+            track->setMuted(muted);
+    }
+
+    // Solo and armed don't have automation, always sync them
+    bool soloed = trackNode[ProjectState::PROP_SOLO];
+    if (track->isSolo() != soloed)
+        track->setSolo(soloed);
+
+    bool armed = trackNode[ProjectState::PROP_ARMED];
+    if (track->isArmed() != armed)
+        track->setArmed(armed);
+
     // Sample and apply volume automation
     if (projectState.hasAutomation(trackId, "volume"))
     {
@@ -239,6 +308,13 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
         {
             track->setVolume(static_cast<float>(value));
         }
+    }
+    else
+    {
+        // No automation, sync static volume from ProjectState
+        float volume = trackNode[ProjectState::PROP_VOLUME];
+        if (std::abs(track->getVolume() - volume) > 0.001f)
+            track->setVolume(volume);
     }
 
     // Sample and apply pan automation
@@ -251,9 +327,16 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
             track->setPan(static_cast<float>(value));
         }
     }
+    else
+    {
+        // No automation, sync static pan from ProjectState
+        float pan = trackNode[ProjectState::PROP_PAN];
+        if (std::abs(track->getPan() - pan) > 0.001f)
+            track->setPan(pan);
+    }
 
-    // Sample and apply mute automation
-    if (projectState.hasAutomation(trackId, "mute"))
+    // Sample and apply mute automation (if present)
+    if (hasMuteAutomation)
     {
         auto envelope = projectState.getAutomationEnvelope(trackId, "mute");
         double value = sampleEnvelope(envelope, playbackBeats);
