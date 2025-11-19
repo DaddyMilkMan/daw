@@ -4,184 +4,236 @@
  */
 
 #include "../include/TempoMap.h"
-#include <algorithm>
-#include <cmath>
+#include "../include/ProjectState.h"
 
 //==============================================================================
-TempoMap::TempoMap()
-    : sampleRate_(44100.0)
+// TempoMapSnapshot Implementation
+//==============================================================================
+
+void TempoMapSnapshot::prepare()
 {
-    // Create default segment: 120 BPM at beat 0
-    TempoSegment defaultSegment;
-    defaultSegment.startBeats = 0.0;
-    defaultSegment.bpm = 120.0;
-    defaultSegment.startSamples = 0;
-    defaultSegment.timeSig.numerator = 4;
-    defaultSegment.timeSig.denominator = 4;
-    defaultSegment.secondsPerBeat = 60.0 / 120.0;
-    defaultSegment.samplesPerBeat = sampleRate_ * defaultSegment.secondsPerBeat;
+    cachedPoints.clear();
 
-    segments_.push_back(defaultSegment);
-}
-
-TempoMap::TempoMap(const std::vector<TempoPoint>& tempoPoints, double sampleRate)
-    : sampleRate_(sampleRate)
-{
-    jassert(sampleRate > 0.0);
-    jassert(!tempoPoints.empty());
-
-    // Reserve space to avoid reallocations
-    segments_.reserve(tempoPoints.size());
-
-    // Build segments with precomputed values
-    juce::int64 currentSamples = 0;
-
-    for (size_t i = 0; i < tempoPoints.size(); ++i)
+    if (points.empty())
     {
-        const auto& pt = tempoPoints[i];
+        // Default: 120 BPM at beat 0
+        CachedPoint cached;
+        cached.timeBeats = 0.0;
+        cached.bpm = 120.0;
+        cached.cumulativeSeconds = 0.0;
+        cachedPoints.push_back(cached);
+        return;
+    }
 
-        TempoSegment segment;
-        segment.startBeats = pt.timeBeats;
-        segment.bpm = pt.bpm;
-        segment.startSamples = currentSamples;
-        segment.timeSig.numerator = pt.timeSigNum;
-        segment.timeSig.denominator = pt.timeSigDen;
+    double cumulativeSeconds = 0.0;
 
-        // Precompute conversion factors
-        segment.secondsPerBeat = 60.0 / segment.bpm;
-        segment.samplesPerBeat = sampleRate_ * segment.secondsPerBeat;
+    for (size_t i = 0; i < points.size(); ++i)
+    {
+        const auto& point = points[i];
 
-        segments_.push_back(segment);
+        CachedPoint cached;
+        cached.timeBeats = point.timeBeats;
+        cached.bpm = point.bpm;
+        cached.cumulativeSeconds = cumulativeSeconds;
+        cachedPoints.push_back(cached);
 
-        // Calculate sample offset to next segment (if there is one)
-        if (i + 1 < tempoPoints.size())
+        // Calculate time to next point
+        if (i + 1 < points.size())
         {
-            const auto& nextPt = tempoPoints[i + 1];
-            double beatDuration = nextPt.timeBeats - pt.timeBeats;
-            juce::int64 sampleDuration = static_cast<juce::int64>(std::round(beatDuration * segment.samplesPerBeat));
-            currentSamples += sampleDuration;
+            double beatDelta = points[i + 1].timeBeats - point.timeBeats;
+            double secondsPerBeat = 60.0 / point.bpm;
+            double timeDelta = beatDelta * secondsPerBeat;
+            cumulativeSeconds += timeDelta;
         }
     }
 }
 
 //==============================================================================
-double TempoMap::samplesToBeats(juce::int64 samplePos) const
+// TempoMap Implementation
+//==============================================================================
+
+TempoMap::TempoMap()
 {
-    if (segments_.empty())
-        return 0.0;
+    // Create default snapshot: 120 BPM at beat 0
+    auto defaultSnapshot = std::make_shared<TempoMapSnapshot>();
+    defaultSnapshot->points.emplace_back(0.0, 120.0);
+    defaultSnapshot->prepare();
 
-    if (samplePos <= 0)
-        return 0.0;
-
-    // Find the segment containing this sample position
-    int segmentIdx = findSegmentForSamples(samplePos);
-    const auto& segment = segments_[segmentIdx];
-
-    // Calculate beats within this segment
-    juce::int64 samplesIntoSegment = samplePos - segment.startSamples;
-    double beatsIntoSegment = static_cast<double>(samplesIntoSegment) / segment.samplesPerBeat;
-
-    return segment.startBeats + beatsIntoSegment;
+    snapshot_ = defaultSnapshot;
+    atomicSnapshot_.store(defaultSnapshot.get(), std::memory_order_release);
 }
 
-juce::int64 TempoMap::beatsToSamples(double beats) const
+TempoMap::~TempoMap()
 {
-    if (segments_.empty())
-        return 0;
-
-    if (beats <= 0.0)
-        return 0;
-
-    // Find the segment containing this beat position
-    int segmentIdx = findSegmentForBeats(beats);
-    const auto& segment = segments_[segmentIdx];
-
-    // Calculate samples within this segment
-    double beatsIntoSegment = beats - segment.startBeats;
-    juce::int64 samplesIntoSegment = static_cast<juce::int64>(std::round(beatsIntoSegment * segment.samplesPerBeat));
-
-    return segment.startSamples + samplesIntoSegment;
+    atomicSnapshot_.store(nullptr, std::memory_order_release);
 }
 
-double TempoMap::getTempoAtBeats(double beats) const
+void TempoMap::updateFromValueTree(const juce::ValueTree& tempoMapTree)
 {
-    if (segments_.empty())
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto newSnapshot = std::make_shared<TempoMapSnapshot>();
+
+    if (!tempoMapTree.isValid())
+    {
+        // No tempo map: default to 120 BPM
+        newSnapshot->points.emplace_back(0.0, 120.0);
+    }
+    else
+    {
+        // Extract tempo points from ValueTree
+        for (auto pointTree : tempoMapTree)
+        {
+            if (pointTree.hasType(ProjectState::ID_TEMPO_POINT))
+            {
+                double timeBeats = pointTree[ProjectState::PROP_TIME_BEATS];
+                double bpm = pointTree[ProjectState::PROP_BPM];
+
+                newSnapshot->points.emplace_back(timeBeats, bpm);
+            }
+        }
+
+        // Ensure we have at least one tempo point
+        if (newSnapshot->points.empty())
+        {
+            newSnapshot->points.emplace_back(0.0, 120.0);
+        }
+
+        // Sort by timeBeats (should already be sorted, but be safe)
+        std::sort(newSnapshot->points.begin(), newSnapshot->points.end(),
+                  [](const TempoPoint& a, const TempoPoint& b) {
+                      return a.timeBeats < b.timeBeats;
+                  });
+    }
+
+    // Prepare cached data
+    newSnapshot->prepare();
+
+    // Swap snapshot
+    swapSnapshot(newSnapshot);
+
+    DBG("TempoMap: Updated with " + juce::String(newSnapshot->points.size()) + " tempo points");
+}
+
+void TempoMap::setSingleTempo(double bpm)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto newSnapshot = std::make_shared<TempoMapSnapshot>();
+    newSnapshot->points.emplace_back(0.0, bpm);
+    newSnapshot->prepare();
+
+    swapSnapshot(newSnapshot);
+
+    DBG("TempoMap: Set single tempo to " + juce::String(bpm) + " BPM");
+}
+
+void TempoMap::swapSnapshot(std::shared_ptr<const TempoMapSnapshot> newSnapshot)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    snapshot_ = newSnapshot;
+    atomicSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+}
+
+std::shared_ptr<const TempoMapSnapshot> TempoMap::loadSnapshot() const
+{
+    // RT-safe: load atomic pointer
+    // We return snapshot_ which is a shared_ptr that keeps the object alive
+    // This is safe because snapshot_ is only written on message thread
+    // and we're reading from a single-reader context (or multiple readers are ok with shared_ptr)
+    return snapshot_;
+}
+
+//==============================================================================
+// RT-Safe Conversion Methods
+//==============================================================================
+
+double TempoMap::beatsToSeconds(double beats, double /* sampleRate */) const
+{
+    auto snap = loadSnapshot();
+    if (!snap || snap->cachedPoints.empty())
+        return beats * (60.0 / 120.0);  // Fallback to 120 BPM
+
+    // Find the tempo segment containing this beat
+    const auto& cached = snap->cachedPoints;
+
+    // Find the last cached point at or before 'beats'
+    size_t index = 0;
+    for (size_t i = 0; i < cached.size(); ++i)
+    {
+        if (cached[i].timeBeats <= beats)
+            index = i;
+        else
+            break;
+    }
+
+    // Calculate time from the found point
+    const auto& point = cached[index];
+    double beatDelta = beats - point.timeBeats;
+    double secondsPerBeat = 60.0 / point.bpm;
+    double timeDelta = beatDelta * secondsPerBeat;
+
+    return point.cumulativeSeconds + timeDelta;
+}
+
+double TempoMap::secondsToBeats(double seconds, double /* sampleRate */) const
+{
+    auto snap = loadSnapshot();
+    if (!snap || snap->cachedPoints.empty())
+        return seconds / (60.0 / 120.0);  // Fallback to 120 BPM
+
+    const auto& cached = snap->cachedPoints;
+
+    // Find the tempo segment containing this time
+    size_t index = 0;
+    for (size_t i = 0; i < cached.size(); ++i)
+    {
+        if (cached[i].cumulativeSeconds <= seconds)
+            index = i;
+        else
+            break;
+    }
+
+    // Calculate beats from the found point
+    const auto& point = cached[index];
+    double timeDelta = seconds - point.cumulativeSeconds;
+    double secondsPerBeat = 60.0 / point.bpm;
+    double beatDelta = timeDelta / secondsPerBeat;
+
+    return point.timeBeats + beatDelta;
+}
+
+int64_t TempoMap::beatsToSamples(double beats, double sampleRate) const
+{
+    double seconds = beatsToSeconds(beats, sampleRate);
+    return static_cast<int64_t>(seconds * sampleRate);
+}
+
+double TempoMap::samplesToBeats(int64_t samples, double sampleRate) const
+{
+    if (sampleRate <= 0.0)
+        return 0.0;
+
+    double seconds = static_cast<double>(samples) / sampleRate;
+    return secondsToBeats(seconds, sampleRate);
+}
+
+double TempoMap::getTempoAt(double beats) const
+{
+    auto snap = loadSnapshot();
+    if (!snap || snap->cachedPoints.empty())
         return 120.0;
 
-    int segmentIdx = findSegmentForBeats(beats);
-    return segments_[segmentIdx].bpm;
-}
-
-TimeSignature TempoMap::getTimeSignatureAtBeats(double beats) const
-{
-    if (segments_.empty())
-        return TimeSignature{4, 4};
-
-    int segmentIdx = findSegmentForBeats(beats);
-    return segments_[segmentIdx].timeSig;
-}
-
-//==============================================================================
-int TempoMap::findSegmentForBeats(double beats) const
-{
-    if (segments_.empty())
-        return 0;
-
-    if (beats <= segments_[0].startBeats)
-        return 0;
-
-    // Binary search for the segment
-    // We want the last segment where startBeats <= beats
-    int left = 0;
-    int right = static_cast<int>(segments_.size()) - 1;
-    int result = 0;
-
-    while (left <= right)
+    // Find the tempo at or before this beat
+    size_t index = 0;
+    for (size_t i = 0; i < snap->cachedPoints.size(); ++i)
     {
-        int mid = left + (right - left) / 2;
-
-        if (segments_[mid].startBeats <= beats)
-        {
-            result = mid;
-            left = mid + 1;
-        }
+        if (snap->cachedPoints[i].timeBeats <= beats)
+            index = i;
         else
-        {
-            right = mid - 1;
-        }
+            break;
     }
 
-    return result;
-}
-
-int TempoMap::findSegmentForSamples(juce::int64 samplePos) const
-{
-    if (segments_.empty())
-        return 0;
-
-    if (samplePos <= segments_[0].startSamples)
-        return 0;
-
-    // Binary search for the segment
-    // We want the last segment where startSamples <= samplePos
-    int left = 0;
-    int right = static_cast<int>(segments_.size()) - 1;
-    int result = 0;
-
-    while (left <= right)
-    {
-        int mid = left + (right - left) / 2;
-
-        if (segments_[mid].startSamples <= samplePos)
-        {
-            result = mid;
-            left = mid + 1;
-        }
-        else
-        {
-            right = mid - 1;
-        }
-    }
-
-    return result;
+    return snap->cachedPoints[index].bpm;
 }

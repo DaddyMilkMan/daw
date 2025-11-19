@@ -1,45 +1,77 @@
 /**
  * @file ArrangerComponent.h
- * @brief Main timeline/arranger view with tempo map and markers
+ * @brief Timeline/Arranger view with clip editing
  *
- * Phase 15: Tempo Map + Markers v1
- *
- * Displays:
- * - Tempo lane (top) showing tempo curve and tempo points
- * - Marker lane showing markers with labels
- * - Timeline/arranger area (future: tracks and clips)
- *
- * Interactions:
- * - Add tempo points (double-click tempo lane)
- * - Move tempo points (drag)
- * - Delete tempo points (select + Delete key)
- * - Add markers (double-click marker lane)
- * - Move markers (drag)
- * - Rename markers (double-click label)
- * - Delete markers (select + Delete key)
+ * Phase 9: Arranger MVP
+ * - Visual timeline showing tracks and clips
+ * - Clip selection (single + multi-select)
+ * - Clip editing: move, resize, create, delete, duplicate
+ * - Zoom and scroll
+ * - All operations use ProjectState + UndoManager
  */
 
 #pragma once
 
 #include <JuceHeader.h>
 #include "ProjectState.h"
-#include "Engine.h"
 
+//==============================================================================
+/**
+ * @struct ClipView
+ * @brief Lightweight UI representation of a clip
+ *
+ * This struct maps ProjectState clip data to screen coordinates for
+ * drawing and hit-testing. The source of truth is always ProjectState.
+ */
+struct ClipView
+{
+    juce::String clipId;
+    juce::String trackId;
+
+    double startBeats{0.0};
+    double lengthBeats{1.0};
+    bool isMidi{false};
+    bool isSelected{false};
+
+    juce::Rectangle<float> bounds; // Screen coordinates for drawing/hit-testing
+
+    // Helper to check if a point is in the left resize zone
+    bool isInLeftResizeZone(juce::Point<float> point, float zoneWidth = 6.0f) const
+    {
+        return bounds.contains(point) && point.x < bounds.getX() + zoneWidth;
+    }
+
+    // Helper to check if a point is in the right resize zone
+    bool isInRightResizeZone(juce::Point<float> point, float zoneWidth = 6.0f) const
+    {
+        return bounds.contains(point) && point.x > bounds.getRight() - zoneWidth;
+    }
+};
+
+//==============================================================================
 /**
  * @class ArrangerComponent
- * @brief Timeline view with tempo map and markers
+ * @brief Timeline view with interactive clip editing
  *
- * Thread safety:
- * - All UI operations run on message thread
- * - Listens to ValueTree changes for undo/redo support
- * - Calls ProjectState APIs which handle undo automatically
+ * Features:
+ * - Displays tracks as horizontal lanes
+ * - Shows clips as colored rectangles on timeline
+ * - Single + multi-select clips
+ * - Move clips in time and between tracks
+ * - Resize clips from edges
+ * - Create clips by double-clicking
+ * - Delete and duplicate clips
+ * - Zoom and scroll timeline
+ *
+ * All editing operations go through ProjectState and use UndoManager.
+ * This component is message-thread only (no RT audio thread interaction).
  */
 class ArrangerComponent : public juce::Component,
                           private juce::ValueTree::Listener
 {
 public:
     //==========================================================================
-    ArrangerComponent(ProjectState& projectState, Engine& engine);
+    explicit ArrangerComponent(ProjectState& projectState);
     ~ArrangerComponent() override;
 
     //==========================================================================
@@ -52,101 +84,25 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     bool keyPressed(const juce::KeyPress& key) override;
 
 private:
     //==========================================================================
-    // Layout Constants
+    // Drag modes
     //==========================================================================
 
-    static constexpr int TEMPO_LANE_HEIGHT = 80;
-    static constexpr int MARKER_LANE_HEIGHT = 30;
-    static constexpr int TIME_RULER_HEIGHT = 20;
-
-    // Tempo range for display
-    static constexpr double MIN_TEMPO = 40.0;
-    static constexpr double MAX_TEMPO = 240.0;
-
-    //==========================================================================
-    // Coordinate Conversion
-    //==========================================================================
-
-    /**
-     * @brief Convert beat position to x coordinate
-     */
-    float beatsToX(double beats) const;
-
-    /**
-     * @brief Convert x coordinate to beat position
-     */
-    double xToBeats(float x) const;
-
-    /**
-     * @brief Convert BPM to y coordinate in tempo lane
-     */
-    float bpmToY(double bpm) const;
-
-    /**
-     * @brief Convert y coordinate in tempo lane to BPM
-     */
-    double yToBpm(float y) const;
-
-    /**
-     * @brief Snap beats to grid (1/4 beat for now)
-     */
-    double snapBeats(double beats) const;
-
-    //==========================================================================
-    // Tempo Lane Rendering
-    //==========================================================================
-
-    void paintTempoLane(juce::Graphics& g, juce::Rectangle<int> area);
-    void paintTempoCurve(juce::Graphics& g, juce::Rectangle<int> area);
-    void paintTempoPoints(juce::Graphics& g, juce::Rectangle<int> area);
-
-    //==========================================================================
-    // Marker Lane Rendering
-    //==========================================================================
-
-    void paintMarkerLane(juce::Graphics& g, juce::Rectangle<int> area);
-    void paintMarkers(juce::Graphics& g, juce::Rectangle<int> area);
-
-    //==========================================================================
-    // Time Ruler Rendering
-    //==========================================================================
-
-    void paintTimeRuler(juce::Graphics& g, juce::Rectangle<int> area);
-
-    //==========================================================================
-    // Interaction Helpers
-    //==========================================================================
-
-    /**
-     * @brief Find tempo point near position (or empty string if none)
-     */
-    juce::String findTempoPointNear(float x, float y, float tolerance = 8.0f);
-
-    /**
-     * @brief Find marker near position (or empty string if none)
-     */
-    juce::String findMarkerNear(float x, float y, float tolerance = 8.0f);
-
-    /**
-     * @brief Check if point is in tempo lane
-     */
-    bool isInTempoLane(float y) const;
-
-    /**
-     * @brief Check if point is in marker lane
-     */
-    bool isInMarkerLane(float y) const;
-
-    /**
-     * @brief Show marker rename dialog
-     */
-    void showMarkerRenameDialog(const juce::String& markerId);
+    enum class DragMode
+    {
+        None,
+        MoveClips,
+        ResizeClipLeft,
+        ResizeClipRight,
+        Marquee
+    };
 
     //==========================================================================
     // ValueTree::Listener interface
@@ -158,33 +114,118 @@ private:
     void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
 
     //==========================================================================
-    // Member Variables
+    // Clip view management
     //==========================================================================
 
-    ProjectState& projectState_;
-    Engine& engine_;
+    /**
+     * @brief Rebuild clip views from ProjectState
+     */
+    void rebuildClipViews();
 
-    // View state
-    double pixelsPerBeat_{40.0};  // Zoom level
-    double viewOffsetBeats_{0.0}; // Horizontal scroll
+    /**
+     * @brief Recompute screen bounds for all clip views
+     */
+    void recomputeClipBounds();
 
-    // Interaction state
-    enum class DragMode
+    /**
+     * @brief Find clip view by ID
+     */
+    ClipView* findClipView(const juce::String& clipId);
+
+    /**
+     * @brief Hit-test to find clip at point
+     */
+    ClipView* findClipAtPoint(juce::Point<float> point);
+
+    //==========================================================================
+    // Coordinate conversion
+    //==========================================================================
+
+    float beatsToX(double beats) const;
+    double xToBeats(float x) const;
+    float trackIndexToY(int trackIndex) const;
+    int yToTrackIndex(float y) const;
+
+    /**
+     * @brief Snap beats to grid
+     */
+    double snapToGrid(double beats) const;
+
+    //==========================================================================
+    // Selection management
+    //==========================================================================
+
+    void clearSelection();
+    void selectClip(const juce::String& clipId, bool addToSelection);
+    void selectClipsInRect(juce::Rectangle<float> rect);
+    bool isClipSelected(const juce::String& clipId) const;
+
+    //==========================================================================
+    // Clip operations (via ProjectState)
+    //==========================================================================
+
+    void createClipAtPoint(juce::Point<float> point);
+    void deleteSelectedClips();
+    void duplicateSelectedClips();
+
+    //==========================================================================
+    // Painting helpers
+    //==========================================================================
+
+    void paintBackground(juce::Graphics& g);
+    void paintTimeRuler(juce::Graphics& g);
+    void paintTracks(juce::Graphics& g);
+    void paintClips(juce::Graphics& g);
+    void paintMarquee(juce::Graphics& g);
+
+    //==========================================================================
+    // Member variables
+    //==========================================================================
+
+    ProjectState& projectState;
+
+    // Clip views (UI model)
+    juce::Array<ClipView> clipViews;
+
+    // Selection
+    juce::SortedSet<juce::String> selectedClipIds;
+
+    // Timeline state
+    double pixelsPerBeat{40.0};
+    double viewStartBeats{0.0};
+    int firstVisibleTrackIndex{0};
+    int trackHeight{80};
+    int rulerHeight{30};
+
+    // Grid snap
+    double gridSnapBeats{0.25}; // 1/16 note at 4/4
+
+    // Drag state
+    DragMode currentDragMode{DragMode::None};
+    juce::Point<float> dragStartPoint;
+    juce::Rectangle<float> marqueeRect;
+
+    // For moving clips
+    struct ClipDragState
     {
-        None,
-        TempoPoint,
-        Marker
+        juce::String clipId;
+        double originalStartBeats;
+        int originalTrackIndex;
     };
+    juce::Array<ClipDragState> clipDragStates;
 
-    DragMode dragMode_{DragMode::None};
-    juce::String draggedItemId_;
-    juce::Point<float> dragStartPos_;
-    double dragStartBeats_{0.0};
-    double dragStartBpm_{120.0};
+    // For resizing clips
+    juce::String resizingClipId;
+    double resizeOriginalStart;
+    double resizeOriginalLength;
 
-    // Selection state
-    juce::String selectedTempoPointId_;
-    juce::String selectedMarkerId_;
+    // Colors
+    juce::Colour audioClipColour{0xff4a90e2};     // Blue
+    juce::Colour midiClipColour{0xff7ed321};      // Green
+    juce::Colour selectedClipColour{0xffffffff};  // White border
+    juce::Colour trackLaneColour{0xff2a2a2a};     // Dark grey
+    juce::Colour trackDividerColour{0xff1a1a1a};  // Darker grey
+    juce::Colour gridLineColour{0xff333333};      // Medium grey
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };

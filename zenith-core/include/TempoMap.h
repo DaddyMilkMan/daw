@@ -1,159 +1,178 @@
 /**
  * @file TempoMap.h
- * @brief RT-safe tempo map for beat <-> sample conversion
+ * @brief RT-safe tempo map for beat/time conversions
  *
- * Phase 15: Tempo Map + Markers v1
+ * Phase 15: Tempo Map & Global Markers MVP
  *
- * The TempoMap class provides immutable, real-time safe conversion between
- * beats and samples. It stores a precomputed sequence of tempo segments
- * and uses binary search for efficient lookups.
+ * Provides beat↔time/sample conversions using a variable tempo map.
+ * Uses a snapshot pattern for RT-safety:
+ * - Message thread builds TempoMapSnapshot from ProjectState
+ * - Audio thread reads snapshot via atomic shared_ptr (lock-free)
  *
- * RT-Safety:
- * - All data is allocated at construction time
- * - Query methods (samplesToBeats, beatsToSamples) use only const operations
- * - No allocations, locks, or system calls in query methods
- * - Designed to be used via std::shared_ptr with atomic pointer swap
+ * Thread Safety:
+ * - updateFromValueTree() runs on MESSAGE THREAD
+ * - All conversion methods (beatsToSeconds, etc.) are RT-SAFE
+ * - Uses atomic shared_ptr swap for lock-free read access
  */
 
 #pragma once
 
-#include <juce_core/juce_core.h>
+#include <JuceHeader.h>
+#include <atomic>
+#include <memory>
 #include <vector>
 
+//==============================================================================
 /**
- * @struct TimeSignature
- * @brief Time signature specification
+ * @struct TempoPoint
+ * @brief Single tempo change point
  */
-struct TimeSignature
+struct TempoPoint
 {
-    int numerator{4};
-    int denominator{4};
+    double timeBeats;    // Position in beats from session start
+    double bpm;          // Tempo at/after this point
+
+    TempoPoint(double beats, double tempoBpm)
+        : timeBeats(beats), bpm(tempoBpm) {}
 };
 
+//==============================================================================
+/**
+ * @struct TempoMapSnapshot
+ * @brief Immutable snapshot of tempo map data
+ *
+ * This structure is built on the message thread and shared to the audio thread.
+ * Once created, it is never modified (immutable).
+ */
+struct TempoMapSnapshot
+{
+    std::vector<TempoPoint> points;  // Sorted by timeBeats
+
+    TempoMapSnapshot() = default;
+
+    // Pre-calculate cumulative time for each tempo point for fast lookups
+    void prepare();
+
+    struct CachedPoint
+    {
+        double timeBeats;
+        double bpm;
+        double cumulativeSeconds;  // Total time from start to this point
+    };
+
+    std::vector<CachedPoint> cachedPoints;
+};
+
+//==============================================================================
 /**
  * @class TempoMap
- * @brief Immutable tempo map for RT-safe beat/sample conversion
+ * @brief RT-safe tempo map for beat/time conversions
  *
- * Thread safety:
- * - Const after construction (all data is const or mutable for caching)
- * - Safe to read from audio thread if constructed on message thread
- * - Use std::atomic<std::shared_ptr<const TempoMap>> for thread-safe updates
+ * This class provides beat↔time/sample conversions based on a variable tempo map.
+ * It uses an atomic shared_ptr to allow lock-free reads from the audio thread.
  */
 class TempoMap
 {
 public:
-    /**
-     * @struct TempoSegment
-     * @brief Represents a tempo segment with precomputed values
-     */
-    struct TempoSegment
-    {
-        double startBeats{0.0};         // Start position in beats
-        double bpm{120.0};               // Tempo in BPM
-        juce::int64 startSamples{0};    // Start position in samples
-        TimeSignature timeSig;           // Time signature
-
-        // Precomputed conversion factors
-        double secondsPerBeat{0.5};      // = 60.0 / bpm
-        double samplesPerBeat{0.0};      // = sampleRate * secondsPerBeat
-    };
-
     //==========================================================================
-    /**
-     * @brief Construct empty tempo map (120 BPM at 44100 Hz)
-     */
     TempoMap();
-
-    /**
-     * @brief Construct tempo map from tempo point specifications
-     * @param tempoPoints Array of tempo points (must include point at beat 0)
-     * @param sampleRate Sample rate in Hz
-     *
-     * The tempo points will be sorted by time and precomputed for RT-safe access.
-     */
-    struct TempoPoint
-    {
-        double timeBeats;
-        double bpm;
-        int timeSigNum;
-        int timeSigDen;
-    };
-
-    TempoMap(const std::vector<TempoPoint>& tempoPoints, double sampleRate);
+    ~TempoMap();
 
     //==========================================================================
-    // Conversion Methods (RT-SAFE)
+    // Message Thread API
     //==========================================================================
 
     /**
-     * @brief Convert sample position to beats
-     * @param samplePos Sample position
-     * @return Position in beats
-     * @note RT-SAFE: No allocations, no locks
+     * @brief Update tempo map from ValueTree
+     * @param tempoMapTree ValueTree containing TEMPO_POINT children
+     * @note MESSAGE THREAD ONLY
      */
-    double samplesToBeats(juce::int64 samplePos) const;
+    void updateFromValueTree(const juce::ValueTree& tempoMapTree);
 
     /**
-     * @brief Convert beats to sample position
-     * @param beats Position in beats
-     * @return Sample position
-     * @note RT-SAFE: No allocations, no locks
+     * @brief Set a single static tempo
+     * @param bpm Tempo in BPM
+     * @note MESSAGE THREAD ONLY
      */
-    juce::int64 beatsToSamples(double beats) const;
+    void setSingleTempo(double bpm);
+
+    //==========================================================================
+    // RT-Safe Conversion API (Audio Thread Safe)
+    //==========================================================================
 
     /**
-     * @brief Get tempo at beat position
-     * @param beats Position in beats
+     * @brief Convert beats to seconds
+     * @param beats Time in beats
+     * @param sampleRate Current sample rate (informational, not used in this method)
+     * @return Time in seconds
+     * @note RT-SAFE (audio thread safe)
+     */
+    double beatsToSeconds(double beats, double sampleRate) const;
+
+    /**
+     * @brief Convert seconds to beats
+     * @param seconds Time in seconds
+     * @param sampleRate Current sample rate (informational, not used in this method)
+     * @return Time in beats
+     * @note RT-SAFE (audio thread safe)
+     */
+    double secondsToBeats(double seconds, double sampleRate) const;
+
+    /**
+     * @brief Convert beats to samples
+     * @param beats Time in beats
+     * @param sampleRate Current sample rate
+     * @return Time in samples
+     * @note RT-SAFE (audio thread safe)
+     */
+    int64_t beatsToSamples(double beats, double sampleRate) const;
+
+    /**
+     * @brief Convert samples to beats
+     * @param samples Time in samples
+     * @param sampleRate Current sample rate
+     * @return Time in beats
+     * @note RT-SAFE (audio thread safe)
+     */
+    double samplesToBeats(int64_t samples, double sampleRate) const;
+
+    /**
+     * @brief Get current tempo at a given beat position
+     * @param beats Time in beats
      * @return Tempo in BPM
-     * @note RT-SAFE: No allocations, no locks
+     * @note RT-SAFE (audio thread safe)
      */
-    double getTempoAtBeats(double beats) const;
-
-    /**
-     * @brief Get time signature at beat position
-     * @param beats Position in beats
-     * @return Time signature
-     * @note RT-SAFE: No allocations, no locks
-     */
-    TimeSignature getTimeSignatureAtBeats(double beats) const;
-
-    /**
-     * @brief Get sample rate
-     */
-    double getSampleRate() const { return sampleRate_; }
-
-    /**
-     * @brief Get number of segments
-     */
-    int getNumSegments() const { return static_cast<int>(segments_.size()); }
+    double getTempoAt(double beats) const;
 
 private:
+    //==========================================================================
+    // Atomic shared_ptr for lock-free access from audio thread
+    //==========================================================================
+
+    // Current snapshot (read by audio thread, swapped by message thread)
+    std::shared_ptr<const TempoMapSnapshot> snapshot_;
+
+    // Spinlock for updating snapshot_ (message thread only)
+    // We use atomic_exchange for lock-free swap
+    mutable std::atomic<const TempoMapSnapshot*> atomicSnapshot_{nullptr};
+
     //==========================================================================
     // Helper Methods
     //==========================================================================
 
     /**
-     * @brief Find segment index for given beat position
-     * @param beats Beat position
-     * @return Segment index (or last segment if beats > end)
-     * @note RT-SAFE: Binary search, no allocations
+     * @brief Swap snapshot atomically
+     * @param newSnapshot New snapshot to install
+     * @note MESSAGE THREAD ONLY
      */
-    int findSegmentForBeats(double beats) const;
+    void swapSnapshot(std::shared_ptr<const TempoMapSnapshot> newSnapshot);
 
     /**
-     * @brief Find segment index for given sample position
-     * @param samplePos Sample position
-     * @return Segment index (or last segment if samplePos > end)
-     * @note RT-SAFE: Binary search, no allocations
+     * @brief Load current snapshot for reading
+     * @return Shared pointer to current snapshot
+     * @note RT-SAFE (audio thread safe)
      */
-    int findSegmentForSamples(juce::int64 samplePos) const;
-
-    //==========================================================================
-    // Member Variables
-    //==========================================================================
-
-    double sampleRate_{44100.0};
-    std::vector<TempoSegment> segments_;  // Allocated at construction, const after
+    std::shared_ptr<const TempoMapSnapshot> loadSnapshot() const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoMap)
 };

@@ -10,7 +10,7 @@
 #include <vector>
 #include "Clip.h"
 
-namespace vexel {
+namespace zenith {
 
 enum class TrackType {
     Audio,
@@ -107,4 +107,4 @@ public:
                 double currentBeat) override;
 };
 
-} // namespace vexel
+} // namespace zenith
