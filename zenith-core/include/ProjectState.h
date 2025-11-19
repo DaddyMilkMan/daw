@@ -307,7 +307,7 @@ public:
     //==========================================================================
 
     /**
-     * @brief Create a new clip (undoable)
+     * @brief Create a new clip (undoable, sample-based)
      * @param trackId Track ID
      * @param clipType "audio" or "midi"
      * @param startSamples Start position in samples
@@ -322,7 +322,24 @@ public:
                            const juce::String& actionName = "Create clip");
 
     /**
-     * @brief Delete a clip (undoable)
+     * @brief Create an empty clip on a track (undoable, beat-based - Phase 9)
+     * @param trackId Track ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Clip length in beats
+     * @param isMidi true for MIDI clip, false for audio clip
+     * @param name Clip name
+     * @param actionName Undo action name
+     * @return Clip ID
+     */
+    juce::String createEmptyClip(const juce::String& trackId,
+                                  double startBeats,
+                                  double lengthBeats,
+                                  bool isMidi,
+                                  const juce::String& name,
+                                  const juce::String& actionName);
+
+    /**
+     * @brief Delete a clip (undoable, with track ID)
      * @param trackId Track ID
      * @param clipId Clip ID
      * @param actionName Optional undo action name
@@ -331,7 +348,15 @@ public:
                     const juce::String& actionName = "Delete clip");
 
     /**
-     * @brief Move a clip (undoable)
+     * @brief Delete a clip (undoable, searches all tracks - Phase 9)
+     * @param clipId Clip ID
+     * @param actionName Undo action name
+     */
+    void deleteClip(const juce::String& clipId,
+                    const juce::String& actionName);
+
+    /**
+     * @brief Move a clip (undoable, sample-based, same track)
      * @param trackId Track ID
      * @param clipId Clip ID
      * @param newStartSamples New start position in samples
@@ -340,6 +365,30 @@ public:
     void moveClip(const juce::String& trackId, const juce::String& clipId,
                   juce::int64 newStartSamples,
                   const juce::String& actionName = "Move clip");
+
+    /**
+     * @brief Move a clip to a new track and/or time position (Phase 9)
+     * @param clipId Clip ID
+     * @param newTrackId Target track ID
+     * @param newStartBeats New start position in beats
+     * @param actionName Undo action name
+     */
+    void moveClip(const juce::String& clipId,
+                  const juce::String& newTrackId,
+                  double newStartBeats,
+                  const juce::String& actionName);
+
+    /**
+     * @brief Resize a clip (change start and/or length - Phase 9)
+     * @param clipId Clip ID
+     * @param newStartBeats New start position in beats
+     * @param newLengthBeats New length in beats
+     * @param actionName Undo action name
+     */
+    void setClipRange(const juce::String& clipId,
+                      double newStartBeats,
+                      double newLengthBeats,
+                      const juce::String& actionName);
 
     /**
      * @brief Split a clip (undoable)
@@ -398,6 +447,13 @@ public:
      * @return Clip ValueTree (invalid if not found)
      */
     juce::ValueTree getClip(const juce::String& trackId, const juce::String& clipId) const;
+
+    /**
+     * @brief Find clip by ID across all tracks (Phase 9)
+     * @param clipId Clip ID
+     * @return Pair of (track ValueTree, clip ValueTree) - both invalid if not found
+     */
+    std::pair<juce::ValueTree, juce::ValueTree> findClip(const juce::String& clipId);
 
     //==========================================================================
     // Phase 13: Automation Management
@@ -601,9 +657,9 @@ private:
     juce::String generateUniqueId(const juce::String& prefix);
 
     /**
-     * @brief Find track by ID
+     * @brief Find track by ID (internal helper)
      */
-    juce::ValueTree findTrack(const juce::String& trackId);
+    juce::ValueTree findTrackInternal(const juce::String& trackId);
 
     /**
      * @brief Find clip by ID across all tracks

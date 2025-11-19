@@ -55,6 +55,7 @@ public:
 
     using HandlePtr = std::shared_ptr<const AudioFileHandle>;
 
+
     //==============================================================================
     AudioFilePool();
     ~AudioFilePool();
@@ -116,6 +117,7 @@ private:
 
     // Audio format manager for loading files
     juce::AudioFormatManager formatManager_;
+
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioFilePool)

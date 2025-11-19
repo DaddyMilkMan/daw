@@ -48,6 +48,9 @@ namespace zenith {
     class PluginEditorWindowManager;
 }
 
+// Forward declaration
+class ProjectState;
+
 //==============================================================================
 /**
  * @class Engine
@@ -128,13 +131,13 @@ public:
 
     /**
      * @brief Start recording
-     * @note MESSAGE THREAD ONLY - Starts recording on armed tracks
+     * @note MESSAGE THREAD ONLY - Starts recording on armed tracks (both MIDI and audio)
      */
     void record();
 
     /**
-     * @brief Stop recording and bake MIDI clips
-     * @note MESSAGE THREAD ONLY - Converts recordings to clips
+     * @brief Stop recording and bake clips
+     * @note MESSAGE THREAD ONLY - Converts recordings to clips (both MIDI and audio)
      */
     void stopRecording();
 
@@ -191,6 +194,7 @@ public:
      * @brief Get loop end position in samples
      */
     juce::int64 getLoopEnd() const { return loopEndSamples_.load(); }
+
 
     //==========================================================================
     // Audio Device Management
@@ -320,6 +324,7 @@ public:
                            double durationSeconds = 10.0,
                            double sampleRate = 0.0);
 
+
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
     //==========================================================================
@@ -394,6 +399,32 @@ private:
         float* const* outputChannelData,
         int numOutputChannels,
         int numSamples);
+
+    /**
+     * @brief Process audio recording (AUDIO THREAD)
+     * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
+     */
+    void processAudioRecording(
+        const float* const* inputChannelData,
+        int numInputChannels,
+        int numSamples);
+
+    //==========================================================================
+    // Recording Helpers (MESSAGE THREAD)
+    //==========================================================================
+
+    /**
+     * @brief Convert a completed audio recording into an AudioClip
+     * @param track Track to add clip to
+     * @param file Recorded audio file
+     * @param recordingStartSamples Timeline position where recording started
+     * @param sampleRate Sample rate of recording
+     */
+    void bakeAudioRecordingIntoTrack(
+        zenith::Track& track,
+        const juce::File& file,
+        juce::int64 recordingStartSamples,
+        double sampleRate);
 
     //==========================================================================
     // Phase 2C: MIDI Recording Helpers (MESSAGE THREAD)
@@ -493,6 +524,28 @@ private:
     };
     MidiRecordingBuffer midiRecording_;
     juce::CriticalSection midiRecordingLock_;
+
+    //==========================================================================
+    // Phase 2D: Audio Recording Infrastructure
+    //==========================================================================
+
+    // Background thread for audio file writing
+    std::unique_ptr<juce::TimeSliceThread> audioWriterThread_;
+
+    // Audio recording session (per-track)
+    struct AudioRecordingSession
+    {
+        std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
+        juce::File file;
+        int numChannels = 0;
+        double sampleRate = 44100.0;
+        juce::int64 recordingStartSamples = 0;
+        int trackIndex = -1;  // Which track this session belongs to
+    };
+
+    // Active recording sessions (message thread creates, audio thread writes)
+    std::vector<AudioRecordingSession> audioRecordingSessions_;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
