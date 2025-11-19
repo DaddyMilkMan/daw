@@ -3,7 +3,7 @@
 
     Track.h
     Created: 2025-11-11
-    Author:  Vexel DAW
+    Author:  Zenith DAW
 
     Audio/MIDI track with clip playback, plugin chain, and mixer controls
 

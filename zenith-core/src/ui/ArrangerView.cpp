@@ -6,220 +6,65 @@
 #include "../../include/ui/ArrangerView.h"
 
 //==============================================================================
-// TrackLane Implementation
-//==============================================================================
-
-TrackLane::TrackLane(ProjectState& state, const juce::String& tId)
-    : projectState(state)
-    , trackId(tId)
+ArrangerView::ArrangerView(ProjectState& projectState)
+    : projectState_(projectState)
 {
-    // Get track info
-    auto track = projectState.getTrackById(trackId);
-    if (track.isValid())
-        trackName = track[ProjectState::PROP_NAME].toString();
-
-    // Listen to clips changes
-    auto clipsNode = projectState.getClips(trackId);
-    if (clipsNode.isValid())
-        clipsNode.addListener(this);
-
-    refreshClips();
-}
-
-TrackLane::~TrackLane()
-{
-    auto clipsNode = projectState.getClips(trackId);
-    if (clipsNode.isValid())
-        clipsNode.removeListener(this);
-}
-
-void TrackLane::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds();
-
-    // Background (alternating colors for tracks)
-    static int trackCounter = 0;
-    bool isEven = (trackCounter++ % 2 == 0);
-    g.fillAll(isEven ? juce::Colour(0xff1e1e1e) : juce::Colour(0xff252525));
-
-    // Track name on the left
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(14.0f, juce::Font::bold));
-    g.drawText(trackName, 10, 10, 150, 20, juce::Justification::centredLeft);
-
-    // Bottom border
-    g.setColour(juce::Colour(0xff1a1a1a));
-    g.drawLine(0.0f, (float)bounds.getBottom() - 1.0f,
-               (float)bounds.getRight(), (float)bounds.getBottom() - 1.0f, 1.0f);
-}
-
-void TrackLane::resized()
-{
-    // Position clip components
-    for (auto* clip : clipComponents)
-    {
-        double startBeats = clip->getStartBeats();
-        double lengthBeats = clip->getLengthBeats();
-
-        int x = (int)(startBeats * pixelsPerBeat) - scrollOffset;
-        int width = (int)(lengthBeats * pixelsPerBeat);
-
-        // Clip vertical position (leave space for track name)
-        clip->setBounds(x, 30, width, getHeight() - 40);
-    }
-}
-
-void TrackLane::setPixelsPerBeat(double ppb)
-{
-    pixelsPerBeat = ppb;
-    resized();
-    repaint();
-}
-
-void TrackLane::setScrollOffset(int offset)
-{
-    scrollOffset = offset;
-    resized();
-    repaint();
-}
-
-void TrackLane::refreshClips()
-{
-    // Clear existing clip components
-    clipComponents.clear();
-
-    // Get clips from ProjectState
-    auto clipsNode = projectState.getClips(trackId);
-    if (!clipsNode.isValid())
-        return;
-
-    // Create ClipComponent for each clip
-    for (auto clip : clipsNode)
-    {
-        if (!clip.hasType(ProjectState::ID_CLIP))
-            continue;
-
-        juce::String clipId = clip[ProjectState::PROP_ID].toString();
-        double startBeats = clip[ProjectState::PROP_START];
-        double lengthBeats = clip[ProjectState::PROP_LENGTH];
-
-        auto* clipComp = new ClipComponent(clipId, trackId, startBeats, lengthBeats);
-
-        // Set up move callback
-        clipComp->onClipMoved = [this](const juce::String& clipId, double newStartBeats)
-        {
-            onClipMoved(clipId, newStartBeats);
-        };
-
-        // Set pixels per beat for proper dragging
-        // (ClipComponent uses this internally for drag calculations)
-
-        clipComponents.add(clipComp);
-        addAndMakeVisible(clipComp);
-    }
-
-    resized();
-}
-
-void TrackLane::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
-{
-    if (child.hasType(ProjectState::ID_CLIP))
-        refreshClips();
-}
-
-void TrackLane::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
-{
-    if (child.hasType(ProjectState::ID_CLIP))
-        refreshClips();
-}
-
-void TrackLane::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
-{
-    if (tree.hasType(ProjectState::ID_CLIP) && property == ProjectState::PROP_START)
-    {
-        // Clip moved - update visual position
-        juce::String clipId = tree[ProjectState::PROP_ID].toString();
-        double newStart = tree[ProjectState::PROP_START];
-
-        for (auto* clip : clipComponents)
-        {
-            if (clip->getClipId() == clipId)
-            {
-                clip->setStartBeats(newStart);
-                resized();
-                break;
-            }
-        }
-    }
-}
-
-void TrackLane::onClipMoved(const juce::String& clipId, double newStartBeats)
-{
-    // Update ProjectState (which will trigger valueTreePropertyChanged)
-    projectState.moveClip(trackId, clipId, newStartBeats, "Move Clip");
-}
-
-//==============================================================================
-// ArrangerView Implementation
-//==============================================================================
-
-ArrangerView::ArrangerView(ProjectState& state)
-    : projectState(state)
-    , horizontalScrollBar(false)  // Horizontal
-    , verticalScrollBar(true)     // Vertical
-{
-    // Create timeline ruler
-    timelineRuler = std::make_unique<TimelineRuler>();
-    addAndMakeVisible(timelineRuler.get());
-
-    // Set time signature from project
-    timelineRuler->setTimeSignature(projectState.getTimeSignatureNumerator(),
-                                    projectState.getTimeSignatureDenominator());
-
-    // Add scrollbars
-    addAndMakeVisible(horizontalScrollBar);
-    addAndMakeVisible(verticalScrollBar);
-
-    horizontalScrollBar.addListener(this);
-    verticalScrollBar.addListener(this);
-
-    // Listen to tracks changes
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    // Listen to TRACKS node for track add/remove
+    auto tracksNode = projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
     if (tracksNode.isValid())
         tracksNode.addListener(this);
 
-    refreshTracks();
-    updateScrollBars();
+    // Build initial track headers
+    rebuildTrackHeaders();
 }
 
 ArrangerView::~ArrangerView()
 {
-    horizontalScrollBar.removeListener(this);
-    verticalScrollBar.removeListener(this);
-
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    // Remove listener
+    auto tracksNode = projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
     if (tracksNode.isValid())
         tracksNode.removeListener(this);
 }
 
 //==============================================================================
-// Component interface
-//==============================================================================
-
 void ArrangerView::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background
-    g.fillAll(juce::Colour(0xff1a1a1a));
+    // Draw background
+    g.fillAll(juce::Colour(0xff1e1e1e));
 
-    // If no tracks, show message
-    if (trackLanes.isEmpty())
+    // Draw header area background
+    auto headerArea = bounds.removeFromLeft(HEADER_WIDTH);
+    g.setColour(juce::Colour(0xff252525));
+    g.fillRect(headerArea);
+
+    // Draw separator line between headers and timeline
+    g.setColour(juce::Colour(0xff0a0a0a));
+    g.drawVerticalLine(HEADER_WIDTH, 0.0f, static_cast<float>(getHeight()));
+
+    // Timeline area (placeholder)
+    g.setColour(juce::Colour(0xff1e1e1e));
+    g.fillRect(bounds);
+
+    // Draw placeholder text
+    if (trackHeaders_.empty())
     {
         g.setColour(juce::Colours::grey);
         g.setFont(juce::Font(16.0f));
-        g.drawText("No tracks - Add a track to get started",
-                   bounds,
+        g.drawText("No tracks. Use Project > Add Track to create tracks.",
+                   getLocalBounds(),
+                   juce::Justification::centred,
+                   true);
+    }
+    else
+    {
+        // Draw timeline placeholder text
+        g.setColour(juce::Colours::darkgrey);
+        g.setFont(juce::Font(14.0f));
+        auto timelineArea = getLocalBounds().removeFromLeft(getWidth()).removeFromLeft(getWidth() - HEADER_WIDTH);
+        g.drawText("Timeline view (coming soon)",
+                   timelineArea,
                    juce::Justification::centred,
                    true);
     }
@@ -227,155 +72,88 @@ void ArrangerView::paint(juce::Graphics& g)
 
 void ArrangerView::resized()
 {
-    auto bounds = getLocalBounds();
-
-    // Timeline ruler at top
-    auto rulerBounds = bounds.removeFromTop(RULER_HEIGHT);
-    timelineRuler->setBounds(rulerBounds);
-
-    // Scrollbars at bottom and right
-    auto horizontalScrollBounds = bounds.removeFromBottom(SCROLLBAR_SIZE);
-    auto verticalScrollBounds = bounds.removeFromRight(SCROLLBAR_SIZE);
-
-    // Leave space for scrollbar corner
-    horizontalScrollBounds.removeFromRight(SCROLLBAR_SIZE);
-
-    horizontalScrollBar.setBounds(horizontalScrollBounds);
-    verticalScrollBar.setBounds(verticalScrollBounds);
-
-    // Track lanes
-    int totalHeight = trackLanes.size() * TRACK_HEIGHT;
-    int y = -scrollOffsetY;
-
-    for (auto* lane : trackLanes)
-    {
-        lane->setBounds(0, y, bounds.getWidth(), TRACK_HEIGHT);
-        y += TRACK_HEIGHT;
-    }
-
-    updateScrollBars();
+    layoutTrackHeaders();
 }
 
 //==============================================================================
-// Zoom control
-//==============================================================================
-
-void ArrangerView::setPixelsPerBeat(double ppb)
-{
-    pixelsPerBeat = juce::jlimit(10.0, 200.0, ppb);
-
-    // Update timeline ruler
-    timelineRuler->setPixelsPerBeat(pixelsPerBeat);
-
-    // Update all track lanes
-    for (auto* lane : trackLanes)
-        lane->setPixelsPerBeat(pixelsPerBeat);
-
-    updateScrollBars();
-    repaint();
-}
-
-void ArrangerView::zoomIn()
-{
-    setPixelsPerBeat(pixelsPerBeat * 1.2);
-}
-
-void ArrangerView::zoomOut()
-{
-    setPixelsPerBeat(pixelsPerBeat / 1.2);
-}
-
-//==============================================================================
-// ValueTree::Listener interface
+// ValueTree::Listener (MESSAGE THREAD)
 //==============================================================================
 
 void ArrangerView::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (child.hasType(ProjectState::ID_TRACK))
-        refreshTracks();
+    // Check if a track was added to TRACKS node
+    if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
+    {
+        DBG("ArrangerView: Track added, rebuilding headers");
+        rebuildTrackHeaders();
+    }
 }
 
 void ArrangerView::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
 {
-    if (child.hasType(ProjectState::ID_TRACK))
-        refreshTracks();
+    juce::ignoreUnused(index);
+
+    // Check if a track was removed from TRACKS node
+    if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
+    {
+        DBG("ArrangerView: Track removed, rebuilding headers");
+        rebuildTrackHeaders();
+    }
 }
 
-//==============================================================================
-// ScrollBar::Listener interface
-//==============================================================================
-
-void ArrangerView::scrollBarMoved(juce::ScrollBar* scrollBar, double newRangeStart)
+void ArrangerView::valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex)
 {
-    if (scrollBar == &horizontalScrollBar)
-    {
-        scrollOffsetX = (int)newRangeStart;
-        timelineRuler->setScrollOffset(scrollOffsetX);
+    juce::ignoreUnused(oldIndex, newIndex);
 
-        for (auto* lane : trackLanes)
-            lane->setScrollOffset(scrollOffsetX);
-    }
-    else if (scrollBar == &verticalScrollBar)
+    // Check if track order changed in TRACKS node
+    if (parent.hasType(ProjectState::ID_TRACKS))
     {
-        scrollOffsetY = (int)newRangeStart;
-        resized();
+        DBG("ArrangerView: Track order changed, rebuilding headers");
+        rebuildTrackHeaders();
     }
 }
 
 //==============================================================================
-// Helper methods
+// Helper Methods
 //==============================================================================
 
-void ArrangerView::refreshTracks()
+void ArrangerView::rebuildTrackHeaders()
 {
-    // Clear existing track lanes
-    trackLanes.clear();
+    // Clear existing headers
+    trackHeaders_.clear();
 
-    // Create TrackLane for each track
-    int numTracks = projectState.getNumTracks();
-    for (int i = 0; i < numTracks; ++i)
+    // Get TRACKS node
+    auto tracksNode = projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid())
+        return;
+
+    // Create header for each track
+    for (auto trackNode : tracksNode)
     {
-        auto track = projectState.getTrack(i);
-        if (!track.isValid())
+        if (!trackNode.hasType(ProjectState::ID_TRACK))
             continue;
 
-        juce::String trackId = track[ProjectState::PROP_ID].toString();
+        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
 
-        auto* lane = new TrackLane(projectState, trackId);
-        lane->setPixelsPerBeat(pixelsPerBeat);
-        lane->setScrollOffset(scrollOffsetX);
-
-        trackLanes.add(lane);
-        addAndMakeVisible(lane);
+        auto header = std::make_unique<TrackHeaderComponent>(projectState_, trackId);
+        addAndMakeVisible(*header);
+        trackHeaders_.push_back(std::move(header));
     }
 
-    resized();
+    // Relayout
+    layoutTrackHeaders();
     repaint();
+
+    DBG("ArrangerView: Rebuilt " + juce::String(trackHeaders_.size()) + " track headers");
 }
 
-void ArrangerView::updateScrollBars()
+void ArrangerView::layoutTrackHeaders()
 {
-    auto bounds = getLocalBounds();
-    bounds.removeFromTop(RULER_HEIGHT);
-    bounds.removeFromBottom(SCROLLBAR_SIZE);
-    bounds.removeFromRight(SCROLLBAR_SIZE);
+    int yPos = 0;
 
-    // Horizontal scrollbar (timeline length)
-    // Assume max 100 bars of content
-    double maxBars = 100.0;
-    double beatsPerBar = projectState.getTimeSignatureNumerator();
-    double totalBeats = maxBars * beatsPerBar;
-    double totalWidth = totalBeats * pixelsPerBeat;
-
-    horizontalScrollBar.setRangeLimits(0.0, totalWidth);
-    horizontalScrollBar.setCurrentRange(scrollOffsetX, bounds.getWidth(), juce::dontSendNotification);
-    horizontalScrollBar.setSingleStepSize(pixelsPerBeat);  // One beat
-    horizontalScrollBar.setAutoHide(false);
-
-    // Vertical scrollbar (track lanes)
-    int totalHeight = trackLanes.size() * TRACK_HEIGHT;
-    verticalScrollBar.setRangeLimits(0.0, totalHeight);
-    verticalScrollBar.setCurrentRange(scrollOffsetY, bounds.getHeight(), juce::dontSendNotification);
-    verticalScrollBar.setSingleStepSize(TRACK_HEIGHT);  // One track
-    verticalScrollBar.setAutoHide(false);
+    for (auto& header : trackHeaders_)
+    {
+        header->setBounds(0, yPos, HEADER_WIDTH, TRACK_HEIGHT);
+        yPos += TRACK_HEIGHT;
+    }
 }

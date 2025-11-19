@@ -19,7 +19,7 @@
 // Forward declare Lua state
 struct lua_State;
 
-namespace vexel {
+namespace zenith {
 
 class AudioEngine;
 
@@ -91,4 +91,4 @@ private:
     ScriptEngine& operator=(const ScriptEngine&) = delete;
 };
 
-} // namespace vexel
+} // namespace zenith

@@ -4,156 +4,67 @@
  */
 
 #include "../../include/ui/ClipComponent.h"
+#include "../../include/ProjectState.h"
 
-//==============================================================================
-ClipComponent::ClipComponent(const juce::String& id, const juce::String& tId,
-                             double start, double length)
-    : clipId(id)
-    , trackId(tId)
-    , startBeats(start)
-    , lengthBeats(length)
-{
-    setMouseCursor(juce::MouseCursor::DraggingHandCursor);
-}
-
-ClipComponent::~ClipComponent()
+ClipComponent::ClipComponent(juce::ValueTree clipNode)
+    : clip(clipNode)
 {
 }
 
-//==============================================================================
-// Component interface
-//==============================================================================
+juce::String ClipComponent::getClipId() const
+{
+    return clip[ProjectState::PROP_ID].toString();
+}
+
+double ClipComponent::getStartBeats() const
+{
+    return clip[ProjectState::PROP_START_BEATS];
+}
+
+double ClipComponent::getLengthBeats() const
+{
+    return clip[ProjectState::PROP_LENGTH_BEATS];
+}
+
+void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height)
+{
+    int x = static_cast<int>(getStartBeats() * pixelsPerBeat);
+    int width = static_cast<int>(getLengthBeats() * pixelsPerBeat);
+    setBounds(x, yPosition, width, height);
+}
 
 void ClipComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background color
-    juce::Colour clipColor = juce::Colour(0xff4a90e2);  // Blue
+    // Determine color based on clip type
+    juce::Colour clipColor = juce::Colours::blue;
+    if (clip[ProjectState::PROP_TYPE].toString() == "midi")
+        clipColor = juce::Colours::green;
 
-    if (isDragging)
-        clipColor = clipColor.brighter(0.3f);
-    else if (isMouseOver)
-        clipColor = clipColor.brighter(0.15f);
-
-    // Fill clip background
-    g.setColour(clipColor);
-    g.fillRoundedRectangle(bounds.toFloat(), 3.0f);
+    // Fill
+    g.setColour(clipColor.withAlpha(0.6f));
+    g.fillRoundedRectangle(bounds.toFloat(), 4.0f);
 
     // Border
-    g.setColour(clipColor.brighter(0.5f));
-    g.drawRoundedRectangle(bounds.toFloat().reduced(1.0f), 3.0f, 1.5f);
+    g.setColour(clipColor);
+    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), 4.0f, 2.0f);
 
-    // Clip label
+    // Clip name/ID
     g.setColour(juce::Colours::white);
     g.setFont(juce::Font(12.0f));
-    g.drawText(clipId, bounds.reduced(6, 2), juce::Justification::topLeft, true);
-
-    // Duration info
-    g.setFont(juce::Font(10.0f));
-    g.setColour(juce::Colours::white.withAlpha(0.7f));
-    juce::String durationText = juce::String(lengthBeats, 2) + " beats";
-    g.drawText(durationText, bounds.reduced(6, 2), juce::Justification::bottomLeft, true);
+    g.drawText(getClipId(), bounds.reduced(4), juce::Justification::centredLeft, true);
 }
 
-void ClipComponent::resized()
+void ClipComponent::mouseDown(const juce::MouseEvent& event)
 {
-    // Nothing to resize
+    dragStartPos = event.getPosition();
+    dragStartBeats = getStartBeats();
 }
 
-void ClipComponent::mouseEnter(const juce::MouseEvent& e)
+void ClipComponent::mouseDrag(const juce::MouseEvent& event)
 {
-    isMouseOver = true;
-    repaint();
-}
-
-void ClipComponent::mouseExit(const juce::MouseEvent& e)
-{
-    isMouseOver = false;
-    repaint();
-}
-
-void ClipComponent::mouseDown(const juce::MouseEvent& e)
-{
-    if (e.mods.isLeftButtonDown())
-    {
-        isDragging = true;
-        dragStartBeats = startBeats;
-        dragStartX = e.getMouseDownX();
-        repaint();
-    }
-}
-
-void ClipComponent::mouseDrag(const juce::MouseEvent& e)
-{
-    if (!isDragging)
-        return;
-
-    // Calculate drag delta in pixels
-    int deltaX = e.getDistanceFromDragStartX();
-
-    // Convert to beats (we'll get pixelsPerBeat from parent)
-    // For now, assume 40 pixels per beat (will be updated by parent)
-    double pixelsPerBeat = 40.0;
-    if (auto* parent = getParentComponent())
-    {
-        // The parent (track lane) should provide this
-        // For now, use a fixed value
-    }
-
-    double deltaBeats = deltaX / pixelsPerBeat;
-    double newStartBeats = dragStartBeats + deltaBeats;
-
-    // Snap to grid
-    if (snapEnabled)
-        newStartBeats = snapToGrid(newStartBeats);
-
-    // Don't allow negative start
-    newStartBeats = juce::jmax(0.0, newStartBeats);
-
-    // Update start position (visual only during drag)
-    startBeats = newStartBeats;
-    repaint();
-}
-
-void ClipComponent::mouseUp(const juce::MouseEvent& e)
-{
-    if (isDragging)
-    {
-        isDragging = false;
-
-        // Notify parent of the move
-        if (onClipMoved)
-            onClipMoved(clipId, startBeats);
-
-        repaint();
-    }
-}
-
-//==============================================================================
-// Clip properties
-//==============================================================================
-
-void ClipComponent::setStartBeats(double newStart)
-{
-    startBeats = newStart;
-    repaint();
-}
-
-void ClipComponent::setLengthBeats(double newLength)
-{
-    lengthBeats = newLength;
-    repaint();
-}
-
-//==============================================================================
-// Helper methods
-//==============================================================================
-
-double ClipComponent::snapToGrid(double beats) const
-{
-    if (snapGridBeats <= 0.0)
-        return beats;
-
-    return std::round(beats / snapGridBeats) * snapGridBeats;
+    // Simple drag visualization (actual state changes would go through ProjectState)
+    auto delta = event.getPosition() - dragStartPos;
+    setTopLeftPosition(getX() + delta.x, getY());
 }

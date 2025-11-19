@@ -3,7 +3,7 @@
 
     PluginHost.h
     Created: 2025-11-11
-    Author:  Vexel DAW
+    Author:  Zenith DAW
 
     VST3/AU/AAX plugin scanner and host manager
 

@@ -1,0 +1,824 @@
+{
+  "presets": [
+    {
+      "name": "Classic EP",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "ep",
+        "classic"
+      ],
+      "description": "Classic electric piano-style pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.65,
+        "filter_resonance": 0.28,
+        "attack": 0.01,
+        "decay": 0.25,
+        "sustain": 0.45,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Classic EP 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "ep",
+        "classic",
+        "variation"
+      ],
+      "description": "Classic electric piano-style pluck",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7004020736144291,
+        "filter_resonance": 0.2894509672287102,
+        "attack": 0.054580236580889334,
+        "decay": 0.25582790506147407,
+        "sustain": 0.370091503380471,
+        "release": 0.14623796294489722
+      }
+    },
+    {
+      "name": "Warm Rhodes",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "rhodes",
+        "warm"
+      ],
+      "description": "Warm Rhodes-style electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.24,
+        "attack": 0.012,
+        "decay": 0.28,
+        "sustain": 0.48,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Warm Rhodes 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "rhodes",
+        "warm",
+        "variation"
+      ],
+      "description": "Warm Rhodes-style electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.4877395345380798,
+        "filter_resonance": 0.3429836679035081,
+        "attack": 0.0725955004517095,
+        "decay": 0.34367978163734647,
+        "sustain": 0.4492022600644258,
+        "release": 0.11512163196688402
+      }
+    },
+    {
+      "name": "Bright Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "bright",
+        "shiny"
+      ],
+      "description": "Bright shiny electric keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.78,
+        "filter_resonance": 0.35,
+        "attack": 0.008,
+        "decay": 0.22,
+        "sustain": 0.42,
+        "release": 0.16
+      }
+    },
+    {
+      "name": "Bright Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "bright",
+        "shiny",
+        "variation"
+      ],
+      "description": "Bright shiny electric keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8525778430471758,
+        "filter_resonance": 0.45726786687151855,
+        "attack": 0.002,
+        "decay": 0.21731016895678984,
+        "sustain": 0.35107400295494134,
+        "release": 0.21003561572938848
+      }
+    },
+    {
+      "name": "LoFi Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "lofi",
+        "vintage"
+      ],
+      "description": "LoFi vintage electric piano",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.48,
+        "filter_resonance": 0.2,
+        "attack": 0.015,
+        "decay": 0.3,
+        "sustain": 0.38,
+        "release": 0.22
+      }
+    },
+    {
+      "name": "LoFi Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "lofi",
+        "vintage",
+        "variation"
+      ],
+      "description": "LoFi vintage electric piano",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5310402104269416,
+        "filter_resonance": 0.11081395147994308,
+        "attack": 0.011045180495797002,
+        "decay": 0.3095622899510292,
+        "sustain": 0.34240906063040943,
+        "release": 0.2915071438883694
+      }
+    },
+    {
+      "name": "Mellow EP",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "mellow",
+        "soft"
+      ],
+      "description": "Mellow soft electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.52,
+        "filter_resonance": 0.22,
+        "attack": 0.018,
+        "decay": 0.32,
+        "sustain": 0.5,
+        "release": 0.24
+      }
+    },
+    {
+      "name": "Mellow EP 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "mellow",
+        "soft",
+        "variation"
+      ],
+      "description": "Mellow soft electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.5052424845185703,
+        "filter_resonance": 0.1508315693060997,
+        "attack": 0.02428737420471334,
+        "decay": 0.36414676526527545,
+        "sustain": 0.45218417014235135,
+        "release": 0.20384952792977182
+      }
+    },
+    {
+      "name": "Funky Clav",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "clavinet",
+        "funky"
+      ],
+      "description": "Funky clavinet-style pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.72,
+        "filter_resonance": 0.42,
+        "attack": 0.003,
+        "decay": 0.15,
+        "sustain": 0.28,
+        "release": 0.12
+      }
+    },
+    {
+      "name": "Funky Clav 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "clavinet",
+        "funky",
+        "variation"
+      ],
+      "description": "Funky clavinet-style pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.8150686764788917,
+        "filter_resonance": 0.4559707338334688,
+        "attack": 0.002,
+        "decay": 0.15337456147883338,
+        "sustain": 0.21936067133892254,
+        "release": 0.06714188871005901
+      }
+    },
+    {
+      "name": "Digital Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "digital",
+        "modern"
+      ],
+      "description": "Modern digital electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.32,
+        "attack": 0.01,
+        "decay": 0.24,
+        "sustain": 0.44,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Digital Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "digital",
+        "modern",
+        "variation"
+      ],
+      "description": "Modern digital electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.6689124279323114,
+        "filter_resonance": 0.341194092429736,
+        "attack": 0.002,
+        "decay": 0.18628173781469942,
+        "sustain": 0.3713588937614452,
+        "release": 0.205171767795859
+      }
+    },
+    {
+      "name": "Wurlitzer Vibe",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "wurlitzer",
+        "vintage"
+      ],
+      "description": "Vintage Wurlitzer-inspired tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.62,
+        "filter_resonance": 0.3,
+        "attack": 0.014,
+        "decay": 0.26,
+        "sustain": 0.46,
+        "release": 0.19
+      }
+    },
+    {
+      "name": "Wurlitzer Vibe 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "wurlitzer",
+        "vintage",
+        "variation"
+      ],
+      "description": "Vintage Wurlitzer-inspired tone",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.5679568224917416,
+        "filter_resonance": 0.3973008031214707,
+        "attack": 0.07154166404059946,
+        "decay": 0.17760461117862147,
+        "sustain": 0.41808074149903923,
+        "release": 0.22244373343288587
+      }
+    },
+    {
+      "name": "Stab Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "stab",
+        "punchy"
+      ],
+      "description": "Punchy stab electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.68,
+        "filter_resonance": 0.38,
+        "attack": 0.006,
+        "decay": 0.18,
+        "sustain": 0.32,
+        "release": 0.14
+      }
+    },
+    {
+      "name": "Stab Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "stab",
+        "punchy",
+        "variation"
+      ],
+      "description": "Punchy stab electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6251334670151243,
+        "filter_resonance": 0.291754843694006,
+        "attack": 0.07568227849290737,
+        "decay": 0.19364027391845462,
+        "sustain": 0.3156273642098871,
+        "release": 0.19464692946382467
+      }
+    },
+    {
+      "name": "Soft Touch",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "soft",
+        "gentle"
+      ],
+      "description": "Gentle soft touch electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.55,
+        "filter_resonance": 0.25,
+        "attack": 0.02,
+        "decay": 0.35,
+        "sustain": 0.52,
+        "release": 0.26
+      }
+    },
+    {
+      "name": "Soft Touch 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "soft",
+        "gentle",
+        "variation"
+      ],
+      "description": "Gentle soft touch electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.6090394235711956,
+        "filter_resonance": 0.17569837944685066,
+        "attack": 0.002,
+        "decay": 0.33676182702202445,
+        "sustain": 0.5077725796831873,
+        "release": 0.2536687362630416
+      }
+    },
+    {
+      "name": "Trap Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "trap",
+        "modern"
+      ],
+      "description": "Modern trap-style plucky keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.74,
+        "filter_resonance": 0.36,
+        "attack": 0.008,
+        "decay": 0.2,
+        "sustain": 0.38,
+        "release": 0.15
+      }
+    },
+    {
+      "name": "Trap Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "trap",
+        "modern",
+        "variation"
+      ],
+      "description": "Modern trap-style plucky keys",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7839825630962913,
+        "filter_resonance": 0.40160749135039236,
+        "attack": 0.0854664338185546,
+        "decay": 0.12289623126117612,
+        "sustain": 0.364419405136363,
+        "release": 0.11914610023583291
+      }
+    },
+    {
+      "name": "Chill EP",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "chill",
+        "relaxed"
+      ],
+      "description": "Relaxed chill electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.6,
+        "filter_resonance": 0.26,
+        "attack": 0.016,
+        "decay": 0.3,
+        "sustain": 0.48,
+        "release": 0.22
+      }
+    },
+    {
+      "name": "Chill EP 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "chill",
+        "relaxed",
+        "variation"
+      ],
+      "description": "Relaxed chill electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.6694411269797359,
+        "filter_resonance": 0.19967752014086856,
+        "attack": 0.002,
+        "decay": 0.2901338011839613,
+        "sustain": 0.46750106237350464,
+        "release": 0.17748066777605256
+      }
+    },
+    {
+      "name": "Pluck Saw",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "saw",
+        "edgy"
+      ],
+      "description": "Edgy saw wave pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.66,
+        "filter_resonance": 0.34,
+        "attack": 0.01,
+        "decay": 0.22,
+        "sustain": 0.4,
+        "release": 0.17
+      }
+    },
+    {
+      "name": "Pluck Saw 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "saw",
+        "edgy",
+        "variation"
+      ],
+      "description": "Edgy saw wave pluck",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6119628379933634,
+        "filter_resonance": 0.4415837438262431,
+        "attack": 0.002,
+        "decay": 0.28937902811427146,
+        "sustain": 0.4080520499919757,
+        "release": 0.08371295926877721
+      }
+    },
+    {
+      "name": "Retro Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "retro",
+        "vintage"
+      ],
+      "description": "Retro vintage electric piano",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5,
+        "filter_resonance": 0.22,
+        "attack": 0.012,
+        "decay": 0.28,
+        "sustain": 0.42,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Retro Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "retro",
+        "vintage",
+        "variation"
+      ],
+      "description": "Retro vintage electric piano",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5958622339352435,
+        "filter_resonance": 0.30064662041918844,
+        "attack": 0.0870394011655602,
+        "decay": 0.36186246073756057,
+        "sustain": 0.4757913175062889,
+        "release": 0.1359317332359515
+      }
+    },
+    {
+      "name": "Short Pluck",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "short",
+        "tight"
+      ],
+      "description": "Tight short pluck for rhythmic parts",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7,
+        "filter_resonance": 0.4,
+        "attack": 0.005,
+        "decay": 0.15,
+        "sustain": 0.25,
+        "release": 0.1
+      }
+    },
+    {
+      "name": "Short Pluck 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "short",
+        "tight",
+        "variation"
+      ],
+      "description": "Tight short pluck for rhythmic parts",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.6972430960865379,
+        "filter_resonance": 0.3312993518078036,
+        "attack": 0.002,
+        "decay": 0.06525799679465835,
+        "sustain": 0.23063569903630657,
+        "release": 0.19317929800570738
+      }
+    },
+    {
+      "name": "Smooth Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "smooth",
+        "silky"
+      ],
+      "description": "Smooth silky electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.64,
+        "filter_resonance": 0.28,
+        "attack": 0.014,
+        "decay": 0.26,
+        "sustain": 0.46,
+        "release": 0.2
+      }
+    },
+    {
+      "name": "Smooth Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "smooth",
+        "silky",
+        "variation"
+      ],
+      "description": "Smooth silky electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.5949189871690532,
+        "filter_resonance": 0.3481769444676567,
+        "attack": 0.006801338774262923,
+        "decay": 0.2452174373101113,
+        "sustain": 0.5331708225375478,
+        "release": 0.29512115638260106
+      }
+    },
+    {
+      "name": "Percussive Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "percussive",
+        "attack"
+      ],
+      "description": "Percussive attack electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.76,
+        "filter_resonance": 0.44,
+        "attack": 0.004,
+        "decay": 0.18,
+        "sustain": 0.3,
+        "release": 0.13
+      }
+    },
+    {
+      "name": "Percussive Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "percussive",
+        "attack",
+        "variation"
+      ],
+      "description": "Percussive attack electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.7707075180938787,
+        "filter_resonance": 0.49241798607111825,
+        "attack": 0.002,
+        "decay": 0.14096790249495633,
+        "sustain": 0.3749934983950654,
+        "release": 0.1452026158367212
+      }
+    },
+    {
+      "name": "Deep EP",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "deep",
+        "bass"
+      ],
+      "description": "Deep bass-heavy electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.45,
+        "filter_resonance": 0.32,
+        "attack": 0.012,
+        "decay": 0.3,
+        "sustain": 0.5,
+        "release": 0.24
+      }
+    },
+    {
+      "name": "Deep EP 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "deep",
+        "bass",
+        "variation"
+      ],
+      "description": "Deep bass-heavy electric piano",
+      "parameters": {
+        "osc_type": 0.5,
+        "filter_cutoff": 0.45810147866386064,
+        "filter_resonance": 0.3795141344909754,
+        "attack": 0.002,
+        "decay": 0.31616209813612245,
+        "sustain": 0.5004560612671222,
+        "release": 0.3077222192732708
+      }
+    },
+    {
+      "name": "Air Keys",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "airy",
+        "light"
+      ],
+      "description": "Light airy electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.8,
+        "filter_resonance": 0.3,
+        "attack": 0.01,
+        "decay": 0.24,
+        "sustain": 0.4,
+        "release": 0.18
+      }
+    },
+    {
+      "name": "Air Keys 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "airy",
+        "light",
+        "variation"
+      ],
+      "description": "Light airy electric piano",
+      "parameters": {
+        "osc_type": 0.0,
+        "filter_cutoff": 0.7342270837643808,
+        "filter_resonance": 0.4105869367858681,
+        "attack": 0.002,
+        "decay": 0.17967839250829884,
+        "sustain": 0.4152056170320044,
+        "release": 0.2136408102919853
+      }
+    },
+    {
+      "name": "Square Pluck",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "square",
+        "synthetic"
+      ],
+      "description": "Synthetic square wave pluck",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.58,
+        "filter_resonance": 0.35,
+        "attack": 0.008,
+        "decay": 0.2,
+        "sustain": 0.35,
+        "release": 0.16
+      }
+    },
+    {
+      "name": "Square Pluck 01",
+      "category": "Keys",
+      "tags": [
+        "keys",
+        "plucky",
+        "square",
+        "synthetic",
+        "variation"
+      ],
+      "description": "Synthetic square wave pluck",
+      "parameters": {
+        "osc_type": 1.0,
+        "filter_cutoff": 0.5291591478401787,
+        "filter_resonance": 0.2587727873473098,
+        "attack": 0.07044597026071003,
+        "decay": 0.15127334677541598,
+        "sustain": 0.3651230645653506,
+        "release": 0.1829212499837638
+      }
+    }
+  ]
+}
