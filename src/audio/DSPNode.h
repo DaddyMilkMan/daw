@@ -13,7 +13,7 @@
 #include <vector>
 #include <string>
 
-namespace vexel {
+namespace zenith {
 
 /**
  * Abstract base class for DSP processing nodes
@@ -143,4 +143,4 @@ protected:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DSPNode)
 };
 
-} // namespace vexel
+} // namespace zenith

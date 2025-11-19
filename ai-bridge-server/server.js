@@ -1,7 +1,7 @@
 /**
  * AI Bridge Server - Example Implementation
  *
- * WebSocket server for communication between Vexel DAW and external AI services.
+ * WebSocket server for communication between Zenith DAW and external AI services.
  * This is a reference implementation showing how to build an AI Bridge server.
  *
  * Usage:

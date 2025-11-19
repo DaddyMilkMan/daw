@@ -5,7 +5,7 @@
 
 #include "AudioEngine.h"
 
-namespace vexel {
+namespace zenith {
 
 AudioEngine::AudioEngine()
 {
@@ -427,4 +427,4 @@ double AudioEngine::secondsToBeats(double seconds) const
     return (seconds * tempo) / 60.0;
 }
 
-} // namespace vexel
+} // namespace zenith

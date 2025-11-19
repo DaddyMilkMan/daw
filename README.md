@@ -1,6 +1,6 @@
 Zenith — Professional Digital Audio Workstation
 
-(formerly “Vexel DAW”)
+(formerly “Zenith DAW”)
 
 
 

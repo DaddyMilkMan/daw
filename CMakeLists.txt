@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(VexelDAW VERSION 1.0.0 LANGUAGES CXX)
+project(ZenithDAW VERSION 1.0.0 LANGUAGES CXX)
 
 # C++ Standard
 set(CMAKE_CXX_STANDARD 17)
@@ -49,34 +49,34 @@ add_subdirectory(src/juce-engine)
 add_subdirectory(src/qt-qml)
 
 # Installation rules
-install(TARGETS VexelDAW
+install(TARGETS ZenithDAW
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
 )
 
 # Platform-specific packaging
 if(APPLE)
-    set(MACOSX_BUNDLE_BUNDLE_NAME "Vexel DAW")
-    set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.vexel.daw")
+    set(MACOSX_BUNDLE_BUNDLE_NAME "Zenith DAW")
+    set(MACOSX_BUNDLE_GUI_IDENTIFIER "com.zenith.daw")
     set(MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION})
     set(MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION})
     set(MACOSX_BUNDLE_ICON_FILE "icon.icns")
-    set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 2025 Vexel")
+    set(MACOSX_BUNDLE_COPYRIGHT "Copyright © 2025 Zenith")
 elseif(WIN32)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /SUBSYSTEM:WINDOWS")
 endif()
 
 # CPack configuration for installers
 include(CPack)
-set(CPACK_PACKAGE_NAME "VexelDAW")
-set(CPACK_PACKAGE_VENDOR "Vexel")
+set(CPACK_PACKAGE_NAME "ZenithDAW")
+set(CPACK_PACKAGE_VENDOR "Zenith")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Professional Digital Audio Workstation")
 set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 
 if(WIN32)
     set(CPACK_GENERATOR "NSIS")
-    set(CPACK_NSIS_DISPLAY_NAME "Vexel DAW")
-    set(CPACK_NSIS_PACKAGE_NAME "VexelDAW")
+    set(CPACK_NSIS_DISPLAY_NAME "Zenith DAW")
+    set(CPACK_NSIS_PACKAGE_NAME "ZenithDAW")
 elseif(APPLE)
     set(CPACK_GENERATOR "DragNDrop")
 else()
