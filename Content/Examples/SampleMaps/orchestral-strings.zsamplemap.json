@@ -1,0 +1,116 @@
+{
+  "name": "Orchestral Strings",
+  "category": "orchestral",
+  "description": "Lush string ensemble with natural sustain and vibrato",
+  "author": "Zenith DAW",
+  "version": "1.0.0",
+
+  "parameters": {
+    "attack": 0.15,
+    "decay": 0.4,
+    "sustain": 0.85,
+    "release": 1.2,
+    "filterCutoff": 0.75,
+    "filterResonance": 0.15,
+    "sampleStartOffset": 0.0,
+    "pitchFine": 0.0,
+    "pitchSemitones": 0.0,
+    "globalPan": 0.5,
+    "globalGain": 0.75
+  },
+
+  "regions": [
+    {
+      "filePath": "strings-C2.wav",
+      "rootNote": 36,
+      "lowNote": 24,
+      "highNote": 39,
+      "lowVel": 0,
+      "highVel": 80,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Low strings - soft dynamics"
+    },
+    {
+      "filePath": "strings-C2-loud.wav",
+      "rootNote": 36,
+      "lowNote": 24,
+      "highNote": 39,
+      "lowVel": 81,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.1,
+      "tune": 0.0,
+      "comment": "Low strings - loud dynamics"
+    },
+    {
+      "filePath": "strings-E3.wav",
+      "rootNote": 52,
+      "lowNote": 40,
+      "highNote": 59,
+      "lowVel": 0,
+      "highVel": 80,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "Mid strings - soft dynamics"
+    },
+    {
+      "filePath": "strings-E3-loud.wav",
+      "rootNote": 52,
+      "lowNote": 40,
+      "highNote": 59,
+      "lowVel": 81,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.1,
+      "tune": 0.0,
+      "comment": "Mid strings - loud dynamics"
+    },
+    {
+      "filePath": "strings-A4.wav",
+      "rootNote": 69,
+      "lowNote": 60,
+      "highNote": 78,
+      "lowVel": 0,
+      "highVel": 80,
+      "loopMode": "forward",
+      "gain": 1.0,
+      "tune": 0.0,
+      "comment": "High strings - soft dynamics"
+    },
+    {
+      "filePath": "strings-A4-loud.wav",
+      "rootNote": 69,
+      "lowNote": 60,
+      "highNote": 78,
+      "lowVel": 81,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 1.1,
+      "tune": 0.0,
+      "comment": "High strings - loud dynamics"
+    },
+    {
+      "filePath": "strings-C6.wav",
+      "rootNote": 84,
+      "lowNote": 79,
+      "highNote": 96,
+      "lowVel": 0,
+      "highVel": 127,
+      "loopMode": "forward",
+      "gain": 0.95,
+      "tune": 0.0,
+      "comment": "Very high strings - full velocity range"
+    }
+  ],
+
+  "notes": {
+    "usage": "Sustaining string patches require forward loop mode for natural tails",
+    "velocityLayers": "Two dynamic layers (0-80, 81-127) for expressive playing",
+    "attack": "Slow attack (0.15s) simulates natural bow attack",
+    "release": "Long release (1.2s) for realistic decay when notes are released",
+    "filterSettings": "Moderate cutoff (0.75) with low resonance (0.15) for warm, natural tone"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "name": "ZenithPolySynth Bass Preset Bank",
+  "version": "1.0.0",
+  "category": "Bass",
+  "total_presets": 150,
+  "banks": [
+    {
+      "name": "Sub/808 Bass",
+      "file": "Bass_Sub_808.json",
+      "count": 20
+    },
+    {
+      "name": "Reese/Growl Bass",
+      "file": "Bass_Reese_Growl.json",
+      "count": 20
+    },
+    {
+      "name": "Analog House Bass",
+      "file": "Bass_Analog_House.json",
+      "count": 20
+    },
+    {
+      "name": "Donk/Pluck Bass",
+      "file": "Bass_Donk_Pluck.json",
+      "count": 10
+    },
+    {
+      "name": "Bass Variations",
+      "file": "Bass_Variations.json",
+      "count": 80
+    }
+  ],
+  "tags": [
+    "808",
+    "sub",
+    "trap",
+    "reese",
+    "growl",
+    "house",
+    "techno",
+    "donk",
+    "pluck",
+    "fm",
+    "analog"
+  ],
+  "description": "Comprehensive bass preset collection for ZenithPolySynth featuring 808s, subs, Reese basses, growls, house basslines, and plucks"
+}

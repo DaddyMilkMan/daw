@@ -2,8 +2,8 @@
   ==============================================================================
 
     MixerChannel.h
-    Ported from: VexelDAW-Native/Source/Audio/MixerChannel.h (2025-11-11)
-    Author:  Vexel DAW → Zenith DAW
+    Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.h (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
 
     Mixer channel strip with EQ, dynamics, and send/return processing
 

@@ -1,8 +1,8 @@
-# Vexel DAW - Quick Start Guide
+# Zenith DAW - Quick Start Guide
 
 **Qt/QML + JUCE Hybrid Architecture**
 
-This guide will get you up and running with the new Qt/QML-based Vexel DAW in under 10 minutes.
+This guide will get you up and running with the new Qt/QML-based Zenith DAW in under 10 minutes.
 
 ---
 
@@ -143,8 +143,8 @@ cmake .. -DCMAKE_BUILD_TYPE=Release
 cmake --build . --config Release -j
 
 # Run
-./bin/VexelDAW  # Linux/macOS
-bin\Release\VexelDAW.exe  # Windows
+./bin/ZenithDAW  # Linux/macOS
+bin\Release\ZenithDAW.exe  # Windows
 ```
 
 ---
@@ -167,19 +167,19 @@ run.bat
 
 **Linux/macOS:**
 ```bash
-./build/bin/VexelDAW
+./build/bin/ZenithDAW
 ```
 
 **Windows:**
 ```cmd
-build\bin\Release\VexelDAW.exe
+build\bin\Release\ZenithDAW.exe
 ```
 
 ---
 
 ## 🎯 First Launch
 
-When you first run Vexel DAW:
+When you first run Zenith DAW:
 
 1. **UI appears** - Modern dark theme with tri-pane layout
 2. **Demo tracks** - 5 demo tracks are pre-loaded
@@ -240,7 +240,7 @@ set CMAKE_PREFIX_PATH=C:\Qt\6.x\msvc2022_64
 │   │   └── bridge/          # Qt/JUCE integration
 │   └── juce-engine/         # JUCE audio engine ⭐ NEW
 │       └── Source/          # Audio processing code
-└── vexel-daw/               # Old Electron code (legacy)
+└── zenith-daw/               # Old Electron code (legacy)
 ```
 
 ---
@@ -299,10 +299,10 @@ rm -rf build
 
 ## 🆚 Old vs New Architecture
 
-### Electron (Old) - `vexel-daw/`
+### Electron (Old) - `zenith-daw/`
 
 ❌ **Deprecated** - Web-based UI (Chromium + React + Node.js)
-- Located in `/vexel-daw/`
+- Located in `/zenith-daw/`
 - Not recommended for new development
 - Kept for reference only
 
