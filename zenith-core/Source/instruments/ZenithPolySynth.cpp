@@ -283,7 +283,7 @@ void ZenithPolySynthVoice::pitchWheelMoved(int newPitchWheelValue)
 {
     // Convert MIDI pitch wheel to semitones (+/- 2 semitones)
     float pitchBend = (newPitchWheelValue - 8192) / 8192.0f * 2.0f;
-    targetFrequency_ = juce::MidiMessage::getMidiNoteInHertz(currentMidiNote_ + pitchBend);
+    targetFrequency_ = static_cast<float>(juce::MidiMessage::getMidiNoteInHertz(currentMidiNote_ + pitchBend));
 }
 
 void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
@@ -544,7 +544,7 @@ void ZenithPolySynthVoice::channelPressureChanged(int newChannelPressureValue)
     setAftertouch(newChannelPressureValue / 127.0f);
 }
 
-float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) const
+float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source)
 {
     switch (source)
     {
@@ -798,7 +798,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
     auto unisonVoices = dynamic_cast<juce::AudioParameterInt*>(getParameters()[UnisonVoices])->get();
     auto unisonDetune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[UnisonDetune])->get();
 
-    auto filterType = static_cast<FilterType>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[FilterType])->getIndex());
+    auto filterType = static_cast<zenith::FilterType>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[FilterType])->getIndex());
     auto filterCutoff = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterCutoff])->get();
     auto filterResonance = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterResonance])->get();
     auto filterDrive = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterDrive])->get();
@@ -875,7 +875,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
 juce::SynthesiserVoice* ZenithPolySynthProcessor::findFreeVoice(juce::SynthesiserSound* soundToPlay,
                                                                  int midiChannel,
                                                                  int midiNoteNumber,
-                                                                 bool stealIfNoneAvailable)
+                                                                 bool stealIfNoneAvailable) const
 {
     // First, try to find a completely free voice
     for (int i = 0; i < getNumVoices(); ++i)
@@ -935,7 +935,7 @@ void ZenithPolySynthProcessor::updateVoiceCount()
         {
             if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
             {
-                voice->setSampleRate(getSampleRate());
+                voice->setSampleRate(juce::AudioProcessor::getSampleRate());
             }
         }
 

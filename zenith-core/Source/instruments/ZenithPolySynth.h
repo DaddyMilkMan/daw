@@ -490,7 +490,7 @@ private:
      * @param source Source to read
      * @return Value in appropriate range for source type
      */
-    float getModulationSourceValue(ModulationSource source) const;
+    float getModulationSourceValue(ModulationSource source);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthVoice)
 };
@@ -617,7 +617,7 @@ protected:
     juce::SynthesiserVoice* findFreeVoice(juce::SynthesiserSound* soundToPlay,
                                            int midiChannel,
                                            int midiNoteNumber,
-                                           bool stealIfNoneAvailable) override;
+                                           bool stealIfNoneAvailable) const override;
 
 private:
     //==========================================================================

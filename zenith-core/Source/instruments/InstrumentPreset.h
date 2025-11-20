@@ -255,7 +255,7 @@ struct ZenithInstrumentPreset
         // Parameters object
         auto* paramsObj = new juce::DynamicObject();
         for (const auto& [paramId, value] : parameters)
-            paramsObj->setProperty(paramId, value);
+            paramsObj->setProperty(juce::Identifier(paramId), value);
         obj->setProperty("params", juce::var(paramsObj));
 
         // Macros object (optional)
@@ -263,7 +263,7 @@ struct ZenithInstrumentPreset
         {
             auto* macrosObj = new juce::DynamicObject();
             for (const auto& [macroId, value] : macros)
-                macrosObj->setProperty(macroId, value);
+                macrosObj->setProperty(juce::Identifier(macroId), value);
             obj->setProperty("macros", juce::var(macrosObj));
         }
 
