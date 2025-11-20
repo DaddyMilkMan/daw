@@ -285,14 +285,14 @@ void ExportEngine::renderBlock(
 
     // Generate a simple 440 Hz test tone (same as Engine's test tone)
     // This matches the current Engine behavior
-    static double phase = 0.0;
+    // Use member variable instead of static to reset between exports
     const double frequency = 440.0;  // A4
     const double amplitude = 0.25;   // -12 dB
     const double phaseIncrement = frequency * 2.0 * juce::MathConstants<double>::pi / sampleRate_;
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
-        float value = static_cast<float>(std::sin(phase) * amplitude);
+        float value = static_cast<float>(std::sin(renderPhase_) * amplitude);
 
         // Write to all output channels
         for (int channel = 0; channel < numChannels; ++channel)
@@ -301,11 +301,11 @@ void ExportEngine::renderBlock(
         }
 
         // Increment phase
-        phase += phaseIncrement;
+        renderPhase_ += phaseIncrement;
 
         // Wrap phase to avoid precision issues
-        if (phase >= 2.0 * juce::MathConstants<double>::pi)
-            phase -= 2.0 * juce::MathConstants<double>::pi;
+        if (renderPhase_ >= 2.0 * juce::MathConstants<double>::pi)
+            renderPhase_ -= 2.0 * juce::MathConstants<double>::pi;
     }
 
     // Note: In a production implementation, this would:

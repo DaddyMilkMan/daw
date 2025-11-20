@@ -95,9 +95,10 @@ public:
      * @brief Find a plugin description by identifier
      *
      * @param identifier Plugin identifier (from PluginDescription::createIdentifierString())
-     * @return Pointer to description, or nullptr if not found
+     * @param outDescription Output parameter to receive the description
+     * @return true if found, false otherwise
      */
-    const juce::PluginDescription* findPluginDescription(const juce::String& identifier) const;
+    bool findPluginDescription(const juce::String& identifier, juce::PluginDescription& outDescription) const;
 
     //==============================================================================
     // Plugin Instantiation (MESSAGE THREAD ONLY)

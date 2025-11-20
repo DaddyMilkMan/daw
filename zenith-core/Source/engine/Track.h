@@ -275,6 +275,7 @@ private:
         juce::String noteId;  // For tracking which ValueTree note this came from
     };
     std::vector<ActiveNote> activeNotes;
+    juce::CriticalSection activeNotesLock;  // Protects activeNotes vector for thread safety
     juce::int64 lastProcessedSample = 0;
 
     //==============================================================================

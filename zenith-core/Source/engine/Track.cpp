@@ -842,12 +842,15 @@ void Track::generateMidiForBlock(const juce::ValueTree& trackState,
                 juce::MidiMessage noteOn = juce::MidiMessage::noteOn(1, pitch, static_cast<juce::uint8>(velocity));
                 midiOut.addEvent(noteOn, sampleOffset);
 
-                // Track this note as active
+                // Track this note as active (with thread synchronization)
                 ActiveNote activeNote;
                 activeNote.pitch = pitch;
                 activeNote.channel = 1;
                 activeNote.noteId = noteId;
-                activeNotes.push_back(activeNote);
+                {
+                    const juce::ScopedLock sl(activeNotesLock);
+                    activeNotes.push_back(activeNote);
+                }
             }
 
             // Check if note-off happens in this block
@@ -860,11 +863,14 @@ void Track::generateMidiForBlock(const juce::ValueTree& trackState,
                 juce::MidiMessage noteOff = juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
                 midiOut.addEvent(noteOff, sampleOffset);
 
-                // Remove from active notes
-                activeNotes.erase(
-                    std::remove_if(activeNotes.begin(), activeNotes.end(),
-                        [&](const ActiveNote& n) { return n.noteId == noteId; }),
-                    activeNotes.end());
+                // Remove from active notes (with thread synchronization)
+                {
+                    const juce::ScopedLock sl(activeNotesLock);
+                    activeNotes.erase(
+                        std::remove_if(activeNotes.begin(), activeNotes.end(),
+                            [&](const ActiveNote& n) { return n.noteId == noteId; }),
+                        activeNotes.end());
+                }
             }
         }
     }

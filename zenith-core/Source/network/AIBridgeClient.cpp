@@ -50,15 +50,15 @@ void AIBridgeClient::sendRequest(const juce::String& naturalLanguage,
     // Generate unique request ID
     juce::String requestId = juce::Uuid().toDashedString();
 
-    // Build request JSON
-    auto* requestObj = new juce::DynamicObject();
-    requestObj->setProperty("type", "wingman_nl_request");
-    requestObj->setProperty("requestId", requestId);
-    requestObj->setProperty("text", naturalLanguage);
-    requestObj->setProperty("sessionGraph", sessionGraph);
-    requestObj->setProperty("source", sourceTag);
+    // Build request JSON - wrap DynamicObject in var immediately for proper memory management
+    juce::var requestVar(new juce::DynamicObject());
+    requestVar.getDynamicObject()->setProperty("type", "wingman_nl_request");
+    requestVar.getDynamicObject()->setProperty("requestId", requestId);
+    requestVar.getDynamicObject()->setProperty("text", naturalLanguage);
+    requestVar.getDynamicObject()->setProperty("sessionGraph", sessionGraph);
+    requestVar.getDynamicObject()->setProperty("source", sourceTag);
 
-    juce::String jsonPayload = juce::JSON::toString(juce::var(requestObj));
+    juce::String jsonPayload = juce::JSON::toString(requestVar);
 
     // Queue request for background thread
     {

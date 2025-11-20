@@ -52,9 +52,10 @@ public:
     /**
      * @brief Get metadata for a specific instrument
      * @param instrumentId Instrument identifier
-     * @return Metadata, or nullptr if not found
+     * @param outMetadata Output parameter to receive metadata
+     * @return true if found, false otherwise
      */
-    const InstrumentMetadata* getMetadata(const juce::String& instrumentId) const;
+    bool getMetadata(const juce::String& instrumentId, InstrumentMetadata& outMetadata) const;
 
     /**
      * @brief Get basic info for all instruments (for list_instruments command)

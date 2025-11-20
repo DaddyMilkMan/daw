@@ -107,5 +107,8 @@ private:
     double sampleRate_ = 44100.0;
     int bufferSize_ = 512;
 
+    // Rendering state (reset per export)
+    double renderPhase_ = 0.0;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ExportEngine)
 };
