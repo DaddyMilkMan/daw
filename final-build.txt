@@ -1,0 +1,490 @@
+'vswhere.exe' is not recognized as an internal or external command,
+operable program or batch file.
+**********************************************************************
+** Visual Studio 2026 Developer PowerShell v18.0
+** Copyright (c) 2025 Microsoft Corporation
+**********************************************************************
+-- Fetching JUCE 8.0.9...
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- JUCE fetched successfully!
+-- 
+-- ========================================
+-- Zenith DAW Configuration
+-- ========================================
+-- Version: 0.1.0
+-- Build Type: Release
+-- C++ Standard: C++20
+-- JUCE Version: 8.0.9
+-- ========================================
+-- 
+-- Configuring done (2.6s)
+-- Generating done (0.5s)
+-- Build files have been written to: C:/zenith/daw/build
+[0/2] Re-checking globbed directories...
+[1/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\ProjectState.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/ProjectState.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\ProjectState.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\ProjectState.cpp
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(76): error C2039: 'PROP_LANE_INDEX': is not a member of 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(84): error C2039: 'PROP_PARAM_ID': is not a member of 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(298): error C2511: 'juce::ValueTree ProjectState::getTrackByIndex(int)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(302): error C3536: 'tracksNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(483): error C2264: 'ProjectState::findClip': error in function definition or declaration; function not called
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(483): error C2119: '<structured binding>': the type for 'auto' cannot be deduced from an empty initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(483): error C3617: initializers of structured bindings must be of array or non-union class type; type '<error>' is not permitted
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(497): error C2677: binary '[': no global operator found which takes type 'const juce::Identifier' (or there is no acceptable conversion)
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(498): error C3536: 'oldTrackId': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(498): error C2088: built-in operator '!=' cannot be applied to an operand of type 'const juce::String'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(518): error C3536: 'oldClipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(519): error C3536: 'clipCopy': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(534): error C2264: 'ProjectState::findClip': error in function definition or declaration; function not called
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(534): error C2119: '<structured binding>': the type for 'auto' cannot be deduced from an empty initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(534): error C3617: initializers of structured bindings must be of array or non-union class type; type '<error>' is not permitted
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(555): error C2264: 'ProjectState::findClip': error in function definition or declaration; function not called
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(555): error C2119: '<structured binding>': the type for 'auto' cannot be deduced from an empty initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(555): error C3617: initializers of structured bindings must be of array or non-union class type; type '<error>' is not permitted
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(564): error C3536: 'clipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(623): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(636): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(828): error C2556: 'void ProjectState::clearAutomation(const juce::String &,const juce::String &,const juce::String &)': overloaded function differs only by return type from 'bool ProjectState::clearAutomation(const juce::String &,const juce::String &,const juce::String &)'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(557): note: see declaration of 'ProjectState::clearAutomation'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(828): error C2371: 'ProjectState::clearAutomation': redefinition; different basic types
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(557): note: see declaration of 'ProjectState::clearAutomation'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(832): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(836): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(904): error C2264: 'ProjectState::findClip': error in function definition or declaration; function not called
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(905): error C3536: 'clip': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(913): error C3536: 'midiNotesNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1121): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(619): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1121): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(619): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1121): error C2084: function 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)' already has a body
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(619): note: see previous definition of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1124): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1137): warning C4390: ';': empty controlled statement found; is this the intent?
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1171): error C2264: 'ProjectState::findClip': error in function definition or declaration; function not called
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1172): error C3536: 'clip': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1176): error C3536: 'midiNotesNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1179): error C3312: no callable 'begin' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1179): error C3312: no callable 'end' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1179): error C3531: 'noteTree': a symbol whose type contains 'auto' must have an initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1179): error C2143: syntax error: missing ';' before ':'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1179): error C2143: syntax error: missing ';' before ')'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1181): error C2677: binary '[': no global operator found which takes type 'const juce::Identifier' (or there is no acceptable conversion)
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1229): error C2511: 'juce::ValueTree ProjectState::findClip(const juce::String &,const juce::String &)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1231): error C2352: 'ProjectState::findTrack': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1105): note: see declaration of 'ProjectState::findTrack'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1232): error C3536: 'track': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1236): error C3536: 'clipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1239): error C3312: no callable 'begin' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1239): error C3312: no callable 'end' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1239): error C3531: 'clip': a symbol whose type contains 'auto' must have an initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1239): error C2143: syntax error: missing ';' before ':'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1239): error C2143: syntax error: missing ';' before ')'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1241): error C2677: binary '[': no global operator found which takes type 'const juce::Identifier' (or there is no acceptable conversion)
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1248): error C2039: 'findNote': is not a member of 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1250): error C3861: 'findClip': identifier not found
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1254): error C2065: 'ID_NOTES': undeclared identifier
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1255): error C3536: 'notesNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1258): error C3312: no callable 'begin' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1258): error C3312: no callable 'end' function found for type '<error>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1258): error C3531: 'note': a symbol whose type contains 'auto' must have an initializer
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1258): error C2143: syntax error: missing ';' before ':'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1258): error C2143: syntax error: missing ';' before ')'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1260): error C2065: 'ID_NOTE': undeclared identifier
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1260): error C2065: 'PROP_ID': undeclared identifier
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1271): error C2511: 'juce::String ProjectState::addClip(const juce::String &,const juce::String &,double,double,int)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1295): error C2352: 'ProjectState::findTrack': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1105): note: see declaration of 'ProjectState::findTrack'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1296): error C3536: 'track': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1304): error C3536: 'clipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1307): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1307): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1312): error C2352: 'ProjectState::generateUniqueId': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1083): note: see declaration of 'ProjectState::generateUniqueId'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1316): error C3536: 'clipId': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1333): error C3536: 'existingClip': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1333): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1340): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1340): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1346): error C2511: 'bool ProjectState::removeClip(const juce::String &,const juce::String &)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1350): error C2352: 'ProjectState::findTrack': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1105): note: see declaration of 'ProjectState::findTrack'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1351): error C3536: 'track': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1355): error C3536: 'clipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1361): error C3536: 'clip': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1361): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1363): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1363): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1372): error C2511: 'bool ProjectState::moveClip(const juce::String &,const juce::String &,double)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1381): error C2661: 'ProjectState::findClip': no overloaded function takes 2 arguments
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1381): note: while trying to match the argument list '(const juce::String, const juce::String)'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1382): error C2039: 'isValid': is not a member of 'std::pair<juce::ValueTree,juce::ValueTree>'
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.50.35717\include\utility(247): note: see declaration of 'std::pair<juce::ValueTree,juce::ValueTree>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1385): error C2676: binary '[': 'std::pair<juce::ValueTree,juce::ValueTree>' does not define this operator or a conversion to a type acceptable to the predefined operator
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1388): error C2039: 'setProperty': is not a member of 'std::pair<juce::ValueTree,juce::ValueTree>'
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.50.35717\include\utility(247): note: see declaration of 'std::pair<juce::ValueTree,juce::ValueTree>'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1388): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1388): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1393): error C2352: 'ProjectState::findTrack': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1105): note: see declaration of 'ProjectState::findTrack'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1394): error C3536: 'track': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1398): error C3536: 'clipsNode': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1410): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1410): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1417): error C3536: 'existingClip': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1417): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1425): error C2597: illegal reference to non-static member 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(847): note: see declaration of 'ProjectState::undoManager'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1425): error C2102: '&' requires l-value
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1433): error C2039: 'resizeClip': is not a member of 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1445): error C3861: 'findClip': identifier not found
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1449): error C2065: 'PROP_LENGTH_BEATS': undeclared identifier
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1449): error C2065: 'undoManager': undeclared identifier
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1459): error C2511: 'juce::String ProjectState::addNote(const juce::String &,const juce::String &,double,double,int,int)': overloaded member function not found in 'ProjectState'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(77): note: see declaration of 'ProjectState'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1481): error C2661: 'ProjectState::findClip': no overloaded function takes 2 arguments
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1481): note: while trying to match the argument list '(const juce::String, const juce::String)'
+C:\zenith\daw\zenith-core\src\ProjectState.cpp(1481): fatal error C1003: error count exceeds 100; stopping compilation
+[2/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\MixerComponent.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/MixerComponent.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\MixerComponent.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\MixerComponent.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(45): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(246): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+[3/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\ArrangerView.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/ArrangerView.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\ArrangerView.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\ArrangerView.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\ArrangerView.cpp(76): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+C:\zenith\daw\zenith-core\src\ArrangerView.cpp(112): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+C:\zenith\daw\zenith-core\src\ArrangerView.cpp(334): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+[4/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\ClipSynchronizer.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/ClipSynchronizer.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\ClipSynchronizer.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\ClipSynchronizer.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+[5/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\Main.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/Main.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\Main.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\Main.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+[6/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\TrackAutomationSynchronizer.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/TrackAutomationSynchronizer.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\TrackAutomationSynchronizer.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\TrackAutomationSynchronizer.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\TrackAutomationSynchronizer.cpp(74): error C2027: use of undefined type 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\include\Engine.h(51): note: see declaration of 'zenith::TempoMap'
+[7/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\Engine.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/Engine.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\Engine.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\Engine.cpp
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\src\../include/ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\src\Engine.cpp(36): error C2665: 'juce::Thread::startThread': no overloaded function could convert all the argument types
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\threads/juce_Thread.h(286): note: could be 'bool juce::Thread::startThread(juce::Thread::Priority)'
+C:\zenith\daw\zenith-core\src\Engine.cpp(36): note: 'bool juce::Thread::startThread(juce::Thread::Priority)': cannot convert argument 1 from 'int' to 'juce::Thread::Priority'
+C:\zenith\daw\zenith-core\src\Engine.cpp(36): note: Conversion to enumeration type requires an explicit cast (static_cast, C-style cast or parenthesized function-style cast)
+C:\zenith\daw\zenith-core\src\Engine.cpp(36): note: while trying to match the argument list '(int)'
+C:\zenith\daw\zenith-core\src\Engine.cpp(109): error C2027: use of undefined type 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(51): note: see declaration of 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\Engine.cpp(109): error C2039: 'updateFromValueTree': is not a member of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.50.35717\include\memory(3376): note: see declaration of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\zenith\daw\zenith-core\src\Engine.cpp(147): error C2027: use of undefined type 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(51): note: see declaration of 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\Engine.cpp(147): error C2039: 'beatsToSamples': is not a member of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.50.35717\include\memory(3376): note: see declaration of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\zenith\daw\zenith-core\src\Engine.cpp(366): error C2027: use of undefined type 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(51): note: see declaration of 'zenith::TempoMap'
+C:\zenith\daw\zenith-core\src\Engine.cpp(366): error C2039: 'secondsToBeats': is not a member of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\Program Files\Microsoft Visual Studio\18\Community\VC\Tools\MSVC\14.50.35717\include\memory(3376): note: see declaration of 'std::unique_ptr<zenith::TempoMap,std::default_delete<zenith::TempoMap>>'
+C:\zenith\daw\zenith-core\src\Engine.cpp(370): error C2374: 'tempo': redefinition; multiple initialization
+C:\zenith\daw\zenith-core\src\Engine.cpp(358): note: see declaration of 'tempo'
+C:\zenith\daw\zenith-core\src\Engine.cpp(370): error C2086: 'const double tempo': redefinition
+C:\zenith\daw\zenith-core\src\Engine.cpp(358): note: see declaration of 'tempo'
+C:\zenith\daw\zenith-core\src\Engine.cpp(467): warning C4996: 'juce::AudioFormat::createWriterFor': Use the function taking an AudioFormatWriterOptions instead.
+C:\zenith\daw\zenith-core\src\Engine.cpp(909): error C2065: 'masterMixBuffer_': undeclared identifier
+C:\zenith\daw\zenith-core\src\Engine.cpp(1024): error C2511: 'void Engine::renderBlock(juce::AudioBuffer<float> &,juce::int64,int)': overloaded member function not found in 'Engine'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(67): note: see declaration of 'Engine'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1040): error C2737: 'numTracks': const object must be initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1044): error C2597: illegal reference to non-static member 'Engine::tracks_'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1044): note: see declaration of 'Engine::tracks_'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1044): error C3867: 'Engine::tracks_': non-standard syntax; use '&' to create a pointer to member
+C:\zenith\daw\zenith-core\src\Engine.cpp(1044): error C2568: '[': unable to resolve function overload
+C:\zenith\daw\zenith-core\src\Engine.cpp(1046): error C3536: 'track': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1056): error C2597: illegal reference to non-static member 'Engine::trackBuffers_'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1056): note: see declaration of 'Engine::trackBuffers_'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1056): error C3867: 'Engine::trackBuffers_': non-standard syntax; use '&' to create a pointer to member
+C:\zenith\daw\zenith-core\src\Engine.cpp(1056): error C2568: '[': unable to resolve function overload
+C:\zenith\daw\zenith-core\src\Engine.cpp(1056): error C2530: 'trackBuffer': references must be initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1059): error C3536: 'trackBuffer': cannot be used before it is initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1066): error C2665: 'juce::AudioSourceChannelInfo::AudioSourceChannelInfo': no overloaded function could convert all the argument types
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_basics\sources/juce_AudioSource.h(50): note: could be 'juce::AudioSourceChannelInfo::AudioSourceChannelInfo(juce::AudioBuffer<float> *,int,int) noexcept'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1066): note: 'juce::AudioSourceChannelInfo::AudioSourceChannelInfo(juce::AudioBuffer<float> *,int,int) noexcept': cannot convert argument 1 from '<error type> *' to 'juce::AudioBuffer<float> *'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1066): note: Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+C:\zenith\daw\zenith-core\src\Engine.cpp(1066): note: while trying to match the argument list '(<error type> *, int, int)'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1071): error C2737: 'trackChannels': const object must be initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1112): error C2737: 'currentMasterLevel': const object must be initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1127): error C2511: 'bool Engine::exportProjectToWav(const juce::String &,double,double)': overloaded member function not found in 'Engine'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(67): note: see declaration of 'Engine'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C3312: no callable 'begin' function found for type 'unknown'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C3312: no callable 'end' function found for type 'unknown'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C2530: 'track': references must be initialized
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C3531: 'track': a symbol whose type contains 'auto' must have an initializer
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C2143: syntax error: missing ';' before ':'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C2597: illegal reference to non-static member 'Engine::tracks_'
+C:\zenith\daw\zenith-core\src\../include/Engine.h(603): note: see declaration of 'Engine::tracks_'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C2143: syntax error: missing ';' before ')'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): error C2451: a conditional expression of type 'unknown' is not valid
+C:\zenith\daw\zenith-core\src\Engine.cpp(1167): note: ill-formed reference to a non-static member
+C:\zenith\daw\zenith-core\src\Engine.cpp(1191): warning C4244: 'argument': conversion from 'juce::int64' to 'int', possible loss of data
+C:\zenith\daw\zenith-core\src\Engine.cpp(1191): error C2352: 'Engine::renderBlock': a call of a non-static member function requires an object
+C:\zenith\daw\zenith-core\src\../include/Engine.h(569): note: see declaration of 'Engine::renderBlock'
+C:\zenith\daw\zenith-core\src\Engine.cpp(1152): warning C4996: 'juce::AudioFormat::createWriterFor': Use the function taking an AudioFormatWriterOptions instead.
+C:\zenith\daw\zenith-core\src\Engine.cpp(1248): warning C4244: 'argument': conversion from 'juce::int64' to 'int', possible loss of data
+C:\zenith\daw\zenith-core\src\Engine.cpp(1588): error C2601: 'Engine::processAudioRecording': local function definitions are illegal
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): note: this line contains a '{' which has not yet been matched
+C:\zenith\daw\zenith-core\src\Engine.cpp(1644): error C2601: 'Engine::bakeAudioRecordingIntoTrack': local function definitions are illegal
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): note: this line contains a '{' which has not yet been matched
+C:\zenith\daw\zenith-core\src\Engine.cpp(1695): error C2601: 'Engine::bakeMidiRecordingsIntoClips': local function definitions are illegal
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): note: this line contains a '{' which has not yet been matched
+C:\zenith\daw\zenith-core\src\Engine.cpp(1759): error C2601: 'Engine::clearMidiRecordings': local function definitions are illegal
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): note: this line contains a '{' which has not yet been matched
+C:\zenith\daw\zenith-core\src\Engine.cpp(1773): error C2601: 'Engine::quantizeMidiSequence': local function definitions are illegal
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): note: this line contains a '{' which has not yet been matched
+C:\zenith\daw\zenith-core\src\Engine.cpp(1480): fatal error C1075: '{': no matching token found
+[8/155] Building CXX object zenith-core\CMakeFiles\ZenithDAW.dir\src\MainWindow.cpp.obj
+FAILED: [code=2] zenith-core/CMakeFiles/ZenithDAW.dir/src/MainWindow.cpp.obj 
+C:\PROGRA~1\MICROS~2\18\COMMUN~1\VC\Tools\MSVC\1450~1.357\bin\Hostx64\x64\cl.exe  /nologo /TP -DJUCE_APP_VERSION=\"0.1.0\" -DJUCE_APP_VERSION_HEX=0x000100 -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1 -DJUCE_MODULE_AVAILABLE_juce_audio_basics=1 -DJUCE_MODULE_AVAILABLE_juce_audio_devices=1 -DJUCE_MODULE_AVAILABLE_juce_audio_formats=1 -DJUCE_MODULE_AVAILABLE_juce_audio_processors=1 -DJUCE_MODULE_AVAILABLE_juce_audio_utils=1 -DJUCE_MODULE_AVAILABLE_juce_core=1 -DJUCE_MODULE_AVAILABLE_juce_data_structures=1 -DJUCE_MODULE_AVAILABLE_juce_dsp=1 -DJUCE_MODULE_AVAILABLE_juce_events=1 -DJUCE_MODULE_AVAILABLE_juce_graphics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1 -DJUCE_MODULE_AVAILABLE_juce_gui_extra=1 -DJUCE_PLUGINHOST_VST3=1 -DJUCE_PLUGINHOST_VST3_PLUGIN_EDITOR_SHOWS_BY_DEFAULT=0 -DJUCE_STANDALONE_APPLICATION=1 -DJUCE_STRICT_REFCOUNTEDPOINTER=1 -DJUCE_USE_CURL=0 -DJUCE_USE_FLAC=1 -DJUCE_USE_MP3AUDIOFORMAT=1 -DJUCE_USE_OGGVORBIS=1 -DJUCE_WEB_BROWSER=0 -DJucePlugin_Name="\"Zenith DAW\"" -DNDEBUG=1 -D_NDEBUG=1 -IC:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\JuceLibraryCode -IC:\zenith\daw\zenith-core\include -IC:\zenith\daw\zenith-core\Source\engine -IC:\zenith\daw\zenith-core\Source\ui -IC:\zenith\daw\zenith-core\Source\commands -IC:\zenith\daw\zenith-core\Source\network -IC:\zenith\daw\zenith-core\Source\instruments -IC:\zenith\daw\build\_deps\juce-src\modules -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\VST3_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lv2 -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\serd -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sord\src -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\sratom -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv -IC:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\format_types\LV2_SDK\lilv\src /DWIN32 /D_WINDOWS /EHsc /O2 /Ob2 /DNDEBUG -std:c++20 -MD /W4 /bigobj /Ox /MP /EHsc -GL /showIncludes /Fozenith-core\CMakeFiles\ZenithDAW.dir\src\MainWindow.cpp.obj /Fdzenith-core\CMakeFiles\ZenithDAW.dir\ /FS -c C:\zenith\daw\zenith-core\src\MainWindow.cpp
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2556: 'juce::ValueTree ProjectState::findClip(const juce::String &)': overloaded function differs only by return type from 'std::pair<juce::ValueTree,juce::ValueTree> ProjectState::findClip(const juce::String &)'
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\include\ProjectState.h(812): error C2371: 'ProjectState::findClip': redefinition; different basic types
+C:\zenith\daw\zenith-core\include\ProjectState.h(476): note: see declaration of 'ProjectState::findClip'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(107): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(107): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(107): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(107): note: while trying to match the argument list '(const char [3], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(108): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(108): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(108): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(108): note: while trying to match the argument list '(const char [5], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(109): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(109): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(109): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(109): note: while trying to match the argument list '(const char [13], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(110): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(110): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(110): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(110): note: while trying to match the argument list '(const char [9], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(111): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(111): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(111): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(111): note: while trying to match the argument list '(const char [7], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(112): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(112): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(112): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(112): note: while trying to match the argument list '(const char [12], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(113): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(113): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(113): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(113): note: while trying to match the argument list '(const char [8], const std::string, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(129): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(129): note: Reason: cannot convert from 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(129): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(129): note: while trying to match the argument list '(const char [3], const std::basic_string<char,std::char_traits<char>,std::allocator<char>>, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(140): error C2664: 'juce::ValueTree &juce::ValueTree::setProperty(const juce::Identifier &,const juce::var &,juce::UndoManager *)': cannot convert argument 2 from 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(140): note: Reason: cannot convert from 'const std::basic_string<char,std::char_traits<char>,std::allocator<char>>' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(140): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\values/juce_ValueTree.h(251): note: see declaration of 'juce::ValueTree::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(140): note: while trying to match the argument list '(const char [3], const std::basic_string<char,std::char_traits<char>,std::allocator<char>>, nullptr)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(241): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(241): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(241): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(241): note: while trying to match the argument list '(const char [3], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(242): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(242): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(242): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(242): note: while trying to match the argument list '(const char [5], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(243): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(243): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(243): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(243): note: while trying to match the argument list '(const char [13], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(244): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(244): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(244): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(244): note: while trying to match the argument list '(const char [9], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(245): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(245): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(245): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(245): note: while trying to match the argument list '(const char [7], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(246): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(246): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(246): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(246): note: while trying to match the argument list '(const char [12], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(247): error C2664: 'void juce::DynamicObject::setProperty(const juce::Identifier &,const juce::var &)': cannot convert argument 2 from 'const std::string' to 'const juce::var &'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(247): note: Reason: cannot convert from 'const std::string' to 'const juce::var'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(247): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_DynamicObject.h(72): note: see declaration of 'juce::DynamicObject::setProperty'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(247): note: while trying to match the argument list '(const char [8], const std::string)'
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): error C2665: 'juce::Array<juce::var,juce::DummyCriticalSection,0>::add': no overloaded function could convert all the argument types
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_Array.h(440): note: could be 'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(ElementType &&)'
+        with
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: 'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(ElementType &&)': cannot convert argument 1 from 'const _Ty' to 'ElementType &&'
+        with
+        [
+            ElementType=juce::var
+        ]
+        and
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: Reason: cannot convert from 'const _Ty' to 'ElementType'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_Array.h(430): note: or       'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(const ElementType &)'
+        with
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: 'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(const ElementType &)': cannot convert argument 1 from 'const _Ty' to 'const ElementType &'
+        with
+        [
+            ElementType=juce::var
+        ]
+        and
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: Reason: cannot convert from 'const _Ty' to 'const ElementType'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_Array.h(456): note: or       'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(ElementType &&,OtherElements ...)'
+        with
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: 'initializing': cannot convert from 'const _Ty' to 'ElementType &&'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: Reason: cannot convert from 'const _Ty' to 'ElementType'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\containers/juce_Array.h(448): note: or       'void juce::Array<juce::var,juce::DummyCriticalSection,0>::add(const ElementType &,OtherElements ...)'
+        with
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: 'initializing': cannot convert from 'const _Ty' to 'const ElementType &'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: Reason: cannot convert from 'const _Ty' to 'const ElementType'
+        with
+        [
+            _Ty=std::string
+        ]
+        and
+        [
+            ElementType=juce::var
+        ]
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+C:\zenith\daw\zenith-core\Source\instruments\InstrumentPreset.h(252): note: while trying to match the argument list '(const _Ty)'
+        with
+        [
+            _Ty=std::string
+        ]
+C:\zenith\daw\zenith-core\src\MainWindow.cpp(36): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument
+ninja: build stopped: subcommand failed.

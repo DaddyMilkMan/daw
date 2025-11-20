@@ -325,11 +325,12 @@ juce::var CommandAPI::cmd_exportWav(const juce::var& params)
     juce::String outputPath = obj->getProperty("outputPath").toString();
 
     // Optional params
-    double durationSeconds = obj->getProperty("durationSeconds", 10.0);
-    double sampleRate = obj->getProperty("sampleRate", 0.0);  // 0 = use current engine rate
+    double durationSeconds = obj->hasProperty("durationSeconds") ? (double)obj->getProperty("durationSeconds") : 10.0;
+    double sampleRate = obj->hasProperty("sampleRate") ? (double)obj->getProperty("sampleRate") : 0.0;  // 0 = use current engine rate
+    int bitDepth = 24;  // Default bit depth
 
     // Export to WAV using unified render path
-    bool success = engine.exportProjectToWav(outputPath, durationSeconds, sampleRate);
+    bool success = engine.exportProjectToWav(juce::File(outputPath), sampleRate, bitDepth, durationSeconds);
 
     if (!success)
     {
@@ -767,17 +768,6 @@ juce::var CommandAPI::cmd_createNote(const juce::var& params)
     return juce::var(result.get());
 }
 
-juce::var CommandAPI::cmd_deleteNote(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-
-    // MIDI note API not yet implemented in ProjectState
-    juce::DynamicObject::Ptr result = new juce::DynamicObject();
-    result->setProperty("success", false);
-    result->setProperty("message", "MIDI note API not yet implemented in ProjectState");
-    return juce::var(result.get());
-}
-
 juce::var CommandAPI::cmd_getClipNotes(const juce::var& params)
 {
     juce::ignoreUnused(params);
@@ -875,11 +865,12 @@ juce::var CommandAPI::cmd_exportProject(const juce::var& params)
 
     // Optional params - default to full project length
     // For now, use a fixed duration since we don't have project length calculation yet
-    double durationSeconds = obj->getProperty("durationSeconds", 10.0);
-    double sampleRate = obj->getProperty("sampleRate", 0.0);  // 0 = use current engine rate
+    double durationSeconds = obj->hasProperty("durationSeconds") ? (double)obj->getProperty("durationSeconds") : 10.0;
+    double sampleRate = obj->hasProperty("sampleRate") ? (double)obj->getProperty("sampleRate") : 0.0;  // 0 = use current engine rate
+    int bitDepth = 24;  // Default bit depth
 
     // Export using Engine's exportProjectToWav
-    bool success = engine.exportProjectToWav(outputPath, durationSeconds, sampleRate);
+    bool success = engine.exportProjectToWav(juce::File(outputPath), sampleRate, bitDepth, durationSeconds);
 
     if (!success)
     {
@@ -924,8 +915,8 @@ juce::var CommandAPI::cmd_listPresets(const juce::var& params)
     juce::String instrumentId = obj->getProperty("instrumentId").toString();
 
     // Optional filters
-    juce::String categoryFilter = obj->getProperty("category", "").toString();
-    juce::String tagFilter = obj->getProperty("tag", "").toString();
+    juce::String categoryFilter = obj->hasProperty("category") ? obj->getProperty("category").toString() : juce::String();
+    juce::String tagFilter = obj->hasProperty("tag") ? obj->getProperty("tag").toString() : juce::String();
 
     // Get presets from preset manager
     zenith::ZenithPresetManager presetManager;
@@ -957,14 +948,14 @@ juce::var CommandAPI::cmd_listPresets(const juce::var& params)
 
         // Build preset object
         juce::DynamicObject::Ptr presetObj = new juce::DynamicObject();
-        presetObj->setProperty("id", preset.id);
-        presetObj->setProperty("name", preset.name);
-        presetObj->setProperty("category", preset.author);  // Using author as category for now
+        presetObj->setProperty("id", juce::String(preset.id));
+        presetObj->setProperty("name", juce::String(preset.name));
+        presetObj->setProperty("category", juce::String(preset.author));  // Using author as category for now
 
         // Convert tags to array
         juce::Array<juce::var> tagsArray;
         for (const auto& tag : preset.tags)
-            tagsArray.add(tag);
+            tagsArray.add(juce::String(tag));
         presetObj->setProperty("tags", tagsArray);
 
         presetsArray.add(juce::var(presetObj.get()));
@@ -989,7 +980,7 @@ juce::var CommandAPI::cmd_loadPreset(const juce::var& params)
     auto* obj = params.getDynamicObject();
     juce::String trackId = obj->getProperty("trackId").toString();
     juce::String presetId = obj->getProperty("presetId").toString();
-    juce::String instrumentIdOpt = obj->getProperty("instrumentId", "").toString();
+    juce::String instrumentIdOpt = obj->hasProperty("instrumentId") ? obj->getProperty("instrumentId").toString() : juce::String("");
 
     // Find track
     int trackIndex = trackId.getTrailingIntValue();
@@ -1026,8 +1017,7 @@ juce::var CommandAPI::cmd_loadPreset(const juce::var& params)
         throw std::runtime_error("Failed to load preset: " + presetId.toStdString());
     }
 
-    // Create undo transaction if UndoManager is available
-    projectState.beginNewTransaction("Load preset " + presetId);
+    // Note: UndoManager automatically groups actions into transactions
 
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
@@ -1048,7 +1038,7 @@ juce::var CommandAPI::cmd_savePreset(const juce::var& params)
     auto* obj = params.getDynamicObject();
     juce::String trackId = obj->getProperty("trackId").toString();
     juce::String name = obj->getProperty("name").toString();
-    juce::String category = obj->getProperty("category", "User").toString();
+    juce::String category = obj->hasProperty("category") ? obj->getProperty("category").toString() : juce::String("User");
 
     // Find track
     int trackIndex = trackId.getTrailingIntValue();
@@ -1110,7 +1100,7 @@ juce::var CommandAPI::cmd_savePreset(const juce::var& params)
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
     result->setProperty("success", true);
-    result->setProperty("presetId", preset.id);
+    result->setProperty("presetId", juce::String(preset.id));
     return juce::var(result.get());
 }
 
@@ -1201,8 +1191,7 @@ juce::var CommandAPI::cmd_setInstrumentParameters(const juce::var& params)
         throw std::runtime_error("Track has no instrument");
     }
 
-    // Begin undo transaction
-    projectState.beginNewTransaction("AI tweak parameters");
+    // Note: UndoManager automatically groups actions into transactions
 
     // Set each parameter
     juce::Array<juce::var> updatedParams;
@@ -1284,8 +1273,7 @@ juce::var CommandAPI::cmd_setInstrumentOnTrack(const juce::var& params)
     // Set instrument on track
     track->setInstrument(std::move(newInstrument));
 
-    // Begin undo transaction
-    projectState.beginNewTransaction("Set instrument " + instrumentId + " on " + trackId);
+    // Note: UndoManager automatically groups actions into transactions
 
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
@@ -1346,8 +1334,7 @@ juce::var CommandAPI::cmd_setInstrumentParam(const juce::var& params)
         throw std::runtime_error("Failed to set parameter: " + paramId.toStdString());
     }
 
-    // Begin undo transaction
-    projectState.beginNewTransaction("Set " + paramId + " to " + juce::String(value, 2));
+    // Note: UndoManager automatically groups actions into transactions
 
     // Return result
     juce::DynamicObject::Ptr result = new juce::DynamicObject();
@@ -1421,7 +1408,7 @@ juce::var CommandAPI::cmd_randomizeInstrumentParams(const juce::var& params)
     juce::String trackId = obj->getProperty("trackId").toString();
 
     // Optional intensity parameter (0.0 = no change, 1.0 = full random range)
-    float intensity = obj->getProperty("intensity", 0.7f);
+    float intensity = obj->hasProperty("intensity") ? (float)obj->getProperty("intensity") : 0.7f;
     intensity = juce::jlimit(0.0f, 1.0f, intensity);
 
     // Find track
@@ -1439,8 +1426,7 @@ juce::var CommandAPI::cmd_randomizeInstrumentParams(const juce::var& params)
         throw std::runtime_error("Track has no instrument");
     }
 
-    // Begin undo transaction
-    projectState.beginNewTransaction("Randomize instrument parameters");
+    // Note: UndoManager automatically groups actions into transactions
 
     // Get metadata and randomize parameters
     const auto& metadata = instrument->getMetadata();

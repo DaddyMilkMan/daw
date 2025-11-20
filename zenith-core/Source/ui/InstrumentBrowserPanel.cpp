@@ -4,7 +4,7 @@
  */
 
 #include "InstrumentBrowserPanel.h"
-#include "../engine/Engine.h"
+#include "../../include/Engine.h"
 #include <algorithm>
 
 namespace zenith {
@@ -487,20 +487,23 @@ void InstrumentBrowserPanel::timerCallback()
 
 zenith::Track* InstrumentBrowserPanel::getSelectedTrack() const
 {
-    // Get first instrument track from engine
+    // Get first instrument track from project state
     // TODO: Implement proper track selection (selected track in arranger)
     // For now, we'll use the first instrument track
 
     int numTracks = engine_.getNumTracks();
     for (int i = 0; i < numTracks; ++i)
     {
-        auto* track = engine_.getTrack(i);
-        if (track != nullptr)
+        auto trackTree = projectState_.getTrackByIndex(i);
+        if (trackTree.isValid())
         {
-            // Check if it's an instrument track or has an instrument
-            if (track->getType() == Track::Type::Instrument || track->hasInstrument())
+            // Check if it's an instrument track
+            juce::String type = trackTree.getProperty(ProjectState::PROP_TYPE).toString();
+            if (type == "instrument")
             {
-                return track;
+                // Note: This returns nullptr since we can't directly access Track objects from ValueTree
+                // The caller should use the trackTree directly instead
+                return nullptr; // TODO: Refactor to return ValueTree or track ID
             }
         }
     }

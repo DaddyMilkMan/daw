@@ -11,8 +11,8 @@
 */
 
 #include "PianoRollComponent.h"
-#include "engine/Track.h"
-#include "engine/Clip.h"
+#include "../Source/engine/Track.h"
+#include "../Source/engine/Clip.h"
 
 //==============================================================================
 // Piano RollComponent Implementation

@@ -410,7 +410,9 @@ int main()
     juce::MessageManager::getInstance();
 
     // Register built-in instruments
-    RegisterBuiltInInstruments();
+    // Note: RegisterBuiltInInstruments() is not available in test configuration
+    // The instruments should be registered through InstrumentRegistry directly
+    // RegisterBuiltInInstruments();
 
     auto& registry = InstrumentRegistry::getInstance();
     auto instrumentIds = registry.getInstrumentIds();

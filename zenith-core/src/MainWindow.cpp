@@ -4,10 +4,10 @@
  */
 
 #include "../include/MainWindow.h"
+#include "../Source/commands/CommandAPI.h"
 #include "ArrangerComponent.h"
 #include "WingmanPanel.h"
 #include "InstrumentBrowserPanel.h"
-#include "CommandAPI.h"
 #include "AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
 #include "../Source/engine/Track.h"
@@ -108,7 +108,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
     juce::ignoreUnused(originatingComponent);
 
     // Ctrl+Z or Cmd+Z for undo
-    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && !key.getModifiers().isShiftDown())
+    if (key.getTextCharacter() == 'z' && key.getModifiers().isCommandDown() && !key.getModifiers().isShiftDown())
     {
         if (projectState.canUndo())
         {
@@ -119,7 +119,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
     }
 
     // Ctrl+Shift+Z or Cmd+Shift+Z for redo
-    if (key.isKeyCode(juce::KeyPress::zKey) && key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown())
+    if (key.getTextCharacter() == 'Z' && key.getModifiers().isCommandDown() && key.getModifiers().isShiftDown())
     {
         if (projectState.canRedo())
         {
@@ -130,7 +130,7 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
     }
 
     // Ctrl+Y or Cmd+Y for redo (alternative)
-    if (key.isKeyCode(juce::KeyPress::yKey) && key.getModifiers().isCommandDown())
+    if (key.getTextCharacter() == 'y' && key.getModifiers().isCommandDown())
     {
         if (projectState.canRedo())
         {

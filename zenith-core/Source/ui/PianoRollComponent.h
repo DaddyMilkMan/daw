@@ -20,10 +20,7 @@
 
 #include <JuceHeader.h>
 #include <memory>
-
-namespace zenith {
-    class Track;
-}
+#include "../Source/engine/Track.h"
 
 //==============================================================================
 /**
@@ -43,7 +40,8 @@ struct NoteVisual
     Piano roll MIDI editor component
 */
 class PianoRollComponent : public juce::Component,
-                           public juce::KeyListener
+                           public juce::KeyListener,
+                           private juce::Timer
 {
 public:
     //==============================================================================
@@ -60,6 +58,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     //==============================================================================
     // Key listener (for delete key)
@@ -74,6 +74,10 @@ public:
     float getNoteHeight() const { return noteHeight; }
 
 private:
+    //==============================================================================
+    // Timer callback (for animations)
+    void timerCallback() override;
+
     //==============================================================================
     // Rendering helpers
     void drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> bounds);
@@ -133,6 +137,15 @@ private:
 
     // Grid snap resolution (in beats)
     double gridResolution = 0.25;  // 1/16 note in 4/4 time
+
+    // Hover state for micro-interactions
+    NoteVisual* hoveredNote = nullptr;
+    int hoveredPianoKey = -1;  // For piano key hover
+    float hoverAlpha = 0.0f;
+    
+    // Selection animation
+    float selectionAlpha = 0.0f;
+    bool selectionAnimating = false;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)

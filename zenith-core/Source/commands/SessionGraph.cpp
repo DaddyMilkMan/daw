@@ -11,10 +11,10 @@
 */
 
 #include "SessionGraph.h"
-#include "../Engine.h"
-#include "../ProjectState.h"
-#include "engine/Track.h"
-#include "engine/Clip.h"
+#include "../../include/Engine.h"
+#include "../../include/ProjectState.h"
+#include "../engine/Track.h"
+#include "../engine/Clip.h"
 
 namespace zenith {
 

@@ -17,7 +17,7 @@
 #include <JuceHeader.h>
 #include "ZenithPolySynth.h"
 #include "InstrumentPreset.h"
-#include "ui/PresetBrowserComponent.h"
+#include "../ui/PresetBrowserComponent.h"
 
 namespace zenith {
 

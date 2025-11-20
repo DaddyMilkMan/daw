@@ -20,10 +20,10 @@ PianoRollComponent::~PianoRollComponent()
     // Detach ValueTree listener if attached
     if (currentClip.isValid())
     {
-        auto clip = projectState.findClip(currentClip.clipId);
+        auto [track, clip] = projectState.findClip(currentClip.clipId);
         if (clip.isValid())
         {
-            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_MIDI_NOTES);
+            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_NOTES);
             if (midiNotesNode.isValid())
                 midiNotesNode.removeListener(this);
         }
@@ -36,10 +36,10 @@ void PianoRollComponent::setClipContext(const MidiClipContext& context)
     // Detach from old clip's ValueTree
     if (currentClip.isValid())
     {
-        auto oldClip = projectState.findClip(currentClip.clipId);
+        auto [oldTrack, oldClip] = projectState.findClip(currentClip.clipId);
         if (oldClip.isValid())
         {
-            auto midiNotesNode = oldClip.getChildWithName(ProjectState::ID_MIDI_NOTES);
+            auto midiNotesNode = oldClip.getChildWithName(ProjectState::ID_NOTES);
             if (midiNotesNode.isValid())
                 midiNotesNode.removeListener(this);
         }
@@ -51,15 +51,15 @@ void PianoRollComponent::setClipContext(const MidiClipContext& context)
     // Attach to new clip's ValueTree for auto-refresh
     if (currentClip.isValid())
     {
-        auto clip = projectState.findClip(currentClip.clipId);
+        auto [track, clip] = projectState.findClip(currentClip.clipId);
         if (clip.isValid())
         {
-            // Get or create MIDI_NOTES node
-            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_MIDI_NOTES);
+            // Get or create NOTES node
+            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_NOTES);
             if (!midiNotesNode.isValid())
             {
-                // Create empty MIDI_NOTES container if it doesn't exist
-                midiNotesNode = juce::ValueTree(ProjectState::ID_MIDI_NOTES);
+                // Create empty NOTES container if it doesn't exist
+                midiNotesNode = juce::ValueTree(ProjectState::ID_NOTES);
                 clip.appendChild(midiNotesNode, nullptr);
             }
 
@@ -968,7 +968,7 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress& key)
 
 void PianoRollComponent::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent.hasType(ProjectState::ID_MIDI_NOTES))
+    if (parent.hasType(ProjectState::ID_NOTES))
     {
         DBG("PianoRoll: Note added via external change (undo/redo/Wingman)");
         needsRefresh = true;
@@ -977,7 +977,7 @@ void PianoRollComponent::valueTreeChildAdded(juce::ValueTree& parent, juce::Valu
 
 void PianoRollComponent::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index)
 {
-    if (parent.hasType(ProjectState::ID_MIDI_NOTES))
+    if (parent.hasType(ProjectState::ID_NOTES))
     {
         DBG("PianoRoll: Note removed via external change");
         needsRefresh = true;
@@ -986,7 +986,7 @@ void PianoRollComponent::valueTreeChildRemoved(juce::ValueTree& parent, juce::Va
 
 void PianoRollComponent::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
-    if (tree.hasType(ProjectState::ID_MIDI_NOTE))
+    if (tree.hasType(ProjectState::ID_NOTE))
     {
         DBG("PianoRoll: Note property changed: " + property.toString());
         needsRefresh = true;

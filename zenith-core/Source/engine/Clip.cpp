@@ -364,8 +364,10 @@ juce::ValueTree Track::Clip::getState() const
         const juce::ScopedLock sl(midiLock);
 
         // Save MIDI sequence as base64
+        juce::MidiFile midiFile;
+        midiFile.addTrack(midiSequence);
         juce::MemoryOutputStream stream;
-        midiSequence.createMidiFile(stream, 0);
+        midiFile.writeTo(stream);
         state.setProperty("midiData", stream.getMemoryBlock().toBase64Encoding(), nullptr);
     }
 
@@ -386,7 +388,10 @@ void Track::Clip::loadState(const juce::ValueTree& state)
     fadeOutLength.store(state.getProperty("fadeOut", 0));
     gain.store(state.getProperty("gain", 1.0f));
     looping.store(state.getProperty("looping", false));
-    clipColor = juce::Colour::fromString(state.getProperty("color", juce::Colours::blue.toString()));
+
+    // Convert var to String before passing to Colour::fromString
+    juce::var colorVar = state.getProperty("color", juce::Colours::blue.toString());
+    clipColor = juce::Colour::fromString(colorVar.toString());
 
     if (clipType == Type::Audio)
     {
@@ -405,7 +410,8 @@ void Track::Clip::loadState(const juce::ValueTree& state)
             midiData.fromBase64Encoding(midiDataBase64);
 
             juce::MidiFile midiFile;
-            midiFile.readFrom(midiData.begin(), midiData.getSize());
+            juce::MemoryInputStream inputStream(midiData, false);
+            midiFile.readFrom(inputStream);
 
             if (midiFile.getNumTracks() > 0)
             {

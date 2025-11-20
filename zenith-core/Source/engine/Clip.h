@@ -28,6 +28,9 @@
 
 namespace zenith {
 
+// Forward declarations
+class AudioFilePool;
+
 //==============================================================================
 /**
  * @brief MIDI note specification (Phase 8)
@@ -116,9 +119,7 @@ public:
     // Audio clip specific
 
     // Phase 1.2: Use AudioFilePool for RT-safe file access
-    // Forward declaration
-    class AudioFilePool;
-    void setAudioFileFromPool(const juce::File& file, AudioFilePool& pool);
+    void setAudioFileFromPool(const juce::File& file, zenith::AudioFilePool& pool);
 
     // Legacy method (deprecated - loads file directly without pool)
     void setAudioFile(const juce::File& file);

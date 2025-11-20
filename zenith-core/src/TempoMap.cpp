@@ -6,6 +6,8 @@
 #include "../include/TempoMap.h"
 #include "../include/ProjectState.h"
 
+namespace zenith {
+
 //==============================================================================
 // TempoMapSnapshot Implementation
 //==============================================================================
@@ -60,12 +62,10 @@ TempoMap::TempoMap()
     defaultSnapshot->prepare();
 
     snapshot_ = defaultSnapshot;
-    atomicSnapshot_.store(defaultSnapshot.get(), std::memory_order_release);
 }
 
 TempoMap::~TempoMap()
 {
-    atomicSnapshot_.store(nullptr, std::memory_order_release);
 }
 
 void TempoMap::updateFromValueTree(const juce::ValueTree& tempoMapTree)
@@ -132,16 +132,14 @@ void TempoMap::swapSnapshot(std::shared_ptr<const TempoMapSnapshot> newSnapshot)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
+    const juce::SpinLock::ScopedLockType sl(snapshotLock_);
     snapshot_ = newSnapshot;
-    atomicSnapshot_.store(newSnapshot.get(), std::memory_order_release);
 }
 
 std::shared_ptr<const TempoMapSnapshot> TempoMap::loadSnapshot() const
 {
-    // RT-safe: load atomic pointer
-    // We return snapshot_ which is a shared_ptr that keeps the object alive
-    // This is safe because snapshot_ is only written on message thread
-    // and we're reading from a single-reader context (or multiple readers are ok with shared_ptr)
+    // RT-safe: acquire spinlock to copy shared_ptr
+    const juce::SpinLock::ScopedLockType sl(snapshotLock_);
     return snapshot_;
 }
 
@@ -237,3 +235,5 @@ double TempoMap::getTempoAt(double beats) const
 
     return snap->cachedPoints[index].bpm;
 }
+
+} // namespace zenith

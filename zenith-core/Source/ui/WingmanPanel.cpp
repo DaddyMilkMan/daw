@@ -11,9 +11,9 @@
 */
 
 #include "WingmanPanel.h"
-#include "commands/CommandAPI.h"
-#include "network/AIBridgeClient.h"
-#include "commands/SessionGraph.h"
+#include "../Source/commands/CommandAPI.h"
+#include "../Source/network/AIBridgeClient.h"
+#include "../Source/commands/SessionGraph.h"
 
 //==============================================================================
 WingmanPanel::WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient)
@@ -393,7 +393,8 @@ void WingmanPanel::addMessage(const juce::String& message, bool isUserInput)
 void WingmanPanel::scrollHistoryToBottom()
 {
     historyDisplay->moveCaretToEnd();
-    historyDisplay->scrollToMakeSureCursorIsVisible();
+    // scrollToMakeSureCursorIsVisible() is protected in JUCE 8
+    // moveCaretToEnd() already scrolls to make caret visible
 }
 
 //==============================================================================

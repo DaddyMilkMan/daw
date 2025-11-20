@@ -17,7 +17,7 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ContentPaths.h"
 #include "Instrument.h"
-#include "engine/AudioFilePool.h"
+#include "../engine/AudioFilePool.h"
 
 namespace zenith {
 
@@ -172,6 +172,11 @@ public:
     juce::String getCurrentBankName() const { return currentPatchName; }
 
     /**
+     * @brief Alias for getCurrentBankName() - compatibility with editor
+     */
+    juce::String getCurrentPatchName() const { return currentPatchName; }
+
+    /**
      * @brief Check if a bank is currently loading
      */
     bool isLoading() const { return isLoadingPatch.load(); }
@@ -180,6 +185,17 @@ public:
      * @brief Get available sample banks from the content directory
      */
     juce::StringArray getAvailableBanks() const;
+
+    /**
+     * @brief Alias for getAvailableBanks() - compatibility with editor
+     */
+    juce::StringArray getAvailablePatches() const { return getAvailableBanks(); }
+
+    /**
+     * @brief Alias for getCurrentBankName() but with different name for editor compatibility
+     * For now, just returns the current bank name (implementation in .cpp)
+     */
+    bool loadPatchByName(const juce::String& patchName);
 
     //==========================================================================
     // Parameter access (for UI)
@@ -359,10 +375,10 @@ public:
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                         int startSample, int numSamples) override;
 
-    void setParameters(float* attack, float* decay, float* sustain, float* release,
-                      float* filterCutoff, float* filterResonance,
-                      float* sampleStartOffset, float* pitchFine, float* pitchSemitones,
-                      float* globalPan, float* globalGain);
+    void setParameters(std::atomic<float>* attack, std::atomic<float>* decay, std::atomic<float>* sustain, std::atomic<float>* release,
+                      std::atomic<float>* filterCutoff, std::atomic<float>* filterResonance,
+                      std::atomic<float>* sampleStartOffset, std::atomic<float>* pitchFine, std::atomic<float>* pitchSemitones,
+                      std::atomic<float>* globalPan, std::atomic<float>* globalGain);
 
 private:
     // Envelope
