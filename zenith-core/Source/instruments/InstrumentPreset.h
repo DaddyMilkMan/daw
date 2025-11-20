@@ -104,13 +104,13 @@ struct ZenithInstrumentPreset
         juce::ValueTree tree("InstrumentPreset");
 
         // Basic info
-        tree.setProperty("id", id, nullptr);
-        tree.setProperty("name", name, nullptr);
-        tree.setProperty("instrumentId", instrumentId, nullptr);
-        tree.setProperty("category", category, nullptr);
-        tree.setProperty("author", author, nullptr);
-        tree.setProperty("description", description, nullptr);
-        tree.setProperty("version", version, nullptr);
+        tree.setProperty("id", juce::String(id), nullptr);
+        tree.setProperty("name", juce::String(name), nullptr);
+        tree.setProperty("instrumentId", juce::String(instrumentId), nullptr);
+        tree.setProperty("category", juce::String(category), nullptr);
+        tree.setProperty("author", juce::String(author), nullptr);
+        tree.setProperty("description", juce::String(description), nullptr);
+        tree.setProperty("version", juce::String(version), nullptr);
 
         // Tags
         if (!tags.empty())
@@ -126,7 +126,7 @@ struct ZenithInstrumentPreset
         for (const auto& [paramId, value] : parameters)
         {
             juce::ValueTree paramTree("Param");
-            paramTree.setProperty("id", paramId, nullptr);
+            paramTree.setProperty("id", juce::String(paramId), nullptr);
             paramTree.setProperty("value", value, nullptr);
             paramsTree.appendChild(paramTree, nullptr);
         }
@@ -137,7 +137,7 @@ struct ZenithInstrumentPreset
         for (const auto& [macroId, value] : macros)
         {
             juce::ValueTree macroTree("Macro");
-            macroTree.setProperty("id", macroId, nullptr);
+            macroTree.setProperty("id", juce::String(macroId), nullptr);
             macroTree.setProperty("value", value, nullptr);
             macrosTree.appendChild(macroTree, nullptr);
         }
@@ -238,24 +238,24 @@ struct ZenithInstrumentPreset
         auto* obj = new juce::DynamicObject();
 
         // Basic info
-        obj->setProperty("id", id);
-        obj->setProperty("name", name);
-        obj->setProperty("instrumentId", instrumentId);
-        obj->setProperty("category", category);
-        obj->setProperty("author", author);
-        obj->setProperty("description", description);
-        obj->setProperty("version", version);
+        obj->setProperty("id", juce::String(id));
+        obj->setProperty("name", juce::String(name));
+        obj->setProperty("instrumentId", juce::String(instrumentId));
+        obj->setProperty("category", juce::String(category));
+        obj->setProperty("author", juce::String(author));
+        obj->setProperty("description", juce::String(description));
+        obj->setProperty("version", juce::String(version));
 
         // Tags array
         juce::Array<juce::var> tagsArray;
         for (const auto& tag : tags)
-            tagsArray.add(tag);
-        obj->setProperty("tags", tagsArray);
+            tagsArray.add(juce::String(tag));
+        obj->setProperty("tags", juce::var(tagsArray));
 
         // Parameters object
         auto* paramsObj = new juce::DynamicObject();
         for (const auto& [paramId, value] : parameters)
-            paramsObj->setProperty(paramId, value);
+            paramsObj->setProperty(juce::Identifier(paramId), value);
         obj->setProperty("params", juce::var(paramsObj));
 
         // Macros object (optional)
@@ -263,7 +263,7 @@ struct ZenithInstrumentPreset
         {
             auto* macrosObj = new juce::DynamicObject();
             for (const auto& [macroId, value] : macros)
-                macrosObj->setProperty(macroId, value);
+                macrosObj->setProperty(juce::Identifier(macroId), value);
             obj->setProperty("macros", juce::var(macrosObj));
         }
 

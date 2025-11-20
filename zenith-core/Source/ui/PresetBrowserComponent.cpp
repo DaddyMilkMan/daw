@@ -104,16 +104,17 @@ void PresetBrowserComponent::setCurrentPreset(const std::string& presetId)
 //==============================================================================
 void PresetBrowserComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    // Modern dark background
+    g.fillAll(juce::Colour(0xff1a1a1d));
 
-    // Title
+    // Title with better typography
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(16.0f, juce::Font::bold));
-    g.drawText("Preset Browser", 0, 5, getWidth(), 25, juce::Justification::centred);
+    g.setFont(juce::Font("Inter", 18.0f, juce::Font::bold));
+    g.drawText("Preset Browser", 0, 8, getWidth(), 25, juce::Justification::centred);
 
-    // Separator
-    g.setColour(juce::Colour(0xff444444));
-    g.drawLine(10.0f, 30.0f, (float)getWidth() - 10.0f, 30.0f, 1.0f);
+    // Subtle separator
+    g.setColour(juce::Colour(0xff404040));
+    g.drawLine(10.0f, 35.0f, (float)getWidth() - 10.0f, 35.0f, 1.0f);
 }
 
 void PresetBrowserComponent::resized()
@@ -388,27 +389,34 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
 
     const auto& preset = owner_.filteredPresets_[rowNumber];
 
-    // Background
+    // Modern background colors with smooth transitions
     if (rowIsSelected)
-        g.fillAll(juce::Colour(0xff4a9eff));
+    {
+        // Animated gradient for selection
+        juce::ColourGradient gradient(
+            juce::Colour(0xff5c86e1), 0.0f, 0.0f,
+            juce::Colour(0xff4a6eb8), (float)width, 0.0f, false);
+        g.setGradientFill(gradient);
+        g.fillRect(0, 0, width, height);
+    }
     else if (rowNumber % 2 == 0)
         g.fillAll(juce::Colour(0xff1e1e1e));
     else
-        g.fillAll(juce::Colour(0xff242424));
+        g.fillAll(juce::Colour(0xff1a1a1d));
 
-    // Text
-    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colour(0xffcccccc));
-    g.setFont(juce::Font(14.0f));
+    // Text with better contrast and smooth fade
+    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colour(0xffe0e0e0));
+    g.setFont(juce::Font("Inter", 13.0f, juce::Font::plain));
 
     juce::String displayName = owner_.getPresetDisplayName(preset);
-    g.drawText(displayName, 5, 0, width - 10, height,
+    g.drawText(displayName, 8, 0, width - 16, height,
               juce::Justification::centredLeft, true);
 
-    // Tags (small, on right)
+    // Tags (small, subtle) with fade effect
     if (!preset.tags.empty())
     {
-        g.setFont(juce::Font(10.0f));
-        g.setColour(rowIsSelected ? juce::Colour(0xffcccccc) : juce::Colour(0xff888888));
+        g.setFont(juce::Font("Inter", 9.0f, juce::Font::plain));
+        g.setColour(rowIsSelected ? juce::Colour(0xffd0d0d0) : juce::Colour(0xff909090));
 
         juce::String tagStr;
         for (size_t i = 0; i < preset.tags.size() && i < 3; ++i)
@@ -419,7 +427,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
         if (preset.tags.size() > 3)
             tagStr += "...";
 
-        g.drawText(tagStr, 5, height - 15, width - 10, 15,
+        g.drawText(tagStr, 8, height - 14, width - 16, 12,
                   juce::Justification::centredRight, true);
     }
 }

@@ -288,7 +288,12 @@ void ArrangerComponent::deleteSelectedClips()
     // Delete all selected clips
     for (const auto& clipId : selectedClipIds)
     {
-        projectState.deleteClip(clipId, "Delete clips");
+        auto [track, clip] = projectState.findClip(clipId);
+        if (track.isValid() && clip.isValid())
+        {
+            juce::String trackId = track.getProperty(ProjectState::PROP_ID).toString();
+            projectState.deleteClip(trackId, clipId, "Delete clips");
+        }
     }
 
     clearSelection();

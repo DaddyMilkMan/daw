@@ -22,13 +22,10 @@
 #include <JuceHeader.h>
 #include <vector>
 #include <memory>
+#include "../Source/engine/Track.h"
 
 // Forward declarations
 class Engine;
-
-namespace zenith {
-    class Track;
-}
 
 //==============================================================================
 /**
@@ -65,6 +62,8 @@ public:
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     //==============================================================================
     // View control
@@ -128,6 +127,14 @@ private:
     bool isDragging = false;
     juce::Point<float> dragStartPosition;
     int64_t clipDragStartSamples = 0;
+
+    // Hover state for micro-interactions
+    ClipVisual* hoveredClip = nullptr;
+    float hoverAlpha = 0.0f;
+    
+    // Selection animation
+    float selectionAlpha = 0.0f;
+    bool selectionAnimating = false;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)

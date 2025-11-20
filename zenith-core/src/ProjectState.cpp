@@ -46,6 +46,10 @@ const juce::Identifier ProjectState::ID_ENVELOPE("ENVELOPE");
 const juce::Identifier ProjectState::ID_POINT("POINT");
 const juce::Identifier ProjectState::ID_NOTES("NOTES");
 const juce::Identifier ProjectState::ID_NOTE("NOTE");
+const juce::Identifier ProjectState::ID_TEMPO_MAP("TEMPO_MAP");
+const juce::Identifier ProjectState::ID_TEMPO_POINT("TEMPO_POINT");
+const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
+const juce::Identifier ProjectState::ID_MARKER("MARKER");
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -65,37 +69,25 @@ const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
 const juce::Identifier ProjectState::PROP_OFFSET("offset");
 const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
-const juce::Identifier ProjectState::PROP_ARMED("armed");
 
-// U4.1: Beat-based clip properties
+// Beat-based clip properties
 const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
 const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
 const juce::Identifier ProjectState::PROP_LANE_INDEX("laneIndex");
 
-// U4.1: MIDI note properties
+// MIDI note properties
 const juce::Identifier ProjectState::PROP_PITCH("pitch");
 const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
 
-// Phase 13: Automation properties
+// Automation properties
 const juce::Identifier ProjectState::PROP_PARAM("param");
-const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
-const juce::Identifier ProjectState::PROP_VALUE("value");
-
-// MIDI Note properties
-const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
-const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
-const juce::Identifier ProjectState::PROP_PITCH("pitch");
-const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
-
-// Phase 8: MIDI note properties
-const juce::Identifier ProjectState::PROP_PITCH("pitch");
-const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
-const juce::Identifier ProjectState::PROP_LENGTH_BEATS("lengthBeats");
-const juce::Identifier ProjectState::PROP_VELOCITY("velocity");
-
 const juce::Identifier ProjectState::PROP_PARAM_ID("paramId");
 const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
 const juce::Identifier ProjectState::PROP_VALUE("value");
+
+// Tempo/Marker properties
+const juce::Identifier ProjectState::PROP_BPM("bpm");
+const juce::Identifier ProjectState::PROP_COLOR("color");
 
 //==============================================================================
 ProjectState::ProjectState()
@@ -375,6 +367,16 @@ juce::String ProjectState::getTrackName(const juce::String& trackId) const
         return {};
 
     return track[PROP_NAME].toString();
+}
+
+juce::String ProjectState::getTrackType(const juce::String& trackId) const
+{
+    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
+
+    if (!track.isValid())
+        return {};
+
+    return track[PROP_TYPE].toString();
 }
 
 //==============================================================================
@@ -682,7 +684,7 @@ juce::ValueTree ProjectState::getOrCreateAutomationEnvelope(const juce::String& 
     envelope.setProperty(PROP_PARAM_ID, paramId, nullptr);
 
     // Create POINTS container
-    envelope.appendChild(juce::ValueTree(ID_POINTS), nullptr);
+    envelope.appendChild(juce::ValueTree(ID_POINT), nullptr);
 
     automationNode.appendChild(envelope, &undoManager);
 
@@ -715,7 +717,7 @@ bool ProjectState::hasAutomation(const juce::String& trackId, const juce::String
     if (!envelope.isValid())
         return false;
 
-    auto pointsNode = envelope.getChildWithName(ID_POINTS);
+    auto pointsNode = envelope.getChildWithName(ID_POINT);
     return pointsNode.isValid() && pointsNode.getNumChildren() > 0;
 }
 
@@ -729,7 +731,7 @@ juce::String ProjectState::addAutomationPoint(const juce::String& trackId, const
         return {};
     }
 
-    auto pointsNode = envelope.getChildWithName(ID_POINTS);
+    auto pointsNode = envelope.getChildWithName(ID_POINT);
     if (!pointsNode.isValid())
     {
         DBG("ProjectState: POINTS node not found");
@@ -782,7 +784,7 @@ bool ProjectState::moveAutomationPoint(const juce::String& trackId, const juce::
     point.setProperty(PROP_VALUE, newValue, &undoManager);
 
     // Re-sort points by time if necessary
-    auto pointsNode = envelope.getChildWithName(ID_POINTS);
+    auto pointsNode = envelope.getChildWithName(ID_POINT);
     if (pointsNode.isValid())
     {
         // Remove and re-insert to maintain sorted order
@@ -818,7 +820,7 @@ bool ProjectState::deleteAutomationPoint(const juce::String& trackId, const juce
     if (!envelope.isValid())
         return false;
 
-    auto pointsNode = envelope.getChildWithName(ID_POINTS);
+    auto pointsNode = envelope.getChildWithName(ID_POINT);
     if (!pointsNode.isValid())
         return false;
 
@@ -831,23 +833,6 @@ bool ProjectState::deleteAutomationPoint(const juce::String& trackId, const juce
 
     DBG("ProjectState: Deleted automation point " + pointId);
     return true;
-}
-
-void ProjectState::clearAutomation(const juce::String& trackId, const juce::String& paramId,
-                                   const juce::String& actionName)
-{
-    auto envelope = getAutomationEnvelope(trackId, paramId);
-    if (!envelope.isValid())
-        return;
-
-    auto pointsNode = envelope.getChildWithName(ID_POINTS);
-    if (!pointsNode.isValid())
-        return;
-
-    undoManager.beginNewTransaction(actionName);
-    pointsNode.removeAllChildren(&undoManager);
-
-    DBG("ProjectState: Cleared automation for " + trackId + ":" + paramId);
 }
 
 //==============================================================================
@@ -880,17 +865,17 @@ juce::Array<ProjectState::MidiNoteSpec> ProjectState::getMidiNotesForClip(const 
 {
     juce::Array<MidiNoteSpec> notes;
 
-    auto clip = findClip(clipId);
+    auto [track, clip] = const_cast<ProjectState*>(this)->findClip(clipId);
     if (!clip.isValid())
         return notes;
 
-    auto midiNotesNode = clip.getChildWithName(ID_MIDI_NOTES);
+    auto midiNotesNode = clip.getChildWithName(ID_NOTES);
     if (!midiNotesNode.isValid())
         return notes;
 
     for (auto noteTree : midiNotesNode)
     {
-        if (!noteTree.hasType(ID_MIDI_NOTE))
+        if (!noteTree.hasType(ID_NOTE))
             continue;
 
         MidiNoteSpec note;
@@ -909,7 +894,7 @@ juce::Array<ProjectState::MidiNoteSpec> ProjectState::getMidiNotesForClip(const 
 
 juce::String ProjectState::addMidiNote(const juce::String& clipId, const MidiNoteSpec& note, const juce::String& actionName)
 {
-    auto clip = findClip(clipId);
+    auto [track, clip] = findClip(clipId);
     if (!clip.isValid())
     {
         DBG("ProjectState: Cannot add MIDI note - clip not found: " + clipId);
@@ -917,10 +902,10 @@ juce::String ProjectState::addMidiNote(const juce::String& clipId, const MidiNot
     }
 
     // Get or create MIDI_NOTES container
-    auto midiNotesNode = clip.getChildWithName(ID_MIDI_NOTES);
+    auto midiNotesNode = clip.getChildWithName(ID_NOTES);
     if (!midiNotesNode.isValid())
     {
-        midiNotesNode = juce::ValueTree(ID_MIDI_NOTES);
+        midiNotesNode = juce::ValueTree(ID_NOTES);
         clip.appendChild(midiNotesNode, &undoManager);
     }
 
@@ -936,7 +921,7 @@ juce::String ProjectState::addMidiNote(const juce::String& clipId, const MidiNot
     double lengthBeats = juce::jmax(0.0, note.lengthBeats);
 
     // Create note tree
-    juce::ValueTree noteTree(ID_MIDI_NOTE);
+    juce::ValueTree noteTree(ID_NOTE);
     noteTree.setProperty(PROP_ID, noteId, nullptr);
     noteTree.setProperty(PROP_PITCH, pitch, nullptr);
     noteTree.setProperty(PROP_START_BEATS, startBeats, nullptr);
@@ -1105,7 +1090,6 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     {
         if (track[PROP_ID].toString() == trackId)
             return track;
-<<<<<<< HEAD
     }
 
     return {};
@@ -1127,57 +1111,9 @@ juce::ValueTree ProjectState::findTrack(const juce::String& trackId) const
     return {};
 }
 
-juce::ValueTree ProjectState::findClip(const juce::String& clipId)
-{
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-    if (!tracksNode.isValid())
-        return {};
-
-    // Search through all tracks
-    for (auto track : tracksNode)
-    {
-        auto clipsNode = track.getChildWithName(ID_CLIPS);
-        if (!clipsNode.isValid())
-            continue;
-
-        // Search through clips in this track
-        for (auto clip : clipsNode)
-        {
-            if (clip[PROP_ID].toString() == clipId)
-                return clip;
-        }
-    }
-
-    return {};
-}
-
-juce::ValueTree ProjectState::findClip(const juce::String& clipId) const
-{
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-    if (!tracksNode.isValid())
-        return {};
-
-    // Search through all tracks
-    for (auto track : tracksNode)
-    {
-        auto clipsNode = track.getChildWithName(ID_CLIPS);
-        if (!clipsNode.isValid())
-            continue;
-
-        // Search through clips in this track
-        for (auto clip : clipsNode)
-        {
-            if (clip[PROP_ID].toString() == clipId)
-                return clip;
-        }
-    }
-
-    return {};
-}
-
 juce::ValueTree ProjectState::findMidiNote(const juce::String& clipId, const juce::String& noteId)
 {
-    auto clip = findClip(clipId);
+    auto [track, clip] = findClip(clipId);
     if (!clip.isValid())
         return {};
 
@@ -1978,240 +1914,6 @@ std::pair<juce::String, juce::String> ProjectState::splitClip(const juce::String
 }
 
 //==============================================================================
-// Phase 13: Automation Management
-//==============================================================================
-
-juce::ValueTree ProjectState::getOrCreateAutomationEnvelope(const juce::String& trackId, const juce::String& paramId)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    jassert(paramId == "volume" || paramId == "pan" || paramId == "mute");
-
-    auto track = findTrack(trackId);
-    if (!track.isValid())
-    {
-        DBG("ProjectState: Track not found: " + trackId);
-        return {};
-    }
-
-    // Get or create AUTOMATION node
-    auto automationNode = track.getChildWithName(ID_AUTOMATION);
-    if (!automationNode.isValid())
-    {
-        automationNode = juce::ValueTree(ID_AUTOMATION);
-        track.appendChild(automationNode, &undoManager);
-        DBG("ProjectState: Created AUTOMATION node for track " + trackId);
-    }
-
-    // Find envelope for this parameter
-    for (auto envelope : automationNode)
-    {
-        if (envelope.hasType(ID_ENVELOPE) && envelope[PROP_PARAM].toString() == paramId)
-            return envelope;
-    }
-
-    // Create new envelope
-    juce::ValueTree envelope(ID_ENVELOPE);
-    envelope.setProperty(PROP_PARAM, paramId, nullptr);
-    automationNode.appendChild(envelope, &undoManager);
-
-    DBG("ProjectState: Created envelope for " + trackId + "/" + paramId);
-    return envelope;
-}
-
-juce::ValueTree ProjectState::getAutomationEnvelope(const juce::String& trackId, const juce::String& paramId) const
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    auto track = const_cast<ProjectState*>(this)->findTrack(trackId);
-    if (!track.isValid())
-        return {};
-
-    auto automationNode = track.getChildWithName(ID_AUTOMATION);
-    if (!automationNode.isValid())
-        return {};
-
-    // Find envelope for this parameter
-    for (auto envelope : automationNode)
-    {
-        if (envelope.hasType(ID_ENVELOPE) && envelope[PROP_PARAM].toString() == paramId)
-            return envelope;
-    }
-
-    return {};
-}
-
-bool ProjectState::hasAutomation(const juce::String& trackId, const juce::String& paramId) const
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    return getAutomationEnvelope(trackId, paramId).isValid();
-}
-
-juce::String ProjectState::addAutomationPoint(const juce::String& trackId, const juce::String& paramId,
-                                               double timeBeats, double value, const juce::String& actionName)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    jassert(timeBeats >= 0.0);
-
-    // Validate parameter ID and value range
-    if (paramId == "volume")
-        value = juce::jlimit(0.0, 1.0, value);
-    else if (paramId == "pan")
-        value = juce::jlimit(-1.0, 1.0, value);
-    else if (paramId == "mute")
-        value = value >= 0.5 ? 1.0 : 0.0;  // Binary
-    else
-    {
-        DBG("ProjectState: Invalid parameter ID: " + paramId);
-        return {};
-    }
-
-    auto envelope = getOrCreateAutomationEnvelope(trackId, paramId);
-    if (!envelope.isValid())
-    {
-        DBG("ProjectState: Failed to get/create envelope");
-        return {};
-    }
-
-    // Generate unique point ID
-    auto pointId = generateUniqueId("point");
-
-    // Create point
-    juce::ValueTree point(ID_POINT);
-    point.setProperty(PROP_ID, pointId, nullptr);
-    point.setProperty(PROP_TIME_BEATS, timeBeats, nullptr);
-    point.setProperty(PROP_VALUE, value, nullptr);
-
-    // Insert in sorted order by time
-    int insertIndex = 0;
-    for (int i = 0; i < envelope.getNumChildren(); ++i)
-    {
-        auto existingPoint = envelope.getChild(i);
-        double existingTime = existingPoint[PROP_TIME_BEATS];
-        if (timeBeats >= existingTime)
-            insertIndex = i + 1;
-        else
-            break;
-    }
-
-    envelope.addChild(point, insertIndex, &undoManager);
-
-    DBG("ProjectState: Added automation point " + pointId + " at " + juce::String(timeBeats) + " beats");
-    return pointId;
-}
-
-bool ProjectState::moveAutomationPoint(const juce::String& trackId, const juce::String& paramId,
-                                        const juce::String& pointId, double newTimeBeats, double newValue,
-                                        const juce::String& actionName)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    jassert(newTimeBeats >= 0.0);
-
-    // Validate value range
-    if (paramId == "volume")
-        newValue = juce::jlimit(0.0, 1.0, newValue);
-    else if (paramId == "pan")
-        newValue = juce::jlimit(-1.0, 1.0, newValue);
-    else if (paramId == "mute")
-        newValue = newValue >= 0.5 ? 1.0 : 0.0;
-
-    auto envelope = getAutomationEnvelope(trackId, paramId);
-    if (!envelope.isValid())
-        return false;
-
-    // Find point
-    for (int i = 0; i < envelope.getNumChildren(); ++i)
-    {
-        auto point = envelope.getChild(i);
-        if (point[PROP_ID].toString() == pointId)
-        {
-            double oldTime = point[PROP_TIME_BEATS];
-
-            // Update properties
-            point.setProperty(PROP_TIME_BEATS, newTimeBeats, &undoManager);
-            point.setProperty(PROP_VALUE, newValue, &undoManager);
-
-            // If time changed, re-sort
-            if (newTimeBeats != oldTime)
-            {
-                // Remove and re-insert in sorted position
-                // Use undoManager for both operations to ensure proper undo/redo support
-                envelope.removeChild(i, &undoManager);
-
-                int insertIndex = 0;
-                for (int j = 0; j < envelope.getNumChildren(); ++j)
-                {
-                    auto existingPoint = envelope.getChild(j);
-                    double existingTime = existingPoint[PROP_TIME_BEATS];
-                    if (newTimeBeats >= existingTime)
-                        insertIndex = j + 1;
-                    else
-                        break;
-                }
-
-                envelope.addChild(point, insertIndex, &undoManager);
-            }
-
-            DBG("ProjectState: Moved automation point " + pointId);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool ProjectState::deleteAutomationPoint(const juce::String& trackId, const juce::String& paramId,
-                                          const juce::String& pointId, const juce::String& actionName)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    auto envelope = getAutomationEnvelope(trackId, paramId);
-    if (!envelope.isValid())
-        return false;
-
-    // Find and remove point
-    for (int i = 0; i < envelope.getNumChildren(); ++i)
-    {
-        auto point = envelope.getChild(i);
-        if (point[PROP_ID].toString() == pointId)
-        {
-            envelope.removeChild(i, &undoManager);
-            DBG("ProjectState: Deleted automation point " + pointId);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-bool ProjectState::clearAutomation(const juce::String& trackId, const juce::String& paramId,
-                                    const juce::String& actionName)
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-    auto track = findTrack(trackId);
-    if (!track.isValid())
-        return false;
-
-    auto automationNode = track.getChildWithName(ID_AUTOMATION);
-    if (!automationNode.isValid())
-        return false;
-
-    // Find and remove envelope
-    for (int i = 0; i < automationNode.getNumChildren(); ++i)
-    {
-        auto envelope = automationNode.getChild(i);
-        if (envelope.hasType(ID_ENVELOPE) && envelope[PROP_PARAM].toString() == paramId)
-        {
-            automationNode.removeChild(i, &undoManager);
-            DBG("ProjectState: Cleared automation for " + trackId + "/" + paramId);
-            return true;
-        }
-    }
-
-    return false;
-}
-
-//==============================================================================
 // MIDI Note Management
 //==============================================================================
 
@@ -2219,7 +1921,7 @@ juce::ValueTree ProjectState::getOrCreateNotesContainer(const juce::String& clip
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    auto clip = findClip(clipId);
+    auto [track, clip] = findClip(clipId);
     if (!clip.isValid())
     {
         DBG("ProjectState: Clip not found: " + clipId);
@@ -2376,32 +2078,122 @@ juce::ValueTree ProjectState::getNotes(const juce::String& clipId) const
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    auto clip = const_cast<ProjectState*>(this)->findClip(clipId);
+    auto [track, clip] = const_cast<ProjectState*>(this)->findClip(clipId);
     if (!clip.isValid())
         return {};
 
     return clip.getChildWithName(ID_NOTES);
 }
 
-juce::ValueTree ProjectState::findClip(const juce::String& clipId)
-{
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-    if (!tracksNode.isValid())
-        return {};
+//==============================================================================
+// Tempo Map & Markers (Phase 15)
+//==============================================================================
 
-    // Search all tracks for the clip
-    for (auto track : tracksNode)
+juce::String ProjectState::addTempoChange(double beatPosition, double bpm, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto tempoMap = state.getChildWithName(ID_TEMPO_MAP);
+    if (!tempoMap.isValid())
     {
-        auto clipsNode = track.getChildWithName(ID_CLIPS);
-        if (clipsNode.isValid())
+        tempoMap = juce::ValueTree(ID_TEMPO_MAP);
+        state.addChild(tempoMap, -1, &undoManager);
+    }
+
+    // Create point
+    juce::ValueTree point(ID_TEMPO_POINT);
+    juce::String pointId = generateUniqueId("tempo_point");
+    
+    point.setProperty(PROP_ID, pointId, nullptr);
+    point.setProperty(PROP_TIME_BEATS, beatPosition, nullptr);
+    point.setProperty(PROP_BPM, bpm, nullptr);
+
+    // Insert in sorted order
+    int insertIndex = 0;
+    for (int i = 0; i < tempoMap.getNumChildren(); ++i)
+    {
+        if ((double)tempoMap.getChild(i)[PROP_TIME_BEATS] > beatPosition)
         {
-            for (auto clip : clipsNode)
-            {
-                if (clip[PROP_ID].toString() == clipId)
-                    return clip;
-            }
+            insertIndex = i;
+            break;
+        }
+        insertIndex = i + 1;
+    }
+
+    undoManager.beginNewTransaction(actionName);
+    tempoMap.addChild(point, insertIndex, &undoManager);
+
+    DBG("ProjectState: Added tempo change at " + juce::String(beatPosition) + " beats: " + juce::String(bpm) + " BPM");
+    return pointId;
+}
+
+juce::ValueTree ProjectState::getTempoMap() const
+{
+    return state.getChildWithName(ID_TEMPO_MAP);
+}
+
+juce::String ProjectState::addMarker(double beatPosition, const juce::String& name, const juce::String& color, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto markers = state.getChildWithName(ID_MARKERS);
+    if (!markers.isValid())
+    {
+        markers = juce::ValueTree(ID_MARKERS);
+        state.addChild(markers, -1, &undoManager);
+    }
+
+    // Create marker
+    juce::ValueTree marker(ID_MARKER);
+    juce::String markerId = generateUniqueId("marker");
+    
+    marker.setProperty(PROP_ID, markerId, nullptr);
+    marker.setProperty(PROP_TIME_BEATS, beatPosition, nullptr);
+    marker.setProperty(PROP_NAME, name, nullptr);
+    marker.setProperty(PROP_COLOR, color, nullptr);
+
+    // Insert in sorted order
+    int insertIndex = 0;
+    for (int i = 0; i < markers.getNumChildren(); ++i)
+    {
+        if ((double)markers.getChild(i)[PROP_TIME_BEATS] > beatPosition)
+        {
+            insertIndex = i;
+            break;
+        }
+        insertIndex = i + 1;
+    }
+
+    undoManager.beginNewTransaction(actionName);
+    markers.addChild(marker, insertIndex, &undoManager);
+
+    DBG("ProjectState: Added marker '" + name + "' at " + juce::String(beatPosition) + " beats");
+    return markerId;
+}
+
+bool ProjectState::deleteMarker(const juce::String& markerId, const juce::String& actionName)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    auto markers = state.getChildWithName(ID_MARKERS);
+    if (!markers.isValid())
+        return false;
+
+    for (int i = 0; i < markers.getNumChildren(); ++i)
+    {
+        if (markers.getChild(i)[PROP_ID].toString() == markerId)
+        {
+            undoManager.beginNewTransaction(actionName);
+            markers.removeChild(i, &undoManager);
+            DBG("ProjectState: Deleted marker " + markerId);
+            return true;
         }
     }
 
-    return {};
+    return false;
+}
+
+juce::ValueTree ProjectState::getMarkers() const
+{
+    return state.getChildWithName(ID_MARKERS);
 }

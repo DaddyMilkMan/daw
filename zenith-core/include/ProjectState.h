@@ -24,16 +24,9 @@
 
 #pragma once
 
-<<<<<<< HEAD
-#include <atomic>
-
-#include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
-=======
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <atomic>
->>>>>>> origin/master
 
 //==============================================================================
 /**
@@ -99,6 +92,10 @@ public:
     static const juce::Identifier ID_POINT;
     static const juce::Identifier ID_NOTES;      // MIDI notes container
     static const juce::Identifier ID_NOTE;       // Individual MIDI note
+    static const juce::Identifier ID_TEMPO_MAP;  // Container for tempo changes
+    static const juce::Identifier ID_TEMPO_POINT;// Individual tempo change
+    static const juce::Identifier ID_MARKERS;    // Container for markers
+    static const juce::Identifier ID_MARKER;     // Individual marker
 
     static const juce::Identifier PROP_NAME;
     static const juce::Identifier PROP_TEMPO;
@@ -118,9 +115,11 @@ public:
     static const juce::Identifier PROP_LENGTH;
     static const juce::Identifier PROP_OFFSET;
     static const juce::Identifier PROP_AUDIO_FILE;
+    static const juce::Identifier PROP_LANE_INDEX;
 
     // Phase 13: Automation properties
     static const juce::Identifier PROP_PARAM;
+    static const juce::Identifier PROP_PARAM_ID;
     static const juce::Identifier PROP_TIME_BEATS;
     static const juce::Identifier PROP_VALUE;
 
@@ -129,6 +128,10 @@ public:
     static const juce::Identifier PROP_LENGTH_BEATS;  // Note length in beats
     static const juce::Identifier PROP_PITCH;         // MIDI pitch (0-127)
     static const juce::Identifier PROP_VELOCITY;      // MIDI velocity (0-127)
+
+    // Tempo/Marker properties
+    static const juce::Identifier PROP_BPM;           // Tempo in BPM
+    static const juce::Identifier PROP_COLOR;         // Marker color (hex string)
 
     //==========================================================================
     ProjectState();
@@ -202,56 +205,16 @@ public:
     juce::ValueTree getTrack(const juce::String& trackId) const;
 
     /**
-
      * @brief Get track node by index
      * @param trackIndex Track index (0-based)
      * @return ValueTree for the track (invalid if not found)
      */
-    juce::ValueTree getTrackByIndex(int trackIndex) const;
+    juce::ValueTree getTrackByIndex(int trackIndex);
 
     //===================================================================
     // Track Mixer API (Phase 10+11) - MESSAGE THREAD ONLY
     //===================================================================
 
-    /**
-     * @brief Set track volume (0.0 - 1.0)
-     * @note Undoable, message thread only
-     */
-    void setTrackVolume(const juce::String& trackId, float volume);
-    float getTrackVolume(const juce::String& trackId) const;
-
-    /**
-     * @brief Set track pan (-1.0 = left, +1.0 = right)
-     * @note Undoable, message thread only
-     */
-    void setTrackPan(const juce::String& trackId, float pan);
-    float getTrackPan(const juce::String& trackId) const;
-
-    /**
-     * @brief Set track mute state
-     * @note Undoable, message thread only
-     */
-    void setTrackMute(const juce::String& trackId, bool muted);
-    bool isTrackMuted(const juce::String& trackId) const;
-
-    /**
-     * @brief Set track solo state
-     * @note Undoable, message thread only
-     */
-    void setTrackSolo(const juce::String& trackId, bool solo);
-    bool isTrackSolo(const juce::String& trackId) const;
-
-    /**
-     * @brief Set track armed state (for recording)
-     * @note Undoable, message thread only
-     */
-    void setTrackArmed(const juce::String& trackId, bool armed);
-
-     * @brief Get track ValueTree by index
-     * @param index Track index
-     * @return Track ValueTree (may be invalid if out of range)
-     */
-    juce::ValueTree getTrackByIndex(int index);
 
     /**
      * @brief Rename a track (undoable)
@@ -513,6 +476,106 @@ public:
      */
     std::pair<juce::ValueTree, juce::ValueTree> findClip(const juce::String& clipId);
 
+    /**
+     * @brief Add a clip to a track (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipType "audio" or "midi"
+     * @param startBeats Start position in beats
+     * @param lengthBeats Length in beats
+     * @param laneIndex Lane index for comping
+     * @return Clip ID
+     */
+    juce::String addClip(const juce::String& trackId, const juce::String& clipType,
+                         double startBeats, double lengthBeats, int laneIndex);
+
+    /**
+     * @brief Remove a clip from a track (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @return true if clip was found and removed
+     */
+    bool removeClip(const juce::String& trackId, const juce::String& clipId);
+
+    /**
+     * @brief Move a clip (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newStartBeats New start position in beats
+     * @return true if clip was found and moved
+     */
+    bool moveClip(const juce::String& trackId, const juce::String& clipId, double newStartBeats);
+
+    /**
+     * @brief Resize a clip (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param newLengthBeats New length in beats
+     * @return true if clip was found and resized
+     */
+    bool resizeClip(const juce::String& trackId, const juce::String& clipId, double newLengthBeats);
+
+    /**
+     * @brief Find clip by track and clip ID (helper)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @return Clip ValueTree (invalid if not found)
+     */
+    juce::ValueTree findClip(const juce::String& trackId, const juce::String& clipId);
+
+    /**
+     * @brief Add a MIDI note to a clip (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param startBeats Start position in beats
+     * @param lengthBeats Length in beats
+     * @param pitch MIDI pitch (0-127)
+     * @param velocity MIDI velocity (0-127)
+     * @return Note ID
+     */
+    juce::String addNote(const juce::String& trackId, const juce::String& clipId,
+                         double startBeats, double lengthBeats, int pitch, int velocity);
+
+    /**
+     * @brief Remove a MIDI note from a clip (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @return true if note was found and removed
+     */
+    bool removeNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId);
+
+    /**
+     * @brief Move a MIDI note (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newStartBeats New start position in beats
+     * @param newPitch New MIDI pitch
+     * @return true if note was found and moved
+     */
+    bool moveNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
+                  double newStartBeats, int newPitch);
+
+    /**
+     * @brief Resize a MIDI note (U4.1 - Beat-based)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @param newLengthBeats New length in beats
+     * @return true if note was found and resized
+     */
+    bool resizeNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId,
+                    double newLengthBeats);
+
+    /**
+     * @brief Find MIDI note by track, clip, and note ID (helper)
+     * @param trackId Track ID
+     * @param clipId Clip ID
+     * @param noteId Note ID
+     * @return Note ValueTree (invalid if not found)
+     */
+    juce::ValueTree findNote(const juce::String& trackId, const juce::String& clipId, const juce::String& noteId);
+
     //==========================================================================
     // Phase 13: Automation Management
     //==========================================================================
@@ -739,6 +802,49 @@ public:
                            double newLengthBeats, const juce::String& actionName);
 
     //==========================================================================
+    // Tempo Map & Markers (Phase 15)
+    //==========================================================================
+
+    /**
+     * @brief Add a tempo change point
+     * @param beatPosition Position in beats
+     * @param bpm Tempo in BPM
+     * @param actionName Undo action name
+     * @return Generated point ID
+     */
+    juce::String addTempoChange(double beatPosition, double bpm, const juce::String& actionName);
+
+    /**
+     * @brief Get all tempo changes
+     * @return ValueTree containing TEMPO_POINT children
+     */
+    juce::ValueTree getTempoMap() const;
+
+    /**
+     * @brief Add a timeline marker
+     * @param beatPosition Position in beats
+     * @param name Marker name
+     * @param color Marker color (hex string, e.g. "FF0000")
+     * @param actionName Undo action name
+     * @return Generated marker ID
+     */
+    juce::String addMarker(double beatPosition, const juce::String& name, const juce::String& color, const juce::String& actionName);
+
+    /**
+     * @brief Delete a marker
+     * @param markerId Marker ID
+     * @param actionName Undo action name
+     * @return true if found and deleted
+     */
+    bool deleteMarker(const juce::String& markerId, const juce::String& actionName);
+
+    /**
+     * @brief Get all markers
+     * @return ValueTree containing MARKER children
+     */
+    juce::ValueTree getMarkers() const;
+
+    //==========================================================================
     // Undo/Redo
     //==========================================================================
 
@@ -802,23 +908,6 @@ private:
     juce::ValueTree findTrackInternal(const juce::String& trackId);
 
     /**
-     * @brief Find clip by ID across all tracks
-     */
-    juce::ValueTree findClip(const juce::String& clipId);
-
-    /**
-     * @brief Find clip by ID (Phase 8)
-     * @param clipId Clip ID to search for
-     * @return ValueTree for the clip, or invalid tree if not found
-     */
-    juce::ValueTree findClip(const juce::String& clipId);
-
-    /**
-     * @brief Find clip by ID (const version)
-     */
-    juce::ValueTree findClip(const juce::String& clipId) const;
-
-    /**
      * @brief Find MIDI note by ID within a clip (Phase 8)
      * @param clipId Clip ID
      * @param noteId Note ID
@@ -835,11 +924,6 @@ private:
      * @brief Find automation point by ID
      */
     juce::ValueTree findAutomationPoint(const juce::ValueTree& envelope, const juce::String& pointId) const;
-
-    /**
-     * @brief Rebuilds the ID counter based on the current state tree
-     */
-    void rebuildIdCounter();
 
     /**
      * @brief Rebuilds the ID counter based on the current state tree

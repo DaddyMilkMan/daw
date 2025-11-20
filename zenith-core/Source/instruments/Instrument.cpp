@@ -130,7 +130,7 @@ bool InstrumentBase::applyPreset(const ZenithInstrumentPreset& preset)
 {
     // Verify preset is for this instrument
     juce::String presetInstrumentId = preset.instrumentId;
-    juce::String thisInstrumentId = metadata_.id;
+    juce::String thisInstrumentId = metadata_.instrumentId;
 
     if (presetInstrumentId != thisInstrumentId)
         return false;
@@ -158,7 +158,7 @@ bool InstrumentBase::applyPreset(const ZenithInstrumentPreset& preset)
 void InstrumentBase::capturePreset(ZenithInstrumentPreset& preset) const
 {
     // Set basic info
-    preset.instrumentId = metadata_.id.toStdString();
+    preset.instrumentId = metadata_.instrumentId.toStdString();
 
     // Capture all parameter values
     preset.parameters.clear();

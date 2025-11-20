@@ -69,8 +69,9 @@ int PluginHost::scanDefaultLocations(bool async)
     int foundCount = 0;
 
     // Scan each location
-    for (const auto& location : defaultLocations)
+    for (int i = 0; i < defaultLocations.getNumPaths(); ++i)
     {
+        auto location = defaultLocations[i];
         DBG("PluginHost: Scanning " + location.getFullPathName());
 
         if (!location.exists())

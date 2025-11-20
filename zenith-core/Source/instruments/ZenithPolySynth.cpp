@@ -560,12 +560,18 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) co
             return std::sin(lfo2_.phase * juce::MathConstants<float>::twoPi);
 
         case ModulationSource::Env1:
+        {
             // Amp envelope is 0 to 1
-            return ampEnvelope_.isActive() ? ampEnvelope_.getNextSample() : 0.0f;
+            juce::ADSR& ampEnv = const_cast<juce::ADSR&>(ampEnvelope_);
+            return ampEnv.isActive() ? ampEnv.getNextSample() : 0.0f;
+        }
 
         case ModulationSource::Env2:
+        {
             // Mod envelope is 0 to 1
-            return modEnvelope_.isActive() ? modEnvelope_.getNextSample() : 0.0f;
+            juce::ADSR& modEnv = const_cast<juce::ADSR&>(modEnvelope_);
+            return modEnv.isActive() ? modEnv.getNextSample() : 0.0f;
+        }
 
         case ModulationSource::Velocity:
             // Note velocity 0 to 1
@@ -798,7 +804,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
     auto unisonVoices = dynamic_cast<juce::AudioParameterInt*>(getParameters()[UnisonVoices])->get();
     auto unisonDetune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[UnisonDetune])->get();
 
-    auto filterType = static_cast<FilterType>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[FilterType])->getIndex());
+    auto filterTypeValue = static_cast<zenith::FilterType>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[ZenithPolySynthProcessor::FilterType])->getIndex());
     auto filterCutoff = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterCutoff])->get();
     auto filterResonance = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterResonance])->get();
     auto filterDrive = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterDrive])->get();
@@ -849,7 +855,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
             voice->setUnisonDetune(unisonDetune);
 
             // Filter
-            voice->setFilterType(filterType);
+            voice->setFilterType(filterTypeValue);
             voice->setFilterCutoff(filterCutoff);
             voice->setFilterResonance(filterResonance);
             voice->setFilterDrive(filterDrive);
@@ -875,6 +881,7 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
 juce::SynthesiserVoice* ZenithPolySynthProcessor::findFreeVoice(juce::SynthesiserSound* soundToPlay,
                                                                  int midiChannel,
                                                                  int midiNoteNumber,
+                                                                 int currentlyPlayingNote,
                                                                  bool stealIfNoneAvailable)
 {
     // First, try to find a completely free voice
@@ -935,7 +942,7 @@ void ZenithPolySynthProcessor::updateVoiceCount()
         {
             if (auto* voice = dynamic_cast<ZenithPolySynthVoice*>(getVoice(i)))
             {
-                voice->setSampleRate(getSampleRate());
+                voice->setSampleRate(juce::Synthesiser::getSampleRate());
             }
         }
 

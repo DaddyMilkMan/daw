@@ -14,8 +14,8 @@
 #pragma once
 
 #include <JuceHeader.h>
-#include "instruments/InstrumentPreset.h"
-#include "instruments/Instrument.h"
+#include "../instruments/InstrumentPreset.h"
+#include "../instruments/Instrument.h"
 #include <vector>
 #include <functional>
 

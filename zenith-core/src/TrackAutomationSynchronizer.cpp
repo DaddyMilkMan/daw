@@ -4,6 +4,7 @@
  */
 
 #include "../include/TrackAutomationSynchronizer.h"
+#include "../include/TempoMap.h"
 
 // Forward declare Track from namespace
 #include "../Source/engine/Track.h"
@@ -61,23 +62,17 @@ void TrackAutomationSynchronizer::timerCallback()
 {
     // MESSAGE THREAD - Safe to access ValueTree and call Track setters
 
-    // For now, use a simple frame counter approach
-    // In a real implementation, Engine would expose playback position
-    static juce::int64 frameCounter = 0;
-
     if (!engine.isPlaying())
     {
-        frameCounter = 0;  // Reset on stop to ensure automation starts from beginning
         return;  // Only update during playback
     }
 
-    // Get playback position in samples from engine
-    // Note: Engine would need to expose this - for now we'll add a method
-    // For MVP, we can use a simplified approach
-
-    // Phase 15: Use TempoMap for samples → beats conversion (handles variable tempo)
+    // Get actual playback position from engine
+    juce::int64 playheadSamples = engine.getPlayheadSamples();
     double sampleRate = engine.getSampleRate();
-    double playbackBeats = engine.getTempoMap().samplesToBeats(frameCounter, sampleRate);
+    
+    // Phase 15: Use TempoMap for samples → beats conversion (handles variable tempo)
+    double playbackBeats = engine.getTempoMap().samplesToBeats(playheadSamples, sampleRate);
 
     // Update all tracks with automation
     auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
@@ -108,10 +103,6 @@ void TrackAutomationSynchronizer::timerCallback()
 
         ++trackIndex;
     }
-
-    // Increment frame counter (rough estimate)
-    // In real impl, this would come from Engine
-    frameCounter += static_cast<juce::int64>(sampleRate / 60.0);  // ~1/60 sec
 }
 
 //==============================================================================

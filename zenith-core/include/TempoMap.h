@@ -22,6 +22,8 @@
 #include <memory>
 #include <vector>
 
+namespace zenith {
+
 //==============================================================================
 /**
  * @struct TempoPoint
@@ -152,9 +154,8 @@ private:
     // Current snapshot (read by audio thread, swapped by message thread)
     std::shared_ptr<const TempoMapSnapshot> snapshot_;
 
-    // Spinlock for updating snapshot_ (message thread only)
-    // We use atomic_exchange for lock-free swap
-    mutable std::atomic<const TempoMapSnapshot*> atomicSnapshot_{nullptr};
+    // Spinlock to protect snapshot_ access
+    mutable juce::SpinLock snapshotLock_;
 
     //==========================================================================
     // Helper Methods
@@ -176,3 +177,5 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoMap)
 };
+
+} // namespace zenith

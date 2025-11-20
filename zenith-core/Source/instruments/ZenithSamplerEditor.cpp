@@ -1,5 +1,5 @@
-#include "instruments/ZenithSamplerEditor.h"
-#include "instruments/ZenithSampler.h"
+#include "ZenithSamplerEditor.h"
+#include "ZenithSampler.h"
 
 namespace zenith {
 

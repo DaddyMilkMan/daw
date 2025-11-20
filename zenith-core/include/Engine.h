@@ -48,6 +48,7 @@ namespace zenith {
     class AudioFilePool;
     class PluginHost;
     class PluginEditorWindowManager;
+    class TempoMap;
 }
 
 //==============================================================================
@@ -87,6 +88,12 @@ public:
      * @note Message thread only - rebuilds track list from ProjectState
      */
     void syncWithProjectState();
+
+    /**
+     * @brief Synchronize tempo map with project state
+     * @note Message thread only
+     */
+    void syncTempoMap();
 
     /**
      * @brief Initialize the audio engine
@@ -260,23 +267,6 @@ public:
     juce::String createTrack(const juce::String& name, const juce::String& type);
 
     //==========================================================================
-    // Offline Export
-    //==========================================================================
-
-    /**
-     * @brief Export project to WAV file with offline rendering
-     * @param outputFile Path to output WAV file
-     * @param sampleRate Sample rate for export (default: 44100)
-     * @param bitDepth Bit depth for export (16, 24, or 32)
-     * @param durationInSeconds Duration to export (0 = auto-detect from project)
-     * @return true if export succeeded
-     * @note Runs on MESSAGE THREAD - not real-time safe
-     */
-    bool exportProjectToWav(const juce::File& outputFile,
-                           double sampleRate = 44100.0,
-                           int bitDepth = 24,
-                           double durationInSeconds = 0.0);
-
     // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
     //==========================================================================
 
@@ -342,6 +332,13 @@ public:
      */
     zenith::AudioFilePool& getAudioFilePool();
 
+    /**
+     * @brief Get the tempo map for beat/time conversions
+     * @return Reference to TempoMap
+     * @note Thread-safe; uses lock-free snapshot mechanism
+     */
+    const zenith::TempoMap& getTempoMap() const noexcept;
+
     //==========================================================================
     // Plugin Hosting (Phase 3: VST3 hosting MVP)
     //==========================================================================
@@ -366,35 +363,6 @@ public:
      * @note Use only from message thread
      */
     zenith::PluginEditorWindowManager& getPluginEditorWindowManager() noexcept;
-
-    //==========================================================================
-    // Export
-    //==========================================================================
-
-    /**
-     * @brief Export project to WAV file (blocking operation)
-     *
-     * This is a SYNCHRONOUS, BLOCKING export that runs on the message thread.
-     * The export will:
-     * 1. Stop playback if active
-     * 2. Render the project offline to a 24-bit stereo WAV file
-     * 3. Restore playback state when done
-     *
-     * @param file Output WAV file path
-     * @param startSeconds Start time in seconds (typically 0.0)
-     * @param endSeconds End time in seconds (0 = auto-detect from project)
-     * @param errorMessage Output error message if export fails
-     * @return true if export succeeded, false otherwise
-     *
-     * @note MESSAGE THREAD ONLY - will assert in debug builds
-     * @note BLOCKS until export completes (user waits for completion)
-     * @note Sample rate: 44.1 kHz, Format: 24-bit PCM stereo
-     */
-    bool exportProjectToWav(
-        const juce::File& file,
-        double startSeconds,
-        double endSeconds,
-        juce::String& errorMessage);
 
     //==========================================================================
     // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -454,6 +422,23 @@ public:
      */
     void handleIncomingMidiMessage(juce::MidiInput* source,
                                    const juce::MidiMessage& message) override;
+
+    //==========================================================================
+    // Project Export
+    //==========================================================================
+
+    /**
+     * @brief Export project to WAV file
+     * @param outputFile Output file path
+     * @param sampleRate Sample rate for export
+     * @param bitDepth Bit depth (16, 24, or 32)
+     * @param durationInSeconds Duration to export
+     * @return true if successful
+     */
+    bool exportProjectToWav(const juce::File& outputFile,
+                           double sampleRate,
+                           int bitDepth,
+                           double durationInSeconds);
 
 private:
     //==========================================================================
@@ -600,6 +585,9 @@ private:
 
     // Automation synchronizer
     std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+    // Phase 15: Tempo map
+    std::unique_ptr<zenith::TempoMap> tempoMap_;
 
     // Unified render path: Pre-allocated track buffers (avoid allocation in audio thread)
     std::vector<juce::AudioBuffer<float>> trackBuffers_;

@@ -33,6 +33,7 @@
 
 #include <JuceHeader.h>
 #include <memory>
+#include "../engine/Track.h"
 
 // Forward declarations
 class Engine;
@@ -139,6 +140,35 @@ private:
 
     // Instrument commands
     juce::var describeInstrument(const juce::var& params);
+
+    // Plugin commands
+    juce::var addPlugin(const juce::var& params);
+    juce::var removePlugin(const juce::var& params);
+    juce::var listPlugins(const juce::var& params);
+    juce::var setPluginParam(const juce::var& params);
+    juce::var getPluginParams(const juce::var& params);
+
+    // Automation commands
+    juce::var addAutomationPoint(const juce::var& params);
+    juce::var clearAutomation(const juce::var& params);
+    juce::var getAutomation(const juce::var& params);
+
+    // Tempo/Marker commands
+    juce::var setTempo(const juce::var& params);
+    juce::var addTempoChange(const juce::var& params);
+    juce::var getTempoMap(const juce::var& params);
+    juce::var addMarker(const juce::var& params);
+    juce::var getMarkers(const juce::var& params);
+    juce::var deleteMarker(const juce::var& params);
+    juce::var gotoMarker(const juce::var& params);
+
+    // MIDI Note commands
+    juce::var addNote(const juce::var& params);
+    juce::var moveNote(const juce::var& params);
+    juce::var deleteNote(const juce::var& params);
+    juce::var getNotes(const juce::var& params);
+    juce::var setNoteVelocity(const juce::var& params);
+    juce::var setNoteLength(const juce::var& params);
 
     //==============================================================================
     // Helper methods

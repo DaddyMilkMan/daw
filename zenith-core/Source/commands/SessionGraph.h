@@ -58,6 +58,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "../engine/Track.h"
 
 // Forward declarations
 class Engine;

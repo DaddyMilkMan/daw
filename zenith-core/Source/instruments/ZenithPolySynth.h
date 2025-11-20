@@ -612,12 +612,13 @@ public:
 
 protected:
     //==========================================================================
-    // Custom voice stealing - override to steal quietest voice
+    // Custom voice stealing - JUCE 8: findFreeVoice no longer virtual
     //==========================================================================
     juce::SynthesiserVoice* findFreeVoice(juce::SynthesiserSound* soundToPlay,
                                            int midiChannel,
                                            int midiNoteNumber,
-                                           bool stealIfNoneAvailable) override;
+                                           int currentlyPlayingNote,
+                                           bool stealIfNoneAvailable);
 
 private:
     //==========================================================================

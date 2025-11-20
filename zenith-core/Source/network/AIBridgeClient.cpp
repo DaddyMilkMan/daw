@@ -148,11 +148,13 @@ void AIBridgeClient::performRequest(const PendingRequest& request)
         // Construct URL
         juce::URL url(serverUrl + "/wingman");
 
+        // JUCE 8: Use withPOSTData() on the URL, not InputStreamOptions
+        url = url.withPOSTData(request.jsonPayload);
+
         // Set up POST request
         auto stream = url.createInputStream(
             juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                 .withConnectionTimeoutMs(10000)
-                .withPostData(request.jsonPayload)
                 .withExtraHeaders("Content-Type: application/json")
                 .withNumRedirectsToFollow(0)
         );
