@@ -741,12 +741,12 @@ juce::var CommandAPI::describeInstrument(const juce::var& params)
     auto& registry = InstrumentRegistry::getInstance();
 
     // Check if instrument exists
-    const auto* metadata = registry.getMetadata(instrumentId);
-    if (metadata == nullptr)
+    InstrumentMetadata metadata;
+    if (!registry.getMetadata(instrumentId, metadata))
         return createErrorResponse("Instrument not found: " + instrumentId);
 
     // Convert metadata to JSON
-    juce::var result = metadata->toVar();
+    juce::var result = metadata.toVar();
 
     DBG("CommandAPI: Described instrument: " + instrumentId);
 

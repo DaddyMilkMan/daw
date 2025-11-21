@@ -135,8 +135,8 @@ private:
     // Member Variables
     //==============================================================================
 
-    // Map of plugin instance to editor window
-    std::map<juce::AudioPluginInstance*, juce::Component::SafePointer<PluginEditorWindow>> editorWindows;
+    // Map of plugin instance to editor window (using unique_ptr for safe ownership)
+    std::map<juce::AudioPluginInstance*, std::unique_ptr<PluginEditorWindow>> editorWindows;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditorWindowManager)

@@ -432,10 +432,12 @@ int main()
         std::cout << "=== Testing Instrument: " << instrumentId << " ===" << std::endl;
 
         // Get metadata
-        const auto* metadata = registry.getMetadata(instrumentId);
+        InstrumentMetadata metadata;
+        bool hasMetadata = registry.getMetadata(instrumentId, metadata);
+        const auto* metadataPtr = hasMetadata ? &metadata : nullptr;
 
         // Test 1: Validate metadata
-        bool metadataValid = validateInstrumentMetadata(instrumentId, metadata);
+        bool metadataValid = validateInstrumentMetadata(instrumentId, metadataPtr);
         allTestsPassed &= metadataValid;
 
         if (!metadataValid)

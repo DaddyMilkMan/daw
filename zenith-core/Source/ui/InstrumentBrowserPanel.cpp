@@ -541,20 +541,21 @@ void InstrumentBrowserPanel::InstrumentListBoxModel::paintListBoxItem(
 
     // Get instrument metadata
     auto instrumentId = owner_.instrumentIds_[rowNumber];
-    auto* metadata = owner_.instrumentRegistry_.getMetadata(instrumentId);
+    InstrumentMetadata metadata;
+    bool hasMetadata = owner_.instrumentRegistry_.getMetadata(instrumentId, metadata);
 
-    if (metadata != nullptr)
+    if (hasMetadata)
     {
         // Draw instrument name
         g.setColour(juce::Colours::white);
         g.setFont(juce::Font(14.0f));
-        g.drawText(metadata->name, 10, 0, width - 20, height,
+        g.drawText(metadata.name, 10, 0, width - 20, height,
                    juce::Justification::centredLeft, true);
 
         // Draw category (smaller, grey)
         g.setColour(juce::Colours::grey);
         g.setFont(juce::Font(11.0f));
-        g.drawText(metadata->category, 10, 0, width - 20, height,
+        g.drawText(metadata.category, 10, 0, width - 20, height,
                    juce::Justification::centredRight, true);
     }
     else
