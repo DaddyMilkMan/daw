@@ -5,19 +5,13 @@
 
 #include "../include/MainWindow.h"
 #include "../Source/commands/CommandAPI.h"
-#include "ArrangerComponent.h"
-#include "ArrangementComponent.h"
+#include "../Source/ui/ArrangerComponent.h"
 #include "WingmanPanel.h"
 #include "InstrumentBrowserPanel.h"
 #include "AIBridgeClient.h"
 #include "../include/PianoRollEditor.h"
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
-#include "../Source/ui/MasterOutputComponent.h"
-#include "../Source/ui/ProjectSettingsComponent.h"
-#include "../Source/ui/TransportControlComponent.h"
-#include "../Source/ui/ZenithLookAndFeel.h"
-#include "../Source/ui/ZenithTransportBar.h"
 
 //==============================================================================
 // MainComponent Implementation
@@ -36,6 +30,57 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addKeyListener(this);
     setWantsKeyboardFocus(true);
 
+    // Status label
+    statusLabel.setText("Zenith DAW - Phase 14: Automation Lanes + Phase 10: Mixer", juce::dontSendNotification);
+    statusLabel.setJustificationType(juce::Justification::centredLeft);
+    statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
+    addAndMakeVisible(statusLabel);
+
+    // Phase 14: Create arrangement view
+    // TEMPORARILY DISABLED: ArrangementComponent has compilation errors (ID_POINTS missing)
+    // arrangementView = std::make_unique<ArrangementComponent>(projectState, engine);
+    // addAndMakeVisible(arrangementView.get());
+
+    // CPU usage label
+    cpuLabel.setText("CPU: 0%", juce::dontSendNotification);
+    cpuLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(cpuLabel);
+
+    // Audio device label
+    audioDeviceLabel.setText("Audio Device: Not initialized", juce::dontSendNotification);
+    audioDeviceLabel.setJustificationType(juce::Justification::centredLeft);
+    addAndMakeVisible(audioDeviceLabel);
+
+    // C4: Track count label (read-only)
+    trackCountLabel.setText("Tracks: 0", juce::dontSendNotification);
+    trackCountLabel.setJustificationType(juce::Justification::centredRight);
+    addAndMakeVisible(trackCountLabel);
+
+    // Transport buttons
+    playButton.setButtonText("Play");
+    playButton.onClick = [this]() {
+        engine.play();
+        DBG("Play button clicked");
+    };
+    addAndMakeVisible(playButton);
+
+    stopButton.setButtonText("Stop");
+    stopButton.onClick = [this]() {
+        engine.stop();
+        DBG("Stop button clicked");
+    };
+    addAndMakeVisible(stopButton);
+
+    recordButton.setButtonText("Record");
+    recordButton.onClick = [this]() {
+        engine.toggleRecording();
+        bool isRecording = engine.isRecording();
+        recordButton.setColour(juce::TextButton::buttonColourId, 
+            isRecording ? juce::Colours::red : juce::Colours::darkgrey);
+        DBG(isRecording ? "Recording started" : "Recording stopped");
+    };
+    addAndMakeVisible(recordButton);
+
     // Phase 1: Import Audio button
     importButton.setButtonText("Import Audio...");
     importButton.onClick = [this]() {
@@ -43,8 +88,19 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     };
     addAndMakeVisible(importButton);
 
+    // Virtual MIDI Keyboard toggle button
+    virtualKeyboardButton.setButtonText("🎹 Keyboard (M)");
+    virtualKeyboardButton.setClickingTogglesState(true);
+    virtualKeyboardButton.onClick = [this]() {
+        virtualKeyboardVisible = virtualKeyboardButton.getToggleState();
+        if (midiKeyboard)
+            midiKeyboard->setVisible(virtualKeyboardVisible);
+        resized();  // Re-layout to accommodate keyboard
+    };
+    addAndMakeVisible(virtualKeyboardButton);
+
     // Phase 9: Create ArrangerComponent with interactive clip editing
-    arrangerComponent = std::make_unique<ArrangerComponent>(projectState);
+    arrangerComponent = std::make_unique<ArrangerComponent>(engine);
     addAndMakeVisible(arrangerComponent.get());
 
     // Phase 7: Create Wingman AI console panel
@@ -55,41 +111,17 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     instrumentBrowserPanel = std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
     addAndMakeVisible(instrumentBrowserPanel.get());
 
-    // Phase 11: Create Master Output Component
-    masterOutputComponent = std::make_unique<zenith::MasterOutputComponent>(engine);
-    addAndMakeVisible(masterOutputComponent.get());
+    // Create Virtual MIDI Keyboard Component
+    midiKeyboard = std::make_unique<juce::MidiKeyboardComponent>(
+        midiKeyboardState,
+        juce::MidiKeyboardComponent::horizontalKeyboard);
+    midiKeyboard->setVisible(false);  // Hidden by default
+    addAndMakeVisible(midiKeyboard.get());
 
-    // Create Project Settings Component (hidden by default, shown in dialog)
-    projectSettingsComponent = std::make_unique<zenith::ProjectSettingsComponent>(projectState);
-    // DON'T add to main view - will be shown as dialog when needed
+    // Note: MIDI keyboard will generate MIDI messages through midiKeyboardState
+    // These can be processed via the Engine's existing MIDI input handling
 
-    // NEW: Create unified transport bar (replaces old transport + bottom buttons)
-    zenithTransportBar = std::make_unique<zenith::ZenithTransportBar>(engine);
-    addAndMakeVisible(zenithTransportBar.get());
-
-    // NEW: Create unified status bar
-    zenithStatusBar = std::make_unique<zenith::ZenithStatusBar>(engine);
-    addAndMakeVisible(zenithStatusBar.get());
-
-    // SKIA DEMO: Create test button to showcase Skia rendering
-    #ifdef ZENITH_USE_SKIA
-        skiaTestButton = std::make_unique<zenith::SkiaButtonComponent>(
-            "Skia GPU Demo",
-            zenith::SkiaButtonComponent::Style::Primary);
-        skiaTestButton->onClick = [this]() {
-            DBG("Skia button clicked!");
-            if (zenithStatusBar)
-            {
-                zenithStatusBar->showMessage("🎨 Skia GPU rendering works! D3D12 backend active.", false, 3000);
-            }
-        };
-        addAndMakeVisible(*skiaTestButton);
-        DBG("Skia button component created and added to UI");
-    #else
-        DBG("Skia not enabled - build with -DZENITH_ENABLE_SKIA=ON to enable GPU rendering");
-    #endif
-
-    // Start timer for updates (60 Hz)
+    // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
 }
 
@@ -136,104 +168,141 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
         }
     }
 
+    // M key: Toggle virtual MIDI keyboard (like Ableton Live)
+    if (key.getTextCharacter() == 'm' || key.getTextCharacter() == 'M')
+    {
+        virtualKeyboardButton.setToggleState(!virtualKeyboardButton.getToggleState(), juce::sendNotification);
+        DBG("Keyboard shortcut: Toggle Virtual MIDI Keyboard (M)");
+        return true;
+    }
+
     return false;  // Key not handled
 }
 
 void MainComponent::paint(juce::Graphics& g)
 {
-    // Background using Zenith design system
-    g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Colors::backgroundDark));
+    // Background (ArrangerComponent handles its own painting)
+    g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 }
 
 void MainComponent::resized()
 {
-    using namespace zenith;
     auto bounds = getLocalBounds();
 
-    // ==========================================================================
-    // Top: Unified Transport Bar (fixed height)
-    // ==========================================================================
-    if (zenithTransportBar != nullptr)
+    // Top bar (status)
+    auto topBar = bounds.removeFromTop(40);
+    statusLabel.setBounds(topBar.removeFromLeft(500).reduced(10, 8));
+
+    // C4: Track count label sits on the right side of the top bar (after CPU)
+    auto trackCountArea = topBar.removeFromRight(120);
+    trackCountLabel.setBounds(trackCountArea.reduced(10, 8));
+
+    cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
+
+    // Bottom bar (transport + audio device)
+    auto bottomBar = bounds.removeFromBottom(50);
+
+    auto deviceSection = bottomBar.removeFromLeft(400);
+    audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
+
+    // Phase 1: Import button on the left
+    auto importSection = bottomBar.removeFromLeft(140);
+    importButton.setBounds(importSection.reduced(10, 8));
+
+    // Virtual Keyboard toggle button
+    auto keyboardButtonSection = bottomBar.removeFromLeft(160);
+    virtualKeyboardButton.setBounds(keyboardButtonSection.reduced(10, 8));
+
+    // Center transport buttons
+    auto transportSection = bottomBar.reduced(10, 8);
+    int buttonWidth = 100;
+    int totalWidth = buttonWidth * 3 + 20;  // 3 buttons + spacing
+    int startX = transportSection.getCentreX() - totalWidth / 2;
+
+    playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
+    stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
+    recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Virtual MIDI Keyboard (above mixer when visible)
+    if (virtualKeyboardVisible && midiKeyboard)
     {
-        auto transportBounds = bounds.removeFromTop(ZenithLookAndFeel::Metrics::transportBarHeight);
-        zenithTransportBar->setBounds(transportBounds);
+        auto keyboardHeight = 80;
+        auto keyboardArea = bounds.removeFromBottom(keyboardHeight);
+        midiKeyboard->setBounds(keyboardArea);
     }
 
-    // ==========================================================================
-    // SKIA DEMO: Test button (top right corner, temporary placement)
-    // ==========================================================================
-    #ifdef ZENITH_USE_SKIA
-        if (skiaTestButton != nullptr)
-        {
-            auto demoArea = bounds.removeFromTop(50);
-            skiaTestButton->setBounds(demoArea.removeFromRight(220).reduced(10));
-        }
-    #endif
-
-    // ==========================================================================
-    // Bottom: Status Bar (fixed height)
-    // ==========================================================================
-    if (zenithStatusBar != nullptr)
-    {
-        auto statusBounds = bounds.removeFromBottom(ZenithLookAndFeel::Metrics::statusBarHeight);
-        zenithStatusBar->setBounds(statusBounds);
-    }
-
-    // ==========================================================================
-    // Bottom: Mixer Panel (fixed height)
-    // ==========================================================================
-    auto mixerArea = bounds.removeFromBottom(ZenithLookAndFeel::Metrics::mixerHeight);
+    // Phase 10: Mixer panel at bottom (above transport bar)
+    auto mixerHeight = 220;
+    auto mixerArea = bounds.removeFromBottom(mixerHeight);
     mixerComponent.setBounds(mixerArea);
 
-    // ==========================================================================
-    // Bottom right corner: Import Audio button (temporary placement)
-    // ==========================================================================
-    // auto importButtonArea = bounds.removeFromBottom(ZenithLookAndFeel::Metrics::buttonHeightL + ZenithLookAndFeel::Metrics::spacingM);
-    // importButton.setBounds(importButtonArea.removeFromLeft(160).reduced(ZenithLookAndFeel::Metrics::spacingM));
-    // Hiding import button for now as it overlaps with layout - use Menu instead
-
-    // ==========================================================================
-    // Left: Browser Panel (fixed width, resizable in future)
-    // ==========================================================================
-    if (instrumentBrowserPanel != nullptr)
-    {
-        auto browserBounds = bounds.removeFromLeft(ZenithLookAndFeel::Metrics::browserPanelWidth);
-        instrumentBrowserPanel->setBounds(browserBounds);
-    }
-
-    // ==========================================================================
-    // Right: Wingman AI Panel + Master Output (fixed widths)
-    // ==========================================================================
-    
-    // Master output strip (rightmost)
-    if (masterOutputComponent != nullptr)
-    {
-        auto masterBounds = bounds.removeFromRight(ZenithLookAndFeel::Metrics::masterStripWidth);
-        masterOutputComponent->setBounds(masterBounds);
-    }
-
-    // Wingman panel (right of center, before master)
+    // Phase 7: Layout Wingman panel on the right (400px width)
     if (wingmanPanel != nullptr)
     {
-        auto wingmanBounds = bounds.removeFromRight(ZenithLookAndFeel::Metrics::inspectorPanelWidth);
+        auto wingmanBounds = bounds.removeFromRight(400);
         wingmanPanel->setBounds(wingmanBounds);
     }
 
-    // ==========================================================================
-    // Center: Arranger / Main Content (takes remaining space)
-    // ==========================================================================
-    if (arrangerComponent != nullptr)
+    // Layout Instrument Browser panel on the left (300px width)
+    if (instrumentBrowserPanel != nullptr)
     {
-        arrangerComponent->setBounds(bounds);
+        auto browserBounds = bounds.removeFromLeft(300);
+        instrumentBrowserPanel->setBounds(browserBounds);
     }
+
+    // Phase 14: Arrangement view with automation lanes
+    // TEMPORARILY DISABLED
+    // if (arrangementView)
+    //     arrangementView->setBounds(bounds);
+
+    // Phase 9: ArrangerComponent takes the remaining central area
+    if (arrangerComponent != nullptr)
+        arrangerComponent->setBounds(bounds);
 }
 
 void MainComponent::timerCallback()
 {
-    // Transport bar handles its own updates now
-    // Nothing to do here for now
+    // Update CPU usage
+    double cpuUsage = engine.getCpuUsage();
+    cpuLabel.setText("CPU: " + juce::String(cpuUsage, 1) + "%", juce::dontSendNotification);
+
+    // Update audio device info
+    auto deviceInfo = engine.getAudioDeviceInfo();
+    audioDeviceLabel.setText("Audio: " + deviceInfo, juce::dontSendNotification);
+
+    // C4: Update track count (dirty-checked)
+    refreshTrackCountLabel();
+
+    // Process MIDI messages from virtual keyboard
+    if (virtualKeyboardVisible)
+    {
+        juce::MidiBuffer midiMessages;
+        midiKeyboardState.processNextMidiBuffer(midiMessages, 0, 16, true);
+
+        // Send MIDI messages to engine
+        for (const auto metadata : midiMessages)
+        {
+            auto message = metadata.getMessage();
+            engine.handleIncomingMidiMessage(nullptr, message);
+        }
+    }
 }
 
+//==============================================================================
+// C4: Track count monitoring (read-only, dirty-checked)
+//==============================================================================
+
+void MainComponent::refreshTrackCountLabel()
+{
+    // Message-thread read only
+    const int count = engine.getNumTracks();
+    if (count == lastTrackCount_)
+        return;
+
+    lastTrackCount_ = count;
+    // No heavy formatting, no repaint storm
+    trackCountLabel.setText("Tracks: " + juce::String(count), juce::dontSendNotification);
+}
 
 //==============================================================================
 // Integration: Piano roll opener
@@ -245,7 +314,7 @@ void MainComponent::openPianoRoll(const juce::String& trackId, const juce::Strin
 
     // Create new piano roll editor window
     // Note: Window deletes itself when closed (see PianoRollEditor::closeButtonPressed)
-    std::make_unique<PianoRollEditor>(projectState, trackId, clipId);
+    new PianoRollEditor(projectState, trackId, clipId);
 }
 
 //==============================================================================
@@ -354,10 +423,6 @@ MainWindow::MainWindow(const juce::String& name)
     projectState->addTrack("MIDI 1", "midi");
     projectState->addTrack("Audio 2", "audio");
 
-    // NEW: Create and apply Zenith design system
-    zenithLookAndFeel = std::make_unique<zenith::ZenithLookAndFeel>();
-    juce::LookAndFeel::setDefaultLookAndFeel(zenithLookAndFeel.get());
-
     // Create main content (Phase 14: Automation + Phase 10: Mixer + Phase 9: Arranger + Wingman AI)
     mainComponent = std::make_unique<MainComponent>(*engine, *commandAPI, *aiBridgeClient, *projectState);
 
@@ -400,17 +465,13 @@ MainWindow::~MainWindow()
     // Clear content
     clearContentComponent();
 
-    // Restore default look and feel before destroying our custom one
-    juce::LookAndFeel::setDefaultLookAndFeel(nullptr);
-    zenithLookAndFeel.reset();
-
     DBG("MainWindow destroyed");
 }
 
 void MainWindow::closeButtonPressed()
 {
-    // TODO(zenith-core#1): Check for unsaved changes
-    // TODO(zenith-core#1): Show save dialog if needed
+    // TODO: Check for unsaved changes
+    // TODO: Show save dialog if needed
 
     juce::JUCEApplication::getInstance()->systemRequestedQuit();
 }
@@ -480,7 +541,5 @@ void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID, int /*topLevelM
 
         default:
             break;
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
-
-

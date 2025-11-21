@@ -59,12 +59,14 @@ public:
 
     //==============================================================================
     // AudioSource interface
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) [[maybe_unused]] override;
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
     void releaseResources() override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
 
-    // Phase 1.3: Version that takes explicit playhead position
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples) [[maybe_unused]];
+    // Phase 1.3: Version that takes explicit playhead position and optional incoming MIDI
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
+                          int64_t playheadSamples,
+                          const juce::MidiBuffer* incomingMidi = nullptr);
 
     //==============================================================================
     // Track properties
@@ -78,26 +80,26 @@ public:
     juce::String getTypeString() const;
 
     int getTrackIndex() const { return trackIndex; }
-    void setTrackIndex(int index) [[maybe_unused]] { trackIndex = index; }
+    void setTrackIndex(int index) { trackIndex = index; }
 
     //==============================================================================
     // Mixer controls (thread-safe using atomics)
-    void setVolume(float newVolume) [[maybe_unused]];           // 0.0 to 1.0
+    void setVolume(float newVolume);           // 0.0 to 1.0
     float getVolume() const { return volume.load(); }
 
-    void setPan(float newPan) [[maybe_unused]];                 // -1.0 (left) to 1.0 (right)
+    void setPan(float newPan);                 // -1.0 (left) to 1.0 (right)
     float getPan() const { return pan.load(); }
 
-    void setMuted(bool shouldBeMuted) [[maybe_unused]];
+    void setMuted(bool shouldBeMuted);
     bool isMuted() const { return muted.load(); }
 
-    void setSolo(bool shouldBeSolo) [[maybe_unused]];
+    void setSolo(bool shouldBeSolo);
     bool isSolo() const { return solo.load(); }
 
-    void setArmed(bool shouldBeArmed) [[maybe_unused]];         // For recording
+    void setArmed(bool shouldBeArmed);         // For recording
     bool isArmed() const { return armed.load(); }
 
-    void setEnabled(bool shouldBeEnabled) [[maybe_unused]];
+    void setEnabled(bool shouldBeEnabled);
     bool isEnabled() const { return enabled.load(); }
 
     //==============================================================================
@@ -126,7 +128,7 @@ public:
     // MESSAGE THREAD ONLY for add/remove/clear
     // Audio thread can process existing plugins safely (no modifications during playback)
     void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
-    void removePlugin(int pluginIndex) [[maybe_unused]];
+    void removePlugin(int pluginIndex);
     void clearPlugins();
     int getNumPlugins() const;
     juce::AudioPluginInstance* getPlugin(int index) const;
@@ -154,7 +156,7 @@ public:
     class Clip;  // Forward declaration
 
     void addClip(std::unique_ptr<Clip> clip);
-    void removeClip(int clipIndex) [[maybe_unused]];
+    void removeClip(int clipIndex);
     void removeClip(Clip* clip);
     void clearClips();
     int getNumClips() const;
@@ -263,9 +265,9 @@ private:
 
     //==============================================================================
     // Helper methods
-    void processPluginChain(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples) [[maybe_unused]];
-    void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples) [[maybe_unused]];
-    void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples) [[maybe_unused]];
+    void processPluginChain(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi, int numSamples);
+    void applyGainAndPan(juce::AudioBuffer<float>& buffer, int numSamples);
+    void updateLevelMeters(const juce::AudioBuffer<float>& buffer, int numSamples);
 
     // MIDI Scheduler state
     struct ActiveNote
@@ -275,6 +277,7 @@ private:
         juce::String noteId;  // For tracking which ValueTree note this came from
     };
     std::vector<ActiveNote> activeNotes;
+    juce::CriticalSection activeNotesLock;  // Protects activeNotes vector for thread safety
     juce::int64 lastProcessedSample = 0;
 
     //==============================================================================
@@ -282,4 +285,3 @@ private:
 };
 
 } // namespace zenith
-

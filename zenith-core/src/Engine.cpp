@@ -15,7 +15,6 @@
 #include "../Source/engine/AudioFilePool.h"
 #include "../Source/engine/PluginHost.h"
 #include "../Source/ui/PluginEditorWindow.h"
-#include "../Source/ui/AudioFeedback.h"
 
 //==============================================================================
 Engine::Engine()
@@ -155,7 +154,7 @@ void Engine::syncWithProjectState()
     };
 
     // Create engine tracks from project state
-    for (const auto& trackNode : tracksNode)
+    for (auto trackNode : tracksNode)
     {
         juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
         juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
@@ -181,7 +180,7 @@ void Engine::syncWithProjectState()
         auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
         if (clipsNode.isValid())
         {
-            for (const auto& clipNode : clipsNode)
+            for (auto clipNode : clipsNode)
             {
                 // Create clip
                 auto clip = std::make_unique<zenith::Track::Clip>();
@@ -308,9 +307,6 @@ void Engine::play()
     DBG("Engine: Play");
     isPlaying_.store(true);
 
-    // Mute UI sounds during playback
-    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(true);
-
     // Phase 1.3: Use new playhead system
     // If playhead is at or past loop end, reset to loop start or 0
     const juce::int64 loopEnd = loopEndSamples_.load();
@@ -345,9 +341,6 @@ void Engine::stop()
 
     isPlaying_.store(false);
     enableTestTone_.store(false);
-
-    // Un-mute UI sounds when playback stops
-    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(false);
 
     // Phase 13: Stop automation synchronizer
     if (automationSynchronizer)
@@ -388,9 +381,6 @@ void Engine::record()
 {
     DBG("Engine: Record");
 
-    // Mute UI sounds during recording (in case not already playing)
-    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(true);
-
     // Start playback if not already playing
     if (!isPlaying_.load())
     {
@@ -423,7 +413,7 @@ void Engine::record()
     // ==========================================================================
 
     // Create recordings directory
-    // TODO(zenith-core#1): Use project path when available; for now use a temp directory
+    // TODO: Use project path when available; for now use a temp directory
     juce::File recordingsDir = juce::File::getSpecialLocation(
         juce::File::userDocumentsDirectory).getChildFile("ZenithDAW/Recordings");
 
@@ -587,6 +577,19 @@ void Engine::stopRecording()
 
     DBG("Engine: Recording stopped, processing clips");
 }
+
+void Engine::toggleRecording()
+{
+    if (isRecording())
+    {
+        stopRecording();
+    }
+    else
+    {
+        record();
+    }
+}
+
 
 //==============================================================================
 // Phase 1.3: Transport Position & Looping
@@ -1065,7 +1068,23 @@ void Engine::processAudio(
     }
 
     // Use unified render path
-    renderBlock(outputBuffer, position, numSamples);
+    
+    // Thread-safe MIDI transfer:
+    // 1. Create local buffer
+    // 2. Lock and swap/copy from incoming buffer
+    // 3. Process local buffer (lock released)
+    juce::MidiBuffer localMidi;
+    {
+        const juce::ScopedLock sl(midiInputLock_);
+        if (!incomingMidiBuffer_.isEmpty())
+        {
+            localMidi.addEvents(incomingMidiBuffer_, 0, numSamples, 0);
+            incomingMidiBuffer_.clear();
+        }
+    }
+
+    // Fix: Correct argument order (numSamples, position) and pass local MIDI
+    renderBlock(outputBuffer, numSamples, position, &localMidi);
 
     // Fallback: If no tracks or all tracks are silent, optionally enable test tone
     // (Only if explicitly enabled via enableTestTone_)
@@ -1134,20 +1153,27 @@ void Engine::enableMidiInput()
         return;
     }
 
-    // Open the first available MIDI input device
-    const auto& firstInput = midiInputs[0];
-    DBG("Engine: Opening MIDI input: " + firstInput.name);
-
-    midiInput_ = juce::MidiInput::openDevice(firstInput.identifier, this);
-
-    if (midiInput_ != nullptr)
+    // Open all available MIDI input devices (Omni mode)
+    for (const auto& input : midiInputs)
     {
-        midiInput_->start();
-        DBG("Engine: MIDI input started: " + firstInput.name);
+        DBG("Engine: Opening MIDI input: " + input.name);
+        
+        auto newInput = juce::MidiInput::openDevice(input.identifier, this);
+        if (newInput != nullptr)
+        {
+            newInput->start();
+            midiInputs_.push_back(std::move(newInput));
+            DBG("Engine: MIDI input started: " + input.name);
+        }
+        else
+        {
+            DBG("Engine: Failed to open MIDI input: " + input.name);
+        }
     }
-    else
+
+    if (midiInputs_.empty())
     {
-        DBG("Engine: Failed to open MIDI input");
+        DBG("Engine: No MIDI inputs could be opened");
     }
 
     // Initialize MIDI recording buffers for all tracks
@@ -1159,12 +1185,16 @@ void Engine::enableMidiInput()
 
 void Engine::disableMidiInput()
 {
-    if (midiInput_ != nullptr)
+    if (!midiInputs_.empty())
     {
-        DBG("Engine: Stopping MIDI input...");
-        midiInput_->stop();
-        midiInput_.reset();
-        DBG("Engine: MIDI input stopped");
+        DBG("Engine: Stopping " + juce::String(midiInputs_.size()) + " MIDI inputs...");
+        for (auto& input : midiInputs_)
+        {
+            if (input)
+                input->stop();
+        }
+        midiInputs_.clear();
+        DBG("Engine: MIDI inputs stopped");
     }
 }
 
@@ -1174,6 +1204,15 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
 
     // This runs on MIDI input thread (NOT audio thread or message thread)
     // Buffer the message for processing in audio callback
+
+    // Debug log for MIDI activity
+    #if JUCE_DEBUG
+    if (message.isNoteOn())
+    {
+        DBG("MIDI In: Note On " + juce::String(message.getNoteNumber()) + 
+            " Vel " + juce::String(message.getVelocity()));
+    }
+    #endif
 
     // Add message to incoming buffer with current timestamp
     {
@@ -1238,7 +1277,8 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels)
 
 void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
                         int numSamples,
-                        juce::int64 playheadPosition)
+                        juce::int64 playheadPosition,
+                        const juce::MidiBuffer* incomingMidi)
 {
     juce::ignoreUnused(playheadPosition);
 
@@ -1272,11 +1312,20 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         // Clear track buffer
         trackBuffer.clear();
 
-        // TODO(zenith-core#1): When tracks have actual audio content, render it here
-        // For now, tracks don't have clips or audio sources yet (Phase 0)
-        // In future phases:
-        // - Get track clips that overlap playheadPosition
-        // - Render clip audio into trackBuffer
+        // Create AudioSourceChannelInfo for the track
+        juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
+
+        // Determine if this track should receive MIDI input
+        const juce::MidiBuffer* trackMidiInput = nullptr;
+        if (incomingMidi != nullptr && !incomingMidi->isEmpty() && 
+            track->getType() == Track::Type::Instrument && 
+            track->isArmed())
+        {
+            trackMidiInput = incomingMidi;
+        }
+
+        // Render track audio (and process MIDI)
+        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput);
         // - Apply track volume, pan, mute, solo
         // - Apply track effects chain
 
@@ -1290,7 +1339,7 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         }
     }
 
-    // TODO(zenith-core#1): Apply master bus effects when implemented
+    // TODO: Apply master bus effects when implemented
 }
 
 bool Engine::exportProjectToWav(const juce::File& outputFile,
@@ -1318,7 +1367,7 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
 
     // Auto-detect duration if not specified
     // For Phase 0, use 10 seconds as default
-    // TODO(zenith-core#1): In future phases, detect from project content (clips, automation, etc.)
+    // TODO: In future phases, detect from project content (clips, automation, etc.)
     if (durationInSeconds <= 0.0)
     {
         durationInSeconds = 10.0;  // Default duration
@@ -1428,7 +1477,7 @@ void Engine::processAudioRecording(
         if (session.writer == nullptr)
             continue;
 
-        // TODO(zenith-core#1): Implement proper input routing matrix
+        // TODO: Implement proper input routing matrix
         // For now: simple mapping - session track index maps to input channel
         // If we have more sessions than input channels, they'll share channels
 
@@ -1631,4 +1680,3 @@ juce::MidiMessageSequence Engine::quantizeMidiSequence(
     return output;
 
 }
-

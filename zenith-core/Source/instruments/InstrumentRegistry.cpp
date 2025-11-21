@@ -35,12 +35,15 @@ juce::StringArray InstrumentRegistry::getInstrumentIds() const
     return ids;
 }
 
-const InstrumentMetadata* InstrumentRegistry::getMetadata(const juce::String& instrumentId) const
+bool InstrumentRegistry::getMetadata(const juce::String& instrumentId, InstrumentMetadata& outMetadata) const
 {
     auto it = instruments_.find(instrumentId);
     if (it != instruments_.end())
-        return &it->second.metadata;
-    return nullptr;
+    {
+        outMetadata = it->second.metadata;
+        return true;
+    }
+    return false;
 }
 
 juce::Array<juce::var> InstrumentRegistry::getInstrumentList() const
@@ -51,12 +54,13 @@ juce::Array<juce::var> InstrumentRegistry::getInstrumentList() const
     {
         const auto& metadata = pair.second.metadata;
 
-        auto* obj = new juce::DynamicObject();
-        obj->setProperty("id", metadata.instrumentId);
-        obj->setProperty("name", metadata.name);
-        obj->setProperty("category", metadata.category);
+        // Wrap DynamicObject in var immediately for proper memory management
+        juce::var obj(new juce::DynamicObject());
+        obj.getDynamicObject()->setProperty("id", metadata.instrumentId);
+        obj.getDynamicObject()->setProperty("name", metadata.name);
+        obj.getDynamicObject()->setProperty("category", metadata.category);
 
-        result.add(juce::var(obj));
+        result.add(obj);
     }
 
     return result;

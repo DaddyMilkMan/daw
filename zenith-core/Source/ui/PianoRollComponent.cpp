@@ -151,6 +151,47 @@ void PianoRollComponent::mouseUp(const juce::MouseEvent& e)
     isDragging = false;
 }
 
+void PianoRollComponent::mouseMove(const juce::MouseEvent& e)
+{
+    // Update hover state
+    auto* hit = hitTestNote(e.position);
+    
+    if (hit != hoveredNote)
+    {
+        hoveredNote = hit;
+        hoverAlpha = 0.0f;
+        repaint();
+    }
+}
+
+void PianoRollComponent::mouseExit(const juce::MouseEvent& /*e*/)
+{
+    hoveredNote = nullptr;
+    hoverAlpha = 0.0f;
+    repaint();
+}
+
+//==============================================================================
+// Timer callback
+//==============================================================================
+
+void PianoRollComponent::timerCallback()
+{
+    bool needsRepaint = false;
+    
+    // Animate hover alpha
+    if (hoveredNote != nullptr && hoverAlpha < 1.0f)
+    {
+        hoverAlpha = std::min(1.0f, hoverAlpha + 0.15f);
+        needsRepaint = true;
+    }
+    
+    if (needsRepaint)
+    {
+        repaint();
+    }
+}
+
 //==============================================================================
 // Key listener
 //==============================================================================

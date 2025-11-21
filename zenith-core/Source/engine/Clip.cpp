@@ -161,18 +161,27 @@ void Track::Clip::setAudioFile(const juce::File& file)
 
     auto* reader = formatManager.createReaderFor(file);
 
-    if (reader != nullptr)
+    if (reader != nullptr && reader->numChannels > 0 && reader->lengthInSamples > 0)
     {
         // Read the entire file into memory
         audioBuffer.setSize(static_cast<int>(reader->numChannels),
                            static_cast<int>(reader->lengthInSamples));
 
-        reader->read(&audioBuffer,
+        bool readSuccess = reader->read(&audioBuffer,
                     0,
                     static_cast<int>(reader->lengthInSamples),
                     0,
                     true,
                     true);
+
+        if (!readSuccess)
+        {
+            // Read failed - clear the buffer
+            audioBuffer.setSize(0, 0);
+            delete reader;
+            DBG("Clip: Failed to read audio file - file may be corrupted");
+            return;
+        }
 
         // Set clip length to match audio file length
         clipLength.store(reader->lengthInSamples);
@@ -346,11 +355,12 @@ juce::ValueTree Track::Clip::getState() const
 
     state.setProperty("name", clipName, nullptr);
     state.setProperty("type", static_cast<int>(clipType), nullptr);
-    state.setProperty("startPosition", static_cast<int>(startPosition.load()), nullptr);
-    state.setProperty("length", static_cast<int>(clipLength.load()), nullptr);
-    state.setProperty("offset", static_cast<int>(clipOffset.load()), nullptr);
-    state.setProperty("fadeIn", static_cast<int>(fadeInLength.load()), nullptr);
-    state.setProperty("fadeOut", static_cast<int>(fadeOutLength.load()), nullptr);
+    // Use juce::int64 to avoid overflow for large sample positions
+    state.setProperty("startPosition", static_cast<juce::int64>(startPosition.load()), nullptr);
+    state.setProperty("length", static_cast<juce::int64>(clipLength.load()), nullptr);
+    state.setProperty("offset", static_cast<juce::int64>(clipOffset.load()), nullptr);
+    state.setProperty("fadeIn", static_cast<juce::int64>(fadeInLength.load()), nullptr);
+    state.setProperty("fadeOut", static_cast<juce::int64>(fadeOutLength.load()), nullptr);
     state.setProperty("gain", gain.load(), nullptr);
     state.setProperty("looping", looping.load(), nullptr);
     state.setProperty("color", clipColor.toString(), nullptr);
@@ -433,9 +443,12 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
 
     if (audioFileHandle_)
     {
-        // Cast type-erased handle back to AudioFileHandle
-        auto handle = std::static_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
-        sourceBuffer = &handle->buffer;
+        // Cast type-erased handle back to AudioFileHandle with runtime type checking
+        auto handle = std::dynamic_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
+        if (handle != nullptr)
+        {
+            sourceBuffer = &handle->buffer;
+        }
     }
     else
     {
@@ -470,11 +483,13 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
         sourcePosition = sourcePosition % sourceBuffer->getNumSamples();
     }
 
-    // Copy audio from buffer
-    const int numSamplesToCopy = juce::jmin(
-        bufferToFill.numSamples,
-        static_cast<int>(sourceBuffer->getNumSamples() - sourcePosition),
-        static_cast<int>(clipLen - positionInClip));
+    // Copy audio from buffer - use int64 to prevent overflow
+    const juce::int64 samplesAvailableInSource = sourceBuffer->getNumSamples() - sourcePosition;
+    const juce::int64 samplesRemainingInClip = clipLen - positionInClip;
+    const int numSamplesToCopy = static_cast<int>(juce::jmin(
+        static_cast<juce::int64>(bufferToFill.numSamples),
+        samplesAvailableInSource,
+        samplesRemainingInClip));
 
     if (numSamplesToCopy <= 0)
         return;

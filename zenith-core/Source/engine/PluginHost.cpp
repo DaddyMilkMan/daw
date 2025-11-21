@@ -53,7 +53,8 @@ PluginHost::~PluginHost()
 
 int PluginHost::scanDefaultLocations(bool async)
 {
-    juce::ignoreUnused(async); // TODO(zenith-core#1): Implement async scanning in future
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    juce::ignoreUnused(async); // TODO: Implement async scanning in future
 
     if (vst3Format == nullptr)
     {
@@ -106,6 +107,8 @@ int PluginHost::scanDefaultLocations(bool async)
 
 bool PluginHost::scanPath(const juce::File& path)
 {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
     if (vst3Format == nullptr)
     {
         DBG("PluginHost: Cannot scan - VST3 format not available");
@@ -144,6 +147,7 @@ bool PluginHost::scanPath(const juce::File& path)
 
 void PluginHost::clearPluginList()
 {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     DBG("PluginHost: Clearing plugin list");
     knownPlugins.clear();
 }
@@ -164,17 +168,18 @@ juce::Array<juce::PluginDescription> PluginHost::getPluginDescriptions() const
     return descriptions;
 }
 
-const juce::PluginDescription* PluginHost::findPluginDescription(const juce::String& identifier) const
+bool PluginHost::findPluginDescription(const juce::String& identifier, juce::PluginDescription& outDescription) const
 {
     for (const auto& desc : knownPlugins.getTypes())
     {
         if (desc.createIdentifierString() == identifier)
         {
-            return &desc;
+            outDescription = desc;
+            return true;
         }
     }
 
-    return nullptr;
+    return false;
 }
 
 //==============================================================================
@@ -187,6 +192,7 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createInstance(
     int blockSize,
     juce::String& errorMessage)
 {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     DBG("PluginHost: Creating instance of " + description.name);
 
     errorMessage.clear();
@@ -224,9 +230,8 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createInstance(
     errorMessage.clear();
 
     // Find the plugin description
-    const auto* description = findPluginDescription(identifier);
-
-    if (description == nullptr)
+    juce::PluginDescription description;
+    if (!findPluginDescription(identifier, description))
     {
         errorMessage = "Plugin not found: " + identifier;
         DBG("PluginHost: " + errorMessage);
@@ -234,8 +239,7 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createInstance(
     }
 
     // Create instance using the description
-    return createInstance(*description, sampleRate, blockSize, errorMessage);
+    return createInstance(description, sampleRate, blockSize, errorMessage);
 }
 
 } // namespace zenith
-

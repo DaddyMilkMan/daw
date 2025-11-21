@@ -153,6 +153,12 @@ public:
      */
     bool isRecording() const { return isRecording_.load(); }
 
+    /**
+     * @brief Toggle recording on/off
+     * @note Convenience method for record button
+     */
+    void toggleRecording();
+
     //==========================================================================
     // Phase 1.3: Transport Position & Looping
     //==========================================================================
@@ -539,7 +545,8 @@ private:
      */
     void renderBlock(juce::AudioBuffer<float>& outputBuffer,
                     int numSamples,
-                    juce::int64 playheadPosition);
+                    juce::int64 playheadPosition,
+                    const juce::MidiBuffer* incomingMidi = nullptr);
 
     //==========================================================================
     // Member Variables
@@ -598,7 +605,7 @@ private:
     std::atomic<float> masterPeakLevel_{0.0f};
 
     // Phase 2A: MIDI input handling
-    std::unique_ptr<juce::MidiInput> midiInput_;
+    std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
     juce::MidiBuffer incomingMidiBuffer_;  // Buffered MIDI from input
     juce::CriticalSection midiInputLock_;  // Protects incomingMidiBuffer_
 

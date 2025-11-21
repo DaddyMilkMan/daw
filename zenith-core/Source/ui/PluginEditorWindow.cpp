@@ -81,9 +81,8 @@ PluginEditorWindow::~PluginEditorWindow()
 
 void PluginEditorWindow::closeButtonPressed()
 {
-    // Just delete this window
-    // The PluginEditorWindowManager will clean up its reference
-    delete this;
+    // Hide the window - the PluginEditorWindowManager handles deletion
+    setVisible(false);
 }
 
 //==============================================================================
@@ -106,16 +105,17 @@ PluginEditorWindow* PluginEditorWindowManager::openEditor(juce::AudioPluginInsta
     {
         // Bring existing window to front
         it->second->toFront(true);
-        return it->second.getComponent();
+        return it->second.get();
     }
 
-    // Create new window
-    auto* window = std::make_unique<PluginEditorWindow>(plugin, useGenericEditor);
+    // Create new window with unique_ptr for safe ownership
+    auto window = std::make_unique<PluginEditorWindow>(plugin, useGenericEditor);
+    auto* windowPtr = window.get();
 
     // Store in map
-    editorWindows[plugin] = window;
+    editorWindows[plugin] = std::move(window);
 
-    return window;
+    return windowPtr;
 }
 
 void PluginEditorWindowManager::closeEditor(juce::AudioPluginInstance* plugin)
@@ -126,10 +126,7 @@ void PluginEditorWindowManager::closeEditor(juce::AudioPluginInstance* plugin)
     auto it = editorWindows.find(plugin);
     if (it != editorWindows.end())
     {
-        // Delete window (will call closeButtonPressed)
-        delete it->second.getComponent();
-
-        // Remove from map
+        // unique_ptr will automatically delete the window
         editorWindows.erase(it);
     }
 }
@@ -160,7 +157,7 @@ bool PluginEditorWindowManager::hasOpenEditor(juce::AudioPluginInstance* plugin)
         return false;
 
     auto it = editorWindows.find(plugin);
-    return it != editorWindows.end() && it->second != nullptr;
+    return it != editorWindows.end();
 }
 
 PluginEditorWindow* PluginEditorWindowManager::getEditorWindow(juce::AudioPluginInstance* plugin) const
@@ -169,11 +166,10 @@ PluginEditorWindow* PluginEditorWindowManager::getEditorWindow(juce::AudioPlugin
         return nullptr;
 
     auto it = editorWindows.find(plugin);
-    if (it != editorWindows.end() && it->second != nullptr)
-        return it->second.getComponent();
+    if (it != editorWindows.end())
+        return it->second.get();
 
     return nullptr;
 }
 
 } // namespace zenith
-
