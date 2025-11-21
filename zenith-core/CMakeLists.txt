@@ -86,6 +86,7 @@ target_sources(ZenithDAW PRIVATE
     src/Main.cpp
     src/MainWindow.cpp
     src/Engine.cpp
+    src/TempoMap.cpp
     src/ProjectState.cpp
     src/MixerComponent.cpp
 
@@ -101,11 +102,13 @@ target_sources(ZenithDAW PRIVATE
     include/PianoRollEditor.h
 
     # Phase 8: CommandAPI for Wingman MIDI commands
-    src/CommandAPI.cpp
+    # REMOVED DUPLICATE - Already listed in Source/commands/ (line 143)
+    # src/CommandAPI.cpp
 
     # Phase 8.1: UI Components
-    src/PianoRollComponent.cpp
-    src/ArrangerComponent.cpp
+    # ArrangementComponent is in src/, ArrangerComponent is in Source/ui/ - they are DIFFERENT
+    # src/PianoRollComponent.cpp  # DUPLICATE of Source/ui/PianoRollComponent.cpp
+    # src/ArrangementComponent.cpp  # DISABLED: Has errors - ID_POINTS not in ProjectState
 
     # Phase 11: Mixer → Engine wiring
     src/TrackStateSynchronizer.cpp
@@ -148,6 +151,8 @@ target_sources(ZenithDAW PRIVATE
     # Instrument Browser UI
     Source/ui/InstrumentBrowserPanel.h
     Source/ui/InstrumentBrowserPanel.cpp
+    Source/ui/PresetBrowserComponent.h
+    Source/ui/PresetBrowserComponent.cpp
 
     # Phase 7: Wingman AI Integration
     Source/network/AIBridgeClient.h
@@ -425,12 +430,14 @@ target_sources(PresetRegressionTests PRIVATE
     src/ProjectState.cpp
 
     # CommandAPI
-    src/CommandAPI.cpp
+    # REMOVED DUPLICATE - Already listed in Source/commands/ (line 143)
+    # src/CommandAPI.cpp
 
     # Track and audio engine
-    Source/engine/Track.cpp
-    Source/engine/Clip.cpp
-    Source/engine/MixerChannel.cpp
+    # REMOVED DUPLICATES - Already listed above (lines 118-122)
+    # Source/engine/Track.cpp
+    # Source/engine/Clip.cpp
+    # Source/engine/MixerChannel.cpp
     Source/engine/AudioFilePool.cpp
     Source/engine/PluginHost.cpp
 
@@ -516,8 +523,9 @@ target_sources(TrackInstrumentIntegrationTests PRIVATE
     tests/TrackInstrumentIntegrationTests.cpp
 
     # Track system
-    Source/engine/Track.cpp
-    Source/engine/Clip.cpp
+    # REMOVED DUPLICATES - Already listed above (lines 118-122)
+    # Source/engine/Track.cpp
+    # Source/engine/Clip.cpp
 
     # Instrument system
     Source/instruments/Instrument.cpp

@@ -198,7 +198,21 @@ private:
             juce::File::userMusicDirectory);
 
         // Create Zenith subdirectory
-        return musicDir.getChildFile("Zenith");
+        auto defaultDir = musicDir.getChildFile("Zenith");
+
+        // DEV ENVIRONMENT FALLBACK:
+        // If default directory doesn't exist or has no content, try the repo path
+        if (!defaultDir.exists())
+        {
+            juce::File repoDir("C:/zenith/daw/zenith-core/Content");
+            if (repoDir.exists())
+            {
+                DBG("ContentPaths: Using repo content directory: " + repoDir.getFullPathName());
+                return repoDir;
+            }
+        }
+
+        return defaultDir;
     }
 
     juce::File customContentRoot;

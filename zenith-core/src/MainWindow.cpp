@@ -5,7 +5,7 @@
 
 #include "../include/MainWindow.h"
 #include "../Source/commands/CommandAPI.h"
-#include "ArrangerComponent.h"
+#include "../Source/ui/ArrangerComponent.h"
 #include "WingmanPanel.h"
 #include "InstrumentBrowserPanel.h"
 #include "AIBridgeClient.h"
@@ -37,8 +37,9 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addAndMakeVisible(statusLabel);
 
     // Phase 14: Create arrangement view
-    arrangementView = std::make_unique<ArrangementComponent>(projectState, engine);
-    addAndMakeVisible(arrangementView.get());
+    // TEMPORARILY DISABLED: ArrangementComponent has compilation errors (ID_POINTS missing)
+    // arrangementView = std::make_unique<ArrangementComponent>(projectState, engine);
+    // addAndMakeVisible(arrangementView.get());
 
     // CPU usage label
     cpuLabel.setText("CPU: 0%", juce::dontSendNotification);
@@ -71,7 +72,13 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
-    recordButton.setEnabled(false);  // Future: recording UI
+    recordButton.onClick = [this]() {
+        engine.toggleRecording();
+        bool isRecording = engine.isRecording();
+        recordButton.setColour(juce::TextButton::buttonColourId, 
+            isRecording ? juce::Colours::red : juce::Colours::darkgrey);
+        DBG(isRecording ? "Recording started" : "Recording stopped");
+    };
     addAndMakeVisible(recordButton);
 
     // Phase 1: Import Audio button
@@ -81,8 +88,19 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     };
     addAndMakeVisible(importButton);
 
+    // Virtual MIDI Keyboard toggle button
+    virtualKeyboardButton.setButtonText("🎹 Keyboard (M)");
+    virtualKeyboardButton.setClickingTogglesState(true);
+    virtualKeyboardButton.onClick = [this]() {
+        virtualKeyboardVisible = virtualKeyboardButton.getToggleState();
+        if (midiKeyboard)
+            midiKeyboard->setVisible(virtualKeyboardVisible);
+        resized();  // Re-layout to accommodate keyboard
+    };
+    addAndMakeVisible(virtualKeyboardButton);
+
     // Phase 9: Create ArrangerComponent with interactive clip editing
-    arrangerComponent = std::make_unique<ArrangerComponent>(projectState);
+    arrangerComponent = std::make_unique<ArrangerComponent>(engine);
     addAndMakeVisible(arrangerComponent.get());
 
     // Phase 7: Create Wingman AI console panel
@@ -92,6 +110,16 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     // Create Instrument Browser Panel
     instrumentBrowserPanel = std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
     addAndMakeVisible(instrumentBrowserPanel.get());
+
+    // Create Virtual MIDI Keyboard Component
+    midiKeyboard = std::make_unique<juce::MidiKeyboardComponent>(
+        midiKeyboardState,
+        juce::MidiKeyboardComponent::horizontalKeyboard);
+    midiKeyboard->setVisible(false);  // Hidden by default
+    addAndMakeVisible(midiKeyboard.get());
+
+    // Note: MIDI keyboard will generate MIDI messages through midiKeyboardState
+    // These can be processed via the Engine's existing MIDI input handling
 
     // Start timer for CPU monitoring (60 Hz)
     startTimer(16);
@@ -140,6 +168,14 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
         }
     }
 
+    // M key: Toggle virtual MIDI keyboard (like Ableton Live)
+    if (key.getTextCharacter() == 'm' || key.getTextCharacter() == 'M')
+    {
+        virtualKeyboardButton.setToggleState(!virtualKeyboardButton.getToggleState(), juce::sendNotification);
+        DBG("Keyboard shortcut: Toggle Virtual MIDI Keyboard (M)");
+        return true;
+    }
+
     return false;  // Key not handled
 }
 
@@ -173,6 +209,10 @@ void MainComponent::resized()
     auto importSection = bottomBar.removeFromLeft(140);
     importButton.setBounds(importSection.reduced(10, 8));
 
+    // Virtual Keyboard toggle button
+    auto keyboardButtonSection = bottomBar.removeFromLeft(160);
+    virtualKeyboardButton.setBounds(keyboardButtonSection.reduced(10, 8));
+
     // Center transport buttons
     auto transportSection = bottomBar.reduced(10, 8);
     int buttonWidth = 100;
@@ -182,6 +222,14 @@ void MainComponent::resized()
     playButton.setBounds(startX, transportSection.getY(), buttonWidth, transportSection.getHeight());
     stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(), buttonWidth, transportSection.getHeight());
     recordButton.setBounds(startX + (buttonWidth + 10) * 2, transportSection.getY(), buttonWidth, transportSection.getHeight());
+
+    // Virtual MIDI Keyboard (above mixer when visible)
+    if (virtualKeyboardVisible && midiKeyboard)
+    {
+        auto keyboardHeight = 80;
+        auto keyboardArea = bounds.removeFromBottom(keyboardHeight);
+        midiKeyboard->setBounds(keyboardArea);
+    }
 
     // Phase 10: Mixer panel at bottom (above transport bar)
     auto mixerHeight = 220;
@@ -203,8 +251,9 @@ void MainComponent::resized()
     }
 
     // Phase 14: Arrangement view with automation lanes
-    if (arrangementView)
-        arrangementView->setBounds(bounds);
+    // TEMPORARILY DISABLED
+    // if (arrangementView)
+    //     arrangementView->setBounds(bounds);
 
     // Phase 9: ArrangerComponent takes the remaining central area
     if (arrangerComponent != nullptr)
@@ -223,6 +272,20 @@ void MainComponent::timerCallback()
 
     // C4: Update track count (dirty-checked)
     refreshTrackCountLabel();
+
+    // Process MIDI messages from virtual keyboard
+    if (virtualKeyboardVisible)
+    {
+        juce::MidiBuffer midiMessages;
+        midiKeyboardState.processNextMidiBuffer(midiMessages, 0, 16, true);
+
+        // Send MIDI messages to engine
+        for (const auto metadata : midiMessages)
+        {
+            auto message = metadata.getMessage();
+            engine.handleIncomingMidiMessage(nullptr, message);
+        }
+    }
 }
 
 //==============================================================================

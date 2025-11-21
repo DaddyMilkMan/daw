@@ -20,7 +20,7 @@
 #include "TrackStateSynchronizer.h"
 #include "ArrangementComponent.h"
 #include "MixerComponent.h"
-#include "ArrangerComponent.h"
+#include "../Source/ui/ArrangerComponent.h"
 #include "ClipSynchronizer.h"
 
 // Forward declarations
@@ -114,6 +114,9 @@ private:
     // Phase 1: Import Audio button
     juce::TextButton importButton;
 
+    // Virtual MIDI Keyboard toggle button
+    juce::TextButton virtualKeyboardButton;
+
     // Audio device info
     juce::Label audioDeviceLabel;
 
@@ -135,6 +138,11 @@ private:
 
     // Instrument & Preset Browser
     std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
+
+    // Virtual MIDI Keyboard (Computer Keyboard to MIDI)
+    juce::MidiKeyboardState midiKeyboardState;
+    std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
+    bool virtualKeyboardVisible = false;
 
     //==========================================================================
     // Phase 1: Audio import

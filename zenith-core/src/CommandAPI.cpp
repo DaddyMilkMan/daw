@@ -152,105 +152,23 @@ void CommandAPI::registerCommand(const juce::String& commandName, CommandHandler
 
 juce::var CommandAPI::cmd_addAutomationPoint(const juce::var& params)
 {
-    juce::String error;
-
-    // Validate required params
-    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
-    if (!validateParam(params, "param", error)) throw std::runtime_error(error.toStdString());
-    if (!validateParam(params, "timeBeats", error)) throw std::runtime_error(error.toStdString());
-    if (!validateParam(params, "value", error)) throw std::runtime_error(error.toStdString());
-
-    auto* obj = params.getDynamicObject();
-    juce::String trackId = obj->getProperty("trackId").toString();
-    juce::String param = obj->getProperty("param").toString();
-    double timeBeats = obj->getProperty("timeBeats");
-    double value = obj->getProperty("value");
-
-    // Validate param name
-    if (param != "volume" && param != "pan" && param != "mute")
-    {
-        throw std::runtime_error("Invalid param. Must be 'volume', 'pan', or 'mute'");
-    }
-
-    // Add point
-    juce::String pointId = projectState.addAutomationPoint(trackId, param, timeBeats, value,
-                                                            "Add automation point");
-
-    if (pointId.isEmpty())
-    {
-        throw std::runtime_error("Failed to add automation point. Check trackId.");
-    }
-
-    // Return result
-    juce::DynamicObject::Ptr result = new juce::DynamicObject();
-    result->setProperty("pointId", pointId);
-    return juce::var(result.get());
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    throw std::runtime_error("Automation not yet implemented");
 }
 
 juce::var CommandAPI::cmd_clearAutomation(const juce::var& params)
 {
-    juce::String error;
-
-    // Validate required params
-    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
-    if (!validateParam(params, "param", error)) throw std::runtime_error(error.toStdString());
-
-    auto* obj = params.getDynamicObject();
-    juce::String trackId = obj->getProperty("trackId").toString();
-    juce::String param = obj->getProperty("param").toString();
-
-    // Validate param name
-    if (param != "volume" && param != "pan" && param != "mute")
-    {
-        throw std::runtime_error("Invalid param. Must be 'volume', 'pan', or 'mute'");
-    }
-
-    // Clear automation
-    bool success = projectState.clearAutomation(trackId, param, "Clear automation");
-
-    // Return result
-    juce::DynamicObject::Ptr result = new juce::DynamicObject();
-    result->setProperty("success", success);
-    return juce::var(result.get());
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    throw std::runtime_error("Automation not yet implemented");
 }
 
 juce::var CommandAPI::cmd_getAutomation(const juce::var& params)
 {
-    juce::String error;
-
-    // Validate required params
-    if (!validateParam(params, "trackId", error)) throw std::runtime_error(error.toStdString());
-    if (!validateParam(params, "param", error)) throw std::runtime_error(error.toStdString());
-
-    auto* obj = params.getDynamicObject();
-    juce::String trackId = obj->getProperty("trackId").toString();
-    juce::String param = obj->getProperty("param").toString();
-
-    // Get envelope
-    auto envelope = projectState.getAutomationEnvelope(trackId, param);
-
-    juce::Array<juce::var> pointsArray;
-
-    if (envelope.isValid())
-    {
-        for (int i = 0; i < envelope.getNumChildren(); ++i)
-        {
-            auto point = envelope.getChild(i);
-            if (point.hasType(ProjectState::ID_POINT))
-            {
-                juce::DynamicObject::Ptr pointObj = new juce::DynamicObject();
-                pointObj->setProperty("id", point[ProjectState::PROP_ID].toString());
-                pointObj->setProperty("timeBeats", point[ProjectState::PROP_TIME_BEATS]);
-                pointObj->setProperty("value", point[ProjectState::PROP_VALUE]);
-                pointsArray.add(juce::var(pointObj.get()));
-            }
-        }
-    }
-
-    // Return result
-    juce::DynamicObject::Ptr result = new juce::DynamicObject();
-    result->setProperty("points", pointsArray);
-    return juce::var(result.get());
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    throw std::runtime_error("Automation not yet implemented");
 }
 
 juce::var CommandAPI::cmd_addTrack(const juce::var& params)

@@ -578,6 +578,19 @@ void Engine::stopRecording()
     DBG("Engine: Recording stopped, processing clips");
 }
 
+void Engine::toggleRecording()
+{
+    if (isRecording())
+    {
+        stopRecording();
+    }
+    else
+    {
+        record();
+    }
+}
+
+
 //==============================================================================
 // Phase 1.3: Transport Position & Looping
 //==============================================================================
@@ -1055,7 +1068,23 @@ void Engine::processAudio(
     }
 
     // Use unified render path
-    renderBlock(outputBuffer, position, numSamples);
+    
+    // Thread-safe MIDI transfer:
+    // 1. Create local buffer
+    // 2. Lock and swap/copy from incoming buffer
+    // 3. Process local buffer (lock released)
+    juce::MidiBuffer localMidi;
+    {
+        const juce::ScopedLock sl(midiInputLock_);
+        if (!incomingMidiBuffer_.isEmpty())
+        {
+            localMidi.addEvents(incomingMidiBuffer_, 0, numSamples, 0);
+            incomingMidiBuffer_.clear();
+        }
+    }
+
+    // Fix: Correct argument order (numSamples, position) and pass local MIDI
+    renderBlock(outputBuffer, numSamples, position, &localMidi);
 
     // Fallback: If no tracks or all tracks are silent, optionally enable test tone
     // (Only if explicitly enabled via enableTestTone_)
@@ -1124,20 +1153,27 @@ void Engine::enableMidiInput()
         return;
     }
 
-    // Open the first available MIDI input device
-    const auto& firstInput = midiInputs[0];
-    DBG("Engine: Opening MIDI input: " + firstInput.name);
-
-    midiInput_ = juce::MidiInput::openDevice(firstInput.identifier, this);
-
-    if (midiInput_ != nullptr)
+    // Open all available MIDI input devices (Omni mode)
+    for (const auto& input : midiInputs)
     {
-        midiInput_->start();
-        DBG("Engine: MIDI input started: " + firstInput.name);
+        DBG("Engine: Opening MIDI input: " + input.name);
+        
+        auto newInput = juce::MidiInput::openDevice(input.identifier, this);
+        if (newInput != nullptr)
+        {
+            newInput->start();
+            midiInputs_.push_back(std::move(newInput));
+            DBG("Engine: MIDI input started: " + input.name);
+        }
+        else
+        {
+            DBG("Engine: Failed to open MIDI input: " + input.name);
+        }
     }
-    else
+
+    if (midiInputs_.empty())
     {
-        DBG("Engine: Failed to open MIDI input");
+        DBG("Engine: No MIDI inputs could be opened");
     }
 
     // Initialize MIDI recording buffers for all tracks
@@ -1149,12 +1185,16 @@ void Engine::enableMidiInput()
 
 void Engine::disableMidiInput()
 {
-    if (midiInput_ != nullptr)
+    if (!midiInputs_.empty())
     {
-        DBG("Engine: Stopping MIDI input...");
-        midiInput_->stop();
-        midiInput_.reset();
-        DBG("Engine: MIDI input stopped");
+        DBG("Engine: Stopping " + juce::String(midiInputs_.size()) + " MIDI inputs...");
+        for (auto& input : midiInputs_)
+        {
+            if (input)
+                input->stop();
+        }
+        midiInputs_.clear();
+        DBG("Engine: MIDI inputs stopped");
     }
 }
 
@@ -1164,6 +1204,15 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
 
     // This runs on MIDI input thread (NOT audio thread or message thread)
     // Buffer the message for processing in audio callback
+
+    // Debug log for MIDI activity
+    #if JUCE_DEBUG
+    if (message.isNoteOn())
+    {
+        DBG("MIDI In: Note On " + juce::String(message.getNoteNumber()) + 
+            " Vel " + juce::String(message.getVelocity()));
+    }
+    #endif
 
     // Add message to incoming buffer with current timestamp
     {
@@ -1228,7 +1277,8 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels)
 
 void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
                         int numSamples,
-                        juce::int64 playheadPosition)
+                        juce::int64 playheadPosition,
+                        const juce::MidiBuffer* incomingMidi)
 {
     juce::ignoreUnused(playheadPosition);
 
@@ -1262,11 +1312,20 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         // Clear track buffer
         trackBuffer.clear();
 
-        // TODO: When tracks have actual audio content, render it here
-        // For now, tracks don't have clips or audio sources yet (Phase 0)
-        // In future phases:
-        // - Get track clips that overlap playheadPosition
-        // - Render clip audio into trackBuffer
+        // Create AudioSourceChannelInfo for the track
+        juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
+
+        // Determine if this track should receive MIDI input
+        const juce::MidiBuffer* trackMidiInput = nullptr;
+        if (incomingMidi != nullptr && !incomingMidi->isEmpty() && 
+            track->getType() == Track::Type::Instrument && 
+            track->isArmed())
+        {
+            trackMidiInput = incomingMidi;
+        }
+
+        // Render track audio (and process MIDI)
+        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput);
         // - Apply track volume, pan, mute, solo
         // - Apply track effects chain
 

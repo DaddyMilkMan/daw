@@ -63,8 +63,10 @@ public:
     void releaseResources() override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
 
-    // Phase 1.3: Version that takes explicit playhead position
-    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+    // Phase 1.3: Version that takes explicit playhead position and optional incoming MIDI
+    void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
+                          int64_t playheadSamples,
+                          const juce::MidiBuffer* incomingMidi = nullptr);
 
     //==============================================================================
     // Track properties

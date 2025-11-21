@@ -158,7 +158,9 @@ void Track::releaseResources()
 }
 
 // Phase 1.3 / 2A: Process with explicit playhead position (lock-free)
-void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
+void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
+                             int64_t playheadSamples,
+                             const juce::MidiBuffer* incomingMidi)
 {
     // Clear the buffer first
     bufferToFill.clearActiveBufferRegion();
@@ -173,6 +175,12 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
 
     // Phase 2A: Clear MIDI buffer for this block
     midiBuffer_.clear();
+
+    // Add incoming MIDI (e.g. from external controller)
+    if (incomingMidi != nullptr && !incomingMidi->isEmpty())
+    {
+        midiBuffer_.addEvents(*incomingMidi, 0, bufferToFill.numSamples, 0);
+    }
 
     // Phase 2A: Get current clip snapshot (RT-safe atomic load, no lock!)
     auto currentSnapshot = clipsSnapshot_.load(std::memory_order_acquire);

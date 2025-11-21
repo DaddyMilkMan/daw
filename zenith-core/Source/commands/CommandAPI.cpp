@@ -1004,78 +1004,23 @@ juce::var CommandAPI::getPluginParams(const juce::var& params)
 
 juce::var CommandAPI::addAutomationPoint(const juce::var& params)
 {
-    if (!params.hasProperty("trackId")) return createErrorResponse("Missing 'trackId'");
-    if (!params.hasProperty("paramId")) return createErrorResponse("Missing 'paramId'");
-    if (!params.hasProperty("timeBeats")) return createErrorResponse("Missing 'timeBeats'");
-    if (!params.hasProperty("value")) return createErrorResponse("Missing 'value'");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String paramId = params["paramId"].toString();
-    double timeBeats = (double)params["timeBeats"];
-    double value = (double)params["value"];
-
-    juce::String pointId = projectState.addAutomationPoint(trackId, paramId, timeBeats, value, "Wingman: Add Point");
-
-    if (pointId.isEmpty())
-        return createErrorResponse("Failed to add automation point");
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("pointId", pointId);
-    resultObj->setProperty("success", true);
-
-    return createSuccessResponse(juce::var(resultObj));
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    return createErrorResponse("Automation not yet implemented");
 }
 
 juce::var CommandAPI::clearAutomation(const juce::var& params)
 {
-    if (!params.hasProperty("trackId")) return createErrorResponse("Missing 'trackId'");
-    if (!params.hasProperty("paramId")) return createErrorResponse("Missing 'paramId'");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String paramId = params["paramId"].toString();
-
-    bool success = projectState.clearAutomation(trackId, paramId, "Wingman: Clear Automation");
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("success", success);
-
-    return createSuccessResponse(juce::var(resultObj));
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    return createErrorResponse("Automation not yet implemented");
 }
 
 juce::var CommandAPI::getAutomation(const juce::var& params)
 {
-    if (!params.hasProperty("trackId")) return createErrorResponse("Missing 'trackId'");
-    if (!params.hasProperty("paramId")) return createErrorResponse("Missing 'paramId'");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String paramId = params["paramId"].toString();
-
-    auto envelope = projectState.getAutomationEnvelope(trackId, paramId);
-    
-    juce::var pointsArray;
-    auto* pointsArrayPtr = pointsArray.getArray();
-
-    if (envelope.isValid())
-    {
-        for (const auto& point : envelope)
-        {
-            if (point.hasType(ProjectState::ID_POINT))
-            {
-                auto* pointObj = new juce::DynamicObject();
-                pointObj->setProperty("id", point.getProperty(ProjectState::PROP_ID));
-                pointObj->setProperty("timeBeats", point.getProperty(ProjectState::PROP_TIME_BEATS));
-                pointObj->setProperty("value", point.getProperty(ProjectState::PROP_VALUE));
-                pointsArrayPtr->add(juce::var(pointObj));
-            }
-        }
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("paramId", paramId);
-    resultObj->setProperty("points", pointsArray);
-
-    return createSuccessResponse(juce::var(resultObj));
+    juce::ignoreUnused(params);
+    // Automation not yet implemented in ProjectState
+    return createErrorResponse("Automation not yet implemented");
 }
 
 //==============================================================================

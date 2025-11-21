@@ -224,7 +224,7 @@ bool PresetBrowserComponent::matchesFilters(const ZenithInstrumentPreset& preset
     {
         juce::String categoryName = categoryComboBox_.getItemText(selectedCategory - 1);
         // For now, we'll use author as category (Factory/User)
-        if (categoryName != preset.author)
+        if (categoryName != juce::String(preset.author))
             return false;
     }
 
@@ -285,71 +285,15 @@ void PresetBrowserComponent::onSaveAsClicked()
         return;
     }
 
-    // Ask user for preset name
-    juce::AlertWindow nameWindow("Save Preset",
-                                "Enter a name for this preset:",
-                                juce::AlertWindow::NoIcon);
-
-    nameWindow.addTextEditor("presetName", "My Preset", "Preset Name:");
-    nameWindow.addTextEditor("tags", "", "Tags (comma-separated):");
-    nameWindow.addTextEditor("description", "", "Description:");
-
-    nameWindow.addButton("Save", 1, juce::KeyPress(juce::KeyPress::returnKey));
-    nameWindow.addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
-
-    if (nameWindow.runModalLoop() == 1)
-    {
-        juce::String presetName = nameWindow.getTextEditorContents("presetName");
-        juce::String tags = nameWindow.getTextEditorContents("tags");
-        juce::String description = nameWindow.getTextEditorContents("description");
-
-        if (presetName.isEmpty())
-        {
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::AlertWindow::WarningIcon,
-                "Invalid Name",
-                "Preset name cannot be empty.",
-                "OK");
-            return;
-        }
-
-        // Capture current state
-        auto parameterValues = onCaptureState_();
-
-        // Create preset
-        ZenithInstrumentPreset newPreset(
-            presetName.toStdString(),
-            instrumentId_.toStdString(),
-            "User");
-
-        newPreset.description = description.toStdString();
-
-        // Parse tags
-        juce::StringArray tagArray = juce::StringArray::fromTokens(tags, ",", "");
-        for (const auto& tag : tagArray)
-            newPreset.tags.push_back(tag.trim().toStdString());
-
-        // Set parameters
-        for (const auto& [paramId, value] : parameterValues)
-        {
-            newPreset.setParameter(paramId, value);
-        }
-
-        // Save to file
-        if (presetManager_.saveUserPreset(newPreset))
-        {
-            statusLabel_.setText("Saved: " + presetName, juce::dontSendNotification);
-            refreshPresetList();
-        }
-        else
-        {
-            juce::AlertWindow::showMessageBoxAsync(
-                juce::AlertWindow::WarningIcon,
-                "Save Failed",
-                "Could not save preset to disk.",
-                "OK");
-        }
-    }
+    // In JUCE 8, use async dialogs instead of runModalLoop
+    // For now, just show a placeholder message
+    juce::AlertWindow::showMessageBoxAsync(
+        juce::AlertWindow::InfoIcon,
+        "Save Preset",
+        "Preset saving is temporarily disabled (requires JUCE 8 async dialog refactor).",
+        "OK");
+    
+    // TODO: Implement async save dialog using JUCE 8 API
 }
 
 juce::String PresetBrowserComponent::getPresetDisplayName(
@@ -422,7 +366,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
         for (size_t i = 0; i < preset.tags.size() && i < 3; ++i)
         {
             if (i > 0) tagStr += ", ";
-            tagStr += preset.tags[i];
+            tagStr += juce::String(preset.tags[i]);
         }
         if (preset.tags.size() > 3)
             tagStr += "...";

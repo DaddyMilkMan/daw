@@ -305,21 +305,23 @@ struct ZenithInstrumentPreset
             }
         }
 
-        // Parameters object
+        // Parameters object (support both "params" and "parameters" for compatibility)
+        juce::var paramsVar;
         if (obj->hasProperty("params"))
+            paramsVar = obj->getProperty("params");
+        else if (obj->hasProperty("parameters"))
+            paramsVar = obj->getProperty("parameters");
+
+        if (paramsVar.isObject())
         {
-            auto paramsVar = obj->getProperty("params");
-            if (paramsVar.isObject())
+            auto paramsObj = paramsVar.getDynamicObject();
+            for (const auto& prop : paramsObj->getProperties())
             {
-                auto paramsObj = paramsVar.getDynamicObject();
-                for (const auto& prop : paramsObj->getProperties())
-                {
-                    std::string paramId = prop.name.toString().toStdString();
-                    float value = static_cast<float>(prop.value);
-                    // Clamp to [0, 1] range
-                    value = juce::jlimit(0.0f, 1.0f, value);
-                    preset.parameters[paramId] = value;
-                }
+                std::string paramId = prop.name.toString().toStdString();
+                float value = static_cast<float>(prop.value);
+                // Clamp to [0, 1] range
+                value = juce::jlimit(0.0f, 1.0f, value);
+                preset.parameters[paramId] = value;
             }
         }
 
@@ -415,13 +417,22 @@ public:
     {
         std::vector<ZenithInstrumentPreset> presets;
 
-        // Load factory presets (both XML and JSON formats)
-        auto factoryDir = getInstrumentPresetsDir(instrumentId, true);
-        if (factoryDir.exists())
+        // Helper lambda to scan a directory
+        auto scanDir = [&](const juce::File& dir)
         {
-            // Load XML presets (.zpreset)
-            auto xmlFiles = factoryDir.findChildFiles(
-                juce::File::findFiles, false, "*.zpreset");
+            DBG("Scanning presets in: " + dir.getFullPathName());
+            if (!dir.exists()) 
+            {
+                DBG("  Directory does not exist");
+                return;
+            }
+
+            // Load XML presets (.zpreset) - RECURSIVE scan for categories
+            auto xmlFiles = dir.findChildFiles(
+                juce::File::findFiles, true, "*.zpreset");
+            
+            DBG("  Found " + juce::String(xmlFiles.size()) + " .zpreset files");
+
             for (const auto& file : xmlFiles)
             {
                 auto preset = ZenithInstrumentPreset::loadFromFile(file);
@@ -429,41 +440,41 @@ public:
                     presets.push_back(preset);
             }
 
-            // Load JSON presets (.json)
-            auto jsonFiles = factoryDir.findChildFiles(
-                juce::File::findFiles, false, "*.json");
+            // Load JSON presets (.json) - RECURSIVE scan for categories
+            auto jsonFiles = dir.findChildFiles(
+                juce::File::findFiles, true, "*.json");
+            
+            DBG("  Found " + juce::String(jsonFiles.size()) + " .json files");
+
             for (const auto& file : jsonFiles)
             {
                 auto preset = ZenithInstrumentPreset::loadFromJsonFile(file);
+                DBG("    Loaded: " + juce::String(preset.name) + " (ID: " + juce::String(preset.instrumentId) + ")");
+                
                 if (preset.instrumentId == instrumentId)
+                {
                     presets.push_back(preset);
+                }
+                else
+                {
+                    DBG("      Skipped: Instrument ID mismatch (Expected: " + juce::String(instrumentId) + ")");
+                }
             }
+        };
+
+        // 1. Load factory presets from AppData
+        scanDir(getInstrumentPresetsDir(instrumentId, true));
+
+        // 2. DEV FALLBACK: Load from repo content
+        // Path: C:/zenith/daw/zenith-core/Content/Instruments/Presets/<InstrumentID>
+        juce::File repoDir("C:/zenith/daw/zenith-core/Content/Instruments/Presets");
+        if (repoDir.exists())
+        {
+            scanDir(repoDir.getChildFile(instrumentId));
         }
 
         // Load user presets (both XML and JSON formats)
-        auto userDir = getInstrumentPresetsDir(instrumentId, false);
-        if (userDir.exists())
-        {
-            // Load XML presets (.zpreset)
-            auto xmlFiles = userDir.findChildFiles(
-                juce::File::findFiles, false, "*.zpreset");
-            for (const auto& file : xmlFiles)
-            {
-                auto preset = ZenithInstrumentPreset::loadFromFile(file);
-                if (preset.instrumentId == instrumentId)
-                    presets.push_back(preset);
-            }
-
-            // Load JSON presets (.json)
-            auto jsonFiles = userDir.findChildFiles(
-                juce::File::findFiles, false, "*.json");
-            for (const auto& file : jsonFiles)
-            {
-                auto preset = ZenithInstrumentPreset::loadFromJsonFile(file);
-                if (preset.instrumentId == instrumentId)
-                    presets.push_back(preset);
-            }
-        }
+        scanDir(getInstrumentPresetsDir(instrumentId, false));
 
         return presets;
     }
