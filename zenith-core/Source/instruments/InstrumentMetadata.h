@@ -107,7 +107,7 @@ private:
             case Type::Bool:   return "bool";
             case Type::Choice: return "choice";
             default:           return "float";
-        \n    default: break;\n\n    default: break;\n}
+        }
     }
 };
 

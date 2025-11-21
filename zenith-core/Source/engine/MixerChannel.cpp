@@ -553,7 +553,7 @@ void MixerChannel::updateFilterCoefficients()
             case EQBand::Type::HighShelf:
                 coeffs = juce::IIRCoefficients::makeHighShelf(currentSampleRate, freq, q, dbToGain(gain));
                 break;
-        \n    default: break;\n\n    default: break;\n}
+        }
 
         eqFiltersL[i].setCoefficients(coeffs);
         eqFiltersR[i].setCoefficients(coeffs);
