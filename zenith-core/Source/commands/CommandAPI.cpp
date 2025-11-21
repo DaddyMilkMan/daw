@@ -62,6 +62,8 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         return setTrackVolume(params);
     else if (command == "set_track_pan")
         return setTrackPan(params);
+    else if (command == "export_audio")
+        return exportAudio(params);
 
     // Clip commands
     else if (command == "list_clips")
@@ -140,6 +142,10 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         return setNoteVelocity(params);
     else if (command == "set_note_length")
         return setNoteLength(params);
+    else if (command == "get_midi_data")
+        return getMidiData(params);
+    else if (command == "set_clip_notes")
+        return setClipNotes(params);
 
     else
         return createErrorResponse("Unknown command: " + command);
@@ -565,6 +571,37 @@ juce::var CommandAPI::setTrackPan(const juce::var& params)
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("trackId", trackId);
     resultObj->setProperty("pan", panValue);
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::exportAudio(const juce::var& params)
+{
+    if (!params.hasProperty("outputPath"))
+        return createErrorResponse("Missing 'outputPath' parameter");
+
+    const juce::String outputPath = params["outputPath"].toString();
+    const double sampleRate = params.hasProperty("sampleRate") ? static_cast<double>(params["sampleRate"]) : 44100.0;
+    const int bitDepth = params.hasProperty("bitDepth") ? static_cast<int>(params["bitDepth"]) : 24;
+    const double durationSeconds = params.hasProperty("durationSeconds")
+        ? static_cast<double>(params["durationSeconds"])
+        : 0.0;
+
+    if (outputPath.isEmpty())
+        return createErrorResponse("outputPath cannot be empty");
+
+    const bool success = engine.exportProjectToWav(juce::File(outputPath), sampleRate, bitDepth, durationSeconds);
+
+    if (!success)
+        return createErrorResponse("Export failed. Check engine logs for details.");
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("outputPath", outputPath);
+    resultObj->setProperty("sampleRate", sampleRate);
+    resultObj->setProperty("bitDepth", bitDepth);
+    resultObj->setProperty("durationSeconds", durationSeconds);
+
+    DBG("CommandAPI: Exported audio to " + outputPath);
 
     return createSuccessResponse(juce::var(resultObj));
 }
@@ -1325,6 +1362,144 @@ juce::var CommandAPI::setNoteLength(const juce::var& params)
 
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("success", true);
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getMidiData(const juce::var& params)
+{
+    const juce::String trackFilter = params.hasProperty("trackId") ? params["trackId"].toString() : juce::String();
+    const juce::String clipFilter = params.hasProperty("clipId") ? params["clipId"].toString() : juce::String();
+
+    juce::var tracksVar;
+    auto* tracksArray = tracksVar.getArray();
+
+    for (int i = 0; i < projectState.getNumTracks(); ++i)
+    {
+        auto trackTree = projectState.getTrackByIndex(i);
+        if (!trackTree.isValid())
+            continue;
+
+        juce::String trackId = trackTree.getProperty(ProjectState::PROP_ID, "").toString();
+        if (trackFilter.isNotEmpty() && trackFilter != trackId)
+            continue;
+
+        juce::String trackType = trackTree.getProperty(ProjectState::PROP_TYPE, "audio").toString();
+        auto clipsNode = trackTree.getChildWithName(ProjectState::ID_CLIPS);
+        if (!clipsNode.isValid())
+            continue;
+
+        juce::var clipsVar;
+        auto* clipsArray = clipsVar.getArray();
+
+        for (const auto& clip : clipsNode)
+        {
+            if (!clip.hasType(ProjectState::ID_CLIP))
+                continue;
+
+            const juce::String clipId = clip.getProperty(ProjectState::PROP_ID).toString();
+            if (clipFilter.isNotEmpty() && clipFilter != clipId)
+                continue;
+
+            const juce::String clipType = clip.getProperty(ProjectState::PROP_TYPE).toString();
+            if (clipType != "midi")
+                continue;
+
+            auto notes = projectState.getMidiNotesForClip(clipId);
+
+            juce::var notesVar;
+            auto* notesArray = notesVar.getArray();
+            for (const auto& note : notes)
+            {
+                auto* noteObj = new juce::DynamicObject();
+                noteObj->setProperty("id", note.id);
+                noteObj->setProperty("pitch", note.pitch);
+                noteObj->setProperty("startBeats", note.startBeats);
+                noteObj->setProperty("lengthBeats", note.lengthBeats);
+                noteObj->setProperty("velocity", note.velocity);
+                noteObj->setProperty("muted", note.muted);
+                notesArray->add(juce::var(noteObj));
+            }
+
+            auto* clipObj = new juce::DynamicObject();
+            clipObj->setProperty("id", clipId);
+            clipObj->setProperty("trackId", trackId);
+            clipObj->setProperty("startBeats", clip.getProperty(ProjectState::PROP_START_BEATS));
+            clipObj->setProperty("lengthBeats", clip.getProperty(ProjectState::PROP_LENGTH_BEATS));
+            clipObj->setProperty("laneIndex", clip.getProperty(ProjectState::PROP_LANE_INDEX));
+            clipObj->setProperty("notes", notesVar);
+            clipObj->setProperty("noteCount", notes.size());
+
+            clipsArray->add(juce::var(clipObj));
+        }
+
+        if (clipsArray->isEmpty())
+            continue;
+
+        auto* trackObj = new juce::DynamicObject();
+        trackObj->setProperty("id", trackId);
+        trackObj->setProperty("type", trackType);
+        trackObj->setProperty("clips", clipsVar);
+        trackObj->setProperty("clipCount", clipsArray->size());
+
+        tracksArray->add(juce::var(trackObj));
+    }
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("tracks", tracksVar);
+    resultObj->setProperty("trackCount", tracksVar.getArray()->size());
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::setClipNotes(const juce::var& params)
+{
+    if (!params.hasProperty("trackId")) return createErrorResponse("Missing 'trackId'");
+    if (!params.hasProperty("clipId")) return createErrorResponse("Missing 'clipId'");
+    if (!params.hasProperty("notes")) return createErrorResponse("Missing 'notes'");
+
+    const juce::String trackId = params["trackId"].toString();
+    const juce::String clipId = params["clipId"].toString();
+
+    if (!params["notes"].isArray())
+        return createErrorResponse("'notes' must be an array");
+
+    auto clipTree = projectState.getClip(trackId, clipId);
+    if (!clipTree.isValid())
+        return createErrorResponse("Clip not found: " + clipId);
+
+    juce::String clipType = clipTree.getProperty(ProjectState::PROP_TYPE, "audio").toString();
+    if (clipType != "midi")
+        return createErrorResponse("Clip is not a MIDI clip: " + clipId);
+
+    auto existingNotes = projectState.getMidiNotesForClip(clipId);
+    for (const auto& note : existingNotes)
+        projectState.removeMidiNote(clipId, note.id, "Wingman: set_clip_notes (clear)");
+
+    int addedCount = 0;
+    auto* notesArray = params["notes"].getArray();
+    for (const auto& noteVar : *notesArray)
+    {
+        if (!noteVar.isObject())
+            continue;
+
+        ProjectState::MidiNoteSpec spec;
+        spec.id = noteVar.hasProperty("id") ? noteVar["id"].toString() : juce::String();
+        spec.pitch = noteVar.hasProperty("pitch") ? static_cast<int>(noteVar["pitch"]) : 60;
+        spec.startBeats = noteVar.hasProperty("startBeats") ? static_cast<double>(noteVar["startBeats"]) : 0.0;
+        spec.lengthBeats = noteVar.hasProperty("lengthBeats") ? static_cast<double>(noteVar["lengthBeats"]) : 1.0;
+        spec.velocity = noteVar.hasProperty("velocity") ? static_cast<int>(noteVar["velocity"]) : 100;
+        spec.muted = noteVar.hasProperty("muted") ? static_cast<bool>(noteVar["muted"]) : false;
+
+        projectState.addMidiNote(clipId, spec, "Wingman: set_clip_notes (add)");
+        ++addedCount;
+    }
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("trackId", trackId);
+    resultObj->setProperty("clipId", clipId);
+    resultObj->setProperty("cleared", existingNotes.size());
+    resultObj->setProperty("added", addedCount);
 
     return createSuccessResponse(juce::var(resultObj));
 }
