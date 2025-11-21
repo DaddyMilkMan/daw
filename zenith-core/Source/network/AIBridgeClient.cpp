@@ -335,3 +335,4 @@ AIBridgeClient::Response AIBridgeClient::parseResponse(const juce::var& response
 }
 
 } // namespace zenith
+

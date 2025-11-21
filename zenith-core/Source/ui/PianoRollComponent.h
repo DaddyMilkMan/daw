@@ -67,10 +67,10 @@ public:
 
     //==============================================================================
     // View control
-    void setPixelsPerBeat(float ppb);
+    void setPixelsPerBeat(float ppb) [[maybe_unused]];
     float getPixelsPerBeat() const { return pixelsPerBeat; }
 
-    void setNoteHeight(float height);
+    void setNoteHeight(float height) [[maybe_unused]];
     float getNoteHeight() const { return noteHeight; }
 
 private:
@@ -97,9 +97,9 @@ private:
     void updateNoteCache();
     NoteVisual* hitTestNote(juce::Point<float> position);
 
-    void createNote(int noteNumber, double startBeats, double lengthBeats, int velocity);
-    void deleteNote(int noteNumber, double startTime);
-    void moveNote(NoteVisual* note, int newNoteNumber, double newStartBeats);
+    void createNote(int noteNumber, double startBeats, double lengthBeats, int velocity) [[maybe_unused]];
+    void deleteNote(int noteNumber, double startTime) [[maybe_unused]];
+    void moveNote(NoteVisual* note, int newNoteNumber, double newStartBeats) [[maybe_unused]];
 
     //==============================================================================
     // Grid snapping
@@ -171,3 +171,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
 };
+

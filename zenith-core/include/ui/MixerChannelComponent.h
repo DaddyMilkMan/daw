@@ -19,6 +19,18 @@
 
 #include <JuceHeader.h>
 
+// Conditional Skia components (GPU-accelerated with spring physics)
+#ifdef ZENITH_USE_SKIA
+    #include "../Source/ui/skia/SkiaSliderComponent.h"
+    #include "../Source/ui/skia/SkiaKnobComponent.h"
+    #include "../Source/ui/skia/SkiaButtonComponent.h"
+#else
+    // Fallback custom JUCE components
+    #include "ZenithSlider.h"
+    #include "ZenithKnob.h"
+    #include "ZenithButton.h"
+#endif
+
 // Forward declarations
 namespace zenith {
     class Track;
@@ -89,20 +101,38 @@ private:
 
     // UI components
     juce::Label nameLabel_;
-    juce::Slider faderSlider_;      // Vertical fader for volume
-    juce::Slider panSlider_;        // Rotary knob for pan
-    juce::TextButton muteButton_;
-    juce::TextButton soloButton_;
 
-    // Simple level meter component
-    class LevelMeter : public juce::Component
+#ifdef ZENITH_USE_SKIA
+    // GPU-accelerated Skia components with spring physics
+    zenith::SkiaSliderComponent faderSlider_;      // Vertical fader for volume
+    zenith::SkiaKnobComponent panKnob_;            // Rotary knob for pan
+    zenith::SkiaButtonComponent muteButton_;
+    zenith::SkiaButtonComponent soloButton_;
+#else
+    // Fallback custom JUCE components
+    zenith::ZenithSlider faderSlider_;      // Vertical fader for volume
+    zenith::ZenithKnob panKnob_;            // Rotary knob for pan
+    zenith::ZenithButton muteButton_;
+    zenith::ZenithButton soloButton_;
+#endif
+
+    // Beautiful custom level meter component with smooth animations
+    class LevelMeter : public juce::Component,
+                       public juce::Timer
     {
     public:
+        LevelMeter();
+        ~LevelMeter() override;
+
         void paint(juce::Graphics& g) override;
-        void setLevel(float level);  // 0.0 to 1.0
+        void setLevel(float level) [[maybe_unused]];  // 0.0 to 1.0
+        void timerCallback() override;
 
     private:
-        std::atomic<float> level_{0.0f};
+        std::atomic<float> targetLevel_{0.0f};
+        float currentLevel_{0.0f};  // Animated level with smooth fall-off
+        float peakLevel_{0.0f};     // Peak hold value
+        int peakHoldCounter_{0};    // Frames to hold peak
     };
 
     LevelMeter meter_;
@@ -112,3 +142,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };
+

@@ -18,7 +18,7 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
 
     // Title label
     titleLabel.setText("Plugin Browser", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(24.0f, juce::Font::bold));
+    titleLabel.setFont(juce::FontOptions(24.0f, juce::Font::bold));
     titleLabel.setJustificationType(juce::Justification::centredLeft);
     addAndMakeVisible(titleLabel);
 
@@ -233,7 +233,7 @@ void PluginBrowserComponent::paintCell(juce::Graphics& g, int rowNumber, int col
             case 3: text = desc.manufacturerName; break;
             case 4: text = desc.pluginFormatName; break;
             default: break;
-        }
+        \n    default: break;\n\n    default: break;\n}
 
         g.drawText(text, 2, 0, width - 4, height, juce::Justification::centredLeft, true);
     }
@@ -369,3 +369,5 @@ void PluginBrowserWindow::closeButtonPressed()
 {
     setVisible(false);
 }
+
+

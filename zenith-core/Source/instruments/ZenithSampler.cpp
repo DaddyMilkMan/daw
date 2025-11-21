@@ -29,7 +29,7 @@ struct ZenithSamplerProcessor::SampleBankData
     std::vector<SampleRegion> regions;
 
     // Default parameters
-    float attack = 0.01f;
+    // float attack = 0.01f;  // Unused variable
     float decay = 0.1f;
     float sustain = 0.7f;
     float release = 0.3f;
@@ -54,7 +54,7 @@ ZenithSamplerProcessor::ZenithSamplerProcessor()
     // Initialize synthesiser with voices
     for (int i = 0; i < 16; ++i)
     {
-        synth.addVoice(new ZenithSamplerVoice());
+        synth.addVoice(std::make_unique<ZenithSamplerVoice>());
     }
 }
 
@@ -571,7 +571,7 @@ void ZenithSamplerProcessor::applyBankData(std::unique_ptr<SampleBankData> bankD
 
 juce::AudioProcessorEditor* ZenithSamplerProcessor::createEditor()
 {
-    // TODO: ZenithSamplerEditor requires additional parameters (ZenithSampler& instrument, ZenithPresetManager& presetManager)
+    // TODO(zenith-core#1): ZenithSamplerEditor requires additional parameters (ZenithSampler& instrument, ZenithPresetManager& presetManager)
     // For now, return nullptr - editor creation requires refactoring to pass these dependencies
     return nullptr;
 }
@@ -1232,3 +1232,4 @@ void ZenithSampler::registerPresets()
 }
 
 } // namespace zenith
+

@@ -9,6 +9,9 @@
 TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juce::String& trackId)
     : projectState_(projectState), trackId_(trackId)
 {
+    // Start 60Hz animation timer
+    startTimerHz(60);
+
     // Get track node from ProjectState
     trackNode_ = projectState_.getTrack(trackId_);
     jassert(trackNode_.isValid());
@@ -17,30 +20,40 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juc
     if (trackNode_.isValid())
         trackNode_.addListener(this);
 
-    // Setup name label (editable)
+    // Setup name label (editable) with Apple styling
     nameLabel_.setEditable(true);
     nameLabel_.setJustificationType(juce::Justification::centredLeft);
-    nameLabel_.setFont(juce::Font(14.0f));
-    nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white);
-    nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colour(0xff2a2a2a));
+    nameLabel_.setFont(juce::FontOptions(14.0f));
+    nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.95f));
+    nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
+    nameLabel_.setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
+    nameLabel_.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff2C2C2E));
+    nameLabel_.setColour(juce::TextEditor::textColourId, juce::Colours::white.withAlpha(0.95f));
+    nameLabel_.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3A3A3C));
+    nameLabel_.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(0xff0A84FF));
     nameLabel_.onTextChange = [this]() { onNameChanged(); };
+    nameLabel_.onEditorShow = [this]() { nameHasFocus_ = true; };
+    nameLabel_.onEditorHide = [this]() { nameHasFocus_ = false; };
     addAndMakeVisible(nameLabel_);
 
-    // Setup Mute button
+    // Setup Mute button (Secondary style, becomes Danger when muted)
     muteButton_.setButtonText("M");
-    muteButton_.setClickingTogglesState(true);
+    muteButton_.setToggleable(true);
+    muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
     muteButton_.onClick = [this]() { onMuteClicked(); };
     addAndMakeVisible(muteButton_);
 
-    // Setup Solo button
+    // Setup Solo button (Secondary style, becomes Warning when soloed)
     soloButton_.setButtonText("S");
-    soloButton_.setClickingTogglesState(true);
+    soloButton_.setToggleable(true);
+    soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
     soloButton_.onClick = [this]() { onSoloClicked(); };
     addAndMakeVisible(soloButton_);
 
-    // Setup Arm button
+    // Setup Arm button (Secondary style, becomes Danger when armed)
     armButton_.setButtonText("R");
-    armButton_.setClickingTogglesState(true);
+    armButton_.setToggleable(true);
+    armButton_.setButtonStyle(zenith::ZenithButton::Secondary);
     armButton_.onClick = [this]() { onArmClicked(); };
     addAndMakeVisible(armButton_);
 
@@ -57,20 +70,67 @@ TrackHeaderComponent::~TrackHeaderComponent()
 //==============================================================================
 void TrackHeaderComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
+    auto bounds = getLocalBounds().toFloat();
 
-    // Draw background
-    g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRect(bounds);
+    // Minimal gradient - very subtle
+    juce::ColourGradient backgroundGradient(
+        juce::Colour(0xff242424), bounds.getCentreX(), bounds.getY(),
+        juce::Colour(0xff1f1f1f), bounds.getCentreX(), bounds.getBottom(),
+        false);
+    g.setGradientFill(backgroundGradient);
+    g.fillRoundedRectangle(bounds, 6.0f);
 
-    // Draw color stripe (left edge, 8px wide)
-    auto colorStripe = bounds.removeFromLeft(8);
-    g.setColour(trackColour_);
-    g.fillRect(colorStripe);
+    // Delicate hover glow
+    if (isHovered_)
+    {
+        g.setColour(juce::Colours::white.withAlpha(0.02f));
+        g.fillRoundedRectangle(bounds, 6.0f);
+    }
 
-    // Draw border
-    g.setColour(juce::Colour(0xff1a1a1a));
-    g.drawRect(bounds, 1);
+    // Soft shadow for separation
+    juce::Path shadowPath;
+    shadowPath.addRoundedRectangle(bounds, 6.0f);
+    juce::DropShadow shadow(juce::Colours::black.withAlpha(0.2f), 4, juce::Point<int>(0, 1));
+    shadow.drawForPath(g, shadowPath);
+
+    // Color stripe (left edge, 6px wide) with rounded corners
+    auto colorStripe = bounds.removeFromLeft(6.0f);
+
+    // Enhanced color stripe with gradient
+    juce::ColourGradient stripeGradient(
+        trackColour_.brighter(0.1f), colorStripe.getCentreX(), colorStripe.getY(),
+        trackColour_.darker(0.2f), colorStripe.getCentreX(), colorStripe.getBottom(),
+        false);
+    g.setGradientFill(stripeGradient);
+
+    juce::Path stripePath;
+    stripePath.addRoundedRectangle(colorStripe.getX(), colorStripe.getY(),
+                                   colorStripe.getWidth(), colorStripe.getHeight(),
+                                   4.0f, 4.0f, true, false, true, false);  // Round left side only
+    g.fillPath(stripePath);
+
+    // Stripe highlight (left edge)
+    g.setColour(juce::Colours::white.withAlpha(0.2f));
+    g.drawLine(colorStripe.getX() + 1.0f, colorStripe.getY() + 4.0f,
+              colorStripe.getX() + 1.0f, colorStripe.getBottom() - 4.0f, 1.0f);
+
+    // Inner highlight at top (subtle)
+    g.setColour(juce::Colour(0xffffffff).withAlpha(0.03f));
+    auto highlightBounds = bounds.withHeight(bounds.getHeight() * 0.4f);
+    g.fillRoundedRectangle(highlightBounds, 4.0f);
+
+    // Subtle bottom border with gradient
+    g.setColour(juce::Colour(0xff3A3A3C).withAlpha(0.5f));
+    g.drawLine(2.0f, bounds.getBottom() - 0.5f,
+              bounds.getRight() - 2.0f, bounds.getBottom() - 0.5f, 0.5f);
+
+    // Name editor focus glow
+    if (nameFocusAnim_ > 0.01f)
+    {
+        auto nameBounds = nameLabel_.getBounds().toFloat().expanded(2.0f);
+        g.setColour(juce::Colour(0xff0A84FF).withAlpha(nameFocusAnim_ * 0.3f));
+        g.drawRoundedRectangle(nameBounds, 3.0f, 2.0f);
+    }
 }
 
 void TrackHeaderComponent::resized()
@@ -102,6 +162,23 @@ void TrackHeaderComponent::resized()
     nameLabel_.setBounds(bounds);
 }
 
+void TrackHeaderComponent::timerCallback()
+{
+    // Smooth focus animation (60Hz, 0.15 speed)
+    bool needsRepaint = false;
+
+    // Name editor focus animation
+    float nameTarget = nameHasFocus_ ? 1.0f : 0.0f;
+    if (std::abs(nameFocusAnim_ - nameTarget) > 0.01f)
+    {
+        nameFocusAnim_ += (nameTarget - nameFocusAnim_) * 0.15f;
+        needsRepaint = true;
+    }
+
+    if (needsRepaint)
+        repaint();
+}
+
 //==============================================================================
 // ValueTree::Listener (MESSAGE THREAD)
 //==============================================================================
@@ -127,19 +204,19 @@ void TrackHeaderComponent::onNameChanged()
 
 void TrackHeaderComponent::onMuteClicked()
 {
-    bool newMuted = muteButton_.getToggleState();
+    bool newMuted = !isMuted_;  // Toggle current state
     projectState_.setTrackMute(trackId_, newMuted, "Toggle Mute");
 }
 
 void TrackHeaderComponent::onSoloClicked()
 {
-    bool newSoloed = soloButton_.getToggleState();
+    bool newSoloed = !isSoloed_;  // Toggle current state
     projectState_.setTrackSolo(trackId_, newSoloed, "Toggle Solo");
 }
 
 void TrackHeaderComponent::onArmClicked()
 {
-    bool newArmed = armButton_.getToggleState();
+    bool newArmed = !isArmed_;  // Toggle current state
     projectState_.setTrackArmed(trackId_, newArmed, "Toggle Record Arm");
 }
 
@@ -166,34 +243,36 @@ void TrackHeaderComponent::updateFromState()
     isSoloed_ = trackNode_[ProjectState::PROP_SOLO];
     isArmed_ = trackNode_[ProjectState::PROP_ARMED];
 
-    muteButton_.setToggleState(isMuted_, juce::dontSendNotification);
-    soloButton_.setToggleState(isSoloed_, juce::dontSendNotification);
-    armButton_.setToggleState(isArmed_, juce::dontSendNotification);
+    // Update button toggle states
+    muteButton_.setToggleState(isMuted_, false);
+    soloButton_.setToggleState(isSoloed_, false);
+    armButton_.setToggleState(isArmed_, false);
 
-    // Visual feedback
-    // Muted: grey out
+    // Update button styles based on state
+    // Muted: grey out name, set button to Danger style
     if (isMuted_)
     {
         nameLabel_.setColour(juce::Label::textColourId, juce::Colours::grey);
-        muteButton_.setColour(juce::TextButton::buttonColourId, juce::Colour(0xff666666));
+        muteButton_.setButtonStyle(zenith::ZenithButton::Danger);
     }
     else
     {
         nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white);
-        muteButton_.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
     }
 
-    // Soloed: highlight S button
+    // Soloed: highlight S button with Warning style (orange)
     if (isSoloed_)
-        soloButton_.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffffaa00));
+        soloButton_.setButtonStyle(zenith::ZenithButton::Warning);
     else
-        soloButton_.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
 
-    // Armed: highlight R button (red)
+    // Armed: highlight R button with Danger style (red)
     if (isArmed_)
-        armButton_.setColour(juce::TextButton::buttonColourId, juce::Colour(0xffff0000));
+        armButton_.setButtonStyle(zenith::ZenithButton::Danger);
     else
-        armButton_.setColour(juce::TextButton::buttonColourId, juce::Colours::darkgrey);
+        armButton_.setButtonStyle(zenith::ZenithButton::Secondary);
 
     repaint();
 }
+

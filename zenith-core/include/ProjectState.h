@@ -169,11 +169,11 @@ public:
     void setProjectName(const juce::String& name);
 
     double getTempo() const;
-    void setTempo(double tempo);
+    void setTempo(double tempo) [[maybe_unused]];
 
     int getTimeSignatureNumerator() const;
     int getTimeSignatureDenominator() const;
-    void setTimeSignature(int numerator, int denominator);
+    void setTimeSignature(int numerator, int denominator) [[maybe_unused]];
 
     //==========================================================================
     // Track Management
@@ -329,7 +329,7 @@ public:
     //==========================================================================
 
     /**
-     * @brief Create a new clip (undoable, sample-based)
+     * @brief Create a std::make_unique<clip>(undoable, sample-based)
      * @param trackId Track ID
      * @param clipType "audio" or "midi"
      * @param startSamples Start position in samples
@@ -786,7 +786,7 @@ public:
      * @brief Change a MIDI note's velocity (Phase 8.2)
      * @param clipId Clip ID
      * @param noteId Note ID
-     * @param newVelocity New velocity (1-127, clamped)
+     * @param newVelocity std::make_unique<velocity>(1-127, clamped)
      * @param actionName Undo action name
      */
     void setMidiNoteVelocity(const juce::String& clipId, const juce::String& noteId,
@@ -943,3 +943,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
 };
+

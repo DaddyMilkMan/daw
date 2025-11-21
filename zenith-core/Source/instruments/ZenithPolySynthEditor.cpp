@@ -76,7 +76,7 @@ void ZenithPolySynthEditor::setupPresetBrowser()
         onPresetLoaded(preset);
     });
 
-    presetBrowser_->setCaptureStateCallback([this]() -> std::map<std::string, float>
+    presetBrowser_->setCaptureStateCallback([this]
     {
         return captureCurrentState();
     });
@@ -170,7 +170,7 @@ void ZenithPolySynthEditor::setupEnvelopeSection()
     addAndMakeVisible(ampEnvLabel_);
     ampEnvLabel_.setText("Amp ADSR", juce::dontSendNotification);
     ampEnvLabel_.setJustificationType(juce::Justification::centred);
-    ampEnvLabel_.setFont(juce::Font(14.0f, juce::Font::bold));
+    ampEnvLabel_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
 
     // Amp ADSR
     setupSlider(ampAttackSlider_, ampAttackLabel_, "A", "Amp attack time");
@@ -193,7 +193,7 @@ void ZenithPolySynthEditor::setupEnvelopeSection()
     addAndMakeVisible(filterEnvLabel_);
     filterEnvLabel_.setText("Filter ADSR", juce::dontSendNotification);
     filterEnvLabel_.setJustificationType(juce::Justification::centred);
-    filterEnvLabel_.setFont(juce::Font(14.0f, juce::Font::bold));
+    filterEnvLabel_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
 
     // Filter ADSR
     setupSlider(filterEnvAttackSlider_, filterEnvAttackLabel_, "A", "Filter envelope attack");
@@ -222,7 +222,7 @@ void ZenithPolySynthEditor::setupLFOSection()
     addAndMakeVisible(lfo1Label_);
     lfo1Label_.setText("LFO 1", juce::dontSendNotification);
     lfo1Label_.setJustificationType(juce::Justification::centred);
-    lfo1Label_.setFont(juce::Font(14.0f, juce::Font::bold));
+    lfo1Label_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
 
     addAndMakeVisible(lfo1WaveCombo_);
     lfo1WaveCombo_.addItem("Sine", 1);
@@ -256,7 +256,7 @@ void ZenithPolySynthEditor::setupLFOSection()
     addAndMakeVisible(lfo2Label_);
     lfo2Label_.setText("LFO 2", juce::dontSendNotification);
     lfo2Label_.setJustificationType(juce::Justification::centred);
-    lfo2Label_.setFont(juce::Font(14.0f, juce::Font::bold));
+    lfo2Label_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
 
     addAndMakeVisible(lfo2WaveCombo_);
     lfo2WaveCombo_.addItem("Sine", 1);
@@ -321,10 +321,8 @@ void ZenithPolySynthEditor::setupMacroSection()
 {
     const auto& metadata = instrument_.getMetadata();
 
-    for (size_t i = 0; i < metadata.macros.size(); ++i)
+    for (const auto& macroInfo : metadata.macros)
     {
-        const auto& macroInfo = metadata.macros[i];
-
         // Create knob
         auto knob = std::make_unique<juce::Slider>();
         knob->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -338,7 +336,7 @@ void ZenithPolySynthEditor::setupMacroSection()
         auto label = std::make_unique<juce::Label>();
         label->setText(macroInfo.name, juce::dontSendNotification);
         label->setJustificationType(juce::Justification::centred);
-        label->setFont(juce::Font(12.0f, juce::Font::bold));
+        label->setFont(juce::FontOptions(12.0f, juce::Font::bold));
         addAndMakeVisible(*label);
 
         // Store knob and label
@@ -384,9 +382,9 @@ void ZenithPolySynthEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
     }
 }
 
-std::map<std::string, float> ZenithPolySynthEditor::captureCurrentState()
+std::map<std::string, float, std::less<>> ZenithPolySynthEditor::captureCurrentState() const
 {
-    std::map<std::string, float> state;
+    std::map<std::string, float, std::less<>> state;
 
     // Capture all parameters from metadata
     const auto& metadata = instrument_.getMetadata();
@@ -410,14 +408,14 @@ void ZenithPolySynthEditor::paint(juce::Graphics& g)
 
     // Title
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(24.0f, juce::Font::bold));
+    g.setFont(juce::FontOptions(24.0f, juce::Font::bold));
     g.drawText("Zenith PolySynth", 0, 10, getWidth(), 35, juce::Justification::centred);
 
     // Macro section header
     if (!macroKnobs_.empty())
     {
         g.setColour(juce::Colour(0xff4a9eff));
-        g.setFont(juce::Font(16.0f, juce::Font::bold));
+        g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
         g.drawText("SMART MACROS", 0, getHeight() - 140, getWidth(), 20, juce::Justification::centred);
 
         // Separator line
@@ -456,7 +454,7 @@ void ZenithPolySynthEditor::resized()
     // Layout main sections in a grid
     int row1Height = 140;
     int row2Height = 180;
-    int row3Height = mainArea.getHeight() - row1Height - row2Height - 20;
+    // // int row3Height = mainArea.getHeight() - row1Height - row2Height - 20;  // Unused variable  // Unused
 
     // Row 1: Oscillator + Filter
     auto row1 = mainArea.removeFromTop(row1Height);
@@ -640,3 +638,4 @@ void ZenithPolySynthEditor::resized()
 }
 
 } // namespace zenith
+

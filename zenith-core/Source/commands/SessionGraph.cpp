@@ -258,3 +258,4 @@ juce::var SessionGraph::serializeClip(Track::Clip* clip, int clipIndex)
 }
 
 } // namespace zenith
+

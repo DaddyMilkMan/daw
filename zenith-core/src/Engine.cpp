@@ -15,6 +15,7 @@
 #include "../Source/engine/AudioFilePool.h"
 #include "../Source/engine/PluginHost.h"
 #include "../Source/ui/PluginEditorWindow.h"
+#include "../Source/ui/AudioFeedback.h"
 
 //==============================================================================
 Engine::Engine()
@@ -154,7 +155,7 @@ void Engine::syncWithProjectState()
     };
 
     // Create engine tracks from project state
-    for (auto trackNode : tracksNode)
+    for (const auto& trackNode : tracksNode)
     {
         juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
         juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
@@ -180,7 +181,7 @@ void Engine::syncWithProjectState()
         auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
         if (clipsNode.isValid())
         {
-            for (auto clipNode : clipsNode)
+            for (const auto& clipNode : clipsNode)
             {
                 // Create clip
                 auto clip = std::make_unique<zenith::Track::Clip>();
@@ -307,6 +308,9 @@ void Engine::play()
     DBG("Engine: Play");
     isPlaying_.store(true);
 
+    // Mute UI sounds during playback
+    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(true);
+
     // Phase 1.3: Use new playhead system
     // If playhead is at or past loop end, reset to loop start or 0
     const juce::int64 loopEnd = loopEndSamples_.load();
@@ -341,6 +345,9 @@ void Engine::stop()
 
     isPlaying_.store(false);
     enableTestTone_.store(false);
+
+    // Un-mute UI sounds when playback stops
+    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(false);
 
     // Phase 13: Stop automation synchronizer
     if (automationSynchronizer)
@@ -381,6 +388,9 @@ void Engine::record()
 {
     DBG("Engine: Record");
 
+    // Mute UI sounds during recording (in case not already playing)
+    zenith::AudioFeedback::getInstance().setMutedDuringPlayback(true);
+
     // Start playback if not already playing
     if (!isPlaying_.load())
     {
@@ -413,7 +423,7 @@ void Engine::record()
     // ==========================================================================
 
     // Create recordings directory
-    // TODO: Use project path when available; for now use a temp directory
+    // TODO(zenith-core#1): Use project path when available; for now use a temp directory
     juce::File recordingsDir = juce::File::getSpecialLocation(
         juce::File::userDocumentsDirectory).getChildFile("ZenithDAW/Recordings");
 
@@ -1262,7 +1272,7 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         // Clear track buffer
         trackBuffer.clear();
 
-        // TODO: When tracks have actual audio content, render it here
+        // TODO(zenith-core#1): When tracks have actual audio content, render it here
         // For now, tracks don't have clips or audio sources yet (Phase 0)
         // In future phases:
         // - Get track clips that overlap playheadPosition
@@ -1280,7 +1290,7 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         }
     }
 
-    // TODO: Apply master bus effects when implemented
+    // TODO(zenith-core#1): Apply master bus effects when implemented
 }
 
 bool Engine::exportProjectToWav(const juce::File& outputFile,
@@ -1308,7 +1318,7 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
 
     // Auto-detect duration if not specified
     // For Phase 0, use 10 seconds as default
-    // TODO: In future phases, detect from project content (clips, automation, etc.)
+    // TODO(zenith-core#1): In future phases, detect from project content (clips, automation, etc.)
     if (durationInSeconds <= 0.0)
     {
         durationInSeconds = 10.0;  // Default duration
@@ -1418,7 +1428,7 @@ void Engine::processAudioRecording(
         if (session.writer == nullptr)
             continue;
 
-        // TODO: Implement proper input routing matrix
+        // TODO(zenith-core#1): Implement proper input routing matrix
         // For now: simple mapping - session track index maps to input channel
         // If we have more sessions than input channels, they'll share channels
 
@@ -1621,3 +1631,4 @@ juce::MidiMessageSequence Engine::quantizeMidiSequence(
     return output;
 
 }
+

@@ -1,6 +1,14 @@
 /**
  * @file ClipComponent.h
- * @brief Visual representation of a clip on the timeline
+ * @brief Beautiful clip with gradients, animations, and modern design
+ *
+ * Features modern DAW aesthetics:
+ * - Smooth gradients (Ableton-inspired)
+ * - Hover effects with scale animation
+ * - Selection glow with pulse
+ * - Subtle shadows for depth
+ * - Waveform preview visualization
+ * - 60 Hz smooth animations
  */
 
 #pragma once
@@ -9,12 +17,18 @@
 
 /**
  * @class ClipComponent
- * @brief Displays a clip on the arranger timeline
+ * @brief Beautiful, animated clip display on the arranger timeline
  *
- * Shows clip name, position, and allows mouse interaction.
- * Bound to a CLIP ValueTree node.
+ * Modern design with:
+ * - Gradient backgrounds (lighter at top, darker at bottom)
+ * - Hover scaling and glow effects
+ * - Selection pulse animation
+ * - Shadows for depth
+ * - Rounded corners (8px)
+ * - Waveform preview for audio clips
  */
-class ClipComponent : public juce::Component
+class ClipComponent : public juce::Component,
+                     public juce::Timer
 {
 public:
     /**
@@ -22,7 +36,7 @@ public:
      * @param clipNode ValueTree node for this clip
      */
     ClipComponent(juce::ValueTree clipNode);
-    ~ClipComponent() override = default;
+    ~ClipComponent() override;
 
     //==========================================================================
     // Clip data
@@ -51,7 +65,7 @@ public:
     /**
      * @brief Update bounds from clip data and pixels-per-beat ratio
      */
-    void updateBounds(double pixelsPerBeat, int yPosition, int height);
+    void updateBounds(double pixelsPerBeat, int yPosition, int height) [[maybe_unused]];
 
     //==========================================================================
     // Component interface
@@ -60,11 +74,26 @@ public:
     void paint(juce::Graphics& g) override;
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseEnter(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
+
+    //==========================================================================
+    // Timer interface (for smooth animations)
+    //==========================================================================
+
+    void timerCallback() override;
 
 private:
     juce::ValueTree clip;
     juce::Point<int> dragStartPos;
     double dragStartBeats = 0.0;
 
+    // Animation state
+    bool isHovered = false;
+    bool isSelected = false;
+    float hoverAnimation = 0.0f;     // 0.0 to 1.0 for smooth hover animation
+    float selectionPulse = 0.0f;     // 0.0 to 1.0 for selection glow pulse
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipComponent)
 };
+

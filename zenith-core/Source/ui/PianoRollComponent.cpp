@@ -31,7 +31,7 @@ PianoRollComponent::PianoRollComponent(zenith::Track::Clip* clipToEdit)
     addKeyListener(this);
     setWantsKeyboardFocus(true);
 
-    // TODO: Get tempo and sample rate from Engine or clip metadata
+    // TODO(zenith-core#1): Get tempo and sample rate from Engine or clip metadata
     currentTempo = 120.0;
     currentSampleRate = 44100.0;
 
@@ -105,7 +105,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& e)
 
         // Calculate note number and start time from mouse position
         float relativeX = e.position.getX() - pianoKeysWidth;
-        float relativeY = e.position.getY();
+        // float relativeY = e.position.getY();  // Unused variable
 
         int noteNumber = pixelsToNoteNumber(relativeY);
         double startBeats = snapToGrid(pixelsToBeats(relativeX));
@@ -131,7 +131,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& e)
 
     // Calculate new position
     float relativeX = e.position.getX() - pianoKeysWidth;
-    float relativeY = e.position.getY();
+    // float relativeY = e.position.getY();  // Unused variable
 
     int newNoteNumber = pixelsToNoteNumber(relativeY);
     double newStartBeats = snapToGrid(pixelsToBeats(relativeX));
@@ -232,7 +232,7 @@ void PianoRollComponent::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> b
             juce::String noteName = "C" + juce::String(octave);
 
             g.setColour(juce::Colours::lightgrey);
-            g.setFont(juce::Font(10.0f));
+            g.setFont(juce::FontOptions(10.0f));
             g.drawText(noteName,
                       bounds.getX() + 2,
                       static_cast<int>(y),
@@ -411,7 +411,7 @@ NoteVisual* PianoRollComponent::hitTestNote(juce::Point<float> position)
     {
         if (it->bounds.contains(position))
         {
-            return &(*it);
+            return std::to_address(it);
         }
     }
 
@@ -437,7 +437,7 @@ void PianoRollComponent::createNote(int noteNumber, double startBeats, double le
 
     // Add to clip's MIDI sequence (this modifies the clip)
     // For MVP, we directly modify the sequence
-    // TODO: Use undo/redo system
+    // TODO(zenith-core#1): Use undo/redo system
     auto sequence = clip->getMidiSequence();
     if (sequence != nullptr)
     {
@@ -500,7 +500,7 @@ void PianoRollComponent::moveNote(NoteVisual* note, int newNoteNumber, double ne
     // Delete old note
     deleteNote(note->noteNumber, note->startTime);
 
-    // Create new note at new position (preserve duration and velocity)
+    // Create new note at std::make_unique<position>(preserve duration and velocity)
     double durationBeats = note->duration / (currentSampleRate * 60.0 / currentTempo);
     createNote(newNoteNumber, newStartBeats, durationBeats, note->velocity);
 }
@@ -556,3 +556,4 @@ void PianoRollWindow::closeButtonPressed()
     // Just delete this window
     delete this;
 }
+

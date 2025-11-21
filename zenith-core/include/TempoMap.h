@@ -96,7 +96,7 @@ public:
      * @param bpm Tempo in BPM
      * @note MESSAGE THREAD ONLY
      */
-    void setSingleTempo(double bpm);
+    void setSingleTempo(double bpm) [[maybe_unused]];
 
     //==========================================================================
     // RT-Safe Conversion API (Audio Thread Safe)
@@ -179,3 +179,4 @@ private:
 };
 
 } // namespace zenith
+

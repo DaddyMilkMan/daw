@@ -62,13 +62,13 @@ public:
      * @brief Set horizontal zoom (pixels per beat)
      * @param ppb Pixels per beat (e.g. 100.0)
      */
-    void setPixelsPerBeat(double ppb);
+    void setPixelsPerBeat(double ppb) [[maybe_unused]];
 
     /**
      * @brief Set horizontal scroll offset
      * @param offset Offset in beats
      */
-    void setScrollOffsetBeats(double offset);
+    void setScrollOffsetBeats(double offset) [[maybe_unused]];
 
     /**
      * @brief Enable/disable grid snapping
@@ -125,8 +125,8 @@ public:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
 
 private:
     //==========================================================================
@@ -284,3 +284,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutomationLaneComponent)
 };
+

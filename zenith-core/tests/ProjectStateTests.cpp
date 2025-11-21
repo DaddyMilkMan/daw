@@ -16,7 +16,7 @@ bool hasDuplicateTrackIds(const ProjectState& state)
 
     juce::StringArray ids;
 
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
         ids.add(track[ProjectState::PROP_ID].toString());
 
     for (int i = 0; i < ids.size(); ++i)
@@ -73,3 +73,4 @@ int main()
     tempFile.deleteFile();
     return 0;
 }
+

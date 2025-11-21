@@ -73,7 +73,7 @@ void ArrangerView::paint(juce::Graphics& g)
 
     // Draw placeholder content
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(16.0f));
+    g.setFont(juce::FontOptions(16.0f));
     g.drawText("ArrangerView (Integration Stub)",
                getLocalBounds().reduced(20),
                juce::Justification::topLeft);
@@ -93,7 +93,7 @@ void ArrangerView::paint(juce::Graphics& g)
     if (tracksNode.isValid())
     {
         int trackY = 40;
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             juce::String trackId = track[ProjectState::PROP_ID].toString();
             juce::String trackName = track[ProjectState::PROP_NAME].toString();
@@ -109,14 +109,14 @@ void ArrangerView::paint(juce::Graphics& g)
 
             // Track name
             g.setColour(juce::Colours::white);
-            g.setFont(juce::Font(14.0f));
+            g.setFont(juce::FontOptions(14.0f));
             g.drawText(trackName, trackRect.reduced(10, 5), juce::Justification::topLeft);
 
             // Draw clips
             auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
             if (clipsNode.isValid())
             {
-                for (auto clip : clipsNode)
+                for (const auto& clip : clipsNode)
                 {
                     double startBeats = clip[ProjectState::PROP_START];
                     double lengthBeats = clip[ProjectState::PROP_LENGTH];
@@ -158,7 +158,7 @@ void ArrangerView::resized()
     if (tracksNode.isValid())
     {
         int trackY = 40;
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             juce::String trackId = track[ProjectState::PROP_ID].toString();
 
@@ -194,12 +194,12 @@ void ArrangerView::mouseDoubleClick(const juce::MouseEvent& event)
         auto& state = projectState.getState();
         auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
 
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             if (track[ProjectState::PROP_ID].toString() == trackId)
             {
                 auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
-                for (auto clip : clipsNode)
+                for (const auto& clip : clipsNode)
                 {
                     if (clip[ProjectState::PROP_ID].toString() == clipId)
                     {
@@ -255,7 +255,7 @@ std::pair<juce::String, juce::String> ArrangerView::findClipAtPosition(juce::Poi
     if (tracksNode.isValid())
     {
         int trackY = 40;
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             if (position.y >= trackY && position.y < trackY + trackHeight)
             {
@@ -267,7 +267,7 @@ std::pair<juce::String, juce::String> ArrangerView::findClipAtPosition(juce::Poi
                 {
                     double clickBeats = pixelsToBeats(static_cast<float>(position.x));
 
-                    for (auto clip : clipsNode)
+                    for (const auto& clip : clipsNode)
                     {
                         double startBeats = clip[ProjectState::PROP_START];
                         double lengthBeats = clip[ProjectState::PROP_LENGTH];
@@ -331,7 +331,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
 
     // Label
     g.setColour(juce::Colours::lightgrey);
-    g.setFont(juce::Font(12.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawText(paramId + " automation", getLocalBounds().reduced(5), juce::Justification::topLeft);
 
     // Get automation envelope from ProjectState
@@ -342,7 +342,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
         // Draw automation points
         g.setColour(juce::Colours::yellow);
 
-        for (auto point : envelope)
+        for (const auto& point : envelope)
         {
             double timeBeats = point[ProjectState::PROP_TIME_BEATS];
             double value = point[ProjectState::PROP_VALUE];
@@ -359,7 +359,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
         juce::Path path;
         bool firstPoint = true;
 
-        for (auto point : envelope)
+        for (const auto& point : envelope)
         {
             double timeBeats = point[ProjectState::PROP_TIME_BEATS];
             double value = point[ProjectState::PROP_VALUE];
@@ -450,3 +450,4 @@ double AutomationLaneComponent::yToValue(float y) const
         return static_cast<double>(normalizedValue);
     }
 }
+

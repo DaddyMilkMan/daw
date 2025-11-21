@@ -16,6 +16,7 @@
 
 #include <JuceHeader.h>
 #include "../ProjectState.h"
+#include "ZenithButton.h"
 
 //==============================================================================
 /**
@@ -34,6 +35,7 @@
  * R = Record arm button
  */
 class TrackHeaderComponent : public juce::Component,
+                               public juce::Timer,
                                private juce::ValueTree::Listener
 {
 public:
@@ -56,6 +58,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void timerCallback() override;
 
     //==========================================================================
     /**
@@ -70,8 +73,8 @@ private:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override {}
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override {}
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override {}
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override {}
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override {}
     void valueTreeParentChanged(juce::ValueTree& tree) override {}
 
     //==========================================================================
@@ -99,9 +102,9 @@ private:
 
     // UI Components
     juce::Label nameLabel_;
-    juce::TextButton muteButton_;
-    juce::TextButton soloButton_;
-    juce::TextButton armButton_;
+    zenith::ZenithButton muteButton_;
+    zenith::ZenithButton soloButton_;
+    zenith::ZenithButton armButton_;
 
     // Current state (cached from ValueTree)
     juce::Colour trackColour_{juce::Colours::grey};
@@ -109,5 +112,11 @@ private:
     bool isSoloed_ = false;
     bool isArmed_ = false;
 
+    // Animation state
+    float nameFocusAnim_ = 0.0f;
+    bool nameHasFocus_ = false;
+    bool isHovered_ = false;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackHeaderComponent)
 };
+

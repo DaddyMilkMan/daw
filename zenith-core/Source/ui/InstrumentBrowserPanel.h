@@ -18,6 +18,11 @@
 #include "../engine/Track.h"
 #include "../../include/ProjectState.h"
 
+// Conditional Skia components (GPU-accelerated with spring physics)
+#ifdef ZENITH_USE_SKIA
+    #include "skia/SkiaButtonComponent.h"
+#endif
+
 // Forward declarations
 class Engine;
 
@@ -32,8 +37,11 @@ namespace zenith {
  * 2. View presets for selected instrument
  * 3. Search and filter presets by name/tag
  * 4. Assign presets to instrument tracks
+ *
+ * Features Apple-inspired design with gradients, rounded corners, and smooth animations.
  */
 class InstrumentBrowserPanel : public juce::Component,
+                                public juce::Timer,
                                 private juce::TextEditor::Listener
 {
 public:
@@ -52,6 +60,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void timerCallback() override;
 
     //==========================================================================
     // Visibility control
@@ -65,7 +74,7 @@ public:
     /**
      * @brief Set panel visibility
      */
-    void setPanelVisible(bool shouldBeVisible);
+    void setPanelVisible(bool shouldBeVisible) [[maybe_unused]];
 
 private:
     //==========================================================================
@@ -105,7 +114,13 @@ private:
     // Tag filter chips
     juce::Label tagsLabel;
     juce::Component tagChipsContainer;
+
+#ifdef ZENITH_USE_SKIA
+    std::vector<std::unique_ptr<SkiaButtonComponent>> tagChips;
+#else
     std::vector<std::unique_ptr<juce::TextButton>> tagChips;
+#endif
+
     juce::String activeTag;  // Empty = show all
 
     // Instrument list
@@ -115,11 +130,23 @@ private:
     // Preset list
     juce::Label presetsLabel;
     juce::ListBox presetList;
+
+#ifdef ZENITH_USE_SKIA
+    std::unique_ptr<SkiaButtonComponent> loadPresetButton;
+    std::unique_ptr<SkiaButtonComponent> searchClearButton;
+#else
     juce::TextButton loadPresetButton;
+    juce::TextButton searchClearButton;
+#endif
 
     // Status/toast message
     juce::Label statusLabel;
     int statusLabelAlpha = 0;  // For fade-out animation
+    int statusHoldTicks = 0;   // Hold time before fading
+
+    // Search bar enhancements
+    float searchFocusAnimation = 0.0f;
+    bool searchHasFocus = false;
 
     //==========================================================================
     // Data
@@ -188,12 +215,12 @@ private:
     /**
      * @brief Handle instrument selection
      */
-    void onInstrumentSelected(int instrumentIndex);
+    void onInstrumentSelected(int instrumentIndex) [[maybe_unused]];
 
     /**
      * @brief Handle preset selection
      */
-    void onPresetDoubleClicked(int presetIndex);
+    void onPresetDoubleClicked(int presetIndex) [[maybe_unused]];
 
     /**
      * @brief Load selected preset to selected track
@@ -221,31 +248,23 @@ private:
     void showStatus(const juce::String& message, bool isError = false);
 
     /**
-     * @brief Timer callback for status fade-out
+     * @brief Update status fade-out animation
      */
-    void timerCallback();
+    void updateStatusAnimation();
+
+    /**
+     * @brief Clear search box
+     */
+    void clearSearch();
 
     /**
      * @brief Get currently selected track
      */
     zenith::Track* getSelectedTrack() const;
 
-    //==========================================================================
-    // Timer for status fade-out
-    //==========================================================================
-
-    class StatusTimer : public juce::Timer
-    {
-    public:
-        StatusTimer(InstrumentBrowserPanel& owner) : owner_(owner) {}
-        void timerCallback() override { owner_.timerCallback(); }
-    private:
-        InstrumentBrowserPanel& owner_;
-    };
-
-    std::unique_ptr<StatusTimer> statusTimer_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentBrowserPanel)
 };
 
 } // namespace zenith
+

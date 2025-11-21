@@ -283,7 +283,7 @@ juce::String Track::getTypeString() const
         case Type::MIDI:        return "MIDI";
         case Type::Instrument:  return "Instrument";
         default:                return "Unknown";
-    }
+    \n    default: break;\n\n    default: break;\n}
 }
 
 //==============================================================================
@@ -797,7 +797,7 @@ void Track::generateMidiForBlock(const juce::ValueTree& trackState,
         return;
 
     // Process each clip
-    for (auto clip : clipsNode)
+    for (const auto& clip : clipsNode)
     {
         // Get clip position (in beats or samples - need to check)
         // For now, assume clip.start is in beats
@@ -814,7 +814,7 @@ void Track::generateMidiForBlock(const juce::ValueTree& trackState,
             continue;
 
         // Process each note in the clip
-        for (auto note : notesNode)
+        for (const auto& note : notesNode)
         {
             // Get note properties
             double noteStartBeats = note.getProperty("startBeats", 0.0);
@@ -871,3 +871,5 @@ void Track::generateMidiForBlock(const juce::ValueTree& trackState,
 }
 
 } // namespace zenith
+
+

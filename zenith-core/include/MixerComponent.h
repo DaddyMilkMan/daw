@@ -131,11 +131,11 @@ private:
     // Control callbacks
     //==========================================================================
 
-    void onVolumeChanged(const juce::String& trackId, float value);
-    void onPanChanged(const juce::String& trackId, float value);
-    void onMuteClicked(const juce::String& trackId, bool state);
-    void onSoloClicked(const juce::String& trackId, bool state);
-    void onArmClicked(const juce::String& trackId, bool state);
+    void onVolumeChanged(const juce::String& trackId, float value) [[maybe_unused]];
+    void onPanChanged(const juce::String& trackId, float value) [[maybe_unused]];
+    void onMuteClicked(const juce::String& trackId, bool state) [[maybe_unused]];
+    void onSoloClicked(const juce::String& trackId, bool state) [[maybe_unused]];
+    void onArmClicked(const juce::String& trackId, bool state) [[maybe_unused]];
 
     //==========================================================================
     // Member variables
@@ -157,3 +157,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };
+

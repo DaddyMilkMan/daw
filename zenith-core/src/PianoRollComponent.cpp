@@ -289,7 +289,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& e)
             if (draggingNote != nullptr)
                 updateNoteDrag(e);
             break;
-    }
+    \n    default: break;\n\n    default: break;\n}
 }
 
 void PianoRollComponent::mouseUp(const juce::MouseEvent& e)
@@ -319,7 +319,7 @@ void PianoRollComponent::mouseUp(const juce::MouseEvent& e)
             if (draggingNote != nullptr)
                 finishNoteDrag();
             break;
-    }
+    \n    default: break;\n\n    default: break;\n}
 
     currentDragMode = DragMode::None;
     activeNote = nullptr;
@@ -747,7 +747,7 @@ void PianoRollComponent::finishSelectionMove()
         return;
 
     // Commit all selected notes to ProjectState
-    // TODO: Batch into single undo transaction
+    // TODO(zenith-core#1): Batch into single undo transaction
     size_t stateIndex = 0;
     for (auto& note : noteRects)
     {
@@ -877,7 +877,7 @@ void PianoRollComponent::zoomHorizontal(float factor, float centerX)
 void PianoRollComponent::zoomVertical(float factor, float centerY)
 {
     // Zoom around centerY
-    int centerPitch = pixelsToPitch(centerY);
+    // int centerPitch = pixelsToPitch(centerY);  // Unused variable
 
     pixelsPerPitch *= factor;
     pixelsPerPitch = juce::jlimit(6.0, 48.0, pixelsPerPitch);  // Clamp zoom
@@ -1017,7 +1017,7 @@ void PianoRollComponent::paint(juce::Graphics& g)
     if (!currentClip.isValid())
     {
         g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(16.0f));
+        g.setFont(juce::FontOptions(16.0f));
         g.drawText("No clip loaded", getLocalBounds(), juce::Justification::centred);
         return;
     }
@@ -1125,7 +1125,7 @@ void PianoRollComponent::paint(juce::Graphics& g)
 
     // Draw clip name in corner
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(14.0f));
+    g.setFont(juce::FontOptions(14.0f));
     g.drawText(currentClip.clipName + " - " + currentClip.clipId,
                noteGrid.removeFromTop(30).reduced(10, 5),
                juce::Justification::centredLeft);
@@ -1135,3 +1135,5 @@ void PianoRollComponent::resized()
 {
     updateNoteRectangles();
 }
+
+

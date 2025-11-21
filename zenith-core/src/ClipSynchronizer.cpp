@@ -59,7 +59,7 @@ juce::String ClipSynchronizer::createClip(const juce::String& trackId, double st
         return {};
 
     // Find track
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
     {
         if (track[ProjectState::PROP_ID].toString() == trackId)
         {
@@ -124,3 +124,4 @@ double ClipSynchronizer::samplesToBeats(int64_t samples, double tempo, double sa
     double seconds = static_cast<double>(samples) / sampleRate;
     return seconds / (60.0 / tempo);
 }
+

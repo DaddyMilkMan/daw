@@ -1385,3 +1385,4 @@ juce::var CommandAPI::setNoteLength(const juce::var& params)
 }
 
 } // namespace zenith
+

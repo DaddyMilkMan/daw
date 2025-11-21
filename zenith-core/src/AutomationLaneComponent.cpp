@@ -496,3 +496,4 @@ void AutomationLaneComponent::valueTreeChildOrderChanged(juce::ValueTree& parent
     // Point order changed (shouldn't happen, but handle it) -> repaint
     repaint();
 }
+

@@ -63,12 +63,12 @@ void PianoRollEditor::ContentComponent::paint(juce::Graphics& g)
 
     // Title
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(16.0f));
+    g.setFont(juce::FontOptions(16.0f));
     g.drawText("Piano Roll Editor (Integration Stub)",
                getLocalBounds().reduced(20),
                juce::Justification::topLeft);
 
-    g.setFont(juce::Font(12.0f));
+    g.setFont(juce::FontOptions(12.0f));
     g.drawText("Track: " + trackId + ", Clip: " + clipId,
                getLocalBounds().reduced(20).removeFromTop(40),
                juce::Justification::topLeft);
@@ -110,9 +110,9 @@ void PianoRollEditor::ContentComponent::paint(juce::Graphics& g)
     }
 
     // Draw MIDI notes (integration stub)
-    // TODO: When U3 MIDI note model is merged, read from ProjectState clip's NOTES nodes
+    // TODO(zenith-core#1): When U3 MIDI note model is merged, read from ProjectState clip's NOTES nodes
     g.setColour(juce::Colours::green);
-    g.setFont(juce::Font(14.0f));
+    g.setFont(juce::FontOptions(14.0f));
     g.drawText("MIDI notes will be displayed here when U3 MIDI model is merged.\n"
                "Click to add notes (writes to ProjectState).",
                getLocalBounds().reduced(100),
@@ -136,7 +136,7 @@ void PianoRollEditor::ContentComponent::mouseDown(const juce::MouseEvent& event)
         DBG("PianoRollEditor: Add note - pitch " + juce::String(pitch) +
             ", beat " + juce::String(beat));
 
-        // TODO: When U3 MIDI note model is merged:
+        // TODO(zenith-core#1): When U3 MIDI note model is merged:
         // 1. Find clip in ProjectState
         // 2. Add NOTE child node to clip's NOTES container
         // 3. Set properties: pitch, start (beats), length (beats), velocity
@@ -162,3 +162,4 @@ int PianoRollEditor::ContentComponent::yToPitch(int y) const
     int note = 127 - ((y - 60) / noteHeight);
     return juce::jlimit(0, 127, note);
 }
+

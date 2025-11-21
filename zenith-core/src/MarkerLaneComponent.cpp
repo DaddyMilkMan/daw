@@ -108,7 +108,7 @@ void MarkerLaneComponent::mouseDrag(const juce::MouseEvent& event)
 
     auto delta = event.position - dragStart;
 
-    // Calculate new position (horizontal only)
+    // Calculate std::make_unique<position>(horizontal only)
     double newBeats = dragStartBeats + (delta.x / getWidth()) * (viewEndBeats - viewStartBeats);
 
     // Clamp
@@ -325,3 +325,4 @@ void MarkerLaneComponent::showRenameDialog(const juce::String& markerId)
     // NOTE: For a full implementation, we'd use AlertWindow::showMessageBoxAsync
     // with a proper text input field. For MVP, we'll use the simpler approach above.
 }
+

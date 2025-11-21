@@ -1,0 +1,2515 @@
+-- The C compiler identification is GNU 15.2.0
+-- The CXX compiler identification is GNU 15.2.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin/gcc.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin/c++.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Fetching JUCE 8.0.9...
+-- Configuring juceaide
+-- Building juceaide
+CMake Error at build/_deps/juce-src/extras/Build/juceaide/CMakeLists.txt:157 (message):
+  Failed to build juceaide
+System.Management.Automation.RemoteException
+  [0/2] Re-checking globbed directories...
+System.Management.Automation.RemoteException
+  [1/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core_CompilationTime.cpp.obj
+System.Management.Automation.RemoteException
+  [2/12] Building C object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\gcc.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -Wall -Wextra
+  -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_graphics\juce_graphics_Sheenbidi.c.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Sheenbidi.c.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics_Sheenbidi.c
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_CompilerWarnings.h:37,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics_Sheenbidi.c:35:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  [3/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_data_structures/juce_data_structures.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_data_structures/juce_data_structures.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_data_structures/juce_data_structures.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_data_structures\juce_data_structures.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_data_structures/juce_data_structures.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_data_structures/juce_data_structures.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.h:64,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_data_structures/juce_data_structures.h:65,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_data_structures/juce_data_structures.cpp:44:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:240:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zeromem(void*, size_t)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:40:71:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+     40 | inline void zeromem (void* memory, size_t numBytes) noexcept        { memset (memory, 0, numBytes); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:1:1:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zerostruct(Type&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+     44 | inline void zerostruct (Type& structure) noexcept                   { memset ((void*) &structure, 0, sizeof (structure)); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  note: (if you use '-fpermissive', G++ will accept your code, but allowing
+  the use of an undeclared name is deprecated)
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:248:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'size_t juce::CharPointer_UTF8::sizeInBytes() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:285:16:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    285 |         return strlen (data) + 1;
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'juce::CharPointer_UTF8
+  juce::CharPointer_UTF8::findTerminatingNull() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    329 |         return CharPointer_UTF8 (data + strlen (data));
+        |                                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:251:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'size_t juce::CharPointer_ASCII::length() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:169:25:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    169 |         return (size_t) strlen (data);
+        |                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compare(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  error: 'strcmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    253 |         return strcmp (data, other.data);
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  note: 'strcmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareUpTo(juce::CharPointer_ASCII, int) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  error: 'strncmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    266 |         return strncmp (data, other.data, (size_t) maxChars);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  note: 'strncmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareIgnoreCase(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:281:16:
+  error: 'stricmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    281 |         return stricmp (data, other.data);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  [4/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_events\juce_events.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_events/juce_events.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.h:64,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.cpp:54:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:208:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:146:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    146 |   #pragma comment (lib, "kernel32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:147:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    147 |   #pragma comment (lib, "user32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:148:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    148 |   #pragma comment (lib, "wininet.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:149:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    149 |   #pragma comment (lib, "advapi32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:150:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    150 |   #pragma comment (lib, "ws2_32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:151:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    151 |   #pragma comment (lib, "version.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:152:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    152 |   #pragma comment (lib, "shlwapi.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:153:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    153 |   #pragma comment (lib, "winmm.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:165:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    165 |     #pragma comment (lib, "comsupp.lib")
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.h:116:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/native/juce_HiddenMessageWindow_windows.h:
+  In member function 'const WCHAR*
+  juce::HiddenMessageWindow::getClassNameFromAtom()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/native/juce_HiddenMessageWindow_windows.h:77:55:
+  warning: cast to pointer from integer of different size
+  [-Wint-to-pointer-cast]
+System.Management.Automation.RemoteException
+     77 |     LPCTSTR getClassNameFromAtom() noexcept  { return (LPCTSTR) (pointer_sized_uint) atom; }
+        |                                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  [5/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_core\juce_core.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_core/juce_core.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:49:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:208:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:146:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    146 |   #pragma comment (lib, "kernel32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:147:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    147 |   #pragma comment (lib, "user32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:148:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    148 |   #pragma comment (lib, "wininet.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:149:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    149 |   #pragma comment (lib, "advapi32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:150:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    150 |   #pragma comment (lib, "ws2_32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:151:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    151 |   #pragma comment (lib, "version.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:152:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    152 |   #pragma comment (lib, "shlwapi.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:153:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    153 |   #pragma comment (lib, "winmm.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:165:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    165 |     #pragma comment (lib, "comsupp.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:69:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     69 |   #pragma comment (lib, "DbgHelp.lib")
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:147:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/maths/juce_Random.cpp:
+  In member function 'void juce::Random::setSeedRandomly()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/maths/juce_Random.cpp:74:39:
+  error: cast from 'juce::Random*' to 'juce::pointer_sized_int' {aka 'int'}
+  loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     74 |     combineSeed (globalSeed ^ (int64) (pointer_sized_int) this);
+        |                                       ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:174:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_SystemStats.cpp:
+  In static member function 'static juce::String
+  juce::SystemStats::getJUCEVersion()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_SystemStats.cpp:42:47:
+  error: static assertion failed: Basic sanity test failed: please report!
+System.Management.Automation.RemoteException
+     42 |     static_assert (sizeof (pointer_sized_int) == sizeof (void*), "Basic sanity test failed: please report!");
+        |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_SystemStats.cpp:42:47:
+  note: the comparison reduces to '(4 == 8)'
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:191:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/time/juce_Time.cpp:
+  In member function 'juce::String juce::Time::getTimeZone() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/time/juce_Time.cpp:395:35:
+  warning: 'tzname' is deprecated: Only provided for source compatibility;
+  this variable might not always be accurate when linking to UCRT.
+  [-Wdeprecated-declarations]
+System.Management.Automation.RemoteException
+    395 |     auto zonePtr = (const char**) tzname;
+        |                                   ^~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/include/c++/15.2.0/ctime:47,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:115:
+System.Management.Automation.RemoteException
+  
+  C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/x86_64-w64-mingw32/include/time.h:276:24:
+  note: declared here
+System.Management.Automation.RemoteException
+    276 |   _CRTIMP extern char *tzname[2] __MINGW_ATTRIB_DEPRECATED_UCRT;
+        |                        ^~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:193:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_Variant.cpp:
+  In static member function 'static juce::String
+  juce::var::VariantType::objectToString(const juce::var::ValueUnion&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_Variant.cpp:320:57:
+  error: cast from 'juce::ReferenceCountedObject*' to
+  'juce::pointer_sized_int' {aka 'int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+    320 |         return "Object 0x" + String::toHexString ((int) (pointer_sized_int) data.objectValue);
+        |                                                         ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:227:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:
+  In function 'void juce::callCPUID(int*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:104:5:
+  error: '__cpuid' was not declared in this scope; did you mean '_clui'?
+System.Management.Automation.RemoteException
+    104 |     __cpuid (result, infoType);
+        |     ^~~~~~~
+        |     _clui
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:
+  In static member function 'static juce::String
+  juce::SystemStats::getCpuModel()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:126:22:
+  warning: signed conversion from 'unsigned int' to 'int' changes value from
+  '2147483648' to '-2147483648' [-Wsign-conversion]
+System.Management.Automation.RemoteException
+    126 |     callCPUID (info, 0x80000000);
+        |                      ^~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:133:22:
+  warning: signed conversion from 'unsigned int' to 'int' changes value from
+  '2147483650' to '-2147483646' [-Wsign-conversion]
+System.Management.Automation.RemoteException
+    133 |     callCPUID (info, 0x80000002);
+        |                      ^~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:136:22:
+  warning: signed conversion from 'unsigned int' to 'int' changes value from
+  '2147483651' to '-2147483645' [-Wsign-conversion]
+System.Management.Automation.RemoteException
+    136 |     callCPUID (info, 0x80000003);
+        |                      ^~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:139:22:
+  warning: signed conversion from 'unsigned int' to 'int' changes value from
+  '2147483652' to '-2147483644' [-Wsign-conversion]
+System.Management.Automation.RemoteException
+    139 |     callCPUID (info, 0x80000004);
+        |                      ^~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:
+  In member function 'void juce::CPUInformation::initialise()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_SystemStats_windows.cpp:165:22:
+  warning: signed conversion from 'unsigned int' to 'int' changes value from
+  '2147483649' to '-2147483647' [-Wsign-conversion]
+System.Management.Automation.RemoteException
+    165 |     callCPUID (info, 0x80000001);
+        |                      ^~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.cpp:228:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:
+  In constructor 'juce::CriticalSection::CriticalSection()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:55:46:
+  error: static assertion failed: win32 lock array too small to hold
+  CRITICAL_SECTION: please report this JUCE bug!
+System.Management.Automation.RemoteException
+     55 |     static_assert (sizeof (CRITICAL_SECTION) <= sizeof (lock),
+        |                    ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:55:46:
+  note: the comparison reduces to '(40 <= 24)'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:
+  In member function 'bool juce::Thread::createNativeThread(Priority)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:99:20:
+  warning: cast to pointer from integer of different size
+  [-Wint-to-pointer-cast]
+System.Management.Automation.RemoteException
+     99 |         threadId = (ThreadID) (pointer_sized_int) newThreadId;
+        |                    ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:
+  In static member function 'static void*
+  juce::Thread::getCurrentThreadId()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_Threads_windows.cpp:179:12:
+  warning: cast to pointer from integer of different size
+  [-Wint-to-pointer-cast]
+System.Management.Automation.RemoteException
+    179 |     return (ThreadID) (pointer_sized_int) GetCurrentThreadId();
+        |            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  [6/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/Main.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1] extras/Build/juceaide/CMakeFiles/juceaide.dir/Main.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/Main.cpp.obj -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\Main.cpp.obj.d -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/Main.cpp.obj -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juceaide/Main.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:67,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.h:68,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/juce_build_tools.h:65,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juceaide/Main.cpp:35:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:240:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zeromem(void*, size_t)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:40:71:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+     40 | inline void zeromem (void* memory, size_t numBytes) noexcept        { memset (memory, 0, numBytes); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:1:1:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zerostruct(Type&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+     44 | inline void zerostruct (Type& structure) noexcept                   { memset ((void*) &structure, 0, sizeof (structure)); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  note: (if you use '-fpermissive', G++ will accept your code, but allowing
+  the use of an undeclared name is deprecated)
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:248:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'size_t juce::CharPointer_UTF8::sizeInBytes() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:285:16:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    285 |         return strlen (data) + 1;
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'juce::CharPointer_UTF8
+  juce::CharPointer_UTF8::findTerminatingNull() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    329 |         return CharPointer_UTF8 (data + strlen (data));
+        |                                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:251:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'size_t juce::CharPointer_ASCII::length() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:169:25:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    169 |         return (size_t) strlen (data);
+        |                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compare(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  error: 'strcmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    253 |         return strcmp (data, other.data);
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  note: 'strcmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareUpTo(juce::CharPointer_ASCII, int) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  error: 'strncmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    266 |         return strncmp (data, other.data, (size_t) maxChars);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  note: 'strncmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareIgnoreCase(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:281:16:
+  error: 'stricmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    281 |         return stricmp (data, other.data);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:151:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In member function 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int)
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:17:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In member function 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:17:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int) const
+  [with PixelType = juce::PixelRGB; bool replaceExisting = true]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelRGB; bool replaceExisting = true]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelRGB,
+  true>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1500:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelRGB]'
+System.Management.Automation.RemoteException
+   1500 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2494:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2494 |             case Image::RGB:    EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelRGB*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1:1:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int) const
+  [with PixelType = juce::PixelRGB; bool replaceExisting = false]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelRGB; bool replaceExisting = false]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelRGB,
+  false>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1505:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelRGB]'
+System.Management.Automation.RemoteException
+   1505 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2494:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2494 |             case Image::RGB:    EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelRGB*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const [with PixelType = juce::PixelAlpha; bool replaceExisting = true]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelAlpha; bool replaceExisting = true]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelAlpha,
+  true>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1500:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelAlpha]'
+System.Management.Automation.RemoteException
+   1500 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2497:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2497 |             default:            EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelAlpha*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const [with PixelType = juce::PixelAlpha; bool replaceExisting = false]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelAlpha; bool replaceExisting = false]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelAlpha,
+  false>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1505:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelAlpha]'
+System.Management.Automation.RemoteException
+   1505 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2497:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2497 |             default:            EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelAlpha*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  [7/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\juce_build_tools\juce_build_tools.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/juce_build_tools/juce_build_tools.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/juce_build_tools.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:67,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.h:68,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/juce_build_tools.h:65,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/juce_build_tools.cpp:44:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:240:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zeromem(void*, size_t)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:40:71:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+     40 | inline void zeromem (void* memory, size_t numBytes) noexcept        { memset (memory, 0, numBytes); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:1:1:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:
+  In function 'void juce::zerostruct(Type&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+     44 | inline void zerostruct (Type& structure) noexcept                   { memset ((void*) &structure, 0, sizeof (structure)); }
+        |                                                                       ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/memory/juce_Memory.h:44:71:
+  note: (if you use '-fpermissive', G++ will accept your code, but allowing
+  the use of an undeclared name is deprecated)
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:248:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'size_t juce::CharPointer_UTF8::sizeInBytes() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:285:16:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    285 |         return strlen (data) + 1;
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:
+  In member function 'juce::CharPointer_UTF8
+  juce::CharPointer_UTF8::findTerminatingNull() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    329 |         return CharPointer_UTF8 (data + strlen (data));
+        |                                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_UTF8.h:329:41:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:251:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'size_t juce::CharPointer_ASCII::length() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:169:25:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+    169 |         return (size_t) strlen (data);
+        |                         ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compare(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  error: 'strcmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    253 |         return strcmp (data, other.data);
+        |                ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:253:16:
+  note: 'strcmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareUpTo(juce::CharPointer_ASCII, int) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  error: 'strncmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    266 |         return strncmp (data, other.data, (size_t) maxChars);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:266:16:
+  note: 'strncmp' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:
+  In member function 'int
+  juce::CharPointer_ASCII::compareIgnoreCase(juce::CharPointer_ASCII) const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/text/juce_CharPointer_ASCII.h:281:16:
+  error: 'stricmp' was not declared in this scope
+System.Management.Automation.RemoteException
+    281 |         return stricmp (data, other.data);
+        |                ^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:151:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In member function 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int)
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:17:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In member function 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:17:
+  error: there are no arguments to 'memset' that depend on a template
+  parameter, so a declaration of 'memset' must be available [-Wtemplate-body]
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ^~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/juce_build_tools.cpp:53:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/utils/juce_ResourceFileHelpers.cpp:
+  In function 'bool
+  juce::build_tools::overwriteFileWithNewDataIfDifferent(const juce::File&,
+  const juce::String&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/utils/juce_ResourceFileHelpers.cpp:96:65:
+  error: 'strlen' was not declared in this scope
+System.Management.Automation.RemoteException
+     96 |         return overwriteFileWithNewDataIfDifferent (file, utf8, strlen (utf8));
+        |                                                                 ^~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build/juce_build_tools/utils/juce_ResourceFileHelpers.cpp:1:1:
+  note: 'strlen' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int) const
+  [with PixelType = juce::PixelRGB; bool replaceExisting = true]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelRGB; bool replaceExisting = true]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelRGB,
+  true>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1500:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelRGB]'
+System.Management.Automation.RemoteException
+   1500 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2494:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2494 |             case Image::RGB:    EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelRGB*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1:1:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+    +++ |+#include <cstring>
+      1 | /*
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelRGB*, juce::PixelARGB, int) const
+  [with PixelType = juce::PixelRGB; bool replaceExisting = false]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelRGB; bool replaceExisting = false]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelRGB,
+  false>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1505:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelRGB]'
+System.Management.Automation.RemoteException
+   1505 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2494:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2494 |             case Image::RGB:    EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelRGB*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    621 |                 memset ((void*) dest, colour.getRed(), (size_t) width * 3);   // if all the component values are the same, we can cheat..
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:621:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const [with PixelType = juce::PixelAlpha; bool replaceExisting = true]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelAlpha; bool replaceExisting = true]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelAlpha,
+  true>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1500:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelAlpha]'
+System.Management.Automation.RemoteException
+   1500 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2497:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2497 |             default:            EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelAlpha*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:
+  In instantiation of 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::replaceLine(juce::PixelAlpha*, juce::PixelARGB, int)
+  const [with PixelType = juce::PixelAlpha; bool replaceExisting = false]':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:556:29:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<PixelType,
+  replaceExisting>::handleEdgeTableLine(int, int, int) const [with PixelType
+  = juce::PixelAlpha; bool replaceExisting = false]'
+System.Management.Automation.RemoteException
+    556 |                 replaceLine (dest, p, width);
+        |                 ~~~~~~~~~~~~^~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1934:79:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::SubRectangleIteratorFloat::iterate(Renderer&)
+  const [with Renderer =
+  juce::RenderingHelpers::EdgeTableFillers::SolidColour<juce::PixelAlpha,
+  false>; SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1934 |                                 if (clippedWidth > 0)   r.handleEdgeTableLine (clippedLeft, clippedWidth, f.topAlpha);
+        |                                                         ~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1505:26:
+  required from 'void
+  juce::RenderingHelpers::EdgeTableFillers::renderSolidFill(Iterator&, const
+  juce::Image::BitmapData&, juce::PixelARGB, bool, DestPixelType*) [with
+  Iterator =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat;
+  DestPixelType = juce::PixelAlpha]'
+System.Management.Automation.RemoteException
+   1505 |             iter.iterate (r);
+        |             ~~~~~~~~~~~~~^~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:2497:67:
+  required from 'void
+  juce::RenderingHelpers::SoftwareRendererSavedState::fillWithSolidColour(IteratorType&,
+  juce::PixelARGB, bool) const [with IteratorType =
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<juce::RenderingHelpers::SoftwareRendererSavedState>::SubRectangleIteratorFloat]'
+System.Management.Automation.RemoteException
+   2497 |             default:            EdgeTableFillers::renderSolidFill (iter, destData, colour, replaceContents, (PixelAlpha*) nullptr); break;
+        |                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1805:39:
+  required from 'void
+  juce::RenderingHelpers::ClipRegions::RectangleListRegion<SavedStateType>::fillRectWithColour(SavedStateType&,
+  juce::Rectangle<float>, juce::PixelARGB) const [with SavedStateType =
+  juce::RenderingHelpers::SoftwareRendererSavedState]'
+System.Management.Automation.RemoteException
+   1805 |             state.fillWithSolidColour (iter, colour, false);
+        |             ~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:1802:14:
+  required from here
+System.Management.Automation.RemoteException
+   1802 |         void fillRectWithColour (SavedStateType& state, Rectangle<float> area, PixelARGB colour) const override
+        |              ^~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  error: 'memset' was not declared in this scope
+System.Management.Automation.RemoteException
+    629 |                 memset ((void*) dest, colour.getAlpha(), (size_t) width);
+        |                 ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_RenderingHelpers.h:629:24:
+  note: 'memset' is defined in header '<cstring>'; this is probably fixable
+  by adding '#include <cstring>'
+System.Management.Automation.RemoteException
+  [8/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_graphics\juce_graphics_Harfbuzz.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics_Harfbuzz.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_CompilerWarnings.h:37,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics_Harfbuzz.cpp:35:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  [9/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_graphics\juce_graphics.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_graphics/juce_graphics.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:67,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:50:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:208:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:146:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    146 |   #pragma comment (lib, "kernel32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:147:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    147 |   #pragma comment (lib, "user32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:148:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    148 |   #pragma comment (lib, "wininet.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:149:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    149 |   #pragma comment (lib, "advapi32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:150:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    150 |   #pragma comment (lib, "ws2_32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:151:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    151 |   #pragma comment (lib, "version.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:152:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    152 |   #pragma comment (lib, "shlwapi.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:153:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    153 |   #pragma comment (lib, "winmm.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:165:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    165 |     #pragma comment (lib, "comsupp.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:92:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     92 |   #pragma comment(lib, "Dwrite.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:93:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     93 |   #pragma comment(lib, "D2d1.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:94:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     94 |   #pragma comment(lib, "DXGI.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:95:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     95 |   #pragma comment(lib, "D3D11.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:96:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     96 |   #pragma comment(lib, "DComp.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:97:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+     97 |   #pragma comment(lib, "dxguid.lib")
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:188:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/images/juce_ImageCache.cpp:
+  In static member function 'static juce::Image
+  juce::ImageCache::getFromMemory(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/images/juce_ImageCache.cpp:157:29:
+  error: cast from 'const void*' to 'juce::pointer_sized_int' {aka 'int'}
+  loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+    157 |     auto hashCode = (int64) (pointer_sized_int) imageData;
+        |                             ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:192:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/image_formats/juce_JPEGLoader.cpp:
+  At global scope:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/image_formats/juce_JPEGLoader.cpp:223:29:
+  error: 'boolean' has not been declared in 'juce::jpeglibNamespace'
+System.Management.Automation.RemoteException
+    223 |     using jpeglibNamespace::boolean;
+        |                             ^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:234:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_DirectWriteTypeface_windows.cpp:
+  In constructor
+  'juce::WindowsDirectWriteTypeface::WindowsDirectWriteTypeface(const
+  juce::String&, const juce::String&, juce::ComSmartPtr<IDWriteFont>,
+  juce::ComSmartPtr<IDWriteFontFace>, juce::HbFont,
+  juce::TypefaceAscentDescent, juce::ComSmartPtr<IDWriteFontCollection>)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_DirectWriteTypeface_windows.cpp:287:47:
+  warning: declaration of 'style' shadows a member of
+  'juce::WindowsDirectWriteTypeface' [-Wshadow]
+System.Management.Automation.RemoteException
+    287 |                                 const String& style,
+        |                                 ~~~~~~~~~~~~~~^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:139:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/fonts/juce_Typeface.h:400:12:
+  note: shadowed declaration is here
+System.Management.Automation.RemoteException
+    400 |     String style;
+        |            ^~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_DirectWriteTypeface_windows.cpp:286:47:
+  warning: declaration of 'name' shadows a member of
+  'juce::WindowsDirectWriteTypeface' [-Wshadow]
+System.Management.Automation.RemoteException
+    286 |     WindowsDirectWriteTypeface (const String& name,
+        |                                 ~~~~~~~~~~~~~~^~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/fonts/juce_Typeface.h:399:12:
+  note: shadowed declaration is here
+System.Management.Automation.RemoteException
+    399 |     String name;
+        |            ^~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:236:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContextImpl_windows.cpp:
+  In member function 'bool
+  juce::Direct2DGraphicsContext::SavedState::isCurrentTransformAxisAligned()
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContextImpl_windows.cpp:533:94:
+  warning: comparing floating-point with '==' or '!=' is unsafe
+  [-Wfloat-equal]
+System.Management.Automation.RemoteException
+    533 |         return currentTransform.isOnlyTranslated || (currentTransform.complexTransform.mat01 == 0.0f && currentTransform.complexTransform.mat10 == 0.0f);
+        |                                                      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContextImpl_windows.cpp:533:145:
+  warning: comparing floating-point with '==' or '!=' is unsafe
+  [-Wfloat-equal]
+System.Management.Automation.RemoteException
+    533 |         return currentTransform.isOnlyTranslated || (currentTransform.complexTransform.mat01 == 0.0f && currentTransform.complexTransform.mat10 == 0.0f);
+        |                                                                                                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:237:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContext_windows.cpp:
+  In static member function 'static bool
+  juce::D2DHelpers::isTransformAxisAligned(const juce::AffineTransform&)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContext_windows.cpp:43:32:
+  warning: comparing floating-point with '==' or '!=' is unsafe
+  [-Wfloat-equal]
+System.Management.Automation.RemoteException
+     43 |         return transform.mat01 == 0.0f && transform.mat10 == 0.0f;
+        |                ~~~~~~~~~~~~~~~~^~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DGraphicsContext_windows.cpp:43:59:
+  warning: comparing floating-point with '==' or '!=' is unsafe
+  [-Wfloat-equal]
+System.Management.Automation.RemoteException
+     43 |         return transform.mat01 == 0.0f && transform.mat10 == 0.0f;
+        |                                           ~~~~~~~~~~~~~~~~^~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp:239:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DImage_windows.cpp:
+  In lambda function:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/native/juce_Direct2DImage_windows.cpp:952:27:
+  error: 'D2D1_SATURATION_PROP_SATURATION' was not declared in this scope
+  [-Wtemplate-body]
+System.Management.Automation.RemoteException
+    952 |         effect->SetValue (D2D1_SATURATION_PROP_SATURATION, 0.0f);
+        |                           ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  [10/12] Building CXX object
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_gui_basics/juce_gui_basics.cpp.obj
+System.Management.Automation.RemoteException
+  FAILED: [code=1]
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_gui_basics/juce_gui_basics.cpp.obj
+System.Management.Automation.RemoteException
+  
+  C:\Users\micah\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe\mingw64\bin\c++.exe
+  -DJUCE_DISABLE_JUCE_VERSION_PRINTING=1
+  -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+  -DJUCE_MODULE_AVAILABLE_juce_build_tools=1
+  -DJUCE_MODULE_AVAILABLE_juce_core=1
+  -DJUCE_MODULE_AVAILABLE_juce_data_structures=1
+  -DJUCE_MODULE_AVAILABLE_juce_events=1
+  -DJUCE_MODULE_AVAILABLE_juce_graphics=1
+  -DJUCE_MODULE_AVAILABLE_juce_gui_basics=1
+  -DJUCE_SILENCE_XCODE_15_LINKER_WARNING=1 -DJUCE_STANDALONE_APPLICATION=1
+  -DJUCE_USE_CURL=0 -DNDEBUG=1 -D_CONSOLE=1 -D_NDEBUG=1
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-build/tools/extras/Build/juceaide/juceaide_artefacts/JuceLibraryCode
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/extras/Build
+  -IC:/zenith/daw/zenith-core/build/_deps/juce-src/modules -std=c++17 -Wall
+  -Wextra -Wpedantic -Wstrict-aliasing -Wuninitialized -Wunused-parameter
+  -Wsign-compare -Wsign-conversion -Wunreachable-code -Wcast-align
+  -Wno-implicit-fallthrough -Wno-maybe-uninitialized -Wno-ignored-qualifiers
+  -Wno-multichar -Wswitch-enum -Wredundant-decls -Wno-strict-overflow
+  -Wshadow -Wfloat-equal -Wmissing-field-initializers -Woverloaded-virtual
+  -Wreorder -Wzero-as-null-pointer-constant -MD -MT
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_gui_basics/juce_gui_basics.cpp.obj
+  -MF
+  extras\Build\juceaide\CMakeFiles\juceaide.dir\__\__\__\modules\juce_gui_basics\juce_gui_basics.cpp.obj.d
+  -o
+  extras/Build/juceaide/CMakeFiles/juceaide.dir/__/__/__/modules/juce_gui_basics/juce_gui_basics.cpp.obj
+  -c
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:77,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:67,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.h:68,
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:55:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/system/juce_TargetPlatform.h:113:6:
+  error: #error "MinGW is not supported.  Please use an alternative
+  compiler."
+System.Management.Automation.RemoteException
+    113 |     #error "MinGW is not supported. Please use an alternative compiler."
+        |      ^~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:208:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:146:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    146 |   #pragma comment (lib, "kernel32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:147:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    147 |   #pragma comment (lib, "user32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:148:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    148 |   #pragma comment (lib, "wininet.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:149:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    149 |   #pragma comment (lib, "advapi32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:150:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    150 |   #pragma comment (lib, "ws2_32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:151:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    151 |   #pragma comment (lib, "version.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:152:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    152 |   #pragma comment (lib, "shlwapi.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:153:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    153 |   #pragma comment (lib, "winmm.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/native/juce_BasicNativeHeaders.h:165:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    165 |     #pragma comment (lib, "comsupp.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:112:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    112 |   #pragma comment(lib, "vfw32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:113:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    113 |   #pragma comment(lib, "imm32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:114:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    114 |   #pragma comment(lib, "comctl32.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:115:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    115 |   #pragma comment(lib, "dwmapi.lib")
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:119:
+  warning: ignoring '#pragma comment ' [-Wunknown-pragmas]
+System.Management.Automation.RemoteException
+    119 |   #pragma comment(linker,                             \
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/juce_core.h:308:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:
+  In static member function 'static int
+  juce::DefaultHashFunctions::generateHash(const void*, int)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_core/containers/juce_HashMap.h:61:109:
+  error: cast from 'const void*' to 'juce::pointer_sized_uint' {aka 'unsigned
+  int'} loses precision [-fpermissive]
+System.Management.Automation.RemoteException
+     61 |     static int generateHash (const void* key, int upperLimit) noexcept      { return generateHash ((uint64) (pointer_sized_uint) key, upperLimit); }
+        |                                                                                                             ^~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/juce_events.h:116,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_graphics/juce_graphics.h:68:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/native/juce_HiddenMessageWindow_windows.h:
+  In member function 'const WCHAR*
+  juce::HiddenMessageWindow::getClassNameFromAtom()':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_events/native/juce_HiddenMessageWindow_windows.h:77:55:
+  warning: cast to pointer from integer of different size
+  [-Wint-to-pointer-cast]
+System.Management.Automation.RemoteException
+     77 |     LPCTSTR getClassNameFromAtom() noexcept  { return (LPCTSTR) (pointer_sized_uint) atom; }
+        |                                                       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_UIAProviders_windows.h:48,
+System.Management.Automation.RemoteException
+                   from C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:215:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_UIATextProvider_windows.h:
+  In lambda function:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_UIATextProvider_windows.h:330:40:
+  error: 'CaretPosition_BeginningOfLine' was not declared in this scope
+System.Management.Automation.RemoteException
+    330 |                                 return CaretPosition_BeginningOfLine;
+        |                                        ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_UIATextProvider_windows.h:333:40:
+  error: 'CaretPosition_EndOfLine' was not declared in this scope
+System.Management.Automation.RemoteException
+    333 |                                 return CaretPosition_EndOfLine;
+        |                                        ^~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_UIATextProvider_windows.h:335:36:
+  error: 'CaretPosition_Unknown' was not declared in this scope
+System.Management.Automation.RemoteException
+    335 |                             return CaretPosition_Unknown;
+        |                                    ^~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:216:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_AccessibilityElement_windows.cpp:
+  In lambda function:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/accessibility/juce_AccessibilityElement_windows.cpp:425:51:
+  error: cast from 'void*' to 'juce::pointer_sized_int' {aka 'int'} loses
+  precision [-fpermissive]
+System.Management.Automation.RemoteException
+    425 |                     VariantHelpers::setInt ((int) (pointer_sized_int) accessibilityHandler.getComponent().getWindowHandle(), pRetVal);
+        |                                                   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:223:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/juce_Windowing_windows.cpp:
+  In member function 'const WCHAR*
+  juce::HWNDComponentPeer::WindowClassHolder::getWindowClassName() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/juce_Windowing_windows.cpp:2332:66:
+  warning: cast to pointer from integer of different size
+  [-Wint-to-pointer-cast]
+System.Management.Automation.RemoteException
+   2332 |         LPCTSTR getWindowClassName() const noexcept     { return (LPCTSTR) (pointer_sized_uint) atom; }
+        |                                                                  ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+-- Configuring incomplete, errors occurred!
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/juce_Windowing_windows.cpp:
+  In member function 'void juce::Desktop::setKioskComponent(juce::Component*,
+  bool, bool)':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/native/juce_Windowing_windows.cpp:5898:56:
+  warning: conversion to 'LONG' {aka 'long int'} from 'long unsigned int' may
+  change the sign of the result [-Wsign-conversion]
+System.Management.Automation.RemoteException
+   5898 |             SetWindowLong (peer->getHWND(), GWL_STYLE, nextFlags);
+        |                                                        ^~~~~~~~~
+System.Management.Automation.RemoteException
+  In file included from
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp:359:
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/positioning/juce_RelativeCoordinatePositioner.cpp:
+  In member function 'virtual juce::String
+  juce::MarkerListScope::getScopeUID() const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/positioning/juce_RelativeCoordinatePositioner.cpp:73:37:
+  error: cast from 'void*' to 'juce::pointer_sized_int' {aka 'int'} loses
+  precision [-fpermissive]
+System.Management.Automation.RemoteException
+     73 |         return String::toHexString ((pointer_sized_int) (void*) &component) + "m";
+        |                                     ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/positioning/juce_RelativeCoordinatePositioner.cpp:
+  In member function 'virtual juce::String
+  juce::RelativeCoordinatePositionerBase::ComponentScope::getScopeUID()
+  const':
+System.Management.Automation.RemoteException
+  
+  C:/zenith/daw/zenith-core/build/_deps/juce-src/modules/juce_gui_basics/positioning/juce_RelativeCoordinatePositioner.cpp:156:33:
+  error: cast from 'void*' to 'juce::pointer_sized_int' {aka 'int'} loses
+  precision [-fpermissive]
+System.Management.Automation.RemoteException
+    156 |     return String::toHexString ((pointer_sized_int) (void*) &component);
+        |                                 ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+System.Management.Automation.RemoteException
+  ninja: build stopped: subcommand failed.
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException
+System.Management.Automation.RemoteException

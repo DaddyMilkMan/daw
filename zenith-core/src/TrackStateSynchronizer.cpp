@@ -37,7 +37,7 @@ void TrackStateSynchronizer::initialize()
         tracksNode.addListener(this);
 
         // Add listeners to all existing tracks
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             addTrackListener(track);
         }
@@ -65,7 +65,7 @@ void TrackStateSynchronizer::shutdown()
 
     if (tracksNode.isValid())
     {
-        for (auto track : tracksNode)
+        for (const auto& track : tracksNode)
         {
             removeTrackListener(track);
         }
@@ -144,7 +144,7 @@ void TrackStateSynchronizer::valueTreeChildAdded(
     if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
     {
         DBG("TrackStateSynchronizer: Track added - need to implement track creation in Engine");
-        // TODO: For full implementation, we'd create a new Engine track here
+        // TODO(zenith-core#1): For full implementation, we'd create a new Engine track here
         // For Phase 11, we assume tracks are pre-created via addTestTracks()
 
         // Add listener to new track
@@ -165,7 +165,7 @@ void TrackStateSynchronizer::valueTreeChildRemoved(
     if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
     {
         DBG("TrackStateSynchronizer: Track removed - need to implement track removal in Engine");
-        // TODO: For full implementation, we'd remove the Engine track here
+        // TODO(zenith-core#1): For full implementation, we'd remove the Engine track here
 
         // Remove listener from removed track
         removeTrackListener(child);
@@ -280,3 +280,4 @@ void TrackStateSynchronizer::removeTrackListener(juce::ValueTree& track)
         track.removeListener(this);
     }
 }
+

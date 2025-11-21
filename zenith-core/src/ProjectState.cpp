@@ -590,7 +590,7 @@ bool ProjectState::setClipAudioFile(const juce::String& trackId, const juce::Str
     }
 
     // Store absolute path for now
-    // TODO: Make relative to project file when project is saved
+    // TODO(zenith-core#1): Make relative to project file when project is saved
     clip.setProperty(PROP_AUDIO_FILE, audioFile.getFullPathName(), &undoManager);
 
     DBG("ProjectState: Set audio file for clip " + clipId + ": " + audioFile.getFileName());
@@ -617,7 +617,7 @@ juce::ValueTree ProjectState::getClip(const juce::String& trackId, const juce::S
         return {};
 
     // Find clip
-    for (auto clip : clipsNode)
+    for (const auto& clip : clipsNode)
     {
         if (clip[PROP_ID].toString() == clipId)
             return clip;
@@ -634,14 +634,14 @@ std::pair<juce::ValueTree, juce::ValueTree> ProjectState::findClip(const juce::S
         return {{}, {}};
 
     // Search through all tracks
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
     {
         auto clipsNode = track.getChildWithName(ID_CLIPS);
         if (!clipsNode.isValid())
             continue;
 
         // Search clips in this track
-        for (auto clip : clipsNode)
+        for (const auto& clip : clipsNode)
         {
             if (clip[PROP_ID].toString() == clipId)
                 return {track, clip};
@@ -673,7 +673,7 @@ juce::ValueTree ProjectState::getOrCreateAutomationEnvelope(const juce::String& 
     }
 
     // Find existing envelope for this parameter
-    for (auto envelope : automationNode)
+    for (const auto& envelope : automationNode)
     {
         if (envelope.getType() == ID_ENVELOPE && envelope[PROP_PARAM_ID].toString() == paramId)
             return envelope;
@@ -702,7 +702,7 @@ juce::ValueTree ProjectState::getAutomationEnvelope(const juce::String& trackId,
     if (!automationNode.isValid())
         return {};
 
-    for (auto envelope : automationNode)
+    for (const auto& envelope : automationNode)
     {
         if (envelope.getType() == ID_ENVELOPE && envelope[PROP_PARAM_ID].toString() == paramId)
             return envelope;
@@ -835,6 +835,24 @@ bool ProjectState::deleteAutomationPoint(const juce::String& trackId, const juce
     return true;
 }
 
+bool ProjectState::clearAutomation(const juce::String& trackId, const juce::String& paramId,
+                                    const juce::String& actionName)
+{
+    auto envelope = getAutomationEnvelope(trackId, paramId);
+    if (!envelope.isValid())
+        return false;
+
+    auto pointsNode = envelope.getChildWithName(ID_POINT);
+    if (!pointsNode.isValid())
+        return false;
+
+    undoManager.beginNewTransaction(actionName);
+    pointsNode.removeAllChildren(&undoManager);
+
+    DBG("ProjectState: Cleared all automation points for " + trackId + " / " + paramId);
+    return true;
+}
+
 //==============================================================================
 // Undo/Redo
 //==============================================================================
@@ -873,7 +891,7 @@ juce::Array<ProjectState::MidiNoteSpec> ProjectState::getMidiNotesForClip(const 
     if (!midiNotesNode.isValid())
         return notes;
 
-    for (auto noteTree : midiNotesNode)
+    for (const auto& noteTree : midiNotesNode)
     {
         if (!noteTree.hasType(ID_NOTE))
             continue;
@@ -1086,7 +1104,7 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     if (!tracksNode.isValid())
         return {};
 
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
     {
         if (track[PROP_ID].toString() == trackId)
             return track;
@@ -1102,7 +1120,7 @@ juce::ValueTree ProjectState::findTrack(const juce::String& trackId) const
     if (!tracksNode.isValid())
         return {};
 
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
     {
         if (track[PROP_ID].toString() == trackId)
             return track;
@@ -1121,7 +1139,7 @@ juce::ValueTree ProjectState::findMidiNote(const juce::String& clipId, const juc
     if (!midiNotesNode.isValid())
         return {};
 
-    for (auto noteTree : midiNotesNode)
+    for (const auto& noteTree : midiNotesNode)
     {
         if (noteTree.hasType(ID_NOTE) && noteTree[PROP_ID].toString() == noteId)
             return noteTree;
@@ -1136,7 +1154,7 @@ juce::ValueTree ProjectState::findAutomationPoint(const juce::ValueTree& envelop
         return {};
 
     // Points are direct children of the envelope, not in a POINTS container
-    for (auto point : envelope)
+    for (const auto& point : envelope)
     {
         if (point.hasType(ID_POINT) && point[PROP_ID].toString() == pointId)
             return point;
@@ -1181,7 +1199,7 @@ juce::ValueTree ProjectState::findClip(const juce::String& trackId, const juce::
     if (!clipsNode.isValid())
         return {};
 
-    for (auto clip : clipsNode)
+    for (const auto& clip : clipsNode)
     {
         if (clip.hasType(ID_CLIP) && clip[PROP_ID].toString() == clipId)
             return clip;
@@ -1200,7 +1218,7 @@ juce::ValueTree ProjectState::findNote(const juce::String& trackId, const juce::
     if (!notesNode.isValid())
         return {};
 
-    for (auto note : notesNode)
+    for (const auto& note : notesNode)
     {
         if (note.hasType(ID_NOTE) && note[PROP_ID].toString() == noteId)
             return note;
@@ -1617,7 +1635,7 @@ void ProjectState::dumpClipStructureToLog() const
         return;
     }
 
-    for (auto track : tracksNode)
+    for (const auto& track : tracksNode)
     {
         if (!track.hasType(ID_TRACK))
             continue;
@@ -1635,7 +1653,7 @@ void ProjectState::dumpClipStructureToLog() const
             continue;
         }
 
-        for (auto clip : clipsNode)
+        for (const auto& clip : clipsNode)
         {
             if (!clip.hasType(ID_CLIP))
                 continue;
@@ -1661,7 +1679,7 @@ void ProjectState::dumpClipStructureToLog() const
                     continue;
                 }
 
-                for (auto note : notesNode)
+                for (const auto& note : notesNode)
                 {
                     if (!note.hasType(ID_NOTE))
                         continue;
@@ -2197,3 +2215,4 @@ juce::ValueTree ProjectState::getMarkers() const
 {
     return state.getChildWithName(ID_MARKERS);
 }
+

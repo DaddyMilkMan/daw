@@ -34,6 +34,11 @@ struct ZenithInstrumentPreset
     std::string name;                   ///< Preset name (e.g., "Warm Pad")
     std::string instrumentId;           ///< Target instrument (e.g., "zenith_poly_synth")
 
+    // New taxonomy fields
+    std::string soundType;                     /// < Sound type (e.g., "Bass", "Pad")
+    std::vector<std::string> engines;          /// < Engine tags (e.g., "VA", "FM")
+    std::vector<std::string> characters;       /// < Character tags (e.g., "Bright", "Warm")
+
     // Metadata
     std::string category;               ///< Category (e.g., "Bass", "Lead", "Pad", "808")
     std::string author;                 ///< Preset author
@@ -63,7 +68,7 @@ struct ZenithInstrumentPreset
     /**
      * @brief Set parameter value
      */
-    void setParameter(const std::string& paramId, float value)
+    void setParameter(const std::string& paramId, float value) [[maybe_unused]]
     {
         parameters[paramId] = value;
     }
@@ -71,7 +76,7 @@ struct ZenithInstrumentPreset
     /**
      * @brief Set macro value
      */
-    void setMacro(const std::string& macroId, float value)
+    void setMacro(const std::string& macroId, float value) [[maybe_unused]]
     {
         macros[macroId] = value;
     }
@@ -110,7 +115,18 @@ struct ZenithInstrumentPreset
         tree.setProperty("category", juce::String(category), nullptr);
         tree.setProperty("author", juce::String(author), nullptr);
         tree.setProperty("description", juce::String(description), nullptr);
-        tree.setProperty("version", juce::String(version), nullptr);
+        // New taxonomy fields
+        tree.setProperty("soundType", juce::String(soundType), nullptr);
+        if (!engines.empty()) {
+            juce::StringArray engArray;
+            for (const auto& eng : engines) engArray.add(eng);
+            tree.setProperty("engines", engArray.joinIntoString(","), nullptr);
+        }
+        if (!characters.empty()) {
+            juce::StringArray charArray;
+            for (const auto& ch : characters) charArray.add(ch);
+            tree.setProperty("characters", charArray.joinIntoString(","), nullptr);
+        }
 
         // Tags
         if (!tags.empty())
@@ -160,7 +176,23 @@ struct ZenithInstrumentPreset
         preset.category = tree.getProperty("category", "").toString().toStdString();
         preset.author = tree.getProperty("author", "Unknown").toString().toStdString();
         preset.description = tree.getProperty("description", "").toString().toStdString();
-        preset.version = tree.getProperty("version", "1.0.0").toString().toStdString();
+        // New taxonomy fields
+        preset.soundType = tree.getProperty("soundType", "").toString().toStdString();
+        {
+            juce::String engStr = tree.getProperty("engines", "").toString();
+            if (engStr.isNotEmpty()) {
+                juce::StringArray engArray = juce::StringArray::fromTokens(engStr, ",", "");
+                for (const auto& e : engArray) preset.engines.push_back(e.trim().toStdString());
+            }
+        }
+        {
+            juce::String charStr = tree.getProperty("characters", "").toString();
+            if (charStr.isNotEmpty()) {
+                juce::StringArray charArray = juce::StringArray::fromTokens(charStr, ",", "");
+                for (const auto& c : charArray) preset.characters.push_back(c.trim().toStdString());
+            }
+        }
+
 
         // Tags
         juce::String tagsStr = tree.getProperty("tags", "").toString();
@@ -600,3 +632,4 @@ private:
 };
 
 } // namespace zenith
+

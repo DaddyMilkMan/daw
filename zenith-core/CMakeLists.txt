@@ -29,6 +29,11 @@ option(ZENITH_ENGINE_SEED_DEBUG_TRACKS "Create 8 demo tracks at startup in Debug
 # ============================================================================
 include(FetchContent)
 
+# ============================================================================
+# Integrate Skia Graphics Library
+# ============================================================================
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/SkiaIntegration.cmake)
+
 message(STATUS "Fetching JUCE 8.0.9...")
 
 FetchContent_Declare(
@@ -100,16 +105,17 @@ target_sources(ZenithDAW PRIVATE
     include/ArrangerView.h
     include/PianoRollEditor.h
 
-    # Phase 8: CommandAPI for Wingman MIDI commands
-    src/CommandAPI.cpp
-
     # Phase 8.1: UI Components
     src/PianoRollComponent.cpp
     src/ArrangerComponent.cpp
 
+    # Phase 14: Automation UI
+    include/ArrangementComponent.h
+    src/ArrangementComponent.cpp
+
     # Phase 11: Mixer → Engine wiring
     src/TrackStateSynchronizer.cpp
-    src/MixerComponent.cpp
+    # src/MixerComponent.cpp removed (duplicate)
 
     # Engine primitives (ported from ZenithDAW-Native, Phase 2)
     Source/engine/Track.h
@@ -131,12 +137,6 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/PluginEditorWindow.h
     Source/ui/PluginEditorWindow.cpp
 
-    # Phase 4: Timeline/Arranger UI
-    Source/ui/ArrangerComponent.h
-    Source/ui/ArrangerComponent.cpp
-    Source/ui/PianoRollComponent.h
-    Source/ui/PianoRollComponent.cpp
-
     # Phase 5: Wingman v0 (AI Command Console)
     Source/commands/CommandAPI.h
     Source/commands/CommandAPI.cpp
@@ -149,9 +149,83 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/InstrumentBrowserPanel.h
     Source/ui/InstrumentBrowserPanel.cpp
 
+    # UI Audio Feedback System
+    Source/ui/AudioFeedback.h
+    Source/ui/AudioFeedback.cpp
+
+    # Additional UI Components
+    Source/ui/ProjectSettingsComponent.h
+    Source/ui/ProjectSettingsComponent.cpp
+    Source/ui/MasterOutputComponent.h
+    Source/ui/MasterOutputComponent.cpp
+    Source/ui/TransportControlComponent.h
+    Source/ui/TransportControlComponent.cpp
+    Source/ui/PresetBrowserComponent.h
+    Source/ui/PresetBrowserComponent.cpp
+
+    # NEW: Modern UI Design System
+    Source/ui/ZenithLookAndFeel.h
+    Source/ui/ZenithLookAndFeel.cpp
+    Source/ui/ZenithTransportBar.h
+    Source/ui/ZenithTransportBar.cpp
+    Source/ui/ZenithStatusBar.h
+    Source/ui/ZenithStatusBar.cpp
+
+    # Skia Rendering System (conditional - only if ZENITH_ENABLE_SKIA=ON)
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/rendering/SkiaRenderer.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/rendering/SkiaRenderer.cpp>
+
+    # Skia UI Components (conditional)
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaButtonComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaButtonComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaSliderComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaSliderComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaKnobComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaKnobComponent.cpp>
+
+    # Skia Enhanced Rendering System (NEW - Complete GPU acceleration)
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTheme.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTheme.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTextRenderer.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTextRenderer.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaWaveformRenderer.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaWaveformRenderer.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPianoRollRenderer.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPianoRollRenderer.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaClipRenderer.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaClipRenderer.cpp>
+
+    # Skia Main Window Integration
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMainWindowIntegration.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMainWindowIntegration.cpp>
+
+    # Skia UI Components (Mixer, Transport, Metering, etc.)
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMixerChannelComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMixerChannelComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTransportControlComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaTransportControlComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMasterOutputMeterComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaMasterOutputMeterComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaEffectsChainComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaEffectsChainComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaInstrumentBrowserComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaInstrumentBrowserComponent.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPresetBrowserComponent.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPresetBrowserComponent.cpp>
+
+    # Skia Settings and Performance
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaSettingsManager.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaSettingsManager.cpp>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPerformanceDashboard.h>
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:Source/ui/skia/SkiaPerformanceDashboard.cpp>
+
     # Phase 7: Wingman AI Integration
     Source/network/AIBridgeClient.h
     Source/network/AIBridgeClient.cpp
+
+    # Tempo Map
+    include/TempoMap.h
+    src/TempoMap.cpp
 
     # Instrument system
     Source/instruments/InstrumentMetadata.h
@@ -182,6 +256,7 @@ target_include_directories(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/rendering
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/commands
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/network
     ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
@@ -212,6 +287,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_gui_basics
     juce::juce_gui_extra
 
+    # Skia Graphics Library
+    Skia::Skia
+
     # Public link for GUI app config
     juce::juce_recommended_config_flags
     juce::juce_recommended_lto_flags
@@ -235,6 +313,9 @@ target_compile_definitions(ZenithDAW PRIVATE
 
     # Application name
     JucePlugin_Name="Zenith DAW"
+
+    # Skia GPU rendering (conditional)
+    $<$<BOOL:${ZENITH_ENABLE_SKIA}>:ZENITH_USE_SKIA=1>
 
     # Audio settings
     JUCE_USE_OGGVORBIS=1
@@ -553,6 +634,47 @@ target_compile_definitions(TrackInstrumentIntegrationTests PRIVATE
 juce_generate_juce_header(TrackInstrumentIntegrationTests)
 
 add_test(NAME TrackInstrumentIntegrationTests COMMAND TrackInstrumentIntegrationTests)
+
+# ============================================================================
+# Synth Headless Verification Test
+# ============================================================================
+
+juce_add_console_app(SynthHeadlessTest
+    PRODUCT_NAME "SynthHeadlessTest"
+)
+
+target_sources(SynthHeadlessTest PRIVATE
+    tests/SynthHeadlessTest.cpp
+    Source/instruments/ZenithPolySynth.cpp
+    Source/instruments/Instrument.cpp
+)
+
+target_include_directories(SynthHeadlessTest PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/engine
+    ${CMAKE_CURRENT_SOURCE_DIR}/Source/instruments
+)
+
+target_link_libraries(SynthHeadlessTest PRIVATE
+    juce::juce_core
+    juce::juce_data_structures
+    juce::juce_events
+    juce::juce_audio_basics
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_dsp
+)
+
+target_compile_definitions(SynthHeadlessTest PRIVATE
+    JUCE_USE_CURL=0
+    JUCE_WEB_BROWSER=0
+    JUCE_MODAL_LOOPS_PERMITTED=1
+    ZENITH_DEBUG_SYNTH=1
+)
+
+juce_generate_juce_header(SynthHeadlessTest)
+
+add_test(NAME SynthHeadlessTest COMMAND SynthHeadlessTest)
 
 # ============================================================================
 # Compiler Warnings

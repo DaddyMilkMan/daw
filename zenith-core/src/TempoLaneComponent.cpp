@@ -276,3 +276,4 @@ void TempoLaneComponent::drawTempoPoint(juce::Graphics& g, double timeBeats, dou
     juce::String label = juce::String(static_cast<int>(bpm));
     g.drawText(label, x - 20, y - 20, 40, 15, juce::Justification::centred);
 }
+

@@ -67,10 +67,10 @@ public:
 
     //==============================================================================
     // View control
-    void setPixelsPerBeat(float ppb);
+    void setPixelsPerBeat(float ppb) [[maybe_unused]];
     float getPixelsPerBeat() const { return pixelsPerBeat; }
 
-    void setTrackHeight(float height);
+    void setTrackHeight(float height) [[maybe_unused]];
     float getTrackHeight() const { return trackHeight; }
 
     //==============================================================================
@@ -139,3 +139,4 @@ private:
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
+

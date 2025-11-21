@@ -40,7 +40,7 @@ void MixerView::paint(juce::Graphics& g)
     if (channels_.empty())
     {
         g.setColour(juce::Colours::grey);
-        g.setFont(juce::Font(16.0f));
+        g.setFont(juce::FontOptions(16.0f));
         g.drawText("No tracks in mixer",
                    getLocalBounds(),
                    juce::Justification::centred,
@@ -118,3 +118,4 @@ void MixerView::rebuildChannels()
     resized();
     repaint();
 }
+

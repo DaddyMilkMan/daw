@@ -39,7 +39,7 @@ ZenithSamplerEditor::ZenithSamplerEditor(
         onPresetLoaded(preset);
     });
 
-    presetBrowser_->setCaptureStateCallback([this]() -> std::map<std::string, float>
+    presetBrowser_->setCaptureStateCallback([this]
     {
         return captureCurrentState();
     });
@@ -156,7 +156,7 @@ void ZenithSamplerEditor::paint(juce::Graphics& g)
     g.fillAll(juce::Colour(0xff1e1e1e));
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(20.0f, juce::Font::bold));
+    g.setFont(juce::FontOptions(20.0f, juce::Font::bold));
     g.drawText("Zenith Sampler", 0, 10, getWidth(), 30, juce::Justification::centred);
 }
 
@@ -312,9 +312,9 @@ void ZenithSamplerEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
     }
 }
 
-std::map<std::string, float> ZenithSamplerEditor::captureCurrentState()
+std::map<std::string, float, std::less<>>ZenithSamplerEditor::captureCurrentState() const
 {
-    std::map<std::string, float> state;
+    std::map<std::string, float, std::less<>> state;
 
     // Capture all parameters from metadata
     const auto& metadata = instrument_.getMetadata();
@@ -332,7 +332,7 @@ void ZenithSamplerEditor::loadSampleMapData()
     // Clear existing data
     sampleMapData_.clear();
 
-    // TODO: Load actual sample map from current patch
+    // TODO(zenith-core#1): Load actual sample map from current patch
     // For now, show placeholder data
     SampleInfo placeholder;
     placeholder.fileName = "No samples loaded";
@@ -380,29 +380,3 @@ void ZenithSamplerEditor::SampleMapTableModel::paintCell(
 
     const auto& sample = owner_.sampleMapData_[rowNumber];
 
-    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colour(0xffcccccc));
-    g.setFont(juce::Font(13.0f));
-
-    juce::String text;
-    switch (columnId)
-    {
-        case 1: // File
-            text = sample.fileName;
-            break;
-        case 2: // Key Range
-            text = juce::MidiMessage::getMidiNoteName(sample.lowKey, true, true, 4) +
-                   " - " +
-                   juce::MidiMessage::getMidiNoteName(sample.highKey, true, true, 4);
-            break;
-        case 3: // Velocity Range
-            text = juce::String(sample.lowVelocity) + " - " + juce::String(sample.highVelocity);
-            break;
-        case 4: // Root
-            text = juce::MidiMessage::getMidiNoteName(sample.rootNote, true, true, 4);
-            break;
-    }
-
-    g.drawText(text, 2, 0, width - 4, height, juce::Justification::centredLeft, true);
-}
-
-} // namespace zenith

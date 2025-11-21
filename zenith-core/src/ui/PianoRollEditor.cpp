@@ -15,7 +15,7 @@ PianoRollEditor::PianoRollEditor(ProjectState& ps, const juce::String& tid, cons
         auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
         if (clipsNode.isValid())
         {
-            for (auto clip : clipsNode)
+            for (const auto& clip : clipsNode)
             {
                 if (clip[ProjectState::PROP_ID].toString() == clipId)
                 {
@@ -82,7 +82,7 @@ void PianoRollEditor::paint(juce::Graphics& g)
         if (noteInOctave == 0)
         {
             g.setColour(juce::Colours::white);
-            g.setFont(juce::Font(10.0f));
+            g.setFont(juce::FontOptions(10.0f));
             g.drawText("C" + juce::String(noteNumber / 12 - 2), 2, y, PIANO_WIDTH - 4, noteHeight,
                       juce::Justification::centredLeft, false);
         }
@@ -146,7 +146,7 @@ void PianoRollEditor::paint(juce::Graphics& g)
 
     g.setColour(juce::Colours::green.withAlpha(0.7f));
 
-    for (auto note : notesNode)
+    for (const auto& note : notesNode)
     {
         double startBeats = note[ProjectState::PROP_START_BEATS];
         double lengthBeats = note[ProjectState::PROP_LENGTH_BEATS];
@@ -204,7 +204,7 @@ void PianoRollEditor::mouseDown(const juce::MouseEvent& event)
     }
     else
     {
-        // Add new note (snap to grid)
+        // Add std::make_unique<note>(snap to grid)
         double snappedBeat = std::round(beat * 4.0) / 4.0; // Snap to 1/4 beat
         double noteLength = 1.0; // Default 1 beat
 
@@ -322,7 +322,7 @@ juce::ValueTree PianoRollEditor::findNoteAtPosition(int x, int y)
     int noteNumber = getNoteAtY(y);
     double beat = getBeatAtX(x);
 
-    for (auto note : notesNode)
+    for (const auto& note : notesNode)
     {
         int nn = note[ProjectState::PROP_NOTE_NUMBER];
         double startBeats = note[ProjectState::PROP_START_BEATS];
@@ -336,3 +336,4 @@ juce::ValueTree PianoRollEditor::findNoteAtPosition(int x, int y)
 
     return {};
 }
+

@@ -82,7 +82,7 @@ void TempoMap::updateFromValueTree(const juce::ValueTree& tempoMapTree)
     else
     {
         // Extract tempo points from ValueTree
-        for (auto pointTree : tempoMapTree)
+        for (const auto& pointTree : tempoMapTree)
         {
             if (pointTree.hasType(ProjectState::ID_TEMPO_POINT))
             {
@@ -237,3 +237,4 @@ double TempoMap::getTempoAt(double beats) const
 }
 
 } // namespace zenith
+

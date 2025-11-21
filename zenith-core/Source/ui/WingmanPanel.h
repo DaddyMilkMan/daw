@@ -39,6 +39,11 @@
 #include <JuceHeader.h>
 #include <memory>
 
+// Conditional Skia components
+#ifdef ZENITH_USE_SKIA
+    #include "skia/SkiaButtonComponent.h"
+#endif
+
 namespace zenith {
     class CommandAPI;
     class AIBridgeClient;
@@ -49,6 +54,7 @@ namespace zenith {
     In-DAW Wingman command console component with AI integration
 */
 class WingmanPanel : public juce::Component,
+                     public juce::Timer,
                      private juce::TextEditor::Listener,
                      private juce::ChangeListener
 {
@@ -61,6 +67,7 @@ public:
     // Component interface
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void timerCallback() override;
 
     //==============================================================================
     // Command execution
@@ -80,7 +87,7 @@ private:
     // Mode management
     enum class Mode { Command, AI };
 
-    void setMode(Mode newMode);
+    void setMode(Mode newMode) [[maybe_unused]];
     Mode getCurrentMode() const { return currentMode; }
 
     //==============================================================================
@@ -97,7 +104,7 @@ private:
 
     //==============================================================================
     // UI helpers
-    void addMessage(const juce::String& message, bool isUserInput);
+    void addMessage(const juce::String& message, bool isUserInput) [[maybe_unused]];
     void scrollHistoryToBottom();
 
     //==============================================================================
@@ -109,9 +116,18 @@ private:
     // UI components
     std::unique_ptr<juce::TextEditor> commandInput;
     std::unique_ptr<juce::TextEditor> historyDisplay;
+
+#ifdef ZENITH_USE_SKIA
+    // Skia GPU-rendered buttons with spring physics
+    std::unique_ptr<zenith::SkiaButtonComponent> clearButton;
+    std::unique_ptr<zenith::SkiaButtonComponent> commandModeButton;
+    std::unique_ptr<zenith::SkiaButtonComponent> aiModeButton;
+#else
+    // Fallback JUCE buttons
     std::unique_ptr<juce::TextButton> clearButton;
     std::unique_ptr<juce::TextButton> commandModeButton;
     std::unique_ptr<juce::TextButton> aiModeButton;
+#endif
 
     // Message history
     juce::StringArray messageHistory;
@@ -124,6 +140,13 @@ private:
     juce::Array<juce::var> pendingCommands;
     juce::String pendingRequestId;
 
+    // Animation state
+    float inputFocusAnim{0.0f};
+    bool inputHasFocus{false};
+    bool isWaitingForAI{false};
+    float typingIndicatorPhase{0.0f};
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)
 };
+

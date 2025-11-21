@@ -4,6 +4,7 @@
  */
 
 #include "../include/MixerComponent.h"
+#include "../Source/ui/ZenithLookAndFeel.h"
 
 //==============================================================================
 MixerComponent::MixerComponent(ProjectState& ps)
@@ -32,17 +33,17 @@ MixerComponent::~MixerComponent()
 void MixerComponent::paint(juce::Graphics& g)
 {
     // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));  // Dark grey background
+    g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Colors::backgroundPanel));
 
     // Draw border
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::border));
     g.drawRect(getLocalBounds(), 1);
 
     // If no tracks, show hint
     if (trackStrips.empty())
     {
-        g.setColour(juce::Colours::grey);
-        g.setFont(juce::Font(14.0f));
+        g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::textSecondary));
+        g.setFont(zenith::ZenithLookAndFeel::getFontBody());
         g.drawText("No tracks - Add a track to see mixer controls",
                    getLocalBounds(),
                    juce::Justification::centred,
@@ -52,11 +53,13 @@ void MixerComponent::paint(juce::Graphics& g)
 
 void MixerComponent::resized()
 {
-    auto bounds = getLocalBounds().reduced(sideMargin, 0);
-    bounds.removeFromTop(topMargin);
-    bounds.removeFromBottom(bottomMargin);
-
+    using namespace zenith;
+    
+    auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Metrics::spacingM);
+    
     int x = 0;
+    const int stripWidth = 80; // Fixed strip width
+    const int stripSpacing = ZenithLookAndFeel::Metrics::spacingS;
 
     for (auto& strip : trackStrips)
     {
@@ -64,53 +67,46 @@ void MixerComponent::resized()
             continue;
 
         // Allocate space for this strip
-        strip->bounds = juce::Rectangle<int>(x, 0, stripWidth, bounds.getHeight());
+        strip->bounds = juce::Rectangle<int>(bounds.getX() + x, bounds.getY(), stripWidth, bounds.getHeight());
 
         // Layout components within the strip
-        auto area = strip->bounds.reduced(4);
+        auto area = strip->bounds;
 
-        // Name label at top (20px)
+        // Name label at top
         if (strip->nameLabel)
         {
-            strip->nameLabel->setBounds(area.removeFromTop(20));
+            strip->nameLabel->setBounds(area.removeFromTop(24));
         }
 
-        area.removeFromTop(4);  // Spacing
+        area.removeFromTop(ZenithLookAndFeel::Metrics::spacingS);
 
-        // Volume slider (takes most space)
-        if (strip->volumeSlider)
-        {
-            auto volumeArea = area.removeFromTop(juce::jmax(100, area.getHeight() - 90));
-            strip->volumeSlider->setBounds(volumeArea);
-        }
+        // Buttons at bottom (stacking up)
+        auto buttonArea = area.removeFromBottom(80); // Reserve space for buttons
+        
+        if (strip->armButton)
+            strip->armButton->setBounds(buttonArea.removeFromBottom(24));
+            
+        if (strip->soloButton)
+            strip->soloButton->setBounds(buttonArea.removeFromBottom(24));
+            
+        if (strip->muteButton)
+            strip->muteButton->setBounds(buttonArea.removeFromBottom(24));
 
-        area.removeFromTop(4);  // Spacing
+        area.removeFromBottom(ZenithLookAndFeel::Metrics::spacingS);
 
-        // Pan knob (60x60)
+        // Pan knob (fixed height)
         if (strip->panSlider)
         {
-            auto panArea = area.removeFromTop(60);
-            strip->panSlider->setBounds(panArea);
+            auto panArea = area.removeFromBottom(60);
+            strip->panSlider->setBounds(panArea.reduced(4));
         }
 
-        area.removeFromTop(4);  // Spacing
+        area.removeFromBottom(ZenithLookAndFeel::Metrics::spacingS);
 
-        // Buttons at bottom (20px each)
-        if (strip->muteButton)
+        // Volume slider (takes remaining space)
+        if (strip->volumeSlider)
         {
-            strip->muteButton->setBounds(area.removeFromTop(20));
-            area.removeFromTop(2);
-        }
-
-        if (strip->soloButton)
-        {
-            strip->soloButton->setBounds(area.removeFromTop(20));
-            area.removeFromTop(2);
-        }
-
-        if (strip->armButton)
-        {
-            strip->armButton->setBounds(area.removeFromTop(20));
+            strip->volumeSlider->setBounds(area);
         }
 
         x += stripWidth + stripSpacing;
@@ -243,8 +239,8 @@ std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(con
     strip->nameLabel = std::make_unique<juce::Label>();
     strip->nameLabel->setText(strip->trackName, juce::dontSendNotification);
     strip->nameLabel->setJustificationType(juce::Justification::centred);
-    strip->nameLabel->setFont(juce::Font(12.0f, juce::Font::bold));
-    strip->nameLabel->setColour(juce::Label::textColourId, juce::Colours::white);
+    strip->nameLabel->setFont(zenith::ZenithLookAndFeel::getFontSmall().withStyle(juce::Font::bold));
+    strip->nameLabel->setColour(juce::Label::textColourId, juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(*strip->nameLabel);
 
     // Create volume slider (vertical)
@@ -253,11 +249,6 @@ std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(con
     strip->volumeSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
     strip->volumeSlider->setRange(0.0, 1.0, 0.01);
     strip->volumeSlider->setValue(trackNode[ProjectState::PROP_VOLUME], juce::dontSendNotification);
-    strip->volumeSlider->onValueChange = [this, trackId = strip->trackId]()
-    {
-        if (!updatingFromState)
-            onVolumeChanged(trackId, (float)trackStrips[0]->volumeSlider->getValue());
-    };
     // Capture trackId by value for the lambda
     strip->volumeSlider->onValueChange = [this, trackId = strip->trackId, slider = strip->volumeSlider.get()]()
     {
@@ -288,7 +279,7 @@ std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(con
         if (!updatingFromState)
             onMuteClicked(trackId, button->getToggleState());
     };
-    strip->muteButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    strip->muteButton->setColour(juce::ToggleButton::textColourId, juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(*strip->muteButton);
 
     // Create solo button
@@ -300,7 +291,7 @@ std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(con
         if (!updatingFromState)
             onSoloClicked(trackId, button->getToggleState());
     };
-    strip->soloButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    strip->soloButton->setColour(juce::ToggleButton::textColourId, juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(*strip->soloButton);
 
     // Create arm button
@@ -312,7 +303,7 @@ std::unique_ptr<MixerComponent::TrackStrip> MixerComponent::createTrackStrip(con
         if (!updatingFromState)
             onArmClicked(trackId, button->getToggleState());
     };
-    strip->armButton->setColour(juce::ToggleButton::textColourId, juce::Colours::white);
+    strip->armButton->setColour(juce::ToggleButton::textColourId, juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(*strip->armButton);
 
     return strip;
@@ -409,3 +400,4 @@ void MixerComponent::onArmClicked(const juce::String& trackId, bool state)
 {
     projectState.setTrackArmed(trackId, state, "Set track armed");
 }
+

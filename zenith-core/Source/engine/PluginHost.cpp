@@ -53,7 +53,7 @@ PluginHost::~PluginHost()
 
 int PluginHost::scanDefaultLocations(bool async)
 {
-    juce::ignoreUnused(async); // TODO: Implement async scanning in future
+    juce::ignoreUnused(async); // TODO(zenith-core#1): Implement async scanning in future
 
     if (vst3Format == nullptr)
     {
@@ -238,3 +238,4 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createInstance(
 }
 
 } // namespace zenith
+

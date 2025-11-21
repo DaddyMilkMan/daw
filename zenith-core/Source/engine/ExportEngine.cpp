@@ -278,7 +278,7 @@ void ExportEngine::renderBlock(
     // a public method for offline rendering. For this implementation,
     // we'll generate a simple test tone directly here.
     //
-    // TODO: Add Engine::renderOffline() method to properly integrate with
+    // TODO(zenith-core#1): Add Engine::renderOffline() method to properly integrate with
     // the actual mixing pipeline.
 
     const int numChannels = outputBuffer.getNumChannels();
@@ -315,3 +315,4 @@ void ExportEngine::renderBlock(
     // 4. Handle automation
     // But for now, the test tone matches Engine's current behavior
 }
+

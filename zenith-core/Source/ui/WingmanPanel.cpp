@@ -11,60 +11,100 @@
 */
 
 #include "WingmanPanel.h"
+#include "AudioFeedback.h"
 #include "../Source/commands/CommandAPI.h"
 #include "../Source/network/AIBridgeClient.h"
 #include "../Source/commands/SessionGraph.h"
+#include "ZenithLookAndFeel.h"
 
 //==============================================================================
 WingmanPanel::WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient)
     : commandAPI(api), aiBridgeClient(aiClient)
 {
+    using namespace zenith;
+
+    // Start 60Hz animation timer
+    startTimerHz(60);
+
     // Register as listener for AI responses
     aiBridgeClient.addChangeListener(this);
+
     // Create history display (read-only, multi-line)
-    historyDisplay = std::make_unique<juce::TextEditor>("History");
+    historyDisplay = std::make_unique<juce::TextEditor>();
     historyDisplay->setMultiLine(true);
     historyDisplay->setReadOnly(true);
-    historyDisplay->setScrollbarsShown(true);
-    historyDisplay->setCaretVisible(false);
-    historyDisplay->setPopupMenuEnabled(false);
-    historyDisplay->setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
-    historyDisplay->setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff1a1a1a));
-    historyDisplay->setColour(juce::TextEditor::textColourId, juce::Colours::lightgrey);
-    historyDisplay->setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3a3a3a));
+    historyDisplay->setFont(ZenithLookAndFeel::getFontSmall());
+    historyDisplay->setColour(juce::TextEditor::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    historyDisplay->setColour(juce::TextEditor::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    historyDisplay->setColour(juce::TextEditor::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
     addAndMakeVisible(*historyDisplay);
 
-    // Create command input (single line)
-    commandInput = std::make_unique<juce::TextEditor>("Command");
+    // Create command input with Zenith styling
+    commandInput = std::make_unique<juce::TextEditor>();
     commandInput->setMultiLine(false);
     commandInput->setReturnKeyStartsNewLine(false);
-    commandInput->setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 14.0f, juce::Font::plain));
-    commandInput->setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff2a2a2a));
-    commandInput->setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    commandInput->setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff5a5a5a));
-    commandInput->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colours::cyan);
+    commandInput->setFont(ZenithLookAndFeel::getFontBody());
+    commandInput->setColour(juce::TextEditor::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel));
+    commandInput->setColour(juce::TextEditor::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    commandInput->setColour(juce::TextEditor::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
+    commandInput->setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
     commandInput->addListener(this);
-    commandInput->setTextToShowWhenEmpty("Enter command (JSON or shorthand)...", juce::Colours::grey);
+    commandInput->setTextToShowWhenEmpty("Enter command (JSON or shorthand)...", juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     addAndMakeVisible(*commandInput);
 
-    // Create mode toggle buttons
+#ifdef ZENITH_USE_SKIA
+    // Create Skia GPU-rendered buttons with spring physics
+    commandModeButton = std::make_unique<zenith::SkiaButtonComponent>("Command", zenith::SkiaButtonComponent::Style::Primary);
+    commandModeButton->setToggleable(true);
+    commandModeButton->setToggleState(true);
+    commandModeButton->onClick = [this]() {
+        setMode(Mode::Command);
+        aiModeButton->setToggleState(false);
+        commandModeButton->setToggleState(true);
+    };
+    addAndMakeVisible(*commandModeButton);
+
+    aiModeButton = std::make_unique<zenith::SkiaButtonComponent>("AI", zenith::SkiaButtonComponent::Style::Secondary);
+    aiModeButton->setToggleable(true);
+    aiModeButton->onClick = [this]() {
+        setMode(Mode::AI);
+        commandModeButton->setToggleState(false);
+        aiModeButton->setToggleState(true);
+    };
+    addAndMakeVisible(*aiModeButton);
+
+    clearButton = std::make_unique<zenith::SkiaButtonComponent>("Clear", zenith::SkiaButtonComponent::Style::Secondary);
+    clearButton->onClick = [this]() { clearHistory(); };
+    addAndMakeVisible(*clearButton);
+#else
+    // Fallback JUCE buttons with Zenith styling
     commandModeButton = std::make_unique<juce::TextButton>("Command");
     commandModeButton->setClickingTogglesState(true);
     commandModeButton->setRadioGroupId(1);
     commandModeButton->setToggleState(true, juce::dontSendNotification);
+    commandModeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
+    commandModeButton->setColour(juce::TextButton::buttonOnColourId, juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
+    commandModeButton->setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+    commandModeButton->setColour(juce::TextButton::textColourOnId, juce::Colour(0xff000000));
     commandModeButton->onClick = [this]() { setMode(Mode::Command); };
     addAndMakeVisible(*commandModeButton);
 
     aiModeButton = std::make_unique<juce::TextButton>("AI");
     aiModeButton->setClickingTogglesState(true);
     aiModeButton->setRadioGroupId(1);
+    aiModeButton->setColour(juce::TextButton::buttonColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
+    aiModeButton->setColour(juce::TextButton::buttonOnColourId, juce::Colour(ZenithLookAndFeel::Colors::accentSecondary));
+    aiModeButton->setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+    aiModeButton->setColour(juce::TextButton::textColourOnId, juce::Colour(0xff000000));
     aiModeButton->onClick = [this]() { setMode(Mode::AI); };
     addAndMakeVisible(*aiModeButton);
 
-    // Create clear button
     clearButton = std::make_unique<juce::TextButton>("Clear");
+    clearButton->setColour(juce::TextButton::buttonColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
+    clearButton->setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     clearButton->onClick = [this]() { clearHistory(); };
     addAndMakeVisible(*clearButton);
+#endif
 
     // Welcome message
     addMessage("╔════════════════════════════════════════════════════════════╗", false);
@@ -105,18 +145,79 @@ WingmanPanel::~WingmanPanel()
 
 void WingmanPanel::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    using namespace zenith;
+    auto bounds = getLocalBounds();
+
+    // Background
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel));
+    g.fillRoundedRectangle(bounds.toFloat(), ZenithLookAndFeel::Metrics::radiusL);
+
+    // Border
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::border));
+    g.drawRoundedRectangle(bounds.toFloat(), ZenithLookAndFeel::Metrics::radiusL, 1.0f);
 
     // Draw title bar
-    auto bounds = getLocalBounds();
     auto titleBar = bounds.removeFromTop(30);
-
-    g.setColour(juce::Colour(0xff3a3a3a));
-    g.fillRect(titleBar);
-
-    g.setColour(juce::Colours::lightgrey);
-    g.setFont(juce::Font(14.0f, juce::Font::bold));
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    g.fillRoundedRectangle(titleBar.toFloat(), ZenithLookAndFeel::Metrics::radiusL); // Top corners rounded
+    
+    // Fix bottom corners of title bar to be square (by overdrawing or clipping, but simple fill is okay for now)
+    // Actually, let's just draw text
+    
+    // Title text
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    g.setFont(ZenithLookAndFeel::getFontSmall().withStyle(juce::Font::bold));
     g.drawText("Wingman Console", titleBar.reduced(10, 0), juce::Justification::centredLeft);
+
+    // Status indicator (mode badge)
+    juce::String modeText = (currentMode == Mode::AI) ? "AI" : "CMD";
+    juce::Colour modeColor = (currentMode == Mode::AI) 
+                           ? juce::Colour(ZenithLookAndFeel::Colors::accentSecondary) 
+                           : juce::Colour(ZenithLookAndFeel::Colors::accentPrimary);
+
+    int badgeX = getWidth() - 60;
+    int badgeY = titleBar.getY() + (titleBar.getHeight() - 18) / 2;
+    juce::Rectangle<int> badgeBounds(badgeX, badgeY, 45, 18);
+
+    g.setColour(modeColor.withAlpha(0.2f));
+    g.fillRoundedRectangle(badgeBounds.toFloat(), ZenithLookAndFeel::Metrics::radiusS);
+
+    g.setColour(modeColor);
+    g.drawRoundedRectangle(badgeBounds.toFloat(), ZenithLookAndFeel::Metrics::radiusS, 1.0f);
+
+    g.setFont(ZenithLookAndFeel::getFontTiny().withStyle(juce::Font::bold));
+    g.drawText(modeText, badgeBounds, juce::Justification::centred);
+
+    // Draw input focus glow
+    if (inputFocusAnim > 0.01f)
+    {
+        auto inputBounds = commandInput->getBounds().toFloat().expanded(2.0f);
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(inputFocusAnim * 0.3f));
+        g.drawRoundedRectangle(inputBounds, ZenithLookAndFeel::Metrics::radiusS, 2.0f);
+    }
+
+    // Draw typing indicator when waiting for AI
+    if (isWaitingForAI)
+    {
+        int dotSize = 6;
+        int spacing = 10;
+        int startX = 20;
+        int dotY = getHeight() - 55;
+
+        for (int i = 0; i < 3; ++i)
+        {
+            float phase = typingIndicatorPhase + (i * 0.33f);
+            float bounce = std::sin(phase * juce::MathConstants<float>::twoPi) * 0.5f + 0.5f;
+            float alpha = 0.3f + (bounce * 0.6f);
+
+            g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(alpha));
+            g.fillEllipse(static_cast<float>(startX + i * spacing), static_cast<float>(dotY - bounce * 4), static_cast<float>(dotSize), static_cast<float>(dotSize));
+        }
+
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+        g.setFont(ZenithLookAndFeel::getFontTiny());
+        g.drawText("AI is thinking...", startX + 40, dotY - 5, 150, 15, juce::Justification::centredLeft);
+    }
 }
 
 void WingmanPanel::resized()
@@ -152,6 +253,32 @@ void WingmanPanel::resized()
 
     // History display (remaining space)
     historyDisplay->setBounds(bounds);
+}
+
+void WingmanPanel::timerCallback()
+{
+    // Smooth focus animations (60Hz, 0.15 speed)
+    bool needsRepaint = false;
+
+    // Input focus animation
+    float inputTarget = inputHasFocus ? 1.0f : 0.0f;
+    if (std::abs(inputFocusAnim - inputTarget) > 0.01f)
+    {
+        inputFocusAnim += (inputTarget - inputFocusAnim) * 0.15f;
+        needsRepaint = true;
+    }
+
+    // Typing indicator animation
+    if (isWaitingForAI)
+    {
+        typingIndicatorPhase += 0.03f;
+        if (typingIndicatorPhase > 1.0f)
+            typingIndicatorPhase -= 1.0f;
+        needsRepaint = true;
+    }
+
+    if (needsRepaint)
+        repaint();
 }
 
 //==============================================================================
@@ -195,6 +322,9 @@ void WingmanPanel::executeCommand(const juce::String& input)
     // Route based on mode
     if (currentMode == Mode::AI)
     {
+        // Play whoosh sound for AI command
+        zenith::AudioFeedback::getInstance().playSound(zenith::AudioFeedback::Whoosh, 0.25f);
+
         // AI mode: send natural language to AI bridge
         executeAIRequest(input);
     }
@@ -462,6 +592,10 @@ void WingmanPanel::executeAIRequest(const juce::String& naturalLanguage)
     // Send request to AI bridge
     aiBridgeClient.sendRequest(naturalLanguage, sessionGraph, "zenith-core");
 
+    // Enable typing indicator
+    isWaitingForAI = true;
+    typingIndicatorPhase = 0.0f;
+
     addMessage("(Waiting for AI response...)", false);
     addMessage("", false);
 }
@@ -477,6 +611,9 @@ void WingmanPanel::changeListenerCallback(juce::ChangeBroadcaster* source)
 
 void WingmanPanel::handleAIResponse()
 {
+    // Disable typing indicator
+    isWaitingForAI = false;
+
     while (aiBridgeClient.hasPendingResponse())
     {
         auto response = aiBridgeClient.popNextResponse();
@@ -596,3 +733,4 @@ void WingmanPanel::cancelPendingBatch()
 
     DBG("WingmanPanel: Batch cancelled");
 }
+

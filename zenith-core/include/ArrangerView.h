@@ -73,7 +73,7 @@ public:
      * @param trackId Track ID
      * @param show true to show, false to hide
      */
-    void setTrackAutomationVisible(const juce::String& trackId, bool show);
+    void setTrackAutomationVisible(const juce::String& trackId, bool show) [[maybe_unused]];
 
     /**
      * @brief Check if track automation is visible
@@ -96,8 +96,8 @@ private:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override {}
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override {}
     void valueTreeParentChanged(juce::ValueTree& tree) override {}
 
     //==========================================================================
@@ -219,3 +219,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutomationLaneComponent)
 };
+

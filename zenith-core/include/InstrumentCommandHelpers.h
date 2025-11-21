@@ -50,7 +50,7 @@ inline juce::String errorCodeToString(ErrorCode code)
         case ErrorCode::InvalidValue:        return "INVALID_VALUE";
         case ErrorCode::InternalError:       return "INTERNAL_ERROR";
         default:                             return "UNKNOWN_ERROR";
-    }
+    \n    default: break;\n\n    default: break;\n}
 }
 
 /**
@@ -141,3 +141,5 @@ inline float clampNormalizedValue(float value)
 }
 
 } // namespace InstrumentCommandHelpers
+
+

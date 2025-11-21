@@ -75,7 +75,7 @@ public:
      * @param handler Function that takes params JSON and returns response JSON
      */
     using CommandHandler = std::function<juce::var(const juce::var& params)>;
-    void registerCommand(const juce::String& commandName, CommandHandler handler);
+    void registerCommand(const juce::String& commandName, CommandHandler handler) [[maybe_unused]];
 
 private:
     //==========================================================================
@@ -478,3 +478,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CommandAPI)
 };
+

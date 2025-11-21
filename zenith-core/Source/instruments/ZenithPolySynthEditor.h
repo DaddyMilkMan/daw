@@ -61,7 +61,7 @@ private:
     //==========================================================================
 
     void onPresetLoaded(const ZenithInstrumentPreset& preset);
-    std::map<std::string, float> captureCurrentState();
+    std::map<std::string, float, std::less<>> captureCurrentState() const;
 
     //==========================================================================
     // Member Variables
@@ -101,7 +101,7 @@ private:
     juce::Slider osc1LevelSlider_;
     juce::Label osc1LevelLabel_;
 
-    // TODO: Osc 2 & 3 (not in current processor)
+    // TODO(zenith-core#1): Osc 2 & 3 (not in current processor)
     juce::Label osc2Label_;  // Placeholder
     juce::Label osc3Label_;  // Placeholder
 
@@ -218,3 +218,4 @@ private:
 };
 
 } // namespace zenith
+

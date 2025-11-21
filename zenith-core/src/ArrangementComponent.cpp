@@ -205,7 +205,7 @@ void ArrangementComponent::drawTrack(juce::Graphics& g, int trackIndex, juce::Re
         drawAutomationLane(g, trackId, visibleParam, automationArea);
     }
 
-    // TODO: Draw clips (Phase 15)
+    // TODO(zenith-core#1): Draw clips (Phase 15)
     // For now, just show a placeholder
     g.setColour(juce::Colours::grey.withAlpha(0.3f));
     g.drawText("Clips area", clipsArea, juce::Justification::centred);
@@ -380,8 +380,8 @@ void ArrangementComponent::mouseDown(const juce::MouseEvent& event)
         auto envelope = projectState.getAutomationEnvelope(trackId, visibleParam);
         if (envelope.isValid())
         {
-            auto pointsNode = envelope.getChildWithName(ProjectState::ID_POINTS);
-            for (auto point : pointsNode)
+            auto pointsNode = envelope.getChildWithName(ProjectState::ID_POINT);
+            for (const auto& point : pointsNode)
             {
                 if (point[ProjectState::PROP_ID].toString() == hitPointId)
                 {
@@ -775,11 +775,11 @@ juce::Array<AutomationPointView> ArrangementComponent::getAutomationPoints(const
     if (!envelope.isValid())
         return result;
 
-    auto pointsNode = envelope.getChildWithName(ProjectState::ID_POINTS);
+    auto pointsNode = envelope.getChildWithName(ProjectState::ID_POINT);
     if (!pointsNode.isValid())
         return result;
 
-    for (auto point : pointsNode)
+    for (const auto& point : pointsNode)
     {
         AutomationPointView view;
         view.pointId = point[ProjectState::PROP_ID].toString();
@@ -808,4 +808,5 @@ double ArrangementComponent::snapToGrid(double beats) const
     double gridSize = 0.25; // 1/16 beat
     return std::round(beats / gridSize) * gridSize;
 }
+
 

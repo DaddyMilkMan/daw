@@ -610,3 +610,4 @@ float Track::Clip::calculateFadeMultiplier(int64_t positionInClip) const
 }
 
 } // namespace zenith
+

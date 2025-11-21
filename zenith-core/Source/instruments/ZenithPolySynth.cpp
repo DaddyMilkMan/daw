@@ -13,6 +13,15 @@
 #include "ZenithPolySynth.h"
 #include <cmath>
 
+// Uncomment to enable synth debug logging
+// #define ZENITH_DEBUG_SYNTH 1
+
+#if ZENITH_DEBUG_SYNTH
+    #define SYNTH_LOG(x) DBG("[SynthDebug] " << x)
+#else
+    #define SYNTH_LOG(x)
+#endif
+
 namespace zenith {
 
 //==============================================================================
@@ -34,7 +43,7 @@ float ZenithOscillator::getNextSample(float frequency)
         case OscillatorWaveform::Noise:    return processNoise();
         case OscillatorWaveform::Supersaw: return processSaw(detunedFrequency); // Same as saw for individual osc
         default:                           return 0.0f;
-    }
+    \n    default: break;\n\n    default: break;\n}
 }
 
 float ZenithOscillator::processSine(float frequency)
@@ -203,7 +212,7 @@ float ZenithFilter::processSample(float input)
         case FilterType::Bandpass: return v1_;
         case FilterType::Highpass: return v0_ - k * v1_ - v2_;
         default:                   return v2_;
-    }
+    \n    default: break;\n\n    default: break;\n}
 }
 
 //==============================================================================
@@ -236,6 +245,8 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
 {
     currentMidiNote_ = midiNoteNumber;
     velocity_ = velocity;
+
+    SYNTH_LOG("NoteOn: note=" << midiNoteNumber << " velocity=" << velocity);
 
     targetFrequency_ = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
 
@@ -313,7 +324,7 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             break;
         default:
             break;
-    }
+    \n    default: break;\n\n    default: break;\n}
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
@@ -506,7 +517,7 @@ void ZenithPolySynthVoice::updateFrequency()
 
 float ZenithPolySynthVoice::applyLFOs()
 {
-    // TODO: Apply LFOs to various targets based on routing
+    // TODO(zenith-core#1): Apply LFOs to various targets based on routing
     // This will be expanded when tempo sync is added via ProjectState
     return 0.0f;
 }
@@ -564,7 +575,7 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source)
             // Amp envelope is 0 to 1
             juce::ADSR& ampEnv = const_cast<juce::ADSR&>(ampEnvelope_);
             return ampEnv.isActive() ? ampEnv.getNextSample() : 0.0f;
-        }
+        \n    default: break;\n\n    default: break;\n}
 
         case ModulationSource::Env2:
         {
@@ -620,9 +631,9 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
 {
     // Add 16 voices for polyphony
     for (int i = 0; i < 16; ++i)
-        addVoice(new ZenithPolySynthVoice());
+        addVoice(std::make_unique<ZenithPolySynthVoice>());
 
-    addSound(new ZenithPolySynthSound());
+    addSound(std::make_unique<ZenithPolySynthSound>());
 
     // Create parameters - ORDER MUST MATCH enum Parameters!
 
@@ -746,6 +757,20 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
     // Render synthesizer
     juce::Synthesiser::renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+
+#if ZENITH_DEBUG_SYNTH
+    int debugActiveVoices = 0;
+    for (int i = 0; i < getNumVoices(); ++i)
+    {
+        if (getVoice(i)->isVoiceActive())
+            debugActiveVoices++;
+    }
+    if (debugActiveVoices > 0)
+    {
+        float peak = buffer.getMagnitude(0, buffer.getNumSamples());
+        SYNTH_LOG("renderNextBlock: numActiveVoices=" << debugActiveVoices << ", peak=" << peak);
+    }
+#endif
 
     // Apply master gain
     float masterGain = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[MasterGain])->get();
@@ -933,7 +958,7 @@ void ZenithPolySynthProcessor::updateVoiceCount()
         // Add new voices
         for (int i = 0; i < newMaxVoices; ++i)
         {
-            addVoice(new ZenithPolySynthVoice());
+            addVoice(std::make_unique<ZenithPolySynthVoice>());
         }
 
         // Re-initialize voices with current sample rate
@@ -1488,3 +1513,5 @@ void ZenithPolySynth::registerPresets()
 #endif // JUCE_DEBUG
 
 } // namespace zenith
+
+

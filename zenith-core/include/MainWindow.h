@@ -22,6 +22,14 @@
 #include "MixerComponent.h"
 #include "ArrangerComponent.h"
 #include "ClipSynchronizer.h"
+#include "ui/ZenithTransportBar.h"
+#include "ui/ZenithStatusBar.h"
+#include "ui/ZenithLookAndFeel.h"
+
+// Skia UI Components (conditional)
+#ifdef ZENITH_USE_SKIA
+    #include "ui/skia/SkiaButtonComponent.h"
+#endif
 
 // Forward declarations
 class WingmanPanel;
@@ -30,6 +38,9 @@ namespace zenith {
     class InstrumentBrowserPanel;
     class CommandAPI;
     class AIBridgeClient;
+    class MasterOutputComponent;
+    class ProjectSettingsComponent;
+    class TransportControlComponent;
 }
 
 //==============================================================================
@@ -71,7 +82,10 @@ public:
     // KeyListener interface (for undo/redo shortcuts)
     //==========================================================================
 
-    bool keyPressed(const juce::KeyPress& key, Component* originatingComponent) override;
+    bool keyPressed(const juce::KeyPress& key) override;
+
+    // Accessors for child components
+    zenith::ZenithStatusBar* getStatusBar() { return zenithStatusBar.get(); }
 
 private:
     //==========================================================================
@@ -79,12 +93,6 @@ private:
     //==========================================================================
 
     void timerCallback() override;
-
-    //==========================================================================
-    // C4: Track count monitoring (read-only, dirty-checked)
-    //==========================================================================
-
-    void refreshTrackCountLabel();
 
     //==========================================================================
     // Integration: Piano roll opener
@@ -105,21 +113,9 @@ private:
     ProjectState& projectState;
 
     // UI Components
-    juce::Label statusLabel;
-    juce::Label cpuLabel;
-    juce::TextButton playButton;
-    juce::TextButton stopButton;
-    juce::TextButton recordButton;
-
-    // Phase 1: Import Audio button
+    
+    // Phase 1: Import Audio button (temporary placement, will be moved to file menu)
     juce::TextButton importButton;
-
-    // Audio device info
-    juce::Label audioDeviceLabel;
-
-    // C4: Track count label (read-only)
-    juce::Label trackCountLabel;
-    int lastTrackCount_ = -1;
 
     // Phase 14: Arrangement view with automation
     std::unique_ptr<ArrangementComponent> arrangementView;
@@ -135,6 +131,26 @@ private:
 
     // Instrument & Preset Browser
     std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
+
+    // Phase 11: Master Output Control with metering
+    std::unique_ptr<zenith::MasterOutputComponent> masterOutputComponent;
+
+    // Project Settings Editor
+    std::unique_ptr<zenith::ProjectSettingsComponent> projectSettingsComponent;
+
+    // NEW: Unified Transport Bar (replaces old transport controls + status labels)
+    std::unique_ptr<zenith::ZenithTransportBar> zenithTransportBar;
+
+    // NEW: Unified Status Bar
+    std::unique_ptr<zenith::ZenithStatusBar> zenithStatusBar;
+
+    // SKIA DEMO: First Skia-rendered component (proof of concept)
+    #ifdef ZENITH_USE_SKIA
+        std::unique_ptr<zenith::SkiaButtonComponent> skiaTestButton;
+    #endif
+
+    // Legacy components (kept for reference/transition)
+    std::unique_ptr<TransportControlComponent> transportControlComponent;
 
     //==========================================================================
     // Phase 1: Audio import
@@ -186,7 +202,7 @@ private:
 
         juce::StringArray getMenuBarNames() override;
         juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
-        void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+        void menuItemSelected(int menuItemID, int topLevelMenuIndex) [[maybe_unused]] override;
 
     private:
         MainWindow& owner;
@@ -229,6 +245,9 @@ private:
     // Integration: Clip synchronizer
     std::unique_ptr<ClipSynchronizer> clipSynchronizer;
 
+    // Design system (created first, must outlive all components)
+    std::unique_ptr<zenith::ZenithLookAndFeel> zenithLookAndFeel;
+
     // Main content
     std::unique_ptr<MainComponent> mainComponent;
 
@@ -237,3 +256,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
+

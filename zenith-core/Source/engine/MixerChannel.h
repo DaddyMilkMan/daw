@@ -45,24 +45,24 @@ public:
 
     //==============================================================================
     // AudioSource interface
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) [[maybe_unused]] override;
     void releaseResources() override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
 
     //==============================================================================
     // Input section
-    void setInputGain(float gainInDb);
+    void setInputGain(float gainInDb) [[maybe_unused]];
     float getInputGain() const { return inputGain.load(); }
 
-    void setPhaseInvert(bool shouldInvert);
+    void setPhaseInvert(bool shouldInvert) [[maybe_unused]];
     bool isPhaseInverted() const { return phaseInvert.load(); }
 
     //==============================================================================
     // High-pass filter
-    void setHighPassEnabled(bool enabled);
+    void setHighPassEnabled(bool enabled) [[maybe_unused]];
     bool isHighPassEnabled() const { return hpfEnabled.load(); }
 
-    void setHighPassFrequency(float frequency);
+    void setHighPassFrequency(float frequency) [[maybe_unused]];
     float getHighPassFrequency() const { return hpfFrequency.load(); }
 
     //==============================================================================
@@ -83,46 +83,46 @@ public:
 
     //==============================================================================
     // Dynamics (Compressor)
-    void setCompressorEnabled(bool enabled);
+    void setCompressorEnabled(bool enabled) [[maybe_unused]];
     bool isCompressorEnabled() const { return compressorEnabled.load(); }
 
-    void setCompressorThreshold(float thresholdDb);
+    void setCompressorThreshold(float thresholdDb) [[maybe_unused]];
     float getCompressorThreshold() const { return compThreshold.load(); }
 
-    void setCompressorRatio(float ratio);
+    void setCompressorRatio(float ratio) [[maybe_unused]];
     float getCompressorRatio() const { return compRatio.load(); }
 
-    void setCompressorAttack(float attackMs);
+    void setCompressorAttack(float attackMs) [[maybe_unused]];
     float getCompressorAttack() const { return compAttack.load(); }
 
-    void setCompressorRelease(float releaseMs);
+    void setCompressorRelease(float releaseMs) [[maybe_unused]];
     float getCompressorRelease() const { return compRelease.load(); }
 
-    void setCompressorMakeup(float makeupDb);
+    void setCompressorMakeup(float makeupDb) [[maybe_unused]];
     float getCompressorMakeup() const { return compMakeup.load(); }
 
     float getGainReduction() const { return gainReduction.load(); }
 
     //==============================================================================
     // Send effects (4 aux sends)
-    void setSendLevel(int sendIndex, float level);
+    void setSendLevel(int sendIndex, float level) [[maybe_unused]];
     float getSendLevel(int sendIndex) const;
 
-    void setSendPreFader(int sendIndex, bool preFader);
+    void setSendPreFader(int sendIndex, bool preFader) [[maybe_unused]];
     bool isSendPreFader(int sendIndex) const;
 
     //==============================================================================
     // Output section
-    void setVolume(float volume);
+    void setVolume(float volume) [[maybe_unused]];
     float getVolume() const { return volume.load(); }
 
-    void setPan(float pan);
+    void setPan(float pan) [[maybe_unused]];
     float getPan() const { return this->pan.load(); }
 
-    void setMuted(bool shouldBeMuted);
+    void setMuted(bool shouldBeMuted) [[maybe_unused]];
     bool isMuted() const { return muted.load(); }
 
-    void setSolo(bool shouldBeSolo);
+    void setSolo(bool shouldBeSolo) [[maybe_unused]];
     bool isSolo() const { return solo.load(); }
 
     //==============================================================================
@@ -205,7 +205,7 @@ private:
     void processEQ(juce::AudioBuffer<float>& buffer);
     void processCompressor(juce::AudioBuffer<float>& buffer);
     void processOutput(juce::AudioBuffer<float>& buffer);
-    void updateMeters(const juce::AudioBuffer<float>& buffer, bool isInput);
+    void updateMeters(const juce::AudioBuffer<float>& buffer, bool isInput) [[maybe_unused]];
     void updateFilterCoefficients();
     void updateCompressorCoefficients();
 
@@ -217,3 +217,4 @@ private:
 };
 
 } // namespace zenith
+

@@ -114,8 +114,8 @@ public:
      */
     void systemRequestedQuit() override
     {
-        // TODO: Check for unsaved changes
-        // TODO: Show "Save changes?" dialog if needed
+        // TODO(zenith-core#1): Check for unsaved changes
+        // TODO(zenith-core#1): Show "Save changes?" dialog if needed
 
         quit();
     }
@@ -163,3 +163,4 @@ private:
  * and creates an instance of our application class.
  */
 START_JUCE_APPLICATION(ZenithApplication)
+

@@ -175,12 +175,12 @@ public:
     /**
      * @brief Set playback position (MESSAGE THREAD ONLY)
      */
-    void setPlayheadSamples(juce::int64 position);
+    void setPlayheadSamples(juce::int64 position) [[maybe_unused]];
 
     /**
      * @brief Enable/disable looping
      */
-    void setLooping(bool shouldLoop);
+    void setLooping(bool shouldLoop) [[maybe_unused]];
 
     /**
      * @brief Check if looping is enabled
@@ -190,7 +190,7 @@ public:
     /**
      * @brief Set loop region in samples (MESSAGE THREAD ONLY)
      */
-    void setLoopRegion(juce::int64 start, juce::int64 end);
+    void setLoopRegion(juce::int64 start, juce::int64 end) [[maybe_unused]];
 
     /**
      * @brief Get loop start position in samples
@@ -255,7 +255,7 @@ public:
      * @param count Number of tracks to create
      * @note Does NOT attach tracks to audio graph; for compile/UI testing only
      */
-    void addTestTracks(int count);
+    void addTestTracks(int count) [[maybe_unused]];
 
     /**
      * @brief Create a new track in both Engine and ProjectState
@@ -275,11 +275,11 @@ public:
      * @note These methods update the engine Track objects directly
      * @note In Phase 11, these are called by TrackStateSynchronizer
      */
-    void setTrackVolume(int trackIndex, float volume);
-    void setTrackPan(int trackIndex, float pan);
-    void setTrackMute(int trackIndex, bool muted);
-    void setTrackSolo(int trackIndex, bool solo);
-    void setTrackArmed(int trackIndex, bool armed);
+    void setTrackVolume(int trackIndex, float volume) [[maybe_unused]];
+    void setTrackPan(int trackIndex, float pan) [[maybe_unused]];
+    void setTrackMute(int trackIndex, bool muted) [[maybe_unused]];
+    void setTrackSolo(int trackIndex, bool solo) [[maybe_unused]];
+    void setTrackArmed(int trackIndex, bool armed) [[maybe_unused]];
 
     //==========================================================================
     // Phase 11: Metering (MESSAGE THREAD SAFE)
@@ -491,7 +491,7 @@ private:
      * @param quantize If true, quantize events to 1/16 note grid
      * @note MESSAGE THREAD ONLY
      */
-    void bakeMidiRecordingsIntoClips(bool quantize);
+    void bakeMidiRecordingsIntoClips(bool quantize) [[maybe_unused]];
 
     /**
      * @brief Clear all MIDI recording buffers
@@ -512,7 +512,7 @@ private:
         double quantizeGrid);
 
     // Track management (message thread only)
-    void prepareTracks(int samplesPerBlockExpected, double sampleRate);
+    void prepareTracks(int samplesPerBlockExpected, double sampleRate) [[maybe_unused]];
 
     // Phase 2A: MIDI input management (message thread only)
     void enableMidiInput();
@@ -528,7 +528,7 @@ private:
      * @param numChannels Number of channels per track
      * @note Must be called before renderBlock() during offline export
      */
-    void prepareBuffersForOfflineRender(int blockSize, int numChannels);
+    void prepareBuffersForOfflineRender(int blockSize, int numChannels) [[maybe_unused]];
 
     /**
      * @brief Render a block of audio into the output buffer
@@ -637,3 +637,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
+

@@ -110,7 +110,7 @@ PluginEditorWindow* PluginEditorWindowManager::openEditor(juce::AudioPluginInsta
     }
 
     // Create new window
-    auto* window = new PluginEditorWindow(plugin, useGenericEditor);
+    auto* window = std::make_unique<PluginEditorWindow>(plugin, useGenericEditor);
 
     // Store in map
     editorWindows[plugin] = window;
@@ -176,3 +176,4 @@ PluginEditorWindow* PluginEditorWindowManager::getEditorWindow(juce::AudioPlugin
 }
 
 } // namespace zenith
+

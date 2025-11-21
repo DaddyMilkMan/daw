@@ -60,8 +60,8 @@ private:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
     void valueTreeParentChanged(juce::ValueTree& tree) override;
 
     //==========================================================================
@@ -96,7 +96,7 @@ private:
     /**
      * @brief Draw a tempo point
      */
-    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected);
+    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected) [[maybe_unused]];
 
     //==========================================================================
     // Member Variables
@@ -119,3 +119,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoLaneComponent)
 };
+

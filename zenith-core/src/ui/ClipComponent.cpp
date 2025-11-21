@@ -1,6 +1,14 @@
 /**
  * @file ClipComponent.cpp
- * @brief Clip component implementation
+ * @brief Beautiful clip component with gradients, shadows, and animations
+ *
+ * Modern DAW-inspired design:
+ * - Smooth gradients (Ableton-style darker at bottom)
+ * - Hover effects with scale and glow
+ * - Selection ring with pulse animation
+ * - Subtle shadows for depth
+ * - Rounded corners (8px)
+ * - Waveform preview visualization
  */
 
 #include "../../include/ui/ClipComponent.h"
@@ -9,6 +17,13 @@
 ClipComponent::ClipComponent(juce::ValueTree clipNode)
     : clip(clipNode)
 {
+    setMouseCursor(juce::MouseCursor::PointingHandCursor);
+    startTimerHz(60);  // 60 Hz for smooth animations
+}
+
+ClipComponent::~ClipComponent()
+{
+    stopTimer();
 }
 
 juce::String ClipComponent::getClipId() const
@@ -35,31 +50,122 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height
 
 void ClipComponent::paint(juce::Graphics& g)
 {
-    auto bounds = getLocalBounds();
+    auto bounds = getLocalBounds().toFloat();
 
-    // Determine color based on clip type
-    juce::Colour clipColor = juce::Colours::blue;
-    if (clip[ProjectState::PROP_TYPE].toString() == "midi")
-        clipColor = juce::Colours::green;
+    // Determine beautiful colors based on clip type (modern DAW palette)
+    juce::Colour baseColor;
+    juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
 
-    // Fill
-    g.setColour(clipColor.withAlpha(0.6f));
-    g.fillRoundedRectangle(bounds.toFloat(), 4.0f);
+    if (clipType == "midi") {
+        baseColor = juce::Colour(0xff34c759);  // Apple green for MIDI
+    } else {
+        baseColor = juce::Colour(0xff4a9eff);  // Apple blue for audio
+    }
 
-    // Border
-    g.setColour(clipColor);
-    g.drawRoundedRectangle(bounds.toFloat().reduced(0.5f), 4.0f, 2.0f);
+    // Apply hover and selection scaling
+    auto scaledBounds = bounds;
+    if (isHovered || isSelected) {
+        float scale = isSelected ? 0.98f : (isHovered ? 1.02f : 1.0f);
+        scale = juce::jlimit(0.95f, 1.05f, scale + hoverAnimation * 0.05f);
 
-    // Clip name/ID
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(12.0f));
-    g.drawText(getClipId(), bounds.reduced(4), juce::Justification::centredLeft, true);
+        float centerX = bounds.getCentreX();
+        float centerY = bounds.getCentreY();
+        float newWidth = bounds.getWidth() * scale;
+        float newHeight = bounds.getHeight() * scale;
+
+        scaledBounds = juce::Rectangle<float>(
+            centerX - newWidth / 2.0f,
+            centerY - newHeight / 2.0f,
+            newWidth,
+            newHeight
+        );
+    }
+
+    // Draw subtle shadow for depth (modern DAW style)
+    if (!isHovered) {
+        g.setColour(juce::Colour(0x00000000).withAlpha(0.3f));
+        g.fillRoundedRectangle(scaledBounds.translated(0.0f, 2.0f), 8.0f);
+    }
+
+    // Draw beautiful gradient background (Ableton-style: lighter at top, darker at bottom)
+    juce::ColourGradient gradient(
+        baseColor.brighter(0.2f), scaledBounds.getCentreX(), scaledBounds.getY(),
+        baseColor.darker(0.3f), scaledBounds.getCentreX(), scaledBounds.getBottom(),
+        false
+    );
+    g.setGradientFill(gradient);
+    g.fillRoundedRectangle(scaledBounds, 8.0f);
+
+    // Add subtle inner highlight (top 30%) for depth
+    g.setColour(juce::Colour(0xffffffff).withAlpha(0.15f));
+    auto highlightBounds = scaledBounds.withHeight(scaledBounds.getHeight() * 0.3f);
+    g.fillRoundedRectangle(highlightBounds, 8.0f);
+
+    // Draw selection glow/ring with pulse animation
+    if (isSelected) {
+        float glowAlpha = 0.4f + 0.2f * std::sin(selectionPulse * juce::MathConstants<float>::twoPi);
+        g.setColour(baseColor.brighter(0.5f).withAlpha(glowAlpha));
+        g.drawRoundedRectangle(scaledBounds.expanded(2.0f), 8.0f, 3.0f);
+    }
+
+    // Draw hover glow
+    if (isHovered && !isSelected) {
+        g.setColour(baseColor.brighter(0.3f).withAlpha(0.3f));
+        g.drawRoundedRectangle(scaledBounds.expanded(1.0f), 8.0f, 2.0f);
+    }
+
+    // Border (subtle, modern)
+    g.setColour(baseColor.darker(0.2f).withAlpha(0.8f));
+    g.drawRoundedRectangle(scaledBounds.reduced(0.5f), 8.0f, 1.5f);
+
+    // Clip name with better typography
+    g.setColour(juce::Colour(0xffffffff).withAlpha(0.95f));
+    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+
+    juce::String clipName = getClipId();
+    auto textBounds = scaledBounds.reduced(8.0f, 4.0f);
+    g.drawText(clipName, textBounds.toNearestInt(), juce::Justification::centredLeft, true);
+
+    // Optional: Draw waveform preview hint for audio clips (simplified for now)
+    if (clipType == "audio" && scaledBounds.getWidth() > 40.0f) {
+        g.setColour(juce::Colour(0xffffffff).withAlpha(0.1f));
+        auto waveformBounds = scaledBounds.reduced(4.0f, scaledBounds.getHeight() * 0.35f);
+
+        // Draw simplified waveform representation
+        for (int i = 0; i < 20; ++i) {
+            float x = waveformBounds.getX() + (waveformBounds.getWidth() / 20.0f) * i;
+            float height = std::sin(i * 0.5f) * waveformBounds.getHeight() * 0.4f;
+            g.drawLine(x, waveformBounds.getCentreY() - height,
+                      x, waveformBounds.getCentreY() + height, 1.0f);
+        }
+    }
+}
+
+void ClipComponent::mouseEnter(const juce::MouseEvent& event)
+{
+    juce::ignoreUnused(event);
+    isHovered = true;
+    repaint();
+}
+
+void ClipComponent::mouseExit(const juce::MouseEvent& event)
+{
+    juce::ignoreUnused(event);
+    isHovered = false;
+    repaint();
 }
 
 void ClipComponent::mouseDown(const juce::MouseEvent& event)
 {
     dragStartPos = event.getPosition();
     dragStartBeats = getStartBeats();
+
+    // Toggle selection on click (Ctrl/Cmd for multi-select)
+    if (!event.mods.isCommandDown()) {
+        isSelected = !isSelected;
+    }
+
+    repaint();
 }
 
 void ClipComponent::mouseDrag(const juce::MouseEvent& event)
@@ -68,3 +174,27 @@ void ClipComponent::mouseDrag(const juce::MouseEvent& event)
     auto delta = event.getPosition() - dragStartPos;
     setTopLeftPosition(getX() + delta.x, getY());
 }
+
+void ClipComponent::timerCallback()
+{
+    // Smooth animation updates
+    const float animationSpeed = 0.1f;
+
+    // Hover animation (smooth ease in/out)
+    float targetHover = isHovered ? 1.0f : 0.0f;
+    hoverAnimation += (targetHover - hoverAnimation) * animationSpeed;
+
+    // Selection pulse animation
+    if (isSelected) {
+        selectionPulse += 0.02f;
+        if (selectionPulse > 1.0f) {
+            selectionPulse -= 1.0f;
+        }
+    }
+
+    // Repaint only if animation is active
+    if (std::abs(hoverAnimation - targetHover) > 0.01f || isSelected) {
+        repaint();
+    }
+}
+

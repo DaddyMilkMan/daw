@@ -439,7 +439,7 @@ juce::var CommandAPI::cmd_getNotes(const juce::var& params)
     juce::Array<juce::var> notesArray;
     if (notesTree.isValid())
     {
-        for (auto note : notesTree)
+        for (const auto& note : notesTree)
         {
             juce::DynamicObject::Ptr noteObj = new juce::DynamicObject();
             noteObj->setProperty("id", note.getProperty("id", "").toString());
@@ -1465,3 +1465,4 @@ juce::var CommandAPI::cmd_randomizeInstrumentParams(const juce::var& params)
     result->setProperty("intensity", intensity);
     return juce::var(result.get());
 }
+

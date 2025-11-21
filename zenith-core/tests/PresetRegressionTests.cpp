@@ -65,7 +65,7 @@ void reportFailure(const std::string& testName,
               << description << std::endl;
 }
 
-void recordTestResult(const std::string& testName, bool passed)
+void recordTestResult(const std::string& testName, bool passed) [[maybe_unused]]
 {
     g_totalTests++;
     if (passed)
@@ -194,7 +194,7 @@ bool testAudioRendering(const std::string& instrumentId,
         instrument->setParameterValue(paramId, value);
     }
 
-    auto* processor = instrument->getProcessor();
+    auto* processor = instrument->getAudioProcessor();
     if (processor == nullptr)
     {
         reportFailure(testName, "Audio Rendering", "Processor is null");
@@ -303,7 +303,7 @@ bool testMultiBlockRendering(const std::string& instrumentId,
         instrument->setParameterValue(paramId, value);
     }
 
-    auto* processor = instrument->getProcessor();
+    auto* processor = instrument->getAudioProcessor();
     if (processor == nullptr)
     {
         reportFailure(testName, "Multi-Block Rendering", "Processor is null");
@@ -833,3 +833,4 @@ int main()
 
     return (g_totalTests == g_passedTests) ? 0 : 1;
 }
+

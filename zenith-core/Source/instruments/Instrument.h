@@ -183,7 +183,7 @@ protected:
      * @param parameterId Stable parameter ID from metadata
      * @param juceParameterIndex Index in AudioProcessor::getParameters()
      */
-    void mapParameter(const juce::String& parameterId, int juceParameterIndex);
+    void mapParameter(const juce::String& parameterId, int juceParameterIndex) [[maybe_unused]];
 
 private:
     std::unique_ptr<juce::AudioProcessor> processor_;
@@ -209,3 +209,4 @@ private:
 };
 
 } // namespace zenith
+

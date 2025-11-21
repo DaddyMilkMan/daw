@@ -4,6 +4,8 @@
  */
 
 #include "InstrumentBrowserPanel.h"
+#include "ZenithLookAndFeel.h"
+#include "AudioFeedback.h"
 #include "../../include/Engine.h"
 #include <algorithm>
 
@@ -26,34 +28,53 @@ InstrumentBrowserPanel::InstrumentBrowserPanel(Engine& engine, ProjectState& pro
       projectState_(projectState),
       instrumentRegistry_(InstrumentRegistry::getInstance())
 {
+    // Start 60Hz animation timer
+    startTimerHz(60);
+
     // Title header
     titleLabel.setText("Instruments", juce::dontSendNotification);
-    titleLabel.setFont(juce::Font(18.0f, juce::Font::bold));
+    titleLabel.setFont(ZenithLookAndFeel::getFontTitle());
     titleLabel.setJustificationType(juce::Justification::centredLeft);
-    titleLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    titleLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(titleLabel);
 
-    // Search box
+    // Search box with enhanced styling
     searchLabel.setText("Search:", juce::dontSendNotification);
-    searchLabel.setFont(juce::Font(14.0f));
-    searchLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+    searchLabel.setFont(ZenithLookAndFeel::getFontBody());
+    searchLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     addAndMakeVisible(searchLabel);
 
     searchBox.setMultiLine(false);
     searchBox.setReturnKeyStartsNewLine(false);
-    searchBox.setTextToShowWhenEmpty("Search presets...", juce::Colours::grey);
-    searchBox.setFont(juce::Font(14.0f));
-    searchBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff2a2a2a));
-    searchBox.setColour(juce::TextEditor::textColourId, juce::Colours::white);
-    searchBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff3a3a3a));
-    searchBox.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(0xff4a9eff));
+    searchBox.setTextToShowWhenEmpty("Search...", juce::Colour(ZenithLookAndFeel::Colors::textDisabled));
+    searchBox.setFont(ZenithLookAndFeel::getFontBody());
+    searchBox.setColour(juce::TextEditor::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    searchBox.setColour(juce::TextEditor::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    searchBox.setColour(juce::TextEditor::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
+    searchBox.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
     searchBox.addListener(this);
     addAndMakeVisible(searchBox);
 
-    // Tag chips
-    tagsLabel.setText("Tags:", juce::dontSendNotification);
-    tagsLabel.setFont(juce::Font(14.0f));
-    tagsLabel.setColour(juce::Label::textColourId, juce::Colours::lightgrey);
+#ifdef ZENITH_USE_SKIA
+    // GPU-accelerated clear button with spring physics
+    searchClearButton = std::make_unique<SkiaButtonComponent>("×", SkiaButtonComponent::Style::Secondary);
+    searchClearButton->onClick = [this]() { clearSearch(); };
+    searchClearButton->setVisible(false);
+    addAndMakeVisible(*searchClearButton);
+#else
+    // Fallback: JUCE clear button
+    searchClearButton.setButtonText("x"); // Simple x, will be styled by LookAndFeel
+    searchClearButton.setColour(juce::TextButton::buttonColourId, juce::Colours::transparentBlack);
+    searchClearButton.setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+    searchClearButton.onClick = [this]() { clearSearch(); };
+    searchClearButton.setVisible(false);
+    addAndMakeVisible(searchClearButton);
+#endif
+
+    // Tag chips with enhanced styling
+    tagsLabel.setText("Categories:", juce::dontSendNotification);
+    tagsLabel.setFont(ZenithLookAndFeel::getFontBody());
+    tagsLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     addAndMakeVisible(tagsLabel);
 
     addAndMakeVisible(tagChipsContainer);
@@ -61,95 +82,121 @@ InstrumentBrowserPanel::InstrumentBrowserPanel(Engine& engine, ProjectState& pro
 
     // Instrument list
     instrumentsLabel.setText("Instruments:", juce::dontSendNotification);
-    instrumentsLabel.setFont(juce::Font(14.0f, juce::Font::bold));
-    instrumentsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    instrumentsLabel.setFont(ZenithLookAndFeel::getFontHeading());
+    instrumentsLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(instrumentsLabel);
 
     instrumentListModel_ = std::make_unique<InstrumentListBoxModel>(*this);
     instrumentList.setModel(instrumentListModel_.get());
-    instrumentList.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff1a1a1a));
-    instrumentList.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff3a3a3a));
-    instrumentList.setRowHeight(30);
+    instrumentList.setColour(juce::ListBox::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    instrumentList.setColour(juce::ListBox::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
+    instrumentList.setRowHeight(32); // Match buttonHeightM
     addAndMakeVisible(instrumentList);
 
     // Preset list
     presetsLabel.setText("Presets:", juce::dontSendNotification);
-    presetsLabel.setFont(juce::Font(14.0f, juce::Font::bold));
-    presetsLabel.setColour(juce::Label::textColourId, juce::Colours::white);
+    presetsLabel.setFont(ZenithLookAndFeel::getFontHeading());
+    presetsLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
     addAndMakeVisible(presetsLabel);
 
     presetListModel_ = std::make_unique<PresetListBoxModel>(*this);
     presetList.setModel(presetListModel_.get());
-    presetList.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff1a1a1a));
-    presetList.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff3a3a3a));
+    presetList.setColour(juce::ListBox::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    presetList.setColour(juce::ListBox::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
     presetList.setRowHeight(28);
     addAndMakeVisible(presetList);
 
-    // Load preset button
+#ifdef ZENITH_USE_SKIA
+    // GPU-accelerated load button with spring physics
+    loadPresetButton = std::make_unique<SkiaButtonComponent>("Load to Track", SkiaButtonComponent::Style::Primary);
+    loadPresetButton->onClick = [this]() { loadPresetToSelectedTrack(); };
+    addAndMakeVisible(*loadPresetButton);
+#else
+    // Fallback: JUCE load button
     loadPresetButton.setButtonText("Load to Track");
     loadPresetButton.setEnabled(false);
     loadPresetButton.onClick = [this]() { loadPresetToSelectedTrack(); };
     addAndMakeVisible(loadPresetButton);
+#endif
 
     // Status label (toast)
-    statusLabel.setFont(juce::Font(12.0f));
+    statusLabel.setFont(ZenithLookAndFeel::getFontSmall());
     statusLabel.setJustificationType(juce::Justification::centred);
-    statusLabel.setColour(juce::Label::backgroundColourId, juce::Colour(0xff2a2a2a));
-    statusLabel.setColour(juce::Label::textColourId, juce::Colours::white);
-    statusLabel.setColour(juce::Label::outlineColourId, juce::Colour(0xff4a9eff));
+    statusLabel.setColour(juce::Label::backgroundColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
+    statusLabel.setColour(juce::Label::textColourId, juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    statusLabel.setColour(juce::Label::outlineColourId, juce::Colour(ZenithLookAndFeel::Colors::border));
     statusLabel.setVisible(false);
     addAndMakeVisible(statusLabel);
-
-    // Status timer
-    statusTimer_ = std::make_unique<StatusTimer>(*this);
 
     // Load instruments
     instrumentIds_ = instrumentRegistry_.getInstrumentIds();
     instrumentList.updateContent();
 
-    setSize(300, 600);
+    setSize(ZenithLookAndFeel::Metrics::browserPanelWidth, 600);
 }
 
 InstrumentBrowserPanel::~InstrumentBrowserPanel()
 {
     searchBox.removeListener(this);
-    statusTimer_->stopTimer();
+    stopTimer();
 }
 
 void InstrumentBrowserPanel::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff252525));
+    auto bounds = getLocalBounds();
 
-    // Border
-    g.setColour(juce::Colour(0xff3a3a3a));
-    g.drawRect(getLocalBounds(), 1);
+    // Background
+    g.fillAll(juce::Colour(ZenithLookAndFeel::Colors::backgroundMid));
+
+    // Right border
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::border));
+    g.drawRect(bounds.removeFromRight(1), 1);
+
+    // Draw focus glow around search box if focused
+    if (searchFocusAnimation > 0.01f)
+    {
+        auto searchBounds = searchBox.getBounds().toFloat().expanded(2.0f);
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(searchFocusAnimation * 0.3f));
+        g.drawRoundedRectangle(searchBounds, ZenithLookAndFeel::Metrics::radiusM, 2.0f);
+    }
 }
 
 void InstrumentBrowserPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced(10);
+    using namespace ZenithLookAndFeel::Metrics;
+    auto bounds = getLocalBounds().reduced(spacingS);
 
     // Title
-    titleLabel.setBounds(bounds.removeFromTop(30));
+    titleLabel.setBounds(bounds.removeFromTop(buttonHeightM));
 
-    bounds.removeFromTop(10);  // Spacing
+    bounds.removeFromTop(spacingS);
 
     // Search section
     searchLabel.setBounds(bounds.removeFromTop(20));
-    searchBox.setBounds(bounds.removeFromTop(30));
+    auto searchArea = bounds.removeFromTop(buttonHeightM);
+    searchBox.setBounds(searchArea);
 
-    bounds.removeFromTop(10);  // Spacing
+    // Clear button overlays search box on the right
+    if (!searchBox.isEmpty())
+    {
+#ifdef ZENITH_USE_SKIA
+        searchClearButton->setBounds(searchArea.getRight() - 24, searchArea.getY() + 4, 20, 20);
+#else
+        searchClearButton.setBounds(searchArea.getRight() - 24, searchArea.getY() + 4, 20, 20);
+#endif
+    }
+
+    bounds.removeFromTop(spacingS);
 
     // Tag chips section
     tagsLabel.setBounds(bounds.removeFromTop(20));
     auto tagChipsArea = bounds.removeFromTop(80);  // 2 rows of chips
     tagChipsContainer.setBounds(tagChipsArea);
 
-    // Layout tag chips in a grid (5 per row)
-    int chipWidth = 55;
-    int chipHeight = 28;
-    int chipSpacing = 5;
+    // Layout tag chips in a grid (4 per row to fit width)
+    int chipWidth = 60;
+    int chipHeight = 24;
+    int chipSpacing = spacingXS;
     int x = 0;
     int y = 0;
 
@@ -158,36 +205,40 @@ void InstrumentBrowserPanel::resized()
         tagChips[i]->setBounds(x, y, chipWidth, chipHeight);
 
         x += chipWidth + chipSpacing;
-        if ((i + 1) % 5 == 0)  // New row every 5 chips
+        if ((i + 1) % 4 == 0)  // New row every 4 chips
         {
             x = 0;
             y += chipHeight + chipSpacing;
         }
     }
 
-    bounds.removeFromTop(10);  // Spacing
+    bounds.removeFromTop(spacingS);
 
     // Instrument list section
     instrumentsLabel.setBounds(bounds.removeFromTop(20));
     auto instrumentListArea = bounds.removeFromTop(150);
     instrumentList.setBounds(instrumentListArea);
 
-    bounds.removeFromTop(10);  // Spacing
+    bounds.removeFromTop(spacingS);
 
     // Preset list section
     presetsLabel.setBounds(bounds.removeFromTop(20));
 
     // Load button at bottom
-    auto loadButtonArea = bounds.removeFromBottom(35);
+    auto loadButtonArea = bounds.removeFromBottom(buttonHeightL);
+#ifdef ZENITH_USE_SKIA
+    loadPresetButton->setBounds(loadButtonArea);
+#else
     loadPresetButton.setBounds(loadButtonArea);
+#endif
 
-    bounds.removeFromBottom(5);  // Spacing
+    bounds.removeFromBottom(spacingS);
 
     // Preset list takes remaining space
     presetList.setBounds(bounds);
 
     // Status label (overlay at bottom)
-    statusLabel.setBounds(getLocalBounds().removeFromBottom(40).reduced(15, 10));
+    statusLabel.setBounds(getLocalBounds().removeFromBottom(40).reduced(spacingM, spacingS));
 }
 
 void InstrumentBrowserPanel::toggleVisibility()
@@ -209,6 +260,24 @@ void InstrumentBrowserPanel::textEditorTextChanged(juce::TextEditor& editor)
     if (&editor == &searchBox)
     {
         updateSearchFilter();
+
+        // Show/hide clear button based on text content
+        bool hasText = !searchBox.isEmpty();
+#ifdef ZENITH_USE_SKIA
+        searchClearButton->setVisible(hasText);
+        if (hasText)
+        {
+            auto searchArea = searchBox.getBounds();
+            searchClearButton->setBounds(searchArea.getRight() - 24, searchArea.getY() + 4, 20, 20);
+        }
+#else
+        searchClearButton.setVisible(hasText);
+        if (hasText)
+        {
+            auto searchArea = searchBox.getBounds();
+            searchClearButton.setBounds(searchArea.getRight() - 24, searchArea.getY() + 4, 20, 20);
+        }
+#endif
     }
 }
 
@@ -218,13 +287,45 @@ void InstrumentBrowserPanel::textEditorTextChanged(juce::TextEditor& editor)
 
 void InstrumentBrowserPanel::initializeTagChips()
 {
+#ifdef ZENITH_USE_SKIA
+    // GPU-accelerated tag chips with spring physics
+    for (const auto& tagName : TAG_CHIPS)
+    {
+        auto chip = std::make_unique<SkiaButtonComponent>(tagName, SkiaButtonComponent::Style::Secondary);
+        chip->setToggleable(true);
+
+        chip->onClick = [this, tagName, chipPtr = chip.get()]() {
+            // Deselect all other chips (radio behavior)
+            for (auto& otherChip : tagChips)
+            {
+                if (otherChip.get() != chipPtr)
+                    otherChip->setToggleState(false);
+            }
+            chipPtr->setToggleState(true);
+            updateTagFilter(tagName);
+        };
+
+        tagChipsContainer.addAndMakeVisible(chip.get());
+        tagChips.push_back(std::move(chip));
+    }
+
+    // Select "All" by default
+    if (!tagChips.empty())
+    {
+        tagChips[0]->setToggleState(true);
+        activeTag = "";  // Empty = show all
+    }
+#else
+    // Fallback: JUCE tag chips
     for (const auto& tagName : TAG_CHIPS)
     {
         auto chip = std::make_unique<juce::TextButton>(tagName);
-        chip->setColour(juce::TextButton::buttonColourId, juce::Colour(0xff2a2a2a));
-        chip->setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff4a9eff));
-        chip->setColour(juce::TextButton::textColourOffId, juce::Colours::white);
-        chip->setColour(juce::TextButton::textColourOnId, juce::Colours::white);
+
+        // Zenith-style chip styling
+        chip->setColour(juce::TextButton::buttonColourId, juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel));
+        chip->setColour(juce::TextButton::buttonOnColourId, juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
+        chip->setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+        chip->setColour(juce::TextButton::textColourOnId, juce::Colour(ZenithLookAndFeel::Colors::backgroundDark)); // Dark text on bright accent
 
         chip->setClickingTogglesState(true);
         chip->setRadioGroupId(1000);  // Exclusive selection
@@ -243,6 +344,7 @@ void InstrumentBrowserPanel::initializeTagChips()
         tagChips[0]->setToggleState(true, juce::dontSendNotification);
         activeTag = "";  // Empty = show all
     }
+#endif
 }
 
 void InstrumentBrowserPanel::onInstrumentSelected(int instrumentIndex)
@@ -338,10 +440,16 @@ void InstrumentBrowserPanel::loadPresetToSelectedTrack()
     if (success)
     {
         showStatus("Loaded preset: " + juce::String(presetItem.preset.name));
+
+        // Play success chime
+        AudioFeedback::getInstance().playSound(AudioFeedback::Success, 0.3f);
     }
     else
     {
         showStatus("Failed to load preset", true);
+
+        // Play error beep
+        AudioFeedback::getInstance().playSound(AudioFeedback::Error, 0.3f);
     }
 }
 
@@ -447,37 +555,49 @@ void InstrumentBrowserPanel::showStatus(const juce::String& message, bool isErro
 {
     statusLabel.setText(message, juce::dontSendNotification);
     statusLabel.setColour(juce::Label::backgroundColourId,
-                          isError ? juce::Colour(0xff8B0000) : juce::Colour(0xff2a2a2a));
+                          isError ? juce::Colour(ZenithLookAndFeel::Colors::accentDanger).withAlpha(0.2f) 
+                                  : juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
     statusLabel.setColour(juce::Label::outlineColourId,
-                          isError ? juce::Colours::red : juce::Colour(0xff4a9eff));
+                          isError ? juce::Colour(ZenithLookAndFeel::Colors::accentDanger) 
+                                  : juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
     statusLabel.setVisible(true);
     statusLabelAlpha = 255;
-
-    // Start fade-out timer
-    statusTimer_->startTimer(50);  // 50ms updates for smooth fade
+    statusHoldTicks = 0;
 }
 
 void InstrumentBrowserPanel::timerCallback()
 {
+    // Update search focus animation (60Hz)
+    const float animationSpeed = 0.15f;
+    float targetFocus = searchHasFocus ? 1.0f : 0.0f;
+    searchFocusAnimation += (targetFocus - searchFocusAnimation) * animationSpeed;
+
+    if (std::abs(searchFocusAnimation - targetFocus) > 0.01f)
+        repaint();
+
+    // Update status animation
+    updateStatusAnimation();
+}
+
+void InstrumentBrowserPanel::updateStatusAnimation()
+{
     // Fade out status label
     if (statusLabelAlpha > 0)
     {
-        // Hold at full opacity for 2 seconds (2000ms / 50ms = 40 ticks)
-        static int holdTicks = 0;
-        if (holdTicks < 40)
+        // Hold at full opacity for 2 seconds (2000ms / ~16.67ms = 120 ticks at 60Hz)
+        if (statusHoldTicks < 120)
         {
-            holdTicks++;
+            statusHoldTicks++;
             return;
         }
 
-        // Fade out over 1 second (1000ms / 50ms = 20 ticks)
-        statusLabelAlpha -= 12;  // 255 / 20 ≈ 12
+        // Fade out over 0.5 seconds (30 ticks at 60Hz)
+        statusLabelAlpha -= 8;  // 255 / 30 ≈ 8
         if (statusLabelAlpha <= 0)
         {
             statusLabelAlpha = 0;
             statusLabel.setVisible(false);
-            statusTimer_->stopTimer();
-            holdTicks = 0;
+            statusHoldTicks = 0;
         }
 
         statusLabel.setAlpha(statusLabelAlpha / 255.0f);
@@ -485,10 +605,22 @@ void InstrumentBrowserPanel::timerCallback()
     }
 }
 
+void InstrumentBrowserPanel::clearSearch()
+{
+    searchBox.clear();
+    searchBox.grabKeyboardFocus();
+#ifdef ZENITH_USE_SKIA
+    searchClearButton->setVisible(false);
+#else
+    searchClearButton.setVisible(false);
+#endif
+    updateSearchFilter();
+}
+
 zenith::Track* InstrumentBrowserPanel::getSelectedTrack() const
 {
     // Get first instrument track from project state
-    // TODO: Implement proper track selection (selected track in arranger)
+    // TODO(zenith-core#1): Implement proper track selection (selected track in arranger)
     // For now, we'll use the first instrument track
 
     int numTracks = engine_.getNumTracks();
@@ -503,7 +635,7 @@ zenith::Track* InstrumentBrowserPanel::getSelectedTrack() const
             {
                 // Note: This returns nullptr since we can't directly access Track objects from ValueTree
                 // The caller should use the trackTree directly instead
-                return nullptr; // TODO: Refactor to return ValueTree or track ID
+                return nullptr; // TODO(zenith-core#1): Refactor to return ValueTree or track ID
             }
         }
     }
@@ -531,13 +663,19 @@ void InstrumentBrowserPanel::InstrumentListBoxModel::paintListBoxItem(
     if (rowNumber < 0 || rowNumber >= owner_.instrumentIds_.size())
         return;
 
+    auto bounds = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
+
     // Background
     if (rowIsSelected)
-        g.fillAll(juce::Colour(0xff4a9eff).withAlpha(0.3f));
+    {
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(0.2f));
+        g.fillRoundedRectangle(bounds.reduced(2.0f, 1.0f), ZenithLookAndFeel::Metrics::radiusS);
+    }
     else if (rowNumber % 2 == 0)
-        g.fillAll(juce::Colour(0xff242424));
-    else
-        g.fillAll(juce::Colour(0xff1a1a1a));
+    {
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel));
+        g.fillAll();
+    }
 
     // Get instrument metadata
     auto instrumentId = owner_.instrumentIds_[rowNumber];
@@ -546,23 +684,30 @@ void InstrumentBrowserPanel::InstrumentListBoxModel::paintListBoxItem(
     if (metadata != nullptr)
     {
         // Draw instrument name
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(14.0f));
-        g.drawText(metadata->name, 10, 0, width - 20, height,
+        g.setColour(rowIsSelected ? juce::Colour(ZenithLookAndFeel::Colors::accentPrimary) 
+                                  : juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+        g.setFont(ZenithLookAndFeel::getFontBody().withStyle(rowIsSelected ? juce::Font::bold : juce::Font::plain));
+        g.drawText(metadata->name, 12, 0, width - 80, height,
                    juce::Justification::centredLeft, true);
 
-        // Draw category (smaller, grey)
-        g.setColour(juce::Colours::grey);
-        g.setFont(juce::Font(11.0f));
-        g.drawText(metadata->category, 10, 0, width - 20, height,
-                   juce::Justification::centredRight, true);
+        // Draw category badge
+        if (metadata->category.isNotEmpty())
+        {
+            g.setColour(juce::Colour(ZenithLookAndFeel::Colors::backgroundLight));
+            juce::Rectangle<float> badge(static_cast<float>(width - 68), 6.0f, 60.0f, static_cast<float>(height - 12));
+            g.fillRoundedRectangle(badge, ZenithLookAndFeel::Metrics::radiusS);
+
+            g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+            g.setFont(ZenithLookAndFeel::getFontTiny());
+            g.drawText(metadata->category, badge.toNearestInt(), juce::Justification::centred, true);
+        }
     }
     else
     {
         // Fallback: just draw ID
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(14.0f));
-        g.drawText(instrumentId, 10, 0, width - 20, height,
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+        g.setFont(ZenithLookAndFeel::getFontBody());
+        g.drawText(instrumentId, 12, 0, width - 20, height,
                    juce::Justification::centredLeft, true);
     }
 }
@@ -599,31 +744,53 @@ void InstrumentBrowserPanel::PresetListBoxModel::paintListBoxItem(
         return;
 
     const auto& preset = owner_.presetItems_[actualIndex].preset;
+    auto bounds = juce::Rectangle<float>(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
 
     // Background
     if (rowIsSelected)
-        g.fillAll(juce::Colour(0xff4a9eff).withAlpha(0.3f));
+    {
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(0.2f));
+        g.fillRoundedRectangle(bounds.reduced(2.0f, 1.0f), ZenithLookAndFeel::Metrics::radiusS);
+    }
     else if (rowNumber % 2 == 0)
-        g.fillAll(juce::Colour(0xff242424));
-    else
-        g.fillAll(juce::Colour(0xff1a1a1a));
+    {
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel));
+        g.fillAll();
+    }
 
     // Draw preset name
-    g.setColour(juce::Colours::white);
-    g.setFont(juce::Font(13.0f));
-    g.drawText(preset.name, 10, 0, width - 80, height,
+    g.setColour(rowIsSelected ? juce::Colour(ZenithLookAndFeel::Colors::accentPrimary) 
+                              : juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    g.setFont(ZenithLookAndFeel::getFontBody().withStyle(rowIsSelected ? juce::Font::bold : juce::Font::plain));
+    g.drawText(preset.name, 12, 0, width - 80, height,
                juce::Justification::centredLeft, true);
 
-    // Draw category badge
+    // Draw category badge with rounded corners
     if (!preset.category.empty())
     {
-        g.setColour(juce::Colour(0xff4a9eff).withAlpha(0.5f));
-        juce::Rectangle<int> badge(width - 75, 4, 65, height - 8);
-        g.fillRoundedRectangle(badge.toFloat(), 3.0f);
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentSecondary).withAlpha(0.2f));
+        juce::Rectangle<float> badge(static_cast<float>(width - 73), 5.0f, 65.0f, static_cast<float>(height - 10));
+        g.fillRoundedRectangle(badge, ZenithLookAndFeel::Metrics::radiusS);
 
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::Font(10.0f));
-        g.drawText(preset.category, badge, juce::Justification::centred, true);
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentSecondary));
+        g.setFont(ZenithLookAndFeel::getFontTiny().withStyle(juce::Font::bold));
+        g.drawText(preset.category, badge.toNearestInt(), juce::Justification::centred, true);
+    }
+
+    // Draw tags as small dots (if present)
+    if (!preset.tags.empty() && !rowIsSelected)
+    {
+        int dotX = 4;
+        int dotY = height - 6;
+        int dotSize = 3;
+
+        for (size_t i = 0; i < std::min(preset.tags.size(), size_t(3)); ++i)
+        {
+            g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(0.5f));
+            g.fillEllipse(static_cast<float>(dotX), static_cast<float>(dotY),
+                         static_cast<float>(dotSize), static_cast<float>(dotSize));
+            dotX += dotSize + 2;
+        }
     }
 }
 
@@ -635,3 +802,4 @@ void InstrumentBrowserPanel::PresetListBoxModel::listBoxItemDoubleClicked(
 }
 
 } // namespace zenith
+

@@ -88,3 +88,4 @@ void InstrumentRegistry::registerInstrument(const juce::String& instrumentId,
 }
 
 } // namespace zenith
+

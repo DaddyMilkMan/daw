@@ -110,8 +110,8 @@ private:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
 
     //==========================================================================
     // Clip view management
@@ -156,7 +156,7 @@ private:
     //==========================================================================
 
     void clearSelection();
-    void selectClip(const juce::String& clipId, bool addToSelection);
+    void selectClip(const juce::String& clipId, bool addToSelection) [[maybe_unused]];
     void selectClipsInRect(juce::Rectangle<float> rect);
     bool isClipSelected(const juce::String& clipId) const;
 
@@ -229,3 +229,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
+

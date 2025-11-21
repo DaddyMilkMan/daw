@@ -83,7 +83,7 @@ public:
     // AudioProcessor overrides
     //==========================================================================
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) [[maybe_unused]] override;
     void releaseResources() override;
     void processBlock(juce::AudioBuffer<float>& buffer,
                      juce::MidiBuffer& midiMessages) override;
@@ -111,7 +111,7 @@ public:
 
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
-    void setCurrentProgram(int index) override { juce::ignoreUnused(index); }
+    void setCurrentProgram(int index) [[maybe_unused]] override { juce::ignoreUnused(index); }
     const juce::String getProgramName(int index) override
     {
         juce::ignoreUnused(index);
@@ -127,7 +127,7 @@ public:
     //==========================================================================
 
     void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) override;
+    void setStateInformation(const void* data, int sizeInBytes) [[maybe_unused]] override;
 
     //==========================================================================
     // Patch management
@@ -367,10 +367,10 @@ public:
                   juce::SynthesiserSound* sound,
                   int currentPitchWheelPosition) override;
 
-    void stopNote(float velocity, bool allowTailOff) override;
+    void stopNote(float velocity, bool allowTailOff) [[maybe_unused]] override;
 
-    void pitchWheelMoved(int newPitchWheelValue) override;
-    void controllerMoved(int controllerNumber, int newControllerValue) override;
+    void pitchWheelMoved(int newPitchWheelValue) [[maybe_unused]] override;
+    void controllerMoved(int controllerNumber, int newControllerValue) [[maybe_unused]] override;
 
     void renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                         int startSample, int numSamples) override;
@@ -411,3 +411,4 @@ private:
 };
 
 } // namespace zenith
+

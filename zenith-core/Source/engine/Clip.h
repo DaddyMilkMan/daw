@@ -75,38 +75,38 @@ public:
 
     //==============================================================================
     // AudioSource interface
-    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+    void prepareToPlay(int samplesPerBlockExpected, double sampleRate) [[maybe_unused]] override;
     void releaseResources() override;
     void getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill) override;
 
     //==============================================================================
     // Clip properties
     Type getType() const { return clipType; }
-    void setType(Type type) { clipType = type; }
+    void setType(Type type) [[maybe_unused]] { clipType = type; }
 
     const juce::String& getName() const { return clipName; }
     void setName(const juce::String& name) { clipName = name; }
 
     //==============================================================================
     // Timeline position (in samples)
-    void setStartPosition(int64_t position);
+    void setStartPosition(int64_t position) [[maybe_unused]];
     int64_t getStartPosition() const { return startPosition.load(); }
 
-    void setLength(int64_t lengthInSamples);
+    void setLength(int64_t lengthInSamples) [[maybe_unused]];
     int64_t getLength() const { return clipLength.load(); }
 
     int64_t getEndPosition() const { return startPosition.load() + clipLength.load(); }
 
     // Offset within the source material (for trimming)
-    void setOffset(int64_t offsetInSamples);
+    void setOffset(int64_t offsetInSamples) [[maybe_unused]];
     int64_t getOffset() const { return clipOffset.load(); }
 
     //==============================================================================
     // Transport control
-    void setTransportPosition(int64_t position);
+    void setTransportPosition(int64_t position) [[maybe_unused]];
     int64_t getTransportPosition() const { return transportPosition.load(); }
 
-    void setPlaying(bool shouldPlay);
+    void setPlaying(bool shouldPlay) [[maybe_unused]];
     bool isPlaying() const { return playing.load(); }
 
     // Check if clip is active at given playhead position (Phase 1.3: uses Engine playhead)
@@ -153,29 +153,29 @@ public:
      * @param midiBuffer The MIDI buffer to add events to
      * @param numSamples The number of samples in this block
      */
-    void getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples);
+    void getMidiEvents(juce::MidiBuffer& midiBuffer, int numSamples) [[maybe_unused]];
 
     //==============================================================================
     // Fades (in samples)
-    void setFadeIn(int64_t fadeInSamples);
+    void setFadeIn(int64_t fadeInSamples) [[maybe_unused]];
     int64_t getFadeIn() const { return fadeInLength.load(); }
 
-    void setFadeOut(int64_t fadeOutSamples);
+    void setFadeOut(int64_t fadeOutSamples) [[maybe_unused]];
     int64_t getFadeOut() const { return fadeOutLength.load(); }
 
     //==============================================================================
     // Gain control
-    void setGain(float newGain);
+    void setGain(float newGain) [[maybe_unused]];
     float getGain() const { return gain.load(); }
 
     //==============================================================================
     // Looping
-    void setLooping(bool shouldLoop);
+    void setLooping(bool shouldLoop) [[maybe_unused]];
     bool isLooping() const { return looping.load(); }
 
     //==============================================================================
     // Color for visual representation
-    void setColor(juce::Colour color);
+    void setColor(juce::Colour color) [[maybe_unused]];
     juce::Colour getColor() const { return clipColor; }
 
     //==============================================================================
@@ -233,14 +233,14 @@ private:
     //==============================================================================
     // Helper methods
     // Phase 1.3: Process audio clip with explicit playhead position
-    void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+    void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples) [[maybe_unused]];
 
     // Phase 2A: Process MIDI clip with explicit playhead position
-    void processMidiClip(juce::MidiBuffer& midiBuffer, int64_t playheadSamples, int numSamples);
+    void processMidiClip(juce::MidiBuffer& midiBuffer, int64_t playheadSamples, int numSamples) [[maybe_unused]];
 
     // Legacy overloads (use internal transportPosition)
     void processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill);
-    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples);
+    void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples) [[maybe_unused]];
     void processMidiClip(const juce::AudioSourceChannelInfo& bufferToFill);
 
     float calculateFadeMultiplier(int64_t positionInClip) const;
@@ -250,3 +250,4 @@ private:
 };
 
 } // namespace zenith
+

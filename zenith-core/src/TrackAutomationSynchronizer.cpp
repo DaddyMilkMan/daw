@@ -80,7 +80,7 @@ void TrackAutomationSynchronizer::timerCallback()
         return;
 
     int trackIndex = 0;
-    for (auto trackNode : tracksNode)
+    for (const auto& trackNode : tracksNode)
     {
         if (!trackNode.hasType(ProjectState::ID_TRACK))
             continue;
@@ -129,7 +129,7 @@ void TrackAutomationSynchronizer::valueTreePropertyChanged(juce::ValueTree& tree
                 return;
 
             int trackIndex = 0;
-            for (auto trackNode : tracksNode)
+            for (const auto& trackNode : tracksNode)
             {
                 if (trackNode.hasType(ProjectState::ID_TRACK))
                 {
@@ -345,7 +345,7 @@ void TrackAutomationSynchronizer::rebuildListeners()
         return;
 
     int index = 0;
-    for (auto trackNode : tracksNode)
+    for (const auto& trackNode : tracksNode)
     {
         if (trackNode.hasType(ProjectState::ID_TRACK))
         {
@@ -357,3 +357,4 @@ void TrackAutomationSynchronizer::rebuildListeners()
 
     DBG("TrackAutomationSynchronizer: Rebuilt listeners for " + juce::String(trackIdToIndex.size()) + " tracks");
 }
+

@@ -107,7 +107,7 @@ private:
             case Type::Bool:   return "bool";
             case Type::Choice: return "choice";
             default:           return "float";
-        }
+        \n    default: break;\n\n    default: break;\n}
     }
 };
 
@@ -282,7 +282,7 @@ public:
      * @param value Normalized value [0..1]
      * @note Thread-safe
      */
-    void setMacroValue(const juce::String& macroId, float value)
+    void setMacroValue(const juce::String& macroId, float value) [[maybe_unused]]
     {
         auto it = macroIdToIndex_.find(macroId);
         if (it != macroIdToIndex_.end())
@@ -369,7 +369,7 @@ public:
     /**
      * @brief Set macro value by index
      */
-    void setMacroValue(size_t index, float value)
+    void setMacroValue(size_t index, float value) [[maybe_unused]]
     {
         if (index < macroValues_.size())
             macroValues_[index] = juce::jlimit(0.0f, 1.0f, value);
@@ -384,3 +384,5 @@ private:
 };
 
 } // namespace zenith
+
+

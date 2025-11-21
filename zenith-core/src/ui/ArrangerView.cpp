@@ -51,7 +51,7 @@ void ArrangerView::paint(juce::Graphics& g)
     if (trackHeaders_.empty())
     {
         g.setColour(juce::Colours::grey);
-        g.setFont(juce::Font(16.0f));
+        g.setFont(juce::FontOptions(16.0f));
         g.drawText("No tracks. Use Project > Add Track to create tracks.",
                    getLocalBounds(),
                    juce::Justification::centred,
@@ -61,7 +61,7 @@ void ArrangerView::paint(juce::Graphics& g)
     {
         // Draw timeline placeholder text
         g.setColour(juce::Colours::darkgrey);
-        g.setFont(juce::Font(14.0f));
+        g.setFont(juce::FontOptions(14.0f));
         auto timelineArea = getLocalBounds().removeFromLeft(getWidth()).removeFromLeft(getWidth() - HEADER_WIDTH);
         g.drawText("Timeline view (coming soon)",
                    timelineArea,
@@ -128,7 +128,7 @@ void ArrangerView::rebuildTrackHeaders()
         return;
 
     // Create header for each track
-    for (auto trackNode : tracksNode)
+    for (const auto& trackNode : tracksNode)
     {
         if (!trackNode.hasType(ProjectState::ID_TRACK))
             continue;
@@ -157,3 +157,4 @@ void ArrangerView::layoutTrackHeaders()
         yPos += TRACK_HEIGHT;
     }
 }
+

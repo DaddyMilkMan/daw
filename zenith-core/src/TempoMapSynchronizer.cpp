@@ -150,3 +150,4 @@ bool TempoMapSynchronizer::isTempoMapNode(const juce::ValueTree& tree) const
 
     return false;
 }
+

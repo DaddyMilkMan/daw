@@ -38,7 +38,7 @@ struct MidiClipContext
     double clipLengthBeats;        // Clip duration in beats
     juce::String clipName;         // Display name
 
-    MidiClipContext() : clipStartBeats(0.0), clipLengthBeats(4.0), clipName("Untitled Clip") {}
+    MidiClipContext() : clipStartBeats{0.0}, clipLengthBeats{4.0}, clipName("Untitled Clip") {}
 
     bool isValid() const { return clipId.isNotEmpty(); }
 };
@@ -99,7 +99,7 @@ private:
     //==========================================================================
 
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
 
     //==========================================================================
@@ -125,7 +125,7 @@ private:
         juce::Rectangle<float> bounds;          // Screen coordinates (note grid area)
         juce::Rectangle<float> velocityBounds;  // Velocity lane bar (Phase 8.2)
 
-        NoteRect() : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100), muted(false), selected(false) {}
+        NoteRect() : pitch{60}, startBeats{0.0}, lengthBeats{1.0}, velocity{100}, muted{false}, selected{false} {}
     };
 
     //==========================================================================
@@ -184,7 +184,7 @@ private:
     void updateNoteDrag(const juce::MouseEvent& e);
     void finishNoteDrag();
 
-    void createNoteAtPosition(float x, float y);
+    void createNoteAtPosition(float x, float y) [[maybe_unused]];
     void deleteSelectedNotes();
 
     //==========================================================================
@@ -209,7 +209,7 @@ private:
     //==========================================================================
 
     void clearSelection();
-    void selectNote(NoteRect* note, bool addToSelection);
+    void selectNote(NoteRect* note, bool addToSelection) [[maybe_unused]];
     void selectNotesInRectangle(const juce::Rectangle<float>& rect);
 
     void startMarqueeSelect(const juce::MouseEvent& e);
@@ -233,10 +233,10 @@ private:
     // Phase 8.2: Zoom & Scroll
     //==========================================================================
 
-    void zoomHorizontal(float factor, float centerX);
-    void zoomVertical(float factor, float centerY);
-    void scrollHorizontal(float delta);
-    void scrollVertical(float delta);
+    void zoomHorizontal(float factor, float centerX) [[maybe_unused]];
+    void zoomVertical(float factor, float centerY) [[maybe_unused]];
+    void scrollHorizontal(float delta) [[maybe_unused]];
+    void scrollVertical(float delta) [[maybe_unused]];
 
     //==========================================================================
     // Member Variables
@@ -294,3 +294,4 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
+

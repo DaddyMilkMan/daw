@@ -19,6 +19,11 @@
 #include <vector>
 #include <functional>
 
+// Conditional Skia components (GPU-accelerated with spring physics)
+#ifdef ZENITH_USE_SKIA
+    #include "skia/SkiaButtonComponent.h"
+#endif
+
 namespace zenith {
 
 //==============================================================================
@@ -27,8 +32,12 @@ namespace zenith {
  *
  * This component can be embedded in instrument editors to provide
  * preset browsing and management functionality.
+ *
+ * Features Apple-inspired design with gradients, rounded corners,
+ * smooth animations, and enhanced visual feedback.
  */
-class PresetBrowserComponent : public juce::Component
+class PresetBrowserComponent : public juce::Component,
+                               public juce::Timer
 {
 public:
     //==========================================================================
@@ -89,6 +98,7 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    void timerCallback() override;
 
 private:
     //==========================================================================
@@ -140,12 +150,32 @@ private:
     // Preset list
     juce::ListBox presetListBox_;
 
-    // Actions
+#ifdef ZENITH_USE_SKIA
+    // GPU-accelerated action buttons with spring physics
+    std::unique_ptr<SkiaButtonComponent> loadButton_;
+    std::unique_ptr<SkiaButtonComponent> saveAsButton_;
+    std::unique_ptr<SkiaButtonComponent> initializeButton_;
+#else
+    // Fallback JUCE buttons
     juce::TextButton saveAsButton_;
-    juce::TextButton refreshButton_;
+    juce::TextButton initializeButton_;
+    juce::TextButton loadButton_;
+#endif
 
     // Status
     juce::Label statusLabel_;
+    int statusLabelAlpha_ = 0;
+    int statusHoldTicks_ = 0;
+
+    // Preview/Info area
+    juce::Label previewLabel_;
+    juce::TextEditor previewTextEditor_;
+
+    // Animation state
+    float searchFieldFocusAnim_ = 0.0f;
+    float tagFieldFocusAnim_ = 0.0f;
+    bool searchFieldHasFocus_ = false;
+    bool tagFieldHasFocus_ = false;
 
     //==========================================================================
     // ListBoxModel for preset display
@@ -160,7 +190,7 @@ private:
         void paintListBoxItem(int rowNumber, juce::Graphics& g,
                             int width, int height, bool rowIsSelected) override;
         void listBoxItemClicked(int row, const juce::MouseEvent& event) override;
-        void returnKeyPressed(int lastRowSelected) override;
+        void returnKeyPressed(int lastRowSelected) [[maybe_unused]] override;
 
     private:
         PresetBrowserComponent& owner_;
@@ -172,3 +202,4 @@ private:
 };
 
 } // namespace zenith
+

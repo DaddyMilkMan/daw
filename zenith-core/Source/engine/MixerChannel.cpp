@@ -112,7 +112,7 @@ void MixerChannel::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferT
         processCompressor(localBuffer);
     }
 
-    // TODO: Process sends (would need references to send buses)
+    // TODO(zenith-core#1): Process sends (would need references to send buses)
 
     // Process output section (pan, volume)
     processOutput(localBuffer);
@@ -335,7 +335,7 @@ void MixerChannel::loadState(const juce::ValueTree& state)
 
     // EQ bands
     int bandIndex = 0;
-    for (auto child : state)
+    for (const auto& child : state)
     {
         if (child.hasType("EQBand") && bandIndex < numEQBands)
         {
@@ -358,7 +358,7 @@ void MixerChannel::loadState(const juce::ValueTree& state)
 
     // Sends
     int sendIndex = 0;
-    for (auto child : state)
+    for (const auto& child : state)
     {
         if (child.hasType("Send") && sendIndex < numSends)
         {
@@ -553,7 +553,7 @@ void MixerChannel::updateFilterCoefficients()
             case EQBand::Type::HighShelf:
                 coeffs = juce::IIRCoefficients::makeHighShelf(currentSampleRate, freq, q, dbToGain(gain));
                 break;
-        }
+        \n    default: break;\n\n    default: break;\n}
 
         eqFiltersL[i].setCoefficients(coeffs);
         eqFiltersR[i].setCoefficients(coeffs);
@@ -573,3 +573,5 @@ void MixerChannel::updateCompressorCoefficients()
     releaseCoeff = 1.0f - std::exp(-1.0f / (releaseMs * 0.001f * currentSampleRate));
 }
 } // namespace zenith
+
+
