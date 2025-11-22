@@ -19,10 +19,19 @@
 #include <memory>
 #include <functional>
 
+#ifdef ZENITH_USE_SKIA
+    #include "include/core/SkRefCnt.h"  // For sk_sp
+#endif
+
 // Forward declare Skia types to avoid including headers here
 class SkCanvas;
 class SkSurface;
 class GrDirectContext;
+
+#ifndef ZENITH_USE_SKIA
+    // Dummy sk_sp when Skia is disabled
+    template<typename T> using sk_sp = std::unique_ptr<T>;
+#endif
 
 namespace zenith {
 
@@ -173,6 +182,14 @@ public:
     GrDirectContext* getGpuContext() const { return grContext_.get(); }
 
     /**
+     * @brief Get the Skia surface (advanced use)
+     * @return Pointer to SkSurface, or nullptr if not initialized
+     *
+     * Use this to read pixels for software rendering or custom blitting
+     */
+    SkSurface* getSurface() const { return surface_.get(); }
+
+    /**
      * @brief Get current rendering backend
      */
     Backend getBackend() const { return backend_; }
@@ -187,8 +204,8 @@ private:
     juce::Component& component_;
 
     // Skia objects
-    std::unique_ptr<GrDirectContext> grContext_;  ///< GPU context
-    std::unique_ptr<SkSurface> surface_;          ///< Rendering surface
+    sk_sp<GrDirectContext> grContext_;            ///< GPU context
+    sk_sp<SkSurface> surface_;                    ///< Rendering surface
 
     // Configuration
     Backend backend_;

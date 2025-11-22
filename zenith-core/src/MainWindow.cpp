@@ -13,6 +13,17 @@
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
 
+#ifdef ZENITH_USE_SKIA
+    #include "include/core/SkSurface.h"
+    #include "include/core/SkImage.h"
+    #include "include/core/SkPixmap.h"
+    #include "include/core/SkFont.h"
+    #include "include/core/SkTextBlob.h"
+    #include "include/core/SkImageInfo.h"
+    #include "include/core/SkSamplingOptions.h"
+    #include "../Source/ui/skia/SkiaComponent.h"
+#endif
+
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
@@ -20,10 +31,104 @@
 MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state)
     : engine(eng), projectState(state), mixerComponent(state)
 {
-    // Set size
+#ifndef ZENITH_USE_SKIA
+    // Configure log display TextEditor (JUCE fallback only)
+    logDisplay.setMultiLine(true);
+    logDisplay.setReadOnly(true);
+    logDisplay.setScrollbarsShown(true);
+    logDisplay.setCaretVisible(false);
+    logDisplay.setFont(juce::Font(juce::Font::getDefaultMonospacedFontName(), 12.0f, juce::Font::plain));
+    logDisplay.setColour(juce::TextEditor::backgroundColourId, juce::Colour(0xff0a0a0a));
+    logDisplay.setColour(juce::TextEditor::textColourId, juce::Colour(0xff00ff00));
+    logDisplay.setColour(juce::TextEditor::outlineColourId, juce::Colour(0xff333333));
+#endif
+    // SkiaTextDisplay needs no configuration - renders natively!
+    addAndMakeVisible(logDisplay);
+    logDisplay.setName("LogDisplay");
+
+    addLog("========================================");
+    addLog("MainComponent Constructor START");
+    addLog("========================================");
+
+#ifdef ZENITH_USE_SKIA
+    addLog("ZENITH_USE_SKIA is DEFINED - Skia rendering ENABLED");
+    addLog("Attempting to initialize Skia rendering system...");
+
+    bool skiaInitSuccess = initializeSkiaRendering();
+
+    if (skiaInitSuccess)
+    {
+        addLog("✓ Theme configuration loaded successfully");
+        addLog("  Theme mode: " + juce::String(getThemeMode() == zenith::ThemeMode::Dark ? "Dark" : "Light"));
+        addLog("  GPU settings - Target FPS: " + juce::String(getGPUSettings().targetFPS));
+        addLog("  GPU settings - Adaptive FPS: " + juce::String(getGPUSettings().adaptiveFPS ? "ON" : "OFF"));
+        addLog("");
+        addLog("⚠ WARNING: SkiaRenderer NOT instantiated!");
+        addLog("⚠ UI components are using JUCE fallback rendering");
+        addLog("⚠ To enable actual Skia rendering:");
+        addLog("  1. Create SkiaRenderer instance in components");
+        addLog("  2. Override paint() to use Skia canvas");
+        addLog("  3. Replace JUCE Graphics with SkCanvas");
+    }
+    else
+    {
+        addLog("✗ FAILURE: Theme configuration failed to load!");
+        addLog("  Using JUCE fallback rendering");
+    }
+#else
+    addLog("ZENITH_USE_SKIA is NOT DEFINED - Using JUCE fallback rendering");
+    addLog("  To enable Skia, rebuild with -DZENITH_ENABLE_SKIA=ON");
+#endif
+
+    addLog("Setting window size to 1400x800");
     setSize(1400, 800);
 
-    // Add mixer component
+#ifdef ZENITH_USE_SKIA
+    // ===== OPTION 1: CREATE SKIARENDERER WITH SOFTWARE BACKEND =====
+    addLog("");
+    addLog("========================================");
+    addLog("CREATING SKIARENDERER (SOFTWARE BACKEND)");
+    addLog("========================================");
+    addLog("Instantiating SkiaRenderer with Backend::Software...");
+
+    try {
+        renderer_ = std::make_unique<zenith::SkiaRenderer>(*this, zenith::SkiaRenderer::Backend::Software);
+        addLog("✓ SkiaRenderer object created");
+
+        addLog("Calling renderer_->initialize()...");
+        bool initSuccess = renderer_->initialize();
+
+        if (initSuccess)
+        {
+            addLog("✓✓✓ SUCCESS! SkiaRenderer initialized!");
+            addLog("  Backend: CPU rasterization (Software)");
+            addLog("  Status: READY TO RENDER");
+            addLog("");
+            addLog("⚡ SKIA IS NOW ACTIVE! ⚡");
+            addLog("  paint() will now use renderer_->render()");
+            addLog("  All rendering goes through SkCanvas");
+            addLog("  JUCE Graphics fallback is DISABLED");
+        }
+        else
+        {
+            addLog("✗ FAILED: renderer_->initialize() returned false");
+            addLog("  Check SkiaRenderer.cpp logs for details");
+            addLog("  Falling back to JUCE rendering");
+            renderer_.reset();  // Clean up failed renderer
+        }
+    }
+    catch (const std::exception& e)
+    {
+        addLog("✗ EXCEPTION during SkiaRenderer creation:");
+        addLog("  " + juce::String(e.what()));
+        addLog("  Falling back to JUCE rendering");
+        renderer_.reset();
+    }
+    addLog("========================================");
+    addLog("");
+#endif
+
+    addLog("Adding mixer component to window");
     addAndMakeVisible(mixerComponent);
 
     // Register as key listener for undo/redo shortcuts
@@ -58,6 +163,9 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
 
     // Transport buttons
     playButton.setButtonText("Play");
+#ifdef ZENITH_USE_SKIA
+    playButton.setStyle(zenith::SkiaButtonComponent::Style::Success);
+#endif
     playButton.onClick = [this]() {
         engine.play();
         DBG("Play button clicked");
@@ -65,6 +173,9 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addAndMakeVisible(playButton);
 
     stopButton.setButtonText("Stop");
+#ifdef ZENITH_USE_SKIA
+    stopButton.setStyle(zenith::SkiaButtonComponent::Style::Secondary);
+#endif
     stopButton.onClick = [this]() {
         engine.stop();
         DBG("Stop button clicked");
@@ -72,12 +183,19 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addAndMakeVisible(stopButton);
 
     recordButton.setButtonText("Record");
+#ifdef ZENITH_USE_SKIA
+    recordButton.setStyle(zenith::SkiaButtonComponent::Style::Secondary);
+#endif
     recordButton.onClick = [this]() {
         engine.toggleRecording();
         bool isRecording = engine.isRecording();
-        recordButton.setColour(juce::TextButton::buttonColourId, 
+#ifdef ZENITH_USE_SKIA
+        recordButton.setStyle(isRecording ? zenith::SkiaButtonComponent::Style::Danger : zenith::SkiaButtonComponent::Style::Secondary);
+#else
+        recordButton.setColour(juce::TextButton::buttonColourId,
             isRecording ? juce::Colours::red : juce::Colours::darkgrey);
-        DBG(isRecording ? "Recording started" : "Recording stopped");
+#endif
+        DBG((isRecording ? "Recording started" : "Recording stopped"));
     };
     addAndMakeVisible(recordButton);
 
@@ -100,7 +218,7 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     addAndMakeVisible(virtualKeyboardButton);
 
     // Phase 9: Create ArrangerComponent with interactive clip editing
-    arrangerComponent = std::make_unique<ArrangerComponent>(engine);
+    arrangerComponent = std::make_unique<ArrangerComponent>(*engine.getProjectState());
     addAndMakeVisible(arrangerComponent.get());
 
     // Phase 7: Create Wingman AI console panel
@@ -121,14 +239,30 @@ MainComponent::MainComponent(Engine& eng, zenith::CommandAPI& api, zenith::AIBri
     // Note: MIDI keyboard will generate MIDI messages through midiKeyboardState
     // These can be processed via the Engine's existing MIDI input handling
 
-    // Start timer for CPU monitoring (60 Hz)
+#ifndef ZENITH_USE_SKIA
+    // Start timer for CPU monitoring (60 Hz) - only when not using Skia
+    // (SkiaMainWindowIntegration manages its own timer)
+    addLog("Starting JUCE timer for CPU monitoring");
     startTimer(16);
+#else
+    addLog("Skia manages timer - not starting separate timer");
+#endif
+
+    addLog("========================================");
+    addLog("MainComponent Constructor COMPLETE");
+    addLog("========================================");
+    addLog("");
+    addLog("Watch the paint() calls above to see if Skia rendering works!");
 }
 
 MainComponent::~MainComponent()
 {
+    DBG("MainComponent Destructor called");
     removeKeyListener(this);
+
+#ifndef ZENITH_USE_SKIA
     stopTimer();
+#endif
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originatingComponent)
@@ -181,6 +315,292 @@ bool MainComponent::keyPressed(const juce::KeyPress& key, Component* originating
 
 void MainComponent::paint(juce::Graphics& g)
 {
+#ifdef ZENITH_USE_SKIA
+    // Use SkiaRenderer if it was successfully initialized
+    if (renderer_)
+    {
+        static int skiaPaintCount = 0;
+        if (skiaPaintCount < 3)
+        {
+            skiaPaintCount++;
+            addLog("🎨 paint() call #" + juce::String(skiaPaintCount) + " using SKIA RENDERER!");
+            if (skiaPaintCount == 1)
+            {
+                addLog("  Software backend: Rendering with Skia, blitting to JUCE");
+                addLog("  ✓ ACTUAL SKIA CPU RENDERING ACTIVE!");
+            }
+        }
+
+        // Step 1: Render EVERYTHING using Skia
+        renderer_->render([this](SkCanvas* canvas) {
+            // Beautiful dark background with Skia anti-aliasing
+            SkPaint bgPaint;
+            bgPaint.setColor(0xFF1E1E1E);
+            canvas->clear(0xFF1E1E1E);
+
+            // Render ALL child components - NATIVE SKIA or JUCE fallback
+            static int nativeSkiaCount = 0;
+            static int juceFallbackCount = 0;
+
+            for (int i = 0; i < getNumChildComponents(); ++i)
+            {
+                auto* child = getChildComponent(i);
+                if (child && child->isVisible())
+                {
+                    auto childBounds = child->getBounds();
+                    SkRect skBounds = SkRect::MakeXYWH(
+                        (float)childBounds.getX(),
+                        (float)childBounds.getY(),
+                        (float)childBounds.getWidth(),
+                        (float)childBounds.getHeight()
+                    );
+
+                    // Check if component supports native Skia rendering
+                    auto* skiaComponent = dynamic_cast<zenith::SkiaComponent*>(child);
+
+                    // DEBUG: Log what we found
+                    static bool loggedComponents = false;
+                    if (!loggedComponents && skiaPaintCount == 1)
+                    {
+                        addLog("  [COMPONENT #" + juce::String(i) + "] " +
+                               juce::String(child->getName().isEmpty() ? "unnamed" : child->getName()));
+                        addLog("    SkiaComponent cast: " + juce::String(skiaComponent != nullptr ? "YES" : "NO"));
+                        if (skiaComponent)
+                            addLog("    supportsSkiaRendering(): " + juce::String(skiaComponent->supportsSkiaRendering() ? "YES" : "NO"));
+                        addLog("    Bounds: " + juce::String(childBounds.getX()) + "," + juce::String(childBounds.getY()) + " " +
+                               juce::String(childBounds.getWidth()) + "x" + juce::String(childBounds.getHeight()));
+                        addLog("    Visible: " + juce::String(child->isVisible() ? "YES" : "NO"));
+                    }
+
+                    if (skiaComponent && skiaComponent->supportsSkiaRendering())
+                    {
+                        // ✓ NATIVE SKIA RENDERING - Direct to SkCanvas!
+                        if (skiaPaintCount == 1)
+                            addLog("  >>> CALLING paintToSkia() for component #" + juce::String(i));
+
+                        canvas->save();
+                        skiaComponent->paintToSkia(canvas, skBounds);
+                        canvas->restore();
+
+                        nativeSkiaCount++;
+                    }
+                    else
+                    {
+                        // ✗ JUCE FALLBACK - Render to image then composite
+                        juce::Image componentImage(juce::Image::ARGB,
+                                                  juce::jmax(1, childBounds.getWidth()),
+                                                  juce::jmax(1, childBounds.getHeight()),
+                                                  true);
+
+                        juce::Graphics componentGraphics(componentImage);
+                        componentGraphics.setOrigin(-childBounds.getX(), -childBounds.getY());
+                        child->paint(componentGraphics);
+
+                        // Convert JUCE image to Skia
+                        juce::Image::BitmapData bitmapData(componentImage, juce::Image::BitmapData::readOnly);
+
+                        SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(
+                            componentImage.getWidth(),
+                            componentImage.getHeight()
+                        );
+
+                        sk_sp<SkImage> skiaImage = SkImages::RasterFromPixmapCopy(
+                            SkPixmap(imageInfo, bitmapData.data, bitmapData.lineStride)
+                        );
+
+                        if (skiaImage)
+                        {
+                            SkPaint paint;
+                            paint.setAntiAlias(true);
+                            canvas->drawImage(skiaImage,
+                                            (float)childBounds.getX(),
+                                            (float)childBounds.getY(),
+                                            SkSamplingOptions(SkFilterMode::kLinear),
+                                            &paint);
+                        }
+
+                        juceFallbackCount++;
+                    }
+                }
+            }
+        });
+
+        // Step 2: Get the Skia surface and read pixels
+        SkSurface* surface = renderer_->getSurface();
+        if (surface)
+        {
+            if (skiaPaintCount == 1)
+                addLog("  [DEBUG] Got SkSurface pointer: " + juce::String::toHexString((juce::pointer_sized_int)surface));
+
+            // Create SkImage from surface
+            sk_sp<SkImage> skImage = surface->makeImageSnapshot();
+            if (skImage)
+            {
+                // Get image dimensions
+                int width = skImage->width();
+                int height = skImage->height();
+
+                if (skiaPaintCount == 1)
+                    addLog("  [DEBUG] SkImage dimensions: " + juce::String(width) + "x" + juce::String(height));
+
+                // Create JUCE image
+                juce::Image juceImage(juce::Image::ARGB, width, height, true);
+
+                if (skiaPaintCount == 1)
+                    addLog("  [DEBUG] Created JUCE image: " + juce::String(juceImage.getWidth()) + "x" + juce::String(juceImage.getHeight()));
+
+                // Read pixels from Skia to JUCE
+                SkPixmap pixmap;
+                if (skImage->peekPixels(&pixmap))
+                {
+                    if (skiaPaintCount == 1)
+                        addLog("  [DEBUG] peekPixels succeeded, pixmap: " + juce::String(pixmap.width()) + "x" + juce::String(pixmap.height()));
+
+                    juce::Image::BitmapData bitmapData(juceImage,
+                                                       juce::Image::BitmapData::writeOnly);
+
+                    // Copy row by row (Skia uses premultiplied alpha, JUCE expects it too)
+                    for (int y = 0; y < height; ++y)
+                    {
+                        const uint32_t* src = (const uint32_t*)pixmap.addr32(0, y);
+                        uint32_t* dst = (uint32_t*)bitmapData.getLinePointer(y);
+                        memcpy(dst, src, width * sizeof(uint32_t));
+                    }
+
+                    if (skiaPaintCount == 1)
+                        addLog("  [DEBUG] Pixel copy complete, copied " + juce::String(height) + " rows");
+                }
+                else
+                {
+                    addLog("  [ERROR] peekPixels FAILED!");
+                }
+
+                // Step 3: VERIFY pixels before drawing
+                auto componentBounds = getLocalBounds();
+                if (skiaPaintCount == 1)
+                {
+                    addLog("  [DEBUG] Component bounds: " + juce::String(componentBounds.getWidth()) + "x" + juce::String(componentBounds.getHeight()));
+
+                    // VERIFY: Check if green box is actually in the image
+                    addLog("  ========================================");
+                    addLog("  PIXEL VERIFICATION (checking image data)");
+                    addLog("  ========================================");
+
+                    // Check center of green box at (935, 130) - should be GREEN
+                    juce::Colour centerPixel = juceImage.getPixelAt(935, 130);
+                    addLog("  Pixel at (935,130) center: RGB(" +
+                           juce::String(centerPixel.getRed()) + "," +
+                           juce::String(centerPixel.getGreen()) + "," +
+                           juce::String(centerPixel.getBlue()) + ")");
+
+                    bool isGreen = (centerPixel.getGreen() > 200 && centerPixel.getRed() < 50);
+                    if (isGreen)
+                        addLog("  ✓ GREEN (0,255,0) DETECTED - Skia drew it!");
+                    else
+                        addLog("  ✗ NOT GREEN - Skia rendering FAILED!");
+
+                    // Check yellow border at (885, 15) - should be YELLOW
+                    juce::Colour borderPixel = juceImage.getPixelAt(885, 15);
+                    addLog("  Pixel at (885,15) border: RGB(" +
+                           juce::String(borderPixel.getRed()) + "," +
+                           juce::String(borderPixel.getGreen()) + "," +
+                           juce::String(borderPixel.getBlue()) + ")");
+
+                    bool isYellow = (borderPixel.getRed() > 200 && borderPixel.getGreen() > 200);
+                    if (isYellow)
+                        addLog("  ✓ YELLOW (255,255,0) DETECTED - Border exists!");
+                    else
+                        addLog("  ✗ NOT YELLOW - Border drawing FAILED!");
+
+                    addLog("  ========================================");
+                }
+
+                if (skiaPaintCount == 1)
+                    addLog("  [DEBUG] Drawing image at (0, 0)...");
+
+                g.drawImageAt(juceImage, 0, 0);
+
+                if (skiaPaintCount == 1)
+                {
+                    // TRUTHFUL RENDERING STATISTICS
+                    int totalComponents = getNumChildComponents();
+                    int nativeSkia = 0;
+                    int juceFallback = 0;
+
+                    for (int i = 0; i < totalComponents; ++i)
+                    {
+                        auto* child = getChildComponent(i);
+                        if (child && child->isVisible())
+                        {
+                            auto* skiaComp = dynamic_cast<zenith::SkiaComponent*>(child);
+                            if (skiaComp && skiaComp->supportsSkiaRendering())
+                                nativeSkia++;
+                            else
+                                juceFallback++;
+                        }
+                    }
+
+                    addLog("  ========================================");
+                    addLog("  RENDERING STATISTICS (TRUTHFUL)");
+                    addLog("  ========================================");
+                    addLog("  Total visible components: " + juce::String(totalComponents));
+                    addLog("  ");
+                    addLog("  ✓ Native Skia rendering: " + juce::String(nativeSkia) + " components");
+                    addLog("  ✗ JUCE fallback: " + juce::String(juceFallback) + " components");
+                    addLog("  ");
+
+                    if (nativeSkia == totalComponents && totalComponents > 0)
+                    {
+                        addLog("  🎉 100% PURE SKIA RENDERING!");
+                        addLog("  ALL components use native SkCanvas!");
+                    }
+                    else if (nativeSkia > 0)
+                    {
+                        int percent = (nativeSkia * 100) / totalComponents;
+                        addLog("  ⚠ HYBRID: " + juce::String(percent) + "% native Skia");
+                        addLog("  Still " + juce::String(juceFallback) + " components using JUCE");
+                    }
+                    else
+                    {
+                        addLog("  ✗ NO NATIVE SKIA YET");
+                        addLog("  All components still use JUCE Graphics");
+                        addLog("  Only Skia compositing is active");
+                    }
+                    addLog("  ========================================");
+                }
+
+                return; // Successfully rendered with Skia
+            }
+            else
+            {
+                addLog("  [ERROR] makeImageSnapshot() returned null!");
+            }
+        }
+        else
+        {
+            addLog("  [ERROR] getSurface() returned null!");
+        }
+
+        // If we get here, something went wrong
+        addLog("ERROR: Failed to get pixels from Skia surface!");
+        addLog("  Falling back to JUCE rendering");
+        renderer_.reset();
+    }
+#endif
+
+    // JUCE fallback rendering (when Skia disabled or failed to initialize)
+    static int paintCallCount = 0;
+    if (paintCallCount < 3)
+    {
+        paintCallCount++;
+        addLog("paint() call #" + juce::String(paintCallCount) + " using juce::Graphics (JUCE fallback)");
+        if (paintCallCount == 1)
+        {
+            addLog("  paint() receives juce::Graphics, not SkCanvas");
+            addLog("  This confirms JUCE rendering is active, NOT Skia");
+        }
+    }
+
     // Background (ArrangerComponent handles its own painting)
     g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey (LUNA-inspired)
 }
@@ -188,6 +608,10 @@ void MainComponent::paint(juce::Graphics& g)
 void MainComponent::resized()
 {
     auto bounds = getLocalBounds();
+
+    // Log display at top right corner (400x250)
+    auto logArea = bounds.removeFromTop(250).removeFromRight(400);
+    logDisplay.setBounds(logArea.reduced(5));
 
     // Top bar (status)
     auto topBar = bounds.removeFromTop(40);

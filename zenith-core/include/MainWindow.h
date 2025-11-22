@@ -23,6 +23,13 @@
 #include "../Source/ui/ArrangerComponent.h"
 #include "ClipSynchronizer.h"
 
+#ifdef ZENITH_USE_SKIA
+    #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
+    #include "../Source/rendering/SkiaRenderer.h"
+    #include "../Source/ui/skia/SkiaButtonComponent.h"
+    #include "../Source/ui/skia/SkiaTextDisplay.h"
+#endif
+
 // Forward declarations
 class WingmanPanel;
 
@@ -51,9 +58,14 @@ namespace zenith {
  * - Supports piano roll editing for MIDI clips
  * - Automation display and editing
  */
+#ifdef ZENITH_USE_SKIA
+class MainComponent : public zenith::SkiaMainWindowIntegration,
+                      public juce::KeyListener
+#else
 class MainComponent : public juce::Component,
                       private juce::Timer,
                       public juce::KeyListener
+#endif
 {
 public:
     //==========================================================================
@@ -104,12 +116,24 @@ private:
     Engine& engine;
     ProjectState& projectState;
 
+#ifdef ZENITH_USE_SKIA
+    // Skia renderer for actual Skia rendering
+    std::unique_ptr<zenith::SkiaRenderer> renderer_;
+#endif
+
     // UI Components
     juce::Label statusLabel;
     juce::Label cpuLabel;
+
+#ifdef ZENITH_USE_SKIA
+    zenith::SkiaButtonComponent playButton;
+    zenith::SkiaButtonComponent stopButton;
+    zenith::SkiaButtonComponent recordButton;
+#else
     juce::TextButton playButton;
     juce::TextButton stopButton;
     juce::TextButton recordButton;
+#endif
 
     // Phase 1: Import Audio button
     juce::TextButton importButton;
@@ -143,6 +167,25 @@ private:
     juce::MidiKeyboardState midiKeyboardState;
     std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
     bool virtualKeyboardVisible = false;
+
+    // Skia/Rendering Debug Log Display
+#ifdef ZENITH_USE_SKIA
+    zenith::SkiaTextDisplay logDisplay;  // ✓ NATIVE SKIA RENDERING!
+#else
+    juce::TextEditor logDisplay;
+#endif
+    juce::String logText;
+
+    void addLog(const juce::String& message)
+    {
+        logText += message + "\n";
+#ifdef ZENITH_USE_SKIA
+        logDisplay.setText(logText);  // SkiaTextDisplay
+#else
+        logDisplay.setText(logText);
+        logDisplay.moveCaretToEnd();
+#endif
+    }
 
     //==========================================================================
     // Phase 1: Audio import

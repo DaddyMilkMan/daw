@@ -9,12 +9,15 @@
 #include "include/core/SkCanvas.h"
 #include "include/core/SkSurface.h"
 #include "include/core/SkColorSpace.h"
-#include "include/gpu/GrDirectContext.h"
-#include "include/gpu/GrBackendSurface.h"
+#include "include/gpu/ganesh/GrDirectContext.h"
+#include "include/gpu/ganesh/GrBackendSurface.h"
+#include "include/gpu/ganesh/SkSurfaceGanesh.h"
+#include "include/gpu/GpuTypes.h"
 
-#if JUCE_WINDOWS
-    #include "include/gpu/d3d/GrD3DBackendContext.h"
-    #include "include/gpu/d3d/GrD3DTypes.h"
+#if JUCE_WINDOWS && defined(SK_DIRECT3D) && 0  // Disabled: vcpkg Skia doesn't include D3D backend
+    #include "include/gpu/ganesh/d3d/GrD3DBackendContext.h"
+    #include "include/gpu/ganesh/d3d/GrD3DTypes.h"
+    #include "include/gpu/ganesh/SkSurfaceGanesh.h"
     #include <d3d12.h>
     #include <dxgi1_6.h>
     #include <d3d12sdklayers.h>
@@ -39,10 +42,10 @@
         UINT rtvDescriptorSize = 0;
     };
 
-#elif JUCE_MAC
+#elif JUCE_MAC && defined(SK_METAL) && 0  // Disabled: vcpkg Skia doesn't include Metal backend
     #include "include/gpu/mtl/GrMtlBackendContext.h"
     #include "include/gpu/mtl/GrMtlTypes.h"
-#elif JUCE_LINUX
+#elif JUCE_LINUX && defined(SK_VULKAN) && 0  // Disabled: vcpkg Skia doesn't include Vulkan backend
     #include "include/gpu/vk/GrVkBackendContext.h"
     #include "include/gpu/vk/GrVkTypes.h"
 #endif
@@ -127,7 +130,7 @@ void SkiaRenderer::shutdown()
     grContext_.reset();
 
     // Platform-specific cleanup
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS && defined(SK_DIRECT3D) && 0  // Disabled: vcpkg Skia doesn't include D3D backend
     if (platformHandle_)
     {
         auto d3dCtx = static_cast<D3D12Context*>(platformHandle_);
@@ -185,10 +188,13 @@ void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback)
     }
 
     // Flush to GPU
-    surface_->flushAndSubmit();
+    if (grContext_)
+    {
+        grContext_->flushAndSubmit();
+    }
 
     // Platform-specific present
-    #if JUCE_WINDOWS
+    #if JUCE_WINDOWS && defined(SK_DIRECT3D) && 0  // Disabled: vcpkg Skia doesn't include D3D backend
     if (platformHandle_ && backend_ == Backend::Direct3D)
     {
         auto d3dCtx = static_cast<D3D12Context*>(platformHandle_);
@@ -224,7 +230,7 @@ void SkiaRenderer::render(std::function<void(SkCanvas*)> drawCallback)
     if (vsyncEnabled_)
     {
         auto frameTime = juce::Time::getCurrentTime() - startTime;
-        auto targetFrameTime = juce::RelativeTime::milliseconds(1000.0 / targetFPS_);
+        auto targetFrameTime = juce::RelativeTime::milliseconds(static_cast<int>(1000.0 / targetFPS_));
 
         if (frameTime < targetFrameTime)
         {
@@ -278,7 +284,7 @@ const char* SkiaRenderer::getBackendName(Backend backend)
         case Backend::OpenGL:    return "OpenGL";
         case Backend::Software:  return "Software";
         default:                 return "Unknown";
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
 
 //==============================================================================
@@ -287,17 +293,17 @@ const char* SkiaRenderer::getBackendName(Backend backend)
 
 bool SkiaRenderer::createGpuContext()
 {
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS && defined(SK_DIRECT3D) && 0  // Disabled: vcpkg Skia doesn't include D3D backend
     if (backend_ == Backend::Direct3D)
     {
         return createD3DContext();
     }
-#elif JUCE_MAC
+#elif JUCE_MAC && defined(SK_METAL) && 0  // Disabled: vcpkg Skia doesn't include Metal backend
     if (backend_ == Backend::Metal)
     {
         return createMetalContext();
     }
-#elif JUCE_LINUX
+#elif JUCE_LINUX && defined(SK_VULKAN) && 0  // Disabled: vcpkg Skia doesn't include Vulkan backend
     if (backend_ == Backend::Vulkan)
     {
         return createVulkanContext();
@@ -327,7 +333,7 @@ bool SkiaRenderer::createSurface(int width, int height)
     {
         // Create CPU-backed surface
         SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
-        surface_ = SkSurface::MakeRaster(info);
+        surface_ = SkSurfaces::Raster(info);
     }
     else
     {
@@ -341,9 +347,9 @@ bool SkiaRenderer::createSurface(int width, int height)
         SkImageInfo info = SkImageInfo::MakeN32Premul(width, height,
                                                       SkColorSpace::MakeSRGB());
 
-        surface_ = SkSurface::MakeRenderTarget(grContext_.get(),
-                                              SkBudgeted::kNo,
-                                              info);
+        surface_ = SkSurfaces::RenderTarget(grContext_.get(),
+                                           skgpu::Budgeted::kNo,
+                                           info);
     }
 
     if (!surface_)
@@ -386,12 +392,15 @@ void SkiaRenderer::updateStats()
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const
 {
+    // Note: vcpkg Skia currently doesn't include D3D/Metal/Vulkan backends compiled in
+    // Fall back to software rendering which works on all platforms
+    // TODO: Build Skia from source with GPU backends enabled
 #if JUCE_WINDOWS
-    return Backend::Direct3D;
+    return Backend::Software;  // D3D not available in vcpkg Skia build
 #elif JUCE_MAC
-    return Backend::Metal;
+    return Backend::Software;  // Metal not available in vcpkg Skia build
 #elif JUCE_LINUX
-    return Backend::Vulkan;
+    return Backend::Software;  // Vulkan not available in vcpkg Skia build
 #else
     return Backend::Software;
 #endif
@@ -401,7 +410,7 @@ SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const
 // Platform-Specific Implementations
 //==============================================================================
 
-#if JUCE_WINDOWS
+#if JUCE_WINDOWS && defined(SK_DIRECT3D) && 0  // Disabled: vcpkg Skia doesn't include D3D backend
 
 bool SkiaRenderer::createD3DContext()
 {
@@ -608,11 +617,11 @@ bool SkiaRenderer::createD3DContext()
 
     // 10. Create Skia GrDirectContext
     GrD3DBackendContext backendContext;
-    backendContext.fAdapter = adapter;
-    backendContext.fDevice = d3dCtx->device;
-    backendContext.fQueue = d3dCtx->commandQueue;
+    backendContext.fAdapter.retain(adapter.Get());
+    backendContext.fDevice.retain(d3dCtx->device.Get());
+    backendContext.fQueue.retain(d3dCtx->commandQueue.Get());
 
-    grContext_.reset(GrDirectContext::MakeDirect3D(backendContext).release());
+    grContext_ = GrDirectContext::MakeDirect3D(backendContext);
 
     if (!grContext_)
     {
