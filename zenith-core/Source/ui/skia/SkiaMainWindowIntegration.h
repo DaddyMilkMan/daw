@@ -86,6 +86,11 @@ public:
      */
     float getTargetFPS() const { return targetFPS_; }
 
+    /**
+     * @brief Check if any animations are active
+     */
+    bool hasActiveAnimations() const;
+
 private:
     struct AnimationState
     {

@@ -58,8 +58,8 @@ juce::String ClipSynchronizer::createClip(const juce::String& trackId, double st
     if (!tracksNode.isValid())
         return {};
 
-    // Find track
-    for (const auto& track : tracksNode)
+    // Find track (need mutable reference to appendChild)
+    for (auto track : tracksNode)
     {
         if (track[ProjectState::PROP_ID].toString() == trackId)
         {

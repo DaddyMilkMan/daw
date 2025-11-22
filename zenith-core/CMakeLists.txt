@@ -136,7 +136,7 @@ target_sources(ZenithDAW PRIVATE
 
     # Phase 4: Timeline/Arranger UI
     Source/ui/ArrangerComponent.h
-    Source/ui/ArrangerComponent.cpp
+    src/ArrangerComponent.cpp
     Source/ui/PianoRollComponent.h
     Source/ui/PianoRollComponent.cpp
 
@@ -147,6 +147,8 @@ target_sources(ZenithDAW PRIVATE
     Source/commands/SessionGraph.cpp
     Source/ui/WingmanPanel.h
     Source/ui/WingmanPanel.cpp
+    Source/ui/AudioFeedback.h
+    Source/ui/AudioFeedback.cpp
 
     # Instrument Browser UI
     Source/ui/InstrumentBrowserPanel.h
@@ -178,6 +180,98 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/ZenithPolySynthEditor.cpp
     include/InstrumentCommandHelpers.h
 )
+
+# ============================================================================
+# Skia Rendering (conditional)
+# ============================================================================
+
+if(ZENITH_ENABLE_SKIA)
+    find_package(unofficial-skia CONFIG REQUIRED)
+
+    target_sources(ZenithDAW PRIVATE
+        # Skia rendering core
+        Source/rendering/SkiaRenderer.h
+        Source/rendering/SkiaRenderer.cpp
+        Source/rendering/SkiaContextManager.h
+        Source/rendering/SkiaContextManager.cpp
+
+        # Skia UI components
+        Source/ui/skia/SkiaTheme.h
+        Source/ui/skia/SkiaTheme.cpp
+        Source/ui/skia/SkiaTextRenderer.h
+        Source/ui/skia/SkiaTextRenderer.cpp
+        Source/ui/skia/SkiaWaveformRenderer.h
+        Source/ui/skia/SkiaWaveformRenderer.cpp
+        Source/ui/skia/SkiaPianoRollRenderer.h
+        Source/ui/skia/SkiaPianoRollRenderer.cpp
+        Source/ui/skia/SkiaClipRenderer.h
+        Source/ui/skia/SkiaClipRenderer.cpp
+        Source/ui/skia/SkiaKnobComponent.h
+        Source/ui/skia/SkiaKnobComponent.cpp
+        Source/ui/skia/SkiaSliderComponent.h
+        Source/ui/skia/SkiaSliderComponent.cpp
+        Source/ui/skia/SkiaButtonComponent.h
+        Source/ui/skia/SkiaButtonComponent.cpp
+        Source/ui/skia/SkiaMixerChannelComponent.h
+        Source/ui/skia/SkiaMixerChannelComponent.cpp
+        Source/ui/skia/SkiaTransportControlComponent.h
+        Source/ui/skia/SkiaTransportControlComponent.cpp
+        Source/ui/skia/SkiaMasterOutputMeterComponent.h
+        Source/ui/skia/SkiaMasterOutputMeterComponent.cpp
+        Source/ui/skia/SkiaEffectsChainComponent.h
+        Source/ui/skia/SkiaEffectsChainComponent.cpp
+        Source/ui/skia/SkiaInstrumentBrowserComponent.h
+        Source/ui/skia/SkiaInstrumentBrowserComponent.cpp
+        Source/ui/skia/SkiaPresetBrowserComponent.h
+        Source/ui/skia/SkiaPresetBrowserComponent.cpp
+        Source/ui/skia/SkiaSettingsManager.h
+        Source/ui/skia/SkiaSettingsManager.cpp
+        Source/ui/skia/SkiaPerformanceDashboard.h
+        Source/ui/skia/SkiaPerformanceDashboard.cpp
+        Source/ui/skia/SkiaMainWindowIntegration.h
+        Source/ui/skia/SkiaMainWindowIntegration.cpp
+    )
+
+    target_include_directories(ZenithDAW PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui/skia
+        ${CMAKE_CURRENT_SOURCE_DIR}/Source/rendering
+    )
+
+    target_link_libraries(ZenithDAW PRIVATE unofficial::skia::skia)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_ENABLE_SKIA=1 ZENITH_USE_SKIA=1)
+
+    # Always enable OpenGL backend (available in vcpkg by default)
+    target_compile_definitions(ZenithDAW PRIVATE SK_GL=1)
+    message(STATUS "  Skia backend: OpenGL (always available)")
+
+    # Add platform-specific GPU backends if vcpkg Skia was built with them
+    # NOTE: These require Skia to be installed with specific features:
+    #       vcpkg install skia[direct3d]  (Windows)
+    #       vcpkg install skia[metal]     (macOS)
+    #       vcpkg install skia[vulkan]    (Linux)
+    if(WIN32)
+        # Direct3D backend - only enable if Skia was built with [direct3d] feature
+        # Uncomment when you reinstall Skia with: vcpkg install skia[direct3d]
+        # target_compile_definitions(ZenithDAW PRIVATE SK_DIRECT3D=1)
+        # target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dxguid)
+        # message(STATUS "  Skia backend: Direct3D (optional, not currently available)")
+    elseif(APPLE)
+        # Metal backend - only enable if Skia was built with [metal] feature
+        # target_compile_definitions(ZenithDAW PRIVATE SK_METAL=1)
+        # target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework MetalKit" "-framework QuartzCore")
+        # message(STATUS "  Skia backend: Metal (optional, not currently available)")
+    elseif(UNIX)
+        # Vulkan backend - only enable if Skia was built with [vulkan] feature
+        # target_compile_definitions(ZenithDAW PRIVATE SK_VULKAN=1)
+        # find_package(Vulkan REQUIRED)
+        # target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
+        # message(STATUS "  Skia backend: Vulkan (optional, not currently available)")
+    endif()
+
+    message(STATUS "Zenith DAW: Skia rendering ENABLED")
+else()
+    message(STATUS "Zenith DAW: Skia rendering DISABLED (using JUCE fallback)")
+endif()
 
 # ============================================================================
 # Include Directories

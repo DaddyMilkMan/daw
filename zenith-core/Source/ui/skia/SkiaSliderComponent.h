@@ -27,7 +27,8 @@ namespace zenith {
  * A professional-quality slider that uses Skia for rendering and
  * spring physics for smooth, natural animations.
  */
-class SkiaSliderComponent : public juce::Component
+class SkiaSliderComponent : public juce::Component,
+                            private juce::Timer
 {
 public:
     /**
@@ -78,6 +79,12 @@ public:
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseWheelMove(const juce::MouseEvent& event,
                        const juce::MouseWheelDetails& wheel) override;
+
+    //==========================================================================
+    // Timer Interface
+    //==========================================================================
+
+    void timerCallback() override;
 
     //==========================================================================
     // Value Control
@@ -174,9 +181,6 @@ private:
     float thumbVelocity_ = 0.0f;
     float hoverProgress_ = 0.0f;
     float hoverVelocity_ = 0.0f;
-
-    // Animation timer
-    juce::Timer animationTimer_;
 
     // Methods
     void startAnimationTimer();

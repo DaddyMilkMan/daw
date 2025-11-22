@@ -11,15 +11,18 @@
 */
 
 #include "PianoRollComponent.h"
-#include "../Source/engine/Track.h"
-#include "../Source/engine/Clip.h"
+#include "../engine/Track.h"
+#include "../engine/Clip.h"
+#include "../../include/Engine.h"
+#include "../../include/ProjectState.h"
+#include "../../include/TempoMap.h"
 
 //==============================================================================
 // Piano RollComponent Implementation
 //==============================================================================
 
-PianoRollComponent::PianoRollComponent(zenith::Track::Clip* clipToEdit)
-    : clip(clipToEdit)
+PianoRollComponent::PianoRollComponent(zenith::Track::Clip* clipToEdit, Engine& engineRef)
+    : clip(clipToEdit), engine(engineRef)
 {
     if (clip == nullptr)
     {
@@ -31,9 +34,9 @@ PianoRollComponent::PianoRollComponent(zenith::Track::Clip* clipToEdit)
     addKeyListener(this);
     setWantsKeyboardFocus(true);
 
-    // TODO(zenith-core#1): Get tempo and sample rate from Engine or clip metadata
-    currentTempo = 120.0;
-    currentSampleRate = 44100.0;
+    // Get tempo and sample rate from Engine
+    currentSampleRate = engine.getSampleRate();
+    currentTempo = engine.getTempoMap().getTempoAt(0); // Start tempo for now
 
     // Build note cache from clip
     updateNoteCache();
@@ -105,7 +108,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent& e)
 
         // Calculate note number and start time from mouse position
         float relativeX = e.position.getX() - pianoKeysWidth;
-        // float relativeY = e.position.getY();  // Unused variable
+        float relativeY = e.position.getY();
 
         int noteNumber = pixelsToNoteNumber(relativeY);
         double startBeats = snapToGrid(pixelsToBeats(relativeX));
@@ -131,7 +134,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& e)
 
     // Calculate new position
     float relativeX = e.position.getX() - pianoKeysWidth;
-    // float relativeY = e.position.getY();  // Unused variable
+    float relativeY = e.position.getY();
 
     int newNoteNumber = pixelsToNoteNumber(relativeY);
     double newStartBeats = snapToGrid(pixelsToBeats(relativeX));
@@ -559,11 +562,12 @@ double PianoRollComponent::snapToGrid(double beats) const
 // PianoRollWindow Implementation
 //==============================================================================
 
-PianoRollWindow::PianoRollWindow(zenith::Track::Clip* clipToEdit)
+PianoRollWindow::PianoRollWindow(zenith::Track::Clip* clipToEdit, Engine& engineRef)
     : DocumentWindow(clipToEdit != nullptr ? "Piano Roll - " + clipToEdit->getName() : "Piano Roll",
                      juce::Colours::darkgrey,
                      DocumentWindow::allButtons),
-      clip(clipToEdit)
+      clip(clipToEdit),
+      engine(engineRef)
 {
     if (clip == nullptr)
     {
@@ -572,7 +576,7 @@ PianoRollWindow::PianoRollWindow(zenith::Track::Clip* clipToEdit)
     }
 
     // Create piano roll component
-    pianoRoll = std::make_unique<PianoRollComponent>(clip);
+    pianoRoll = std::make_unique<PianoRollComponent>(clip, engine);
 
     // Set as content
     setContentNonOwned(pianoRoll.get(), true);

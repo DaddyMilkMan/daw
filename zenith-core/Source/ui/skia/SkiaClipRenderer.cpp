@@ -10,8 +10,8 @@
     #include <include/core/SkPath.h>
     #include <include/core/SkRRect.h>
     #include <include/core/SkShader.h>
-    #include <include/core/SkGradientShader.h>
     #include <include/core/SkMaskFilter.h>
+    #include <include/core/SkBlurTypes.h>
     #include <include/effects/SkGradientShader.h>
 #endif
 
@@ -264,7 +264,7 @@ void SkiaClipRenderer::renderClipBackground(SkCanvas* canvas,
 
         if (depthStyle.shadowBlur > 0.0f)
         {
-            shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, depthStyle.shadowBlur));
+            shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, depthStyle.shadowBlur));
         }
 
         SkRect shadowRect = clipRect;
@@ -376,7 +376,7 @@ void SkiaClipRenderer::renderClipGlow(SkCanvas* canvas,
 
         if (layerBlur > 0.0f)
         {
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, layerBlur));
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, layerBlur));
         }
 
         SkRRect roundRect = SkRRect::MakeRectXY(clipRect, 4.0f, 4.0f);

@@ -11,7 +11,10 @@
 #include "include/core/SkRRect.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkMaskFilter.h"
+#include "include/core/SkBlurTypes.h"
 #include "include/core/SkColor.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontTypes.h"
 #include "include/effects/SkGradientShader.h"
 
 namespace zenith {
@@ -53,7 +56,7 @@ SkiaSliderComponent::SkiaSliderComponent(Orientation orientation, Style style)
 
 SkiaSliderComponent::~SkiaSliderComponent()
 {
-    animationTimer_.stopTimer();
+    stopTimer();
 }
 
 //==============================================================================
@@ -119,13 +122,13 @@ void SkiaSliderComponent::mouseDown(const juce::MouseEvent& event)
     {
         float trackWidth = getWidth() - THUMB_SIZE;
         float clickPos = event.x - THUMB_SIZE / 2.0f;
-        newValue = juce::jlimit(0.0, 1.0, clickPos / trackWidth);
+        newValue = juce::jlimit(0.0, 1.0, static_cast<double>(clickPos / trackWidth));
     }
     else
     {
         float trackHeight = getHeight() - THUMB_SIZE;
         float clickPos = trackHeight - (event.y - THUMB_SIZE / 2.0f);
-        newValue = juce::jlimit(0.0, 1.0, clickPos / trackHeight);
+        newValue = juce::jlimit(0.0, 1.0, static_cast<double>(clickPos / trackHeight));
     }
 
     // Map from 0-1 to actual range
@@ -219,11 +222,12 @@ void SkiaSliderComponent::setNumSteps(int steps)
 
 void SkiaSliderComponent::startAnimationTimer()
 {
-    animationTimer_.setCallback([this]() {
-        updateAnimations();
-    });
+    startTimer((int)(1000.0f / ANIMATION_FPS));
+}
 
-    animationTimer_.startTimer((int)(1000.0f / ANIMATION_FPS));
+void SkiaSliderComponent::timerCallback()
+{
+    updateAnimations();
 }
 
 void SkiaSliderComponent::updateAnimations()
@@ -411,7 +415,7 @@ void SkiaSliderComponent::drawSlider(SkCanvas* canvas)
         SkPaint shadowPaint;
         shadowPaint.setAntiAlias(true);
         shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
-        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, 3.0f));
 
         canvas->drawCircle(thumbPos.x, thumbPos.y + 2, THUMB_SIZE/2, shadowPaint);
     }

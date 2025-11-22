@@ -52,32 +52,7 @@ WingmanPanel::WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiCl
     commandInput->setTextToShowWhenEmpty("Enter command (JSON or shorthand)...", juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     addAndMakeVisible(*commandInput);
 
-#ifdef ZENITH_USE_SKIA
-    // Create Skia GPU-rendered buttons with spring physics
-    commandModeButton = std::make_unique<zenith::SkiaButtonComponent>("Command", zenith::SkiaButtonComponent::Style::Primary);
-    commandModeButton->setToggleable(true);
-    commandModeButton->setToggleState(true);
-    commandModeButton->onClick = [this]() {
-        setMode(Mode::Command);
-        aiModeButton->setToggleState(false);
-        commandModeButton->setToggleState(true);
-    };
-    addAndMakeVisible(*commandModeButton);
-
-    aiModeButton = std::make_unique<zenith::SkiaButtonComponent>("AI", zenith::SkiaButtonComponent::Style::Secondary);
-    aiModeButton->setToggleable(true);
-    aiModeButton->onClick = [this]() {
-        setMode(Mode::AI);
-        commandModeButton->setToggleState(false);
-        aiModeButton->setToggleState(true);
-    };
-    addAndMakeVisible(*aiModeButton);
-
-    clearButton = std::make_unique<zenith::SkiaButtonComponent>("Clear", zenith::SkiaButtonComponent::Style::Secondary);
-    clearButton->onClick = [this]() { clearHistory(); };
-    addAndMakeVisible(*clearButton);
-#else
-    // Fallback JUCE buttons with Zenith styling
+    // JUCE buttons with Zenith styling
     commandModeButton = std::make_unique<juce::TextButton>("Command");
     commandModeButton->setClickingTogglesState(true);
     commandModeButton->setRadioGroupId(1);
@@ -104,7 +79,6 @@ WingmanPanel::WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiCl
     clearButton->setColour(juce::TextButton::textColourOffId, juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     clearButton->onClick = [this]() { clearHistory(); };
     addAndMakeVisible(*clearButton);
-#endif
 
     // Welcome message
     addMessage("╔════════════════════════════════════════════════════════════╗", false);

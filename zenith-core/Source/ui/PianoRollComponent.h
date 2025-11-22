@@ -20,7 +20,9 @@
 
 #include <JuceHeader.h>
 #include <memory>
-#include "../Source/engine/Track.h"
+#include "../engine/Track.h"
+
+class Engine; // Forward declaration
 
 //==============================================================================
 /**
@@ -45,7 +47,7 @@ class PianoRollComponent : public juce::Component,
 {
 public:
     //==============================================================================
-    PianoRollComponent(zenith::Track::Clip* clipToEdit);
+    PianoRollComponent(zenith::Track::Clip* clipToEdit, Engine& engine);
     ~PianoRollComponent() override;
 
     //==============================================================================
@@ -110,6 +112,7 @@ private:
     //==============================================================================
 
     zenith::Track::Clip* clip;  // Clip being edited (not owned)
+    Engine& engine;             // Reference to engine
 
     // View parameters
     float pixelsPerBeat = 40.0f;       // Horizontal zoom
@@ -158,7 +161,7 @@ private:
 class PianoRollWindow : public juce::DocumentWindow
 {
 public:
-    PianoRollWindow(zenith::Track::Clip* clip);
+    PianoRollWindow(zenith::Track::Clip* clip, Engine& engine);
     ~PianoRollWindow() override;
 
     void closeButtonPressed() override;
@@ -167,8 +170,8 @@ public:
 
 private:
     zenith::Track::Clip* clip;
+    Engine& engine;
     std::unique_ptr<PianoRollComponent> pianoRoll;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
 };
-

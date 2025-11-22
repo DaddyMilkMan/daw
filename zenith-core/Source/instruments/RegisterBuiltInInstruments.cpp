@@ -14,6 +14,7 @@
 #include "InstrumentRegistry.h"
 #include "ZenithPolySynth.h"
 #include "ZenithSampler.h"
+#include "../utils/PresetGenerator.h"
 
 namespace zenith {
 
@@ -239,6 +240,10 @@ void registerBuiltInInstruments()
     }
 
     DBG("Built-in instruments registered successfully (2 synths + 5 sample-based instruments)");
+
+    // Generate factory presets for testing (one-time generation logic could be added here)
+    // For now, we regenerate them on startup to ensure they exist
+    PresetGenerator::generateFactoryPresets();
 }
 
 } // namespace zenith

@@ -13,8 +13,10 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "include/core/SkColor.h"
 #ifdef ZENITH_USE_SKIA
-    #include <include/core/SkColor.h>
+#include "include/core/SkPaint.h"
+#include "include/core/SkRect.h"
 #endif
 
 namespace zenith {

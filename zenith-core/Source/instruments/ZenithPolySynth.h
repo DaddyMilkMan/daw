@@ -178,6 +178,7 @@ enum class ModulationDestination
     Osc1Mix,            // Oscillator 1 mix level
     Osc2Mix,            // Oscillator 2 mix level
     Osc3Mix,            // Oscillator 3 mix level
+    OscShape,           // Oscillator Shape/PulseWidth (0 to 1)
     NumDestinations
 };
 
@@ -247,9 +248,10 @@ public:
     /**
      * @brief Generate next sample
      * @param frequency Base frequency in Hz
+     * @param shape Shape parameter (Pulse Width for Square, etc.)
      * @return Sample value in range [-1, 1]
      */
-    float getNextSample(float frequency);
+    float getNextSample(float frequency, float shape = 0.5f);
 
 private:
     OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
@@ -260,7 +262,7 @@ private:
 
     float processSine(float frequency);
     float processSaw(float frequency);
-    float processSquare(float frequency);
+    float processSquare(float frequency, float pulseWidth);
     float processTriangle(float frequency);
     float processNoise();
 };
@@ -305,6 +307,32 @@ private:
 
 //==============================================================================
 /**
+    Per-Voice Effects Chain
+*/
+class ZenithEffects
+{
+public:
+    ZenithEffects() = default;
+
+    void setSampleRate(double sampleRate) { sampleRate_ = sampleRate; }
+    void reset() { /* No state to reset for simple distortion */ }
+
+    void setDistortion(float amount) { distortionAmount_ = amount; }
+    void setChorus(float amount) { chorusAmount_ = amount; }
+
+    void process(float& left, float& right);
+
+private:
+    double sampleRate_ = 44100.0;
+    float distortionAmount_ = 0.0f;
+    float chorusAmount_ = 0.0f;
+    
+    // Simple chorus LFO
+    float chorusPhase_ = 0.0f;
+};
+
+//==============================================================================
+/**
     Voice for ZenithPolySynth - RT-safe polyphonic voice
 */
 class ZenithPolySynthVoice : public juce::SynthesiserVoice
@@ -339,10 +367,15 @@ public:
     void setUnisonVoices(int voices) [[maybe_unused]] { unisonVoices_ = juce::jlimit(1, 7, voices); }
     void setUnisonDetune(float cents) [[maybe_unused]] { unisonDetune_ = cents; }
 
-    void setFilterType(FilterType type) [[maybe_unused]] { filter_.setType(type); }
+    void setFilterType(FilterType type) [[maybe_unused]] { filter1_.setType(type); }
     void setFilterCutoff(float cutoff) [[maybe_unused]] { filterCutoff_ = cutoff; }
-    void setFilterResonance(float resonance) [[maybe_unused]] { filter_.setResonance(resonance); }
-    void setFilterDrive(float drive) [[maybe_unused]] { filter_.setDrive(drive); }
+    void setFilterResonance(float resonance) [[maybe_unused]] { filter1_.setResonance(resonance); }
+    void setFilterDrive(float drive) [[maybe_unused]] { filter1_.setDrive(drive); }
+    
+    void setFilter2Type(FilterType type) [[maybe_unused]] { filter2_.setType(type); }
+    void setFilter2Cutoff(float cutoff) [[maybe_unused]] { filter2Cutoff_ = cutoff; }
+    void setFilter2Resonance(float resonance) [[maybe_unused]] { filter2_.setResonance(resonance); }
+    void setFilterRouting(bool serial) [[maybe_unused]] { filterSerial_ = serial; }
 
     void setAmpEnvelope(float attack, float decay, float sustain, float release) [[maybe_unused]];
     void setModEnvelope(float attack, float decay, float sustain, float release) [[maybe_unused]];
@@ -353,6 +386,9 @@ public:
     void setGlideTime(float glideTimeSeconds) [[maybe_unused]] { glideTime_ = glideTimeSeconds; }
     void setMonoMode(bool mono) [[maybe_unused]] { monoMode_ = mono; }
     void setQualityPreset(QualityPreset quality) [[maybe_unused]] { qualityPreset_ = quality; }
+    
+    void setDistortion(float amount) { effects_.setDistortion(amount); }
+    void setChorus(float amount) { effects_.setChorus(amount); }
 
     void setSampleRate(double sampleRate) [[maybe_unused]];
 
@@ -397,11 +433,13 @@ private:
     float unisonDetune_ = 10.0f; // cents
 
     //==========================================================================
-    // Filter
+    // Filters (Dual)
     //==========================================================================
-    ZenithFilter filter_;
+    ZenithFilter filter1_;
+    ZenithFilter filter2_;
     float filterCutoff_ = 2000.0f;
-    float filterEnvAmount_ = 0.0f;
+    float filter2Cutoff_ = 2000.0f;
+    bool filterSerial_ = true;
 
     //==========================================================================
     // Envelopes
@@ -435,6 +473,11 @@ private:
     };
 
     LFO lfo1_, lfo2_;
+    
+    //==========================================================================
+    // Effects
+    //==========================================================================
+    ZenithEffects effects_;
 
     //==========================================================================
     // Voice state
@@ -464,7 +507,7 @@ private:
     float modWheel_ = 0.0f;      // CC#1
     float aftertouch_ = 0.0f;    // Channel pressure
     float pan_ = 0.0f;           // Stereo pan (-1 to +1)
-    float wavetablePos_ = 0.0f;  // Wavetable position (0 to 1)
+    float oscShape_ = 0.5f;      // Oscillator shape/PWM (0 to 1)
 
     //==========================================================================
     // Helper methods
@@ -542,11 +585,17 @@ public:
         UnisonVoices,
         UnisonDetune,
 
-        // Filter
+        // Filter 1
         FilterType,
         FilterCutoff,
         FilterResonance,
         FilterDrive,
+        
+        // Filter 2
+        Filter2Type,
+        Filter2Cutoff,
+        Filter2Resonance,
+        FilterRouting, // 0=Serial, 1=Parallel
 
         // Amp Envelope
         AmpAttack,
@@ -569,6 +618,10 @@ public:
         LFO2Rate,
         LFO2Amount,
         LFO2Target,
+        
+        // Effects
+        DistortionAmount,
+        ChorusAmount,
 
         // Global
         GlideTime,
@@ -628,6 +681,9 @@ private:
 
     juce::SmoothedValue<float> masterGainSmoothed_;
     int currentMaxVoices_ = 16;
+    
+    // Cached parameter pointers for fast access
+    std::vector<juce::RangedAudioParameter*> cachedParams_;
 
 #if JUCE_DEBUG
     //==========================================================================

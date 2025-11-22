@@ -25,6 +25,9 @@
 #include "../Source/engine/Track.h"
 
 // Forward declarations
+class ProjectState;
+
+// Forward declarations
 class Engine;
 
 //==============================================================================
@@ -49,7 +52,7 @@ class ArrangerComponent : public juce::Component,
 {
 public:
     //==============================================================================
-    ArrangerComponent(Engine& eng);
+    ArrangerComponent(ProjectState& projectState);
     ~ArrangerComponent() override;
 
     //==============================================================================

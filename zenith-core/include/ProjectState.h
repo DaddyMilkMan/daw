@@ -888,6 +888,17 @@ public:
      */
     const juce::ValueTree& getState() const { return state; }
 
+    //==========================================================================
+    // Debug Helpers
+    //==========================================================================
+
+#if JUCE_DEBUG
+    /**
+     * @brief Dump clip and note structure to log (debug only)
+     */
+    void dumpClipStructureToLog() const;
+#endif
+
 private:
     //==========================================================================
     // Helper Methods

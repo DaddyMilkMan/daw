@@ -443,8 +443,9 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
 
     if (audioFileHandle_)
     {
-        // Cast type-erased handle back to AudioFileHandle with runtime type checking
-        auto handle = std::dynamic_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
+        // Cast type-erased handle back to AudioFileHandle
+        // Use reinterpret_pointer_cast since void* has no RTTI for dynamic_cast
+        auto handle = std::reinterpret_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
         if (handle != nullptr)
         {
             sourceBuffer = &handle->buffer;

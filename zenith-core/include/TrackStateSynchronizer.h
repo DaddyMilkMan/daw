@@ -107,12 +107,12 @@ private:
     /**
      * @brief Add track listeners to a track node
      */
-    void addTrackListener(juce::ValueTree& track);
+    void addTrackListener(const juce::ValueTree& track);
 
     /**
      * @brief Remove track listeners from a track node
      */
-    void removeTrackListener(juce::ValueTree& track);
+    void removeTrackListener(const juce::ValueTree& track);
 
     //==========================================================================
     // Member Variables

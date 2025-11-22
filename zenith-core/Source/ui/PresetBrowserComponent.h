@@ -19,10 +19,7 @@
 #include <vector>
 #include <functional>
 
-// Conditional Skia components (GPU-accelerated with spring physics)
-#ifdef ZENITH_USE_SKIA
-    #include "skia/SkiaButtonComponent.h"
-#endif
+// Note: Skia rendering enabled for other components but buttons use JUCE for now
 
 namespace zenith {
 
@@ -150,17 +147,10 @@ private:
     // Preset list
     juce::ListBox presetListBox_;
 
-#ifdef ZENITH_USE_SKIA
-    // GPU-accelerated action buttons with spring physics
-    std::unique_ptr<SkiaButtonComponent> loadButton_;
-    std::unique_ptr<SkiaButtonComponent> saveAsButton_;
-    std::unique_ptr<SkiaButtonComponent> initializeButton_;
-#else
-    // Fallback JUCE buttons
+    // Action buttons (JUCE for now)
     juce::TextButton saveAsButton_;
     juce::TextButton initializeButton_;
     juce::TextButton loadButton_;
-#endif
 
     // Status
     juce::Label statusLabel_;

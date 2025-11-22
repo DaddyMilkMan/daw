@@ -18,10 +18,7 @@
 #include "../engine/Track.h"
 #include "../../include/ProjectState.h"
 
-// Conditional Skia components (GPU-accelerated with spring physics)
-#ifdef ZENITH_USE_SKIA
-    #include "skia/SkiaButtonComponent.h"
-#endif
+// Note: Skia rendering enabled for other components but buttons use JUCE for now
 
 // Forward declarations
 class Engine;
@@ -115,11 +112,7 @@ private:
     juce::Label tagsLabel;
     juce::Component tagChipsContainer;
 
-#ifdef ZENITH_USE_SKIA
-    std::vector<std::unique_ptr<SkiaButtonComponent>> tagChips;
-#else
     std::vector<std::unique_ptr<juce::TextButton>> tagChips;
-#endif
 
     juce::String activeTag;  // Empty = show all
 
@@ -131,13 +124,8 @@ private:
     juce::Label presetsLabel;
     juce::ListBox presetList;
 
-#ifdef ZENITH_USE_SKIA
-    std::unique_ptr<SkiaButtonComponent> loadPresetButton;
-    std::unique_ptr<SkiaButtonComponent> searchClearButton;
-#else
     juce::TextButton loadPresetButton;
     juce::TextButton searchClearButton;
-#endif
 
     // Status/toast message
     juce::Label statusLabel;

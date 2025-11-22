@@ -28,7 +28,8 @@ namespace zenith {
  *
  * This is the first step toward replacing all JUCE UI with Skia.
  */
-class SkiaButtonComponent : public juce::Component
+class SkiaButtonComponent : public juce::Component,
+                            private juce::Timer
 {
 public:
     /**
@@ -131,10 +132,8 @@ private:
     float hoverVelocity_ = 0.0f;
     float pressVelocity_ = 0.0f;
 
-    // Animation timer (60Hz minimum)
-    juce::Timer animationTimer_;
-
     // Methods
+    void timerCallback() override;
     void startAnimationTimer();
     void updateAnimations();
     void drawButton(class SkCanvas* canvas);

@@ -61,7 +61,7 @@ private:
     //==========================================================================
 
     void onPresetLoaded(const ZenithInstrumentPreset& preset);
-    std::map<std::string, float, std::less<>> captureCurrentState() const;
+    std::map<std::string, float> captureCurrentState() const;
 
     //==========================================================================
     // Member Variables

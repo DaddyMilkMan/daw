@@ -382,9 +382,9 @@ void ZenithPolySynthEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
     }
 }
 
-std::map<std::string, float, std::less<>> ZenithPolySynthEditor::captureCurrentState() const
+std::map<std::string, float> ZenithPolySynthEditor::captureCurrentState() const
 {
-    std::map<std::string, float, std::less<>> state;
+    std::map<std::string, float> state;
 
     // Capture all parameters from metadata
     const auto& metadata = instrument_.getMetadata();

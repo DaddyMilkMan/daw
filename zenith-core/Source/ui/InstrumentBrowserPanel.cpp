@@ -100,9 +100,6 @@ InstrumentBrowserPanel::InstrumentBrowserPanel(Engine& engine, ProjectState& pro
     statusLabel.setVisible(false);
     addAndMakeVisible(statusLabel);
 
-    // Status timer
-    statusTimer_ = std::make_unique<StatusTimer>(*this);
-
     // Load instruments
     instrumentIds_ = instrumentRegistry_.getInstrumentIds();
     instrumentList.updateContent();
@@ -113,7 +110,6 @@ InstrumentBrowserPanel::InstrumentBrowserPanel(Engine& engine, ProjectState& pro
 InstrumentBrowserPanel::~InstrumentBrowserPanel()
 {
     searchBox.removeListener(this);
-    statusTimer_->stopTimer();
 }
 
 void InstrumentBrowserPanel::paint(juce::Graphics& g)
@@ -453,8 +449,8 @@ void InstrumentBrowserPanel::showStatus(const juce::String& message, bool isErro
     statusLabel.setVisible(true);
     statusLabelAlpha = 255;
 
-    // Start fade-out timer
-    statusTimer_->startTimer(50);  // 50ms updates for smooth fade
+    // Start fade-out timer (using inherited Timer functionality)
+    startTimer(50);  // 50ms updates for smooth fade
 }
 
 void InstrumentBrowserPanel::timerCallback()
@@ -476,7 +472,7 @@ void InstrumentBrowserPanel::timerCallback()
         {
             statusLabelAlpha = 0;
             statusLabel.setVisible(false);
-            statusTimer_->stopTimer();
+            stopTimer();  // Stop inherited Timer
             holdTicks = 0;
         }
 
@@ -487,24 +483,18 @@ void InstrumentBrowserPanel::timerCallback()
 
 zenith::Track* InstrumentBrowserPanel::getSelectedTrack() const
 {
-    // Get first instrument track from project state
+    // Get first instrument track from engine
     // TODO: Implement proper track selection (selected track in arranger)
-    // For now, we'll use the first instrument track
-
+    // For now, we'll use the first instrument track found in the engine
+    
     int numTracks = engine_.getNumTracks();
-    for (int i = 0; i < numTracks; ++i)
+    const auto& tracks = engine_.tracks();
+    
+    for (const auto& track : tracks)
     {
-        auto trackTree = projectState_.getTrackByIndex(i);
-        if (trackTree.isValid())
+        if (track->getType() == Track::Type::Instrument)
         {
-            // Check if it's an instrument track
-            juce::String type = trackTree.getProperty(ProjectState::PROP_TYPE).toString();
-            if (type == "instrument")
-            {
-                // Note: This returns nullptr since we can't directly access Track objects from ValueTree
-                // The caller should use the trackTree directly instead
-                return nullptr; // TODO: Refactor to return ValueTree or track ID
-            }
+            return track.get();
         }
     }
 

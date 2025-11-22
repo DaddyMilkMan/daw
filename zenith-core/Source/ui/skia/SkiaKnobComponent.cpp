@@ -10,8 +10,11 @@
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkMaskFilter.h"
+#include "include/core/SkBlurTypes.h"
 #include "include/core/SkColor.h"
 #include "include/effects/SkGradientShader.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontTypes.h"
 
 #include <cmath>
 
@@ -26,7 +29,7 @@ namespace {
     constexpr float SPRING_STIFFNESS = 300.0f;
     constexpr float SPRING_DAMPING = 22.0f;
     constexpr float ANIMATION_FPS = 60.0f;
-    constexpr float ANIMATION_DT = 1.0f / ANIMATION_DT;
+    constexpr float ANIMATION_DT = 1.0f / ANIMATION_FPS;
 
     // Visual
     constexpr float MIN_ANGLE = -150.0f;  // Degrees
@@ -54,7 +57,7 @@ SkiaKnobComponent::SkiaKnobComponent(Style style)
 
 SkiaKnobComponent::~SkiaKnobComponent()
 {
-    animationTimer_.stopTimer();
+    stopTimer();
 }
 
 //==============================================================================
@@ -192,11 +195,12 @@ void SkiaKnobComponent::setNumSteps(int steps)
 
 void SkiaKnobComponent::startAnimationTimer()
 {
-    animationTimer_.setCallback([this]() {
-        updateAnimations();
-    });
+    startTimer((int)(1000.0f / ANIMATION_FPS));
+}
 
-    animationTimer_.startTimer((int)(1000.0f / ANIMATION_FPS));
+void SkiaKnobComponent::timerCallback()
+{
+    updateAnimations();
 }
 
 void SkiaKnobComponent::updateAnimations()
@@ -279,7 +283,7 @@ void SkiaKnobComponent::drawKnob(SkCanvas* canvas)
         SkPaint shadowPaint;
         shadowPaint.setAntiAlias(true);
         shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
-        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 5.0f));
+        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, 5.0f));
 
         canvas->drawCircle(centerX, centerY + 3, radius, shadowPaint);
     }
@@ -369,7 +373,7 @@ void SkiaKnobComponent::drawKnob(SkCanvas* canvas)
     indicatorPaint.setStrokeCap(SkPaint::kRound_Cap);
 
     // Calculate indicator position
-    float angleRad = (rotationAngle_ + 90) * M_PI / 180.0f;
+    float angleRad = (rotationAngle_ + 90) * juce::MathConstants<float>::pi / 180.0f;
     float indicatorStartRadius = radius * (1.0f - INDICATOR_LENGTH);
     float indicatorEndRadius = radius * 0.85f;
 

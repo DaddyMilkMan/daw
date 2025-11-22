@@ -8,8 +8,8 @@
 #ifdef ZENITH_USE_SKIA
     #include <include/core/SkPaint.h>
     #include <include/core/SkShader.h>
-    #include <include/core/SkGradientShader.h>
     #include <include/core/SkMaskFilter.h>
+    #include <include/core/SkBlurTypes.h>
     #include <include/effects/SkGradientShader.h>
 #endif
 
@@ -231,7 +231,7 @@ SkPaint SkiaTheme::createGlowPaint(SkColor color, float radius, float opacity)
 
     if (radius > 0.0f)
     {
-        paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, radius));
+        paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, radius));
     }
 
     return paint;
@@ -247,7 +247,7 @@ SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur, float opacity)
 
     if (blur > 0.0f)
     {
-        paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blur));
+        paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blur));
     }
 
     return paint;

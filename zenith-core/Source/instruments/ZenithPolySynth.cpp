@@ -11,6 +11,7 @@
 */
 
 #include "ZenithPolySynth.h"
+#include "../utils/PresetGenerator.h"
 #include <cmath>
 
 // Uncomment to enable synth debug logging
@@ -28,7 +29,7 @@ namespace zenith {
 // ZenithOscillator Implementation
 //==============================================================================
 
-float ZenithOscillator::getNextSample(float frequency)
+float ZenithOscillator::getNextSample(float frequency, float shape)
 {
     // Apply detune
     float detuneMultiplier = std::pow(2.0f, detuneCents_ / 1200.0f);
@@ -38,12 +39,12 @@ float ZenithOscillator::getNextSample(float frequency)
     {
         case OscillatorWaveform::Sine:     return processSine(detunedFrequency);
         case OscillatorWaveform::Saw:      return processSaw(detunedFrequency);
-        case OscillatorWaveform::Square:   return processSquare(detunedFrequency);
+        case OscillatorWaveform::Square:   return processSquare(detunedFrequency, shape);
         case OscillatorWaveform::Triangle: return processTriangle(detunedFrequency);
         case OscillatorWaveform::Noise:    return processNoise();
         case OscillatorWaveform::Supersaw: return processSaw(detunedFrequency); // Same as saw for individual osc
         default:                           return 0.0f;
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
 
 float ZenithOscillator::processSine(float frequency)
@@ -83,10 +84,13 @@ float ZenithOscillator::processSaw(float frequency)
     return naiveSaw;
 }
 
-float ZenithOscillator::processSquare(float frequency)
+float ZenithOscillator::processSquare(float frequency, float pulseWidth)
 {
-    // PolyBLEP antialiasing for square wave
-    float naiveSquare = (phase_ < 0.5) ? 1.0f : -1.0f;
+    // Clamp pulse width to reasonable range (0.05 to 0.95)
+    float pw = juce::jlimit(0.05f, 0.95f, pulseWidth);
+
+    // PolyBLEP antialiasing for square wave with variable pulse width
+    float naiveSquare = (phase_ < pw) ? 1.0f : -1.0f;
 
     float t = phase_;
     float dt = frequency / sampleRate_;
@@ -103,8 +107,8 @@ float ZenithOscillator::processSquare(float frequency)
         naiveSquare += (t + t + t * t + 1.0f);
     }
 
-    // Correct discontinuity at falling edge (phase = 0.5)
-    t = phase_ - 0.5;
+    // Correct discontinuity at falling edge (phase = pw)
+    t = phase_ - pw;
     if (t > 0.0 && t < dt)
     {
         t = t / dt;
@@ -212,7 +216,42 @@ float ZenithFilter::processSample(float input)
         case FilterType::Bandpass: return v1_;
         case FilterType::Highpass: return v0_ - k * v1_ - v2_;
         default:                   return v2_;
-    \n    default: break;\n\n    default: break;\n}
+    }
+}
+
+//==============================================================================
+// ZenithEffects Implementation
+//==============================================================================
+
+void ZenithEffects::process(float& left, float& right)
+{
+    // 1. Distortion (tanh saturation)
+    if (distortionAmount_ > 0.01f)
+    {
+        float drive = 1.0f + distortionAmount_ * 10.0f;
+        left = std::tanh(left * drive);
+        right = std::tanh(right * drive);
+    }
+
+    // 2. Chorus (simple stereo spread)
+    if (chorusAmount_ > 0.01f)
+    {
+        // Simple LFO for chorus
+        float lfo = std::sin(chorusPhase_ * juce::MathConstants<float>::twoPi);
+        chorusPhase_ += 0.5f / static_cast<float>(sampleRate_); // 0.5 Hz rate
+        if (chorusPhase_ >= 1.0f) chorusPhase_ -= 1.0f;
+
+        // Delay-free chorus approximation (widening)
+        // In a real implementation, use a delay line. Here we just invert phase slightly mixed in.
+        // Actually, let's do a simple detune simulation by panning
+        
+        float width = chorusAmount_ * lfo;
+        float mid = (left + right) * 0.5f;
+        float side = (left - right) * 0.5f;
+        
+        left = mid + side * (1.0f + width);
+        right = mid - side * (1.0f + width);
+    }
 }
 
 //==============================================================================
@@ -264,7 +303,8 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
         osc.reset();
 
     // Reset filter
-    filter_.reset();
+    filter1_.reset();
+    filter2_.reset();
 
     // Reset LFOs
     lfo1_.reset();
@@ -324,7 +364,7 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
             break;
         default:
             break;
-    \n    default: break;\n\n    default: break;\n}
+    }
 
     for (int sample = 0; sample < numSamples; ++sample)
     {
@@ -401,16 +441,35 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
         // Apply filter cutoff modulation from modulation matrix
         filterCutoffMod += modulationState_.get(ModulationDestination::FilterCutoff) * 10000.0f; // +/- 10kHz
 
-        filter_.setCutoff(filterCutoffMod);
+        filter1_.setCutoff(filterCutoffMod);
 
         // Apply filter resonance modulation from modulation matrix
         float baseResonance = 0.3f; // Default resonance
         float resonanceMod = juce::jlimit(0.0f, 1.0f,
                                           baseResonance + modulationState_.get(ModulationDestination::FilterResonance));
-        filter_.setResonance(resonanceMod);
+        filter1_.setResonance(resonanceMod);
+        
+        // Filter 2 settings (static for now, could add mod targets)
+        filter2_.setCutoff(filter2Cutoff_);
 
-        // Filter the oscillator output
-        float filteredOutput = filter_.processSample(oscOutput);
+        // Filter Processing (Dual Filter)
+        float filteredOutput = 0.0f;
+        
+        if (filterSerial_)
+        {
+            // Serial: Osc -> F1 -> F2
+            float f1Out = filter1_.processSample(oscOutput);
+            filteredOutput = filter2_.processSample(f1Out);
+        }
+        else
+        {
+            // Parallel: Osc -> F1
+            //           Osc -> F2
+            //           Mix 50/50
+            float f1Out = filter1_.processSample(oscOutput);
+            float f2Out = filter2_.processSample(oscOutput);
+            filteredOutput = (f1Out + f2Out) * 0.5f;
+        }
 
         // Apply amplitude envelope and velocity
         float ampEnvValue = ampEnvelope_.getNextSample();
@@ -425,21 +484,31 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffe
 
         // Apply pan modulation from modulation matrix
         float panValue = juce::jlimit(-1.0f, 1.0f, pan_ + modulationState_.get(ModulationDestination::Pan));
+        
+        // Stereo Output Calculation
+        float leftOut = finalOutput;
+        float rightOut = finalOutput;
 
-        // Mix into output buffer (stereo with pan)
+        // Apply Panning
+        float leftGain = std::cos((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        float rightGain = std::sin((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
+        
+        leftOut *= leftGain;
+        rightOut *= rightGain;
+        
+        // Apply Per-Voice Effects
+        effects_.process(leftOut, rightOut);
+
+        // Mix into output buffer
         if (outputBuffer.getNumChannels() >= 2)
         {
-            // Simple constant-power panning
-            float leftGain = std::cos((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-            float rightGain = std::sin((panValue + 1.0f) * juce::MathConstants<float>::pi * 0.25f);
-
-            outputBuffer.addSample(0, startSample + sample, finalOutput * leftGain);
-            outputBuffer.addSample(1, startSample + sample, finalOutput * rightGain);
+            outputBuffer.addSample(0, startSample + sample, leftOut);
+            outputBuffer.addSample(1, startSample + sample, rightOut);
         }
         else
         {
             // Mono output
-            outputBuffer.addSample(0, startSample + sample, finalOutput);
+            outputBuffer.addSample(0, startSample + sample, (leftOut + rightOut) * 0.5f);
         }
 
         // Check if voice should be stopped
@@ -492,7 +561,9 @@ void ZenithPolySynthVoice::setSampleRate(double sampleRate)
     for (auto& osc : unisonOscillators_)
         osc.setSampleRate(sampleRate);
 
-    filter_.setSampleRate(sampleRate);
+    filter1_.setSampleRate(sampleRate);
+    filter2_.setSampleRate(sampleRate);
+    effects_.setSampleRate(sampleRate);
     ampEnvelope_.setSampleRate(sampleRate);
     modEnvelope_.setSampleRate(sampleRate);
 }
@@ -515,12 +586,8 @@ void ZenithPolySynthVoice::updateFrequency()
     }
 }
 
-float ZenithPolySynthVoice::applyLFOs()
-{
-    // TODO(zenith-core#1): Apply LFOs to various targets based on routing
-    // This will be expanded when tempo sync is added via ProjectState
-    return 0.0f;
-}
+// applyLFOs removed - functionality moved to Modulation Matrix
+
 
 //==============================================================================
 // Modulation Matrix Implementation
@@ -575,7 +642,7 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source)
             // Amp envelope is 0 to 1
             juce::ADSR& ampEnv = const_cast<juce::ADSR&>(ampEnvelope_);
             return ampEnv.isActive() ? ampEnv.getNextSample() : 0.0f;
-        \n    default: break;\n\n    default: break;\n}
+        }
 
         case ModulationSource::Env2:
         {
@@ -631,9 +698,9 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
 {
     // Add 16 voices for polyphony
     for (int i = 0; i < 16; ++i)
-        addVoice(std::make_unique<ZenithPolySynthVoice>());
+        addVoice(new ZenithPolySynthVoice());
 
-    addSound(std::make_unique<ZenithPolySynthSound>());
+    addSound(new ZenithPolySynthSound());
 
     // Create parameters - ORDER MUST MATCH enum Parameters!
 
@@ -659,13 +726,22 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     addParameter(new juce::AudioParameterInt("unison_voices", "Unison Voices", 1, 7, 1));
     addParameter(new juce::AudioParameterFloat("unison_detune", "Unison Detune", 0.0f, 50.0f, 10.0f));
 
-    // Filter
+    // Filter 1
     addParameter(new juce::AudioParameterChoice("filter_type", "Filter Type",
         juce::StringArray{"Lowpass", "Bandpass", "Highpass"}, 0)); // Default: Lowpass
     addParameter(new juce::AudioParameterFloat("filter_cutoff", "Filter Cutoff",
         juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), 2000.0f));
     addParameter(new juce::AudioParameterFloat("filter_resonance", "Filter Resonance", 0.0f, 1.0f, 0.3f));
     addParameter(new juce::AudioParameterFloat("filter_drive", "Filter Drive", 1.0f, 5.0f, 1.0f));
+    
+    // Filter 2
+    addParameter(new juce::AudioParameterChoice("filter2_type", "Filter 2 Type",
+        juce::StringArray{"Lowpass", "Bandpass", "Highpass"}, 2)); // Default: Highpass
+    addParameter(new juce::AudioParameterFloat("filter2_cutoff", "Filter 2 Cutoff",
+        juce::NormalisableRange<float>(20.0f, 20000.0f, 1.0f, 0.3f), 2000.0f));
+    addParameter(new juce::AudioParameterFloat("filter2_resonance", "Filter 2 Resonance", 0.0f, 1.0f, 0.3f));
+    addParameter(new juce::AudioParameterChoice("filter_routing", "Filter Routing",
+        juce::StringArray{"Serial", "Parallel"}, 0)); // Default: Serial
 
     // Amp Envelope
     addParameter(new juce::AudioParameterFloat("amp_attack", "Amp Attack",
@@ -698,6 +774,10 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     addParameter(new juce::AudioParameterFloat("lfo2_amount", "LFO 2 Amount", 0.0f, 1.0f, 0.0f));
     addParameter(new juce::AudioParameterChoice("lfo2_target", "LFO 2 Target",
         juce::StringArray{"Filter Cutoff", "Osc1 Pitch", "Osc2 Pitch", "Osc1 Mix", "Osc2 Mix"}, 0));
+        
+    // Effects
+    addParameter(new juce::AudioParameterFloat("distortion", "Distortion", 0.0f, 1.0f, 0.0f));
+    addParameter(new juce::AudioParameterFloat("chorus", "Chorus", 0.0f, 1.0f, 0.0f));
 
     // Global
     addParameter(new juce::AudioParameterFloat("glide_time", "Glide Time", 0.0f, 2.0f, 0.0f));
@@ -732,6 +812,13 @@ void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     // Initialize master gain smoothing
     masterGainSmoothed_.reset(sampleRate, 0.05); // 50ms smoothing
     masterGainSmoothed_.setCurrentAndTargetValue(0.7f);
+    
+    // Cache parameter pointers
+    cachedParams_.clear();
+    for (auto* param : getParameters())
+    {
+        cachedParams_.push_back(dynamic_cast<juce::RangedAudioParameter*>(param));
+    }
 }
 
 void ZenithPolySynthProcessor::releaseResources()
@@ -813,49 +900,85 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
 void ZenithPolySynthProcessor::updateVoiceParameters()
 {
-    // Get parameter values
-    auto osc1Wave = static_cast<OscillatorWaveform>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[Osc1Wave])->getIndex());
-    auto osc1Detune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc1Detune])->get();
-    auto osc1Mix = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc1Mix])->get();
+    // Ensure cached params are valid
+    if (cachedParams_.size() != NumParameters)
+    {
+        cachedParams_.clear();
+        for (auto* param : getParameters())
+            cachedParams_.push_back(dynamic_cast<juce::RangedAudioParameter*>(param));
+    }
 
-    auto osc2Wave = static_cast<OscillatorWaveform>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[Osc2Wave])->getIndex());
-    auto osc2Detune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc2Detune])->get();
-    auto osc2Mix = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc2Mix])->get();
+    // Helper to get float value from cached param
+    auto getFloat = [&](int index) {
+        return static_cast<juce::AudioParameterFloat*>(cachedParams_[index])->get();
+    };
+    
+    // Helper to get choice index from cached param
+    auto getChoice = [&](int index) {
+        return static_cast<juce::AudioParameterChoice*>(cachedParams_[index])->getIndex();
+    };
 
-    auto osc3Wave = static_cast<OscillatorWaveform>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[Osc3Wave])->getIndex());
-    auto osc3Detune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc3Detune])->get();
-    auto osc3Mix = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[Osc3Mix])->get();
+    // Helper to get int value from cached param
+    auto getIntParam = [&](int index) {
+        return static_cast<juce::AudioParameterInt*>(cachedParams_[index])->get();
+    };
+    
+    // Helper to get bool value
+    auto getBool = [&](int index) {
+        return static_cast<juce::AudioParameterBool*>(cachedParams_[index])->get();
+    };
 
-    auto unisonVoices = dynamic_cast<juce::AudioParameterInt*>(getParameters()[UnisonVoices])->get();
-    auto unisonDetune = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[UnisonDetune])->get();
+    // Get parameter values using cached pointers
+    auto osc1Wave = static_cast<OscillatorWaveform>(getChoice(Osc1Wave));
+    auto osc1Detune = getFloat(Osc1Detune);
+    auto osc1Mix = getFloat(Osc1Mix);
 
-    auto filterTypeValue = static_cast<zenith::FilterType>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[ZenithPolySynthProcessor::FilterType])->getIndex());
-    auto filterCutoff = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterCutoff])->get();
-    auto filterResonance = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterResonance])->get();
-    auto filterDrive = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[FilterDrive])->get();
+    auto osc2Wave = static_cast<OscillatorWaveform>(getChoice(Osc2Wave));
+    auto osc2Detune = getFloat(Osc2Detune);
+    auto osc2Mix = getFloat(Osc2Mix);
 
-    auto ampAttack = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[AmpAttack])->get();
-    auto ampDecay = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[AmpDecay])->get();
-    auto ampSustain = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[AmpSustain])->get();
-    auto ampRelease = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[AmpRelease])->get();
+    auto osc3Wave = static_cast<OscillatorWaveform>(getChoice(Osc3Wave));
+    auto osc3Detune = getFloat(Osc3Detune);
+    auto osc3Mix = getFloat(Osc3Mix);
 
-    auto modAttack = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[ModAttack])->get();
-    auto modDecay = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[ModDecay])->get();
-    auto modSustain = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[ModSustain])->get();
-    auto modRelease = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[ModRelease])->get();
+    auto unisonVoices = getIntParam(UnisonVoices);
+    auto unisonDetune = getFloat(UnisonDetune);
 
-    auto lfo1Rate = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[LFO1Rate])->get();
-    auto lfo1Amount = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[LFO1Amount])->get();
-    auto lfo1Target = static_cast<LFOTarget>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[LFO1Target])->getIndex());
+    auto filterTypeValue = static_cast<zenith::FilterType>(getChoice(FilterType));
+    auto filterCutoff = getFloat(FilterCutoff);
+    auto filterResonance = getFloat(FilterResonance);
+    auto filterDrive = getFloat(FilterDrive);
+    
+    auto filter2TypeValue = static_cast<zenith::FilterType>(getChoice(Filter2Type));
+    auto filter2Cutoff = getFloat(Filter2Cutoff);
+    auto filter2Resonance = getFloat(Filter2Resonance);
+    auto filterRouting = getChoice(FilterRouting) == 0; // 0=Serial, 1=Parallel
 
-    auto lfo2Rate = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[LFO2Rate])->get();
-    auto lfo2Amount = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[LFO2Amount])->get();
-    auto lfo2Target = static_cast<LFOTarget>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[LFO2Target])->getIndex());
+    auto ampAttack = getFloat(AmpAttack);
+    auto ampDecay = getFloat(AmpDecay);
+    auto ampSustain = getFloat(AmpSustain);
+    auto ampRelease = getFloat(AmpRelease);
 
-    auto glideTime = dynamic_cast<juce::AudioParameterFloat*>(getParameters()[GlideTime])->get();
-    auto monoMode = dynamic_cast<juce::AudioParameterBool*>(getParameters()[MonoMode])->get();
+    auto modAttack = getFloat(ModAttack);
+    auto modDecay = getFloat(ModDecay);
+    auto modSustain = getFloat(ModSustain);
+    auto modRelease = getFloat(ModRelease);
 
-    auto quality = static_cast<QualityPreset>(dynamic_cast<juce::AudioParameterChoice*>(getParameters()[QualitySetting])->getIndex());
+    auto lfo1Rate = getFloat(LFO1Rate);
+    auto lfo1Amount = getFloat(LFO1Amount);
+    auto lfo1Target = static_cast<LFOTarget>(getChoice(LFO1Target));
+
+    auto lfo2Rate = getFloat(LFO2Rate);
+    auto lfo2Amount = getFloat(LFO2Amount);
+    auto lfo2Target = static_cast<LFOTarget>(getChoice(LFO2Target));
+    
+    auto distortion = getFloat(DistortionAmount);
+    auto chorus = getFloat(ChorusAmount);
+
+    auto glideTime = getFloat(GlideTime);
+    auto monoMode = getBool(MonoMode);
+
+    auto quality = static_cast<QualityPreset>(getChoice(QualitySetting));
 
     // Update all voices
     for (int i = 0; i < getNumVoices(); ++i)
@@ -879,11 +1002,17 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
             voice->setUnisonVoices(unisonVoices);
             voice->setUnisonDetune(unisonDetune);
 
-            // Filter
+            // Filter 1
             voice->setFilterType(filterTypeValue);
             voice->setFilterCutoff(filterCutoff);
             voice->setFilterResonance(filterResonance);
             voice->setFilterDrive(filterDrive);
+            
+            // Filter 2
+            voice->setFilter2Type(filter2TypeValue);
+            voice->setFilter2Cutoff(filter2Cutoff);
+            voice->setFilter2Resonance(filter2Resonance);
+            voice->setFilterRouting(filterRouting);
 
             // Envelopes
             voice->setAmpEnvelope(ampAttack, ampDecay, ampSustain, ampRelease);
@@ -892,6 +1021,10 @@ void ZenithPolySynthProcessor::updateVoiceParameters()
             // LFOs
             voice->setLFO1(lfo1Rate, lfo1Amount, lfo1Target);
             voice->setLFO2(lfo2Rate, lfo2Amount, lfo2Target);
+            
+            // Effects
+            voice->setDistortion(distortion);
+            voice->setChorus(chorus);
 
             // Global
             voice->setGlideTime(glideTime);
@@ -958,7 +1091,7 @@ void ZenithPolySynthProcessor::updateVoiceCount()
         // Add new voices
         for (int i = 0; i < newMaxVoices; ++i)
         {
-            addVoice(std::make_unique<ZenithPolySynthVoice>());
+            addVoice(new ZenithPolySynthVoice());
         }
 
         // Re-initialize voices with current sample rate
@@ -1296,6 +1429,9 @@ InstrumentMetadata ZenithPolySynth::createMetadata()
 
 void ZenithPolySynth::registerPresets()
 {
+    // Ensure factory presets are generated on disk
+    PresetGenerator::generateFactoryPresets();
+
     // Preset 1: EDM Supersaw Lead
     {
         std::map<juce::String, float> params;

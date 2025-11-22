@@ -102,7 +102,7 @@ void ZenithTransportBar::paint(juce::Graphics& g)
                        stopPressed_);
     
     // Record button
-    bool isRecording = false; // TODO(zenith-core#1): Get from engine
+    bool isRecording = engine_.isRecording();
     drawTransportButton(g, getRecordButtonBounds(),
                        u8"\u25CF", // Record circle
                        juce::Colour(ZenithLookAndFeel::Colors::recordRed),
@@ -111,7 +111,7 @@ void ZenithTransportBar::paint(juce::Graphics& g)
                        recordPressed_);
     
     // Loop button
-    bool isLooping = false; // TODO(zenith-core#1): Get from engine
+    bool isLooping = engine_.isLooping();
     drawTransportButton(g, getLoopButtonBounds(),
                        u8"\u27F3", // Loop arrow
                        juce::Colour(ZenithLookAndFeel::Colors::accentSecondary),
@@ -128,11 +128,14 @@ void ZenithTransportBar::resized()
 void ZenithTransportBar::timerCallback()
 {
     // Update time display
-    double playheadPosition = 0.0; // TODO(zenith-core#1): Get from engine
-    timeDisplay_ = formatTime(playheadPosition);
+    double playheadPosition = engine_.getPlaybackPositionBeats();
+    timeDisplay_ = formatTime(playheadPosition * (60.0 / engine_.getTempoMap().getTempoAt(playheadPosition))); // Convert beats to seconds approx or use getPlayheadSamples / SampleRate
+    // Better: Use getPlayheadSamples / SampleRate
+    double currentSeconds = (double)engine_.getPlayheadSamples() / engine_.getSampleRate();
+    timeDisplay_ = formatTime(currentSeconds);
     
     // Update tempo
-    double tempo = 120.0; // TODO(zenith-core#1): Get from engine
+    double tempo = engine_.getTempoMap().getTempoAt(engine_.getPlaybackPositionBeats());
     tempoDisplay_ = formatTempo(tempo);
     
     // Update CPU
@@ -168,27 +171,33 @@ void ZenithTransportBar::mouseUp(const juce::MouseEvent& event)
     // Play button
     if (playPressed_ && getPlayButtonBounds().contains(pos))
     {
-        engine_.play();
-        DBG("Transport: Play");
+        if (engine_.isPlaying())
+            engine_.stop(); // Toggle behavior if desired, or just play
+        else
+            engine_.play();
+        DBG("Transport: Play/Stop");
     }
     
     // Stop button
     if (stopPressed_ && getStopButtonBounds().contains(pos))
     {
         engine_.stop();
+        engine_.setPlayheadSamples(0); // Return to zero on stop
         DBG("Transport: Stop");
     }
     
     // Record button
     if (recordPressed_ && getRecordButtonBounds().contains(pos))
     {
-        DBG("Transport: Record (not implemented yet)");
+        engine_.toggleRecording();
+        DBG("Transport: Record toggled");
     }
     
     // Loop button
     if (loopPressed_ && getLoopButtonBounds().contains(pos))
     {
-        DBG("Transport: Toggle loop (not implemented yet)");
+        engine_.setLooping(!engine_.isLooping());
+        DBG("Transport: Loop toggled");
     }
     
     playPressed_ = false;

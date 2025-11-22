@@ -97,6 +97,16 @@ void SkiaAnimationController::clear()
     animationStates_.clear();
 }
 
+bool SkiaAnimationController::hasActiveAnimations() const
+{
+    for (const auto& [id, state] : animationStates_)
+    {
+        if (state.isActive)
+            return true;
+    }
+    return false;
+}
+
 //==============================================================================
 // SkiaMainWindowIntegration Implementation
 //==============================================================================
@@ -156,23 +166,56 @@ void SkiaMainWindowIntegration::updateGPUSettings(const SkiaTheme::GPUSettings& 
 
 bool SkiaMainWindowIntegration::initializeSkiaRendering()
 {
+    DBG("SkiaMainWindowIntegration::initializeSkiaRendering() called");
+
     if (skiaInitialized_)
+    {
+        DBG("  Already initialized - returning true");
         return true;
+    }
+
+    DBG("  Starting initialization process...");
 
     try
     {
-        // Initialize theme system
+        DBG("  Step 1: Getting SkiaTheme singleton instance");
         auto& theme = SkiaTheme::getInstance();
 
-        // Log initialization
-        DBG("SkiaMainWindowIntegration: Initialized");
+        DBG("  Step 2: Loading theme configuration");
+        DBG("    Theme mode: " << (theme.getThemeMode() == ThemeMode::Dark ? "Dark" : "Light"));
 
+        auto colors = theme.getColors();
+        DBG("    Background color: 0x" << juce::String::toHexString((int)colors.background));
+        DBG("    Primary color: 0x" << juce::String::toHexString((int)colors.primary));
+
+        auto typo = theme.getTypography();
+        DBG("    Base font size: " << typo.baseSize);
+
+        auto gpu = theme.getGPUSettings();
+        DBG("    Target FPS: " << gpu.targetFPS);
+        DBG("    Adaptive FPS: " << (gpu.adaptiveFPS ? "enabled" : "disabled"));
+
+        DBG("  Step 3: Marking theme configuration as loaded");
         skiaInitialized_ = true;
+
+        DBG("  ⚠ WARNING: This only initializes theme settings!");
+        DBG("  ⚠ SkiaRenderer is NOT created - UI components use JUCE fallback");
+        DBG("  ⚠ To use actual Skia rendering, SkiaRenderer must be instantiated");
+        DBG("  ✓ Theme configuration loaded successfully");
         return true;
     }
     catch (const std::exception& e)
     {
-        DBG("SkiaMainWindowIntegration initialization failed: " << e.what());
+        DBG("  ✗ EXCEPTION caught during initialization!");
+        DBG("    Exception type: std::exception");
+        DBG("    Message: " << e.what());
+        DBG("  SkiaMainWindowIntegration initialization FAILED");
+        return false;
+    }
+    catch (...)
+    {
+        DBG("  ✗ UNKNOWN EXCEPTION caught during initialization!");
+        DBG("  SkiaMainWindowIntegration initialization FAILED");
         return false;
     }
 }
@@ -208,8 +251,8 @@ void SkiaMainWindowIntegration::paint(juce::Graphics& g)
 void SkiaMainWindowIntegration::timerCallback()
 {
     auto currentTime = juce::Time::getCurrentTime();
-    float deltaTime = lastFrameTime_.mSecondsSinceEpoch() > 0
-                          ? (currentTime.mSecondsSinceEpoch() - lastFrameTime_.mSecondsSinceEpoch()) / 1000.0f
+    float deltaTime = lastFrameTime_.toMilliseconds() > 0
+                          ? static_cast<float>((currentTime.toMilliseconds() - lastFrameTime_.toMilliseconds()) / 1000.0)
                           : 0.016f; // Default to 60 FPS if first frame
 
     lastFrameTime_ = currentTime;
@@ -221,22 +264,9 @@ void SkiaMainWindowIntegration::timerCallback()
     animationController_.update(deltaTime);
 
     // Stop timer if no animations are running
-    if (animationController_.getValue("any_animation") == 0.0f)
+    if (!animationController_.hasActiveAnimations())
     {
-        bool hasActiveAnimations = false;
-        for (auto& [id, state] : animationController_.animationStates_)
-        {
-            if (state.isActive)
-            {
-                hasActiveAnimations = true;
-                break;
-            }
-        }
-
-        if (!hasActiveAnimations)
-        {
-            stopAnimationLoop();
-        }
+        stopAnimationLoop();
     }
 
     repaint();

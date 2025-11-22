@@ -202,6 +202,7 @@ public:
     //==========================================================================
 
     juce::AudioProcessorValueTreeState& getAPVTS() { return parameters; }
+    juce::Synthesiser& getSynth() { return synth; }
 
 private:
     //==========================================================================
@@ -331,6 +332,21 @@ public:
     {
         return midiVelocity >= lowVelocity && midiVelocity <= highVelocity;
     }
+
+    int getLowKey() const
+    {
+        for (int i = 0; i < 128; ++i)
+            if (midiNotes[i]) return i;
+        return -1;
+    }
+    int getHighKey() const
+    {
+        for (int i = 127; i >= 0; --i)
+            if (midiNotes[i]) return i;
+        return -1;
+    }
+    int getLowVelocity() const { return lowVelocity; }
+    int getHighVelocity() const { return highVelocity; }
 
 private:
     juce::String soundName;

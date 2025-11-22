@@ -10,8 +10,8 @@
     #include <include/core/SkPaint.h>
     #include <include/core/SkPath.h>
     #include <include/core/SkShader.h>
-    #include <include/core/SkGradientShader.h>
     #include <include/core/SkMaskFilter.h>
+    #include <include/core/SkBlurTypes.h>
     #include <include/effects/SkGradientShader.h>
 #endif
 
@@ -183,7 +183,10 @@ void SkiaWaveformRenderer::renderTimeRange(SkCanvas* canvas,
         case WaveformStyle::Hybrid:
             renderHybrid(canvas, waveform, bounds, startSample, endSample, options);
             break;
-    \n    default: break;\n}
+
+        default:
+            break;
+    }
 
     // Draw center line if enabled
     if (options.showCenterLine)
@@ -460,7 +463,7 @@ void SkiaWaveformRenderer::applyGlowEffect(SkCanvas* canvas,
 
         if (layerBlur > 0.0f)
         {
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, layerBlur));
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, layerBlur));
         }
 
         canvas->drawPath(path, glowPaint);

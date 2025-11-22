@@ -39,10 +39,7 @@
 #include <JuceHeader.h>
 #include <memory>
 
-// Conditional Skia components
-#ifdef ZENITH_USE_SKIA
-    #include "skia/SkiaButtonComponent.h"
-#endif
+// Note: Skia rendering enabled for other components but buttons use JUCE for now
 
 namespace zenith {
     class CommandAPI;
@@ -117,17 +114,10 @@ private:
     std::unique_ptr<juce::TextEditor> commandInput;
     std::unique_ptr<juce::TextEditor> historyDisplay;
 
-#ifdef ZENITH_USE_SKIA
-    // Skia GPU-rendered buttons with spring physics
-    std::unique_ptr<zenith::SkiaButtonComponent> clearButton;
-    std::unique_ptr<zenith::SkiaButtonComponent> commandModeButton;
-    std::unique_ptr<zenith::SkiaButtonComponent> aiModeButton;
-#else
-    // Fallback JUCE buttons
+    // Buttons (JUCE for now)
     std::unique_ptr<juce::TextButton> clearButton;
     std::unique_ptr<juce::TextButton> commandModeButton;
     std::unique_ptr<juce::TextButton> aiModeButton;
-#endif
 
     // Message history
     juce::StringArray messageHistory;

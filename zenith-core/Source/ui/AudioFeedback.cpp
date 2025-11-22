@@ -46,7 +46,7 @@ void AudioFeedback::playSound(SoundType type, float volume)
         case Success: buffer = &successBuffer_; break;
         case Error:   buffer = &errorBuffer_; break;
         case Whoosh:  buffer = &whooshBuffer_; break;
-    \n    default: break;\n\n    default: break;\n}
+    }
 
     if (buffer && buffer->getNumSamples() > 0)
     {

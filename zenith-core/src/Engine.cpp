@@ -1315,10 +1315,13 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
         // Create AudioSourceChannelInfo for the track
         juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
 
+        // Get the track pointer
+        auto* track = tracks_[trackIdx].get();
+
         // Determine if this track should receive MIDI input
         const juce::MidiBuffer* trackMidiInput = nullptr;
-        if (incomingMidi != nullptr && !incomingMidi->isEmpty() && 
-            track->getType() == Track::Type::Instrument && 
+        if (incomingMidi != nullptr && !incomingMidi->isEmpty() &&
+            track->getType() == zenith::Track::Type::Instrument &&
             track->isArmed())
         {
             trackMidiInput = incomingMidi;

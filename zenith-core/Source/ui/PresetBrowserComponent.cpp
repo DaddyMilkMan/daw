@@ -55,10 +55,6 @@ PresetBrowserComponent::PresetBrowserComponent(
     saveAsButton_.setButtonText("Save As...");
     saveAsButton_.onClick = [this] { onSaveAsClicked(); };
 
-    addAndMakeVisible(refreshButton_);
-    refreshButton_.setButtonText("Refresh");
-    refreshButton_.onClick = [this] { refreshPresetList(); };
-
     // Status
     addAndMakeVisible(statusLabel_);
     statusLabel_.setJustificationType(juce::Justification::centred);
@@ -154,8 +150,8 @@ void PresetBrowserComponent::resized()
     // Buttons
     auto buttonRow = bounds.removeFromTop(buttonHeight);
     saveAsButton_.setBounds(buttonRow.removeFromLeft(buttonRow.getWidth() / 2 - 2));
+    // Refresh button removed
     buttonRow.removeFromLeft(4);
-    refreshButton_.setBounds(buttonRow);
 
     bounds.removeFromTop(5);
 
@@ -392,6 +388,13 @@ void PresetBrowserComponent::PresetListBoxModel::returnKeyPressed(int lastRowSel
     {
         owner_.onPresetSelected();
     }
+}
+
+//==============================================================================
+void PresetBrowserComponent::timerCallback()
+{
+    // Timer callback for periodic preset list refresh
+    // Currently unused - can be used for dynamic preset monitoring
 }
 
 } // namespace zenith

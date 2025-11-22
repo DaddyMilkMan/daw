@@ -312,9 +312,9 @@ void ZenithSamplerEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
     }
 }
 
-std::map<std::string, float, std::less<>>ZenithSamplerEditor::captureCurrentState() const
+std::map<std::string, float> ZenithSamplerEditor::captureCurrentState() const
 {
-    std::map<std::string, float, std::less<>> state;
+    std::map<std::string, float> state;
 
     // Capture all parameters from metadata
     const auto& metadata = instrument_.getMetadata();
@@ -332,16 +332,38 @@ void ZenithSamplerEditor::loadSampleMapData()
     // Clear existing data
     sampleMapData_.clear();
 
-    // TODO(zenith-core#1): Load actual sample map from current patch
-    // For now, show placeholder data
-    SampleInfo placeholder;
-    placeholder.fileName = "No samples loaded";
-    placeholder.lowKey = 0;
-    placeholder.highKey = 127;
-    placeholder.lowVelocity = 0;
-    placeholder.highVelocity = 127;
-    placeholder.rootNote = 60;
-    sampleMapData_.push_back(placeholder);
+    auto& synth = sampler.getSynth();
+    int numSounds = synth.getNumSounds();
+
+    if (numSounds == 0)
+    {
+        // Show placeholder if no sounds
+        SampleInfo placeholder;
+        placeholder.fileName = "No samples loaded";
+        placeholder.lowKey = 0;
+        placeholder.highKey = 127;
+        placeholder.lowVelocity = 0;
+        placeholder.highVelocity = 127;
+        placeholder.rootNote = 60;
+        sampleMapData_.push_back(placeholder);
+    }
+    else
+    {
+        for (int i = 0; i < numSounds; ++i)
+        {
+            if (auto* sound = dynamic_cast<ZenithSamplerSound*>(synth.getSound(i).get()))
+            {
+                SampleInfo info;
+                info.fileName = sound->getName();
+                info.rootNote = sound->getRootNote();
+                info.lowKey = sound->getLowKey();
+                info.highKey = sound->getHighKey();
+                info.lowVelocity = sound->getLowVelocity();
+                info.highVelocity = sound->getHighVelocity();
+                sampleMapData_.push_back(info);
+            }
+        }
+    }
 
     sampleMapTable_.updateContent();
 }
@@ -380,3 +402,26 @@ void ZenithSamplerEditor::SampleMapTableModel::paintCell(
 
     const auto& sample = owner_.sampleMapData_[rowNumber];
 
+
+    // Display sample filename, key range, etc.
+    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colours::lightgrey);
+    g.setFont(12.0f);
+
+    switch (columnId)
+    {
+        case 1: // Filename
+            g.drawText(sample.fileName, 4, 0, width - 8, height, juce::Justification::centredLeft, true);
+            break;
+        case 2: // Low Key
+            g.drawText(juce::String(sample.lowKey), 4, 0, width - 8, height, juce::Justification::centred, true);
+            break;
+        case 3: // High Key
+            g.drawText(juce::String(sample.highKey), 4, 0, width - 8, height, juce::Justification::centred, true);
+            break;
+        case 4: // Root Note
+            g.drawText(juce::String(sample.rootNote), 4, 0, width - 8, height, juce::Justification::centred, true);
+            break;
+    }
+}
+
+} // namespace zenith

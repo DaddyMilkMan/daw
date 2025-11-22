@@ -84,6 +84,12 @@ public:
     void setProjectState(ProjectState* state);
 
     /**
+     * @brief Get the associated ProjectState
+     * @return Pointer to the ProjectState (may be null)
+     */
+    ProjectState* getProjectState() { return projectState_; }
+
+    /**
      * @brief Synchronize engine tracks with project state
      * @note Message thread only - rebuilds track list from ProjectState
      */

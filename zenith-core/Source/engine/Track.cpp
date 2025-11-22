@@ -291,7 +291,7 @@ juce::String Track::getTypeString() const
         case Type::MIDI:        return "MIDI";
         case Type::Instrument:  return "Instrument";
         default:                return "Unknown";
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
 
 //==============================================================================

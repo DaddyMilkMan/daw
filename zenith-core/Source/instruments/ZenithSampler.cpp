@@ -29,7 +29,7 @@ struct ZenithSamplerProcessor::SampleBankData
     std::vector<SampleRegion> regions;
 
     // Default parameters
-    // float attack = 0.01f;  // Unused variable
+    float attack = 0.01f;
     float decay = 0.1f;
     float sustain = 0.7f;
     float release = 0.3f;
@@ -54,7 +54,7 @@ ZenithSamplerProcessor::ZenithSamplerProcessor()
     // Initialize synthesiser with voices
     for (int i = 0; i < 16; ++i)
     {
-        synth.addVoice(std::make_unique<ZenithSamplerVoice>());
+        synth.addVoice(new ZenithSamplerVoice());
     }
 }
 

@@ -1628,7 +1628,7 @@ void ProjectState::dumpClipStructureToLog() const
     DBG("ProjectState Clip & Note Structure Dump");
     DBG("========================================");
 
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
     if (!tracksNode.isValid())
     {
         DBG("No tracks found");
@@ -1637,16 +1637,16 @@ void ProjectState::dumpClipStructureToLog() const
 
     for (const auto& track : tracksNode)
     {
-        if (!track.hasType(ID_TRACK))
+        if (!track.hasType(ProjectState::ID_TRACK))
             continue;
 
-        juce::String trackId = track[PROP_ID].toString();
-        juce::String trackName = track[PROP_NAME].toString();
-        juce::String trackType = track[PROP_TYPE].toString();
+        juce::String trackId = track[ProjectState::PROP_ID].toString();
+        juce::String trackName = track[ProjectState::PROP_NAME].toString();
+        juce::String trackType = track[ProjectState::PROP_TYPE].toString();
 
         DBG("TRACK: " + trackId + " (" + trackName + ", type=" + trackType + ")");
 
-        auto clipsNode = track.getChildWithName(ID_CLIPS);
+        auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
         if (!clipsNode.isValid() || clipsNode.getNumChildren() == 0)
         {
             DBG("  (no clips)");
@@ -1655,14 +1655,14 @@ void ProjectState::dumpClipStructureToLog() const
 
         for (const auto& clip : clipsNode)
         {
-            if (!clip.hasType(ID_CLIP))
+            if (!clip.hasType(ProjectState::ID_CLIP))
                 continue;
 
-            juce::String clipId = clip[PROP_ID].toString();
-            juce::String clipType = clip[PROP_TYPE].toString();
-            double startBeats = clip[PROP_START_BEATS];
-            double lengthBeats = clip[PROP_LENGTH_BEATS];
-            int laneIndex = clip[PROP_LANE_INDEX];
+            juce::String clipId = clip[ProjectState::PROP_ID].toString();
+            juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
+            double startBeats = clip[ProjectState::PROP_START_BEATS];
+            double lengthBeats = clip[ProjectState::PROP_LENGTH_BEATS];
+            int laneIndex = clip[ProjectState::PROP_LANE_INDEX];
 
             DBG("  CLIP: " + clipId + " (type=" + clipType +
                 ", start=" + juce::String(startBeats, 2) + " beats" +
@@ -1672,7 +1672,7 @@ void ProjectState::dumpClipStructureToLog() const
             // Show notes for MIDI clips
             if (clipType == "midi")
             {
-                auto notesNode = clip.getChildWithName(ID_NOTES);
+                auto notesNode = clip.getChildWithName(ProjectState::ID_NOTES);
                 if (!notesNode.isValid() || notesNode.getNumChildren() == 0)
                 {
                     DBG("    (no notes)");
@@ -1681,14 +1681,14 @@ void ProjectState::dumpClipStructureToLog() const
 
                 for (const auto& note : notesNode)
                 {
-                    if (!note.hasType(ID_NOTE))
+                    if (!note.hasType(ProjectState::ID_NOTE))
                         continue;
 
-                    juce::String noteId = note[PROP_ID].toString();
-                    double noteStart = note[PROP_START_BEATS];
-                    double noteLength = note[PROP_LENGTH_BEATS];
-                    int pitch = note[PROP_PITCH];
-                    int velocity = note[PROP_VELOCITY];
+                    juce::String noteId = note[ProjectState::PROP_ID].toString();
+                    double noteStart = note[ProjectState::PROP_START_BEATS];
+                    double noteLength = note[ProjectState::PROP_LENGTH_BEATS];
+                    int pitch = note[ProjectState::PROP_PITCH];
+                    int velocity = note[ProjectState::PROP_VELOCITY];
 
                     DBG("    NOTE: " + noteId +
                         " (start=" + juce::String(noteStart, 2) + " beats" +
@@ -1756,7 +1756,7 @@ void ProjectState::setTrackMute(const juce::String& trackId, bool muted,
     if (track.isValid())
     {
         track.setProperty(PROP_MUTE, muted, &undoManager);
-        DBG("ProjectState: Set track " + trackId + " mute to " + juce::String(muted));
+        DBG("ProjectState: Set track " + trackId + " mute to " + (muted ? "true" : "false"));
     }
 }
 
@@ -1769,7 +1769,7 @@ void ProjectState::setTrackSolo(const juce::String& trackId, bool soloed,
     if (track.isValid())
     {
         track.setProperty(PROP_SOLO, soloed, &undoManager);
-        DBG("ProjectState: Set track " + trackId + " solo to " + juce::String(soloed));
+        DBG("ProjectState: Set track " + trackId + " solo to " + (soloed ? "true" : "false"));
     }
 }
 
@@ -1782,7 +1782,7 @@ void ProjectState::setTrackArmed(const juce::String& trackId, bool armed,
     if (track.isValid())
     {
         track.setProperty(PROP_ARMED, armed, &undoManager);
-        DBG("ProjectState: Set track " + trackId + " armed to " + juce::String(armed));
+        DBG("ProjectState: Set track " + trackId + " armed to " + (armed ? "true" : "false"));
     }
 }
 

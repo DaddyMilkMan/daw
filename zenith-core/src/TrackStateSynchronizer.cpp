@@ -265,19 +265,23 @@ int TrackStateSynchronizer::getEngineTrackIndex(const juce::ValueTree& track) co
     return -1;
 }
 
-void TrackStateSynchronizer::addTrackListener(juce::ValueTree& track)
+void TrackStateSynchronizer::addTrackListener(const juce::ValueTree& track)
 {
-    if (track.isValid() && track.hasType(ProjectState::ID_TRACK))
+    // Create mutable copy since addListener is non-const
+    auto mutableTrack = track;
+    if (mutableTrack.isValid() && mutableTrack.hasType(ProjectState::ID_TRACK))
     {
-        track.addListener(this);
+        mutableTrack.addListener(this);
     }
 }
 
-void TrackStateSynchronizer::removeTrackListener(juce::ValueTree& track)
+void TrackStateSynchronizer::removeTrackListener(const juce::ValueTree& track)
 {
-    if (track.isValid() && track.hasType(ProjectState::ID_TRACK))
+    // Create mutable copy since removeListener is non-const
+    auto mutableTrack = track;
+    if (mutableTrack.isValid() && mutableTrack.hasType(ProjectState::ID_TRACK))
     {
-        track.removeListener(this);
+        mutableTrack.removeListener(this);
     }
 }
 

@@ -24,7 +24,8 @@ namespace zenith {
  * @class SkiaKnobComponent
  * @brief GPU-rendered rotary knob with spring physics
  */
-class SkiaKnobComponent : public juce::Component
+class SkiaKnobComponent : public juce::Component,
+                          private juce::Timer
 {
 public:
     /**
@@ -162,10 +163,8 @@ private:
     float hoverProgress_ = 0.0f;
     float hoverVelocity_ = 0.0f;
 
-    // Animation timer
-    juce::Timer animationTimer_;
-
     // Methods
+    void timerCallback() override;
     void startAnimationTimer();
     void updateAnimations();
     void drawKnob(class SkCanvas* canvas);

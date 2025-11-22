@@ -9,6 +9,10 @@
 
 namespace zenith {
 
+// Forward declarations for helpers
+static std::unique_ptr<juce::PropertiesFile> getProperties();
+static void addToRecentFilesList(juce::StringArray& recentFiles, const juce::File& file);
+
 //==============================================================================
 FileMenuComponent::FileMenuComponent(ProjectState& state, Engine& eng)
     : projectState_(state), engine_(eng)
@@ -26,6 +30,8 @@ FileMenuComponent::FileMenuComponent(ProjectState& state, Engine& eng)
     fileButton.setColour(juce::TextButton::buttonOnColourId, juce::Colour(0xff0055ff));
     fileButton.setColour(juce::TextButton::textColourOnId, juce::Colour(0xffffffff));
     fileButton.setColour(juce::TextButton::textColourOffId, juce::Colour(0xffffffff));
+
+    refreshRecentFiles();
 }
 
 FileMenuComponent::~FileMenuComponent()
@@ -190,9 +196,13 @@ void FileMenuComponent::hideMenu()
 }
 
 //==============================================================================
+// Static file tracker (simple solution for now)
+static juce::File currentProjectFile;
+
 void FileMenuComponent::handleNewProject()
 {
     projectState_.newProject();
+    currentProjectFile = juce::File(); // Reset current file
     hideMenu();
     DBG("New project created");
 }
@@ -210,20 +220,28 @@ void FileMenuComponent::handleOpenProject()
     chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc) {
         auto file = fc.getResult();
         if (file.existsAsFile()) {
-            projectState_.loadFromFile(file);
-            hideMenu();
-            DBG("Project opened: " + file.getFullPathName());
+            if (projectState_.loadFromFile(file)) {
+                currentProjectFile = file;
+                addToRecentFilesList(recentFiles_, file); // Update recent files
+                hideMenu();
+                DBG("Project opened: " + file.getFullPathName());
+            } else {
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Load Failed", "Could not load project file.");
+            }
         }
     });
 }
 
 void FileMenuComponent::handleSaveProject()
 {
-    // TODO(zenith-core#1): Save to current file, or show save as dialog if new project
-    projectState_.saveToFile(juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                            .getChildFile("untitled.zth"));
-    hideMenu();
-    DBG("Project saved");
+    if (currentProjectFile.existsAsFile()) {
+        projectState_.saveToFile(currentProjectFile);
+        hideMenu();
+        DBG("Project saved to: " + currentProjectFile.getFullPathName());
+    } else {
+        handleSaveAs();
+    }
 }
 
 void FileMenuComponent::handleSaveAs()
@@ -239,17 +257,88 @@ void FileMenuComponent::handleSaveAs()
     chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc) {
         auto file = fc.getResult();
         if (file.getFullPathName().isNotEmpty()) {
-            projectState_.saveToFile(file);
-            hideMenu();
-            DBG("Project saved as: " + file.getFullPathName());
+            if (projectState_.saveToFile(file)) {
+                currentProjectFile = file;
+                addToRecentFilesList(recentFiles_, file); // Update recent files
+                hideMenu();
+                DBG("Project saved as: " + file.getFullPathName());
+            } else {
+                 juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Save Failed", "Could not save project file.");
+            }
         }
     });
 }
 
+// Helper to get properties file
+static std::unique_ptr<juce::PropertiesFile> getProperties()
+{
+    juce::PropertiesFile::Options options;
+    options.applicationName = "ZenithDAW";
+    options.filenameSuffix = ".settings";
+    options.folderName = "ZenithDAW";
+    options.osxLibrarySubFolder = "Application Support";
+    options.commonToAllUsers = false;
+    options.ignoreCaseOfKeyNames = true;
+    options.storageFormat = juce::PropertiesFile::storeAsXML;
+
+    return std::make_unique<juce::PropertiesFile>(options);
+}
+
 void FileMenuComponent::refreshRecentFiles()
 {
-    // TODO(zenith-core#1): Load recent files list from preferences
-    recentFiles_.clear();
+    auto props = getProperties();
+    recentFiles_ = juce::StringArray::fromTokens(props->getValue("recentFiles"), "|", "");
+    
+    // Ensure valid files
+    for (int i = recentFiles_.size(); --i >= 0;)
+    {
+        if (!juce::File(recentFiles_[i]).exists())
+            recentFiles_.remove(i);
+    }
+}
+
+void FileMenuComponent::handleRecentFile(int index)
+{
+    if (index >= 0 && index < recentFiles_.size())
+    {
+        juce::File file(recentFiles_[index]);
+        if (file.existsAsFile())
+        {
+            if (projectState_.loadFromFile(file))
+            {
+                currentProjectFile = file;
+                
+                // Move to top of recent list
+                recentFiles_.remove(index);
+                recentFiles_.insert(0, file.getFullPathName());
+                
+                // Save
+                auto props = getProperties();
+                props->setValue("recentFiles", recentFiles_.joinIntoString("|"));
+                
+                hideMenu();
+                DBG("Project opened from recent: " + file.getFullPathName());
+            }
+            else
+            {
+                juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::WarningIcon,
+                    "Load Failed", "Could not load project file.");
+            }
+        }
+    }
+}
+
+// Helper to add to recent files
+static void addToRecentFilesList(juce::StringArray& recentFiles, const juce::File& file)
+{
+    recentFiles.removeString(file.getFullPathName());
+    recentFiles.insert(0, file.getFullPathName());
+    while (recentFiles.size() > 10)
+        recentFiles.remove(recentFiles.size() - 1);
+        
+    auto props = getProperties();
+    props->setValue("recentFiles", recentFiles.joinIntoString("|"));
 }
 
 }  // namespace zenith

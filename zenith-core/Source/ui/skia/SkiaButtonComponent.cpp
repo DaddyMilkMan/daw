@@ -11,9 +11,12 @@
 #include "include/core/SkRRect.h"
 #include "include/core/SkPath.h"
 #include "include/core/SkMaskFilter.h"
+#include "include/core/SkBlurTypes.h"
 #include "include/core/SkColor.h"
 #include "include/effects/SkGradientShader.h"
 #include "include/effects/SkImageFilters.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkFontTypes.h"
 
 namespace zenith {
 
@@ -51,7 +54,7 @@ SkiaButtonComponent::SkiaButtonComponent(const juce::String& buttonText, Style s
 
 SkiaButtonComponent::~SkiaButtonComponent()
 {
-    animationTimer_.stopTimer();
+    stopTimer();
 }
 
 //==============================================================================
@@ -172,13 +175,13 @@ void SkiaButtonComponent::setCornerRadius(float radius)
 
 void SkiaButtonComponent::startAnimationTimer()
 {
-    // Use JUCE timer for simplicity (will upgrade to dedicated render thread later)
-    animationTimer_.setCallback([this]() {
-        updateAnimations();
-    });
-
     // Run at 60Hz minimum (will support 120Hz later)
-    animationTimer_.startTimer((int)(1000.0f / ANIMATION_FPS));
+    startTimer((int)(1000.0f / ANIMATION_FPS));
+}
+
+void SkiaButtonComponent::timerCallback()
+{
+    updateAnimations();
 }
 
 void SkiaButtonComponent::updateAnimations()
@@ -257,7 +260,7 @@ void SkiaButtonComponent::drawButton(SkCanvas* canvas)
 
         // Blur for soft shadow
         shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-            kNormal_SkBlurStyle, SHADOW_BLUR / 2.0f));
+            SkBlurStyle::kNormal_SkBlurStyle, SHADOW_BLUR / 2.0f));
 
         // Offset shadow down slightly
         SkRRect shadowRect = roundRect;
@@ -400,7 +403,7 @@ juce::Colour SkiaButtonComponent::getStyleColour() const
         case Style::Danger:    return juce::Colour(0xffFF3B30);  // Apple red
         case Style::Warning:   return juce::Colour(0xffFF9500);  // Apple orange
         default:               return juce::Colour(0xff0A84FF);
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
 
 } // namespace zenith
