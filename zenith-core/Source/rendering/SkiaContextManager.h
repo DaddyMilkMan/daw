@@ -191,10 +191,6 @@ private:
     SkiaContextManager();
     ~SkiaContextManager();
 
-    // Delete copy/move
-    SkiaContextManager(const SkiaContextManager&) = delete;
-    SkiaContextManager& operator=(const SkiaContextManager&) = delete;
-
     // Initialization for different backends
     bool initializeGPU_OpenGL();
     bool initializeGPU_Direct3D();
