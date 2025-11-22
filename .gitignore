@@ -4,7 +4,7 @@ ai-bridge-server/node_modules/
 zenith-daw/dist/
 zenith-daw/dist-electron/
 ZenithDAW-Native/build/
-zenith-core/build/
+zenith-core/build*/
 build/
 
 # Compiled binaries
