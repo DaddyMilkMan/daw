@@ -41,13 +41,22 @@ struct SkRect;
  * @brief Mixer panel with vertical track strips
  */
 class MixerComponent : public juce::Component,
-                       public juce::ValueTree::Listener {
+                       public juce::ValueTree::Listener
+#ifdef ZENITH_USE_SKIA
+                       , public zenith::SkiaComponent
+#endif
+{
 public:
   MixerComponent(ProjectState &ps);
   ~MixerComponent() override;
 
   void paint(juce::Graphics &g) override;
   void resized() override;
+
+#ifdef ZENITH_USE_SKIA
+  void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
+  bool supportsSkiaRendering() const override { return true; }
+#endif
 
   //==============================================================================
   struct TrackStrip {
@@ -121,6 +130,19 @@ private:
    * @brief Find track strip by track ID
    */
   TrackStrip *findTrackStrip(const juce::String &trackId);
+
+#ifdef ZENITH_USE_SKIA
+  /**
+   * @brief Draw a single track strip using Skia
+   */
+  void drawTrackStripSkia(SkCanvas* canvas, SkRect stripBounds, const TrackStrip& strip);
+
+  /**
+   * @brief Draw a button indicator using Skia
+   */
+  void drawButtonIndicatorSkia(SkCanvas* canvas, SkRect bounds, bool isActive,
+                               unsigned int activeColor, const char* label);
+#endif
 
   //==========================================================================
   // Control callbacks

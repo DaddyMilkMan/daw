@@ -6,6 +6,15 @@
 #include "../include/MixerComponent.h"
 #include "../Source/ui/ZenithLookAndFeel.h"
 
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkRRect.h>
+#include <include/core/SkPath.h>
+#include <include/effects/SkGradientShader.h>
+#endif
+
 //==============================================================================
 MixerComponent::MixerComponent(ProjectState &ps) : projectState(ps) {
   // Listen to the entire state tree for changes
@@ -385,3 +394,213 @@ void MixerComponent::onSoloClicked(const juce::String &trackId, bool state) {
 void MixerComponent::onArmClicked(const juce::String &trackId, bool state) {
   projectState.setTrackArmed(trackId, state, "Set track armed");
 }
+
+//==============================================================================
+// Skia Rendering Implementation
+//==============================================================================
+
+#ifdef ZENITH_USE_SKIA
+
+void MixerComponent::paintToSkia(SkCanvas* canvas, SkRect bounds) {
+    // 1. Draw Background with Gradient
+    SkPoint gradientPoints[2] = {
+        {bounds.x(), bounds.y()},
+        {bounds.x(), bounds.y() + bounds.height()}
+    };
+
+    SkColor gradientColors[2] = {
+        SkColorSetARGB(255, 30, 30, 30),   // Dark grey top
+        SkColorSetARGB(255, 20, 20, 20)    // Darker bottom
+    };
+
+    SkScalar gradientPositions[2] = { 0.0f, 1.0f };
+
+    auto gradient = SkGradientShader::MakeLinear(
+        gradientPoints, gradientColors, gradientPositions, 2, SkTileMode::kClamp
+    );
+
+    SkPaint bgPaint;
+    bgPaint.setShader(gradient);
+    canvas->drawRect(bounds, bgPaint);
+
+    // 2. Draw Top Border
+    SkPaint borderPaint;
+    borderPaint.setColor(SkColorSetARGB(128, 80, 80, 80));
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setAntiAlias(true);
+
+    canvas->drawLine(bounds.x(), bounds.y(),
+                     bounds.right(), bounds.y(), borderPaint);
+
+    // 3. Draw Track Strips
+    const float startX = bounds.x() + static_cast<float>(sideMargin);
+    float currentX = startX;
+    const float marginTop = static_cast<float>(topMargin);
+    const float marginBottom = static_cast<float>(bottomMargin);
+
+    const float sWidth = static_cast<float>(stripWidth);
+    const float sSpacing = static_cast<float>(stripSpacing);
+
+    for (const auto& strip : trackStrips) {
+        if (!strip) continue;
+
+        SkRect stripBounds = SkRect::MakeXYWH(
+            currentX,
+            bounds.y() + marginTop,
+            sWidth,
+            bounds.height() - marginTop - marginBottom
+        );
+
+        drawTrackStripSkia(canvas, stripBounds, *strip);
+        currentX += sWidth + sSpacing;
+    }
+
+    // 4. Draw Empty State Message
+    if (trackStrips.empty()) {
+        SkFont font;
+        font.setSize(14);
+        font.setEdging(SkFont::Edging::kAntiAlias);
+
+        SkPaint textPaint;
+        textPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
+        textPaint.setAntiAlias(true);
+
+        const char* message = "No tracks - Add a track to see mixer controls";
+        SkRect textBounds;
+        font.measureText(message, strlen(message), SkTextEncoding::kUTF8, &textBounds);
+
+        canvas->drawString(message,
+                           bounds.centerX() - textBounds.width() / 2.0f,
+                           bounds.centerY(),
+                           font, textPaint);
+    }
+}
+
+void MixerComponent::drawTrackStripSkia(SkCanvas* canvas, SkRect stripBounds, const TrackStrip& strip) {
+    canvas->save();
+
+    // Strip Background
+    SkRRect roundedStrip;
+    roundedStrip.setRectXY(stripBounds, 4, 4);
+
+    SkPaint stripBgPaint;
+    stripBgPaint.setColor(SkColorSetARGB(255, 40, 40, 40));
+    canvas->drawRRect(roundedStrip, stripBgPaint);
+
+    SkPaint stripBorderPaint;
+    stripBorderPaint.setColor(SkColorSetARGB(255, 60, 60, 60));
+    stripBorderPaint.setStyle(SkPaint::kStroke_Style);
+    stripBorderPaint.setStrokeWidth(1.0f);
+    stripBorderPaint.setAntiAlias(true);
+    canvas->drawRRect(roundedStrip, stripBorderPaint);
+
+    // Track Name
+    SkFont nameFont;
+    nameFont.setSize(12);
+    nameFont.setEdging(SkFont::Edging::kAntiAlias);
+
+    SkPaint namePaint;
+    namePaint.setColor(SK_ColorWHITE);
+    namePaint.setAntiAlias(true);
+
+    juce::String displayName = strip.trackName;
+    if (displayName.length() > 10) displayName = displayName.substring(0, 9) + "...";
+    const char* nameStr = displayName.toRawUTF8();
+
+    SkRect nameBounds;
+    nameFont.measureText(nameStr, strlen(nameStr), SkTextEncoding::kUTF8, &nameBounds);
+    canvas->drawString(nameStr,
+                       stripBounds.centerX() - nameBounds.width() / 2.0f,
+                       stripBounds.y() + 20,
+                       nameFont, namePaint);
+
+    // Volume Fader (Visual Representation)
+    float faderWidth = 16;
+    float faderHeight = stripBounds.height() - 130;
+    float faderX = stripBounds.centerX() - (faderWidth / 2.0f);
+    float faderY = stripBounds.y() + 35;
+
+    // Fader Trough
+    SkRRect faderTrack;
+    faderTrack.setRectXY(SkRect::MakeXYWH(faderX, faderY, faderWidth, faderHeight), 3, 3);
+    SkPaint faderTrackPaint;
+    faderTrackPaint.setColor(SkColorSetARGB(255, 25, 25, 25));
+    canvas->drawRRect(faderTrack, faderTrackPaint);
+
+    // Fader Fill
+    float volumeValue = strip.volumeSlider ? static_cast<float>(strip.volumeSlider->getValue()) : 0.0f;
+    float fillHeight = faderHeight * volumeValue;
+    float fillY = faderY + faderHeight - fillHeight;
+
+    SkRRect faderFill;
+    faderFill.setRectXY(SkRect::MakeXYWH(faderX, fillY, faderWidth, fillHeight), 3, 3);
+
+    SkPoint fillGradientPoints[2] = {{faderX, fillY}, {faderX, fillY + fillHeight}};
+    SkColor fillGradientColors[2] = {SkColorSetARGB(255, 100, 200, 255), SkColorSetARGB(255, 50, 150, 255)};
+    auto fillGradient = SkGradientShader::MakeLinear(fillGradientPoints, fillGradientColors, nullptr, 2, SkTileMode::kClamp);
+
+    SkPaint faderFillPaint;
+    faderFillPaint.setShader(fillGradient);
+    canvas->drawRRect(faderFill, faderFillPaint);
+
+    // Buttons
+    float buttonY = stripBounds.bottom() - 75;
+    float buttonSize = 18;
+    float buttonSpacing = 4;
+    float buttonTotalWidth = (buttonSize * 3) + (buttonSpacing * 2);
+    float buttonX = stripBounds.centerX() - (buttonTotalWidth / 2.0f);
+
+    bool isMuted = strip.muteButton && strip.muteButton->getToggleState();
+    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
+                            isMuted, SK_ColorRED, "M");
+
+    buttonX += buttonSize + buttonSpacing;
+    bool isSolo = strip.soloButton && strip.soloButton->getToggleState();
+    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
+                            isSolo, SkColorSetARGB(255, 255, 200, 0), "S");
+
+    buttonX += buttonSize + buttonSpacing;
+    bool isArmed = strip.armButton && strip.armButton->getToggleState();
+    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
+                            isArmed, SkColorSetARGB(255, 200, 0, 0), "R");
+
+    canvas->restore();
+}
+
+void MixerComponent::drawButtonIndicatorSkia(SkCanvas* canvas, SkRect bounds, bool isActive,
+                                             unsigned int activeColor, const char* label) {
+    SkRRect buttonRect;
+    buttonRect.setRectXY(bounds, 3, 3);
+
+    SkPaint bgPaint;
+    bgPaint.setColor(isActive ? activeColor : SkColorSetARGB(255, 50, 50, 50));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRRect(buttonRect, bgPaint);
+
+    SkPaint borderPaint;
+    borderPaint.setColor(SkColorSetARGB(255, 80, 80, 80));
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setAntiAlias(true);
+    canvas->drawRRect(buttonRect, borderPaint);
+
+    SkFont labelFont;
+    labelFont.setSize(10);
+    labelFont.setEdging(SkFont::Edging::kAntiAlias);
+
+    SkPaint labelPaint;
+    labelPaint.setColor(SK_ColorWHITE);
+    labelPaint.setAntiAlias(true);
+
+    SkRect textBounds;
+    labelFont.measureText(label, strlen(label), SkTextEncoding::kUTF8, &textBounds);
+
+    // Manual centering adjustment
+    float textX = bounds.centerX() - (textBounds.width() / 2.0f);
+    float textY = bounds.centerY() + (textBounds.height() / 2.0f) - 1;
+
+    canvas->drawString(label, textX, textY, labelFont, labelPaint);
+}
+
+#endif

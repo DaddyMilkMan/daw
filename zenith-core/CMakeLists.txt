@@ -20,6 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # Phase control flags for incremental integration
 option(ZENITH_ENABLE_PHASE1_AUDIO "Enable src/audio skeleton (Phase 1 - not ready)" OFF)
 option(ZENITH_ENABLE_VEXEL_DONOR   "Enable donor compile checks from ZenithDAW-Native" OFF)
+option(ZENITH_ENABLE_SKIA          "Enable Skia rendering backend" ON)
 
 # C3: Optional debug seed for testing track integration (disabled by default)
 option(ZENITH_ENGINE_SEED_DEBUG_TRACKS "Create 8 demo tracks at startup in Debug builds" OFF)
