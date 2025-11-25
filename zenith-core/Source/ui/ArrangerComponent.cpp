@@ -3,13 +3,14 @@
 
 #include "ArrangerComponent.h"
 #ifdef ZENITH_USE_SKIA
-    #include <include/core/SkCanvas.h>
-    #include <include/core/SkPaint.h>
-    #include <include/core/SkFont.h>
-    #include <include/core/SkPath.h>
-    #include <include/core/SkRRect.h>
-    #include <include/effects/SkGradientShader.h>
-    #include "../Source/ui/skia/SkiaTheme.h"
+#include "../Source/ui/skia/SkiaTheme.h"
+#include <include/core/SkCanvas.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkPath.h>
+#include <include/core/SkRRect.h>
+#include <include/effects/SkGradientShader.h>
+
 #endif
 #include "skia/SkiaTheme.h"
 
@@ -476,13 +477,8 @@ void ArrangerComponent::paintTimeRuler(juce::Graphics &g) {}
 void ArrangerComponent::paintMarquee(juce::Graphics &g) {}
 
 #ifdef ZENITH_USE_SKIA
-void ArrangerComponent::paintToSkia(SkCanvas* canvas, SkRect bounds)
-{
-    auto& theme = zenith::SkiaTheme::getInstance();
-    canvas->clear(theme.getColors().bg1);
-
-    SkPaint p;
-    p.setColor(theme.getColors().textStrong);
-    // TODO: Implement custom Skia rendering for ArrangerComponent
+void ArrangerComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
+  // Call base class implementation which sets up the canvas and calls paintSkia
+  SkiaCanvasComponent::paintToSkia(canvas, bounds);
 }
 #endif

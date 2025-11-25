@@ -66,11 +66,20 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
+    //==============================================================================
+    // Mouse event handling
+    void mouseDown(const juce::MouseEvent& e) override;
+    void mouseDrag(const juce::MouseEvent& e) override;
+    void mouseUp(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
+
 #ifdef ZENITH_USE_SKIA
 protected:
     //==============================================================================
     // Skia rendering override
     void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+    void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
 #endif
 
     //==============================================================================

@@ -788,6 +788,13 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
 }
 
 #ifdef ZENITH_USE_SKIA
+void ArrangerComponent::paintSkia(SkCanvas &canvas,
+                                  const juce::Rectangle<int> &bounds) {
+  SkRect skBounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                      bounds.getWidth(), bounds.getHeight());
+  paintToSkia(&canvas, skBounds);
+}
+
 void ArrangerComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
   // Background
   canvas->clear(SkColorSetRGB(30, 30, 30)); // 0xff1e1e1e

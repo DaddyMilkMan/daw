@@ -539,10 +539,10 @@ ZenithSamplerSound::ZenithSamplerSound(
     const juce::BigInteger &notes, int midiNoteForNormalPitch, int lowVel,
     int highVel, double attackTimeSecs, double releaseTimeSecs,
     double maxSampleLengthSeconds, LoopMode loop, float sampleGain,
-    float sampleTune)
+    float sampleTune, int choke)
     : soundName(name), midiNotes(notes), rootNote(midiNoteForNormalPitch),
       lowVelocity(lowVel), highVelocity(highVel), loopMode(loop),
-      gain(sampleGain), tune(sampleTune) {
+      gain(sampleGain), tune(sampleTune), chokeGroup(choke) {
   sourceSampleRate = source.sampleRate;
 
   auto lengthInSamples =
@@ -556,16 +556,14 @@ ZenithSamplerSound::ZenithSamplerSound(
   data = ownedData.get();
 }
 
-ZenithSamplerSound::ZenithSamplerSound(const juce::String &name,
-                                       AudioFilePool::HandlePtr audioHandle,
-                                       const juce::BigInteger &notes,
-                                       int midiNoteForNormalPitch, int lowVel,
-                                       int highVel, LoopMode loop,
-                                       float sampleGain, float sampleTune)
+ZenithSamplerSound::ZenithSamplerSound(
+    const juce::String &name, AudioFilePool::HandlePtr audioHandle,
+    const juce::BigInteger &notes, int midiNoteForNormalPitch, int lowVel,
+    int highVel, LoopMode loop, float sampleGain, float sampleTune, int choke)
     : soundName(name), poolHandle(audioHandle), midiNotes(notes),
       rootNote(midiNoteForNormalPitch), lowVelocity(lowVel),
-      highVelocity(highVel), loopMode(loop), gain(sampleGain),
-      tune(sampleTune) {
+      highVelocity(highVel), loopMode(loop), gain(sampleGain), tune(sampleTune),
+      chokeGroup(choke) {
   if (poolHandle) {
     sourceSampleRate = poolHandle->sampleRate;
     // Point to the pool's buffer (const_cast is safe as we only read)

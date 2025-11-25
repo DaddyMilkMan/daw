@@ -13,6 +13,8 @@
 #include "../Source/ui/WingmanPanel.h"
 #include "../include/PianoRollEditor.h"
 
+#include "../src/SimpleLogger.h"
+
 #ifdef ZENITH_USE_SKIA
 #include "../Source/ui/skia/SkiaComponent.h"
 #include <include/core/SkFont.h>
@@ -49,25 +51,25 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("========================================");
 
 #ifdef ZENITH_USE_SKIA
-  DBG(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-      "EXECUTING <<<");
+  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
+            "EXECUTING <<<");
 
   // Initialize Skia rendering system
   bool skiaInitSuccess = initializeSkiaRendering();
   if (skiaInitSuccess) {
-    DBG("✓ Skia theme configuration loaded successfully");
+    logToFile("✓ Skia theme configuration loaded successfully");
   }
 
   // Instantiate the SkiaRenderer
-  DBG("→ Initializing SkiaRenderer...");
+  logToFile("→ Initializing SkiaRenderer...");
   renderer_ = std::make_unique<zenith::SkiaRenderer>(*this);
   if (renderer_->initialize()) {
-    DBG("✓ SkiaRenderer initialized successfully");
+    logToFile("✓ SkiaRenderer initialized successfully");
   } else {
-    DBG("✗ SkiaRenderer initialization FAILED - falling back to software");
+    logToFile(
+        "✗ SkiaRenderer initialization FAILED - falling back to software");
     renderer_.reset();
   }
-
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
@@ -437,162 +439,44 @@ void MainComponent::paint(juce::Graphics &g) {
       }
     });
 
-    // Step 2: Get the Skia surface and read pixels
+    // Step 2: Get the Skia surface and read pixels directly
     SkSurface *surface = renderer_->getSurface();
     if (surface) {
-      if (skiaPaintCount == 1)
-        DBG("  [DEBUG] Got SkSurface pointer: " +
-            juce::String::toHexString((juce::pointer_sized_int)surface));
+      // Create JUCE image to hold the result
+      int width = surface->width();
+      int height = surface->height();
+      juce::Image juceImage(juce::Image::ARGB, width, height, true);
 
-      // Create SkImage from surface
-      sk_sp<SkImage> skImage = surface->makeImageSnapshot();
-      if (skImage) {
-        // Get image dimensions
-        int width = skImage->width();
-        int height = skImage->height();
+      // Lock the JUCE image for writing
+      juce::Image::BitmapData bitmapData(juceImage,
+                                         juce::Image::BitmapData::readWrite);
 
-        if (skiaPaintCount == 1)
-          DBG("  [DEBUG] SkImage dimensions: " + juce::String(width) + "x" +
-              juce::String(height));
+      // Define the Skia info that matches JUCE's internal format
+      // JUCE ARGB is typically BGRA on Windows (little endian)
+      SkImageInfo readInfo = SkImageInfo::Make(
+          width, height, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
 
-        // Create JUCE image
-        juce::Image juceImage(juce::Image::ARGB, width, height, true);
+      // Read pixels directly from surface into JUCE bitmap memory
+      // This works for both Raster (Software) and GPU surfaces
+      bool readSuccess = surface->readPixels(
+          readInfo, bitmapData.data, bitmapData.lineStride, 0, 0); // srcX, srcY
 
-        if (skiaPaintCount == 1)
-          DBG("  [DEBUG] Created JUCE image: " +
-              juce::String(juceImage.getWidth()) + "x" +
-              juce::String(juceImage.getHeight()));
-
-        // Read pixels from Skia to JUCE
-        SkPixmap pixmap;
-        if (skImage->peekPixels(&pixmap)) {
-          if (skiaPaintCount == 1)
-            DBG("  [DEBUG] peekPixels succeeded, pixmap: " +
-                juce::String(pixmap.width()) + "x" +
-                juce::String(pixmap.height()));
-
-          juce::Image::BitmapData bitmapData(
-              juceImage, juce::Image::BitmapData::writeOnly);
-
-          // Copy row by row (Skia uses premultiplied alpha, JUCE expects it
-          // too)
-          for (int y = 0; y < height; ++y) {
-            const uint32_t *src = (const uint32_t *)pixmap.addr32(0, y);
-            uint32_t *dst = (uint32_t *)bitmapData.getLinePointer(y);
-            memcpy(dst, src, width * sizeof(uint32_t));
-          }
-
-          if (skiaPaintCount == 1)
-            DBG("  [DEBUG] Pixel copy complete, copied " +
-                juce::String(height) + " rows");
-        } else {
-          DBG("  [ERROR] peekPixels FAILED!");
-        }
-
-        // Step 3: VERIFY pixels before drawing
-        auto componentBounds = getLocalBounds();
-        if (skiaPaintCount == 1) {
-          DBG("  [DEBUG] Component bounds: " +
-              juce::String(componentBounds.getWidth()) + "x" +
-              juce::String(componentBounds.getHeight()));
-
-          // VERIFY: Check if green box is actually in the image
-          DBG("  ========================================");
-          DBG("  PIXEL VERIFICATION (checking image data)");
-          DBG("  ========================================");
-
-          // Check center of green box at (935, 130) - should be GREEN
-          juce::Colour centerPixel = juceImage.getPixelAt(935, 130);
-          DBG("  Pixel at (935,130) center: RGB(" +
-              juce::String(centerPixel.getRed()) + "," +
-              juce::String(centerPixel.getGreen()) + "," +
-              juce::String(centerPixel.getBlue()) + ")");
-
-          bool isGreen =
-              (centerPixel.getGreen() > 200 && centerPixel.getRed() < 50);
-          if (isGreen)
-            DBG("  ✓ GREEN (0,255,0) DETECTED - Skia drew it!");
-          else
-            DBG("  ✗ NOT GREEN - Skia rendering FAILED!");
-
-          // Check yellow border at (885, 15) - should be YELLOW
-          juce::Colour borderPixel = juceImage.getPixelAt(885, 15);
-          DBG("  Pixel at (885,15) border: RGB(" +
-              juce::String(borderPixel.getRed()) + "," +
-              juce::String(borderPixel.getGreen()) + "," +
-              juce::String(borderPixel.getBlue()) + ")");
-
-          bool isYellow =
-              (borderPixel.getRed() > 200 && borderPixel.getGreen() > 200);
-          if (isYellow)
-            DBG("  ✓ YELLOW (255,255,0) DETECTED - Border exists!");
-          else
-            DBG("  ✗ NOT YELLOW - Border drawing FAILED!");
-
-          DBG("  ========================================");
-        }
-
-        if (skiaPaintCount == 1)
-          DBG("  [DEBUG] Drawing image at (0, 0)...");
-
+      if (readSuccess) {
+        // Draw the resulting image to the screen
         g.drawImageAt(juceImage, 0, 0);
-
-        if (skiaPaintCount == 1) {
-          // TRUTHFUL RENDERING STATISTICS
-          int totalComponents = getNumChildComponents();
-          int nativeSkia = 0;
-          int juceFallback = 0;
-
-          for (int i = 0; i < totalComponents; ++i) {
-            auto *child = getChildComponent(i);
-            if (child && child->isVisible()) {
-              auto *skiaComp = dynamic_cast<zenith::SkiaComponent *>(child);
-              if (skiaComp && skiaComp->supportsSkiaRendering())
-                nativeSkia++;
-              else
-                juceFallback++;
-            }
-          }
-
-          DBG("  ========================================");
-          DBG("  RENDERING STATISTICS (TRUTHFUL)");
-          DBG("  ========================================");
-          DBG("  Total visible components: " + juce::String(totalComponents));
-          DBG("  ");
-          DBG("  ✓ Native Skia rendering: " + juce::String(nativeSkia) +
-              " components");
-          DBG("  ✗ JUCE fallback: " + juce::String(juceFallback) +
-              " components");
-          DBG("  ");
-
-          if (nativeSkia == totalComponents && totalComponents > 0) {
-            DBG("  🎉 100% PURE SKIA RENDERING!");
-            DBG("  ALL components use native SkCanvas!");
-          } else if (nativeSkia > 0) {
-            int percent = (nativeSkia * 100) / totalComponents;
-            DBG("  ⚠ HYBRID: " + juce::String(percent) + "% native Skia");
-            DBG("  Still " + juce::String(juceFallback) +
-                " components using JUCE");
-          } else {
-            DBG("  ✗ NO NATIVE SKIA YET");
-            DBG("  All components still use JUCE Graphics");
-            DBG("  Only Skia compositing is active");
-          }
-          DBG("  ========================================");
-        }
-
-        return; // Successfully rendered with Skia
       } else {
-        DBG("  [ERROR] makeImageSnapshot() returned null!");
+        DBG("  [ERROR] readPixels() FAILED!");
+
+        // Draw error message on screen
+        g.setColour(juce::Colours::red);
+        g.drawRect(getLocalBounds(), 5);
+        g.setFont(20.0f);
+        g.drawText("SKIA READPIXELS FAILED", getLocalBounds(),
+                   juce::Justification::centred);
       }
     } else {
       DBG("  [ERROR] getSurface() returned null!");
     }
-
-    // If we get here, something went wrong
-    DBG("ERROR: Failed to get pixels from Skia surface!");
-    DBG("  Falling back to JUCE rendering");
-    renderer_.reset();
   }
 #endif
 

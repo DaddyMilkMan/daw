@@ -75,9 +75,9 @@ public:
     // Log system info
     logSystemInfo();
 
-    // Register built-in instruments
-    DBG("Registering built-in instruments...");
-    zenith::registerBuiltInInstruments();
+    // Register built-in instruments (disabled temporarily - ZenithSampler compilation issues)
+    // DBG("Registering built-in instruments...");
+    // zenith::registerBuiltInInstruments();
 
     // Create main window
     mainWindow = std::make_unique<MainWindow>(getApplicationName());

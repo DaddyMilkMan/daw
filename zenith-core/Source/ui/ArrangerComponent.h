@@ -75,7 +75,9 @@ public:
   void valueTreeParentChanged(juce::ValueTree &tree) override {}
 
 #ifdef ZENITH_USE_SKIA
+  void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
   void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
+
   bool supportsSkiaRendering() const override { return true; }
 #endif
 

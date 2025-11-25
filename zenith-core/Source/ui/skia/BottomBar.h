@@ -12,13 +12,11 @@
 
 #include "SkiaCanvasComponent.h"
 #include "SkiaTheme.h"
+#include "../views/PianoKeyboardViewSkia.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
-
-// Forward declaration
-class PianoKeyboardViewSkia;
 
 /**
  * @class BottomBar

@@ -34,15 +34,16 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "../Source/rendering/SkiaRenderer.h"
+#include "../Source/ui/skia/BottomBar.h"
+#include "../Source/ui/skia/BrowserPanel.h"
+#include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButtonComponent.h"
 #include "../Source/ui/skia/SkiaButtonNative.h"
+#include "../Source/ui/skia/SkiaColorTestComponent.h"
 #include "../Source/ui/skia/SkiaLabel.h"
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/SkiaTextDisplay.h"
 #include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/skia/BrowserPanel.h"
-#include "../Source/ui/skia/RightSidePanel.h"
-#include "../Source/ui/skia/BottomBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
 
 #endif
@@ -158,6 +159,9 @@ private:
 
   // Bottom: Piano keyboard + mixer strip
   std::unique_ptr<zenith::BottomBar> bottomBar;
+
+  // Skia Color Test Component (Visual verification)
+  std::unique_ptr<zenith::SkiaColorTestComponent> skiaColorTest;
 #else
   // JUCE fallback UI components
   juce::Label statusLabel;
@@ -183,7 +187,8 @@ private:
   // Phase 9: Arranger component with interactive clip editing (center)
   std::unique_ptr<ArrangerComponent> arrangerComponent;
 
-  // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using Skia)
+  // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
+  // Skia)
 #ifdef ZENITH_USE_SKIA
   std::unique_ptr<WingmanPanel> wingmanPanelPtr_;
 #endif
