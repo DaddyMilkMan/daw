@@ -64,8 +64,8 @@ void reportFailure(const std::string &testName, const std::string &category,
             << std::endl;
 }
 
-void recordTestResult(const std::string &testName, bool passed)
-    [[maybe_unused]] {
+[[maybe_unused]] void recordTestResult(const std::string &testName,
+                                       bool passed) {
   g_totalTests++;
   if (passed) {
     g_passedTests++;

@@ -15,6 +15,12 @@
 
 #pragma once
 
+#ifdef ZENITH_USE_SKIA
+    #include "../Source/ui/skia/SkiaComponent.h"
+    class SkCanvas;
+    struct SkRect;
+#endif
+
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
@@ -34,6 +40,7 @@ namespace zenith {
  * @brief Master output control with real-time metering and animations
  */
 class MasterOutputComponent : public juce::Component,
+                       , public zenith::SkiaComponent
                               public juce::Timer
 {
 public:
@@ -65,6 +72,11 @@ public:
      * @brief Reset peak meters
      */
     void resetPeaks();
+
+#ifdef ZENITH_USE_SKIA
+    void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
+    bool supportsSkiaRendering() const override { return true; }
+#endif
 
 private:
     //==========================================================================

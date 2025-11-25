@@ -1,5 +1,11 @@
 #pragma once
 
+#ifdef ZENITH_USE_SKIA
+    #include "../Source/ui/skia/SkiaComponent.h"
+    class SkCanvas;
+    struct SkRect;
+#endif
+
 #include "../../include/ProjectState.h"
 #ifdef ZENITH_USE_SKIA
 #include "skia/SkiaCanvasComponent.h"
@@ -71,6 +77,11 @@ public:
   void valueTreeChildOrderChanged(juce::ValueTree &parent, int oldIndex,
                                   int newIndex) override;
   void valueTreeParentChanged(juce::ValueTree &tree) override {}
+
+#ifdef ZENITH_USE_SKIA
+    void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
+    bool supportsSkiaRendering() const override { return true; }
+#endif
 
 private:
   void timerCallback() override {} // Unused for now

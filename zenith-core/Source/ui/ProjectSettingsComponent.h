@@ -16,15 +16,16 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 
 class ProjectState;
 
@@ -39,162 +40,160 @@ namespace zenith {
  */
 class ProjectSettingsComponent : public juce::Component,
                                  public juce::Timer,
-                                 public juce::TextEditor::Listener
-{
+                                 public juce::TextEditor::Listener {
 public:
-    //==========================================================================
-    explicit ProjectSettingsComponent(ProjectState& state);
-    ~ProjectSettingsComponent() override;
+  //==========================================================================
+  explicit ProjectSettingsComponent(ProjectState &state);
+  ~ProjectSettingsComponent() override;
 
-    //==========================================================================
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-    void timerCallback() override;
+  //==========================================================================
+  void paint(juce::Graphics &g) override;
+  void resized() override;
+  void timerCallback() override;
 
-    //==========================================================================
-    // TextEditor::Listener
-    //==========================================================================
-    void textEditorTextChanged(juce::TextEditor& editor) override;
-    void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
-    void textEditorEscapeKeyPressed(juce::TextEditor& editor) override;
-    void textEditorFocusLost(juce::TextEditor& editor) override;
+  //==========================================================================
+  // TextEditor::Listener
+  //==========================================================================
+  void textEditorTextChanged(juce::TextEditor &editor) override;
+  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
+  void textEditorEscapeKeyPressed(juce::TextEditor &editor) override;
+  void textEditorFocusLost(juce::TextEditor &editor) override;
 
-    //==========================================================================
-    // Methods
-    //==========================================================================
+  //==========================================================================
+  // Methods
+  //==========================================================================
 
-    /**
-     * @brief Refresh UI to show current project state
-     */
-    void refresh();
+  /**
+   * @brief Refresh UI to show current project state
+   */
+  void refresh();
 
 private:
-    //==========================================================================
-    // Helpers
-    //==========================================================================
+  //==========================================================================
+  // Helpers
+  //==========================================================================
 
-    /**
-     * @brief Create a styled text input field
-     */
-    void setupTextEditor(juce::TextEditor& editor, int maxLength = -1);
+  /**
+   * @brief Create a styled text input field
+   */
+  void setupTextEditor(juce::TextEditor &editor, int maxLength = -1);
 
-    /**
-     * @brief Paint a settings row (label + value)
-     */
-    void paintSettingRow(juce::Graphics& g, const juce::String& label,
-                        const juce::Rectangle<int>& bounds);
+  /**
+   * @brief Paint a settings row (label + value)
+   */
+  void paintSettingRow(juce::Graphics &g, const juce::String &label,
+                       const juce::Rectangle<int> &bounds);
 
-    /**
-     * @brief Update tempo from text editor
-     */
-    void updateTempoFromText();
+  /**
+   * @brief Update tempo from text editor
+   */
+  void updateTempoFromText();
 
-    /**
-     * @brief Update time signature from text editors
-     */
-    void updateTimeSignatureFromText();
+  /**
+   * @brief Update time signature from text editors
+   */
+  void updateTimeSignatureFromText();
 
-    /**
-     * @brief Validate tempo value
-     */
-    float validateTempo(float value) const;
+  /**
+   * @brief Validate tempo value
+   */
+  float validateTempo(float value) const;
 
-    /**
-     * @brief Validate time signature values
-     */
-    void validateTimeSignature(int& num, int& den) const;
+  /**
+   * @brief Validate time signature values
+   */
+  void validateTimeSignature(int &num, int &den) const;
 
-    /**
-     * @brief Adjust tempo by delta
-     */
-    void adjustTempo(float delta) [[maybe_unused]];
+  /**
+   * @brief Adjust tempo by delta
+   */
+  [[maybe_unused]] void adjustTempo(float delta);
 
-    /**
-     * @brief Adjust time signature numerator by delta
-     */
-    void adjustTimeSignatureNum(int delta) [[maybe_unused]];
+  /**
+   * @brief Adjust time signature numerator by delta
+   */
+  [[maybe_unused]] void adjustTimeSignatureNum(int delta);
 
-    /**
-     * @brief Adjust time signature denominator by delta
-     */
-    void adjustTimeSignatureDen(int delta) [[maybe_unused]];
+  /**
+   * @brief Adjust time signature denominator by delta
+   */
+  [[maybe_unused]] void adjustTimeSignatureDen(int delta);
 
-    /**
-     * @brief Handle tap tempo button click
-     */
-    void onTapTempo();
+  /**
+   * @brief Handle tap tempo button click
+   */
+  void onTapTempo();
 
-    /**
-     * @brief Apply all changes
-     */
-    void applyChanges();
+  /**
+   * @brief Apply all changes
+   */
+  void applyChanges();
 
-    /**
-     * @brief Cancel all changes
-     */
-    void cancelChanges();
+  /**
+   * @brief Cancel all changes
+   */
+  void cancelChanges();
 
-    //==========================================================================
-    // Members
-    //==========================================================================
+  //==========================================================================
+  // Members
+  //==========================================================================
 
-    ProjectState& projectState_;
+  ProjectState &projectState_;
 
-    // Project name editor
-    juce::TextEditor projectNameEditor_;
+  // Project name editor
+  juce::TextEditor projectNameEditor_;
 
-    // Tempo editor
-    juce::TextEditor tempoEditor_;
+  // Tempo editor
+  juce::TextEditor tempoEditor_;
 
-    // Time signature editors
-    juce::TextEditor timeSignatureNumEditor_;
-    juce::TextEditor timeSignatureDenEditor_;
+  // Time signature editors
+  juce::TextEditor timeSignatureNumEditor_;
+  juce::TextEditor timeSignatureDenEditor_;
 
-    // Sample rate display (read-only)
-    juce::Label sampleRateLabel_;
-    juce::Label sampleRateValue_;
+  // Sample rate display (read-only)
+  juce::Label sampleRateLabel_;
+  juce::Label sampleRateValue_;
 
-    // Stepper buttons
-    juce::TextButton tempoUpButton_;
-    juce::TextButton tempoDownButton_;
-    juce::TextButton timeSignatureNumUpButton_;
-    juce::TextButton timeSignatureNumDownButton_;
-    juce::TextButton timeSignatureDenUpButton_;
-    juce::TextButton timeSignatureDenDownButton_;
+  // Stepper buttons
+  juce::TextButton tempoUpButton_;
+  juce::TextButton tempoDownButton_;
+  juce::TextButton timeSignatureNumUpButton_;
+  juce::TextButton timeSignatureNumDownButton_;
+  juce::TextButton timeSignatureDenUpButton_;
+  juce::TextButton timeSignatureDenDownButton_;
 
-    // Tap tempo button
-    juce::TextButton tapTempoButton_;
-    std::vector<juce::int64> tapTimes_;
-    juce::int64 lastTapTime_ = 0;
+  // Tap tempo button
+  juce::TextButton tapTempoButton_;
+  std::vector<juce::int64> tapTimes_;
+  juce::int64 lastTapTime_ = 0;
 
-    // Action buttons
-    juce::TextButton applyButton_;
-    juce::TextButton cancelButton_;
+  // Action buttons
+  juce::TextButton applyButton_;
+  juce::TextButton cancelButton_;
 
-    // Current tempo for validation
-    double currentTempo_ = 120.0;
-    int timeSignatureNum_ = 4;
-    int timeSignatureDen_ = 4;
+  // Current tempo for validation
+  double currentTempo_ = 120.0;
+  int timeSignatureNum_ = 4;
+  int timeSignatureDen_ = 4;
 
-    // Validation state
-    bool projectNameValid_ = true;
-    bool tempoValid_ = true;
-    bool timeSignatureValid_ = true;
+  // Validation state
+  bool projectNameValid_ = true;
+  bool tempoValid_ = true;
+  bool timeSignatureValid_ = true;
 
-    // Animation state
-    float nameEditorFocusAnim_ = 0.0f;
-    float tempoEditorFocusAnim_ = 0.0f;
-    float timeSignatureNumFocusAnim_ = 0.0f;
-    float timeSignatureDenFocusAnim_ = 0.0f;
+  // Animation state
+  float nameEditorFocusAnim_ = 0.0f;
+  float tempoEditorFocusAnim_ = 0.0f;
+  float timeSignatureNumFocusAnim_ = 0.0f;
+  float timeSignatureDenFocusAnim_ = 0.0f;
 
-    // Layout constants
-    static constexpr int ROW_HEIGHT = 40;
-    static constexpr int LABEL_WIDTH = 140;
-    static constexpr int SPACING = 12;
-    static constexpr int PADDING = 16;
+  // Layout constants
+  static constexpr int ROW_HEIGHT = 40;
+  static constexpr int LABEL_WIDTH = 140;
+  static constexpr int SPACING = 12;
+  static constexpr int PADDING = 16;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectSettingsComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectSettingsComponent)
 };
 
-}  // namespace zenith
-
+} // namespace zenith

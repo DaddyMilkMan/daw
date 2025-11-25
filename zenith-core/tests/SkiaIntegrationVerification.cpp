@@ -10,14 +10,19 @@
  * 5. SkiaRenderer class integrates properly with JUCE
  */
 
-#include <JuceHeader.h>
 #include <iostream>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
 #ifdef ZENITH_USE_SKIA
-#include "Source/rendering/SkiaRenderer.h"
+#include "../Source/rendering/SkiaRenderer.h"
 #include "include/core/SkCanvas.h"
 #include "include/core/SkColor.h"
+#include "include/core/SkColorSpace.h"
+#include "include/core/SkFont.h"
 #include "include/core/SkImageInfo.h"
 #include "include/core/SkPaint.h"
 #include "include/core/SkPath.h"
@@ -47,7 +52,7 @@ bool testSkiaBasicSetup() {
   try {
     // Create a simple software surface
     SkImageInfo info = SkImageInfo::MakeN32Premul(100, 100);
-    sk_sp<SkSurface> surface = SkSurfaces::Raster(info);
+    sk_sp<SkSurface> surface = SkSurfaces::Raster(info, 0, nullptr);
 
     if (!surface) {
       std::cout << "ERROR: Failed to create raster surface\n";
@@ -73,7 +78,7 @@ bool testSkiaDrawing() {
   try {
     // Create surface
     SkImageInfo info = SkImageInfo::MakeN32Premul(200, 200);
-    sk_sp<SkSurface> surface = SkSurfaces::Raster(info);
+    sk_sp<SkSurface> surface = SkSurfaces::Raster(info, 0, nullptr);
 
     if (!surface) {
       std::cout << "ERROR: Failed to create surface for drawing\n";
@@ -266,14 +271,14 @@ bool testSkiaImageInfo() {
     std::cout << "  ✓ Alpha8 info created\n";
 
     // Test surface creation with different configs
-    sk_sp<SkSurface> surfaceRGBA = SkSurfaces::Raster(infoRGBA);
+    sk_sp<SkSurface> surfaceRGBA = SkSurfaces::Raster(infoRGBA, 0, nullptr);
     if (!surfaceRGBA) {
       std::cout << "ERROR: Failed to create RGBA surface\n";
       return false;
     }
     std::cout << "  ✓ RGBA surface created\n";
 
-    sk_sp<SkSurface> surfaceSRGB = SkSurfaces::Raster(infoSRGB);
+    sk_sp<SkSurface> surfaceSRGB = SkSurfaces::Raster(infoSRGB, 0, nullptr);
     if (!surfaceSRGB) {
       std::cout << "ERROR: Failed to create sRGB surface\n";
       return false;
@@ -299,7 +304,8 @@ int main(int argc, char *argv[]) {
 
 #ifdef ZENITH_USE_SKIA
   std::cout << "\n✓ ZENITH_USE_SKIA is DEFINED - Skia integration enabled\n";
-  std::cout << "Skia version: " << SK_MILESTONE << "\n";
+  // std::cout << "Skia version: " << SK_MILESTONE << "\n"; // Removed to avoid
+  // error
 
   // Initialize JUCE
   juce::ScopedJuceInitialiser_GUI juceInit;

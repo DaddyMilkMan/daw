@@ -20,7 +20,6 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_dsp/juce_dsp.h>
 
-
 namespace zenith {
 
 // Forward declarations for voice/sound classes
@@ -299,7 +298,7 @@ public:
                      int highVelocity, double attackTimeSecs,
                      double releaseTimeSecs, double maxSampleLengthSeconds,
                      LoopMode loopMode = LoopMode::None, float gain = 1.0f,
-                     float tune = 0.0f);
+                     float tune = 0.0f, int chokeGroup = 0);
 
   // Constructor that uses AudioFilePool handle
   ZenithSamplerSound(const juce::String &name,
@@ -307,7 +306,7 @@ public:
                      const juce::BigInteger &midiNotes,
                      int midiNoteForNormalPitch, int lowVelocity,
                      int highVelocity, LoopMode loopMode = LoopMode::None,
-                     float gain = 1.0f, float tune = 0.0f);
+                     float gain = 1.0f, float tune = 0.0f, int chokeGroup = 0);
 
   ~ZenithSamplerSound() override;
 
@@ -321,6 +320,7 @@ public:
   LoopMode getLoopMode() const { return loopMode; }
   float getGain() const { return gain; }
   float getTune() const { return tune; }
+  int getChokeGroup() const { return chokeGroup; }
 
   bool appliesToVelocity(int midiVelocity) const {
     return midiVelocity >= lowVelocity && midiVelocity <= highVelocity;
@@ -357,6 +357,7 @@ private:
   LoopMode loopMode;
   float gain;
   float tune;
+  int chokeGroup;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithSamplerSound)
 };

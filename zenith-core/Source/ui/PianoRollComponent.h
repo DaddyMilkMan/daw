@@ -1,29 +1,10 @@
-/*
-  ==============================================================================
-
-    PianoRollComponent.h
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 4: Piano Roll MIDI Editor
-
-    GPU-accelerated piano roll component with Skia rendering
-
-    Features:
-    - GPU-accelerated Skia rendering via SkiaCanvasComponent
-    - Zebra striping for visual legibility (alternating dark backgrounds)
-    - Smooth hover animations and note selection feedback
-    - MIDI note editing (create, move, delete)
-    - Professional piano keyboard display with proper key colors
-
-    Responsibilities:
-    - Display piano keys (left panel) with proper black/white key rendering
-    - Draw note grid (time × pitch) with zebra striping
-    - Render MIDI notes with smooth animations
-    - Handle note editing interactions (create, move, delete)
-
-  ==============================================================================
-*/
-
 #pragma once
+
+#ifdef ZENITH_USE_SKIA
+    #include "../Source/ui/skia/SkiaComponent.h"
+    class SkCanvas;
+    struct SkRect;
+#endif
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -69,26 +50,13 @@ class PianoRollComponent : public zenith::SkiaCanvasComponent,
                            private juce::Timer
 {
 public:
-    //==============================================================================
-    PianoRollComponent(zenith::Track::Clip* clipToEdit, Engine& engine);
-    ~PianoRollComponent() override;
-
-    //==============================================================================
-    // Component interface
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-
-protected:
-    //==============================================================================
-    // Skia rendering override
-    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
-
 #else
 class PianoRollComponent : public juce::Component,
                            public juce::KeyListener,
                            private juce::Timer
 {
 public:
+#endif
     //==============================================================================
     PianoRollComponent(zenith::Track::Clip* clipToEdit, Engine& engine);
     ~PianoRollComponent() override;
@@ -98,15 +66,12 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-#endif  // ZENITH_USE_SKIA
-
+#ifdef ZENITH_USE_SKIA
+protected:
     //==============================================================================
-    // Mouse interaction
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void mouseUp(const juce::MouseEvent& e) override;
-    void mouseMove(const juce::MouseEvent& e) override;
-    void mouseExit(const juce::MouseEvent& e) override;
+    // Skia rendering override
+    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+#endif
 
     //==============================================================================
     // Key listener (for delete key)

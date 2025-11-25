@@ -14,6 +14,8 @@
 #include <include/core/SkPath.h>
 #include <include/effects/SkGradientShader.h>
 #endif
+#include "../Source/ui/skia/SkiaUtils.h"
+#include "../Source/ui/skia/SkiaTheme.h"
 
 //==============================================================================
 MixerComponent::MixerComponent(ProjectState &ps) : projectState(ps) {

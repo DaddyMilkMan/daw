@@ -715,106 +715,139 @@ void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffer,
     float pitchMultiplier = std::pow(2.0f, totalPitchShift / 12.0f);
     double finalPitchRatio = pitchRatio * pitchMultiplier;
 
-    // Get filter parameters
-    float cutoff = (filterCutoffParam != nullptr)
-                       ? static_cast<float>(*filterCutoffParam)
-                       : 1.0f;
-    float resonance = (filterResonanceParam != nullptr)
-                          ? static_cast<float>(*filterResonanceParam)
-                          : 0.0f;
+    // Issue 10: Fix Sampler Filter Stepping
+    // Process in small sub-blocks to update filter parameters
+    const int subBlockSize = 32;
 
-    // Map cutoff to Hz (20Hz - 20kHz)
-    float cutoffHz = 20.0f + cutoff * cutoff * 19980.0f;
-    filter.setCutoffFrequency(cutoffHz);
-    filter.setResonance(resonance * 0.9f + 0.1f); // 0.1 - 1.0
+    for (int start = 0; start < numSamples; start += subBlockSize) {
+      int blockSize = std::min(subBlockSize, numSamples - start);
 
-    // Get global controls
-    float gainValue = (globalGainParam != nullptr)
-                          ? static_cast<float>(*globalGainParam)
-                          : 0.8f;
-    float pan = (globalPanParam != nullptr)
-                    ? static_cast<float>(*globalPanParam)
-                    : 0.5f; // 0 = left, 0.5 = center, 1 = right
+      // Update filter parameters for this sub-block
+      // Get filter parameters
+      float cutoff = (filterCutoffParam != nullptr)
+                         ? static_cast<float>(*filterCutoffParam)
+                         : 1.0f;
+      float resonance = (filterResonanceParam != nullptr)
+                            ? static_cast<float>(*filterResonanceParam)
+                            : 0.0f;
 
-    // Apply per-sample gain
-    gainValue *= sound->getGain();
+      // Map cutoff to Hz (20Hz - 20kHz)
+      float cutoffHz = 20.0f + cutoff * cutoff * 19980.0f;
+      filter.setCutoffFrequency(cutoffHz);
+      filter.setResonance(resonance * 0.9f + 0.1f); // 0.1 - 1.0
 
-    // Calculate pan gains (constant power)
-    float leftGain = std::cos(pan * juce::MathConstants<float>::halfPi);
-    float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
+      // Get global controls
+      float gainValue = (globalGainParam != nullptr)
+                            ? static_cast<float>(*globalGainParam)
+                            : 0.8f;
+      float pan = (globalPanParam != nullptr)
+                      ? static_cast<float>(*globalPanParam)
+                      : 0.5f; // 0 = left, 0.5 = center, 1 = right
 
-    auto loopMode = sound->getLoopMode();
+      // Apply per-sample gain
+      gainValue *= sound->getGain();
 
-    for (int i = 0; i < numSamples; ++i) {
-      auto pos = (int)sourceSamplePosition;
+      // Calculate pan gains (constant power)
+      float leftGain = std::cos(pan * juce::MathConstants<float>::halfPi);
+      float rightGain = std::sin(pan * juce::MathConstants<float>::halfPi);
 
-      // Handle looping
-      if (loopMode == ZenithSamplerSound::LoopMode::Forward &&
-          pos >= dataLength - 1) {
-        sourceSamplePosition = 0.0;
-        pos = 0;
-      } else if (loopMode == ZenithSamplerSound::LoopMode::PingPong) {
-        if (pos >= dataLength - 1 && loopDirection) {
-          loopDirection = false; // Reverse
-        } else if (pos <= 0 && !loopDirection) {
-          loopDirection = true; // Forward
-        }
-      } else if (loopMode == ZenithSamplerSound::LoopMode::None &&
-                 pos >= dataLength - 1) {
-        stopNote(0.0f, false);
-        break;
-      }
+      auto loopMode = sound->getLoopMode();
 
-      // Ensure we're in bounds
-      if (pos < 0 || pos >= dataLength - 1) {
-        stopNote(0.0f, false);
-        break;
-      }
+      for (int i = 0; i < blockSize; ++i) {
+        int sampleIndex = start + i;
+        auto pos = (int)sourceSamplePosition;
 
-      // Linear interpolation
-      auto alpha = (float)(sourceSamplePosition - pos);
-      auto invAlpha = 1.0f - alpha;
-
-      // Get envelope value once per sample
-      float envValue = ampEnvelope.getNextSample();
-
-      for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
-        auto *channelData = data.getReadPointer(ch % data.getNumChannels());
-        auto sample =
-            (channelData[pos] * invAlpha + channelData[pos + 1] * alpha);
-
-        // Apply envelope
-        sample *= envValue;
-
-        // Apply velocity
-        sample *= velocity;
-
-        // Apply filter
-        sample = filter.processSample(ch, sample);
-
-        // Apply gain
-        sample *= gainValue;
-
-        // Apply pan (only for stereo output)
-        if (outputBuffer.getNumChannels() >= 2) {
-          sample *= (ch == 0) ? leftGain : rightGain;
+        // Handle looping
+        if (loopMode == ZenithSamplerSound::LoopMode::Forward &&
+            pos >= dataLength - 1) {
+          sourceSamplePosition = 0.0;
+          pos = 0;
+        } else if (loopMode == ZenithSamplerSound::LoopMode::PingPong) {
+          if (pos >= dataLength - 1 && loopDirection) {
+            loopDirection = false; // Reverse
+          } else if (pos <= 0 && !loopDirection) {
+            loopDirection = true; // Forward
+          }
+        } else if (loopMode == ZenithSamplerSound::LoopMode::None &&
+                   pos >= dataLength - 1) {
+          stopNote(0.0f, false);
+          // Break out of inner loop
+          i = blockSize;
+          // Break out of outer loop
+          start = numSamples;
+          break;
         }
 
-        // Add to output
-        outputBuffer.addSample(ch, startSample + i, sample);
-      }
+        // Ensure we're in bounds
+        if (pos < 0 || pos >= dataLength - 1) {
+          stopNote(0.0f, false);
+          i = blockSize;
+          start = numSamples;
+          break;
+        }
 
-      // Update position based on direction (for ping-pong)
-      if (loopMode == ZenithSamplerSound::LoopMode::PingPong &&
-          !loopDirection) {
-        sourceSamplePosition -= finalPitchRatio;
-      } else {
-        sourceSamplePosition += finalPitchRatio;
-      }
+        // Issue 4: Fix Sampler Aliasing with Cubic Hermite Interpolation
+        auto alpha = (float)(sourceSamplePosition - pos);
 
-      if (!ampEnvelope.isActive()) {
-        stopNote(0.0f, false);
-        break;
+        // Get envelope value once per sample
+        float envValue = ampEnvelope.getNextSample();
+
+        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+          auto *channelData = data.getReadPointer(ch % data.getNumChannels());
+
+          // Safe index access for Hermite (4 points: pos-1, pos, pos+1, pos+2)
+          int p0 = std::max(0, pos - 1);
+          int p1 = pos;
+          int p2 = std::min(dataLength - 1, pos + 1);
+          int p3 = std::min(dataLength - 1, pos + 2);
+
+          float y0 = channelData[p0];
+          float y1 = channelData[p1];
+          float y2 = channelData[p2];
+          float y3 = channelData[p3];
+
+          // Cubic Hermite Interpolation
+          float c0 = y1;
+          float c1 = 0.5f * (y2 - y0);
+          float c2 = y0 - 2.5f * y1 + 2.0f * y2 - 0.5f * y3;
+          float c3 = 0.5f * (y3 - y0) + 1.5f * (y1 - y2);
+
+          float sample = ((c3 * alpha + c2) * alpha + c1) * alpha + c0;
+
+          // Apply envelope
+          sample *= envValue;
+
+          // Apply velocity
+          sample *= velocity;
+
+          // Apply filter
+          sample = filter.processSample(ch, sample);
+
+          // Apply gain
+          sample *= gainValue;
+
+          // Apply pan (only for stereo output)
+          if (outputBuffer.getNumChannels() >= 2) {
+            sample *= (ch == 0) ? leftGain : rightGain;
+          }
+
+          outputBuffer.addSample(ch, startSample + sampleIndex, sample);
+        }
+
+        // Advance sample position
+        if (loopMode == ZenithSamplerSound::LoopMode::PingPong &&
+            !loopDirection) {
+          sourceSamplePosition -= finalPitchRatio;
+        } else {
+          sourceSamplePosition += finalPitchRatio;
+        }
+
+        if (!ampEnvelope.isActive()) {
+          stopNote(0.0f, false);
+          i = blockSize;
+          start = numSamples;
+          break;
+        }
       }
     }
   }
@@ -1042,8 +1075,8 @@ InstrumentMetadata ZenithSampler::createMetadata() {
 
 void ZenithSampler::registerPresets() {
   // Register built-in sample banks as presets
-  // Note: These are stubs - actual sample files would need to be in the content
-  // directory
+  // Note: These are stubs - actual sample files would need to be in the
+  // content directory
 
   // Built-in bank: 808 Essentials
   const char *bank808Json = R"({
@@ -1144,8 +1177,9 @@ void ZenithSampler::registerPresets() {
   // 1. Create the sample files in the content directory structure
   // 2. Call loadSampleBankFromJson() with the JSON strings above
   // For example:
-  //   auto* proc = dynamic_cast<ZenithSamplerProcessor*>(getAudioProcessor());
-  //   if (proc) proc->loadSampleBankFromJson(bank808Json, "808 Essentials");
+  //   auto* proc =
+  //   dynamic_cast<ZenithSamplerProcessor*>(getAudioProcessor()); if (proc)
+  //   proc->loadSampleBankFromJson(bank808Json, "808 Essentials");
 }
 
 } // namespace zenith

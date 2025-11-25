@@ -1,4 +1,9 @@
-{
+#include "ui/ZenithSlider.h"
+
+namespace zenith {
+
+ZenithSlider::ZenithSlider(Orientation orientation)
+    : orientation_(orientation) {
   // Start animation timer at 60 Hz
   startTimerHz(60);
 }
@@ -253,11 +258,13 @@ void ZenithSlider::drawTrack(juce::Graphics &g,
   if (orientation_ == Vertical) {
     // Vertical: fill from bottom up to value position
     float fillHeight = trackBounds.getHeight() * value_;
-    filledBounds = trackBounds.removeFromBottom(fillHeight);
+    filledBounds = trackBounds;
+    filledBounds = filledBounds.removeFromBottom(fillHeight);
   } else {
     // Horizontal: fill from left to value position
     float fillWidth = trackBounds.getWidth() * value_;
-    filledBounds = trackBounds.removeFromLeft(fillWidth);
+    filledBounds = trackBounds;
+    filledBounds = filledBounds.removeFromLeft(fillWidth);
   }
 
   // Value track gradient (Apple blue)

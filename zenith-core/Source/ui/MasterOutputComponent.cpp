@@ -6,6 +6,15 @@
  */
 
 #include "MasterOutputComponent.h"
+#ifdef ZENITH_USE_SKIA
+    #include <include/core/SkCanvas.h>
+    #include <include/core/SkPaint.h>
+    #include <include/core/SkFont.h>
+    #include <include/core/SkPath.h>
+    #include <include/core/SkRRect.h>
+    #include <include/effects/SkGradientShader.h>
+    #include "../Source/ui/skia/SkiaTheme.h"
+#endif
 #include "../../include/Engine.h"
 #include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
@@ -265,3 +274,15 @@ float MasterOutputComponent::gainToDb(float gain)
 }
 
 }  // namespace zenith
+
+#ifdef ZENITH_USE_SKIA
+void MasterOutputComponent::paintToSkia(SkCanvas* canvas, SkRect bounds)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    canvas->clear(theme.getColors().bg1);
+
+    SkPaint p;
+    p.setColor(theme.getColors().textStrong);
+    // TODO: Implement custom Skia rendering for MasterOutputComponent
+}
+#endif
