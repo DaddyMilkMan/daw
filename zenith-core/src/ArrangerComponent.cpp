@@ -4,6 +4,7 @@
  */
 
 #include "../Source/ui/ArrangerComponent.h"
+#include "../Source/rendering/SkiaContextManager.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
@@ -335,6 +336,18 @@ void ArrangerComponent::duplicateSelectedClips() {
 //==============================================================================
 
 void ArrangerComponent::paint(juce::Graphics &g) {
+#ifdef ZENITH_USE_SKIA
+  auto &manager = zenith::SkiaContextManager::getInstance();
+  if (manager.isInitialized()) {
+    manager.renderToComponent(*this, [this](SkCanvas *canvas) {
+      paintToSkia(canvas,
+                  SkRect::MakeWH((float)getWidth(), (float)getHeight()));
+    });
+    return;
+  }
+#endif
+
+  // JUCE Fallback (keep existing code below)
   paintBackground(g);
   paintTracks(g);
   paintClips(g);
@@ -706,7 +719,8 @@ juce::String ArrangerComponent::getTooltip() {
       auto clipName = clipNode[ProjectState::PROP_NAME].toString();
       auto startBeats = clipNode[ProjectState::PROP_START_BEATS].toString();
       auto lengthBeats = clipNode[ProjectState::PROP_LENGTH_BEATS].toString();
-      return clipName + " (" + startBeats + " beats, " + lengthBeats + " beats)";
+      return clipName + " (" + startBeats + " beats, " + lengthBeats +
+             " beats)";
     }
   }
 
@@ -774,17 +788,16 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
 }
 
 #ifdef ZENITH_USE_SKIA
-void ArrangerComponent::paintSkia(SkCanvas &canvas,
-                                  const juce::Rectangle<int> &bounds) {
+void ArrangerComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
   // Background
-  canvas.clear(SkColorSetRGB(30, 30, 30)); // 0xff1e1e1e
+  canvas->clear(SkColorSetRGB(30, 30, 30)); // 0xff1e1e1e
 
   // Tracks
   auto tracksNode =
       projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
   if (tracksNode.isValid()) {
     int numTracks = tracksNode.getNumChildren();
-    float width = (float)bounds.getWidth();
+    float width = bounds.width();
 
     SkPaint trackPaint;
     SkPaint dividerPaint;
@@ -809,30 +822,30 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
 
     for (int i = firstVisibleTrackIndex; i < numTracks; ++i) {
       float y = trackIndexToY(i);
-      if (y > bounds.getHeight())
+      if (y > bounds.height())
         break;
 
       // Track lane background
       SkColor laneColor =
           (i % 2 == 0) ? SkColorSetRGB(40, 40, 40) : SkColorSetRGB(35, 35, 35);
       trackPaint.setColor(laneColor);
-      canvas.drawRect(SkRect::MakeXYWH(0, y, width, trackHeight), trackPaint);
+      canvas->drawRect(SkRect::MakeXYWH(0, y, width, trackHeight), trackPaint);
 
       // Divider
-      canvas.drawLine(0, y, width, y, dividerPaint);
+      canvas->drawLine(0, y, width, y, dividerPaint);
 
       // Vertical grid lines
       for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
         float x = beatsToX(beat);
         if (x >= 0 && x <= width)
-          canvas.drawLine(x, y, x, y + trackHeight, gridPaint);
+          canvas->drawLine(x, y, x, y + trackHeight, gridPaint);
       }
 
       // Track name
       auto track = tracksNode.getChild(i);
       juce::String name = track[ProjectState::PROP_NAME].toString();
-      canvas.drawString(name.toRawUTF8(), 10, y + 20, trackFont,
-                        trackTextPaint);
+      canvas->drawString(name.toRawUTF8(), 10, y + 20, trackFont,
+                         trackTextPaint);
     }
   }
 
@@ -850,7 +863,7 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
       borderPaint.setColor(SkColorSetRGB(255, 255, 255));
       borderPaint.setStyle(SkPaint::kStroke_Style);
       borderPaint.setStrokeWidth(2.0f);
-      canvas.drawRect(clipRect, borderPaint);
+      canvas->drawRect(clipRect, borderPaint);
     }
 
     // Clip name
@@ -864,8 +877,8 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
         SkPaint textPaint;
         textPaint.setColor(SkColorSetARGB(204, 0, 0, 0)); // black alpha 0.8
         textPaint.setAntiAlias(true);
-        canvas.drawString(name.toRawUTF8(), clipRect.fLeft + 4,
-                          clipRect.fTop + 14, font, textPaint);
+        canvas->drawString(name.toRawUTF8(), clipRect.fLeft + 4,
+                           clipRect.fTop + 14, font, textPaint);
       }
     }
   }
@@ -874,9 +887,8 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
   {
     SkPaint rulerBgPaint;
     rulerBgPaint.setColor(SkColorSetRGB(42, 42, 42));
-    canvas.drawRect(
-        SkRect::MakeXYWH(0, 0, (float)bounds.getWidth(), rulerHeight),
-        rulerBgPaint);
+    canvas->drawRect(SkRect::MakeXYWH(0, 0, bounds.width(), rulerHeight),
+                     rulerBgPaint);
 
     SkPaint tickPaint;
     tickPaint.setColor(SkColorSetRGB(100, 100, 100));
@@ -890,20 +902,20 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
     textPaint.setAntiAlias(true);
 
     double startBeat = std::floor(viewStartBeats);
-    double endBeat = viewStartBeats + (bounds.getWidth() / pixelsPerBeat);
+    double endBeat = viewStartBeats + (bounds.width() / pixelsPerBeat);
 
     for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
       float x = beatsToX(beat);
-      if (x < 0 || x > bounds.getWidth())
+      if (x < 0 || x > bounds.width())
         continue;
 
-      canvas.drawLine(x, rulerHeight - 8.0f, x, rulerHeight, tickPaint);
+      canvas->drawLine(x, rulerHeight - 8.0f, x, rulerHeight, tickPaint);
 
       juce::String numStr = juce::String(static_cast<int>(beat + 1));
       float textWidth = font.measureText(numStr.toRawUTF8(), numStr.length(),
                                          SkTextEncoding::kUTF8);
-      canvas.drawString(numStr.toRawUTF8(), x - textWidth / 2, 15, font,
-                        textPaint);
+      canvas->drawString(numStr.toRawUTF8(), x - textWidth / 2, 15, font,
+                         textPaint);
     }
   }
 
@@ -915,12 +927,12 @@ void ArrangerComponent::paintSkia(SkCanvas &canvas,
 
     SkPaint fillPaint;
     fillPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
-    canvas.drawRect(mRect, fillPaint);
+    canvas->drawRect(mRect, fillPaint);
 
     SkPaint borderPaint;
     borderPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    canvas.drawRect(mRect, borderPaint);
+    canvas->drawRect(mRect, borderPaint);
   }
 }
 #endif

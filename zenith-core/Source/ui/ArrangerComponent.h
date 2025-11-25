@@ -1,9 +1,9 @@
 #pragma once
 
 #ifdef ZENITH_USE_SKIA
-    #include "../Source/ui/skia/SkiaComponent.h"
-    class SkCanvas;
-    struct SkRect;
+#include "../Source/ui/skia/SkiaComponent.h"
+class SkCanvas;
+struct SkRect;
 #endif
 
 #include "../../include/ProjectState.h"
@@ -52,10 +52,6 @@ public:
   void paint(juce::Graphics &g) override;
   void resized() override;
 
-#ifdef ZENITH_USE_SKIA
-  void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
-#endif
-
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
@@ -79,8 +75,8 @@ public:
   void valueTreeParentChanged(juce::ValueTree &tree) override {}
 
 #ifdef ZENITH_USE_SKIA
-    void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
-    bool supportsSkiaRendering() const override { return true; }
+  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
+  bool supportsSkiaRendering() const override { return true; }
 #endif
 
 private:
