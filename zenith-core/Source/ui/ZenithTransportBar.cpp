@@ -1,6 +1,8 @@
 /**
  * @file ZenithTransportBar.cpp
  * @brief Unified transport bar implementation
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens correctly
  */
 
 #include "ZenithTransportBar.h"
@@ -34,37 +36,37 @@ void ZenithTransportBar::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
     
-    // Background with subtle gradient
+    // DESIGN SYSTEM: Background with subtle gradient using elevation tokens
     juce::ColourGradient gradient(
-        juce::Colour(ZenithLookAndFeel::Colors::backgroundMid),
+        juce::Colour(ZenithLookAndFeel::Elevation::dp1),
         0.0f, 0.0f,
-        juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel),
+        juce::Colour(ZenithLookAndFeel::Elevation::dp2),
         0.0f, (float)getHeight(),
         false
     );
     g.setGradientFill(gradient);
     g.fillAll();
     
-    // Top border
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::border));
+    // DESIGN SYSTEM: Top border using borderSubtle
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
     g.drawLine(0.0f, 0.0f, (float)getWidth(), 0.0f, 1.0f);
     
-    // Bottom border (stronger)
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderLight));
+    // DESIGN SYSTEM: Bottom border using borderMedium (stronger)
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium));
     g.drawLine(0.0f, (float)getHeight(), (float)getWidth(), (float)getHeight(), 1.0f);
     
-    // Left section: Project name
-    auto leftSection = bounds.removeFromLeft(200).reduced(ZenithLookAndFeel::Metrics::spacingM, 0);
+    // DESIGN SYSTEM: Left section: Project name using textPrimary
+    auto leftSection = bounds.removeFromLeft(200).reduced(ZenithLookAndFeel::Spacing::m, 0);
     g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
-    g.setFont(ZenithLookAndFeel::getFontHeading());
+    g.setFont(ZenithLookAndFeel::Typography::getH4());
     g.drawText("Zenith DAW", leftSection, juce::Justification::centredLeft, true);
     
     // Right section: Status displays
-    auto rightSection = bounds.removeFromRight(400).reduced(ZenithLookAndFeel::Metrics::spacingM, 0);
+    auto rightSection = bounds.removeFromRight(400).reduced(ZenithLookAndFeel::Spacing::m, 0);
     
-    // Track count (rightmost)
+    // DESIGN SYSTEM: Track count using textSecondary (rightmost)
     auto trackCountArea = rightSection.removeFromRight(100);
-    g.setFont(ZenithLookAndFeel::getFontSmall());
+    g.setFont(ZenithLookAndFeel::Typography::getSmall());
     g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     g.drawText(juce::String(trackCount_) + " tracks", trackCountArea, juce::Justification::centredRight, true);
     
@@ -72,48 +74,48 @@ void ZenithTransportBar::paint(juce::Graphics& g)
     auto cpuArea = rightSection.removeFromRight(80);
     g.drawText(cpuDisplay_, cpuArea, juce::Justification::centredRight, true);
     
-    // Tempo
+    // DESIGN SYSTEM: Tempo using textPrimary
     auto tempoArea = rightSection.removeFromRight(80);
-    g.setFont(ZenithLookAndFeel::getFontBody());
+    g.setFont(ZenithLookAndFeel::Typography::getBody());
     g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
     g.drawText(tempoDisplay_, tempoArea, juce::Justification::centredRight, true);
     
     // Time display
     auto timeArea = rightSection.removeFromRight(120);
-    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    g.setFont(ZenithLookAndFeel::Typography::getH4());
     g.drawText(timeDisplay_, timeArea, juce::Justification::centredRight, true);
     
     // Center section: Transport controls
-    // Draw play button
+    // DESIGN SYSTEM: Draw play button with playGreen semantic color
     bool isPlaying = engine_.isPlaying();
     drawTransportButton(g, getPlayButtonBounds(), 
-                       u8"\u25B6", // Play triangle
+                       juce::CharPointer_UTF8("\xe2\x96\xb6"), // Play triangle
                        juce::Colour(ZenithLookAndFeel::Colors::playGreen),
                        isPlaying,
                        playHovered_,
                        playPressed_);
     
-    // Stop button
+    // DESIGN SYSTEM: Stop button with stopGrey color
     drawTransportButton(g, getStopButtonBounds(),
-                       u8"\u25A0", // Stop square
+                       juce::CharPointer_UTF8("\xe2\x96\xa0"), // Stop square
                        juce::Colour(ZenithLookAndFeel::Colors::stopGrey),
                        !isPlaying,
                        stopHovered_,
                        stopPressed_);
     
-    // Record button
+    // DESIGN SYSTEM: Record button with recordRed color
     bool isRecording = engine_.isRecording();
     drawTransportButton(g, getRecordButtonBounds(),
-                       u8"\u25CF", // Record circle
+                       juce::CharPointer_UTF8("\xe2\x97\x8f"), // Record circle
                        juce::Colour(ZenithLookAndFeel::Colors::recordRed),
                        isRecording,
                        recordHovered_,
                        recordPressed_);
     
-    // Loop button
+    // DESIGN SYSTEM: Loop button with accentSecondary color
     bool isLooping = engine_.isLooping();
     drawTransportButton(g, getLoopButtonBounds(),
-                       u8"\u27F3", // Loop arrow
+                       juce::CharPointer_UTF8("\xe2\x9f\xb3"), // Loop arrow
                        juce::Colour(ZenithLookAndFeel::Colors::accentSecondary),
                        isLooping,
                        loopHovered_,
@@ -128,9 +130,6 @@ void ZenithTransportBar::resized()
 void ZenithTransportBar::timerCallback()
 {
     // Update time display
-    double playheadPosition = engine_.getPlaybackPositionBeats();
-    timeDisplay_ = formatTime(playheadPosition * (60.0 / engine_.getTempoMap().getTempoAt(playheadPosition))); // Convert beats to seconds approx or use getPlayheadSamples / SampleRate
-    // Better: Use getPlayheadSamples / SampleRate
     double currentSeconds = (double)engine_.getPlayheadSamples() / engine_.getSampleRate();
     timeDisplay_ = formatTime(currentSeconds);
     
@@ -172,7 +171,7 @@ void ZenithTransportBar::mouseUp(const juce::MouseEvent& event)
     if (playPressed_ && getPlayButtonBounds().contains(pos))
     {
         if (engine_.isPlaying())
-            engine_.stop(); // Toggle behavior if desired, or just play
+            engine_.stop();
         else
             engine_.play();
         DBG("Transport: Play/Stop");
@@ -230,11 +229,13 @@ void ZenithTransportBar::mouseMove(const juce::MouseEvent& event)
 
 void ZenithTransportBar::mouseEnter(const juce::MouseEvent& event)
 {
+    juce::ignoreUnused(event);
     setMouseCursor(juce::MouseCursor::PointingHandCursor);
 }
 
 void ZenithTransportBar::mouseExit(const juce::MouseEvent& event)
 {
+    juce::ignoreUnused(event);
     playHovered_ = false;
     stopHovered_ = false;
     recordHovered_ = false;
@@ -257,34 +258,34 @@ void ZenithTransportBar::drawTransportButton(juce::Graphics& g,
 {
     auto buttonBounds = bounds.toFloat().reduced(2.0f);
     
-    // Background circle
+    // DESIGN SYSTEM: Background circle using elevation tokens
     juce::Colour bgColor;
     if (isPressed)
         bgColor = color.darker(0.3f);
     else if (isActive)
         bgColor = color;
     else if (isHovered)
-        bgColor = juce::Colour(ZenithLookAndFeel::Colors::backgroundLight);
+        bgColor = juce::Colour(ZenithLookAndFeel::Elevation::dp8);  // Hover uses elevated surface
     else
-        bgColor = juce::Colour(ZenithLookAndFeel::Colors::backgroundPanel);
+        bgColor = juce::Colour(ZenithLookAndFeel::Elevation::dp2);  // Default uses panel surface
     
     g.setColour(bgColor);
     g.fillEllipse(buttonBounds);
     
-    // Border
+    // DESIGN SYSTEM: Border using borderSubtle when not active
     if (!isActive)
     {
-        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::border));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
         g.drawEllipse(buttonBounds, 1.0f);
     }
     
-    // Symbol
+    // DESIGN SYSTEM: Symbol color - textOnAccent when active, color.brighter when not
     juce::Colour symbolColor = isActive 
-        ? juce::Colour(0xff000000) // Black on active background
+        ? juce::Colour(ZenithLookAndFeel::Colors::textOnAccent) // Black on active background
         : color.brighter(0.3f);
     
     g.setColour(symbolColor);
-    g.setFont(juce::FontOptions(20.0f, juce::Font::bold));
+    g.setFont(ZenithLookAndFeel::Typography::getH2());
     g.drawText(symbol, buttonBounds.toNearestInt(), juce::Justification::centred, true);
 }
 
@@ -295,7 +296,7 @@ void ZenithTransportBar::drawTransportButton(juce::Graphics& g,
 juce::Rectangle<int> ZenithTransportBar::getPlayButtonBounds() const
 {
     int buttonSize = 40;
-    int spacing = 8;
+    int spacing = ZenithLookAndFeel::Spacing::s;
     int totalWidth = buttonSize * 4 + spacing * 3;
     int startX = (getWidth() - totalWidth) / 2;
     int y = (getHeight() - buttonSize) / 2;
@@ -306,7 +307,7 @@ juce::Rectangle<int> ZenithTransportBar::getPlayButtonBounds() const
 juce::Rectangle<int> ZenithTransportBar::getStopButtonBounds() const
 {
     int buttonSize = 40;
-    int spacing = 8;
+    int spacing = ZenithLookAndFeel::Spacing::s;
     int totalWidth = buttonSize * 4 + spacing * 3;
     int startX = (getWidth() - totalWidth) / 2;
     int y = (getHeight() - buttonSize) / 2;
@@ -317,7 +318,7 @@ juce::Rectangle<int> ZenithTransportBar::getStopButtonBounds() const
 juce::Rectangle<int> ZenithTransportBar::getRecordButtonBounds() const
 {
     int buttonSize = 40;
-    int spacing = 8;
+    int spacing = ZenithLookAndFeel::Spacing::s;
     int totalWidth = buttonSize * 4 + spacing * 3;
     int startX = (getWidth() - totalWidth) / 2;
     int y = (getHeight() - buttonSize) / 2;
@@ -328,7 +329,7 @@ juce::Rectangle<int> ZenithTransportBar::getRecordButtonBounds() const
 juce::Rectangle<int> ZenithTransportBar::getLoopButtonBounds() const
 {
     int buttonSize = 40;
-    int spacing = 8;
+    int spacing = ZenithLookAndFeel::Spacing::s;
     int totalWidth = buttonSize * 4 + spacing * 3;
     int startX = (getWidth() - totalWidth) / 2;
     int y = (getHeight() - buttonSize) / 2;
@@ -360,4 +361,3 @@ juce::String ZenithTransportBar::formatTempo(double bpm)
 }
 
 } // namespace zenith
-

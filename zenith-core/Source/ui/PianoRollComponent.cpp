@@ -6,6 +6,8 @@
     Author:  Zenith DAW - Phase 4: Piano Roll MIDI Editor
 
     Piano roll implementation
+    
+    DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens
 
   ==============================================================================
 */
@@ -16,6 +18,7 @@
 #include "../../include/Engine.h"
 #include "../../include/ProjectState.h"
 #include "../../include/TempoMap.h"
+#include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
 //==============================================================================
 // Piano RollComponent Implementation
@@ -55,8 +58,8 @@ PianoRollComponent::~PianoRollComponent()
 
 void PianoRollComponent::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    // DESIGN SYSTEM: Background using dp4 elevation
+    g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp4));
 
     auto bounds = getLocalBounds();
 
@@ -244,8 +247,8 @@ void PianoRollComponent::setNoteHeight(float height)
 
 void PianoRollComponent::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    // Background
-    g.setColour(juce::Colour(0xff3a3a3a));
+    // DESIGN SYSTEM: Background using dp2 elevation
+    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp2));
     g.fillRect(bounds);
 
     // Draw keys
@@ -257,16 +260,16 @@ void PianoRollComponent::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> b
         int noteInOctave = noteNumber % 12;
         bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 || noteInOctave == 8 || noteInOctave == 10);
 
-        // Draw key
+        // DESIGN SYSTEM: Draw key using elevation tokens
         if (isBlackKey)
-            g.setColour(juce::Colour(0xff1a1a1a));
+            g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp0));  // Darkest for black keys
         else
-            g.setColour(juce::Colour(0xff4a4a4a));
+            g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp8));  // Lighter for white keys
 
         g.fillRect(bounds.getX(), static_cast<int>(y), bounds.getWidth(), static_cast<int>(noteHeight));
 
-        // Draw border
-        g.setColour(juce::Colours::black);
+        // DESIGN SYSTEM: Draw border using borderSubtle
+        g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderSubtle));
         g.drawHorizontalLine(static_cast<int>(y), static_cast<float>(bounds.getX()), static_cast<float>(bounds.getRight()));
 
         // Draw note name for C notes
@@ -275,8 +278,9 @@ void PianoRollComponent::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> b
             int octave = noteNumber / 12 - 1;
             juce::String noteName = "C" + juce::String(octave);
 
-            g.setColour(juce::Colours::lightgrey);
-            g.setFont(juce::FontOptions(10.0f));
+            // DESIGN SYSTEM: Text using textSecondary
+            g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::textSecondary));
+            g.setFont(zenith::ZenithLookAndFeel::Typography::getTiny());
             g.drawText(noteName,
                       bounds.getX() + 2,
                       static_cast<int>(y),
@@ -287,15 +291,15 @@ void PianoRollComponent::drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> b
         }
     }
 
-    // Border
-    g.setColour(juce::Colours::black);
+    // DESIGN SYSTEM: Border using borderMedium
+    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderMedium));
     g.drawVerticalLine(bounds.getRight(), static_cast<float>(bounds.getY()), static_cast<float>(bounds.getBottom()));
 }
 
 void PianoRollComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds)
 {
-    // Vertical grid lines (beats)
-    g.setColour(juce::Colour(0xff3a3a3a).withAlpha(0.3f));
+    // DESIGN SYSTEM: Vertical grid lines (beats) using borderSubtle
+    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderSubtle).withAlpha(0.3f));
 
     int maxBeats = static_cast<int>(pixelsToBeats(static_cast<float>(getWidth() - pianoKeysWidth)) + 1);
 
@@ -305,11 +309,11 @@ void PianoRollComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds
 
         if (x >= bounds.getX() && x <= bounds.getRight())
         {
-            // Thicker line every 4 beats (bar line)
+            // DESIGN SYSTEM: Thicker line every 4 beats using borderMedium
             if (beat % 4 == 0)
-                g.setColour(juce::Colour(0xff5a5a5a).withAlpha(0.5f));
+                g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderMedium).withAlpha(0.5f));
             else
-                g.setColour(juce::Colour(0xff3a3a3a).withAlpha(0.3f));
+                g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderSubtle).withAlpha(0.3f));
 
             g.drawVerticalLine(static_cast<int>(x),
                              static_cast<float>(bounds.getY()),
@@ -317,8 +321,8 @@ void PianoRollComponent::drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds
         }
     }
 
-    // Horizontal grid lines (semitones)
-    g.setColour(juce::Colour(0xff3a3a3a).withAlpha(0.3f));
+    // DESIGN SYSTEM: Horizontal grid lines using borderSubtle
+    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::borderSubtle).withAlpha(0.3f));
 
     for (int noteNumber = lowestNote; noteNumber <= highestNote; ++noteNumber)
     {
@@ -336,17 +340,17 @@ void PianoRollComponent::drawNotes(juce::Graphics& g, juce::Rectangle<int> bound
 
     for (const auto& note : noteCache)
     {
-        // Note color
+        // DESIGN SYSTEM: Note color using semantic colors
         if (&note == selectedNote)
-            g.setColour(juce::Colours::yellow);
+            g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::warning));  // Yellow/amber for selected
         else
-            g.setColour(juce::Colours::green.brighter(0.2f));
+            g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::success).brighter(0.2f));  // Green for normal
 
         // Draw note rectangle
         g.fillRect(note.bounds.reduced(1.0f));
 
-        // Border
-        g.setColour(juce::Colours::black);
+        // DESIGN SYSTEM: Border using dp0
+        g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp0));
         g.drawRect(note.bounds, 1.0f);
     }
 }
@@ -544,7 +548,7 @@ void PianoRollComponent::moveNote(NoteVisual* note, int newNoteNumber, double ne
     // Delete old note
     deleteNote(note->noteNumber, note->startTime);
 
-    // Create new note at std::make_unique<position>(preserve duration and velocity)
+    // Create new note at new position (preserve duration and velocity)
     double durationBeats = note->duration / (currentSampleRate * 60.0 / currentTempo);
     createNote(newNoteNumber, newStartBeats, durationBeats, note->velocity);
 }
@@ -564,7 +568,7 @@ double PianoRollComponent::snapToGrid(double beats) const
 
 PianoRollWindow::PianoRollWindow(zenith::Track::Clip* clipToEdit, Engine& engineRef)
     : DocumentWindow(clipToEdit != nullptr ? "Piano Roll - " + clipToEdit->getName() : "Piano Roll",
-                     juce::Colours::darkgrey,
+                     juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp2),  // DESIGN SYSTEM: Use elevation
                      DocumentWindow::allButtons),
       clip(clipToEdit),
       engine(engineRef)
@@ -601,4 +605,3 @@ void PianoRollWindow::closeButtonPressed()
     // Just delete this window
     delete this;
 }
-

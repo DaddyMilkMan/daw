@@ -16,8 +16,21 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
 #include "ProjectState.h"
+
+#ifdef ZENITH_USE_SKIA
+    #include <include/core/SkCanvas.h>
+    #include "../Source/ui/skia/SkiaTheme.h"
+#endif
 
 //==============================================================================
 /**
@@ -62,13 +75,13 @@ public:
      * @brief Set horizontal zoom (pixels per beat)
      * @param ppb Pixels per beat (e.g. 100.0)
      */
-    void setPixelsPerBeat(double ppb) [[maybe_unused]];
+    void setPixelsPerBeat(double ppb);
 
     /**
      * @brief Set horizontal scroll offset
      * @param offset Offset in beats
      */
-    void setScrollOffsetBeats(double offset) [[maybe_unused]];
+    void setScrollOffsetBeats(double offset);
 
     /**
      * @brief Enable/disable grid snapping
@@ -118,6 +131,8 @@ public:
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
+    void mouseMove(const juce::MouseEvent& e) override;
+    void mouseExit(const juce::MouseEvent& e) override;
 
     //==========================================================================
     // ValueTree::Listener Interface
@@ -125,8 +140,8 @@ public:
 
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
 
 private:
     //==========================================================================
@@ -178,6 +193,15 @@ private:
     double dragStartTimeBeats = 0.0;
     double dragStartValue = 0.0;
     bool isDragging = false;
+
+    //==========================================================================
+    // Hover State (for tooltips and visual feedback)
+    //==========================================================================
+
+    juce::String hoveredPointId;
+    juce::Point<float> hoveredPointScreenPos;
+    double hoveredPointTime = 0.0;
+    double hoveredPointValue = 0.0;
 
     //==========================================================================
     // Coordinate Conversion

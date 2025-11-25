@@ -72,7 +72,15 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
 #include "Instrument.h"
 #include <array>
 
@@ -220,12 +228,12 @@ struct ModulationState
         return values[static_cast<size_t>(dest)];
     }
 
-    void set(ModulationDestination dest, float value) [[maybe_unused]]
+    void set(ModulationDestination dest, float value)
     {
         values[static_cast<size_t>(dest)] = value;
     }
 
-    void add(ModulationDestination dest, float value) [[maybe_unused]]
+    void add(ModulationDestination dest, float value)
     {
         values[static_cast<size_t>(dest)] += value;
     }
@@ -240,9 +248,9 @@ class ZenithOscillator
 public:
     ZenithOscillator() = default;
 
-    void setWaveform(OscillatorWaveform waveform) [[maybe_unused]] { waveform_ = waveform; }
-    void setDetune(float detuneCents) [[maybe_unused]] { detuneCents_ = detuneCents; }
-    void setSampleRate(double sampleRate) [[maybe_unused]] { sampleRate_ = sampleRate; }
+    void setWaveform(OscillatorWaveform waveform) { waveform_ = waveform; }
+    void setDetune(float detuneCents) { detuneCents_ = detuneCents; }
+    void setSampleRate(double sampleRate) { sampleRate_ = sampleRate; }
     void reset() { phase_ = 0.0; }
 
     /**
@@ -276,11 +284,11 @@ class ZenithFilter
 public:
     ZenithFilter() = default;
 
-    void setType(FilterType type) [[maybe_unused]] { type_ = type; }
-    void setSampleRate(double sampleRate) [[maybe_unused]];
-    void setCutoff(float cutoffHz) [[maybe_unused]];
-    void setResonance(float resonance) [[maybe_unused]];
-    void setDrive(float drive) [[maybe_unused]] { drive_ = drive; }
+    void setType(FilterType type) { type_ = type; }
+    void setSampleRate(double sampleRate);
+    void setCutoff(float cutoffHz);
+    void setResonance(float resonance);
+    void setDrive(float drive) { drive_ = drive; }
     void reset();
 
     /**
@@ -342,55 +350,55 @@ public:
     ~ZenithPolySynthVoice() override = default;
 
     bool canPlaySound(juce::SynthesiserSound* sound) override;
-    void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition) [[maybe_unused]] override;
-    void stopNote(float velocity, bool allowTailOff) [[maybe_unused]] override;
-    void pitchWheelMoved(int newPitchWheelValue) [[maybe_unused]] override;
-    void controllerMoved(int controllerNumber, int newControllerValue) [[maybe_unused]] override;
-    void channelPressureChanged(int newChannelPressureValue) [[maybe_unused]] override;
-    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) [[maybe_unused]] override;
+    void startNote(int midiNoteNumber, float velocity, juce::SynthesiserSound* sound, int currentPitchWheelPosition) override;
+    void stopNote(float velocity, bool allowTailOff) override;
+    void pitchWheelMoved(int newPitchWheelValue) override;
+    void controllerMoved(int controllerNumber, int newControllerValue) override;
+    void channelPressureChanged(int newChannelPressureValue) override;
+    void renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples) override;
 
     //==========================================================================
     // Parameter setters (called from message thread or via atomic parameters)
     //==========================================================================
-    void setOsc1Waveform(OscillatorWaveform waveform) [[maybe_unused]] { osc1_.setWaveform(waveform); }
-    void setOsc2Waveform(OscillatorWaveform waveform) [[maybe_unused]] { osc2_.setWaveform(waveform); }
-    void setOsc3Waveform(OscillatorWaveform waveform) [[maybe_unused]] { osc3_.setWaveform(waveform); }
+    void setOsc1Waveform(OscillatorWaveform waveform) { osc1_.setWaveform(waveform); }
+    void setOsc2Waveform(OscillatorWaveform waveform) { osc2_.setWaveform(waveform); }
+    void setOsc3Waveform(OscillatorWaveform waveform) { osc3_.setWaveform(waveform); }
 
-    void setOsc1Detune(float cents) [[maybe_unused]] { osc1_.setDetune(cents); }
-    void setOsc2Detune(float cents) [[maybe_unused]] { osc2_.setDetune(cents); }
-    void setOsc3Detune(float cents) [[maybe_unused]] { osc3_.setDetune(cents); }
+    void setOsc1Detune(float cents) { osc1_.setDetune(cents); }
+    void setOsc2Detune(float cents) { osc2_.setDetune(cents); }
+    void setOsc3Detune(float cents) { osc3_.setDetune(cents); }
 
-    void setOsc1Mix(float mix) [[maybe_unused]] { osc1Mix_ = mix; }
-    void setOsc2Mix(float mix) [[maybe_unused]] { osc2Mix_ = mix; }
-    void setOsc3Mix(float mix) [[maybe_unused]] { osc3Mix_ = mix; }
+    void setOsc1Mix(float mix) { osc1Mix_ = mix; }
+    void setOsc2Mix(float mix) { osc2Mix_ = mix; }
+    void setOsc3Mix(float mix) { osc3Mix_ = mix; }
 
-    void setUnisonVoices(int voices) [[maybe_unused]] { unisonVoices_ = juce::jlimit(1, 7, voices); }
-    void setUnisonDetune(float cents) [[maybe_unused]] { unisonDetune_ = cents; }
+    void setUnisonVoices(int voices) { unisonVoices_ = juce::jlimit(1, 7, voices); }
+    void setUnisonDetune(float cents) { unisonDetune_ = cents; }
 
-    void setFilterType(FilterType type) [[maybe_unused]] { filter1_.setType(type); }
-    void setFilterCutoff(float cutoff) [[maybe_unused]] { filterCutoff_ = cutoff; }
-    void setFilterResonance(float resonance) [[maybe_unused]] { filter1_.setResonance(resonance); }
-    void setFilterDrive(float drive) [[maybe_unused]] { filter1_.setDrive(drive); }
+    void setFilterType(FilterType type) { filter1_.setType(type); }
+    void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
+    void setFilterResonance(float resonance) { filter1_.setResonance(resonance); }
+    void setFilterDrive(float drive) { filter1_.setDrive(drive); }
     
-    void setFilter2Type(FilterType type) [[maybe_unused]] { filter2_.setType(type); }
-    void setFilter2Cutoff(float cutoff) [[maybe_unused]] { filter2Cutoff_ = cutoff; }
-    void setFilter2Resonance(float resonance) [[maybe_unused]] { filter2_.setResonance(resonance); }
-    void setFilterRouting(bool serial) [[maybe_unused]] { filterSerial_ = serial; }
+    void setFilter2Type(FilterType type) { filter2_.setType(type); }
+    void setFilter2Cutoff(float cutoff) { filter2Cutoff_ = cutoff; }
+    void setFilter2Resonance(float resonance) { filter2_.setResonance(resonance); }
+    void setFilterRouting(bool serial) { filterSerial_ = serial; }
 
-    void setAmpEnvelope(float attack, float decay, float sustain, float release) [[maybe_unused]];
-    void setModEnvelope(float attack, float decay, float sustain, float release) [[maybe_unused]];
+    void setAmpEnvelope(float attack, float decay, float sustain, float release);
+    void setModEnvelope(float attack, float decay, float sustain, float release);
 
-    void setLFO1(float rate, float amount, LFOTarget target) [[maybe_unused]];
-    void setLFO2(float rate, float amount, LFOTarget target) [[maybe_unused]];
+    void setLFO1(float rate, float amount, LFOTarget target);
+    void setLFO2(float rate, float amount, LFOTarget target);
 
-    void setGlideTime(float glideTimeSeconds) [[maybe_unused]] { glideTime_ = glideTimeSeconds; }
-    void setMonoMode(bool mono) [[maybe_unused]] { monoMode_ = mono; }
-    void setQualityPreset(QualityPreset quality) [[maybe_unused]] { qualityPreset_ = quality; }
+    void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
+    void setMonoMode(bool mono) { monoMode_ = mono; }
+    void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
     
     void setDistortion(float amount) { effects_.setDistortion(amount); }
     void setChorus(float amount) { effects_.setChorus(amount); }
 
-    void setSampleRate(double sampleRate) [[maybe_unused]];
+    void setSampleRate(double sampleRate);
 
     //==========================================================================
     // Modulation Matrix Control
@@ -409,8 +417,8 @@ public:
     /**
      * @brief Set MIDI controller values (called from controllerMoved)
      */
-    void setModWheel(float value) [[maybe_unused]] { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
-    void setAftertouch(float value) [[maybe_unused]] { aftertouch_ = juce::jlimit(0.0f, 1.0f, value); }
+    void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
+    void setAftertouch(float value) { aftertouch_ = juce::jlimit(0.0f, 1.0f, value); }
 
     /**
      * @brief Get current output amplitude for voice stealing
@@ -653,7 +661,7 @@ public:
     const juce::String getProgramName(int) override { return "Default"; }
     void changeProgramName(int, const juce::String&) override {}
 
-    void prepareToPlay(double sampleRate, int samplesPerBlock) [[maybe_unused]] override;
+    void prepareToPlay(double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
     void processBlock(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages) override;
 
@@ -661,7 +669,7 @@ public:
     bool hasEditor() const override { return false; }
 
     void getStateInformation(juce::MemoryBlock& destData) override;
-    void setStateInformation(const void* data, int sizeInBytes) [[maybe_unused]] override;
+    void setStateInformation(const void* data, int sizeInBytes) override;
 
 protected:
     //==========================================================================

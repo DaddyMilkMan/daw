@@ -1,10 +1,13 @@
 /**
  * @file ZenithButton.cpp
  * @brief Implementation of beautiful custom button component
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens
  */
 
 #include "ui/ZenithButton.h"
 #include "AudioFeedback.h"
+#include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
 namespace zenith {
 
@@ -150,23 +153,24 @@ void ZenithButton::drawButton(juce::Graphics& g, const juce::Rectangle<float>& b
     auto scaledBounds = bounds.withSizeKeepingCentre(
         bounds.getWidth() * scale, bounds.getHeight() * scale);
 
-    float cornerRadius = 8.0f;
+    // DESIGN SYSTEM: Use Radius::l for corner radius
+    float cornerRadius = ZenithLookAndFeel::Radius::l;
 
-    // Shadow (only when not pressed)
+    // DESIGN SYSTEM: Shadow using dp0 (base background)
     if (pressAnimation_ < 0.5f && isEnabled())
     {
         float shadowAlpha = 0.4f * (1.0f - pressAnimation_);
-        g.setColour(juce::Colour(0x00000000).withAlpha(shadowAlpha));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp0).withAlpha(shadowAlpha));
         g.fillRoundedRectangle(scaledBounds.translated(0.0f, 2.0f), cornerRadius);
     }
 
     // Get colors based on style and state
     juce::Colour baseColor = getBaseColour();
 
-    // Disabled state
+    // DESIGN SYSTEM: Disabled state using dp4
     if (!isEnabled())
     {
-        baseColor = juce::Colour(0xff3a3a3a);
+        baseColor = juce::Colour(ZenithLookAndFeel::Elevation::dp4);
     }
     // Toggle state (brighter)
     else if (isToggled_)
@@ -187,10 +191,10 @@ void ZenithButton::drawButton(juce::Graphics& g, const juce::Rectangle<float>& b
     g.setGradientFill(buttonGradient);
     g.fillRoundedRectangle(scaledBounds, cornerRadius);
 
-    // Inner highlight at top (30%)
+    // DESIGN SYSTEM: Inner highlight using textPrimary with alpha
     if (isEnabled())
     {
-        g.setColour(juce::Colour(0xffffffff).withAlpha(0.12f));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(0.12f));
         auto highlightBounds = scaledBounds.withHeight(scaledBounds.getHeight() * 0.3f);
         g.fillRoundedRectangle(highlightBounds, cornerRadius);
     }
@@ -211,43 +215,44 @@ void ZenithButton::drawButton(juce::Graphics& g, const juce::Rectangle<float>& b
         g.drawRoundedRectangle(scaledBounds.expanded(3.0f), cornerRadius, 3.0f);
     }
 
-    // Button text
+    // DESIGN SYSTEM: Button text using textPrimary/textDisabled
     if (buttonText_.isNotEmpty())
     {
         juce::Colour textColor = isEnabled()
-            ? juce::Colour(0xffffffff).withAlpha(0.95f)
-            : juce::Colour(0xffffffff).withAlpha(0.3f);
+            ? juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(0.95f)
+            : juce::Colour(ZenithLookAndFeel::Colors::textDisabled);
 
         g.setColour(textColor);
-        g.setFont(14.0f);
+        g.setFont(ZenithLookAndFeel::Typography::getBody());
         g.drawText(buttonText_, scaledBounds, juce::Justification::centred);
     }
 
-    // Pressed overlay (darker)
+    // DESIGN SYSTEM: Pressed overlay using dp0
     if (isPressed_ && pressAnimation_ > 0.01f)
     {
-        g.setColour(juce::Colour(0x00000000).withAlpha(0.2f * pressAnimation_));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp0).withAlpha(0.2f * pressAnimation_));
         g.fillRoundedRectangle(scaledBounds, cornerRadius);
     }
 }
 
 juce::Colour ZenithButton::getBaseColour() const
 {
+    // DESIGN SYSTEM: Map button styles to design tokens
     switch (style_)
     {
         case Primary:
-            return juce::Colour(0xff4a9eff);  // Apple blue
+            return juce::Colour(ZenithLookAndFeel::Colors::accentPrimary);  // Cyan
         case Secondary:
-            return juce::Colour(0xff3a3a3a);  // Dark gray
+            return juce::Colour(ZenithLookAndFeel::Elevation::dp4);  // Elevated surface
         case Success:
-            return juce::Colour(0xff34c759);  // Apple green
+            return juce::Colour(ZenithLookAndFeel::Colors::success);  // Green
         case Danger:
-            return juce::Colour(0xffff453a);  // Apple red
+            return juce::Colour(ZenithLookAndFeel::Colors::danger);  // Red
         case Warning:
-            return juce::Colour(0xffff9500);  // Apple orange
+            return juce::Colour(ZenithLookAndFeel::Colors::warning);  // Amber
         default:
-            return juce::Colour(0xff4a9eff);
-    \n    default: break;\n\n    default: break;\n}
+            return juce::Colour(ZenithLookAndFeel::Colors::accentPrimary);
+    }
 }
 
 juce::Colour ZenithButton::getHoverColour() const
@@ -257,5 +262,3 @@ juce::Colour ZenithButton::getHoverColour() const
 }
 
 }  // namespace zenith
-
-

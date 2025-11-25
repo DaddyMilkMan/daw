@@ -1,0 +1,51 @@
+
+=== Zenith DAW Preset Regression Tests ===
+
+=== Test Suite 1: Preset Loading & Audio Rendering ===
+
+--- Testing ZenithPolySynth Presets ---
+[INFO] Testing 5 presets for zenith_poly_synth
+[PASS] zenith_poly_synth::Bright Lead [Load]
+[PASS] zenith_poly_synth::Bright Lead [Audio]
+[PASS] zenith_poly_synth::Bright Lead [MultiBlock]
+[PASS] zenith_poly_synth::Deep Bass [Load]
+[PASS] zenith_poly_synth::Deep Bass [Audio]
+[PASS] zenith_poly_synth::Deep Bass [MultiBlock]
+[PASS] zenith_poly_synth::Acid Squelch [Load]
+[PASS] zenith_poly_synth::Acid Squelch [Audio]
+[PASS] zenith_poly_synth::Acid Squelch [MultiBlock]
+[PASS] zenith_poly_synth::303 Tribute [Load]
+[PASS] zenith_poly_synth::303 Tribute [Audio]
+[PASS] zenith_poly_synth::303 Tribute [MultiBlock]
+[PASS] zenith_poly_synth::Vocal Formant [Load]
+[PASS] zenith_poly_synth::Vocal Formant [Audio]
+[PASS] zenith_poly_synth::Vocal Formant [MultiBlock]
+
+--- Testing ZenithSampler Presets ---
+[INFO] Testing 3 presets for zenith_sampler
+[PASS] zenith_sampler::LoFi Vinyl [Load]
+[FAIL] zenith_sampler::LoFi Vinyl [Audio] (Audio Output): Expected non-zero output but got silence (RMS: 0.000000)
+[PASS] zenith_sampler::LoFi Vinyl [MultiBlock]
+[PASS] zenith_sampler::Natural Acoustic [Load]
+[FAIL] zenith_sampler::Natural Acoustic [Audio] (Audio Output): Expected non-zero output but got silence (RMS: 0.000000)
+[PASS] zenith_sampler::Natural Acoustic [MultiBlock]
+[PASS] zenith_sampler::Punchy Drums [Load]
+[FAIL] zenith_sampler::Punchy Drums [Audio] (Audio Output): Expected non-zero output but got silence (RMS: 0.000000)
+[PASS] zenith_sampler::Punchy Drums [MultiBlock]
+
+=== Test Suite 2: Golden-Value Regression Test ===
+
+[PASS] Golden-Value [Supersaw Classic]
+
+=== Test Summary ===
+Total tests: 25
+Passed: 22
+Failed: 3
+
+Γ£ù 3 test failures detected:
+
+Audio Output failures (3):
+  - zenith_sampler::LoFi Vinyl [Audio]: Expected non-zero output but got silence (RMS: 0.000000)
+  - zenith_sampler::Natural Acoustic [Audio]: Expected non-zero output but got silence (RMS: 0.000000)
+  - zenith_sampler::Punchy Drums [Audio]: Expected non-zero output but got silence (RMS: 0.000000)
+

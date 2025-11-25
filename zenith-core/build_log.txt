@@ -1,37 +1,466 @@
-[ 10%] Built target SynthHeadlessTest_rc_lib
-[ 10%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/Source/instruments/ZenithPolySynth.cpp.obj
-ZenithPolySynth.cpp
-[ 20%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/Source/instruments/Instrument.cpp.obj
-Instrument.cpp
-[ 20%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_core/juce_core.cpp.obj
-juce_core.cpp
-[ 20%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_core/juce_core_CompilationTime.cpp.obj
-juce_core_CompilationTime.cpp
-[ 30%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_data_structures/juce_data_structures.cpp.obj
-juce_data_structures.cpp
-[ 30%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_events/juce_events.cpp.obj
-juce_events.cpp
-[ 40%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_audio_basics/juce_audio_basics.cpp.obj
-juce_audio_basics.cpp
-[ 40%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors.cpp.obj
-juce_audio_processors.cpp
-[ 50%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_ara.cpp.obj
-juce_audio_processors_ara.cpp
-[ 50%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_audio_processors/juce_audio_processors_lv2_libs.cpp.obj
-juce_audio_processors_lv2_libs.cpp
-[ 60%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_gui_extra/juce_gui_extra.cpp.obj
-juce_gui_extra.cpp
-[ 60%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_gui_basics/juce_gui_basics.cpp.obj
-juce_gui_basics.cpp
-[ 70%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_graphics/juce_graphics.cpp.obj
-juce_graphics.cpp
-[ 70%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_graphics/juce_graphics_Harfbuzz.cpp.obj
-juce_graphics_Harfbuzz.cpp
-[ 80%] Building C object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_graphics/juce_graphics_Sheenbidi.c.obj
-juce_graphics_Sheenbidi.c
-[ 80%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_audio_formats/juce_audio_formats.cpp.obj
-juce_audio_formats.cpp
-[ 90%] Building CXX object CMakeFiles/SynthHeadlessTest.dir/_deps/juce-src/modules/juce_dsp/juce_dsp.cpp.obj
-juce_dsp.cpp
-[ 90%] Linking CXX executable SynthHeadlessTest_artefacts\Debug\SynthHeadlessTest.exe
-[100%] Built target SynthHeadlessTest
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  MixerComponent.cpp
+  WingmanPanel.cpp
+C:\zenith\daw\zenith-core\include\MixerComponent.h(95,43): warning C4100: 'treeWhoseParentHasChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(96,45): warning C4100: 'treeWhichHasBeenChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(273,61): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(58,72): error C2039: 'spacingM': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(58,72): error C2065: 'spacingM': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(61,15): warning C4458: declaration of 'stripWidth' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(144,24):
+      see declaration of 'MixerComponent::stripWidth'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(62,15): warning C4458: declaration of 'stripSpacing' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(145,24):
+      see declaration of 'MixerComponent::stripSpacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(62,58): error C2039: 'spacingS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(62,58): error C2065: 'spacingS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,46): error C3536: 'bounds': cannot be used before it is initialized [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,45): error C2440: '<function-style-cast>': cannot convert from 'const int' to 'juce::Rectangle<int>' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,45):
+      'juce::Rectangle<int>::Rectangle': no overloaded function could convert all the argument types
+          C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_graphics\geometry\juce_Rectangle.h(85,5):
+          could be 'juce::Rectangle<int>::Rectangle(const juce::Rectangle<int> &)'
+              C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,45):
+              'juce::Rectangle<int>::Rectangle(const juce::Rectangle<int> &)': cannot convert argument 1 from 'const int' to 'const juce::Rectangle<int> &'
+                  C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,80):
+                  Reason: cannot convert from 'const int' to 'const juce::Rectangle<int>'
+          C:\zenith\daw\zenith-core\src\MixerComponent.cpp(70,45):
+          while trying to match the argument list '(const int)'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(81,56): error C2039: 'spacingS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(81,56): error C2065: 'spacingS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(95,59): error C2039: 'spacingS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(95,59): error C2065: 'spacingS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(104,59): error C2039: 'spacingS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(104,59): error C2065: 'spacingS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(273,61): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(82,11): error C3646: 'bg0': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(82,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(83,11): error C3646: 'bg1': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(83,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(84,11): error C3646: 'bg2': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(84,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(85,11): error C3646: 'bg3': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(85,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(88,11): error C3646: 'borderSubtle': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(88,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(89,11): error C3646: 'borderStrong': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(89,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(92,11): error C3646: 'textStrong': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(92,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(93,11): error C3646: 'textMuted': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(93,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(94,11): error C3646: 'textSubtle': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(94,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(95,11): error C3646: 'textDanger': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(95,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(98,11): error C3646: 'accentMain': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(98,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(99,11): error C3646: 'accentAlt': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(99,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(100,11): error C3646: 'accentRecord': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(100,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(101,11): error C3646: 'accentWarning': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(101,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(104,11): error C3646: 'clipDrums': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(104,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(105,11): error C3646: 'clipBass': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(105,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(106,11): error C3646: 'clipHarmony': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(106,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(107,11): error C3646: 'clipLeads': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(107,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(108,11): error C3646: 'clipFX': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(108,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(111,11): error C3646: 'background': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(111,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(112,11): error C3646: 'backgroundSecondary': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(112,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(113,11): error C3646: 'backgroundTertiary': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(113,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(115,11): error C3646: 'surfaceDefault': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(115,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(116,11): error C3646: 'surfaceHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(116,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(117,11): error C3646: 'surfaceActive': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(117,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(118,11): error C3646: 'surfaceDisabled': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(118,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(120,11): error C3646: 'primary': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(120,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(121,11): error C3646: 'primaryHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(121,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(122,11): error C3646: 'primaryActive': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(122,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(124,11): error C3646: 'success': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(124,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(125,11): error C3646: 'successHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(125,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(127,11): error C3646: 'danger': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(127,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(128,11): error C3646: 'dangerHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(128,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(130,11): error C3646: 'warning': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(130,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(131,11): error C3646: 'warningHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(131,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(133,11): error C3646: 'textPrimary': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(133,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(134,11): error C3646: 'textSecondary': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(134,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(135,11): error C3646: 'textDisabled': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(135,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(136,11): error C3646: 'textOnAccent': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(136,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(138,11): error C3646: 'border': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(138,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(139,11): error C3646: 'borderHover': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(139,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(140,11): error C3646: 'divider': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(140,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(142,11): error C3646: 'shadowDark': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(142,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(143,11): error C3646: 'shadowLight': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(143,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(144,11): error C3646: 'innerShadow': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(144,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(145,11): error C3646: 'highlight': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(145,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(147,11): error C3646: 'waveformAudio': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(147,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(148,11): error C3646: 'waveformMidi': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(148,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(149,11): error C3646: 'gridLine': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(149,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(150,11): error C3646: 'playhead': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(150,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(151,11): error C3646: 'loopRegion': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(151,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(152,11): error C3646: 'meterGreen': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(152,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(153,11): error C3646: 'meterYellow': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(153,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(154,11): error C3646: 'meterRed': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(154,3): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(260,13): error C3646: 'hoverOverlay': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(260,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(261,13): error C3646: 'activeOverlay': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(261,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(262,13): error C3646: 'focusBorder': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(262,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(282,13): error C3646: 'borderColor': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(282,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(284,13): error C3646: 'tintColor': unknown override specifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTheme.h(284,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(216,72): error C2039: 'radiusL': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(216,72): error C2065: 'radiusL': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(220,72): error C2039: 'radiusL': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(220,72): error C2065: 'radiusL': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(228,35): error C2039: 'radiusL': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(228,35): error C2065: 'radiusL': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(252,54): error C2039: 'radiusS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(252,54): error C2065: 'radiusS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(256,54): error C2039: 'radiusS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(256,54): error C2065: 'radiusS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(258,32): error C2039: 'getFontTiny': is not a member of 'zenith::ZenithLookAndFeel' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(39,7):
+      see declaration of 'zenith::ZenithLookAndFeel'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(258,32): error C3861: 'getFontTiny': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(266,69): error C2039: 'radiusS': is not a member of 'zenith::ZenithLookAndFeel::Spacing' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(156,12):
+      see declaration of 'zenith::ZenithLookAndFeel::Spacing'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(266,69): error C2065: 'radiusS': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(291,34): error C2039: 'getFontTiny': is not a member of 'zenith::ZenithLookAndFeel' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(39,7):
+      see declaration of 'zenith::ZenithLookAndFeel'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(291,34): error C3861: 'getFontTiny': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(291,7): error C2668: 'juce::Graphics::setFont': ambiguous call to overloaded function [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_graphics\contexts\juce_GraphicsContext.h(122,10):
+      could be 'void juce::Graphics::setFont(float)'
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_graphics\contexts\juce_GraphicsContext.h(115,10):
+      or       'void juce::Graphics::setFont(const juce::Font &)'
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(291,7):
+      while trying to match the argument list '(<error type>)'
+  

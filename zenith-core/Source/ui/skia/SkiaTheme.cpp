@@ -1,193 +1,262 @@
 /**
  * @file SkiaTheme.cpp
  * @brief Implementation of comprehensive theme system
+ * 
+ * DESIGN SYSTEM: Colors unified with ZenithLookAndFeel tokens
+ * - accentMain: #00d9ff (cyan) - matches ZenithLookAndFeel::Colors::accentPrimary
+ * - All neutrals match Material Design elevation system
  */
 
 #include "SkiaTheme.h"
 
 #ifdef ZENITH_USE_SKIA
-    #include <include/core/SkPaint.h>
-    #include <include/core/SkShader.h>
-    #include <include/core/SkMaskFilter.h>
-    #include <include/core/SkBlurTypes.h>
-    #include <include/effects/SkGradientShader.h>
+#include <include/core/SkBlurTypes.h>
+#include <include/core/SkMaskFilter.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkShader.h>
+#include <include/effects/SkGradientShader.h>
+
 #endif
 
 namespace zenith {
 
 //==============================================================================
-// Color definitions
+// Color definitions - UNIFIED with ZenithLookAndFeel
 //==============================================================================
 
 // Helper to create ARGB color
-constexpr SkColor ARGB(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
-{
-    return (a << 24) | (r << 16) | (g << 8) | b;
+constexpr SkColor ARGB(uint8_t a, uint8_t r, uint8_t g, uint8_t b) {
+  return (a << 24) | (r << 16) | (g << 8) | b;
 }
 
-// Dark mode palette (modern, professional)
+// DESIGN SYSTEM: Dark mode palette - UNIFIED with ZenithLookAndFeel
+// All colors now match the tokens in ZenithLookAndFeel.h
 static const ThemeColors DARK_COLORS = {
-    // Background colors
-    .background = ARGB(255, 18, 18, 18),          // #121212 - Very dark grey
-    .backgroundSecondary = ARGB(255, 24, 24, 24), // #181818 - Slightly lighter
-    .backgroundTertiary = ARGB(255, 32, 32, 32),  // #202020 - Raised surfaces
+    // === Neutrals (Material Design Elevation) ===
+    // UNIFIED: Now matches ZenithLookAndFeel::Elevation exactly
+    .bg0 = ARGB(255, 18, 18, 18),    // #121212 - dp0 (was #050608)
+    .bg1 = ARGB(255, 30, 30, 30),    // #1e1e1e - dp1 (was #111418)
+    .bg2 = ARGB(255, 35, 35, 35),    // #232323 - dp2 (was #181C22)
+    .bg3 = ARGB(255, 39, 39, 39),    // #272727 - dp4 (was #1F242C)
 
-    // Surface colors
-    .surfaceDefault = ARGB(255, 42, 42, 42),      // #2A2A2A - Default control
-    .surfaceHover = ARGB(255, 52, 52, 52),        // #343434 - Hovered
-    .surfaceActive = ARGB(255, 62, 62, 62),       // #3E3E3E - Pressed
-    .surfaceDisabled = ARGB(255, 28, 28, 28),     // #1C1C1C - Disabled
+    // === Borders - UNIFIED ===
+    .borderSubtle = ARGB(255, 58, 58, 58), // #3a3a3a - matches borderSubtle
+    .borderStrong = ARGB(255, 74, 74, 74), // #4a4a4a - matches borderMedium
 
-    // Accent colors - Apple-inspired
-    .primary = ARGB(255, 10, 132, 255),           // #0A84FF - Blue
-    .primaryHover = ARGB(255, 40, 152, 255),      // Lighter blue
-    .primaryActive = ARGB(255, 0, 112, 235),      // Darker blue
+    // === Text (87% opacity for primary) - UNIFIED ===
+    .textStrong = ARGB(255, 222, 222, 222), // #dedede - matches textPrimary
+    .textMuted = ARGB(255, 153, 153, 153),  // #999999 - matches textSecondary
+    .textSubtle = ARGB(255, 97, 97, 97),    // #616161 - matches textDisabled
+    .textDanger = ARGB(255, 255, 82, 82),   // #ff5252 - matches danger/recordRed
 
-    .success = ARGB(255, 52, 199, 89),            // #34C759 - Green
-    .successHover = ARGB(255, 72, 219, 109),      // Lighter green
+    // === Accents - UNIFIED with ZenithLookAndFeel ===
+    .accentMain = ARGB(255, 0, 217, 255),     // #00d9ff - UNIFIED: matches accentPrimary (was #00D4AA)
+    .accentAlt = ARGB(255, 255, 140, 66),     // #ff8c42 - UNIFIED: matches accentSecondary (was #4C8DFF)
+    .accentRecord = ARGB(255, 255, 82, 82),   // #ff5252 - matches recordRed
+    .accentWarning = ARGB(255, 255, 193, 7),  // #ffc107 - matches warning
 
-    .danger = ARGB(255, 255, 69, 58),             // #FF453A - Red
-    .dangerHover = ARGB(255, 255, 99, 88),        // Lighter red
+    // === Clip Palette - Color-coded tracks from ZenithLookAndFeel ===
+    .clipDrums = ARGB(255, 204, 51, 17),     // #cc3311 - trackRedDark (low freq)
+    .clipBass = ARGB(255, 222, 143, 5),      // #de8f05 - trackOrange
+    .clipHarmony = ARGB(255, 68, 170, 153),  // #44aa99 - trackGreen
+    .clipLeads = ARGB(255, 0, 217, 255),     // #00d9ff - trackCyan (accentPrimary)
+    .clipFX = ARGB(255, 156, 39, 176),       // #9c27b0 - trackPurple
 
-    .warning = ARGB(255, 255, 159, 10),           // #FF9F0A - Orange
-    .warningHover = ARGB(255, 255, 179, 50),      // Lighter orange
+    // === Legacy Mappings - UNIFIED ===
+    .background = ARGB(255, 18, 18, 18),             // dp0
+    .backgroundSecondary = ARGB(255, 30, 30, 30),   // dp1
+    .backgroundTertiary = ARGB(255, 35, 35, 35),    // dp2
 
-    // Text colors
-    .textPrimary = ARGB(255, 255, 255, 255),      // White
-    .textSecondary = ARGB(180, 255, 255, 255),    // 70% white
-    .textDisabled = ARGB(100, 255, 255, 255),     // 40% white
-    .textOnAccent = ARGB(255, 255, 255, 255),     // White on colors
+    .surfaceDefault = ARGB(255, 39, 39, 39),        // dp4
+    .surfaceHover = ARGB(255, 46, 46, 46),          // dp8
+    .surfaceActive = ARGB(255, 30, 30, 30),         // dp1
+    .surfaceDisabled = ARGB(255, 18, 18, 18),       // dp0
 
-    // Border/divider
-    .border = ARGB(80, 255, 255, 255),            // 31% white
-    .borderHover = ARGB(120, 255, 255, 255),      // 47% white
-    .divider = ARGB(50, 255, 255, 255),           // 20% white
+    // Primary accent - UNIFIED with accentPrimary
+    .primary = ARGB(255, 0, 217, 255),              // #00d9ff
+    .primaryHover = ARGB(255, 51, 224, 255),        // #33e0ff - accentPrimaryHover
+    .primaryActive = ARGB(255, 0, 168, 204),        // #00a8cc - accentPrimaryPressed
 
-    // Depth/shadow
-    .shadowDark = ARGB(180, 0, 0, 0),             // 70% black shadow
-    .shadowLight = ARGB(255, 60, 60, 60),         // Light grey highlight
-    .innerShadow = ARGB(100, 0, 0, 0),            // 40% black inner shadow
-    .highlight = ARGB(40, 255, 255, 255),         // 16% white highlight
+    // Semantic colors - UNIFIED
+    .success = ARGB(255, 76, 175, 80),              // #4caf50 - playGreen
+    .successHover = ARGB(255, 102, 187, 106),       // slightly lighter
 
-    // DAW-specific
-    .waveformAudio = ARGB(255, 100, 200, 255),    // Light blue
-    .waveformMidi = ARGB(255, 126, 211, 33),      // #7ED321 - Bright green
-    .gridLine = ARGB(40, 255, 255, 255),          // 16% white
-    .playhead = ARGB(255, 255, 69, 58),           // Red
-    .loopRegion = ARGB(60, 10, 132, 255),         // 24% blue
-    .meterGreen = ARGB(255, 52, 199, 89),         // Green
-    .meterYellow = ARGB(255, 255, 204, 0),        // Yellow
-    .meterRed = ARGB(255, 255, 69, 58),           // Red
+    .danger = ARGB(255, 255, 82, 82),               // #ff5252 - recordRed
+    .dangerHover = ARGB(255, 255, 112, 112),
+
+    .warning = ARGB(255, 255, 193, 7),              // #ffc107
+    .warningHover = ARGB(255, 255, 213, 79),
+
+    // Text - UNIFIED
+    .textPrimary = ARGB(255, 222, 222, 222),        // #dedede
+    .textSecondary = ARGB(255, 153, 153, 153),      // #999999
+    .textDisabled = ARGB(255, 97, 97, 97),          // #616161
+    .textOnAccent = ARGB(255, 0, 0, 0),             // #000000 - black on bright backgrounds
+
+    // Borders - UNIFIED
+    .border = ARGB(255, 58, 58, 58),                // #3a3a3a
+    .borderHover = ARGB(255, 74, 74, 74),           // #4a4a4a
+    .divider = ARGB(255, 58, 58, 58),               // #3a3a3a
+
+    // Shadows/highlights
+    .shadowDark = ARGB(180, 0, 0, 0),
+    .shadowLight = ARGB(20, 255, 255, 255),
+    .innerShadow = ARGB(100, 0, 0, 0),
+    .highlight = ARGB(40, 255, 255, 255),
+
+    // DAW-specific - UNIFIED
+    .waveformAudio = ARGB(255, 0, 217, 255),        // #00d9ff - accentPrimary
+    .waveformMidi = ARGB(255, 68, 170, 153),        // #44aa99 - trackGreen
+    .gridLine = ARGB(255, 58, 58, 58),              // #3a3a3a - borderSubtle
+    .playhead = ARGB(255, 255, 82, 82),             // #ff5252 - recordRed
+    .loopRegion = ARGB(60, 0, 217, 255),            // accentPrimary with alpha
+    
+    // Meter colors - UNIFIED with ZenithLookAndFeel
+    .meterGreen = ARGB(255, 76, 175, 80),           // #4caf50 - meterGreen (safe zone)
+    .meterYellow = ARGB(255, 255, 193, 7),          // #ffc107 - meterAmber (caution)
+    .meterRed = ARGB(255, 255, 82, 82),             // #ff5252 - meterRed (clipping)
 };
 
-// Light mode palette (clean, Apple-inspired)
+// Light mode palette (adjusted from dark mode)
 static const ThemeColors LIGHT_COLORS = {
-    // Background colors
-    .background = ARGB(255, 248, 248, 248),       // #F8F8F8 - Very light grey
-    .backgroundSecondary = ARGB(255, 242, 242, 242), // #F2F2F2
-    .backgroundTertiary = ARGB(255, 235, 235, 235),  // #EBEBEB
+    // Neutrals (Inverted for light mode)
+    .bg0 = ARGB(255, 250, 250, 250),        // Near white
+    .bg1 = ARGB(255, 255, 255, 255),        // Pure white
+    .bg2 = ARGB(255, 245, 245, 245),        // Very light gray
+    .bg3 = ARGB(255, 238, 238, 238),        // Light gray
 
-    // Surface colors
-    .surfaceDefault = ARGB(255, 255, 255, 255),   // White
-    .surfaceHover = ARGB(255, 245, 245, 245),     // Light grey
-    .surfaceActive = ARGB(255, 230, 230, 230),    // Medium grey
-    .surfaceDisabled = ARGB(255, 250, 250, 250),  // Off-white
+    // Borders
+    .borderSubtle = ARGB(255, 224, 224, 224),
+    .borderStrong = ARGB(255, 189, 189, 189),
 
-    // Accent colors
-    .primary = ARGB(255, 0, 122, 255),            // #007AFF - iOS blue
-    .primaryHover = ARGB(255, 30, 142, 255),      // Lighter
-    .primaryActive = ARGB(255, 0, 102, 235),      // Darker
+    // Text (dark on light)
+    .textStrong = ARGB(255, 33, 33, 33),
+    .textMuted = ARGB(255, 117, 117, 117),
+    .textSubtle = ARGB(255, 158, 158, 158),
+    .textDanger = ARGB(255, 211, 47, 47),
 
-    .success = ARGB(255, 40, 205, 65),            // #28CD41 - iOS green
-    .successHover = ARGB(255, 60, 225, 85),
+    // Accents (same vibrant colors work on light)
+    .accentMain = ARGB(255, 0, 188, 212),       // Slightly darker cyan for light mode
+    .accentAlt = ARGB(255, 255, 112, 67),       // Darker orange
+    .accentRecord = ARGB(255, 244, 67, 54),
+    .accentWarning = ARGB(255, 255, 160, 0),
 
-    .danger = ARGB(255, 255, 59, 48),             // #FF3B30 - iOS red
-    .dangerHover = ARGB(255, 255, 89, 78),
+    // Clip Palette
+    .clipDrums = ARGB(255, 239, 83, 80),
+    .clipBass = ARGB(255, 255, 167, 38),
+    .clipHarmony = ARGB(255, 102, 187, 106),
+    .clipLeads = ARGB(255, 66, 165, 245),
+    .clipFX = ARGB(255, 171, 71, 188),
 
-    .warning = ARGB(255, 255, 149, 0),            // #FF9500 - iOS orange
-    .warningHover = ARGB(255, 255, 169, 40),
+    // Legacy Mappings
+    .background = ARGB(255, 250, 250, 250),
+    .backgroundSecondary = ARGB(255, 255, 255, 255),
+    .backgroundTertiary = ARGB(255, 245, 245, 245),
 
-    // Text colors
-    .textPrimary = ARGB(255, 0, 0, 0),            // Black
-    .textSecondary = ARGB(180, 0, 0, 0),          // 70% black
-    .textDisabled = ARGB(100, 0, 0, 0),           // 40% black
-    .textOnAccent = ARGB(255, 255, 255, 255),     // White
+    .surfaceDefault = ARGB(255, 238, 238, 238),
+    .surfaceHover = ARGB(255, 224, 224, 224),
+    .surfaceActive = ARGB(255, 255, 255, 255),
+    .surfaceDisabled = ARGB(255, 250, 250, 250),
 
-    // Border/divider
-    .border = ARGB(80, 0, 0, 0),                  // 31% black
-    .borderHover = ARGB(120, 0, 0, 0),            // 47% black
-    .divider = ARGB(50, 0, 0, 0),                 // 20% black
+    .primary = ARGB(255, 0, 188, 212),
+    .primaryHover = ARGB(255, 0, 172, 193),
+    .primaryActive = ARGB(255, 0, 151, 167),
 
-    // Depth/shadow
-    .shadowDark = ARGB(100, 0, 0, 0),             // 40% black shadow
-    .shadowLight = ARGB(255, 255, 255, 255),      // White highlight
-    .innerShadow = ARGB(50, 0, 0, 0),             // 20% black
-    .highlight = ARGB(180, 255, 255, 255),        // 70% white highlight
+    .success = ARGB(255, 67, 160, 71),
+    .successHover = ARGB(255, 76, 175, 80),
 
-    // DAW-specific
-    .waveformAudio = ARGB(255, 0, 122, 255),      // Blue
-    .waveformMidi = ARGB(255, 40, 205, 65),       // Green
-    .gridLine = ARGB(30, 0, 0, 0),                // 12% black
-    .playhead = ARGB(255, 255, 59, 48),           // Red
-    .loopRegion = ARGB(40, 0, 122, 255),          // 16% blue
-    .meterGreen = ARGB(255, 40, 205, 65),
-    .meterYellow = ARGB(255, 255, 204, 0),
-    .meterRed = ARGB(255, 255, 59, 48),
+    .danger = ARGB(255, 211, 47, 47),
+    .dangerHover = ARGB(255, 229, 57, 53),
+
+    .warning = ARGB(255, 255, 160, 0),
+    .warningHover = ARGB(255, 255, 179, 0),
+
+    .textPrimary = ARGB(255, 33, 33, 33),
+    .textSecondary = ARGB(255, 117, 117, 117),
+    .textDisabled = ARGB(255, 158, 158, 158),
+    .textOnAccent = ARGB(255, 255, 255, 255),
+
+    .border = ARGB(255, 224, 224, 224),
+    .borderHover = ARGB(255, 189, 189, 189),
+    .divider = ARGB(255, 224, 224, 224),
+
+    .shadowDark = ARGB(60, 0, 0, 0),
+    .shadowLight = ARGB(255, 255, 255, 255),
+    .innerShadow = ARGB(30, 0, 0, 0),
+    .highlight = ARGB(200, 255, 255, 255),
+
+    .waveformAudio = ARGB(255, 0, 188, 212),
+    .waveformMidi = ARGB(255, 102, 187, 106),
+    .gridLine = ARGB(255, 224, 224, 224),
+    .playhead = ARGB(255, 244, 67, 54),
+    .loopRegion = ARGB(60, 0, 188, 212),
+    .meterGreen = ARGB(255, 67, 160, 71),
+    .meterYellow = ARGB(255, 255, 160, 0),
+    .meterRed = ARGB(255, 211, 47, 47),
 };
 
 //==============================================================================
 // SkiaTheme implementation
 //==============================================================================
 
-SkiaTheme::SkiaTheme()
-{
-    // Initialize with dark mode by default
+SkiaTheme::SkiaTheme() {
+  // Initialize with dark mode by default
+  updateColorsForMode();
+
+  // DESIGN SYSTEM: Interaction colors - unified with accent
+  interaction_.hoverOverlay = ARGB(13, 255, 255, 255);  // ~5% white overlay
+  interaction_.activeOverlay = ARGB(33, 255, 255, 255); // ~13% white overlay
+  interaction_.focusBorder = ARGB(255, 0, 217, 255);    // accentPrimary #00d9ff
+
+  // DESIGN SYSTEM: Selection style - unified with accent
+  selectionStyle_.mode = SelectionMode::BorderAndTint;
+  selectionStyle_.borderColor = ARGB(255, 0, 217, 255);  // accentPrimary
+  selectionStyle_.borderWidth = 2.0f;
+  selectionStyle_.tintColor = ARGB(38, 0, 217, 255);     // accentPrimary with 15% opacity
+  selectionStyle_.tintOpacity = 0.15f;
+  selectionStyle_.cornerRadius = 6.0f;  // Match ZenithLookAndFeel::Radius::m
+
+  // Configure GPU settings
+  gpuSettings_.adaptiveFPS = true;
+  gpuSettings_.prioritizeQuality = true;
+  gpuSettings_.targetFPS = 60;
+  gpuSettings_.waveformDetailLevel = 4;
+  gpuSettings_.msaaSamples = 4;
+
+  // Configure typography
+  typography_.enableTextGlow = true;
+  typography_.textGlowRadius = 4.0f;
+  typography_.textGlowOpacity = 0.5f;
+  typography_.enableTextShadow = true;
+  typography_.textShadowOffsetY = 1.5f;
+  typography_.textShadowBlur = 3.0f;
+  typography_.mono = {11.0f, false};
+
+  // Set depth style
+  depthStyle_ = DepthStyle::moderate();
+
+  // Configure spring physics per component type
+  buttonPhysics_ = SpringPhysicsSettings::snappy();
+  sliderPhysics_ = SpringPhysicsSettings::smooth();
+  knobPhysics_ = SpringPhysicsSettings::smooth();
+  waveformPhysics_ = SpringPhysicsSettings::precise();
+  timelinePhysics_ = SpringPhysicsSettings::smooth();
+}
+
+SkiaTheme &SkiaTheme::getInstance() {
+  static SkiaTheme instance;
+  return instance;
+}
+
+void SkiaTheme::setThemeMode(ThemeMode mode) {
+  if (currentMode_ != mode) {
+    currentMode_ = mode;
     updateColorsForMode();
-
-    // Configure GPU settings with user preferences
-    gpuSettings_.adaptiveFPS = true;           // User requested adaptive FPS
-    gpuSettings_.prioritizeQuality = true;     // User wants visual quality prioritized
-    gpuSettings_.targetFPS = 60;               // Start at 60, will adapt
-    gpuSettings_.waveformDetailLevel = 4;      // High detail for producers
-    gpuSettings_.msaaSamples = 4;              // Good antialiasing
-
-    // Configure typography for flashy effects
-    typography_.enableTextGlow = true;         // User wants flashy text
-    typography_.textGlowRadius = 4.0f;         // Moderate glow
-    typography_.textGlowOpacity = 0.5f;        // Visible but not overpowering
-    typography_.enableTextShadow = true;
-    typography_.textShadowOffsetY = 1.5f;
-    typography_.textShadowBlur = 3.0f;
-
-    // Set depth style for full 3D (user requested)
-    depthStyle_ = DepthStyle::moderate();      // Balance between subtle and dramatic
-
-    // Configure spring physics per component type (user wants different settings per component)
-    buttonPhysics_ = SpringPhysicsSettings::snappy();      // Buttons: fast and responsive
-    sliderPhysics_ = SpringPhysicsSettings::smooth();      // Sliders: smooth tracking
-    knobPhysics_ = SpringPhysicsSettings::smooth();        // Knobs: smooth rotation
-    waveformPhysics_ = SpringPhysicsSettings::precise();   // Waveforms: ultra-responsive at 120Hz
-    timelinePhysics_ = SpringPhysicsSettings::smooth();    // Timeline: smooth spring (user specified)
+  }
 }
 
-SkiaTheme& SkiaTheme::getInstance()
-{
-    static SkiaTheme instance;
-    return instance;
-}
-
-void SkiaTheme::setThemeMode(ThemeMode mode)
-{
-    if (currentMode_ != mode)
-    {
-        currentMode_ = mode;
-        updateColorsForMode();
-    }
-}
-
-void SkiaTheme::updateColorsForMode()
-{
-    colors_ = (currentMode_ == ThemeMode::Dark) ? DARK_COLORS : LIGHT_COLORS;
+void SkiaTheme::updateColorsForMode() {
+  colors_ = (currentMode_ == ThemeMode::Dark) ? DARK_COLORS : LIGHT_COLORS;
 }
 
 //==============================================================================
@@ -196,64 +265,58 @@ void SkiaTheme::updateColorsForMode()
 
 #ifdef ZENITH_USE_SKIA
 
-SkPaint SkiaTheme::createGradientPaint(SkColor topColor, SkColor bottomColor, const SkRect& bounds)
-{
-    SkPaint paint;
-    paint.setAntiAlias(true);
+SkPaint SkiaTheme::createGradientPaint(SkColor topColor, SkColor bottomColor,
+                                       const SkRect &bounds) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
 
-    SkPoint points[2] = {
-        SkPoint::Make(bounds.centerX(), bounds.top()),
-        SkPoint::Make(bounds.centerX(), bounds.bottom())
-    };
-    SkColor colors[2] = {topColor, bottomColor};
-    SkScalar positions[2] = {0.0f, 1.0f};
+  SkPoint points[2] = {SkPoint::Make(bounds.centerX(), bounds.top()),
+                       SkPoint::Make(bounds.centerX(), bounds.bottom())};
+  SkColor colors[2] = {topColor, bottomColor};
+  SkScalar positions[2] = {0.0f, 1.0f};
 
-    sk_sp<SkShader> shader = SkGradientShader::MakeLinear(
-        points, colors, positions, 2, SkTileMode::kClamp
-    );
-    paint.setShader(shader);
+  sk_sp<SkShader> shader = SkGradientShader::MakeLinear(
+      points, colors, positions, 2, SkTileMode::kClamp);
+  paint.setShader(shader);
 
-    return paint;
+  return paint;
 }
 
-SkPaint SkiaTheme::createGlowPaint(SkColor color, float radius, float opacity)
-{
-    SkPaint paint;
-    paint.setAntiAlias(true);
-    paint.setColor(color);
+SkPaint SkiaTheme::createGlowPaint(SkColor color, float radius, float opacity) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setColor(color);
 
-    // Extract color components and apply opacity
-    uint8_t a = static_cast<uint8_t>((SkColorGetA(color) * opacity));
-    uint8_t r = SkColorGetR(color);
-    uint8_t g = SkColorGetG(color);
-    uint8_t b = SkColorGetB(color);
-    paint.setColor(ARGB(a, r, g, b));
+  // Extract color components and apply opacity
+  uint8_t a = static_cast<uint8_t>((SkColorGetA(color) * opacity));
+  uint8_t r = SkColorGetR(color);
+  uint8_t g = SkColorGetG(color);
+  uint8_t b = SkColorGetB(color);
+  paint.setColor(ARGB(a, r, g, b));
 
-    if (radius > 0.0f)
-    {
-        paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, radius));
-    }
+  if (radius > 0.0f) {
+    paint.setMaskFilter(
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, radius));
+  }
 
-    return paint;
+  return paint;
 }
 
-SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur, float opacity)
-{
-    SkPaint paint;
-    paint.setAntiAlias(true);
+SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur, float opacity) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
 
-    uint8_t alpha = static_cast<uint8_t>(255 * opacity);
-    paint.setColor(ARGB(alpha, 0, 0, 0));
+  uint8_t alpha = static_cast<uint8_t>(255 * opacity);
+  paint.setColor(ARGB(alpha, 0, 0, 0));
 
-    if (blur > 0.0f)
-    {
-        paint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blur));
-    }
+  if (blur > 0.0f) {
+    paint.setMaskFilter(
+        SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, blur));
+  }
 
-    return paint;
+  return paint;
 }
 
 #endif // ZENITH_USE_SKIA
 
 } // namespace zenith
-

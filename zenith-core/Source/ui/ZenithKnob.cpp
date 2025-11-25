@@ -1,9 +1,12 @@
 /**
  * @file ZenithKnob.cpp
  * @brief Beautiful custom rotary knob implementation
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens
  */
 
 #include "ZenithKnob.h"
+#include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
 namespace zenith {
 
@@ -48,13 +51,15 @@ void ZenithKnob::paint(juce::Graphics& g)
     // Draw value tooltip when hovering or dragging
     if (isHovered_ || isDragging_) {
         float alpha = juce::jlimit(0.0f, 1.0f, hoverAnimation_ + (isDragging_ ? 0.5f : 0.0f));
-        g.setColour(juce::Colour(0xff2a2a2a).withAlpha(0.95f * alpha));
+        // DESIGN SYSTEM: Tooltip using dp8 elevation
+        g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp8).withAlpha(0.95f * alpha));
 
         auto tooltipBounds = knobBounds.withY(knobBounds.getY() - 30.0f).withHeight(24.0f);
-        g.fillRoundedRectangle(tooltipBounds, 4.0f);
+        g.fillRoundedRectangle(tooltipBounds, ZenithLookAndFeel::Radius::s);
 
-        g.setColour(juce::Colour(0xffffffff).withAlpha(alpha));
-        g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+        // DESIGN SYSTEM: Tooltip text using textPrimary
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(alpha));
+        g.setFont(ZenithLookAndFeel::Typography::getSmallBold());
 
         juce::String valueText = juce::String(getDisplayValue(), 2) + suffix_;
         g.drawText(valueText, tooltipBounds, juce::Justification::centred, true);
@@ -70,33 +75,33 @@ void ZenithKnob::drawKnobBody(juce::Graphics& g, const juce::Rectangle<float>& b
     float scale = 1.0f + (hoverAnimation_ * 0.05f) + (dragAnimation_ * 0.03f);
     radius *= scale;
 
-    // Draw outer shadow
-    g.setColour(juce::Colour(0x00000000).withAlpha(0.4f));
+    // DESIGN SYSTEM: Draw outer shadow using dp0
+    g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp0).withAlpha(0.4f));
     g.fillEllipse(center.x - radius, center.y - radius + 2.0f, radius * 2.0f, radius * 2.0f);
 
-    // Draw knob body with beautiful gradient (Ableton-style)
+    // DESIGN SYSTEM: Draw knob body with gradient (dp4 to dp1)
     juce::ColourGradient bodyGradient(
-        juce::Colour(0xff3a3a3a), center.x, center.y - radius,   // Lighter at top
-        juce::Colour(0xff1e1e1e), center.x, center.y + radius,   // Darker at bottom
+        juce::Colour(ZenithLookAndFeel::Elevation::dp4), center.x, center.y - radius,   // Lighter at top
+        juce::Colour(ZenithLookAndFeel::Elevation::dp1), center.x, center.y + radius,   // Darker at bottom
         false
     );
     g.setGradientFill(bodyGradient);
     g.fillEllipse(center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f);
 
-    // Inner highlight (top 40%) for shine
+    // DESIGN SYSTEM: Inner highlight using textPrimary with alpha
     juce::Path highlightPath;
     highlightPath.addEllipse(center.x - radius, center.y - radius, radius * 2.0f, radius * 0.8f);
-    g.setColour(juce::Colour(0xffffffff).withAlpha(0.08f));
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(0.08f));
     g.fillPath(highlightPath);
 
-    // Outer border
-    g.setColour(juce::Colour(0xff4a4a4a).withAlpha(0.8f));
+    // DESIGN SYSTEM: Outer border using borderMedium
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium).withAlpha(0.8f));
     g.drawEllipse(center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f, 1.5f);
 
-    // Hover glow
+    // DESIGN SYSTEM: Hover glow using accentPrimary
     if (isHovered_) {
         float glowAlpha = 0.3f * hoverAnimation_;
-        g.setColour(juce::Colour(0xff4a9eff).withAlpha(glowAlpha));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary).withAlpha(glowAlpha));
         g.drawEllipse(center.x - radius - 2.0f, center.y - radius - 2.0f,
                      (radius + 2.0f) * 2.0f, (radius + 2.0f) * 2.0f, 2.0f);
     }
@@ -110,12 +115,12 @@ void ZenithKnob::drawValueArc(juce::Graphics& g, const juce::Rectangle<float>& b
     // Calculate angles
     float angle = START_ANGLE + (value_ * ROTATION_RANGE);
 
-    // Draw background arc (full range)
+    // DESIGN SYSTEM: Draw background arc using dp4
     juce::Path backgroundArc;
     backgroundArc.addCentredArc(center.x, center.y, radius, radius,
                                0.0f, START_ANGLE, START_ANGLE + ROTATION_RANGE, true);
 
-    g.setColour(juce::Colour(0xff2a2a2a));
+    g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp4));
     g.strokePath(backgroundArc, juce::PathStrokeType(3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
 
     // Draw value arc with gradient
@@ -123,10 +128,10 @@ void ZenithKnob::drawValueArc(juce::Graphics& g, const juce::Rectangle<float>& b
     valueArc.addCentredArc(center.x, center.y, radius, radius,
                           0.0f, START_ANGLE, angle, true);
 
-    // Gradient from green to blue based on value
-    juce::Colour arcColor = juce::Colour(0xff4a9eff);  // Blue for low values
+    // DESIGN SYSTEM: Gradient from accentPrimary to success based on value
+    juce::Colour arcColor = juce::Colour(ZenithLookAndFeel::Colors::accentPrimary);  // Cyan for low values
     if (value_ > 0.5f) {
-        arcColor = juce::Colour(0xff34c759);  // Green for high values
+        arcColor = juce::Colour(ZenithLookAndFeel::Colors::success);  // Green for high values
     }
 
     g.setColour(arcColor.withAlpha(0.9f));
@@ -152,12 +157,12 @@ void ZenithKnob::drawIndicator(juce::Graphics& g, const juce::Rectangle<float>& 
     float endX = center.x + std::cos(angle - juce::MathConstants<float>::halfPi) * indicatorLength;
     float endY = center.y + std::sin(angle - juce::MathConstants<float>::halfPi) * indicatorLength;
 
-    // Draw indicator line with gradient
-    g.setColour(juce::Colour(0xffffffff).withAlpha(0.9f));
+    // DESIGN SYSTEM: Draw indicator line using textPrimary
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(0.9f));
     g.drawLine(center.x, center.y, endX, endY, 2.5f);
 
-    // Draw indicator tip (dot)
-    g.setColour(juce::Colour(0xff4a9eff));
+    // DESIGN SYSTEM: Draw indicator tip using accentPrimary
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimary));
     g.fillEllipse(endX - 3.0f, endY - 3.0f, 6.0f, 6.0f);
 }
 
@@ -165,8 +170,9 @@ void ZenithKnob::drawLabel(juce::Graphics& g, const juce::Rectangle<float>& boun
 {
     if (label_.isEmpty()) return;
 
-    g.setColour(juce::Colour(0xff999999));
-    g.setFont(juce::FontOptions(10.0f));
+    // DESIGN SYSTEM: Label using textSecondary
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+    g.setFont(ZenithLookAndFeel::Typography::getTiny());
     g.drawText(label_, bounds.toNearestInt(), juce::Justification::centred, true);
 }
 
@@ -280,4 +286,3 @@ float ZenithKnob::getDisplayValue() const
 }
 
 }  // namespace zenith
-

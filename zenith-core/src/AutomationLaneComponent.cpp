@@ -3,9 +3,19 @@
  * @brief Implementation of AutomationLaneComponent
  *
  * Phase U5: Automation Lanes UI
+ * POLISH: Skia rendering with smooth curves, themed colors, and hover tooltips
  */
 
 #include "AutomationLaneComponent.h"
+
+#ifdef ZENITH_USE_SKIA
+    #include <include/core/SkRect.h>
+    #include <include/core/SkPaint.h>
+    #include <include/core/SkPath.h>
+    #include <include/core/SkRRect.h>
+    #include <include/core/SkFont.h>
+    #include <include/core/SkTextBlob.h>
+#endif
 
 //==============================================================================
 // Constructor / Destructor
@@ -102,19 +112,182 @@ AutomationLaneComponent::ParamInfo AutomationLaneComponent::getDefaultVolumeInfo
 
 void AutomationLaneComponent::paint(juce::Graphics& g)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+#ifdef ZENITH_USE_SKIA
+    // Use Skia rendering for automation lanes
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+    const auto& typo = theme.getTypography();
 
-    // Draw components
+    // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
+    juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()), std::max(1, getHeight()), true);
+    {
+        juce::Image::BitmapData bitmapData(tempImage, juce::Image::BitmapData::readWrite);
+        SkImageInfo info = SkImageInfo::MakeN32Premul(tempImage.getWidth(), tempImage.getHeight());
+        auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
+
+        if (skSurface)
+        {
+            SkCanvas& canvas = *skSurface->getCanvas();
+            canvas.clear(SK_ColorTRANSPARENT);
+
+            // Background with subtle tint
+            SkPaint bgPaint;
+            bgPaint.setColor(colors.bg1);
+            bgPaint.setAntiAlias(true);
+            canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
+
+            // Draw components
+            drawGrid(g);  // Keep JUCE grid for now (lighter weight)
+
+            // Draw envelope curve with Skia (smooth)
+            rebuildPointHandles();
+
+            if (!pointHandles.empty())
+            {
+                SkPath path;
+                std::vector<PointHandle> sortedHandles = pointHandles;
+                std::sort(sortedHandles.begin(), sortedHandles.end(),
+                    [](const PointHandle& a, const PointHandle& b) { return a.screenPos.x < b.screenPos.x; });
+
+                // Start from left edge
+                path.moveTo(0, sortedHandles[0].screenPos.y);
+                path.lineTo(sortedHandles[0].screenPos.x, sortedHandles[0].screenPos.y);
+
+                // Draw smooth curve through points
+                for (size_t i = 0; i < sortedHandles.size(); ++i)
+                {
+                    path.lineTo(sortedHandles[i].screenPos.x, sortedHandles[i].screenPos.y);
+                }
+
+                // Extend to right edge
+                if (!sortedHandles.empty())
+                    path.lineTo(getWidth(), sortedHandles.back().screenPos.y);
+
+                // Draw curve
+                SkPaint curvePaint;
+                curvePaint.setColor(colors.accentMain);
+                curvePaint.setStyle(SkPaint::kStroke_Style);
+                curvePaint.setStrokeWidth(2.5f);
+                curvePaint.setAntiAlias(true);
+                canvas.drawPath(path, curvePaint);
+            }
+
+            // Draw control points with selection highlighting
+            const auto& selection = theme.getSelectionStyle();
+            for (const auto& handle : pointHandles)
+            {
+                bool isSelected = (handle.pointId == draggedPointId);
+                bool isHovered = (handle.pointId == hoveredPointId);
+
+                // Selection background (if selected)
+                if (isSelected)
+                {
+                    SkPaint selBgPaint;
+                    selBgPaint.setColor(selection.tintColor);
+                    selBgPaint.setAntiAlias(true);
+                    float expandedRadius = handle.radius + 4.0f;
+                    canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, expandedRadius, selBgPaint);
+                }
+
+                // Control point fill
+                SkPaint fillPaint;
+                fillPaint.setColor(isSelected ? colors.accentAlt :
+                                   isHovered ? colors.accentMain :
+                                   colors.accentMain);
+                fillPaint.setAntiAlias(true);
+                canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, fillPaint);
+
+                // Control point border
+                SkPaint borderPaint;
+                borderPaint.setColor(isSelected ? selection.borderColor : colors.textStrong);
+                borderPaint.setStyle(SkPaint::kStroke_Style);
+                borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
+                borderPaint.setAntiAlias(true);
+                canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, borderPaint);
+
+                // Hover glow
+                if (isHovered && !isSelected)
+                {
+                    SkPaint glowPaint;
+                    glowPaint.setColor(SkColorSetARGB(40, 0, 212, 170));
+                    glowPaint.setAntiAlias(true);
+                    canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius + 3.0f, glowPaint);
+                }
+            }
+
+            // Draw hover tooltip
+            if (hoveredPointId.isNotEmpty())
+            {
+                juce::String tooltipText = paramInfo.valueToString(hoveredPointValue) +
+                                          " @ " + juce::String(hoveredPointTime, 2) + " beats";
+
+                SkFont font;
+                font.setSize(typo.tiny.size);
+
+                auto textStr = tooltipText.toStdString();
+                SkRect textBounds;
+                font.measureText(textStr.c_str(), textStr.length(), SkTextEncoding::kUTF8, &textBounds);
+
+                float tooltipWidth = textBounds.width() + 12.0f;
+                float tooltipHeight = 20.0f;
+                float tooltipX = hoveredPointScreenPos.x - tooltipWidth / 2.0f;
+                float tooltipY = hoveredPointScreenPos.y - tooltipHeight - 10.0f;
+
+                // Clamp to screen
+                tooltipX = juce::jlimit(4.0f, (float)getWidth() - tooltipWidth - 4.0f, tooltipX);
+                tooltipY = juce::jmax(4.0f, tooltipY);
+
+                // Tooltip background
+                SkPaint tooltipBg;
+                tooltipBg.setColor(colors.bg3);
+                tooltipBg.setAntiAlias(true);
+                SkRRect tooltipRect = SkRRect::MakeRectXY(
+                    SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight), 4.0f, 4.0f);
+                canvas.drawRRect(tooltipRect, tooltipBg);
+
+                // Tooltip border
+                SkPaint tooltipBorder;
+                tooltipBorder.setColor(colors.borderSubtle);
+                tooltipBorder.setStyle(SkPaint::kStroke_Style);
+                tooltipBorder.setStrokeWidth(1.0f);
+                tooltipBorder.setAntiAlias(true);
+                canvas.drawRRect(tooltipRect, tooltipBorder);
+
+                // Tooltip text
+                SkPaint textPaint;
+                textPaint.setColor(colors.textStrong);
+                textPaint.setAntiAlias(true);
+                auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
+                canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+            }
+
+            // Draw parameter name
+            SkFont nameFont;
+            nameFont.setSize(typo.body.size);
+
+            SkPaint namePaint;
+            namePaint.setColor(colors.textMuted);
+            namePaint.setAntiAlias(true);
+
+            auto nameStr = paramInfo.displayName.toStdString();
+            auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
+            canvas.drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
+        }
+    }
+
+    // Draw the rendered image
+    g.drawImageAt(tempImage, 0, 0);
+#else
+    // Fallback: Original JUCE rendering
+    g.fillAll(juce::Colour(0xff2a2a2a));
     drawGrid(g);
     drawEnvelopeCurve(g);
-    rebuildPointHandles();  // Update hit test cache
+    rebuildPointHandles();
     drawControlPoints(g);
-
-    // Draw parameter name
     g.setColour(juce::Colours::white.withAlpha(0.7f));
     g.setFont(14.0f);
     g.drawText(paramInfo.displayName, 5, 5, 100, 20, juce::Justification::centredLeft);
+#endif
 }
 
 void AutomationLaneComponent::resized()
@@ -344,6 +517,47 @@ void AutomationLaneComponent::mouseDoubleClick(const juce::MouseEvent& e)
     if (hitPointId.isNotEmpty())
     {
         deletePoint(hitPointId);
+    }
+}
+
+void AutomationLaneComponent::mouseMove(const juce::MouseEvent& e)
+{
+    // Update hover state
+    juce::String newHoveredPointId = findPointAtPosition(e.position);
+
+    if (newHoveredPointId != hoveredPointId)
+    {
+        hoveredPointId = newHoveredPointId;
+
+        // Update hover info for tooltip
+        if (hoveredPointId.isNotEmpty() && envelopeNode.isValid())
+        {
+            for (int i = 0; i < envelopeNode.getNumChildren(); ++i)
+            {
+                auto pointNode = envelopeNode.getChild(i);
+                juce::String pointId = pointNode.getProperty(ProjectState::PROP_ID, "");
+                if (pointId == hoveredPointId)
+                {
+                    hoveredPointTime = pointNode.getProperty(ProjectState::PROP_TIME_BEATS, 0.0);
+                    hoveredPointValue = pointNode.getProperty(ProjectState::PROP_VALUE, 0.0);
+                    hoveredPointScreenPos = juce::Point<float>(beatsToPixels(hoveredPointTime),
+                                                                valueToPixelY(hoveredPointValue));
+                    break;
+                }
+            }
+        }
+
+        repaint();
+    }
+}
+
+void AutomationLaneComponent::mouseExit(const juce::MouseEvent& e)
+{
+    // Clear hover state
+    if (hoveredPointId.isNotEmpty())
+    {
+        hoveredPointId = "";
+        repaint();
     }
 }
 

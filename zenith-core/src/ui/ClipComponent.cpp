@@ -1,18 +1,28 @@
 /**
  * @file ClipComponent.cpp
- * @brief Beautiful clip component with gradients, shadows, and animations
+ * @brief Flat clip component with theme colors and clean typography
  *
- * Modern DAW-inspired design:
- * - Smooth gradients (Ableton-style darker at bottom)
- * - Hover effects with scale and glow
- * - Selection ring with pulse animation
- * - Subtle shadows for depth
- * - Rounded corners (8px)
- * - Waveform preview visualization
+ * Clean DAW design:
+ * - Track-colored fills (muted, from theme)
+ * - Typography.body for clip names
+ * - Simple 1-2px selection border
+ * - Rounded corners (4px, 8px grid)
  */
+
+// POLISH: spacing normalized to 8px grid (rounded corners 4px)
+// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: flattened visuals (track colors, no gradients)
 
 #include "../../include/ui/ClipComponent.h"
 #include "../../include/ProjectState.h"
+
+#ifdef ZENITH_USE_SKIA
+#include "../../Source/ui/skia/SkiaTheme.h"
+#include <include/core/SkCanvas.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRRect.h>
+#endif
 
 ClipComponent::ClipComponent(juce::ValueTree clipNode)
     : clip(clipNode)
@@ -48,6 +58,81 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height
     setBounds(x, yPosition, width, height);
 }
 
+#ifdef ZENITH_USE_SKIA
+void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    auto& theme = ::zenith::SkiaTheme::getInstance();
+    auto& colors = theme.getColors();
+    auto& typo = theme.getTypography();
+
+    // POLISH: Flat track-colored fills (no gradients)
+    juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
+
+    // Map clip type to theme colors
+    SkColor clipColor;
+    if (clipType == "midi") {
+        clipColor = colors.waveformMidi;  // Green for MIDI
+    } else {
+        clipColor = colors.waveformAudio;  // Blue for audio
+    }
+
+    // Create muted version of color for fill (reduce alpha for subtlety)
+    SkColor fillColor = SkColorSetARGB(
+        180,  // Muted alpha
+        SkColorGetR(clipColor),
+        SkColorGetG(clipColor),
+        SkColorGetB(clipColor)
+    );
+
+    // POLISH: Rounded rect at 4px (8px grid)
+    SkRect clipRect = SkRect::MakeXYWH(0, 0, bounds.getWidth(), bounds.getHeight());
+    SkRRect clipRRect = SkRRect::MakeRectXY(clipRect, 4.0f, 4.0f);
+
+    // Fill background
+    SkPaint fillPaint;
+    fillPaint.setAntiAlias(true);
+    fillPaint.setColor(fillColor);
+    canvas.drawRRect(clipRRect, fillPaint);
+
+    // POLISH: Simple 1-2px border for selection (no pulse animation)
+    if (isSelected) {
+        SkPaint selectionPaint;
+        selectionPaint.setAntiAlias(true);
+        selectionPaint.setColor(clipColor);
+        selectionPaint.setStyle(SkPaint::kStroke_Style);
+        selectionPaint.setStrokeWidth(2.0f);
+        canvas.drawRRect(clipRRect, selectionPaint);
+    } else {
+        // Subtle border
+        SkPaint borderPaint;
+        borderPaint.setAntiAlias(true);
+        borderPaint.setColor(colors.borderSubtle);
+        borderPaint.setStyle(SkPaint::kStroke_Style);
+        borderPaint.setStrokeWidth(1.0f);
+        canvas.drawRRect(clipRRect, borderPaint);
+    }
+
+    // POLISH: Clip name using Typography.body
+    if (bounds.getWidth() > 20) {
+        SkFont font;
+        font.setSize(typo.body.size);
+        if (typo.body.bold) font.setEmbolden(true);
+        font.setEdging(SkFont::Edging::kAntiAlias);
+
+        juce::String clipName = getClipId();
+
+        // POLISH: Ensure text legibility on clip color
+        // Use textStrong for good contrast on muted backgrounds
+        SkPaint textPaint;
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(colors.textStrong);
+
+        float textX = 8.0f;  // 8px padding
+        float textY = bounds.getHeight() / 2.0f + typo.body.size / 2.0f;
+        canvas.drawString(clipName.toRawUTF8(), textX, textY, font, textPaint);
+    }
+}
+#else
 void ClipComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
@@ -140,6 +225,7 @@ void ClipComponent::paint(juce::Graphics& g)
         }
     }
 }
+#endif
 
 void ClipComponent::mouseEnter(const juce::MouseEvent& event)
 {

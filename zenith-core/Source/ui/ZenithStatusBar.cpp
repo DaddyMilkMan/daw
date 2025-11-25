@@ -1,9 +1,12 @@
 /**
  * @file ZenithStatusBar.cpp
  * @brief Unified status bar component implementation
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens correctly
  */
 
 #include "ZenithStatusBar.h"
+#include "ZenithLookAndFeel.h"
 #include "../../include/Engine.h"
 
 namespace zenith {
@@ -25,21 +28,22 @@ void ZenithStatusBar::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background
-    g.fillAll(juce::Colour(ZenithLookAndFeel::Colors::backgroundDark));
+    // DESIGN SYSTEM: Background using backgroundBase elevation (not backgroundDark)
+    g.fillAll(juce::Colour(ZenithLookAndFeel::Elevation::dp0));
 
-    // Top border
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::border));
+    // DESIGN SYSTEM: Top border using borderSubtle
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
     g.drawRect(bounds.removeFromTop(1), 1);
 
-    // Padding
-    bounds.reduce(ZenithLookAndFeel::Metrics::spacingS, 0);
+    // DESIGN SYSTEM: Padding using Spacing constants
+    bounds.reduce(ZenithLookAndFeel::Spacing::s, 0);
 
     // Draw CPU Usage (Right side)
     {
         auto cpuBounds = bounds.removeFromRight(100);
+        // DESIGN SYSTEM: Text using textSecondary
         g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
-        g.setFont(ZenithLookAndFeel::getFontSmall());
+        g.setFont(ZenithLookAndFeel::Typography::getSmall());
         
         juce::String cpuText = "CPU: " + juce::String(cpuUsage_, 1) + "%";
         g.drawText(cpuText, cpuBounds, juce::Justification::centredRight, true);
@@ -48,8 +52,9 @@ void ZenithStatusBar::paint(juce::Graphics& g)
     // Draw Audio Device Info (Right side, left of CPU)
     {
         auto deviceBounds = bounds.removeFromRight(300);
+        // DESIGN SYSTEM: Text using textSecondary
         g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
-        g.setFont(ZenithLookAndFeel::getFontSmall());
+        g.setFont(ZenithLookAndFeel::Typography::getSmall());
         
         juce::String deviceText = audioDeviceName_ + " | " + audioSettings_;
         g.drawText(deviceText, deviceBounds, juce::Justification::centredRight, true);
@@ -58,9 +63,11 @@ void ZenithStatusBar::paint(juce::Graphics& g)
     // Draw Status Message (Left side)
     if (messageAlpha_ > 0.0f)
     {
-        g.setColour(isErrorMessage_ ? juce::Colour(ZenithLookAndFeel::Colors::accentDanger).withAlpha(messageAlpha_)
-                                    : juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(messageAlpha_));
-        g.setFont(ZenithLookAndFeel::getFontSmall());
+        // DESIGN SYSTEM: Error color using danger, normal using textPrimary
+        g.setColour(isErrorMessage_ 
+            ? juce::Colour(ZenithLookAndFeel::Colors::danger).withAlpha(messageAlpha_)
+            : juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(messageAlpha_));
+        g.setFont(ZenithLookAndFeel::Typography::getSmall());
         g.drawText(currentMessage_, bounds, juce::Justification::centredLeft, true);
     }
 }
@@ -133,4 +140,3 @@ void ZenithStatusBar::updateStats()
 }
 
 } // namespace zenith
-

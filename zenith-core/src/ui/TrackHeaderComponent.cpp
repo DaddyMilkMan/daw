@@ -3,7 +3,19 @@
  * @brief Track header implementation
  */
 
+// POLISH: spacing normalized to 8px grid (stripe 8px, padding 4/8, buttons 24x24, radius 4px)
+// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: flattened background (removed gradient), unified hover/active using theme
+
 #include "../../include/ui/TrackHeaderComponent.h"
+
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkFont.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkPath.h>
+#include <include/core/SkRRect.h>
+#include <include/effects/SkGradientShader.h>
+#endif
 
 //==============================================================================
 TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juce::String& trackId)
@@ -21,9 +33,10 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juc
         trackNode_.addListener(this);
 
     // Setup name label (editable) with Apple styling
+    auto& typo = zenith::SkiaTheme::getInstance().getTypography();
     nameLabel_.setEditable(true);
     nameLabel_.setJustificationType(juce::Justification::centredLeft);
-    nameLabel_.setFont(juce::FontOptions(14.0f));
+    nameLabel_.setFont(juce::FontOptions(typo.header.size));
     nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.95f));
     nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     nameLabel_.setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
@@ -68,6 +81,69 @@ TrackHeaderComponent::~TrackHeaderComponent()
 }
 
 //==============================================================================
+#ifdef ZENITH_USE_SKIA
+void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    using namespace zenith;
+    auto& theme = SkiaTheme::getInstance();
+    auto colors = theme.getColors();
+
+    float width = (float)bounds.getWidth();
+    float height = (float)bounds.getHeight();
+
+    // Background - flat for modern look
+    SkPaint bgPaint;
+    bgPaint.setColor(colors.bg2);
+    bgPaint.setAntiAlias(true);
+
+    SkRRect bgRRect = SkRRect::MakeRectXY(SkRect::MakeWH(width, height), 4.0f, 4.0f);
+    canvas.drawRRect(bgRRect, bgPaint);
+
+    // Delicate hover glow
+    if (isHovered_)
+    {
+        SkPaint hoverPaint;
+        hoverPaint.setColor(SkColorSetARGB(13, 255, 255, 255));  // Slightly stronger (5% alpha)
+        hoverPaint.setAntiAlias(true);
+        canvas.drawRRect(bgRRect, hoverPaint);
+    }
+
+    // Color stripe (left edge, 8px wide) - flat for clarity
+    SkRect stripeRect = SkRect::MakeXYWH(0, 0, 8.0f, height);
+
+    SkPaint stripePaint;
+    stripePaint.setColor(SkColorSetARGB(trackColour_.getAlpha(), trackColour_.getRed(),
+                                         trackColour_.getGreen(), trackColour_.getBlue()));
+    stripePaint.setAntiAlias(true);
+
+    // Rounded stripe (left side only)
+    SkRRect stripeRRect = SkRRect::MakeRectXY(stripeRect, 4.0f, 4.0f);
+    canvas.drawRRect(stripeRRect, stripePaint);
+
+    // Subtle bottom border
+    SkPaint borderPaint;
+    borderPaint.setColor(SkColorSetARGB(128, 58, 58, 60));  // #3A3A3C.withAlpha(0.5)
+    borderPaint.setStrokeWidth(0.5f);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setAntiAlias(true);
+    canvas.drawLine(2.0f, height - 0.5f, width - 2.0f, height - 0.5f, borderPaint);
+
+    // Name editor focus glow
+    if (nameFocusAnim_ > 0.01f)
+    {
+        auto nameBounds = nameLabel_.getBounds().toFloat().expanded(2.0f);
+        SkPaint focusPaint;
+        focusPaint.setColor(SkColorSetARGB((int)(nameFocusAnim_ * 0.3f * 255), 10, 132, 255));  // #0A84FF
+        focusPaint.setStrokeWidth(2.0f);
+        focusPaint.setStyle(SkPaint::kStroke_Style);
+        focusPaint.setAntiAlias(true);
+        SkRRect focusRRect = SkRRect::MakeRectXY(
+            SkRect::MakeXYWH(nameBounds.getX(), nameBounds.getY(), nameBounds.getWidth(), nameBounds.getHeight()),
+            4.0f, 4.0f);
+        canvas.drawRRect(focusRRect, focusPaint);
+    }
+}
+#else
 void TrackHeaderComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds().toFloat();
@@ -132,6 +208,7 @@ void TrackHeaderComponent::paint(juce::Graphics& g)
         g.drawRoundedRectangle(nameBounds, 3.0f, 2.0f);
     }
 }
+#endif
 
 void TrackHeaderComponent::resized()
 {

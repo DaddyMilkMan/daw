@@ -1,0 +1,15 @@
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  PresetRegressionTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_rc_lib.dir\Debug\PresetRegressionTests_rc_lib.lib
+  PresetRegressionTests.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_artefacts\Debug\PresetRegressionTests.exe
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  TrackInstrumentIntegrationTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\TrackInstrumentIntegrationTests_rc_lib.dir\Debug\TrackInstrumentIntegrationTests_rc_lib.lib
+  TrackInstrumentIntegrationTests.vcxproj -> C:\zenith\daw\zenith-core\build\TrackInstrumentIntegrationTests_artefacts\Debug\TrackInstrumentIntegrationTests.exe
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  InstrumentValidationTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\InstrumentValidationTests_rc_lib.dir\Debug\InstrumentValidationTests_rc_lib.lib
+  InstrumentValidationTests.vcxproj -> C:\zenith\daw\zenith-core\build\InstrumentValidationTests_artefacts\Debug\InstrumentValidationTests.exe

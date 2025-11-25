@@ -1,10 +1,13 @@
 /**
  * @file TransportControlComponent.cpp
  * @brief Transport control implementation with animations
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens
  */
 
 #include "TransportControlComponent.h"
 #include "../../include/Engine.h"
+#include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
 namespace zenith {
 
@@ -26,16 +29,16 @@ void TransportControlComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background with subtle gradient
+    // DESIGN SYSTEM: Background with subtle gradient using elevation tokens
     juce::ColourGradient bgGradient(
-        juce::Colour(0xff2a2a2a), 0.0f, bounds.getY(),
-        juce::Colour(0xff1e1e1e), 0.0f, bounds.getBottom(),
+        juce::Colour(ZenithLookAndFeel::Elevation::dp4), 0.0f, (float)bounds.getY(),
+        juce::Colour(ZenithLookAndFeel::Elevation::dp1), 0.0f, (float)bounds.getBottom(),
         false);
     g.setGradientFill(bgGradient);
     g.fillAll();
 
-    // Border
-    g.setColour(juce::Colour(0xff3a3a3a));
+    // DESIGN SYSTEM: Border using borderSubtle token
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
     g.drawRect(bounds, 1);
 
     // Center content area
@@ -46,48 +49,52 @@ void TransportControlComponent::paint(juce::Graphics& g)
     int totalButtonWidth = (BUTTON_SIZE * 3) + (BUTTON_SPACING * 2);
     int startX = centerArea.getCentreX() - (totalButtonWidth / 2);
 
-    // Play button
+    // DESIGN SYSTEM: Play button with playGreen semantic color
     auto playBounds = juce::Rectangle<int>(startX, centerArea.getCentreY() - BUTTON_SIZE / 2,
                                            BUTTON_SIZE, BUTTON_SIZE);
-    drawButton(g, playBounds, "▶", juce::Colour(0xff34c759),
+    drawButton(g, playBounds, juce::CharPointer_UTF8("\xe2\x96\xb6"), // Play triangle
+               juce::Colour(ZenithLookAndFeel::Colors::playGreen),
                playPressed_, playHovered_, engine_.isPlaying());
 
-    // Stop button
+    // DESIGN SYSTEM: Stop button with accentPrimary color  
     auto stopBounds = juce::Rectangle<int>(startX + BUTTON_SIZE + BUTTON_SPACING,
                                           centerArea.getCentreY() - BUTTON_SIZE / 2,
                                           BUTTON_SIZE, BUTTON_SIZE);
-    drawButton(g, stopBounds, "⏹", juce::Colour(0xff4a9eff),
+    drawButton(g, stopBounds, juce::CharPointer_UTF8("\xe2\x8f\xb9"), // Stop square
+               juce::Colour(ZenithLookAndFeel::Colors::accentPrimary),
                stopPressed_, stopHovered_, !engine_.isPlaying() && !engine_.isRecording());
 
-    // Record button
+    // DESIGN SYSTEM: Record button with recordRed semantic color
     auto recordBounds = juce::Rectangle<int>(startX + (BUTTON_SIZE + BUTTON_SPACING) * 2,
                                             centerArea.getCentreY() - BUTTON_SIZE / 2,
                                             BUTTON_SIZE, BUTTON_SIZE);
-    drawButton(g, recordBounds, "●", juce::Colour(0xffff453a),
+    drawButton(g, recordBounds, juce::CharPointer_UTF8("\xe2\x97\x8f"), // Record circle
+               juce::Colour(ZenithLookAndFeel::Colors::recordRed),
                recordPressed_, recordHovered_, engine_.isRecording());
 
     // Status and time display below buttons
     auto statusArea = bounds.removeFromTop(40);
     statusArea = statusArea.reduced(SPACING);
 
-    // Status text
-    g.setColour(juce::Colour(0xff999999));
-    g.setFont(juce::FontOptions(12.0f, juce::Font::bold));
+    // DESIGN SYSTEM: Status text with textSecondary token
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
+    g.setFont(ZenithLookAndFeel::Typography::getSmallBold());
 
-    juce::String statusText = engine_.isRecording() ? "● RECORDING"
-                            : engine_.isPlaying() ? "▶ PLAYING"
-                            : "⏹ STOPPED";
+    juce::String statusText = engine_.isRecording() ? juce::CharPointer_UTF8("\xe2\x97\x8f RECORDING")
+                            : engine_.isPlaying() ? juce::CharPointer_UTF8("\xe2\x96\xb6 PLAYING")
+                            : juce::CharPointer_UTF8("\xe2\x8f\xb9 STOPPED");
 
-    juce::Colour statusColor = engine_.isRecording() ? juce::Colour(0xffff453a)
-                             : engine_.isPlaying() ? juce::Colour(0xff34c759)
-                             : juce::Colour(0xff999999);
+    // DESIGN SYSTEM: Status color using semantic colors
+    juce::Colour statusColor = engine_.isRecording() ? juce::Colour(ZenithLookAndFeel::Colors::recordRed)
+                             : engine_.isPlaying() ? juce::Colour(ZenithLookAndFeel::Colors::playGreen)
+                             : juce::Colour(ZenithLookAndFeel::Colors::textSecondary);
     g.setColour(statusColor);
     g.drawText(statusText, statusArea.removeFromLeft(120), juce::Justification::centredLeft, true);
 
-    // Playback time
+    // DESIGN SYSTEM: Playback time with textPrimary token
     juce::String timeText = formatTime(engine_.getPlayheadSamples());
-    g.setColour(juce::Colour(0xffcccccc));
-    g.setFont(juce::FontOptions(11.0f));
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    g.setFont(ZenithLookAndFeel::Typography::getSmall());
     g.drawText(timeText, statusArea, juce::Justification::centredRight, true);
 }
 
@@ -115,9 +122,9 @@ void TransportControlComponent::drawButton(juce::Graphics& g, const juce::Rectan
         buttonBounds.getWidth() * scale,
         buttonBounds.getHeight() * scale);
 
-    // Draw outer shadow (subtle)
+    // DESIGN SYSTEM: Draw outer shadow using elevation
     if (!isPressed) {
-        g.setColour(juce::Colour(0x00000000).withAlpha(0.3f));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp0).withAlpha(0.3f));
         g.drawEllipse(scaledBounds.expanded(2.0f), 1.0f);
     }
 
@@ -133,19 +140,19 @@ void TransportControlComponent::drawButton(juce::Graphics& g, const juce::Rectan
     g.setColour(isActive ? color.brighter(0.5f) : color.withAlpha(0.5f));
     g.drawEllipse(scaledBounds, isActive ? 2.5f : 1.5f);
 
-    // Highlight on top (Apple-style)
+    // DESIGN SYSTEM: Highlight on top using textPrimary with alpha
     if (isActive) {
-        g.setColour(juce::Colour(0xffffffff).withAlpha(0.2f));
+        g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary).withAlpha(0.2f));
         g.fillEllipse(scaledBounds.withHeight(scaledBounds.getHeight() * 0.4f));
     }
 
-    // Label text
-    g.setColour(juce::Colour(0xffffffff));
-    g.setFont(juce::FontOptions(22.0f, juce::Font::bold));
+    // DESIGN SYSTEM: Label text using textPrimary
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    g.setFont(ZenithLookAndFeel::Typography::getH2());
     g.drawText(label, bounds, juce::Justification::centred, true);
 
-    // Recording pulse effect
-    if (isActive && label == "●") {
+    // DESIGN SYSTEM: Recording pulse effect with recordRed
+    if (isActive && label.containsChar(0x25CF)) { // Record circle character
         juce::Colour pulseColor = color.withAlpha(0.3f + 0.2f * std::sin(recordPulseAnimation_ * juce::MathConstants<float>::twoPi));
         g.setColour(pulseColor);
         g.drawEllipse(scaledBounds.expanded(4.0f), 2.0f);
@@ -273,4 +280,3 @@ juce::String TransportControlComponent::formatTime(juce::int64 samples)
 }
 
 }  // namespace zenith
-
