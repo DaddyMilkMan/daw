@@ -1,362 +1,330 @@
 /**
  * @file SkiaMainWindowIntegration.cpp
- * @brief Implementation of Skia main window integration
+ * @brief Implementation of GPU-accelerated Skia DAW rendering
  */
 
 #include "SkiaMainWindowIntegration.h"
 
 #ifdef ZENITH_USE_SKIA
 
-#include <cmath>
+// Define colors for the DAW UI
+#define SK_COLOR_BG_DARK     SkColorSetRGB(18, 18, 20)
+#define SK_COLOR_PANEL       SkColorSetRGB(30, 30, 35)
+#define SK_COLOR_ACCENT      SkColorSetRGB(0, 160, 255)
+#define SK_COLOR_TEXT_MAIN   SkColorSetRGB(220, 220, 220)
+#define SK_COLOR_TEXT_DIM    SkColorSetRGB(150, 150, 150)
+#define SK_COLOR_GRID_LINE   SkColorSetRGB(50, 50, 55)
 
 namespace zenith {
 
 //==============================================================================
-// SkiaAnimationController Implementation
-//==============================================================================
-
-SkiaAnimationController::SkiaAnimationController()
-    : currentFPS_(60.0f), targetFPS_(60.0f), frameTimeAccumulator_(0.0f), frameCount_(0)
-{
-}
-
-void SkiaAnimationController::update(float deltaTime)
-{
-    // Update FPS
-    frameTimeAccumulator_ += deltaTime;
-    frameCount_++;
-
-    if (frameTimeAccumulator_ >= 0.5f) // Update FPS every 0.5 seconds
-    {
-        currentFPS_ = frameCount_ / frameTimeAccumulator_;
-        frameTimeAccumulator_ = 0.0f;
-        frameCount_ = 0;
-    }
-
-    // Update all active animations using spring physics
-    for (auto& [componentId, state] : animationStates_)
-    {
-        if (!state.isActive)
-            continue;
-
-        // Spring physics: F = -k(x - target) - c*v
-        float positionError = state.target - state.current;
-        float acceleration = (state.physics.stiffness * positionError) - (state.physics.damping * state.velocity);
-
-        // Integrate velocity and position (simple Euler for now, can upgrade to RK4)
-        state.velocity += acceleration * deltaTime;
-        state.current += state.velocity * deltaTime;
-
-        // Check if animation has settled
-        if (std::abs(positionError) < SPRING_SETTLE_THRESHOLD &&
-            std::abs(state.velocity) < SPRING_SETTLE_THRESHOLD)
-        {
-            state.current = state.target;
-            state.velocity = 0.0f;
-            state.isActive = false;
-        }
-    }
-}
-
-void SkiaAnimationController::animateTo(const juce::String& componentId, float targetValue,
-                                        const SpringPhysicsSettings& physics)
-{
-    if (animationStates_.find(componentId) == animationStates_.end())
-    {
-        animationStates_[componentId] = AnimationState();
-    }
-
-    auto& state = animationStates_[componentId];
-    state.target = juce::jlimit(0.0f, 1.0f, targetValue);
-    state.physics = physics;
-    state.isActive = true;
-}
-
-float SkiaAnimationController::getValue(const juce::String& componentId) const
-{
-    auto it = animationStates_.find(componentId);
-    if (it != animationStates_.end())
-    {
-        return it->second.current;
-    }
-    return 0.0f;
-}
-
-bool SkiaAnimationController::isAnimationComplete(const juce::String& componentId) const
-{
-    auto it = animationStates_.find(componentId);
-    if (it != animationStates_.end())
-    {
-        return !it->second.isActive;
-    }
-    return true;
-}
-
-void SkiaAnimationController::clear()
-{
-    animationStates_.clear();
-}
-
-bool SkiaAnimationController::hasActiveAnimations() const
-{
-    for (const auto& [id, state] : animationStates_)
-    {
-        if (state.isActive)
-            return true;
-    }
-    return false;
-}
-
-//==============================================================================
-// SkiaMainWindowIntegration Implementation
+// Constructor / Destructor
 //==============================================================================
 
 SkiaMainWindowIntegration::SkiaMainWindowIntegration()
-    : isAnimationLoopRunning_(false), skiaInitialized_(false)
+    : isPlaying_(true), frameCounter_(0)
 {
-    // 1. Attach OpenGL context to this component
+    // 1. Configure and attach OpenGL context
     openGLContext.setRenderer(this);
-    openGLContext.setContinuousRepainting(true);
+    openGLContext.setContinuousRepainting(true); // VSYNC enabled
     openGLContext.setComponentPaintingEnabled(true);
     openGLContext.attachTo(*this);
 
-    // Set initial timer interval (will be adjusted by FPS settings)
-    startTimer(16); // ~60 FPS
-    lastFrameTime_ = juce::Time::getCurrentTime();
+    // 2. Start animation timer at 60 Hz
+    startTimerHz(60);
 
-    DBG("SkiaMainWindowIntegration: Constructor - OpenGL context attached");
+    DBG("SkiaMainWindowIntegration: Initialized");
 }
 
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration()
 {
-    // 2. Detach OpenGL context cleanly
     openGLContext.detach();
-    stopAnimationLoop();
     shutdownSkiaRendering();
 }
 
-ThemeMode SkiaMainWindowIntegration::getThemeMode() const
-{
-    return SkiaTheme::getInstance().getThemeMode();
-}
+//==============================================================================
+// OpenGL Lifecycle
+//==============================================================================
 
-void SkiaMainWindowIntegration::setThemeMode(ThemeMode mode, bool animate)
+void SkiaMainWindowIntegration::newOpenGLContextCreated()
 {
-    auto& theme = SkiaTheme::getInstance();
+    DBG("newOpenGLContextCreated - Initializing Skia on render thread");
 
-    if (theme.getThemeMode() != mode)
-    {
-        if (animate)
-        {
-            // Animate theme transition
-            animateComponent("theme_transition", 1.0f, SpringPhysicsSettings::smooth());
+    try {
+        renderer_ = std::make_unique<SkiaRenderer>(*this, SkiaRenderer::Backend::OpenGL, true);
+        if (renderer_->initialize()) {
+            skiaInitialized_ = true;
+            DBG("✓ Skia initialized successfully");
+        } else {
+            DBG("✗ SkiaRenderer initialization failed");
         }
-
-        theme.setThemeMode(mode);
-        repaint();
+    } catch (const std::exception& e) {
+        DBG("✗ Exception: " << e.what());
     }
 }
 
-void SkiaMainWindowIntegration::setAdaptiveFPS(bool enable)
+void SkiaMainWindowIntegration::openGLContextClosing()
 {
-    auto gpuSettings = SkiaTheme::getInstance().getGPUSettings();
-    gpuSettings.adaptiveFPS = enable;
-    updateGPUSettings(gpuSettings);
+    DBG("openGLContextClosing - Cleaning up Skia");
+    renderer_.reset();
+    skiaInitialized_ = false;
 }
 
-void SkiaMainWindowIntegration::updateGPUSettings(const SkiaTheme::GPUSettings& settings)
+void SkiaMainWindowIntegration::renderOpenGL()
 {
-    SkiaTheme::getInstance().setGPUSettings(settings);
+    if (!skiaInitialized_ || !renderer_) return;
 
-    // Adjust timer interval based on target FPS
-    stopTimer();
-    int intervalMs = static_cast<int>(1000.0f / settings.targetFPS);
-    startTimer(juce::jlimit(1, 100, intervalMs));
+    // Handle DPI scaling (Windows typically 1.0, 1.25, or 1.5)
+    const float scale = (float)openGLContext.getRenderingScale();
 
-    // Update the actual renderer target FPS if it exists
-    if (renderer_) {
-        renderer_->setTargetFPS(settings.targetFPS);
+    // Update Animation State
+    if (isPlaying_) {
+        playheadPosition_ += 2.0f;
+        if (playheadPosition_ > (float)getWidth()) {
+            playheadPosition_ = 0.0f;
+        }
+    }
+    frameCounter_++;
+
+    // RENDER THE FRAME
+    renderer_->render([this, scale](SkCanvas* canvas) {
+        canvas->save();
+        canvas->scale(scale, scale); // Apply DPI scaling
+
+        // 1. Main Background
+        canvas->clear(SK_COLOR_BG_DARK);
+
+        // 2. Define Layout Areas (Logical Pixels)
+        float w = (float)getWidth() / scale;
+        float h = (float)getHeight() / scale;
+        float topBarH = 50.0f;
+        float sideW = 250.0f;
+        float rightW = 280.0f;
+
+        SkRect transportRect = SkRect::MakeXYWH(0, 0, w, topBarH);
+        SkRect browserRect   = SkRect::MakeXYWH(0, topBarH, sideW, h - topBarH);
+        SkRect inspectorRect = SkRect::MakeXYWH(w - rightW, topBarH, rightW, h - topBarH);
+        SkRect timelineRect  = SkRect::MakeXYWH(sideW, topBarH, w - sideW - rightW, h - topBarH);
+
+        // 3. Draw Layout Components
+        drawTimelineArea(canvas, timelineRect, scale);
+        drawBrowserPanel(canvas, browserRect, scale);
+        drawInspectorPanel(canvas, inspectorRect, scale);
+        drawTransportBar(canvas, transportRect, scale); // Top stays on top
+
+        canvas->restore();
+    });
+}
+
+//==============================================================================
+// Drawing Implementations
+//==============================================================================
+
+void SkiaMainWindowIntegration::drawTransportBar(SkCanvas* canvas, const SkRect& bounds, float scale)
+{
+    SkPaint paint;
+
+    // Background
+    paint.setColor(SK_COLOR_PANEL);
+    canvas->drawRect(bounds, paint);
+
+    // Bottom Border
+    paint.setColor(SkColorSetRGB(60, 60, 65));
+    paint.setStrokeWidth(1.0f);
+    canvas->drawLine(bounds.left(), bounds.bottom(), bounds.right(), bounds.bottom(), paint);
+
+    // Title Text
+    SkFont font(nullptr, 18.0f);
+    paint.setColor(SK_COLOR_TEXT_MAIN);
+    canvas->drawString("ZENITH DAW", bounds.left() + 20, bounds.centerY() + 6, font, paint);
+
+    // Play Button (Center)
+    SkRect playBtn = SkRect::MakeXYWH(bounds.centerX() - 40, bounds.centerY() - 15, 80, 30);
+    SkRRect rrect;
+    rrect.setRectXY(playBtn, 4, 4);
+
+    paint.setColor(SK_COLOR_ACCENT);
+    canvas->drawRRect(rrect, paint);
+
+    paint.setColor(SK_ColorWHITE);
+    font.setSize(12.0f);
+    canvas->drawString(isPlaying_ ? "PLAYING" : "STOPPED", playBtn.left() + 15, playBtn.bottom() - 10, font, paint);
+
+    // BPM Counter
+    paint.setColor(SK_COLOR_TEXT_DIM);
+    canvas->drawString("128.00 BPM", bounds.right() - 150, bounds.centerY() + 5, font, paint);
+}
+
+void SkiaMainWindowIntegration::drawBrowserPanel(SkCanvas* canvas, const SkRect& bounds, float scale)
+{
+    SkPaint paint;
+
+    // Background
+    paint.setColor(SkColorSetRGB(22, 22, 24));
+    canvas->drawRect(bounds, paint);
+
+    // Border (Right edge)
+    paint.setColor(SK_COLOR_GRID_LINE);
+    paint.setStrokeWidth(1.0f);
+    canvas->drawLine(bounds.right(), bounds.top(), bounds.right(), bounds.bottom(), paint);
+
+    // Mock List Items
+    SkFont font(nullptr, 13.0f);
+    float itemY = bounds.top() + 30;
+
+    const char* items[] = { " Audio Files", " Instruments", " MIDI Effects", " Audio Effects", " Presets" };
+
+    for (int i = 0; i < 5; ++i) {
+        paint.setColor(i == 1 ? SK_COLOR_ACCENT : SK_COLOR_TEXT_MAIN); // Highlight 'Instruments'
+        if (i == 1) {
+            // Draw selection highlight
+            SkPaint bgPaint;
+            bgPaint.setColor(SkColorSetARGB(30, 0, 160, 255));
+            canvas->drawRect(SkRect::MakeXYWH(bounds.left(), itemY - 15, bounds.width() - 1, 30), bgPaint);
+        }
+        canvas->drawString(items[i], bounds.left() + 20, itemY, font, paint);
+        itemY += 35;
     }
 }
+
+void SkiaMainWindowIntegration::drawTimelineArea(SkCanvas* canvas, const SkRect& bounds, float scale)
+{
+    // Clip to timeline area
+    canvas->save();
+    canvas->clipRect(bounds);
+
+    SkPaint paint;
+
+    // 1. Draw Grid Lines
+    paint.setColor(SK_COLOR_GRID_LINE);
+    paint.setStrokeWidth(1.0f);
+
+    // Vertical Grid (Beats)
+    float beatWidth = 100.0f;
+    for (float x = bounds.left(); x < bounds.right(); x += beatWidth) {
+        canvas->drawLine(x, bounds.top(), x, bounds.bottom(), paint);
+    }
+
+    // Horizontal Grid (Tracks) and track headers
+    float trackHeight = 80.0f;
+    for (float y = bounds.top(); y < bounds.bottom(); y += trackHeight) {
+        canvas->drawLine(bounds.left(), y, bounds.right(), y, paint);
+
+        // Mock Track Header Background
+        SkPaint headerPaint;
+        headerPaint.setColor(SkColorSetRGB(35, 35, 40));
+        canvas->drawRect(SkRect::MakeXYWH(bounds.left(), y, 150, trackHeight), headerPaint);
+
+        // Track Name
+        SkFont font(nullptr, 12.0f);
+        SkPaint textPaint;
+        textPaint.setColor(SK_COLOR_TEXT_DIM);
+        canvas->drawString("Track Name", bounds.left() + 10, y + trackHeight / 2 + 4, font, textPaint);
+    }
+
+    // 2. Draw a Sample Clip
+    SkRect clipRect = SkRect::MakeXYWH(bounds.left() + 250, bounds.top() + 10, 200, 60);
+    SkRRect clipRRect;
+    clipRRect.setRectXY(clipRect, 6, 6);
+
+    paint.setColor(SkColorSetARGB(200, 0, 160, 255)); // Semi-transparent Blue
+    canvas->drawRRect(clipRRect, paint);
+
+    paint.setColor(SK_ColorWHITE);
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(2.0f);
+    canvas->drawRRect(clipRRect, paint);
+
+    // 3. Draw Playhead
+    drawPlayhead(canvas, bounds, scale);
+
+    canvas->restore();
+}
+
+void SkiaMainWindowIntegration::drawPlayhead(SkCanvas* canvas, const SkRect& bounds, float scale)
+{
+    // Animated playhead position
+    float x = bounds.left() + 250 + (sin(frameCounter_ * 0.05f) * 100 + 100);
+
+    SkPaint paint;
+    paint.setColor(SkColorSetRGB(255, 50, 50)); // Red
+    paint.setStrokeWidth(2.0f);
+
+    // Vertical Line
+    canvas->drawLine(x, bounds.top(), x, bounds.bottom(), paint);
+
+    // Triangle Cap
+    SkPath path;
+    path.moveTo(x - 6, bounds.top());
+    path.lineTo(x + 6, bounds.top());
+    path.lineTo(x, bounds.top() + 12);
+    path.close();
+    canvas->drawPath(path, paint);
+}
+
+void SkiaMainWindowIntegration::drawInspectorPanel(SkCanvas* canvas, const SkRect& bounds, float scale)
+{
+    SkPaint paint;
+    paint.setColor(SkColorSetRGB(25, 25, 28));
+    canvas->drawRect(bounds, paint);
+
+    paint.setColor(SK_COLOR_GRID_LINE);
+    paint.setStrokeWidth(1.0f);
+    canvas->drawLine(bounds.left(), bounds.top(), bounds.left(), bounds.bottom(), paint);
+
+    // Header Text
+    SkFont font(nullptr, 14.0f);
+    paint.setColor(SK_COLOR_TEXT_MAIN);
+    canvas->drawString("PROPERTIES", bounds.left() + 20, bounds.top() + 30, font, paint);
+
+    // Mock Knobs
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(3.0f);
+    paint.setColor(SK_COLOR_ACCENT);
+
+    canvas->drawCircle(bounds.left() + 50, bounds.top() + 80, 20, paint);
+    canvas->drawCircle(bounds.left() + 120, bounds.top() + 80, 20, paint);
+}
+
+//==============================================================================
+// Standard Component Methods
+//==============================================================================
+
+void SkiaMainWindowIntegration::paint(juce::Graphics& g)
+{
+    // Usually empty - OpenGL handles rendering
+    // But show loading message if Skia not ready
+    if (!skiaInitialized_) {
+        g.fillAll(juce::Colours::black);
+        g.setColour(juce::Colours::white);
+        g.drawText("Initializing GPU Engine...", getLocalBounds(), juce::Justification::centred, true);
+    }
+}
+
+void SkiaMainWindowIntegration::resized()
+{
+    // No-op - renderOpenGL handles bounds
+}
+
+void SkiaMainWindowIntegration::timerCallback()
+{
+    // Trigger render updates
+    openGLContext.triggerRepaint();
+}
+
+//==============================================================================
+// Control Methods
+//==============================================================================
 
 bool SkiaMainWindowIntegration::initializeSkiaRendering()
 {
-    // Initialization is now deferred to newOpenGLContextCreated
-    // This method is kept for API compatibility
+    // Initialization moved to newOpenGLContextCreated
     return true;
 }
 
 void SkiaMainWindowIntegration::shutdownSkiaRendering()
 {
     renderer_.reset();
-    skiaInitialized_ = false;
-    DBG("SkiaMainWindowIntegration: Shutdown complete");
-}
-
-void SkiaMainWindowIntegration::resized()
-{
-    // No-op - renderOpenGL handles resize based on current bounds
-}
-
-void SkiaMainWindowIntegration::paint(juce::Graphics& g)
-{
-    // Paint is called for JUCE overlay components on top of OpenGL
-    // Usually empty - OpenGL rendering is handled in renderOpenGL()
-    if (!skiaInitialized_)
-    {
-        g.fillAll(juce::Colours::black);
-        g.setColour(juce::Colours::white);
-        g.drawText("Initializing OpenGL...", getLocalBounds(), juce::Justification::centred, true);
-    }
-}
-
-void SkiaMainWindowIntegration::timerCallback()
-{
-    auto currentTime = juce::Time::getCurrentTime();
-    float deltaTime = lastFrameTime_.toMilliseconds() > 0
-                          ? static_cast<float>((currentTime.toMilliseconds() - lastFrameTime_.toMilliseconds()) / 1000.0)
-                          : 0.016f; // Default to 60 FPS if first frame
-
-    lastFrameTime_ = currentTime;
-
-    // Clamp delta time to prevent huge jumps
-    deltaTime = juce::jlimit(0.001f, 0.1f, deltaTime);
-
-    // Update animations
-    animationController_.update(deltaTime);
-
-    // Stop timer if no animations are running
-    if (!animationController_.hasActiveAnimations())
-    {
-        stopAnimationLoop();
-    }
-
-    repaint();
-}
-
-void SkiaMainWindowIntegration::startAnimationLoop()
-{
-    if (!isAnimationLoopRunning_)
-    {
-        isAnimationLoopRunning_ = true;
-        int targetFPS = renderer_ ? renderer_->getTargetFPS() : 60;
-        startTimer(1000 / targetFPS);
-        if (!isVisible())
-        {
-            setVisible(true);
-        }
-    }
-}
-
-void SkiaMainWindowIntegration::stopAnimationLoop()
-{
-    if (isAnimationLoopRunning_)
-    {
-        isAnimationLoopRunning_ = false;
-        stopTimer();
-    }
-}
-
-//==============================================================================
-// OpenGL Rendering Callbacks
-//==============================================================================
-
-void SkiaMainWindowIntegration::newOpenGLContextCreated()
-{
-    // This runs on the Render Thread
-    DBG("SkiaMainWindowIntegration::newOpenGLContextCreated() - Initializing Skia on render thread");
-
-    try
-    {
-        auto& theme = SkiaTheme::getInstance();
-        auto gpu = theme.getGPUSettings();
-
-        renderer_ = std::make_unique<SkiaRenderer>(*this, SkiaRenderer::Backend::OpenGL, true);
-        renderer_->setTargetFPS(gpu.targetFPS);
-
-        if (renderer_->initialize())
-        {
-            skiaInitialized_ = true;
-            DBG("✓ Skia initialized on OpenGL render thread");
-        }
-        else
-        {
-            DBG("✗ SkiaRenderer::initialize() failed");
-        }
-    }
-    catch (const std::exception& e)
-    {
-        DBG("✗ Exception in newOpenGLContextCreated: " << e.what());
-    }
-    catch (...)
-    {
-        DBG("✗ Unknown exception in newOpenGLContextCreated");
-    }
-}
-
-void SkiaMainWindowIntegration::renderOpenGL()
-{
-    // This runs on the Render Thread at the OpenGL refresh rate
-    if (!skiaInitialized_ || !renderer_)
-        return;
-
-    try
-    {
-        // Get DPI scaling for Windows 1440p monitors
-        const float scale = (float)openGLContext.getRenderingScale();
-        currentScale_ = scale;
-
-        // Resize surface if needed (check bounds)
-        int scaledWidth = getWidth() * scale;
-        int scaledHeight = getHeight() * scale;
-        renderer_->resize(scaledWidth, scaledHeight);
-
-        // Render frame with Skia
-        renderer_->render([this, scale](SkCanvas* canvas) {
-            // Apply DPI scaling
-            canvas->save();
-            canvas->scale(scale, scale);
-
-            // Clear with theme background
-            const auto& colors = SkiaTheme::getInstance().getColors();
-            canvas->clear(SkColorSetRGB(
-                (colors.background >> 16) & 0xFF,
-                (colors.background >> 8) & 0xFF,
-                colors.background & 0xFF
-            ));
-
-            // Draw test circle to prove GPU rendering works
-            SkPaint paint;
-            paint.setColor(SK_ColorGREEN);
-            paint.setAntiAlias(true);
-            canvas->drawCircle(getWidth() / 2.0f, getHeight() / 2.0f, 50.0f, paint);
-
-            // TODO: Delegate to child SkiaComponents here
-
-            canvas->restore();
-        });
-    }
-    catch (const std::exception& e)
-    {
-        DBG("✗ Exception in renderOpenGL: " << e.what());
-    }
-    catch (...)
-    {
-        DBG("✗ Unknown exception in renderOpenGL");
-    }
-}
-
-void SkiaMainWindowIntegration::openGLContextClosing()
-{
-    // Clean up Skia resources before OpenGL context is destroyed
-    DBG("SkiaMainWindowIntegration::openGLContextClosing() - Cleaning up");
-
-    if (renderer_)
-    {
-        renderer_->shutdown();
-        renderer_.reset();
-    }
-
     skiaInitialized_ = false;
 }
 
