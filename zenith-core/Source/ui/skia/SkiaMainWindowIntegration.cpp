@@ -114,13 +114,23 @@ bool SkiaAnimationController::hasActiveAnimations() const
 SkiaMainWindowIntegration::SkiaMainWindowIntegration()
     : isAnimationLoopRunning_(false), skiaInitialized_(false)
 {
+    // 1. Attach OpenGL context to this component
+    openGLContext.setRenderer(this);
+    openGLContext.setContinuousRepainting(true);
+    openGLContext.setComponentPaintingEnabled(true);
+    openGLContext.attachTo(*this);
+
     // Set initial timer interval (will be adjusted by FPS settings)
     startTimer(16); // ~60 FPS
     lastFrameTime_ = juce::Time::getCurrentTime();
+
+    DBG("SkiaMainWindowIntegration: Constructor - OpenGL context attached");
 }
 
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration()
 {
+    // 2. Detach OpenGL context cleanly
+    openGLContext.detach();
     stopAnimationLoop();
     shutdownSkiaRendering();
 }
@@ -162,90 +172,42 @@ void SkiaMainWindowIntegration::updateGPUSettings(const SkiaTheme::GPUSettings& 
     stopTimer();
     int intervalMs = static_cast<int>(1000.0f / settings.targetFPS);
     startTimer(juce::jlimit(1, 100, intervalMs));
+
+    // Update the actual renderer target FPS if it exists
+    if (renderer_) {
+        renderer_->setTargetFPS(settings.targetFPS);
+    }
 }
 
 bool SkiaMainWindowIntegration::initializeSkiaRendering()
 {
-    DBG("SkiaMainWindowIntegration::initializeSkiaRendering() called");
-
-    if (skiaInitialized_)
-    {
-        DBG("  Already initialized - returning true");
-        return true;
-    }
-
-    DBG("  Starting initialization process...");
-
-    try
-    {
-        DBG("  Step 1: Getting SkiaTheme singleton instance");
-        auto& theme = SkiaTheme::getInstance();
-
-        DBG("  Step 2: Loading theme configuration");
-        DBG("    Theme mode: " << (theme.getThemeMode() == ThemeMode::Dark ? "Dark" : "Light"));
-
-        auto colors = theme.getColors();
-        DBG("    Background color: 0x" << juce::String::toHexString((int)colors.background));
-        DBG("    Primary color: 0x" << juce::String::toHexString((int)colors.primary));
-
-        auto typo = theme.getTypography();
-        DBG("    Base font size: " << typo.baseSize);
-
-        auto gpu = theme.getGPUSettings();
-        DBG("    Target FPS: " << gpu.targetFPS);
-        DBG("    Adaptive FPS: " << (gpu.adaptiveFPS ? "enabled" : "disabled"));
-
-        DBG("  Step 3: Marking theme configuration as loaded");
-        skiaInitialized_ = true;
-
-        DBG("  ⚠ WARNING: This only initializes theme settings!");
-        DBG("  ⚠ SkiaRenderer is NOT created - UI components use JUCE fallback");
-        DBG("  ⚠ To use actual Skia rendering, SkiaRenderer must be instantiated");
-        DBG("  ✓ Theme configuration loaded successfully");
-        return true;
-    }
-    catch (const std::exception& e)
-    {
-        DBG("  ✗ EXCEPTION caught during initialization!");
-        DBG("    Exception type: std::exception");
-        DBG("    Message: " << e.what());
-        DBG("  SkiaMainWindowIntegration initialization FAILED");
-        return false;
-    }
-    catch (...)
-    {
-        DBG("  ✗ UNKNOWN EXCEPTION caught during initialization!");
-        DBG("  SkiaMainWindowIntegration initialization FAILED");
-        return false;
-    }
+    // Initialization is now deferred to newOpenGLContextCreated
+    // This method is kept for API compatibility
+    return true;
 }
 
 void SkiaMainWindowIntegration::shutdownSkiaRendering()
 {
-    if (!skiaInitialized_)
-        return;
-
-    stopAnimationLoop();
-    animationController_.clear();
+    renderer_.reset();
     skiaInitialized_ = false;
-
     DBG("SkiaMainWindowIntegration: Shutdown complete");
 }
 
 void SkiaMainWindowIntegration::resized()
 {
-    // Override if needed for layout adjustments
+    // No-op - renderOpenGL handles resize based on current bounds
 }
 
 void SkiaMainWindowIntegration::paint(juce::Graphics& g)
 {
-    // Clear background with theme color
-    const auto& colors = SkiaTheme::getInstance().getColors();
-    g.fillAll(juce::Colour(
-        colors.background >> 16 & 0xFF,
-        colors.background >> 8 & 0xFF,
-        colors.background & 0xFF
-    ));
+    // Paint is called for JUCE overlay components on top of OpenGL
+    // Usually empty - OpenGL rendering is handled in renderOpenGL()
+    if (!skiaInitialized_)
+    {
+        g.fillAll(juce::Colours::black);
+        g.setColour(juce::Colours::white);
+        g.drawText("Initializing OpenGL...", getLocalBounds(), juce::Justification::centred, true);
+    }
 }
 
 void SkiaMainWindowIntegration::timerCallback()
@@ -277,9 +239,8 @@ void SkiaMainWindowIntegration::startAnimationLoop()
     if (!isAnimationLoopRunning_)
     {
         isAnimationLoopRunning_ = true;
-        startTimer(16); // ~60 FPS
-
-        // Make sure component is visible for updates
+        int targetFPS = renderer_ ? renderer_->getTargetFPS() : 60;
+        startTimer(1000 / targetFPS);
         if (!isVisible())
         {
             setVisible(true);
@@ -294,6 +255,109 @@ void SkiaMainWindowIntegration::stopAnimationLoop()
         isAnimationLoopRunning_ = false;
         stopTimer();
     }
+}
+
+//==============================================================================
+// OpenGL Rendering Callbacks
+//==============================================================================
+
+void SkiaMainWindowIntegration::newOpenGLContextCreated()
+{
+    // This runs on the Render Thread
+    DBG("SkiaMainWindowIntegration::newOpenGLContextCreated() - Initializing Skia on render thread");
+
+    try
+    {
+        auto& theme = SkiaTheme::getInstance();
+        auto gpu = theme.getGPUSettings();
+
+        renderer_ = std::make_unique<SkiaRenderer>(*this, SkiaRenderer::Backend::OpenGL, true);
+        renderer_->setTargetFPS(gpu.targetFPS);
+
+        if (renderer_->initialize())
+        {
+            skiaInitialized_ = true;
+            DBG("✓ Skia initialized on OpenGL render thread");
+        }
+        else
+        {
+            DBG("✗ SkiaRenderer::initialize() failed");
+        }
+    }
+    catch (const std::exception& e)
+    {
+        DBG("✗ Exception in newOpenGLContextCreated: " << e.what());
+    }
+    catch (...)
+    {
+        DBG("✗ Unknown exception in newOpenGLContextCreated");
+    }
+}
+
+void SkiaMainWindowIntegration::renderOpenGL()
+{
+    // This runs on the Render Thread at the OpenGL refresh rate
+    if (!skiaInitialized_ || !renderer_)
+        return;
+
+    try
+    {
+        // Get DPI scaling for Windows 1440p monitors
+        const float scale = (float)openGLContext.getRenderingScale();
+        currentScale_ = scale;
+
+        // Resize surface if needed (check bounds)
+        int scaledWidth = getWidth() * scale;
+        int scaledHeight = getHeight() * scale;
+        renderer_->resize(scaledWidth, scaledHeight);
+
+        // Render frame with Skia
+        renderer_->render([this, scale](SkCanvas* canvas) {
+            // Apply DPI scaling
+            canvas->save();
+            canvas->scale(scale, scale);
+
+            // Clear with theme background
+            const auto& colors = SkiaTheme::getInstance().getColors();
+            canvas->clear(SkColorSetRGB(
+                (colors.background >> 16) & 0xFF,
+                (colors.background >> 8) & 0xFF,
+                colors.background & 0xFF
+            ));
+
+            // Draw test circle to prove GPU rendering works
+            SkPaint paint;
+            paint.setColor(SK_ColorGREEN);
+            paint.setAntiAlias(true);
+            canvas->drawCircle(getWidth() / 2.0f, getHeight() / 2.0f, 50.0f, paint);
+
+            // TODO: Delegate to child SkiaComponents here
+
+            canvas->restore();
+        });
+    }
+    catch (const std::exception& e)
+    {
+        DBG("✗ Exception in renderOpenGL: " << e.what());
+    }
+    catch (...)
+    {
+        DBG("✗ Unknown exception in renderOpenGL");
+    }
+}
+
+void SkiaMainWindowIntegration::openGLContextClosing()
+{
+    // Clean up Skia resources before OpenGL context is destroyed
+    DBG("SkiaMainWindowIntegration::openGLContextClosing() - Cleaning up");
+
+    if (renderer_)
+    {
+        renderer_->shutdown();
+        renderer_.reset();
+    }
+
+    skiaInitialized_ = false;
 }
 
 } // namespace zenith

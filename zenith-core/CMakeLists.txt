@@ -339,6 +339,7 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_graphics
     juce::juce_gui_basics
     juce::juce_gui_extra
+    juce::juce_opengl
 
     # Public link for GUI app config
     juce::juce_recommended_config_flags

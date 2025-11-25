@@ -16,19 +16,21 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
+#include <juce_opengl/juce_opengl.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
 
+#include "../../rendering/SkiaRenderer.h"
+#include "SkiaTheme.h"
+
 #ifdef ZENITH_USE_SKIA
     #include <include/core/SkCanvas.h>
     #include <include/core/SkPaint.h>
     #include <include/core/SkRect.h>
 #endif
-
-#include "SkiaTheme.h"
 
 namespace zenith {
 
@@ -128,8 +130,10 @@ private:
  * - Animation loop coordination
  * - FPS monitoring and adaptation
  * - Component lifecycle management
+ * - OpenGL context management for GPU acceleration
  */
 class SkiaMainWindowIntegration : public juce::Component,
+                                   public juce::OpenGLRenderer,
                                    private juce::Timer
 {
 public:
@@ -237,6 +241,28 @@ public:
      */
     void paint(juce::Graphics& g) override;
 
+    //==========================================================================
+    // OpenGL Rendering Callbacks (from juce::OpenGLRenderer)
+    //==========================================================================
+
+    /**
+     * @brief Called when OpenGL context is created
+     * Initializes Skia renderer on render thread
+     */
+    void newOpenGLContextCreated() override;
+
+    /**
+     * @brief Main OpenGL rendering callback
+     * Renders frame with GPU acceleration
+     */
+    void renderOpenGL() override;
+
+    /**
+     * @brief Called when OpenGL context is closing
+     * Cleanup Skia resources
+     */
+    void openGLContextClosing() override;
+
 private:
     //==========================================================================
     // Timer callback for animation loop
@@ -263,10 +289,13 @@ private:
     // Member variables
     //==========================================================================
 
+    juce::OpenGLContext openGLContext;
+    std::unique_ptr<SkiaRenderer> renderer_;
     SkiaAnimationController animationController_;
     bool isAnimationLoopRunning_ = false;
     juce::Time lastFrameTime_;
     bool skiaInitialized_ = false;
+    float currentScale_ = 1.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaMainWindowIntegration)
 };
