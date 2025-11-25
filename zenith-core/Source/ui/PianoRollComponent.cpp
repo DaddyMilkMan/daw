@@ -20,6 +20,14 @@
 #include "../../include/TempoMap.h"
 #include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaTheme.h"
+#include <include/core/SkPaint.h>
+#include <include/core/SkRect.h>
+#include <include/core/SkRRect.h>
+#include <include/core/SkFont.h>
+#endif
+
 //==============================================================================
 // Piano RollComponent Implementation
 //==============================================================================
@@ -58,6 +66,11 @@ PianoRollComponent::~PianoRollComponent()
 
 void PianoRollComponent::paint(juce::Graphics& g)
 {
+#ifdef ZENITH_USE_SKIA
+    // When using SkiaCanvasComponent, paint() calls our Skia backend automatically
+    // This JUCE fallback is for non-Skia builds
+#endif
+
     // DESIGN SYSTEM: Background using dp4 elevation
     g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Elevation::dp4));
 
@@ -75,6 +88,34 @@ void PianoRollComponent::paint(juce::Graphics& g)
     // Draw notes
     drawNotes(g, bounds);
 }
+
+#ifdef ZENITH_USE_SKIA
+void PianoRollComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+
+    // Background
+    SkPaint bgPaint;
+    bgPaint.setColor(colors.bg1);
+    bgPaint.setAntiAlias(true);
+    canvas.drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
+
+    // Draw zebra striping first (subtle alternating background)
+    drawZebraStripingSkia(canvas, bounds);
+
+    // Draw grid lines
+    drawGridSkia(canvas, bounds);
+
+    // Draw piano keys on left side
+    float pianoKeysX = bounds.getX();
+    float pianoKeysY = bounds.getY();
+    drawPianoKeysSkia(canvas, pianoKeysX, pianoKeysY, pianoKeysWidth, bounds.getHeight());
+
+    // Draw notes
+    drawNotesSkia(canvas, bounds);
+}
+#endif
 
 void PianoRollComponent::resized()
 {
@@ -561,6 +602,233 @@ double PianoRollComponent::snapToGrid(double beats) const
 {
     return std::round(beats / gridResolution) * gridResolution;
 }
+
+#ifdef ZENITH_USE_SKIA
+//==============================================================================
+// Skia Rendering Implementation
+//==============================================================================
+
+void PianoRollComponent::drawZebraStripingSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    // Zebra striping: alternating dark backgrounds for sharps/flats for visual legibility
+    // This makes it easier to distinguish white keys from black keys at a glance
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+
+    SkPaint stripePaint;
+    stripePaint.setAntiAlias(true);
+
+    // Iterate through notes and draw alternating stripes
+    for (int noteNumber = lowestNote; noteNumber <= highestNote; ++noteNumber)
+    {
+        int noteInOctave = noteNumber % 12;
+        bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 ||
+                          noteInOctave == 8 || noteInOctave == 10);
+
+        // Only darken black key rows for zebra striping effect
+        if (isBlackKey)
+        {
+            float y = noteNumberToPixels(noteNumber) + pianoKeysWidth;  // Offset by piano width
+            float height = noteHeight;
+
+            // Subtle darkening for black key rows
+            stripePaint.setColor(SkColorSetARGB(40, 0, 0, 0));  // Semi-transparent black
+
+            canvas.drawRect(SkRect::MakeXYWH(pianoKeysWidth, y, bounds.getWidth() - pianoKeysWidth, height),
+                           stripePaint);
+        }
+    }
+}
+
+void PianoRollComponent::drawPianoKeysSkia(SkCanvas& canvas, float x, float y, float width, float height)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+    const auto& typo = theme.getTypography();
+
+    SkPaint keyPaint;
+    keyPaint.setAntiAlias(true);
+
+    SkPaint borderPaint;
+    borderPaint.setColor(colors.borderSubtle);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setAntiAlias(true);
+
+    // Draw piano keys from highest to lowest note
+    for (int noteNumber = highestNote; noteNumber >= lowestNote; --noteNumber)
+    {
+        int noteInOctave = noteNumber % 12;
+        bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 ||
+                          noteInOctave == 8 || noteInOctave == 10);
+
+        float keyY = noteNumberToPixels(noteNumber);
+
+        // Key background color
+        if (isBlackKey)
+            keyPaint.setColor(colors.bg0);  // Dark for black keys
+        else
+            keyPaint.setColor(colors.bg2);  // Lighter for white keys
+
+        // Draw key rectangle
+        SkRect keyRect = SkRect::MakeXYWH(x, keyY, width, noteHeight);
+        canvas.drawRect(keyRect, keyPaint);
+
+        // Draw border
+        canvas.drawRect(keyRect, borderPaint);
+
+        // Draw note name for C notes
+        if (noteInOctave == 0)  // C
+        {
+            int octave = noteNumber / 12 - 1;
+            juce::String noteName = "C" + juce::String(octave);
+
+            SkFont font;
+            font.setSize(typo.tiny.size);
+
+            SkPaint textPaint;
+            textPaint.setColor(colors.textMuted);
+            textPaint.setAntiAlias(true);
+
+            auto nameStr = noteName.toStdString();
+            canvas.drawString(nameStr.c_str(), x + 4, keyY + noteHeight * 0.7f, font, textPaint);
+        }
+    }
+}
+
+void PianoRollComponent::drawGridSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+
+    // Vertical grid lines (beats)
+    SkPaint beatLinePaint;
+    beatLinePaint.setAntiAlias(true);
+
+    int maxBeats = static_cast<int>(pixelsToBeats(bounds.getWidth()) + 1);
+
+    for (int beat = 0; beat <= maxBeats; ++beat)
+    {
+        float x = pianoKeysWidth + beatsToPixels(beat);
+
+        if (x >= bounds.getX() && x <= bounds.getRight())
+        {
+            // Thicker line every 4 beats
+            if (beat % 4 == 0)
+            {
+                beatLinePaint.setColor(SkColorSetARGB(128,
+                    SkColorGetR(colors.borderStrong),
+                    SkColorGetG(colors.borderStrong),
+                    SkColorGetB(colors.borderStrong)));
+                beatLinePaint.setStrokeWidth(1.2f);
+            }
+            else
+            {
+                beatLinePaint.setColor(SkColorSetARGB(64,
+                    SkColorGetR(colors.borderSubtle),
+                    SkColorGetG(colors.borderSubtle),
+                    SkColorGetB(colors.borderSubtle)));
+                beatLinePaint.setStrokeWidth(0.5f);
+            }
+
+            canvas.drawLine(x, bounds.getY(), x, bounds.getBottom(), beatLinePaint);
+        }
+    }
+
+    // Horizontal grid lines (notes)
+    SkPaint noteLinePaint;
+    noteLinePaint.setColor(SkColorSetARGB(64,
+        SkColorGetR(colors.borderSubtle),
+        SkColorGetG(colors.borderSubtle),
+        SkColorGetB(colors.borderSubtle)));
+    noteLinePaint.setStrokeWidth(0.5f);
+    noteLinePaint.setAntiAlias(true);
+
+    for (int noteNumber = lowestNote; noteNumber <= highestNote; ++noteNumber)
+    {
+        float noteY = noteNumberToPixels(noteNumber);
+        canvas.drawLine(pianoKeysWidth, noteY, bounds.getRight(), noteY, noteLinePaint);
+    }
+}
+
+void PianoRollComponent::drawNotesSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    const auto& colors = theme.getColors();
+
+    SkPaint notePaint;
+    notePaint.setAntiAlias(true);
+
+    SkPaint selectedPaint;
+    selectedPaint.setColor(colors.accentAlt);  // Selection color (blue)
+    selectedPaint.setAntiAlias(true);
+
+    SkPaint borderPaint;
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.5f);
+    borderPaint.setAntiAlias(true);
+
+    // Draw each note
+    for (const auto& note : noteCache)
+    {
+        // Determine color based on selection state
+        bool isSelected = (&note == selectedNote);
+        bool isHovered = (&note == hoveredNote);
+
+        if (isSelected)
+        {
+            notePaint.setColor(colors.accentMain);  // Teal for selected
+            borderPaint.setColor(colors.accentAlt);
+        }
+        else if (isHovered)
+        {
+            // Lighter color with glow for hovered notes
+            notePaint.setColor(SkColorSetARGB(220,
+                SkColorGetR(colors.success),
+                SkColorGetG(colors.success),
+                SkColorGetB(colors.success)));
+            borderPaint.setColor(colors.textStrong);
+        }
+        else
+        {
+            // Normal note color (green)
+            notePaint.setColor(SkColorSetARGB(200,
+                SkColorGetR(colors.success),
+                SkColorGetG(colors.success),
+                SkColorGetB(colors.success)));
+            borderPaint.setColor(colors.success);
+        }
+
+        // Draw note rectangle with rounded corners
+        SkRect noteRect = SkRect::MakeXYWH(
+            note.bounds.getX(),
+            note.bounds.getY(),
+            note.bounds.getWidth(),
+            note.bounds.getHeight()
+        );
+
+        // Rounded rectangle for softer appearance
+        canvas.drawRRect(SkRRect::MakeRectXY(noteRect, 2.0f, 2.0f), notePaint);
+
+        // Border
+        canvas.drawRRect(SkRRect::MakeRectXY(noteRect, 2.0f, 2.0f), borderPaint);
+
+        // Velocity indicator (brightness)
+        if (note.velocity > 0)
+        {
+            float velocityBrightness = note.velocity / 127.0f;
+            SkPaint velocityPaint;
+            velocityPaint.setColor(SkColorSetARGB(
+                static_cast<int>(100 * velocityBrightness),
+                255, 255, 255
+            ));
+            velocityPaint.setAntiAlias(true);
+            canvas.drawRRect(SkRRect::MakeRectXY(noteRect, 2.0f, 2.0f), velocityPaint);
+        }
+    }
+}
+
+#endif  // ZENITH_USE_SKIA
 
 //==============================================================================
 // PianoRollWindow Implementation

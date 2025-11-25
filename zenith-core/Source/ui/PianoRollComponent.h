@@ -5,13 +5,20 @@
     Created: 2025-11-14
     Author:  Zenith DAW - Phase 4: Piano Roll MIDI Editor
 
-    Piano roll component for editing MIDI notes
+    GPU-accelerated piano roll component with Skia rendering
+
+    Features:
+    - GPU-accelerated Skia rendering via SkiaCanvasComponent
+    - Zebra striping for visual legibility (alternating dark backgrounds)
+    - Smooth hover animations and note selection feedback
+    - MIDI note editing (create, move, delete)
+    - Professional piano keyboard display with proper key colors
 
     Responsibilities:
-    - Display piano keys (left panel)
-    - Draw note grid (time × pitch)
-    - Render MIDI notes as rectangles
-    - Handle note editing (create, move, delete)
+    - Display piano keys (left panel) with proper black/white key rendering
+    - Draw note grid (time × pitch) with zebra striping
+    - Render MIDI notes with smooth animations
+    - Handle note editing interactions (create, move, delete)
 
   ==============================================================================
 */
@@ -30,6 +37,10 @@
 #include <memory>
 #include "../engine/Track.h"
 
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaCanvasComponent.h"
+#endif
+
 class Engine; // Forward declaration
 
 //==============================================================================
@@ -47,8 +58,32 @@ struct NoteVisual
 
 //==============================================================================
 /**
-    Piano roll MIDI editor component
+    Piano roll MIDI editor component with GPU-accelerated Skia rendering
+
+    When ZENITH_USE_SKIA is enabled, inherits from SkiaCanvasComponent for
+    GPU acceleration. Otherwise falls back to standard JUCE rendering.
 */
+#ifdef ZENITH_USE_SKIA
+class PianoRollComponent : public zenith::SkiaCanvasComponent,
+                           public juce::KeyListener,
+                           private juce::Timer
+{
+public:
+    //==============================================================================
+    PianoRollComponent(zenith::Track::Clip* clipToEdit, Engine& engine);
+    ~PianoRollComponent() override;
+
+    //==============================================================================
+    // Component interface
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+protected:
+    //==============================================================================
+    // Skia rendering override
+    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+
+#else
 class PianoRollComponent : public juce::Component,
                            public juce::KeyListener,
                            private juce::Timer
@@ -62,6 +97,8 @@ public:
     // Component interface
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+#endif  // ZENITH_USE_SKIA
 
     //==============================================================================
     // Mouse interaction
@@ -89,10 +126,19 @@ private:
     void timerCallback() override;
 
     //==============================================================================
-    // Rendering helpers
+    // Rendering helpers (JUCE Graphics fallback)
     void drawPianoKeys(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds);
     void drawNotes(juce::Graphics& g, juce::Rectangle<int> bounds);
+
+#ifdef ZENITH_USE_SKIA
+    //==============================================================================
+    // Skia-specific rendering helpers
+    void drawPianoKeysSkia(SkCanvas& canvas, float x, float y, float width, float height);
+    void drawGridSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds);
+    void drawNotesSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds);
+    void drawZebraStripingSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds);
+#endif
 
     //==============================================================================
     // Time/pitch mapping
