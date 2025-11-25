@@ -253,6 +253,13 @@ if(ZENITH_ENABLE_SKIA)
         Source/ui/skia/BottomBar.h
         Source/ui/skia/BottomBar.cpp
 
+        # Session View (Clip Launcher)
+        Source/ui/views/SessionViewComponent.h
+        Source/ui/views/SessionViewComponent.cpp
+
+        # Main Layout Manager
+        Source/ui/MainLayoutComponent.h
+
         # Enhanced UI Components are commented out until implemented
         # Source/ui/skia/SkiaWingmanEnhanced.h
         # Source/ui/skia/SkiaWingmanEnhanced.cpp

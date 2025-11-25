@@ -3,7 +3,8 @@
  * @brief Implementation of left-side browser panel
  */
 
-// POLISH: spacing normalized to 8px grid (width 256px, heights 48/40/32, padding 16, radius 4px)
+// POLISH: spacing normalized to 8px grid (width 256px, heights 48/40/32,
+// padding 16, radius 4px)
 
 #include "BrowserPanel.h"
 #include <include/core/SkFont.h>
@@ -17,13 +18,13 @@ namespace zenith {
 // Constants
 //==============================================================================
 
-static constexpr float BROWSER_WIDTH = 256.0f;        // 8px grid: 260→256
+static constexpr float BROWSER_WIDTH = 256.0f; // 8px grid: 260→256
 static constexpr float COLLAPSED_WIDTH = 48.0f;
-static constexpr float TAB_BAR_HEIGHT = 48.0f;        // 8px grid: 44→48
-static constexpr float SEARCH_BAR_HEIGHT = 40.0f;     // 8px grid: 36→40
+static constexpr float TAB_BAR_HEIGHT = 48.0f;    // 8px grid: 44→48
+static constexpr float SEARCH_BAR_HEIGHT = 40.0f; // 8px grid: 36→40
 static constexpr float ITEM_HEIGHT = 32.0f;
-static constexpr float SECTION_PADDING = 16.0f;       // 8px grid: 12→16
-static constexpr float CORNER_RADIUS = 4.0f;          // 8px grid: 6→4
+static constexpr float SECTION_PADDING = 16.0f; // 8px grid: 12→16
+static constexpr float CORNER_RADIUS = 4.0f;    // 8px grid: 6→4
 
 //==============================================================================
 // Construction
@@ -119,8 +120,7 @@ void BrowserPanel::clearItems(Tab tab) {
   repaint();
 }
 
-std::vector<BrowserPanel::BrowserItem>
-BrowserPanel::getFilteredItems() const {
+std::vector<BrowserPanel::BrowserItem> BrowserPanel::getFilteredItems() const {
   // Get items for current tab
   const std::vector<BrowserItem> *items = nullptr;
   switch (currentTab_) {
@@ -227,7 +227,7 @@ void BrowserPanel::mouseDoubleClick(const juce::MouseEvent &event) {
 }
 
 void BrowserPanel::mouseWheelMove(const juce::MouseEvent &event,
-                                   const juce::MouseWheelDetails &wheel) {
+                                  const juce::MouseWheelDetails &wheel) {
   if (isCollapsed_)
     return;
 
@@ -244,7 +244,7 @@ void BrowserPanel::mouseWheelMove(const juce::MouseEvent &event,
 //==============================================================================
 
 void BrowserPanel::paintSkia(SkCanvas &canvas,
-                              const juce::Rectangle<int> &bounds) {
+                             const juce::Rectangle<int> &bounds) {
   auto &theme = SkiaTheme::getInstance();
   auto &colors = theme.getColors();
 
@@ -262,12 +262,12 @@ void BrowserPanel::paintSkia(SkCanvas &canvas,
   auto searchBarBounds = getSearchBarBounds();
   auto contentAreaBounds = getContentAreaBounds();
 
-  SkRect tabBarRect = SkRect::MakeXYWH(tabBarBounds.getX(), tabBarBounds.getY(),
-                                       tabBarBounds.getWidth(),
-                                       tabBarBounds.getHeight());
-  SkRect searchBarRect = SkRect::MakeXYWH(
-      searchBarBounds.getX(), searchBarBounds.getY(), searchBarBounds.getWidth(),
-      searchBarBounds.getHeight());
+  SkRect tabBarRect =
+      SkRect::MakeXYWH(tabBarBounds.getX(), tabBarBounds.getY(),
+                       tabBarBounds.getWidth(), tabBarBounds.getHeight());
+  SkRect searchBarRect =
+      SkRect::MakeXYWH(searchBarBounds.getX(), searchBarBounds.getY(),
+                       searchBarBounds.getWidth(), searchBarBounds.getHeight());
   SkRect contentRect = SkRect::MakeXYWH(
       contentAreaBounds.getX(), contentAreaBounds.getY(),
       contentAreaBounds.getWidth(), contentAreaBounds.getHeight());
@@ -328,8 +328,8 @@ void BrowserPanel::drawTabBar(SkCanvas &canvas, const SkRect &bounds) {
                         HitZone::TabFiles, HitZone::TabMacros};
 
   for (int i = 0; i < 4; ++i) {
-    SkRect tabRect = SkRect::MakeXYWH(bounds.left() + i * tabWidth, bounds.top(),
-                                      tabWidth, bounds.height());
+    SkRect tabRect = SkRect::MakeXYWH(bounds.left() + i * tabWidth,
+                                      bounds.top(), tabWidth, bounds.height());
 
     bool isActive = (currentTab_ == tabs[i]);
     bool isHovered = (hoveredZone_ == hitZones[i]);
@@ -347,7 +347,8 @@ void BrowserPanel::drawSearchBar(SkCanvas &canvas, const SkRect &bounds) {
   bgPaint.setColor(colors.bg3);
 
   SkRect searchRect = bounds;
-  searchRect.inset(SECTION_PADDING, (bounds.height() - 32) / 2);  // 8px grid: 28→32
+  searchRect.inset(SECTION_PADDING,
+                   (bounds.height() - 32) / 2); // 8px grid: 28→32
 
   SkRRect searchRRect =
       SkRRect::MakeRectXY(searchRect, CORNER_RADIUS, CORNER_RADIUS);
@@ -360,14 +361,14 @@ void BrowserPanel::drawSearchBar(SkCanvas &canvas, const SkRect &bounds) {
   iconPaint.setStyle(SkPaint::kStroke_Style);
   iconPaint.setStrokeWidth(1.5f);
 
-  float iconX = searchRect.left() + 12;  // 8px grid: 10→12
+  float iconX = searchRect.left() + 12; // 8px grid: 10→12
   float iconY = searchRect.centerY();
 
   canvas.drawCircle(iconX, iconY, 6.0f, iconPaint);
   canvas.drawLine(iconX + 4, iconY + 4, iconX + 8, iconY + 8, iconPaint);
 
   // Search text
-  auto& typo = SkiaTheme::getInstance().getTypography();
+  auto &typo = SkiaTheme::getInstance().getTypography();
   if (!searchText_.isEmpty()) {
     SkFont font;
     font.setSize(typo.body.size);
@@ -376,7 +377,8 @@ void BrowserPanel::drawSearchBar(SkCanvas &canvas, const SkRect &bounds) {
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors.textStrong);
 
-    canvas.drawString(searchText_.toRawUTF8(), searchRect.left() + 24,  // 8px grid: 26→24
+    canvas.drawString(searchText_.toRawUTF8(),
+                      searchRect.left() + 24, // 8px grid: 26→24
                       searchRect.centerY() + 4, font, textPaint);
   } else {
     // Placeholder
@@ -387,7 +389,7 @@ void BrowserPanel::drawSearchBar(SkCanvas &canvas, const SkRect &bounds) {
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors.textSubtle);
 
-    canvas.drawString("Search...", searchRect.left() + 24,  // 8px grid: 26→24
+    canvas.drawString("Search...", searchRect.left() + 24, // 8px grid: 26→24
                       searchRect.centerY() + 4, font, textPaint);
   }
 }
@@ -430,18 +432,17 @@ void BrowserPanel::drawContentArea(SkCanvas &canvas, const SkRect &bounds) {
   // Draw scrollbar if needed
   if (maxScrollOffset_ > 0) {
     float scrollBarHeight = (bounds.height() / totalHeight) * bounds.height();
-    float scrollBarY =
-        bounds.top() + (scrollOffset_ / maxScrollOffset_) *
-                           (bounds.height() - scrollBarHeight);
+    float scrollBarY = bounds.top() + (scrollOffset_ / maxScrollOffset_) *
+                                          (bounds.height() - scrollBarHeight);
 
     SkPaint scrollBarPaint;
     scrollBarPaint.setAntiAlias(true);
     scrollBarPaint.setColor(colors.borderStrong);
 
-    SkRect scrollBarRect = SkRect::MakeXYWH(bounds.right() - 8, scrollBarY, 4,  // 8px grid: -6→-8
-                                            scrollBarHeight);
-    SkRRect scrollBarRRect =
-        SkRRect::MakeRectXY(scrollBarRect, 2.0f, 2.0f);
+    SkRect scrollBarRect =
+        SkRect::MakeXYWH(bounds.right() - 8, scrollBarY, 4, // 8px grid: -6→-8
+                         scrollBarHeight);
+    SkRRect scrollBarRRect = SkRRect::MakeRectXY(scrollBarRect, 2.0f, 2.0f);
 
     canvas.drawRRect(scrollBarRRect, scrollBarPaint);
   }
@@ -451,15 +452,15 @@ void BrowserPanel::drawCollapseButton(SkCanvas &canvas, const SkRect &bounds) {
   auto &colors = SkiaTheme::getInstance().getColors();
 
   auto buttonBounds = getCollapseButtonBounds();
-  SkRect buttonRect = SkRect::MakeXYWH(buttonBounds.getX(), buttonBounds.getY(),
-                                       buttonBounds.getWidth(),
-                                       buttonBounds.getHeight());
+  SkRect buttonRect =
+      SkRect::MakeXYWH(buttonBounds.getX(), buttonBounds.getY(),
+                       buttonBounds.getWidth(), buttonBounds.getHeight());
 
   // Background
   SkPaint bgPaint;
   bgPaint.setAntiAlias(true);
   bgPaint.setColor(hoveredZone_ == HitZone::CollapseButton ? colors.bg3
-                                                            : colors.bg2);
+                                                           : colors.bg2);
 
   SkRRect bgRRect = SkRRect::MakeRectXY(buttonRect, 4.0f, 4.0f);
   canvas.drawRRect(bgRRect, bgPaint);
@@ -491,8 +492,8 @@ void BrowserPanel::drawCollapseButton(SkCanvas &canvas, const SkRect &bounds) {
 }
 
 void BrowserPanel::drawTab(SkCanvas &canvas, const SkRect &rect,
-                            const juce::String &label, bool isActive,
-                            bool isHovered) {
+                           const juce::String &label, bool isActive,
+                           bool isHovered) {
   auto &theme = SkiaTheme::getInstance();
   auto &colors = theme.getColors();
   auto &interaction = theme.getInteraction();
@@ -524,7 +525,7 @@ void BrowserPanel::drawTab(SkCanvas &canvas, const SkRect &rect,
   }
 
   // Text
-  auto& typo = SkiaTheme::getInstance().getTypography();
+  auto &typo = SkiaTheme::getInstance().getTypography();
   SkFont font;
   font.setSize(typo.body.size);
 
@@ -538,14 +539,14 @@ void BrowserPanel::drawTab(SkCanvas &canvas, const SkRect &rect,
                    &textBounds);
 
   float textX = rect.centerX() - textBounds.width() / 2;
-  float textY = rect.centerY() + 4;  // 8px grid: 5→4
+  float textY = rect.centerY() + 4; // 8px grid: 5→4
 
   canvas.drawString(label.toRawUTF8(), textX, textY, font, textPaint);
 }
 
 void BrowserPanel::drawBrowserItem(SkCanvas &canvas, const SkRect &rect,
-                                    const BrowserItem &item, bool isSelected,
-                                    bool isHovered) {
+                                   const BrowserItem &item, bool isSelected,
+                                   bool isHovered) {
   auto &theme = SkiaTheme::getInstance();
   auto &colors = theme.getColors();
   auto &interaction = theme.getInteraction();
@@ -589,10 +590,41 @@ void BrowserPanel::drawBrowserItem(SkCanvas &canvas, const SkRect &rect,
   float iconX = rect.left() + 16;
   float iconY = rect.centerY();
 
-  canvas.drawCircle(iconX, iconY, 4.0f, iconPaint);
+  // Draw waveform preview for audio items instead of simple circle
+  if (item.category == "Drums" || item.category == "Bass" ||
+      item.category == "Instruments") {
+    // Define waveform rect
+    SkRect waveRect =
+        SkRect::MakeXYWH(rect.left() + 8, rect.centerY() - 8, 60, 16);
+
+    // Draw "Fake" Waveform for visual polish (until real audio analysis is
+    // linked)
+    SkPath wavePath;
+    wavePath.moveTo(waveRect.left(), waveRect.centerY());
+    float x = waveRect.left();
+    int seed =
+        (int)(item.name.hashCode() % 100); // Deterministic random based on name
+    while (x < waveRect.right()) {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff; // Simple LCG
+      float h = (float)((seed % 10) + 2);              // Height variation
+      wavePath.lineTo(x, waveRect.centerY() - h);
+      wavePath.lineTo(x + 2, waveRect.centerY() + h);
+      x += 3;
+    }
+
+    SkPaint wavePaint;
+    wavePaint.setStyle(SkPaint::kStroke_Style);
+    wavePaint.setColor(isSelected ? colors.bg0 : iconPaint.getColor());
+    wavePaint.setStrokeWidth(1.5f);
+    wavePaint.setAntiAlias(true);
+    canvas.drawPath(wavePath, wavePaint);
+  } else {
+    // Fallback to circle for non-audio items
+    canvas.drawCircle(iconX, iconY, 4.0f, iconPaint);
+  }
 
   // Item name
-  auto& typo = theme.getTypography();
+  auto &typo = theme.getTypography();
   SkFont font;
   font.setSize(typo.body.size);
 
@@ -600,14 +632,14 @@ void BrowserPanel::drawBrowserItem(SkCanvas &canvas, const SkRect &rect,
   textPaint.setAntiAlias(true);
   textPaint.setColor(isSelected ? colors.bg0 : colors.textStrong);
 
-  canvas.drawString(item.name.toRawUTF8(), rect.left() + 32,
-                    rect.centerY() + 4, font, textPaint);
+  canvas.drawString(item.name.toRawUTF8(), rect.left() + 76, rect.centerY() + 4,
+                    font, textPaint);
 
   // Category (smaller, muted)
   font.setSize(typo.small.size);
   textPaint.setColor(isSelected ? colors.bg1 : colors.textSubtle);
 
-  canvas.drawString(item.category.toRawUTF8(), rect.left() + 32,
+  canvas.drawString(item.category.toRawUTF8(), rect.left() + 76,
                     rect.centerY() + 16, font, textPaint);
 }
 
