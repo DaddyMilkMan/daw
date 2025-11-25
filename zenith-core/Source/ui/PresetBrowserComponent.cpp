@@ -7,7 +7,6 @@
 #include "ZenithLookAndFeel.h"
 #include <algorithm>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -100,7 +99,7 @@ void PresetBrowserComponent::paint(juce::Graphics &g) {
 
   // Title with better typography
   g.setColour(juce::Colours::white);
-  g.setFont(juce::Font("Inter", 18.0f, juce::Font::bold));
+  g.setFont(juce::FontOptions("Inter", 18.0f, juce::Font::bold));
   g.drawText("Preset Browser", 0, 8, getWidth(), 25,
              juce::Justification::centred);
 
@@ -320,7 +319,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
   g.setColour(rowIsSelected
                   ? juce::Colours::white
                   : juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
-  g.setFont(juce::Font("Inter", 13.0f, juce::Font::plain));
+  g.setFont(juce::FontOptions("Inter", 13.0f, juce::Font::plain));
 
   juce::String displayName = owner_.getPresetDisplayName(preset);
   g.drawText(displayName, 8, 0, width - 16, height,
@@ -328,7 +327,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
 
   // Tags (small, subtle) with fade effect
   if (!preset.tags.empty()) {
-    g.setFont(juce::Font("Inter", 9.0f, juce::Font::plain));
+    g.setFont(juce::FontOptions("Inter", 9.0f, juce::Font::plain));
     g.setColour(rowIsSelected
                     ? juce::Colour(ZenithLookAndFeel::Colors::textPrimary)
                           .withAlpha(0.8f)
