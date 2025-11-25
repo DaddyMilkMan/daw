@@ -18,6 +18,8 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "../Source/ui/skia/SkiaComponent.h"
+#include "../Source/ui/skia/SkiaSliderComponent.h"
+#include "../Source/ui/skia/SkiaButtonComponent.h"
 class SkCanvas;
 struct SkRect;
 #endif
@@ -133,15 +135,11 @@ private:
 
 #ifdef ZENITH_USE_SKIA
   /**
-   * @brief Draw a single track strip using Skia
+   * @brief Draw a single track strip background using Skia
+   * Child components (volumeSlider, panSlider, muteButton, soloButton, armButton)
+   * render themselves to avoid double-rendering issues.
    */
   void drawTrackStripSkia(SkCanvas* canvas, SkRect stripBounds, const TrackStrip& strip);
-
-  /**
-   * @brief Draw a button indicator using Skia
-   */
-  void drawButtonIndicatorSkia(SkCanvas* canvas, SkRect bounds, bool isActive,
-                               unsigned int activeColor, const char* label);
 #endif
 
   //==========================================================================

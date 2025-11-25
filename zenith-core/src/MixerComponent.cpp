@@ -515,92 +515,12 @@ void MixerComponent::drawTrackStripSkia(SkCanvas* canvas, SkRect stripBounds, co
                        stripBounds.y() + 20,
                        nameFont, namePaint);
 
-    // Volume Fader (Visual Representation)
-    float faderWidth = 16;
-    float faderHeight = stripBounds.height() - 130;
-    float faderX = stripBounds.centerX() - (faderWidth / 2.0f);
-    float faderY = stripBounds.y() + 35;
-
-    // Fader Trough
-    SkRRect faderTrack;
-    faderTrack.setRectXY(SkRect::MakeXYWH(faderX, faderY, faderWidth, faderHeight), 3, 3);
-    SkPaint faderTrackPaint;
-    faderTrackPaint.setColor(SkColorSetARGB(255, 25, 25, 25));
-    canvas->drawRRect(faderTrack, faderTrackPaint);
-
-    // Fader Fill
-    float volumeValue = strip.volumeSlider ? static_cast<float>(strip.volumeSlider->getValue()) : 0.0f;
-    float fillHeight = faderHeight * volumeValue;
-    float fillY = faderY + faderHeight - fillHeight;
-
-    SkRRect faderFill;
-    faderFill.setRectXY(SkRect::MakeXYWH(faderX, fillY, faderWidth, fillHeight), 3, 3);
-
-    SkPoint fillGradientPoints[2] = {{faderX, fillY}, {faderX, fillY + fillHeight}};
-    SkColor fillGradientColors[2] = {SkColorSetARGB(255, 100, 200, 255), SkColorSetARGB(255, 50, 150, 255)};
-    auto fillGradient = SkGradientShader::MakeLinear(fillGradientPoints, fillGradientColors, nullptr, 2, SkTileMode::kClamp);
-
-    SkPaint faderFillPaint;
-    faderFillPaint.setShader(fillGradient);
-    canvas->drawRRect(faderFill, faderFillPaint);
-
-    // Buttons
-    float buttonY = stripBounds.bottom() - 75;
-    float buttonSize = 18;
-    float buttonSpacing = 4;
-    float buttonTotalWidth = (buttonSize * 3) + (buttonSpacing * 2);
-    float buttonX = stripBounds.centerX() - (buttonTotalWidth / 2.0f);
-
-    bool isMuted = strip.muteButton && strip.muteButton->getToggleState();
-    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
-                            isMuted, SK_ColorRED, "M");
-
-    buttonX += buttonSize + buttonSpacing;
-    bool isSolo = strip.soloButton && strip.soloButton->getToggleState();
-    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
-                            isSolo, SkColorSetARGB(255, 255, 200, 0), "S");
-
-    buttonX += buttonSize + buttonSpacing;
-    bool isArmed = strip.armButton && strip.armButton->getToggleState();
-    drawButtonIndicatorSkia(canvas, SkRect::MakeXYWH(buttonX, buttonY, buttonSize, buttonSize),
-                            isArmed, SkColorSetARGB(255, 200, 0, 0), "R");
+    // NOTE: Volume Fader, Pan Slider, and M/S/R Buttons are child components
+    // that render themselves. They handle their own Skia or JUCE rendering.
+    // Do NOT draw them here to avoid double-rendering or desync issues.
+    // The component bounds are set in resized() to position them within the strip.
 
     canvas->restore();
-}
-
-void MixerComponent::drawButtonIndicatorSkia(SkCanvas* canvas, SkRect bounds, bool isActive,
-                                             unsigned int activeColor, const char* label) {
-    SkRRect buttonRect;
-    buttonRect.setRectXY(bounds, 3, 3);
-
-    SkPaint bgPaint;
-    bgPaint.setColor(isActive ? activeColor : SkColorSetARGB(255, 50, 50, 50));
-    bgPaint.setAntiAlias(true);
-    canvas->drawRRect(buttonRect, bgPaint);
-
-    SkPaint borderPaint;
-    borderPaint.setColor(SkColorSetARGB(255, 80, 80, 80));
-    borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setAntiAlias(true);
-    canvas->drawRRect(buttonRect, borderPaint);
-
-    SkFont labelFont;
-    labelFont.setSize(10);
-    labelFont.setEdging(SkFont::Edging::kAntiAlias);
-
-    SkPaint labelPaint;
-    labelPaint.setColor(SK_ColorWHITE);
-    labelPaint.setAntiAlias(true);
-
-    SkRect textBounds;
-    labelFont.measureText(label, strlen(label), SkTextEncoding::kUTF8, &textBounds);
-
-    // Manual centering adjustment
-    float textX = bounds.centerX() - (textBounds.width() / 2.0f);
-    float textY = bounds.centerY() + (textBounds.height() / 2.0f) - 1;
-
-    canvas->drawString(label, textX, textY, labelFont, labelPaint);
 }
 
 #endif
