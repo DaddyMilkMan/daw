@@ -1113,6 +1113,131 @@ Response:
 
 ---
 
+## Audio/MIDI Raw Access Helpers
+
+These commands expose offline audio renders and full MIDI note dumps so AI agents can analyze or regenerate content without touching the audio thread.
+
+### export_audio
+
+**Description:** Offline render the current project mix to a WAV file for analysis or downstream processing.
+
+**Request:**
+```json
+{
+  "command": "export_audio",
+  "params": {
+    "outputPath": "C:/temp/zenith_render.wav",
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "durationSeconds": 0
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "outputPath": "C:/temp/zenith_render.wav",
+    "sampleRate": 48000,
+    "bitDepth": 24,
+    "durationSeconds": 0
+  }
+}
+```
+
+**Notes:**
+- Runs on the message thread using the offline export path; never touches the real-time audio callback.
+- `durationSeconds` of 0 auto-detects from the project length fallback in the engine.
+
+### get_midi_data
+
+**Description:** Retrieve MIDI note data for all MIDI clips (or a specific track/clip) to enable AI-side analysis or transformation.
+
+**Request (single track):**
+```json
+{
+  "command": "get_midi_data",
+  "params": {
+    "trackId": "track_1"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "tracks": [
+      {
+        "id": "track_1",
+        "type": "midi",
+        "clipCount": 1,
+        "clips": [
+          {
+            "id": "clip_5",
+            "trackId": "track_1",
+            "startBeats": 0.0,
+            "lengthBeats": 8.0,
+            "laneIndex": 0,
+            "noteCount": 2,
+            "notes": [
+              { "id": "note_1", "pitch": 60, "startBeats": 0.0, "lengthBeats": 1.0, "velocity": 100, "muted": false },
+              { "id": "note_2", "pitch": 64, "startBeats": 1.0, "lengthBeats": 1.0, "velocity": 95, "muted": false }
+            ]
+          }
+        ]
+      }
+    ],
+    "trackCount": 1
+  }
+}
+```
+
+**Notes:**
+- Optional `trackId` and `clipId` filters narrow the dump; otherwise all MIDI clips are returned.
+- Clips are sourced from ProjectState, preserving beat positions, lane indices, velocities, and mute flags.
+
+### set_clip_notes
+
+**Description:** Replace all MIDI notes in a clip with a provided list so AI can regenerate parts after analysis.
+
+**Request:**
+```json
+{
+  "command": "set_clip_notes",
+  "params": {
+    "trackId": "track_1",
+    "clipId": "clip_5",
+    "notes": [
+      { "pitch": 36, "startBeats": 0.0, "lengthBeats": 0.5, "velocity": 110 },
+      { "pitch": 42, "startBeats": 0.5, "lengthBeats": 0.5, "velocity": 105 }
+    ]
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "trackId": "track_1",
+    "clipId": "clip_5",
+    "cleared": 4,
+    "added": 2
+  }
+}
+```
+
+**Notes:**
+- Only valid for MIDI clips; returns an error for audio clips.
+- Existing notes are removed before the new set is inserted, each under its own undo transaction.
+
+---
+
 ## Best Practices for AI Agents
 
 1. **Discovery First**: Always use `list_instruments` and `list_presets` before making assumptions about available resources
