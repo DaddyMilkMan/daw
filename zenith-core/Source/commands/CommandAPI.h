@@ -23,8 +23,11 @@
     - move_clip: Move clip to new position
     - set_track_volume: Adjust track volume (dB)
     - set_track_pan: Adjust track pan (-1.0 to 1.0)
+    - export_audio: Offline render project audio to WAV for AI analysis
     - get_session_graph: Export full project state as JSON
     - describe_instrument: Get parameter schema for an instrument
+    - get_midi_data: Dump MIDI clip note data for analysis
+    - set_clip_notes: Replace MIDI clip contents with a provided note list
 
   ==============================================================================
 */
@@ -130,6 +133,7 @@ private:
     juce::var renameTrack(const juce::var& params);
     juce::var setTrackVolume(const juce::var& params);
     juce::var setTrackPan(const juce::var& params);
+    juce::var exportAudio(const juce::var& params);
 
     // Clip commands
     juce::var listClips(const juce::var& params);
@@ -177,6 +181,8 @@ private:
     juce::var getNotes(const juce::var& params);
     juce::var setNoteVelocity(const juce::var& params);
     juce::var setNoteLength(const juce::var& params);
+    juce::var getMidiData(const juce::var& params);
+    juce::var setClipNotes(const juce::var& params);
 
     //==============================================================================
     // Helper methods
