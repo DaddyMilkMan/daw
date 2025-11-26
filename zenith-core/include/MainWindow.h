@@ -94,6 +94,7 @@ public:
 
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void mouseDown(const juce::MouseEvent &e) override;
 
   //==========================================================================
   // KeyListener interface (for undo/redo shortcuts)

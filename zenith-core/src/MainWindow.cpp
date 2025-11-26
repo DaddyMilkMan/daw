@@ -45,6 +45,9 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   addKeyListener(this);
   setWantsKeyboardFocus(true);
 
+  // Add Debug Overlay
+  addChildComponent(&zenith::DebugLogOverlay::getInstance());
+
   setSize(1400, 800);
 
   DBG("========================================");
@@ -342,8 +345,20 @@ void MainComponent::paint(juce::Graphics &g) {
 #endif
 }
 
+void MainComponent::mouseDown(const juce::MouseEvent &e) {
+  if (e.mods.isPopupMenu()) {
+    juce::PopupMenu m;
+    m.addItem("Show Debug Logs", [] {
+      zenith::DebugLogOverlay::getInstance().setVisible(true);
+      zenith::DebugLogOverlay::getInstance().toFront(true);
+    });
+    m.showMenuAsync(juce::PopupMenu::Options());
+  }
+}
+
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
+  zenith::DebugLogOverlay::getInstance().setBounds(bounds.reduced(50));
 
   DBG("MainComponent::resized() called - Total bounds: " +
       juce::String(bounds.getWidth()) + "x" + juce::String(bounds.getHeight()));

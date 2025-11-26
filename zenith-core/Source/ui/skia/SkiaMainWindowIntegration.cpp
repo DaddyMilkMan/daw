@@ -1,7 +1,9 @@
 #include "SkiaMainWindowIntegration.h"
+#include "../../../src/SimpleLogger.h"
 #include "../skia/SkiaComponent.h"
 #include <include/core/SkSurface.h>
 #include <include/gpu/ganesh/GrDirectContext.h>
+
 
 #ifdef ZENITH_USE_SKIA
 
@@ -12,7 +14,7 @@ SkiaMainWindowIntegration::SkiaMainWindowIntegration() {
   openGLContext.setRenderer(this);
   openGLContext.setContinuousRepainting(true); // Force 60FPS
   openGLContext.setComponentPaintingEnabled(
-      false); // CRITICAL FIX: Disable JUCE painting
+      true); // ENABLE JUCE painting for overlays
   openGLContext.setMultisamplingEnabled(true);
   openGLContext.attachTo(*this);
 }
@@ -23,16 +25,27 @@ SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
 }
 
 void SkiaMainWindowIntegration::newOpenGLContextCreated() {
+  logToFile("SkiaMainWindowIntegration::newOpenGLContextCreated - Initializing "
+            "Skia...");
   renderer_ =
       std::make_unique<SkiaRenderer>(*this, SkiaRenderer::Backend::OpenGL);
   if (!renderer_->initialize()) {
+    logToFile("CRITICAL: Skia failed to initialize");
     DBG("CRITICAL: Skia failed to initialize");
+  } else {
+    logToFile("Skia initialized successfully.");
   }
 }
 
 void SkiaMainWindowIntegration::openGLContextClosing() { renderer_.reset(); }
 
 void SkiaMainWindowIntegration::renderOpenGL() {
+  static bool logged = false;
+  if (!logged) {
+    logToFile("SkiaMainWindowIntegration::renderOpenGL - First frame");
+    logged = true;
+  }
+
   if (!renderer_)
     return;
 

@@ -34,8 +34,10 @@ public:
   }
 
   void paint(juce::Graphics &g) override {
+#ifndef ZENITH_USE_SKIA
     // Failsafe: If Skia fails, you will see this dark grey background
     g.fillAll(juce::Colours::darkgrey);
+#endif
   }
 
   void resized() override {
