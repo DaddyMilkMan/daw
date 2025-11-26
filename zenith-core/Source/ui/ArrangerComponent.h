@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef ZENITH_USE_SKIA
-#include "../Source/ui/skia/SkiaComponent.h"
+#include "skia/SkiaComponent.h"
 class SkCanvas;
 struct SkRect;
 #endif

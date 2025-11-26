@@ -10,6 +10,7 @@
 #include "../Source/network/AIBridgeClient.h"
 #include "../Source/ui/ArrangerComponent.h"
 #include "../Source/ui/InstrumentBrowserPanel.h"
+#include "../Source/ui/MainLayoutComponent.h"
 #include "../Source/ui/WingmanPanel.h"
 #include "../include/PianoRollEditor.h"
 
@@ -62,14 +63,6 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 
   // Instantiate the SkiaRenderer
   logToFile("→ Initializing SkiaRenderer...");
-  renderer_ = std::make_unique<zenith::SkiaRenderer>(*this);
-  if (renderer_->initialize()) {
-    logToFile("✓ SkiaRenderer initialized successfully");
-  } else {
-    logToFile(
-        "✗ SkiaRenderer initialization FAILED - falling back to software");
-    renderer_.reset();
-  }
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
@@ -105,19 +98,16 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("✓ TransportBar created and made visible at " +
       juce::String::toHexString((juce::pointer_sized_int)transportBar.get()));
 
-  // Left: Browser Panel
-  DBG("→ Creating BrowserPanel...");
-  browserPanel = std::make_unique<zenith::BrowserPanel>();
-  addAndMakeVisible(browserPanel.get());
-  DBG("✓ BrowserPanel created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)browserPanel.get()));
+  // The "Perfect DAW" Tri-Pane Layout Manager
+  DBG("→ Creating MainLayoutComponent...");
+  mainLayout = std::make_unique<zenith::MainLayoutComponent>(projectState);
+  addAndMakeVisible(mainLayout.get());
+  DBG("✓ MainLayoutComponent created and made visible at " +
+      juce::String::toHexString((juce::pointer_sized_int)mainLayout.get()));
 
-  // Connect browser collapse callback
-  browserPanel->onCollapseToggled = [this]() {
-    resized(); // Re-layout when browser is collapsed/expanded
-    DBG("Browser panel collapsed state: " +
-        juce::String(browserPanel->isCollapsed() ? "collapsed" : "expanded"));
-  };
+  // Connect browser collapse callback (proxied through MainLayout if needed, or
+  // handled internally) For now, MainLayout handles its own resizing when
+  // browser toggles.
 
   // Create Wingman panel (will be hosted in RightSidePanel)
   DBG("→ Creating WingmanPanel...");
@@ -145,31 +135,12 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("✓ BottomBar created and made visible at " +
       juce::String::toHexString((juce::pointer_sized_int)bottomBar.get()));
 
-  // Center: Arranger Component
-  DBG("→ Creating ArrangerComponent...");
-  arrangerComponent =
-      std::make_unique<ArrangerComponent>(*engine.getProjectState());
-  addAndMakeVisible(arrangerComponent.get());
-  DBG("✓ ArrangerComponent created and made visible at " +
-      juce::String::toHexString(
-          (juce::pointer_sized_int)arrangerComponent.get()));
-
-  // Center: Session View (Clip Launcher)
-  DBG("→ Creating SessionViewComponent...");
-  sessionView = std::make_unique<zenith::SessionViewComponent>();
-  sessionView->setVisible(false); // Start hidden, Arranger is default
-  addAndMakeVisible(sessionView.get());
-  DBG("✓ SessionViewComponent created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)sessionView.get()));
-
   // Connect view toggle callback
   transportBar->onViewToggleClicked = [this]() {
-    showSessionView = !showSessionView;
-    sessionView->setVisible(showSessionView);
-    arrangerComponent->setVisible(!showSessionView);
-    resized(); // Re-layout
-    DBG("View toggled to: " +
-        juce::String(showSessionView ? "Session" : "Arranger"));
+    if (mainLayout) {
+      mainLayout->toggleView();
+      DBG("View toggled via MainLayout");
+    }
   };
 
   // Start animation timer (SkiaMainWindowIntegration handles this)
@@ -353,21 +324,10 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
 void MainComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
-  // With OpenGL + setComponentPaintingEnabled(true), child components
-  // automatically render themselves. This paint() is only called
-  // if OpenGL context isn't ready yet.
-
-  if (!renderer_ || !renderer_->getSurface()) {
-    g.fillAll(juce::Colour(0xff121214));
-    g.setColour(juce::Colours::white);
-    g.setFont(16.0f);
-    g.drawText("Initializing Skia Renderer...", getLocalBounds(),
-               juce::Justification::centred, true);
-    return;
-  }
-#endif
-
-  // JUCE fallback rendering (when Skia disabled or failed to initialize)
+  // Delegate to base class which handles initialization status
+  SkiaMainWindowIntegration::paint(g);
+#else
+  // JUCE fallback rendering (when Skia disabled)
   static int paintCallCount = 0;
   if (paintCallCount < 3) {
     paintCallCount++;
@@ -381,6 +341,7 @@ void MainComponent::paint(juce::Graphics &g) {
 
   // Background (ArrangerComponent handles its own painting)
   g.fillAll(juce::Colour(0xff1e1e1e)); // Dark grey (LUNA-inspired)
+#endif
 }
 
 void MainComponent::resized() {
@@ -413,15 +374,8 @@ void MainComponent::resized() {
     DBG("  ✗ BottomBar is NULL!");
   }
 
-  // Left: Browser Panel (260px width, collapsible)
-  if (browserPanel) {
-    int browserWidth = browserPanel->isCollapsed() ? 48 : 260;
-    auto browserBounds = bounds.removeFromLeft(browserWidth);
-    browserPanel->setBounds(browserBounds);
-    DBG("  ✓ BrowserPanel positioned at: " + browserBounds.toString());
-  } else {
-    DBG("  ✗ BrowserPanel is NULL!");
-  }
+  // Left: Browser Panel (Managed by MainLayoutComponent now)
+  // MainLayoutComponent handles Browser, Session, and Arranger internally
 
   // Right: Scratch Pads + Wingman Console (400px width)
   if (rightSidePanel) {
@@ -432,16 +386,12 @@ void MainComponent::resized() {
     DBG("  ✗ RightSidePanel is NULL!");
   }
 
-  // Center: Session View OR Arranger Component (toggle-able)
-  // Both take the same space, but only one is visible at a time
-  if (showSessionView && sessionView) {
-    sessionView->setBounds(bounds);
-    DBG("  ✓ SessionViewComponent positioned at: " + bounds.toString());
-  } else if (arrangerComponent) {
-    arrangerComponent->setBounds(bounds);
-    DBG("  ✓ ArrangerComponent positioned at: " + bounds.toString());
+  // Center: Main Layout (Browser + Session/Arranger)
+  if (mainLayout) {
+    mainLayout->setBounds(bounds);
+    DBG("  ✓ MainLayoutComponent positioned at: " + bounds.toString());
   } else {
-    DBG("  ✗ No center view active!");
+    DBG("  ✗ MainLayoutComponent is NULL!");
   }
 
 #else

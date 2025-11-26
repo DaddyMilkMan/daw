@@ -1,10 +1,9 @@
 #pragma once
-#include "../include/ProjectState.h"
+#include "../../include/ProjectState.h"
 #include "ArrangerComponent.h"
 #include "skia/BrowserPanel.h"
 #include "views/SessionViewComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
-
 
 namespace zenith {
 
@@ -26,8 +25,17 @@ public:
     addAndMakeVisible(sessionView);
     addAndMakeVisible(arranger);
 
-    // Start with Arranger visible, Session hidden
-    sessionView.setVisible(false);
+    // Show Session View by default to prove it works
+    sessionView.setVisible(true);
+    arranger.setVisible(false);
+
+    // Set opaque for better performance
+    setOpaque(true);
+  }
+
+  void paint(juce::Graphics &g) override {
+    // Failsafe: If Skia fails, you will see this dark grey background
+    g.fillAll(juce::Colours::darkgrey);
   }
 
   void resized() override {

@@ -4,10 +4,6 @@
  *
  * Contains the main UI layout and hosts the audio engine.
  *
- * Phase 0: Foundation
- * - Basic window management
- * - Menu bar
- * - Status bar
  * - Audio engine integration
  */
 
@@ -46,7 +42,6 @@
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
 #include "../Source/ui/views/SessionViewComponent.h"
-
 #endif
 
 // Forward declarations
@@ -56,6 +51,7 @@ namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
 class AIBridgeClient;
+class MainLayoutComponent;
 } // namespace zenith
 
 //==============================================================================
@@ -139,11 +135,6 @@ private:
   Engine &engine;
   ProjectState &projectState;
 
-#ifdef ZENITH_USE_SKIA
-  // Skia renderer for actual Skia rendering
-  std::unique_ptr<zenith::SkiaRenderer> renderer_;
-#endif
-
   // ============================================================================
   // Modern DAW Layout Panels
   // ============================================================================
@@ -152,18 +143,15 @@ private:
   // Top: Transport bar with play/stop/record, tempo, CPU, etc.
   std::unique_ptr<zenith::TransportBar> transportBar;
 
-  // Left: Browser panel with Devices/Clips/Files/Macros tabs
-  std::unique_ptr<zenith::BrowserPanel> browserPanel;
+  // The "Perfect DAW" Tri-Pane Layout Manager
+  // Manages Browser, Session View, and Arranger View
+  std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
 
   // Right: Scratch Pads + Wingman Console
   std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
 
   // Bottom: Piano keyboard + mixer strip
   std::unique_ptr<zenith::BottomBar> bottomBar;
-
-  // Center: Session View (Clip Launcher)
-  std::unique_ptr<zenith::SessionViewComponent> sessionView;
-  bool showSessionView = false; // Default to Arranger View
 #else
   // JUCE fallback UI components
   juce::Label statusLabel;
@@ -187,7 +175,10 @@ private:
   int lastTrackCount_ = -1;
 
   // Phase 9: Arranger component with interactive clip editing (center)
+  // Now managed by MainLayoutComponent in Skia builds
+#ifndef ZENITH_USE_SKIA
   std::unique_ptr<ArrangerComponent> arrangerComponent;
+#endif
 
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
   // Skia)

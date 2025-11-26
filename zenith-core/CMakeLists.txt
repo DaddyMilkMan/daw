@@ -268,6 +268,7 @@ if(ZENITH_ENABLE_SKIA)
     )
 
     target_include_directories(ZenithDAW PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui/skia
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/rendering
     )
