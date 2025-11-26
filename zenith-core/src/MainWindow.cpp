@@ -49,6 +49,9 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   // Add Debug Overlay
   addChildComponent(&zenith::DebugLogOverlay::getInstance());
 
+  // Show Console
+  showDebugConsole();
+
   setSize(1400, 800);
 
   DBG("========================================");

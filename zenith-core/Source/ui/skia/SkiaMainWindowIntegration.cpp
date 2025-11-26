@@ -61,8 +61,17 @@ void SkiaMainWindowIntegration::renderOpenGL() {
 
   // Recursively Render the Component Tree
   // Iterate over children of 'this' (MainComponent)
+  int childCount = 0;
   for (auto *child : getChildren()) {
+    childCount++;
     renderComponentRecursively(child, canvas);
+  }
+
+  static bool loggedChildren = false;
+  if (!loggedChildren) {
+    logToFile("SkiaMainWindowIntegration::renderOpenGL - Visited " +
+              std::to_string(childCount) + " children of MainComponent");
+    loggedChildren = true;
   }
 
   // Flush GPU context
