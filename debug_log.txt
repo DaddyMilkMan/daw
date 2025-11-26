@@ -26,3 +26,7 @@
 ✓ Skia theme configuration loaded successfully
 → Initializing SkiaRenderer...
 ✓ SkiaRenderer initialized successfully
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+✓ Skia theme configuration loaded successfully
+→ Initializing SkiaRenderer...
+✓ SkiaRenderer initialized successfully
