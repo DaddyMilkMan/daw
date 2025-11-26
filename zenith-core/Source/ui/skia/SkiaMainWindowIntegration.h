@@ -11,7 +11,12 @@
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkRRect.h>
+#include <include/core/SkSurface.h>
 #include <include/core/SkTypeface.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/SkSurfaceGanesh.h>
 
 #endif
 
@@ -36,6 +41,11 @@ private:
 
   juce::OpenGLContext openGLContext;
   std::unique_ptr<SkiaRenderer> renderer_;
+  bool rendererInitialized_ = false;
+
+#ifdef ZENITH_USE_SKIA
+  sk_sp<GrDirectContext> grContext_;
+#endif
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaMainWindowIntegration)
 };

@@ -8,6 +8,7 @@
 #include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
 #include <include/core/SkRRect.h>
+#include <include/core/SkPathEffect.h>
 #include <include/effects/SkDashPathEffect.h>
 
 namespace zenith {
@@ -76,7 +77,7 @@ void RightSidePanel::ScratchPadsPanel::paintSkia(
   iconPaint.setStrokeWidth(2.0f);
 
   const float intervals[] = {8.0f, 4.0f};
-  iconPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2));
+  iconPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
 
   SkRect placeholderRect =
       SkRect::MakeXYWH(centerX - 60, centerY - 40, 120, 80);

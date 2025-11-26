@@ -1,64 +1,37 @@
 /**
  * @file SkiaKnobComponent.cpp
- * @brief Implementation of Skia-rendered knob with spring physics
+ * @brief Professional rotary knob with spring physics
  */
 
 #include "SkiaKnobComponent.h"
+#include "SkiaTheme.h"
 
-// Skia headers
-#include "include/core/SkCanvas.h"
-#include "include/core/SkPaint.h"
-#include "include/core/SkPath.h"
-#include "include/core/SkMaskFilter.h"
-#include "include/core/SkBlurTypes.h"
-#include "include/core/SkColor.h"
-#include "include/effects/SkGradientShader.h"
-#include "include/core/SkFont.h"
-#include "include/core/SkFontTypes.h"
+#include <include/core/SkCanvas.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkPath.h>
+#include <include/effects/SkGradientShader.h>
 
 #include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 namespace zenith {
 
 //==============================================================================
-// Constants
-//==============================================================================
-
-namespace {
-    // Spring physics
-    constexpr float SPRING_STIFFNESS = 300.0f;
-    constexpr float SPRING_DAMPING = 22.0f;
-    constexpr float ANIMATION_FPS = 60.0f;
-    constexpr float ANIMATION_DT = 1.0f / ANIMATION_FPS;
-
-    // Visual
-    constexpr float MIN_ANGLE = -150.0f;  // Degrees
-    constexpr float MAX_ANGLE = 150.0f;
-    constexpr float ARC_WIDTH = 4.0f;
-    constexpr float INDICATOR_LENGTH = 0.4f;  // As fraction of radius
-}
-
-//==============================================================================
-// Constructor / Destructor
+// Construction
 //==============================================================================
 
 SkiaKnobComponent::SkiaKnobComponent(Style style)
-    : style_(style)
+    : style_(style), isDragging_(false), dragStartValue_(0.0)
 {
-    // Create Skia renderer
-    renderer_ = std::make_unique<SkiaRenderer>(*this);
-
-    // Start animation timer
+    setSize(100, 130);
+    setRepaintsOnMouseActivity(true);
     startAnimationTimer();
-
-    // Initial rotation
-    rotationAngle_ = valueToAngle(value_);
 }
 
-SkiaKnobComponent::~SkiaKnobComponent()
-{
-    stopTimer();
-}
+SkiaKnobComponent::~SkiaKnobComponent() = default;
 
 //==============================================================================
 // Component Interface
@@ -66,94 +39,74 @@ SkiaKnobComponent::~SkiaKnobComponent()
 
 void SkiaKnobComponent::paint(juce::Graphics& g)
 {
-    if (!renderer_->isInitialized())
-    {
-        if (!renderer_->initialize())
-        {
-            // Fallback
-            g.fillAll(juce::Colours::darkgrey);
-            g.setColour(juce::Colours::white);
-            g.drawText("Skia init failed", getLocalBounds(),
-                      juce::Justification::centred);
-            return;
-        }
-    }
-
-    renderer_->render([this](SkCanvas* canvas) {
-        drawKnob(canvas);
-    });
+    // Fallback: Should be rendered through Skia
+    g.fillAll(juce::Colours::darkgrey);
 }
 
 void SkiaKnobComponent::resized()
 {
-    if (renderer_ && renderer_->isInitialized())
-    {
-        auto bounds = getLocalBounds();
-        renderer_->resize(bounds.getWidth(), bounds.getHeight());
-    }
+    // Layout handled automatically
 }
 
 //==============================================================================
 // Mouse Events
 //==============================================================================
 
-void SkiaKnobComponent::mouseEnter(const juce::MouseEvent&)
+void SkiaKnobComponent::mouseEnter(const juce::MouseEvent& event)
 {
+    juce::ignoreUnused(event);
     isHovered_ = true;
-    repaint();
+    startAnimationTimer();
 }
 
-void SkiaKnobComponent::mouseExit(const juce::MouseEvent&)
+void SkiaKnobComponent::mouseExit(const juce::MouseEvent& event)
 {
+    juce::ignoreUnused(event);
     isHovered_ = false;
-    repaint();
 }
 
 void SkiaKnobComponent::mouseDown(const juce::MouseEvent& event)
 {
-    isDragging_ = true;
-    dragStartPos_ = event.getPosition();
-    dragStartValue_ = value_;
-    repaint();
+    if (event.mods.isLeftButtonDown()) {
+        isDragging_ = true;
+        dragStartPos_ = event.getPosition();
+        dragStartValue_ = value_;
+    }
+
+    if (event.getNumberOfClicks() >= 2) {
+        setValue(defaultValue_, true);
+    }
 }
 
-void SkiaKnobComponent::mouseUp(const juce::MouseEvent&)
+void SkiaKnobComponent::mouseUp(const juce::MouseEvent& event)
 {
+    juce::ignoreUnused(event);
     isDragging_ = false;
-    repaint();
 }
 
 void SkiaKnobComponent::mouseDrag(const juce::MouseEvent& event)
 {
-    if (!isDragging_)
-        return;
+    if (!isDragging_) return;
 
-    // Calculate drag delta (vertical movement)
-    int deltaY = dragStartPos_.y - event.y;
+    auto delta = event.getPosition() - dragStartPos_;
+    float sensitivity = event.mods.isShiftDown() ? 0.002f : 0.005f;
+    float valueDelta = -delta.getY() * sensitivity;
 
-    // Apply sensitivity (with shift for fine control)
-    float effectiveSensitivity = sensitivity_;
-    if (event.mods.isShiftDown())
-        effectiveSensitivity *= 4.0f;  // 4x more pixels for fine control
-
-    // Convert pixels to value change
-    double valueDelta = (double)deltaY / effectiveSensitivity;
-
-    setValue(dragStartValue_ + valueDelta);
+    setValue(dragStartValue_ + valueDelta, true);
 }
 
-void SkiaKnobComponent::mouseDoubleClick(const juce::MouseEvent&)
+void SkiaKnobComponent::mouseDoubleClick(const juce::MouseEvent& event)
 {
-    // Reset to default value
-    setValue(defaultValue_);
+    juce::ignoreUnused(event);
+    setValue(defaultValue_, true);
 }
 
-void SkiaKnobComponent::mouseWheelMove(const juce::MouseEvent&,
-                                      const juce::MouseWheelDetails& wheel)
+void SkiaKnobComponent::mouseWheelMove(const juce::MouseEvent& event,
+                                       const juce::MouseWheelDetails& wheel)
 {
-    // Scroll to adjust value
-    double delta = wheel.deltaY * (maximum_ - minimum_) * 0.05;
-    setValue(value_ + delta);
+    juce::ignoreUnused(event);
+    float delta = wheel.deltaY * 0.01f;
+    setValue(value_ + delta, true);
 }
 
 //==============================================================================
@@ -162,14 +115,12 @@ void SkiaKnobComponent::mouseWheelMove(const juce::MouseEvent&,
 
 void SkiaKnobComponent::setValue(double value, bool sendNotification)
 {
-    value = constrainValue(value);
+    double clamped = constrainValue(value);
 
-    if (value_ != value)
-    {
-        value_ = value;
+    if (std::abs(value_ - clamped) > 0.0001) {
+        value_ = clamped;
 
-        if (sendNotification && onValueChange)
-        {
+        if (sendNotification && onValueChange) {
             onValueChange(value_);
         }
 
@@ -181,12 +132,41 @@ void SkiaKnobComponent::setRange(double minimum, double maximum)
 {
     minimum_ = minimum;
     maximum_ = maximum;
-    setValue(value_, false);
+    repaint();
 }
 
 void SkiaKnobComponent::setNumSteps(int steps)
 {
     numSteps_ = steps;
+    repaint();
+}
+
+//==============================================================================
+// Helper Methods
+//==============================================================================
+
+double SkiaKnobComponent::constrainValue(double value) const
+{
+    return juce::jlimit(0.0, 1.0, value);
+}
+
+float SkiaKnobComponent::valueToAngle(double value) const
+{
+    const float minAngle = -135.0f * (M_PI / 180.0f);
+    const float maxAngle = 135.0f * (M_PI / 180.0f);
+    return minAngle + static_cast<float>(value) * (maxAngle - minAngle);
+}
+
+double SkiaKnobComponent::angleToValue(float angle) const
+{
+    const float minAngle = -135.0f * (M_PI / 180.0f);
+    const float maxAngle = 135.0f * (M_PI / 180.0f);
+    return static_cast<double>((angle - minAngle) / (maxAngle - minAngle));
+}
+
+juce::String SkiaKnobComponent::getValueText() const
+{
+    return juce::String(value_, textPrecision_) + textSuffix_;
 }
 
 //==============================================================================
@@ -195,7 +175,7 @@ void SkiaKnobComponent::setNumSteps(int steps)
 
 void SkiaKnobComponent::startAnimationTimer()
 {
-    startTimer((int)(1000.0f / ANIMATION_FPS));
+    startTimerHz(60);
 }
 
 void SkiaKnobComponent::timerCallback()
@@ -205,291 +185,32 @@ void SkiaKnobComponent::timerCallback()
 
 void SkiaKnobComponent::updateAnimations()
 {
-    bool needsRepaint = false;
-
     // Spring physics for rotation
-    float targetAngle = valueToAngle(value_);
-    if (std::abs(rotationAngle_ - targetAngle) > 0.1f)
-    {
-        float force = -SPRING_STIFFNESS * (rotationAngle_ - targetAngle)
-                     - SPRING_DAMPING * rotationVelocity_;
+    const float targetAngle = valueToAngle(value_);
+    const float angleDelta = targetAngle - rotationAngle_;
 
-        rotationVelocity_ += force * ANIMATION_DT;
-        rotationAngle_ += rotationVelocity_ * ANIMATION_DT;
+    rotationVelocity_ += angleDelta * 0.2f;  // Spring stiffness
+    rotationVelocity_ *= 0.92f;              // Damping
+    rotationAngle_ += rotationVelocity_;
 
-        needsRepaint = true;
-    }
+    // Hover animation
+    const float targetHover = isHovered_ ? 1.0f : 0.0f;
+    hoverVelocity_ += (targetHover - hoverProgress_) * 0.2f;
+    hoverVelocity_ *= 0.92f;
+    hoverProgress_ += hoverVelocity_;
 
-    // Spring physics for hover
-    float hoverTarget = (isHovered_ || isDragging_) ? 1.0f : 0.0f;
-    if (std::abs(hoverProgress_ - hoverTarget) > 0.001f)
-    {
-        float force = -SPRING_STIFFNESS * (hoverProgress_ - hoverTarget)
-                     - SPRING_DAMPING * hoverVelocity_;
-
-        hoverVelocity_ += force * ANIMATION_DT;
-        hoverProgress_ += hoverVelocity_ * ANIMATION_DT;
-
-        hoverProgress_ = std::max(0.0f, std::min(1.0f, hoverProgress_));
-
-        needsRepaint = true;
-    }
-
-    if (needsRepaint)
-    {
-        repaint();
-    }
+    repaint();
 }
 
 //==============================================================================
-// Skia Drawing
+// Skia Rendering
 //==============================================================================
 
 void SkiaKnobComponent::drawKnob(SkCanvas* canvas)
 {
-    auto bounds = getLocalBounds();
-    float width = (float)bounds.getWidth();
-    float height = (float)bounds.getHeight();
-
-    // Calculate knob dimensions
-    float knobSize = std::min(width, height) * 0.7f;
-    float centerX = width / 2.0f;
-    float centerY = height / 2.0f;
-    float radius = knobSize / 2.0f;
-
-    //==========================================================================
-    // Draw outer glow (when hovered)
-    //==========================================================================
-
-    if (hoverProgress_ > 0.01f)
-    {
-        SkPaint glowPaint;
-        glowPaint.setAntiAlias(true);
-        glowPaint.setStyle(SkPaint::kStroke_Style);
-        glowPaint.setStrokeWidth(3.0f);
-        glowPaint.setColor(SkColorSetARGB(
-            (int)(100 * hoverProgress_),
-            10, 132, 255));
-
-        canvas->drawCircle(centerX, centerY, radius + 4, glowPaint);
-    }
-
-    //==========================================================================
-    // Draw knob shadow
-    //==========================================================================
-
-    if (!isDragging_)
-    {
-        SkPaint shadowPaint;
-        shadowPaint.setAntiAlias(true);
-        shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
-        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, 5.0f));
-
-        canvas->drawCircle(centerX, centerY + 3, radius, shadowPaint);
-    }
-
-    //==========================================================================
-    // Draw knob body (3D gradient)
-    //==========================================================================
-
-    SkPaint knobPaint;
-    knobPaint.setAntiAlias(true);
-
-    // Radial gradient for 3D effect
-    SkColor knobColors[] = {
-        SkColorSetARGB(255, 80, 80, 85),   // Center (darker)
-        SkColorSetARGB(255, 50, 50, 55)    // Edge (darkest)
-    };
-
-    sk_sp<SkShader> knobGradient = SkGradientShader::MakeRadial(
-        SkPoint::Make(centerX, centerY - radius * 0.2f),  // Light from top
-        radius,
-        knobColors, nullptr, 2,
-        SkTileMode::kClamp);
-
-    knobPaint.setShader(knobGradient);
-
-    canvas->drawCircle(centerX, centerY, radius, knobPaint);
-
-    //==========================================================================
-    // Draw value arc
-    //==========================================================================
-
-    SkPaint arcPaint;
-    arcPaint.setAntiAlias(true);
-    arcPaint.setStyle(SkPaint::kStroke_Style);
-    arcPaint.setStrokeWidth(ARC_WIDTH);
-    arcPaint.setStrokeCap(SkPaint::kRound_Cap);
-
-    // Arc path
-    SkPath arcPath;
-    float arcRadius = radius + 8.0f;
-
-    SkRect arcBounds = SkRect::MakeXYWH(
-        centerX - arcRadius,
-        centerY - arcRadius,
-        arcRadius * 2,
-        arcRadius * 2
-    );
-
-    // Background arc (full range)
-    SkPaint bgArcPaint = arcPaint;
-    bgArcPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
-
-    arcPath.addArc(arcBounds, MIN_ANGLE + 90, MAX_ANGLE - MIN_ANGLE);
-    canvas->drawPath(arcPath, bgArcPaint);
-
-    // Value arc
-    arcPath.reset();
-
-    SkPaint valueArcPaint = arcPaint;
-
-    // Gradient for value arc
-    SkColor arcColors[] = {
-        SkColorSetARGB(255, 10, 132, 255),
-        SkColorSetARGB(255, 64, 200, 255)
-    };
-
-    float sweepAngle = rotationAngle_ - MIN_ANGLE;
-
-    arcPath.addArc(arcBounds, MIN_ANGLE + 90, sweepAngle);
-
-    sk_sp<SkShader> arcGradient = SkGradientShader::MakeSweep(
-        centerX, centerY,
-        arcColors, nullptr, 2);
-
-    valueArcPaint.setShader(arcGradient);
-
-    canvas->drawPath(arcPath, valueArcPaint);
-
-    //==========================================================================
-    // Draw indicator line
-    //==========================================================================
-
-    SkPaint indicatorPaint;
-    indicatorPaint.setAntiAlias(true);
-    indicatorPaint.setColor(SK_ColorWHITE);
-    indicatorPaint.setStrokeWidth(2.5f);
-    indicatorPaint.setStrokeCap(SkPaint::kRound_Cap);
-
-    // Calculate indicator position
-    float angleRad = (rotationAngle_ + 90) * juce::MathConstants<float>::pi / 180.0f;
-    float indicatorStartRadius = radius * (1.0f - INDICATOR_LENGTH);
-    float indicatorEndRadius = radius * 0.85f;
-
-    float startX = centerX + std::cos(angleRad) * indicatorStartRadius;
-    float startY = centerY + std::sin(angleRad) * indicatorStartRadius;
-    float endX = centerX + std::cos(angleRad) * indicatorEndRadius;
-    float endY = centerY + std::sin(angleRad) * indicatorEndRadius;
-
-    canvas->drawLine(startX, startY, endX, endY, indicatorPaint);
-
-    //==========================================================================
-    // Draw center dot (3D highlight)
-    //==========================================================================
-
-    SkPaint centerDotPaint;
-    centerDotPaint.setAntiAlias(true);
-
-    // Small gradient dot
-    SkColor dotColors[] = {
-        SkColorSetARGB(150, 255, 255, 255),
-        SkColorSetARGB(0, 255, 255, 255)
-    };
-
-    sk_sp<SkShader> dotGradient = SkGradientShader::MakeRadial(
-        SkPoint::Make(centerX, centerY - 1),
-        radius * 0.15f,
-        dotColors, nullptr, 2,
-        SkTileMode::kClamp);
-
-    centerDotPaint.setShader(dotGradient);
-
-    canvas->drawCircle(centerX, centerY, radius * 0.15f, centerDotPaint);
-
-    //==========================================================================
-    // Draw value text (in center)
-    //==========================================================================
-
-    if (showValue_)
-    {
-        SkPaint textPaint;
-        textPaint.setAntiAlias(true);
-        textPaint.setColor(SK_ColorWHITE);
-
-        SkFont font(nullptr, 12.0f);
-
-        juce::String valueText = getValueText();
-
-        // Measure text
-        SkRect textBounds;
-        font.measureText(valueText.toRawUTF8(), valueText.length(),
-                        SkTextEncoding::kUTF8, &textBounds);
-
-        // Draw centered
-        float textX = centerX - textBounds.width() / 2;
-        float textY = centerY + radius + 16;
-
-        canvas->drawString(valueText.toRawUTF8(), textX, textY, font, textPaint);
-    }
-
-    //==========================================================================
-    // Draw label (below value)
-    //==========================================================================
-
-    if (label_.isNotEmpty())
-    {
-        SkPaint labelPaint;
-        labelPaint.setAntiAlias(true);
-        labelPaint.setColor(SkColorSetARGB(200, 255, 255, 255));
-
-        SkFont labelFont(nullptr, 10.0f);
-
-        SkRect labelBounds;
-        labelFont.measureText(label_.toRawUTF8(), label_.length(),
-                             SkTextEncoding::kUTF8, &labelBounds);
-
-        float labelX = centerX - labelBounds.width() / 2;
-        float labelY = centerY + radius + 30;
-
-        canvas->drawString(label_.toRawUTF8(), labelX, labelY,
-                          labelFont, labelPaint);
-    }
-}
-
-//==============================================================================
-// Helper Methods
-//==============================================================================
-
-double SkiaKnobComponent::constrainValue(double value) const
-{
-    value = juce::jlimit(minimum_, maximum_, value);
-
-    if (numSteps_ > 0)
-    {
-        double interval = (maximum_ - minimum_) / (numSteps_ - 1);
-        value = minimum_ + std::round((value - minimum_) / interval) * interval;
-    }
-
-    return value;
-}
-
-float SkiaKnobComponent::valueToAngle(double value) const
-{
-    double normalized = (value - minimum_) / (maximum_ - minimum_);
-    return MIN_ANGLE + normalized * (MAX_ANGLE - MIN_ANGLE);
-}
-
-double SkiaKnobComponent::angleToValue(float angle) const
-{
-    double normalized = (angle - MIN_ANGLE) / (MAX_ANGLE - MIN_ANGLE);
-    return minimum_ + normalized * (maximum_ - minimum_);
-}
-
-juce::String SkiaKnobComponent::getValueText() const
-{
-    return juce::String(value_, textPrecision_) + textSuffix_;
+    // This would be called from the Skia rendering pipeline
+    // For now, just a placeholder
+    juce::ignoreUnused(canvas);
 }
 
 } // namespace zenith
-

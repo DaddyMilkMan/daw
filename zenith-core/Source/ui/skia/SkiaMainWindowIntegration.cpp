@@ -2,7 +2,15 @@
 #include "../../../src/SimpleLogger.h"
 #include "../skia/SkiaComponent.h"
 #include <include/core/SkSurface.h>
+#include <include/core/SkColorSpace.h>
 #include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
+#include <include/gpu/ganesh/SkSurfaceGanesh.h>
+#include <juce_opengl/juce_opengl.h>
+#include <gl/GL.h>
 
 
 #ifdef ZENITH_USE_SKIA
@@ -14,7 +22,7 @@ SkiaMainWindowIntegration::SkiaMainWindowIntegration() {
   openGLContext.setRenderer(this);
   openGLContext.setContinuousRepainting(true); // Force 60FPS
   openGLContext.setComponentPaintingEnabled(
-      true); // ENABLE JUCE painting for overlays
+      false); // DISABLE JUCE painting - we're using pure OpenGL/Skia
   openGLContext.setMultisamplingEnabled(true);
   openGLContext.attachTo(*this);
 }
@@ -25,58 +33,116 @@ SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
 }
 
 void SkiaMainWindowIntegration::newOpenGLContextCreated() {
-  logToFile("SkiaMainWindowIntegration::newOpenGLContextCreated - Initializing "
-            "Skia...");
-  renderer_ =
-      std::make_unique<SkiaRenderer>(*this, SkiaRenderer::Backend::OpenGL);
-  if (!renderer_->initialize()) {
-    logToFile("CRITICAL: Skia failed to initialize");
-    DBG("CRITICAL: Skia failed to initialize");
-  } else {
-    logToFile("Skia initialized successfully.");
-  }
+  logToFile("SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context "
+            "created, will initialize Skia on first render");
+  // Defer actual initialization to first renderOpenGL() call
+  // when we're guaranteed to be in the rendering thread
+  rendererInitialized_ = false;
 }
 
-void SkiaMainWindowIntegration::openGLContextClosing() { renderer_.reset(); }
+void SkiaMainWindowIntegration::openGLContextClosing() {
+  grContext_.reset();
+  renderer_.reset();
+}
 
 void SkiaMainWindowIntegration::renderOpenGL() {
-  static bool logged = false;
-  if (!logged) {
-    logToFile("SkiaMainWindowIntegration::renderOpenGL - First frame");
-    logged = true;
+  // Lazy initialization on first render when OpenGL context is guaranteed to be active
+  if (!rendererInitialized_) {
+    logToFile("SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering");
+
+    // Create GrDirectContext
+    auto glInterface = GrGLMakeNativeInterface();
+    if (!glInterface) {
+      logToFile("ERROR: Failed to create GL interface");
+      return;
+    }
+
+    grContext_ = GrDirectContexts::MakeGL(glInterface);
+    if (!grContext_) {
+      logToFile("ERROR: Failed to create GrDirectContext");
+      return;
+    }
+
+    logToFile("Successfully created Skia GrDirectContext for framebuffer rendering");
+    rendererInitialized_ = true;
   }
 
-  if (!renderer_)
+  if (!grContext_) {
+    logToFile("ERROR: No GrDirectContext available");
     return;
+  }
 
-  SkSurface *surface = renderer_->getSurface();
-  if (!surface)
+  // Get framebuffer dimensions from component bounds
+  int fbWidth = getWidth();
+  int fbHeight = getHeight();
+
+  if (fbWidth <= 0 || fbHeight <= 0) {
+    return; // Component not ready yet
+  }
+
+  // Create backend render target info for the default framebuffer (FBO 0)
+  GrGLFramebufferInfo fbInfo;
+  fbInfo.fFBOID = 0; // Default framebuffer
+  fbInfo.fFormat = 0x8058; // GL_RGBA8
+
+  // Create backend render target wrapping the default framebuffer using factory method
+  GrBackendRenderTarget backendRT = GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 1, 8, fbInfo);
+
+  SkSurfaceProps props(0, kRGB_H_SkPixelGeometry);
+  sk_sp<SkSurface> surface = SkSurfaces::WrapBackendRenderTarget(
+      grContext_.get(),
+      backendRT,
+      kBottomLeft_GrSurfaceOrigin,
+      kRGBA_8888_SkColorType,
+      nullptr,
+      &props);
+
+  if (!surface) {
+    static bool loggedError = false;
+    if (!loggedError) {
+      logToFile("ERROR: Failed to create Skia surface from framebuffer");
+      loggedError = true;
+    }
     return;
+  }
 
-  SkCanvas *canvas = surface->getCanvas();
-  if (!canvas)
+  // Get canvas and start drawing
+  SkCanvas* canvas = surface->getCanvas();
+  if (!canvas) {
+    logToFile("ERROR: No canvas from surface");
     return;
+  }
 
-  canvas->clear(SkColorSetRGB(18, 18, 20)); // Dark DAW background
+  // Clear with dark background
+  canvas->clear(SkColorSetRGB(40, 40, 45));
 
-  // Recursively Render the Component Tree
-  // Iterate over children of 'this' (MainComponent)
+  // Recursively render the component tree
+  // Iterate over all children of the MainComponent
   int childCount = 0;
   for (auto *child : getChildren()) {
     childCount++;
-    renderComponentRecursively(child, canvas);
+
+    // Check if this child supports Skia rendering
+    if (auto* skiaComp = dynamic_cast<SkiaComponent*>(child)) {
+      if (skiaComp->supportsSkiaRendering()) {
+        renderComponentRecursively(child, canvas);
+      }
+    }
   }
 
-  static bool loggedChildren = false;
-  if (!loggedChildren) {
-    logToFile("SkiaMainWindowIntegration::renderOpenGL - Visited " +
-              std::to_string(childCount) + " children of MainComponent");
-    loggedChildren = true;
+  static bool loggedComponentTree = false;
+  if (!loggedComponentTree) {
+    logToFile("SkiaMainWindowIntegration: Rendering " + std::to_string(childCount) + " child components");
+    loggedComponentTree = true;
   }
 
-  // Flush GPU context
-  if (auto *context = renderer_->getGpuContext()) {
-    context->flush();
+  // Flush all Skia GPU commands to the framebuffer
+  grContext_->flush();
+
+  static bool loggedSuccess = false;
+  if (!loggedSuccess) {
+    logToFile("Skia framebuffer rendering initialized successfully!");
+    loggedSuccess = true;
   }
 }
 
@@ -108,12 +174,10 @@ void SkiaMainWindowIntegration::renderComponentRecursively(
 }
 
 void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
-  // Fallback: Only used if OpenGL fails
-  if (!renderer_) {
-    g.fillAll(juce::Colours::red);
-    g.drawText("GPU ERROR", getLocalBounds(), juce::Justification::centred,
-               true);
-  }
+  // OpenGL rendering is active - this paint() method should not be called
+  // when setComponentPaintingEnabled(false) is set.
+  // If you see this, OpenGL context failed to attach.
+  // Leave empty - OpenGL handles all rendering
 }
 
 void SkiaMainWindowIntegration::resized() {

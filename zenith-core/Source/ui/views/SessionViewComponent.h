@@ -5,7 +5,7 @@
 
 namespace zenith {
 
-class SessionViewComponent : public SkiaCanvasComponent {
+class SessionViewComponent : public SkiaCanvasComponent, public juce::Timer {
 public:
   SessionViewComponent();
   ~SessionViewComponent() override;
@@ -17,6 +17,9 @@ public:
   // The Skia Render Loop
   void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
 
+  // Timer for animation
+  void timerCallback() override;
+
 private:
   // Data Model (Placeholder for your real Engine data)
   struct ClipSlot {
@@ -27,6 +30,14 @@ private:
     float playProgress = 0.0f; // 0.0 to 1.0
     SkColor color;
   };
+
+  // Drawing methods
+  void drawSceneHeaders(SkCanvas &canvas, const juce::Rectangle<int> &bounds, float clipHeight);
+  void drawTrackHeaders(SkCanvas &canvas, const juce::Rectangle<int> &bounds, float clipWidth);
+  void drawClipGrid(SkCanvas &canvas, const juce::Rectangle<int> &bounds, float clipWidth, float clipHeight);
+  void drawClipSlot(SkCanvas &canvas, const SkRect &rect, const ClipSlot &slot, bool isHovered);
+  void drawEmptySlot(SkCanvas &canvas, const SkRect &rect, bool isHovered);
+  void drawMasterSection(SkCanvas &canvas, const juce::Rectangle<int> &bounds);
 
   // 8 Tracks x 8 Scenes
   static constexpr int NUM_TRACKS = 8;

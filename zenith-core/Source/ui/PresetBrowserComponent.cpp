@@ -99,7 +99,8 @@ void PresetBrowserComponent::paint(juce::Graphics &g) {
 
   // Title with better typography
   g.setColour(juce::Colours::white);
-  g.setFont(juce::FontOptions("Inter", 18.0f, juce::Font::bold));
+  juce::Font titleFont = juce::Font("Inter", 18.0f, juce::Font::bold);
+  g.setFont(titleFont);
   g.drawText("Preset Browser", 0, 8, getWidth(), 25,
              juce::Justification::centred);
 
@@ -207,7 +208,7 @@ bool PresetBrowserComponent::matchesFilters(
     juce::String categoryName =
         categoryComboBox_.getItemText(selectedCategory - 1);
     // For now, we'll use author as category (Factory/User)
-    if (categoryName != juce::String(preset.author))
+    if (categoryName.toStdString() != preset.author)
       return false;
   }
 
@@ -257,15 +258,43 @@ void PresetBrowserComponent::onSaveAsClicked() {
     return;
   }
 
-  // In JUCE 8, use async dialogs instead of runModalLoop
-  // For now, just show a placeholder message
-  juce::AlertWindow::showMessageBoxAsync(
-      juce::AlertWindow::InfoIcon, "Save Preset",
-      "Preset saving is temporarily disabled (requires JUCE 8 async dialog "
-      "refactor).",
-      "OK");
+  // Capture current state
+  auto currentState = onCaptureState_();
 
-  // TODO: Implement async save dialog using JUCE 8 API
+  // Use JUCE 8 async dialog API
+  auto* inputWindow = new juce::AlertWindow("Save Preset",
+                                             "Enter a name for the preset:",
+                                             juce::AlertWindow::NoIcon);
+  
+  inputWindow->addTextEditor("presetName", "", "Preset Name:");
+  inputWindow->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+  inputWindow->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+
+  inputWindow->enterModalState(true,
+      juce::ModalCallbackFunction::create([this, currentState, inputWindow](int result)
+      {
+          if (result == 1)
+          {
+              juce::String presetName = inputWindow->getTextEditorContents("presetName");
+              if (presetName.isNotEmpty())
+              {
+                  // Create preset
+                  ZenithInstrumentPreset newPreset;
+                  newPreset.name = presetName.toStdString();
+                  newPreset.author = "User";
+                  newPreset.instrumentId = instrumentId_.toStdString();
+                  newPreset.parameters = currentState;
+
+                  // Save preset
+                  if (presetManager_.saveUserPreset(newPreset))
+                  {
+                      refreshPresetList();
+                      statusLabel_.setText("Saved: " + presetName, juce::dontSendNotification);
+                  }
+              }
+          }
+          delete inputWindow;
+      }), true);
 }
 
 juce::String PresetBrowserComponent::getPresetDisplayName(
@@ -319,7 +348,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
   g.setColour(rowIsSelected
                   ? juce::Colours::white
                   : juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
-  g.setFont(juce::FontOptions("Inter", 13.0f, juce::Font::plain));
+  g.setFont(juce::Font("Inter", 13.0f, juce::Font::plain));
 
   juce::String displayName = owner_.getPresetDisplayName(preset);
   g.drawText(displayName, 8, 0, width - 16, height,
@@ -327,7 +356,7 @@ void PresetBrowserComponent::PresetListBoxModel::paintListBoxItem(
 
   // Tags (small, subtle) with fade effect
   if (!preset.tags.empty()) {
-    g.setFont(juce::FontOptions("Inter", 9.0f, juce::Font::plain));
+    g.setFont(juce::Font("Inter", 9.0f, juce::Font::plain));
     g.setColour(rowIsSelected
                     ? juce::Colour(ZenithLookAndFeel::Colors::textPrimary)
                           .withAlpha(0.8f)
