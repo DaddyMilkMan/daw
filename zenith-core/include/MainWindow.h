@@ -45,6 +45,7 @@
 #include "../Source/ui/skia/SkiaTextDisplay.h"
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
+#include "../Source/ui/views/SessionViewComponent.h"
 
 #endif
 
@@ -160,8 +161,9 @@ private:
   // Bottom: Piano keyboard + mixer strip
   std::unique_ptr<zenith::BottomBar> bottomBar;
 
-  // Skia Color Test Component (Visual verification)
-  std::unique_ptr<zenith::SkiaColorTestComponent> skiaColorTest;
+  // Center: Session View (Clip Launcher)
+  std::unique_ptr<zenith::SessionViewComponent> sessionView;
+  bool showSessionView = false; // Default to Arranger View
 #else
   // JUCE fallback UI components
   juce::Label statusLabel;

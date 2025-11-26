@@ -67,6 +67,7 @@ public:
   std::function<void(double)> onTempoChanged;
   std::function<void()> onMenuClicked;
   std::function<void()> onUndoClicked;
+  std::function<void()> onViewToggleClicked;
 
   //==========================================================================
   // Component Overrides
@@ -107,7 +108,17 @@ private:
   // Hit Testing
   //==========================================================================
 
-  enum class HitZone { None, Play, Stop, Record, Loop, Menu, Undo, Wingman };
+  enum class HitZone {
+    None,
+    Play,
+    Stop,
+    Record,
+    Loop,
+    Menu,
+    Undo,
+    Wingman,
+    ViewToggle
+  };
 
   HitZone hitTest(const juce::Point<int> &point) const;
   juce::Rectangle<int> getPlayButtonBounds() const;
@@ -117,6 +128,7 @@ private:
   juce::Rectangle<int> getMenuButtonBounds() const;
   juce::Rectangle<int> getUndoButtonBounds() const;
   juce::Rectangle<int> getWingmanButtonBounds() const;
+  juce::Rectangle<int> getViewToggleButtonBounds() const;
 
   //==========================================================================
   // State

@@ -147,6 +147,24 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
       juce::String::toHexString(
           (juce::pointer_sized_int)arrangerComponent.get()));
 
+  // Center: Session View (Clip Launcher)
+  DBG("→ Creating SessionViewComponent...");
+  sessionView = std::make_unique<zenith::SessionViewComponent>();
+  sessionView->setVisible(false); // Start hidden, Arranger is default
+  addAndMakeVisible(sessionView.get());
+  DBG("✓ SessionViewComponent created and made visible at " +
+      juce::String::toHexString((juce::pointer_sized_int)sessionView.get()));
+
+  // Connect view toggle callback
+  transportBar->onViewToggleClicked = [this]() {
+    showSessionView = !showSessionView;
+    sessionView->setVisible(showSessionView);
+    arrangerComponent->setVisible(!showSessionView);
+    resized(); // Re-layout
+    DBG("View toggled to: " +
+        juce::String(showSessionView ? "Session" : "Arranger"));
+  };
+
   // Start animation timer (SkiaMainWindowIntegration handles this)
   DBG("✓ Animation timer managed by SkiaMainWindowIntegration");
 
@@ -545,12 +563,16 @@ void MainComponent::resized() {
     DBG("  ✗ RightSidePanel is NULL!");
   }
 
-  // Center: Arranger Component (takes remaining space)
-  if (arrangerComponent) {
+  // Center: Session View OR Arranger Component (toggle-able)
+  // Both take the same space, but only one is visible at a time
+  if (showSessionView && sessionView) {
+    sessionView->setBounds(bounds);
+    DBG("  ✓ SessionViewComponent positioned at: " + bounds.toString());
+  } else if (arrangerComponent) {
     arrangerComponent->setBounds(bounds);
     DBG("  ✓ ArrangerComponent positioned at: " + bounds.toString());
   } else {
-    DBG("  ✗ ArrangerComponent is NULL!");
+    DBG("  ✗ No center view active!");
   }
 
 #else

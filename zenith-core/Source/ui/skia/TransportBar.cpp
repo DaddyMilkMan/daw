@@ -141,6 +141,10 @@ void TransportBar::mouseUp(const juce::MouseEvent &event) {
       if (onUndoClicked)
         onUndoClicked();
       break;
+    case HitZone::ViewToggle:
+      if (onViewToggleClicked)
+        onViewToggleClicked();
+      break;
     default:
       break;
     }
@@ -174,6 +178,8 @@ juce::String TransportBar::getTooltip() {
     return "Undo (Ctrl+Z)";
   case HitZone::Wingman:
     return "Wingman AI Assistant";
+  case HitZone::ViewToggle:
+    return "Toggle Session/Arranger View (Tab)";
   default:
     return {};
   }
@@ -302,10 +308,19 @@ void TransportBar::drawCenterSection(SkCanvas &canvas, const SkRect &bounds) {
   float centerY = bounds.centerY();
 
   // Draw transport buttons
+  auto viewToggleBounds = getViewToggleButtonBounds();
   auto playBounds = getPlayButtonBounds();
   auto stopBounds = getStopButtonBounds();
   auto recordBounds = getRecordButtonBounds();
   auto loopBounds = getLoopButtonBounds();
+
+  // View Toggle button (Grid icon)
+  drawTransportButton(
+      canvas,
+      SkRect::MakeXYWH(viewToggleBounds.getX(), viewToggleBounds.getY(),
+                       viewToggleBounds.getWidth(),
+                       viewToggleBounds.getHeight()),
+      "View", false, hoveredZone_ == HitZone::ViewToggle, colors.accentAlt);
 
   // Play button (triangle)
   drawTransportButton(
@@ -512,6 +527,25 @@ void TransportBar::drawTransportButton(SkCanvas &canvas, const SkRect &rect,
 
     canvas.drawCircle(centerX - 5, centerY, 5.0f, iconPaint);
     canvas.drawCircle(centerX + 5, centerY, 5.0f, iconPaint);
+  } else if (label == "View") {
+    // Grid icon (Session View) vs Horizontal Lines (Arranger)
+    // For now, just a grid icon
+    float sz = 4.0f;
+    float gap = 2.0f;
+    float startX = centerX - sz - gap / 2;
+    float startY = centerY - sz - gap / 2;
+
+    SkPaint gridPaint = iconPaint;
+    gridPaint.setStyle(SkPaint::kFill_Style);
+
+    canvas.drawRect(SkRect::MakeXYWH(startX, startY, sz, sz), gridPaint);
+    canvas.drawRect(SkRect::MakeXYWH(startX + sz + gap, startY, sz, sz),
+                    gridPaint);
+    canvas.drawRect(SkRect::MakeXYWH(startX, startY + sz + gap, sz, sz),
+                    gridPaint);
+    canvas.drawRect(
+        SkRect::MakeXYWH(startX + sz + gap, startY + sz + gap, sz, sz),
+        gridPaint);
   }
 }
 
@@ -629,8 +663,22 @@ TransportBar::hitTest(const juce::Point<int> &point) const {
     return HitZone::Undo;
   if (getWingmanButtonBounds().contains(point))
     return HitZone::Wingman;
+  if (getViewToggleButtonBounds().contains(point))
+    return HitZone::ViewToggle;
 
   return HitZone::None;
+}
+
+juce::Rectangle<int> TransportBar::getViewToggleButtonBounds() const {
+  int centerX = getWidth() / 2;
+  int centerY = getHeight() / 2;
+
+  // Place to the left of Play button
+  int x = centerX - static_cast<int>(BUTTON_SIZE * 2.5f + BUTTON_SPACING * 2);
+  int y = centerY - static_cast<int>(BUTTON_SIZE / 2);
+
+  return juce::Rectangle<int>(x, y, static_cast<int>(BUTTON_SIZE),
+                              static_cast<int>(BUTTON_SIZE));
 }
 
 juce::Rectangle<int> TransportBar::getPlayButtonBounds() const {
