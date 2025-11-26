@@ -43,6 +43,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 {
   // Register as key listener for undo/redo shortcuts
   addKeyListener(this);
+  addMouseListener(this, true); // Intercept mouse events recursively
   setWantsKeyboardFocus(true);
 
   // Add Debug Overlay
