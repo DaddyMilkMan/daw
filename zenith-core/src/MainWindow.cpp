@@ -112,6 +112,13 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("✓ BrowserPanel created and made visible at " +
       juce::String::toHexString((juce::pointer_sized_int)browserPanel.get()));
 
+  // Connect browser collapse callback
+  browserPanel->onCollapseToggled = [this]() {
+    resized(); // Re-layout when browser is collapsed/expanded
+    DBG("Browser panel collapsed state: " +
+        juce::String(browserPanel->isCollapsed() ? "collapsed" : "expanded"));
+  };
+
   // Create Wingman panel (will be hosted in RightSidePanel)
   DBG("→ Creating WingmanPanel...");
   auto wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
@@ -328,6 +335,18 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
     DBG("Keyboard shortcut: Toggle Virtual MIDI Keyboard (M)");
     return true;
   }
+
+#ifdef ZENITH_USE_SKIA
+  // Tab key: Toggle between Session View and Arranger View
+  if (key == juce::KeyPress::tabKey &&
+      !key.getModifiers().isAnyModifierKeyDown()) {
+    if (transportBar && transportBar->onViewToggleClicked) {
+      transportBar->onViewToggleClicked();
+      DBG("Keyboard shortcut: Toggle Session/Arranger View (Tab)");
+      return true;
+    }
+  }
+#endif
 
   return false; // Key not handled
 }
