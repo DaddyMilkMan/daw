@@ -375,7 +375,7 @@ void MainComponent::paint(juce::Graphics &g) {
 
       // DEBUG: Visual indicator to verify Skia rendering is active
       // Set to true to show red banner, false to hide
-      constexpr bool kShowSkiaDebugBanner = true;
+      constexpr bool kShowSkiaDebugBanner = false;
       if (kShowSkiaDebugBanner) {
         SkPaint bannerPaint;
         bannerPaint.setColor(SkColorSetARGB(255, 255, 0, 0)); // Bright red
