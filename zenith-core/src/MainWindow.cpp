@@ -353,167 +353,17 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
 void MainComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
-  // Use SkiaRenderer if it was successfully initialized
-  if (renderer_) {
-    static int skiaPaintCount = 0;
-    if (skiaPaintCount < 3) {
-      skiaPaintCount++;
-      DBG("🎨 paint() call #" + juce::String(skiaPaintCount) +
-          " using SKIA RENDERER!");
-      if (skiaPaintCount == 1) {
-        DBG("  Software backend: Rendering with Skia, blitting to JUCE");
-        DBG("  ✓ ACTUAL SKIA CPU RENDERING ACTIVE!");
-      }
-    }
+  // With OpenGL + setComponentPaintingEnabled(true), child components
+  // automatically render themselves. This paint() is only called
+  // if OpenGL context isn't ready yet.
 
-    // Step 1: Render EVERYTHING using Skia
-    renderer_->render([this](SkCanvas *canvas) {
-      // Beautiful dark background with Skia anti-aliasing
-      SkPaint bgPaint;
-      bgPaint.setColor(0xFF1E1E1E);
-      canvas->clear(0xFF1E1E1E);
-
-      // DEBUG: Visual indicator to verify Skia rendering is active
-      // Set to true to show red banner, false to hide
-      constexpr bool kShowSkiaDebugBanner = false;
-      if (kShowSkiaDebugBanner) {
-        SkPaint bannerPaint;
-        bannerPaint.setColor(SkColorSetARGB(255, 255, 0, 0)); // Bright red
-        bannerPaint.setAntiAlias(true);
-        canvas->drawRect(SkRect::MakeXYWH(10, 10, 350, 40), bannerPaint);
-
-        SkFont bannerFont;
-        bannerFont.setSize(16.0f);
-        bannerFont.setEdging(SkFont::Edging::kAntiAlias);
-
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
-        textPaint.setAntiAlias(true);
-
-        canvas->drawString("SKIA MAIN LAYOUT ACTIVE", 20, 35, bannerFont,
-                           textPaint);
-      }
-
-      // Render ALL child components - NATIVE SKIA or JUCE fallback
-      static int nativeSkiaCount = 0;
-      static int juceFallbackCount = 0;
-
-      for (int i = 0; i < getNumChildComponents(); ++i) {
-        auto *child = getChildComponent(i);
-        if (child && child->isVisible()) {
-          auto childBounds = child->getBounds();
-          SkRect skBounds = SkRect::MakeXYWH(
-              (float)childBounds.getX(), (float)childBounds.getY(),
-              (float)childBounds.getWidth(), (float)childBounds.getHeight());
-
-          // Check if component supports native Skia rendering
-          auto *skiaComponent = dynamic_cast<zenith::SkiaComponent *>(child);
-
-          // DEBUG: Log what we found
-          static bool loggedComponents = false;
-          if (!loggedComponents && skiaPaintCount == 1) {
-            DBG("  [COMPONENT #" + juce::String(i) + "] " +
-                juce::String(child->getName().isEmpty() ? "unnamed"
-                                                        : child->getName()));
-            DBG("    SkiaComponent cast: " +
-                juce::String(skiaComponent != nullptr ? "YES" : "NO"));
-            if (skiaComponent)
-              DBG("    supportsSkiaRendering(): " +
-                  juce::String(skiaComponent->supportsSkiaRendering() ? "YES"
-                                                                      : "NO"));
-            DBG("    Bounds: " + juce::String(childBounds.getX()) + "," +
-                juce::String(childBounds.getY()) + " " +
-                juce::String(childBounds.getWidth()) + "x" +
-                juce::String(childBounds.getHeight()));
-            DBG("    Visible: " +
-                juce::String(child->isVisible() ? "YES" : "NO"));
-          }
-
-          if (skiaComponent && skiaComponent->supportsSkiaRendering()) {
-            // ✓ NATIVE SKIA RENDERING - Direct to SkCanvas!
-            if (skiaPaintCount == 1)
-              DBG("  >>> CALLING paintToSkia() for component #" +
-                  juce::String(i));
-
-            canvas->save();
-            skiaComponent->paintToSkia(canvas, skBounds);
-            canvas->restore();
-
-            nativeSkiaCount++;
-          } else {
-            // ✗ JUCE FALLBACK - Render to image then composite
-            juce::Image componentImage(
-                juce::Image::ARGB, juce::jmax(1, childBounds.getWidth()),
-                juce::jmax(1, childBounds.getHeight()), true);
-
-            juce::Graphics componentGraphics(componentImage);
-            componentGraphics.setOrigin(-childBounds.getX(),
-                                        -childBounds.getY());
-            child->paint(componentGraphics);
-
-            // Convert JUCE image to Skia
-            juce::Image::BitmapData bitmapData(
-                componentImage, juce::Image::BitmapData::readOnly);
-
-            SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(
-                componentImage.getWidth(), componentImage.getHeight());
-
-            sk_sp<SkImage> skiaImage = SkImages::RasterFromPixmapCopy(
-                SkPixmap(imageInfo, bitmapData.data, bitmapData.lineStride));
-
-            if (skiaImage) {
-              SkPaint paint;
-              paint.setAntiAlias(true);
-              canvas->drawImage(skiaImage, (float)childBounds.getX(),
-                                (float)childBounds.getY(),
-                                SkSamplingOptions(SkFilterMode::kLinear),
-                                &paint);
-            }
-
-            juceFallbackCount++;
-          }
-        }
-      }
-    });
-
-    // Step 2: Get the Skia surface and read pixels directly
-    SkSurface *surface = renderer_->getSurface();
-    if (surface) {
-      // Create JUCE image to hold the result
-      int width = surface->width();
-      int height = surface->height();
-      juce::Image juceImage(juce::Image::ARGB, width, height, true);
-
-      // Lock the JUCE image for writing
-      juce::Image::BitmapData bitmapData(juceImage,
-                                         juce::Image::BitmapData::readWrite);
-
-      // Define the Skia info that matches JUCE's internal format
-      // JUCE ARGB is typically BGRA on Windows (little endian)
-      SkImageInfo readInfo = SkImageInfo::Make(
-          width, height, kBGRA_8888_SkColorType, kPremul_SkAlphaType);
-
-      // Read pixels directly from surface into JUCE bitmap memory
-      // This works for both Raster (Software) and GPU surfaces
-      bool readSuccess = surface->readPixels(
-          readInfo, bitmapData.data, bitmapData.lineStride, 0, 0); // srcX, srcY
-
-      if (readSuccess) {
-        // Draw the resulting image to the screen
-        g.drawImageAt(juceImage, 0, 0);
-      } else {
-        DBG("  [ERROR] readPixels() FAILED!");
-
-        // Draw error message on screen
-        g.setColour(juce::Colours::red);
-        g.drawRect(getLocalBounds(), 5);
-        g.setFont(20.0f);
-        g.drawText("SKIA READPIXELS FAILED", getLocalBounds(),
-                   juce::Justification::centred);
-      }
-    } else {
-      DBG("  [ERROR] getSurface() returned null!");
-    }
+  if (!renderer_ || !renderer_->getSurface()) {
+    g.fillAll(juce::Colour(0xff121214));
+    g.setColour(juce::Colours::white);
+    g.setFont(16.0f);
+    g.drawText("Initializing Skia Renderer...", getLocalBounds(),
+               juce::Justification::centred, true);
+    return;
   }
 #endif
 
