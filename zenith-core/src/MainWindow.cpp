@@ -56,10 +56,8 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
             "EXECUTING <<<");
 
   // Initialize Skia rendering system
-  bool skiaInitSuccess = initializeSkiaRendering();
-  if (skiaInitSuccess) {
-    logToFile("✓ Skia theme configuration loaded successfully");
-  }
+  // Skia initialization is handled by
+  // SkiaMainWindowIntegration::newOpenGLContextCreated
 
   // Instantiate the SkiaRenderer
   logToFile("→ Initializing SkiaRenderer...");

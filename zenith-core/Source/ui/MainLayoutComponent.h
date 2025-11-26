@@ -30,7 +30,7 @@ public:
     arranger.setVisible(false);
 
     // Set opaque for better performance
-    setOpaque(true);
+    setOpaque(false);
   }
 
   void paint(juce::Graphics &g) override {
