@@ -185,6 +185,95 @@ void SkiaTransportControlComponent::paint(juce::Graphics& g)
     g.setColour(isLooping_ ? juce::Colour(0xff000000) : juce::Colour(0xffDFDFDF));
     g.setFont(juce::Font(16.0f));
     g.drawText("⟲", cycleBounds.toNearestInt(), juce::Justification::centred);
+    
+    // === CPU Meter (far right) ===
+    int cpuMeterX = bounds.getWidth() - 80;
+    int cpuMeterY = buttonY;
+    
+    // Simulate CPU usage (would be real in production)
+    float cpuUsage = 0.45f;  // 45% CPU
+    
+    // CPU label
+    g.setColour(juce::Colour(0xff9A9A9A));
+    g.setFont(juce::Font(9.0f));
+    g.drawText("CPU", cpuMeterX, cpuMeterY - 12, 40, 10, juce::Justification::centred);
+    
+    // CPU meter bar
+    juce::Rectangle<float> cpuBounds(cpuMeterX, cpuMeterY, 40, 8);
+    g.setColour(juce::Colour(0xff1A1A1A));
+    g.fillRoundedRectangle(cpuBounds, 2.0f);
+    
+    // CPU fill (green <80%, orange >=80%)
+    float cpuFillWidth = cpuBounds.getWidth() * cpuUsage;
+    juce::Rectangle<float> cpuFill(cpuBounds.getX(), cpuBounds.getY(), cpuFillWidth, cpuBounds.getHeight());
+    
+    if (cpuUsage < 0.8f)
+        g.setColour(juce::Colour(0xff00FF00));  // Green
+    else
+        g.setColour(juce::Colour(0xffFF9900));  // Orange warning
+    
+    g.fillRoundedRectangle(cpuFill, 2.0f);
+    
+    // CPU percentage text
+    g.setColour(juce::Colour(0xffDFDFDF));
+    g.setFont(juce::Font(10.0f));
+    g.drawText(juce::String((int)(cpuUsage * 100)) + "%", cpuMeterX, cpuMeterY + 10, 40, 12, 
+              juce::Justification::centred);
+    
+    // === MIDI Activity Indicator (left side) ===
+    int midiX = 20;
+    int midiY = buttonY;
+    
+    g.setColour(juce::Colour(0xff9A9A9A));
+    g.setFont(juce::Font(9.0f));
+    g.drawText("MIDI", midiX, midiY - 12, 30, 10, juce::Justification::centred);
+    
+    // MIDI in/out dots (green when active)
+    bool midiInActive = isPlaying_;  // Simulate activity
+    bool midiOutActive = isRecordEnabled_;
+    
+    g.setColour(midiInActive ? juce::Colour(0xff00FF00) : juce::Colour(0xff333333));
+    g.fillEllipse(midiX + 5, midiY + 2, 6, 6);  // IN dot
+    
+    g.setColour(midiOutActive ? juce::Colour(0xff00FF00) : juce::Colour(0xff333333));
+    g.fillEllipse(midiX + 15, midiY + 2, 6, 6);  // OUT dot
+    
+    // === Master Volume Slider (right of cycle) ===
+    int masterVolX = lcdX + lcdWidth + 70;
+    int masterVolY = buttonY + 4;
+    int masterVolWidth = 60;
+    
+    g.setColour(juce::Colour(0xff9A9A9A));
+    g.setFont(juce::Font(9.0f));
+    g.drawText("MASTER", masterVolX, masterVolY - 16, masterVolWidth, 10, juce::Justification::centred);
+    
+    // Master volume slider (horizontal mini)
+    juce::Rectangle<float> masterVolBounds(masterVolX, masterVolY, masterVolWidth, 12);
+    g.setColour(juce::Colour(0xff1A1A1A));
+    g.fillRoundedRectangle(masterVolBounds, 2.0f);
+    
+    // Fill (assume 0dB = 100%)
+    float masterVol = 0.85f;  // 85% = -1.5dB
+    float masterFillWidth = masterVolBounds.getWidth() * masterVol;
+    juce::Rectangle<float> masterFill(masterVolBounds.getX(), masterVolBounds.getY(), 
+                                      masterFillWidth, masterVolBounds.getHeight());
+    
+    g.setColour(juce::Colour(0xff006FFF));  // Logic Blue
+    g.fillRoundedRectangle(masterFill, 2.0f);
+    
+    // === Subtle Noise Texture Overlay (1% opacity for professional feel) ===
+    // Create subtle noise pattern for that professional "not too perfect" look
+    juce::Random random(12345);  // Fixed seed for consistent pattern
+    for (int i = 0; i < 500; ++i)  // Sparse noise
+    {
+        int x = random.nextInt(bounds.getWidth());
+        int y = random.nextInt(bounds.getHeight());
+        int brightness = random.nextInt(40) - 20;  // -20 to +20
+        
+        juce::Colour noiseColor = juce::Colour(0xff1C1C1C).brighter(brightness * 0.001f);
+        g.setColour(noiseColor.withAlpha(0.01f));  // 1% opacity
+        g.fillRect(x, y, 1, 1);
+    }
 }
 
 void SkiaTransportControlComponent::resized()
