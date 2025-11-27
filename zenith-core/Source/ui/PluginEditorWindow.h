@@ -21,7 +21,16 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 
 namespace zenith {
 
@@ -32,47 +41,58 @@ namespace zenith {
     This is a simple DocumentWindow that displays the plugin's editor UI.
     When the window is closed, it deletes itself.
 */
-class PluginEditorWindow : public juce::DocumentWindow
-{
+class PluginEditorWindow : public juce::DocumentWindow {
 public:
-    //==============================================================================
-    /**
-     * @brief Create a plugin editor window
-     *
-     * @param plugin The plugin instance to edit
-     * @param useGenericEditor If true, use generic editor even if custom UI available
-     */
-    PluginEditorWindow(juce::AudioPluginInstance* plugin, bool useGenericEditor = false);
+  //==============================================================================
+  /**
+   * @brief Create a plugin editor window
+   *
+   * @param plugin The plugin instance to edit
+   * @param useGenericEditor If true, use generic editor even if custom UI
+   * available
+   */
+  PluginEditorWindow(juce::AudioPluginInstance *plugin,
+                     bool useGenericEditor = false);
 
-    ~PluginEditorWindow() override;
+  ~PluginEditorWindow() override;
 
-    //==============================================================================
-    /**
-     * @brief Get the plugin being edited
-     */
-    juce::AudioPluginInstance* getPlugin() const { return plugin; }
+  //==============================================================================
+  /**
+   * @brief Get the plugin being edited
+   */
+  juce::AudioPluginInstance *getPlugin() const { return plugin; }
 
-    //==============================================================================
-    // DocumentWindow overrides
+  //==============================================================================
+  // DocumentWindow overrides
 
-    /**
-     * @brief Called when user clicks close button
-     */
-    void closeButtonPressed() override;
+  /**
+   * @brief Called when user clicks close button
+   */
+  void closeButtonPressed() override;
+
+  /**
+   * @brief Set callback for when window is closed
+   */
+  void setOnCloseCallback(std::function<void()> callback) {
+    onClose = std::move(callback);
+  }
 
 private:
-    //==============================================================================
-    // Member Variables
-    //==============================================================================
+  std::function<void()> onClose;
 
-    // The plugin instance (not owned - must outlive this window)
-    juce::AudioPluginInstance* plugin;
+private:
+  //==============================================================================
+  // Member Variables
+  //==============================================================================
 
-    // The plugin editor component (owned by this window's content component)
-    juce::Component::SafePointer<juce::AudioProcessorEditor> editor;
+  // The plugin instance (not owned - must outlive this window)
+  juce::AudioPluginInstance *plugin;
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditorWindow)
+  // The plugin editor component (owned by this window's content component)
+  juce::Component::SafePointer<juce::AudioProcessorEditor> editor;
+
+  //==============================================================================
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditorWindow)
 };
 
 //==============================================================================
@@ -82,65 +102,66 @@ private:
     This class keeps track of open plugin editor windows and ensures
     only one window per plugin instance.
 */
-class PluginEditorWindowManager
-{
+class PluginEditorWindowManager {
 public:
-    //==============================================================================
-    PluginEditorWindowManager() = default;
-    ~PluginEditorWindowManager();
+  //==============================================================================
+  PluginEditorWindowManager() = default;
+  ~PluginEditorWindowManager();
 
-    //==============================================================================
-    /**
-     * @brief Open or focus a plugin editor window
-     *
-     * If a window is already open for this plugin, it will be brought to front.
-     * Otherwise, a new window will be created.
-     *
-     * @param plugin The plugin to edit
-     * @param useGenericEditor If true, use generic editor
-     * @return Pointer to the window (may be newly created or existing)
-     */
-    PluginEditorWindow* openEditor(juce::AudioPluginInstance* plugin, bool useGenericEditor = false);
+  //==============================================================================
+  /**
+   * @brief Open or focus a plugin editor window
+   *
+   * If a window is already open for this plugin, it will be brought to front.
+   * Otherwise, a new window will be created.
+   *
+   * @param plugin The plugin to edit
+   * @param useGenericEditor If true, use generic editor
+   * @return Pointer to the window (may be newly created or existing)
+   */
+  PluginEditorWindow *openEditor(juce::AudioPluginInstance *plugin,
+                                 bool useGenericEditor = false);
 
-    /**
-     * @brief Close a plugin editor window
-     *
-     * @param plugin The plugin whose editor to close
-     */
-    void closeEditor(juce::AudioPluginInstance* plugin);
+  /**
+   * @brief Close a plugin editor window
+   *
+   * @param plugin The plugin whose editor to close
+   */
+  void closeEditor(juce::AudioPluginInstance *plugin);
 
-    /**
-     * @brief Close all plugin editor windows
-     */
-    void closeAllEditors();
+  /**
+   * @brief Close all plugin editor windows
+   */
+  void closeAllEditors();
 
-    /**
-     * @brief Check if a plugin has an open editor window
-     *
-     * @param plugin The plugin to check
-     * @return true if window is open
-     */
-    bool hasOpenEditor(juce::AudioPluginInstance* plugin) const;
+  /**
+   * @brief Check if a plugin has an open editor window
+   *
+   * @param plugin The plugin to check
+   * @return true if window is open
+   */
+  bool hasOpenEditor(juce::AudioPluginInstance *plugin) const;
 
-    /**
-     * @brief Get the editor window for a plugin (if open)
-     *
-     * @param plugin The plugin
-     * @return Pointer to window, or nullptr if not open
-     */
-    PluginEditorWindow* getEditorWindow(juce::AudioPluginInstance* plugin) const;
+  /**
+   * @brief Get the editor window for a plugin (if open)
+   *
+   * @param plugin The plugin
+   * @return Pointer to window, or nullptr if not open
+   */
+  PluginEditorWindow *getEditorWindow(juce::AudioPluginInstance *plugin) const;
 
 private:
-    //==============================================================================
-    // Member Variables
-    //==============================================================================
+  //==============================================================================
+  // Member Variables
+  //==============================================================================
 
-    // Map of plugin instance to editor window (using unique_ptr for safe ownership)
-    std::map<juce::AudioPluginInstance*, std::unique_ptr<PluginEditorWindow>> editorWindows;
+  // Map of plugin instance to editor window (using unique_ptr for safe
+  // ownership)
+  std::map<juce::AudioPluginInstance *, std::unique_ptr<PluginEditorWindow>>
+      editorWindows;
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditorWindowManager)
+  //==============================================================================
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginEditorWindowManager)
 };
 
 } // namespace zenith
-

@@ -1,0 +1,24 @@
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  MixerComponent.cpp
+  WingmanPanel.cpp
+C:\zenith\daw\zenith-core\include\MixerComponent.h(95,43): warning C4100: 'treeWhoseParentHasChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(96,45): warning C4100: 'treeWhichHasBeenChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(273,61): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(95,9): warning C4100: 'indexFromWhichChildWasRemoved': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(108,9): warning C4100: 'newIndex': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(107,60): warning C4100: 'oldIndex': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(273,61): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+  juce_graphics_Sheenbidi.c
+MixerComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl MixerComponent::resized(void)" (?resized@MixerComponent@@UEAAXXZ) [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\build\ZenithDAW_artefacts\Debug\Zenith DAW.exe : fatal error LNK1120: 1 unresolved externals [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]

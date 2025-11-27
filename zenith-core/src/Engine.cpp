@@ -14,6 +14,7 @@
 #include "../Source/engine/MixerChannel.h"
 #include "../Source/engine/AudioFilePool.h"
 #include "../Source/engine/PluginHost.h"
+#include "../Source/engine/AuxBus.h"
 #include "../Source/ui/PluginEditorWindow.h"
 
 //==============================================================================

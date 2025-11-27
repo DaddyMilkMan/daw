@@ -1,0 +1,40 @@
+If:
+  PathMatch: .*\.(cpp|h|hpp|cc|cxx)$
+
+CompileFlags:
+  Add:
+    # Project includes
+    - -IC:/zenith/daw/zenith-core/Source
+    - -IC:/zenith/daw/zenith-core/include
+    # JUCE and Skia as system headers (suppresses their warnings)
+    - -isystem
+    - C:/zenith/daw/zenith-core/build/_deps/juce-src/modules
+    - -isystem
+    - C:/vcpkg/installed/x64-windows/include/skia
+    # C++ standard
+    - -std=c++17
+    # Defines
+    - -DZENITH_USE_SKIA
+    - -DJUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+    - -D_WIN32
+    - -DWIN32
+    - -D_WINDOWS
+    - -DUNICODE
+    - -D_UNICODE
+    # Suppress attribute errors
+    - -Wno-error=c++17-attribute-extensions
+    - -Wno-error=unknown-attributes
+
+Diagnostics:
+  # Completely disable attribute-related errors
+  Suppress:
+    - unused-attribute
+    - maybe_unused
+    - unknown-attributes
+    - c++17-attribute-extensions
+  ClangTidy:
+    # Disable all clang-tidy checks
+    CheckOptions:
+      DisableAllChecks: true
+  UnusedIncludes: None
+  MissingIncludes: None

@@ -1,0 +1,25 @@
+{
+    "name": "LoFi Keys",
+    "category": "keys",
+    "parameters": {
+        "attack": 0.05,
+        "decay": 0.3,
+        "sustain": 0.6,
+        "release": 0.8,
+        "filterCutoff": 0.7,
+        "filterResonance": 0.1,
+        "sampleStartOffset": 0.0,
+        "pitchFine": 0.0,
+        "pitchSemitones": 0.0,
+        "globalPan": 0.5,
+        "globalGain": 0.85
+    },
+    "regions": [
+        { "filePath": "lofi-piano-C3.wav", "rootNote": 48, "lowNote": 42, "highNote": 53, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+        { "filePath": "lofi-piano-C4.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+        { "filePath": "lofi-piano-C5.wav", "rootNote": 72, "lowNote": 66, "highNote": 84, "lowVel": 0, "highVel": 63, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+        { "filePath": "lofi-piano-C3-hard.wav", "rootNote": 48, "lowNote": 42, "highNote": 53, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+        { "filePath": "lofi-piano-C4-hard.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
+        { "filePath": "lofi-piano-C5-hard.wav", "rootNote": 72, "lowNote": 66, "highNote": 84, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 }
+    ]
+}

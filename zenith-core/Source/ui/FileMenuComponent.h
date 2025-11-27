@@ -17,7 +17,16 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 
 class ProjectState;
 class Engine;
@@ -29,110 +38,108 @@ namespace zenith {
  * @brief Beautiful file operations menu with animations
  */
 class FileMenuComponent : public juce::Component,
-                         public juce::Button::Listener
-{
+                          public juce::Button::Listener {
 public:
-    //==========================================================================
-    FileMenuComponent(ProjectState& state, Engine& eng);
-    ~FileMenuComponent() override;
+  //==========================================================================
+  FileMenuComponent(ProjectState &state, Engine &eng);
+  ~FileMenuComponent() override;
 
-    //==========================================================================
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+  //==========================================================================
+  void paint(juce::Graphics &g) override;
+  void resized() override;
 
-    //==========================================================================
-    // Button::Listener
-    //==========================================================================
-    void buttonClicked(juce::Button* button) override;
+  //==========================================================================
+  // Button::Listener
+  //==========================================================================
+  void buttonClicked(juce::Button *button) override;
 
-    //==========================================================================
-    // Methods
-    //==========================================================================
+  //==========================================================================
+  // Methods
+  //==========================================================================
 
-    /**
-     * @brief Refresh recent files list
-     */
-    void refreshRecentFiles();
+  /**
+   * @brief Refresh recent files list
+   */
+  void refreshRecentFiles();
 
 private:
-    //==========================================================================
-    // Helpers
-    //==========================================================================
+  //==========================================================================
+  // Helpers
+  //==========================================================================
 
-    /**
-     * @brief Show menu with animation
-     */
-    void showMenu();
+  /**
+   * @brief Show menu with animation
+   */
+  void showMenu();
 
-    /**
-     * @brief Hide menu with animation
-     */
-    void hideMenu();
+  /**
+   * @brief Hide menu with animation
+   */
+  void hideMenu();
 
-    /**
-     * @brief Paint menu item
-     */
-    void paintMenuItem(juce::Graphics& g, const juce::String& label,
-                      const juce::String& shortcut, int index, bool isHovered);
+  /**
+   * @brief Paint menu item
+   */
+  void paintMenuItem(juce::Graphics &g, const juce::String &label,
+                     const juce::String &shortcut, int index, bool isHovered);
 
-    /**
-     * @brief Handle New Project
-     */
-    void handleNewProject();
+  /**
+   * @brief Handle New Project
+   */
+  void handleNewProject();
 
-    /**
-     * @brief Handle Open Project
-     */
-    void handleOpenProject();
+  /**
+   * @brief Handle Open Project
+   */
+  void handleOpenProject();
 
-    /**
-     * @brief Handle Save Project
-     */
-    void handleSaveProject();
+  /**
+   * @brief Handle Save Project
+   */
+  void handleSaveProject();
 
-    /**
-     * @brief Handle Save As
-     */
-    void handleSaveAs();
+  /**
+   * @brief Handle Save As
+   */
+  void handleSaveAs();
 
-    /**
-     * @brief Handle recent file selection
-     */
-    void handleRecentFile(int index) [[maybe_unused]];
+  /**
+   * @brief Handle recent file selection
+   */
+  [[maybe_unused]] void handleRecentFile(int index);
 
-    //==========================================================================
-    // Members
-    //==========================================================================
+  //==========================================================================
+  // Members
+  //==========================================================================
 
-    ProjectState& projectState_;
-    Engine& engine_;
+  ProjectState &projectState_;
+  Engine &engine_;
 
-    // Menu button
-    juce::TextButton fileButton;
-    bool menuOpen_ = false;
-    float menuAlpha_ = 0.0f;  // For animation
+  // Menu button
+  juce::TextButton fileButton;
+  bool menuOpen_ = false;
+  float menuAlpha_ = 0.0f; // For animation
 
-    // Menu item bounds
-    juce::Rectangle<int> newProjectBounds_;
-    juce::Rectangle<int> openProjectBounds_;
-    juce::Rectangle<int> saveProjectBounds_;
-    juce::Rectangle<int> saveAsBounds_;
-    juce::Rectangle<int> recentFilesArea_;
+  // Menu item bounds
+  juce::Rectangle<int> newProjectBounds_;
+  juce::Rectangle<int> openProjectBounds_;
+  juce::Rectangle<int> saveProjectBounds_;
+  juce::Rectangle<int> saveAsBounds_;
+  juce::Rectangle<int> recentFilesArea_;
 
-    // Recent files (max 5)
-    juce::StringArray recentFiles_;
-    juce::Array<juce::Rectangle<int>> recentFileBounds_;
+  // Recent files (max 5)
+  juce::StringArray recentFiles_;
+  juce::Array<juce::Rectangle<int>> recentFileBounds_;
 
-    // Hover state
-    int hoveredMenuItemIndex_ = -1;
+  // Hover state
+  int hoveredMenuItemIndex_ = -1;
 
-    // Layout constants
-    static constexpr int MENU_WIDTH = 250;
-    static constexpr int MENU_ITEM_HEIGHT = 40;
-    static constexpr int SEPARATOR_HEIGHT = 8;
+  // Layout constants
+  static constexpr int MENU_WIDTH = 250;
+  static constexpr int MENU_ITEM_HEIGHT = 40;
+  static constexpr int SEPARATOR_HEIGHT = 8;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FileMenuComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(FileMenuComponent)
 };
 
-}  // namespace zenith
-
+} // namespace zenith

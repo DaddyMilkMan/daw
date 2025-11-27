@@ -1,126 +1,132 @@
 /**
  * @file SkiaWaveformRenderer.cpp
- * @brief Implementation of GPU-accelerated waveform rendering
+ * @brief GPU-accelerated waveform rendering for audio visualization
  */
 
 #include "SkiaWaveformRenderer.h"
-#include "SkiaTheme.h"
 
 #ifdef ZENITH_USE_SKIA
-    #include <include/core/SkPaint.h>
-    #include <include/core/SkPath.h>
-    #include <include/core/SkShader.h>
-    #include <include/core/SkMaskFilter.h>
-    #include <include/core/SkBlurTypes.h>
-    #include <include/effects/SkGradientShader.h>
-#endif
 
 #include <algorithm>
 #include <cmath>
+#include "include/effects/SkGradientShader.h"
 
 namespace zenith {
 
 //==============================================================================
-// WaveformData implementation
+// Construction
+//==============================================================================
+
+SkiaWaveformRenderer::SkiaWaveformRenderer() = default;
+
+SkiaWaveformRenderer::~SkiaWaveformRenderer() = default;
+
+//==============================================================================
+// Data Management
 //==============================================================================
 
 void WaveformData::generateFromAudioBuffer(const juce::AudioBuffer<float>& buffer, int detailLevel)
 {
-    clear();
+    numChannels = buffer.getNumChannels();
+    sampleRate = 44100;  // Default, should be passed in
+    durationSeconds = static_cast<double>(buffer.getNumSamples()) / sampleRate;
+
+    samples.clear();
 
     if (buffer.getNumSamples() == 0)
         return;
 
-    numChannels = buffer.getNumChannels();
-    sampleRate = 44100; // Default, should be passed in from actual source
-    durationSeconds = buffer.getNumSamples() / static_cast<double>(sampleRate);
-
-    // Calculate samples per segment based on detail level
-    // Detail level 1 (low): ~1000 segments
-    // Detail level 5 (high): ~10000 segments
-    int targetSegments = 1000 * detailLevel;
-    int samplesPerSegment = std::max(1, buffer.getNumSamples() / targetSegments);
-
+    int samplesPerSegment = std::max(1, buffer.getNumSamples() / (detailLevel * 100));
     int numSegments = (buffer.getNumSamples() + samplesPerSegment - 1) / samplesPerSegment;
-    samples.reserve(numSegments);
 
-    // Generate min/max/RMS for each segment
-    for (int segment = 0; segment < numSegments; ++segment)
-    {
-        int startSample = segment * samplesPerSegment;
+    samples.resize(numSegments);
+
+    for (int seg = 0; seg < numSegments; ++seg) {
+        int startSample = seg * samplesPerSegment;
         int endSample = std::min(startSample + samplesPerSegment, buffer.getNumSamples());
 
-        MinMaxPair pair;
+        MinMaxPair& pair = samples[seg];
         pair.min = 0.0f;
         pair.max = 0.0f;
-        float sumSquares = 0.0f;
-        int sampleCount = 0;
+        pair.rms = 0.0f;
 
-        // Analyze all channels
-        for (int ch = 0; ch < numChannels; ++ch)
-        {
+        float rmsSum = 0.0f;
+        int count = 0;
+
+        for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
             const float* channelData = buffer.getReadPointer(ch);
 
-            for (int i = startSample; i < endSample; ++i)
-            {
+            for (int i = startSample; i < endSample; ++i) {
                 float sample = channelData[i];
                 pair.min = std::min(pair.min, sample);
                 pair.max = std::max(pair.max, sample);
-                sumSquares += sample * sample;
-                ++sampleCount;
+                rmsSum += sample * sample;
+                count++;
             }
         }
 
-        // Calculate RMS
-        if (sampleCount > 0)
-        {
-            pair.rms = std::sqrt(sumSquares / sampleCount);
-        }
-        else
-        {
-            pair.rms = 0.0f;
-        }
-
-        samples.push_back(pair);
+        if (count > 0)
+            pair.rms = std::sqrt(rmsSum / count);
     }
 }
 
 void WaveformData::generateFromAudioSource(juce::AudioFormatReader* source, int detailLevel)
 {
-    if (!source)
-        return;
+    if (!source) return;
 
-    // Read entire file into buffer (for simplicity; could be optimized for large files)
-    const int bufferSize = static_cast<int>(source->lengthInSamples);
-    juce::AudioBuffer<float> buffer(static_cast<int>(source->numChannels), bufferSize);
-
-    source->read(&buffer, 0, bufferSize, 0, true, true);
-
+    numChannels = source->numChannels;
     sampleRate = static_cast<int>(source->sampleRate);
-    durationSeconds = source->lengthInSamples / source->sampleRate;
+    durationSeconds = static_cast<double>(source->lengthInSamples) / source->sampleRate;
 
-    generateFromAudioBuffer(buffer, detailLevel);
+    samples.clear();
+
+    int samplesPerSegment = std::max(1, static_cast<int>(source->lengthInSamples) / (detailLevel * 100));
+    int numSegments = (source->lengthInSamples + samplesPerSegment - 1) / samplesPerSegment;
+
+    samples.resize(numSegments);
+
+    juce::AudioBuffer<float> tempBuffer(numChannels, samplesPerSegment);
+
+    for (int seg = 0; seg < numSegments; ++seg) {
+        int startSample = seg * samplesPerSegment;
+        int readSamples = std::min(samplesPerSegment, static_cast<int>(source->lengthInSamples - startSample));
+
+        source->read(&tempBuffer, 0, readSamples, startSample, true, true);
+
+        MinMaxPair& pair = samples[seg];
+        pair.min = 0.0f;
+        pair.max = 0.0f;
+        pair.rms = 0.0f;
+
+        float rmsSum = 0.0f;
+        int count = 0;
+
+        for (int ch = 0; ch < numChannels; ++ch) {
+            const float* channelData = tempBuffer.getReadPointer(ch);
+
+            for (int i = 0; i < readSamples; ++i) {
+                float sample = channelData[i];
+                pair.min = std::min(pair.min, sample);
+                pair.max = std::max(pair.max, sample);
+                rmsSum += sample * sample;
+                count++;
+            }
+        }
+
+        if (count > 0)
+            pair.rms = std::sqrt(rmsSum / count);
+    }
 }
 
 void WaveformData::clear()
 {
     samples.clear();
     durationSeconds = 0.0;
-    numChannels = 1;
 }
 
-#ifdef ZENITH_USE_SKIA
-
 //==============================================================================
-// SkiaWaveformRenderer implementation
+// Animation
 //==============================================================================
-
-SkiaWaveformRenderer::SkiaWaveformRenderer()
-{
-    lastAnimationTime_ = juce::Time::getCurrentTime();
-}
-
-SkiaWaveformRenderer::~SkiaWaveformRenderer() = default;
 
 void SkiaWaveformRenderer::setAnimationProgress(float progress)
 {
@@ -128,7 +134,7 @@ void SkiaWaveformRenderer::setAnimationProgress(float progress)
 }
 
 //==============================================================================
-// Main rendering methods
+// Rendering
 //==============================================================================
 
 void SkiaWaveformRenderer::render(SkCanvas* canvas,
@@ -136,10 +142,40 @@ void SkiaWaveformRenderer::render(SkCanvas* canvas,
                                   const SkRect& bounds,
                                   const WaveformRenderOptions& options)
 {
-    if (!canvas || !waveform.isValid() || bounds.isEmpty())
+    if (!canvas || !waveform.isValid())
         return;
 
-    renderTimeRange(canvas, waveform, bounds, 0.0, waveform.durationSeconds, options);
+    // Apply animation scaling
+    float animScale = options.animateEntry ? animationProgress_ : 1.0f;
+
+    size_t startSample = 0;
+    size_t endSample = waveform.samples.size();
+
+    // Clamp to valid range
+    endSample = std::min(endSample, waveform.samples.size());
+
+    canvas->save();
+
+    // Render based on style
+    switch (options.style) {
+        case WaveformStyle::Filled:
+            renderFilled(canvas, waveform, bounds, startSample, endSample, options);
+            break;
+        case WaveformStyle::Outline:
+            renderOutline(canvas, waveform, bounds, startSample, endSample, options);
+            break;
+        case WaveformStyle::Peaks:
+            renderPeaks(canvas, waveform, bounds, startSample, endSample, options);
+            break;
+        case WaveformStyle::RMS:
+            renderRMS(canvas, waveform, bounds, startSample, endSample, options);
+            break;
+        case WaveformStyle::Hybrid:
+            renderHybrid(canvas, waveform, bounds, startSample, endSample, options);
+            break;
+    }
+
+    canvas->restore();
 }
 
 void SkiaWaveformRenderer::renderTimeRange(SkCanvas* canvas,
@@ -149,344 +185,22 @@ void SkiaWaveformRenderer::renderTimeRange(SkCanvas* canvas,
                                           double endTime,
                                           const WaveformRenderOptions& options)
 {
-    if (!canvas || !waveform.isValid() || bounds.isEmpty())
+    if (!canvas || !waveform.isValid())
         return;
 
-    // Convert time range to sample indices
-    size_t startSample = getSampleIndexForTime(waveform, startTime);
-    size_t endSample = getSampleIndexForTime(waveform, endTime);
+    // Convert time to sample indices
+    size_t startSample = static_cast<size_t>((startTime / waveform.durationSeconds) * waveform.samples.size());
+    size_t endSample = static_cast<size_t>((endTime / waveform.durationSeconds) * waveform.samples.size());
 
-    if (startSample >= waveform.samples.size())
-        return;
-
+    startSample = std::min(startSample, waveform.samples.size());
     endSample = std::min(endSample, waveform.samples.size());
 
-    // Render based on style
-    switch (options.style)
-    {
-        case WaveformStyle::Filled:
-            renderFilled(canvas, waveform, bounds, startSample, endSample, options);
-            break;
+    if (startSample >= endSample)
+        return;
 
-        case WaveformStyle::Outline:
-            renderOutline(canvas, waveform, bounds, startSample, endSample, options);
-            break;
-
-        case WaveformStyle::Peaks:
-            renderPeaks(canvas, waveform, bounds, startSample, endSample, options);
-            break;
-
-        case WaveformStyle::RMS:
-            renderRMS(canvas, waveform, bounds, startSample, endSample, options);
-            break;
-
-        case WaveformStyle::Hybrid:
-            renderHybrid(canvas, waveform, bounds, startSample, endSample, options);
-            break;
-
-        default:
-            break;
-    }
-
-    // Draw center line if enabled
-    if (options.showCenterLine)
-    {
-        SkPaint centerLinePaint;
-        centerLinePaint.setAntiAlias(true);
-        centerLinePaint.setColor(SkColorSetA(options.outlineColor, 80));
-        centerLinePaint.setStrokeWidth(0.5f);
-
-        float centerY = bounds.centerY();
-        canvas->drawLine(bounds.left(), centerY, bounds.right(), centerY, centerLinePaint);
-    }
-}
-
-//==============================================================================
-// Style-specific rendering
-//==============================================================================
-
-void SkiaWaveformRenderer::renderFilled(SkCanvas* canvas,
-                                       const WaveformData& waveform,
-                                       const SkRect& bounds,
-                                       size_t startSample,
-                                       size_t endSample,
-                                       const WaveformRenderOptions& options)
-{
-    SkPath path = createWaveformPath(waveform, bounds, startSample, endSample, true);
-
-    // Apply glow effect if enabled
-    if (options.enableGlow)
-    {
-        applyGlowEffect(canvas, path, options);
-    }
-
-    // Create fill paint
-    SkPaint fillPaint;
-    fillPaint.setAntiAlias(options.antiAlias);
-    fillPaint.setStyle(SkPaint::kFill_Style);
-
-    if (options.useGradient)
-    {
-        // Vertical gradient from top to bottom
-        SkPoint points[2] = {
-            SkPoint::Make(bounds.centerX(), bounds.top()),
-            SkPoint::Make(bounds.centerX(), bounds.bottom())
-        };
-        SkColor colors[2] = {options.gradientTop, options.gradientBottom};
-        SkScalar positions[2] = {0.0f, 1.0f};
-
-        sk_sp<SkShader> shader = SkGradientShader::MakeLinear(
-            points, colors, positions, 2, SkTileMode::kClamp
-        );
-        fillPaint.setShader(shader);
-    }
-    else
-    {
-        fillPaint.setColor(options.fillColor);
-    }
-
-    fillPaint.setAlpha(static_cast<uint8_t>(255 * options.opacity * options.animationProgress));
-
-    canvas->drawPath(path, fillPaint);
-}
-
-void SkiaWaveformRenderer::renderOutline(SkCanvas* canvas,
-                                        const WaveformData& waveform,
-                                        const SkRect& bounds,
-                                        size_t startSample,
-                                        size_t endSample,
-                                        const WaveformRenderOptions& options)
-{
-    SkPath path = createWaveformPath(waveform, bounds, startSample, endSample, false);
-
-    SkPaint outlinePaint;
-    outlinePaint.setAntiAlias(options.antiAlias);
-    outlinePaint.setStyle(SkPaint::kStroke_Style);
-    outlinePaint.setStrokeWidth(options.outlineWidth);
-    outlinePaint.setColor(options.outlineColor);
-    outlinePaint.setAlpha(static_cast<uint8_t>(255 * options.opacity * options.animationProgress));
-
-    canvas->drawPath(path, outlinePaint);
-}
-
-void SkiaWaveformRenderer::renderPeaks(SkCanvas* canvas,
-                                      const WaveformData& waveform,
-                                      const SkRect& bounds,
-                                      size_t startSample,
-                                      size_t endSample,
-                                      const WaveformRenderOptions& options)
-{
-    SkPaint peakPaint;
-    peakPaint.setAntiAlias(options.antiAlias);
-    peakPaint.setStyle(SkPaint::kStroke_Style);
-    peakPaint.setStrokeWidth(options.peakWidth);
-    peakPaint.setColor(options.peakColor);
-    peakPaint.setAlpha(static_cast<uint8_t>(255 * options.opacity * options.animationProgress));
-
-    size_t numSamples = endSample - startSample;
-    float centerY = bounds.centerY();
-    float heightScale = bounds.height() / 2.0f;
-
-    for (size_t i = 0; i < numSamples; ++i)
-    {
-        size_t sampleIdx = startSample + i;
-        if (sampleIdx >= waveform.samples.size())
-            break;
-
-        float x = bounds.left() + (i / static_cast<float>(numSamples)) * bounds.width();
-        float yMin = centerY - waveform.samples[sampleIdx].min * heightScale;
-        float yMax = centerY - waveform.samples[sampleIdx].max * heightScale;
-
-        canvas->drawLine(x, yMin, x, yMax, peakPaint);
-    }
-}
-
-void SkiaWaveformRenderer::renderRMS(SkCanvas* canvas,
-                                    const WaveformData& waveform,
-                                    const SkRect& bounds,
-                                    size_t startSample,
-                                    size_t endSample,
-                                    const WaveformRenderOptions& options)
-{
-    size_t numSamples = endSample - startSample;
-    float centerY = bounds.centerY();
-    float heightScale = bounds.height() / 2.0f;
-
-    SkPath rmsPath;
-    bool first = true;
-
-    // Create RMS envelope path
-    for (size_t i = 0; i < numSamples; ++i)
-    {
-        size_t sampleIdx = startSample + i;
-        if (sampleIdx >= waveform.samples.size())
-            break;
-
-        float x = bounds.left() + (i / static_cast<float>(numSamples)) * bounds.width();
-        float rms = waveform.samples[sampleIdx].rms;
-        float yTop = centerY - rms * heightScale;
-        float yBottom = centerY + rms * heightScale;
-
-        if (first)
-        {
-            rmsPath.moveTo(x, yTop);
-            first = false;
-        }
-        else
-        {
-            rmsPath.lineTo(x, yTop);
-        }
-    }
-
-    // Add bottom envelope
-    for (int i = static_cast<int>(numSamples) - 1; i >= 0; --i)
-    {
-        size_t sampleIdx = startSample + i;
-        if (sampleIdx >= waveform.samples.size())
-            continue;
-
-        float x = bounds.left() + (i / static_cast<float>(numSamples)) * bounds.width();
-        float rms = waveform.samples[sampleIdx].rms;
-        float yBottom = centerY + rms * heightScale;
-
-        rmsPath.lineTo(x, yBottom);
-    }
-
-    rmsPath.close();
-
-    SkPaint rmsPaint;
-    rmsPaint.setAntiAlias(options.antiAlias);
-    rmsPaint.setStyle(SkPaint::kFill_Style);
-    rmsPaint.setColor(options.rmsColor);
-    rmsPaint.setAlpha(static_cast<uint8_t>(255 * options.opacity * options.animationProgress * 0.6f));
-
-    canvas->drawPath(rmsPath, rmsPaint);
-}
-
-void SkiaWaveformRenderer::renderHybrid(SkCanvas* canvas,
-                                       const WaveformData& waveform,
-                                       const SkRect& bounds,
-                                       size_t startSample,
-                                       size_t endSample,
-                                       const WaveformRenderOptions& options)
-{
-    // Draw RMS first (semi-transparent)
-    WaveformRenderOptions rmsOpts = options;
-    rmsOpts.opacity *= 0.4f;
-    renderRMS(canvas, waveform, bounds, startSample, endSample, rmsOpts);
-
-    // Draw peaks on top
-    renderPeaks(canvas, waveform, bounds, startSample, endSample, options);
-}
-
-//==============================================================================
-// Helper methods
-//==============================================================================
-
-SkPath SkiaWaveformRenderer::createWaveformPath(const WaveformData& waveform,
-                                               const SkRect& bounds,
-                                               size_t startSample,
-                                               size_t endSample,
-                                               bool includeBottom)
-{
-    SkPath path;
-
-    size_t numSamples = endSample - startSample;
-    if (numSamples == 0)
-        return path;
-
-    float centerY = bounds.centerY();
-    float heightScale = bounds.height() / 2.0f;
-
-    // Draw top envelope (max values)
-    bool first = true;
-    for (size_t i = 0; i < numSamples; ++i)
-    {
-        size_t sampleIdx = startSample + i;
-        if (sampleIdx >= waveform.samples.size())
-            break;
-
-        float x = bounds.left() + (i / static_cast<float>(numSamples)) * bounds.width();
-        float y = centerY - waveform.samples[sampleIdx].max * heightScale;
-
-        if (first)
-        {
-            path.moveTo(x, y);
-            first = false;
-        }
-        else
-        {
-            path.lineTo(x, y);
-        }
-    }
-
-    if (includeBottom)
-    {
-        // Draw bottom envelope (min values) in reverse
-        for (int i = static_cast<int>(numSamples) - 1; i >= 0; --i)
-        {
-            size_t sampleIdx = startSample + i;
-            if (sampleIdx >= waveform.samples.size())
-                continue;
-
-            float x = bounds.left() + (i / static_cast<float>(numSamples)) * bounds.width();
-            float y = centerY - waveform.samples[sampleIdx].min * heightScale;
-
-            path.lineTo(x, y);
-        }
-
-        path.close();
-    }
-
-    return path;
-}
-
-void SkiaWaveformRenderer::applyGlowEffect(SkCanvas* canvas,
-                                          const SkPath& path,
-                                          const WaveformRenderOptions& options)
-{
-    // Draw multiple glow layers
-    const int glowLayers = 2;
-
-    for (int i = 0; i < glowLayers; ++i)
-    {
-        SkPaint glowPaint;
-        glowPaint.setAntiAlias(true);
-        glowPaint.setStyle(SkPaint::kStroke_Style);
-
-        float layerOpacity = options.glowOpacity * (1.0f - i * 0.3f);
-        float layerBlur = options.glowRadius * (1.0f + i * 0.4f);
-
-        glowPaint.setColor(options.fillColor);
-        glowPaint.setAlpha(static_cast<uint8_t>(255 * layerOpacity * options.animationProgress));
-        glowPaint.setStrokeWidth(options.outlineWidth + i * 2.0f);
-
-        if (layerBlur > 0.0f)
-        {
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, layerBlur));
-        }
-
-        canvas->drawPath(path, glowPaint);
-    }
-}
-
-size_t SkiaWaveformRenderer::getSampleIndexForTime(const WaveformData& waveform, double timeSeconds) const
-{
-    if (waveform.durationSeconds <= 0.0 || waveform.samples.empty())
-        return 0;
-
-    double ratio = timeSeconds / waveform.durationSeconds;
-    size_t index = static_cast<size_t>(ratio * waveform.samples.size());
-    return std::min(index, waveform.samples.size() - 1);
-}
-
-double SkiaWaveformRenderer::getTimeForSampleIndex(const WaveformData& waveform, size_t index) const
-{
-    if (waveform.samples.empty())
-        return 0.0;
-
-    double ratio = index / static_cast<double>(waveform.samples.size());
-    return ratio * waveform.durationSeconds;
+    canvas->save();
+    renderFilled(canvas, waveform, bounds, startSample, endSample, options);
+    canvas->restore();
 }
 
 void SkiaWaveformRenderer::renderMidiNotes(SkCanvas* canvas,
@@ -498,33 +212,247 @@ void SkiaWaveformRenderer::renderMidiNotes(SkCanvas* canvas,
         return;
 
     SkPaint notePaint;
-    notePaint.setAntiAlias(true);
     notePaint.setColor(color);
+    notePaint.setAntiAlias(true);
 
-    // Simple MIDI note visualization (rectangles for now)
-    for (const auto& note : notes)
-    {
-        // int pitch = std::get<0>(note);
-        double start = std::get<1>(note);
-        double length = std::get<2>(note);
+    for (const auto& note : notes) {
+        int pitch = std::get<0>(note);
+        double startTime = std::get<1>(note);
+        double duration = std::get<2>(note);
         int velocity = std::get<3>(note);
 
-        // Map note to bounds (simplified - would need proper pitch mapping)
-        float x = bounds.left() + static_cast<float>(start / 10.0) * bounds.width();
-        float width = static_cast<float>(length / 10.0) * bounds.width();
-        float height = 4.0f;
-        float y = bounds.centerY() - height / 2.0f;
+        // Map pitch to vertical position (0-127 MIDI notes)
+        float y = bounds.top() + (127 - pitch) * (bounds.height() / 128.0f);
+        float height = bounds.height() / 128.0f;
 
-        // Alpha based on velocity
-        uint8_t alpha = static_cast<uint8_t>((velocity / 127.0f) * 255);
-        notePaint.setAlpha(alpha);
+        // Map time to horizontal position
+        float x = bounds.left() + (startTime / 10.0) * bounds.width();  // Assume 10 second duration
+        float width = (duration / 10.0) * bounds.width();
 
-        SkRect noteRect = SkRect::MakeXYWH(x, y, width, height);
-        canvas->drawRect(noteRect, notePaint);
+        // Draw note as rectangle with velocity opacity
+        uint8_t alpha = static_cast<uint8_t>((velocity / 127.0f) * 255.0f);
+        SkColor noteColor = SkColorSetA(color, alpha);
+        notePaint.setColor(noteColor);
+
+        canvas->drawRect(SkRect::MakeXYWH(x, y, width, height), notePaint);
     }
 }
 
-#endif // ZENITH_USE_SKIA
+//==============================================================================
+// Internal Rendering Methods
+//==============================================================================
+
+void SkiaWaveformRenderer::renderFilled(SkCanvas* canvas,
+                                       const WaveformData& waveform,
+                                       const SkRect& bounds,
+                                       size_t startSample,
+                                       size_t endSample,
+                                       const WaveformRenderOptions& options)
+{
+    if (startSample >= endSample || endSample > waveform.samples.size())
+        return;
+
+    SkPath path = createWaveformPath(waveform, bounds, startSample, endSample, true);
+
+    SkPaint paint;
+    paint.setAntiAlias(options.antiAlias);
+    paint.setColor(options.fillColor);
+    paint.setAlpha(static_cast<uint8_t>(options.opacity * 255.0f));
+
+    if (options.useGradient) {
+        SkPoint pts[2] = {{bounds.left(), bounds.top()}, {bounds.left(), bounds.bottom()}};
+        SkColor colors[2] = {options.gradientTop, options.gradientBottom};
+        sk_sp<SkShader> shader = SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp);
+        paint.setShader(shader);
+    }
+
+    canvas->drawPath(path, paint);
+
+    if (options.enableGlow)
+        applyGlowEffect(canvas, path, options);
+}
+
+void SkiaWaveformRenderer::renderOutline(SkCanvas* canvas,
+                                        const WaveformData& waveform,
+                                        const SkRect& bounds,
+                                        size_t startSample,
+                                        size_t endSample,
+                                        const WaveformRenderOptions& options)
+{
+    if (startSample >= endSample || endSample > waveform.samples.size())
+        return;
+
+    SkPath path = createWaveformPath(waveform, bounds, startSample, endSample, false);
+
+    SkPaint paint;
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(options.outlineWidth);
+    paint.setAntiAlias(options.antiAlias);
+    paint.setColor(options.outlineColor);
+    paint.setAlpha(static_cast<uint8_t>(options.opacity * 255.0f));
+
+    canvas->drawPath(path, paint);
+}
+
+void SkiaWaveformRenderer::renderPeaks(SkCanvas* canvas,
+                                      const WaveformData& waveform,
+                                      const SkRect& bounds,
+                                      size_t startSample,
+                                      size_t endSample,
+                                      const WaveformRenderOptions& options)
+{
+    if (startSample >= endSample || endSample > waveform.samples.size())
+        return;
+
+    SkPaint paint;
+    paint.setStrokeWidth(options.peakWidth);
+    paint.setAntiAlias(options.antiAlias);
+    paint.setColor(options.peakColor);
+    paint.setAlpha(static_cast<uint8_t>(options.opacity * 255.0f));
+
+    float centerY = bounds.centerY();
+    float pixelWidth = bounds.width() / (endSample - startSample);
+
+    for (size_t i = startSample; i < endSample; ++i) {
+        float x = bounds.left() + (i - startSample) * pixelWidth;
+        float maxVal = waveform.samples[i].max;
+        float minVal = waveform.samples[i].min;
+
+        float y1 = centerY - maxVal * bounds.height() / 2.0f;
+        float y2 = centerY - minVal * bounds.height() / 2.0f;
+
+        canvas->drawLine(x, y1, x, y2, paint);
+    }
+}
+
+void SkiaWaveformRenderer::renderRMS(SkCanvas* canvas,
+                                    const WaveformData& waveform,
+                                    const SkRect& bounds,
+                                    size_t startSample,
+                                    size_t endSample,
+                                    const WaveformRenderOptions& options)
+{
+    if (startSample >= endSample || endSample > waveform.samples.size())
+        return;
+
+    SkPath path;
+    float centerY = bounds.centerY();
+    float pixelWidth = bounds.width() / (endSample - startSample);
+
+    path.moveTo(bounds.left(), centerY);
+
+    for (size_t i = startSample; i < endSample; ++i) {
+        float x = bounds.left() + (i - startSample) * pixelWidth;
+        float rms = waveform.samples[i].rms;
+        float y = centerY - rms * bounds.height() / 2.0f;
+        path.lineTo(x, y);
+    }
+
+    path.lineTo(bounds.right(), centerY);
+    path.close();
+
+    SkPaint paint;
+    paint.setAntiAlias(options.antiAlias);
+    paint.setColor(options.rmsColor);
+    paint.setAlpha(static_cast<uint8_t>(options.opacity * 255.0f));
+
+    canvas->drawPath(path, paint);
+}
+
+void SkiaWaveformRenderer::renderHybrid(SkCanvas* canvas,
+                                       const WaveformData& waveform,
+                                       const SkRect& bounds,
+                                       size_t startSample,
+                                       size_t endSample,
+                                       const WaveformRenderOptions& options)
+{
+    if (startSample >= endSample)
+        return;
+
+    // Draw RMS as filled area
+    renderRMS(canvas, waveform, bounds, startSample, endSample, options);
+
+    // Draw peaks as outline
+    WaveformRenderOptions peakOpts = options;
+    peakOpts.peakColor = options.outlineColor;
+    renderPeaks(canvas, waveform, bounds, startSample, endSample, peakOpts);
+}
+
+//==============================================================================
+// Helper Methods
+//==============================================================================
+
+SkPath SkiaWaveformRenderer::createWaveformPath(const WaveformData& waveform,
+                                               const SkRect& bounds,
+                                               size_t startSample,
+                                               size_t endSample,
+                                               bool includeBottom)
+{
+    SkPath path;
+    float centerY = bounds.centerY();
+    float pixelWidth = bounds.width() / (endSample - startSample);
+
+    // Top path
+    path.moveTo(bounds.left(), centerY);
+
+    for (size_t i = startSample; i < endSample; ++i) {
+        float x = bounds.left() + (i - startSample) * pixelWidth;
+        float maxVal = waveform.samples[i].max;
+        float y = centerY - maxVal * bounds.height() / 2.0f;
+        path.lineTo(x, y);
+    }
+
+    if (includeBottom) {
+        path.lineTo(bounds.right(), centerY);
+
+        // Bottom path (in reverse)
+        for (int i = endSample - 1; i >= static_cast<int>(startSample); --i) {
+            float x = bounds.left() + (i - startSample) * pixelWidth;
+            float minVal = waveform.samples[i].min;
+            float y = centerY - minVal * bounds.height() / 2.0f;
+            path.lineTo(x, y);
+        }
+    }
+
+    path.close();
+    return path;
+}
+
+void SkiaWaveformRenderer::applyGlowEffect(SkCanvas* canvas,
+                                          const SkPath& path,
+                                          const WaveformRenderOptions& options)
+{
+    // Draw glow by drawing the path with reduced opacity at a slight offset
+    SkPaint glowPaint;
+    glowPaint.setColor(options.fillColor);
+    glowPaint.setAlpha(static_cast<uint8_t>(options.glowOpacity * 255.0f));
+
+    // Draw multiple passes with decreasing opacity for glow effect
+    for (float offset = options.glowRadius; offset > 0.5f; offset -= 1.0f) {
+        uint8_t alpha = static_cast<uint8_t>((options.glowOpacity * 255.0f) * (1.0f - (offset / options.glowRadius)));
+        glowPaint.setAlpha(alpha);
+        canvas->drawPath(path, glowPaint);
+    }
+}
+
+size_t SkiaWaveformRenderer::getSampleIndexForTime(const WaveformData& waveform, double timeSeconds) const
+{
+    if (waveform.durationSeconds <= 0.0)
+        return 0;
+
+    double ratio = timeSeconds / waveform.durationSeconds;
+    return static_cast<size_t>(juce::jlimit(0.0, 1.0, ratio) * waveform.samples.size());
+}
+
+double SkiaWaveformRenderer::getTimeForSampleIndex(const WaveformData& waveform, size_t index) const
+{
+    if (waveform.samples.empty())
+        return 0.0;
+
+    double ratio = static_cast<double>(index) / waveform.samples.size();
+    return ratio * waveform.durationSeconds;
+}
 
 } // namespace zenith
 
+#endif // ZENITH_USE_SKIA

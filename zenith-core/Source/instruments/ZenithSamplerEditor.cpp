@@ -156,7 +156,7 @@ void ZenithSamplerEditor::paint(juce::Graphics& g)
     g.fillAll(juce::Colour(0xff1e1e1e));
 
     g.setColour(juce::Colours::white);
-    g.setFont(juce::FontOptions(20.0f, juce::Font::bold));
+    g.setFont(juce::FontOptions(20.0f).withStyle("Bold"));
     g.drawText("Zenith Sampler", 0, 10, getWidth(), 30, juce::Justification::centred);
 }
 

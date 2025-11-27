@@ -16,8 +16,25 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#ifdef ZENITH_USE_SKIA
+#include "../Source/ui/skia/SkiaButtonComponent.h"
+#include "../Source/ui/skia/SkiaComponent.h"
+#include "../Source/ui/skia/SkiaSliderComponent.h"
+
+class SkCanvas;
+struct SkRect;
+#endif
+
 #include "ProjectState.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
 
@@ -25,136 +42,137 @@
 /**
  * @class MixerComponent
  * @brief Mixer panel with vertical track strips
- *
- * Shows one vertical strip per track with:
- * - Track name label
- * - Volume fader (vertical)
- * - Pan knob (rotary)
- * - Mute/Solo/Arm buttons
- *
- * All changes are routed through ProjectState and are undoable.
  */
-class MixerComponent : public juce::Component,
-                       private juce::ValueTree::Listener
-{
+class MixerComponent :
+#ifdef ZENITH_USE_SKIA
+    public zenith::SkiaComponent,
+#else
+    public juce::Component,
+#endif
+    public juce::ValueTree::Listener {
 public:
-    //==========================================================================
-    explicit MixerComponent(ProjectState& projectState);
-    ~MixerComponent() override;
+  MixerComponent(ProjectState &ps);
+  ~MixerComponent() override;
 
-    //==========================================================================
-    // Component interface
-    //==========================================================================
+#ifndef ZENITH_USE_SKIA
+  void paint(juce::Graphics &g) override;
+#endif
+  void resized() override;
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(SkCanvas *canvas) override;
+#endif
+
+  //==============================================================================
+  struct TrackStrip {
+    juce::String trackId;
+    juce::String trackName;
+
+    std::unique_ptr<juce::Label> nameLabel;
+    std::unique_ptr<juce::Slider> volumeSlider;
+    std::unique_ptr<juce::Slider> panSlider;
+    std::unique_ptr<juce::ToggleButton> muteButton;
+    std::unique_ptr<juce::ToggleButton> soloButton;
+    std::unique_ptr<juce::ToggleButton> armButton;
+
+    juce::Rectangle<int> bounds;
+
+    TrackStrip() = default;
+    ~TrackStrip() = default;
+
+    // Delete copy and move to prevent issues with unique_ptr
+    TrackStrip(const TrackStrip &) = delete;
+    TrackStrip &operator=(const TrackStrip &) = delete;
+    TrackStrip(TrackStrip &&) = default;
+    TrackStrip &operator=(TrackStrip &&) = default;
+  };
+
+  //==========================================================================
+  // ValueTree::Listener interface
+  //==========================================================================
+
+  void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
+                                const juce::Identifier &property) override;
+
+  void valueTreeChildAdded(juce::ValueTree &parentTree,
+                           juce::ValueTree &childWhichHasBeenAdded) override;
+
+  void valueTreeChildRemoved(juce::ValueTree &parentTree,
+                             juce::ValueTree &childWhichHasBeenRemoved,
+                             int indexFromWhichChildWasRemoved) override;
+
+  void
+  valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
+                             int oldIndex, int newIndex) override;
+
+  void
+  valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) override {}
+  void valueTreeRedirected(juce::ValueTree &treeWhichHasBeenChanged) override {}
 
 private:
-    //==========================================================================
-    // Track Strip
-    //==========================================================================
+  //==========================================================================
+  // Helper methods
+  //==========================================================================
 
-    /**
-     * @struct TrackStrip
-     * @brief UI components for a single track
-     */
-    struct TrackStrip
-    {
-        juce::String trackId;
-        juce::String trackName;
+  /**
+   * @brief Rebuild all track strips from current ProjectState
+   */
+  void rebuildTrackStrips();
 
-        std::unique_ptr<juce::Label>        nameLabel;
-        std::unique_ptr<juce::Slider>       volumeSlider;
-        std::unique_ptr<juce::Slider>       panSlider;
-        std::unique_ptr<juce::ToggleButton> muteButton;
-        std::unique_ptr<juce::ToggleButton> soloButton;
-        std::unique_ptr<juce::ToggleButton> armButton;
+  /**
+   * @brief Create a new track strip for a track
+   */
+  std::unique_ptr<TrackStrip>
+  createTrackStrip(const juce::ValueTree &trackNode);
 
-        juce::Rectangle<int> bounds;
+  /**
+   * @brief Update a track strip from ProjectState
+   */
+  void updateTrackStripFromState(TrackStrip &strip,
+                                 const juce::ValueTree &trackNode);
 
-        TrackStrip() = default;
-        ~TrackStrip() = default;
+  /**
+   * @brief Find track strip by track ID
+   */
+  TrackStrip *findTrackStrip(const juce::String &trackId);
 
-        // Delete copy and move to prevent issues with unique_ptr
-        TrackStrip(const TrackStrip&) = delete;
-        TrackStrip& operator=(const TrackStrip&) = delete;
-        TrackStrip(TrackStrip&&) = default;
-        TrackStrip& operator=(TrackStrip&&) = default;
-    };
+#ifdef ZENITH_USE_SKIA
+  /**
+   * @brief Draw a single track strip background using Skia
+   * Child components (volumeSlider, panSlider, muteButton, soloButton,
+   * armButton) render themselves to avoid double-rendering issues.
+   */
+  void drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
+                          const TrackStrip &strip);
+#endif
 
-    //==========================================================================
-    // ValueTree::Listener interface
-    //==========================================================================
+  //==========================================================================
+  // Control callbacks
+  //==========================================================================
 
-    void valueTreePropertyChanged(juce::ValueTree& treeWhosePropertyHasChanged,
-                                  const juce::Identifier& property) override;
+  void onVolumeChanged(const juce::String &trackId, float value);
+  void onPanChanged(const juce::String &trackId, float value);
+  void onMuteClicked(const juce::String &trackId, bool state);
+  void onSoloClicked(const juce::String &trackId, bool state);
+  void onArmClicked(const juce::String &trackId, bool state);
 
-    void valueTreeChildAdded(juce::ValueTree& parentTree,
-                            juce::ValueTree& childWhichHasBeenAdded) override;
+  //==========================================================================
+  // Member variables
+  //==========================================================================
 
-    void valueTreeChildRemoved(juce::ValueTree& parentTree,
-                              juce::ValueTree& childWhichHasBeenRemoved,
-                              int indexFromWhichChildWasRemoved) override;
+  ProjectState &projectState;
 
-    void valueTreeChildOrderChanged(juce::ValueTree& parentTreeWhoseChildrenHaveMoved,
-                                   int oldIndex,
-                                   int newIndex) override;
+  std::vector<std::unique_ptr<TrackStrip>> trackStrips;
 
-    void valueTreeParentChanged(juce::ValueTree& treeWhoseParentHasChanged) override {}
-    void valueTreeRedirected(juce::ValueTree& treeWhichHasBeenChanged) override {}
+  // UI constants
+  static constexpr int stripWidth = 80;
+  static constexpr int stripSpacing = 4;
+  static constexpr int topMargin = 10;
+  static constexpr int bottomMargin = 10;
+  static constexpr int sideMargin = 10;
 
-    //==========================================================================
-    // Helper methods
-    //==========================================================================
+  // Flag to prevent feedback loops
+  bool updatingFromState = false;
 
-    /**
-     * @brief Rebuild all track strips from current ProjectState
-     */
-    void rebuildTrackStrips();
-
-    /**
-     * @brief Create a new track strip for a track
-     */
-    std::unique_ptr<TrackStrip> createTrackStrip(const juce::ValueTree& trackNode);
-
-    /**
-     * @brief Update a track strip from ProjectState
-     */
-    void updateTrackStripFromState(TrackStrip& strip, const juce::ValueTree& trackNode);
-
-    /**
-     * @brief Find track strip by track ID
-     */
-    TrackStrip* findTrackStrip(const juce::String& trackId);
-
-    //==========================================================================
-    // Control callbacks
-    //==========================================================================
-
-    void onVolumeChanged(const juce::String& trackId, float value) [[maybe_unused]];
-    void onPanChanged(const juce::String& trackId, float value) [[maybe_unused]];
-    void onMuteClicked(const juce::String& trackId, bool state) [[maybe_unused]];
-    void onSoloClicked(const juce::String& trackId, bool state) [[maybe_unused]];
-    void onArmClicked(const juce::String& trackId, bool state) [[maybe_unused]];
-
-    //==========================================================================
-    // Member variables
-    //==========================================================================
-
-    ProjectState& projectState;
-
-    std::vector<std::unique_ptr<TrackStrip>> trackStrips;
-
-    // UI constants
-    static constexpr int stripWidth = 80;
-    static constexpr int stripSpacing = 4;
-    static constexpr int topMargin = 10;
-    static constexpr int bottomMargin = 10;
-    static constexpr int sideMargin = 10;
-
-    // Flag to prevent feedback loops
-    bool updatingFromState = false;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };
-

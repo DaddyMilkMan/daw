@@ -1,10 +1,22 @@
 /**
  * @file MasterOutputComponent.cpp
  * @brief Master output component implementation with smooth animations
+ * 
+ * DESIGN SYSTEM: Updated to use ZenithLookAndFeel design tokens
  */
 
 #include "MasterOutputComponent.h"
+#ifdef ZENITH_USE_SKIA
+    #include <include/core/SkCanvas.h>
+    #include <include/core/SkPaint.h>
+    #include <include/core/SkFont.h>
+    #include <include/core/SkPath.h>
+    #include <include/core/SkRRect.h>
+    #include <include/effects/SkGradientShader.h>
+    #include "../Source/ui/skia/SkiaTheme.h"
+#endif
 #include "../../include/Engine.h"
+#include "ZenithLookAndFeel.h"  // DESIGN SYSTEM: Include for design tokens
 
 namespace zenith {
 
@@ -26,9 +38,11 @@ void MasterOutputComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Dark background with subtle border (Apple-inspired)
-    g.fillAll(juce::Colour(0xff2a2a2a));
-    g.setColour(juce::Colour(0xff3a3a3a));
+    // DESIGN SYSTEM: Dark background with elevation token
+    g.fillAll(juce::Colour(ZenithLookAndFeel::Elevation::dp4));
+    
+    // DESIGN SYSTEM: Border using borderSubtle token
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
     g.drawRect(bounds, 1);
 
     // Layout: left side = fader, right side = meters + peak
@@ -59,83 +73,92 @@ void MasterOutputComponent::timerCallback()
 //==============================================================================
 void MasterOutputComponent::paintMasterFader(juce::Graphics& g, const juce::Rectangle<int>& bounds)
 {
-    auto faderBounds = bounds.reduced(8, 20);
+    auto faderBounds = bounds.reduced(ZenithLookAndFeel::Spacing::s, ZenithLookAndFeel::Spacing::l);
 
-    // Background track
-    g.setColour(juce::Colour(0xff1e1e1e));
-    g.fillRoundedRectangle(faderBounds.toFloat(), 4.0f);
+    // DESIGN SYSTEM: Background track using elevation
+    g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp1));
+    g.fillRoundedRectangle(faderBounds.toFloat(), ZenithLookAndFeel::Radius::s);
 
-    // Border
-    g.setColour(juce::Colour(0xff4a4a4a));
-    g.drawRoundedRectangle(faderBounds.toFloat(), 4.0f, 1.0f);
+    // DESIGN SYSTEM: Border using borderMedium
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium));
+    g.drawRoundedRectangle(faderBounds.toFloat(), ZenithLookAndFeel::Radius::s, 1.0f);
 
-    // Calculate fader position (0 dB = middle, -∞ = top, +12 = bottom)
+    // Calculate fader position (0 dB = middle, -inf = top, +12 = bottom)
     // Range: -60 to +12 dB
     float normalizedGain = (masterGaindB_ + 60.0f) / 72.0f;
     normalizedGain = juce::jlimit(0.0f, 1.0f, normalizedGain);
 
     int faderY = faderBounds.getY() + (int)(faderBounds.getHeight() * (1.0f - normalizedGain));
 
-    // Draw fader thumb with gradient (Apple-like)
+    // DESIGN SYSTEM: Draw fader thumb with accentPrimary gradient
     auto thumbBounds = juce::Rectangle<int>(faderBounds.getX(), faderY - 6, faderBounds.getWidth(), 12);
     juce::ColourGradient gradient(
-        juce::Colour(0xff4a9eff),  // Light blue top
-        thumbBounds.getX(), thumbBounds.getY(),
-        juce::Colour(0xff2563eb),  // Deep blue bottom
-        thumbBounds.getX(), thumbBounds.getBottom(),
+        juce::Colour(ZenithLookAndFeel::Colors::accentPrimaryHover),  // Light top
+        (float)thumbBounds.getX(), (float)thumbBounds.getY(),
+        juce::Colour(ZenithLookAndFeel::Colors::accentPrimary),       // Accent bottom
+        (float)thumbBounds.getX(), (float)thumbBounds.getBottom(),
         false);
     g.setGradientFill(gradient);
-    g.fillRoundedRectangle(thumbBounds.toFloat(), 3.0f);
+    g.fillRoundedRectangle(thumbBounds.toFloat(), ZenithLookAndFeel::Radius::xs);
 
-    // Thumb border highlight
-    g.setColour(juce::Colour(0xff7bb5ff).withAlpha(0.8f));
-    g.drawRoundedRectangle(thumbBounds.toFloat().expanded(1.0f), 3.0f, 1.0f);
+    // DESIGN SYSTEM: Thumb border highlight using accentPrimaryHover
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::accentPrimaryHover).withAlpha(0.8f));
+    g.drawRoundedRectangle(thumbBounds.toFloat().expanded(1.0f), ZenithLookAndFeel::Radius::xs, 1.0f);
 
-    // Display dB value above fader
-    g.setColour(juce::Colour(0xffcccccc));
-    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
+    // DESIGN SYSTEM: Display dB value using textPrimary
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
+    g.setFont(ZenithLookAndFeel::Typography::getSmallBold());
     juce::String dbText = juce::String(masterGaindB_, 1) + " dB";
     g.drawText(dbText, faderBounds.withHeight(20), juce::Justification::centred, true);
 }
 
 void MasterOutputComponent::paintLevelMeters(juce::Graphics& g, const juce::Rectangle<int>& bounds)
 {
-    auto meterBounds = bounds.reduced(4, 20);
+    auto meterBounds = bounds.reduced(ZenithLookAndFeel::Spacing::xs, ZenithLookAndFeel::Spacing::l);
 
-    // Background
-    g.setColour(juce::Colour(0xff1e1e1e));
-    g.fillRoundedRectangle(meterBounds.toFloat(), 4.0f);
+    // DESIGN SYSTEM: Background using elevation
+    g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp1));
+    g.fillRoundedRectangle(meterBounds.toFloat(), ZenithLookAndFeel::Radius::s);
 
-    // Border
-    g.setColour(juce::Colour(0xff4a4a4a));
-    g.drawRoundedRectangle(meterBounds.toFloat(), 4.0f, 1.0f);
+    // DESIGN SYSTEM: Border using borderMedium
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium));
+    g.drawRoundedRectangle(meterBounds.toFloat(), ZenithLookAndFeel::Radius::s, 1.0f);
 
     // Draw level meter bars (smoothly animated)
     float meterHeight = (float)meterBounds.getHeight();
 
-    // Current level bar (green)
+    // DESIGN SYSTEM: Current level bar with proper meter colors
     float currentBarHeight = animatedCurrentLevel_ * meterHeight;
     auto currentBarBounds = meterBounds
         .withY(meterBounds.getBottom() - (int)currentBarHeight)
         .withHeight((int)currentBarHeight);
 
     if (currentBarHeight > 0.5f) {
-        // Green-to-yellow gradient based on level
-        juce::Colour barColor = animatedCurrentLevel_ > 0.85f
-            ? juce::Colour(0xffff9500)  // Orange if close to peak
-            : juce::Colour(0xff34c759);  // Green for normal
+        // DESIGN SYSTEM: Use meter colors based on level
+        // Green: 0-60% (-18dB to -6dB safe zone)
+        // Amber: 60-90% (-6dB to 0dB caution)
+        // Red: 90%+ (0dB+ clipping)
+        juce::Colour barColor;
+        if (animatedCurrentLevel_ < 0.6f) {
+            barColor = juce::Colour(ZenithLookAndFeel::Colors::meterGreen);
+        } else if (animatedCurrentLevel_ < 0.9f) {
+            barColor = juce::Colour(ZenithLookAndFeel::Colors::meterAmber);
+        } else {
+            barColor = juce::Colour(ZenithLookAndFeel::Colors::meterRed);
+        }
+        
         g.setColour(barColor);
         g.fillRect(currentBarBounds);
     }
 
-    // Peak level indicator line
+    // DESIGN SYSTEM: Peak level indicator line using meterRed
     float peakLineY = meterBounds.getBottom() - (animatedPeakLevel_ * meterHeight);
-    g.setColour(juce::Colour(0xffff453a));  // Red
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::meterRed));
     g.drawHorizontalLine((int)peakLineY, (float)meterBounds.getX(), (float)meterBounds.getRight());
 
-    // dB scale labels
-    g.setFont(juce::FontOptions(8.0f));
-    g.setColour(juce::Colour(0xff666666));
+    // DESIGN SYSTEM: dB scale labels using textDisabled
+    g.setFont(ZenithLookAndFeel::Typography::getTiny());
+    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textDisabled));
     g.drawText("-12", meterBounds.withHeight(12), juce::Justification::centred, true);
     g.drawText("0", meterBounds.withTop(meterBounds.getCentreY() - 6).withHeight(12),
                juce::Justification::centred, true);
@@ -144,28 +167,34 @@ void MasterOutputComponent::paintLevelMeters(juce::Graphics& g, const juce::Rect
 void MasterOutputComponent::paintPeakIndicators(juce::Graphics& g, const juce::Rectangle<int>& bounds)
 {
     // Show headroom and peak values
-    auto textBounds = bounds.reduced(4, 20);
+    auto textBounds = bounds.reduced(ZenithLookAndFeel::Spacing::xs, ZenithLookAndFeel::Spacing::l);
 
-    g.setFont(juce::FontOptions(10.0f, juce::Font::bold));
+    g.setFont(ZenithLookAndFeel::Typography::getTiny());
 
     // Headroom indicator
     float headroom = 1.0f - animatedPeakLevel_;
     headroom = juce::jlimit(0.0f, 1.0f, headroom);
 
     juce::String headroomText = "HM: " + juce::String(gainToDb(headroom), 1) + " dB";
-    g.setColour(headroom < 0.1f ? juce::Colour(0xffff453a) : juce::Colour(0xff34c759));
+    
+    // DESIGN SYSTEM: Headroom color - meterRed if low, success if good
+    g.setColour(headroom < 0.1f 
+        ? juce::Colour(ZenithLookAndFeel::Colors::meterRed) 
+        : juce::Colour(ZenithLookAndFeel::Colors::success));
     g.drawText(headroomText, textBounds.removeFromTop(16), juce::Justification::centredLeft, true);
 
-    // Peak value
+    // DESIGN SYSTEM: Peak value using meterRed if clipping, textPrimary if safe
     juce::String peakText = "P: " + juce::String(gainToDb(animatedPeakLevel_), 1) + " dB";
-    g.setColour(animatedPeakLevel_ > 0.95f ? juce::Colour(0xffff453a) : juce::Colour(0xffcccccc));
+    g.setColour(animatedPeakLevel_ > 0.95f 
+        ? juce::Colour(ZenithLookAndFeel::Colors::meterRed) 
+        : juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
     g.drawText(peakText, textBounds, juce::Justification::centredLeft, true);
 }
 
 //==============================================================================
 void MasterOutputComponent::mouseDown(const juce::MouseEvent& event)
 {
-    auto bounds = getLocalBounds().removeFromLeft(FADER_WIDTH + SPACING).reduced(8, 20);
+    auto bounds = getLocalBounds().removeFromLeft(FADER_WIDTH + SPACING).reduced(ZenithLookAndFeel::Spacing::s, ZenithLookAndFeel::Spacing::l);
 
     if (bounds.contains(event.getPosition())) {
         isDraggingFader_ = true;
@@ -212,7 +241,6 @@ void MasterOutputComponent::updateAnimatedLevels()
     float peakLevel = engine_.getMasterPeakLevel();
 
     // Smooth animation towards current level (decay when signal drops)
-    const // float ATTACK = 0.85f;  // Unused variable   // Fast attack
     const float RELEASE = 0.95f;  // Smooth release
 
     animatedCurrentLevel_ = (currentLevel > animatedCurrentLevel_)
@@ -247,3 +275,14 @@ float MasterOutputComponent::gainToDb(float gain)
 
 }  // namespace zenith
 
+#ifdef ZENITH_USE_SKIA
+void MasterOutputComponent::paintToSkia(SkCanvas* canvas, SkRect bounds)
+{
+    auto& theme = zenith::SkiaTheme::getInstance();
+    canvas->clear(theme.getColors().bg1);
+
+    SkPaint p;
+    p.setColor(theme.getColors().textStrong);
+    // TODO: Implement custom Skia rendering for MasterOutputComponent
+}
+#endif

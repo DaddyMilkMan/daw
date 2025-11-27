@@ -1,9 +1,20 @@
 /**
  * @file TimelineRuler.cpp
- * @brief Timeline ruler implementation with Apple-inspired design
+ * @brief Timeline ruler implementation with flat Skia design
  */
 
+// POLISH: spacing normalized to 8px grid (labels at Typography.small)
+// POLISH: typography now uses SkiaTheme::Typography (small)
+// POLISH: flattened background (bg2, no gradients)
+
 #include "../../include/ui/TimelineRuler.h"
+
+#ifdef ZENITH_USE_SKIA
+#include "../../Source/ui/skia/SkiaTheme.h"
+#include <include/core/SkCanvas.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkPaint.h>
+#endif
 
 TimelineRuler::TimelineRuler()
 {
@@ -33,6 +44,138 @@ double TimelineRuler::pixelsToBeats(int pixels) const
     return viewStartBeat + (pixels / pixelsPerBeat);
 }
 
+#ifdef ZENITH_USE_SKIA
+void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+{
+    auto& theme = ::zenith::SkiaTheme::getInstance();
+    auto& colors = theme.getColors();
+    auto& typo = theme.getTypography();
+    auto& interaction = theme.getInteraction();
+
+    // POLISH: Flat background using bg2 (no gradients)
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    bgPaint.setColor(colors.bg2);
+    canvas.drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
+
+    // Top border for separation
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setColor(colors.borderSubtle);
+    canvas.drawLine(0, 0, bounds.getWidth(), 0, borderPaint);
+
+    // Draw beat markers
+    int startBeat = static_cast<int>(std::floor(viewStartBeat));
+    int endBeat = static_cast<int>(std::ceil(viewStartBeat + viewLengthBeats));
+
+    SkFont font;
+    font.setSize(typo.small.size);
+    if (typo.small.bold) font.setEmbolden(true);
+    font.setEdging(SkFont::Edging::kAntiAlias);
+
+    for (int beat = startBeat; beat <= endBeat; ++beat)
+    {
+        int x = beatsToPixels(beat);
+
+        if (x < 0 || x > bounds.getWidth())
+            continue;
+
+        // Downbeats (measure starts) - every 4 beats
+        if (beat % 4 == 0)
+        {
+            int measure = beat / 4 + 1;
+            bool isHoveredMeasure = (measure == hoveredMeasure);
+
+            // POLISH: Subtle highlight for hovered measure using interaction overlay
+            if (isHoveredMeasure && hoverAnimation > 0.01f)
+            {
+                SkPaint hoverBgPaint;
+                hoverBgPaint.setAntiAlias(true);
+                hoverBgPaint.setColor(interaction.hoverOverlay);
+                hoverBgPaint.setAlpha(static_cast<uint8_t>(SkColorGetA(interaction.hoverOverlay) * hoverAnimation));
+
+                int nextX = beatsToPixels(beat + 4);
+                if (nextX > bounds.getWidth()) nextX = bounds.getWidth();
+                canvas.drawRect(SkRect::MakeXYWH(x, 0, nextX - x, bounds.getHeight()), hoverBgPaint);
+            }
+
+            // Measure line using borderStrong
+            SkPaint linePaint;
+            linePaint.setAntiAlias(true);
+            linePaint.setColor(isHoveredMeasure ? colors.accentMain : colors.borderStrong);
+            if (isHoveredMeasure)
+                linePaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation * 0.6f + 255 * 0.4f));
+            linePaint.setStrokeWidth(1.0f);
+            canvas.drawLine(x, 0, x, bounds.getHeight(), linePaint);
+
+            // POLISH: Measure number using Typography.small
+            juce::String text = juce::String(measure);
+            SkPaint textPaint;
+            textPaint.setAntiAlias(true);
+            textPaint.setColor(isHoveredMeasure ? colors.accentMain : colors.textMuted);
+            if (isHoveredMeasure)
+                textPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation * 0.5f + 255 * 0.5f));
+
+            canvas.drawString(text.toRawUTF8(), x + 8, bounds.getHeight() / 2 + typo.small.size / 2, font, textPaint);
+        }
+        else
+        {
+            // Minor beat ticks using borderSubtle
+            SkPaint tickPaint;
+            tickPaint.setAntiAlias(true);
+            tickPaint.setColor(colors.borderSubtle);
+            tickPaint.setStrokeWidth(0.5f);
+            canvas.drawLine(x, bounds.getHeight() - 8, x, bounds.getHeight(), tickPaint);
+        }
+    }
+
+    // Tooltip (preserved from original)
+    if (isHovered && hoverAnimation > 0.5f)
+    {
+        double beatAtMouse = pixelsToBeats(mousePosition.x);
+        juce::String timeText = formatTimePosition(beatAtMouse);
+
+        SkFont tooltipFont;
+        tooltipFont.setSize(typo.small.size);
+        tooltipFont.setEdging(SkFont::Edging::kAntiAlias);
+
+        SkRect textBounds;
+        tooltipFont.measureText(timeText.toRawUTF8(), timeText.length(), SkTextEncoding::kUTF8, &textBounds);
+        int tooltipWidth = static_cast<int>(textBounds.width()) + 16;
+        int tooltipHeight = 24;
+
+        int tooltipX = mousePosition.x - tooltipWidth / 2;
+        int tooltipY = bounds.getHeight() + 4;
+        tooltipX = juce::jlimit(2, bounds.getWidth() - tooltipWidth - 2, tooltipX);
+
+        SkRect tooltipRect = SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight);
+
+        // POLISH: Simplified tooltip (no heavy shadows)
+        SkPaint tooltipBgPaint;
+        tooltipBgPaint.setAntiAlias(true);
+        tooltipBgPaint.setColor(colors.bg3);
+        tooltipBgPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
+        canvas.drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBgPaint);
+
+        SkPaint tooltipBorderPaint;
+        tooltipBorderPaint.setAntiAlias(true);
+        tooltipBorderPaint.setColor(colors.borderSubtle);
+        tooltipBorderPaint.setStyle(SkPaint::kStroke_Style);
+        tooltipBorderPaint.setStrokeWidth(1.0f);
+        tooltipBorderPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
+        canvas.drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBorderPaint);
+
+        SkPaint tooltipTextPaint;
+        tooltipTextPaint.setAntiAlias(true);
+        tooltipTextPaint.setColor(colors.textStrong);
+        tooltipTextPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
+
+        float textX = tooltipRect.centerX() - textBounds.width() / 2;
+        float textY = tooltipRect.centerY() + typo.small.size / 2;
+        canvas.drawString(timeText.toRawUTF8(), textX, textY, tooltipFont, tooltipTextPaint);
+    }
+}
+#else
 void TimelineRuler::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
@@ -43,6 +186,7 @@ void TimelineRuler::paint(juce::Graphics& g)
     drawBeatMarkers(g, bounds);
     drawTooltip(g);
 }
+#endif
 
 void TimelineRuler::drawBackground(juce::Graphics& g, const juce::Rectangle<int>& bounds)
 {

@@ -288,8 +288,8 @@ int main()
     // Initialize JUCE
     juce::MessageManager::getInstance();
 
-    // Register instruments
-    RegisterBuiltInInstruments();
+    // Register instruments (correct function name with namespace)
+    zenith::registerBuiltInInstruments();
 
     // Run tests
     bool allPassed = true;

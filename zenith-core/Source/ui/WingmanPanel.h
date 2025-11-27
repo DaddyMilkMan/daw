@@ -36,107 +36,150 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
-// Note: Skia rendering enabled for other components but buttons use JUCE for now
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaButtonNative.h"
+#include "skia/SkiaLabel.h"
+#include "skia/SkiaTextInput.h"
+
+#endif
 
 namespace zenith {
-    class CommandAPI;
-    class AIBridgeClient;
-}
+class CommandAPI;
+class AIBridgeClient;
+} // namespace zenith
 
 //==============================================================================
 /**
     In-DAW Wingman command console component with AI integration
 */
-class WingmanPanel : public juce::Component,
-                     public juce::Timer,
-                     private juce::TextEditor::Listener,
-                     private juce::ChangeListener
-{
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaCanvasComponent.h"
+#endif
+
+//==============================================================================
+/**
+    In-DAW Wingman command console component with AI integration
+*/
+class WingmanPanel : public
+#ifdef ZENITH_USE_SKIA
+                     zenith::SkiaCanvasComponent,
+#else
+                     juce::Component,
+#endif
+                     public juce::Timer
+#ifndef ZENITH_USE_SKIA
+    ,
+                     private juce::TextEditor::Listener
+#endif
+    ,
+                     private juce::ChangeListener {
 public:
-    //==============================================================================
-    WingmanPanel(zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient);
-    ~WingmanPanel() override;
+  WingmanPanel(zenith::CommandAPI &api, zenith::AIBridgeClient &aiClient);
+  ~WingmanPanel() override;
 
-    //==============================================================================
-    // Component interface
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-    void timerCallback() override;
+#ifndef ZENITH_USE_SKIA
+  void paint(juce::Graphics &g) override;
+#endif
+  void resized() override;
 
-    //==============================================================================
-    // Command execution
-    void executeCommand(const juce::String& input);
-    void clearHistory();
+#ifdef ZENITH_USE_SKIA
+  void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
+#endif
 
 private:
-    //==============================================================================
-    // TextEditor::Listener
-    void textEditorReturnKeyPressed(juce::TextEditor& editor) override;
+  // Timer callback
+  void timerCallback() override;
+  //==============================================================================
+  // TextEditor::Listener (JUCE only)
+#ifndef ZENITH_USE_SKIA
+  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
+#endif
 
-    //==============================================================================
-    // ChangeListener (for AI responses)
-    void changeListenerCallback(juce::ChangeBroadcaster* source) override;
+  //==============================================================================
+  // ChangeListener (for AI responses)
+  void changeListenerCallback(juce::ChangeBroadcaster *source) override;
 
-    //==============================================================================
-    // Mode management
-    enum class Mode { Command, AI };
+  //==============================================================================
+  // Mode management
+  enum class Mode { Command, AI };
 
-    void setMode(Mode newMode) [[maybe_unused]];
-    Mode getCurrentMode() const { return currentMode; }
+  void setMode(Mode newMode);
+  Mode getCurrentMode() const { return currentMode; }
 
-    //==============================================================================
-    // AI mode handlers
-    void executeAIRequest(const juce::String& naturalLanguage);
-    void handleAIResponse();
-    void showAIPlan(const juce::String& thought, const juce::Array<juce::var>& commands);
-    void executePendingBatch();
-    void cancelPendingBatch();
+  //==============================================================================
+  // AI mode handlers
+  void executeAIRequest(const juce::String &naturalLanguage);
+  void handleAIResponse();
+  void showAIPlan(const juce::String &thought,
+                  const juce::Array<juce::var> &commands);
+  void executePendingBatch();
+  void cancelPendingBatch();
 
-    //==============================================================================
-    // Shorthand parser
-    juce::String parseShorthand(const juce::String& input);
+  //==============================================================================
+  // Shorthand parser
+  juce::String parseShorthand(const juce::String &input);
 
-    //==============================================================================
-    // UI helpers
-    void addMessage(const juce::String& message, bool isUserInput) [[maybe_unused]];
-    void scrollHistoryToBottom();
+  //==============================================================================
+  // Command execution
+  void executeCommand(const juce::String &input);
+  void clearHistory();
 
-    //==============================================================================
-    // Member variables
+  //==============================================================================
+  // UI helpers
+  void addMessage(const juce::String &message, bool isUserInput);
+  void scrollHistoryToBottom();
 
-    zenith::CommandAPI& commandAPI;
-    zenith::AIBridgeClient& aiBridgeClient;
+  //==============================================================================
+  // Member variables
 
-    // UI components
-    std::unique_ptr<juce::TextEditor> commandInput;
-    std::unique_ptr<juce::TextEditor> historyDisplay;
+  zenith::CommandAPI &commandAPI;
+  zenith::AIBridgeClient &aiBridgeClient;
 
-    // Buttons (JUCE for now)
-    std::unique_ptr<juce::TextButton> clearButton;
-    std::unique_ptr<juce::TextButton> commandModeButton;
-    std::unique_ptr<juce::TextButton> aiModeButton;
+  // UI components
+#ifdef ZENITH_USE_SKIA
+  std::unique_ptr<zenith::SkiaTextInput> commandInput;
+  std::unique_ptr<zenith::SkiaTextInput> historyDisplay;
 
-    // Message history
-    juce::StringArray messageHistory;
+  std::unique_ptr<zenith::SkiaButtonNative> clearButton;
+  std::unique_ptr<zenith::SkiaButtonNative> commandModeButton;
+  std::unique_ptr<zenith::SkiaButtonNative> aiModeButton;
+#else
+  std::unique_ptr<juce::TextEditor> commandInput;
+  std::unique_ptr<juce::TextEditor> historyDisplay;
 
-    // Mode state
-    Mode currentMode{Mode::Command};
+  std::unique_ptr<juce::TextButton> clearButton;
+  std::unique_ptr<juce::TextButton> commandModeButton;
+  std::unique_ptr<juce::TextButton> aiModeButton;
+#endif
 
-    // Pending batch state
-    bool hasPendingBatch{false};
-    juce::Array<juce::var> pendingCommands;
-    juce::String pendingRequestId;
+  // Message history
+  juce::StringArray messageHistory;
 
-    // Animation state
-    float inputFocusAnim{0.0f};
-    bool inputHasFocus{false};
-    bool isWaitingForAI{false};
-    float typingIndicatorPhase{0.0f};
+  // Mode state
+  Mode currentMode{Mode::Command};
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)
+  // Pending batch state
+  bool hasPendingBatch{false};
+  juce::Array<juce::var> pendingCommands;
+  juce::String pendingRequestId;
+
+  // Animation state
+  float inputFocusAnim{0.0f};
+  bool inputHasFocus{false};
+  bool isWaitingForAI{false};
+  float typingIndicatorPhase{0.0f};
+
+  //==============================================================================
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)
 };
-

@@ -1,145 +1,145 @@
-/*
-  ==============================================================================
-
-    ArrangerComponent.h
-    Created: 2025-11-14
-    Author:  Zenith DAW - Phase 4: Timeline/Arranger View
-
-    Main timeline/arranger component
-
-    Responsibilities:
-    - Display tracks and clips in a scrollable timeline
-    - Draw time ruler (bars/beats grid)
-    - Render playhead
-    - Handle clip selection and interaction
-    - Open piano roll on MIDI clip double-click
-
-  ==============================================================================
-*/
-
 #pragma once
 
-#include <JuceHeader.h>
-#include <vector>
-#include <memory>
-#include "../Source/engine/Track.h"
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaComponent.h"
+class SkCanvas;
+struct SkRect;
+#endif
 
-// Forward declarations
-class ProjectState;
+#include "../../include/ProjectState.h"
+#ifdef ZENITH_USE_SKIA
+#include "skia/SkiaCanvasComponent.h"
+#endif
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
-// Forward declarations
-class Engine;
+struct ClipView {
+  juce::String clipId;
+  juce::String trackId;
+  double startBeats = 0.0;
+  double lengthBeats = 4.0;
+  bool isMidi = false;
+  bool isSelected = false;
+  juce::Rectangle<float> bounds;
 
-//==============================================================================
-/**
-    Visual representation of a clip for hit-testing (no Component overhead)
-*/
-struct ClipVisual
-{
-    zenith::Track* track = nullptr;
-    zenith::Track::Clip* clip = nullptr;
-    juce::Rectangle<float> bounds;
-    bool isMidi = false;
-    int trackIndex = -1;
+  bool isInLeftResizeZone(juce::Point<float> p) const {
+    return p.x >= bounds.getX() && p.x < bounds.getX() + 8.0f; // 8px grid: 5→8
+  }
+  bool isInRightResizeZone(juce::Point<float> p) const {
+    return p.x >= bounds.getRight() - 8.0f &&
+           p.x <= bounds.getRight(); // 8px grid: 5→8
+  }
 };
 
-//==============================================================================
-/**
-    Arranger/Timeline component showing tracks and clips
-*/
+struct ClipDragState {
+  juce::String clipId;
+  double originalStartBeats;
+  int originalTrackIndex;
+};
+
+#ifdef ZENITH_USE_SKIA
+class ArrangerComponent : public zenith::SkiaCanvasComponent,
+#else
 class ArrangerComponent : public juce::Component,
-                          private juce::Timer
-{
+#endif
+                          public juce::TooltipClient,
+                          private juce::Timer,
+                          public juce::ValueTree::Listener {
 public:
-    //==============================================================================
-    ArrangerComponent(ProjectState& projectState);
-    ~ArrangerComponent() override;
+  ArrangerComponent(ProjectState &ps);
+  ~ArrangerComponent() override;
 
-    //==============================================================================
-    // Component interface
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+#ifndef ZENITH_USE_SKIA
+  void paint(juce::Graphics &g) override;
+#endif
+  void resized() override;
 
-    //==============================================================================
-    // Mouse interaction
-    void mouseDown(const juce::MouseEvent& e) override;
-    void mouseDrag(const juce::MouseEvent& e) override;
-    void mouseDoubleClick(const juce::MouseEvent& e) override;
-    void mouseMove(const juce::MouseEvent& e) override;
-    void mouseExit(const juce::MouseEvent& e) override;
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
+  juce::String getTooltip() override;
+  void mouseDoubleClick(const juce::MouseEvent &e) override;
+  void mouseWheelMove(const juce::MouseEvent &e,
+                      const juce::MouseWheelDetails &wheel) override;
 
-    //==============================================================================
-    // View control
-    void setPixelsPerBeat(float ppb) [[maybe_unused]];
-    float getPixelsPerBeat() const { return pixelsPerBeat; }
+  bool keyPressed(const juce::KeyPress &key) override;
 
-    void setTrackHeight(float height) [[maybe_unused]];
-    float getTrackHeight() const { return trackHeight; }
+  // ValueTree::Listener
+  void valueTreePropertyChanged(juce::ValueTree &tree,
+                                const juce::Identifier &property) override;
+  void valueTreeChildAdded(juce::ValueTree &parent,
+                           juce::ValueTree &child) override;
+  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
+                             int index) override;
+  void valueTreeChildOrderChanged(juce::ValueTree &parent, int oldIndex,
+                                  int newIndex) override;
+  void valueTreeParentChanged(juce::ValueTree &tree) override {}
 
-    //==============================================================================
-    // Selection
-    ClipVisual* getSelectedClip() { return selectedClip; }
-    const ClipVisual* getSelectedClip() const { return selectedClip; }
-
-    void clearSelection();
+#ifdef ZENITH_USE_SKIA
+  void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
+#endif
 
 private:
-    //==============================================================================
-    // Timer callback (for playhead animation)
-    void timerCallback() override;
+  void timerCallback() override {} // Unused for now
 
-    //==============================================================================
-    // Rendering helpers
-    void drawTimeRuler(juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawGrid(juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawTracks(juce::Graphics& g, juce::Rectangle<int> bounds);
-    void drawPlayhead(juce::Graphics& g, juce::Rectangle<int> bounds);
+  ProjectState &projectState;
 
-    //==============================================================================
-    // Time mapping
-    float beatsToPixels(double beats) const;
-    double pixelsToBeats(float pixels) const;
-    int64_t beatsToSamples(double beats) const;
-    double samplesToBeats(int64_t samples) const;
+  juce::Array<ClipView> clipViews;
+  juce::StringArray selectedClipIds;
 
-    //==============================================================================
-    // Clip cache management
-    void updateClipCache();
-    ClipVisual* hitTestClip(juce::Point<float> position);
+  // View settings (8px grid: trackHeight 64, rulerHeight 32)
+  double viewStartBeats = 0.0;
+  double pixelsPerBeat = 40.0;
+  float trackHeight = 64.0f; // 8px grid: 60->64
+  float rulerHeight = 32.0f; // 8px grid: 30->32
+  int firstVisibleTrackIndex = 0;
 
-    //==============================================================================
-    // Member variables
-    //==============================================================================
+  // Drag state
+  enum class DragMode {
+    None,
+    MoveClips,
+    ResizeClipLeft,
+    ResizeClipRight,
+    Marquee
+  };
+  DragMode currentDragMode = DragMode::None;
+  juce::Point<float> dragStartPoint;
+  juce::Array<ClipDragState> clipDragStates;
+  juce::String resizingClipId;
+  double resizeOriginalStart = 0.0;
+  double resizeOriginalLength = 0.0;
+  juce::Rectangle<float> marqueeRect;
 
-    Engine& engine;
+  // Grid
+  double gridSnapBeats = 1.0;
 
-    // View parameters
-    float pixelsPerBeat = 40.0f;  // Zoom level (horizontal)
-    float trackHeight = 80.0f;     // Height of each track lane
-    float rulerHeight = 30.0f;     // Height of time ruler at top
+  // Helpers
+  void rebuildClipViews();
+  void recomputeClipBounds();
+  ClipView *findClipView(const juce::String &clipId);
+  ClipView *findClipAtPoint(juce::Point<float> point);
 
-    // Cached tempo (fetched from Engine or default)
-    double currentTempo = 120.0;
-    double currentSampleRate = 44100.0;
+  float beatsToX(double beats) const;
+  double xToBeats(float x) const;
+  float trackIndexToY(int trackIndex) const;
+  int yToTrackIndex(float y) const;
+  double snapToGrid(double beats) const;
 
-    // Clip visuals cache (rebuilt when tracks change)
-    std::vector<ClipVisual> clipCache;
-    ClipVisual* selectedClip = nullptr;
+  void clearSelection();
+  void selectClip(const juce::String &clipId, bool addToSelection);
+  void selectClipsInRect(juce::Rectangle<float> rect);
+  bool isClipSelected(const juce::String &clipId) const;
 
-    // Mouse drag state
-    bool isDragging = false;
-    juce::Point<float> dragStartPosition;
-    int64_t clipDragStartSamples = 0;
+  void createClipAtPoint(juce::Point<float> point);
+  void deleteSelectedClips();
+  void duplicateSelectedClips();
 
-    // Hover state for micro-interactions
-    ClipVisual* hoveredClip = nullptr;
-    float hoverAlpha = 0.0f;
-    
-    // Selection animation
-    float selectionAlpha = 0.0f;
-    bool selectionAnimating = false;
+  void paintBackground(juce::Graphics &g);
+  void paintTracks(juce::Graphics &g);
+  void paintClips(juce::Graphics &g);
+  void paintTimeRuler(juce::Graphics &g);
+  void paintMarquee(juce::Graphics &g);
 
-    //==============================================================================
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
-

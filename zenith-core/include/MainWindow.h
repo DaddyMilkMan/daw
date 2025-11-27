@@ -4,40 +4,55 @@
  *
  * Contains the main UI layout and hosts the audio engine.
  *
- * Phase 0: Foundation
- * - Basic window management
- * - Menu bar
- * - Status bar
  * - Audio engine integration
  */
 
 #pragma once
 
-#include <JuceHeader.h>
+#include "../Source/ui/ArrangerComponent.h"
+#include "ArrangementComponent.h"
+#include "ClipSynchronizer.h"
 #include "Engine.h"
+#include "MixerComponent.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
-#include "ArrangementComponent.h"
-#include "MixerComponent.h"
-#include "../Source/ui/ArrangerComponent.h"
-#include "ClipSynchronizer.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_audio_utils/juce_audio_utils.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-    #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-    #include "../Source/rendering/SkiaRenderer.h"
-    #include "../Source/ui/skia/SkiaButtonComponent.h"
-    #include "../Source/ui/skia/SkiaTextDisplay.h"
+#include "../Source/rendering/SkiaRenderer.h"
+#include "../Source/ui/skia/BottomBar.h"
+#include "../Source/ui/skia/BrowserPanel.h"
+#include "../Source/ui/skia/RightSidePanel.h"
+#include "../Source/ui/skia/SkiaButtonComponent.h"
+#include "../Source/ui/skia/SkiaButtonNative.h"
+#include "../Source/ui/skia/SkiaColorTestComponent.h"
+#include "../Source/ui/skia/SkiaLabel.h"
+#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
+#include "../Source/ui/skia/SkiaTextDisplay.h"
+#include "../Source/ui/skia/TransportBar.h"
+#include "../Source/ui/views/PianoKeyboardViewSkia.h"
+#include "../Source/ui/views/SessionViewComponent.h"
 #endif
 
 // Forward declarations
 class WingmanPanel;
 
 namespace zenith {
-    class InstrumentBrowserPanel;
-    class CommandAPI;
-    class AIBridgeClient;
-}
+class InstrumentBrowserPanel;
+class CommandAPI;
+class AIBridgeClient;
+class MainLayoutComponent;
+} // namespace zenith
 
 //==============================================================================
 /**
@@ -68,132 +83,120 @@ class MainComponent : public juce::Component,
 #endif
 {
 public:
-    //==========================================================================
-    MainComponent(Engine& engine, zenith::CommandAPI& api, zenith::AIBridgeClient& aiClient, ProjectState& state);
-    ~MainComponent() override;
+  //==========================================================================
+  MainComponent(Engine &engine, zenith::CommandAPI &api,
+                zenith::AIBridgeClient &aiClient, ProjectState &state);
+  ~MainComponent() override;
 
-    //==========================================================================
-    // Component interface
-    //==========================================================================
+  //==========================================================================
+  // Component interface
+  //==========================================================================
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+  void paint(juce::Graphics &g) override;
+  void resized() override;
+  void mouseDown(const juce::MouseEvent &e) override;
 
-    //==========================================================================
-    // KeyListener interface (for undo/redo shortcuts)
-    //==========================================================================
+  //==========================================================================
+  // KeyListener interface (for undo/redo shortcuts)
+  //==========================================================================
 
-    bool keyPressed(const juce::KeyPress& key, Component* originatingComponent) override;
+  bool keyPressed(const juce::KeyPress &key,
+                  Component *originatingComponent) override;
 
 private:
-    //==========================================================================
-    // Timer interface (for status updates)
-    //==========================================================================
+#ifndef ZENITH_USE_SKIA
+  //==========================================================================
+  // Timer interface (for status updates)
+  //==========================================================================
 
-    void timerCallback() override;
-
-    //==========================================================================
-    // C4: Track count monitoring (read-only, dirty-checked)
-    //==========================================================================
-
-    void refreshTrackCountLabel();
-
-    //==========================================================================
-    // Integration: Piano roll opener
-    //==========================================================================
-
-    /**
-     * @brief Open piano roll editor for a MIDI clip
-     * @param trackId Track ID
-     * @param clipId Clip ID
-     */
-    void openPianoRoll(const juce::String& trackId, const juce::String& clipId);
-
-    //==========================================================================
-    // Member variables
-    //==========================================================================
-
-    Engine& engine;
-    ProjectState& projectState;
-
-#ifdef ZENITH_USE_SKIA
-    // Skia renderer for actual Skia rendering
-    std::unique_ptr<zenith::SkiaRenderer> renderer_;
+  void timerCallback() override;
 #endif
 
-    // UI Components
-    juce::Label statusLabel;
-    juce::Label cpuLabel;
+  //==========================================================================
+  // C4: Track count monitoring (read-only, dirty-checked)
+  //==========================================================================
+
+  void refreshTrackCountLabel();
+
+  //==========================================================================
+  // Integration: Piano roll opener
+  //==========================================================================
+
+  /**
+   * @brief Open piano roll editor for a MIDI clip
+   * @param trackId Track ID
+   * @param clipId Clip ID
+   */
+  void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
+
+  //==========================================================================
+  // Member variables
+  //==========================================================================
+
+  Engine &engine;
+  ProjectState &projectState;
+
+  // ============================================================================
+  // Modern DAW Layout Panels
+  // ============================================================================
 
 #ifdef ZENITH_USE_SKIA
-    zenith::SkiaButtonComponent playButton;
-    zenith::SkiaButtonComponent stopButton;
-    zenith::SkiaButtonComponent recordButton;
+  // Top: Transport bar with play/stop/record, tempo, CPU, etc.
+  std::unique_ptr<zenith::TransportBar> transportBar;
+
+  // The "Perfect DAW" Tri-Pane Layout Manager
+  // Manages Browser, Session View, and Arranger View
+  std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
+
+  // Right: Scratch Pads + Wingman Console
+  std::unique_ptr<zenith::RightSidePanel> rightSidePanel;
+
+  // Bottom: Piano keyboard + mixer strip
+  std::unique_ptr<zenith::BottomBar> bottomBar;
 #else
-    juce::TextButton playButton;
-    juce::TextButton stopButton;
-    juce::TextButton recordButton;
+  // JUCE fallback UI components
+  juce::Label statusLabel;
+  juce::Label cpuLabel;
+  juce::TextButton playButton;
+  juce::TextButton stopButton;
+  juce::TextButton recordButton;
+  juce::TextButton importButton;
+  juce::TextButton virtualKeyboardButton;
+  juce::Label audioDeviceLabel;
+  juce::Label trackCountLabel;
+
+  MixerComponent mixerComponent;
+  std::unique_ptr<WingmanPanel> wingmanPanel;
+  std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
+
+  std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
+  bool virtualKeyboardVisible = false;
 #endif
 
-    // Phase 1: Import Audio button
-    juce::TextButton importButton;
+  int lastTrackCount_ = -1;
 
-    // Virtual MIDI Keyboard toggle button
-    juce::TextButton virtualKeyboardButton;
+  // Phase 9: Arranger component with interactive clip editing (center)
+  // Now managed by MainLayoutComponent in Skia builds
+#ifndef ZENITH_USE_SKIA
+  std::unique_ptr<ArrangerComponent> arrangerComponent;
+#endif
 
-    // Audio device info
-    juce::Label audioDeviceLabel;
-
-    // C4: Track count label (read-only)
-    juce::Label trackCountLabel;
-    int lastTrackCount_ = -1;
-
-    // Phase 14: Arrangement view with automation
-    std::unique_ptr<ArrangementComponent> arrangementView;
-
-    // Phase 10/11: Mixer panel (direct member for efficiency)
-    MixerComponent mixerComponent;
-
-    // Phase 9: Arranger component with interactive clip editing
-    std::unique_ptr<ArrangerComponent> arrangerComponent;
-
-    // Phase 7: Wingman command console
-    std::unique_ptr<WingmanPanel> wingmanPanel;
-
-    // Instrument & Preset Browser
-    std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
-
-    // Virtual MIDI Keyboard (Computer Keyboard to MIDI)
-    juce::MidiKeyboardState midiKeyboardState;
-    std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
-    bool virtualKeyboardVisible = false;
-
-    // Skia/Rendering Debug Log Display
+  // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
+  // Skia)
 #ifdef ZENITH_USE_SKIA
-    zenith::SkiaTextDisplay logDisplay;  // ✓ NATIVE SKIA RENDERING!
-#else
-    juce::TextEditor logDisplay;
+  std::unique_ptr<WingmanPanel> wingmanPanelPtr_;
 #endif
-    juce::String logText;
 
-    void addLog(const juce::String& message)
-    {
-        logText += message + "\n";
-#ifdef ZENITH_USE_SKIA
-        logDisplay.setText(logText);  // SkiaTextDisplay
-#else
-        logDisplay.setText(logText);
-        logDisplay.moveCaretToEnd();
-#endif
-    }
+  // Virtual MIDI Keyboard state (shared between Skia and JUCE builds)
+  juce::MidiKeyboardState midiKeyboardState;
 
-    //==========================================================================
-    // Phase 1: Audio import
-    //==========================================================================
+  //==========================================================================
+  // Phase 1: Audio import
+  //==========================================================================
 
-    void handleImportAudio();
+  void handleImportAudio();
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 
 //==============================================================================
@@ -208,83 +211,78 @@ private:
  * - Audio engine
  * - Project state
  */
-class MainWindow : public juce::DocumentWindow
-{
+class MainWindow : public juce::DocumentWindow {
 public:
-    //==========================================================================
-    explicit MainWindow(const juce::String& name);
-    ~MainWindow() override;
+  //==========================================================================
+  explicit MainWindow(const juce::String &name);
+  ~MainWindow() override;
 
-    //==========================================================================
-    // DocumentWindow interface
-    //==========================================================================
+  //==========================================================================
+  // DocumentWindow interface
+  //==========================================================================
 
-    void closeButtonPressed() override;
+  void closeButtonPressed() override;
 
 private:
-    //==========================================================================
-    // Menu bar model
-    //==========================================================================
+  //==========================================================================
+  // Menu bar model
+  //==========================================================================
 
-    /**
-     * @class ZenithMenuBar
-     * @brief Menu bar model for the application
-     */
-    class ZenithMenuBar : public juce::MenuBarModel
-    {
-    public:
-        explicit ZenithMenuBar(MainWindow& owner);
+  /**
+   * @class ZenithMenuBar
+   * @brief Menu bar model for the application
+   */
+  class ZenithMenuBar : public juce::MenuBarModel {
+  public:
+    explicit ZenithMenuBar(MainWindow &owner);
 
-        juce::StringArray getMenuBarNames() override;
-        juce::PopupMenu getMenuForIndex(int topLevelMenuIndex, const juce::String& menuName) override;
-        void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
+    juce::StringArray getMenuBarNames() override;
+    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex,
+                                    const juce::String &menuName) override;
+    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
 
-    private:
-        MainWindow& owner;
+  private:
+    MainWindow &owner;
 
-        enum MenuItems
-        {
-            aboutZenith = 1,
-            quit = 2
-        };
-    };
+    enum MenuItems { aboutZenith = 1, quit = 2 };
+  };
 
-    //==========================================================================
-    // Menu handlers
-    //==========================================================================
+  //==========================================================================
+  // Menu handlers
+  //==========================================================================
 
-    void showAboutDialog();
+  void showAboutDialog();
 
-    //==========================================================================
-    // Member variables
-    //==========================================================================
+  //==========================================================================
+  // Member variables
+  //==========================================================================
 
-    // Audio engine (created first, destroyed last)
-    std::unique_ptr<Engine> engine;
+  // Audio engine (created first, destroyed last)
+  std::unique_ptr<Engine> engine;
 
-    // Project state
-    std::unique_ptr<ProjectState> projectState;
+  // Project state
+  std::unique_ptr<ProjectState> projectState;
 
-    // Phase 11: Track state synchronizer (general track state sync)
-    std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
+  // Phase 11: Track state synchronizer (general track state sync)
+  std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
 
-    // Phase 13: Automation synchronizer (automation-specific sync)
-    std::unique_ptr<TrackAutomationSynchronizer> automationSync;
+  // Phase 13: Automation synchronizer (automation-specific sync)
+  std::unique_ptr<TrackAutomationSynchronizer> automationSync;
 
-    // Phase 5: Wingman command API
-    std::unique_ptr<zenith::CommandAPI> commandAPI;
+  // Phase 5: Wingman command API
+  std::unique_ptr<zenith::CommandAPI> commandAPI;
 
-    // Phase 7: AI bridge client
-    std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
+  // Phase 7: AI bridge client
+  std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
-    // Integration: Clip synchronizer
-    std::unique_ptr<ClipSynchronizer> clipSynchronizer;
+  // Integration: Clip synchronizer
+  std::unique_ptr<ClipSynchronizer> clipSynchronizer;
 
-    // Main content
-    std::unique_ptr<MainComponent> mainComponent;
+  // Main content
+  std::unique_ptr<MainComponent> mainComponent;
 
-    // Menu bar
-    std::unique_ptr<ZenithMenuBar> menuBar;
+  // Menu bar
+  std::unique_ptr<ZenithMenuBar> menuBar;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

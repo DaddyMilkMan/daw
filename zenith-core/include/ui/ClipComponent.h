@@ -1,34 +1,57 @@
 /**
  * @file ClipComponent.h
- * @brief Beautiful clip with gradients, animations, and modern design
+ * @brief Flat clip component with theme colors and clean typography
  *
- * Features modern DAW aesthetics:
- * - Smooth gradients (Ableton-inspired)
- * - Hover effects with scale animation
- * - Selection glow with pulse
- * - Subtle shadows for depth
- * - Waveform preview visualization
+ * Features clean DAW aesthetics:
+ * - Track-colored fills (muted)
+ * - Typography.body for clip names
+ * - Simple 1-2px selection border
+ * - Rounded corners (4px)
  * - 60 Hz smooth animations
  */
 
+// POLISH: spacing normalized to 8px grid (rounded corners 4px)
+// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: flattened visuals (track colors, no gradients)
+
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
+
+#ifdef ZENITH_USE_SKIA
+#include "../../Source/ui/skia/SkiaCanvasComponent.h"
+#include "../../Source/ui/skia/SkiaTheme.h"
+#include <include/core/SkCanvas.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRRect.h>
+#endif
 
 /**
  * @class ClipComponent
- * @brief Beautiful, animated clip display on the arranger timeline
+ * @brief Flat clip display on the arranger timeline
  *
- * Modern design with:
- * - Gradient backgrounds (lighter at top, darker at bottom)
- * - Hover scaling and glow effects
- * - Selection pulse animation
- * - Shadows for depth
- * - Rounded corners (8px)
- * - Waveform preview for audio clips
+ * Clean design with:
+ * - Track-colored backgrounds (muted, using theme clip colors)
+ * - Typography.body for clip names
+ * - Simple 1-2px selection border
+ * - Rounded corners (4px, 8px grid)
  */
+#ifdef ZENITH_USE_SKIA
+class ClipComponent : public zenith::SkiaCanvasComponent,
+                     public juce::Timer
+#else
 class ClipComponent : public juce::Component,
                      public juce::Timer
+#endif
 {
 public:
     /**
@@ -71,7 +94,11 @@ public:
     // Component interface
     //==========================================================================
 
+#ifdef ZENITH_USE_SKIA
+    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+#else
     void paint(juce::Graphics& g) override;
+#endif
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;

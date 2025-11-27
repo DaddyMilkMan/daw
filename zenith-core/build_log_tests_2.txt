@@ -1,0 +1,19 @@
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  PresetRegressionTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_rc_lib.dir\Debug\PresetRegressionTests_rc_lib.lib
+  Instrument.cpp
+  InstrumentRegistry.cpp
+  RegisterBuiltInInstruments.cpp
+  ZenithPolySynth.cpp
+  ZenithSampler.cpp
+C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3630,35): warning C4996: 'juce::AudioParameterFloat::AudioParameterFloat': Prefer the signature taking an Attributes argument [C:\zenith\daw\zenith-core\build\PresetRegressionTests.vcxproj]
+  (compiling source file '../Source/instruments/ZenithSampler.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3630,35):
+      the template instantiation context (the oldest one first) is
+          C:\zenith\daw\zenith-core\Source\instruments\ZenithSampler.cpp(78,21):
+          see reference to function template instantiation 'std::unique_ptr<juce::AudioParameterFloat,std::default_delete<juce::AudioParameterFloat>> std::make_unique<juce::AudioParameterFloat,const char(&)[7],const char(&)[7],juce::NormalisableRange<float>,float,const char(&)[2],0>(const char (&)[7],const char (&)[7],juce::NormalisableRange<float> &&,float &&,const char (&)[2])' being compiled
+  
+  PresetRegressionTests.cpp
+  Generating Code...
+  PresetRegressionTests.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_artefacts\Debug\PresetRegressionTests.exe

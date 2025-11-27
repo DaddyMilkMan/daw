@@ -21,15 +21,24 @@
 
 #pragma once
 
-#include <JuceHeader.h>
-#include "ProjectState.h"
 #include "Engine.h"
+#include "ProjectState.h"
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 #include <memory>
 #include <vector>
 
+
 namespace zenith {
-    class Track;
+class Track;
 }
 
 //==============================================================================
@@ -53,97 +62,100 @@ namespace zenith {
  * - Audio thread reads those atomics lock-free
  */
 class TrackAutomationSynchronizer : public juce::Timer,
-                                     private juce::ValueTree::Listener
-{
+                                    private juce::ValueTree::Listener {
 public:
-    //==========================================================================
-    /**
-     * @brief Constructor
-     * @param projectState Reference to project state (must outlive this object)
-     * @param engine Reference to audio engine (must outlive this object)
-     */
-    TrackAutomationSynchronizer(ProjectState& projectState, Engine& engine);
+  //==========================================================================
+  /**
+   * @brief Constructor
+   * @param projectState Reference to project state (must outlive this object)
+   * @param engine Reference to audio engine (must outlive this object)
+   */
+  TrackAutomationSynchronizer(ProjectState &projectState, Engine &engine);
 
-    /**
-     * @brief Destructor
-     */
-    ~TrackAutomationSynchronizer() override;
+  /**
+   * @brief Destructor
+   */
+  ~TrackAutomationSynchronizer() override;
 
-    //==========================================================================
-    /**
-     * @brief Start automation synchronization
-     * @param updateRateHz Update rate in Hz (default 60)
-     */
-    void start(int updateRateHz = 60);
+  //==========================================================================
+  /**
+   * @brief Start automation synchronization
+   * @param updateRateHz Update rate in Hz (default 60)
+   */
+  void start(int updateRateHz = 60);
 
-    /**
-     * @brief Stop automation synchronization
-     */
-    void stop();
+  /**
+   * @brief Stop automation synchronization
+   */
+  void stop();
 
-    /**
-     * @brief Check if synchronizer is running
-     */
-    bool isRunning() const { return isTimerRunning(); }
+  /**
+   * @brief Check if synchronizer is running
+   */
+  bool isRunning() const { return isTimerRunning(); }
 
 private:
-    //==========================================================================
-    // Timer callback (MESSAGE THREAD)
-    //==========================================================================
+  //==========================================================================
+  // Timer callback (MESSAGE THREAD)
+  //==========================================================================
 
-    /**
-     * @brief Timer callback - samples automation and updates tracks
-     * @note Called on MESSAGE THREAD at regular intervals
-     */
-    void timerCallback() override;
+  /**
+   * @brief Timer callback - samples automation and updates tracks
+   * @note Called on MESSAGE THREAD at regular intervals
+   */
+  void timerCallback() override;
 
-    //==========================================================================
-    // ValueTree::Listener (MESSAGE THREAD)
-    //==========================================================================
+  //==========================================================================
+  // ValueTree::Listener (MESSAGE THREAD)
+  //==========================================================================
 
-    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
-    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
-    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
-    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
-    void valueTreeParentChanged(juce::ValueTree& tree) override;
+  void valueTreePropertyChanged(juce::ValueTree &tree,
+                                const juce::Identifier &property) override;
+  void valueTreeChildAdded(juce::ValueTree &parent,
+                           juce::ValueTree &child) override;
+  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
+                             int index) override;
+  void valueTreeChildOrderChanged(juce::ValueTree &parent, int oldIndex,
+                                  int newIndex) override;
+  void valueTreeParentChanged(juce::ValueTree &tree) override;
 
+  //==========================================================================
+  // Helper Methods
+  //==========================================================================
 
-    //==========================================================================
-    // Helper Methods
-    //==========================================================================
+  /**
+   * @brief Sample automation envelope at a specific time
+   * @param envelope Envelope ValueTree
+   * @param timeBeats Time in beats
+   * @return Interpolated value
+   */
+  double sampleEnvelope(const juce::ValueTree &envelope,
+                        double timeBeats) const;
 
-    /**
-     * @brief Sample automation envelope at a specific time
-     * @param envelope Envelope ValueTree
-     * @param timeBeats Time in beats
-     * @return Interpolated value
-     */
-    double sampleEnvelope(const juce::ValueTree& envelope, double timeBeats) const;
+  /**
+   * @brief Update automation for a specific track
+   * @param trackId Track ID from ProjectState
+   * @param track Track object to update
+   * @param playbackBeats Current playback position in beats
+   */
+  void updateTrackAutomation(const juce::String &trackId, zenith::Track *track,
+                             double playbackBeats);
 
-    /**
-     * @brief Update automation for a specific track
-     * @param trackId Track ID from ProjectState
-     * @param track Track object to update
-     * @param playbackBeats Current playback position in beats
-     */
-    void updateTrackAutomation(const juce::String& trackId, zenith::Track* track, double playbackBeats) [[maybe_unused]];
+  /**
+   * @brief Rebuild automation listeners
+   * @note Call when tracks change or automation structure changes
+   */
+  void rebuildListeners();
 
-    /**
-     * @brief Rebuild automation listeners
-     * @note Call when tracks change or automation structure changes
-     */
-    void rebuildListeners();
+  //==========================================================================
+  // Member Variables
+  //==========================================================================
 
-    //==========================================================================
-    // Member Variables
-    //==========================================================================
+  ProjectState &projectState;
+  Engine &engine;
 
-    ProjectState& projectState;
-    Engine& engine;
+  // Track ID mapping (ProjectState ID -> Engine track index)
+  std::map<juce::String, int> trackIdToIndex;
 
-    // Track ID mapping (ProjectState ID -> Engine track index)
-    std::map<juce::String, int> trackIdToIndex;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackAutomationSynchronizer)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackAutomationSynchronizer)
 };
-

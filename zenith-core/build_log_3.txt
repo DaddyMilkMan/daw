@@ -1,0 +1,26 @@
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  MixerComponent.cpp
+C:\zenith\daw\zenith-core\include\MixerComponent.h(95,43): warning C4100: 'treeWhoseParentHasChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(96,45): warning C4100: 'treeWhichHasBeenChanged': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\ZenithLookAndFeel.h(273,61): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(55,13): warning C4458: declaration of 'stripWidth' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(144,24):
+      see declaration of 'MixerComponent::stripWidth'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(56,13): warning C4458: declaration of 'stripSpacing' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(145,24):
+      see declaration of 'MixerComponent::stripSpacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(155,9): warning C4100: 'indexFromWhichChildWasRemoved': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(168,9): warning C4100: 'newIndex': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(167,60): warning C4100: 'oldIndex': unreferenced parameter [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  ZenithDAW.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_artefacts\Debug\Zenith DAW.exe

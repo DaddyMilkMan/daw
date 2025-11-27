@@ -12,13 +12,28 @@
 
 #pragma once
 
-#include <JuceHeader.h>
-#include "../instruments/InstrumentRegistry.h"
-#include "../instruments/InstrumentPreset.h"
-#include "../engine/Track.h"
-#include "../../include/ProjectState.h"
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
 
-// Note: Skia rendering enabled for other components but buttons use JUCE for now
+
+#include "../../include/ProjectState.h"
+#include "../engine/Track.h"
+#include "../instruments/InstrumentPreset.h"
+#include "../instruments/InstrumentRegistry.h"
+
+#ifdef ZENITH_USE_SKIA
+    #include "skia/SkiaLabel.h"
+    #include "skia/SkiaButtonNative.h"
+    #include "skia/SkiaTextInput.h"
+    #include "skia/SkiaListBox.h"
+#endif
 
 // Forward declarations
 class Engine;
@@ -35,224 +50,256 @@ namespace zenith {
  * 3. Search and filter presets by name/tag
  * 4. Assign presets to instrument tracks
  *
- * Features Apple-inspired design with gradients, rounded corners, and smooth animations.
+ * Features Apple-inspired design with gradients, rounded corners, and smooth
+ * animations.
  */
 class InstrumentBrowserPanel : public juce::Component,
-                                public juce::Timer,
-                                private juce::TextEditor::Listener
+                               public juce::Timer
+#ifndef ZENITH_USE_SKIA
+                               , private juce::TextEditor::Listener
+#endif
 {
 public:
-    //==========================================================================
-    /**
-     * @brief Construct instrument browser panel
-     * @param engine Engine reference for accessing tracks
-     * @param projectState Project state for accessing tracks
-     */
-    InstrumentBrowserPanel(Engine& engine, ProjectState& projectState);
-    ~InstrumentBrowserPanel() override;
+  //==========================================================================
+  /**
+   * @brief Construct instrument browser panel
+   * @param engine Engine reference for accessing tracks
+   * @param projectState Project state for accessing tracks
+   */
+  InstrumentBrowserPanel(Engine &engine, ProjectState &projectState);
+  ~InstrumentBrowserPanel() override;
 
-    //==========================================================================
-    // Component interface
-    //==========================================================================
+  //==========================================================================
+  // Component interface
+  //==========================================================================
 
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-    void timerCallback() override;
+  void paint(juce::Graphics &g) override;
+  void resized() override;
+  void timerCallback() override;
 
-    //==========================================================================
-    // Visibility control
-    //==========================================================================
+  //==========================================================================
+  // Visibility control
+  //==========================================================================
 
-    /**
-     * @brief Toggle panel visibility
-     */
-    void toggleVisibility();
+  /**
+   * @brief Toggle panel visibility
+   */
+  void toggleVisibility();
 
-    /**
-     * @brief Set panel visibility
-     */
-    void setPanelVisible(bool shouldBeVisible) [[maybe_unused]];
+  /**
+   * @brief Set panel visibility
+   */
+  void setPanelVisible(bool shouldBeVisible);
 
 private:
-    //==========================================================================
-    // TextEditor::Listener interface (for search box)
-    //==========================================================================
+  //==========================================================================
+  // TextEditor::Listener interface (for search box)
+  //==========================================================================
 
-    void textEditorTextChanged(juce::TextEditor& editor) override;
+#ifndef ZENITH_USE_SKIA
+  void textEditorTextChanged(juce::TextEditor &editor) override;
+#endif
 
-    //==========================================================================
-    // Internal data structures
-    //==========================================================================
+  //==========================================================================
+  // Internal data structures
+  //==========================================================================
 
-    /**
-     * @brief Preset item with all metadata for display
-     */
-    struct PresetItem
-    {
-        ZenithInstrumentPreset preset;
-        bool matchesSearch = true;
-        bool matchesTag = true;
+  /**
+   * @brief Preset item with all metadata for display
+   */
+  struct PresetItem {
+    ZenithInstrumentPreset preset;
+    bool matchesSearch = true;
+    bool matchesTag = true;
 
-        bool isVisible() const { return matchesSearch && matchesTag; }
-    };
+    bool isVisible() const { return matchesSearch && matchesTag; }
+  };
 
-    //==========================================================================
-    // UI Components
-    //==========================================================================
+  //==========================================================================
+  // UI Components
+  //==========================================================================
 
-    // Header
-    juce::Label titleLabel;
-    juce::TextButton toggleButton;
+#ifdef ZENITH_USE_SKIA
+  // Skia components (GPU-accelerated)
+  // Header
+  zenith::SkiaLabel titleLabel;
+  zenith::SkiaButtonNative toggleButton;
 
-    // Search
-    juce::Label searchLabel;
-    juce::TextEditor searchBox;
+  // Search
+  zenith::SkiaLabel searchLabel;
+  zenith::SkiaTextInput searchBox;
 
-    // Tag filter chips
-    juce::Label tagsLabel;
-    juce::Component tagChipsContainer;
+  // Tag filter chips
+  zenith::SkiaLabel tagsLabel;
+  juce::Component tagChipsContainer;
 
-    std::vector<std::unique_ptr<juce::TextButton>> tagChips;
+  std::vector<std::unique_ptr<zenith::SkiaButtonNative>> tagChips;
 
-    juce::String activeTag;  // Empty = show all
+  juce::String activeTag; // Empty = show all
 
-    // Instrument list
-    juce::Label instrumentsLabel;
-    juce::ListBox instrumentList;
+  // Instrument list
+  zenith::SkiaLabel instrumentsLabel;
+  zenith::SkiaListBox instrumentList;
 
-    // Preset list
-    juce::Label presetsLabel;
-    juce::ListBox presetList;
+  // Preset list
+  zenith::SkiaLabel presetsLabel;
+  zenith::SkiaListBox presetList;
 
-    juce::TextButton loadPresetButton;
-    juce::TextButton searchClearButton;
+  zenith::SkiaButtonNative loadPresetButton;
+  zenith::SkiaButtonNative searchClearButton;
 
-    // Status/toast message
-    juce::Label statusLabel;
-    int statusLabelAlpha = 0;  // For fade-out animation
-    int statusHoldTicks = 0;   // Hold time before fading
+  // Status/toast message
+  zenith::SkiaLabel statusLabel;
+#else
+  // JUCE fallback
+  juce::Label titleLabel;
+  juce::TextButton toggleButton;
 
-    // Search bar enhancements
-    float searchFocusAnimation = 0.0f;
-    bool searchHasFocus = false;
+  juce::Label searchLabel;
+  juce::TextEditor searchBox;
 
-    //==========================================================================
-    // Data
-    //==========================================================================
+  juce::Label tagsLabel;
+  juce::Component tagChipsContainer;
 
-    Engine& engine_;
-    ProjectState& projectState_;
-    InstrumentRegistry& instrumentRegistry_;
-    ZenithPresetManager presetManager_;
+  std::vector<std::unique_ptr<juce::TextButton>> tagChips;
 
-    juce::StringArray instrumentIds_;
-    juce::String selectedInstrumentId_;
-    std::vector<PresetItem> presetItems_;
-    juce::StringArray visiblePresetIndices_;  // Indices of visible presets after filtering
+  juce::String activeTag;
 
-    //==========================================================================
-    // ListBox models
-    //==========================================================================
+  juce::Label instrumentsLabel;
+  juce::ListBox instrumentList;
 
-    /**
-     * @brief ListBox model for instrument list
-     */
-    class InstrumentListBoxModel : public juce::ListBoxModel
-    {
-    public:
-        InstrumentListBoxModel(InstrumentBrowserPanel& owner);
+  juce::Label presetsLabel;
+  juce::ListBox presetList;
 
-        int getNumRows() override;
-        void paintListBoxItem(int rowNumber, juce::Graphics& g,
-                             int width, int height, bool rowIsSelected) override;
-        void listBoxItemClicked(int row, const juce::MouseEvent& e) override;
+  juce::TextButton loadPresetButton;
+  juce::TextButton searchClearButton;
 
-    private:
-        InstrumentBrowserPanel& owner_;
-    };
+  juce::Label statusLabel;
+#endif
 
-    /**
-     * @brief ListBox model for preset list
-     */
-    class PresetListBoxModel : public juce::ListBoxModel
-    {
-    public:
-        PresetListBoxModel(InstrumentBrowserPanel& owner);
+  int statusLabelAlpha = 0; // For fade-out animation
+  int statusHoldTicks = 0;  // Hold time before fading
 
-        int getNumRows() override;
-        void paintListBoxItem(int rowNumber, juce::Graphics& g,
-                             int width, int height, bool rowIsSelected) override;
-        void listBoxItemDoubleClicked(int row, const juce::MouseEvent& e) override;
+  // Search bar enhancements
+  float searchFocusAnimation = 0.0f;
+  bool searchHasFocus = false;
 
-    private:
-        InstrumentBrowserPanel& owner_;
-    };
+  //==========================================================================
+  // Data
+  //==========================================================================
 
-    std::unique_ptr<InstrumentListBoxModel> instrumentListModel_;
-    std::unique_ptr<PresetListBoxModel> presetListModel_;
+  Engine &engine_;
+  ProjectState &projectState_;
+  InstrumentRegistry &instrumentRegistry_;
+  ZenithPresetManager presetManager_;
 
-    //==========================================================================
-    // Internal methods
-    //==========================================================================
+  juce::StringArray instrumentIds_;
+  juce::String selectedInstrumentId_;
+  std::vector<PresetItem> presetItems_;
+  juce::StringArray
+      visiblePresetIndices_; // Indices of visible presets after filtering
 
-    /**
-     * @brief Initialize tag chips
-     */
-    void initializeTagChips();
+  //==========================================================================
+  // ListBox models (JUCE only)
+  //==========================================================================
 
-    /**
-     * @brief Handle instrument selection
-     */
-    void onInstrumentSelected(int instrumentIndex) [[maybe_unused]];
+#ifndef ZENITH_USE_SKIA
+  /**
+   * @brief ListBox model for instrument list
+   */
+  class InstrumentListBoxModel : public juce::ListBoxModel {
+  public:
+    InstrumentListBoxModel(InstrumentBrowserPanel &owner);
 
-    /**
-     * @brief Handle preset selection
-     */
-    void onPresetDoubleClicked(int presetIndex) [[maybe_unused]];
+    int getNumRows() override;
+    void paintListBoxItem(int rowNumber, juce::Graphics &g, int width,
+                          int height, bool rowIsSelected) override;
+    void listBoxItemClicked(int row, const juce::MouseEvent &e) override;
 
-    /**
-     * @brief Load selected preset to selected track
-     */
-    void loadPresetToSelectedTrack();
+  private:
+    InstrumentBrowserPanel &owner_;
+  };
 
-    /**
-     * @brief Update search filter
-     */
-    void updateSearchFilter();
+  /**
+   * @brief ListBox model for preset list
+   */
+  class PresetListBoxModel : public juce::ListBoxModel {
+  public:
+    PresetListBoxModel(InstrumentBrowserPanel &owner);
 
-    /**
-     * @brief Update tag filter
-     */
-    void updateTagFilter(const juce::String& tag);
+    int getNumRows() override;
+    void paintListBoxItem(int rowNumber, juce::Graphics &g, int width,
+                          int height, bool rowIsSelected) override;
+    void listBoxItemDoubleClicked(int row, const juce::MouseEvent &e) override;
 
-    /**
-     * @brief Apply filters and update visible preset list
-     */
-    void applyFilters();
+  private:
+    InstrumentBrowserPanel &owner_;
+  };
 
-    /**
-     * @brief Show status message (toast)
-     */
-    void showStatus(const juce::String& message, bool isError = false);
+  std::unique_ptr<InstrumentListBoxModel> instrumentListModel_;
+  std::unique_ptr<PresetListBoxModel> presetListModel_;
+#endif
 
-    /**
-     * @brief Update status fade-out animation
-     */
-    void updateStatusAnimation();
+  //==========================================================================
+  // Internal methods
+  //==========================================================================
 
-    /**
-     * @brief Clear search box
-     */
-    void clearSearch();
+  /**
+   * @brief Initialize tag chips
+   */
+  void initializeTagChips();
 
-    /**
-     * @brief Get currently selected track
-     */
-    zenith::Track* getSelectedTrack() const;
+  /**
+   * @brief Handle instrument selection
+   */
+  void onInstrumentSelected(int instrumentIndex);
 
+  /**
+   * @brief Handle preset selection
+   */
+  void onPresetDoubleClicked(int presetIndex);
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentBrowserPanel)
+  /**
+   * @brief Load selected preset to selected track
+   */
+  void loadPresetToSelectedTrack();
+
+  /**
+   * @brief Update search filter
+   */
+  void updateSearchFilter();
+
+  /**
+   * @brief Update tag filter
+   */
+  void updateTagFilter(const juce::String &tag);
+
+  /**
+   * @brief Apply filters and update visible preset list
+   */
+  void applyFilters();
+
+  /**
+   * @brief Show status message (toast)
+   */
+  void showStatus(const juce::String &message, bool isError = false);
+
+  /**
+   * @brief Update status fade-out animation
+   */
+  void updateStatusAnimation();
+
+  /**
+   * @brief Clear search box
+   */
+  void clearSearch();
+
+  /**
+   * @brief Get currently selected track
+   */
+  zenith::Track *getSelectedTrack() const;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentBrowserPanel)
 };
 
 } // namespace zenith
-

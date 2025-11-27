@@ -14,9 +14,22 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
 #include "../ProjectState.h"
 #include "ZenithButton.h"
+
+#ifdef ZENITH_USE_SKIA
+#include "../../Source/ui/skia/SkiaCanvasComponent.h"
+#include "../../Source/ui/skia/SkiaTheme.h"
+#endif
 
 //==============================================================================
 /**
@@ -34,7 +47,12 @@
  * S = Solo button
  * R = Record arm button
  */
-class TrackHeaderComponent : public juce::Component,
+class TrackHeaderComponent :
+#ifdef ZENITH_USE_SKIA
+                               public zenith::SkiaCanvasComponent,
+#else
+                               public juce::Component,
+#endif
                                public juce::Timer,
                                private juce::ValueTree::Listener
 {
@@ -56,7 +74,11 @@ public:
     // Component interface
     //==========================================================================
 
+#ifdef ZENITH_USE_SKIA
+    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+#else
     void paint(juce::Graphics& g) override;
+#endif
     void resized() override;
     void timerCallback() override;
 

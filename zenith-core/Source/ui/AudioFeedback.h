@@ -8,7 +8,16 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+
 
 namespace zenith {
 
@@ -23,85 +32,86 @@ namespace zenith {
  * - Toggle switch sound
  * - All sounds are subtle and professional
  */
-class AudioFeedback
-{
+class AudioFeedback {
 public:
-    enum SoundType
-    {
-        Click,      // Soft click for normal buttons
-        Toggle,     // Two-tone for toggle switches
-        Success,    // Pleasant chime for success
-        Error,      // Subtle beep for errors
-        Whoosh      // Swipe/transition sound
-    };
+  enum SoundType {
+    Click,   // Soft click for normal buttons
+    Toggle,  // Two-tone for toggle switches
+    Success, // Pleasant chime for success
+    Error,   // Subtle beep for errors
+    Whoosh   // Swipe/transition sound
+  };
 
-    /**
-     * @brief Get the singleton instance
-     */
-    static AudioFeedback& getInstance()
-    {
-        static AudioFeedback instance;
-        return instance;
-    }
+  /**
+   * @brief Get the singleton instance
+   */
+  static AudioFeedback &getInstance() {
+    static AudioFeedback instance;
+    return instance;
+  }
 
-    /**
-     * @brief Play a UI sound effect
-     * @param type The type of sound to play
-     * @param volume Volume level (0.0 to 1.0), default 0.3 for subtlety
-     */
-    void playSound(SoundType type, float volume = 0.3f);
+  /**
+   * @brief Play a UI sound effect
+   * @param type The type of sound to play
+   * @param volume Volume level (0.0 to 1.0), default 0.3 for subtlety
+   */
+  void playSound(SoundType type, float volume = 0.3f);
 
-    /**
-     * @brief Enable or disable all UI sounds
-     */
-    void setEnabled(bool shouldBeEnabled) [[maybe_unused]] { enabled_ = shouldBeEnabled; }
+  /**
+   * @brief Enable or disable all UI sounds
+   */
+  [[maybe_unused]] void setEnabled(bool shouldBeEnabled) {
+    enabled_ = shouldBeEnabled;
+  }
 
-    /**
-     * @brief Check if UI sounds are enabled
-     */
-    bool isEnabled() const { return enabled_; }
+  /**
+   * @brief Check if UI sounds are enabled
+   */
+  bool isEnabled() const { return enabled_; }
 
-    /**
-     * @brief Mute UI sounds during playback/recording
-     * @param shouldMute True to mute during playback/recording, false to allow sounds
-     *
-     * Call this when transport state changes:
-     * - setMutedDuringPlayback(true) when playback or recording starts
-     * - setMutedDuringPlayback(false) when playback or recording stops
-     */
-    void setMutedDuringPlayback(bool shouldMute) [[maybe_unused]] { mutedDuringPlayback_ = shouldMute; }
+  /**
+   * @brief Mute UI sounds during playback/recording
+   * @param shouldMute True to mute during playback/recording, false to allow
+   * sounds
+   *
+   * Call this when transport state changes:
+   * - setMutedDuringPlayback(true) when playback or recording starts
+   * - setMutedDuringPlayback(false) when playback or recording stops
+   */
+  [[maybe_unused]] void setMutedDuringPlayback(bool shouldMute) {
+    mutedDuringPlayback_ = shouldMute;
+  }
 
-    /**
-     * @brief Check if sounds are muted due to playback/recording
-     */
-    bool isMutedDuringPlayback() const { return mutedDuringPlayback_; }
+  /**
+   * @brief Check if sounds are muted due to playback/recording
+   */
+  bool isMutedDuringPlayback() const { return mutedDuringPlayback_; }
 
 private:
-    AudioFeedback();
-    ~AudioFeedback() = default;
+  AudioFeedback();
+  ~AudioFeedback() = default;
 
-    // Generate synth sounds programmatically
-    void generateClickSound();
-    void generateToggleSound();
-    void generateSuccessSound();
-    void generateErrorSound();
-    void generateWhooshSound();
+  // Generate synth sounds programmatically
+  void generateClickSound();
+  void generateToggleSound();
+  void generateSuccessSound();
+  void generateErrorSound();
+  void generateWhooshSound();
 
-    bool enabled_ = true;
-    bool mutedDuringPlayback_ = false;  // Mute during playback/recording
+  bool enabled_ = true;
+  bool mutedDuringPlayback_ = false; // Mute during playback/recording
 
-    // Simple audio player (using JUCE's audio system)
-    juce::AudioDeviceManager audioDeviceManager_;
+  // Simple audio player (using JUCE's audio system)
+  juce::AudioDeviceManager audioDeviceManager_;
 
-    // Pre-generated sound buffers
-    juce::AudioBuffer<float> clickBuffer_;
-    juce::AudioBuffer<float> toggleBuffer_;
-    juce::AudioBuffer<float> successBuffer_;
-    juce::AudioBuffer<float> errorBuffer_;
-    juce::AudioBuffer<float> whooshBuffer_;
+  // Pre-generated sound buffers
+  juce::AudioBuffer<float> clickBuffer_;
+  juce::AudioBuffer<float> toggleBuffer_;
+  juce::AudioBuffer<float> successBuffer_;
+  juce::AudioBuffer<float> errorBuffer_;
+  juce::AudioBuffer<float> whooshBuffer_;
 
-    JUCE_DECLARE_NON_COPYABLE(AudioFeedback)
+  JUCE_DECLARE_NON_COPYABLE(AudioFeedback)
 };
 
 } // namespace zenith
-
