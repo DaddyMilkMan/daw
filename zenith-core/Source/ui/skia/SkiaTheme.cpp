@@ -10,8 +10,15 @@
     #include <include/core/SkShader.h>
     #include <include/core/SkMaskFilter.h>
     #include <include/core/SkBlurTypes.h>
+    #include <include/core/SkRRect.h>
+    #include <include/core/SkPath.h>
+    #include <include/core/SkFont.h>
+    #include <include/core/SkTextBlob.h>
     #include <include/effects/SkGradientShader.h>
 #endif
+
+#include <cstring>   // For strlen, memcpy
+#include <algorithm> // For std::max, std::min
 
 namespace zenith {
 
@@ -251,6 +258,69 @@ SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur, float opacity)
     }
 
     return paint;
+}
+
+//==============================================================================
+// Logic Pro Rendering Methods - Part 1
+//==============================================================================
+
+void SkiaTheme::drawRoundedRect(SkCanvas* canvas, const SkRect& rect, float radius,
+                               const SkPaint& fillPaint, const SkPaint* strokePaint,
+                               float strokeWidth)
+{
+    SkRRect rrect = SkRRect::MakeRectXY(rect, radius, radius);
+    canvas->drawRRect(rrect, fillPaint);
+    
+    if (strokePaint != nullptr && strokeWidth > 0.0f)
+    {
+        SkPaint stroke = *strokePaint;
+        stroke.setStyle(SkPaint::kStroke_Style);
+        stroke.setStrokeWidth(strokeWidth);
+        stroke.setAntiAlias(true);
+        canvas->drawRRect(rrect, stroke);
+    }
+}
+
+void SkiaTheme::drawLogicButton(SkCanvas* canvas, const SkRect& bounds, bool isPressed,
+                               bool isHighlighted, SkColor accentColor)
+{
+    SkColor topColor, bottomColor;
+    
+    if (accentColor != 0)
+    {
+        topColor = accentColor;
+        bottomColor = SkColorSetARGB(
+            SkColorGetA(accentColor),
+            (uint8_t)(SkColorGetR(accentColor) * 0.8f),
+            (uint8_t)(SkColorGetG(accentColor) * 0.8f),
+            (uint8_t)(SkColorGetB(accentColor) * 0.8f)
+        );
+    }
+    else
+    {
+        if (isPressed)
+        {
+            topColor = ARGB(255, 50, 50, 50);
+            bottomColor = ARGB(255, 40, 40, 40);
+        }
+        else if (isHighlighted)
+        {
+            topColor = ARGB(255, 70, 70, 70);
+            bottomColor = ARGB(255, 60, 60, 60);
+        }
+        else
+        {
+            topColor = ARGB(255, 62, 62, 62);    // #3E3E3E Logic Pro
+            bottomColor = ARGB(255, 46, 46, 46);  // #2E2E2E Logic Pro
+        }
+    }
+    
+    SkPaint gradientPaint = createGradientPaint(topColor, bottomColor, bounds);
+    SkPaint strokePaint;
+    strokePaint.setColor(ARGB(255, 17, 17, 17));
+    strokePaint.setAntiAlias(true);
+    
+    drawRoundedRect(canvas, bounds, 6.0f, gradientPaint, &strokePaint, 1.0f);
 }
 
 #endif // ZENITH_USE_SKIA
