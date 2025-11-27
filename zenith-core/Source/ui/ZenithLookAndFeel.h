@@ -41,37 +41,37 @@ public:
     
     struct Colors
     {
-        // Backgrounds
-        static constexpr juce::uint32 backgroundDark = 0xff1a1a1a;      // Main window background
-        static constexpr juce::uint32 backgroundMid = 0xff242424;       // Panels (browser, mixer)
-        static constexpr juce::uint32 backgroundLight = 0xff2e2e2e;     // Hovered items, raised surfaces
-        static constexpr juce::uint32 backgroundPanel = 0xff202020;     // Panel backgrounds
+        // Backgrounds - Logic Pro gray palette
+        static constexpr juce::uint32 backgroundDark = 0xff1F1F1F;      // Main window background (Logic gray)
+        static constexpr juce::uint32 backgroundMid = 0xff2B2B2B;       // Panels (browser, mixer)
+        static constexpr juce::uint32 backgroundLight = 0xff3E3E3E;     // Hovered items, raised surfaces
+        static constexpr juce::uint32 backgroundPanel = 0xff262626;     // Panel backgrounds
         
-        // Accents
-        static constexpr juce::uint32 accentPrimary = 0xff00d4aa;       // Teal - primary interactive
-        static constexpr juce::uint32 accentPrimaryDark = 0xff00a885;   // Darker teal for pressed state
-        static constexpr juce::uint32 accentSecondary = 0xff0088ff;     // Blue - secondary actions
-        static constexpr juce::uint32 accentWarning = 0xffffaa00;       // Orange - warnings
-        static constexpr juce::uint32 accentDanger = 0xffff4444;        // Red - destructive/record
+        // Accents - Logic Pro color scheme
+        static constexpr juce::uint32 accentPrimary = 0xff006FFF;       // Logic Blue - primary interactive
+        static constexpr juce::uint32 accentPrimaryDark = 0xff0055CC;   // Darker Logic Blue for pressed state
+        static constexpr juce::uint32 accentSecondary = 0xff3A7DFF;     // Logic Blue glow - focus ring
+        static constexpr juce::uint32 accentWarning = 0xffFF9900;       // Orange - warnings
+        static constexpr juce::uint32 accentDanger = 0xffFF0000;        // Red - destructive/record
         
-        // Text
-        static constexpr juce::uint32 textPrimary = 0xffeeeeee;         // Main text
-        static constexpr juce::uint32 textSecondary = 0xffaaaaaa;       // Subtle text, labels
+        // Text - Logic Pro softer white
+        static constexpr juce::uint32 textPrimary = 0xffDFDFDF;         // Main text (softer than pure white)
+        static constexpr juce::uint32 textSecondary = 0xff9A9A9A;       // Subtle text, labels
         static constexpr juce::uint32 textDisabled = 0xff666666;        // Disabled state
         
-        // Borders
-        static constexpr juce::uint32 border = 0xff3a3a3a;              // Default borders
-        static constexpr juce::uint32 borderLight = 0xff4a4a4a;         // Lighter borders
+        // Borders - Logic Pro engraved style
+        static constexpr juce::uint32 border = 0xff111111;              // Default borders (dark engraved)
+        static constexpr juce::uint32 borderLight = 0xff444444;         // Lighter borders
         
-        // Transport/Status
-        static constexpr juce::uint32 playGreen = 0xff44ff88;           // Play button
-        static constexpr juce::uint32 recordRed = 0xffff4444;           // Record button
+        // Transport/Status - Logic Pro exact colors
+        static constexpr juce::uint32 playGreen = 0xff00FF00;           // Play button (bright green)
+        static constexpr juce::uint32 recordRed = 0xffFF0000;           // Record button (pure red)
         static constexpr juce::uint32 stopGrey = 0xff888888;            // Stop button
         
-        // Meters
-        static constexpr juce::uint32 meterGreen = 0xff44ff88;          // Level meter (low)
-        static constexpr juce::uint32 meterYellow = 0xffffaa00;         // Level meter (mid)
-        static constexpr juce::uint32 meterRed = 0xffff4444;            // Level meter (clip)
+        // Meters - Logic Pro gradient
+        static constexpr juce::uint32 meterGreen = 0xff00FF00;          // Level meter (low)
+        static constexpr juce::uint32 meterYellow = 0xffFFFF00;         // Level meter (mid)
+        static constexpr juce::uint32 meterRed = 0xffFF0000;            // Level meter (clip)
     };
 
     //==========================================================================
@@ -87,17 +87,17 @@ public:
         static constexpr int spacingL = 24;
         static constexpr int spacingXL = 32;
         
-        // Border radius
+        // Border radius - Logic Pro style (more rounded)
         static constexpr float radiusS = 2.0f;
-        static constexpr float radiusM = 4.0f;
-        static constexpr float radiusL = 8.0f;
-        static constexpr float radiusXL = 12.0f;
+        static constexpr float radiusM = 4.0f;      // Scrollbars
+        static constexpr float radiusL = 6.0f;      // Buttons, regions (Logic standard)
+        static constexpr float radiusXL = 8.0f;
         
-        // Component heights
+        // Component heights - Logic Pro dimensions
         static constexpr int buttonHeightS = 24;
         static constexpr int buttonHeightM = 32;
         static constexpr int buttonHeightL = 40;
-        static constexpr int transportBarHeight = 56;
+        static constexpr int transportBarHeight = 60;    // Logic standard (40-60px)
         static constexpr int statusBarHeight = 24;
         static constexpr int mixerHeight = 200;
         

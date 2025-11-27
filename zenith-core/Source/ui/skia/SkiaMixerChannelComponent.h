@@ -1,13 +1,14 @@
 /**
  * @file SkiaMixerChannelComponent.h
- * @brief GPU-rendered mixer channel with Skia
+ * @brief Logic Pro style mixer channel strip
  *
  * Features:
- * - Fader slider with smooth spring physics
- * - Pan knob with velocity feedback
- * - Volume meter with peak detection
- * - Mute/Solo buttons with LED indicators
- * - Input meter visualization
+ * - Chrome/silver fader cap with concave middle
+ * - Color-accurate audio meter (green/yellow/orange/red)
+ * - M/S/R buttons
+ * - Pan knob with green ring
+ * - Track name and icon
+ * - Insert/send slots
  */
 
 #pragma once
@@ -16,150 +17,88 @@
 
 #ifdef ZENITH_USE_SKIA
     #include <include/core/SkCanvas.h>
-    #include <include/core/SkPaint.h>
 #endif
-
-#include "SkiaTheme.h"
-#include "SkiaTextRenderer.h"
 
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-/**
- * @class SkiaMixerChannelComponent
- * @brief GPU-rendered mixer channel
- */
 class SkiaMixerChannelComponent : public juce::Component,
-                                  private juce::Timer
+                                   public juce::Timer
 {
 public:
     SkiaMixerChannelComponent();
-    ~SkiaMixerChannelComponent() override;
+    ~SkiaMixerChannelComponent() override = default;
 
-    //==========================================================================
-    // Value accessors
-    //==========================================================================
-
-    /**
-     * @brief Set the fader value (0-1)
-     */
-    void setFaderValue(float value);
-
-    /**
-     * @brief Get the fader value
-     */
-    float getFaderValue() const { return faderValue_; }
-
-    /**
-     * @brief Set the pan value (-1 to 1, 0 = center)
-     */
-    void setPanValue(float value);
-
-    /**
-     * @brief Get the pan value
-     */
-    float getPanValue() const { return panValue_; }
-
-    /**
-     * @brief Set mute state
-     */
-    void setMuted(bool muted);
-
-    /**
-     * @brief Get mute state
-     */
-    bool isMuted() const { return isMuted_; }
-
-    /**
-     * @brief Set solo state
-     */
-    void setSolo(bool solo);
-
-    /**
-     * @brief Get solo state
-     */
-    bool isSolo() const { return isSolo_; }
-
-    /**
-     * @brief Set the input level (0-1 for meter display)
-     */
-    void setInputLevel(float level);
-
-    /**
-     * @brief Set the channel name
-     */
+    // Channel properties
     void setChannelName(const juce::String& name);
-
-    //==========================================================================
-    // Component interface
-    //==========================================================================
+    void setChannelColor(juce::Colour color);
+    void setChannelType(bool isBus);  // false = audio/MIDI, true = bus/aux
+    
+    // Fader
+    void setFaderValue(float db);  // -inf to +6dB
+    float getFaderValue() const { return faderDb_; }
+    
+    // Meter
+    void setMeterLevel(float level);  // 0.0 to 1.0
+    void setPeakLevel(float peak);
+    
+    // Pan
+    void setPan(float pan);  // -1.0 to +1.0
+    float getPan() const { return pan_; }
+    
+    // Buttons
+    void setMuted(bool muted);
+    void setSoloed(bool soloed);
+    void setRecordEnabled(bool enabled);
+    
+    bool isMuted() const { return isMuted_; }
+    bool isSoloed() const { return isSoloed_; }
+    bool isRecordEnabled() const { return isRecordEnabled_; }
+    
+    // Selection
+    void setSelected(bool selected);
+    bool isSelected() const { return isSelected_; }
 
     void paint(juce::Graphics& g) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
-    void mouseUp(const juce::MouseEvent& event) override;
-
-private:
-    //==========================================================================
-    // Timer callback for animations
-    //==========================================================================
-
     void timerCallback() override;
 
-    //==========================================================================
-    // Rendering
-    //==========================================================================
-
-    void renderFader();
-    void renderPanKnob();
-    void renderMeterDisplay();
-    void renderButtons();
-    void renderLabel();
-
-    //==========================================================================
-    // Hit testing
-    //==========================================================================
-
-    enum class HitTarget
-    {
-        None,
-        Fader,
-        Pan,
-        Mute,
-        Solo
-    };
-
-    HitTarget getHitTarget(const juce::Point<int>& pos) const;
-
-    //==========================================================================
-    // Member variables
-    //==========================================================================
-
-    float faderValue_ = 0.7f;
-    float faderTarget_ = 0.7f;
-    float panValue_ = 0.0f;
-    float panTarget_ = 0.0f;
+private:
+    // Channel properties
+    juce::String channelName_ = "Audio 1";
+    juce::Colour channelColor_ = juce::Colour(0xff006FFF);
+    bool isBus_ = false;
+    bool isSelected_ = false;
+    
+    // Audio properties
+    float faderDb_ = 0.0f;      // Current fader position
+    float meterLevel_ = 0.0f;   // Current meter level
+    float peakLevel_ = 0.0f;    // Peak hold
+    float peakHoldTime_ = 0.0f; // Peak hold timer (2 seconds)
+    float pan_ = 0.0f;          // Pan position
+    
+    // Button states
     bool isMuted_ = false;
-    bool isSolo_ = false;
-    float inputLevel_ = 0.0f;
-    float inputLevelSmoothed_ = 0.0f;
-    float peakLevel_ = 0.0f;
-    juce::String channelName_ = "Channel";
-
-    // Animation states
+    bool isSoloed_ = false;
+    bool isRecordEnabled_ = false;
+    
+    // UI bounds
+    juce::Rectangle<int> faderTrackBounds_;
+    juce::Rectangle<int> faderCapBounds_;
+    juce::Rectangle<int> meterBounds_;
+    juce::Rectangle<int> panKnobBounds_;
+    juce::Rectangle<int> muteButtonBounds_;
+    juce::Rectangle<int> soloButtonBounds_;
+    juce::Rectangle<int> recordButtonBounds_;
+    
+    // Interaction
     bool isDraggingFader_ = false;
     bool isDraggingPan_ = false;
-    HitTarget currentHitTarget_ = HitTarget::None;
-
-    // Meters
-    struct MeterState
-    {
-        float current = 0.0f;
-        float peak = 0.0f;
-        int peakHoldSamples = 0;
-    } meter_;
+    int dragStartY_ = 0;
+    float dragStartValue_ = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaMixerChannelComponent)
 };

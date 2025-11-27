@@ -257,6 +257,83 @@ public:
     static SkPaint createShadowPaint(float offsetY, float blur, float opacity);
 #endif
 
+    //==========================================================================
+    // Logic Pro Specific Rendering Methods
+    //==========================================================================
+
+#ifdef ZENITH_USE_SKIA
+    /**
+     * @brief Draw rounded rectangle with exact radius and optional stroke
+     * @param canvas Skia canvas
+     * @param rect Rectangle bounds
+     * @param radius Corner radius (Logic Pro uses 4-6px)
+     * @param fillPaint Paint for fill
+     * @param strokePaint Optional paint for stroke (nullptr = no stroke)
+     * @param strokeWidth Stroke width if strokePaint provided
+     */
+    static void drawRoundedRect(SkCanvas* canvas, const SkRect& rect, float radius,
+                               const SkPaint& fillPaint, const SkPaint* strokePaint = nullptr,
+                               float strokeWidth = 1.0f);
+
+    /**
+     * @brief Draw Logic Pro style button with gradient and stroke
+     * @param canvas Skia canvas
+     * @param bounds Button bounds
+     * @param isPressed Is button pressed
+     * @param isHighlighted Is button hovered
+     * @param accentColor Optional accent color (0 = use default)
+     */
+    static void drawLogicButton(SkCanvas* canvas, const SkRect& bounds, bool isPressed,
+                               bool isHighlighted, SkColor accentColor = 0);
+
+    /**
+     * @brief Draw fader cap (chrome style with concave middle - Logic Pro style)
+     * @param canvas Skia canvas
+     * @param bounds Cap bounds
+     */
+    static void drawFaderCap(SkCanvas* canvas, const SkRect& bounds);
+
+    /**
+     * @brief Draw audio meter with green/yellow/orange/red gradient
+     * @param canvas Skia canvas
+     * @param bounds Meter bounds
+     * @param level Audio level (0.0 to 1.0)
+     */
+    static void drawAudioMeter(SkCanvas* canvas, const SkRect& bounds, float level);
+
+    /**
+     * @brief Draw waveform (filled style, Logic Pro)
+     * @param canvas Skia canvas
+     * @param bounds Waveform bounds
+     * @param samples Audio sample data
+     * @param numSamples Number of samples
+     * @param color Waveform color
+     */
+    static void drawWaveform(SkCanvas* canvas, const SkRect& bounds,
+                            const float* samples, int numSamples, SkColor color);
+
+    /**
+     * @brief Draw LCD text with glow effect (Logic Pro transport display)
+     * @param canvas Skia canvas
+     * @param position Text position
+     * @param text Text to render
+     * @param color Text color (cyan/orange for Logic)
+     * @param size Font size
+     */
+    static void drawLCDText(SkCanvas* canvas, const SkPoint& position,
+                           const char* text, SkColor color, float size);
+
+    /**
+     * @brief Draw playhead with triangle caps at top/bottom
+     * @param canvas Skia canvas
+     * @param x Horizontal position
+     * @param rulerBounds Ruler area bounds
+     * @param arrangementBounds Arrangement area bounds
+     */
+    static void drawPlayhead(SkCanvas* canvas, float x, const SkRect& rulerBounds,
+                            const SkRect& arrangementBounds);
+#endif
+
 private:
     SkiaTheme();
     ~SkiaTheme() = default;
