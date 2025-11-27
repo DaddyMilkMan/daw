@@ -79,13 +79,13 @@ void ZenithLookAndFeel::drawButtonBackground(juce::Graphics& g,
     
     // Fill with flat color
     g.setColour(baseColour);
-    g.fillRoundedRectangle(bounds, Metrics::radiusM);
+    g.fillRoundedRectangle(bounds, Metrics::radiusL);  // Logic Pro: 6px rounded
     
     // Subtle border
     if (!shouldDrawButtonAsDown)
     {
         g.setColour(juce::Colour(Colors::border));
-        g.drawRoundedRectangle(bounds, Metrics::radiusM, 1.0f);
+        g.drawRoundedRectangle(bounds, Metrics::radiusL, 1.0f);  // Logic Pro: 6px rounded
     }
 }
 
@@ -346,7 +346,7 @@ void ZenithLookAndFeel::drawScrollbar(juce::Graphics& g,
         thumbColour = thumbColour.brighter(0.4f);
     
     g.setColour(thumbColour);
-    g.fillRoundedRectangle(thumbBounds.toFloat(), Metrics::radiusS);
+    g.fillRoundedRectangle(thumbBounds.toFloat(), Metrics::radiusM);  // Logic Pro: 4px scrollbar
 }
 
 //==============================================================================
