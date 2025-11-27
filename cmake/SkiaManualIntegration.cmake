@@ -116,6 +116,14 @@ if(ZENITH_ENABLE_SKIA)
         Source/ui/skia/SkiaColorTestComponent.cpp
         Source/ui/views/PianoKeyboardViewSkia.cpp
 
+        # Logic Pro UI Transformation Components (NEW)
+        Source/ui/skia/SkiaTrackHeaderComponent.h
+        Source/ui/skia/SkiaTrackHeaderComponent.cpp
+        Source/ui/skia/SkiaArrangementViewComponent.h
+        Source/ui/skia/SkiaArrangementViewComponent.cpp
+        Source/ui/skia/SkiaPianoRollComponent.h
+        Source/ui/skia/SkiaPianoRollComponent.cpp
+
         # Modern DAW Layout Components
         Source/ui/skia/TransportBar.h
         Source/ui/skia/TransportBar.cpp

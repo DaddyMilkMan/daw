@@ -160,6 +160,11 @@ target_sources(ZenithDAW PRIVATE
     Source/ui/PresetBrowserComponent.h
     Source/ui/PresetBrowserComponent.cpp
 
+    # Logic Pro Look & Feel System
+    Source/ui/ZenithLookAndFeel.h
+    Source/ui/ZenithLookAndFeel.cpp
+    Source/ui/ZenithTypography.h
+
     # Phase 7: Wingman AI Integration
     Source/network/AIBridgeClient.h
     Source/network/AIBridgeClient.cpp
