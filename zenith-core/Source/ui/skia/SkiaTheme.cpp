@@ -323,6 +323,153 @@ void SkiaTheme::drawLogicButton(SkCanvas* canvas, const SkRect& bounds, bool isP
     drawRoundedRect(canvas, bounds, 6.0f, gradientPaint, &strokePaint, 1.0f);
 }
 
+void SkiaTheme::drawFaderCap(SkCanvas* canvas, const SkRect& bounds)
+{
+    // Chrome/silver gradient
+    SkColor topColor = ARGB(255, 221, 221, 221);    // #DDDDDD
+    SkColor bottomColor = ARGB(255, 136, 136, 136); // #888888
+    
+    SkPaint gradientPaint = createGradientPaint(topColor, bottomColor, bounds);
+    gradientPaint.setAntiAlias(true);
+    drawRoundedRect(canvas, bounds, 2.0f, gradientPaint, nullptr, 0.0f);
+    
+    // Center line for concave effect
+    SkPaint linePaint;
+    linePaint.setColor(ARGB(255, 100, 100, 100));
+    linePaint.setStrokeWidth(1.0f);
+    linePaint.setAntiAlias(true);
+    canvas->drawLine(bounds.left() + 2, bounds.centerY(), bounds.right() - 2, bounds.centerY(), linePaint);
+}
+
+void SkiaTheme::drawAudioMeter(SkCanvas* canvas, const SkRect& bounds, float level)
+{
+    level = std::max(0.0f, std::min(1.0f, level));
+    
+    // Background
+    SkPaint bgPaint;
+    bgPaint.setColor(ARGB(255, 17, 17, 17));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRect(bounds, bgPaint);
+    
+    // Meter fill
+    float fillHeight = bounds.height() * level;
+    SkRect fillRect = SkRect::MakeLTRB(bounds.left(), bounds.bottom() - fillHeight, bounds.right(), bounds.bottom());
+    
+    // Color zones: Green 0-0.75, Yellow 0.75-0.9, Orange 0.9-0.95, Red 0.95-1.0
+    SkColor meterColor;
+    if (level < 0.75f)
+        meterColor = ARGB(255, 0, 255, 0);
+    else if (level < 0.9f)
+        meterColor = ARGB(255, 255, 255, 0);
+    else if (level < 0.95f)
+        meterColor = ARGB(255, 255, 153, 0);
+    else
+        meterColor = ARGB(255, 255, 0, 0);
+    
+    SkPaint meterPaint;
+    meterPaint.setColor(meterColor);
+    meterPaint.setAntiAlias(true);
+    canvas->drawRect(fillRect, meterPaint);
+}
+
+void SkiaTheme::drawWaveform(SkCanvas* canvas, const SkRect& bounds,
+                            const float* samples, int numSamples, SkColor color)
+{
+    if (numSamples < 2 || samples == nullptr) return;
+    
+    SkPath waveformPath;
+    float xStep = bounds.width() / (float)numSamples;
+    float halfHeight = bounds.height() * 0.5f;
+    float centerY = bounds.centerY();
+    
+    waveformPath.moveTo(bounds.left(), centerY);
+    
+    // Top half
+    for (int i = 0; i < numSamples; ++i)
+    {
+        float x = bounds.left() + i * xStep;
+        float y = centerY - (samples[i] * halfHeight);
+        waveformPath.lineTo(x, y);
+    }
+    
+    // Bottom half (mirror)
+    for (int i = numSamples - 1; i >= 0; --i)
+    {
+        float x = bounds.left() + i * xStep;
+        float y = centerY + (samples[i] * halfHeight);
+        waveformPath.lineTo(x, y);
+    }
+    
+    waveformPath.close();
+    
+    SkPaint fillPaint;
+    fillPaint.setColor(color);
+    fillPaint.setAntiAlias(true);
+    fillPaint.setStyle(SkPaint::kFill_Style);
+    canvas->drawPath(waveformPath, fillPaint);
+}
+
+void SkiaTheme::drawLCDText(SkCanvas* canvas, const SkPoint& position,
+                           const char* text, SkColor color, float size)
+{
+    SkFont font;
+    font.setSize(size);
+    font.setEdging(SkFont::Edging::kAntiAlias);
+    
+    // Glow effect
+    SkPaint glowPaint = createGlowPaint(color, 4.0f, 0.6f);
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kOuter_SkBlurStyle, 3.0f));
+    
+    SkTextBlobBuilder glowBuilder;
+    const auto& glowBuffer = glowBuilder.allocRun(font, strlen(text), position.fX, position.fY);
+    memcpy(glowBuffer.glyphs, text, strlen(text));
+    canvas->drawTextBlob(glowBuilder.make(), 0, 0, glowPaint);
+    
+    // Main text
+    SkPaint textPaint;
+    textPaint.setColor(color);
+    textPaint.setAntiAlias(true);
+    
+    SkTextBlobBuilder builder;
+    const auto& buffer = builder.allocRun(font, strlen(text), position.fX, position.fY);
+    memcpy(buffer.glyphs, text, strlen(text));
+    canvas->drawTextBlob(builder.make(), 0, 0, textPaint);
+}
+
+void SkiaTheme::drawPlayhead(SkCanvas* canvas, float x, const SkRect& rulerBounds,
+                            const SkRect& arrangementBounds)
+{
+    SkPaint playheadPaint;
+    playheadPaint.setColor(ARGB(255, 255, 255, 255));  // White
+    playheadPaint.setStrokeWidth(2.0f);
+    playheadPaint.setAntiAlias(true);
+    
+    // Vertical line
+    canvas->drawLine(x, rulerBounds.top(), x, arrangementBounds.bottom(), playheadPaint);
+    
+    // Triangle cap at top
+    SkPath topTriangle;
+    float triSize = 8.0f;
+    topTriangle.moveTo(x, rulerBounds.bottom());
+    topTriangle.lineTo(x - triSize, rulerBounds.bottom() - triSize);
+    topTriangle.lineTo(x + triSize, rulerBounds.bottom() - triSize);
+    topTriangle.close();
+    
+    SkPaint trianglePaint;
+    trianglePaint.setColor(ARGB(255, 255, 255, 255));
+    trianglePaint.setAntiAlias(true);
+    trianglePaint.setStyle(SkPaint::kFill_Style);
+    canvas->drawPath(topTriangle, trianglePaint);
+    
+    // Triangle cap at bottom
+    SkPath bottomTriangle;
+    bottomTriangle.moveTo(x, arrangementBounds.bottom());
+    bottomTriangle.lineTo(x - triSize, arrangementBounds.bottom() - triSize);
+    bottomTriangle.lineTo(x + triSize, arrangementBounds.bottom() - triSize);
+    bottomTriangle.close();
+    canvas->drawPath(bottomTriangle, trianglePaint);
+}
+
 #endif // ZENITH_USE_SKIA
 
 } // namespace zenith
