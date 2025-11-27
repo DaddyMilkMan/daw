@@ -10,11 +10,12 @@
 
 #pragma once
 
+#include "../views/PianoKeyboardViewSkia.h"
 #include "SkiaCanvasComponent.h"
 #include "SkiaTheme.h"
-#include "../views/PianoKeyboardViewSkia.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
 
 namespace zenith {
 
@@ -27,7 +28,7 @@ namespace zenith {
  * - Optional slim mixer strip
  * - Toggleable visibility
  */
-class BottomBar : public juce::Component, public SkiaComponent {
+class BottomBar : public SkiaComponent {
 public:
   //==========================================================================
   // Construction
@@ -40,8 +41,9 @@ public:
   // SkiaComponent Implementation
   //==========================================================================
 
-  bool supportsSkiaRendering() const override { return true; }
-  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(SkCanvas *canvas) override;
+#endif
 
   //==========================================================================
   // Visibility Control
@@ -64,7 +66,9 @@ public:
   //==========================================================================
 
   void resized() override;
+#ifndef ZENITH_USE_SKIA
   void paint(juce::Graphics &g) override;
+#endif
 
 private:
   //==========================================================================

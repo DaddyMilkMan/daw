@@ -137,6 +137,7 @@ if(ZENITH_ENABLE_SKIA)
     # Add include directories
     target_include_directories(ZenithDAW PRIVATE
         ${SKIA_INCLUDE_DIR}
+        ${SKIA_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui/skia
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/rendering

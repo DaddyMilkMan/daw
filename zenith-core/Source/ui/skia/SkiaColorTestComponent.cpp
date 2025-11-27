@@ -22,14 +22,17 @@ SkiaColorTestComponent::SkiaColorTestComponent() {
   setSize(400, 300);
 }
 
+#ifndef ZENITH_USE_SKIA
 void SkiaColorTestComponent::paint(juce::Graphics &g) {
   // Leave empty to allow Skia rendering (from parent) to show through.
   // We can draw a subtle border to show the component exists if needed,
   // but for the final look, we want it clean.
 }
+#endif
 
-void SkiaColorTestComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
 #ifdef ZENITH_USE_SKIA
+void SkiaColorTestComponent::drawSkia(SkCanvas *canvas) {
+  SkRect bounds = SkRect::MakeWH(getWidth(), getHeight());
   // Draw a semi-transparent background
   SkPaint bgPaint;
   bgPaint.setColor(SkColorSetARGB(220, 30, 30, 30));

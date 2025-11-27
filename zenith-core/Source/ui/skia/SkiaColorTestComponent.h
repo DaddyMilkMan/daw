@@ -9,7 +9,6 @@
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 namespace zenith {
 
 /**
@@ -19,19 +18,20 @@ namespace zenith {
  * This component is used to verify that Skia rendering is working correctly
  * and to demonstrate the visual capabilities (gradients, anti-aliasing).
  */
-class SkiaColorTestComponent : public juce::Component, public SkiaComponent {
+class SkiaColorTestComponent : public SkiaComponent {
 public:
   SkiaColorTestComponent();
   ~SkiaColorTestComponent() override = default;
 
   // JUCE paint (fallback or background)
+#ifndef ZENITH_USE_SKIA
   void paint(juce::Graphics &g) override;
+#endif
 
   // Skia paint (native rendering)
-  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
-
-  // Check if Skia rendering is supported
-  bool supportsSkiaRendering() const override { return true; }
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(SkCanvas *canvas) override;
+#endif
 
 private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaColorTestComponent)

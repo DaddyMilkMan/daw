@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include "MixerChannel.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -28,7 +29,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
-
 
 // Forward declarations
 namespace zenith {
@@ -71,10 +71,11 @@ public:
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
 
   // Phase 1.3: Version that takes explicit playhead position and optional
-  // incoming MIDI
-  void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill,
-                         int64_t playheadSamples,
-                         const juce::MidiBuffer *incomingMidi = nullptr);
+  // incoming MIDI and aux buffers
+  void getNextAudioBlock(
+      const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+      const juce::MidiBuffer *incomingMidi = nullptr,
+      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {});
 
   //==============================================================================
   // Track properties
@@ -92,23 +93,30 @@ public:
 
   //==============================================================================
   // Mixer controls (thread-safe using atomics)
-  void setVolume(float newVolume); // 0.0 to 1.0
-  float getVolume() const { return volume.load(); }
+  // Mixer controls (thread-safe using atomics)
+  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
+  float getVolume() const { return mixerChannel.getVolume(); }
 
-  void setPan(float newPan); // -1.0 (left) to 1.0 (right)
-  float getPan() const { return pan.load(); }
+  void setPan(float newPan) { mixerChannel.setPan(newPan); }
+  float getPan() const { return mixerChannel.getPan(); }
 
-  void setMuted(bool shouldBeMuted);
-  bool isMuted() const { return muted.load(); }
+  void setMuted(bool shouldBeMuted) { mixerChannel.setMuted(shouldBeMuted); }
+  bool isMuted() const { return mixerChannel.isMuted(); }
 
-  void setSolo(bool shouldBeSolo);
-  bool isSolo() const { return solo.load(); }
+  void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
+  bool isSolo() const { return mixerChannel.isSolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
 
   void setEnabled(bool shouldBeEnabled);
   bool isEnabled() const { return enabled.load(); }
+
+  void setInputChannel(int channel) { inputChannelIndex.store(channel); }
+  int getInputChannel() const { return inputChannelIndex.load(); }
+
+  MixerChannel &getMixerChannel() { return mixerChannel; }
+  const MixerChannel &getMixerChannel() const { return mixerChannel; }
 
   //==============================================================================
   // Instrument management (for Instrument tracks)
@@ -170,9 +178,10 @@ public:
 
   //==============================================================================
   // Monitoring
-  float getCurrentLevel() const { return currentLevel.load(); }
-  float getPeakLevel() const { return peakLevel.load(); }
-  void resetPeakLevel();
+  // Monitoring
+  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+  void resetPeakLevel() { mixerChannel.resetPeaks(); }
 
   //==============================================================================
   // State management
@@ -204,23 +213,26 @@ private:
   int currentBlockSize = 512;
 
   //==============================================================================
-  // Mixer controls (atomic for lock-free access)
-  std::atomic<float> volume{0.8f};
-  std::atomic<float> pan{0.0f};
-  std::atomic<bool> muted{false};
-  std::atomic<bool> solo{false};
+  // Mixer controls (delegated to MixerChannel)
+  // Note: armed and enabled are track-specific, not channel-strip specific
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
 
+  // Input routing
+  std::atomic<int> inputChannelIndex{0};
+
   //==============================================================================
-  // Level monitoring (atomic for lock-free access)
-  std::atomic<float> currentLevel{0.0f};
-  std::atomic<float> peakLevel{0.0f};
+  // Level monitoring (delegated to MixerChannel)
+  // We keep wrappers for compatibility but they read from MixerChannel
 
   //==============================================================================
   // Instrument (for Instrument tracks)
   std::unique_ptr<Instrument> instrument_;
   juce::AudioBuffer<float> instrumentBuffer_;
+
+  //==============================================================================
+  // Mixer Channel Strip (EQ, Comp, Sends, Volume, Pan)
+  MixerChannel mixerChannel;
 
   //==============================================================================
   // Plugin chain (Phase 3: VST3 hosting MVP)

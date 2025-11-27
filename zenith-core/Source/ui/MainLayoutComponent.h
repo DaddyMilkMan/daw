@@ -2,8 +2,15 @@
 #include "../../include/ProjectState.h"
 #include "ArrangerComponent.h"
 #include "skia/BrowserPanel.h"
+#include "skia/SkiaComponent.h"
 #include "views/SessionViewComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRect.h>
+#endif
 
 namespace zenith {
 
@@ -17,7 +24,7 @@ namespace zenith {
  * - Top: Transport Bar (future)
  * - Bottom: Editor Panel (future)
  */
-class MainLayoutComponent : public juce::Component {
+class MainLayoutComponent : public SkiaComponent {
 public:
   MainLayoutComponent(ProjectState &ps) : arranger(ps) {
     // 1. Setup Components
@@ -33,38 +40,61 @@ public:
     setOpaque(false);
   }
 
-  void paint(juce::Graphics &g) override {
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(SkCanvas *canvas) override {
+    if (!canvas) return;
+    
+    auto bounds = getLocalBounds();
+    
+    // Draw dark background
+    SkPaint bgPaint;
+    bgPaint.setColor(SkColorSetRGB(30, 30, 35));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRect(SkRect::MakeWH(static_cast<float>(bounds.getWidth()), 
+                                     static_cast<float>(bounds.getHeight())), bgPaint);
+    
+    // Render all visible children
+    for (auto *child : getChildren()) {
+      if (!child->isVisible())
+        continue;
+
+      auto childBounds = child->getBounds();
+
+      canvas->save();
+      canvas->translate(static_cast<float>(childBounds.getX()), 
+                        static_cast<float>(childBounds.getY()));
+      canvas->clipRect(SkRect::MakeWH(static_cast<float>(childBounds.getWidth()), 
+                                       static_cast<float>(childBounds.getHeight())));
+
+      if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
+        skiaChild->drawSkia(canvas);
+      }
+
+      canvas->restore();
+    }
+  }
+#endif
+
 #ifndef ZENITH_USE_SKIA
+  void paint(juce::Graphics &g) override {
     // Failsafe: If Skia fails, you will see this dark grey background
     g.fillAll(juce::Colours::darkgrey);
-#endif
   }
+#endif
 
   void resized() override {
     auto area = getLocalBounds();
 
     // --- Tri-Pane Layout Logic ---
 
-    // 1. Top Bar (Transport) - Fixed Height
-    auto topBarArea = area.removeFromTop(56);
-    // transportBar.setBounds(topBarArea); // TODO: Add transport bar
-
-    // 2. Bottom Editor - Resizable (Placeholder for now)
-    auto bottomEditorArea =
-        area.removeFromBottom(250); // Fixed for now, make resizable later
-
-    // 3. Left Browser - Collapsible
+    // 1. Left Browser - Collapsible
     if (!browserCollapsed) {
       browserPanel.setBounds(area.removeFromLeft(260));
     } else {
       browserPanel.setBounds(area.removeFromLeft(48)); // Icon width
     }
 
-    // 4. Right Inspector - Collapsible
-    auto inspectorArea = area.removeFromRight(280);
-    // inspectorPanel.setBounds(inspectorArea); // TODO: Add inspector
-
-    // 5. Central Workspace (Fills remaining)
+    // 2. Central Workspace (Fills remaining)
     if (sessionView.isVisible())
       sessionView.setBounds(area);
     else

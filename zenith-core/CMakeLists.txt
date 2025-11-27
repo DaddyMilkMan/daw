@@ -587,6 +587,11 @@ if(ZENITH_ENABLE_SKIA)
         ${SKIA_LIBRARY}
     )
 
+    target_include_directories(SkiaSimpleTest PRIVATE
+        ${SKIA_INCLUDE_DIR}
+        ${SKIA_DIR}/include
+    )
+
     target_compile_definitions(SkiaSimpleTest PRIVATE
         JUCE_USE_CURL=0
         ZENITH_USE_SKIA=1

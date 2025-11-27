@@ -10,16 +10,6 @@
 #include <include/core/SkPath.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
-
-#endif
-#include "skia/SkiaTheme.h"
-
-#ifdef ZENITH_USE_SKIA
-#include <include/core/SkFont.h>
-#include <include/core/SkPaint.h>
-#include <include/core/SkPath.h>
-#include <include/core/SkRRect.h>
-#include <include/effects/SkGradientShader.h>
 #endif
 
 //==============================================================================
@@ -32,12 +22,17 @@ ArrangerComponent::~ArrangerComponent() {
   projectState.state.removeListener(this);
 }
 
+#ifndef ZENITH_USE_SKIA
 void ArrangerComponent::paint(juce::Graphics &g) {
-  SkiaCanvasComponent::paint(g);
+  // Default paint if Skia is disabled
+  g.fillAll(juce::Colours::black);
 }
+#endif
 
 void ArrangerComponent::resized() {
-  SkiaCanvasComponent::resized();
+#ifdef ZENITH_USE_SKIA
+  zenith::SkiaCanvasComponent::resized();
+#endif
   recomputeClipBounds();
 }
 
@@ -475,10 +470,3 @@ void ArrangerComponent::paintTracks(juce::Graphics &g) {}
 void ArrangerComponent::paintClips(juce::Graphics &g) {}
 void ArrangerComponent::paintTimeRuler(juce::Graphics &g) {}
 void ArrangerComponent::paintMarquee(juce::Graphics &g) {}
-
-#ifdef ZENITH_USE_SKIA
-void ArrangerComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
-  // Call base class implementation which sets up the canvas and calls paintSkia
-  SkiaCanvasComponent::paintToSkia(canvas, bounds);
-}
-#endif

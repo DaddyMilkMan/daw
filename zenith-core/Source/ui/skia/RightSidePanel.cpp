@@ -1,321 +1,400 @@
-/**
- * @file RightSidePanel.cpp
- * @brief Implementation of right-side panel
- */
+/*
+  ==============================================================================
+    RightSidePanel.cpp
+    Wingman AI Assistant Panel - Full Skia rendering
+    Modern chat interface for AI assistant in DAW
+  ==============================================================================
+*/
 
 #include "RightSidePanel.h"
-#include "../WingmanPanel.h"
+
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
 #include <include/core/SkRRect.h>
-#include <include/core/SkPathEffect.h>
-#include <include/effects/SkDashPathEffect.h>
+#include <include/effects/SkGradientShader.h>
+#endif
 
 namespace zenith {
 
 //==============================================================================
-// ScratchPadsPanel Implementation
+// Color Constants
 //==============================================================================
-
-RightSidePanel::ScratchPadsPanel::ScratchPadsPanel() { setSize(400, 300); }
-
-void RightSidePanel::ScratchPadsPanel::paintSkia(
-    SkCanvas &canvas, const juce::Rectangle<int> &bounds) {
-  auto &colors = SkiaTheme::getInstance().getColors();
-
-  // Background
-  SkPaint bgPaint;
-  bgPaint.setAntiAlias(true);
-  bgPaint.setColor(colors.bg1);
-
-  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-  canvas.drawRect(skBounds, bgPaint);
-
-  // Header bar
-  SkPaint headerPaint;
-  headerPaint.setAntiAlias(true);
-  headerPaint.setColor(colors.bg2);
-
-  SkRect headerRect = SkRect::MakeXYWH(0, 0, skBounds.width(), 40);
-  canvas.drawRect(headerRect, headerPaint);
-
-  // Bottom border on header
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setColor(colors.borderSubtle);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-
-  canvas.drawLine(0, 40, skBounds.width(), 40, borderPaint);
-
-  // Title text
-  SkFont titleFont;
-  titleFont.setSize(14.0f);
-
-  SkPaint titlePaint;
-  titlePaint.setAntiAlias(true);
-  titlePaint.setColor(colors.textStrong);
-
-  canvas.drawString("Scratch Pads", 16, 26, titleFont, titlePaint);
-
-  // Placeholder content
-  SkFont bodyFont;
-  bodyFont.setSize(12.0f);
-
-  SkPaint bodyPaint;
-  bodyPaint.setAntiAlias(true);
-  bodyPaint.setColor(colors.textMuted);
-
-  float centerX = skBounds.centerX();
-  float centerY = skBounds.centerY();
-
-  // Draw placeholder icon (dashed rectangle)
-  SkPaint iconPaint;
-  iconPaint.setAntiAlias(true);
-  iconPaint.setColor(colors.textSubtle);
-  iconPaint.setStyle(SkPaint::kStroke_Style);
-  iconPaint.setStrokeWidth(2.0f);
-
-  const float intervals[] = {8.0f, 4.0f};
-  iconPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
-
-  SkRect placeholderRect =
-      SkRect::MakeXYWH(centerX - 60, centerY - 40, 120, 80);
-  SkRRect placeholderRRect = SkRRect::MakeRectXY(placeholderRect, 6.0f, 6.0f);
-
-  canvas.drawRRect(placeholderRRect, iconPaint);
-
-  // Placeholder text
-  const char *line1 = "Scratch Pads";
-  const char *line2 = "Coming Soon";
-
-  SkRect textBounds1, textBounds2;
-  bodyFont.measureText(line1, strlen(line1), SkTextEncoding::kUTF8,
-                       &textBounds1);
-  bodyFont.measureText(line2, strlen(line2), SkTextEncoding::kUTF8,
-                       &textBounds2);
-
-  canvas.drawString(line1, centerX - textBounds1.width() / 2, centerY + 60,
-                    bodyFont, bodyPaint);
-
-  bodyPaint.setColor(colors.textSubtle);
-  canvas.drawString(line2, centerX - textBounds2.width() / 2, centerY + 76,
-                    bodyFont, bodyPaint);
+namespace {
+  constexpr SkColor BG_DARK = 0xFF0D0D0D;
+  constexpr SkColor BG_PANEL = 0xFF141414;
+  constexpr SkColor BG_INPUT = 0xFF1A1A1A;
+  constexpr SkColor BG_MESSAGE_USER = 0xFF1E3A5F;
+  constexpr SkColor BG_MESSAGE_AI = 0xFF1A1A1A;
+  constexpr SkColor ACCENT = 0xFF00B4D8;
+  constexpr SkColor ACCENT_DIM = 0xFF006080;
+  constexpr SkColor TEXT_PRIMARY = 0xFFE0E0E0;
+  constexpr SkColor TEXT_SECONDARY = 0xFF808080;
+  constexpr SkColor TEXT_MUTED = 0xFF505050;
+  constexpr SkColor BORDER = 0xFF2A2A2A;
+  constexpr SkColor SUCCESS = 0xFF4ADE80;
+  constexpr SkColor OFFLINE = 0xFFEF4444;
 }
 
 //==============================================================================
-// RightSidePanel Construction
+// Construction
 //==============================================================================
 
 RightSidePanel::RightSidePanel() {
-  // Create scratch pads panel
-  scratchPadsPanel_ = std::make_unique<ScratchPadsPanel>();
-  addAndMakeVisible(scratchPadsPanel_.get());
-
-  setSize(400, 600);
+  setSize(320, 600);
+  
+  // Add welcome message
+  addMessage("Welcome to Wingman AI. I can help you with music production, mixing, and sound design.", false);
+  
+  startTimerHz(30); // Animation timer
 }
 
-//==============================================================================
-// Panel Access
-//==============================================================================
-
-void RightSidePanel::setWingmanPanel(WingmanPanel *panel) {
-  if (wingmanPanel_ != panel) {
-    wingmanPanel_ = panel;
-    if (wingmanPanel_) {
-      addAndMakeVisible(wingmanPanel_);
-      resized();
-    }
-  }
+RightSidePanel::~RightSidePanel() {
+  stopTimer();
 }
-
-void RightSidePanel::setWingmanPanelHeight(int height) {
-  wingmanHeight_ = juce::jmax(MIN_WINGMAN_HEIGHT, height);
-  resized();
-}
-
-//==============================================================================
-// Component Overrides
-//==============================================================================
 
 void RightSidePanel::resized() {
-  auto bounds = getLocalBounds();
-
-  // Ensure wingman height fits
-  wingmanHeight_ = juce::jlimit(MIN_WINGMAN_HEIGHT, bounds.getHeight() - 100,
-                                wingmanHeight_);
-
-  // Bottom: Wingman panel
-  if (wingmanPanel_) {
-    auto wingmanBounds = bounds.removeFromBottom(wingmanHeight_);
-    wingmanPanel_->setBounds(wingmanBounds);
-  }
-
-  // Splitter
-  bounds.removeFromBottom(SPLITTER_HEIGHT);
-
-  // Top: Scratch Pads
-  scratchPadsPanel_->setBounds(bounds);
+  // Layout handled in draw methods
 }
 
-void RightSidePanel::paint(juce::Graphics &g) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
+void RightSidePanel::timerCallback() {
+  // Animate connection pulse
+  connectionPulse_ += 0.1f;
+  if (connectionPulse_ > 6.28f) connectionPulse_ = 0.0f;
+  repaint();
+}
 
-  // Draw splitter
-  auto splitterBounds = getSplitterBounds();
+//==============================================================================
+// Chat Interface
+//==============================================================================
 
-  juce::Colour splitterColor = juce::Colour(
-      isSplitterHovered_ ? colors.borderStrong : colors.borderSubtle);
+void RightSidePanel::addMessage(const juce::String& text, bool isUser) {
+  ChatMessage msg;
+  msg.text = text;
+  msg.isUser = isUser;
+  msg.timestamp = juce::Time::currentTimeMillis();
+  messages_.push_back(msg);
+  repaint();
+}
 
-  g.setColour(splitterColor);
-  g.fillRect(splitterBounds);
+//==============================================================================
+// Interaction
+//==============================================================================
 
-  // Draw drag handle in center
-  if (isSplitterHovered_) {
-    juce::Colour handleColor = juce::Colour(colors.textSubtle);
-    g.setColour(handleColor);
-
-    int handleWidth = 40;
-    int handleHeight = 3;
-    int handleX = splitterBounds.getCentreX() - handleWidth / 2;
-    int handleY = splitterBounds.getCentreY() - handleHeight / 2;
-
-    g.fillRoundedRectangle(handleX, handleY, handleWidth, handleHeight, 1.5f);
+void RightSidePanel::mouseDown(const juce::MouseEvent &e) {
+  auto zone = hitTest(e.getPosition());
+  
+  if (zone == HitZone::SendButton) {
+    // Send message logic would go here
+    DBG("Send button clicked");
   }
 }
 
-void RightSidePanel::paintToSkia(SkCanvas *canvas, SkRect bounds) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-
-  // 1. Draw splitter
-  auto splitterBounds = getSplitterBounds();
-  SkRect skSplitterBounds =
-      SkRect::MakeXYWH(bounds.left() + splitterBounds.getX(),
-                       bounds.top() + splitterBounds.getY(),
-                       splitterBounds.getWidth(), splitterBounds.getHeight());
-
-  SkPaint splitterPaint;
-  splitterPaint.setAntiAlias(true);
-  splitterPaint.setColor(isSplitterHovered_ ? colors.borderStrong
-                                            : colors.borderSubtle);
-  canvas->drawRect(skSplitterBounds, splitterPaint);
-
-  // Draw drag handle in center
-  if (isSplitterHovered_) {
-    SkPaint handlePaint;
-    handlePaint.setAntiAlias(true);
-    handlePaint.setColor(colors.textSubtle);
-
-    float handleWidth = 40.0f;
-    float handleHeight = 3.0f;
-    float handleX = skSplitterBounds.centerX() - handleWidth / 2;
-    float handleY = skSplitterBounds.centerY() - handleHeight / 2;
-
-    SkRRect handleRRect = SkRRect::MakeRectXY(
-        SkRect::MakeXYWH(handleX, handleY, handleWidth, handleHeight), 1.5f,
-        1.5f);
-    canvas->drawRRect(handleRRect, handlePaint);
+void RightSidePanel::mouseMove(const juce::MouseEvent &e) {
+  auto newZone = hitTest(e.getPosition());
+  if (newZone != hoveredZone_) {
+    hoveredZone_ = newZone;
+    repaint();
   }
+}
 
-  // 2. Draw children
-  for (auto *child : getChildren()) {
-    if (!child->isVisible())
-      continue;
+void RightSidePanel::mouseExit(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  hoveredZone_ = HitZone::None;
+  repaint();
+}
 
-    auto childBounds = child->getBounds();
-    SkRect childSkBounds = SkRect::MakeXYWH(
-        bounds.left() + childBounds.getX(), bounds.top() + childBounds.getY(),
-        childBounds.getWidth(), childBounds.getHeight());
-
-    auto *skiaChild = dynamic_cast<SkiaComponent *>(child);
-    if (skiaChild && skiaChild->supportsSkiaRendering()) {
-      // Native Skia rendering
-      canvas->save();
-      // Optional: clip to child bounds to prevent bleeding
-      canvas->clipRect(childSkBounds);
-      skiaChild->paintToSkia(canvas, childSkBounds);
-      canvas->restore();
-    } else {
-      // JUCE Fallback rendering for non-Skia children (e.g. WingmanPanel)
-      juce::Image componentImage(juce::Image::ARGB,
-                                 juce::jmax(1, childBounds.getWidth()),
-                                 juce::jmax(1, childBounds.getHeight()), true);
-
-      juce::Graphics componentGraphics(componentImage);
-      componentGraphics.setOrigin(-childBounds.getX(), -childBounds.getY());
-      child->paint(componentGraphics);
-      // Note: We don't recursively paint children of JUCE components here for
-      // simplicity, assuming they handle their own painting or are leaf
-      // components. For complex hierarchies, we might need paintEntireComponent
-      // but that's heavier. child->paintEntireComponent(componentGraphics,
-      // false); Actually, paint() is usually enough for simple components, but
-      // for containers we need more. Let's stick to paint() for now as
-      // WingmanPanel is likely self-contained or we accept this limitation.
-
-      // Convert JUCE image to Skia
-      juce::Image::BitmapData bitmapData(componentImage,
-                                         juce::Image::BitmapData::readOnly);
-
-      SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(
-          componentImage.getWidth(), componentImage.getHeight());
-
-      sk_sp<SkImage> skiaImage = SkImages::RasterFromPixmapCopy(
-          SkPixmap(imageInfo, bitmapData.data, bitmapData.lineStride));
-
-      if (skiaImage) {
-        SkPaint paint;
-        paint.setAntiAlias(true);
-        canvas->drawImage(skiaImage, childSkBounds.left(), childSkBounds.top(),
-                          SkSamplingOptions(SkFilterMode::kLinear), &paint);
-      }
+RightSidePanel::HitZone RightSidePanel::hitTest(juce::Point<int> pos) const {
+  float y = static_cast<float>(pos.y);
+  float x = static_cast<float>(pos.x);
+  float h = static_cast<float>(getHeight());
+  float w = static_cast<float>(getWidth());
+  
+  // Input area at bottom
+  if (y > h - INPUT_HEIGHT - PADDING) {
+    if (x > w - 50) {
+      return HitZone::SendButton;
     }
+    return HitZone::InputField;
   }
-}
-
-void RightSidePanel::mouseDown(const juce::MouseEvent &event) {
-  if (isSplitterHovered(event.getPosition())) {
-    isDraggingSplitter_ = true;
-    dragStartY_ = event.getPosition().y;
-    dragStartHeight_ = wingmanHeight_;
+  
+  // Chat area
+  if (y > HEADER_HEIGHT && y < h - INPUT_HEIGHT - PADDING) {
+    return HitZone::ChatArea;
   }
-}
-
-void RightSidePanel::mouseDrag(const juce::MouseEvent &event) {
-  if (isDraggingSplitter_) {
-    int deltaY = event.getPosition().y - dragStartY_;
-    int newHeight =
-        dragStartHeight_ - deltaY; // Invert because we're sizing from bottom
-
-    setWingmanPanelHeight(newHeight);
-  }
-}
-
-void RightSidePanel::mouseMove(const juce::MouseEvent &event) {
-  bool wasHovered = isSplitterHovered_;
-  isSplitterHovered_ = isSplitterHovered(event.getPosition());
-
-  if (wasHovered != isSplitterHovered_) {
-    repaint(getSplitterBounds());
-
-    // Update cursor
-    setMouseCursor(isSplitterHovered_ ? juce::MouseCursor::UpDownResizeCursor
-                                      : juce::MouseCursor::NormalCursor);
-  }
+  
+  return HitZone::None;
 }
 
 //==============================================================================
-// Internal Methods
+// Skia Rendering
 //==============================================================================
 
-juce::Rectangle<int> RightSidePanel::getSplitterBounds() const {
-  int y = getHeight() - wingmanHeight_ - SPLITTER_HEIGHT;
-  return juce::Rectangle<int>(0, y, getWidth(), SPLITTER_HEIGHT);
+#ifdef ZENITH_USE_SKIA
+void RightSidePanel::drawSkia(SkCanvas *canvas) {
+  if (!canvas) return;
+  
+  drawBackground(canvas);
+  drawHeader(canvas);
+  drawChatArea(canvas);
+  drawInputArea(canvas);
 }
 
-bool RightSidePanel::isSplitterHovered(const juce::Point<int> &point) const {
-  return getSplitterBounds().expanded(0, 2).contains(point);
+void RightSidePanel::drawBackground(SkCanvas *canvas) {
+  float w = static_cast<float>(getWidth());
+  float h = static_cast<float>(getHeight());
+  
+  // Main background
+  SkPaint bgPaint;
+  bgPaint.setColor(BG_PANEL);
+  canvas->drawRect(SkRect::MakeWH(w, h), bgPaint);
+  
+  // Left border
+  SkPaint borderPaint;
+  borderPaint.setColor(BORDER);
+  borderPaint.setStrokeWidth(1.0f);
+  canvas->drawLine(0, 0, 0, h, borderPaint);
 }
+
+void RightSidePanel::drawHeader(SkCanvas *canvas) {
+  float w = static_cast<float>(getWidth());
+  
+  // Header background
+  SkPaint headerPaint;
+  headerPaint.setColor(BG_DARK);
+  canvas->drawRect(SkRect::MakeXYWH(0, 0, w, HEADER_HEIGHT), headerPaint);
+  
+  // Bottom border
+  SkPaint borderPaint;
+  borderPaint.setColor(BORDER);
+  canvas->drawLine(0, HEADER_HEIGHT, w, HEADER_HEIGHT, borderPaint);
+  
+  // Wingman icon (simplified AI brain icon)
+  float iconX = PADDING + 8;
+  float iconY = HEADER_HEIGHT / 2;
+  
+  SkPaint iconPaint;
+  iconPaint.setAntiAlias(true);
+  iconPaint.setColor(ACCENT);
+  iconPaint.setStyle(SkPaint::kStroke_Style);
+  iconPaint.setStrokeWidth(2.0f);
+  
+  // Draw simple brain/circuit icon
+  canvas->drawCircle(iconX, iconY, 10, iconPaint);
+  canvas->drawLine(iconX - 6, iconY, iconX + 6, iconY, iconPaint);
+  canvas->drawLine(iconX, iconY - 6, iconX, iconY + 6, iconPaint);
+  
+  // Title
+  SkFont titleFont;
+  titleFont.setSize(14.0f);
+  titleFont.setEmbolden(true);
+  
+  SkPaint textPaint;
+  textPaint.setAntiAlias(true);
+  textPaint.setColor(TEXT_PRIMARY);
+  
+  canvas->drawString("Wingman AI", PADDING + 28, HEADER_HEIGHT / 2 + 5, titleFont, textPaint);
+  
+  // Connection status indicator
+  drawConnectionStatus(canvas);
+}
+
+void RightSidePanel::drawConnectionStatus(SkCanvas *canvas) {
+  float w = static_cast<float>(getWidth());
+  float statusX = w - PADDING - 8;
+  float statusY = HEADER_HEIGHT / 2;
+  
+  SkPaint statusPaint;
+  statusPaint.setAntiAlias(true);
+  
+  if (isConnected_) {
+    statusPaint.setColor(SUCCESS);
+  } else {
+    // Pulsing offline indicator
+    float alpha = 0.5f + 0.5f * std::sin(connectionPulse_);
+    statusPaint.setColor(SkColorSetA(OFFLINE, static_cast<int>(alpha * 255)));
+  }
+  
+  canvas->drawCircle(statusX, statusY, 5, statusPaint);
+  
+  // Status text
+  SkFont statusFont;
+  statusFont.setSize(10.0f);
+  
+  SkPaint statusTextPaint;
+  statusTextPaint.setAntiAlias(true);
+  statusTextPaint.setColor(TEXT_MUTED);
+  
+  canvas->drawString(isConnected_ ? "Online" : "Offline", 
+                     statusX - 45, statusY + 3, statusFont, statusTextPaint);
+}
+
+void RightSidePanel::drawChatArea(SkCanvas *canvas) {
+  float w = static_cast<float>(getWidth());
+  float h = static_cast<float>(getHeight());
+  float chatTop = HEADER_HEIGHT + PADDING;
+  float chatBottom = h - INPUT_HEIGHT - PADDING * 2;
+  float chatHeight = chatBottom - chatTop;
+  
+  // Chat area background
+  SkPaint chatBgPaint;
+  chatBgPaint.setColor(BG_DARK);
+  
+  SkRect chatRect = SkRect::MakeXYWH(PADDING, chatTop, w - PADDING * 2, chatHeight);
+  SkRRect chatRRect = SkRRect::MakeRectXY(chatRect, CORNER_RADIUS, CORNER_RADIUS);
+  canvas->drawRRect(chatRRect, chatBgPaint);
+  
+  // Clip to chat area
+  canvas->save();
+  canvas->clipRRect(chatRRect);
+  
+  // Draw messages
+  float yPos = chatTop + PADDING;
+  SkFont messageFont;
+  messageFont.setSize(12.0f);
+  
+  for (const auto& msg : messages_) {
+    float msgWidth = w - PADDING * 6;
+    float msgHeight = 60.0f; // Simplified - would calculate based on text
+    
+    // Message bubble
+    SkRect msgRect = SkRect::MakeXYWH(
+      msg.isUser ? w - PADDING * 2 - msgWidth - PADDING : PADDING * 2,
+      yPos,
+      msgWidth,
+      msgHeight
+    );
+    
+    SkPaint msgPaint;
+    msgPaint.setAntiAlias(true);
+    msgPaint.setColor(msg.isUser ? BG_MESSAGE_USER : BG_MESSAGE_AI);
+    
+    SkRRect msgRRect = SkRRect::MakeRectXY(msgRect, 8, 8);
+    canvas->drawRRect(msgRRect, msgPaint);
+    
+    // Message text
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(TEXT_PRIMARY);
+    
+    // Wrap text (simplified - just truncate for now)
+    juce::String displayText = msg.text;
+    if (displayText.length() > 80) {
+      displayText = displayText.substring(0, 77) + "...";
+    }
+    
+    canvas->drawString(displayText.toRawUTF8(), 
+                       msgRect.left() + 10, 
+                       msgRect.top() + 20, 
+                       messageFont, textPaint);
+    
+    // Sender label
+    SkFont labelFont;
+    labelFont.setSize(10.0f);
+    
+    SkPaint labelPaint;
+    labelPaint.setAntiAlias(true);
+    labelPaint.setColor(msg.isUser ? ACCENT : TEXT_MUTED);
+    
+    canvas->drawString(msg.isUser ? "You" : "Wingman", 
+                       msgRect.left() + 10, 
+                       msgRect.bottom() - 10, 
+                       labelFont, labelPaint);
+    
+    yPos += msgHeight + MESSAGE_GAP;
+  }
+  
+  canvas->restore();
+  
+  // Empty state
+  if (messages_.empty()) {
+    SkFont emptyFont;
+    emptyFont.setSize(13.0f);
+    
+    SkPaint emptyPaint;
+    emptyPaint.setAntiAlias(true);
+    emptyPaint.setColor(TEXT_MUTED);
+    
+    canvas->drawString("Ask Wingman anything about", 
+                       chatRect.centerX() - 80, chatRect.centerY() - 10, 
+                       emptyFont, emptyPaint);
+    canvas->drawString("music production...", 
+                       chatRect.centerX() - 55, chatRect.centerY() + 10, 
+                       emptyFont, emptyPaint);
+  }
+}
+
+void RightSidePanel::drawInputArea(SkCanvas *canvas) {
+  float w = static_cast<float>(getWidth());
+  float h = static_cast<float>(getHeight());
+  float inputY = h - INPUT_HEIGHT - PADDING;
+  
+  // Input field background
+  SkRect inputRect = SkRect::MakeXYWH(PADDING, inputY, w - PADDING * 2 - 50, INPUT_HEIGHT - 8);
+  
+  SkPaint inputPaint;
+  inputPaint.setAntiAlias(true);
+  inputPaint.setColor(hoveredZone_ == HitZone::InputField ? 0xFF1E1E1E : BG_INPUT);
+  
+  SkRRect inputRRect = SkRRect::MakeRectXY(inputRect, CORNER_RADIUS, CORNER_RADIUS);
+  canvas->drawRRect(inputRRect, inputPaint);
+  
+  // Border
+  SkPaint borderPaint;
+  borderPaint.setAntiAlias(true);
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setStrokeWidth(1.0f);
+  borderPaint.setColor(hoveredZone_ == HitZone::InputField ? ACCENT_DIM : BORDER);
+  canvas->drawRRect(inputRRect, borderPaint);
+  
+  // Placeholder text
+  SkFont inputFont;
+  inputFont.setSize(12.0f);
+  
+  SkPaint placeholderPaint;
+  placeholderPaint.setAntiAlias(true);
+  placeholderPaint.setColor(TEXT_MUTED);
+  
+  if (inputText_.isEmpty()) {
+    canvas->drawString("Ask Wingman...", inputRect.left() + 12, inputRect.centerY() + 4, 
+                       inputFont, placeholderPaint);
+  }
+  
+  // Send button
+  float btnX = w - PADDING - 40;
+  float btnY = inputY + 4;
+  float btnSize = INPUT_HEIGHT - 16;
+  
+  SkRect btnRect = SkRect::MakeXYWH(btnX, btnY, btnSize, btnSize);
+  
+  SkPaint btnPaint;
+  btnPaint.setAntiAlias(true);
+  btnPaint.setColor(hoveredZone_ == HitZone::SendButton ? ACCENT : ACCENT_DIM);
+  
+  SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, CORNER_RADIUS, CORNER_RADIUS);
+  canvas->drawRRect(btnRRect, btnPaint);
+  
+  // Send arrow icon
+  SkPaint arrowPaint;
+  arrowPaint.setAntiAlias(true);
+  arrowPaint.setColor(0xFFFFFFFF);
+  arrowPaint.setStyle(SkPaint::kStroke_Style);
+  arrowPaint.setStrokeWidth(2.0f);
+  arrowPaint.setStrokeCap(SkPaint::kRound_Cap);
+  
+  float cx = btnRect.centerX();
+  float cy = btnRect.centerY();
+  
+  SkPath arrow;
+  arrow.moveTo(cx - 6, cy);
+  arrow.lineTo(cx + 6, cy);
+  arrow.moveTo(cx + 2, cy - 5);
+  arrow.lineTo(cx + 6, cy);
+  arrow.lineTo(cx + 2, cy + 5);
+  
+  canvas->drawPath(arrow, arrowPaint);
+}
+#endif
 
 } // namespace zenith

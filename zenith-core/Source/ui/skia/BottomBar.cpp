@@ -3,15 +3,14 @@
  * @brief Implementation of bottom bar with keyboard and mixer
  */
 
-// POLISH: spacing normalized to 8px grid (fader width 8, radius 4px, text 12pt)
-
 #include "BottomBar.h"
-// #include "views/PianoKeyboardViewSkia.h"  // TODO: File missing - needs investigation
+
+#ifdef ZENITH_USE_SKIA
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
 #include <include/core/SkRRect.h>
-
+#endif
 
 namespace zenith {
 
@@ -35,7 +34,8 @@ void BottomBar::MixerStrip::paintSkia(SkCanvas &canvas,
   bgPaint.setAntiAlias(true);
   bgPaint.setColor(colors.bg2);
 
-  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+  SkRect skBounds = SkRect::MakeWH(static_cast<float>(bounds.getWidth()), 
+                                    static_cast<float>(bounds.getHeight()));
   canvas.drawRect(skBounds, bgPaint);
 
   // Top border
@@ -48,11 +48,11 @@ void BottomBar::MixerStrip::paintSkia(SkCanvas &canvas,
   canvas.drawLine(0, 0, skBounds.width(), 0, borderPaint);
 
   // Draw mixer channels
-  float channelWidth = skBounds.width() / channelCount_;
+  float channelWidth = skBounds.width() / static_cast<float>(channelCount_);
   float padding = 8.0f;
 
   for (int i = 0; i < channelCount_; ++i) {
-    float x = i * channelWidth;
+    float x = static_cast<float>(i) * channelWidth;
 
     // Channel background
     SkRect channelRect =
@@ -72,16 +72,14 @@ void BottomBar::MixerStrip::paintSkia(SkCanvas &canvas,
     float faderLevel = 0.7f; // Placeholder level
 
     SkRect faderTrackRect =
-        SkRect::MakeXYWH(channelRect.centerX() - 4, faderY, 8,
-                         faderHeight); // 8px grid: -3→-4, 6→8
+        SkRect::MakeXYWH(channelRect.centerX() - 4, faderY, 8, faderHeight);
 
     // Track background
     SkPaint trackPaint;
     trackPaint.setAntiAlias(true);
     trackPaint.setColor(colors.bg1);
 
-    SkRRect trackRRect =
-        SkRRect::MakeRectXY(faderTrackRect, 4.0f, 4.0f); // 8px grid: 3→4
+    SkRRect trackRRect = SkRRect::MakeRectXY(faderTrackRect, 4.0f, 4.0f);
     canvas.drawRRect(trackRRect, trackPaint);
 
     // Fill level
@@ -94,8 +92,7 @@ void BottomBar::MixerStrip::paintSkia(SkCanvas &canvas,
     fillPaint.setAntiAlias(true);
     fillPaint.setColor(colors.accentMain);
 
-    SkRRect fillRRect =
-        SkRRect::MakeRectXY(fillRect, 4.0f, 4.0f); // 8px grid: 3→4
+    SkRRect fillRRect = SkRRect::MakeRectXY(fillRect, 4.0f, 4.0f);
     canvas.drawRRect(fillRRect, fillPaint);
 
     // Channel number
@@ -125,8 +122,8 @@ void BottomBar::MixerStrip::paintSkia(SkCanvas &canvas,
 
 BottomBar::BottomBar(juce::MidiKeyboardState &keyboardState) {
   // Create piano keyboard
-  // keyboard_ = std::make_unique<PianoKeyboardViewSkia>(keyboardState);  // TODO: PianoKeyboardViewSkia file missing
-  // addAndMakeVisible(keyboard_.get());
+  keyboard_ = std::make_unique<PianoKeyboardViewSkia>(keyboardState);
+  addAndMakeVisible(keyboard_.get());
 
   // Create mixer strip
   mixerStrip_ = std::make_unique<MixerStrip>();
@@ -142,7 +139,9 @@ BottomBar::BottomBar(juce::MidiKeyboardState &keyboardState) {
 void BottomBar::setKeyboardVisible(bool visible) {
   if (keyboardVisible_ != visible) {
     keyboardVisible_ = visible;
-    // keyboard_->setVisible(visible);  // TODO: keyboard_ member missing
+    if (keyboard_) {
+      keyboard_->setVisible(visible);
+    }
     resized();
   }
 }
@@ -168,7 +167,9 @@ void BottomBar::resized() {
 
   if (keyboardVisible_ && !mixerStripVisible_) {
     // Keyboard takes full width
-    // keyboard_->setBounds(bounds);  // TODO: keyboard_ member missing
+    if (keyboard_) {
+      keyboard_->setBounds(bounds);
+    }
   } else if (!keyboardVisible_ && mixerStripVisible_) {
     // Mixer strip takes full width
     mixerStrip_->setBounds(bounds);
@@ -176,10 +177,13 @@ void BottomBar::resized() {
     // Both visible: split horizontally
     auto mixerBounds = bounds.removeFromRight(MIXER_STRIP_WIDTH);
     mixerStrip_->setBounds(mixerBounds);
-    // keyboard_->setBounds(bounds);  // TODO: keyboard_ member missing
+    if (keyboard_) {
+      keyboard_->setBounds(bounds);
+    }
   }
 }
 
+#ifndef ZENITH_USE_SKIA
 void BottomBar::paint(juce::Graphics &g) {
   auto &colors = SkiaTheme::getInstance().getColors();
 
@@ -191,9 +195,13 @@ void BottomBar::paint(juce::Graphics &g) {
   g.setColour(juce::Colour(colors.bg2));
   g.fillRect(getLocalBounds().withTrimmedTop(1));
 }
+#endif
 
-void BottomBar::paintToSkia(SkCanvas *canvas, SkRect bounds) {
+#ifdef ZENITH_USE_SKIA
+void BottomBar::drawSkia(SkCanvas *canvas) {
   auto &colors = SkiaTheme::getInstance().getColors();
+  auto bounds = SkRect::MakeWH(static_cast<float>(getWidth()), 
+                                static_cast<float>(getHeight()));
 
   // Draw top border
   SkPaint borderPaint;
@@ -211,50 +219,9 @@ void BottomBar::paintToSkia(SkCanvas *canvas, SkRect bounds) {
                                     bounds.width(), bounds.height() - 1.0f),
                    bgPaint);
 
-  // Draw children
-  for (auto *child : getChildren()) {
-    if (!child->isVisible())
-      continue;
-
-    auto childBounds = child->getBounds();
-    SkRect childSkBounds = SkRect::MakeXYWH(
-        bounds.left() + childBounds.getX(), bounds.top() + childBounds.getY(),
-        childBounds.getWidth(), childBounds.getHeight());
-
-    auto *skiaChild = dynamic_cast<SkiaComponent *>(child);
-    if (skiaChild && skiaChild->supportsSkiaRendering()) {
-      // Native Skia rendering
-      canvas->save();
-      canvas->clipRect(childSkBounds);
-      skiaChild->paintToSkia(canvas, childSkBounds);
-      canvas->restore();
-    } else {
-      // JUCE Fallback rendering
-      juce::Image componentImage(juce::Image::ARGB,
-                                 juce::jmax(1, childBounds.getWidth()),
-                                 juce::jmax(1, childBounds.getHeight()), true);
-
-      juce::Graphics componentGraphics(componentImage);
-      componentGraphics.setOrigin(-childBounds.getX(), -childBounds.getY());
-      child->paint(componentGraphics);
-
-      juce::Image::BitmapData bitmapData(componentImage,
-                                         juce::Image::BitmapData::readOnly);
-
-      SkImageInfo imageInfo = SkImageInfo::MakeN32Premul(
-          componentImage.getWidth(), componentImage.getHeight());
-
-      sk_sp<SkImage> skiaImage = SkImages::RasterFromPixmapCopy(
-          SkPixmap(imageInfo, bitmapData.data, bitmapData.lineStride));
-
-      if (skiaImage) {
-        SkPaint paint;
-        paint.setAntiAlias(true);
-        canvas->drawImage(skiaImage, childSkBounds.left(), childSkBounds.top(),
-                          SkSamplingOptions(SkFilterMode::kLinear), &paint);
-      }
-    }
-  }
+  // Note: Children are rendered recursively by SkiaMainWindowIntegration::renderComponentRecursively
+  // We don't need to manually render them here
 }
+#endif
 
 } // namespace zenith

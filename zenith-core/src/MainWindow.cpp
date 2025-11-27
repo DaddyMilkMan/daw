@@ -114,23 +114,12 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   // handled internally) For now, MainLayout handles its own resizing when
   // browser toggles.
 
-  // Create Wingman panel (will be hosted in RightSidePanel)
-  DBG("→ Creating WingmanPanel...");
-  auto wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
-  DBG("✓ WingmanPanel created at " +
-      juce::String::toHexString((juce::pointer_sized_int)wingmanPanel.get()));
-
-  // Right: Scratch Pads + Wingman Console
+  // Right: AI Assistant Panel (Wingman) - Pure Skia
   DBG("→ Creating RightSidePanel...");
   rightSidePanel = std::make_unique<zenith::RightSidePanel>();
-  rightSidePanel->setWingmanPanel(wingmanPanel.get());
   addAndMakeVisible(rightSidePanel.get());
   DBG("✓ RightSidePanel created and made visible at " +
       juce::String::toHexString((juce::pointer_sized_int)rightSidePanel.get()));
-
-  // Keep wingmanPanel alive (owned by MainComponent)
-  wingmanPanelPtr_ = std::move(wingmanPanel);
-  DBG("✓ WingmanPanel ownership transferred to MainComponent member");
 
   // Bottom: Piano Keyboard + Mixer Strip
   DBG("→ Creating BottomBar...");

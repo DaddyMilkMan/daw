@@ -17,28 +17,29 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
-#include <unordered_map>
 #include <mutex>
+#include <unordered_map>
+
 
 #ifdef ZENITH_USE_SKIA
-    #include "include/core/SkRefCnt.h"
-    #include "include/core/SkSurface.h"
-    #include "include/gpu/ganesh/GrDirectContext.h"
+#include "include/core/SkRefCnt.h"
+#include "include/core/SkSurface.h"
+#include "include/gpu/ganesh/GrDirectContext.h"
 #else
-    // Forward declarations when Skia is disabled
-    class SkSurface;
-    class GrDirectContext;
-    template<typename T> using sk_sp = std::shared_ptr<T>;
+// Forward declarations when Skia is disabled
+class SkSurface;
+class GrDirectContext;
+template <typename T> using sk_sp = std::shared_ptr<T>;
 #endif
 
 class SkCanvas;
@@ -76,171 +77,175 @@ namespace zenith {
  * }
  * @endcode
  */
-class SkiaContextManager
-{
+class SkiaContextManager {
 public:
-    /**
-     * Backend rendering mode
-     */
-    enum class RenderMode
-    {
-        GPU_Direct3D,    ///< Direct3D 12 GPU rendering (Windows)
-        GPU_Metal,       ///< Metal GPU rendering (macOS)
-        GPU_Vulkan,      ///< Vulkan GPU rendering (Linux)
-        GPU_OpenGL,      ///< OpenGL GPU rendering (cross-platform fallback)
-        Software         ///< CPU rasterization (guaranteed fallback)
-    };
+  /**
+   * Backend rendering mode
+   */
+  enum class RenderMode {
+    GPU_Direct3D, ///< Direct3D 12 GPU rendering (Windows)
+    GPU_Metal,    ///< Metal GPU rendering (macOS)
+    GPU_Vulkan,   ///< Vulkan GPU rendering (Linux)
+    GPU_OpenGL,   ///< OpenGL GPU rendering (cross-platform fallback)
+    Software      ///< CPU rasterization (guaranteed fallback)
+  };
 
-    //==========================================================================
-    // Singleton Access
-    //==========================================================================
+  //==========================================================================
+  // Singleton Access
+  //==========================================================================
 
-    /**
-     * @brief Get the singleton instance
-     */
-    static SkiaContextManager& getInstance();
+  /**
+   * @brief Get the singleton instance
+   */
+  static SkiaContextManager &getInstance();
 
-    /**
-     * @brief Initialize the Skia context with GPU backend
-     * @param preferredMode Preferred rendering backend
-     * @return true if initialization succeeded
-     *
-     * Call this once at application startup. Will try GPU backends and
-     * fall back to software if GPU initialization fails.
-     */
-    bool initialize(RenderMode preferredMode = RenderMode::GPU_OpenGL);
+  /**
+   * @brief Initialize the Skia context with GPU backend
+   * @param preferredMode Preferred rendering backend
+   * @return true if initialization succeeded
+   *
+   * Call this once at application startup. Will try GPU backends and
+   * fall back to software if GPU initialization fails.
+   */
+  bool initialize(RenderMode preferredMode = RenderMode::GPU_OpenGL);
 
-    /**
-     * @brief Shutdown and cleanup all Skia resources
-     *
-     * Call this at application shutdown. Releases all surfaces and GPU context.
-     */
-    void shutdown();
+  /**
+   * @brief Shutdown and cleanup all Skia resources
+   *
+   * Call this at application shutdown. Releases all surfaces and GPU context.
+   */
+  void shutdown();
 
-    /**
-     * @brief Check if initialized
-     */
-    bool isInitialized() const { return initialized_; }
+  /**
+   * @brief Check if initialized
+   */
+  bool isInitialized() const { return initialized_; }
 
-    /**
-     * @brief Get current render mode
-     */
-    RenderMode getRenderMode() const { return currentMode_; }
+  /**
+   * @brief Get current render mode
+   */
+  RenderMode getRenderMode() const { return currentMode_; }
 
-    //==========================================================================
-    // Component Rendering
-    //==========================================================================
+  //==========================================================================
+  // Component Rendering
+  //==========================================================================
 
-    /**
-     * @brief Render Skia content for a JUCE component
-     * @param component The JUCE component to render into
-     * @param drawCallback Function that receives SkCanvas for drawing
-     *
-     * This is the main entry point for rendering. It:
-     * 1. Gets or creates a surface for this component
-     * 2. Calls your drawing code with SkCanvas
-     * 3. Blits the result to the component's JUCE Graphics context
-     *
-     * Call this from your Component::paint(Graphics& g) method.
-     */
-    void renderToComponent(juce::Component& component,
-                          std::function<void(SkCanvas*)> drawCallback);
+  /**
+   * @brief Render Skia content for a JUCE component
+   * @param component The JUCE component to render into
+   * @param drawCallback Function that receives SkCanvas for drawing
+   *
+   * This is the main entry point for rendering. It:
+   * 1. Gets or creates a surface for this component
+   * 2. Calls your drawing code with SkCanvas
+   * 3. Blits the result to the component's JUCE Graphics context
+   *
+   * Call this from your Component::paint(Graphics& g) method.
+   */
+  void renderToComponent(juce::Component &component,
+                         std::function<void(SkCanvas *)> drawCallback);
 
-    /**
-     * @brief Render Skia content and return as JUCE Image
-     * @param width Image width
-     * @param height Image height
-     * @param drawCallback Function that receives SkCanvas for drawing
-     * @return JUCE Image with rendered content
-     *
-     * Use this for off-screen rendering or when you need a JUCE Image.
-     */
-    juce::Image renderToImage(int width, int height,
-                             std::function<void(SkCanvas*)> drawCallback);
+  /**
+   * @brief Render to component and immediately blit to JUCE Graphics
+   * @param g The JUCE Graphics context from paint()
+   * @param component The component being rendered
+   * @param drawCallback Your drawing lambda
+   */
+  void renderToComponent(juce::Graphics &g, juce::Component &component,
+                         std::function<void(SkCanvas *)> drawCallback);
 
-    /**
-     * @brief Notify that a component was resized
-     * @param component The resized component
-     *
-     * Call this from your Component::resized() to update the surface size.
-     */
-    void componentResized(juce::Component& component);
+  /**
+   * @brief Render Skia content and return as JUCE Image
+   * @param width Image width
+   * @param height Image height
+   * @param drawCallback Function that receives SkCanvas for drawing
+   * @return JUCE Image with rendered content
+   *
+   * Use this for off-screen rendering or when you need a JUCE Image.
+   */
+  juce::Image renderToImage(int width, int height,
+                            std::function<void(SkCanvas *)> drawCallback);
 
-    /**
-     * @brief Release surface for a component (call when component is destroyed)
-     * @param component The destroyed component
-     */
-    void componentDestroyed(juce::Component& component);
+  /**
+   * @brief Notify that a component was resized
+   * @param component The resized component
+   *
+   * Call this from your Component::resized() to update the surface size.
+   */
+  void componentResized(juce::Component &component);
 
-    //==========================================================================
-    // Advanced Access
-    //==========================================================================
+  /**
+   * @brief Release surface for a component (call when component is destroyed)
+   * @param component The destroyed component
+   */
+  void componentDestroyed(juce::Component &component);
 
-    /**
-     * @brief Get the shared GPU context
-     * @return Pointer to GrDirectContext, or nullptr if using software rendering
-     */
-    GrDirectContext* getGpuContext() const { return grContext_.get(); }
+  //==========================================================================
+  // Advanced Access
+  //==========================================================================
 
-    /**
-     * @brief Get rendering statistics
-     */
-    struct Stats
-    {
-        int activeSurfaces = 0;
-        size_t gpuMemoryUsed = 0;
-        int frameCount = 0;
-        double averageFrameTime = 0.0;
-    };
+  /**
+   * @brief Get the shared GPU context
+   * @return Pointer to GrDirectContext, or nullptr if using software rendering
+   */
+  GrDirectContext *getGpuContext() const { return grContext_.get(); }
 
-    const Stats& getStats() const { return stats_; }
+  /**
+   * @brief Get rendering statistics
+   */
+  struct Stats {
+    int activeSurfaces = 0;
+    size_t gpuMemoryUsed = 0;
+    int frameCount = 0;
+    double averageFrameTime = 0.0;
+  };
+
+  const Stats &getStats() const { return stats_; }
 
 private:
-    SkiaContextManager();
-    ~SkiaContextManager();
+  SkiaContextManager();
+  ~SkiaContextManager();
 
-    // Initialization for different backends
-    bool initializeGPU_OpenGL();
-    bool initializeGPU_Direct3D();
-    bool initializeGPU_Metal();
-    bool initializeGPU_Vulkan();
-    bool initializeSoftware();
+  // Initialization for different backends
+  bool initializeGPU_OpenGL();
+  bool initializeGPU_Direct3D();
+  bool initializeGPU_Metal();
+  bool initializeGPU_Vulkan();
+  bool initializeSoftware();
 
-    // Surface management
-    struct ComponentSurface
-    {
-        sk_sp<SkSurface> surface;
-        int width = 0;
-        int height = 0;
-        juce::Time lastUsed;
-    };
+  // Surface management
+  struct ComponentSurface {
+    sk_sp<SkSurface> surface;
+    int width = 0;
+    int height = 0;
+    juce::Time lastUsed;
+  };
 
-    sk_sp<SkSurface> getOrCreateSurface(juce::Component& component);
-    void cleanupOldSurfaces();
+  sk_sp<SkSurface> getOrCreateSurface(juce::Component &component);
+  void cleanupOldSurfaces();
 
-    // Blit Skia surface to JUCE Graphics
-    void blitToJUCE(juce::Graphics& g, SkSurface* surface,
-                   int width, int height);
+  // Blit Skia surface to JUCE Graphics
+  void blitToJUCE(juce::Graphics &g, SkSurface *surface, int width, int height);
 
-    // Member variables
-    bool initialized_ = false;
-    RenderMode currentMode_ = RenderMode::Software;
+  // Member variables
+  bool initialized_ = false;
+  RenderMode currentMode_ = RenderMode::Software;
 
-    // Skia objects
-    sk_sp<GrDirectContext> grContext_;  ///< Shared GPU context (if GPU mode)
+  // Skia objects
+  sk_sp<GrDirectContext> grContext_; ///< Shared GPU context (if GPU mode)
 
-    // Surface cache (one per component)
-    std::unordered_map<juce::Component*, ComponentSurface> surfaces_;
-    std::mutex surfacesMutex_;
+  // Surface cache (one per component)
+  std::unordered_map<juce::Component *, ComponentSurface> surfaces_;
+  std::mutex surfacesMutex_;
 
-    // Stats
-    Stats stats_;
-    juce::Time lastCleanupTime_;
+  // Stats
+  Stats stats_;
+  juce::Time lastCleanupTime_;
 
-    // Platform-specific data (void* to avoid platform headers)
-    void* platformData_ = nullptr;
+  // Platform-specific data (void* to avoid platform headers)
+  void *platformData_ = nullptr;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaContextManager)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaContextManager)
 };
 
 } // namespace zenith

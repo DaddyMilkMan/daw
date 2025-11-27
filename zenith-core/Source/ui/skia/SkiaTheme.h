@@ -14,16 +14,24 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include <include/core/SkColor.h>
-#include <include/core/SkPaint.h>
-#include <include/core/SkRect.h>
+#include "include/core/SkColor.h"
+#include "include/core/SkFont.h"
+#include "include/core/SkPaint.h"
+#include "include/core/SkTypeface.h"
+#include "include/core/SkTypes.h"
+
 #else
-using SkColor = uint32_t;
+#include <cstdint>
 #endif
 
 namespace zenith {
+
+#ifndef ZENITH_USE_SKIA
+using SkColor = uint32_t;
+#endif
 
 /**
  * @enum ThemeMode
@@ -318,18 +326,6 @@ public:
   /**
    * @brief Create a gradient from two colors
    * @param topColor Top of gradient
-   * @param bottomColor Bottom of gradient
-   * @param bounds Rectangle to fill
-   * @return SkPaint configured with gradient
-   */
-#ifdef ZENITH_USE_SKIA
-  static SkPaint createGradientPaint(SkColor topColor, SkColor bottomColor,
-                                     const SkRect &bounds);
-#endif
-
-  /**
-   * @brief Create a glow effect paint
-   * @param color Glow color
    * @param radius Blur radius
    * @param opacity Glow opacity
    * @return SkPaint configured for glow
@@ -347,6 +343,8 @@ public:
    */
 #ifdef ZENITH_USE_SKIA
   static SkPaint createShadowPaint(float offsetY, float blur, float opacity);
+  static SkPaint createGradientPaint(SkColor topColor, SkColor bottomColor,
+                                     const SkRect &bounds);
 #endif
 
 private:
@@ -374,6 +372,19 @@ private:
   InteractionColors interaction_;
   SelectionStyle selectionStyle_;
   GPUSettings gpuSettings_;
+};
+
+/**
+ * @class FlatSkiaLookAndFeel
+ * @brief Custom LookAndFeel to ensure JUCE components match Skia flat design
+ */
+class FlatSkiaLookAndFeel : public juce::LookAndFeel_V4 {
+public:
+  FlatSkiaLookAndFeel();
+  void drawButtonBackground(juce::Graphics &g, juce::Button &button,
+                            const juce::Colour &backgroundColour,
+                            bool shouldDrawButtonAsHighlighted,
+                            bool shouldDrawButtonAsDown) override;
 };
 
 } // namespace zenith

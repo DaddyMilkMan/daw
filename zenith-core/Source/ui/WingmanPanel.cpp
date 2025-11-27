@@ -202,11 +202,7 @@ WingmanPanel::~WingmanPanel() {
   commandInput->removeListener(this);
 #endif
 }
-
-//==============================================================================
-// Component Interface
-//==============================================================================
-
+#ifndef ZENITH_USE_SKIA
 void WingmanPanel::paint(juce::Graphics &g) {
   using namespace zenith;
   auto bounds = getLocalBounds();
@@ -224,17 +220,16 @@ void WingmanPanel::paint(juce::Graphics &g) {
   g.fillRoundedRectangle(titleBar.toFloat(),
                          ZenithLookAndFeel::Radius::l); // Top corners rounded
 
-  // Fix bottom corners of title bar to be square (by overdrawing or clipping,
-  // but simple fill is okay for now) Actually, let's just draw text
-
   // Title text
   g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
-  g.setFont(ZenithLookAndFeel::getFontSmall().withStyle(juce::Font::bold));
+  g.setFont(
+      ZenithLookAndFeel::Typography::getSmall().withStyle(juce::Font::bold));
   g.drawText("Wingman Console", titleBar.reduced(10, 0),
              juce::Justification::centredLeft);
 
   // Status indicator (mode badge)
   juce::String modeText = (currentMode == Mode::AI) ? "AI" : "CMD";
+
   juce::Colour modeColor =
       (currentMode == Mode::AI)
           ? juce::Colour(ZenithLookAndFeel::Colors::accentSecondary)
@@ -251,8 +246,8 @@ void WingmanPanel::paint(juce::Graphics &g) {
   g.drawRoundedRectangle(badgeBounds.toFloat(), ZenithLookAndFeel::Radius::s,
                          1.0f);
 
-  g.setFont(
-      ZenithLookAndFeel::Typography::getTiny().withStyle(juce::Font::bold));
+  g.setColour(modeColor);
+  g.setFont(ZenithLookAndFeel::Typography::getTiny());
   g.drawText(modeText, badgeBounds, juce::Justification::centred);
 
   // Draw input focus glow
@@ -289,6 +284,7 @@ void WingmanPanel::paint(juce::Graphics &g) {
                juce::Justification::centredLeft);
   }
 }
+#endif
 
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkFont.h>
@@ -409,8 +405,10 @@ void WingmanPanel::paintSkia(SkCanvas &canvas,
       dotPaint.setAlpha((int)(alpha * 255));
       dotPaint.setAntiAlias(true);
 
-      canvas.drawCircle(static_cast<float>(startX + i * spacing) + dotSize / 2.0f,
-                        static_cast<float>(dotY) - bounce * 4 + dotSize / 2.0f, dotSize / 2.0f, dotPaint);
+      canvas.drawCircle(static_cast<float>(startX + i * spacing) +
+                            dotSize / 2.0f,
+                        static_cast<float>(dotY) - bounce * 4 + dotSize / 2.0f,
+                        dotSize / 2.0f, dotPaint);
     }
 
     SkFont tinyFont;

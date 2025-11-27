@@ -1,0 +1,1736 @@
+The system cannot find the path specified.
+MSBuild version 17.14.14+a129329f1 for .NET Framework
+
+  Checking File Globs
+  RecordingAutomationTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\RecordingAutomationTests_rc_lib.dir\Debug\RecordingAutomationTests_rc_lib.lib
+  TempoTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\TempoTests_rc_lib.dir\Debug\TempoTests_rc_lib.lib
+  SkiaSimpleTest_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\SkiaSimpleTest_rc_lib.dir\Debug\SkiaSimpleTest_rc_lib.lib
+  PresetRegressionTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_rc_lib.dir\Debug\PresetRegressionTests_rc_lib.lib
+  InstrumentValidationTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\InstrumentValidationTests_rc_lib.dir\Debug\InstrumentValidationTests_rc_lib.lib
+  GeneratePolySynthPresets_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\GeneratePolySynthPresets_rc_lib.dir\Debug\GeneratePolySynthPresets_rc_lib.lib
+  ProjectStateTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ProjectStateTests_rc_lib.dir\Debug\ProjectStateTests_rc_lib.lib
+  TrackInstrumentIntegrationTests_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\TrackInstrumentIntegrationTests_rc_lib.dir\Debug\TrackInstrumentIntegrationTests_rc_lib.lib
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  RecordingAutomationTests.vcxproj -> C:\zenith\daw\zenith-core\build\RecordingAutomationTests_artefacts\Debug\RecordingAutomationTests.exe
+  TempoTests.vcxproj -> C:\zenith\daw\zenith-core\build\TempoTests_artefacts\Debug\TempoTests.exe
+  SkiaSimpleTest.cpp
+  ProjectStateTests.vcxproj -> C:\zenith\daw\zenith-core\build\ProjectStateTests_artefacts\Debug\ProjectStateTests.exe
+  InstrumentValidationTests.vcxproj -> C:\zenith\daw\zenith-core\build\InstrumentValidationTests_artefacts\Debug\InstrumentValidationTests.exe
+  PresetRegressionTests.vcxproj -> C:\zenith\daw\zenith-core\build\PresetRegressionTests_artefacts\Debug\PresetRegressionTests.exe
+  TrackInstrumentIntegrationTests.vcxproj -> C:\zenith\daw\zenith-core\build\TrackInstrumentIntegrationTests_artefacts\Debug\TrackInstrumentIntegrationTests.exe
+  GeneratePolySynthPresets.vcxproj -> C:\zenith\daw\zenith-core\build\GeneratePolySynthPresets_artefacts\Debug\GeneratePolySynthPresets.exe
+  Main.cpp
+  MainWindow.cpp
+  MixerComponent.cpp
+  ArrangerComponent.cpp
+  PianoRollComponent.cpp
+  WingmanPanel.cpp
+  InstrumentBrowserPanel.cpp
+  SkiaMasterOutputMeterComponent.cpp
+  SkiaMainWindowIntegration.cpp
+  SkiaCanvasComponent.cpp
+  SkiaColorTestComponent.cpp
+  PianoKeyboardViewSkia.cpp
+C:\zenith\daw\zenith-core\tests\SkiaSimpleTest.cpp(9,10): error C1083: Cannot open include file: 'include/core/SkCanvas.h': No such file or directory [C:\zenith\daw\zenith-core\build\SkiaSimpleTest.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\PianoRollComponent.h(66,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'PianoRollComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/PianoRollComponent.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\PianoRollComponent.h(82,10): error C3668: 'PianoRollComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/PianoRollComponent.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(45,37): warning C4584: 'MixerComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(55,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'MixerComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(59,8): error C3668: 'MixerComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(60,8): error C3668: 'MixerComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MixerComponent.cpp')
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,45): error C2385: ambiguous access of 'getWidth' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,45):
+      could be the 'getWidth' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,45):
+      or could be the 'getWidth' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,64): error C2385: ambiguous access of 'getHeight' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,64):
+      could be the 'getHeight' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(49,64):
+      or could be the 'getHeight' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(47,31): error C2594: 'argument': ambiguous conversions from 'MixerComponent' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(61,14): error C2385: ambiguous access of 'getLocalBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(61,14):
+      could be the 'getLocalBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(61,14):
+      or could be the 'getLocalBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(68,16): error C2385: ambiguous access of 'getLocalBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(68,16):
+      could be the 'getLocalBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(68,16):
+      or could be the 'getLocalBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(77,17): error C2385: ambiguous access of 'getLocalBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(77,17):
+      could be the 'getLocalBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(77,17):
+      or could be the 'getLocalBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(80,13): warning C4458: declaration of 'stripWidth' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(164,24):
+      see declaration of 'MixerComponent::stripWidth'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(81,13): warning C4458: declaration of 'stripSpacing' hides class member [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\include\MixerComponent.h(165,24):
+      see declaration of 'MixerComponent::stripSpacing'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(174,5): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(174,5):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(174,5):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(187,5): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(187,5):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(187,5):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(198,5): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(198,5):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(198,5):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(254,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(254,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(254,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(270,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(270,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(270,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(284,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(284,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(284,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+  TransportBar.cpp
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(299,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(299,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(299,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(314,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(314,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(314,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\MixerComponent.cpp(329,3): error C2385: ambiguous access of 'addAndMakeVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(329,3):
+      could be the 'addAndMakeVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MixerComponent.cpp(329,3):
+      or could be the 'addAndMakeVisible' in base 'juce::Component'
+  
+  BrowserPanel.cpp
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(22,45): warning C4584: 'zenith::SkiaColorTestComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/SkiaColorTestComponent.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(28,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaColorTestComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/SkiaColorTestComponent.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(31,8): error C3668: 'zenith::SkiaColorTestComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/SkiaColorTestComponent.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(34,8): error C3668: 'zenith::SkiaColorTestComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/SkiaColorTestComponent.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,32): warning C4584: 'zenith::SkiaLabel': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(103,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaLabel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(118,10): error C3668: 'zenith::SkiaLabel::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(120,10): error C3668: 'zenith::SkiaLabel::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17): error C2385: ambiguous access of 'resized' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      could be the 'resized' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      or could be the 'resized' in base 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.cpp(22,3): error C2385: ambiguous access of 'setSize' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.cpp(22,3):
+      could be the 'setSize' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.cpp(22,3):
+      or could be the 'setSize' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(36,36): warning C4584: 'zenith::SkiaTextInput': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(88,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaTextInput::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(158,10): error C3668: 'zenith::SkiaTextInput::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(160,10): error C3668: 'zenith::SkiaTextInput::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9): error C2385: ambiguous access of 'setWantsKeyboardFocus' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      or could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,34): warning C4584: 'zenith::SkiaListBox': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(138,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaListBox::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(184,10): error C3668: 'zenith::SkiaListBox::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(186,10): error C3668: 'zenith::SkiaListBox::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36): error C2385: ambiguous access of 'getHeight' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36):
+      could be the 'getHeight' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36):
+      or could be the 'getHeight' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72): error C2385: ambiguous access of 'getHeight' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72):
+      could be the 'getHeight' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72):
+      or could be the 'getHeight' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25): error C2259: 'zenith::SkiaTextInput': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(36,7):
+      see declaration of 'zenith::SkiaTextInput'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23): error C2259: 'zenith::SkiaListBox': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,7):
+      see declaration of 'zenith::SkiaListBox'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23): error C2259: 'zenith::SkiaListBox': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,7):
+      see declaration of 'zenith::SkiaListBox'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/InstrumentBrowserPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+  RightSidePanel.cpp
+C:\zenith\daw\zenith-core\include\MixerComponent.h(45,37): warning C4584: 'MixerComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(55,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'MixerComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(59,8): error C3668: 'MixerComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(60,8): error C3668: 'MixerComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(45,37): warning C4584: 'MixerComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(38,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(42,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(46,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaTextInput' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(50,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(58,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\include\MixerComponent.h(55,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'MixerComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(59,8): error C3668: 'MixerComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\include\MixerComponent.h(60,8): error C3668: 'MixerComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(88,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaListBox' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(93,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(130,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaListBox' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(138,17): error C2385: ambiguous access of 'setVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(138,17):
+      could be the 'setVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(138,17):
+      or could be the 'setVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(139,23): error C2594: 'argument': ambiguous conversions from 'zenith::SkiaLabel' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(255,16): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(255,16):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(255,16):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(260,17): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(260,17):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(260,17):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(261,15): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(261,15):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(261,15):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(266,15): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(266,15):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(266,15):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(292,22): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(292,22):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(292,22):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(294,20): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(294,20):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(294,20):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(299,18): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(299,18):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(299,18):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(308,16): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(308,16):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(308,16):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(311,17): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(311,17):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(311,17):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(433,20): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(433,20):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(433,20):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(611,16): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(611,16):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(611,16):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(618,17): error C2385: ambiguous access of 'setColour' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(618,17):
+      could be the 'setColour' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(618,17):
+      or could be the 'setColour' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(621,17): error C2385: ambiguous access of 'setColour' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(621,17):
+      could be the 'setColour' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(621,17):
+      or could be the 'setColour' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(624,17): error C2385: ambiguous access of 'setVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(624,17):
+      could be the 'setVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(624,17):
+      or could be the 'setVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(649,25): error C2385: ambiguous access of 'setVisible' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(649,25):
+      could be the 'setVisible' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(649,25):
+      or could be the 'setVisible' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(654,21): error C2385: ambiguous access of 'setAlpha' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(654,21):
+      could be the 'setAlpha' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(654,21):
+      or could be the 'setAlpha' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(655,21): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(655,21):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.cpp(655,21):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(30,32): warning C4584: 'zenith::BottomBar': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(43,8): error C3668: 'zenith::BottomBar::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(44,8): error C3668: 'zenith::BottomBar::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(67,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::BottomBar::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(30,32): warning C4584: 'zenith::BottomBar': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(43,8): error C3668: 'zenith::BottomBar::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(44,8): error C3668: 'zenith::BottomBar::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(67,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::BottomBar::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+  BottomBar.cpp
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(91,12): error C2079: 'skFont' uses undefined class 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,30): error C2027: use of undefined type 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(62,7):
+      see declaration of 'SkFont'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,38): error C2065: 'kSubpixelAntiAlias': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13): error C2665: 'SkCanvas::drawString': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(1885,10):
+      could be 'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 1 from 'const char *' to 'const SkString &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Reason: cannot convert from 'const char *' to 'const SkString'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Constructor for class 'SkString' is declared 'explicit'
+      C:\zenith\skia\include\core\SkCanvas.h(1856,10):
+      or       'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 4 from '<error type>' to 'const SkFont &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              Reason: cannot convert from '<error type>' to 'const SkFont'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              use of undefined type 'SkFont'
+              C:\zenith\skia\include\core\SkCanvas.h(62,7):
+              see declaration of 'SkFont'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+      while trying to match the argument list '(const char *, float, float, <error type>, SkPaint)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(91,12): error C2079: 'skFont' uses undefined class 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,30): error C2027: use of undefined type 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(62,7):
+      see declaration of 'SkFont'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,38): error C2065: 'kSubpixelAntiAlias': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13): error C2665: 'SkCanvas::drawString': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(1885,10):
+      could be 'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 1 from 'const char *' to 'const SkString &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Reason: cannot convert from 'const char *' to 'const SkString'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Constructor for class 'SkString' is declared 'explicit'
+      C:\zenith\skia\include\core\SkCanvas.h(1856,10):
+      or       'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 4 from '<error type>' to 'const SkFont &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              Reason: cannot convert from '<error type>' to 'const SkFont'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              use of undefined type 'SkFont'
+              C:\zenith\skia\include\core\SkCanvas.h(62,7):
+              see declaration of 'SkFont'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+      while trying to match the argument list '(const char *, float, float, <error type>, SkPaint)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(22,45): warning C4584: 'zenith::SkiaColorTestComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(28,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaColorTestComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(31,8): error C3668: 'zenith::SkiaColorTestComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(34,8): error C3668: 'zenith::SkiaColorTestComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,32): warning C4584: 'zenith::SkiaLabel': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(103,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaLabel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(118,10): error C3668: 'zenith::SkiaLabel::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(120,10): error C3668: 'zenith::SkiaLabel::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17): error C2385: ambiguous access of 'resized' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      could be the 'resized' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      or could be the 'resized' in base 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(22,45): warning C4584: 'zenith::SkiaColorTestComponent': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(28,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaColorTestComponent::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(31,8): error C3668: 'zenith::SkiaColorTestComponent::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaColorTestComponent.h(34,8): error C3668: 'zenith::SkiaColorTestComponent::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,32): warning C4584: 'zenith::SkiaLabel': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(103,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaLabel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(118,10): error C3668: 'zenith::SkiaLabel::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(120,10): error C3668: 'zenith::SkiaLabel::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17): error C2385: ambiguous access of 'resized' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      could be the 'resized' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      or could be the 'resized' in base 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(338,25): error C2509: 'paint': member function not declared in 'ArrangerComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ArrangerComponent.h(41,7):
+      see declaration of 'ArrangerComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,32): warning C4584: 'zenith::SkiaLabel': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(103,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaLabel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(118,10): error C3668: 'zenith::SkiaLabel::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(120,10): error C3668: 'zenith::SkiaLabel::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(58,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(72,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17): error C2385: ambiguous access of 'resized' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      could be the 'resized' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(75,17):
+      or could be the 'resized' in base 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(84,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(90,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(36,36): warning C4584: 'zenith::SkiaTextInput': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(88,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaTextInput::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(158,10): error C3668: 'zenith::SkiaTextInput::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(795,3): error C3861: 'paintToSkia': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(160,10): error C3668: 'zenith::SkiaTextInput::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(798,25): error C2039: 'paintToSkia': is not a member of 'ArrangerComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\ArrangerComponent.h(41,7):
+      see declaration of 'ArrangerComponent'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(804,7): error C2065: 'projectState': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(805,7): error C3536: 'tracksNode': cannot be used before it is initialized [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(827,35): error C2065: 'viewStartBeats': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9): error C2385: ambiguous access of 'setWantsKeyboardFocus' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      or could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(828,22): error C2065: 'viewStartBeats': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(828,48): error C2065: 'pixelsPerBeat': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(830,18): error C2065: 'firstVisibleTrackIndex': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(831,17): error C3861: 'trackIndexToY': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(839,54): error C2065: 'trackHeight': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(846,19): error C3861: 'beatsToX': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(848,41): error C2065: 'trackHeight': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(848,19): error C2661: 'SkCanvas::drawLine': no overloaded function takes 4 arguments [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(848,19):
+      while trying to match the argument list '(float, float, float, SkPaint)'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(853,27): error C3536: 'track': cannot be used before it is initialized [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(853,56): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(860,31): error C2065: 'clipViews': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(860,20): error C2530: 'clipView': references must be initialized [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(860,20): error C3531: 'clipView': a symbol whose type contains 'auto' must have an initializer [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(860,29): error C2143: syntax error: missing ';' before ':' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(860,40): error C2143: syntax error: missing ';' before ')' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(861,31): error C2660: 'SkRect::MakeXYWH': function does not take 1 arguments [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\skia\include\core\SkRect.h(660,43):
+      see declaration of 'SkRect::MakeXYWH'
+      C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(861,31):
+      while trying to match the argument list '()'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(878,28): error C2065: 'projectState': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(878,28): error C2119: '<structured binding>': the type for 'auto' cannot be deduced from an empty initializer [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(878,28): error C3617: initializers of structured bindings must be of array or non-union class type; type '<error type>' is not permitted [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(880,57): error C2677: binary '[': no global operator found which takes type 'const juce::Identifier' (or there is no acceptable conversion) [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(897,61): error C2065: 'rulerHeight': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(911,35): error C2065: 'viewStartBeats': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(912,22): error C2065: 'viewStartBeats': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(912,57): error C2065: 'pixelsPerBeat': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(915,17): error C3861: 'beatsToX': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(919,27): error C2065: 'rulerHeight': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(919,50): error C2065: 'rulerHeight': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(930,7): error C2065: 'currentDragMode': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(930,26): error C2653: 'DragMode': is not a class or namespace name [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(930,36): error C2065: 'Marquee': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(930,48): error C2065: 'marqueeRect': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(932,26): error C2065: 'marqueeRect': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(932,46): error C2065: 'marqueeRect': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(933,26): error C2065: 'marqueeRect': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(933,50): error C2065: 'marqueeRect': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(932,17): error C2660: 'SkRect::MakeXYWH': function does not take 1 arguments [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\skia\include\core\SkRect.h(660,43):
+      see declaration of 'SkRect::MakeXYWH'
+      C:\zenith\daw\zenith-core\src\ArrangerComponent.cpp(932,17):
+      while trying to match the argument list '()'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.h(91,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'WingmanPanel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/WingmanPanel.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(43,21): error C2594: 'argument': ambiguous conversions from '_Ty' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(43,21): error C2594:         with [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(43,21): error C2594:         [ [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(43,21): error C2594:             _Ty=zenith::SkiaTextInput [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(43,21): error C2594:         ] [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(55,21): error C2594: 'argument': ambiguous conversions from '_Ty' to 'juce::Component &' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(55,21): error C2594:         with [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(55,21): error C2594:         [ [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(55,21): error C2594:             _Ty=zenith::SkiaTextInput [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(55,21): error C2594:         ] [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(260,38): error C2385: ambiguous access of 'getBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(260,38):
+      could be the 'getBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(260,38):
+      or could be the 'getBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(456,17): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(456,17):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(456,17):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(462,19): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(462,19):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.cpp(462,19):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+  SessionViewComponent.cpp
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(35,38): warning C4584: 'zenith::SkiaTextDisplay': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(62,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaTextDisplay::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(77,10): error C3668: 'zenith::SkiaTextDisplay::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(79,10): error C3668: 'zenith::SkiaTextDisplay::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(35,38): warning C4584: 'zenith::SkiaTextDisplay': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(62,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaTextDisplay::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(77,10): error C3668: 'zenith::SkiaTextDisplay::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(79,10): error C3668: 'zenith::SkiaTextDisplay::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(40,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(46,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(52,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/Main.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextDisplay.h(58,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(36,36): warning C4584: 'zenith::SkiaTextInput': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(88,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaTextInput::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(158,10): error C3668: 'zenith::SkiaTextInput::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(160,10): error C3668: 'zenith::SkiaTextInput::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(47,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9): error C2385: ambiguous access of 'setWantsKeyboardFocus' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(48,9):
+      or could be the 'setWantsKeyboardFocus' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(64,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(78,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(96,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(102,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(115,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(122,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(133,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(139,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(147,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(214,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,34): warning C4584: 'zenith::SkiaListBox': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(138,10): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::SkiaListBox::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(184,10): error C3668: 'zenith::SkiaListBox::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(186,10): error C3668: 'zenith::SkiaListBox::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9): error C2385: ambiguous access of 'setOpaque' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9):
+      could be the 'setOpaque' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(67,9):
+      or could be the 'setOpaque' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(80,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(88,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36): error C2385: ambiguous access of 'getHeight' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36):
+      could be the 'getHeight' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(104,36):
+      or could be the 'getHeight' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(115,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(124,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(164,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(171,9):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72): error C2385: ambiguous access of 'getHeight' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72):
+      could be the 'getHeight' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(319,72):
+      or could be the 'getHeight' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13): error C2385: ambiguous access of 'repaint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13):
+      could be the 'repaint' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(341,13):
+      or could be the 'repaint' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(125,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(129,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25): error C2259: 'zenith::SkiaTextInput': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaTextInput.h(36,7):
+      see declaration of 'zenith::SkiaTextInput'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(130,25):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(133,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(141,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23): error C2259: 'zenith::SkiaListBox': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,7):
+      see declaration of 'zenith::SkiaListBox'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(142,23):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(145,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23): error C2259: 'zenith::SkiaListBox': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaListBox.h(44,7):
+      see declaration of 'zenith::SkiaListBox'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(146,23):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21): error C2259: 'zenith::SkiaLabel': cannot instantiate abstract class [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaLabel.h(40,7):
+      see declaration of 'zenith::SkiaLabel'
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21):
+      due to following members:
+      C:\zenith\daw\zenith-core\Source\ui\InstrumentBrowserPanel.h(152,21):
+      'void zenith::SkiaComponent::drawSkia(SkCanvas *)': is abstract
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(39,16):
+      see declaration of 'zenith::SkiaComponent::drawSkia'
+  
+C:\zenith\daw\zenith-core\Source\ui\WingmanPanel.h(91,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'WingmanPanel::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\src\MainWindow.cpp(126,19): error C2039: 'setWingmanPanel': is not a member of 'zenith::RightSidePanel' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.h(14,7):
+      see declaration of 'zenith::RightSidePanel'
+  
+C:\zenith\daw\zenith-core\src\MainWindow.cpp(139,34): error C2594: 'argument': ambiguous conversions from 'zenith::BottomBar *' to 'juce::Component *' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\src\MainWindow.cpp(388,16): error C2385: ambiguous access of 'setBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\src\MainWindow.cpp(388,16):
+      could be the 'setBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\src\MainWindow.cpp(388,16):
+      or could be the 'setBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(91,12): error C2079: 'skFont' uses undefined class 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/RightSidePanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,30): error C2027: use of undefined type 'SkFont' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/RightSidePanel.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(62,7):
+      see declaration of 'SkFont'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(93,38): error C2065: 'kSubpixelAntiAlias': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/RightSidePanel.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13): error C2665: 'SkCanvas::drawString': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/RightSidePanel.cpp')
+      C:\zenith\skia\include\core\SkCanvas.h(1885,10):
+      could be 'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 1 from 'const char *' to 'const SkString &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Reason: cannot convert from 'const char *' to 'const SkString'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,38):
+              Constructor for class 'SkString' is declared 'explicit'
+      C:\zenith\skia\include\core\SkCanvas.h(1856,10):
+      or       'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+          'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 4 from '<error type>' to 'const SkFont &'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              Reason: cannot convert from '<error type>' to 'const SkFont'
+              C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,48):
+              use of undefined type 'SkFont'
+              C:\zenith\skia\include\core\SkCanvas.h(62,7):
+              see declaration of 'SkFont'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaButton.h(96,13):
+      while trying to match the argument list '(const char *, float, float, <error type>, SkPaint)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(13,3): error C2665: 'juce::Component::addAndMakeVisible': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(772,10):
+      could be 'void juce::Component::addAndMakeVisible(juce::Component &,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(13,3):
+          'void juce::Component::addAndMakeVisible(juce::Component &,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component &'
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(760,10):
+      or       'void juce::Component::addAndMakeVisible(juce::Component *,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(13,3):
+          'void juce::Component::addAndMakeVisible(juce::Component *,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component *'
+              C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(13,32):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(13,3):
+      while trying to match the argument list '(std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(14,3): error C2665: 'juce::Component::addAndMakeVisible': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(772,10):
+      could be 'void juce::Component::addAndMakeVisible(juce::Component &,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(14,3):
+          'void juce::Component::addAndMakeVisible(juce::Component &,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component &'
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(760,10):
+      or       'void juce::Component::addAndMakeVisible(juce::Component *,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(14,3):
+          'void juce::Component::addAndMakeVisible(juce::Component *,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component *'
+              C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(14,27):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(14,3):
+      while trying to match the argument list '(std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(15,3): error C2665: 'juce::Component::addAndMakeVisible': no overloaded function could convert all the argument types [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(772,10):
+      could be 'void juce::Component::addAndMakeVisible(juce::Component &,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(15,3):
+          'void juce::Component::addAndMakeVisible(juce::Component &,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component &'
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(760,10):
+      or       'void juce::Component::addAndMakeVisible(juce::Component *,int)'
+          C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(15,3):
+          'void juce::Component::addAndMakeVisible(juce::Component *,int)': cannot convert argument 1 from 'std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>' to 'juce::Component *'
+              C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(15,31):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\zenith\daw\zenith-core\Source\ui\skia\RightSidePanel.cpp(15,3):
+      while trying to match the argument list '(std::unique_ptr<zenith::SkiaButton,std::default_delete<zenith::SkiaButton>>)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(30,32): warning C4584: 'zenith::BottomBar': base-class 'juce::Component' is already a base-class of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\zenith-core\build\_deps\juce-src\modules\juce_gui_basics\components\juce_Component.h(44,17):
+      see declaration of 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(43,8): error C3668: 'zenith::BottomBar::supportsSkiaRendering': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(44,8): error C3668: 'zenith::BottomBar::paintToSkia': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.h(67,8): error C3248: 'zenith::SkiaComponent::paint': function declared as 'final' cannot be overridden by 'zenith::BottomBar::paint' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(42,8):
+      see declaration of 'zenith::SkiaComponent::paint'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(133,3): error C2385: ambiguous access of 'addChildComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(133,3):
+      could be the 'addChildComponent' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(133,3):
+      or could be the 'addChildComponent' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(135,3): error C2385: ambiguous access of 'setSize' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(135,3):
+      could be the 'setSize' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(135,3):
+      or could be the 'setSize' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(163,17): error C2385: ambiguous access of 'getLocalBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(163,17):
+      could be the 'getLocalBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(163,17):
+      or could be the 'getLocalBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(188,20): error C2385: ambiguous access of 'getWidth' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(188,20):
+      could be the 'getWidth' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(188,20):
+      or could be the 'getWidth' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(192,14): error C2385: ambiguous access of 'getLocalBounds' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(192,14):
+      could be the 'getLocalBounds' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(192,14):
+      or could be the 'getLocalBounds' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(215,22): error C2385: ambiguous access of 'getChildren' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(215,22):
+      could be the 'getChildren' in base 'juce::Component'
+      C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(215,22):
+      or could be the 'getChildren' in base 'juce::Component'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(225,33): error C2039: 'supportsSkiaRendering': is not a member of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\BottomBar.cpp(229,18): error C2039: 'paintToSkia': is not a member of 'zenith::SkiaComponent' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\ui\skia\SkiaComponent.h(24,7):
+      see declaration of 'zenith::SkiaComponent'
+  
+Press any key to continue . . . 

@@ -49,7 +49,9 @@ public:
   ArrangerComponent(ProjectState &ps);
   ~ArrangerComponent() override;
 
+#ifndef ZENITH_USE_SKIA
   void paint(juce::Graphics &g) override;
+#endif
   void resized() override;
 
   void mouseDown(const juce::MouseEvent &e) override;
@@ -76,9 +78,6 @@ public:
 
 #ifdef ZENITH_USE_SKIA
   void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
-  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
-
-  bool supportsSkiaRendering() const override { return true; }
 #endif
 
 private:

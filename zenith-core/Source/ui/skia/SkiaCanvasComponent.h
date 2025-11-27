@@ -23,17 +23,15 @@ namespace zenith {
  * It also implements SkiaComponent to support direct rendering when
  * hosted by a Skia-aware parent (like MainWindow).
  */
-class SkiaCanvasComponent : public juce::Component, public SkiaComponent {
+class SkiaCanvasComponent : public SkiaComponent {
 public:
   SkiaCanvasComponent();
   ~SkiaCanvasComponent() override;
 
-  void paint(juce::Graphics &g) override;
   void resized() override;
 
   // SkiaComponent implementation
-  bool supportsSkiaRendering() const override { return true; }
-  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
+  void drawSkia(SkCanvas *canvas) override;
 
 protected:
   /**

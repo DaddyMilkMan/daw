@@ -57310,3 +57310,59 @@ SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct 
 Successfully created Skia GrDirectContext for framebuffer rendering
 SkiaMainWindowIntegration: Rendering 5 child components
 Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!
+>>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<
+→ Initializing SkiaRenderer...
+SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context created, will initialize Skia on first render
+SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering
+Successfully created Skia GrDirectContext for framebuffer rendering
+SkiaMainWindowIntegration: Rendering 5 child components
+Skia framebuffer rendering initialized successfully!

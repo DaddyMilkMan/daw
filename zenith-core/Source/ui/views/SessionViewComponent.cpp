@@ -1,16 +1,9 @@
 /**
  * @file SessionViewComponent.cpp
- * @brief PROFESSIONAL SESSION VIEW - Ableton Live Quality
+ * @brief Professional Session/Clip Launcher View - Clean Empty DAW Design
  * 
- * Features:
- * - Clip launcher grid with professional styling
- * - Real-time play progress indicators
- * - Material design clip slots with depth
- * - Recording indicators with pulse animation
- * - Scene launch buttons
- * - Track headers with meters
- * - Stop/Solo/Arm buttons per track
- * - Glass morphism effects
+ * GPU-accelerated Skia rendering for smooth 60fps animations.
+ * Starts empty like Ableton Live - user creates their own content.
  */
 
 #include "SessionViewComponent.h"
@@ -26,16 +19,48 @@
 namespace zenith {
 
 //==============================================================================
-// Constants
+// Design Constants (8px grid)
 //==============================================================================
 
-static constexpr float TRACK_HEADER_HEIGHT = 48.0f;
-static constexpr float SCENE_HEADER_WIDTH = 80.0f;
-static constexpr float CLIP_MIN_WIDTH = 120.0f;
-static constexpr float CLIP_MIN_HEIGHT = 80.0f;
-static constexpr float CLIP_GAP = 8.0f;
-static constexpr float CORNER_RADIUS = 6.0f;
-static constexpr float METER_HEIGHT = 4.0f;
+static constexpr float TRACK_HEADER_HEIGHT = 80.0f;
+static constexpr float SCENE_HEADER_WIDTH = 48.0f;
+static constexpr float CLIP_GAP = 2.0f;
+static constexpr float CORNER_RADIUS = 4.0f;
+static constexpr float SMALL_RADIUS = 2.0f;
+static constexpr float METER_WIDTH = 4.0f;
+static constexpr float TRACK_WIDTH = 100.0f;
+static constexpr float CLIP_HEIGHT = 48.0f;
+
+//==============================================================================
+// Color Palette - Professional Dark Theme
+//==============================================================================
+
+static constexpr SkColor BG_DARKEST = 0xFF0D0D0D;
+static constexpr SkColor BG_DARK = 0xFF141414;
+static constexpr SkColor BG_MID = 0xFF1A1A1A;
+static constexpr SkColor BG_LIGHT = 0xFF242424;
+
+static constexpr SkColor SURFACE = 0xFF1E1E1E;
+static constexpr SkColor SURFACE_ELEVATED = 0xFF2A2A2A;
+
+static constexpr SkColor ACCENT_PRIMARY = 0xFF00B4D8;  // Cyan accent
+static constexpr SkColor ACCENT_WARM = 0xFFFF9500;     // Orange for record/arm
+
+static constexpr SkColor TEXT_PRIMARY = 0xFFE0E0E0;
+static constexpr SkColor TEXT_SECONDARY = 0xFF909090;
+static constexpr SkColor TEXT_MUTED = 0xFF505050;
+
+static constexpr SkColor BORDER_SUBTLE = 0xFF2A2A2A;
+static constexpr SkColor BORDER_LIGHT = 0xFF3A3A3A;
+
+static constexpr SkColor METER_GREEN = 0xFF4ADE80;
+static constexpr SkColor METER_YELLOW = 0xFFFACC15;
+static constexpr SkColor METER_RED = 0xFFEF4444;
+
+// Track arm/solo/mute button colors
+static constexpr SkColor BTN_ARM = 0xFFEF4444;
+static constexpr SkColor BTN_SOLO = 0xFFFACC15;
+static constexpr SkColor BTN_MUTE = 0xFF3B82F6;
 
 //==============================================================================
 // Construction
@@ -43,341 +68,310 @@ static constexpr float METER_HEIGHT = 4.0f;
 
 SessionViewComponent::SessionViewComponent() {
   setSize(1200, 800);
-
-  // Initialize demo data
-  for (int track = 0; track < NUM_TRACKS; ++track) {
-    for (int scene = 0; scene < NUM_SCENES; ++scene) {
-      auto &slot = grid[track][scene];
-
-      // Add some demo clips
-      if ((track + scene) % 3 == 0) {
-        slot.hasClip = true;
-        slot.name = "Clip " + juce::String(track + 1) + "-" +
-                    juce::String(scene + 1);
-        slot.playProgress = 0.0f;
-
-        // Assign colors based on track
-        auto &colors = SkiaTheme::getInstance().getColors();
-        switch (track % 5) {
-        case 0:
-          slot.color = colors.clipDrums;
-          break;
-        case 1:
-          slot.color = colors.clipBass;
-          break;
-        case 2:
-          slot.color = colors.clipHarmony;
-          break;
-        case 3:
-          slot.color = colors.clipLeads;
-          break;
-        case 4:
-          slot.color = colors.clipFX;
-          break;
-        }
-      }
-    }
+  
+  // Initialize empty - no demo data, like a real DAW
+  for (int i = 0; i < NUM_TRACKS; ++i) {
+    trackNames[i] = juce::String(i + 1) + "-Audio";
+    trackMeterValues[i] = 0.0f;
   }
 
-  // Start animation timer for play progress
+  // Clear all slots - start empty
+  for (int track = 0; track < NUM_TRACKS; ++track) {
+    for (int scene = 0; scene < NUM_SCENES; ++scene) {
+      grid[track][scene] = ClipSlot(); // Empty by default
+    }
+  }
+  
   startTimerHz(60);
 }
 
-SessionViewComponent::~SessionViewComponent() { stopTimer(); }
+SessionViewComponent::~SessionViewComponent() { 
+  stopTimer(); 
+}
+
+void SessionViewComponent::initializeDemoData() {
+  // Intentionally empty - DAW starts clean
+}
 
 //==============================================================================
 // Interaction
 //==============================================================================
 
 void SessionViewComponent::mouseDown(const juce::MouseEvent &e) {
-  if (e.mods.isLeftButtonDown()) {
-    // Calculate which clip slot was clicked
-    float clipWidth =
-        (getWidth() - SCENE_HEADER_WIDTH) / NUM_TRACKS - CLIP_GAP;
-    float clipHeight =
-        (getHeight() - TRACK_HEADER_HEIGHT) / NUM_SCENES - CLIP_GAP;
-
-    int track = static_cast<int>((e.position.x - SCENE_HEADER_WIDTH) /
-                                 (clipWidth + CLIP_GAP));
-    int scene = static_cast<int>((e.position.y - TRACK_HEADER_HEIGHT) /
-                                 (clipHeight + CLIP_GAP));
-
-    if (track >= 0 && track < NUM_TRACKS && scene >= 0 && scene < NUM_SCENES) {
-      auto &slot = grid[track][scene];
-
-      if (slot.hasClip) {
-        // Toggle play state
-        slot.isPlaying = !slot.isPlaying;
-        if (slot.isPlaying) {
-          slot.playProgress = 0.0f;
-        }
-        repaint();
+  auto [track, scene] = getSlotAtPosition(e.position);
+  
+  if (track >= 0 && track < NUM_TRACKS && scene >= 0 && scene < NUM_SCENES) {
+    auto &slot = grid[track][scene];
+    
+    if (slot.hasClip) {
+      slot.isPlaying = !slot.isPlaying;
+      if (slot.isPlaying) {
+        slot.playProgress = 0.0f;
       }
+      repaint();
     }
   }
 }
 
 void SessionViewComponent::mouseMove(const juce::MouseEvent &e) {
-  // Update hover state
-  float clipWidth = (getWidth() - SCENE_HEADER_WIDTH) / NUM_TRACKS - CLIP_GAP;
-  float clipHeight = (getHeight() - TRACK_HEADER_HEIGHT) / NUM_SCENES - CLIP_GAP;
-
-  int track =
-      static_cast<int>((e.position.x - SCENE_HEADER_WIDTH) / (clipWidth + CLIP_GAP));
-  int scene =
-      static_cast<int>((e.position.y - TRACK_HEADER_HEIGHT) / (clipHeight + CLIP_GAP));
-
+  auto [track, scene] = getSlotAtPosition(e.position);
   juce::Point<int> newHover = {track, scene};
-
+  
   if (newHover != hoveredSlot) {
     hoveredSlot = newHover;
     repaint();
   }
 }
 
+void SessionViewComponent::mouseExit(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  hoveredSlot = {-1, -1};
+  repaint();
+}
+
+std::pair<int, int> SessionViewComponent::getSlotAtPosition(juce::Point<float> pos) const {
+  if (pos.x < SCENE_HEADER_WIDTH || pos.y < TRACK_HEADER_HEIGHT) {
+    return {-1, -1};
+  }
+  
+  int track = static_cast<int>((pos.x - SCENE_HEADER_WIDTH) / (TRACK_WIDTH + CLIP_GAP));
+  int scene = static_cast<int>((pos.y - TRACK_HEADER_HEIGHT) / (CLIP_HEIGHT + CLIP_GAP));
+  
+  if (track < 0 || track >= NUM_TRACKS || scene < 0 || scene >= NUM_SCENES) {
+    return {-1, -1};
+  }
+  
+  return {track, scene};
+}
+
 //==============================================================================
-// Timer Callback (Animation)
+// Timer Callback
 //==============================================================================
 
 void SessionViewComponent::timerCallback() {
   bool needsRepaint = false;
-
-  // Update play progress for playing clips
+  
   for (int track = 0; track < NUM_TRACKS; ++track) {
     for (int scene = 0; scene < NUM_SCENES; ++scene) {
       auto &slot = grid[track][scene];
-
+      
       if (slot.isPlaying) {
-        slot.playProgress += 0.016f; // ~60 FPS
+        slot.playProgress += 0.008f;
         if (slot.playProgress >= 1.0f) {
-          slot.playProgress = 0.0f; // Loop
+          slot.playProgress = 0.0f;
         }
         needsRepaint = true;
       }
     }
   }
-
+  
   if (needsRepaint) {
     repaint();
   }
 }
 
 //==============================================================================
-// Rendering
+// Main Rendering
 //==============================================================================
 
-void SessionViewComponent::paintSkia(SkCanvas &canvas,
-                                     const juce::Rectangle<int> &bounds) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-
-  // TEMP: Draw bright test content to verify rendering
-  SkPaint testPaint;
-  testPaint.setAntiAlias(true);
-  testPaint.setColor(SK_ColorRED);
-  canvas.drawRect(SkRect::MakeXYWH(10, 10, 200, 100), testPaint);
+void SessionViewComponent::paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) {
+  // Dark background
+  canvas.clear(BG_DARKEST);
   
-  testPaint.setColor(SK_ColorGREEN);
-  canvas.drawRect(SkRect::MakeXYWH(220, 10, 200, 100), testPaint);
+  // Draw track headers (top)
+  drawTrackHeaders(canvas, bounds, TRACK_WIDTH);
   
-  testPaint.setColor(SK_ColorBLUE);
-  canvas.drawRect(SkRect::MakeXYWH(10, 120, 200, 100), testPaint);
+  // Draw scene headers (left)
+  drawSceneHeaders(canvas, bounds, CLIP_HEIGHT);
   
-  testPaint.setColor(SK_ColorYELLOW);
-  canvas.drawCircle(320, 170, 50, testPaint);
-  
-  // Test text
-  SkFont testFont;
-  testFont.setSize(24);
-  testPaint.setColor(SK_ColorWHITE);
-  canvas.drawString("ZENITH DAW RENDERING TEST", 10, 250, testFont, testPaint);
-
-  // Background
-  SkPaint bgPaint;
-  bgPaint.setAntiAlias(true);
-  bgPaint.setColor(0xFF1A1A1F);  // Slightly lighter than pure black
-  canvas.drawRect(
-      SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
-
-  // Calculate dimensions
-  float clipWidth = (bounds.getWidth() - SCENE_HEADER_WIDTH) / NUM_TRACKS - CLIP_GAP;
-  float clipHeight = (bounds.getHeight() - TRACK_HEADER_HEIGHT) / NUM_SCENES - CLIP_GAP;
-
-  clipWidth = std::max(clipWidth, CLIP_MIN_WIDTH);
-  clipHeight = std::max(clipHeight, CLIP_MIN_HEIGHT);
-
-  // Draw scene headers (left column)
-  drawSceneHeaders(canvas, bounds, clipHeight);
-
-  // Draw track headers (top row)
-  drawTrackHeaders(canvas, bounds, clipWidth);
-
   // Draw clip grid
-  drawClipGrid(canvas, bounds, clipWidth, clipHeight);
-
-  // Draw master section (bottom right)
-  drawMasterSection(canvas, bounds);
+  drawClipGrid(canvas, bounds, TRACK_WIDTH, CLIP_HEIGHT);
+  
+  // Draw grid lines
+  drawGridLines(canvas, bounds);
 }
 
-void SessionViewComponent::drawSceneHeaders(SkCanvas &canvas,
-                                            const juce::Rectangle<int> &bounds,
+void SessionViewComponent::drawBackground(SkCanvas &canvas, const juce::Rectangle<int> &bounds) {
+  canvas.clear(BG_DARKEST);
+}
+
+void SessionViewComponent::drawGridPanel(SkCanvas &canvas, const juce::Rectangle<int> &bounds,
+                                         float clipWidth, float clipHeight) {
+  juce::ignoreUnused(canvas, bounds, clipWidth, clipHeight);
+}
+
+//==============================================================================
+// Grid Lines
+//==============================================================================
+
+void SessionViewComponent::drawGridLines(SkCanvas &canvas, const juce::Rectangle<int> &bounds) {
+  SkPaint linePaint;
+  linePaint.setColor(BORDER_SUBTLE);
+  linePaint.setStrokeWidth(1.0f);
+  linePaint.setAntiAlias(false); // Crisp lines
+  
+  // Vertical lines between tracks
+  for (int track = 0; track <= NUM_TRACKS; ++track) {
+    float x = SCENE_HEADER_WIDTH + track * (TRACK_WIDTH + CLIP_GAP);
+    canvas.drawLine(x, 0, x, static_cast<float>(bounds.getHeight()), linePaint);
+  }
+  
+  // Horizontal lines between scenes
+  for (int scene = 0; scene <= NUM_SCENES; ++scene) {
+    float y = TRACK_HEADER_HEIGHT + scene * (CLIP_HEIGHT + CLIP_GAP);
+    canvas.drawLine(SCENE_HEADER_WIDTH, y, static_cast<float>(bounds.getWidth()), y, linePaint);
+  }
+}
+
+//==============================================================================
+// Scene Headers (Left Column)
+//==============================================================================
+
+void SessionViewComponent::drawSceneHeaders(SkCanvas &canvas, const juce::Rectangle<int> &bounds,
                                             float clipHeight) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-  auto &typo = theme.getTypography();
-
+  juce::ignoreUnused(bounds);
+  
   SkFont font;
-  font.setSize(typo.body.size);
-
+  font.setSize(11.0f);
+  
   for (int scene = 0; scene < NUM_SCENES; ++scene) {
     float y = TRACK_HEADER_HEIGHT + scene * (clipHeight + CLIP_GAP);
-
-    SkRect sceneRect =
-        SkRect::MakeXYWH(CLIP_GAP, y, SCENE_HEADER_WIDTH - CLIP_GAP * 2, clipHeight);
-
-    // Scene launch button (glass morphism style)
+    
+    SkRect sceneRect = SkRect::MakeXYWH(0, y, SCENE_HEADER_WIDTH, clipHeight);
+    
+    // Scene background
     SkPaint scenePaint;
-    scenePaint.setAntiAlias(true);
-
-    // Gradient background (dark to slightly lighter)
-    SkPoint pts[2] = {{sceneRect.left(), sceneRect.top()},
-                      {sceneRect.left(), sceneRect.bottom()}};
-    SkColor gradColors[2] = {0xFF151515, 0xFF1F1F1F};
-    sk_sp<SkShader> gradient =
-        SkGradientShader::MakeLinear(pts, gradColors, nullptr, 2, SkTileMode::kClamp);
-    scenePaint.setShader(gradient);
-
-    SkRRect sceneRRect =
-        SkRRect::MakeRectXY(sceneRect, CORNER_RADIUS, CORNER_RADIUS);
-    canvas.drawRRect(sceneRRect, scenePaint);
-
-    // Border
-    SkPaint borderPaint;
-    borderPaint.setAntiAlias(true);
-    borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setColor(colors.borderSubtle);
-    canvas.drawRRect(sceneRRect, borderPaint);
-
+    scenePaint.setColor(BG_MID);
+    canvas.drawRect(sceneRect, scenePaint);
+    
     // Scene number
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    textPaint.setColor(colors.textMuted);
-
-    juce::String sceneNum = juce::String(scene + 1);
-    SkRect textBounds;
-    font.measureText(sceneNum.toRawUTF8(), sceneNum.length(),
-                     SkTextEncoding::kUTF8, &textBounds);
-
-    float textX = sceneRect.centerX() - textBounds.width() / 2;
-    float textY = sceneRect.centerY() + typo.body.size / 2 - 2;
-
-    canvas.drawString(sceneNum.toRawUTF8(), textX, textY, font, textPaint);
-
-    // Play triangle icon
-    SkPaint iconPaint;
-    iconPaint.setAntiAlias(true);
-    iconPaint.setColor(colors.accentMain);
-
-    SkPath triangle;
-    float iconSize = 12.0f;
-    float iconX = sceneRect.centerX();
-    float iconY = sceneRect.bottom() - iconSize - 8.0f;
-
-    triangle.moveTo(iconX - iconSize / 3, iconY);
-    triangle.lineTo(iconX + iconSize * 2 / 3, iconY + iconSize / 2);
-    triangle.lineTo(iconX - iconSize / 3, iconY + iconSize);
-    triangle.close();
-
-    canvas.drawPath(triangle, iconPaint);
+    textPaint.setColor(TEXT_MUTED);
+    
+    juce::String sceneLabel = juce::String(scene + 1);
+    canvas.drawString(sceneLabel.toRawUTF8(), 
+                      sceneRect.centerX() - 4, 
+                      sceneRect.centerY() + 4, 
+                      font, textPaint);
   }
+  
+  // Master/Scene launch header
+  SkRect masterRect = SkRect::MakeXYWH(0, 0, SCENE_HEADER_WIDTH, TRACK_HEADER_HEIGHT);
+  SkPaint masterPaint;
+  masterPaint.setColor(BG_DARK);
+  canvas.drawRect(masterRect, masterPaint);
 }
 
-void SessionViewComponent::drawTrackHeaders(SkCanvas &canvas,
-                                            const juce::Rectangle<int> &bounds,
+//==============================================================================
+// Track Headers (Top Row) - Like Ableton
+//==============================================================================
+
+void SessionViewComponent::drawTrackHeaders(SkCanvas &canvas, const juce::Rectangle<int> &bounds,
                                             float clipWidth) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-  auto &typo = theme.getTypography();
-
+  juce::ignoreUnused(bounds);
+  
   SkFont font;
-  font.setSize(typo.small.size);
-
+  font.setSize(10.0f);
+  
+  SkFont boldFont;
+  boldFont.setSize(11.0f);
+  boldFont.setEmbolden(true);
+  
   for (int track = 0; track < NUM_TRACKS; ++track) {
     float x = SCENE_HEADER_WIDTH + track * (clipWidth + CLIP_GAP);
-
-    SkRect headerRect = SkRect::MakeXYWH(x, CLIP_GAP, clipWidth,
-                                         TRACK_HEADER_HEIGHT - CLIP_GAP * 2);
-
-    // Header background (dark with subtle gradient)
+    
+    SkRect headerRect = SkRect::MakeXYWH(x, 0, clipWidth, TRACK_HEADER_HEIGHT);
+    
+    // Header background
     SkPaint headerPaint;
-    headerPaint.setAntiAlias(true);
-    headerPaint.setColor(colors.bg1);
-
-    SkRRect headerRRect =
-        SkRRect::MakeRectXY(headerRect, CORNER_RADIUS, CORNER_RADIUS);
-    canvas.drawRRect(headerRRect, headerPaint);
-
-    // Track name
+    headerPaint.setColor(BG_MID);
+    canvas.drawRect(headerRect, headerPaint);
+    
+    // Track number and name
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    textPaint.setColor(colors.textStrong);
-
-    juce::String trackName = juce::String(track + 1) + " - Track";
-    canvas.drawString(trackName.toRawUTF8(), x + 8, CLIP_GAP + 16, font,
-                      textPaint);
-
-    // Level meter (thin horizontal bar at bottom)
-    float meterY = headerRect.bottom() - METER_HEIGHT - 4;
-    float meterWidth = headerRect.width() - 16;
-    float meterValue = 0.7f; // Demo value
-
-    SkRect meterBg = SkRect::MakeXYWH(x + 8, meterY, meterWidth, METER_HEIGHT);
-
+    textPaint.setColor(TEXT_SECONDARY);
+    
+    juce::String trackLabel = juce::String(track + 1) + " Audio";
+    canvas.drawString(trackLabel.toRawUTF8(), x + 8, 18, boldFont, textPaint);
+    
+    // Arm button (circle)
+    float btnY = 28;
+    float btnSize = 14.0f;
+    float btnSpacing = 20.0f;
+    
+    // Record arm button
+    SkPaint armPaint;
+    armPaint.setAntiAlias(true);
+    armPaint.setStyle(SkPaint::kStroke_Style);
+    armPaint.setStrokeWidth(1.5f);
+    armPaint.setColor(TEXT_MUTED);
+    canvas.drawCircle(x + 14, btnY + btnSize/2, btnSize/2 - 1, armPaint);
+    
+    // Solo button "S"
+    SkPaint soloPaint;
+    soloPaint.setAntiAlias(true);
+    soloPaint.setColor(TEXT_MUTED);
+    canvas.drawString("S", x + 14 + btnSpacing, btnY + 11, font, soloPaint);
+    
+    // Mute button "M"  
+    canvas.drawString("M", x + 14 + btnSpacing * 2, btnY + 11, font, soloPaint);
+    
+    // Level meter (vertical)
+    float meterX = x + clipWidth - METER_WIDTH - 6;
+    float meterTop = 8;
+    float meterHeight = TRACK_HEADER_HEIGHT - 16;
+    
     // Meter background
+    SkRect meterBg = SkRect::MakeXYWH(meterX, meterTop, METER_WIDTH, meterHeight);
     SkPaint meterBgPaint;
-    meterBgPaint.setAntiAlias(true);
-    meterBgPaint.setColor(colors.bg3);
-    canvas.drawRoundRect(meterBg, 2, 2, meterBgPaint);
-
-    // Meter fill (gradient green to yellow)
-    if (meterValue > 0.0f) {
-      SkRect meterFill = SkRect::MakeXYWH(x + 8, meterY, meterWidth * meterValue,
-                                          METER_HEIGHT);
-
+    meterBgPaint.setColor(BG_DARKEST);
+    canvas.drawRect(meterBg, meterBgPaint);
+    
+    // Meter fill (from bottom up)
+    float level = trackMeterValues[track];
+    if (level > 0.0f) {
+      float fillHeight = meterHeight * level;
+      SkRect meterFill = SkRect::MakeXYWH(meterX, meterTop + meterHeight - fillHeight, 
+                                           METER_WIDTH, fillHeight);
       SkPaint meterPaint;
-      meterPaint.setAntiAlias(true);
-
-      SkPoint meterPts[2] = {{meterFill.left(), meterFill.top()},
-                             {meterFill.right(), meterFill.top()}};
-      SkColor meterColors[2] = {colors.meterGreen, colors.meterYellow};
-      sk_sp<SkShader> meterGrad = SkGradientShader::MakeLinear(
-          meterPts, meterColors, nullptr, 2, SkTileMode::kClamp);
-      meterPaint.setShader(meterGrad);
-
-      canvas.drawRoundRect(meterFill, 2, 2, meterPaint);
+      meterPaint.setColor(METER_GREEN);
+      canvas.drawRect(meterFill, meterPaint);
     }
+    
+    // Volume fader area (simplified)
+    float faderY = 50;
+    SkPaint faderPaint;
+    faderPaint.setColor(TEXT_MUTED);
+    faderPaint.setAntiAlias(true);
+    canvas.drawString("0.0", x + 8, faderY + 12, font, faderPaint);
+    canvas.drawString("dB", x + 28, faderY + 12, font, faderPaint);
+    
+    // Pan knob area
+    canvas.drawString("C", x + 60, faderY + 12, font, faderPaint);
   }
 }
 
-void SessionViewComponent::drawClipGrid(SkCanvas &canvas,
-                                        const juce::Rectangle<int> &bounds,
-                                        float clipWidth, float clipHeight) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
+//==============================================================================
+// Clip Grid - Empty slots ready for content
+//==============================================================================
 
+void SessionViewComponent::drawClipGrid(SkCanvas &canvas, const juce::Rectangle<int> &bounds,
+                                        float clipWidth, float clipHeight) {
+  juce::ignoreUnused(bounds);
+  
   for (int track = 0; track < NUM_TRACKS; ++track) {
     for (int scene = 0; scene < NUM_SCENES; ++scene) {
       auto &slot = grid[track][scene];
-
+      
       float x = SCENE_HEADER_WIDTH + track * (clipWidth + CLIP_GAP);
       float y = TRACK_HEADER_HEIGHT + scene * (clipHeight + CLIP_GAP);
-
+      
       SkRect clipRect = SkRect::MakeXYWH(x, y, clipWidth, clipHeight);
-
-      bool isHovered =
-          (hoveredSlot.x == track && hoveredSlot.y == scene);
-
+      
+      bool isHovered = (hoveredSlot.x == track && hoveredSlot.y == scene);
+      
       if (slot.hasClip) {
         drawClipSlot(canvas, clipRect, slot, isHovered);
       } else {
@@ -389,188 +383,72 @@ void SessionViewComponent::drawClipGrid(SkCanvas &canvas,
 
 void SessionViewComponent::drawClipSlot(SkCanvas &canvas, const SkRect &rect,
                                         const ClipSlot &slot, bool isHovered) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-  auto &depth = theme.getDepthStyle();
-
-  // Shadow (depth effect)
-  if (slot.isPlaying) {
-    SkPaint shadowPaint;
-    shadowPaint.setAntiAlias(true);
-    shadowPaint.setColor(0x80000000);
-
-    sk_sp<SkImageFilter> blur =
-        SkImageFilters::Blur(depth.shadowBlur, depth.shadowBlur, nullptr);
-    shadowPaint.setImageFilter(blur);
-
-    SkRect shadowRect =
-        rect.makeOffset(0, depth.shadowOffsetY).makeOutset(2, 2);
-    SkRRect shadowRRect =
-        SkRRect::MakeRectXY(shadowRect, CORNER_RADIUS, CORNER_RADIUS);
-    canvas.drawRRect(shadowRRect, shadowPaint);
-  }
-
-  // Clip background (gradient from clip color)
+  // Clip background
   SkPaint clipPaint;
   clipPaint.setAntiAlias(true);
-
-  // Create vertical gradient (darker at top, brighter at bottom)
-  SkPoint pts[2] = {{rect.left(), rect.top()}, {rect.left(), rect.bottom()}};
-
-  SkColor baseColor = slot.color;
-  SkColor darkColor = SkColorSetARGB(
-      SkColorGetA(baseColor), SkColorGetR(baseColor) * 0.3f,
-      SkColorGetG(baseColor) * 0.3f, SkColorGetB(baseColor) * 0.3f);
-  SkColor brightColor = SkColorSetARGB(
-      SkColorGetA(baseColor), std::min(255.0f, SkColorGetR(baseColor) * 1.2f),
-      std::min(255.0f, SkColorGetG(baseColor) * 1.2f),
-      std::min(255.0f, SkColorGetB(baseColor) * 1.2f));
-
-  SkColor gradColors[2] = {darkColor, brightColor};
-  sk_sp<SkShader> gradient =
-      SkGradientShader::MakeLinear(pts, gradColors, nullptr, 2, SkTileMode::kClamp);
-  clipPaint.setShader(gradient);
-
-  SkRRect clipRRect = SkRRect::MakeRectXY(rect, CORNER_RADIUS, CORNER_RADIUS);
+  clipPaint.setColor(slot.color);
+  
+  SkRRect clipRRect = SkRRect::MakeRectXY(rect, SMALL_RADIUS, SMALL_RADIUS);
   canvas.drawRRect(clipRRect, clipPaint);
-
-  // Glow effect when playing
-  if (slot.isPlaying) {
-    SkPaint glowPaint;
-    glowPaint.setAntiAlias(true);
-    glowPaint.setColor(slot.color);
-    glowPaint.setAlpha(60);
-
-    sk_sp<SkImageFilter> glow = SkImageFilters::Blur(8.0f, 8.0f, nullptr);
-    glowPaint.setImageFilter(glow);
-
-    canvas.drawRRect(clipRRect, glowPaint);
-  }
-
-  // Play progress bar (bottom)
-  if (slot.isPlaying && slot.playProgress > 0.0f) {
-    float progressWidth = rect.width() * slot.playProgress;
-
-    SkRect progressRect = SkRect::MakeXYWH(rect.left(), rect.bottom() - 4,
-                                           progressWidth, 4);
-
-    SkPaint progressPaint;
-    progressPaint.setAntiAlias(true);
-    progressPaint.setColor(colors.accentMain);
-
-    // Add glow to progress bar
-    sk_sp<SkImageFilter> progressGlow =
-        SkImageFilters::Blur(4.0f, 4.0f, nullptr);
-    progressPaint.setImageFilter(progressGlow);
-
-    canvas.drawRect(progressRect, progressPaint);
-  }
-
-  // Hover overlay
-  if (isHovered) {
-    SkPaint hoverPaint;
-    hoverPaint.setAntiAlias(true);
-    hoverPaint.setColor(theme.getInteraction().hoverOverlay);
-    canvas.drawRRect(clipRRect, hoverPaint);
-  }
-
-  // Border
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(slot.isPlaying ? 2.0f : 1.0f);
-  borderPaint.setColor(slot.isPlaying ? colors.accentMain : colors.borderSubtle);
-  canvas.drawRRect(clipRRect, borderPaint);
-
+  
   // Clip name
-  auto &typo = theme.getTypography();
   SkFont font;
-  font.setSize(typo.body.size);
-
+  font.setSize(10.0f);
+  
   SkPaint textPaint;
   textPaint.setAntiAlias(true);
-  textPaint.setColor(colors.textStrong);
-
-  canvas.drawString(slot.name.toRawUTF8(), rect.left() + 8, rect.top() + 20,
-                    font, textPaint);
-
-  // Play indicator (triangle)
+  textPaint.setColor(0xFF000000); // Black text on colored clip
+  
+  canvas.drawString(slot.name.toRawUTF8(), rect.left() + 6, rect.top() + 14, font, textPaint);
+  
+  // Playing indicator
   if (slot.isPlaying) {
-    SkPaint playPaint;
-    playPaint.setAntiAlias(true);
-    playPaint.setColor(colors.accentMain);
-
-    SkPath playTriangle;
-    float iconX = rect.left() + 8;
-    float iconY = rect.top() + 30;
-    float iconSize = 10.0f;
-
-    playTriangle.moveTo(iconX, iconY);
-    playTriangle.lineTo(iconX + iconSize, iconY + iconSize / 2);
-    playTriangle.lineTo(iconX, iconY + iconSize);
-    playTriangle.close();
-
-    canvas.drawPath(playTriangle, playPaint);
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(2.0f);
+    borderPaint.setColor(0xFFFFFFFF);
+    canvas.drawRRect(clipRRect, borderPaint);
   }
-}
-
-void SessionViewComponent::drawEmptySlot(SkCanvas &canvas, const SkRect &rect,
-                                         bool isHovered) {
-  auto &theme = SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
-
-  // Empty slot background (very dark)
-  SkPaint emptyPaint;
-  emptyPaint.setAntiAlias(true);
-  emptyPaint.setColor(colors.bg0);  // Pure black
-
-  SkRRect emptyRRect = SkRRect::MakeRectXY(rect, CORNER_RADIUS, CORNER_RADIUS);
-  canvas.drawRRect(emptyRRect, emptyPaint);
-
-  // Dashed border (subtle)
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(colors.borderSubtle);
-
-  // Dashed effect
-  float intervals[] = {4.0f, 4.0f};
-  borderPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
-
-  canvas.drawRRect(emptyRRect, borderPaint);
-
-  // Hover overlay (suggest drop zone)
-  if (isHovered) {
+  
+  // Hover overlay
+  if (isHovered && !slot.isPlaying) {
     SkPaint hoverPaint;
-    hoverPaint.setAntiAlias(true);
-    hoverPaint.setColor(0x14FFFFFF);  // Subtle white tint
-    canvas.drawRRect(emptyRRect, hoverPaint);
-  }
-
-  // Plus icon (suggest add clip)
-  if (isHovered) {
-    SkPaint plusPaint;
-    plusPaint.setAntiAlias(true);
-    plusPaint.setStyle(SkPaint::kStroke_Style);
-    plusPaint.setStrokeWidth(2.0f);
-    plusPaint.setColor(colors.textSubtle);
-
-    float centerX = rect.centerX();
-    float centerY = rect.centerY();
-    float iconSize = 16.0f;
-
-    canvas.drawLine(centerX - iconSize / 2, centerY, centerX + iconSize / 2,
-                    centerY, plusPaint);
-    canvas.drawLine(centerX, centerY - iconSize / 2, centerX,
-                    centerY + iconSize / 2, plusPaint);
+    hoverPaint.setColor(0x20FFFFFF);
+    canvas.drawRRect(clipRRect, hoverPaint);
   }
 }
 
-void SessionViewComponent::drawMasterSection(SkCanvas &canvas,
-                                             const juce::Rectangle<int> &bounds) {
-  // Master track controls (volume, pan, etc.) could go here
-  // For now, keep it minimal
+void SessionViewComponent::drawWaveform(SkCanvas &canvas, const SkRect &rect, const ClipSlot &slot) {
+  juce::ignoreUnused(canvas, rect, slot);
+}
+
+void SessionViewComponent::drawEmptySlot(SkCanvas &canvas, const SkRect &rect, bool isHovered) {
+  // Empty slot - subtle dark background
+  SkPaint emptyPaint;
+  emptyPaint.setColor(isHovered ? BG_LIGHT : BG_DARK);
+  canvas.drawRect(rect, emptyPaint);
+  
+  // Stop button in center (small square) - appears on hover
+  if (isHovered) {
+    float stopSize = 8.0f;
+    SkRect stopRect = SkRect::MakeXYWH(
+      rect.centerX() - stopSize/2,
+      rect.centerY() - stopSize/2,
+      stopSize, stopSize
+    );
+    
+    SkPaint stopPaint;
+    stopPaint.setAntiAlias(true);
+    stopPaint.setStyle(SkPaint::kStroke_Style);
+    stopPaint.setStrokeWidth(1.0f);
+    stopPaint.setColor(TEXT_MUTED);
+    canvas.drawRect(stopRect, stopPaint);
+  }
+}
+
+void SessionViewComponent::drawMasterSection(SkCanvas &canvas, const juce::Rectangle<int> &bounds) {
+  juce::ignoreUnused(canvas, bounds);
 }
 
 } // namespace zenith

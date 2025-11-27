@@ -1,110 +1,78 @@
-/**
- * @file RightSidePanel.h
- * @brief Right-side panel hosting Scratch Pads and Wingman Console
- *
- * Vertically split panel containing:
- * - Top: Scratch Pads area (placeholder for future arrangements)
- * - Bottom: Wingman Console panel
- * - Resizable splitter between them
- */
-
+/*
+  ==============================================================================
+    RightSidePanel.h
+    The container for the right-hand AI assistant panel (Wingman)
+    Full Skia rendering - professional DAW inspector/AI panel
+  ==============================================================================
+*/
 #pragma once
-
-#include "SkiaCanvasComponent.h"
+#include "SkiaComponent.h"
 #include "SkiaTheme.h"
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
 
-// Forward declarations (global namespace)
-class WingmanPanel;
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#endif
 
 namespace zenith {
 
-/**
- * @class RightSidePanel
- * @brief Right panel with Scratch Pads and Wingman Console
- *
- * Provides:
- * - Scratch Pads area for quick ideas/arrangements
- * - Wingman AI command console
- * - Vertical resizing between sections
- */
-class RightSidePanel : public juce::Component, public SkiaComponent {
+class RightSidePanel : public SkiaComponent, public juce::Timer {
 public:
-  //==========================================================================
-  // Construction
-  //==========================================================================
-
   RightSidePanel();
-  ~RightSidePanel() override = default;
-
-  //==========================================================================
-  // SkiaComponent Implementation
-  //==========================================================================
-
-  bool supportsSkiaRendering() const override { return true; }
-  void paintToSkia(SkCanvas *canvas, SkRect bounds) override;
-
-  //==========================================================================
-  // Panel Access
-  //==========================================================================
-
-  void setWingmanPanel(WingmanPanel *panel);
-  WingmanPanel *getWingmanPanel() const { return wingmanPanel_; }
-
-  void setWingmanPanelHeight(int height);
-  int getWingmanPanelHeight() const { return wingmanHeight_; }
-
-  //==========================================================================
-  // Component Overrides
-  //==========================================================================
+  ~RightSidePanel() override;
 
   void resized() override;
-  void paint(juce::Graphics &g) override;
+  
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(SkCanvas *canvas) override;
+#endif
 
-  void mouseDown(const juce::MouseEvent &event) override;
-  void mouseDrag(const juce::MouseEvent &event) override;
-  void mouseMove(const juce::MouseEvent &event) override;
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
+  
+  void timerCallback() override;
 
-private:
-  //==========================================================================
-  // Scratch Pads Component (Placeholder)
-  //==========================================================================
-
-  class ScratchPadsPanel : public SkiaCanvasComponent {
-  public:
-    ScratchPadsPanel();
-    ~ScratchPadsPanel() override = default;
-
-  protected:
-    void paintSkia(SkCanvas &canvas,
-                   const juce::Rectangle<int> &bounds) override;
-
-  private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ScratchPadsPanel)
+  // Chat message structure
+  struct ChatMessage {
+    juce::String text;
+    bool isUser;
+    juce::int64 timestamp;
   };
 
-  //==========================================================================
-  // Internal Methods
-  //==========================================================================
+  // Add a message to the chat
+  void addMessage(const juce::String& text, bool isUser);
 
-  juce::Rectangle<int> getSplitterBounds() const;
-  bool isSplitterHovered(const juce::Point<int> &point) const;
+  // Deprecated - kept for compatibility
+  void setWingmanPanel(juce::Component *panel) { juce::ignoreUnused(panel); }
 
-  //==========================================================================
+private:
+  // Drawing methods
+  void drawBackground(SkCanvas *canvas);
+  void drawHeader(SkCanvas *canvas);
+  void drawChatArea(SkCanvas *canvas);
+  void drawInputArea(SkCanvas *canvas);
+  void drawConnectionStatus(SkCanvas *canvas);
+
+  // Hit testing
+  enum class HitZone { None, SendButton, InputField, ChatArea };
+  HitZone hitTest(juce::Point<int> pos) const;
+
   // State
-  //==========================================================================
+  std::vector<ChatMessage> messages_;
+  juce::String inputText_;
+  float scrollOffset_ = 0.0f;
+  HitZone hoveredZone_ = HitZone::None;
+  bool isConnected_ = false;
+  float connectionPulse_ = 0.0f;
 
-  std::unique_ptr<ScratchPadsPanel> scratchPadsPanel_;
-  WingmanPanel *wingmanPanel_ = nullptr; // Not owned by this component
-
-  int wingmanHeight_ = 300;
-  static constexpr int MIN_WINGMAN_HEIGHT = 200;
-  static constexpr int SPLITTER_HEIGHT = 6;
-
-  bool isDraggingSplitter_ = false;
-  bool isSplitterHovered_ = false;
-  int dragStartY_ = 0;
-  int dragStartHeight_ = 0;
+  // Layout constants
+  static constexpr float HEADER_HEIGHT = 48.0f;
+  static constexpr float INPUT_HEIGHT = 56.0f;
+  static constexpr float PADDING = 12.0f;
+  static constexpr float MESSAGE_GAP = 8.0f;
+  static constexpr float CORNER_RADIUS = 8.0f;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightSidePanel)
 };

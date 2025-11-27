@@ -20,15 +20,15 @@
 
 #pragma once
 
-#include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
@@ -36,382 +36,409 @@ namespace zenith {
  * @class ZenithLookAndFeel
  * @brief Modern vibrant professional design system for Zenith DAW
  */
-class ZenithLookAndFeel : public juce::LookAndFeel_V4
-{
+class ZenithLookAndFeel : public juce::LookAndFeel_V4 {
 public:
-    //==========================================================================
-    // Constructor
-    //==========================================================================
-    
-    ZenithLookAndFeel();
-    ~ZenithLookAndFeel() override = default;
+  //==========================================================================
+  // Constructor
+  //==========================================================================
 
-    //==========================================================================
-    // Design Tokens: Material Design Dark Theme Elevation
-    // Base: #121212 (0dp) with white overlays for elevation
-    //==========================================================================
-    
-    struct Elevation
-    {
-        // Material Design elevation system for dark mode
-        static constexpr juce::uint32 dp0  = 0xff121212;  // Base (0dp) - main background
-        static constexpr juce::uint32 dp1  = 0xff1e1e1e;  // 1dp (5% white overlay) - cards
-        static constexpr juce::uint32 dp2  = 0xff232323;  // 2dp (7% overlay) - panels
-        static constexpr juce::uint32 dp4  = 0xff272727;  // 4dp (9% overlay) - app bars
-        static constexpr juce::uint32 dp8  = 0xff2e2e2e;  // 8dp (12% overlay) - hover states
-        static constexpr juce::uint32 dp12 = 0xff333333;  // 12dp - raised panels
-        static constexpr juce::uint32 dp24 = 0xff383838;  // 24dp - dialogs/modals
-    };
+  ZenithLookAndFeel();
+  ~ZenithLookAndFeel() override = default;
 
-    //==========================================================================
-    // Design Tokens: Vibrant Professional Color Palette
-    // Following research: jewel tones, reduced saturation for dark mode
-    //==========================================================================
-    
-    struct Colors
-    {
-        // === Core Neutrals (60% of UI) ===
-        static constexpr juce::uint32 backgroundBase = 0xff121212;      // Material Design 0dp
-        static constexpr juce::uint32 backgroundRaised = 0xff1e1e1e;    // 1dp - tracks, panels
-        static constexpr juce::uint32 backgroundPanel = 0xff232323;     // 2dp - browser, mixer
-        static constexpr juce::uint32 backgroundElevated = 0xff2e2e2e;  // 8dp - hover states
-        static constexpr juce::uint32 backgroundModal = 0xff383838;     // 24dp - dialogs
-        
-        // DESIGN SYSTEM: Legacy aliases for backward compatibility
-        static constexpr juce::uint32 backgroundDark = 0xff121212;      // Alias for backgroundBase
-        static constexpr juce::uint32 backgroundMid = 0xff1e1e1e;       // Alias for backgroundRaised
-        static constexpr juce::uint32 backgroundLight = 0xff2e2e2e;     // Alias for backgroundElevated
-        
-        // === Primary Accent (10% of UI) - Cyan/Teal (Ableton-inspired) ===
-        static constexpr juce::uint32 accentPrimary = 0xff00d9ff;       // Vibrant cyan - primary actions
-        static constexpr juce::uint32 accentPrimaryHover = 0xff33e0ff;  // +10% brightness on hover
-        static constexpr juce::uint32 accentPrimaryPressed = 0xff00a8cc; // -20% on press
-        static constexpr juce::uint32 accentPrimaryGlow = 0x6600d9ff;   // 40% opacity for glows
-        
-        // === Secondary Accent (30% of UI) - Orange (Warm, complementary) ===
-        static constexpr juce::uint32 accentSecondary = 0xffff8c42;     // Warm orange - secondary actions
-        static constexpr juce::uint32 accentSecondaryHover = 0xffffa366; // Hover state
-        
-        // === Semantic Colors ===
-        static constexpr juce::uint32 success = 0xff4caf50;             // Green - success states
-        static constexpr juce::uint32 warning = 0xffffc107;             // Amber - warnings
-        static constexpr juce::uint32 danger = 0xffff5252;              // Red - errors/destructive
-        static constexpr juce::uint32 info = 0xff2196f3;                // Blue - informational
-        
-        // DESIGN SYSTEM: Legacy aliases for backward compatibility
-        static constexpr juce::uint32 accentDanger = 0xffff5252;        // Alias for danger
-        
-        // === Text (87% opacity for primary, following Material Design) ===
-        static constexpr juce::uint32 textPrimary = 0xffdedede;         // 87% white (#FFFFFF at 87%)
-        static constexpr juce::uint32 textSecondary = 0xff999999;       // 60% white - labels, hints
-        static constexpr juce::uint32 textDisabled = 0xff616161;        // 38% white - disabled state
-        static constexpr juce::uint32 textOnAccent = 0xff000000;        // Black on bright backgrounds
-        
-        // === Borders ===
-        static constexpr juce::uint32 borderSubtle = 0xff3a3a3a;        // Subtle borders
-        static constexpr juce::uint32 borderMedium = 0xff4a4a4a;        // Medium emphasis
-        static constexpr juce::uint32 borderStrong = 0xff5a5a5a;        // High emphasis
-        
-        // DESIGN SYSTEM: Legacy aliases for backward compatibility
-        static constexpr juce::uint32 border = 0xff3a3a3a;              // Alias for borderSubtle
-        static constexpr juce::uint32 borderLight = 0xff4a4a4a;         // Alias for borderMedium
+  //==========================================================================
+  // Design Tokens: Material Design Dark Theme Elevation
+  // Base: #121212 (0dp) with white overlays for elevation
+  //==========================================================================
 
-        // === Additional Semantic Colors ===
-        static constexpr juce::uint32 accentAlt = 0xff00b8d4;           // Teal - alternative accent for hover states
-        static constexpr juce::uint32 divider = 0xff303030;             // Subtle divider lines (12% white overlay on dark background)
+  struct Elevation {
+    // Material Design elevation system for dark mode
+    static constexpr juce::uint32 dp0 =
+        0xff121212; // Base (0dp) - main background
+    static constexpr juce::uint32 dp1 =
+        0xff1e1e1e; // 1dp (5% white overlay) - cards
+    static constexpr juce::uint32 dp2 = 0xff232323; // 2dp (7% overlay) - panels
+    static constexpr juce::uint32 dp4 =
+        0xff272727; // 4dp (9% overlay) - app bars
+    static constexpr juce::uint32 dp8 =
+        0xff2e2e2e; // 8dp (12% overlay) - hover states
+    static constexpr juce::uint32 dp12 = 0xff333333; // 12dp - raised panels
+    static constexpr juce::uint32 dp24 = 0xff383838; // 24dp - dialogs/modals
+  };
 
-        // === Transport & Status (Industry standard colors) ===
-        static constexpr juce::uint32 playGreen = 0xff4caf50;           // Play button
-        static constexpr juce::uint32 recordRed = 0xffff5252;           // Record button
-        static constexpr juce::uint32 stopGrey = 0xff9e9e9e;            // Stop button
-        
-        // === Level Meters (Standard -18dB, -6dB, 0dB zones) ===
-        static constexpr juce::uint32 meterGreen = 0xff4caf50;          // -18dB to -6dB (safe)
-        static constexpr juce::uint32 meterAmber = 0xffffc107;          // -6dB to 0dB (caution)
-        static constexpr juce::uint32 meterRed = 0xffff5252;            // 0dB+ (clipping)
-        
-        // === Track Color Palette (Frequency-based + Instrument families) ===
-        // Low frequency (bass, kicks) - Red/Orange
-        static constexpr juce::uint32 trackRedDark = 0xffcc3311;        
-        static constexpr juce::uint32 trackOrange = 0xffde8f05;
-        static constexpr juce::uint32 trackAmber = 0xffffb302;
-        
-        // Mid frequency (snares, claps, vocals) - Yellow/Green
-        static constexpr juce::uint32 trackYellow = 0xffffdd00;
-        static constexpr juce::uint32 trackLime = 0xff88cc00;
-        static constexpr juce::uint32 trackGreen = 0xff44aa99;
-        
-        // High frequency (hi-hats, cymbals) - Cyan/Blue
-        static constexpr juce::uint32 trackCyan = 0xff00d9ff;
-        static constexpr juce::uint32 trackBlue = 0xff0173b2;
-        static constexpr juce::uint32 trackIndigo = 0xff6366f1;
-        
-        // Synths & Special - Purple/Magenta
-        static constexpr juce::uint32 trackPurple = 0xff9c27b0;
-        static constexpr juce::uint32 trackMagenta = 0xffe91e63;
-        static constexpr juce::uint32 trackPink = 0xffff69b4;
-    };
+  //==========================================================================
+  // Design Tokens: Vibrant Professional Color Palette
+  // Following research: jewel tones, reduced saturation for dark mode
+  //==========================================================================
 
-    //==========================================================================
-    // Design Tokens: Spacing (8px Grid System)
-    // All measurements in multiples of 8px for scalability
-    //==========================================================================
-    
-    struct Spacing
-    {
-        static constexpr int xs = 4;      // Half-step for tight spacing
-        static constexpr int s = 8;       // Small - related elements
-        static constexpr int m = 16;      // Medium - same section
-        static constexpr int l = 24;      // Large - different sections
-        static constexpr int xl = 32;     // Extra large - major sections
-        static constexpr int xxl = 48;    // Huge - page sections
-        
-        // Internal padding
-        static constexpr int paddingPanel = 16;
-        static constexpr int paddingCard = 12;
-        static constexpr int paddingButton = 12;  // Horizontal padding
-    };
-    
-    // DESIGN SYSTEM: Legacy alias for Spacing
-    using Metrics = Spacing;
+  struct Colors {
+    // === Core Neutrals (60% of UI) ===
+    static constexpr juce::uint32 backgroundBase =
+        0xff121212; // Material Design 0dp
+    static constexpr juce::uint32 backgroundRaised =
+        0xff1e1e1e; // 1dp - tracks, panels
+    static constexpr juce::uint32 backgroundPanel =
+        0xff232323; // 2dp - browser, mixer
+    static constexpr juce::uint32 backgroundElevated =
+        0xff2e2e2e; // 8dp - hover states
+    static constexpr juce::uint32 backgroundModal =
+        0xff383838; // 24dp - dialogs
 
-    //==========================================================================
-    // Design Tokens: Border Radius
-    //==========================================================================
-    
-    struct Radius
-    {
-        static constexpr float none = 0.0f;
-        static constexpr float xs = 2.0f;      // Minimal rounding
-        static constexpr float s = 4.0f;       // Small controls
-        static constexpr float m = 6.0f;       // Standard buttons
-        static constexpr float l = 8.0f;       // Cards, panels
-        static constexpr float xl = 12.0f;     // Large panels
-        static constexpr float round = 999.0f; // Fully rounded
-    };
+    // DESIGN SYSTEM: Legacy aliases for backward compatibility
+    static constexpr juce::uint32 backgroundDark =
+        0xff121212; // Alias for backgroundBase
+    static constexpr juce::uint32 backgroundMid =
+        0xff1e1e1e; // Alias for backgroundRaised
+    static constexpr juce::uint32 backgroundLight =
+        0xff2e2e2e; // Alias for backgroundElevated
 
-    //==========================================================================
-    // Design Tokens: Shadows & Glows (for depth in dark mode)
-    //==========================================================================
-    
-    struct Shadows
-    {
-        // Soft drop shadows (use sparingly, prefer elevation)
-        static constexpr float softBlur = 8.0f;
-        static constexpr float mediumBlur = 12.0f;
-        static constexpr float largeBlur = 24.0f;
-        
-        // Glow for dark mode (better than shadows)
-        static constexpr float glowSubtle = 12.0f;
-        static constexpr float glowStrong = 20.0f;
-    };
+    // === Primary Accent (10% of UI) - Cyan/Teal (Ableton-inspired) ===
+    static constexpr juce::uint32 accentPrimary =
+        0xff00d9ff; // Vibrant cyan - primary actions
+    static constexpr juce::uint32 accentPrimaryHover =
+        0xff33e0ff; // +10% brightness on hover
+    static constexpr juce::uint32 accentPrimaryPressed =
+        0xff00a8cc; // -20% on press
+    static constexpr juce::uint32 accentPrimaryGlow =
+        0x6600d9ff; // 40% opacity for glows
 
-    //==========================================================================
-    // Design Tokens: Animation Timing (Material Design Standards)
-    //==========================================================================
-    
-    struct Timing
-    {
-        static constexpr int instantMs = 0;          // No animation
-        static constexpr int quickMs = 100;          // Pressed feedback
-        static constexpr int fastMs = 150;           // Hover, focus
-        static constexpr int normalMs = 200;         // Standard transitions
-        static constexpr int slowMs = 300;           // Large elements
-        static constexpr int deliberateMs = 400;     // Page transitions (max)
-        
-        // Hover delay to prevent flickering
-        static constexpr int hoverDelayMs = 150;
-    };
+    // === Secondary Accent (30% of UI) - Orange (Warm, complementary) ===
+    static constexpr juce::uint32 accentSecondary =
+        0xffff8c42; // Warm orange - secondary actions
+    static constexpr juce::uint32 accentSecondaryHover =
+        0xffffa366; // Hover state
 
-    //==========================================================================
-    // Design Tokens: Component Sizes
-    //==========================================================================
-    
-    struct ComponentSizes
-    {
-        // Heights
-        static constexpr int buttonHeightS = 24;
-        static constexpr int buttonHeightM = 32;
-        static constexpr int buttonHeightL = 40;
-        static constexpr int transportBarHeight = 64;
-        static constexpr int statusBarHeight = 28;
-        static constexpr int trackHeaderHeight = 56;
-        static constexpr int trackMinHeight = 48;
-        static constexpr int trackDefaultHeight = 80;
-        
-        // Widths
-        static constexpr int browserPanelWidth = 280;
-        static constexpr int inspectorPanelWidth = 340;
-        static constexpr int masterStripWidth = 100;
-        static constexpr int mixerChannelWidth = 80;
-        static constexpr int mixerChannelWidthExpanded = 120;
-        
-        // Scrollbars
-        static constexpr int scrollbarThickness = 12;
-    };
+    // === Semantic Colors ===
+    static constexpr juce::uint32 success =
+        0xff4caf50; // Green - success states
+    static constexpr juce::uint32 warning = 0xffffc107; // Amber - warnings
+    static constexpr juce::uint32 danger =
+        0xffff5252;                                  // Red - errors/destructive
+    static constexpr juce::uint32 info = 0xff2196f3; // Blue - informational
 
-    //==========================================================================
-    // Typography (San Francisco / System UI font)
-    // Sizes follow 12-14-16-18-20-24-32 scale
-    //==========================================================================
-    
-    struct Typography
-    {
-        // Display (rarely used, headers only)
-        static juce::Font getDisplay() { return juce::FontOptions(32.0f, juce::Font::bold); }
-        
-        // Headings
-        static juce::Font getH1() { return juce::FontOptions(24.0f, juce::Font::bold); }
-        static juce::Font getH2() { return juce::FontOptions(20.0f, juce::Font::bold); }
-        static juce::Font getH3() { return juce::FontOptions(18.0f, juce::Font::bold); }
-        static juce::Font getH4() { return juce::FontOptions(16.0f, juce::Font::bold); }
-        
-        // Body text
-        static juce::Font getBody() { return juce::FontOptions(14.0f); }           // Primary
-        static juce::Font getBodyBold() { return juce::FontOptions(14.0f, juce::Font::bold); }
-        static juce::Font getSmall() { return juce::FontOptions(12.0f); }          // Secondary
-        static juce::Font getSmallBold() { return juce::FontOptions(12.0f, juce::Font::bold); }
-        
-        // Special purpose
-        static juce::Font getTiny() { return juce::FontOptions(10.0f); }           // Minimum (rarely use)
-        static juce::Font getMonospace() { return juce::Font(juce::Font::getDefaultMonospacedFontName(), 14.0f, juce::Font::plain); }
-        
-        // Line height multiplier (1.5x font size recommended)
-        static constexpr float lineHeightMultiplier = 1.5f;
-    };
-    
-    // DESIGN SYSTEM: Static font accessors for legacy code compatibility
-    static juce::Font getFontSmall() { return Typography::getSmall(); }
-    static juce::Font getFontBody() { return Typography::getBody(); }
-    static juce::Font getFontHeading() { return Typography::getH4(); }
-    static juce::Font getFontLarge() { return Typography::getH3(); }
+    // DESIGN SYSTEM: Legacy aliases for backward compatibility
+    static constexpr juce::uint32 accentDanger = 0xffff5252; // Alias for danger
 
-    //==========================================================================
-    // Component Drawing Overrides
-    //==========================================================================
-    
-    // Buttons
-    void drawButtonBackground(juce::Graphics& g,
-                            juce::Button& button,
-                            const juce::Colour& backgroundColour,
+    // === Text (87% opacity for primary, following Material Design) ===
+    static constexpr juce::uint32 textPrimary =
+        0xffdedede; // 87% white (#FFFFFF at 87%)
+    static constexpr juce::uint32 textSecondary =
+        0xff999999; // 60% white - labels, hints
+    static constexpr juce::uint32 textDisabled =
+        0xff616161; // 38% white - disabled state
+    static constexpr juce::uint32 textOnAccent =
+        0xff000000; // Black on bright backgrounds
+
+    // === Borders ===
+    static constexpr juce::uint32 borderSubtle = 0xff3a3a3a; // Subtle borders
+    static constexpr juce::uint32 borderMedium = 0xff4a4a4a; // Medium emphasis
+    static constexpr juce::uint32 borderStrong = 0xff5a5a5a; // High emphasis
+
+    // DESIGN SYSTEM: Legacy aliases for backward compatibility
+    static constexpr juce::uint32 border = 0xff3a3a3a; // Alias for borderSubtle
+    static constexpr juce::uint32 borderLight =
+        0xff4a4a4a; // Alias for borderMedium
+
+    // === Additional Semantic Colors ===
+    static constexpr juce::uint32 accentAlt =
+        0xff00b8d4; // Teal - alternative accent for hover states
+    static constexpr juce::uint32 divider =
+        0xff303030; // Subtle divider lines (12% white overlay on dark
+                    // background)
+
+    // === Transport & Status (Industry standard colors) ===
+    static constexpr juce::uint32 playGreen = 0xff4caf50; // Play button
+    static constexpr juce::uint32 recordRed = 0xffff5252; // Record button
+    static constexpr juce::uint32 stopGrey = 0xff9e9e9e;  // Stop button
+
+    // === Level Meters (Standard -18dB, -6dB, 0dB zones) ===
+    static constexpr juce::uint32 meterGreen =
+        0xff4caf50; // -18dB to -6dB (safe)
+    static constexpr juce::uint32 meterAmber =
+        0xffffc107; // -6dB to 0dB (caution)
+    static constexpr juce::uint32 meterRed = 0xffff5252; // 0dB+ (clipping)
+
+    // === Track Color Palette (Frequency-based + Instrument families) ===
+    // Low frequency (bass, kicks) - Red/Orange
+    static constexpr juce::uint32 trackRedDark = 0xffcc3311;
+    static constexpr juce::uint32 trackOrange = 0xffde8f05;
+    static constexpr juce::uint32 trackAmber = 0xffffb302;
+
+    // Mid frequency (snares, claps, vocals) - Yellow/Green
+    static constexpr juce::uint32 trackYellow = 0xffffdd00;
+    static constexpr juce::uint32 trackLime = 0xff88cc00;
+    static constexpr juce::uint32 trackGreen = 0xff44aa99;
+
+    // High frequency (hi-hats, cymbals) - Cyan/Blue
+    static constexpr juce::uint32 trackCyan = 0xff00d9ff;
+    static constexpr juce::uint32 trackBlue = 0xff0173b2;
+    static constexpr juce::uint32 trackIndigo = 0xff6366f1;
+
+    // Synths & Special - Purple/Magenta
+    static constexpr juce::uint32 trackPurple = 0xff9c27b0;
+    static constexpr juce::uint32 trackMagenta = 0xffe91e63;
+    static constexpr juce::uint32 trackPink = 0xffff69b4;
+  };
+
+  //==========================================================================
+  // Design Tokens: Spacing (8px Grid System)
+  // All measurements in multiples of 8px for scalability
+  //==========================================================================
+
+  struct Spacing {
+    static constexpr int xs = 4;   // Half-step for tight spacing
+    static constexpr int s = 8;    // Small - related elements
+    static constexpr int m = 16;   // Medium - same section
+    static constexpr int l = 24;   // Large - different sections
+    static constexpr int xl = 32;  // Extra large - major sections
+    static constexpr int xxl = 48; // Huge - page sections
+
+    // Internal padding
+    static constexpr int paddingPanel = 16;
+    static constexpr int paddingCard = 12;
+    static constexpr int paddingButton = 12; // Horizontal padding
+
+    // Legacy aliases
+    static constexpr int spacingS = s;
+    static constexpr int spacingM = m;
+  };
+
+  // DESIGN SYSTEM: Legacy alias for Spacing
+  using Metrics = Spacing;
+
+  //==========================================================================
+  // Design Tokens: Border Radius
+  //==========================================================================
+
+  struct Radius {
+    static constexpr float none = 0.0f;
+    static constexpr float xs = 2.0f;      // Minimal rounding
+    static constexpr float s = 4.0f;       // Small controls
+    static constexpr float m = 6.0f;       // Standard buttons
+    static constexpr float l = 8.0f;       // Cards, panels
+    static constexpr float xl = 12.0f;     // Large panels
+    static constexpr float round = 999.0f; // Fully rounded
+
+    // Legacy aliases
+    static constexpr float radiusS = s;
+    static constexpr float radiusL = l;
+  };
+
+  //==========================================================================
+  // Design Tokens: Shadows & Glows (for depth in dark mode)
+  //==========================================================================
+
+  struct Shadows {
+    // Soft drop shadows (use sparingly, prefer elevation)
+    static constexpr float softBlur = 8.0f;
+    static constexpr float mediumBlur = 12.0f;
+    static constexpr float largeBlur = 24.0f;
+
+    // Glow for dark mode (better than shadows)
+    static constexpr float glowSubtle = 12.0f;
+    static constexpr float glowStrong = 20.0f;
+  };
+
+  //==========================================================================
+  // Design Tokens: Animation Timing (Material Design Standards)
+  //==========================================================================
+
+  struct Timing {
+    static constexpr int instantMs = 0;      // No animation
+    static constexpr int quickMs = 100;      // Pressed feedback
+    static constexpr int fastMs = 150;       // Hover, focus
+    static constexpr int normalMs = 200;     // Standard transitions
+    static constexpr int slowMs = 300;       // Large elements
+    static constexpr int deliberateMs = 400; // Page transitions (max)
+
+    // Hover delay to prevent flickering
+    static constexpr int hoverDelayMs = 150;
+  };
+
+  //==========================================================================
+  // Design Tokens: Component Sizes
+  //==========================================================================
+
+  struct ComponentSizes {
+    // Heights
+    static constexpr int buttonHeightS = 24;
+    static constexpr int buttonHeightM = 32;
+    static constexpr int buttonHeightL = 40;
+    static constexpr int transportBarHeight = 64;
+    static constexpr int statusBarHeight = 28;
+    static constexpr int trackHeaderHeight = 56;
+    static constexpr int trackMinHeight = 48;
+    static constexpr int trackDefaultHeight = 80;
+
+    // Widths
+    static constexpr int browserPanelWidth = 280;
+    static constexpr int inspectorPanelWidth = 340;
+    static constexpr int masterStripWidth = 100;
+    static constexpr int mixerChannelWidth = 80;
+    static constexpr int mixerChannelWidthExpanded = 120;
+
+    // Scrollbars
+    static constexpr int scrollbarThickness = 12;
+  };
+
+  //==========================================================================
+  // Typography (San Francisco / System UI font)
+  // Sizes follow 12-14-16-18-20-24-32 scale
+  //==========================================================================
+
+  struct Typography {
+    // Display (rarely used, headers only)
+    static juce::Font getDisplay() {
+      return juce::FontOptions(32.0f, juce::Font::bold);
+    }
+
+    // Headings
+    static juce::Font getH1() {
+      return juce::FontOptions(24.0f, juce::Font::bold);
+    }
+    static juce::Font getH2() {
+      return juce::FontOptions(20.0f, juce::Font::bold);
+    }
+    static juce::Font getH3() {
+      return juce::FontOptions(18.0f, juce::Font::bold);
+    }
+    static juce::Font getH4() {
+      return juce::FontOptions(16.0f, juce::Font::bold);
+    }
+
+    // Body text
+    static juce::Font getBody() { return juce::FontOptions(14.0f); } // Primary
+    static juce::Font getBodyBold() {
+      return juce::FontOptions(14.0f, juce::Font::bold);
+    }
+    static juce::Font getSmall() {
+      return juce::FontOptions(12.0f);
+    } // Secondary
+    static juce::Font getSmallBold() {
+      return juce::FontOptions(12.0f, juce::Font::bold);
+    }
+
+    // Special purpose
+    static juce::Font getTiny() {
+      return juce::FontOptions(10.0f);
+    } // Minimum (rarely use)
+    static juce::Font getMonospace() {
+      return juce::Font(juce::Font::getDefaultMonospacedFontName(), 14.0f,
+                        juce::Font::plain);
+    }
+
+    // Line height multiplier (1.5x font size recommended)
+    static constexpr float lineHeightMultiplier = 1.5f;
+  };
+
+  // DESIGN SYSTEM: Static font accessors for legacy code compatibility
+  static juce::Font getFontSmall() { return Typography::getSmall(); }
+  static juce::Font getFontBody() { return Typography::getBody(); }
+  static juce::Font getFontHeading() { return Typography::getH4(); }
+  static juce::Font getFontLarge() { return Typography::getH3(); }
+  static juce::Font getFontTiny() { return Typography::getTiny(); }
+
+  //==========================================================================
+  // Component Drawing Overrides
+  //==========================================================================
+
+  // Buttons
+  void drawButtonBackground(juce::Graphics &g, juce::Button &button,
+                            const juce::Colour &backgroundColour,
                             bool shouldDrawButtonAsHighlighted,
                             bool shouldDrawButtonAsDown) override;
-    
-    void drawButtonText(juce::Graphics& g,
-                       juce::TextButton& button,
-                       bool shouldDrawButtonAsHighlighted,
-                       bool shouldDrawButtonAsDown) override;
-    
-    void drawToggleButton(juce::Graphics& g,
-                         juce::ToggleButton& button,
-                         bool shouldDrawButtonAsHighlighted,
-                         bool shouldDrawButtonAsDown) override;
-    
-    // Sliders
-    void drawRotarySlider(juce::Graphics& g,
-                         int x, int y, int width, int height,
-                         float sliderPos,
-                         float rotaryStartAngle,
-                         float rotaryEndAngle,
-                         juce::Slider& slider) override;
-    
-    void drawLinearSlider(juce::Graphics& g,
-                         int x, int y, int width, int height,
-                         float sliderPos,
-                         float minSliderPos,
-                         float maxSliderPos,
-                         juce::Slider::SliderStyle style,
-                         juce::Slider& slider) override;
-    
-    // ComboBox
-    void drawComboBox(juce::Graphics& g,
-                     int width, int height,
-                     bool isButtonDown,
-                     int buttonX, int buttonY,
-                     int buttonW, int buttonH,
-                     juce::ComboBox& box) override;
-    
-    // Labels
-    void drawLabel(juce::Graphics& g, juce::Label& label) override;
-    
-    // Scrollbars
-    void drawScrollbar(juce::Graphics& g,
-                      juce::ScrollBar& scrollbar,
-                      int x, int y, int width, int height,
-                      bool isScrollbarVertical,
-                      int thumbStartPosition,
-                      int thumbSize,
-                      bool isMouseOver,
-                      bool isMouseDown) override;
-    
-    // Tab buttons
-    void drawTabButton(juce::TabBarButton& button,
-                      juce::Graphics& g,
-                      bool isMouseOver,
-                      bool isMouseDown) override;
-    
-    // Popup menus
-    void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override;
-    
-    void drawPopupMenuItem(juce::Graphics& g,
-                          const juce::Rectangle<int>& area,
-                          bool isSeparator,
-                          bool isActive,
-                          bool isHighlighted,
-                          bool isTicked,
-                          bool hasSubMenu,
-                          const juce::String& text,
-                          const juce::String& shortcutKeyText,
-                          const juce::Drawable* icon,
-                          const juce::Colour* textColour) override;
 
-    //==========================================================================
-    // Helper Methods
-    //==========================================================================
-    
-    /**
-     * @brief Draw rounded rectangle with optional gradient and shadow
-     */
-    void drawRoundedRect(juce::Graphics& g,
-                        const juce::Rectangle<float>& bounds,
-                        float cornerSize,
-                        const juce::Colour& fillColour,
-                        const juce::Colour& strokeColour = juce::Colour(),
-                        float strokeWidth = 0.0f);
-    
-    /**
-     * @brief Draw glow effect (better than shadow for dark mode)
-     */
-    void drawGlow(juce::Graphics& g,
-                 const juce::Rectangle<float>& bounds,
-                 float cornerSize,
-                 const juce::Colour& glowColour,
-                 float glowSize);
-    
-    /**
-     * @brief Get button color with proper state management
-     */
-    juce::Colour getButtonColour(juce::Button& button,
-                                bool isHighlighted,
-                                bool isDown);
-    
-    /**
-     * @brief Get track color by index (for color-coded organization)
-     */
-    static juce::Colour getTrackColor(int index);
-    
-    /**
-     * @brief Calculate contrast ratio between two colors (WCAG compliance check)
-     */
-    static float calculateContrastRatio(const juce::Colour& fg, const juce::Colour& bg);
-    
-    /**
-     * @brief Ensure text meets WCAG AA (4.5:1) or AAA (7:1) contrast
-     */
-    static juce::Colour ensureReadableText(const juce::Colour& background, bool requireAAA = false);
+  void drawButtonText(juce::Graphics &g, juce::TextButton &button,
+                      bool shouldDrawButtonAsHighlighted,
+                      bool shouldDrawButtonAsDown) override;
+
+  void drawToggleButton(juce::Graphics &g, juce::ToggleButton &button,
+                        bool shouldDrawButtonAsHighlighted,
+                        bool shouldDrawButtonAsDown) override;
+
+  // Sliders
+  void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,
+                        float sliderPos, float rotaryStartAngle,
+                        float rotaryEndAngle, juce::Slider &slider) override;
+
+  void drawLinearSlider(juce::Graphics &g, int x, int y, int width, int height,
+                        float sliderPos, float minSliderPos, float maxSliderPos,
+                        juce::Slider::SliderStyle style,
+                        juce::Slider &slider) override;
+
+  // ComboBox
+  void drawComboBox(juce::Graphics &g, int width, int height, bool isButtonDown,
+                    int buttonX, int buttonY, int buttonW, int buttonH,
+                    juce::ComboBox &box) override;
+
+  // Labels
+  void drawLabel(juce::Graphics &g, juce::Label &label) override;
+
+  // Scrollbars
+  void drawScrollbar(juce::Graphics &g, juce::ScrollBar &scrollbar, int x,
+                     int y, int width, int height, bool isScrollbarVertical,
+                     int thumbStartPosition, int thumbSize, bool isMouseOver,
+                     bool isMouseDown) override;
+
+  // Tab buttons
+  void drawTabButton(juce::TabBarButton &button, juce::Graphics &g,
+                     bool isMouseOver, bool isMouseDown) override;
+
+  // Popup menus
+  void drawPopupMenuBackground(juce::Graphics &g, int width,
+                               int height) override;
+
+  void drawPopupMenuItem(juce::Graphics &g, const juce::Rectangle<int> &area,
+                         bool isSeparator, bool isActive, bool isHighlighted,
+                         bool isTicked, bool hasSubMenu,
+                         const juce::String &text,
+                         const juce::String &shortcutKeyText,
+                         const juce::Drawable *icon,
+                         const juce::Colour *textColour) override;
+
+  //==========================================================================
+  // Helper Methods
+  //==========================================================================
+
+  /**
+   * @brief Draw rounded rectangle with optional gradient and shadow
+   */
+  void drawRoundedRect(juce::Graphics &g, const juce::Rectangle<float> &bounds,
+                       float cornerSize, const juce::Colour &fillColour,
+                       const juce::Colour &strokeColour = juce::Colour(),
+                       float strokeWidth = 0.0f);
+
+  /**
+   * @brief Draw glow effect (better than shadow for dark mode)
+   */
+  void drawGlow(juce::Graphics &g, const juce::Rectangle<float> &bounds,
+                float cornerSize, const juce::Colour &glowColour,
+                float glowSize);
+
+  /**
+   * @brief Get button color with proper state management
+   */
+  juce::Colour getButtonColour(juce::Button &button, bool isHighlighted,
+                               bool isDown);
+
+  /**
+   * @brief Get track color by index (for color-coded organization)
+   */
+  static juce::Colour getTrackColor(int index);
+
+  /**
+   * @brief Calculate contrast ratio between two colors (WCAG compliance check)
+   */
+  static float calculateContrastRatio(const juce::Colour &fg,
+                                      const juce::Colour &bg);
+
+  /**
+   * @brief Ensure text meets WCAG AA (4.5:1) or AAA (7:1) contrast
+   */
+  static juce::Colour ensureReadableText(const juce::Colour &background,
+                                         bool requireAAA = false);
 
 private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithLookAndFeel)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithLookAndFeel)
 };
 
 } // namespace zenith

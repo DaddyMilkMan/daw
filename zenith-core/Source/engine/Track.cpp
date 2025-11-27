@@ -21,7 +21,6 @@
 #include "PluginHost.h"
 #include <algorithm>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -110,6 +109,9 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
       clip->prepareToPlay(samplesPerBlockExpected, sampleRate);
     }
   }
+
+  // Prepare mixer channel
+  mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
 void Track::releaseResources() {
@@ -137,19 +139,22 @@ void Track::releaseResources() {
       clip->releaseResources();
     }
   }
+
+  // Release mixer channel
+  mixerChannel.releaseResources();
 }
 
 // Phase 1.3 / 2A: Process with explicit playhead position (lock-free)
-void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill,
-                              int64_t playheadSamples,
-                              const juce::MidiBuffer *incomingMidi) {
+void Track::getNextAudioBlock(
+    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+    const juce::MidiBuffer *incomingMidi,
+    const std::vector<juce::AudioBuffer<float> *> &auxBuffers) {
   // Clear the buffer first
   bufferToFill.clearActiveBufferRegion();
 
-  // If track is disabled or muted, return silence
-  if (!enabled.load() || muted.load()) {
-    currentLevel.store(0.0f);
-    midiBuffer_.clear(); // Phase 2A: Clear MIDI buffer too
+  // If track is disabled, return silence
+  if (!enabled.load()) {
+    midiBuffer_.clear();
     return;
   }
 
@@ -237,11 +242,18 @@ void Track::getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill,
   // Process through plugin chain with MIDI support
   processPluginChain(localBuffer, midiBuffer_, bufferToFill.numSamples);
 
-  // Apply volume and pan
-  applyGainAndPan(localBuffer, bufferToFill.numSamples);
+  // Delegate all mixer processing to MixerChannel
+  // This includes: input gain, HPF, EQ, compressor, volume, pan, metering
+  juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
+                                         bufferToFill.numSamples);
+  mixerChannel.getNextAudioBlock(mixerInfo);
 
-  // Update level meters
-  updateLevelMeters(localBuffer, bufferToFill.numSamples);
+  // Process aux sends (post-fader by default; pre-fader can be configured in
+  // MixerChannel) We pass the processed buffer to the sends
+  // Note: Aux send processing is handled by the Engine at mix-down time,
+  // as MixerChannel::processSends is private. The Engine reads send levels
+  // from MixerChannel and routes accordingly.
+  (void)auxBuffers; // Suppress unused parameter warning
 }
 
 // Legacy overload: uses default playhead of 0
@@ -270,25 +282,6 @@ juce::String Track::getTypeString() const {
 }
 
 //==============================================================================
-void Track::setVolume(float newVolume) {
-  volume.store(juce::jlimit(0.0f, 1.0f, newVolume));
-  sendChangeMessage();
-}
-
-void Track::setPan(float newPan) {
-  pan.store(juce::jlimit(-1.0f, 1.0f, newPan));
-  sendChangeMessage();
-}
-
-void Track::setMuted(bool shouldBeMuted) {
-  muted.store(shouldBeMuted);
-  sendChangeMessage();
-}
-
-void Track::setSolo(bool shouldBeSolo) {
-  solo.store(shouldBeSolo);
-  sendChangeMessage();
-}
 
 void Track::setArmed(bool shouldBeArmed) {
   armed.store(shouldBeArmed);
@@ -455,7 +448,6 @@ Track::Clip *Track::getClip(int index) const {
 }
 
 //==============================================================================
-void Track::resetPeakLevel() { peakLevel.store(0.0f); }
 
 //==============================================================================
 juce::ValueTree Track::getState() const {
@@ -463,10 +455,10 @@ juce::ValueTree Track::getState() const {
 
   state.setProperty("name", trackName, nullptr);
   state.setProperty("type", static_cast<int>(trackType), nullptr);
-  state.setProperty("volume", volume.load(), nullptr);
-  state.setProperty("pan", pan.load(), nullptr);
-  state.setProperty("muted", muted.load(), nullptr);
-  state.setProperty("solo", solo.load(), nullptr);
+  state.setProperty("volume", mixerChannel.getVolume(), nullptr);
+  state.setProperty("pan", mixerChannel.getPan(), nullptr);
+  state.setProperty("muted", mixerChannel.isMuted(), nullptr);
+  state.setProperty("solo", mixerChannel.isSolo(), nullptr);
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
 
@@ -517,10 +509,10 @@ void Track::loadState(const juce::ValueTree &state) {
 
   trackName = state.getProperty("name", "Untitled Track");
   trackType = static_cast<Type>(static_cast<int>(state.getProperty("type", 0)));
-  volume.store(state.getProperty("volume", 0.8f));
-  pan.store(state.getProperty("pan", 0.0f));
-  muted.store(state.getProperty("muted", false));
-  solo.store(state.getProperty("solo", false));
+  mixerChannel.setVolume(state.getProperty("volume", 0.8f));
+  mixerChannel.setPan(state.getProperty("pan", 0.0f));
+  mixerChannel.setMuted(state.getProperty("muted", false));
+  mixerChannel.setSolo(state.getProperty("solo", false));
   armed.store(state.getProperty("armed", false));
   enabled.store(state.getProperty("enabled", true));
 
@@ -653,53 +645,6 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
       // - Effect plugins typically ignore MIDI (but some use it for modulation)
       plugin->processBlock(pluginView, midi);
     }
-  }
-}
-
-void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-  const float vol = volume.load();
-  const float panValue = pan.load();
-
-  // Calculate left and right gains from pan
-  // Pan law: -3dB center, constant power
-  const float piOver4 = juce::MathConstants<float>::pi / 4.0f;
-  const float leftGain = vol * std::cos(piOver4 * (1.0f + panValue));
-  const float rightGain = vol * std::sin(piOver4 * (1.0f + panValue));
-
-  if (buffer.getNumChannels() >= 2) {
-    // Stereo: apply pan
-    buffer.applyGain(0, 0, numSamples, leftGain);
-    buffer.applyGain(1, 0, numSamples, rightGain);
-  } else if (buffer.getNumChannels() == 1) {
-    // Mono: apply volume only
-    buffer.applyGain(0, 0, numSamples, vol);
-  }
-}
-
-void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
-                              int numSamples) {
-  float maxLevel = 0.0f;
-
-  for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-    const float *channelData = buffer.getReadPointer(ch);
-    for (int i = 0; i < numSamples; ++i) {
-      const float absValue = std::abs(channelData[i]);
-      if (absValue > maxLevel) {
-        maxLevel = absValue;
-      }
-    }
-  }
-
-  // Update current level (RMS-style with smoothing)
-  const float currentLevelValue = currentLevel.load();
-  const float smoothingFactor = 0.3f;
-  const float newLevel =
-      currentLevelValue * (1.0f - smoothingFactor) + maxLevel * smoothingFactor;
-  currentLevel.store(newLevel);
-
-  // Update peak level
-  if (maxLevel > peakLevel.load()) {
-    peakLevel.store(maxLevel);
   }
 }
 

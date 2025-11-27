@@ -58,6 +58,7 @@ class AudioFilePool;
 class PluginHost;
 class PluginEditorWindowManager;
 class TempoMap;
+class AuxBus;
 } // namespace zenith
 
 //==============================================================================
@@ -289,6 +290,47 @@ public:
    * tracks
    */
   juce::String createTrack(const juce::String &name, const juce::String &type);
+
+  //==========================================================================
+  // Aux Bus Management (MESSAGE THREAD ONLY)
+  //==========================================================================
+
+  /**
+   * @brief Create a new auxiliary send/return bus
+   * @param name Name for the aux bus (e.g., "Reverb", "Delay")
+   * @return Index of the created aux bus
+   * @note Message thread only
+   */
+  int createAuxBus(const juce::String &name);
+
+  /**
+   * @brief Remove an auxiliary bus
+   * @param auxIndex Index of aux bus to remove
+   * @note Message thread only
+   */
+  void removeAuxBus(int auxIndex);
+
+  /**
+   * @brief Get number of aux buses
+   * @return Number of aux buses
+   */
+  int getNumAuxBuses() const noexcept;
+
+  /**
+   * @brief Get aux bus by index
+   * @param auxIndex Index of aux bus
+   * @return Pointer to aux bus, or nullptr if invalid
+   * @note Message thread only
+   */
+  zenith::AuxBus *getAuxBus(int auxIndex) noexcept;
+
+  /**
+   * @brief Get aux bus meters
+   * @param auxIndex Index of aux bus
+   * @return Current level (0.0 - 1.0+), or 0.0 if invalid
+   */
+  float getAuxBusLevel(int auxIndex) const;
+  float getAuxBusPeakLevel(int auxIndex) const;
 
   //==========================================================================
   // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
@@ -606,6 +648,11 @@ private:
   // thread)
   std::vector<juce::AudioBuffer<float>> trackBuffers_;
   juce::AudioBuffer<float> masterBuffer_;
+
+  // Aux buses (send/return effects)
+  std::vector<std::unique_ptr<zenith::AuxBus>> auxBuses_;
+  std::vector<juce::AudioBuffer<float>>
+      auxBusBuffers_; // Pre-allocated buffers for aux buses
 
   // Phase 11: Master metering (atomic for lock-free GUI access)
   std::atomic<float> masterLevel_{0.0f};

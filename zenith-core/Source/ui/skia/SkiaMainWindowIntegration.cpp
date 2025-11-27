@@ -1,17 +1,16 @@
 #include "SkiaMainWindowIntegration.h"
 #include "../../../src/SimpleLogger.h"
 #include "../skia/SkiaComponent.h"
-#include <include/core/SkSurface.h>
-#include <include/core/SkColorSpace.h>
-#include <include/gpu/ganesh/GrDirectContext.h>
-#include <include/gpu/ganesh/GrBackendSurface.h>
-#include <include/gpu/ganesh/gl/GrGLInterface.h>
-#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
-#include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
-#include <include/gpu/ganesh/SkSurfaceGanesh.h>
-#include <juce_opengl/juce_opengl.h>
 #include <gl/GL.h>
-
+#include <include/core/SkColorSpace.h>
+#include <include/core/SkSurface.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/SkSurfaceGanesh.h>
+#include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
+#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <juce_opengl/juce_opengl.h>
 
 #ifdef ZENITH_USE_SKIA
 
@@ -33,8 +32,9 @@ SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
 }
 
 void SkiaMainWindowIntegration::newOpenGLContextCreated() {
-  logToFile("SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context "
-            "created, will initialize Skia on first render");
+  logToFile(
+      "SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context "
+      "created, will initialize Skia on first render");
   // Defer actual initialization to first renderOpenGL() call
   // when we're guaranteed to be in the rendering thread
   rendererInitialized_ = false;
@@ -46,9 +46,11 @@ void SkiaMainWindowIntegration::openGLContextClosing() {
 }
 
 void SkiaMainWindowIntegration::renderOpenGL() {
-  // Lazy initialization on first render when OpenGL context is guaranteed to be active
+  // Lazy initialization on first render when OpenGL context is guaranteed to be
+  // active
   if (!rendererInitialized_) {
-    logToFile("SkiaMainWindowIntegration::renderOpenGL - Initializing Skia renderer for direct framebuffer rendering");
+    logToFile("SkiaMainWindowIntegration::renderOpenGL - Initializing Skia "
+              "renderer for direct framebuffer rendering");
 
     // Create GrDirectContext
     auto glInterface = GrGLMakeNativeInterface();
@@ -63,7 +65,8 @@ void SkiaMainWindowIntegration::renderOpenGL() {
       return;
     }
 
-    logToFile("Successfully created Skia GrDirectContext for framebuffer rendering");
+    logToFile(
+        "Successfully created Skia GrDirectContext for framebuffer rendering");
     rendererInitialized_ = true;
   }
 
@@ -82,20 +85,18 @@ void SkiaMainWindowIntegration::renderOpenGL() {
 
   // Create backend render target info for the default framebuffer (FBO 0)
   GrGLFramebufferInfo fbInfo;
-  fbInfo.fFBOID = 0; // Default framebuffer
+  fbInfo.fFBOID = 0;       // Default framebuffer
   fbInfo.fFormat = 0x8058; // GL_RGBA8
 
-  // Create backend render target wrapping the default framebuffer using factory method
-  GrBackendRenderTarget backendRT = GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 1, 8, fbInfo);
+  // Create backend render target wrapping the default framebuffer using factory
+  // method
+  GrBackendRenderTarget backendRT =
+      GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 1, 8, fbInfo);
 
   SkSurfaceProps props(0, kRGB_H_SkPixelGeometry);
   sk_sp<SkSurface> surface = SkSurfaces::WrapBackendRenderTarget(
-      grContext_.get(),
-      backendRT,
-      kBottomLeft_GrSurfaceOrigin,
-      kRGBA_8888_SkColorType,
-      nullptr,
-      &props);
+      grContext_.get(), backendRT, kBottomLeft_GrSurfaceOrigin,
+      kRGBA_8888_SkColorType, nullptr, &props);
 
   if (!surface) {
     static bool loggedError = false;
@@ -107,7 +108,7 @@ void SkiaMainWindowIntegration::renderOpenGL() {
   }
 
   // Get canvas and start drawing
-  SkCanvas* canvas = surface->getCanvas();
+  SkCanvas *canvas = surface->getCanvas();
   if (!canvas) {
     logToFile("ERROR: No canvas from surface");
     return;
@@ -121,18 +122,14 @@ void SkiaMainWindowIntegration::renderOpenGL() {
   int childCount = 0;
   for (auto *child : getChildren()) {
     childCount++;
-
-    // Check if this child supports Skia rendering
-    if (auto* skiaComp = dynamic_cast<SkiaComponent*>(child)) {
-      if (skiaComp->supportsSkiaRendering()) {
-        renderComponentRecursively(child, canvas);
-      }
-    }
+    // Render ALL visible children, not just SkiaComponents
+    renderComponentRecursively(child, canvas);
   }
 
   static bool loggedComponentTree = false;
   if (!loggedComponentTree) {
-    logToFile("SkiaMainWindowIntegration: Rendering " + std::to_string(childCount) + " child components");
+    logToFile("SkiaMainWindowIntegration: Rendering " +
+              std::to_string(childCount) + " child components");
     loggedComponentTree = true;
   }
 
@@ -161,8 +158,7 @@ void SkiaMainWindowIntegration::renderComponentRecursively(
 
   // Check if this is a Skia-aware component
   if (auto *skiaComp = dynamic_cast<SkiaComponent *>(comp)) {
-    skiaComp->paintToSkia(
-        canvas, SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+    skiaComp->drawSkia(canvas);
   }
 
   // Render Children (Z-Order: Bottom to Top)

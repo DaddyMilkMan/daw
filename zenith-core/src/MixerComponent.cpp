@@ -39,20 +39,8 @@ MixerComponent::~MixerComponent() {
 // Component interface
 //==============================================================================
 
+#ifndef ZENITH_USE_SKIA
 void MixerComponent::paint(juce::Graphics &g) {
-#ifdef ZENITH_USE_SKIA
-  auto &manager = zenith::SkiaContextManager::getInstance();
-  // If Skia is ready, render via Skia and EXIT this function
-  if (manager.isInitialized() && supportsSkiaRendering()) {
-    manager.renderToComponent(*this, [this](SkCanvas *canvas) {
-      // Convert component bounds to SkRect
-      SkRect bounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
-      paintToSkia(canvas, bounds);
-    });
-    return; // CRITICAL: Stop here so we don't double-render with JUCE
-  }
-#endif
-
   // Background
   g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Colors::backgroundPanel));
 
@@ -68,6 +56,126 @@ void MixerComponent::paint(juce::Graphics &g) {
                getLocalBounds(), juce::Justification::centred, true);
   }
 }
+#endif
+
+// ... (resized and other methods remain unchanged)
+
+#ifdef ZENITH_USE_SKIA
+
+void MixerComponent::drawSkia(SkCanvas *canvas) {
+  SkRect bounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
+
+  // 1. Draw Background with Gradient
+  SkPoint gradientPoints[2] = {{bounds.x(), bounds.y()},
+                               {bounds.x(), bounds.y() + bounds.height()}};
+
+  SkColor gradientColors[2] = {
+      SkColorSetARGB(255, 30, 30, 30), // Dark grey top
+      SkColorSetARGB(255, 20, 20, 20)  // Darker bottom
+  };
+
+  SkScalar gradientPositions[2] = {0.0f, 1.0f};
+
+  auto gradient = SkGradientShader::MakeLinear(
+      gradientPoints, gradientColors, gradientPositions, 2, SkTileMode::kClamp);
+
+  SkPaint bgPaint;
+  bgPaint.setShader(gradient);
+  canvas->drawRect(bounds, bgPaint);
+
+  // 2. Draw Top Border
+  SkPaint borderPaint;
+  borderPaint.setColor(SkColorSetARGB(128, 80, 80, 80));
+  borderPaint.setStrokeWidth(1.0f);
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setAntiAlias(true);
+
+  canvas->drawLine(bounds.x(), bounds.y(), bounds.right(), bounds.y(),
+                   borderPaint);
+
+  // 3. Draw Track Strips
+  const float startX = bounds.x() + static_cast<float>(sideMargin);
+  float currentX = startX;
+  const float marginTop = static_cast<float>(topMargin);
+  const float marginBottom = static_cast<float>(bottomMargin);
+
+  const float sWidth = static_cast<float>(stripWidth);
+  const float sSpacing = static_cast<float>(stripSpacing);
+
+  for (const auto &strip : trackStrips) {
+    if (!strip)
+      continue;
+
+    SkRect stripBounds =
+        SkRect::MakeXYWH(currentX, bounds.y() + marginTop, sWidth,
+                         bounds.height() - marginTop - marginBottom);
+
+    drawTrackStripSkia(canvas, stripBounds, *strip);
+    currentX += sWidth + sSpacing;
+  }
+
+  // 4. Draw Empty State Message
+  if (trackStrips.empty()) {
+    SkFont font;
+    font.setSize(14);
+    font.setEdging(SkFont::Edging::kAntiAlias);
+
+    SkPaint textPaint;
+    textPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
+    textPaint.setAntiAlias(true);
+
+    const char *message = "No tracks - Add a track to see mixer controls";
+    SkRect textBounds;
+    font.measureText(message, strlen(message), SkTextEncoding::kUTF8,
+                     &textBounds);
+
+    canvas->drawString(message, bounds.centerX() - textBounds.width() / 2.0f,
+                       bounds.centerY(), font, textPaint);
+  }
+}
+
+void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
+                                        const TrackStrip &strip) {
+  canvas->save();
+
+  // Strip Background
+  SkRRect roundedStrip;
+  roundedStrip.setRectXY(stripBounds, 4, 4);
+
+  SkPaint stripBgPaint;
+  stripBgPaint.setColor(SkColorSetARGB(255, 40, 40, 40));
+  canvas->drawRRect(roundedStrip, stripBgPaint);
+
+  SkPaint stripBorderPaint;
+  stripBorderPaint.setColor(SkColorSetARGB(255, 60, 60, 60));
+  stripBorderPaint.setStyle(SkPaint::kStroke_Style);
+  stripBorderPaint.setStrokeWidth(1.0f);
+  stripBorderPaint.setAntiAlias(true);
+  canvas->drawRRect(roundedStrip, stripBorderPaint);
+
+  // Track Name
+  SkFont nameFont;
+  nameFont.setSize(12);
+  nameFont.setEdging(SkFont::Edging::kAntiAlias);
+
+  SkPaint namePaint;
+  namePaint.setColor(SK_ColorWHITE);
+  namePaint.setAntiAlias(true);
+
+  juce::String displayName = strip.trackName;
+  if (displayName.length() > 10)
+    displayName = displayName.substring(0, 9) + "...";
+  const char *nameStr = displayName.toRawUTF8();
+
+  SkRect nameBounds;
+  nameFont.measureText(nameStr, strlen(nameStr), SkTextEncoding::kUTF8,
+                       &nameBounds);
+  canvas->drawString(nameStr, stripBounds.centerX() - nameBounds.width() / 2.0f,
+                     stripBounds.y() + 20, nameFont, namePaint);
+
+  canvas->restore();
+}
+#endif
 
 //==============================================================================
 
@@ -75,10 +183,9 @@ void MixerComponent::resized() {
   using namespace zenith;
 
   auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Spacing::m);
-
   int x = 0;
-  const int stripWidth = 80; // Fixed strip width
-  const int stripSpacing = ZenithLookAndFeel::Spacing::s;
+  const int localStripWidth = 80; // Fixed strip width
+  const int localStripSpacing = ZenithLookAndFeel::Spacing::s;
 
   for (auto &strip : trackStrips) {
     if (!strip)
@@ -86,46 +193,36 @@ void MixerComponent::resized() {
 
     // Allocate space for this strip
     strip->bounds = juce::Rectangle<int>(bounds.getX() + x, bounds.getY(),
-                                         stripWidth, bounds.getHeight());
+                                         localStripWidth, bounds.getHeight());
 
     // Layout components within the strip
     auto area = strip->bounds;
 
-    // Name label at top
-    if (strip->nameLabel) {
-      strip->nameLabel->setBounds(area.removeFromTop(24));
-    }
+    // 1. Track Name (Top)
+    if (strip->nameLabel)
+      strip->nameLabel->setBounds(area.removeFromTop(20));
 
-    area.removeFromTop(ZenithLookAndFeel::Spacing::s);
+    // 2. Volume Slider (Vertical)
+    auto volumeArea = area.removeFromTop(area.getHeight() - 100);
+    if (strip->volumeSlider)
+      strip->volumeSlider->setBounds(
+          volumeArea.reduced(ZenithLookAndFeel::Spacing::s, 0));
 
-    // Buttons at bottom (stacking up)
-    auto buttonArea = area.removeFromBottom(80); // Reserve space for buttons
+    // 3. Pan Slider (Knob)
+    auto panArea = area.removeFromTop(60);
+    if (strip->panSlider)
+      strip->panSlider->setBounds(
+          panArea.reduced(ZenithLookAndFeel::Spacing::s));
 
-    if (strip->armButton)
-      strip->armButton->setBounds(buttonArea.removeFromBottom(24));
-
-    if (strip->soloButton)
-      strip->soloButton->setBounds(buttonArea.removeFromBottom(24));
-
+    // 4. Mute/Solo Buttons (Bottom)
+    auto buttonArea = area.removeFromBottom(40);
+    auto muteArea = buttonArea.removeFromLeft(buttonArea.getWidth() / 2);
     if (strip->muteButton)
-      strip->muteButton->setBounds(buttonArea.removeFromBottom(24));
+      strip->muteButton->setBounds(muteArea.reduced(2));
+    if (strip->soloButton)
+      strip->soloButton->setBounds(buttonArea.reduced(2));
 
-    area.removeFromBottom(ZenithLookAndFeel::Spacing::s);
-
-    // Pan knob (fixed height)
-    if (strip->panSlider) {
-      auto panArea = area.removeFromBottom(60);
-      strip->panSlider->setBounds(panArea.reduced(4));
-    }
-
-    area.removeFromBottom(ZenithLookAndFeel::Spacing::s);
-
-    // Volume slider (takes remaining space)
-    if (strip->volumeSlider) {
-      strip->volumeSlider->setBounds(area);
-    }
-
-    x += stripWidth + stripSpacing;
+    x += localStripWidth + localStripSpacing;
   }
 }
 
@@ -414,125 +511,3 @@ void MixerComponent::onArmClicked(const juce::String &trackId, bool state) {
 //==============================================================================
 // Skia Rendering Implementation
 //==============================================================================
-
-#ifdef ZENITH_USE_SKIA
-
-void MixerComponent::paintToSkia(SkCanvas *canvas, SkRect bounds) {
-  // 1. Draw Background with Gradient
-  SkPoint gradientPoints[2] = {{bounds.x(), bounds.y()},
-                               {bounds.x(), bounds.y() + bounds.height()}};
-
-  SkColor gradientColors[2] = {
-      SkColorSetARGB(255, 30, 30, 30), // Dark grey top
-      SkColorSetARGB(255, 20, 20, 20)  // Darker bottom
-  };
-
-  SkScalar gradientPositions[2] = {0.0f, 1.0f};
-
-  auto gradient = SkGradientShader::MakeLinear(
-      gradientPoints, gradientColors, gradientPositions, 2, SkTileMode::kClamp);
-
-  SkPaint bgPaint;
-  bgPaint.setShader(gradient);
-  canvas->drawRect(bounds, bgPaint);
-
-  // 2. Draw Top Border
-  SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(128, 80, 80, 80));
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setAntiAlias(true);
-
-  canvas->drawLine(bounds.x(), bounds.y(), bounds.right(), bounds.y(),
-                   borderPaint);
-
-  // 3. Draw Track Strips
-  const float startX = bounds.x() + static_cast<float>(sideMargin);
-  float currentX = startX;
-  const float marginTop = static_cast<float>(topMargin);
-  const float marginBottom = static_cast<float>(bottomMargin);
-
-  const float sWidth = static_cast<float>(stripWidth);
-  const float sSpacing = static_cast<float>(stripSpacing);
-
-  for (const auto &strip : trackStrips) {
-    if (!strip)
-      continue;
-
-    SkRect stripBounds =
-        SkRect::MakeXYWH(currentX, bounds.y() + marginTop, sWidth,
-                         bounds.height() - marginTop - marginBottom);
-
-    drawTrackStripSkia(canvas, stripBounds, *strip);
-    currentX += sWidth + sSpacing;
-  }
-
-  // 4. Draw Empty State Message
-  if (trackStrips.empty()) {
-    SkFont font;
-    font.setSize(14);
-    font.setEdging(SkFont::Edging::kAntiAlias);
-
-    SkPaint textPaint;
-    textPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
-    textPaint.setAntiAlias(true);
-
-    const char *message = "No tracks - Add a track to see mixer controls";
-    SkRect textBounds;
-    font.measureText(message, strlen(message), SkTextEncoding::kUTF8,
-                     &textBounds);
-
-    canvas->drawString(message, bounds.centerX() - textBounds.width() / 2.0f,
-                       bounds.centerY(), font, textPaint);
-  }
-}
-
-void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
-                                        const TrackStrip &strip) {
-  canvas->save();
-
-  // Strip Background
-  SkRRect roundedStrip;
-  roundedStrip.setRectXY(stripBounds, 4, 4);
-
-  SkPaint stripBgPaint;
-  stripBgPaint.setColor(SkColorSetARGB(255, 40, 40, 40));
-  canvas->drawRRect(roundedStrip, stripBgPaint);
-
-  SkPaint stripBorderPaint;
-  stripBorderPaint.setColor(SkColorSetARGB(255, 60, 60, 60));
-  stripBorderPaint.setStyle(SkPaint::kStroke_Style);
-  stripBorderPaint.setStrokeWidth(1.0f);
-  stripBorderPaint.setAntiAlias(true);
-  canvas->drawRRect(roundedStrip, stripBorderPaint);
-
-  // Track Name
-  SkFont nameFont;
-  nameFont.setSize(12);
-  nameFont.setEdging(SkFont::Edging::kAntiAlias);
-
-  SkPaint namePaint;
-  namePaint.setColor(SK_ColorWHITE);
-  namePaint.setAntiAlias(true);
-
-  juce::String displayName = strip.trackName;
-  if (displayName.length() > 10)
-    displayName = displayName.substring(0, 9) + "...";
-  const char *nameStr = displayName.toRawUTF8();
-
-  SkRect nameBounds;
-  nameFont.measureText(nameStr, strlen(nameStr), SkTextEncoding::kUTF8,
-                       &nameBounds);
-  canvas->drawString(nameStr, stripBounds.centerX() - nameBounds.width() / 2.0f,
-                     stripBounds.y() + 20, nameFont, namePaint);
-
-  // NOTE: Volume Fader, Pan Slider, and M/S/R Buttons are child components
-  // that render themselves. They handle their own Skia or JUCE rendering.
-  // Do NOT draw them here to avoid double-rendering or desync issues.
-  // The component bounds are set in resized() to position them within the
-  // strip.
-
-  canvas->restore();
-}
-
-#endif

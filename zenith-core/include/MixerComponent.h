@@ -17,9 +17,10 @@
 #pragma once
 
 #ifdef ZENITH_USE_SKIA
+#include "../Source/ui/skia/SkiaButtonComponent.h"
 #include "../Source/ui/skia/SkiaComponent.h"
 #include "../Source/ui/skia/SkiaSliderComponent.h"
-#include "../Source/ui/skia/SkiaButtonComponent.h"
+
 class SkCanvas;
 struct SkRect;
 #endif
@@ -42,22 +43,24 @@ struct SkRect;
  * @class MixerComponent
  * @brief Mixer panel with vertical track strips
  */
-class MixerComponent : public juce::Component,
-                       public juce::ValueTree::Listener
+class MixerComponent :
 #ifdef ZENITH_USE_SKIA
-                       , public zenith::SkiaComponent
+    public zenith::SkiaComponent,
+#else
+    public juce::Component,
 #endif
-{
+    public juce::ValueTree::Listener {
 public:
   MixerComponent(ProjectState &ps);
   ~MixerComponent() override;
 
+#ifndef ZENITH_USE_SKIA
   void paint(juce::Graphics &g) override;
+#endif
   void resized() override;
 
 #ifdef ZENITH_USE_SKIA
-  void paintToSkia(SkCanvas* canvas, SkRect bounds) override;
-  bool supportsSkiaRendering() const override { return true; }
+  void drawSkia(SkCanvas *canvas) override;
 #endif
 
   //==============================================================================
@@ -136,10 +139,11 @@ private:
 #ifdef ZENITH_USE_SKIA
   /**
    * @brief Draw a single track strip background using Skia
-   * Child components (volumeSlider, panSlider, muteButton, soloButton, armButton)
-   * render themselves to avoid double-rendering issues.
+   * Child components (volumeSlider, panSlider, muteButton, soloButton,
+   * armButton) render themselves to avoid double-rendering issues.
    */
-  void drawTrackStripSkia(SkCanvas* canvas, SkRect stripBounds, const TrackStrip& strip);
+  void drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
+                          const TrackStrip &strip);
 #endif
 
   //==========================================================================

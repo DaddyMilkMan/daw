@@ -1,7 +1,7 @@
 /**
  * @file SkiaTheme.cpp
  * @brief PROFESSIONAL DAW THEME - Ableton/Logic/FL Studio Quality
- * 
+ *
  * Design Philosophy:
  * - DARK: True blacks with subtle gradients (not flat grey)
  * - DEPTH: Real shadows, glows, and dimensionality
@@ -40,47 +40,47 @@ void SkiaTheme::updateColorsForMode() {
     // ========================================================================
 
     // TRUE BLACKS - Not grey! Deep, rich blacks with subtle variations
-    colors_.bg0 = 0xFF000000;  // Pure black app background
-    colors_.bg1 = 0xFF0A0A0A;  // Almost black - main panels
-    colors_.bg2 = 0xFF151515;  // Dark grey - elevated surfaces
-    colors_.bg3 = 0xFF1F1F1F;  // Medium dark - controls, inputs
+    colors_.bg0 = 0xFF000000; // Pure black app background
+    colors_.bg1 = 0xFF0A0A0A; // Almost black - main panels
+    colors_.bg2 = 0xFF151515; // Dark grey - elevated surfaces
+    colors_.bg3 = 0xFF1F1F1F; // Medium dark - controls, inputs
 
     // BORDERS - Subtle, not distracting
-    colors_.borderSubtle = 0xFF252525;  // Barely visible dividers
-    colors_.borderStrong = 0xFF353535;  // Clear but not harsh
+    colors_.borderSubtle = 0xFF252525; // Barely visible dividers
+    colors_.borderStrong = 0xFF353535; // Clear but not harsh
 
     // TEXT - High contrast for readability
-    colors_.textStrong = 0xFFFFFFFF;   // Pure white - headers, important
-    colors_.textMuted = 0xFFB8B8B8;    // Light grey - body text
-    colors_.textSubtle = 0xFF707070;   // Mid grey - disabled, hints
-    colors_.textDanger = 0xFFFF4444;   // Bright red - errors
+    colors_.textStrong = 0xFFFFFFFF; // Pure white - headers, important
+    colors_.textMuted = 0xFFB8B8B8;  // Light grey - body text
+    colors_.textSubtle = 0xFF707070; // Mid grey - disabled, hints
+    colors_.textDanger = 0xFFFF4444; // Bright red - errors
 
     // PROFESSIONAL ACCENTS - Vibrant but sophisticated
-    colors_.accentMain = 0xFF00E5FF;      // Electric cyan (not teal!)
-    colors_.accentAlt = 0xFF0A84FF;       // iOS blue - selection
-    colors_.accentRecord = 0xFFFF3B30;    // Danger red - recording
-    colors_.accentWarning = 0xFFFFCC00;   // Golden yellow - warnings
+    colors_.accentMain = 0xFF00E5FF;    // Electric cyan (not teal!)
+    colors_.accentAlt = 0xFF0A84FF;     // iOS blue - selection
+    colors_.accentRecord = 0xFFFF3B30;  // Danger red - recording
+    colors_.accentWarning = 0xFFFFCC00; // Golden yellow - warnings
 
     // CLIP COLORS - Professional, saturated, distinguishable
-    colors_.clipDrums = 0xFFFF6B4A;    // Bright coral red
-    colors_.clipBass = 0xFFFFBF00;     // Golden yellow
-    colors_.clipHarmony = 0xFF4CD964;  // Vibrant green
-    colors_.clipLeads = 0xFF0A84FF;    // Electric blue
-    colors_.clipFX = 0xFFBF5AF2;       // Purple
+    colors_.clipDrums = 0xFFFF6B4A;   // Bright coral red
+    colors_.clipBass = 0xFFFFBF00;    // Golden yellow
+    colors_.clipHarmony = 0xFF4CD964; // Vibrant green
+    colors_.clipLeads = 0xFF0A84FF;   // Electric blue
+    colors_.clipFX = 0xFFBF5AF2;      // Purple
 
     // SURFACE STATES - Interactive feedback
     colors_.surfaceDefault = colors_.bg2;
-    colors_.surfaceHover = 0xFF1C1C1C;     // Subtle lightening
-    colors_.surfaceActive = 0xFF252525;    // More pronounced
-    colors_.surfaceDisabled = 0xFF121212;  // Dimmed
+    colors_.surfaceHover = 0xFF1C1C1C;    // Subtle lightening
+    colors_.surfaceActive = 0xFF252525;   // More pronounced
+    colors_.surfaceDisabled = 0xFF121212; // Dimmed
 
     // PRIMARY ACTION - Main CTA color with states
     colors_.primary = colors_.accentMain;
-    colors_.primaryHover = 0xFF1AEBFF;   // Lighter on hover
-    colors_.primaryActive = 0xFF00D4E6;  // Darker when pressed
+    colors_.primaryHover = 0xFF1AEBFF;  // Lighter on hover
+    colors_.primaryActive = 0xFF00D4E6; // Darker when pressed
 
     // SUCCESS - Confirmation, enabled states
-    colors_.success = 0xFF30D158;       // iOS green
+    colors_.success = 0xFF30D158; // iOS green
     colors_.successHover = 0xFF48D96B;
 
     // DANGER - Destructive actions, errors
@@ -95,7 +95,7 @@ void SkiaTheme::updateColorsForMode() {
     colors_.textPrimary = colors_.textStrong;
     colors_.textSecondary = colors_.textMuted;
     colors_.textDisabled = colors_.textSubtle;
-    colors_.textOnAccent = 0xFF000000;  // Black text on bright accents
+    colors_.textOnAccent = 0xFF000000; // Black text on bright accents
 
     // BORDERS
     colors_.border = colors_.borderSubtle;
@@ -103,28 +103,28 @@ void SkiaTheme::updateColorsForMode() {
     colors_.divider = 0xFF1A1A1A;
 
     // DEPTH EFFECTS - Real shadows and highlights
-    colors_.shadowDark = 0x80000000;     // 50% black shadow
-    colors_.shadowLight = 0x40FFFFFF;    // 25% white highlight
-    colors_.innerShadow = 0x60000000;    // Inner shadow for depth
-    colors_.highlight = 0x30FFFFFF;      // Edge highlight (shimmer)
+    colors_.shadowDark = 0x80000000;  // 50% black shadow
+    colors_.shadowLight = 0x40FFFFFF; // 25% white highlight
+    colors_.innerShadow = 0x60000000; // Inner shadow for depth
+    colors_.highlight = 0x30FFFFFF;   // Edge highlight (shimmer)
 
     // WAVEFORM & VISUALIZATION
-    colors_.waveformAudio = 0xFF00E5FF;  // Cyan - audio clips
-    colors_.waveformMidi = 0xFF0A84FF;   // Blue - MIDI clips
-    colors_.gridLine = 0xFF1F1F1F;       // Subtle grid
-    colors_.playhead = 0xFFFFFFFF;       // White - playback cursor
-    colors_.loopRegion = 0x40FFCC00;     // Translucent yellow
+    colors_.waveformAudio = 0xFF00E5FF; // Cyan - audio clips
+    colors_.waveformMidi = 0xFF0A84FF;  // Blue - MIDI clips
+    colors_.gridLine = 0xFF1F1F1F;      // Subtle grid
+    colors_.playhead = 0xFFFFFFFF;      // White - playback cursor
+    colors_.loopRegion = 0x40FFCC00;    // Translucent yellow
 
     // METERS - Professional color grading
-    colors_.meterGreen = 0xFF30D158;   // Safe level
-    colors_.meterYellow = 0xFFFFCC00;  // Warning level
-    colors_.meterRed = 0xFFFF3B30;     // Clipping
+    colors_.meterGreen = 0xFF30D158;  // Safe level
+    colors_.meterYellow = 0xFFFFCC00; // Warning level
+    colors_.meterRed = 0xFFFF3B30;    // Clipping
 
     // ======================================================================
     // INTERACTION OVERLAYS - Hover/Active/Focus effects
     // ======================================================================
-    interaction_.hoverOverlay = 0x14FFFFFF;   // 8% white overlay
-    interaction_.activeOverlay = 0x28FFFFFF;  // 16% white overlay
+    interaction_.hoverOverlay = 0x14FFFFFF;  // 8% white overlay
+    interaction_.activeOverlay = 0x28FFFFFF; // 16% white overlay
     interaction_.focusBorder = colors_.accentMain;
 
     // ======================================================================
@@ -140,12 +140,12 @@ void SkiaTheme::updateColorsForMode() {
     // ======================================================================
     // TYPOGRAPHY - Professional font settings
     // ======================================================================
-    typography_.title = {18.0f, true};      // Panel headers
-    typography_.header = {15.0f, true};     // Section headers
-    typography_.body = {13.0f, false};      // Default text
-    typography_.small = {11.0f, false};     // Labels, hints
-    typography_.tiny = {9.0f, false};       // Timestamps
-    typography_.mono = {12.0f, false};      // Timecode, values
+    typography_.title = {18.0f, true};  // Panel headers
+    typography_.header = {15.0f, true}; // Section headers
+    typography_.body = {13.0f, false};  // Default text
+    typography_.small = {11.0f, false}; // Labels, hints
+    typography_.tiny = {9.0f, false};   // Timestamps
+    typography_.mono = {12.0f, false};  // Timecode, values
 
     // Text effects for premium look
     typography_.enableTextGlow = true;
@@ -172,19 +172,19 @@ void SkiaTheme::updateColorsForMode() {
     gpuSettings_.targetFPS = 60;
     gpuSettings_.adaptiveFPS = true;
     gpuSettings_.prioritizeQuality = true;
-    gpuSettings_.waveformDetailLevel = 5;  // Maximum detail
+    gpuSettings_.waveformDetailLevel = 5; // Maximum detail
     gpuSettings_.enableAntialiasing = true;
-    gpuSettings_.msaaSamples = 8;  // High quality AA
+    gpuSettings_.msaaSamples = 8; // High quality AA
     gpuSettings_.enableMipmaps = true;
 
     // ======================================================================
     // SPRING PHYSICS - Smooth, responsive animations
     // ======================================================================
-    buttonPhysics_ = {500.0f, 32.0f, 60.0f};     // Snappy buttons
-    sliderPhysics_ = {420.0f, 28.0f, 60.0f};     // Smooth faders
-    knobPhysics_ = {380.0f, 26.0f, 60.0f};       // Fluid knobs
-    waveformPhysics_ = {550.0f, 35.0f, 120.0f};  // Precise waveforms
-    timelinePhysics_ = {450.0f, 30.0f, 60.0f};   // Smooth scrubbing
+    buttonPhysics_ = {500.0f, 32.0f, 60.0f};    // Snappy buttons
+    sliderPhysics_ = {420.0f, 28.0f, 60.0f};    // Smooth faders
+    knobPhysics_ = {380.0f, 26.0f, 60.0f};      // Fluid knobs
+    waveformPhysics_ = {550.0f, 35.0f, 120.0f}; // Precise waveforms
+    timelinePhysics_ = {450.0f, 30.0f, 60.0f};  // Smooth scrubbing
 
   } else {
     // ======================================================================
@@ -236,8 +236,7 @@ SkPaint SkiaTheme::createGlowPaint(SkColor color, float radius, float opacity) {
   paint.setColor(color);
 
   // Create glow effect using blur
-  sk_sp<SkImageFilter> blur =
-      SkImageFilters::Blur(radius, radius, nullptr);
+  sk_sp<SkImageFilter> blur = SkImageFilters::Blur(radius, radius, nullptr);
   paint.setImageFilter(blur);
 
   // Adjust opacity
@@ -247,8 +246,7 @@ SkPaint SkiaTheme::createGlowPaint(SkColor color, float radius, float opacity) {
   return paint;
 }
 
-SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur,
-                                     float opacity) {
+SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur, float opacity) {
   SkPaint paint;
   paint.setAntiAlias(true);
   paint.setColor(getInstance().getColors().shadowDark);
@@ -265,5 +263,25 @@ SkPaint SkiaTheme::createShadowPaint(float offsetY, float blur,
 }
 
 #endif
+
+//==============================================================================
+// FlatSkiaLookAndFeel
+//==============================================================================
+
+FlatSkiaLookAndFeel::FlatSkiaLookAndFeel() {
+  // Kill the gradients by setting flat colors
+  setColour(juce::TextButton::buttonColourId, juce::Colour(45, 45, 45));
+  setColour(juce::TextButton::buttonOnColourId, juce::Colour(60, 60, 60));
+}
+
+void FlatSkiaLookAndFeel::drawButtonBackground(
+    juce::Graphics &g, juce::Button &button,
+    const juce::Colour &backgroundColour, bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown) {
+  // Force flat fill
+  auto bounds = button.getLocalBounds().toFloat();
+  g.setColour(backgroundColour);
+  g.fillRoundedRectangle(bounds, 4.0f);
+}
 
 } // namespace zenith

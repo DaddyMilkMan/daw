@@ -88,7 +88,9 @@ public:
   WingmanPanel(zenith::CommandAPI &api, zenith::AIBridgeClient &aiClient);
   ~WingmanPanel() override;
 
+#ifndef ZENITH_USE_SKIA
   void paint(juce::Graphics &g) override;
+#endif
   void resized() override;
 
 #ifdef ZENITH_USE_SKIA
