@@ -16,4 +16,4 @@ project(Zenith VERSION 0.1.0 LANGUAGES CXX)
 #
 # ============================================================================
 
-add_subdirectory(zenith-core)
+add_subdirectory(modules/zenith-core)

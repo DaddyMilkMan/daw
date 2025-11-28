@@ -1,8 +1,0 @@
-MSBuild version 17.14.14+a129329f1 for .NET Framework
-
-  Checking File Globs
-  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\zenith-core\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
-MainWindow.obj : error LNK2001: unresolved external symbol "public: virtual __cdecl zenith::SessionViewComponent::~SessionViewComponent(void)" (??1SessionViewComponent@zenith@@UEAA@XZ) [C:\zenith\daw\build\zenith-core\ZenithDAW.vcxproj]
-SessionViewComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl zenith::SessionViewComponent::mouseMove(class juce::MouseEvent const &)" (?mouseMove@SessionViewComponent@zenith@@UEAAXAEBVMouseEvent@juce@@@Z) [C:\zenith\daw\build\zenith-core\ZenithDAW.vcxproj]
-SessionViewComponent.obj : error LNK2001: unresolved external symbol "public: virtual void __cdecl zenith::SessionViewComponent::mouseDown(class juce::MouseEvent const &)" (?mouseDown@SessionViewComponent@zenith@@UEAAXAEBVMouseEvent@juce@@@Z) [C:\zenith\daw\build\zenith-core\ZenithDAW.vcxproj]
-C:\zenith\daw\build\zenith-core\ZenithDAW_artefacts\Release\Zenith DAW.exe : fatal error LNK1120: 3 unresolved externals [C:\zenith\daw\build\zenith-core\ZenithDAW.vcxproj]
