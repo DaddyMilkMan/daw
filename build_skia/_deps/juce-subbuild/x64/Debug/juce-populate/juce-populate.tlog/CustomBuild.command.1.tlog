@@ -1,0 +1,150 @@
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-MKDIR.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -Dcfgdir=/Debug -P C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/tmp/juce-populate-mkdirs.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-mkdir
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-DOWNLOAD.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/tmp/juce-populate-gitclone.cmake
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-download
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-UPDATE.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps\juce-src
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -Dcan_fetch=YES -DCMAKE_MESSAGE_LOG_LEVEL=VERBOSE -P C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/tmp/juce-populate-gitupdate.cmake
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-PATCH.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-patch
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-CONFIGURE.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps\juce-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-configure
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-BUILD.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps\juce-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-build
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-INSTALL.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps\juce-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-install
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\CE856A20C388B9B6A4AECE56A48D98B3\JUCE-POPULATE-TEST.RULE
+setlocal
+cd C:\zenith\daw\build_skia\_deps\juce-build
+if %errorlevel% neq 0 goto :cmEnd
+C:
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E echo_append
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-test
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\0C3344E62F10B2CD708A8B4CF168A359\JUCE-POPULATE-COMPLETE.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E make_directory C:/zenith/daw/build_skia/_deps/juce-subbuild/CMakeFiles/Debug
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/CMakeFiles/Debug/juce-populate-complete
+if %errorlevel% neq 0 goto :cmEnd
+"C:\Program Files\CMake\bin\cmake.exe" -E touch C:/zenith/daw/build_skia/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/Debug/juce-populate-done
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKEFILES\788123537AAFE6BB690B56D704DFDDE0\JUCE-POPULATE.RULE
+setlocal
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\BUILD_SKIA\_DEPS\JUCE-SUBBUILD\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/zenith/daw/build_skia/_deps/juce-subbuild -BC:/zenith/daw/build_skia/_deps/juce-subbuild --check-stamp-file C:/zenith/daw/build_skia/_deps/juce-subbuild/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

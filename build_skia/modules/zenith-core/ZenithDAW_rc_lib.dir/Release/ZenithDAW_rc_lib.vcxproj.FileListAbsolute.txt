@@ -1,0 +1,1 @@
+C:\zenith\daw\build_skia\modules\zenith-core\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib

@@ -1,0 +1,20 @@
+^C:\ZENITH\DAW\BUILD_SKIA\CMAKEFILES\5C97778EB2CB5C2FAC5B34B1D9138471\TRACKINSTRUMENTINTEGRATIONTESTS_RESOURCES.RC.RULE
+setlocal
+..\..\_deps\juce-build\tools\extras\Build\juceaide\juceaide_artefacts\Custom\juceaide.exe rcfile C:/zenith/daw/build_skia/modules/zenith-core/TrackInstrumentIntegrationTests_artefacts/JuceLibraryCode/Info.txt C:/zenith/daw/build_skia/modules/zenith-core/TrackInstrumentIntegrationTests_artefacts/JuceLibraryCode/TrackInstrumentIntegrationTests_resources.rc
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+^C:\ZENITH\DAW\MODULES\ZENITH-CORE\CMAKELISTS.TXT
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/zenith/daw -BC:/zenith/daw/build_skia --check-stamp-file C:/zenith/daw/build_skia/modules/zenith-core/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

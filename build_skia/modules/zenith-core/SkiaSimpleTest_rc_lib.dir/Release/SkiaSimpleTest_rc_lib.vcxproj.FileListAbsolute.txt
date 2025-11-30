@@ -1,0 +1,1 @@
+C:\zenith\daw\build_skia\modules\zenith-core\SkiaSimpleTest_rc_lib.dir\Release\SkiaSimpleTest_rc_lib.lib

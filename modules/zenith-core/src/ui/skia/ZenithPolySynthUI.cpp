@@ -18,6 +18,7 @@
 #include <include/core/SkRRect.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
+#include <include/core/SkRect.h> 
 #include <include/effects/SkGradientShader.h>
 #include <include/gpu/ganesh/gl/GrGLInterface.h>
 #include <include/gpu/ganesh/GrBackendSurface.h>
@@ -221,7 +222,8 @@ ZenithPolySynthUI::~ZenithPolySynthUI() {
 void ZenithPolySynthUI::newOpenGLContextCreated() {
 #ifdef ZENITH_USE_SKIA
     auto glInterface = GrGLMakeNativeInterface();
-    auto ctx = GrDirectContexts::MakeGL(glInterface);
+    // Use GrDirectContext::MakeGL (correct factory for recent Skia)
+    auto ctx = GrDirectContext::MakeGL(glInterface);
     if (grContext_) grContext_->unref();
     grContext_ = ctx.release();
     
@@ -269,6 +271,7 @@ void ZenithPolySynthUI::recreateSurface() {
         framebufferInfo
     );
 
+    // Create Skia surface
     auto s = SkSurfaces::WrapBackendRenderTarget(
         grContext_,
         backendRT,
@@ -318,28 +321,40 @@ void ZenithPolySynthUI::renderOpenGL() {
 // Drawing
 //==============================================================================
 
+// Helper function for recursive drawing
+static void drawComponentRecursively(juce::Component* comp, SkCanvas* canvas) {
+    if (!comp->isVisible()) return;
+
+    canvas->save();
+    
+    auto bounds = comp->getBounds();
+    // Translate to component's local coordinate system relative to parent
+    canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
+    
+    // Clip to bounds
+    canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+
+    // 1. Draw the component itself
+    if (auto* skiaComp = dynamic_cast<SkiaComponent*>(comp)) {
+        skiaComp->drawSkia(canvas);
+    }
+
+    // 2. Draw children
+    for (auto* child : comp->getChildren()) {
+        drawComponentRecursively(child, canvas);
+    }
+
+    canvas->restore();
+}
+
 void ZenithPolySynthUI::drawSkia(SkCanvas *canvas) {
 #ifdef ZENITH_USE_SKIA
-  // 1. Draw Background
+  // 1. Draw Background (this component's own background)
   drawBackground(canvas);
 
-  // 2. Recursive Draw for Children
+  // 2. Recursive Draw for ALL Children
   for (auto *child : getChildren()) {
-      if (!child->isVisible()) continue;
-
-      canvas->save();
-      auto bounds = child->getBounds();
-      canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
-      
-      // Clip to bounds
-      canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
-
-      // If the child is a SkiaComponent, call its custom draw method
-      if (auto *skiaComp = dynamic_cast<SkiaComponent *>(child)) {
-          skiaComp->drawSkia(canvas);
-      }
-      
-      canvas->restore();
+      drawComponentRecursively(child, canvas);
   }
 #endif
 }
@@ -402,8 +417,6 @@ void ZenithPolySynthUI::drawGlassPanel(SkCanvas *canvas, const juce::Rectangle<i
 void ZenithPolySynthUI::paint(juce::Graphics &g) {
   // Fallback
   g.fillAll(juce::Colours::black);
-  g.setColour(juce::Colours::white);
-  g.drawText("Initializing OpenGL...", getLocalBounds(), juce::Justification::centred);
 }
 
 void ZenithPolySynthUI::resized() {
@@ -415,14 +428,10 @@ void ZenithPolySynthUI::resized() {
   
   // Bottom: Controls
   auto bottomArea = area;
-  
-  // If Advanced Mode, we have more space at the bottom?
-  // No, the window size changes.
-  // In Advanced Mode (800x600), the top area is larger, but we want to keep the simple controls in a similar relative position?
-  // Let's assume the Simple Mode controls stay in the upper part of the bottom area, and Advanced controls appear below them.
+  // Layout logic here...
 }
 
-// Implement remaining helpers stubbed for brevity
+// Implement remaining helpers
 void ZenithPolySynthUI::toggleAdvancedMode() {
     isAdvancedMode_ = !isAdvancedMode_;
     if (isAdvancedMode_) {
@@ -441,20 +450,9 @@ void ZenithPolySynthUI::toggleLearningMode() {
     tooltipOverlay_->setVisible(isLearningMode_);
 }
 
-void ZenithPolySynthUI::loadPreset(int index) {
-    // Stub
-}
-
-void ZenithPolySynthUI::loadNextPreset() {
-    // Stub
-}
-
-void ZenithPolySynthUI::loadPrevPreset() {
-    // Stub
-}
-
-void ZenithPolySynthUI::refreshPresetList() {
-    // Stub
-}
+void ZenithPolySynthUI::loadPreset(int index) {}
+void ZenithPolySynthUI::loadNextPreset() {}
+void ZenithPolySynthUI::loadPrevPreset() {}
+void ZenithPolySynthUI::refreshPresetList() {}
 
 } // namespace zenith

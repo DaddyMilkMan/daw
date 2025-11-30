@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/zenith/daw/build_skia/_deps/juce-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

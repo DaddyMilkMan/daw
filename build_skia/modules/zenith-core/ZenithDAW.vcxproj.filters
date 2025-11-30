@@ -1,0 +1,323 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\MainWindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\Engine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\TempoMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ProjectState.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\MixerComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\TrackAutomationSynchronizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ClipSynchronizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\PianoRollComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\AutomationLaneComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\TrackStateSynchronizer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\Track.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\Clip.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\MixerChannel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\AudioFilePool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\PluginHost.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\AuxBus.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\engine\ExportEngine.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\commands\CommandAPI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\commands\SessionGraph.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\network\AIBridgeClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\Instrument.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\InstrumentRegistry.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPolySynth.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPresetManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithSampler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithSamplerEditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\RegisterBuiltInInstruments.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPolySynthEditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\ArrangerView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\ClipComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\MixerChannelComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\MixerView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\PianoRollEditor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\TimelineRuler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\TrackHeaderComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\WingmanPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\InstrumentBrowserPanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ai\OpenAIClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\ZenithPolySynthUI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\SkiaMainWindowIntegration.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\TransportBar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\BottomBar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\RightSidePanel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\views\PianoKeyboardViewSkia.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ui\MainLayoutComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\modules\zenith-core\src\ArrangementComponent.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_basics\juce_audio_basics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_core\juce_core.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_core\juce_core_CompilationTime.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_devices\juce_audio_devices.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_events\juce_events.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_formats\juce_audio_formats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors_ara.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors_lv2_libs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_gui_extra\juce_gui_extra.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_gui_basics\juce_gui_basics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_graphics\juce_graphics.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_graphics\juce_graphics_Harfbuzz.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_graphics\juce_graphics_Sheenbidi.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_data_structures\juce_data_structures.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_audio_utils\juce_audio_utils.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_dsp\juce_dsp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\zenith\daw\build_skia\_deps\juce-src\modules\juce_opengl\juce_opengl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\include\ClipSynchronizer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\include\ArrangerView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\include\PianoRollEditor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\Track.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\Clip.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\MixerChannel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\AudioFilePool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\PluginHost.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\AuxBus.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\engine\ExportEngine.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\commands\CommandAPI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\commands\SessionGraph.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\network\AIBridgeClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\Instrument.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\InstrumentRegistry.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPolySynth.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPresetManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithSampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithSamplerEditor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\RegisterBuiltInInstruments.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\instruments\ZenithPolySynthEditor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\include\InstrumentCommandHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\include\ai\OpenAIClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\ZenithPolySynthUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\ZenithUIComponents.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\SkiaMainWindowIntegration.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\TransportBar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\BottomBar.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\RightSidePanel.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\skia\views\PianoKeyboardViewSkia.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\modules\zenith-core\src\ui\MainLayoutComponent.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\zenith\daw\build_skia\modules\zenith-core\ZenithDAW_artefacts\JuceLibraryCode\JuceHeader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\zenith\daw\build_skia\CMakeFiles\ee9ed9b4298f4623da6f308e13574118\JuceHeader.h.rule">
+      <Filter>CMake Rules</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\zenith\daw\modules\zenith-core\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Object Include="C:\zenith\daw\build_skia\modules\zenith-core\ZenithDAW_rc_lib.dir\$(Configuration)\ZenithDAW_resources.res">
+      <Filter>Object Libraries</Filter>
+    </Object>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CMake Rules">
+      <UniqueIdentifier>{10381792-EDCE-301E-B985-F31CF483DD7C}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{14EDD580-A9B9-3DCF-AB83-16089F642C97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Object Libraries">
+      <UniqueIdentifier>{C8F6F608-6F2B-3CFB-B731-3B922C2F5455}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{55B36459-12FE-3689-B09A-8EACD67FB195}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>

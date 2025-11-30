@@ -33,7 +33,6 @@ namespace zenith {
     Acts as the OpenGL/Skia root for the plugin editor.
 */
 class ZenithPolySynthUI : public juce::AudioProcessorEditor,
-                          public SkiaComponent,
                           public juce::OpenGLRenderer {
 public:
   ZenithPolySynthUI(ZenithPolySynthProcessor &p);
@@ -46,8 +45,8 @@ public:
   void openGLContextClosing() override;
 
   //==============================================================================
-  // SkiaComponent override
-  void drawSkia(SkCanvas* canvas) override;
+  // Custom Skia Draw (called by renderOpenGL)
+  void drawSkia(SkCanvas* canvas);
 
   //==============================================================================
   // Component overrides
