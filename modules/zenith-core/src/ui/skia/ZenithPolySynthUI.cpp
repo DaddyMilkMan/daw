@@ -24,6 +24,7 @@
 #include <include/gpu/ganesh/GrBackendSurface.h>
 #include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <include/gpu/ganesh/SkSurfaceGanesh.h>
 #endif
 
@@ -209,7 +210,7 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
 
   // Load Presets
   refreshPresetList();
-}
+} // <--- End of Constructor
 
 ZenithPolySynthUI::~ZenithPolySynthUI() {
     openGLContext.detach();
@@ -222,8 +223,8 @@ ZenithPolySynthUI::~ZenithPolySynthUI() {
 void ZenithPolySynthUI::newOpenGLContextCreated() {
 #ifdef ZENITH_USE_SKIA
     auto glInterface = GrGLMakeNativeInterface();
-    // Use GrDirectContext::MakeGL (correct factory for recent Skia)
-    auto ctx = GrDirectContext::MakeGL(glInterface);
+    // Use GrDirectContexts::MakeGL (plural namespace)
+    auto ctx = GrDirectContexts::MakeGL(glInterface);
     if (grContext_) grContext_->unref();
     grContext_ = ctx.release();
     
@@ -450,9 +451,56 @@ void ZenithPolySynthUI::toggleLearningMode() {
     tooltipOverlay_->setVisible(isLearningMode_);
 }
 
-void ZenithPolySynthUI::loadPreset(int index) {}
-void ZenithPolySynthUI::loadNextPreset() {}
-void ZenithPolySynthUI::loadPrevPreset() {}
-void ZenithPolySynthUI::refreshPresetList() {}
+void ZenithPolySynthUI::loadPreset(int index) {
+    if (index < 0 || index >= (int)presetList_.size()) return;
+
+    const auto& meta = presetList_[index];
+    auto& pm = ZenithPresetManager::getInstance();
+    auto preset = pm.loadPreset(meta.instrumentId, meta.id);
+
+    // Apply parameters to processor
+    // Note: We apply directly to processor parameters because we don't hold the Instrument instance
+    auto& apvts = processor.getParameters();
+    for (auto const& [paramId, value] : preset.parameters) {
+        if (auto* param = apvts.getParameter(paramId)) {
+            if (auto* rangedParam = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+                rangedParam->beginChangeGesture();
+                rangedParam->setValueNotifyingHost(value);
+                rangedParam->endChangeGesture();
+            }
+        }
+    }
+    
+    currentPresetIndex_ = index;
+    if (presetBar_) {
+        presetBar_->setPresetName(meta.name);
+    }
+}
+
+void ZenithPolySynthUI::loadNextPreset() {
+    if (presetList_.empty()) return;
+    int nextIndex = (currentPresetIndex_ + 1) % (int)presetList_.size();
+    loadPreset(nextIndex);
+}
+
+void ZenithPolySynthUI::loadPrevPreset() {
+    if (presetList_.empty()) return;
+    // Handle wrap-around correctly including -1 start case
+    int prevIndex = currentPresetIndex_ - 1;
+    if (prevIndex < 0) prevIndex = (int)presetList_.size() - 1;
+    
+    loadPreset(prevIndex);
+}
+
+void ZenithPolySynthUI::refreshPresetList() {
+    auto& pm = ZenithPresetManager::getInstance();
+    // Use the ID "zenith.poly_synth" as defined in ZenithPolySynth::createMetadata()
+    presetList_ = pm.getPresetList("zenith.poly_synth");
+    
+    // Reset index if out of bounds
+    if (currentPresetIndex_ >= (int)presetList_.size()) {
+        currentPresetIndex_ = -1;
+    }
+}
 
 } // namespace zenith

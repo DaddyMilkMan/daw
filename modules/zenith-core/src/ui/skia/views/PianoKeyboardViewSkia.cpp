@@ -15,6 +15,9 @@
 #include <include/core/SkPaint.h>
 #include <include/core/SkRect.h>
 #include <include/core/SkColor.h>
+#include <include/core/SkPoint.h>
+#include <include/core/SkTileMode.h>
+#include <include/effects/SkGradientShader.h>
 #endif
 
 namespace zenith {
@@ -33,27 +36,25 @@ PianoKeyboardViewSkia::~PianoKeyboardViewSkia()
     state_.removeListener(this);
 }
 
-#include <include/effects/SkGradientShader.h>
-
-void PianoKeyboardViewSkia::drawSkia(::SkCanvas* canvas)
+void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
 {
-    ::SkPaint whiteKeyPaint;
+    SkPaint whiteKeyPaint;
     whiteKeyPaint.setAntiAlias(true);
     // Gradient for white keys (top to bottom)
-    ::SkPoint pts[2] = { ::SkPoint::Make(0, 0), ::SkPoint::Make(0, getHeight()) };
-    ::SkColor colors[2] = { 0xFFEEEEEE, 0xFFCCCCCC }; // White to Light Grey
-    whiteKeyPaint.setShader(::SkGradientShader::MakeLinear(pts, colors, nullptr, 2, ::SkTileMode::kClamp));
+    SkPoint pts[2] = { SkPoint::Make(0, 0), SkPoint::Make(0, getHeight()) };
+    SkColor colors[2] = { 0xFFEEEEEE, 0xFFCCCCCC }; // White to Light Grey
+    whiteKeyPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
 
-    ::SkPaint blackKeyPaint;
+    SkPaint blackKeyPaint;
     blackKeyPaint.setAntiAlias(true);
     // Gradient for black keys
-    ::SkColor blackColors[2] = { 0xFF333333, 0xFF000000 }; // Dark Grey to Black
-    blackKeyPaint.setShader(::SkGradientShader::MakeLinear(pts, blackColors, nullptr, 2, ::SkTileMode::kClamp));
+    SkColor blackColors[2] = { 0xFF333333, 0xFF000000 }; // Dark Grey to Black
+    blackKeyPaint.setShader(SkGradientShader::MakeLinear(pts, blackColors, nullptr, 2, SkTileMode::kClamp));
     
-    ::SkPaint activeKeyPaint;
+    SkPaint activeKeyPaint;
     activeKeyPaint.setAntiAlias(true);
-    ::SkColor activeColors[2] = { 0xFF00FFFF, 0xFF0088AA }; // Cyan Gradient
-    activeKeyPaint.setShader(::SkGradientShader::MakeLinear(pts, activeColors, nullptr, 2, ::SkTileMode::kClamp));
+    SkColor activeColors[2] = { 0xFF00FFFF, 0xFF0088AA }; // Cyan Gradient
+    activeKeyPaint.setShader(SkGradientShader::MakeLinear(pts, activeColors, nullptr, 2, SkTileMode::kClamp));
     
     float x = 0;
     float w = getWidth();
@@ -151,8 +152,24 @@ int PianoKeyboardViewSkia::getNoteAtPosition(juce::Point<float> pos)
     float whiteKeyWidth = w / (float)numWhiteKeys;
     
     // Check black keys first (they are on top)
-    // ... (omitted for brevity in this rapid implementation, implementing simple white key mapping)
+    float blackKeyWidth = whiteKeyWidth * 0.6f;
+    float blackKeyHeight = getHeight() * 0.6f;
     
+    float currentX = 0;
+    for (int i = rangeStart_; i <= rangeEnd_; ++i) {
+        if (!juce::MidiMessage::isMidiNoteBlack(i)) {
+            currentX += whiteKeyWidth;
+            continue;
+        }
+        
+        // Check black key hit
+        float blackKeyX = currentX - (blackKeyWidth * 0.5f);
+        if (pos.x >= blackKeyX && pos.x <= blackKeyX + blackKeyWidth && pos.y <= blackKeyHeight) {
+            return i;
+        }
+    }
+    
+    // Check white keys
     int whiteKeyIndex = (int)(pos.x / whiteKeyWidth);
     
     // Map index back to note

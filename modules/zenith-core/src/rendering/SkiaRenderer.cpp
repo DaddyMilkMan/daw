@@ -4,6 +4,7 @@
  */
 
 #include "SkiaRenderer.h"
+// Force rebuild for diagnostics
 
 // Skia headers
 #include "include/core/SkCanvas.h"
@@ -88,20 +89,25 @@ bool SkiaRenderer::initialize() {
   }
 
   DBG("Initializing SkiaRenderer...");
+  DBG("  Step 1: Creating GPU Context...");
 
   // Create GPU context
   if (!createGpuContext()) {
     DBG("ERROR: Failed to create GPU context");
     return false;
   }
+  DBG("  Step 1: GPU Context created successfully.");
 
   // Create rendering surface
   auto bounds = component_.getLocalBounds();
+  DBG("  Step 2: Creating Surface (" << bounds.getWidth() << "x" << bounds.getHeight() << ")...");
+  
   if (!createSurface(bounds.getWidth(), bounds.getHeight())) {
     DBG("ERROR: Failed to create surface");
     shutdown();
     return false;
   }
+  DBG("  Step 2: Surface created successfully.");
 
   initialized_ = true;
   lastFrameTime_ = juce::Time::getCurrentTime();
@@ -171,7 +177,8 @@ void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
   SkCanvas *canvas = surface_->getCanvas();
 
   // Clear canvas
-  canvas->clear(SK_ColorBLACK);
+  // DIAGNOSTIC: Change clear color to MAGENTA to verify renderer is working
+  canvas->clear(SkColorSetRGB(255, 0, 255));
 
   // Execute user drawing code
   if (drawCallback) {

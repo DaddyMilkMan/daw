@@ -7,8 +7,16 @@ ZenithDAW-Native/build/
 zenith-core/build*/
 build/
 
+
 # Compiled binaries
 GeneratePolySynthPresetsStandalone
 *.o
+*.obj
 *.exe
+*.dll
+*.tlog
+*.log
+stderr.txt
+stdout.txt
 nul
+build_skia/
