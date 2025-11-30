@@ -29,7 +29,7 @@
 
 #ifdef ZENITH_USE_SKIA
     #include <include/core/SkCanvas.h>
-    #include "../Source/ui/skia/SkiaTheme.h"
+    #include "../src/ui/skia/SkiaTheme.h"
 #endif
 
 //==============================================================================

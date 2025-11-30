@@ -1,0 +1,11 @@
+#demucs==4.0.1
+# pass local path to demucs in vendored folder
+torch
+numpy
+-e ./demucs-for-onnx
+librosa
+museval
+musdb
+onnxruntime
+onnx
+bin2c

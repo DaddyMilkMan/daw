@@ -3,8 +3,8 @@
  * @brief Timeline/Arranger view implementation
  */
 
-#include "../Source/ui/ArrangerComponent.h"
-#include "../Source/rendering/SkiaContextManager.h"
+#include "ui/ArrangerComponent.h"
+#include "rendering/SkiaContextManager.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>

@@ -9,7 +9,7 @@
 
 #pragma once
 
-#include "../Source/ui/ArrangerComponent.h"
+#include "ArrangerView.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
@@ -29,26 +29,26 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "../Source/rendering/SkiaRenderer.h"
-#include "../Source/ui/skia/BottomBar.h"
-#include "../Source/ui/skia/BrowserPanel.h"
-#include "../Source/ui/skia/RightSidePanel.h"
-#include "../Source/ui/skia/SkiaButtonComponent.h"
-#include "../Source/ui/skia/SkiaButtonNative.h"
-#include "../Source/ui/skia/SkiaColorTestComponent.h"
-#include "../Source/ui/skia/SkiaLabel.h"
-#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-#include "../Source/ui/skia/SkiaTextDisplay.h"
-#include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/views/PianoKeyboardViewSkia.h"
-#include "../Source/ui/views/SessionViewComponent.h"
+#include "rendering/SkiaRenderer.h"
+#include "ui/skia/BottomBar.h"
+#include "ui/skia/BrowserPanel.h"
+#include "ui/skia/RightSidePanel.h"
+#include "ui/skia/SkiaButtonComponent.h"
+#include "ui/skia/SkiaButtonNative.h"
+#include "ui/skia/SkiaColorTestComponent.h"
+#include "ui/skia/SkiaLabel.h"
+#include "ui/skia/SkiaMainWindowIntegration.h"
+#include "ui/skia/SkiaTextDisplay.h"
+#include "ui/skia/TransportBar.h"
+#include "ui/skia/views/PianoKeyboardViewSkia.h"
+#include "ui/skia/views/SessionViewComponent.h"
 #endif
 
-// Forward declarations
-class WingmanPanel;
+// UI panels
+#include "ui/WingmanPanel.h"
+#include "ui/InstrumentBrowserPanel.h"
 
 namespace zenith {
-class InstrumentBrowserPanel;
 class CommandAPI;
 class AIBridgeClient;
 class MainLayoutComponent;
@@ -102,6 +102,14 @@ public:
 
   bool keyPressed(const juce::KeyPress &key,
                   Component *originatingComponent) override;
+
+#ifdef ZENITH_USE_SKIA
+  //==========================================================================
+  // SkiaMainWindowIntegration interface
+  //==========================================================================
+
+  void drawSkiaContent(SkCanvas* canvas) override;
+#endif
 
 private:
 #ifndef ZENITH_USE_SKIA
@@ -166,7 +174,7 @@ private:
   juce::Label trackCountLabel;
 
   MixerComponent mixerComponent;
-  std::unique_ptr<WingmanPanel> wingmanPanel;
+  std::unique_ptr<zenith::WingmanPanel> wingmanPanel;
   std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
 
   std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
@@ -178,13 +186,13 @@ private:
   // Phase 9: Arranger component with interactive clip editing (center)
   // Now managed by MainLayoutComponent in Skia builds
 #ifndef ZENITH_USE_SKIA
-  std::unique_ptr<ArrangerComponent> arrangerComponent;
+  std::unique_ptr<ArrangerView> arrangerComponent;
 #endif
 
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
   // Skia)
 #ifdef ZENITH_USE_SKIA
-  std::unique_ptr<WingmanPanel> wingmanPanelPtr_;
+  std::unique_ptr<zenith::WingmanPanel> wingmanPanelPtr_;
 #endif
 
   // Virtual MIDI Keyboard state (shared between Skia and JUCE builds)

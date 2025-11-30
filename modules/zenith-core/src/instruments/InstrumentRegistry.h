@@ -58,12 +58,29 @@ public:
     juce::StringArray getInstrumentIds() const;
 
     /**
+     * @brief Get list of all available instrument IDs (alias)
+     */
+    juce::StringArray getAllInstrumentIds() const { return getInstrumentIds(); }
+
+    /**
      * @brief Get metadata for a specific instrument
      * @param instrumentId Instrument identifier
      * @param outMetadata Output parameter to receive metadata
      * @return true if found, false otherwise
      */
     bool getMetadata(const juce::String& instrumentId, InstrumentMetadata& outMetadata) const;
+
+    /**
+     * @brief Get metadata for a specific instrument (direct return)
+     * @param instrumentId Instrument identifier
+     * @return Metadata struct, or default if not found
+     */
+    InstrumentMetadata getInstrumentMetadata(const juce::String& instrumentId) const
+    {
+        InstrumentMetadata meta;
+        getMetadata(instrumentId, meta);
+        return meta;
+    }
 
     /**
      * @brief Get basic info for all instruments (for list_instruments command)

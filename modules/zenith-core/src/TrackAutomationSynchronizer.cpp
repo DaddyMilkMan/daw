@@ -7,7 +7,7 @@
 #include "../include/TempoMap.h"
 
 // Forward declare Track from namespace
-#include "../Source/engine/Track.h"
+#include "engine/Track.h"
 
 //==============================================================================
 TrackAutomationSynchronizer::TrackAutomationSynchronizer(ProjectState& ps, Engine& eng)

@@ -8,7 +8,7 @@
 #include "../../include/ui/PianoRollEditor.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "../ui/skia/SkiaTheme.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
@@ -49,8 +49,10 @@ PianoRollEditor::~PianoRollEditor() {
 }
 
 #ifdef ZENITH_USE_SKIA
-void PianoRollEditor::paintSkia(SkCanvas &canvas,
-                                const juce::Rectangle<int> &bounds) {
+void PianoRollEditor::drawSkia(SkCanvas* canvas) {
+  if (!canvas) return;
+
+  auto bounds = getLocalBounds();
   auto &theme = ::zenith::SkiaTheme::getInstance();
   auto &colors = theme.getColors();
   auto &typo = theme.getTypography();
@@ -59,7 +61,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
   SkPaint bgPaint;
   bgPaint.setAntiAlias(true);
   bgPaint.setColor(colors.bg1);
-  canvas.drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
+  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
                   bgPaint);
 
   int numNotes = highestNote - lowestNote + 1;
@@ -82,14 +84,14 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
     SkPaint keyPaint;
     keyPaint.setAntiAlias(true);
     keyPaint.setColor(isBlackKey ? colors.bg3 : colors.bg2);
-    canvas.drawRect(SkRect::MakeXYWH(0, y, PIANO_WIDTH, noteHeight), keyPaint);
+    canvas->drawRect(SkRect::MakeXYWH(0, y, PIANO_WIDTH, noteHeight), keyPaint);
 
     // Key border
     SkPaint keyBorderPaint;
     keyBorderPaint.setAntiAlias(true);
     keyBorderPaint.setColor(colors.borderSubtle);
     keyBorderPaint.setStrokeWidth(1.0f);
-    canvas.drawLine(0, y + noteHeight, PIANO_WIDTH, y + noteHeight,
+    canvas->drawLine(0, y + noteHeight, PIANO_WIDTH, y + noteHeight,
                     keyBorderPaint);
 
     // POLISH: C note labels using Typography.tiny
@@ -99,7 +101,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
       textPaint.setColor(colors.textMuted);
 
       juce::String label = "C" + juce::String(noteNumber / 12 - 2);
-      canvas.drawString(label.toRawUTF8(), 4,
+      canvas->drawString(label.toRawUTF8(), 4,
                         y + noteHeight * 0.5f + typo.tiny.size * 0.5f,
                         labelFont, textPaint);
     }
@@ -115,7 +117,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
     SkPaint rowPaint;
     rowPaint.setAntiAlias(true);
     rowPaint.setColor(noteInOctave == 0 ? colors.bg2 : colors.bg1);
-    canvas.drawRect(SkRect::MakeXYWH(PIANO_WIDTH, y,
+    canvas->drawRect(SkRect::MakeXYWH(PIANO_WIDTH, y,
                                      bounds.getWidth() - PIANO_WIDTH,
                                      noteHeight),
                     rowPaint);
@@ -125,7 +127,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
     separatorPaint.setAntiAlias(true);
     separatorPaint.setColor(colors.borderSubtle);
     separatorPaint.setStrokeWidth(1.0f);
-    canvas.drawLine(PIANO_WIDTH, y + noteHeight, bounds.getWidth(),
+    canvas->drawLine(PIANO_WIDTH, y + noteHeight, bounds.getWidth(),
                     y + noteHeight, separatorPaint);
   }
 
@@ -150,7 +152,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
       gridPaint.setColor(colors.borderSubtle);
     }
 
-    canvas.drawLine(x, RULER_HEIGHT, x, bounds.getHeight(), gridPaint);
+    canvas->drawLine(x, RULER_HEIGHT, x, bounds.getHeight(), gridPaint);
   }
 
   // POLISH: Draw MIDI notes as rounded rects using theme waveformMidi color
@@ -181,7 +183,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
     noteFillPaint.setColor(SkColorSetARGB(180, SkColorGetR(colors.waveformMidi),
                                           SkColorGetG(colors.waveformMidi),
                                           SkColorGetB(colors.waveformMidi)));
-    canvas.drawRRect(noteRRect, noteFillPaint);
+    canvas->drawRRect(noteRRect, noteFillPaint);
 
     // Note border
     SkPaint noteBorderPaint;
@@ -189,7 +191,7 @@ void PianoRollEditor::paintSkia(SkCanvas &canvas,
     noteBorderPaint.setColor(colors.waveformMidi);
     noteBorderPaint.setStyle(SkPaint::kStroke_Style);
     noteBorderPaint.setStrokeWidth(1.0f);
-    canvas.drawRRect(noteRRect, noteBorderPaint);
+    canvas->drawRRect(noteRRect, noteBorderPaint);
   }
 }
 #else
@@ -464,4 +466,14 @@ juce::ValueTree PianoRollEditor::findNoteAtPosition(int x, int y) {
   }
 
   return {};
+}
+
+void PianoRollEditor::resized() {
+  auto bounds = getLocalBounds();
+
+  // Position ruler at top
+  ruler.setBounds(bounds.removeFromTop(32));
+
+  // Remaining space for piano roll content
+  // (Override in subclass if needed for additional layout)
 }

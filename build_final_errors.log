@@ -1,0 +1,23 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  InstrumentValidationTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\InstrumentValidationTests_rc_lib.dir\Release\InstrumentValidationTests_rc_lib.lib
+  PresetRegressionTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\PresetRegressionTests_rc_lib.dir\Release\PresetRegressionTests_rc_lib.lib
+  ProjectStateTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\ProjectStateTests_rc_lib.dir\Release\ProjectStateTests_rc_lib.lib
+  RecordingAutomationTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\RecordingAutomationTests_rc_lib.dir\Release\RecordingAutomationTests_rc_lib.lib
+  SkiaSimpleTest_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\SkiaSimpleTest_rc_lib.dir\Release\SkiaSimpleTest_rc_lib.lib
+  TempoTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\TempoTests_rc_lib.dir\Release\TempoTests_rc_lib.lib
+  TrackInstrumentIntegrationTests_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\TrackInstrumentIntegrationTests_rc_lib.dir\Release\TrackInstrumentIntegrationTests_rc_lib.lib
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\modules\zenith-core\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
+  InstrumentValidationTests.cpp
+C:\zenith\daw\modules\zenith-core\tests\InstrumentValidationTests.cpp(29,10): error C1083: Cannot open include file: '../Source/instruments/InstrumentPreset.h': No such file or directory [C:\zenith\daw\build\modules\zenith-core\InstrumentValidationTests.vcxproj]
+  PresetRegressionTests.cpp
+C:\zenith\daw\modules\zenith-core\tests\PresetRegressionTests.cpp(34,10): error C1083: Cannot open include file: '../Source/instruments/InstrumentPreset.h': No such file or directory [C:\zenith\daw\build\modules\zenith-core\PresetRegressionTests.vcxproj]
+  ProjectStateTests.vcxproj -> C:\zenith\daw\build\modules\zenith-core\ProjectStateTests_artefacts\Release\ProjectStateTests.exe
+  RecordingAutomationTests.vcxproj -> C:\zenith\daw\build\modules\zenith-core\RecordingAutomationTests_artefacts\Release\RecordingAutomationTests.exe
+  SkiaSimpleTest.vcxproj -> C:\zenith\daw\build\modules\zenith-core\SkiaSimpleTest_artefacts\Release\SkiaSimpleTest.exe
+  TempoTests.vcxproj -> C:\zenith\daw\build\modules\zenith-core\TempoTests_artefacts\Release\TempoTests.exe
+  TrackInstrumentIntegrationTests.cpp
+C:\zenith\daw\modules\zenith-core\tests\TrackInstrumentIntegrationTests.cpp(22,10): error C1083: Cannot open include file: '../Source/engine/Track.h': No such file or directory [C:\zenith\daw\build\modules\zenith-core\TrackInstrumentIntegrationTests.vcxproj]
+  PianoKeyboardViewSkia.cpp
+C:\zenith\daw\modules\zenith-core\src\ui\skia\views\PianoKeyboardViewSkia.cpp(14,10): error C1083: Cannot open include file: 'skia/include/core/SkCanvas.h': No such file or directory [C:\zenith\daw\build\modules\zenith-core\ZenithDAW.vcxproj]

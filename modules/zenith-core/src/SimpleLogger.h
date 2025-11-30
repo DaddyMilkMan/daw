@@ -1,6 +1,5 @@
 #pragma once
-#pragma once
-#include "../Source/ui/debug/DebugLogOverlay.h"
+#include "ui/debug/DebugLogOverlay.h"
 #include <fstream>
 #include <iostream>
 #include <string>

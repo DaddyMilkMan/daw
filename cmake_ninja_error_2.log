@@ -1,0 +1,16 @@
+-- Fetching JUCE 8.0.9...
+CMake Error: Error: generator : Ninja
+Does not match the generator used previously: Visual Studio 17 2022
+Either remove the CMakeCache.txt file and CMakeFiles directory or choose a different binary directory.
+
+CMake Error at C:/Program Files/CMake/share/cmake-4.1/Modules/FetchContent.cmake:1906 (message):
+  CMake step for juce failed: 1
+Call Stack (most recent call first):
+  C:/Program Files/CMake/share/cmake-4.1/Modules/FetchContent.cmake:1609 (__FetchContent_populateSubbuild)
+  C:/Program Files/CMake/share/cmake-4.1/Modules/FetchContent.cmake:2145:EVAL:2 (__FetchContent_doPopulation)
+  C:/Program Files/CMake/share/cmake-4.1/Modules/FetchContent.cmake:2145 (cmake_language)
+  C:/Program Files/CMake/share/cmake-4.1/Modules/FetchContent.cmake:2384 (__FetchContent_Populate)
+  modules/zenith-core/CMakeLists.txt:46 (FetchContent_MakeAvailable)
+
+
+-- Configuring incomplete, errors occurred!

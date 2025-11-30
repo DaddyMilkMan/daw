@@ -17,9 +17,7 @@
 #pragma once
 
 #ifdef ZENITH_USE_SKIA
-#include "../Source/ui/skia/SkiaButtonComponent.h"
-#include "../Source/ui/skia/SkiaComponent.h"
-#include "../Source/ui/skia/SkiaSliderComponent.h"
+#include "../src/ui/skia/ZenithUIComponents.h"
 
 class SkCanvas;
 struct SkRect;

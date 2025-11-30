@@ -10,7 +10,7 @@
 #include "../../include/ui/TimelineRuler.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "../ui/skia/SkiaTheme.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
@@ -45,8 +45,11 @@ double TimelineRuler::pixelsToBeats(int pixels) const
 }
 
 #ifdef ZENITH_USE_SKIA
-void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+void TimelineRuler::drawSkia(SkCanvas* canvas)
 {
+    if (!canvas) return;
+
+    auto bounds = getLocalBounds();
     auto& theme = ::zenith::SkiaTheme::getInstance();
     auto& colors = theme.getColors();
     auto& typo = theme.getTypography();
@@ -56,13 +59,13 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
     SkPaint bgPaint;
     bgPaint.setAntiAlias(true);
     bgPaint.setColor(colors.bg2);
-    canvas.drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
+    canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
 
     // Top border for separation
     SkPaint borderPaint;
     borderPaint.setAntiAlias(true);
     borderPaint.setColor(colors.borderSubtle);
-    canvas.drawLine(0, 0, bounds.getWidth(), 0, borderPaint);
+    canvas->drawLine(0, 0, bounds.getWidth(), 0, borderPaint);
 
     // Draw beat markers
     int startBeat = static_cast<int>(std::floor(viewStartBeat));
@@ -96,7 +99,7 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
 
                 int nextX = beatsToPixels(beat + 4);
                 if (nextX > bounds.getWidth()) nextX = bounds.getWidth();
-                canvas.drawRect(SkRect::MakeXYWH(x, 0, nextX - x, bounds.getHeight()), hoverBgPaint);
+                canvas->drawRect(SkRect::MakeXYWH(x, 0, nextX - x, bounds.getHeight()), hoverBgPaint);
             }
 
             // Measure line using borderStrong
@@ -106,7 +109,7 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
             if (isHoveredMeasure)
                 linePaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation * 0.6f + 255 * 0.4f));
             linePaint.setStrokeWidth(1.0f);
-            canvas.drawLine(x, 0, x, bounds.getHeight(), linePaint);
+            canvas->drawLine(x, 0, x, bounds.getHeight(), linePaint);
 
             // POLISH: Measure number using Typography.small
             juce::String text = juce::String(measure);
@@ -116,7 +119,8 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
             if (isHoveredMeasure)
                 textPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation * 0.5f + 255 * 0.5f));
 
-            canvas.drawString(text.toRawUTF8(), x + 8, bounds.getHeight() / 2 + typo.small.size / 2, font, textPaint);
+            canvas->drawSimpleText(text.toRawUTF8(), text.length(), SkTextEncoding::kUTF8,
+                                  x + 8, bounds.getHeight() / 2 + typo.small.size / 2, font, textPaint);
         }
         else
         {
@@ -125,7 +129,7 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
             tickPaint.setAntiAlias(true);
             tickPaint.setColor(colors.borderSubtle);
             tickPaint.setStrokeWidth(0.5f);
-            canvas.drawLine(x, bounds.getHeight() - 8, x, bounds.getHeight(), tickPaint);
+            canvas->drawLine(x, bounds.getHeight() - 8, x, bounds.getHeight(), tickPaint);
         }
     }
 
@@ -155,7 +159,7 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
         tooltipBgPaint.setAntiAlias(true);
         tooltipBgPaint.setColor(colors.bg3);
         tooltipBgPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
-        canvas.drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBgPaint);
+        canvas->drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBgPaint);
 
         SkPaint tooltipBorderPaint;
         tooltipBorderPaint.setAntiAlias(true);
@@ -163,7 +167,7 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
         tooltipBorderPaint.setStyle(SkPaint::kStroke_Style);
         tooltipBorderPaint.setStrokeWidth(1.0f);
         tooltipBorderPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
-        canvas.drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBorderPaint);
+        canvas->drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBorderPaint);
 
         SkPaint tooltipTextPaint;
         tooltipTextPaint.setAntiAlias(true);
@@ -172,7 +176,8 @@ void TimelineRuler::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
 
         float textX = tooltipRect.centerX() - textBounds.width() / 2;
         float textY = tooltipRect.centerY() + typo.small.size / 2;
-        canvas.drawString(timeText.toRawUTF8(), textX, textY, tooltipFont, tooltipTextPaint);
+        canvas->drawSimpleText(timeText.toRawUTF8(), timeText.length(), SkTextEncoding::kUTF8,
+                              textX, textY, tooltipFont, tooltipTextPaint);
     }
 }
 #else

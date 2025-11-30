@@ -40,9 +40,9 @@ juce::var Preset::toJson() const
 
     // Parameters (compact object format)
     auto* paramsObj = new juce::DynamicObject();
-    for (const auto& [paramId, value] : parameters)
+    for (auto it = parameters.begin(); it != parameters.end(); ++it)
     {
-        paramsObj->setProperty(paramId, value);
+        paramsObj->setProperty(it->first, it->second);
     }
     obj->setProperty("parameters", juce::var(paramsObj));
 
@@ -249,10 +249,10 @@ juce::StringArray ZenithPresetManager::getCategories(const juce::String& instrum
     auto factoryDir = getPresetsDirectory(instrumentId, juce::String(), false);
     if (factoryDir.exists())
     {
-        auto subdirs = factoryDir.findChildFiles(juce::File::findDirectories, false);
-        for (const auto& dir : subdirs)
+        juce::Array<juce::File> subdirs = factoryDir.findChildFiles(juce::File::findDirectories, false);
+        for (int i = 0; i < subdirs.size(); ++i)
         {
-            categories.addIfNotAlreadyThere(dir.getFileName());
+            categories.addIfNotAlreadyThere(subdirs[i].getFileName());
         }
     }
 
@@ -260,10 +260,10 @@ juce::StringArray ZenithPresetManager::getCategories(const juce::String& instrum
     auto userDir = getPresetsDirectory(instrumentId, juce::String(), true);
     if (userDir.exists())
     {
-        auto subdirs = userDir.findChildFiles(juce::File::findDirectories, false);
-        for (const auto& dir : subdirs)
+        juce::Array<juce::File> subdirs = userDir.findChildFiles(juce::File::findDirectories, false);
+        for (int i = 0; i < subdirs.size(); ++i)
         {
-            categories.addIfNotAlreadyThere(dir.getFileName());
+            categories.addIfNotAlreadyThere(subdirs[i].getFileName());
         }
     }
 
@@ -294,11 +294,11 @@ bool ZenithPresetManager::applyPresetToInstrument(const Preset& preset, Instrume
     }
 
     // Default implementation: apply each parameter
-    for (const auto& [paramId, value] : preset.parameters)
+    for (auto it = preset.parameters.begin(); it != preset.parameters.end(); ++it)
     {
-        if (!instrument.setParameter(paramId, value))
+        if (!instrument.setParameter(it->first, it->second))
         {
-            DBG("ZenithPresetManager: Failed to set parameter '" << paramId << "'");
+            DBG("ZenithPresetManager: Failed to set parameter '" << it->first << "'");
         }
     }
 
@@ -433,11 +433,11 @@ std::vector<Preset> ZenithPresetManager::scanDirectory(const juce::File& directo
         return presets;
 
     // Find all .zpreset.json files recursively
-    auto files = directory.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
+    juce::Array<juce::File> files = directory.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
 
-    for (const auto& file : files)
+    for (int i = 0; i < files.size(); ++i)
     {
-        auto preset = loadPresetFromFile(file);
+        auto preset = loadPresetFromFile(files[i]);
         if (preset.instrumentId.isNotEmpty() &&
             (instrumentId.isEmpty() || preset.instrumentId == instrumentId))
         {
@@ -457,11 +457,11 @@ std::vector<PresetMetadata> ZenithPresetManager::scanDirectoryMetadata(const juc
         return metadataList;
 
     // Find all .zpreset.json files recursively
-    auto files = directory.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
+    juce::Array<juce::File> files = directory.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
 
-    for (const auto& file : files)
+    for (int i = 0; i < files.size(); ++i)
     {
-        auto meta = loadMetadataFromFile(file);
+        auto meta = loadMetadataFromFile(files[i]);
         if (meta.instrumentId.isNotEmpty() &&
             (instrumentId.isEmpty() || meta.instrumentId == instrumentId))
         {
@@ -539,12 +539,12 @@ juce::File ZenithPresetManager::findPresetFile(const juce::String& instrumentId,
         return juce::File();
 
     // Search recursively for preset with matching ID
-    auto files = baseDir.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
+    juce::Array<juce::File> files = baseDir.findChildFiles(juce::File::findFiles, true, "*.zpreset.json");
 
-    for (const auto& file : files)
+    for (int i = 0; i < files.size(); ++i)
     {
         // Quick check: load just the ID field
-        juce::String jsonStr = file.loadFileAsString();
+        juce::String jsonStr = files[i].loadFileAsString();
         auto json = juce::JSON::parse(jsonStr);
 
         if (json.isObject())
@@ -552,7 +552,7 @@ juce::File ZenithPresetManager::findPresetFile(const juce::String& instrumentId,
             auto* obj = json.getDynamicObject();
             if (obj && obj->getProperty("id").toString() == presetId)
             {
-                return file;
+                return files[i];
             }
         }
     }

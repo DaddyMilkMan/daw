@@ -1,0 +1,29 @@
+-- Fetching JUCE 8.0.9...
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- JUCE fetched successfully!
+-- ============================================
+-- Configuring Manual Skia Integration
+-- ============================================
+CMake Error at C:/zenith/daw/cmake/SkiaManualIntegration.cmake:19 (message):
+
+
+  Skia directory not found: C:/zenith/skia
+
+
+
+  Please download Skia first:
+
+    1. Run: C:\zenith\daw\download-skia.bat
+    2. Or manually download from: https://github.com/JetBrains/skia-pack/releases
+
+
+
+Call Stack (most recent call first):
+  CMakeLists.txt:196 (include)
+
+
+-- Configuring incomplete, errors occurred!

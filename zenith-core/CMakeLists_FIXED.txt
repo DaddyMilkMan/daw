@@ -1,0 +1,28 @@
+# ALEX'S BUILD FIX PLAN
+# ======================
+
+## Issue 1: JUCE FetchContent Path Too Long
+SOLUTION: Use shorter FETCHCONTENT_BASE_DIR
+Add to CMakeLists.txt line 34:
+set(FETCHCONTENT_BASE_DIR "C:/juce_deps" CACHE PATH "FetchContent base")
+
+## Issue 2: ZENITH_USE_SKIA Not Set Properly  
+CURRENT: Lines 202-205 set it conditionally
+PROBLEM: It's already set! But build log shows it's not being used
+SOLUTION: The macro IS set correctly. Real issue is include paths.
+
+## Issue 3: Include Path Inconsistency
+FOUND: Some files use <skia/include/core/SkCanvas.h>
+       Others use <include/core/SkCanvas.h>
+SOLUTION: Standardize to <skia/include/core/...> everywhere
+
+## Issue 4: Surface Recreation Every Frame
+FILE: SkiaMainWindowIntegration.cpp
+PROBLEM: No surface caching
+SOLUTION: Cache surface, only recreate on resize
+
+## IMMEDIATE ACTIONS:
+1. Set FETCHCONTENT_BASE_DIR to short path
+2. Fix all include paths to use skia/ prefix
+3. Implement surface caching with sk_sp<>
+4. Add proper error handling

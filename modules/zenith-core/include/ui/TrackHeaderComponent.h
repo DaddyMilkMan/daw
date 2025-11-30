@@ -27,8 +27,7 @@
 #include "ZenithButton.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaCanvasComponent.h"
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "../../src/ui/skia/ZenithUIComponents.h"
 #endif
 
 //==============================================================================
@@ -75,7 +74,7 @@ public:
     //==========================================================================
 
 #ifdef ZENITH_USE_SKIA
-    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds) override;
+    void drawSkia(SkCanvas* canvas) override;
 #else
     void paint(juce::Graphics& g) override;
 #endif

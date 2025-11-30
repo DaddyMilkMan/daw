@@ -4,17 +4,11 @@
  */
 
 #include "../../include/ui/MixerChannelComponent.h"
-#include "../../Source/engine/Track.h"
+#include "../engine/Track.h"
 
 //==============================================================================
 MixerChannelComponent::MixerChannelComponent(zenith::Track* track)
     : track_(track)
-#ifdef ZENITH_USE_SKIA
-    , faderSlider_(zenith::SkiaSliderComponent::Orientation::Vertical, zenith::SkiaSliderComponent::Style::Linear)
-    , panKnob_(zenith::SkiaKnobComponent::Style::Continuous)
-    , muteButton_("M", zenith::SkiaButtonComponent::Style::Secondary)
-    , soloButton_("S", zenith::SkiaButtonComponent::Style::Secondary)
-#endif
 {
     jassert(track_ != nullptr);
 
@@ -29,7 +23,7 @@ MixerChannelComponent::MixerChannelComponent(zenith::Track* track)
     faderSlider_.setRange(0.0, 1.0);
     faderSlider_.setValue(track_->getVolume(), false);
     faderSlider_.setTextSuffix(" dB");
-    faderSlider_.onValueChange = [this](double value) { onFaderChanged(); };
+    faderSlider_.onValueChange = [this]() { onFaderChanged(); };
     addAndMakeVisible(faderSlider_);
 
     // GPU-accelerated pan knob with spring physics
@@ -37,7 +31,7 @@ MixerChannelComponent::MixerChannelComponent(zenith::Track* track)
     panKnob_.setValue(track_->getPan(), false);
     panKnob_.setDefaultValue(0.0);  // Center is default
     panKnob_.setLabel("Pan");
-    panKnob_.onValueChange = [this](double value) { onPanChanged(); };
+    panKnob_.onValueChange = [this]() { onPanChanged(); };
     addAndMakeVisible(panKnob_);
 
     // GPU-accelerated buttons with spring physics
@@ -60,9 +54,9 @@ MixerChannelComponent::MixerChannelComponent(zenith::Track* track)
     addAndMakeVisible(faderSlider_);
 
     panKnob_.setRange(-1.0f, 1.0f, 0.0f);  // Min, Max, Default (center)
-    panKnob_.setValue(track_->getPan(), false);
+    panKnob_.setValue(track_->getPan(), juce::dontSendNotification);
     panKnob_.setLabel("Pan");
-    panKnob_.onValueChange = [this](float value) { onPanChanged(); };
+    panKnob_.onChange = [this](float value) { onPanChanged(); };
     addAndMakeVisible(panKnob_);
 
     muteButton_.setButtonText("M");
@@ -172,7 +166,7 @@ void MixerChannelComponent::updateFromTrack()
     faderSlider_.setValue(track_->getVolume(), false);
 
     // Update pan knob
-    panKnob_.setValue(track_->getPan(), false);
+    panKnob_.setValue(track_->getPan(), juce::dontSendNotification);
 
 #ifdef ZENITH_USE_SKIA
     // Skia buttons: toggle state provides visual feedback

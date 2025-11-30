@@ -10,6 +10,8 @@
 #include "../../include/ui/TrackHeaderComponent.h"
 
 #ifdef ZENITH_USE_SKIA
+#include "../ui/skia/SkiaTheme.h"
+#include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
@@ -33,10 +35,10 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juc
         trackNode_.addListener(this);
 
     // Setup name label (editable) with Apple styling
-    auto& typo = zenith::SkiaTheme::getInstance().getTypography();
+    // auto& typo = zenith::SkiaTheme::getInstance().getTypography();
     nameLabel_.setEditable(true);
     nameLabel_.setJustificationType(juce::Justification::centredLeft);
-    nameLabel_.setFont(juce::FontOptions(typo.header.size));
+    nameLabel_.setFont(juce::FontOptions(14.0f));
     nameLabel_.setColour(juce::Label::textColourId, juce::Colours::white.withAlpha(0.95f));
     nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
     nameLabel_.setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
@@ -82,8 +84,11 @@ TrackHeaderComponent::~TrackHeaderComponent()
 
 //==============================================================================
 #ifdef ZENITH_USE_SKIA
-void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+void TrackHeaderComponent::drawSkia(SkCanvas* canvas)
 {
+    if (!canvas) return;
+
+    auto bounds = getLocalBounds();
     using namespace zenith;
     auto& theme = SkiaTheme::getInstance();
     auto colors = theme.getColors();
@@ -97,7 +102,7 @@ void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int
     bgPaint.setAntiAlias(true);
 
     SkRRect bgRRect = SkRRect::MakeRectXY(SkRect::MakeWH(width, height), 4.0f, 4.0f);
-    canvas.drawRRect(bgRRect, bgPaint);
+    canvas->drawRRect(bgRRect, bgPaint);
 
     // Delicate hover glow
     if (isHovered_)
@@ -105,7 +110,7 @@ void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int
         SkPaint hoverPaint;
         hoverPaint.setColor(SkColorSetARGB(13, 255, 255, 255));  // Slightly stronger (5% alpha)
         hoverPaint.setAntiAlias(true);
-        canvas.drawRRect(bgRRect, hoverPaint);
+        canvas->drawRRect(bgRRect, hoverPaint);
     }
 
     // Color stripe (left edge, 8px wide) - flat for clarity
@@ -118,7 +123,7 @@ void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int
 
     // Rounded stripe (left side only)
     SkRRect stripeRRect = SkRRect::MakeRectXY(stripeRect, 4.0f, 4.0f);
-    canvas.drawRRect(stripeRRect, stripePaint);
+    canvas->drawRRect(stripeRRect, stripePaint);
 
     // Subtle bottom border
     SkPaint borderPaint;
@@ -126,7 +131,7 @@ void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int
     borderPaint.setStrokeWidth(0.5f);
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setAntiAlias(true);
-    canvas.drawLine(2.0f, height - 0.5f, width - 2.0f, height - 0.5f, borderPaint);
+    canvas->drawLine(2.0f, height - 0.5f, width - 2.0f, height - 0.5f, borderPaint);
 
     // Name editor focus glow
     if (nameFocusAnim_ > 0.01f)
@@ -140,7 +145,7 @@ void TrackHeaderComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int
         SkRRect focusRRect = SkRRect::MakeRectXY(
             SkRect::MakeXYWH(nameBounds.getX(), nameBounds.getY(), nameBounds.getWidth(), nameBounds.getHeight()),
             4.0f, 4.0f);
-        canvas.drawRRect(focusRRect, focusPaint);
+        canvas->drawRRect(focusRRect, focusPaint);
     }
 }
 #else
@@ -276,7 +281,7 @@ void TrackHeaderComponent::valueTreePropertyChanged(juce::ValueTree& tree, const
 void TrackHeaderComponent::onNameChanged()
 {
     auto newName = nameLabel_.getText();
-    projectState_.setTrackName(trackId_, newName, "Change Track Name");
+    trackNode_.setProperty(ProjectState::PROP_NAME, newName, nullptr);
 }
 
 void TrackHeaderComponent::onMuteClicked()
@@ -312,7 +317,7 @@ void TrackHeaderComponent::updateFromState()
         nameLabel_.setText(name, juce::dontSendNotification);
 
     // Update color
-    int colourInt = trackNode_[ProjectState::PROP_COLOUR];
+    int colourInt = trackNode_[ProjectState::PROP_COLOR];
     trackColour_ = juce::Colour(static_cast<juce::uint32>(colourInt));
 
     // Update button states

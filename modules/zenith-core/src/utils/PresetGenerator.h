@@ -23,6 +23,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include "../instruments/InstrumentPreset.h"
 #include "../instruments/ZenithPolySynth.h"
+#include "../instruments/ZenithPresetManager.h"
 
 namespace zenith {
 
@@ -47,7 +48,7 @@ private:
             return;
         }
 
-        ZenithPresetManager manager;
+        auto& manager = ZenithPresetManager::getInstance();
         juce::Random random(12345); // Fixed seed for reproducibility
 
         const std::vector<std::string> types = { "Bass", "Lead", "Pad", "Pluck", "Keys", "FX", "Sequence" };
@@ -60,24 +61,24 @@ private:
             std::string type = types[random.nextInt(types.size())];
             std::string character = characters[random.nextInt(characters.size())];
 
-            // Create preset
-            std::string name = character + " " + type + " " + juce::String(i + 1).toStdString();
-            ZenithInstrumentPreset preset(name, "zenith.poly_synth", "Zenith AI");
-            
-            preset.category = type;
-            preset.soundType = type;
-            preset.characters.push_back(character);
-            preset.engines.push_back("Subtractive");
-            preset.tags.push_back(type);
-            preset.tags.push_back(character);
-            preset.version = "1.0";
+            // Create preset using Preset struct
+            std::string presetName = character + " " + type + " " + juce::String(i + 1).toStdString();
+            Preset preset;
+            preset.id = juce::String("poly_synth_" + std::to_string(i + 1));
+            preset.name = juce::String(presetName);
+            preset.instrumentId = "zenith.poly_synth";
+            preset.category = juce::String(type);
+            preset.tags.push_back(juce::String(type));
+            preset.tags.push_back(juce::String(character));
+            preset.author = "Zenith AI";
             preset.description = "Procedurally generated " + character + " " + type + " preset.";
 
             // Set parameters based on type and character
-            setPolySynthParameters(preset, type, character, random);
+            // TODO: Convert setPolySynthParameters to work with Preset struct
+            // setPolySynthParameters(preset, type, character, random);
 
-            // Save as factory preset
-            manager.saveFactoryPreset(preset);
+            // Save as factory preset (userPreset = false means factory preset)
+            manager.savePreset(preset, false);
         }
         
         DBG("Generated 500 presets for Zenith Poly Synth");

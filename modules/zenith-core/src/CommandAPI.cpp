@@ -4,9 +4,9 @@
  */
 
 #include "../include/CommandAPI.h"
-#include "../Source/instruments/InstrumentRegistry.h"
-#include "../Source/instruments/InstrumentPreset.h"
-#include "../Source/engine/Track.h"
+#include "instruments/InstrumentRegistry.h"
+#include "instruments/InstrumentPreset.h"
+#include "engine/Track.h"
 
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState& ps, Engine& eng)

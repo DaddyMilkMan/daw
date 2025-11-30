@@ -431,16 +431,14 @@ private:
   }
 };
 
-//==============================================================================
-/**
- * @brief Preset manager for loading and saving presets
- *
- * Manages:
- * - Factory preset discovery
- * - User preset storage
- * - Preset browsing and search
- */
-class ZenithPresetManager {
+// Note: ZenithPresetManager is defined in ZenithPresetManager.h (not duplicated here)
+//       This avoids C2011 "class type redefinition" error
+
+// REMOVED DUPLICATE ZenithPresetManager CLASS (lines 443-656)
+// Use #include "ZenithPresetManager.h" instead
+
+#if 0 // OLD DUPLICATE CODE - DO NOT USE
+class ZenithPresetManager_OLD_DUPLICATE_REMOVED {
 public:
   ZenithPresetManager() {
     // Get preset directories
@@ -652,7 +650,8 @@ private:
   juce::File factoryPresetsDir_;
   juce::File userPresetsDir_;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPresetManager)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPresetManager_OLD_DUPLICATE_REMOVED)
 };
+#endif // OLD DUPLICATE CODE
 
 } // namespace zenith

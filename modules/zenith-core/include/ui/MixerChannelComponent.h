@@ -29,9 +29,7 @@
 
 // Conditional Skia components (GPU-accelerated with spring physics)
 #ifdef ZENITH_USE_SKIA
-    #include "../Source/ui/skia/SkiaSliderComponent.h"
-    #include "../Source/ui/skia/SkiaKnobComponent.h"
-    #include "../Source/ui/skia/SkiaButtonComponent.h"
+    #include "../../src/ui/skia/ZenithUIComponents.h"
 #else
     // Fallback custom JUCE components
     #include "ZenithSlider.h"
@@ -110,19 +108,11 @@ private:
     // UI components
     juce::Label nameLabel_;
 
-#ifdef ZENITH_USE_SKIA
-    // GPU-accelerated Skia components with spring physics
-    zenith::SkiaSliderComponent faderSlider_;      // Vertical fader for volume
-    zenith::SkiaKnobComponent panKnob_;            // Rotary knob for pan
-    zenith::SkiaButtonComponent muteButton_;
-    zenith::SkiaButtonComponent soloButton_;
-#else
-    // Fallback custom JUCE components
+    // UI components (Skia-rendered controls)
     zenith::ZenithSlider faderSlider_;      // Vertical fader for volume
     zenith::ZenithKnob panKnob_;            // Rotary knob for pan
     zenith::ZenithButton muteButton_;
     zenith::ZenithButton soloButton_;
-#endif
 
     // Beautiful custom level meter component with smooth animations
     class LevelMeter : public juce::Component,

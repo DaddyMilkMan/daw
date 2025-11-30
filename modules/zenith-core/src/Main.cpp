@@ -10,7 +10,7 @@
  * - System initialization
  */
 
-#include "../Source/instruments/RegisterBuiltInInstruments.h"
+#include "instruments/RegisterBuiltInInstruments.h"
 #include "../include/MainWindow.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>

@@ -289,7 +289,7 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent& e)
             if (draggingNote != nullptr)
                 updateNoteDrag(e);
             break;
-    \n    default: break;\n\n    default: break;\n}
+    }
 }
 
 void PianoRollComponent::mouseUp(const juce::MouseEvent& e)
@@ -319,7 +319,7 @@ void PianoRollComponent::mouseUp(const juce::MouseEvent& e)
             if (draggingNote != nullptr)
                 finishNoteDrag();
             break;
-    \n    default: break;\n\n    default: break;\n}
+    }
 
     currentDragMode = DragMode::None;
     activeNote = nullptr;

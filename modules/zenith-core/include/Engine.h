@@ -56,7 +56,7 @@ class Clip;
 class MixerChannel;
 class AudioFilePool;
 class PluginHost;
-class PluginEditorWindowManager;
+// class PluginEditorWindowManager;  // Temporarily disabled
 class TempoMap;
 class AuxBus;
 } // namespace zenith
@@ -423,12 +423,13 @@ public:
    */
   int scanForPlugins();
 
-  /**
-   * @brief Get the plugin editor window manager
-   * @return Reference to PluginEditorWindowManager
-   * @note Use only from message thread
-   */
-  zenith::PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
+  // Temporarily disabled - plugin editor window functionality
+  // /**
+  //  * @brief Get the plugin editor window manager
+  //  * @return Reference to PluginEditorWindowManager
+  //  * @note Use only from message thread
+  //  */
+  // zenith::PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
 
   //==========================================================================
   // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -633,7 +634,7 @@ private:
 
   // Phase 3: Plugin hosting
   std::unique_ptr<zenith::PluginHost> pluginHost_;
-  std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
+  // std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;  // Temporarily disabled
 
   // Project state reference (non-owning, for tempo/time sig/automation access)
   ProjectState *projectState_ = nullptr;

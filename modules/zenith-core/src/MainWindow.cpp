@@ -4,20 +4,22 @@
  */
 
 #include "../include/MainWindow.h"
-#include "../Source/commands/CommandAPI.h"
-#include "../Source/engine/Clip.h"
-#include "../Source/engine/Track.h"
-#include "../Source/network/AIBridgeClient.h"
-#include "../Source/ui/ArrangerComponent.h"
-#include "../Source/ui/InstrumentBrowserPanel.h"
-#include "../Source/ui/MainLayoutComponent.h"
-#include "../Source/ui/WingmanPanel.h"
+#include "commands/CommandAPI.h"
+#include "engine/Clip.h"
+#include "engine/Track.h"
+#include "network/AIBridgeClient.h"
+// #include "ui/ArrangerComponent.h"  // Using ArrangerView instead
+// #include "ui/InstrumentBrowserPanel.h"  // TODO: Implement this component
+#ifdef ZENITH_USE_SKIA
+#include "ui/MainLayoutComponent.h"
+#endif
+// #include "ui/WingmanPanel.h"  // TODO: Implement WingmanPanel
 #include "../include/PianoRollEditor.h"
 
-#include "../src/SimpleLogger.h"
+// #include "SimpleLogger.h"  // Disabled: DebugLogOverlay doesn't exist
 
 #ifdef ZENITH_USE_SKIA
-#include "../Source/ui/skia/SkiaComponent.h"
+#include "ui/skia/SkiaComponent.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImage.h>
 #include <include/core/SkImageInfo.h>
@@ -47,10 +49,10 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   setWantsKeyboardFocus(true);
 
   // Add Debug Overlay
-  addChildComponent(&zenith::DebugLogOverlay::getInstance());
+  // addChildComponent(&zenith::DebugLogOverlay::getInstance());  // Disabled: DebugLogOverlay doesn't exist
 
   // Show Console
-  showDebugConsole();
+  // showDebugConsole();  // Disabled: DebugLogOverlay doesn't exist
 
   setSize(1400, 800);
 
@@ -59,15 +61,15 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("========================================");
 
 #ifdef ZENITH_USE_SKIA
-  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-            "EXECUTING <<<");
+  DBG(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
+      "EXECUTING <<<");
 
   // Initialize Skia rendering system
   // Skia initialization is handled by
   // SkiaMainWindowIntegration::newOpenGLContextCreated
 
   // Instantiate the SkiaRenderer
-  logToFile("→ Initializing SkiaRenderer...");
+  DBG("→ Initializing SkiaRenderer...");
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
@@ -105,7 +107,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 
   // The "Perfect DAW" Tri-Pane Layout Manager
   DBG("→ Creating MainLayoutComponent...");
-  mainLayout = std::make_unique<zenith::MainLayoutComponent>(projectState);
+  mainLayout = std::make_unique<zenith::MainLayoutComponent>(projectState, engine);
   addAndMakeVisible(mainLayout.get());
   DBG("✓ MainLayoutComponent created and made visible at " +
       juce::String::toHexString((juce::pointer_sized_int)mainLayout.get()));
@@ -217,17 +219,17 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 
   // Arranger component
   arrangerComponent =
-      std::make_unique<ArrangerComponent>(*engine.getProjectState());
+      std::make_unique<ArrangerView>(*engine.getProjectState());
   addAndMakeVisible(arrangerComponent.get());
 
-  // Wingman panel
-  wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
-  addAndMakeVisible(wingmanPanel.get());
+  // Wingman panel - TODO: Implement WingmanPanel
+  // wingmanPanel = std::make_unique<WingmanPanel>(api, aiClient);
+  // addAndMakeVisible(wingmanPanel.get());
 
-  // Instrument Browser
-  instrumentBrowserPanel =
-      std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
-  addAndMakeVisible(instrumentBrowserPanel.get());
+  // Instrument Browser - TODO: Implement InstrumentBrowserPanel
+  // instrumentBrowserPanel =
+  //     std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
+  // addAndMakeVisible(instrumentBrowserPanel.get());
 
   // Virtual MIDI Keyboard
   midiKeyboard = std::make_unique<juce::MidiKeyboardComponent>(
@@ -338,20 +340,62 @@ void MainComponent::paint(juce::Graphics &g) {
 #endif
 }
 
+#ifdef ZENITH_USE_SKIA
+void MainComponent::drawSkiaContent(SkCanvas* canvas) {
+  if (!canvas) return;
+
+  // Draw all Skia UI panels
+  // Each panel translates the canvas to its local coordinate space
+
+  // Top: Transport Bar
+  if (transportBar) {
+    canvas->save();
+    auto bounds = transportBar->getBounds();
+    canvas->translate(bounds.getX(), bounds.getY());
+    transportBar->drawSkia(canvas);
+    canvas->restore();
+  }
+
+  // Center: Main Layout (Browser + Session/Arranger)
+  if (mainLayout) {
+    // MainLayoutComponent uses JUCE paint(), not Skia
+    // It will be rendered by its children components
+  }
+
+  // Right: Scratch Pads + Wingman Console
+  if (rightSidePanel) {
+    canvas->save();
+    auto bounds = rightSidePanel->getBounds();
+    canvas->translate(bounds.getX(), bounds.getY());
+    rightSidePanel->drawSkia(canvas);
+    canvas->restore();
+  }
+
+  // Bottom: Piano Keyboard + Mixer Strip
+  if (bottomBar) {
+    canvas->save();
+    auto bounds = bottomBar->getBounds();
+    canvas->translate(bounds.getX(), bounds.getY());
+    bottomBar->drawSkia(canvas);
+    canvas->restore();
+  }
+}
+#endif
+
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] {
-      zenith::DebugLogOverlay::getInstance().setVisible(true);
-      zenith::DebugLogOverlay::getInstance().toFront(true);
-    });
+    // m.addItem("Show Debug Logs", [] {  // Disabled: DebugLogOverlay doesn't exist
+    //   zenith::DebugLogOverlay::getInstance().setVisible(true);
+    //   zenith::DebugLogOverlay::getInstance().toFront(true);
+    // });
     m.showMenuAsync(juce::PopupMenu::Options());
   }
 }
 
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
-  zenith::DebugLogOverlay::getInstance().setBounds(bounds.reduced(50));
+  // zenith::DebugLogOverlay::getInstance().setBounds(bounds.reduced(50));  // Disabled: DebugLogOverlay doesn't exist
 
   DBG("MainComponent::resized() called - Total bounds: " +
       juce::String(bounds.getWidth()) + "x" + juce::String(bounds.getHeight()));
@@ -450,17 +494,17 @@ void MainComponent::resized() {
   auto mixerArea = bounds.removeFromBottom(220);
   mixerComponent.setBounds(mixerArea);
 
-  // Wingman panel (right)
-  if (wingmanPanel) {
-    auto wingmanBounds = bounds.removeFromRight(400);
-    wingmanPanel->setBounds(wingmanBounds);
-  }
+  // Wingman panel (right) - TODO: Implement WingmanPanel
+  // if (wingmanPanel) {
+  //   auto wingmanBounds = bounds.removeFromRight(400);
+  //   wingmanPanel->setBounds(wingmanBounds);
+  // }
 
-  // Instrument Browser (left)
-  if (instrumentBrowserPanel) {
-    auto browserBounds = bounds.removeFromLeft(300);
-    instrumentBrowserPanel->setBounds(browserBounds);
-  }
+  // Instrument Browser (left) - TODO: Implement InstrumentBrowserPanel
+  // if (instrumentBrowserPanel) {
+  //   auto browserBounds = bounds.removeFromLeft(300);
+  //   instrumentBrowserPanel->setBounds(browserBounds);
+  // }
 
   // Arranger Component (center)
   if (arrangerComponent)

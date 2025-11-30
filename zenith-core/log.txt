@@ -1,0 +1,67 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\zenith-core\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  MainWindow.cpp
+  ZenithPolySynthUI.cpp
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(57,94): error C2039: 'FilterEnvAmount': is not a member of 'zenith::ZenithPolySynthProcessor' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\instruments\ZenithPolySynth.h(434,7):
+      see declaration of 'zenith::ZenithPolySynthProcessor'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(57,94): error C2065: 'FilterEnvAmount': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(63,96): error C2039: 'SubOscLevel': is not a member of 'zenith::ZenithPolySynthProcessor' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\instruments\ZenithPolySynth.h(434,7):
+      see declaration of 'zenith::ZenithPolySynthProcessor'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(63,96): error C2065: 'SubOscLevel': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(69,98): error C2039: 'NoiseLevel': is not a member of 'zenith::ZenithPolySynthProcessor' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\zenith-core\Source\instruments\ZenithPolySynth.h(434,7):
+      see declaration of 'zenith::ZenithPolySynthProcessor'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(69,98): error C2065: 'NoiseLevel': undeclared identifier [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(212,24): error C3861: 'GrGLMakeNativeInterface': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(214,38): error C2668: 'GrDirectContexts::MakeGL': ambiguous call to overloaded function [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\gl\GrGLDirectContext.h(25,31):
+      could be 'sk_sp<GrDirectContext> GrDirectContexts::MakeGL(const GrContextOptions &)'
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\gl\GrGLDirectContext.h(23,31):
+      or       'sk_sp<GrDirectContext> GrDirectContexts::MakeGL(sk_sp<const GrGLInterface>)'
+      C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(214,38):
+      while trying to match the argument list '(<error type>)'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(238,25): error C2079: 'backendRT' uses undefined class 'GrBackendRenderTarget' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(239,31): error C2027: use of undefined type 'GrBackendRenderTarget' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\gl\GrGLBackendSurface.h(18,7):
+      see declaration of 'GrBackendRenderTarget'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(242,42): error C2039: 'WrapBackendRenderTarget': is not a member of 'SkSurfaces' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\GrDirectContext.h(56,11):
+      see declaration of 'SkSurfaces'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(242,42): error C3861: 'WrapBackendRenderTarget': identifier not found [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(248,22): error C2027: use of undefined type 'SkSurface' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkCanvas.h(75,7):
+      see declaration of 'SkSurface'
+  
+C:\zenith\daw\zenith-core\Source\ui\skia\ZenithPolySynthUI.cpp(248,31): error C2039: 'getCanvas': is not a member of 'sk_sp<SkSurface>' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkSurface>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,63): error C2589: '(': illegal token on right side of '::' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,63):
+      the template instantiation context (the oldest one first) is
+          C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(174,50):
+          while compiling class template 'skia_private::AutoSTArray'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,63): error C2059: syntax error: '(' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,91): error C2059: syntax error: ')' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,93): error C2059: syntax error: '/' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(278,104): error C2238: unexpected token(s) preceding ';' [C:\zenith\daw\zenith-core\build\ZenithDAW.vcxproj]
+  (compiling source file '../src/MainWindow.cpp')
+  

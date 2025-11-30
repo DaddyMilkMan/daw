@@ -470,6 +470,26 @@ public:
   // Parameter layout
   juce::AudioProcessorValueTreeState &getParameters() { return parameters_; }
 
+  // Modulation matrix access (for UI)
+  float getModulationMatrix(int src, int dst) const {
+    if (src >= 0 && src < 8 && dst >= 0 && dst < 8)
+      return modulationMatrix_[src][dst];
+    return 0.0f;
+  }
+
+  void setModulationMatrix(int src, int dst, float value) {
+    if (src >= 0 && src < 8 && dst >= 0 && dst < 8)
+      modulationMatrix_[src][dst] = juce::jlimit(-1.0f, 1.0f, value);
+  }
+
+  // Visualizer audio buffer access (for UI)
+  bool readFromVisualizer(float* buffer, int size) const {
+    if (!buffer || size <= 0) return false;
+    int copySize = std::min(size, (int)visualizerBuffer_.size());
+    std::copy(visualizerBuffer_.begin(), visualizerBuffer_.begin() + copySize, buffer);
+    return copySize > 0;
+  }
+
   // Parameter IDs
   static const juce::String Osc1Wave;
   static const juce::String Osc1Detune;
@@ -522,6 +542,13 @@ private:
   int maxActiveVoices_ = 0;
   double maxBlockProcessingTime_ = 0.0;
 
+  // Modulation matrix: 8x8 grid of modulation amounts
+  float modulationMatrix_[8][8] = {};
+
+  // Visualizer buffer: circular buffer for waveform display
+  std::vector<float> visualizerBuffer_;
+  std::atomic<int> visualizerWritePos_{0};
+
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
   void updateVoiceParameters();
   void updateVoiceCount();
@@ -556,8 +583,35 @@ public:
 
   static InstrumentMetadata createMetadata();
 
+  // Modulation matrix access (for UI)
+  float getModulationMatrix(int src, int dst) const {
+    if (src >= 0 && src < 8 && dst >= 0 && dst < 8)
+      return modulationMatrix_[src][dst];
+    return 0.0f;
+  }
+
+  void setModulationMatrix(int src, int dst, float value) {
+    if (src >= 0 && src < 8 && dst >= 0 && dst < 8)
+      modulationMatrix_[src][dst] = juce::jlimit(-1.0f, 1.0f, value);
+  }
+
+  // Visualizer audio buffer access (for UI)
+  bool readFromVisualizer(float* buffer, int size) const {
+    if (!buffer || size <= 0) return false;
+    int copySize = std::min(size, (int)visualizerBuffer_.size());
+    std::copy(visualizerBuffer_.begin(), visualizerBuffer_.begin() + copySize, buffer);
+    return copySize > 0;
+  }
+
 private:
   void registerPresets();
+
+  // Modulation matrix: 8x8 grid of modulation amounts
+  float modulationMatrix_[8][8] = {};
+
+  // Visualizer buffer: circular buffer for waveform display
+  std::vector<float> visualizerBuffer_;
+  std::atomic<int> visualizerWritePos_{0};
 };
 
 } // namespace zenith

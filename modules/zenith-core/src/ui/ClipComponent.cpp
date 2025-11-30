@@ -17,7 +17,7 @@
 #include "../../include/ProjectState.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "../ui/skia/SkiaTheme.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
@@ -59,8 +59,11 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height
 }
 
 #ifdef ZENITH_USE_SKIA
-void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds)
+void ClipComponent::drawSkia(SkCanvas* canvas)
 {
+    if (!canvas) return;
+
+    auto bounds = getLocalBounds();
     auto& theme = ::zenith::SkiaTheme::getInstance();
     auto& colors = theme.getColors();
     auto& typo = theme.getTypography();
@@ -92,7 +95,7 @@ void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
     SkPaint fillPaint;
     fillPaint.setAntiAlias(true);
     fillPaint.setColor(fillColor);
-    canvas.drawRRect(clipRRect, fillPaint);
+    canvas->drawRRect(clipRRect, fillPaint);
 
     // POLISH: Simple 1-2px border for selection (no pulse animation)
     if (isSelected) {
@@ -101,7 +104,7 @@ void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
         selectionPaint.setColor(clipColor);
         selectionPaint.setStyle(SkPaint::kStroke_Style);
         selectionPaint.setStrokeWidth(2.0f);
-        canvas.drawRRect(clipRRect, selectionPaint);
+        canvas->drawRRect(clipRRect, selectionPaint);
     } else {
         // Subtle border
         SkPaint borderPaint;
@@ -109,7 +112,7 @@ void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
         borderPaint.setColor(colors.borderSubtle);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(1.0f);
-        canvas.drawRRect(clipRRect, borderPaint);
+        canvas->drawRRect(clipRRect, borderPaint);
     }
 
     // POLISH: Clip name using Typography.body
@@ -129,7 +132,7 @@ void ClipComponent::paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& boun
 
         float textX = 8.0f;  // 8px padding
         float textY = bounds.getHeight() / 2.0f + typo.body.size / 2.0f;
-        canvas.drawString(clipName.toRawUTF8(), textX, textY, font, textPaint);
+        canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(), SkTextEncoding::kUTF8, textX, textY, font, textPaint);
     }
 }
 #else

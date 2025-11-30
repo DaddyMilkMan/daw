@@ -9,13 +9,13 @@
 #include "../include/TrackAutomationSynchronizer.h"
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "../Source/engine/Track.h"
-#include "../Source/engine/Clip.h"
-#include "../Source/engine/MixerChannel.h"
-#include "../Source/engine/AudioFilePool.h"
-#include "../Source/engine/PluginHost.h"
-#include "../Source/engine/AuxBus.h"
-#include "../Source/ui/PluginEditorWindow.h"
+#include "engine/Track.h"
+#include "engine/Clip.h"
+#include "engine/MixerChannel.h"
+#include "engine/AudioFilePool.h"
+#include "engine/PluginHost.h"
+#include "engine/AuxBus.h"
+// #include "ui/PluginEditorWindow.h"  // Temporarily disabled
 
 //==============================================================================
 Engine::Engine()
@@ -28,7 +28,7 @@ Engine::Engine()
 
     // Phase 3: Initialize plugin host and editor window manager
     pluginHost_ = std::make_unique<zenith::PluginHost>();
-    pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();
+    // pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();  // Temporarily disabled
 
     // Phase 2D: Initialize audio recording infrastructure
     // Create background thread for audio file writing
@@ -728,11 +728,12 @@ int Engine::scanForPlugins()
     return count;
 }
 
-zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexcept
-{
-    jassert(pluginEditorWindowManager_ != nullptr);
-    return *pluginEditorWindowManager_;
-}
+// Temporarily disabled - plugin editor window functionality
+// zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexcept
+// {
+//     jassert(pluginEditorWindowManager_ != nullptr);
+//     return *pluginEditorWindowManager_;
+// }
 
 const zenith::TempoMap& Engine::getTempoMap() const noexcept
 {

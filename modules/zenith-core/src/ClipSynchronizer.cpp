@@ -4,8 +4,8 @@
  */
 
 #include "../include/ClipSynchronizer.h"
-#include "../Source/engine/Track.h"
-#include "../Source/engine/Clip.h"
+#include "engine/Track.h"
+#include "engine/Clip.h"
 
 //==============================================================================
 ClipSynchronizer::ClipSynchronizer(ProjectState& ps, Engine& eng)

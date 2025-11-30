@@ -589,6 +589,12 @@ ZenithPolySynthProcessor::ZenithPolySynthProcessor()
           "Output", juce::AudioChannelSet::stereo(), true)),
       parameters_(*this, nullptr, "Parameters", createParameterLayout()) {
 
+  // Initialize visualizer buffer (2048 samples for waveform display)
+  visualizerBuffer_.resize(2048, 0.0f);
+
+  // Initialize modulation matrix to zero
+  std::memset(modulationMatrix_, 0, sizeof(modulationMatrix_));
+
   updateVoiceCount();
 }
 
@@ -623,6 +629,17 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // Master Gain
   float masterGain = *parameters_.getRawParameterValue(MasterGain);
   buffer.applyGain(juce::Decibels::decibelsToGain(masterGain));
+
+  // Update visualizer buffer with audio data (for UI display)
+  if (buffer.getNumChannels() > 0 && buffer.getNumSamples() > 0) {
+    const float* channelData = buffer.getReadPointer(0);
+    int writePos = visualizerWritePos_.load();
+    for (int i = 0; i < buffer.getNumSamples(); ++i) {
+      visualizerBuffer_[writePos] = channelData[i];
+      writePos = (writePos + 1) % visualizerBuffer_.size();
+    }
+    visualizerWritePos_.store(writePos);
+  }
 }
 
 void ZenithPolySynthProcessor::updateVoiceParameters() {

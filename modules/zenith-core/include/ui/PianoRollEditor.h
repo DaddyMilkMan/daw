@@ -22,8 +22,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaCanvasComponent.h"
-#include "../../Source/ui/skia/SkiaTheme.h"
+// #include "../../src/ui/skia/SkiaCanvasComponent.h"  // TEMP DISABLED: File doesn't exist
+#include "../../src/ui/skia/SkiaTheme.h"
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
@@ -69,7 +69,7 @@ public:
   //==========================================================================
 
 #ifdef ZENITH_USE_SKIA
-  void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
+  void drawSkia(SkCanvas* canvas) override;
 #else
   void paint(juce::Graphics &g) override;
 #endif

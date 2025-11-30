@@ -15,6 +15,8 @@
     #include <include/core/SkRRect.h>
     #include <include/core/SkFont.h>
     #include <include/core/SkTextBlob.h>
+    #include <include/core/SkSurface.h>
+    #include <include/core/SkImageInfo.h>
 #endif
 
 //==============================================================================
@@ -123,18 +125,18 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
     {
         juce::Image::BitmapData bitmapData(tempImage, juce::Image::BitmapData::readWrite);
         SkImageInfo info = SkImageInfo::MakeN32Premul(tempImage.getWidth(), tempImage.getHeight());
-        auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
+        sk_sp<SkSurface> skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
 
         if (skSurface)
         {
-            SkCanvas& canvas = *skSurface->getCanvas();
-            canvas.clear(SK_ColorTRANSPARENT);
+            SkCanvas* canvas = skSurface->getCanvas();
+            canvas->clear(SK_ColorTRANSPARENT);
 
             // Background with subtle tint
             SkPaint bgPaint;
             bgPaint.setColor(colors.bg1);
             bgPaint.setAntiAlias(true);
-            canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
+            canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
             // Draw components
             drawGrid(g);  // Keep JUCE grid for now (lighter weight)
@@ -169,7 +171,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                 curvePaint.setStyle(SkPaint::kStroke_Style);
                 curvePaint.setStrokeWidth(2.5f);
                 curvePaint.setAntiAlias(true);
-                canvas.drawPath(path, curvePaint);
+                canvas->drawPath(path, curvePaint);
             }
 
             // Draw control points with selection highlighting
@@ -186,7 +188,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                     selBgPaint.setColor(selection.tintColor);
                     selBgPaint.setAntiAlias(true);
                     float expandedRadius = handle.radius + 4.0f;
-                    canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, expandedRadius, selBgPaint);
+                    canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, expandedRadius, selBgPaint);
                 }
 
                 // Control point fill
@@ -195,7 +197,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                                    isHovered ? colors.accentMain :
                                    colors.accentMain);
                 fillPaint.setAntiAlias(true);
-                canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, fillPaint);
+                canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, fillPaint);
 
                 // Control point border
                 SkPaint borderPaint;
@@ -203,7 +205,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                 borderPaint.setStyle(SkPaint::kStroke_Style);
                 borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
                 borderPaint.setAntiAlias(true);
-                canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, borderPaint);
+                canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius, borderPaint);
 
                 // Hover glow
                 if (isHovered && !isSelected)
@@ -211,7 +213,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                     SkPaint glowPaint;
                     glowPaint.setColor(SkColorSetARGB(40, 0, 212, 170));
                     glowPaint.setAntiAlias(true);
-                    canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius + 3.0f, glowPaint);
+                    canvas->drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius + 3.0f, glowPaint);
                 }
             }
 
@@ -243,7 +245,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                 tooltipBg.setAntiAlias(true);
                 SkRRect tooltipRect = SkRRect::MakeRectXY(
                     SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight), 4.0f, 4.0f);
-                canvas.drawRRect(tooltipRect, tooltipBg);
+                canvas->drawRRect(tooltipRect, tooltipBg);
 
                 // Tooltip border
                 SkPaint tooltipBorder;
@@ -251,14 +253,14 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
                 tooltipBorder.setStyle(SkPaint::kStroke_Style);
                 tooltipBorder.setStrokeWidth(1.0f);
                 tooltipBorder.setAntiAlias(true);
-                canvas.drawRRect(tooltipRect, tooltipBorder);
+                canvas->drawRRect(tooltipRect, tooltipBorder);
 
                 // Tooltip text
                 SkPaint textPaint;
                 textPaint.setColor(colors.textStrong);
                 textPaint.setAntiAlias(true);
                 auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
-                canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+                canvas->drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
             }
 
             // Draw parameter name
@@ -271,7 +273,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
 
             auto nameStr = paramInfo.displayName.toStdString();
             auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
-            canvas.drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
+            canvas->drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
         }
     }
 

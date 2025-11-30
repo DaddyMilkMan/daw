@@ -305,10 +305,6 @@ private:
     ZenithPresetManager();
     ~ZenithPresetManager() = default;
 
-    // Prevent copying
-    ZenithPresetManager(const ZenithPresetManager&) = delete;
-    ZenithPresetManager& operator=(const ZenithPresetManager&) = delete;
-
     /**
      * @brief Scan directory for preset files
      * @param directory Directory to scan

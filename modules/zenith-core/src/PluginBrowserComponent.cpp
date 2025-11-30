@@ -5,7 +5,7 @@
 
 #include "../include/PluginBrowserComponent.h"
 #include "../include/Engine.h"
-#include "../Source/engine/Track.h"
+#include "engine/Track.h"
 
 //==============================================================================
 // PluginBrowserComponent Implementation
@@ -233,7 +233,7 @@ void PluginBrowserComponent::paintCell(juce::Graphics& g, int rowNumber, int col
             case 3: text = desc.manufacturerName; break;
             case 4: text = desc.pluginFormatName; break;
             default: break;
-        \n    default: break;\n\n    default: break;\n}
+        }
 
         g.drawText(text, 2, 0, width - 4, height, juce::Justification::centredLeft, true);
     }
