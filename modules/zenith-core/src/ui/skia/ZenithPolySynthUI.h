@@ -17,15 +17,23 @@
 #include "../../instruments/ZenithPolySynth.h"
 #include "../../instruments/ZenithPresetManager.h"
 #include "ZenithUIComponents.h"
+#include "SkiaComponent.h"
+
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#endif
 
 namespace zenith {
 
 //==============================================================================
 /**
     Main Editor for ZenithPolySynth
-    Uses direct OpenGL/Skia rendering.
+    Uses direct Skia rendering via SkiaComponent.
+    Acts as the OpenGL/Skia root for the plugin editor.
 */
 class ZenithPolySynthUI : public juce::AudioProcessorEditor,
+                          public SkiaComponent,
                           public juce::OpenGLRenderer {
 public:
   ZenithPolySynthUI(ZenithPolySynthProcessor &p);
@@ -38,17 +46,25 @@ public:
   void openGLContextClosing() override;
 
   //==============================================================================
+  // SkiaComponent override
+  void drawSkia(SkCanvas* canvas) override;
+
+  //==============================================================================
   // Component overrides
-  void paint(juce::Graphics &g) override;
   void resized() override;
+  void paint(juce::Graphics& g) override; // Needed to paint black background for fallback
 
 private:
   ZenithPolySynthProcessor &processor;
   juce::OpenGLContext openGLContext;
 
 #ifdef ZENITH_USE_SKIA
-  // sk_sp<GrDirectContext> grContext_;  // GPU rendering disabled - using raster Skia
-  bool rendererInitialized_ = false;
+  GrDirectContext* grContext_ = nullptr;
+  SkSurface* surface_ = nullptr;
+  int lastWidth_ = 0;
+  int lastHeight_ = 0;
+
+  void recreateSurface();
 #endif
 
   // UI State
@@ -111,7 +127,6 @@ private:
   std::unique_ptr<ZenithSlider> modReleaseSlider_;
 
   // Internal helpers
-  void renderComponentRecursively(juce::Component *comp, SkCanvas *canvas);
   void drawBackground(SkCanvas *canvas);
   void drawGlassPanel(SkCanvas *canvas, const juce::Rectangle<int> &bounds);
   void toggleAdvancedMode();

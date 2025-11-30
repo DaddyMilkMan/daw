@@ -19,6 +19,11 @@
 #include <include/core/SkPaint.h>
 #include <include/core/SkFont.h>
 #include <include/effects/SkGradientShader.h>
+#include <include/gpu/ganesh/gl/GrGLInterface.h>
+#include <include/gpu/ganesh/GrBackendSurface.h>
+#include <include/gpu/ganesh/gl/GrGLBackendSurface.h>
+#include <include/gpu/ganesh/GrDirectContext.h>
+#include <include/gpu/ganesh/SkSurfaceGanesh.h>
 #endif
 
 namespace zenith {
@@ -29,12 +34,12 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   // Set initial size
   setSize(kSimpleWidth, kSimpleHeight);
 
-  // Setup OpenGL
+  // Setup OpenGL Context for Skia
   openGLContext.setRenderer(this);
   openGLContext.setContinuousRepainting(true);
-  openGLContext.setComponentPaintingEnabled(false);
-  openGLContext.setMultisamplingEnabled(true);
-  
+  openGLContext.setComponentPaintingEnabled(false); // Disable JUCE painting
+  openGLContext.attachTo(*this);
+
   // Helper for setup
   auto setupControl = [&](ZenithControl* c, const juce::String& tip) {
       c->setTooltip(tip);
@@ -205,32 +210,137 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   refreshPresetList();
 }
 
-void ZenithPolySynthUI::renderOpenGL() {
-  // Use raster rendering via JUCE paint instead of GPU rendering
-  // GPU rendering would require proper Ganesh setup which is complex
-  // The SkiaComponent::paint() method handles raster Skia rendering
-  juce::OpenGLHelpers::clear(juce::Colours::black);
+ZenithPolySynthUI::~ZenithPolySynthUI() {
+    openGLContext.detach();
 }
 
-void ZenithPolySynthUI::renderComponentRecursively(juce::Component *comp, SkCanvas *canvas) {
+//==============================================================================
+// OpenGL / Skia Lifecycle
+//==============================================================================
+
+void ZenithPolySynthUI::newOpenGLContextCreated() {
 #ifdef ZENITH_USE_SKIA
-  if (!comp->isVisible()) return;
+    auto glInterface = GrGLMakeNativeInterface();
+    auto ctx = GrDirectContexts::MakeGL(glInterface);
+    if (grContext_) grContext_->unref();
+    grContext_ = ctx.release();
+    
+    if (!grContext_) {
+        DBG("Failed to create Skia GrDirectContext!");
+        return;
+    }
+    recreateSurface();
+#endif
+}
 
-  canvas->save();
-  
-  auto bounds = comp->getBounds();
-  canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
-  canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+void ZenithPolySynthUI::openGLContextClosing() {
+#ifdef ZENITH_USE_SKIA
+    if (surface_) {
+        surface_->unref();
+        surface_ = nullptr;
+    }
+    if (grContext_) {
+        grContext_->abandonContext(); // Important for cleanup order
+        grContext_->unref();
+        grContext_ = nullptr;
+    }
+#endif
+}
 
-  if (auto *skiaComp = dynamic_cast<SkiaComponent *>(comp)) {
-    skiaComp->drawSkia(canvas);
+void ZenithPolySynthUI::recreateSurface() {
+#ifdef ZENITH_USE_SKIA
+    if (!grContext_) return;
+
+    auto width = getWidth();
+    auto height = getHeight();
+    
+    // Ensure valid dimensions
+    if (width <= 0 || height <= 0) return;
+
+    // GrGLFramebufferInfo for default framebuffer (ID 0)
+    GrGLFramebufferInfo framebufferInfo;
+    framebufferInfo.fFBOID = 0; 
+    framebufferInfo.fFormat = 0x8058; // GL_RGBA8
+
+    auto backendRT = GrBackendRenderTargets::MakeGL(
+        width, height,
+        0, // sample count
+        8, // stencil bits
+        framebufferInfo
+    );
+
+    auto s = SkSurfaces::WrapBackendRenderTarget(
+        grContext_,
+        backendRT,
+        kBottomLeft_GrSurfaceOrigin,
+        kRGBA_8888_SkColorType,
+        nullptr,
+        nullptr
+    );
+
+    if (surface_) surface_->unref();
+    surface_ = s.release();
+#endif
+}
+
+void ZenithPolySynthUI::renderOpenGL() {
+#ifdef ZENITH_USE_SKIA
+    if (!grContext_) return;
+
+    // Check resize
+    if (getWidth() != lastWidth_ || getHeight() != lastHeight_) {
+        recreateSurface();
+        lastWidth_ = getWidth();
+        lastHeight_ = getHeight();
+    }
+
+    if (!surface_) return;
+
+    auto canvas = surface_->getCanvas();
+    // Clear background
+    canvas->clear(SkColorSetARGB(255, 10, 10, 15));
+
+    // Update animation
+    animationTime_ += 0.01f; // Simple tick
+
+    // Call the main draw method
+    drawSkia(canvas);
+
+    // Flush to GPU
+    grContext_->flushAndSubmit();
+#else
+    // Fallback
+    juce::OpenGLHelpers::clear(juce::Colours::black);
+#endif
+}
+
+//==============================================================================
+// Drawing
+//==============================================================================
+
+void ZenithPolySynthUI::drawSkia(SkCanvas *canvas) {
+#ifdef ZENITH_USE_SKIA
+  // 1. Draw Background
+  drawBackground(canvas);
+
+  // 2. Recursive Draw for Children
+  for (auto *child : getChildren()) {
+      if (!child->isVisible()) continue;
+
+      canvas->save();
+      auto bounds = child->getBounds();
+      canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
+      
+      // Clip to bounds
+      canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+
+      // If the child is a SkiaComponent, call its custom draw method
+      if (auto *skiaComp = dynamic_cast<SkiaComponent *>(child)) {
+          skiaComp->drawSkia(canvas);
+      }
+      
+      canvas->restore();
   }
-
-  for (auto *child : comp->getChildren()) {
-    renderComponentRecursively(child, canvas);
-  }
-
-  canvas->restore();
 #endif
 }
 
@@ -310,6 +420,41 @@ void ZenithPolySynthUI::resized() {
   // No, the window size changes.
   // In Advanced Mode (800x600), the top area is larger, but we want to keep the simple controls in a similar relative position?
   // Let's assume the Simple Mode controls stay in the upper part of the bottom area, and Advanced controls appear below them.
+}
+
+// Implement remaining helpers stubbed for brevity
+void ZenithPolySynthUI::toggleAdvancedMode() {
+    isAdvancedMode_ = !isAdvancedMode_;
+    if (isAdvancedMode_) {
+        setSize(kAdvancedWidth, kAdvancedHeight);
+        expandButton_->setButtonText("SIMPLE");
+    } else {
+        setSize(kSimpleWidth, kSimpleHeight);
+        expandButton_->setButtonText("EXPAND");
+    }
+    resized();
+}
+
+void ZenithPolySynthUI::toggleLearningMode() {
+    isLearningMode_ = !isLearningMode_;
+    learningModeButton_->setButtonText(isLearningMode_ ? "EXIT LEARN" : "LEARN");
+    tooltipOverlay_->setVisible(isLearningMode_);
+}
+
+void ZenithPolySynthUI::loadPreset(int index) {
+    // Stub
+}
+
+void ZenithPolySynthUI::loadNextPreset() {
+    // Stub
+}
+
+void ZenithPolySynthUI::loadPrevPreset() {
+    // Stub
+}
+
+void ZenithPolySynthUI::refreshPresetList() {
+    // Stub
 }
 
 } // namespace zenith
