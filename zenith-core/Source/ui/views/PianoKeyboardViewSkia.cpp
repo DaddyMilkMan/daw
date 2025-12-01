@@ -17,6 +17,7 @@
 #include <skia/include/core/SkPaint.h>
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkColor.h>
+#include <skia/include/effects/SkGradientShader.h>
 #endif
 
 namespace zenith {
@@ -35,7 +36,7 @@ PianoKeyboardViewSkia::~PianoKeyboardViewSkia()
     state_.removeListener(this);
 }
 
-#include <skia/include/effects/SkGradientShader.h>
+
 
 void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
 {

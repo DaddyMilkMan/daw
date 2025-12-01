@@ -165,6 +165,41 @@ struct MacroMetadata {
 
 //==============================================================================
 /**
+    Instrument Preset Structure
+*/
+struct InstrumentPreset {
+    juce::String name;
+    juce::String category;
+    juce::String description;
+    juce::String author;
+    juce::String tags;
+    juce::var parameters; // JSON object of parameter values
+
+    juce::var toVar() const {
+        auto* obj = new juce::DynamicObject();
+        obj->setProperty("name", name);
+        obj->setProperty("category", category);
+        obj->setProperty("description", description);
+        obj->setProperty("author", author);
+        obj->setProperty("tags", tags);
+        obj->setProperty("parameters", parameters);
+        return juce::var(obj);
+    }
+    
+    static InstrumentPreset fromVar(const juce::var& v) {
+        InstrumentPreset p;
+        p.name = v.getProperty("name", "Unnamed").toString();
+        p.category = v.getProperty("category", "User").toString();
+        p.description = v.getProperty("description", "").toString();
+        p.author = v.getProperty("author", "").toString();
+        p.tags = v.getProperty("tags", "").toString();
+        p.parameters = v.getProperty("parameters", juce::var(new juce::DynamicObject()));
+        return p;
+    }
+};
+
+//==============================================================================
+/**
     Complete instrument metadata
 */
 struct InstrumentMetadata {

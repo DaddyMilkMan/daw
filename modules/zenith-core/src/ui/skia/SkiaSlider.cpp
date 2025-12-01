@@ -1,0 +1,331 @@
+/*
+  ==============================================================================
+
+    SkiaSlider.cpp
+    Created: 2025-11-30
+    Authors: Kenji Nakamura, Leo Rossi, Diego Martinez
+
+    Implementation of the SkiaSlider component.
+    
+  ==============================================================================
+*/
+
+#include "SkiaSlider.h"
+#include <include/effects/SkGradientShader.h>
+
+namespace zenith {
+
+// ============================================================================
+// CONSTRUCTION
+// ============================================================================
+
+SkiaSlider::SkiaSlider(const juce::String& name) {
+    // Default size
+    setSize(40, 150); // Vertical default
+    
+    // Accessibility
+    setDescription(name.isEmpty() ? "Slider" : name);
+    setWantsKeyboardFocus(true);
+    
+    // Initial history
+    valueHistory_.push(value_);
+}
+
+SkiaSlider::~SkiaSlider() {
+}
+
+// ============================================================================
+// APPEARANCE
+// ============================================================================
+
+void SkiaSlider::setStyle(Style style) {
+    if (style_ != style) {
+        style_ = style;
+        markDirty();
+    }
+}
+
+void SkiaSlider::setOrientation(Orientation orientation) {
+    if (orientation_ != orientation) {
+        orientation_ = orientation;
+        // Swap dimensions if needed for better default feel
+        if (orientation == Orientation::Horizontal && getWidth() < getHeight()) {
+            setSize(getHeight(), getWidth());
+        } else if (orientation == Orientation::Vertical && getWidth() > getHeight()) {
+            setSize(getHeight(), getWidth());
+        }
+        markDirty();
+    }
+}
+
+void SkiaSlider::setValueColoring(bool enabled) {
+    valueColoring_ = enabled;
+    markDirty();
+}
+
+// ============================================================================
+// VALUE CONTROL
+// ============================================================================
+
+void SkiaSlider::setValue(float value) {
+    float clampedValue = juce::jlimit(0.0f, 1.0f, value);
+    
+    if (std::abs(value_ - clampedValue) > 0.0001f) {
+        value_ = clampedValue;
+        
+        if (onValueChange) {
+            onValueChange(value_);
+        }
+        
+        markDirty();
+    }
+}
+
+void SkiaSlider::setDefaultValue(float value) {
+    defaultValue_ = juce::jlimit(0.0f, 1.0f, value);
+}
+
+void SkiaSlider::setDisplayRange(float min, float max) {
+    displayMin_ = min;
+    displayMax_ = max;
+    markDirty();
+}
+
+void SkiaSlider::setSnapToValue(bool enabled, float snapValue, float tolerance) {
+    snapEnabled_ = enabled;
+    snapValue_ = snapValue;
+    snapTolerance_ = tolerance;
+}
+
+// ============================================================================
+// INTERACTION
+// ============================================================================
+
+void SkiaSlider::mouseDown(const juce::MouseEvent& e) {
+    // Context Menu
+    if (e.mods.isPopupMenu()) {
+        showContextMenu();
+        return;
+    }
+    
+    // Fine control
+    isFineControl_ = e.mods.isShiftDown();
+    
+    isDragging_ = true;
+    valueHistory_.push(value_); // Save for undo
+    
+    // Jump to value immediately on click (pro behavior)
+    setValue(positionToValue(e.getPosition()));
+    
+    if (onDragStart) {
+        onDragStart();
+    }
+    
+    grabKeyboardFocus();
+}
+
+void SkiaSlider::mouseDrag(const juce::MouseEvent& e) {
+    if (!isDragging_) return;
+    
+    // Fine control update
+    isFineControl_ = e.mods.isShiftDown();
+    
+    float newValue = positionToValue(e.getPosition());
+    
+    // Snapping logic
+    if (snapEnabled_) {
+        if (std::abs(newValue - snapValue_) < snapTolerance_) {
+            newValue = snapValue_;
+        }
+    }
+    
+    setValue(newValue);
+}
+
+void SkiaSlider::mouseUp(const juce::MouseEvent& e) {
+    if (isDragging_) {
+        isDragging_ = false;
+        if (onDragEnd) {
+            onDragEnd();
+        }
+    }
+}
+
+void SkiaSlider::mouseDoubleClick(const juce::MouseEvent& e) {
+    resetToDefault();
+}
+
+void SkiaSlider::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
+    float delta = (orientation_ == Orientation::Vertical ? wheel.deltaY : wheel.deltaX) * 0.1f;
+    if (e.mods.isShiftDown()) delta *= 0.1f;
+    
+    setValue(juce::jlimit(0.0f, 1.0f, value_ + delta));
+}
+
+float SkiaSlider::positionToValue(const juce::Point<int>& pos) const {
+    auto bounds = getLocalBounds().toFloat();
+    float val = 0.0f;
+    
+    if (orientation_ == Orientation::Vertical) {
+        // Bottom is 0, Top is 1
+        val = 1.0f - (pos.y / bounds.getHeight());
+    } else {
+        // Left is 0, Right is 1
+        val = pos.x / bounds.getWidth();
+    }
+    
+    return juce::jlimit(0.0f, 1.0f, val);
+}
+
+void SkiaSlider::onHoverEnter() {
+    animateTo("glow", 1.0f, design::animation::DURATION_FAST);
+}
+
+void SkiaSlider::onHoverExit() {
+    animateTo("glow", 0.0f, design::animation::DURATION_FAST);
+}
+
+// ============================================================================
+// CONTEXT MENU & UNDO/REDO
+// ============================================================================
+
+void SkiaSlider::resetToDefault() {
+    valueHistory_.push(value_);
+    setValue(defaultValue_);
+}
+
+void SkiaSlider::copyValue() {
+    juce::SystemClipboard::copyTextToClipboard(juce::String(value_));
+}
+
+void SkiaSlider::pasteValue() {
+    juce::String text = juce::SystemClipboard::getTextFromClipboard();
+    float val = text.getFloatValue();
+    if (val >= 0.0f && val <= 1.0f) {
+        valueHistory_.push(value_);
+        setValue(val);
+    }
+}
+
+bool SkiaSlider::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
+    // Undo: Ctrl + Z
+    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
+        if (valueHistory_.canUndo()) {
+            setValue(valueHistory_.undo());
+            return true;
+        }
+    }
+    
+    // Redo: Ctrl + Y or Ctrl + Shift + Z
+    if (key == juce::KeyPress('y', juce::ModifierKeys::commandModifier, 0) ||
+        key == juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0)) {
+        if (valueHistory_.canRedo()) {
+            setValue(valueHistory_.redo());
+            return true;
+        }
+    }
+    
+    return SkiaComponent::keyPressed(key, origin);
+}
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+
+void SkiaSlider::drawSkia(SkCanvas* canvas) {
+    auto bounds = getLocalBounds().toFloat();
+    
+    // Track
+    SkPaint trackPaint;
+    trackPaint.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
+    trackPaint.setAntiAlias(true);
+    
+    SkRect trackRect;
+    if (orientation_ == Orientation::Vertical) {
+        float w = (style_ == Style::Line) ? 4.0f : bounds.getWidth() * 0.3f;
+        trackRect = SkRect::MakeXYWH(bounds.getCentreX() - w/2, 0, w, bounds.getHeight());
+    } else {
+        float h = (style_ == Style::Line) ? 4.0f : bounds.getHeight() * 0.3f;
+        trackRect = SkRect::MakeXYWH(0, bounds.getCentreY() - h/2, bounds.getWidth(), h);
+    }
+    
+    canvas->drawRoundRect(trackRect, 4.0f, 4.0f, trackPaint);
+    
+    // Fill (for Bar style)
+    if (style_ == Style::Bar) {
+        SkPaint fillPaint;
+        SkColor color = valueColoring_ ? 
+            design::interpolate(design::colors::BLUE, design::colors::CYAN, value_) : 
+            design::colors::CYAN;
+            
+        fillPaint.setColor(color);
+        fillPaint.setAntiAlias(true);
+        
+        SkRect fillRect = trackRect;
+        if (orientation_ == Orientation::Vertical) {
+            float h = trackRect.height() * value_;
+            fillRect.setXYWH(trackRect.x(), trackRect.bottom() - h, trackRect.width(), h);
+        } else {
+            fillRect.setWidth(trackRect.width() * value_);
+        }
+        
+        // Glow
+        if (isGlowEnabled() || isHovered()) {
+            SkPaint glowPaint = fillPaint;
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
+            glowPaint.setAlpha(100);
+            canvas->drawRoundRect(fillRect, 4.0f, 4.0f, glowPaint);
+        }
+        
+        canvas->drawRoundRect(fillRect, 4.0f, 4.0f, fillPaint);
+    }
+    
+    // Handle (for Line and Fader styles)
+    if (style_ != Style::Bar) {
+        SkRect handleRect;
+        float handleSize = (style_ == Style::Fader) ? 20.0f : 12.0f; // Reduced from 30.0f
+        float handleThickness = (style_ == Style::Fader) ? 10.0f : 12.0f; // Reduced from 15.0f
+        
+        if (orientation_ == Orientation::Vertical) {
+            float y = bounds.height() * (1.0f - value_);
+            handleRect = SkRect::MakeXYWH(bounds.getCentreX() - handleSize/2, y - handleThickness/2, handleSize, handleThickness);
+        } else {
+            float x = bounds.width() * value_;
+            handleRect = SkRect::MakeXYWH(x - handleThickness/2, bounds.getCentreY() - handleSize/2, handleThickness, handleSize);
+        }
+        
+        SkPaint handlePaint;
+        handlePaint.setColor(design::colors::TEXT_PRIMARY);
+        handlePaint.setAntiAlias(true);
+        
+        // Fader cap detail
+        if (style_ == Style::Fader) {
+            handlePaint.setColor(design::colors::BG_LIGHT);
+            canvas->drawRoundRect(handleRect, 2.0f, 2.0f, handlePaint);
+            
+            // Center line
+            SkPaint linePaint;
+            linePaint.setColor(design::colors::CYAN);
+            linePaint.setStrokeWidth(2.0f);
+            if (orientation_ == Orientation::Vertical) {
+                canvas->drawLine(handleRect.left(), handleRect.centerY(), handleRect.right(), handleRect.centerY(), linePaint);
+            } else {
+                canvas->drawLine(handleRect.centerX(), handleRect.top(), handleRect.centerX(), handleRect.bottom(), linePaint);
+            }
+        } else {
+            // Simple dot/circle
+            canvas->drawCircle(handleRect.centerX(), handleRect.centerY(), handleSize/2, handlePaint);
+        }
+        
+        // Handle Glow
+        if (isHovered()) {
+            SkPaint glowPaint;
+            glowPaint.setColor(design::colors::CYAN);
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f));
+            glowPaint.setAlpha(128);
+            canvas->drawRect(handleRect, glowPaint);
+        }
+    }
+}
+
+} // namespace zenith

@@ -1,9 +1,9 @@
+#define NOMINMAX
 #pragma once
 
 #include <JuceHeader.h>
 
 #ifdef ZENITH_USE_SKIA
-#define NOMINMAX
 #include <skia/include/core/SkCanvas.h>
 #include <skia/include/core/SkSurface.h>
 #include <skia/include/core/SkRefCnt.h>

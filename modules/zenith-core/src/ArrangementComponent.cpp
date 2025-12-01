@@ -7,6 +7,17 @@
 #include "../include/ProjectState.h"
 #include "../include/Engine.h"
 
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRect.h>
+#include <include/core/SkRRect.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkColor.h>
+#include <include/core/SkPath.h>
+#include <include/effects/SkGradientShader.h>
+#endif
+
 //==============================================================================
 ArrangementComponent::ArrangementComponent(ProjectState& ps, Engine& eng)
     : projectState(ps)
@@ -38,23 +49,10 @@ ArrangementComponent::~ArrangementComponent()
 // Component Interface
 //==============================================================================
 
-void ArrangementComponent::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds();
-
-    // Background
-    g.fillAll(juce::Colour(0xff1a1a1a));
-
-    // Split into header and timeline areas
-    auto headerArea = bounds.removeFromLeft(TRACK_HEADER_WIDTH);
-    auto timelineArea = bounds;
-
-    // Draw track headers
-    drawTrackHeaders(g, headerArea);
-
-    // Draw timeline
-    drawTimeline(g, timelineArea);
-}
+// void ArrangementComponent::paint(juce::Graphics& g)
+// {
+//     // DEPRECATED: Using drawSkia
+// }
 
 void ArrangementComponent::resized()
 {
@@ -808,5 +806,246 @@ double ArrangementComponent::snapToGrid(double beats) const
     double gridSize = 0.25; // 1/16 beat
     return std::round(beats / gridSize) * gridSize;
 }
+
+#ifdef ZENITH_USE_SKIA
+
+void ArrangementComponent::drawSkia(void* canvasPtr)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    auto bounds = getLocalBounds();
+    
+    // Background
+    canvas->clear(SkColorSetRGB(26, 26, 26)); // 0xff1a1a1a
+
+    // Split into header and timeline areas
+    auto headerArea = bounds.removeFromLeft(TRACK_HEADER_WIDTH);
+    auto timelineArea = bounds;
+
+    drawTrackHeadersSkia(canvas, headerArea);
+    drawTimelineSkia(canvas, timelineArea);
+}
+
+void ArrangementComponent::drawTrackHeadersSkia(void* canvasPtr, juce::Rectangle<int> area)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid()) return;
+
+    SkPaint paint;
+    SkFont font;
+    font.setSize(14.0f);
+    font.setEdging(SkFont::Edging::kAntiAlias);
+
+    int y = 0;
+    for (int i = 0; i < tracksNode.getNumChildren(); ++i)
+    {
+        auto track = tracksNode.getChild(i);
+        auto trackName = track[ProjectState::PROP_NAME].toString();
+        auto trackId = track[ProjectState::PROP_ID].toString();
+
+        auto trackHeaderArea = juce::Rectangle<int>(area.getX(), y, area.getWidth(), TRACK_HEIGHT);
+        SkRect rect = SkRect::MakeXYWH((float)trackHeaderArea.getX(), (float)trackHeaderArea.getY(), (float)trackHeaderArea.getWidth(), (float)trackHeaderArea.getHeight());
+
+        // Header background
+        paint.setColor(SkColorSetRGB(42, 42, 42)); // 0xff2a2a2a
+        paint.setStyle(SkPaint::kFill_Style);
+        canvas->drawRect(rect, paint);
+
+        // Border
+        paint.setColor(SkColorSetRGB(58, 58, 58)); // 0xff3a3a3a
+        paint.setStyle(SkPaint::kStroke_Style);
+        canvas->drawRect(rect, paint);
+
+        // Track name
+        paint.setColor(SK_ColorWHITE);
+        paint.setStyle(SkPaint::kFill_Style);
+        canvas->drawString(trackName.toRawUTF8(), (float)trackHeaderArea.getX() + 10, (float)trackHeaderArea.getY() + 20, font, paint);
+
+        // Automation buttons
+        auto buttonArea = trackHeaderArea.reduced(10, 5);
+        buttonArea.removeFromTop(20);
+        buttonArea = buttonArea.removeFromTop(25).removeFromLeft(120);
+        
+        int buttonWidth = 35;
+        int buttonSpacing = 5;
+        auto visibleParam = getVisibleAutomationParam(i);
+
+        // Helper lambda for buttons
+        auto drawButton = [&](const char* label, const char* param, SkColor activeColor, juce::Rectangle<int>& btnRect) {
+            bool isActive = (visibleParam == param);
+            SkRect r = SkRect::MakeXYWH((float)btnRect.getX(), (float)btnRect.getY(), (float)btnRect.getWidth(), (float)btnRect.getHeight());
+            
+            paint.setStyle(SkPaint::kFill_Style);
+            paint.setColor(isActive ? activeColor : SkColorSetRGB(68, 68, 68));
+            canvas->drawRect(r, paint);
+            
+            paint.setStyle(SkPaint::kStroke_Style);
+            paint.setColor(SK_ColorWHITE);
+            canvas->drawRect(r, paint);
+            
+            paint.setStyle(SkPaint::kFill_Style);
+            // Center text roughly
+            canvas->drawString(label, (float)btnRect.getX() + 12, (float)btnRect.getY() + 17, font, paint);
+            
+            if (projectState.hasAutomation(trackId, param)) {
+                paint.setColor(activeColor);
+                canvas->drawCircle((float)btnRect.getRight() - 6, (float)btnRect.getY() + 4, 2, paint);
+                paint.setColor(SK_ColorWHITE);
+            }
+        };
+
+        auto vBtn = buttonArea.removeFromLeft(buttonWidth);
+        drawButton("V", "volume", SkColorSetRGB(255, 165, 0), vBtn); // Orange
+        
+        buttonArea.removeFromLeft(buttonSpacing);
+        auto pBtn = buttonArea.removeFromLeft(buttonWidth);
+        drawButton("P", "pan", SK_ColorCYAN, pBtn);
+        
+        buttonArea.removeFromLeft(buttonSpacing);
+        auto mBtn = buttonArea.removeFromLeft(buttonWidth);
+        drawButton("M", "mute", SK_ColorRED, mBtn);
+
+        y += TRACK_HEIGHT;
+    }
+}
+
+void ArrangementComponent::drawTimelineSkia(void* canvasPtr, juce::Rectangle<int> area)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid()) return;
+
+    int y = 0;
+    for (int i = 0; i < tracksNode.getNumChildren(); ++i)
+    {
+        auto trackArea = juce::Rectangle<int>(area.getX(), y, area.getWidth(), TRACK_HEIGHT);
+        drawTrackSkia(canvas, i, trackArea);
+        y += TRACK_HEIGHT;
+    }
+}
+
+void ArrangementComponent::drawTrackSkia(void* canvasPtr, int trackIndex, juce::Rectangle<int> area)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    if (trackIndex >= tracksNode.getNumChildren()) return;
+
+    auto track = tracksNode.getChild(trackIndex);
+    auto trackId = track[ProjectState::PROP_ID].toString();
+
+    SkPaint paint;
+    SkRect rect = SkRect::MakeXYWH((float)area.getX(), (float)area.getY(), (float)area.getWidth(), (float)area.getHeight());
+
+    // Background
+    paint.setColor(trackIndex % 2 == 0 ? SkColorSetRGB(37, 37, 37) : SkColorSetRGB(42, 42, 42));
+    paint.setStyle(SkPaint::kFill_Style);
+    canvas->drawRect(rect, paint);
+
+    // Border
+    paint.setColor(SkColorSetRGB(58, 58, 58));
+    paint.setStyle(SkPaint::kStroke_Style);
+    canvas->drawRect(rect, paint);
+
+    auto visibleParam = getVisibleAutomationParam(trackIndex);
+    auto clipsArea = area;
+    auto automationArea = juce::Rectangle<int>();
+
+    if (!visibleParam.isEmpty())
+    {
+        int automationHeight = (TRACK_HEIGHT * AUTOMATION_LANE_HEIGHT_RATIO) / 100;
+        automationArea = clipsArea.removeFromBottom(automationHeight);
+        drawAutomationLaneSkia(canvas, trackId, visibleParam, automationArea);
+    }
+
+    // Clips Placeholder
+    SkFont font;
+    font.setSize(14.0f);
+    paint.setColor(SkColorSetARGB(80, 128, 128, 128));
+    paint.setStyle(SkPaint::kFill_Style);
+    canvas->drawString("Clips area", (float)clipsArea.getCentreX() - 30, (float)clipsArea.getCentreY(), font, paint);
+}
+
+void ArrangementComponent::drawAutomationLaneSkia(void* canvasPtr, const juce::String& trackId,
+                                                  const juce::String& paramId, juce::Rectangle<int> area)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    SkPaint paint;
+    SkRect rect = SkRect::MakeXYWH((float)area.getX(), (float)area.getY(), (float)area.getWidth(), (float)area.getHeight());
+
+    // Background
+    paint.setColor(SkColorSetRGB(26, 26, 26));
+    paint.setStyle(SkPaint::kFill_Style);
+    canvas->drawRect(rect, paint);
+
+    // Border
+    paint.setColor(SkColorSetRGB(68, 68, 68));
+    paint.setStyle(SkPaint::kStroke_Style);
+    canvas->drawRect(rect, paint);
+
+    // Color
+    SkColor color = SK_ColorWHITE;
+    if (paramId == "volume") color = SkColorSetRGB(255, 165, 0);
+    else if (paramId == "pan") color = SK_ColorCYAN;
+    else if (paramId == "mute") color = SK_ColorRED;
+
+    // Reference lines
+    paint.setColor(SkColorSetA(color, 50));
+    paint.setStyle(SkPaint::kStroke_Style);
+    if (paramId == "volume" || paramId == "mute") {
+        float midY = area.getY() + area.getHeight() / 2.0f;
+        canvas->drawLine((float)area.getX(), midY, (float)area.getRight(), midY, paint);
+    } else if (paramId == "pan") {
+        float centerY = area.getY() + area.getHeight() / 2.0f;
+        canvas->drawLine((float)area.getX(), centerY, (float)area.getRight(), centerY, paint);
+    }
+
+    auto points = getAutomationPoints(trackId, paramId);
+    if (points.isEmpty()) return;
+
+    // Draw curve
+    SkPath path;
+    bool firstPoint = true;
+    for (const auto& point : points)
+    {
+        float x = (float)(beatsToPixels(point.timeBeats) - beatsToPixels(viewOffsetBeats) + TRACK_HEADER_WIDTH);
+        float y = (float)automationValueToPixels(point.value, area, paramId);
+
+        if (firstPoint) {
+            path.moveTo(x, y);
+            firstPoint = false;
+        } else {
+            path.lineTo(x, y);
+        }
+    }
+
+    paint.setColor(color);
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setStrokeWidth(2.0f);
+    paint.setAntiAlias(true);
+    canvas->drawPath(path, paint);
+
+    // Draw points
+    paint.setStyle(SkPaint::kFill_Style);
+    for (const auto& point : points)
+    {
+        float x = (float)(beatsToPixels(point.timeBeats) - beatsToPixels(viewOffsetBeats) + TRACK_HEADER_WIDTH);
+        float y = (float)automationValueToPixels(point.value, area, paramId);
+        float radius = 6.0f;
+
+        if (selectedPoint.pointId == point.pointId) {
+            paint.setColor(SK_ColorWHITE);
+            canvas->drawCircle(x, y, 8.0f, paint);
+            paint.setColor(color);
+            canvas->drawCircle(x, y, 6.0f, paint);
+        } else {
+            paint.setColor(SK_ColorWHITE);
+            canvas->drawCircle(x, y, radius, paint);
+            paint.setColor(color);
+            canvas->drawCircle(x, y, radius - 2.0f, paint);
+        }
+    }
+}
+
+#endif
 
 

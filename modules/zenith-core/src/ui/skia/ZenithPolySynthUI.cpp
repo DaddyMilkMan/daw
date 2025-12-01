@@ -276,8 +276,8 @@ void ZenithPolySynthUI::recreateSurface() {
     auto s = SkSurfaces::WrapBackendRenderTarget(
         grContext_,
         backendRT,
-        kBottomLeft_GrSurfaceOrigin,
-        kRGBA_8888_SkColorType,
+        kBottomLeft_GrSurfaceOrigin, // kBottomLeft_GrSurfaceOrigin
+        kRGBA_8888_SkColorType,      // kRGBA_8888_SkColorType
         nullptr,
         nullptr
     );
@@ -323,17 +323,17 @@ void ZenithPolySynthUI::renderOpenGL() {
 //==============================================================================
 
 // Helper function for recursive drawing
-static void drawComponentRecursively(juce::Component* comp, SkCanvas* canvas) {
+static void drawComponentRecursively(juce::Component* comp, ::SkCanvas* canvas) { // SkCanvas
     if (!comp->isVisible()) return;
 
     canvas->save();
     
     auto bounds = comp->getBounds();
     // Translate to component's local coordinate system relative to parent
-    canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
+    canvas->translate((::SkScalar)bounds.getX(), (::SkScalar)bounds.getY()); // SkScalar
     
     // Clip to bounds
-    canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+    canvas->clipRect(::SkRect::MakeWH(bounds.getWidth(), bounds.getHeight())); // SkRect::MakeWH
 
     // 1. Draw the component itself
     if (auto* skiaComp = dynamic_cast<SkiaComponent*>(comp)) {
@@ -348,7 +348,7 @@ static void drawComponentRecursively(juce::Component* comp, SkCanvas* canvas) {
     canvas->restore();
 }
 
-void ZenithPolySynthUI::drawSkia(SkCanvas *canvas) {
+void ZenithPolySynthUI::drawSkia(SkCanvas *canvas) { // SkCanvas
 #ifdef ZENITH_USE_SKIA
   // 1. Draw Background (this component's own background)
   drawBackground(canvas);
@@ -360,10 +360,10 @@ void ZenithPolySynthUI::drawSkia(SkCanvas *canvas) {
 #endif
 }
 
-void ZenithPolySynthUI::drawBackground(SkCanvas *canvas) {
+void ZenithPolySynthUI::drawBackground(SkCanvas *canvas) { // SkCanvas
 #ifdef ZENITH_USE_SKIA
   // Draw a subtle gradient background (Nebula effect)
-  SkPaint paint;
+  SkPaint paint; // SkPaint
   
   // Animated Gradient
   // Rotate points based on time
@@ -372,19 +372,19 @@ void ZenithPolySynthUI::drawBackground(SkCanvas *canvas) {
   float cy = getHeight() * 0.5f;
   float radius = std::max(getWidth(), getHeight()) * 0.8f;
   
-  SkPoint points[2] = {
-      SkPoint::Make(cx + cos(angle) * radius, cy + sin(angle) * radius),
+  SkPoint points[2] = { // SkPoint
+      SkPoint::Make(cx + cos(angle) * radius, cy + sin(angle) * radius), // SkPoint::Make
       SkPoint::Make(cx - cos(angle) * radius, cy - sin(angle) * radius)
   };
   
   // Pulsing colors
   float pulse = (sin(animationTime_ * 0.5f) + 1.0f) * 0.5f; // 0 to 1
-  SkColor color1 = SkColorSetRGB(10 + (int)(pulse * 10), 15, 30 + (int)(pulse * 20));
-  SkColor color2 = SkColorSetRGB(20, 10 + (int)(pulse * 10), 25);
+  SkColor color1 = SkColorSetRGB(10 + (int)(pulse * 10), 15, 30 + (int)(pulse * 20)); // SkColor, SkColorSetRGB
+  SkColor color2 = SkColorSetRGB(20, 10 + (int)(pulse * 10), 25); // SkColor, SkColorSetRGB
   
-  SkColor colors[2] = {color1, color2};
+  SkColor colors[2] = {color1, color2}; // SkColor
   
-  paint.setShader(SkGradientShader::MakeLinear(points, colors, nullptr, 2, SkTileMode::kClamp));
+  paint.setShader(SkGradientShader::MakeLinear(points, colors, nullptr, 2, SkTileMode::kClamp)); // SkGradientShader::MakeLinear, SkTileMode::kClamp
   canvas->drawPaint(paint);
 
   // Draw "Glass" panel
@@ -392,22 +392,22 @@ void ZenithPolySynthUI::drawBackground(SkCanvas *canvas) {
 #endif
 }
 
-void ZenithPolySynthUI::drawGlassPanel(SkCanvas *canvas, const juce::Rectangle<int> &bounds) {
+void ZenithPolySynthUI::drawGlassPanel(SkCanvas *canvas, const juce::Rectangle<int> &bounds) { // SkCanvas
 #ifdef ZENITH_USE_SKIA
-  SkRect rect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
-  SkRRect rrect = SkRRect::MakeRectXY(rect, 16.0f, 16.0f); // 16px rounded corners
+  SkRect rect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight()); // SkRect, SkRect::MakeXYWH
+  SkRRect rrect = SkRRect::MakeRectXY(rect, 16.0f, 16.0f); // SkRRect, SkRRect::MakeRectXY
 
-  SkPaint paint;
+  SkPaint paint; // SkPaint
   
   // 1. Semi-transparent fill
-  paint.setColor(SkColorSetARGB(30, 255, 255, 255)); // 12% white
-  paint.setStyle(SkPaint::kFill_Style);
+  paint.setColor(SkColorSetARGB(30, 255, 255, 255)); // SkColorSetARGB
+  paint.setStyle(SkPaint::kFill_Style); // SkPaint::kFill_Style
   canvas->drawRRect(rrect, paint);
 
   // 2. Border/Stroke (Glow effect)
-  paint.setStyle(SkPaint::kStroke_Style);
+  paint.setStyle(SkPaint::kStroke_Style); // SkPaint::kStroke_Style
   paint.setStrokeWidth(1.0f);
-  paint.setColor(SkColorSetARGB(50, 255, 255, 255)); // 20% white border
+  paint.setColor(SkColorSetARGB(50, 255, 255, 255)); // SkColorSetARGB
   canvas->drawRRect(rrect, paint);
 
   // 3. Subtle inner glow (simulated with another stroke)

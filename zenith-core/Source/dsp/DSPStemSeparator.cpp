@@ -74,7 +74,8 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
     computeMidSide(leftIn, rightIn, numSamples, mid, side);
 
     // 2. Process based on Stem Type
-    juce::dsp::AudioBlock<float> midBlock(&mid, 1, numSamples);
+    float* midData = mid.data();
+    juce::dsp::AudioBlock<float> midBlock(&midData, 1, numSamples);
     juce::dsp::ProcessContextReplacing<float> midContext(midBlock);
 
     switch (stemType) {

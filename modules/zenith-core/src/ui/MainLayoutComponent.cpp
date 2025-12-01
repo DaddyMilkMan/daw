@@ -12,6 +12,12 @@
 #include "BrowserPanel.h"
 #include "skia/SkiaMainWindowIntegration.h"
 
+#ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRect.h>
+#endif
+
 namespace zenith {
 
 MainLayoutComponent::MainLayoutComponent(ProjectState& state, Engine& engine)
@@ -20,6 +26,12 @@ MainLayoutComponent::MainLayoutComponent(ProjectState& state, Engine& engine)
     // Create Arranger
     arrangerComponent_ = std::make_unique<ArrangementComponent>(projectState_, engine_);
     addAndMakeVisible(arrangerComponent_.get());
+
+#ifdef ZENITH_USE_SKIA
+    // Create Session View (hidden by default)
+    sessionViewComponent_ = std::make_unique<SessionViewComponent>();
+    addChildComponent(sessionViewComponent_.get());
+#endif
 
     // Create Browser (Skia-based)
     // Note: In a real implementation, we might want to wrap this or have a dedicated container
@@ -56,6 +68,12 @@ void MainLayoutComponent::resized()
     if (arrangerComponent_) {
         arrangerComponent_->setBounds(area);
     }
+    
+#ifdef ZENITH_USE_SKIA
+    if (sessionViewComponent_) {
+        sessionViewComponent_->setBounds(area);
+    }
+#endif
 }
 
 void MainLayoutComponent::toggleView()
@@ -66,7 +84,12 @@ void MainLayoutComponent::toggleView()
         arrangerComponent_->setVisible(!showSessionView_);
     }
     
-    // Toggle Session View visibility when implemented
+#ifdef ZENITH_USE_SKIA
+    if (sessionViewComponent_) {
+        sessionViewComponent_->setVisible(showSessionView_);
+    }
+#endif
+    
     resized();
 }
 
@@ -75,5 +98,37 @@ void MainLayoutComponent::toggleBrowser()
     browserVisible_ = !browserVisible_;
     resized();
 }
+
+#ifdef ZENITH_USE_SKIA
+void MainLayoutComponent::drawSkia(void* canvasPtr)
+{
+    SkCanvas* canvas = static_cast<SkCanvas*>(canvasPtr);
+    
+    // Draw Arranger or Session View
+    if (!showSessionView_) {
+        if (arrangerComponent_) {
+            canvas->save();
+            auto bounds = arrangerComponent_->getBounds();
+            canvas->translate((float)bounds.getX(), (float)bounds.getY());
+            
+            // ArrangementComponent uses void* to avoid header dependency
+            arrangerComponent_->drawSkia(canvas);
+            
+            canvas->restore();
+        }
+    } else {
+        if (sessionViewComponent_) {
+            canvas->save();
+            auto bounds = sessionViewComponent_->getBounds();
+            canvas->translate((float)bounds.getX(), (float)bounds.getY());
+            
+            // SessionViewComponent is a SkiaComponent
+            sessionViewComponent_->drawSkia(canvas);
+            
+            canvas->restore();
+        }
+    }
+}
+#endif
 
 } // namespace zenith

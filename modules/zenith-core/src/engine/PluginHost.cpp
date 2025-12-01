@@ -54,8 +54,34 @@ PluginHost::~PluginHost()
 int PluginHost::scanDefaultLocations(bool async)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    juce::ignoreUnused(async); // TODO: Implement async scanning in future
+    
+    if (async) {
+        // CRITICAL FIX #2: Real async scanning
+        DBG("PluginHost: Starting ASYNC scan...");
+        
+        scanThread_ = std::make_unique<juce::Thread>("PluginScanner");
+        scanThread_->startThread([this]() {
+            performScan();
+            
+            // Callback on message thread
+            juce::MessageManager::callAsync([this]() {
+                int count = knownPlugins.getNumTypes();
+                DBG("PluginHost: Async scan complete - found " + juce::String(count) + " plugins");
+                if (scanCompleteCallback_) {
+                    scanCompleteCallback_(count);
+                }
+            });
+        });
+        
+        return 0; // Return immediately, callback will provide count
+    }
+    
+    // Synchronous scanning (original code)
+    return performScan();
+}
 
+int PluginHost::performScan()
+{
     if (vst3Format == nullptr)
     {
         DBG("PluginHost: Cannot scan - VST3 format not available");

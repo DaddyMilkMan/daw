@@ -27,7 +27,16 @@
 #include <include/core/SkSamplingOptions.h>
 #include <include/core/SkSurface.h>
 #include <include/core/SkTextBlob.h>
+#include <include/core/SkColor.h>
+#include <fstream>
 
+static void logToDisk(const std::string& msg) {
+    std::ofstream outfile;
+    outfile.open("C:\\zenith\\daw\\debug_log.txt", std::ios_base::app);
+    outfile << msg << std::endl;
+}
+#else
+static void logToDisk(const std::string& msg) {}
 #endif
 
 //==============================================================================
@@ -61,21 +70,20 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("========================================");
 
 #ifdef ZENITH_USE_SKIA
-  DBG(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-      "EXECUTING <<<");
+  logToDisk(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<");
 
   // Initialize Skia rendering system
   // Skia initialization is handled by
   // SkiaMainWindowIntegration::newOpenGLContextCreated
 
   // Instantiate the SkiaRenderer
-  DBG("→ Initializing SkiaRenderer...");
+  logToDisk("→ Initializing SkiaRenderer...");
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
 
   // Top: Transport Bar
-  DBG("→ Creating TransportBar...");
+  logToDisk("→ Creating TransportBar...");
   transportBar = std::make_unique<zenith::TransportBar>();
   transportBar->setProjectName("Zenith DAW");
   transportBar->setTempo(120.0);
@@ -98,41 +106,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
       DBG("Recording started");
     } else {
       DBG("Recording stopped");
-    }
-  };
-
-  addAndMakeVisible(transportBar.get());
-  DBG("✓ TransportBar created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)transportBar.get()));
-
-  // The "Perfect DAW" Tri-Pane Layout Manager
-  DBG("→ Creating MainLayoutComponent...");
-  mainLayout = std::make_unique<zenith::MainLayoutComponent>(projectState, engine);
-  addAndMakeVisible(mainLayout.get());
-  DBG("✓ MainLayoutComponent created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)mainLayout.get()));
-
-  // Connect browser collapse callback (proxied through MainLayout if needed, or
-  // handled internally) For now, MainLayout handles its own resizing when
-  // browser toggles.
-
   // Right: AI Assistant Panel (Wingman) - Pure Skia
-  DBG("→ Creating RightSidePanel...");
-  rightSidePanel = std::make_unique<zenith::RightSidePanel>();
-  addAndMakeVisible(rightSidePanel.get());
-  DBG("✓ RightSidePanel created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)rightSidePanel.get()));
-
-  // Bottom: Piano Keyboard + Mixer Strip
-  DBG("→ Creating BottomBar...");
-  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState);
-  bottomBar->setKeyboardVisible(false); // Hidden by default
-  addAndMakeVisible(bottomBar.get());
-  DBG("✓ BottomBar created and made visible at " +
-      juce::String::toHexString((juce::pointer_sized_int)bottomBar.get()));
-
-  // Connect view toggle callback
-  transportBar->onViewToggleClicked = [this]() {
     if (mainLayout) {
       mainLayout->toggleView();
       DBG("View toggled via MainLayout");
@@ -140,7 +114,13 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   };
 
   // Start animation timer (SkiaMainWindowIntegration handles this)
-  DBG("✓ Animation timer managed by SkiaMainWindowIntegration");
+  logToDisk("✓ Animation timer managed by SkiaMainWindowIntegration");
+  
+  // Initialize Skia context (starts rendering thread)
+  logToDisk("→ Calling initializeSkia()...");
+  initializeSkia(); // Enable Skia rendering
+  logToDisk("✓ initializeSkia() returned");
+  logToDisk("✓ MainComponent Constructor COMPLETE");
 
 #else
   // ============================================================================
@@ -320,29 +300,27 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
 void MainComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
+  logToDisk("MainComponent::paint() called");
   // Delegate to base class which handles initialization status
   SkiaMainWindowIntegration::paint(g);
 #else
-  // JUCE fallback rendering (when Skia disabled)
-  static int paintCallCount = 0;
-  if (paintCallCount < 3) {
-    paintCallCount++;
-    DBG("paint() call #" << paintCallCount
-                         << " using juce::Graphics (JUCE fallback)");
-    if (paintCallCount == 1) {
-      DBG("  paint() receives juce::Graphics, not SkCanvas");
-      DBG("  This confirms JUCE rendering is active, NOT Skia");
-    }
-  }
-
-  // Background (ArrangerComponent handles its own painting)
-  g.fillAll(juce::Colour(0xff1e1e1e)); // Dark grey (LUNA-inspired)
+// ...
 #endif
 }
 
 #ifdef ZENITH_USE_SKIA
-void MainComponent::drawSkiaContent(SkCanvas* canvas) {
+void MainComponent::renderSkia(SkCanvas* canvas) {
   if (!canvas) return;
+
+  // Lock the message manager to safely access component state and ValueTrees
+  // This is necessary because renderSkia runs on the OpenGL thread
+  juce::MessageManagerLock mmLock;
+  if (!mmLock.lockWasGained()) return;
+
+  // logToDisk("MainComponent::renderSkia called"); // Commented out to reduce spam
+  
+  // Draw background (Dark Grey for DAW look)
+  canvas->clear(SkColorSetRGB(18, 18, 18)); 
 
   // Draw all Skia UI panels
   // Each panel translates the canvas to its local coordinate space
@@ -358,8 +336,45 @@ void MainComponent::drawSkiaContent(SkCanvas* canvas) {
 
   // Center: Main Layout (Browser + Session/Arranger)
   if (mainLayout) {
-    // MainLayoutComponent uses JUCE paint(), not Skia
-    // It will be rendered by its children components
+    canvas->save();
+    // MainLayoutComponent handles its own translation if we pass the canvas, 
+    // but here we are in MainComponent coordinates.
+    // MainLayoutComponent::drawSkia expects to be called, but it doesn't take bounds.
+    // It assumes it's drawing at (0,0) of its local bounds?
+    // Let's check MainLayoutComponent::drawSkia implementation.
+    // It translates for its children: canvas->translate(bounds.getX(), bounds.getY());
+    // So if we are in MainComponent, we shouldn't translate for MainLayout?
+    // Wait, MainLayoutComponent::drawSkia translates for ITS children relative to ITSELF.
+    // So MainComponent must translate to MainLayout's position.
+    
+    auto bounds = mainLayout->getBounds();
+    // canvas->translate(bounds.getX(), bounds.getY()); // MainLayout is usually at 0,0 or below transport?
+    // Let's check resized() in MainComponent.
+    // mainLayout->setBounds(bounds); where bounds is the remaining area.
+    // So yes, we need to translate.
+    
+    // However, MainLayoutComponent::drawSkia takes void* canvas.
+    // It doesn't seem to do any translation for itself.
+    // So we should translate here.
+    
+    // Wait, MainLayoutComponent::drawSkia implementation:
+    // canvas->translate((float)bounds.getX(), (float)bounds.getY());
+    // This uses `arrangerComponent_->getBounds()`.
+    // ArrangerComponent is a child of MainLayoutComponent.
+    // So `arrangerComponent_->getBounds()` is relative to `MainLayoutComponent`.
+    // So `MainLayoutComponent::drawSkia` assumes the canvas is already transformed to `MainLayoutComponent`'s origin.
+    
+    // So in MainComponent, we MUST translate to MainLayoutComponent's origin.
+    
+    // But wait, MainLayoutComponent::drawSkia implementation I just wrote:
+    // canvas->translate((float)bounds.getX(), (float)bounds.getY());
+    // This translates by the child's position.
+    
+    // So yes, here in MainComponent, we translate to MainLayout's position.
+    
+    canvas->translate((float)bounds.getX(), (float)bounds.getY());
+    mainLayout->drawSkia(canvas);
+    canvas->restore();
   }
 
   // Right: Scratch Pads + Wingman Console
@@ -382,21 +397,12 @@ void MainComponent::drawSkiaContent(SkCanvas* canvas) {
 }
 #endif
 
-void MainComponent::mouseDown(const juce::MouseEvent &e) {
-  if (e.mods.isPopupMenu()) {
-    juce::PopupMenu m;
-    // m.addItem("Show Debug Logs", [] {  // Disabled: DebugLogOverlay doesn't exist
-    //   zenith::DebugLogOverlay::getInstance().setVisible(true);
-    //   zenith::DebugLogOverlay::getInstance().toFront(true);
-    // });
-    m.showMenuAsync(juce::PopupMenu::Options());
-  }
-}
+// ...
 
 void MainComponent::resized() {
   auto bounds = getLocalBounds();
-  // zenith::DebugLogOverlay::getInstance().setBounds(bounds.reduced(50));  // Disabled: DebugLogOverlay doesn't exist
-
+  logToDisk("MainComponent::resized() called - Bounds: " + std::to_string(bounds.getWidth()) + "x" + std::to_string(bounds.getHeight()));
+  // ...
   DBG("MainComponent::resized() called - Total bounds: " +
       juce::String(bounds.getWidth()) + "x" + juce::String(bounds.getHeight()));
 
@@ -410,6 +416,7 @@ void MainComponent::resized() {
   if (transportBar) {
     auto transportBounds = bounds.removeFromTop(60);
     transportBar->setBounds(transportBounds);
+
     DBG("  ✓ TransportBar positioned at: " + transportBounds.toString());
   } else {
     DBG("  ✗ TransportBar is NULL!");
@@ -423,9 +430,6 @@ void MainComponent::resized() {
   } else {
     DBG("  ✗ BottomBar is NULL!");
   }
-
-  // Left: Browser Panel (Managed by MainLayoutComponent now)
-  // MainLayoutComponent handles Browser, Session, and Arranger internally
 
   // Right: Scratch Pads + Wingman Console (400px width)
   if (rightSidePanel) {
@@ -510,6 +514,11 @@ void MainComponent::resized() {
   if (arrangerComponent)
     arrangerComponent->setBounds(bounds);
 #endif
+}
+
+void MainComponent::mouseDown(const juce::MouseEvent& e) {
+    juce::ignoreUnused(e);
+    DBG("MainComponent::mouseDown");
 }
 
 #ifndef ZENITH_USE_SKIA
@@ -711,7 +720,7 @@ MainWindow::~MainWindow() {
     engine->shutdown();
 
   // Clear content
-  clearContentComponent();
+  setContentOwned(nullptr, true);
 
   DBG("MainWindow destroyed");
 }

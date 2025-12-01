@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
 
-# Set MSVC runtime to static BEFORE project() call to match Skia
-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "" FORCE)
+# Set MSVC runtime to dynamic to match vcpkg (x64-windows)
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreadedDebugDLL" CACHE STRING "" FORCE)
 
 # Project definition
 project(ZenithDAW VERSION 0.1.0 LANGUAGES C CXX)
@@ -198,7 +198,32 @@ if(ZENITH_ENABLE_SKIA)
         src/ui/MainLayoutComponent.h
         src/ui/MainLayoutComponent.cpp
         src/ArrangementComponent.cpp
+        
+        # NEW: Team-built Skia UI Components
+        src/ui/skia/ZenithDesignSystem.h
+        src/ui/skia/ZenithDesignSystem.cpp
+        src/ui/skia/SkiaAccessibility.h
+        src/ui/skia/SkiaComponent.h
+        src/ui/skia/SkiaComponent.cpp
+        src/ui/skia/SkiaButton.h
+        src/ui/skia/SkiaButton.cpp
+        src/ui/skia/SkiaKnob.h
+        src/ui/skia/SkiaKnob.cpp
+        src/ui/skia/SkiaSlider.h
+        src/ui/skia/SkiaSlider.cpp
+        
+        # NEW: AI Integration Module (Deep Integration - ALL 10 FEATURES - NO STUBS)
+        src/ai/AiDataStructures.h
+        src/ai/AiBridge.h
+        src/ai/AiBridge.cpp
+        src/ai/AiChordAnalyzer.h
+        src/ai/AiAudioAnalyzer.h
+        src/ai/AiUndoableAction.h
+        src/ai/IAiTimelineTarget.h
     )
+    # ADD THIS LINE:
+    target_compile_definitions(ZenithDAW PUBLIC ZENITH_USE_SKIA=1)
+    target_compile_definitions(ZenithDAW PUBLIC ZENITH_ENABLE_SKIA=1) # Adding this too for consistency
 else()
     # Include JUCE fallback slider only when not using Skia
     target_sources(ZenithDAW PRIVATE

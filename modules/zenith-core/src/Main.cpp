@@ -16,7 +16,17 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <fstream> // Moved to global scope
 
+// Helper function for logging
+static void logToDisk(const std::string& msg) {
+    std::ofstream outfile;
+    // Use a fixed path for now, or use JUCE's File::getSpecialLocation in production
+    outfile.open("C:\\zenith\\daw\\debug_log.txt", std::ios_base::app);
+    if (outfile.is_open()) {
+        outfile << msg << std::endl;
+    }
+}
 
 //==============================================================================
 /**
@@ -68,9 +78,9 @@ public:
     juce::ignoreUnused(commandLine);
 
     // Log startup
-    DBG("Zenith DAW starting...");
-    DBG("Version: " + getApplicationVersion());
-    DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
+    logToDisk(">>> Zenith DAW starting... (Main.cpp)");
+    logToDisk("Version: " + getApplicationVersion().toStdString());
+    logToDisk("JUCE Version: " + juce::SystemStats::getJUCEVersion().toStdString());
 
     // Log system info
     logSystemInfo();
@@ -80,7 +90,15 @@ public:
     // zenith::registerBuiltInInstruments();
 
     // Create main window
-    mainWindow = std::make_unique<MainWindow>(getApplicationName());
+    logToDisk("→ Creating MainWindow...");
+    try {
+        mainWindow = std::make_unique<MainWindow>(getApplicationName());
+        logToDisk("✓ MainWindow created successfully!");
+    } catch (const std::exception& e) {
+        logToDisk("!!! EXCEPTION creating MainWindow: " + std::string(e.what()));
+    } catch (...) {
+        logToDisk("!!! UNKNOWN EXCEPTION creating MainWindow");
+    }
 
     DBG("Zenith DAW initialized successfully!");
   }

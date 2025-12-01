@@ -31,6 +31,8 @@ public:
     SkiaMainWindowIntegration();
     ~SkiaMainWindowIntegration() override;
 
+    void initializeSkia();
+
     // Component overrides
     void paint(juce::Graphics& g) override;
     void resized() override;
@@ -45,7 +47,7 @@ protected:
      * @brief Override this to draw your Skia content
      * @param canvas Skia canvas to draw on
      */
-    virtual void drawSkiaContent(SkCanvas* canvas) = 0;
+    virtual void renderSkia(SkCanvas* canvas);
 
     /**
      * @brief Get the current Skia canvas (valid during renderOpenGL)

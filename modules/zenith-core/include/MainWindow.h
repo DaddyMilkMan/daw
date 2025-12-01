@@ -42,6 +42,7 @@
 #include "ui/skia/TransportBar.h"
 #include "ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ui/skia/views/SessionViewComponent.h"
+#include <include/core/SkColor.h>
 #endif
 
 // UI panels
@@ -108,7 +109,7 @@ public:
   // SkiaMainWindowIntegration interface
   //==========================================================================
 
-  void drawSkiaContent(SkCanvas* canvas) override;
+  void renderSkia(SkCanvas* canvas) override;
 #endif
 
 private:

@@ -157,6 +157,12 @@ private:
 
     // VST3 format (raw pointer owned by formatManager)
     juce::AudioPluginFormat* vst3Format = nullptr;
+    
+    // CRITICAL FIX #2: Async scanning support
+    std::unique_ptr<juce::Thread> scanThread_;
+    std::function<void(int)> scanCompleteCallback_;
+    
+    void performScan();
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginHost)

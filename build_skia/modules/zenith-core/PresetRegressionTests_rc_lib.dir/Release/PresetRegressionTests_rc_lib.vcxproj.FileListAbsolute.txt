@@ -1,1 +1,0 @@
-C:\zenith\daw\build_skia\modules\zenith-core\PresetRegressionTests_rc_lib.dir\Release\PresetRegressionTests_rc_lib.lib

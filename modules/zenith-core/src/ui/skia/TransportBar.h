@@ -6,7 +6,7 @@
     Author:  Leo "Lil Bit" Rossi
 
     Transport controls with Neon Noir styling.
-    Play, Stop, Record, Tempo, CPU meter, Timeline.
+    Refactored to use SkiaButton, SkiaKnob, and SkiaSlider.
 
   ==============================================================================
 */
@@ -15,6 +15,9 @@
 
 #include <JuceHeader.h>
 #include "SkiaComponent.h"
+#include "SkiaButton.h"
+#include "SkiaKnob.h"
+#include "SkiaSlider.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
@@ -31,20 +34,18 @@ namespace zenith {
 class TransportBar : public SkiaComponent {
 public:
     TransportBar();
-    ~TransportBar() override = default;
+    ~TransportBar() override;
 
     void drawSkia(SkCanvas* canvas) override;
     void resized() override;
-    void mouseDown(const juce::MouseEvent& e) override;
-
+    
     // State setters
-    void setPlaying(bool playing) { isPlaying_ = playing; repaint(); }
-    void setRecording(bool recording) { isRecording_ = recording; repaint(); }
-    void setTempo(double bpm) { tempo_ = bpm; repaint(); }
+    void setPlaying(bool playing);
+    void setRecording(bool recording);
+    void setTempo(double bpm);
     void setCPU(float percent) { cpuUsage_ = percent; repaint(); }
     void setPosition(double seconds) { position_ = seconds; repaint(); }
     
-    // New setters
     void setProjectName(const juce::String& name) { projectName_ = name; repaint(); }
     void setTimeSignature(int num, int den) { timeSigNum_ = num; timeSigDen_ = den; repaint(); }
 
@@ -55,24 +56,23 @@ public:
     std::function<void()> onViewToggleClicked;
 
 private:
+    // Child Components
+    std::unique_ptr<SkiaButton> playBtn_;
+    std::unique_ptr<SkiaButton> stopBtn_;
+    std::unique_ptr<SkiaButton> recordBtn_;
+    std::unique_ptr<SkiaButton> viewToggleBtn_;
+    
+    std::unique_ptr<SkiaKnob> tempoKnob_;
+    std::unique_ptr<SkiaSlider> masterVolSlider_;
+
+    // State
     bool isPlaying_ = false;
     bool isRecording_ = false;
-    double tempo_ = 120.0;
     float cpuUsage_ = 0.0f;
     double position_ = 0.0;
     juce::String projectName_ = "Zenith DAW";
     int timeSigNum_ = 4;
     int timeSigDen_ = 4;
-
-    juce::Rectangle<int> playButtonBounds_;
-    juce::Rectangle<int> stopButtonBounds_;
-    juce::Rectangle<int> recordButtonBounds_;
-    juce::Rectangle<int> viewToggleButtonBounds_;
-
-    void drawButton(SkCanvas* canvas, const juce::Rectangle<int>& bounds, 
-                    const char* label, bool isActive, uint32_t color);
-    void drawMeter(SkCanvas* canvas, const juce::Rectangle<int>& bounds,
-                   float value, const char* label);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 };

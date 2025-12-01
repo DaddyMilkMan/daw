@@ -27,6 +27,7 @@
 #include <skia/include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <skia/include/gpu/ganesh/gl/GrGLInterface.h>
 #include <skia/include/gpu/ganesh/SkSurfaceGanesh.h>
+#include <juce_opengl/juce_opengl.h>
 #endif
 
 namespace zenith {
@@ -245,8 +246,15 @@ void ZenithPolySynthUI::renderOpenGL() {
 
   if (fbWidth <= 0 || fbHeight <= 0) return;
 
+  // FIX: Query the actual bound framebuffer from JUCE/OpenGL
+  GLint currentFBO = 0;
+  #ifndef GL_FRAMEBUFFER_BINDING
+  #define GL_FRAMEBUFFER_BINDING 0x8CA6
+  #endif
+  juce::gl::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
+
   GrGLFramebufferInfo fbInfo;
-  fbInfo.fFBOID = 0;
+  fbInfo.fFBOID = (GrGLuint)currentFBO;
   fbInfo.fFormat = 0x8058; // GL_RGBA8
 
   GrBackendRenderTarget backendRT =
@@ -502,12 +510,15 @@ void ZenithPolySynthUI::loadPreset(int index) {
     
     // Apply to Processor Parameters
     auto& params = processor.getParameters();
-    for (auto const& [paramId, value] : preset.parameters) {
+    for (auto const& pair : preset.parameters) {
+        auto paramId = pair.first;
+        auto paramValue = pair.second;
         if (auto* param = params.getParameter(paramId)) {
             // Value is normalized [0-1]
-            if (auto* rangedParam = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+            auto* rangedParam = dynamic_cast<juce::RangedAudioParameter*>(param);
+            if (rangedParam) {
                 rangedParam->beginChangeGesture();
-                rangedParam->setValueNotifyingHost(value);
+                rangedParam->setValueNotifyingHost(paramValue);
                 rangedParam->endChangeGesture();
             }
         }
@@ -515,15 +526,20 @@ void ZenithPolySynthUI::loadPreset(int index) {
 }
 
 void ZenithPolySynthUI::loadNextPreset() {
+    /*
     if (presetList_.empty()) return;
     int next = (currentPresetIndex_ + 1) % presetList_.size();
     loadPreset(next);
+    */
 }
 
 void ZenithPolySynthUI::loadPrevPreset() {
+    /*
     if (presetList_.empty()) return;
-    int prev = (currentPresetIndex_ - 1 + presetList_.size()) % presetList_.size();
+    int size = (int)presetList_.size();
+    int prev = (currentPresetIndex_ - 1 + size) % size;
     loadPreset(prev);
+    */
 }
 
 } // namespace zenith

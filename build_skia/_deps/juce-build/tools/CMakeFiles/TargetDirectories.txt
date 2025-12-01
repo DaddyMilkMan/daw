@@ -1,7 +1,0 @@
-C:/zenith/daw/build_skia/_deps/juce-build/tools/CMakeFiles/INSTALL.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/CMakeFiles/ALL_BUILD.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/CMakeFiles/ZERO_CHECK.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/modules/CMakeFiles/INSTALL.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/extras/Build/CMakeFiles/INSTALL.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/extras/Build/juceaide/CMakeFiles/juceaide.dir
-C:/zenith/daw/build_skia/_deps/juce-build/tools/extras/Build/juceaide/CMakeFiles/INSTALL.dir

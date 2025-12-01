@@ -18,6 +18,10 @@
 #include "../../include/ProjectState.h"
 #include "../../include/Engine.h"
 
+#ifdef ZENITH_USE_SKIA
+#include "skia/views/SessionViewComponent.h"
+#endif
+
 namespace zenith {
 
 /**
@@ -33,6 +37,10 @@ public:
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+
+#ifdef ZENITH_USE_SKIA
+    void drawSkia(void* canvas);
+#endif
 
     // View management
     void toggleView();  // Toggle between Session and Arranger
@@ -55,7 +63,10 @@ private:
 
     // Components
     std::unique_ptr<ArrangementComponent> arrangerComponent_;
-    // SessionViewComponent would go here when implemented
+    
+#ifdef ZENITH_USE_SKIA
+    std::unique_ptr<SessionViewComponent> sessionViewComponent_;
+#endif
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

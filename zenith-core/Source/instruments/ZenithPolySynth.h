@@ -19,10 +19,6 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
-#include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
@@ -91,19 +87,16 @@ enum class ModulationSource {
     Modulation destinations available in the matrix
 */
 enum class ModulationDestination {
-  None = 0,        // No destination
-  FilterCutoff,    // Filter cutoff frequency
-  FilterResonance, // Filter resonance/Q
-  Osc1Pitch,       // Oscillator 1 pitch (semitones)
-  Osc2Pitch,       // Oscillator 2 pitch (semitones)
-  Osc3Pitch,       // Oscillator 3 pitch (semitones)
-  WavetablePos,    // Wavetable/phase position (0 to 1)
-  Pan,             // Stereo panning (-1 left to +1 right)
-  Volume,          // Output volume/gain
-  Osc1Mix,         // Oscillator 1 mix level
-  Osc2Mix,         // Oscillator 2 mix level
-  Osc3Mix,         // Oscillator 3 mix level
-  OscShape,        // Oscillator Shape/PulseWidth (0 to 1)
+  None = 0,
+  Osc1Pitch,
+  Osc2Pitch,
+  Osc3Pitch,
+  Osc1Mix,
+  Osc2Mix,
+  Osc3Mix,
+  FilterCutoff,
+  FilterResonance,
+  AmpGain,
   NumDestinations
 };
 
@@ -455,6 +448,7 @@ private:
   float velocity_ = 0.0f;
   float modWheel_ = 0.0f;
   float aftertouch_ = 0.0f;
+  float pitchBend_ = 0.0f;
   float currentAmplitude_ = 0.0f;
   float oscShape_ = 0.5f; // Global shape parameter for square waves
 
@@ -480,8 +474,7 @@ public:
 /**
     Main Processor Class
 */
-class ZenithPolySynthProcessor : public juce::Synthesiser,
-                                 public juce::AudioProcessor {
+class ZenithPolySynthProcessor : public juce::AudioProcessor {
 public:
   ZenithPolySynthProcessor();
   ~ZenithPolySynthProcessor() override;
@@ -493,8 +486,8 @@ public:
                     juce::MidiBuffer &midiMessages) override;
 
   // Editor
-  juce::AudioProcessorEditor *createEditor() override { return nullptr; }
-  bool hasEditor() const override { return false; }
+  juce::AudioProcessorEditor *createEditor() override;
+  bool hasEditor() const override { return true; }
 
   // Metadata
   const juce::String getName() const override { return "Zenith Poly Synth"; }
@@ -575,6 +568,7 @@ public:
   void pushToVisualizer(const float* buffer, int numSamples);
 
 private:
+  juce::Synthesiser synthesiser_;
   juce::AudioProcessorValueTreeState parameters_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
@@ -592,6 +586,7 @@ private:
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
   void updateVoiceParameters();
   void updateVoiceCount();
+};
 
 class ZenithPolySynth : public InstrumentBase {
 public:

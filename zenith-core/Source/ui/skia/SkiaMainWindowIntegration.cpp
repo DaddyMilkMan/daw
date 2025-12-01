@@ -15,6 +15,7 @@
 #ifdef ZENITH_USE_SKIA
 #include <skia/include/gpu/ganesh/gl/GrGLInterface.h>
 #include <skia/include/core/SkSurface.h>
+#include <juce_opengl/juce_opengl.h>
 #endif
 
 namespace zenith {
@@ -114,8 +115,21 @@ void SkiaMainWindowIntegration::recreateSurface() {
     }
 
     // Get framebuffer info
+    GLint currentFBO = 0;
+    // Use JUCE's OpenGL context to get the current FBO
+    // Note: glGetIntegerv might not be directly available without GLEW/GLAD or JUCE's wrapper
+    // But since we are inside a JUCE OpenGL context, we can try to use the context's functions if available
+    // or just assume FBO 0 for the main window if we can't query it.
+    // However, JUCE might be rendering to an FBO itself.
+    
+    // Better approach: Use juce::gl namespace
+#ifndef GL_FRAMEBUFFER_BINDING
+#define GL_FRAMEBUFFER_BINDING 0x8CA6
+#endif
+    juce::gl::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
+
     GrGLFramebufferInfo framebufferInfo;
-    framebufferInfo.fFBOID = 0; // Default framebuffer
+    framebufferInfo.fFBOID = (GrGLuint)currentFBO;
     framebufferInfo.fFormat = 0x8058; // GL_RGBA8
 
     // Create backend render target

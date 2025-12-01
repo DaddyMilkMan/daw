@@ -1,1 +1,0 @@
-C:\zenith\daw\build_skia\modules\zenith-core\RecordingAutomationTests_rc_lib.dir\Release\RecordingAutomationTests_rc_lib.lib

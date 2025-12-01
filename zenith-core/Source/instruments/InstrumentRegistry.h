@@ -72,6 +72,16 @@ public:
     juce::Array<juce::var> getInstrumentList() const;
 
     //==========================================================================
+    // Preset Management
+    //==========================================================================
+
+    std::vector<InstrumentPreset> getPresetsForInstrument(const juce::String& instrumentId) const;
+    bool getPreset(const juce::String& instrumentId, const juce::String& presetName, InstrumentPreset& outPreset) const;
+    void addPreset(const juce::String& instrumentId, const InstrumentPreset& preset);
+    bool deletePreset(const juce::String& instrumentId, const juce::String& presetName);
+    juce::var getParameterSchema(const juce::String& instrumentId) const;
+
+    //==========================================================================
     // Instrument Creation
     //==========================================================================
 
@@ -109,6 +119,8 @@ private:
     };
 
     std::map<juce::String, InstrumentInfo> instruments_;
+    // Map<InstrumentID, Map<PresetName, Preset>>
+    std::map<juce::String, std::map<juce::String, InstrumentPreset>> presets_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(InstrumentRegistry)
 };

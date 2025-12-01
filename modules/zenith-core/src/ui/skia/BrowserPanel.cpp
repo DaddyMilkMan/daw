@@ -13,6 +13,12 @@
 #include "BrowserPanel.h"
 
 #ifdef ZENITH_USE_SKIA
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkRect.h>
+#include <include/core/SkFont.h>
+#include <include/core/SkColor.h>
+#include <include/effects/SkGradientShader.h>
 
 namespace zenith {
 
@@ -35,13 +41,25 @@ void BrowserPanel::drawSkia(SkCanvas* canvas) {
     canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), paint);
     
     // Header
-    paint.setColor(SkColorSetARGB(255, 30, 30, 35));
+    // Header Background with Gradient
+    SkPoint pts[2] = { {0.0f, 0.0f}, {0.0f, 40.0f} };
+    SkColor colors[2] = { SkColorSetRGB(45, 45, 50), SkColorSetRGB(30, 30, 35) };
+    paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
     canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), 40), paint);
+    paint.setShader(nullptr); // Reset shader
     
+    // Header Text
     SkFont headerFont;
     headerFont.setSize(16.0f);
+    headerFont.setEmbolden(true);
+    headerFont.setEdging(SkFont::Edging::kAntiAlias);
+    
     paint.setColor(SK_ColorWHITE);
-    canvas->drawSimpleText("PRESETS", 7, SkTextEncoding::kUTF8, 10, 25, headerFont, paint);
+    canvas->drawString("PRESETS", 15, 26, headerFont, paint);
+    
+    // Header Separator
+    paint.setColor(SkColorSetARGB(100, 0, 255, 255)); // Cyan accent
+    canvas->drawLine(0, 40, bounds.getWidth(), 40, paint);
     
     // Draw preset list
     SkFont itemFont;
@@ -67,7 +85,7 @@ void BrowserPanel::drawSkia(SkCanvas* canvas) {
         
         // Text
         paint.setColor(i == selectedIndex_ ? SkColorSetRGB(0, 255, 255) : SK_ColorWHITE);
-        canvas->drawSimpleText(filteredPresets_[i].toStdString().c_str(), filteredPresets_[i].length(), SkTextEncoding::kUTF8, itemBounds.getX() + 10, itemBounds.getCentreY() + 5, itemFont, paint);
+        canvas->drawString(filteredPresets_[i].toRawUTF8(), (float)itemBounds.getX() + 10, (float)itemBounds.getCentreY() + 5, itemFont, paint);
     }
     
     // Scrollbar if needed

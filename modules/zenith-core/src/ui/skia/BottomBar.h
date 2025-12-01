@@ -14,28 +14,46 @@
 
 #include <JuceHeader.h>
 #include "SkiaComponent.h"
+/*
+  ==============================================================================
+
+    BottomBar.h
+    Created: 2025-11-28
+    Author:  David Chen + Leo Rossi
+
+    Bottom bar container with Piano Keyboard and Mixer Strip.
+
+  ==============================================================================
+*/
+
+#pragma once
+
+#include <JuceHeader.h>
+#include "SkiaComponent.h"
 #include "views/PianoKeyboardViewSkia.h"
 
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
+class Engine;
+
 class BottomBar : public SkiaComponent {
 public:
-    explicit BottomBar(juce::MidiKeyboardState& state);
+    BottomBar(juce::MidiKeyboardState& state, Engine& engine);
     ~BottomBar() override;
     
     void drawSkia(SkCanvas* canvas) override;
     void resized() override;
     
     void setKeyboardVisible(bool visible);
-    bool isKeyboardVisible() const { return keyboardVisible_; }
 
 private:
     juce::MidiKeyboardState& midiState_;
+    Engine& engine_;
     std::unique_ptr<PianoKeyboardViewSkia> pianoKeyboard_;
     
-    bool keyboardVisible_ = false;
+    bool keyboardVisible_ = true;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BottomBar)
 };

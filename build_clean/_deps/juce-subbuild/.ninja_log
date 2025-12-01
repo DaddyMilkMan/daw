@@ -1,0 +1,21 @@
+# ninja log v7
+4	106	7861943749508601	juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir	3d202b5389035b52
+4	106	7861943749508601	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-mkdir	3d202b5389035b52
+107	25354	7861944001857653	juce-populate-prefix/src/juce-populate-stamp/juce-populate-download	a1365fe745ba041a
+107	25354	7861944001857653	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-download	a1365fe745ba041a
+25355	25737	7861944002090025	juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	a47fb36c954d64e1
+25355	25737	7861944002090025	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-update	a47fb36c954d64e1
+25738	25887	7861944007266573	juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	514bbd1cae9581b2
+25738	25887	7861944007266573	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-patch	514bbd1cae9581b2
+25888	26020	7861944008602338	juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	bbad48f3f1fa80a2
+25888	26020	7861944008602338	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-configure	bbad48f3f1fa80a2
+26021	26175	7861944010118107	juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	2c1ccb341e8e3c6e
+26021	26175	7861944010118107	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-build	2c1ccb341e8e3c6e
+26176	26356	7861944011958338	juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	2753e9945395dc87
+26176	26356	7861944011958338	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-install	2753e9945395dc87
+26356	26503	7861944013371121	juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	565aa02978681d6e
+26356	26503	7861944013371121	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-test	565aa02978681d6e
+26504	26849	7861944016890168	CMakeFiles/juce-populate-complete	c1add99b5e0b4233
+26504	26849	7861944016890168	juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	c1add99b5e0b4233
+26504	26849	7861944016890168	C:/zenith/daw/build_clean/_deps/juce-subbuild/CMakeFiles/juce-populate-complete	c1add99b5e0b4233
+26504	26849	7861944016890168	C:/zenith/daw/build_clean/_deps/juce-subbuild/juce-populate-prefix/src/juce-populate-stamp/juce-populate-done	c1add99b5e0b4233

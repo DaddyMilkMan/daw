@@ -109,6 +109,10 @@ public:
   void paint(juce::Graphics &g) override;
   void resized() override;
 
+#ifdef ZENITH_USE_SKIA
+  void drawSkia(void* canvas); // Using void* to avoid including Skia headers in this public header if possible, or forward declare
+#endif
+
   //==========================================================================
   // Mouse interaction
   //==========================================================================
@@ -154,6 +158,15 @@ private:
   void drawAutomationLane(juce::Graphics &g, const juce::String &trackId,
                           const juce::String &paramId,
                           juce::Rectangle<int> area);
+
+#ifdef ZENITH_USE_SKIA
+  void drawTrackHeadersSkia(void* canvas, juce::Rectangle<int> area);
+  void drawTimelineSkia(void* canvas, juce::Rectangle<int> area);
+  void drawTrackSkia(void* canvas, int trackIndex, juce::Rectangle<int> area);
+  void drawAutomationLaneSkia(void* canvas, const juce::String &trackId,
+                              const juce::String &paramId,
+                              juce::Rectangle<int> area);
+#endif
 
   //==========================================================================
   // Coordinate mapping

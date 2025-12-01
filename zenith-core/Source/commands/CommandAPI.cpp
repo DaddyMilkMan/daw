@@ -52,6 +52,7 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
     // Route to appropriate handler
     // Track commands
     if (command == "list_tracks")
+        return listTracks(params);
     // Session/project commands
     else if (command == "get_session_graph")
         return getSessionGraph(params);
@@ -93,30 +94,6 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         return generatePreset(params);
 
     // Plugin commands
-    else if (command == "add_plugin")
-        return addPlugin(params);
-    else if (command == "remove_plugin")
-        return removePlugin(params);
-    else if (command == "list_plugins")
-        return listPlugins(params);
-    else if (command == "set_plugin_param")
-        return setPluginParam(params);
-    else if (command == "get_plugin_params")
-        return getPluginParams(params);
-
-    // Automation commands
-    else if (command == "add_automation_point")
-        return addAutomationPoint(params);
-    else if (command == "clear_automation")
-        return clearAutomation(params);
-        return deleteMarker(params);
-    else if (command == "goto_marker")
-        return gotoMarker(params);
-        return getMidiData(params);
-    else if (command == "set_clip_notes")
-        return setClipNotes(params);
-
-    else
         return createErrorResponse("Unknown command: " + command);
 }
 
@@ -345,6 +322,41 @@ juce::var CommandAPI::renameTrack(const juce::var& params)
 // list_clips command
 juce::var CommandAPI::listClips(const juce::var& params)
 {
+    if (!params.hasProperty("trackId"))
+        return createErrorResponse("Missing 'trackId' parameter");
+
+    juce::String trackId = params["trackId"].toString();
+    Track* track = findTrackById(trackId);
+    
+    if (track == nullptr)
+        return createErrorResponse("Track not found: " + trackId);
+
+    juce::var clipsArray;
+    auto* clipsArrayPtr = clipsArray.getArray();
+
+    for (int i = 0; i < track->getNumClips(); ++i)
+    {
+        auto* clip = track->getClip(i);
+        if (clip != nullptr)
+        {
+            auto* clipObj = new juce::DynamicObject();
+            clipObj->setProperty("id", "clip_" + juce::String(i));
+            clipObj->setProperty("name", clip->getName());
+            clipObj->setProperty("start", clip->getStartPosition());
+            clipObj->setProperty("length", clip->getLength());
+            clipObj->setProperty("offset", clip->getOffset());
+            
+            clipsArrayPtr->add(juce::var(clipObj));
+        }
+    }
+
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("trackId", trackId);
+    resultObj->setProperty("clips", clipsArray);
+    resultObj->setProperty("count", track->getNumClips());
+
+    return createSuccessResponse(juce::var(resultObj));
+}
 
 juce::var CommandAPI::splitClip(const juce::var& params)
 {
@@ -693,6 +705,17 @@ juce::var CommandAPI::describeInstrument(const juce::var& params)
 //==============================================================================
 // Helper Methods
 //==============================================================================
+juce::var CommandAPI::createSuccessResponse(const juce::var& result)
+{
+    auto* response = new juce::DynamicObject();
+    response->setProperty("success", true);
+    response->setProperty("result", result);
+    return juce::var(response);
+}
+
+juce::var CommandAPI::createErrorResponse(const juce::String& errorMessage)
+{
+    auto* response = new juce::DynamicObject();
     response->setProperty("success", false);
     response->setProperty("error", errorMessage);
     return juce::var(response);
@@ -1434,7 +1457,7 @@ juce::var CommandAPI::listPresets(const juce::var& params)
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("instrumentId", instrumentId);
     resultObj->setProperty("presets", presetsArray);
-    resultObj->setProperty("count", presets.size());
+    resultObj->setProperty("count", (int)presets.size());
     
     DBG("CommandAPI: Listed " + juce::String(presets.size()) + " presets for " + instrumentId);
     
@@ -1463,7 +1486,7 @@ juce::var CommandAPI::loadPreset(const juce::var& params)
         return createErrorResponse("Track has no instrument loaded");
     
     // Get instrument ID
-    juce::String instrumentId = instrument->getMetadata().id;
+    juce::String instrumentId = instrument->getMetadata().instrumentId;
     
     // Get InstrumentRegistry
     auto& registry = InstrumentRegistry::getInstance();
@@ -1473,8 +1496,22 @@ juce::var CommandAPI::loadPreset(const juce::var& params)
     if (!registry.getPreset(instrumentId, presetName, preset))
         return createErrorResponse("Preset not found: " + presetName + " for instrument " + instrumentId);
     
+    // Convert to ZenithInstrumentPreset
+    ZenithInstrumentPreset zenithPreset;
+    zenithPreset.name = preset.name.toStdString();
+    zenithPreset.category = preset.category.toStdString();
+    zenithPreset.description = preset.description.toStdString();
+    zenithPreset.author = preset.author.toStdString();
+    
+    if (preset.parameters.isObject()) {
+        auto paramsObj = preset.parameters.getDynamicObject();
+        for (auto& prop : paramsObj->getProperties()) {
+            zenithPreset.setParameter(prop.name.toString().toStdString(), (float)prop.value);
+        }
+    }
+
     // Load preset into instrument
-    instrument->loadPreset(preset);
+    instrument->applyPreset(zenithPreset);
     
     DBG("CommandAPI: Loaded preset '" + presetName + "' on track " + trackId);
     
@@ -1516,10 +1553,16 @@ juce::var CommandAPI::savePreset(const juce::var& params)
     preset.category = category;
     preset.description = description;
     preset.author = "Grok AI";
-    preset.parameters = instrument->getCurrentParameters();
+    // Build parameters object
+    auto* paramsObj = new juce::DynamicObject();
+    const auto& metadata = instrument->getMetadata();
+    for (const auto& param : metadata.parameters) {
+        paramsObj->setProperty(param.id, instrument->getParameter(param.id));
+    }
+    preset.parameters = juce::var(paramsObj);
     
     // Get instrument ID
-    juce::String instrumentId = instrument->getMetadata().id;
+    juce::String instrumentId = metadata.instrumentId;
     
     // Save to registry
     auto& registry = InstrumentRegistry::getInstance();
@@ -1655,10 +1698,15 @@ juce::var CommandAPI::getInstrumentParameters(const juce::var& params)
         return createErrorResponse("Track has no instrument loaded");
     
     // Get current parameters
-    juce::var parameters = instrument->getCurrentParameters();
+    auto* paramsObj = new juce::DynamicObject();
+    const auto& metadata = instrument->getMetadata();
+    for (const auto& param : metadata.parameters) {
+        paramsObj->setProperty(param.id, instrument->getParameter(param.id));
+    }
+    juce::var parameters = juce::var(paramsObj);
     
     // Get instrument metadata
-    juce::String instrumentId = instrument->getMetadata().id;
+    juce::String instrumentId = metadata.instrumentId;
     
     DBG("CommandAPI: Retrieved parameters for instrument on track " + trackId);
     

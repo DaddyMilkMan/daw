@@ -29,24 +29,32 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 SkiaMainWindowIntegration::SkiaMainWindowIntegration() {
-    logDiagnostic("SkiaMainWindowIntegration: Constructor called.");
+    setOpaque(true);
+    
     // Attach OpenGL context to this component
     openGLContext_.setRenderer(this);
-    openGLContext_.attachTo(*this);
+    openGLContext_.setComponentPaintingEnabled(false); // Disable JUCE painting on top
     openGLContext_.setContinuousRepainting(true);
-    logDiagnostic("SkiaMainWindowIntegration: OpenGL Context attached.");
+    // openGLContext_.attachTo(*this); // MOVED to initializeSkia() to avoid race condition
+}
+
+void SkiaMainWindowIntegration::initializeSkia() {
+    openGLContext_.attachTo(*this);
 }
 
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
-    if (surface_) surface_->unref();
     openGLContext_.detach();
+    if (surface_) surface_->unref();
 }
 
 void SkiaMainWindowIntegration::paint(juce::Graphics& g) {
-    // OpenGL rendering handles everything
-    // This is just a fallback
-    // logDiagnostic("SkiaMainWindowIntegration: paint() called (Software Fallback)");
-    g.fillAll(juce::Colour(0xff0a0a0f));
+    // If we are here, OpenGL is not running or we are painting on top
+    // Draw a fallback message
+    logDiagnostic("SkiaMainWindowIntegration: paint() called (Software Fallback - BLUE)");
+    g.fillAll(juce::Colours::blue);
+    g.setColour(juce::Colours::white);
+    g.setFont(20.0f);
+    g.drawText("Rendering Backend: Software (Blue Screen of Life)", getLocalBounds(), juce::Justification::centred, true);
 }
 
 
@@ -55,11 +63,9 @@ void SkiaMainWindowIntegration::resized() {
 }
 
 void SkiaMainWindowIntegration::newOpenGLContextCreated() {
-    logDiagnostic("SkiaMainWindowIntegration: Creating OpenGL Context...");
     // Create Skia GPU context
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface) {
-        logDiagnostic("ERROR: Failed to create GL Interface!");
         return;
     }
     
@@ -68,10 +74,8 @@ void SkiaMainWindowIntegration::newOpenGLContextCreated() {
     grContext_ = ctx.release();
     
     if (!grContext_) {
-        logDiagnostic("ERROR: Failed to create Skia GrDirectContext!");
         return;
     }
-    logDiagnostic("SkiaMainWindowIntegration: GrDirectContext created successfully.");
 
     contextInitialized_ = true;
     recreateSurface();
@@ -79,7 +83,6 @@ void SkiaMainWindowIntegration::newOpenGLContextCreated() {
 
 void SkiaMainWindowIntegration::renderOpenGL() {
     if (!contextInitialized_ || !grContext_) {
-        // logDiagnostic("SkiaMainWindowIntegration: Not initialized, skipping render.");
         return;
     }
 
@@ -88,8 +91,6 @@ void SkiaMainWindowIntegration::renderOpenGL() {
 
     // Recreate surface if size changed
     if (width != lastWidth_ || height != lastHeight_) {
-        std::string msg = "SkiaMainWindowIntegration: Resizing surface to " + std::to_string(width) + "x" + std::to_string(height);
-        logDiagnostic(msg.c_str());
         recreateSurface();
         lastWidth_ = width;
         lastHeight_ = height;
@@ -102,11 +103,11 @@ void SkiaMainWindowIntegration::renderOpenGL() {
     // Get canvas and clear
     skiaCanvas_ = surface_->getCanvas();
     
-    // DIAGNOSTIC: Change clear color to MAGENTA
-    skiaCanvas_->clear(SkColorSetRGB(255, 0, 255)); 
+    // Clear background
+    skiaCanvas_->clear(SkColorSetARGB(255, 10, 10, 15)); 
 
     // Let derived class draw
-    drawSkiaContent(skiaCanvas_);
+    renderSkia(skiaCanvas_);
 
     // Flush to GPU
     grContext_->flushAndSubmit();
@@ -165,6 +166,10 @@ void SkiaMainWindowIntegration::recreateSurface() {
     if (!surface_) {
         DBG("Failed to create Skia surface!");
     }
+}
+
+void SkiaMainWindowIntegration::renderSkia(SkCanvas* canvas) {
+    logDiagnostic("Base SkiaMainWindowIntegration::renderSkia called - MainComponent override not found!");
 }
 
 #endif // ZENITH_USE_SKIA

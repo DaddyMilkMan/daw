@@ -237,7 +237,7 @@ private:
 
           // Simple text wrapping (very basic)
           std::string str = text.toStdString();
-          canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+          SkTextUtils::DrawString(canvas, str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8,
                                  cardX + 10.0f, cardY + 25.0f, font, paint);
       }
   }
@@ -328,21 +328,14 @@ public:
     paint.setColor(SkColorSetARGB(200, 255, 255, 255));
 
     std::string labelStr = name_.toStdString();
-    canvas->drawSimpleText(labelStr.c_str(), labelStr.length(), SkTextEncoding::kUTF8,
+    canvas->drawSimpleText(labelStr.c_str(), labelStr.length(), ::SkTextUtils::SkTextEncoding::kUTF8,
                            cx - (labelStr.length() * 3.0f), cy + radius + 15.0f, font, paint);
 #else
     juce::ignoreUnused(canvas);
 #endif
   }
 
-  void mouseDrag(const juce::MouseEvent& e) override {
-    if (parameter_) {
-      float delta = (e.getDistanceFromDragStartY() - e.getDistanceFromDragStartX()) * 0.005f;
-      float current = parameter_->getValue();
-      float next = juce::jlimit(0.0f, 1.0f, current + delta);
-      parameter_->setValueNotifyingHost(next);
-    }
-  }
+  // ...
 };
 
 //==============================================================================
@@ -419,14 +412,7 @@ public:
 #endif
   }
 
-  void mouseDrag(const juce::MouseEvent& e) override {
-    if (parameter_) {
-      float delta = -e.getDistanceFromDragStartY() * 0.005f; // Vertical drag
-      float current = parameter_->getValue();
-      float next = juce::jlimit(0.0f, 1.0f, current + delta);
-      parameter_->setValueNotifyingHost(next);
-    }
-  }
+  // ...
 };
 
 //==============================================================================
@@ -498,8 +484,8 @@ public:
     paint.setColor(SK_ColorWHITE);
 
     std::string str = text_.toStdString();
-    float textWidth = font.measureText(str.c_str(), str.length(), SkTextEncoding::kUTF8);
-    canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+    float textWidth = font.measureText(str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8);
+    canvas->drawSimpleText(str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8,
                            bounds.getCentreX() - textWidth/2, bounds.getCentreY() + 5.0f, font, paint);
 #else
     juce::ignoreUnused(canvas);
@@ -840,19 +826,19 @@ public:
       font.setEmbolden(true);
 
       std::string str = presetName_.toStdString();
-      float textWidth = font.measureText(str.c_str(), str.length(), SkTextEncoding::kUTF8);
+      float textWidth = font.measureText(str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8);
 
       // Glow effect for text
       paint.setStyle(SkPaint::kFill_Style);
       paint.setColor(SkColorSetRGB(0, 255, 255));
       paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f));
-      canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+      canvas->drawSimpleText(str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8,
                              cx - textWidth/2, cy + 6.0f, font, paint);
 
       // Sharp text
       paint.setMaskFilter(nullptr);
       paint.setColor(SK_ColorWHITE);
-      canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+      canvas->drawSimpleText(str.c_str(), str.length(), ::SkTextUtils::SkTextEncoding::kUTF8,
                              cx - textWidth/2, cy + 6.0f, font, paint);
 #else
       juce::ignoreUnused(canvas);

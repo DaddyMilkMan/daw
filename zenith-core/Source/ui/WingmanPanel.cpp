@@ -11,6 +11,7 @@
 */
 
 #include "WingmanPanel.h"
+#include "ZenithLookAndFeel.h"
 #include "../network/SecureKeyStore.h"
 
 namespace zenith {

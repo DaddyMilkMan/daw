@@ -214,6 +214,7 @@ if(ZENITH_ENABLE_SKIA)
     target_compile_definitions(ZenithDAW PRIVATE 
         ZENITH_USE_SKIA=1 
         SK_GL=1
+        NOMINMAX
     )
 
     # Add Skia UI sources
