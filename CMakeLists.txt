@@ -1,134 +1,145 @@
-cmake_minimum_required(VERSION 3.20)
-project(ZenithDAW VERSION 0.1.0)
+cmake_minimum_required(VERSION 3.25)
 
-# C++ Standard
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# 1. Project Definition
+project(ZenithDAW 
+    VERSION 0.1.0
+    LANGUAGES CXX C
+)
+
+# 2. Build Performance: ccache
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+    message(STATUS "ccache not found. Install it for faster builds.")
+endif()
+
+# 3. Default Build Type
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "No build type selected, defaulting to Release")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
+endif()
+
+# 4. Options
+option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" ON)
+option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
+option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
+option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" ON)
+
+# 5. C++ Standard (Enforced later via target_compile_features)
+# set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Always enable Skia (Phase 2 decision)
-add_definitions(-DZENITH_USE_SKIA=1)
+# add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
 
 # JUCE Setup
 include(FetchContent)
 FetchContent_Declare(
     JUCE
     GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 7.0.9
+    GIT_TAG 8.0.0
 )
 FetchContent_MakeAvailable(JUCE)
 
 # Find Skia (from vcpkg)
-find_package(skia CONFIG REQUIRED)
+# find_package(unofficial-skia CONFIG REQUIRED) - Using Manual Integration
 
 # Source files
 set(ZENITH_SOURCES
     # Main
-    zenith-core/Source/Main.cpp
-    zenith-core/Source/MainWindow.cpp
-    zenith-core/Source/Engine.cpp
-    zenith-core/Source/ProjectState.cpp
-    zenith-core/Source/commands/CommandAPI.cpp
+    apps/desktop/Source/Main.cpp
+    apps/desktop/Source/MainWindow.cpp
+    apps/desktop/Source/Engine.cpp
+    apps/desktop/Source/ProjectState.cpp
+    apps/desktop/Source/commands/CommandAPI.cpp
     
     # UI Core
-    zenith-core/Source/ArrangerComponent.cpp
-    zenith-core/Source/ArrangementComponent.cpp
-    zenith-core/Source/ui/ArrangerView.cpp
-    zenith-core/Source/MixerComponent.cpp
-    zenith-core/Source/PianoRollComponent.cpp
-    zenith-core/Source/PianoRollEditor.cpp
-    zenith-core/Source/AutomationLaneComponent.cpp
-    zenith-core/Source/MarkerLaneComponent.cpp
-    zenith-core/Source/TempoLaneComponent.cpp
-    zenith-core/Source/PluginBrowserComponent.cpp
+    apps/desktop/Source/ArrangerComponent.cpp
+    apps/desktop/Source/ArrangementComponent.cpp
+    apps/desktop/Source/ui/ArrangerView.cpp
+    apps/desktop/Source/MixerComponent.cpp
+    apps/desktop/Source/PianoRollComponent.cpp
+    apps/desktop/Source/PianoRollEditor.cpp
+    # apps/desktop/Source/AutomationLaneComponent.cpp
+    # apps/desktop/Source/MarkerLaneComponent.cpp
+    # apps/desktop/Source/TempoLaneComponent.cpp
+    # apps/desktop/Source/PluginBrowserComponent.cpp
     
     # Engine
-    zenith-core/Source/engine/Track.cpp
-    zenith-core/Source/engine/Clip.cpp
-    zenith-core/Source/engine/MixerChannel.cpp
-    zenith-core/Source/engine/AudioFilePool.cpp
-    zenith-core/Source/engine/PluginHost.cpp
-    zenith-core/Source/engine/AuxBus.cpp
-    zenith-core/Source/engine/ExportEngine.cpp
-    zenith-core/Source/engine/ZenithLogger.cpp
-    zenith-core/Source/engine/ExportEngineImpl.cpp
-    zenith-core/Source/engine/TrackPluginState.cpp
-    zenith-core/Source/engine/PluginHostAsync.cpp
+    apps/desktop/Source/engine/Track.cpp
+    apps/desktop/Source/engine/Clip.cpp
+    apps/desktop/Source/engine/MixerChannel.cpp
+    apps/desktop/Source/engine/AudioFilePool.cpp
+    apps/desktop/Source/engine/PluginHost.cpp
+    apps/desktop/Source/engine/AuxBus.cpp
+    apps/desktop/Source/engine/ZenithLogger.cpp
+    apps/desktop/Source/engine/TrackPluginState.cpp
+    apps/desktop/Source/engine/PluginHostAsync.cpp
     
     # Instruments
-    zenith-core/Source/instruments/Instrument.cpp
-    zenith-core/Source/instruments/InstrumentRegistry.cpp
-    zenith-core/Source/instruments/RegisterBuiltInInstruments.cpp
-    zenith-core/Source/instruments/PresetGenerator.cpp
-    zenith-core/Source/instruments/ZenithPolySynth.cpp
-    zenith-core/Source/instruments/ZenithPolySynthEditor.cpp
-    zenith-core/Source/instruments/ZenithPresetManager.cpp
-    zenith-core/Source/instruments/ZenithSampler.cpp
-    zenith-core/Source/instruments/ZenithSamplerEditor.cpp
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
     
     # UI Components (Duplicates removed - using Source locations)
-    zenith-core/Source/ui/ClipComponent.cpp
-    zenith-core/Source/ui/MixerView.cpp
-    zenith-core/Source/ui/MixerChannelComponent.cpp
-    zenith-core/Source/ui/TrackHeaderComponent.cpp
-    zenith-core/Source/ui/TimelineRuler.cpp
-    zenith-core/Source/ui/PluginEditorWindow.cpp
-    zenith-core/Source/ui/PresetBrowserComponent.cpp
-    zenith-core/Source/ui/InstrumentBrowserPanel.cpp
-    zenith-core/Source/ui/WingmanPanel.cpp
-    zenith-core/Source/ui/AudioFeedback.cpp
-    zenith-core/Source/ui/MainLayoutComponent.cpp
-    zenith-core/Source/ui/ZenithLookAndFeel.cpp
-    zenith-core/Source/ui/ZenithTheme.cpp
+    apps/desktop/Source/ui/ClipComponent.cpp
+    apps/desktop/Source/ui/MixerView.cpp
+    apps/desktop/Source/ui/MixerChannelComponent.cpp
+    apps/desktop/Source/ui/TrackHeaderComponent.cpp
+    apps/desktop/Source/ui/TimelineRuler.cpp
+    apps/desktop/Source/ui/PluginEditorWindow.cpp
+    apps/desktop/Source/ui/PresetBrowserComponent.cpp
+    apps/desktop/Source/ui/InstrumentBrowserPanel.cpp
+    apps/desktop/Source/ui/WingmanPanel.cpp
+    apps/desktop/Source/ui/AudioFeedback.cpp
+    apps/desktop/Source/ui/MainLayoutComponent.cpp
+    apps/desktop/Source/ui/ZenithLookAndFeel.cpp
+    apps/desktop/Source/ui/ZenithTheme.cpp
     
-    # Skia UI
-    zenith-core/Source/ui/skia/SkiaComponent.cpp
-    zenith-core/Source/ui/skia/SkiaButton.cpp
-    zenith-core/Source/ui/skia/SkiaKnob.cpp
-    zenith-core/Source/ui/skia/SkiaSlider.cpp
-    zenith-core/Source/ui/skia/SkiaMainWindowIntegration.cpp
-    zenith-core/Source/ui/skia/TransportBar.cpp
-    zenith-core/Source/ui/skia/BottomBar.cpp
-    zenith-core/Source/ui/skia/BrowserPanel.cpp
-    zenith-core/Source/ui/skia/RightSidePanel.cpp
-    zenith-core/Source/ui/skia/ZenithPolySynthUI.cpp
-    zenith-core/Source/ui/skia/ZenithDesignSystem.cpp
-    zenith-core/Source/ui/skia/views/PianoKeyboardViewSkia.cpp
-    zenith-core/Source/ui/skia/views/SessionViewComponent.cpp
-    
+    # Skia UI - Moved to SkiaManualIntegration.cmake (Conditional)
+
     # Network/AI
-    zenith-core/Source/network/AIBridgeClient.cpp
-    zenith-core/Source/network/GrokAPIClient.cpp
-    zenith-core/Source/network/GrokDAWController.cpp
-    zenith-core/Source/network/SecureKeyStore.cpp
-    zenith-core/Source/network/AudioAnalysisService.cpp
+    apps/desktop/Source/network/AIBridgeClient.cpp
+    apps/desktop/Source/network/GrokAPIClient.cpp
+    apps/desktop/Source/network/GrokDAWController.cpp
+    apps/desktop/Source/network/SecureKeyStore.cpp
+    apps/desktop/Source/network/AudioAnalysisService.cpp
     
     # DSP
-    zenith-core/Source/dsp/DSPStemSeparator.cpp
-    zenith-core/Source/dsp/DSPVoiceChanger.cpp
-    zenith-core/Source/dsp/ONNXStemSeparator.cpp
-    zenith-core/Source/dsp/ONNXStemSeparatorImpl.cpp
+    # apps/desktop/Source/dsp/DSPStemSeparator.cpp
+    # apps/desktop/Source/dsp/DSPVoiceChanger.cpp
+    # apps/desktop/Source/dsp/ONNXStemSeparator.cpp
+    # apps/desktop/Source/dsp/ONNXStemSeparatorImpl.cpp
     
     # Commands (SessionGraph only - CommandAPI is already listed above)
-    zenith-core/Source/commands/SessionGraph.cpp
+    apps/desktop/Source/commands/SessionGraph.cpp
     
     # Export
-    zenith-core/Source/export/NFTMintingService.cpp
+    # apps/desktop/Source/export/NFTMintingService.cpp
     
     # Rendering
-    zenith-core/Source/rendering/SkiaContextManager.cpp
+    apps/desktop/Source/rendering/SkiaContextManager.cpp
     
     # Synchronizers
-    zenith-core/Source/ClipSynchronizer.cpp
-    zenith-core/Source/TrackStateSynchronizer.cpp
-    zenith-core/Source/TrackAutomationSynchronizer.cpp
-    zenith-core/Source/TempoMapSynchronizer.cpp
-    zenith-core/Source/TempoMap.cpp
+    apps/desktop/Source/ClipSynchronizer.cpp
+    apps/desktop/Source/TrackStateSynchronizer.cpp
+    apps/desktop/Source/TrackAutomationSynchronizer.cpp
+    # apps/desktop/Source/TempoMapSynchronizer.cpp
+    apps/desktop/Source/TempoMap.cpp
 )
 
 # Test sources (optional, can be disabled)
 set(ZENITH_TEST_SOURCES
-    zenith-core/Source/tests/AudioEngineTests.cpp
-    zenith-core/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
 )
 
 # Create main executable
@@ -139,13 +150,17 @@ juce_add_gui_app(ZenithDAW
     BUNDLE_ID com.zenithaudio.daw
 )
 
+# Generate JuceHeader.h for compatibility
+juce_generate_juce_header(ZenithDAW)
+
 target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 
 # Include directories
 target_include_directories(ZenithDAW PRIVATE
-    zenith-core/include
-    zenith-core/Source
+    apps/desktop/include
+    apps/desktop/Source
     ${CMAKE_PREFIX_PATH}/include
+    ${CMAKE_BINARY_DIR}/JuceLibraryCode
 )
 
 # Link JUCE modules
@@ -162,12 +177,12 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_processors
     juce::juce_audio_utils
     juce::juce_dsp
+    juce::juce_opengl
 )
 
-# Link Skia
-target_link_libraries(ZenithDAW PRIVATE
-    skia::skia
-)
+# Skia Integration (Manual)
+set(ZENITH_ENABLE_SKIA ON)
+include(apps/desktop/cmake/SkiaManualIntegration.cmake)
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE
@@ -179,13 +194,101 @@ target_compile_definitions(ZenithDAW PRIVATE
     ZENITH_USE_SKIA=1
 )
 
-# Copy DLLs to output directory (Windows)
-if(WIN32)
-    add_custom_command(TARGET ZenithDAW POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "$<TARGET_FILE:skia::skia>"
-        "$<TARGET_FILE_DIR:ZenithDAW>"
+if(MSVC)
+    target_compile_options(ZenithDAW PRIVATE /Qspectre-)
+    set_target_properties(ZenithDAW PROPERTIES VS_SPECTRE_MITIGATION "false")
+endif()
+
+# ==============================================================================
+# MODERN COMPILER CONFIGURATION (The "Ruthless" Standard)
+# ==============================================================================
+
+# 6. Modern C++ Standards & Conformance
+target_compile_features(ZenithDAW PRIVATE cxx_std_20)
+set_target_properties(ZenithDAW PROPERTIES
+    CXX_STANDARD_REQUIRED ON
+    CXX_EXTENSIONS OFF
+    # Enforce specific runtime library to prevent mismatches
+    MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
+)
+
+# 7. Interprocedural Optimization (LTO)
+if(ENABLE_IPO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT result OUTPUT output)
+    if(result)
+        set_target_properties(ZenithDAW PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+        message(STATUS "IPO/LTO enabled for ZenithDAW")
+    else()
+        message(WARNING "IPO is not supported: ${output}")
+    endif()
+endif()
+
+# 8. The "Ruthless" Compiler Flags & Hardening
+if(MSVC)
+    target_compile_options(ZenithDAW PRIVATE
+        /W4 /permissive- 
+        /wd4100 # Unused parameter
+        
+        # Conformance
+        /Zc:__cplusplus 
+        /Zc:inline      
+        /Zc:preprocessor 
+        /Zc:throwingNew 
+        
+        # Hardening
+        $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
+        $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
+        $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
+        $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
+        
+        # Ruthless Warnings
+        /w14242 /w14254 /w14263 
+        /w14265 
+        /w14287 
+        /we4289 
+        /w14296 
+        /w14311 
+        /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
     )
+    
+    if(ENABLE_HARDENING)
+        target_link_options(ZenithDAW PRIVATE 
+            /DYNAMICBASE 
+            /NXCOMPAT    
+            /CETCOMPAT   
+        )
+    endif()
+
+else() # GCC / Clang
+    target_compile_options(ZenithDAW PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
+        -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
+        
+        $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
+        $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
+        $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
+        $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
+    )
+
+    if(ENABLE_HARDENING)
+        target_link_options(ZenithDAW PRIVATE 
+            -Wl,-z,relro 
+            -Wl,-z,now 
+            -pie
+        )
+    endif()
+endif()
+
+# 9. Sanitizers
+if(ENABLE_SANITIZERS)
+    if(MSVC)
+        target_compile_options(ZenithDAW PRIVATE /fsanitize=address)
+    else()
+        target_compile_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
+        target_link_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
+    endif()
+    message(STATUS "Sanitizers enabled (Address, UB)")
 endif()
 
 # Optional: Test executable
@@ -196,7 +299,7 @@ if(BUILD_TESTS)
     )
     
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
-    target_include_directories(ZenithDAWTests PRIVATE zenith-core/Source zenith-core/include)
+    target_include_directories(ZenithDAWTests PRIVATE apps/desktop/Source apps/desktop/include)
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
         juce::juce_data_structures
