@@ -22,33 +22,28 @@ namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-SkiaMainWindowIntegration::SkiaMainWindowIntegration() {
+// ============================================================================
+// SkiaRenderer Implementation
+// ============================================================================
+
+SkiaRenderer::SkiaRenderer(juce::Component* componentToAttach) 
+    : targetComponent_(componentToAttach)
+{
     // Attach OpenGL context to this component
-    openGLContext_.setRenderer(this);
-    openGLContext_.attachTo(*this);
-    openGLContext_.setContinuousRepainting(true);
+    if (targetComponent_) {
+        openGLContext_.setRenderer(this);
+        openGLContext_.attachTo(*targetComponent_);
+        openGLContext_.setContinuousRepainting(true);
+    }
 }
 
-SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
-    // BOB'S FIX: sk_sp handles cleanup automatically
+SkiaRenderer::~SkiaRenderer() {
     surface_.reset();
     grContext_.reset();
     openGLContext_.detach();
 }
 
-void SkiaMainWindowIntegration::paint(juce::Graphics& g) {
-    // OpenGL rendering handles everything
-    // This is just a fallback
-    g.fillAll(juce::Colour(0xff0a0a0f));
-}
-
-
-void SkiaMainWindowIntegration::resized() {
-    // Surface will be recreated in renderOpenGL if size changed
-}
-
-void SkiaMainWindowIntegration::newOpenGLContextCreated() {
-    // DMITRI'S FIX: Initialize Skia HERE, not in renderOpenGL!
+void SkiaRenderer::newOpenGLContextCreated() {
     auto glInterface = GrGLMakeNativeInterface();
     grContext_ = GrDirectContexts::MakeGL(glInterface);
     
@@ -61,15 +56,15 @@ void SkiaMainWindowIntegration::newOpenGLContextCreated() {
     recreateSurface();
 }
 
-void SkiaMainWindowIntegration::renderOpenGL() {
+void SkiaRenderer::renderOpenGL() {
     if (!contextInitialized_ || !grContext_) {
         return;
     }
 
-    auto width = getWidth();
-    auto height = getHeight();
+    auto width = targetComponent_->getWidth();
+    auto height = targetComponent_->getHeight();
 
-    // DMITRI'S FIX: Only recreate surface if size changed
+    // Only recreate surface if size changed
     if (width != lastWidth_ || height != lastHeight_ || !surface_) {
         recreateSurface();
         lastWidth_ = width;
@@ -92,7 +87,7 @@ void SkiaMainWindowIntegration::renderOpenGL() {
     skiaCanvas_ = nullptr;
 }
 
-void SkiaMainWindowIntegration::openGLContextClosing() {
+void SkiaRenderer::openGLContextClosing() {
     if (surface_) {
         surface_.reset();
     }
@@ -102,13 +97,13 @@ void SkiaMainWindowIntegration::openGLContextClosing() {
     contextInitialized_ = false;
 }
 
-void SkiaMainWindowIntegration::recreateSurface() {
+void SkiaRenderer::recreateSurface() {
     if (!grContext_) {
         return;
     }
 
-    auto width = getWidth();
-    auto height = getHeight();
+    auto width = targetComponent_->getWidth();
+    auto height = targetComponent_->getHeight();
 
     if (width <= 0 || height <= 0) {
         return;
@@ -116,17 +111,19 @@ void SkiaMainWindowIntegration::recreateSurface() {
 
     // Get framebuffer info
     GLint currentFBO = 0;
-    // Use JUCE's OpenGL context to get the current FBO
-    // Note: glGetIntegerv might not be directly available without GLEW/GLAD or JUCE's wrapper
-    // But since we are inside a JUCE OpenGL context, we can try to use the context's functions if available
-    // or just assume FBO 0 for the main window if we can't query it.
-    // However, JUCE might be rendering to an FBO itself.
+    GLint samples = 0;
+    #ifndef GL_FRAMEBUFFER_BINDING
+    #define GL_FRAMEBUFFER_BINDING 0x8CA6
+    #endif
+    #ifndef GL_SAMPLES
+    #define GL_SAMPLES 0x80A9
+    #endif
     
-    // Better approach: Use juce::gl namespace
-#ifndef GL_FRAMEBUFFER_BINDING
-#define GL_FRAMEBUFFER_BINDING 0x8CA6
-#endif
     juce::gl::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
+    juce::gl::glGetIntegerv(GL_SAMPLES, &samples);
+    
+    // Clamp samples to valid range (0 or 1 means no MSAA to Skia)
+    if (samples < 0) samples = 0;
 
     GrGLFramebufferInfo framebufferInfo;
     framebufferInfo.fFBOID = (GrGLuint)currentFBO;
@@ -135,13 +132,12 @@ void SkiaMainWindowIntegration::recreateSurface() {
     // Create backend render target
     auto backendRT = GrBackendRenderTargets::MakeGL(
         width, height,
-        0, // sample count
+        samples, // Use actual sample count
         8, // stencil bits
         framebufferInfo
     );
 
     // Create Skia surface
-    // Note: SkSurfaces::WrapBackendRenderTarget returns sk_sp<SkSurface>
     surface_ = SkSurfaces::WrapBackendRenderTarget(
         grContext_.get(),
         backendRT,
@@ -154,6 +150,29 @@ void SkiaMainWindowIntegration::recreateSurface() {
     if (!surface_) {
         DBG("Failed to create Skia surface!");
     }
+}
+
+// ============================================================================
+// SkiaMainWindowIntegration Implementation
+// ============================================================================
+
+SkiaMainWindowIntegration::SkiaMainWindowIntegration() 
+    : SkiaRenderer(this)
+{
+}
+
+SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
+}
+
+void SkiaMainWindowIntegration::paint(juce::Graphics& g) {
+    juce::ignoreUnused(g);
+    // OpenGL rendering handles everything
+    // This is just a fallback
+    // g.fillAll(juce::Colour(0xff0a0a0f));
+}
+
+void SkiaMainWindowIntegration::resized() {
+    // Surface will be recreated in renderOpenGL if size changed
 }
 
 #endif // ZENITH_USE_SKIA

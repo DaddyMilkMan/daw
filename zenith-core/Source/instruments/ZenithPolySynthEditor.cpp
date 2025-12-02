@@ -118,12 +118,6 @@ void ZenithPolySynthEditor::setupOscillatorSection()
 
     setupSlider(unisonDetuneSlider_, unisonDetuneLabel_, "Spread", "Unison detune amount");
     unisonDetuneSlider_.setRange(0.0, 1.0, 0.01);
-
-    // Placeholders for Osc 2 & 3
-    addAndMakeVisible(osc2Label_);
-    osc2Label_.setText("Osc 2/3: TODO", juce::dontSendNotification);
-    osc2Label_.setJustificationType(juce::Justification::centred);
-    osc2Label_.setColour(juce::Label::textColourId, juce::Colours::grey);
 }
 
 void ZenithPolySynthEditor::setupFilterSection()

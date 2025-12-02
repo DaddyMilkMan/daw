@@ -43,7 +43,7 @@ void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
     SkPaint whiteKeyPaint;
     whiteKeyPaint.setAntiAlias(true);
     // Gradient for white keys (top to bottom)
-    SkPoint pts[2] = { SkPoint::Make(0, 0), SkPoint::Make(0, getHeight()) };
+    SkPoint pts[2] = { SkPoint::Make(0, 0), SkPoint::Make(0, (float)getHeight()) };
     SkColor colors[2] = { 0xFFEEEEEE, 0xFFCCCCCC }; // White to Light Grey
     whiteKeyPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
 
@@ -58,9 +58,8 @@ void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
     SkColor activeColors[2] = { 0xFF00FFFF, 0xFF0088AA }; // Cyan Gradient
     activeKeyPaint.setShader(SkGradientShader::MakeLinear(pts, activeColors, nullptr, 2, SkTileMode::kClamp));
     
-    float x = 0;
-    float w = getWidth();
-    float h = getHeight();
+    float w = (float)getWidth();
+    float h = (float)getHeight();
     
     // Calculate key width based on visible range
     int numWhiteKeys = 0;
@@ -77,7 +76,7 @@ void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
     for (int i = rangeStart_; i <= rangeEnd_; ++i) {
         if (juce::MidiMessage::isMidiNoteBlack(i)) continue;
         
-        ::SkRect keyRect = ::SkRect::MakeXYWH((float)currentX, 0.0f, (float)(whiteKeyWidth - 1), (float)h);
+        ::SkRect keyRect = ::SkRect::MakeXYWH(currentX, 0.0f, whiteKeyWidth - 1.0f, h);
         
         if (state_.isNoteOn(1, i)) {
             // Glow effect
@@ -100,7 +99,7 @@ void PianoKeyboardViewSkia::drawSkia(SkCanvas* canvas)
         // Black key is centered on the line between white keys
         // But we need to account for the previous white key
         float blackKeyX = currentX - (blackKeyWidth * 0.5f);
-        ::SkRect keyRect = ::SkRect::MakeXYWH((float)blackKeyX, 0.0f, (float)blackKeyWidth, (float)blackKeyHeight);
+        ::SkRect keyRect = ::SkRect::MakeXYWH(blackKeyX, 0.0f, blackKeyWidth, blackKeyHeight);
         
         if (state_.isNoteOn(1, i)) {
             canvas->drawRect(keyRect, activeKeyPaint);
@@ -130,23 +129,26 @@ void PianoKeyboardViewSkia::mouseDrag(const juce::MouseEvent& e)
 
 void PianoKeyboardViewSkia::mouseUp(const juce::MouseEvent& e)
 {
+    juce::ignoreUnused(e);
     state_.allNotesOff(1);
 }
 
 void PianoKeyboardViewSkia::handleNoteOn(juce::MidiKeyboardState*, int midiChannel, int midiNoteNumber, float velocity)
 {
+    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity);
     repaint();
 }
 
 void PianoKeyboardViewSkia::handleNoteOff(juce::MidiKeyboardState*, int midiChannel, int midiNoteNumber, float velocity)
 {
+    juce::ignoreUnused(midiChannel, midiNoteNumber, velocity);
     repaint();
 }
 
 int PianoKeyboardViewSkia::getNoteAtPosition(juce::Point<float> pos)
 {
     // Simplified hit testing
-    float w = getWidth();
+    float w = (float)getWidth();
     int numWhiteKeys = 0;
     for (int i = rangeStart_; i <= rangeEnd_; ++i) {
         if (!juce::MidiMessage::isMidiNoteBlack(i)) numWhiteKeys++;

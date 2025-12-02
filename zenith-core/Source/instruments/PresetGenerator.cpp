@@ -392,23 +392,27 @@ juce::var PresetGenerator::clampParameter(
 // Complete Preset Creation
 //==============================================================================
 
-InstrumentPreset PresetGenerator::createPresetFromParameters(
+ZenithInstrumentPreset PresetGenerator::createPresetFromParameters(
     const juce::String& instrumentId,
     const juce::String& presetName,
     const juce::String& description,
     const juce::var& parameters,
     const juce::String& genre)
 {
-    InstrumentPreset preset;
+    ZenithInstrumentPreset preset;
     
-    preset.name = presetName.isEmpty() ? "AI Generated" : presetName;
+    preset.name = presetName.isEmpty() ? "AI Generated" : presetName.toStdString();
     preset.category = "AI Generated";
-    preset.description = description;
+    preset.description = description.toStdString();
     preset.author = "Grok AI";
-    preset.tags = genre.isNotEmpty() ? genre : detectSoundType(description);
+    // preset.tags = ... ZenithInstrumentPreset uses vector<string> for tags
+    if (genre.isNotEmpty())
+        preset.tags.push_back(genre.toStdString());
+    else
+        preset.tags.push_back(detectSoundType(description).toStdString());
     
     // Clamp all parameters to valid ranges
-    auto* params = new juce::DynamicObject();
+    // ZenithInstrumentPreset uses std::map<std::string, float> for parameters
     
     if (parameters.isObject())
     {
@@ -423,12 +427,12 @@ InstrumentPreset PresetGenerator::createPresetFromParameters(
                 
                 // Clamp to valid range
                 auto clampedValue = clampParameter(paramName, paramValue, instrumentId);
-                params->setProperty(paramName, clampedValue);
+                
+                // Convert to float and store
+                preset.parameters[paramName.toStdString()] = (float)clampedValue;
             }
         }
     }
-    
-    preset.parameters = juce::var(params);
     
     return preset;
 }

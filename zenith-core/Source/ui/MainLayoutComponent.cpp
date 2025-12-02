@@ -34,6 +34,17 @@ void MainLayoutComponent::paint(juce::Graphics& g)
     }
 }
 
+void MainLayoutComponent::drawSkia(SkCanvas* canvas)
+{
+    // Draw background if needed
+    if (!isSessionView()) {
+        canvas->clear(SkColorSetRGB(30, 30, 30));
+    }
+    
+    // Recursively draw children (Arranger, etc.)
+    drawChildren(canvas);
+}
+
 void MainLayoutComponent::resized()
 {
     auto area = getLocalBounds();

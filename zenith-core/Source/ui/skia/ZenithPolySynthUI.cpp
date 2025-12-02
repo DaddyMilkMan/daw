@@ -10,11 +10,13 @@
 
 #include "ZenithPolySynthUI.h"
 
-#define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
+
 
 // Include all Skia headers BEFORE entering namespace zenith
 #ifdef ZENITH_USE_SKIA
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <skia/include/core/SkColor.h>
 #include <skia/include/core/SkSurface.h>
 #include <skia/include/core/SkRefCnt.h>
@@ -22,27 +24,19 @@
 #include <skia/include/core/SkCanvas.h>
 #include <skia/include/core/SkPaint.h>
 #include <skia/include/effects/SkGradientShader.h>
-#include <skia/include/gpu/ganesh/gl/GrGLBackendSurface.h>
-#include <skia/include/gpu/ganesh/GrBackendSurface.h>
-#include <skia/include/gpu/ganesh/gl/GrGLDirectContext.h>
-#include <skia/include/gpu/ganesh/gl/GrGLInterface.h>
-#include <skia/include/gpu/ganesh/SkSurfaceGanesh.h>
-#include <juce_opengl/juce_opengl.h>
 #endif
 
 namespace zenith {
 
 ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
-    : AudioProcessorEditor(&p), processor(p) {
+    : AudioProcessorEditor(&p), 
+      SkiaRenderer(this), // Initialize SkiaRenderer
+      processor(p) {
   
   // Set initial size
   setSize(kSimpleWidth, kSimpleHeight);
 
-  // Setup OpenGL
-  openGLContext.setRenderer(this);
-  openGLContext.setContinuousRepainting(true);
-  openGLContext.setComponentPaintingEnabled(false);
-  openGLContext.setMultisamplingEnabled(true);
+  // Note: OpenGL setup is now handled by SkiaRenderer base class
   
 #ifdef ZENITH_USE_SKIA
   // Colors (uint32_t 0xAARRGGBB)
@@ -194,92 +188,30 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   
   // Set LookAndFeel
   setLookAndFeel(&zenithLookAndFeel_);
-  
-  grContext_ = nullptr;
 #endif
 }
 
 ZenithPolySynthUI::~ZenithPolySynthUI() {
-  openGLContext.detach();
   setLookAndFeel(nullptr);
 }
 
-void ZenithPolySynthUI::newOpenGLContextCreated() {
-    // Context creation handled in renderOpenGL for Skia
-}
-
-void ZenithPolySynthUI::openGLContextClosing() {
+void ZenithPolySynthUI::drawSkiaContent(SkCanvas* canvas) {
 #ifdef ZENITH_USE_SKIA
-    if (grContext_) {
-        grContext_->unref();
-        grContext_ = nullptr;
-    }
-    rendererInitialized_ = false;
-#endif
-}
-
-void ZenithPolySynthUI::renderOpenGL() {
-#ifdef ZENITH_USE_SKIA
-  // 1. Initialize Skia if needed
-  if (!rendererInitialized_) {
-    auto glInterface = GrGLMakeNativeInterface();
-    if (glInterface) {
-      auto ctx = GrDirectContexts::MakeGL(glInterface);
-      if (grContext_) grContext_->unref();
-      grContext_ = ctx.release();
-      if (grContext_) {
-        rendererInitialized_ = true;
-      }
-    }
-  }
-
-  if (!grContext_) return;
-
-  // 2. Create Surface
-  int fbWidth = getWidth(); // Note: might need scaling for HiDPI
-  int fbHeight = getHeight();
-  
-  // Handle HiDPI
-  double scale = openGLContext.getRenderingScale();
-  fbWidth = juce::roundToInt(fbWidth * scale);
-  fbHeight = juce::roundToInt(fbHeight * scale);
-
-  if (fbWidth <= 0 || fbHeight <= 0) return;
-
-  // FIX: Query the actual bound framebuffer from JUCE/OpenGL
-  GLint currentFBO = 0;
-  #ifndef GL_FRAMEBUFFER_BINDING
-  #define GL_FRAMEBUFFER_BINDING 0x8CA6
-  #endif
-  juce::gl::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &currentFBO);
-
-  GrGLFramebufferInfo fbInfo;
-  fbInfo.fFBOID = (GrGLuint)currentFBO;
-  fbInfo.fFormat = 0x8058; // GL_RGBA8
-
-  GrBackendRenderTarget backendRT =
-      GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 1, 8, fbInfo);
-
-  SkSurfaceProps props(0, kRGB_H_SkPixelGeometry);
-  sk_sp<SkSurface> surface = SkSurfaces::WrapBackendRenderTarget(
-      grContext_, backendRT, kBottomLeft_GrSurfaceOrigin,
-      kRGBA_8888_SkColorType, nullptr, &props);
-
-  if (!surface) return;
-
-  SkCanvas *canvas = surface->getCanvas();
   if (!canvas) return;
 
-  // 3. Draw
   // Scale canvas to match component coordinates
+  // Note: SkiaRenderer handles the surface creation, but we might need to handle scaling
+  // if the surface was created with physical pixels and we want logical coordinates.
+  // JUCE's getRenderingScale() is useful here.
+  
+  auto scale = static_cast<float>(openGLContext_.getRenderingScale());
   canvas->save();
-  canvas->scale((float)scale, (float)scale);
+  canvas->scale(scale, scale);
 
-  // Clear background
-  canvas->clear(0xFF141419); // Dark background
+  // Clear background (optional, SkiaRenderer does it, but we can do it again with our color)
+  // canvas->clear(0xFF141419); 
 
   // Draw UI
-  animationTime_ += 0.01f;
   drawBackground(canvas);
   
   // Render children
@@ -288,12 +220,6 @@ void ZenithPolySynthUI::renderOpenGL() {
   }
 
   canvas->restore();
-
-  // 4. Flush
-  grContext_->flushAndSubmit();
-#else
-  // Fallback if Skia not enabled
-  juce::OpenGLHelpers::clear(juce::Colours::black);
 #endif
 }
 
@@ -305,12 +231,16 @@ void ZenithPolySynthUI::renderComponentRecursively(juce::Component *comp, SkCanv
   
   auto bounds = comp->getBounds();
   canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
+  
+  // Clip to bounds
   canvas->clipRect(SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight()));
 
+  // Draw if it's a Skia component
   if (auto *skiaComp = dynamic_cast<SkiaComponent *>(comp)) {
     skiaComp->drawSkia(canvas);
   }
 
+  // Recursively draw children
   for (auto *child : comp->getChildren()) {
     renderComponentRecursively(child, canvas);
   }
@@ -321,8 +251,24 @@ void ZenithPolySynthUI::renderComponentRecursively(juce::Component *comp, SkCanv
 
 void ZenithPolySynthUI::drawBackground(SkCanvas *canvas) {
 #ifdef ZENITH_USE_SKIA
-  // Simple fill to test compilation
-  canvas->clear(0xFF141419);
+  auto bounds = getLocalBounds().toFloat();
+  SkPaint paint;
+  paint.setAntiAlias(true);
+
+  // Premium Radial Gradient Background
+  SkPoint center = { bounds.centerX(), bounds.centerY() };
+  SkColor colors[2] = { SkColorSetRGB(30, 30, 40), SkColorSetRGB(10, 10, 15) }; // Lighter center -> Dark edges
+  float radius = std::max(bounds.width(), bounds.height()) * 0.8f;
+  
+  paint.setShader(SkGradientShader::MakeRadial(center, radius, colors, nullptr, 2, SkTileMode::kClamp));
+  paint.setStyle(SkPaint::kFill_Style);
+  canvas->drawRect(SkRect::MakeWH(bounds.width(), bounds.height()), paint);
+  paint.setShader(nullptr);
+
+  // Subtle Noise/Texture (Optional, simulated with dots)
+  // For now, just the gradient is a huge improvement over flat grey.
+#else
+  juce::ignoreUnused(canvas);
 #endif
 }
 
@@ -343,6 +289,8 @@ void ZenithPolySynthUI::drawGlassPanel(SkCanvas *canvas, const juce::Rectangle<i
   paint.setStrokeWidth(1.0f);
   paint.setColor(0x32FFFFFF); // SkColorSetARGB(50, 255, 255, 255)
   canvas->drawRRect(rrect, paint);
+#else
+  juce::ignoreUnused(canvas, bounds);
 #endif
 }
 
@@ -361,7 +309,7 @@ void ZenithPolySynthUI::resized() {
   if (presetBar_) presetBar_->setBounds(topBar.reduced(100, 0)); // Centered with margin
 
   // Top: Visualizer
-  auto topArea = area.removeFromTop(area.getHeight() * 0.4f);
+  auto topArea = area.removeFromTop(static_cast<int>(area.getHeight() * 0.4f));
   if (visualizer_) visualizer_->setBounds(topArea.reduced(10));
   
   // Bottom: Controls
@@ -413,12 +361,12 @@ void ZenithPolySynthUI::resized() {
   }
 
   // 1. Left: Source (20%)
-  auto sourceArea = bottomArea.removeFromLeft(bottomArea.getWidth() * 0.25f);
+  auto sourceArea = bottomArea.removeFromLeft(static_cast<int>(bottomArea.getWidth() * 0.25f));
   subLevelKnob_->setBounds(sourceArea.removeFromTop(sourceArea.getHeight() / 2).reduced(10));
   noiseLevelKnob_->setBounds(sourceArea.reduced(10));
 
   // 3. Right: Envelopes (25%)
-  auto envArea = bottomArea.removeFromRight(bottomArea.getWidth() * 0.33f);
+  auto envArea = bottomArea.removeFromRight(static_cast<int>(bottomArea.getWidth() * 0.33f));
   int sliderWidth = envArea.getWidth() / 4;
   ampAttackSlider_->setBounds(envArea.removeFromLeft(sliderWidth).reduced(5));
   ampDecaySlider_->setBounds(envArea.removeFromLeft(sliderWidth).reduced(5));
@@ -497,7 +445,7 @@ void ZenithPolySynthUI::refreshPresetList() {
 }
 
 void ZenithPolySynthUI::loadPreset(int index) {
-    if (index < 0 || index >= presetList_.size()) return;
+    if (index < 0 || index >= static_cast<int>(presetList_.size())) return;
     
     currentPresetIndex_ = index;
     auto& meta = presetList_[index];
@@ -526,20 +474,16 @@ void ZenithPolySynthUI::loadPreset(int index) {
 }
 
 void ZenithPolySynthUI::loadNextPreset() {
-    /*
     if (presetList_.empty()) return;
-    int next = (currentPresetIndex_ + 1) % presetList_.size();
+    int next = (currentPresetIndex_ + 1) % static_cast<int>(presetList_.size());
     loadPreset(next);
-    */
 }
 
 void ZenithPolySynthUI::loadPrevPreset() {
-    /*
     if (presetList_.empty()) return;
-    int size = (int)presetList_.size();
+    int size = static_cast<int>(presetList_.size());
     int prev = (currentPresetIndex_ - 1 + size) % size;
     loadPreset(prev);
-    */
 }
 
 } // namespace zenith

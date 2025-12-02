@@ -12,6 +12,7 @@
 */
 
 #include "AudioAnalysisService.h"
+#include <juce_events/juce_events.h>
 
 namespace zenith {
 

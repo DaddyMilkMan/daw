@@ -4,12 +4,11 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
 #include "ProjectState.h"
+#include "skia/SkiaComponent.h"
 
-#ifdef ZENITH_USE_SKIA
-#include <skia/core/SkCanvas.h>
-#endif
+#include <skia/include/core/SkCanvas.h>
 
-class ArrangerComponent : public juce::Component,
+class ArrangerComponent : public zenith::SkiaComponent,
                           public juce::ValueTree::Listener
 {
 public:
@@ -32,9 +31,7 @@ public:
     void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) override;
     void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) override;
 
-#ifdef ZENITH_USE_SKIA
-    void paintSkia(SkCanvas& canvas, const juce::Rectangle<int>& bounds);
-#endif
+    void drawSkia(SkCanvas* canvas) override;
 
     juce::String getTooltip();
 

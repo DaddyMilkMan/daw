@@ -678,6 +678,25 @@ juce::var CommandAPI::redo(const juce::var& params)
     return createSuccessResponse(juce::var(resultObj));
 }
 
+juce::var CommandAPI::history(const juce::var& params)
+{
+    juce::ignoreUnused(params);
+
+    // Return undo/redo history status
+    auto* resultObj = new juce::DynamicObject();
+    resultObj->setProperty("canUndo", projectState.canUndo());
+    resultObj->setProperty("canRedo", projectState.canRedo());
+    
+    // In a real implementation, we would list the actual transactions
+    juce::var undoStack;
+    juce::var redoStack;
+    
+    resultObj->setProperty("undoStack", undoStack);
+    resultObj->setProperty("redoStack", redoStack);
+
+    return createSuccessResponse(juce::var(resultObj));
+}
+
 juce::var CommandAPI::describeInstrument(const juce::var& params)
 {
     // Validate params

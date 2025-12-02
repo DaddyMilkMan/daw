@@ -131,17 +131,6 @@ private:
     juce::var createTrack(const juce::var& params);
     juce::var deleteTrack(const juce::var& params);
     juce::var renameTrack(const juce::var& params);
-    juce::var duplicateTrack(const juce::var& params);
-    
-    /** Set loop range (start, end) */
-    juce::var setLoopRange(const juce::var& params); 
-    
-    /** Stress test audio engine (create many tracks) */
-    juce::var stressTestAudio(const juce::var& params);
-
-    /** Mint current project as NFT */
-    juce::var mintNFT(const juce::var& params);
-
     juce::var setTrackVolume(const juce::var& params);
     juce::var setTrackPan(const juce::var& params);
     juce::var exportAudio(const juce::var& params);
@@ -163,21 +152,6 @@ private:
 
     // Instrument commands
     juce::var describeInstrument(const juce::var& params);
-    
-    // Preset management commands (NEW - for Grok AI)
-    juce::var listPresets(const juce::var& params);
-    juce::var loadPreset(const juce::var& params);
-    juce::var savePreset(const juce::var& params);
-    juce::var createPreset(const juce::var& params);
-    juce::var deletePreset(const juce::var& params);
-    
-    // Instrument parameter control (NEW - for Grok AI)
-    juce::var getInstrumentParameters(const juce::var& params);
-    juce::var setInstrumentParameter(const juce::var& params);
-    juce::var getInstrumentParameterSchema(const juce::var& params);
-    
-    // AI Preset Generation (NEW - for Grok AI)
-    juce::var generatePreset(const juce::var& params);
 
     // Plugin commands
     juce::var addPlugin(const juce::var& params);

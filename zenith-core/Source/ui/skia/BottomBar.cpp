@@ -45,34 +45,67 @@ void BottomBar::drawSkia(SkCanvas* canvas) {
     
     // Background
     paint.setColor(SkColorSetARGB(255, 20, 20, 20)); // Opaque dark grey
-    canvas->drawRect(SkRect::MakeWH(getWidth(), getHeight()), paint);
+    canvas->drawRect(SkRect::MakeWH((float)getWidth(), (float)getHeight()), paint);
     
     // Top border glow
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(1.0f);
     
     // Gradient for top border
-    SkPoint points[2] = { SkPoint::Make(0, 0), SkPoint::Make(getWidth(), 0) };
+    SkPoint points[2] = { SkPoint::Make(0.0f, 0.0f), SkPoint::Make((float)getWidth(), 0.0f) };
     
-    // Use uint32_t for colors array to avoid potential SkColor type issues
-    uint32_t colors[3] = { 
+    SkColor colors[3] = { 
         0x0000AAFF, // Transparent Cyan
         0xFF00AAFF, // Opaque Cyan
         0x0000AAFF  // Transparent Cyan
     };
     
-    paint.setShader(SkGradientShader::MakeLinear(points, (const SkColor*)colors, nullptr, 3, SkTileMode::kClamp));
+    paint.setShader(SkGradientShader::MakeLinear(points, colors, nullptr, 3, SkTileMode::kClamp));
     
-    canvas->drawLine(0, 0, getWidth(), 0, paint);
+    canvas->drawLine(0.0f, 0.0f, (float)getWidth(), 0.0f, paint);
     
-    // If keyboard is hidden, show mixer placeholder
+    // If keyboard is hidden, show mixer strip
     if (!keyboardVisible_) {
+        // Simple horizontal mixer strip with volume meters
         SkFont font;
-        font.setSize(14.0f);
+        font.setSize(10.0f);
         paint.setShader(nullptr);
         paint.setStyle(SkPaint::kFill_Style);
-        paint.setColor(SkColorSetARGB(100, 255, 255, 255));
-        canvas->drawString("Mixer Strip (Coming Soon)", 20, 30, font, paint);
+        
+        // Draw 8 channel strips
+        int numChannels = 8;
+        float stripWidth = (float)getWidth() / numChannels;
+        
+        for (int i = 0; i < numChannels; ++i) {
+            float x = i * stripWidth;
+            
+            // Channel background
+            paint.setColor(SkColorSetARGB(30, 255, 255, 255));
+            SkRect channelRect = SkRect::MakeXYWH(x + 4, 10, stripWidth - 8, getHeight() - 20);
+            canvas->drawRoundRect(channelRect, 4.0f, 4.0f, paint);
+            
+            // Volume meter (placeholder - would connect to actual channels)
+            float meterHeight = channelRect.height() - 40;
+            float meterLevel = 0.3f + (i * 0.05f); // Demo levels
+            
+            // Meter track
+            paint.setColor(SkColorSetARGB(50, 0, 0, 0));
+            SkRect meterTrack = SkRect::MakeXYWH(channelRect.centerX() - 8, channelRect.y() + 25, 16, meterHeight);
+            canvas->drawRoundRect(meterTrack, 2.0f, 2.0f, paint);
+            
+            // Meter fill (green to red gradient)
+            float fillHeight = meterHeight * meterLevel;
+            SkRect meterFill = SkRect::MakeXYWH(meterTrack.left(), meterTrack.bottom() - fillHeight, 16, fillHeight);
+            
+            SkColor meterColor = meterLevel > 0.8f ? 0xFFFF3232 : (meterLevel > 0.6f ? 0xFFFFC800 : 0xFF00FF64);
+            paint.setColor(meterColor);
+            canvas->drawRoundRect(meterFill, 2.0f, 2.0f, paint);
+            
+            // Channel label
+            paint.setColor(SkColorSetARGB(150, 255, 255, 255));
+            juce::String label = juce::String(i + 1);
+            canvas->drawString(label.toStdString().c_str(), channelRect.centerX() - 4, channelRect.y() + 15, font, paint);
+        }
     }
 }
 

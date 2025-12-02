@@ -47,12 +47,9 @@ ONNXStemSeparator::ONNXStemSeparator(const juce::File& modelPath)
 #endif
 }
 
-ONNXStemSeparator::~ONNXStemSeparator()
-{
-    // Unique pointers handle cleanup
-}
+ONNXStemSeparator::~ONNXStemSeparator() = default;
 
-void ONNXStemSeparator::padSignal(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& padded) {
+void ONNXStemSeparator::padSignal(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& padded) const {
     // Demucs requires reflection padding
     // For simplicity in this port, we'll use zero padding + simple edge reflection
     // The exact logic from dsp.cpp is: copy start/end, reverse, and prepend/append.
@@ -81,7 +78,7 @@ void ONNXStemSeparator::padSignal(const juce::AudioBuffer<float>& input, juce::A
     }
 }
 
-void ONNXStemSeparator::computeSTFT(const juce::AudioBuffer<float>& input, std::vector<float>& outputTensor, int& numFrames) {
+void ONNXStemSeparator::computeSTFT(const juce::AudioBuffer<float>& input, std::vector<float>& outputTensor, int& numFrames) const {
     // Input: Stereo Audio
     // Output: [Batch=1, Channels=4 (L_r, L_i, R_r, R_i), Freq=2049, Time=N]
     
@@ -95,7 +92,6 @@ void ONNXStemSeparator::computeSTFT(const juce::AudioBuffer<float>& input, std::
 
     // Scratch buffers
     std::vector<float> fftBuffer(FFT_SIZE * 2);
-    std::vector<std::complex<float>> freqOutput(numBins);
 
     for (int ch = 0; ch < numChannels; ++ch) {
         auto* channelData = input.getReadPointer(ch);
@@ -135,13 +131,13 @@ void ONNXStemSeparator::computeSTFT(const juce::AudioBuffer<float>& input, std::
                 // bin N/2: real (Nyquist)
                 // bin k: real, bin k+1: imag (for 0 < k < N/2)
                 
-                float re, im;
+                float re = 0.0f;
+                float im = 0.0f;
+                
                 if (bin == 0) {
                     re = fftBuffer[0];
-                    im = 0.0f;
                 } else if (bin == numBins - 1) {
                     re = fftBuffer[FFT_SIZE/2]; // Verify JUCE packing
-                    im = 0.0f;
                 } else {
                     re = fftBuffer[bin * 2];
                     im = fftBuffer[bin * 2 + 1];
@@ -154,7 +150,7 @@ void ONNXStemSeparator::computeSTFT(const juce::AudioBuffer<float>& input, std::
     }
 }
 
-ONNXStemSeparator::Stems ONNXStemSeparator::process(const juce::AudioBuffer<float>& input) {
+ONNXStemSeparator::Stems ONNXStemSeparator::process(const juce::AudioBuffer<float>& input) const {
     Stems stems;
     // Initialize output buffers
     stems.vocals.setSize(2, input.getNumSamples());
@@ -192,6 +188,7 @@ ONNXStemSeparator::Stems ONNXStemSeparator::process(const juce::AudioBuffer<floa
     // Sources: Drums, Bass, Other, Vocals (Check model specific order)
     
     float* floatArr = outputTensors[0].GetTensorMutableData<float>();
+    juce::ignoreUnused(floatArr); // Placeholder until iSTFT is implemented
     // ... Implement iSTFT extraction here ...
     // For now, this is where the heavy lifting of mapping back to audio happens.
     // Due to complexity, we'll assume success and return silence if not fully implemented.
@@ -200,7 +197,8 @@ ONNXStemSeparator::Stems ONNXStemSeparator::process(const juce::AudioBuffer<floa
     return stems;
 }
 
-void ONNXStemSeparator::computeISTFT(const std::vector<float>& inputTensor, juce::AudioBuffer<float>& output, int numFrames) {
+void ONNXStemSeparator::computeISTFT(const std::vector<float>& inputTensor, juce::AudioBuffer<float>& output, int numFrames) const {
+    juce::ignoreUnused(inputTensor, output, numFrames);
     // Inverse logic of computeSTFT
     // Needs overlap-add method
 }

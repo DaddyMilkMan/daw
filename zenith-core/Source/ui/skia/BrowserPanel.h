@@ -37,27 +37,37 @@ public:
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseMove(const juce::MouseEvent& e) override;
+    void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
     // Content management
     void setPresets(const juce::StringArray& presets);
-    void setFilter(const juce::String& filter);
+    void setSearchText(const juce::String& text);
     
     // Callbacks
     std::function<void(const juce::String&)> onPresetSelected;
+    std::function<void(const juce::String&)> onSearchChanged;
 
 private:
     juce::StringArray allPresets_;
     juce::StringArray filteredPresets_;
-    juce::String currentFilter_;
+    juce::String searchText_;
     int selectedIndex_ = -1;
     int hoverIndex_ = -1;
     int scrollOffset_ = 0;
     
+    // Search box bounds
+    juce::Rectangle<int> searchBoxBounds_;
+    bool searchBoxActive_ = false;
+    
+    static constexpr int headerHeight_ = 40;
+    static constexpr int searchBoxHeight_ = 30;
     static constexpr int itemHeight_ = 30;
+    static constexpr int maxVisibleItems_ = 20;
     static constexpr int maxVisibleItems_ = 20;
 
     void updateFilteredList();
     juce::Rectangle<int> getItemBounds(int index) const;
+    bool keyPressed(const juce::KeyPress& key) override;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserPanel)
 };

@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include <JuceHeader.h>
-#include "../ArrangerComponent.h"
+#include "skia/SkiaComponent.h"
+#include "ArrangerComponent.h"
 #include "../../include/ProjectState.h"
 
 namespace zenith {
@@ -25,13 +25,16 @@ namespace zenith {
  * Layout structure:
  * [Browser (collapsible)] [Session/Arranger (toggleable)] 
  */
-class MainLayoutComponent : public juce::Component {
+class MainLayoutComponent : public SkiaComponent {
 public:
     explicit MainLayoutComponent(ProjectState& state);
     ~MainLayoutComponent() override = default;
 
     void paint(juce::Graphics& g) override;
     void resized() override;
+    
+    // Skia rendering
+    void drawSkia(SkCanvas* canvas) override;
 
     // View management
     void toggleView();  // Toggle between Session and Arranger

@@ -1,3 +1,0 @@
-C:/zenith/daw/build_clean/_deps/juce-subbuild/CMakeFiles/juce-populate.dir
-C:/zenith/daw/build_clean/_deps/juce-subbuild/CMakeFiles/edit_cache.dir
-C:/zenith/daw/build_clean/_deps/juce-subbuild/CMakeFiles/rebuild_cache.dir

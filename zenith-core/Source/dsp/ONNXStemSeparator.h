@@ -27,7 +27,7 @@ namespace zenith {
 
 class ONNXStemSeparator {
 public:
-    ONNXStemSeparator(const juce::File& modelPath);
+    explicit ONNXStemSeparator(const juce::File& modelPath);
     ~ONNXStemSeparator();
 
     struct Stems {
@@ -42,7 +42,7 @@ public:
      * @param input Audio buffer (stereo)
      * @return Stems separated audio
      */
-    Stems process(const juce::AudioBuffer<float>& input);
+    Stems process(const juce::AudioBuffer<float>& input) const;
 
     bool isLoaded() const { return modelLoaded_; }
 
@@ -55,18 +55,19 @@ private:
     juce::File modelPath_;
 
     // JUCE DSP
-    juce::dsp::FFT fft_{ 12 }; // 2^12 = 4096
-    juce::dsp::WindowingFunction<float> window_;
+    // Mutable to allow const methods if perform is non-const (though it should be const)
+    mutable juce::dsp::FFT fft_{ 12 }; // 2^12 = 4096
+    mutable juce::dsp::WindowingFunction<float> window_;
 
     // Internal Helpers
-    void padSignal(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& padded);
+    void padSignal(const juce::AudioBuffer<float>& input, juce::AudioBuffer<float>& padded) const;
     
     // STFT: Converts Time Domain -> Complex Spectrogram (Real/Imag as channels)
     // Output: [Channels * 2, FreqBins, TimeFrames]
-    void computeSTFT(const juce::AudioBuffer<float>& input, std::vector<float>& outputTensor, int& numFrames);
+    void computeSTFT(const juce::AudioBuffer<float>& input, std::vector<float>& outputTensor, int& numFrames) const;
     
     // iSTFT: Converts Complex Spectrogram -> Time Domain
-    void computeISTFT(const std::vector<float>& inputTensor, juce::AudioBuffer<float>& output, int numFrames);
+    void computeISTFT(const std::vector<float>& inputTensor, juce::AudioBuffer<float>& output, int numFrames) const;
 
 #ifdef ZENITH_ENABLE_ONNX
     // ONNX Runtime Members (Pointers to keep header clean)

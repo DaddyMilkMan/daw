@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"C:/zenith/daw/build_clean/_deps/juce-subbuild/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

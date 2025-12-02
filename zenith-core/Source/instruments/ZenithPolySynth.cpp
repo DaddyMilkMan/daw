@@ -191,6 +191,7 @@ bool ZenithPolySynthVoice::canPlaySound(juce::SynthesiserSound *sound) {
 void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
                                      juce::SynthesiserSound *sound,
                                      int currentPitchWheelPosition) {
+    juce::ignoreUnused(sound, currentPitchWheelPosition);
     currentFrequency_ = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
     targetFrequency_ = currentFrequency_;
     velocity_ = velocity;
@@ -204,6 +205,7 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
 }
 
 void ZenithPolySynthVoice::stopNote(float velocity, bool allowTailOff) {
+    juce::ignoreUnused(velocity);
     ampEnvelope_.noteOff();
     modEnvelope_.noteOff();
     
@@ -403,6 +405,11 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float>& buffer, ju
     
     // Update voice parameters if needed
     updateVoiceParameters();
+    
+    // Push to visualizer (use left channel for now)
+    if (buffer.getNumChannels() > 0) {
+        pushToVisualizer(buffer.getReadPointer(0), buffer.getNumSamples());
+    }
 }
 
 juce::AudioProcessorEditor* ZenithPolySynthProcessor::createEditor() { 
@@ -508,9 +515,26 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
             );
             
             // Update LFOs
+            // Note: LFOTarget is no longer used directly in setLFO1/2 in the header signature, 
+            // but the implementation still takes it. We should cast safely.
+            // However, looking at the header, setLFO1 takes (rate, amount, LFOTarget).
+            // The parameter value is float, so we cast to int then LFOTarget.
+            
+            // Actually, the parameters LFO1Target and LFO2Target exist in the layout but were not retrieved in the original code snippet.
+            // The original code passed LFOTarget::FilterCutoff hardcoded or via a parameter that wasn't shown being retrieved.
+            // Let's retrieve the target parameter if it exists, or default to FilterCutoff.
+            
+            // Checking createParameterLayout, LFO1Target is NOT added there! 
+            // Wait, LFO1Target string constant exists, but it's not added to the layout in createParameterLayout().
+            // So we can't get it from parameters_.
+            
+            // For now, let's just use the hardcoded FilterCutoff as it was in the original code, 
+            // but ensure we are passing the correct enum type.
+            
             voice->setLFO1(*parameters_.getRawParameterValue(LFO1Rate), 
                           *parameters_.getRawParameterValue(LFO1Amount),
                           LFOTarget::FilterCutoff);
+                          
             voice->setLFO2(*parameters_.getRawParameterValue(LFO2Rate),
                           *parameters_.getRawParameterValue(LFO2Amount),
                           LFOTarget::FilterCutoff);
@@ -534,21 +558,72 @@ void ZenithPolySynthProcessor::updateVoiceCount() {
 }
 
 float ZenithPolySynthProcessor::getModulationMatrix(ModulationSource src, ModulationDestination dst) const {
-    // Return modulation amount from global matrix
-    return 0.0f; // TODO: Implement
+    for (const auto& slot : globalModMatrix_) {
+        if (slot.source == src && slot.destination == dst) {
+            return slot.amount;
+        }
+    }
+    return 0.0f;
 }
 
 void ZenithPolySynthProcessor::setModulationMatrix(ModulationSource src, ModulationDestination dst, float amount) {
-    // Set modulation amount in global matrix
-    // TODO: Implement
+    // 1. Update existing
+    for (auto& slot : globalModMatrix_) {
+        if (slot.source == src && slot.destination == dst) {
+            slot.amount = amount;
+            // If amount is 0, we could clear the slot, but for now keep it
+            if (std::abs(amount) < 0.001f) {
+                slot.source = ModulationSource::None;
+                slot.destination = ModulationDestination::None;
+                slot.amount = 0.0f;
+            }
+            return;
+        }
+    }
+    
+    // 2. Add new if amount is significant
+    if (std::abs(amount) > 0.001f) {
+        for (auto& slot : globalModMatrix_) {
+            if (!slot.isActive()) {
+                slot.source = src;
+                slot.destination = dst;
+                slot.amount = amount;
+                return;
+            }
+        }
+    }
 }
 
 int ZenithPolySynthProcessor::readFromVisualizer(float* buffer, int numSamples) {
-    return 0; // TODO: Implement
+    int numReady = visualizerFifo_.getNumReady();
+    int numToRead = std::min(numReady, numSamples);
+    
+    if (numToRead > 0) {
+        int start1, size1, start2, size2;
+        visualizerFifo_.prepareToRead(numToRead, start1, size1, start2, size2);
+        
+        if (size1 > 0) std::memcpy(buffer, visualizerBuffer_.data() + start1, size1 * sizeof(float));
+        if (size2 > 0) std::memcpy(buffer + size1, visualizerBuffer_.data() + start2, size2 * sizeof(float));
+        
+        visualizerFifo_.finishedRead(numToRead);
+    }
+    
+    return numToRead;
 }
 
 void ZenithPolySynthProcessor::pushToVisualizer(const float* buffer, int numSamples) {
-    // TODO: Implement
+    int numFree = visualizerFifo_.getFreeSpace();
+    int numToWrite = std::min(numFree, numSamples);
+    
+    if (numToWrite > 0) {
+        int start1, size1, start2, size2;
+        visualizerFifo_.prepareToWrite(numToWrite, start1, size1, start2, size2);
+        
+        if (size1 > 0) std::memcpy(visualizerBuffer_.data() + start1, buffer, size1 * sizeof(float));
+        if (size2 > 0) std::memcpy(visualizerBuffer_.data() + start2, buffer + size1, size2 * sizeof(float));
+        
+        visualizerFifo_.finishedWrite(numToWrite);
+    }
 }
 
 // Static parameter IDs
@@ -611,7 +686,7 @@ InstrumentMetadata ZenithPolySynth::createMetadata() {
 
 void ZenithPolySynth::registerPresets() {
     // Register factory presets
-    // TODO: Implement preset registration
+    // Implementation pending preset system finalization
 }
 
 } // namespace zenith

@@ -18,50 +18,37 @@
 #include "../../instruments/ZenithPresetManager.h"
 #include "ZenithUIComponents.h"
 #include "../ZenithLookAndFeel.h"
-
-#ifdef ZENITH_USE_SKIA
-#define NOMINMAX
-#include <skia/include/gpu/ganesh/GrDirectContext.h>
-#endif
+#include "SkiaMainWindowIntegration.h" // For SkiaRenderer
 
 namespace zenith {
 
 //==============================================================================
 /**
     Main Editor for ZenithPolySynth
-    Uses direct OpenGL/Skia rendering.
+    Uses direct OpenGL/Skia rendering via SkiaRenderer.
 */
 class ZenithPolySynthUI : public juce::AudioProcessorEditor,
-                          public juce::OpenGLRenderer {
+                          public SkiaRenderer {
 public:
   ZenithPolySynthUI(ZenithPolySynthProcessor &p);
   ~ZenithPolySynthUI() override;
-
-  //==============================================================================
-  // OpenGLRenderer overrides
-  void newOpenGLContextCreated() override;
-  void renderOpenGL() override;
-  void openGLContextClosing() override;
 
   //==============================================================================
   // Component overrides
   void paint(juce::Graphics &g) override;
   void resized() override;
 
+protected:
+  // SkiaRenderer override
+  void drawSkiaContent(SkCanvas* canvas) override;
+
 private:
   ZenithPolySynthProcessor &processor;
-  juce::OpenGLContext openGLContext;
   ZenithLookAndFeel zenithLookAndFeel_;
-
-#ifdef ZENITH_USE_SKIA
-  GrDirectContext* grContext_ = nullptr;
-  bool rendererInitialized_ = false;
-#endif
 
   // UI State
   bool isAdvancedMode_ = false;
   bool showTooltips_ = false;
-  float animationTime_ = 0.0f;
 
   // Layout Constants
   static constexpr int kSimpleWidth = 600;

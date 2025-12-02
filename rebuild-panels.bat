@@ -1,6 +1,0 @@
-@echo off
-call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul 2>&1
-cd /d C:\zenith\daw\build
-echo Rebuilding with WingmanPanel and InstrumentBrowserPanel implementations...
-cmake .. -G Ninja -DCMAKE_CXX_COMPILER=cl.exe -DCMAKE_C_COMPILER=cl.exe -DZENITH_ENABLE_SKIA=OFF >nul 2>&1
-ninja ZenithDAW 2>&1 | tail -n 60

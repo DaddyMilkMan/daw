@@ -1,4 +1,6 @@
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #pragma once
 
 #include <JuceHeader.h>
@@ -20,20 +22,18 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 /**
- * @brief Base class for main window with Skia rendering
+ * @brief Reusable Skia Renderer that manages OpenGL context and Skia Surface.
  * 
- * Provides OpenGL context management and Skia canvas rendering.
- * Derived classes override drawSkiaContent() to render their UI.
+ * Inherit from this class to add Skia rendering to any JUCE Component.
+ * You must pass the component reference to the constructor.
  */
-class SkiaMainWindowIntegration : public juce::Component,
-                                  public juce::OpenGLRenderer {
+class SkiaRenderer : public juce::OpenGLRenderer {
 public:
-    SkiaMainWindowIntegration();
-    ~SkiaMainWindowIntegration() override;
+    explicit SkiaRenderer(juce::Component* componentToAttach);
+    virtual ~SkiaRenderer();
 
-    // Component overrides
-    void paint(juce::Graphics& g) override;
-    void resized() override;
+    SkiaRenderer(const SkiaRenderer&) = delete;
+    SkiaRenderer& operator=(const SkiaRenderer&) = delete;
 
     // OpenGLRenderer overrides
     void newOpenGLContextCreated() override;
@@ -52,20 +52,37 @@ protected:
      */
     SkCanvas* getSkiaCanvas() { return skiaCanvas_; }
 
-private:
     juce::OpenGLContext openGLContext_;
-    // BOB'S FIX: Use sk_sp smart pointers for automatic ref counting
     sk_sp<GrDirectContext> grContext_;
     sk_sp<SkSurface> surface_;
-    SkCanvas* skiaCanvas_ = nullptr; // Non-owning pointer, owned by surface_
-    
+    SkCanvas* skiaCanvas_ = nullptr;
+
+private:
+    juce::Component* targetComponent_ = nullptr;
     bool contextInitialized_ = false;
     int lastWidth_ = 0;
     int lastHeight_ = 0;
 
     void recreateSurface();
+};
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaMainWindowIntegration)
+/**
+ * @brief Base class for main window with Skia rendering
+ * 
+ * Kept for backward compatibility and simple use cases.
+ */
+class SkiaMainWindowIntegration : public juce::Component,
+                                  public SkiaRenderer {
+public:
+    SkiaMainWindowIntegration();
+    ~SkiaMainWindowIntegration() override;
+
+    // Component overrides
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    SkiaMainWindowIntegration(const SkiaMainWindowIntegration&) = delete;
+    SkiaMainWindowIntegration& operator=(const SkiaMainWindowIntegration&) = delete;
 };
 
 #endif // ZENITH_USE_SKIA

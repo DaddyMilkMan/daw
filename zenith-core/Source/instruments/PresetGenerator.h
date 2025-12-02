@@ -86,7 +86,7 @@ public:
         @param genre Optional genre tag
         @return Complete InstrumentPreset object
     */
-    static InstrumentPreset createPresetFromParameters(
+    static ZenithInstrumentPreset createPresetFromParameters(
         const juce::String& instrumentId,
         const juce::String& presetName,
         const juce::String& description,

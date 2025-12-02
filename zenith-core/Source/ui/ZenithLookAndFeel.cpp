@@ -41,6 +41,7 @@ void ZenithLookAndFeel::Colors::setOledMode(bool enabled) {
 void ZenithLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                                          float sliderPos, const float rotaryStartAngle,
                                          const float rotaryEndAngle, juce::Slider& slider) {
+    juce::ignoreUnused(slider);
     // Logic Pro style knob
     auto radius = (float)juce::jmin(width / 2, height / 2) - 4.0f;
     auto centreX = (float)x + (float)width * 0.5f;
@@ -72,6 +73,7 @@ void ZenithLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
 void ZenithLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
                                          float sliderPos, float minSliderPos, float maxSliderPos,
                                          const juce::Slider::SliderStyle style, juce::Slider& slider) {
+    juce::ignoreUnused(minSliderPos, maxSliderPos, slider);
     // Logic Pro style fader
     auto trackWidth = 4.0f;
     

@@ -124,19 +124,17 @@ public:
         
         // Convert request to JSON string
         juce::String jsonRequest = juce::JSON::toString(requestBody);
+        url = url.withPOSTData(jsonRequest);
         
         // Create POST request
-        juce::StringPairArray headers;
-        headers.set("Authorization", "Bearer " + apiKey);
-        headers.set("Content-Type", "application/json");
+        juce::String headersStr = "Authorization: Bearer " + apiKey + "\n" +
+                                  "Content-Type: application/json";
         
         // Send async request
         activeRequest = url.downloadToFile(
             juce::File::createTempFile("grok_response"),
             juce::URL::DownloadTaskOptions()
-                .withExtraHeaders(headers)
-                .withPOSTData(jsonRequest)
-                .withHttpRequestCmd("POST")
+                .withExtraHeaders(headersStr)
         );
         
         if (activeRequest == nullptr)

@@ -59,14 +59,28 @@ void ArrangerView::paint(juce::Graphics& g)
     }
     else
     {
-        // Draw timeline placeholder text
-        g.setColour(juce::Colours::darkgrey);
-        g.setFont(juce::FontOptions(14.0f));
-        auto timelineArea = getLocalBounds().removeFromLeft(getWidth()).removeFromLeft(getWidth() - HEADER_WIDTH);
-        g.drawText("Timeline view (coming soon)",
-                   timelineArea,
-                   juce::Justification::centred,
-                   true);
+        // Draw timeline grid and tracks
+        auto timelineArea = getLocalBounds();
+        timelineArea.removeFromLeft(HEADER_WIDTH);
+        
+        // Draw subtle grid
+        g.setColour(juce::Colour(0xff252525));
+        int beatWidth = 50; // Pixels per beat
+        for (int beat = 0; beat < timelineArea.getWidth() / beatWidth; ++beat)
+        {
+            int x = HEADER_WIDTH + beat * beatWidth;
+            bool isDownbeat = (beat % 4 == 0);
+            g.setColour(isDownbeat ? juce::Colour(0xff2a2a2a) : juce::Colour(0xff242424));
+            g.drawVerticalLine(x, 0.0f, static_cast<float>(getHeight()));
+        }
+        
+        // Draw track lanes
+        for (size_t i = 0; i < trackHeaders_.size(); ++i)
+        {
+            int y = static_cast<int>(i) * TRACK_HEIGHT;
+            g.setColour(i % 2 == 0 ? juce::Colour(0xff1e1e1e) : juce::Colour(0xff1a1a1a));
+            g.fillRect(HEADER_WIDTH, y, timelineArea.getWidth(), TRACK_HEIGHT);
+        }
     }
 }
 

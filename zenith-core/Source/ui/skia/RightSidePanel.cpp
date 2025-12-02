@@ -35,13 +35,13 @@ void RightSidePanel::drawSkia(SkCanvas* canvas) {
     
     // Glassmorphism Background (Darker, matching theme)
     paint.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
-    canvas->drawRect(::SkRect::MakeWH(getWidth(), getHeight()), paint);
+    canvas->drawRect(::SkRect::MakeWH((float)getWidth(), (float)getHeight()), paint);
     
     // Left border glow (Accent color: Cyan)
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(1.0f);
     paint.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
-    canvas->drawLine(0, 0, 0, getHeight(), paint);
+    canvas->drawLine(0.0f, 0.0f, 0.0f, (float)getHeight(), paint);
     
     // Header
     SkFont font;
@@ -50,23 +50,23 @@ void RightSidePanel::drawSkia(SkCanvas* canvas) {
     
     paint.setStyle(SkPaint::kFill_Style);
     paint.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
-    canvas->drawString("WINGMAN AI", 20, 30, font, paint);
+    canvas->drawString("WINGMAN AI", 20.0f, 30.0f, font, paint);
     
     // Placeholder content
     font.setSize(12.0f);
     font.setEmbolden(false);
     paint.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
-    canvas->drawString("Chat with your AI assistant...", 20, 60, font, paint);
+    canvas->drawString("Chat with your AI assistant...", 20.0f, 60.0f, font, paint);
 
     // Master Meter (Visualist Request: Peak vs RMS)
-    float meterX = getWidth() - 40;
-    float meterY = 80;
-    float meterW = 20;
-    float meterH = getHeight() - 100;
+    float meterX = (float)getWidth() - 40.0f;
+    float meterY = 80.0f;
+    float meterW = 20.0f;
+    float meterH = (float)getHeight() - 100.0f;
 
     // Background
     paint.setColor(SkColorSetARGB(100, 10, 10, 10));
-    canvas->drawRect(::SkRect::MakeXYWH((float)meterX, (float)meterY, (float)meterW, (float)meterH), paint);
+    canvas->drawRect(::SkRect::MakeXYWH(meterX, meterY, meterW, meterH), paint);
 
     // Simulated Levels (since we don't have real audio data here yet)
     // In a real app, these would come from the Engine
@@ -78,17 +78,17 @@ void RightSidePanel::drawSkia(SkCanvas* canvas) {
     // Peak Bar (Fast, Green/Red)
     float peakH = meterH * peakLevel;
     paint.setColor(peakLevel > 0.8f ? SkColorSetRGB(255, 50, 50) : SkColorSetRGB(0, 255, 100));
-    canvas->drawRect(::SkRect::MakeXYWH((float)meterX, (float)(meterY + meterH - peakH), (float)meterW, (float)peakH), paint);
+    canvas->drawRect(::SkRect::MakeXYWH(meterX, meterY + meterH - peakH, meterW, peakH), paint);
 
     // RMS Bar (Slow, Solid White line inside)
     float rmsH = meterH * rmsLevel;
     paint.setColor(SkColorSetARGB(200, 255, 255, 255));
-    canvas->drawRect(::SkRect::MakeXYWH((float)(meterX + 5), (float)(meterY + meterH - rmsH), (float)(meterW - 10), (float)rmsH), paint);
+    canvas->drawRect(::SkRect::MakeXYWH(meterX + 5.0f, meterY + meterH - rmsH, meterW - 10.0f, rmsH), paint);
 
     // Label
     font.setSize(10.0f);
     paint.setColor(SkColorSetARGB(150, 255, 255, 255));
-    canvas->drawString("RMS", meterX, meterY + meterH + 15, font, paint);
+    canvas->drawString("RMS", meterX, meterY + meterH + 15.0f, font, paint);
 }
 
 void RightSidePanel::resized() {
