@@ -19,6 +19,9 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b %ERRORLEVEL%
 )
 
+echo [INFO] Patching vcxproj to disable Spectre Mitigation...
+powershell -Command "(Get-Content ZenithDAW.vcxproj) -replace '<SpectreMitigation>Spectre</SpectreMitigation>', '' | Set-Content ZenithDAW.vcxproj"
+
 echo [INFO] Building Project...
 cmake --build . --config Release -j 8
 if %ERRORLEVEL% NEQ 0 (

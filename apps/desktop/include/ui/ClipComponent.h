@@ -1,0 +1,120 @@
+/**
+ * @file ClipComponent.h
+ * @brief Flat clip component with theme colors and clean typography
+ *
+ * Features clean DAW aesthetics:
+ * - Track-colored fills (muted)
+ * - Typography.body for clip names
+ * - Simple 1-2px selection border
+ * - Rounded corners (4px)
+ * - 60 Hz smooth animations
+ */
+
+// POLISH: spacing normalized to 8px grid (rounded corners 4px)
+// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: flattened visuals (track colors, no gradients)
+
+#pragma once
+
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
+
+#ifdef ZENITH_USE_SKIA
+#include "../../Source/ui/skia/SkiaComponent.h"
+#endif
+
+/**
+ * @class ClipComponent
+ * @brief Flat clip display on the arranger timeline
+ *
+ * Clean design with:
+ * - Track-colored backgrounds (muted, using theme clip colors)
+ * - Typography.body for clip names
+ * - Simple 1-2px selection border
+ * - Rounded corners (4px, 8px grid)
+ */
+#ifdef ZENITH_USE_SKIA
+class ClipComponent : public zenith::SkiaComponent
+#else
+class ClipComponent : public juce::Component,
+                     public juce::Timer
+#endif
+{
+public:
+    /**
+     * @brief Constructor
+     * @param clipNode ValueTree node for this clip
+     */
+    ClipComponent(juce::ValueTree clipNode);
+    ~ClipComponent() override;
+
+    //==========================================================================
+    // Clip data
+    //==========================================================================
+
+    /**
+     * @brief Get the clip's ValueTree node
+     */
+    juce::ValueTree getClipNode() const { return clip; }
+
+    /**
+     * @brief Get clip ID
+     */
+    juce::String getClipId() const;
+
+    /**
+     * @brief Get start position in beats
+     */
+    double getStartBeats() const;
+
+    /**
+     * @brief Get length in beats
+     */
+    double getLengthBeats() const;
+
+    /**
+     * @brief Update bounds from clip data and pixels-per-beat ratio
+     */
+    void updateBounds(double pixelsPerBeat, int yPosition, int height) [[maybe_unused]];
+
+    //==========================================================================
+    // Component interface
+    //==========================================================================
+
+#ifdef ZENITH_USE_SKIA
+    void drawSkia(SkCanvas* canvas) override;
+#else
+    void paint(juce::Graphics& g) override;
+#endif
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseEnter(const juce::MouseEvent& event) override;
+    void mouseExit(const juce::MouseEvent& event) override;
+
+    //==========================================================================
+    // Timer interface (for smooth animations)
+    //==========================================================================
+
+    void timerCallback() override;
+
+private:
+    juce::ValueTree clip;
+    juce::Point<int> dragStartPos;
+    double dragStartBeats = 0.0;
+
+    // Animation state
+    bool isHovered = false;
+    bool isSelected = false;
+    float hoverAnimation = 0.0f;     // 0.0 to 1.0 for smooth hover animation
+    float selectionPulse = 0.0f;     // 0.0 to 1.0 for selection glow pulse
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipComponent)
+};
+
