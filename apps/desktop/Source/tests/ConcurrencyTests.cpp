@@ -37,24 +37,27 @@ public:
 
             // 2. Drain from "Audio Thread"
             std::atomic<int> receivedCount{0};
-            std::atomic<bool> keepRunning{true};
+            std::atomic<bool> writerFinished{false};
             
             std::thread reader([&]() {
-                while (keepRunning || sentCount > receivedCount) {
+                while (true) {
                     juce::MidiBuffer buffer;
-                    fifo.drainTo(buffer, 0, 512); // Assuming drainTo(buffer, startSample, numSamples) signature
+                    fifo.drainTo(buffer, 0, 512);
                     receivedCount += buffer.getNumEvents();
                     
-                    if (!keepRunning && buffer.getNumEvents() == 0 && sentCount == receivedCount) break;
-                    if (!keepRunning && sentCount > receivedCount) {
-                         // Give writer a chance to finish if we are stopping
-                         juce::Thread::sleep(1);
+                    if (writerFinished && receivedCount >= sentCount) {
+                        // Writer is done and we caught up
+                        break;
                     }
+                    
+                    // Active spin with yield - standard for lock-free testing
+                    // Avoids OS scheduler sleep granularity issues (15ms+)
+                    std::this_thread::yield();
                 }
             });
 
             writer.join();
-            keepRunning = false;
+            writerFinished = true;
             reader.join();
             
             // We expect to receive what we successfully sent

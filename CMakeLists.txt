@@ -56,91 +56,7 @@ FetchContent_MakeAvailable(flecs)
 
 # Source files
 set(ZENITH_SOURCES
-    # Main
     apps/desktop/Source/Main.cpp
-    apps/desktop/Source/ui/MainWindow.cpp
-    apps/desktop/Source/engine/Engine.cpp
-    apps/desktop/Source/engine/ProjectState.cpp
-    apps/desktop/Source/commands/CommandAPI.cpp
-    
-    # UI Core
-    apps/desktop/Source/ui/ArrangerComponent.cpp
-    apps/desktop/Source/ui/MixerComponent.cpp
-    apps/desktop/Source/ui/PianoRollComponent.cpp
-    apps/desktop/Source/ui/AutomationLaneComponent.cpp
-    apps/desktop/Source/ui/MarkerLaneComponent.cpp
-    apps/desktop/Source/ui/TempoLaneComponent.cpp
-    apps/desktop/Source/ui/PluginBrowserComponent.cpp
-    
-    # Engine
-    apps/desktop/Source/engine/Track.cpp
-    apps/desktop/Source/engine/Clip.cpp
-    apps/desktop/Source/engine/MixerChannel.cpp
-    apps/desktop/Source/engine/AudioFilePool.cpp
-    apps/desktop/Source/engine/PluginHost.cpp
-    apps/desktop/Source/engine/AuxBus.cpp
-    apps/desktop/Source/engine/ZenithLogger.cpp
-    apps/desktop/Source/engine/TrackPluginState.cpp
-    apps/desktop/Source/engine/PluginHostAsync.cpp
-    
-    # Instruments
-    apps/desktop/Source/instruments/Instrument.cpp
-    apps/desktop/Source/instruments/InstrumentRegistry.cpp
-    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
-    apps/desktop/Source/instruments/PresetGenerator.cpp
-    apps/desktop/Source/instruments/ZenithPolySynth.cpp
-    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
-    apps/desktop/Source/instruments/ZenithPresetManager.cpp
-    apps/desktop/Source/instruments/ZenithSampler.cpp
-    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
-    
-    # UI Components
-    apps/desktop/Source/ui/ClipComponent.cpp
-    apps/desktop/Source/ui/MixerView.cpp
-    apps/desktop/Source/ui/MixerChannelComponent.cpp
-    apps/desktop/Source/ui/TrackHeaderComponent.cpp
-    apps/desktop/Source/ui/TimelineRuler.cpp
-    apps/desktop/Source/ui/PluginEditorWindow.cpp
-    apps/desktop/Source/ui/PresetBrowserComponent.cpp
-    apps/desktop/Source/ui/InstrumentBrowserPanel.cpp
-    apps/desktop/Source/ui/WingmanPanel.cpp
-    apps/desktop/Source/ui/AudioFeedback.cpp
-    apps/desktop/Source/ui/MainLayoutComponent.cpp
-    apps/desktop/Source/ui/ZenithLookAndFeel.cpp
-    apps/desktop/Source/ui/ZenithTheme.cpp
-    
-    # Skia UI - Moved to SkiaManualIntegration.cmake (Conditional)
-
-    # Network/AI
-    apps/desktop/Source/network/AIBridgeClient.cpp
-    apps/desktop/Source/network/MockAIProvider.cpp
-    apps/desktop/Source/network/GrokAPIClient.cpp
-    apps/desktop/Source/network/GrokDAWController.cpp
-    apps/desktop/Source/network/GrokUtils.cpp
-    apps/desktop/Source/network/SecureKeyStore.cpp
-    apps/desktop/Source/network/AudioAnalysisService.cpp
-    
-    # DSP
-    # apps/desktop/Source/dsp/DSPStemSeparator.cpp
-    # apps/desktop/Source/dsp/DSPVoiceChanger.cpp
-    # apps/desktop/Source/dsp/ONNXStemSeparator.cpp
-    # apps/desktop/Source/dsp/ONNXStemSeparatorImpl.cpp
-    
-    # Commands (SessionGraph only - CommandAPI is already listed above)
-    apps/desktop/Source/commands/SessionGraph.cpp
-    
-    # Export
-    # apps/desktop/Source/export/NFTMintingService.cpp
-    
-    # Rendering
-    apps/desktop/Source/rendering/SkiaContextManager.cpp
-    
-    # Synchronizers
-    apps/desktop/Source/engine/ClipSynchronizer.cpp
-    apps/desktop/Source/engine/TrackStateSynchronizer.cpp
-    apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
-    apps/desktop/Source/engine/TempoMapSynchronizer.cpp
-    apps/desktop/Source/engine/TempoMap.cpp
 )
 
 # Test sources (optional, can be disabled)
@@ -167,6 +83,14 @@ juce_add_gui_app(ZenithDAW
 juce_generate_juce_header(ZenithDAW)
 
 target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
+
+# Modularized Source Groups (Complaint #6 Fix)
+add_subdirectory(apps/desktop/Source/engine)
+add_subdirectory(apps/desktop/Source/ui)
+add_subdirectory(apps/desktop/Source/instruments)
+add_subdirectory(apps/desktop/Source/network)
+add_subdirectory(apps/desktop/Source/commands)
+add_subdirectory(apps/desktop/Source/rendering)
 
 # Include directories
 target_include_directories(ZenithDAW PRIVATE

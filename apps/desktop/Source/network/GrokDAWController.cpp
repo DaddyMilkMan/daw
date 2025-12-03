@@ -7,11 +7,14 @@
 
 #include "GrokDAWController.h"
 #include "GrokUtils.h"
+#include "AITools.h"
+#include "AIPrompts.h"
 #include <juce_events/juce_events.h>
 #include "../dsp/ONNXStemSeparator.h"
 #include "../dsp/DSPStemSeparator.h"
 #include "../dsp/DSPVoiceChanger.h"
 #include "../instruments/PresetGenerator.h"
+#include <map>
 
 namespace zenith {
 
@@ -21,9 +24,15 @@ namespace zenith {
 class GrokDAWController::Impl
 {
 public:
+    using FunctionHandler = std::function<void(const GrokFunctionCall&, 
+                                             std::function<void(juce::String)>, 
+                                             std::function<void(juce::String)>, 
+                                             std::function<void(juce::String)>)>;
+
     Impl(CommandAPI& api)
         : commandAPI(api)
     {
+        registerDefaultHandlers();
     }
     
     ~Impl() = default;
@@ -33,235 +42,88 @@ public:
     GrokAPIClient grokClient;
     AudioAnalysisService analysisService;
     
+    // Thread Pool for safe async operations (Complaint #8 Fix)
+    juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job for now
+    
     std::function<juce::var()> contextProvider;
     
     bool isInitialized = false;
     
+    // Command Registry (Complaint #2 Fix)
+    std::map<juce::String, FunctionHandler> functionRegistry;
+
     //==========================================================================
-    /**
-        Build system prompt with DAW context
-    */
-    juce::String buildSystemPrompt()
+    void registerDefaultHandlers()
     {
-        juce::String prompt = 
-            "You are an AI assistant for Zenith DAW. "
-            "You can control the DAW via function calling. "
-            "\n\n"
-            "Capabilities:\n"
-            "- Manage tracks and clips\n"
-            "- Control plugins and automation\n"
-            "- Load/save presets\n"
-            "- Generate synthesizer presets\n"
-            "- Edit MIDI\n"
-            "- Control transport and project settings\n"
-            "- Analyze audio tracks\n"
-            "\n"
-            "Use available functions to fulfill user requests. "
-            "Confirm actions concisely.\n"
-            "\n";
-        
-        // Add current DAW context if available
-        if (contextProvider)
-        {
-            auto context = contextProvider();
-            if (context.isObject())
+        // ... (handlers remain the same)
+        // Handler for audio analysis (special case with side effects)
+        functionRegistry["analyze_track"] = [this](const GrokFunctionCall& call, auto onComplete, auto onError, auto onProgress) {
+            handleAudioAnalysis(call, onComplete, onError, onProgress);
+        };
+
+        // Handler for stem separation
+        functionRegistry["separate_stems"] = [this](const GrokFunctionCall& call, auto onComplete, auto onError, auto onProgress) {
+            if (onProgress) onProgress("Separating stems (this may take a moment)...");
+            
+            // Delegate to CommandAPI
+            auto* cmd = new juce::DynamicObject();
+            cmd->setProperty("command", "separate_track");
+            cmd->setProperty("params", call.arguments);
+            
+            juce::var result = commandAPI.executeCommand(juce::var(cmd));
+            
+            if (result.getProperty("success", false))
             {
-                prompt += "Current DAW State:\n";
-                
-                if (context.hasProperty("trackCount"))
-                    prompt += "- Tracks: " + context["trackCount"].toString() + "\n";
-                
-                if (context.hasProperty("selectedTrack"))
-                    prompt += "- Selected Track: " + context["selectedTrack"].toString() + "\n";
-                
-                if (context.hasProperty("tempo"))
-                    prompt += "- Tempo: " + context["tempo"].toString() + " BPM\n";
-                
-                if (context.hasProperty("isPlaying"))
-                {
-                    bool playing = context["isPlaying"];
-                    prompt += "- Playback: " + juce::String(playing ? "Playing" : "Stopped") + "\n";
-                }
-                
-                prompt += "\n";
+                juce::String msg = "Stems separated successfully. Created tracks: ";
+                auto createdTracks = result.getProperty("createdTracks", juce::var());
+                if (createdTracks.isArray()) msg += juce::String(createdTracks.size());
+                onComplete(msg);
             }
+            else
+            {
+                onError("Separation failed: " + result.getProperty("error", "Unknown error").toString());
+            }
+        };
+
+        // Default handler for all other CommandAPI commands
+        auto defaultHandler = [this](const GrokFunctionCall& call, auto onComplete, auto onError, auto onProgress) {
+            auto* cmd = new juce::DynamicObject();
+            cmd->setProperty("command", call.functionName);
+            cmd->setProperty("params", call.arguments);
+            
+            juce::var result = commandAPI.executeCommand(juce::var(cmd));
+            
+            if (result.getProperty("success", false))
+            {
+                grokClient.submitFunctionResult(call, result, onComplete, onError);
+            }
+            else
+            {
+                onError("Function call failed: " + result.getProperty("error", "Command failed").toString());
+            }
+        };
+
+        // Register common commands to use the default handler
+        const char* standardCommands[] = {
+            "create_track", "list_tracks", "delete_track", 
+            "list_presets", "add_note", "set_tempo", 
+            "generate_midi_pattern", "generate_lyrics"
+        };
+
+        for (const char* cmd : standardCommands) {
+            functionRegistry[cmd] = defaultHandler;
         }
-        
-        return prompt;
-    }
-    
-    //==========================================================================
-    /**
-        Helper to create function definition from JSON schema string
-    */
-    GrokFunction createFunctionDef(
-        const juce::String& name,
-        const juce::String& description,
-        const juce::String& schemaJson)
-    {
-        auto schema = juce::JSON::parse(schemaJson);
-        return GrokFunction(name, description, schema);
     }
 
     //==========================================================================
-    /**
-        Get all available DAW functions as Grok function definitions
-    */
-    juce::Array<GrokFunction> getAvailableFunctions()
-    {
-        juce::Array<GrokFunction> myFunctions;
-        
-        // Track functions
-        myFunctions.add(createFunctionDef(
-            "create_track",
-            "Create a new audio or MIDI track",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"name\": {\"type\": \"string\", \"description\": \"Track name\"},"
-            "    \"type\": {\"type\": \"string\", \"enum\": [\"audio\", \"midi\"], \"description\": \"Track type\"}"
-            "  },"
-            "  \"required\": [\"name\", \"type\"]"
-            "}"
-        ));
-        
-        myFunctions.add(createFunctionDef(
-            "list_tracks",
-            "Get list of all tracks in the project",
-            "{\"type\": \"object\", \"properties\": {}}"
-        ));
-        
-        myFunctions.add(createFunctionDef(
-            "delete_track",
-            "Delete a track by ID",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"trackId\": {\"type\": \"string\", \"description\": \"Track ID to delete\"}"
-            "  },"
-            "  \"required\": [\"trackId\"]"
-            "}"
-        ));
-
-        // Audio Analysis
-        myFunctions.add(createFunctionDef(
-            "analyze_track",
-            "Analyze the audio of a specific track or the master mix to provide feedback",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"trackId\": {\"type\": \"string\", \"description\": \"Track ID to analyze, or 'master' for the full mix\"},"
-            "    \"duration\": {\"type\": \"number\", \"description\": \"Duration to analyze in seconds (default 10.0)\"}"
-            "  },"
-            "  \"required\": [\"trackId\"]"
-            "}"
-        ));
-        
-        // Preset functions
-        myFunctions.add(createFunctionDef(
-            "list_presets",
-            "List available presets for an instrument",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"instrumentId\": {\"type\": \"string\", \"description\": \"Instrument ID\"},"
-            "    \"name\": {\"type\": \"string\", \"description\": \"Preset name\"},"
-            "    \"parameters\": {\"type\": \"object\", \"description\": \"Preset parameters\"}"
-            "  },"
-            "  \"required\": [\"instrumentId\", \"name\", \"parameters\"]"
-            "}"
-        ));
-
-        // AI Audio Processing
-        myFunctions.add(createFunctionDef(
-            "separate_stems",
-            "Separate audio track into stems (vocals, drums, bass, other)",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"trackId\": {\"type\": \"string\", \"description\": \"Track ID to separate\"}"
-            "  },"
-            "  \"required\": [\"trackId\"]"
-            "}"
-        ));
-
-        // MIDI functions
-        myFunctions.add(createFunctionDef(
-            "add_note",
-            "Add a MIDI note to a clip",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"trackId\": {\"type\": \"string\"},"
-            "    \"clipId\": {\"type\": \"string\"},"
-            "    \"pitch\": {\"type\": \"integer\", \"description\": \"MIDI note number (0-127)\"},"
-            "    \"startBeats\": {\"type\": \"number\", \"description\": \"Start position in beats\"},"
-            "    \"lengthBeats\": {\"type\": \"number\", \"description\": \"Note length in beats\"},"
-            "    \"velocity\": {\"type\": \"integer\", \"description\": \"Velocity (0-127)\"}"
-            "  },"
-            "  \"required\": [\"trackId\", \"clipId\", \"pitch\", \"startBeats\", \"lengthBeats\"]"
-            "}"
-        ));
-        
-        // Tempo control
-        myFunctions.add(createFunctionDef(
-            "set_tempo",
-            "Set the project tempo",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"bpm\": {\"type\": \"number\", \"description\": \"Tempo in BPM\"}"
-            "  },"
-            "  \"required\": [\"bpm\"]"
-            "}"
-        ));
-
-        // MIDI Generation
-        myFunctions.add(createFunctionDef(
-            "generate_midi_pattern",
-            "Generate a MIDI pattern (bassline, melody, or full chord progression) on a track",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"trackId\": {\"type\": \"string\", \"description\": \"Track ID\"},"
-            "    \"description\": {\"type\": \"string\", \"description\": \"Description (e.g., 'Neo-Soul chord progression in Eb Minor')\"},"
-            "    \"lengthBeats\": {\"type\": \"number\", \"description\": \"Length in beats (default 16)\"},"
-            "    \"type\": {\"type\": \"string\", \"enum\": [\"melody\", \"bass\", \"chords\"], \"description\": \"Pattern type\"}"
-            "  },"
-            "  \"required\": [\"trackId\", \"description\"]"
-            "}"
-        ));
-
-        // Lyric Generation
-        myFunctions.add(createFunctionDef(
-            "generate_lyrics",
-            "Generate lyrics for a song based on a theme or mood",
-            "{"
-            "  \"type\": \"object\","
-            "  \"properties\": {"
-            "    \"theme\": {\"type\": \"string\", \"description\": \"Theme, topic, or mood\"},"
-            "    \"style\": {\"type\": \"string\", \"description\": \"Style (e.g., 'Rap', 'Pop', 'Country')\"},"
-            "    \"structure\": {\"type\": \"string\", \"description\": \"Structure (e.g., 'Verse-Chorus-Verse')\"}"
-            "  },"
-            "  \"required\": [\"theme\"]"
-            "}"
-        ));
-
-        return myFunctions;
-    }
-    
-    //==========================================================================
-    /**
-        Handle audio analysis request
-    */
     void handleAudioAnalysis(
         const GrokFunctionCall& call,
         std::function<void(juce::String response)> onComplete,
         std::function<void(juce::String error)> onError,
         std::function<void(juce::String status)> onProgress)
     {
-        // Launch background thread for export and analysis
-        juce::Thread::launch([this, call, onComplete, onError, onProgress]()
+        // Use ThreadPool instead of detached threads (Complaint #8 Fix)
+        threadPool.addJob([this, call, onComplete, onError, onProgress]()
         {
             // Check if analysis service is available (Python installed?)
             if (!analysisService.isAvailable())
@@ -329,7 +191,7 @@ public:
 
     //==========================================================================
     /**
-        Handle function call from Grok
+        Handle function call via Registry
     */
     void handleFunctionCall(
         const GrokFunctionCall& call,
@@ -340,74 +202,29 @@ public:
         if (onProgress)
             onProgress("Executing: " + call.functionName);
             
-        // Special handling for audio analysis
-        if (call.functionName == "analyze_track")
+        auto it = functionRegistry.find(call.functionName);
+        if (it != functionRegistry.end())
         {
-            handleAudioAnalysis(call, onComplete, onError, onProgress);
-            return;
-        }
-
-        if (call.functionName == "separate_stems")
-        {
-            if (onProgress) onProgress("Separating stems (this may take a moment)...");
-            
-            // Delegate to CommandAPI's real implementation
-            auto* cmd = new juce::DynamicObject();
-            cmd->setProperty("command", "separate_track");
-            cmd->setProperty("params", call.arguments);
-            
-            juce::var cmdVar(cmd);
-            juce::var result = commandAPI.executeCommand(cmdVar);
-            
-            bool success = result.getProperty("success", false);
-            
-            if (success)
-            {
-                juce::String msg = "Stems separated successfully. Created tracks: ";
-                auto createdTracks = result.getProperty("createdTracks", juce::var());
-                if (createdTracks.isArray())
-                {
-                    msg += juce::String(createdTracks.size());
-                }
-                onComplete(msg);
-            }
-            else
-            {
-                juce::String error = result.getProperty("error", "Unknown error");
-                onError("Separation failed: " + error);
-            }
-            return;
-        }
-        
-        // Build command for CommandAPI
-        auto* cmd = new juce::DynamicObject();
-        cmd->setProperty("command", call.functionName);
-        cmd->setProperty("params", call.arguments);
-        
-        juce::var cmdVar(cmd);
-        
-        // Execute command
-        juce::var result = commandAPI.executeCommand(cmdVar);
-        
-        // Check if successful
-        bool success = result.hasProperty("success") ? (bool)result["success"] : false;
-        
-        if (success)
-        {
-            // Submit result back to Grok
-            grokClient.submitFunctionResult(
-                call,
-                result,
-                onComplete,
-                onError
-            );
+            it->second(call, onComplete, onError, onProgress);
         }
         else
         {
-            juce::String errorMsg = result.hasProperty("error") 
-                ? result["error"].toString() 
-                : "Command failed";
-            onError("Function call failed: " + errorMsg);
+            // Fallback: Try to execute as a generic command even if not explicitly registered
+            // This allows CommandAPI to expand without updating this registry every time
+            auto* cmd = new juce::DynamicObject();
+            cmd->setProperty("command", call.functionName);
+            cmd->setProperty("params", call.arguments);
+            
+            juce::var result = commandAPI.executeCommand(juce::var(cmd));
+            
+            if (result.getProperty("success", false))
+            {
+                grokClient.submitFunctionResult(call, result, onComplete, onError);
+            }
+            else
+            {
+                onError("Unknown function or failed execution: " + call.functionName);
+            }
         }
     }
 };
@@ -451,11 +268,11 @@ void GrokDAWController::executeCommand(
     if (onProgress)
         onProgress("Processing command...");
     
-    // Build system prompt with current DAW state
-    auto systemPrompt = pImpl->buildSystemPrompt();
+    // Task 4: Use helper for system prompt
+    auto systemPrompt = AIPrompts::buildSystemPrompt(pImpl->contextProvider);
     
-    // Get available functions
-    auto functions = pImpl->getAvailableFunctions();
+    // Task 4: Use helper for tool definitions
+    auto functions = AITools::getAvailableFunctions();
     
     // Send to Grok
     pImpl->grokClient.sendChat(
@@ -466,7 +283,7 @@ void GrokDAWController::executeCommand(
         onResponse,
         [this, onResponse, onError, onProgress](GrokFunctionCall call)
         {
-            // Grok wants to call a function
+            // Grok wants to call a function -> Dispatch via Registry
             pImpl->handleFunctionCall(call, onResponse, onError, onProgress);
         },
         onError

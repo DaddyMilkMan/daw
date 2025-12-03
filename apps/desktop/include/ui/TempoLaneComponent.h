@@ -104,7 +104,33 @@ private:
     /**
      * @brief Draw a tempo point
      */
-    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected) [[maybe_unused]];
+    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected) const;
+
+    /**
+     * @brief Draw grid lines for BPM
+     */
+    void drawGrid(juce::Graphics& g) const;
+
+    /**
+     * @brief Draw tempo curve connecting points
+     */
+    void drawTempoCurve(juce::Graphics& g) const;
+
+    /**
+     * @brief Draw all tempo points
+     */
+    void drawTempoPoints(juce::Graphics& g) const;
+
+    /**
+     * @brief Track mouse movement for hover effects
+     */
+    void mouseMove(const juce::MouseEvent& event) override;
+
+    /**
+     * @brief Clear hover state when mouse exits
+     */
+    void mouseExit(const juce::MouseEvent& event) override;
+
 
     //==========================================================================
     // Member Variables
@@ -120,10 +146,11 @@ private:
 
     // Interaction state
     juce::String selectedPointId;
-    juce::String draggingPointId;
-    juce::Point<float> dragStart;
-    double dragStartBeats = 0.0;
-    double dragStartBpm = 0.0;
+    juce::String hoveredPointId;
+    bool isDraggingPoint = false;
+    float dragStartX = 0.0f;
+    float dragStartY = 0.0f;
+
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoLaneComponent)
 };

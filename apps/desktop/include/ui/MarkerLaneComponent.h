@@ -95,7 +95,23 @@ private:
     /**
      * @brief Draw a marker
      */
-    void drawMarker(juce::Graphics& g, double timeBeats, const juce::String& name, bool selected) [[maybe_unused]];
+    void drawMarker(juce::Graphics& g, double timeBeats, const juce::String& name, 
+                   const juce::String& colorHex, bool selected) const;
+
+    /**
+     * @brief Draw all markers
+     */
+    void drawMarkers(juce::Graphics& g) const;
+
+    /**
+     * @brief Track mouse movement for hover effects
+     */
+    void mouseMove(const juce::MouseEvent& event) override;
+
+    /**
+     * @brief Clear hover state when mouse exits
+     */
+    void mouseExit(const juce::MouseEvent& event) override;
 
     /**
      * @brief Generate next marker name ("Marker 1", "Marker 2", etc.)
@@ -119,9 +135,9 @@ private:
 
     // Interaction state
     juce::String selectedMarkerId;
-    juce::String draggingMarkerId;
-    juce::Point<float> dragStart;
-    double dragStartBeats = 0.0;
+    juce::String hoveredMarkerId;
+    bool isDraggingMarker = false;
+    float dragStartX = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MarkerLaneComponent)
 };
