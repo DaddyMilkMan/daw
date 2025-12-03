@@ -62,61 +62,14 @@ void DSPStemSeparator::computeMidSide(const float* left, const float* right, int
 void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBlock,
                                juce::dsp::AudioBlock<float>& outputBlock,
                                StemType stemType) {
-    auto numSamples = inputBlock.getNumSamples();
-    auto leftIn = inputBlock.getChannelPointer(0);
-    auto rightIn = inputBlock.getChannelPointer(1);
+    // The "Fake" EQ-based separation has been removed as requested.
+    // Real separation requires the ONNX model integration.
+    // For now, we output silence to indicate the feature is inactive/waiting for model.
     
-    auto leftOut = outputBlock.getChannelPointer(0);
-    auto rightOut = outputBlock.getChannelPointer(1);
-
-    // 1. Calculate Mid/Side
-    std::vector<float> mid, side;
-    computeMidSide(leftIn, rightIn, numSamples, mid, side);
-
-    // 2. Process based on Stem Type
-    float* midData = mid.data();
-    juce::dsp::AudioBlock<float> midBlock(&midData, 1, numSamples);
-    juce::dsp::ProcessContextReplacing<float> midContext(midBlock);
-
-    switch (stemType) {
-        case StemType::Vocals:
-            // Vocals are mostly Mid channel, High frequencies
-            highPassFilter_.process(midContext);
-            // Copy filtered Mid to output (Mono to Stereo)
-            for (int i = 0; i < numSamples; ++i) {
-                leftOut[i] = mid[i];
-                rightOut[i] = mid[i];
-            }
-            break;
-
-        case StemType::Bass:
-            // Bass is mostly Mid channel, Low frequencies
-            lowPassFilter_.process(midContext);
-            // Copy filtered Mid to output
-            for (int i = 0; i < numSamples; ++i) {
-                leftOut[i] = mid[i];
-                rightOut[i] = mid[i];
-            }
-            break;
-
-        case StemType::Other:
-            // "Other" is mostly the Side channel (stereo information)
-            for (int i = 0; i < numSamples; ++i) {
-                leftOut[i] = side[i];
-                rightOut[i] = -side[i]; // Invert phase for stereo width
-            }
-            break;
-
-        case StemType::Drums:
-            // Drums are hard to separate with just EQ/MS.
-            // We'll use the Bass (Low Mid) + a bit of transient shaping (simulated)
-            lowPassFilter_.process(midContext);
-            for (int i = 0; i < numSamples; ++i) {
-                leftOut[i] = mid[i] * 1.2f; // Boost slightly
-                rightOut[i] = mid[i] * 1.2f;
-            }
-            break;
-    }
+    outputBlock.clear();
+    
+    // Log once per stream ideally, but DBG is safe-ish here for dev
+    // DBG("DSPStemSeparator: Real separation model not loaded."); 
 }
 
 } // namespace zenith

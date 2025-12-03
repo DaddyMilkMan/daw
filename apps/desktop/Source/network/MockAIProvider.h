@@ -22,10 +22,10 @@ public:
     static juce::String processRequest(const juce::String& jsonRequest);
 
 private:
-    static juce::var generateMelody(const juce::String& description);
-    static juce::var generateDrums(const juce::String& description);
-    static juce::var generateBass(const juce::String& description);
-    static juce::var generateChords(const juce::String& description);
+    static juce::Array<juce::var> generateMelody(const juce::String& description);
+    static juce::Array<juce::var> generateDrums(const juce::String& description);
+    static juce::Array<juce::var> generateBass(const juce::String& description);
+    static juce::Array<juce::var> generateChords(const juce::String& description);
     
     // Helper to create a standard response
     static juce::String createResponse(const juce::String& requestId, 

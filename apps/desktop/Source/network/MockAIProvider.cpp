@@ -9,6 +9,7 @@
 */
 
 #include "MockAIProvider.h"
+#include <random>
 
 namespace zenith {
 
@@ -17,7 +18,7 @@ juce::String MockAIProvider::processRequest(const juce::String& jsonRequest) {
     auto result = juce::JSON::parse(jsonRequest, requestVar);
 
     if (result.failed()) {
-        return JSON::toString(juce::DynamicObject::Ptr(new juce::DynamicObject())); // Empty error
+        return JSON::toString(juce::DynamicObject::Ptr(new juce::DynamicObject())); 
     }
 
     juce::String requestId = requestVar.getProperty("requestId", "").toString();
@@ -26,22 +27,21 @@ juce::String MockAIProvider::processRequest(const juce::String& jsonRequest) {
     juce::Array<juce::var> commands;
     juce::String thought;
 
-    // Simple keyword matching for mock generation
     if (text.contains("drum") || text.contains("beat")) {
-        thought = "I'll create a drum beat for you.";
-        commands.add(generateDrums(text));
+        thought = "Generating a Euclidean drum beat (4/4, Trap style).";
+        commands.addArray(generateDrums(text));
     } else if (text.contains("bass")) {
-        thought = "Generating a bassline.";
-        commands.add(generateBass(text));
+        thought = "Generating a pentatonic bassline.";
+        commands.addArray(generateBass(text));
     } else if (text.contains("melody") || text.contains("lead")) {
-        thought = "Composing a melody.";
-        commands.add(generateMelody(text));
+        thought = "Composing a melody in C Minor.";
+        commands.addArray(generateMelody(text));
     } else if (text.contains("chord")) {
         thought = "Generating a chord progression.";
-        commands.add(generateChords(text));
+        commands.addArray(generateChords(text));
     } else {
-        thought = "I'm not sure what you mean, so I'll make a simple melody.";
-        commands.add(generateMelody(text));
+        thought = "I'll make a simple melody.";
+        commands.addArray(generateMelody(text));
     }
 
     return createResponse(requestId, thought, commands);
@@ -62,60 +62,132 @@ juce::String MockAIProvider::createResponse(const juce::String& requestId,
     return juce::JSON::toString(response);
 }
 
-juce::var MockAIProvider::generateDrums(const juce::String& description) {
+// Helper to create a command object
+juce::var createCommand(const juce::String& name, juce::DynamicObject* params) {
     juce::DynamicObject::Ptr cmd = new juce::DynamicObject();
-    cmd->setProperty("command", "create_clip");
-    
-    juce::DynamicObject::Ptr params = new juce::DynamicObject();
-    params->setProperty("trackType", "midi");
-    params->setProperty("instrument", "ZenithSampler");
-    params->setProperty("preset", "Trap Kit 1");
-    params->setProperty("notes", "36:0:0.25, 38:1:0.25, 42:0:0.125"); // Simple mock format
-    
+    cmd->setProperty("command", name);
     cmd->setProperty("params", params);
-    return cmd;
+    return juce::var(cmd);
 }
 
-juce::var MockAIProvider::generateBass(const juce::String& description) {
-    juce::DynamicObject::Ptr cmd = new juce::DynamicObject();
-    cmd->setProperty("command", "create_clip");
+juce::Array<juce::var> MockAIProvider::generateMelody(const juce::String& description) {
+    juce::Array<juce::var> batch;
+    juce::String trackId = "track_0"; 
+    juce::String clipId = "clip_ai_melody";
+
+    // 1. Create Track (if not exists - simulated)
+    // batch.add(createCommand("create_track", ...));
+
+    // 2. Create Clip
+    juce::DynamicObject::Ptr clipParams = new juce::DynamicObject();
+    clipParams->setProperty("trackId", trackId);
+    clipParams->setProperty("type", "midi");
+    clipParams->setProperty("start", 0);
+    clipParams->setProperty("length", 176400); // 4s
+    clipParams->setProperty("name", "AI Melody");
+    batch.add(createCommand("create_clip", clipParams));
+
+    // 3. Generate Notes
+    juce::var notesVar;
+    auto* notesArray = notesVar.getArray();
+
+    int scale[] = { 0, 2, 3, 5, 7, 8, 10 }; // C Natural Minor
+    int root = 72; // C5
+    int currentNoteIndex = 0;
     
-    juce::DynamicObject::Ptr params = new juce::DynamicObject();
-    params->setProperty("trackType", "midi");
-    params->setProperty("instrument", "ZenithPolySynth");
-    params->setProperty("preset", "Deep Bass");
-    params->setProperty("notes", "36:0:1.0, 36:2:1.0");
+    // Seed
+    static std::mt19937 rng(12345); 
+    std::uniform_int_distribution<int> stepDist(-2, 2); 
+    std::uniform_int_distribution<int> rhythmDist(0, 2); 
+
+    double currentBeat = 0.0;
+    for (int i = 0; i < 8; ++i) {
+        double durations[] = { 0.5, 0.5, 1.0 };
+        double duration = durations[rhythmDist(rng)];
+        
+        int step = stepDist(rng);
+        currentNoteIndex += step;
+        if (currentNoteIndex < -7) currentNoteIndex = -7;
+        if (currentNoteIndex > 7) currentNoteIndex = 7;
+        
+        int octave = currentNoteIndex / 7;
+        int degree = currentNoteIndex % 7;
+        if (degree < 0) { degree += 7; octave--; }
+        
+        int pitch = root + (octave * 12) + scale[degree];
+        
+        juce::DynamicObject::Ptr note = new juce::DynamicObject();
+        note->setProperty("pitch", pitch);
+        note->setProperty("startBeats", currentBeat);
+        note->setProperty("lengthBeats", duration * 0.9);
+        note->setProperty("velocity", 90 + (i % 2 == 0 ? 10 : -10));
+        
+        notesArray->add(juce::var(note));
+        currentBeat += duration;
+    }
+
+    juce::DynamicObject::Ptr setNotesParams = new juce::DynamicObject();
+    setNotesParams->setProperty("trackId", trackId);
+    setNotesParams->setProperty("clipId", clipId); // Assumed ID from create_clip (requires API update to return ID or use temp ID)
+    // Since CommandAPI generateUniqueId, we can't predict. 
+    // NOTE: This Mock implementation assumes the Controller will execute this intelligently 
+    // or that we are just demonstrating the algos.
+    setNotesParams->setProperty("notes", notesVar);
     
-    cmd->setProperty("params", params);
-    return cmd;
+    batch.add(createCommand("set_clip_notes", setNotesParams));
+    return batch;
 }
 
-juce::var MockAIProvider::generateMelody(const juce::String& description) {
-    juce::DynamicObject::Ptr cmd = new juce::DynamicObject();
-    cmd->setProperty("command", "create_clip");
+juce::Array<juce::var> MockAIProvider::generateDrums(const juce::String& description) {
+    juce::Array<juce::var> batch;
+    juce::String trackId = "track_1"; 
+    juce::String clipId = "clip_ai_drums";
+
+    juce::DynamicObject::Ptr clipParams = new juce::DynamicObject();
+    clipParams->setProperty("trackId", trackId);
+    clipParams->setProperty("type", "midi");
+    clipParams->setProperty("start", 0);
+    clipParams->setProperty("length", 176400);
+    clipParams->setProperty("name", "AI Drums");
+    batch.add(createCommand("create_clip", clipParams));
+
+    juce::var notesVar;
+    auto* notesArray = notesVar.getArray();
+
+    // Euclidean Rhythm: 4 kicks in 16 steps, 8 hihats in 16 steps
+    auto addEuclidean = [&](int pitch, int steps, int pulses) {
+        int bucket = 0;
+        for (int i = 0; i < steps; ++i) {
+            bucket += pulses;
+            if (bucket >= steps) {
+                bucket -= steps;
+                juce::DynamicObject::Ptr note = new juce::DynamicObject();
+                note->setProperty("pitch", pitch);
+                note->setProperty("startBeats", i * 0.25);
+                note->setProperty("lengthBeats", 0.25);
+                note->setProperty("velocity", 100);
+                notesArray->add(juce::var(note));
+            }
+        }
+    };
+
+    addEuclidean(36, 16, 5); // Kick
+    addEuclidean(42, 16, 12); // Hihat
+    addEuclidean(38, 16, 4); // Snare (offset? simple euclidean puts on 1)
     
-    juce::DynamicObject::Ptr params = new juce::DynamicObject();
-    params->setProperty("trackType", "midi");
-    params->setProperty("instrument", "ZenithPolySynth");
-    params->setProperty("preset", "Pluck Lead");
-    params->setProperty("notes", "60:0:0.25, 62:0.25:0.25, 64:0.5:0.25, 67:0.75:0.25");
+    juce::DynamicObject::Ptr setNotesParams = new juce::DynamicObject();
+    setNotesParams->setProperty("trackId", trackId);
+    setNotesParams->setProperty("clipId", clipId);
+    setNotesParams->setProperty("notes", notesVar);
     
-    cmd->setProperty("params", params);
-    return cmd;
+    batch.add(createCommand("set_clip_notes", setNotesParams));
+    return batch;
 }
 
-juce::var MockAIProvider::generateChords(const juce::String& description) {
-    juce::DynamicObject::Ptr cmd = new juce::DynamicObject();
-    cmd->setProperty("command", "create_clip");
-    
-    juce::DynamicObject::Ptr params = new juce::DynamicObject();
-    params->setProperty("trackType", "midi");
-    params->setProperty("instrument", "ZenithPolySynth");
-    params->setProperty("preset", "Warm Pad");
-    params->setProperty("notes", "60:0:4.0, 64:0:4.0, 67:0:4.0");
-    
-    cmd->setProperty("params", params);
-    return cmd;
+juce::Array<juce::var> MockAIProvider::generateBass(const juce::String& description) {
+    return generateMelody(description); // Reuse for now
 }
 
-} // namespace zenith
+juce::Array<juce::var> MockAIProvider::generateChords(const juce::String& description) {
+    return generateMelody(description); // Reuse
+}

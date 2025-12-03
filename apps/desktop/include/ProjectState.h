@@ -25,6 +25,7 @@
 #pragma once
 
 #include <atomic>
+#include <unordered_map>
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
@@ -1036,6 +1037,11 @@ private:
    */
   void rebuildIdCounter();
 
+  /**
+   * @brief Rebuilds the track ID map for O(1) lookup
+   */
+  void rebuildTrackMap();
+
   //==========================================================================
   // Member Variables
   //==========================================================================
@@ -1045,6 +1051,9 @@ private:
 
   // ID counter for generating unique IDs
   std::atomic<int> idCounter{0};
+
+  // Track ID lookup cache
+  std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
 
   // Dirty flag for unsaved changes
   std::atomic<bool> isDirty{false};

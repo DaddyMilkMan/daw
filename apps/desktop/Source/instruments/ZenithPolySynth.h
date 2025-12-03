@@ -179,7 +179,23 @@ private:
   // Supersaw state
   std::array<double, 7> supersawPhases_ = {0.0};
   std::array<float, 7> supersawDetunes_ = {0.0f};
+  std::array<float, 7> supersawRatios_ = {1.0f}; // Precalculated frequency multipliers
   bool supersawInit_ = false;
+
+  void updateSupersawRatios();
+  // PolyBLEP anti-aliasing helper
+  // t: current phase (0..1)
+  // dt: phase increment per sample
+  inline float poly_blep(float t, float dt) {
+      if (t < dt) {
+          t /= dt;
+          return t + t - t * t - 1.0f;
+      } else if (t > 1.0f - dt) {
+          t = (t - 1.0f) / dt;
+          return t * t + t + t + 1.0f;
+      }
+      return 0.0f;
+  }
 };
 
 //==============================================================================
@@ -313,6 +329,13 @@ private:
       
       reverbInit_ = true;
   }
+  
+public:
+    bool hasTail() const {
+        // Simple check: if effects are enabled, assume tail is active for a while
+        // Ideally we would check signal levels, but for now we prevent early cutoff
+        return (reverbAmount_ > 0.0f || chorusAmount_ > 0.0f);
+    }
 };
 
 //==============================================================================

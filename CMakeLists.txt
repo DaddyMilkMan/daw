@@ -43,6 +43,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
+# Flecs ECS (Entity Component System)
+FetchContent_Declare(
+    flecs
+    GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
+    GIT_TAG v4.0.3  # Latest stable as of Dec 2025
+)
+FetchContent_MakeAvailable(flecs)
+
 # Find Skia (from vcpkg)
 # find_package(unofficial-skia CONFIG REQUIRED) - Using Manual Integration
 
@@ -177,6 +185,9 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
     juce::juce_opengl
+    
+    # ECS (Entity Component System)
+    flecs::flecs_static
 )
 
 # Skia Integration (Manual)
