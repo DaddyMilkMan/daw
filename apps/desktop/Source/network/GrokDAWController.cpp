@@ -6,6 +6,7 @@
 */
 
 #include "GrokDAWController.h"
+#include "GrokUtils.h"
 #include <juce_events/juce_events.h>
 #include "../dsp/ONNXStemSeparator.h"
 #include "../dsp/DSPStemSeparator.h"
@@ -511,8 +512,8 @@ void GrokDAWController::generatePreset(
         "You are an expert sound designer. Generate synthesizer presets based on descriptions.",
         [this, instrumentId, description, genre, onComplete, onError](juce::String response)
         {
-            // Parse Grok's response as JSON
-            auto params = juce::JSON::parse(response);
+            // Parse Grok's response as JSON (using robust utility)
+            auto params = GrokUtils::parseJSONResponse(response);
             
             if (!params.isObject())
             {

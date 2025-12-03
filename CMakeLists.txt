@@ -116,6 +116,7 @@ set(ZENITH_SOURCES
     apps/desktop/Source/network/MockAIProvider.cpp
     apps/desktop/Source/network/GrokAPIClient.cpp
     apps/desktop/Source/network/GrokDAWController.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
     apps/desktop/Source/network/AudioAnalysisService.cpp
     
@@ -147,6 +148,11 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/AudioEngineTests.cpp
     apps/desktop/Source/tests/ProjectStateTests.cpp
     apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/FlecsSyncTests.cpp
+    # Dependencies for tests
+    apps/desktop/Source/network/GrokUtils.cpp
 )
 
 # Create main executable
