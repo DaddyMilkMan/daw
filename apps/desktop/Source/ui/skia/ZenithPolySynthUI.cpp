@@ -321,14 +321,97 @@ void ZenithPolySynthUI::drawKnobFromState(SkCanvas* canvas, const render::KnobRe
 }
 
 // ============================================================================
-// STUB IMPLEMENTATIONS (to be removed/implemented later)
+// PRESET MANAGEMENT (IMPLEMENTED)
 // ============================================================================
 
-void ZenithPolySynthUI::toggleAdvancedMode() {}
-void ZenithPolySynthUI::toggleLearningMode() {}
-void ZenithPolySynthUI::loadPreset(int index) {}
-void ZenithPolySynthUI::loadNextPreset() {}
-void ZenithPolySynthUI::loadPrevPreset() {}
-void ZenithPolySynthUI::refreshPresetList() {}
+void ZenithPolySynthUI::toggleAdvancedMode() {
+    isAdvancedMode_ = !isAdvancedMode_;
+    
+    // Resize the entire UI to accommodate advanced controls
+    const int newWidth = isAdvancedMode_ ? kAdvancedWidth : kSimpleWidth;
+    const int newHeight = isAdvancedMode_ ? kAdvancedHeight : kSimpleHeight;
+    setSize(newWidth, newHeight);
+    
+    // Trigger layout update
+    resized();
+    
+    DBG("Advanced mode: " + juce::String(isAdvancedMode_ ? "ON" : "OFF"));
+}
+
+void ZenithPolySynthUI::toggleLearningMode() {
+    // Learning mode shows tooltips for all controls
+    // Currently stubbed - could show persistent tooltips overlay
+    DBG("Learning mode toggle - Currently not implemented in widget-based UI");
+}
+
+void ZenithPolySynthUI::loadPreset(int index) {
+    if (index < 0 || index >= static_cast<int>(presetList_.size())) {
+        DBG("Invalid preset index: " + juce::String(index));
+        return;
+    }
+    
+    currentPresetIndex_ = index;
+    const auto& meta = presetList_[index];
+    
+    // Update preset bar display
+    if (presetBar_) {
+        presetBar_->setPresetName(meta.name);
+    }
+    
+    // Load full preset data
+    auto preset = ZenithPresetManager::getInstance().loadPreset("ZenithPolySynth", meta.id);
+    
+    // Apply to processor parameters
+    auto& params = processor.getParameters();
+    for (const auto& pair : preset.parameters) {
+        const juce::String& paramId = pair.first;
+        float paramValue = pair.second;  // Normalized [0-1]
+        
+        if (auto* param = params.getParameter(paramId)) {
+            // Set value with host notification
+            if (auto* ranged = dynamic_cast<juce::RangedAudioParameter*>(param)) {
+                ranged->beginChangeGesture();
+                ranged->setValueNotifyingHost(paramValue);
+                ranged->endChangeGesture();
+            }
+        }
+    }
+    
+    DBG("Loaded preset: " + meta.name + " (" + juce::String(index + 1) + "/" + juce::String(presetList_.size()) + ")");
+}
+
+void ZenithPolySynthUI::loadNextPreset() {
+    if (presetList_.empty()) return;
+    
+    int next = (currentPresetIndex_ + 1) % static_cast<int>(presetList_.size());
+    loadPreset(next);
+}
+
+void ZenithPolySynthUI::loadPrevPreset() {
+    if (presetList_.empty()) return;
+    
+    int size = static_cast<int>(presetList_.size());
+    int prev = (currentPresetIndex_ - 1 + size) % size;
+    loadPreset(prev);
+}
+
+void ZenithPolySynthUI::refreshPresetList() {
+    // Get preset metadata list from PresetManager
+    presetList_ = ZenithPresetManager::getInstance().getPresetList("ZenithPolySynth");
+    
+    if (presetList_.empty()) {
+        DBG("No presets found for ZenithPolySynth");
+        if (presetBar_) {
+            presetBar_->setPresetName("No Presets");
+        }
+        currentPresetIndex_ = -1;
+    } else {
+        DBG("Found " + juce::String(presetList_.size()) + " presets for ZenithPolySynth");
+        // Load first preset by default
+        currentPresetIndex_ = 0;
+        loadPreset(0);
+    }
+}
 
 } // namespace zenith
+
