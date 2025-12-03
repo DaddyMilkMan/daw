@@ -45,6 +45,9 @@ PluginHost::PluginHost()
 PluginHost::~PluginHost()
 {
     DBG("PluginHost: Destructor");
+    cancelScan();
+    if (scanThread_.joinable())
+        scanThread_.join();
 }
 
 //==============================================================================
@@ -240,6 +243,14 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createInstance(
 
     // Create instance using the description
     return createInstance(description, sampleRate, blockSize, errorMessage);
+}
+
+std::unique_ptr<juce::AudioPluginInstance> PluginHost::createPlugin(const juce::PluginDescription& description)
+{
+    juce::String errorMessage;
+    // Use default sample rate and block size if not specified
+    // Ideally these should come from the Engine, but for state restoration this is often acceptable initially
+    return createInstance(description, 44100.0, 512, errorMessage);
 }
 
 } // namespace zenith

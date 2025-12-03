@@ -3,7 +3,7 @@
 
     AudioAnalysisService.h
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
+
 
     Service for analyzing audio files using Python + librosa
     Integrates with Grok for AI-powered feedback

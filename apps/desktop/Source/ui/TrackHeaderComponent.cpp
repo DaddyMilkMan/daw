@@ -278,25 +278,25 @@ void TrackHeaderComponent::valueTreePropertyChanged(juce::ValueTree& tree, const
 void TrackHeaderComponent::onNameChanged()
 {
     auto newName = nameLabel_.getText();
-    // projectState_.setTrackName(trackId_, newName, "Change Track Name"); // Disabled due to missing API
+    projectState_.renameTrack(trackId_, newName, "Change Track Name");
 }
 
 void TrackHeaderComponent::onMuteClicked()
 {
     bool newMuted = !isMuted_;  // Toggle current state
-    // projectState_.setTrackMute(trackId_, newMuted, "Toggle Mute"); // Disabled
+    projectState_.setTrackMute(trackId_, newMuted, "Toggle Mute");
 }
 
 void TrackHeaderComponent::onSoloClicked()
 {
     bool newSoloed = !isSoloed_;  // Toggle current state
-    // projectState_.setTrackSolo(trackId_, newSoloed, "Toggle Solo"); // Disabled
+    projectState_.setTrackSolo(trackId_, newSoloed, "Toggle Solo");
 }
 
 void TrackHeaderComponent::onArmClicked()
 {
     bool newArmed = !isArmed_;  // Toggle current state
-    // projectState_.setTrackArmed(trackId_, newArmed, "Toggle Record Arm"); // Disabled
+    projectState_.setTrackArmed(trackId_, newArmed, "Toggle Record Arm");
 }
 
 //==============================================================================
@@ -309,18 +309,22 @@ void TrackHeaderComponent::updateFromState()
         return;
 
     // Update name
-    // juce::String name = trackNode_[ProjectState::PROP_NAME].toString(); // Disabled missing prop
-    // if (nameLabel_.getText() != name)
-    //    nameLabel_.setText(name, juce::dontSendNotification);
+    juce::String name = trackNode_[ProjectState::PROP_NAME].toString();
+    if (nameLabel_.getText() != name)
+       nameLabel_.setText(name, juce::dontSendNotification);
 
     // Update color
-    // int colourInt = trackNode_[ProjectState::PROP_COLOUR]; // Disabled
-    // trackColour_ = juce::Colour(static_cast<juce::uint32>(colourInt));
+    if (trackNode_.hasProperty(ProjectState::PROP_COLOR)) {
+        juce::String colorStr = trackNode_[ProjectState::PROP_COLOR].toString();
+        trackColour_ = juce::Colour::fromString(colorStr);
+    } else {
+        trackColour_ = juce::Colours::grey;
+    }
 
     // Update button states
-    // isMuted_ = trackNode_[ProjectState::PROP_MUTE]; // Disabled
-    // isSoloed_ = trackNode_[ProjectState::PROP_SOLO];
-    // isArmed_ = trackNode_[ProjectState::PROP_ARMED];
+    isMuted_ = trackNode_[ProjectState::PROP_MUTE];
+    isSoloed_ = trackNode_[ProjectState::PROP_SOLO];
+    isArmed_ = trackNode_[ProjectState::PROP_ARMED];
 
     // Update button toggle states
     muteButton_.setToggleState(isMuted_);

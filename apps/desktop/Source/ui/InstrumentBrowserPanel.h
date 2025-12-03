@@ -2,17 +2,63 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../../include/Engine.h"
 #include "../../include/ProjectState.h"
+#include "../instruments/InstrumentRegistry.h"
 
 namespace zenith {
+
 class InstrumentBrowserPanel : public juce::Component {
 public:
     InstrumentBrowserPanel(Engine& engine, ProjectState& state) {
         juce::ignoreUnused(engine, state);
+        refreshInstruments();
     }
+
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::black);
+        g.fillAll(juce::Colours::black); // Dark background
+        
+        // Header
+        g.setColour(juce::Colours::darkgrey);
+        g.fillRect(0, 0, getWidth(), 30);
+        
         g.setColour(juce::Colours::white);
-        g.drawText("Instrument Browser (Stub)", getLocalBounds(), juce::Justification::centred, true);
+        g.setFont(juce::Font(16.0f, juce::Font::bold));
+        g.drawText("Instruments", 10, 0, getWidth() - 20, 30, juce::Justification::centredLeft, true);
+
+        // List
+        g.setFont(juce::Font(14.0f));
+        int y = 40;
+        
+        if (instrumentIds.isEmpty()) {
+             g.setColour(juce::Colours::grey);
+             g.drawText("No instruments found.", 0, 40, getWidth(), 40, juce::Justification::centred, true);
+             return;
+        }
+
+        for (const auto& id : instrumentIds) {
+            // Simple hover effect could be added here if we tracked mouse
+            g.setColour(juce::Colours::white);
+            g.drawText(id, 20, y, getWidth() - 40, 24, juce::Justification::left, true);
+            
+            // Separator
+            g.setColour(juce::Colours::white.withAlpha(0.1f));
+            g.fillRect(10, y + 24, getWidth() - 20, 1);
+            
+            y += 28;
+        }
     }
+    
+    void refreshInstruments() {
+        // Fetch available instruments from the registry
+        instrumentIds = InstrumentRegistry::getInstance().getInstrumentIds();
+        repaint();
+    }
+    
+    void mouseDown(const juce::MouseEvent& e) override {
+        // Simple click handling to refresh or select (future)
+        refreshInstruments();
+    }
+
+private:
+    juce::StringArray instrumentIds;
 };
 }

@@ -283,12 +283,12 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
         : juce::Thread("BankLoader"), processor(owner), bankFile(file) {}
 
     void run() override {
-      auto bankData = std::make_unique<SampleBankData>();
+      auto bankData = std::make_shared<SampleBankData>();
 
       if (processor.parseBankFile(bankFile, *bankData)) {
         // Apply on message thread
         juce::MessageManager::callAsync(
-            [this, data = std::move(bankData)]() mutable {
+            [this, data = bankData]() mutable {
               processor.applyBankData(std::move(data));
               processor.isLoadingPatch.store(false);
             });
@@ -325,7 +325,7 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
           bankName(name) {}
 
     void run() override {
-      auto bankData = std::make_unique<SampleBankData>();
+      auto bankData = std::make_shared<SampleBankData>();
       bankData->bankName = bankName;
 
       auto json = juce::JSON::parse(jsonString);
@@ -337,8 +337,8 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
         if (processor.parseBankJson(json, baseDir, *bankData)) {
           // Apply on message thread
           juce::MessageManager::callAsync(
-              [this, data = std::move(bankData)]() mutable {
-                processor.applyBankData(std::move(data));
+              [this, data = bankData]() mutable {
+                processor.applyBankData(data);
                 processor.isLoadingPatch.store(false);
               });
           return;
@@ -445,7 +445,7 @@ bool ZenithSamplerProcessor::parseBankJson(const juce::var &json,
 }
 
 void ZenithSamplerProcessor::applyBankData(
-    std::unique_ptr<SampleBankData> bankData) {
+    std::shared_ptr<SampleBankData> bankData) {
   if (bankData == nullptr)
     return;
 

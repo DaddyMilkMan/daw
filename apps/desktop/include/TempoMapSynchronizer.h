@@ -51,7 +51,7 @@ public:
      * @param projectState Reference to project state (must outlive this object)
      * @param tempoMap Reference to engine's tempo map (must outlive this object)
      */
-    TempoMapSynchronizer(ProjectState& projectState, TempoMap& tempoMap);
+    TempoMapSynchronizer(ProjectState& projectState, zenith::TempoMap& tempoMap);
 
     /**
      * @brief Destructor
@@ -106,7 +106,7 @@ private:
     //==========================================================================
 
     ProjectState& projectState;
-    TempoMap& tempoMap;
+    zenith::TempoMap& tempoMap;
 
     bool isActive = false;
 

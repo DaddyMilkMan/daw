@@ -134,6 +134,7 @@ private:
     juce::var setTrackVolume(const juce::var& params);
     juce::var setTrackPan(const juce::var& params);
     juce::var exportAudio(const juce::var& params);
+    juce::var separateTrack(const juce::var& params);
 
     // Clip commands
     juce::var listClips(const juce::var& params);
@@ -141,6 +142,15 @@ private:
     juce::var deleteClip(const juce::var& params);
     juce::var splitClip(const juce::var& params);
     juce::var moveClip(const juce::var& params);
+    juce::var resizeClip(const juce::var& params);
+
+    // Transport commands
+    juce::var play(const juce::var& params);
+    juce::var stop(const juce::var& params);
+    juce::var record(const juce::var& params);
+    juce::var rewind(const juce::var& params);
+    juce::var setLoop(const juce::var& params);
+    juce::var setTimeSignature(const juce::var& params);
 
     // Session/project commands
     juce::var getSessionGraph(const juce::var& params);
@@ -183,6 +193,19 @@ private:
     juce::var setNoteLength(const juce::var& params);
     juce::var getMidiData(const juce::var& params);
     juce::var setClipNotes(const juce::var& params);
+
+    // Preset management
+    juce::var listPresets(const juce::var& params);
+    juce::var loadPreset(const juce::var& params);
+    juce::var savePreset(const juce::var& params);
+    juce::var createPreset(const juce::var& params);
+    juce::var deletePreset(const juce::var& params);
+    juce::var generatePreset(const juce::var& params);
+
+    // Instrument parameters
+    juce::var getInstrumentParameters(const juce::var& params);
+    juce::var setInstrumentParameter(const juce::var& params);
+    juce::var getInstrumentParameterSchema(const juce::var& params);
 
     //==============================================================================
     // Helper methods

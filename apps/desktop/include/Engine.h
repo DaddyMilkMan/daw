@@ -81,6 +81,11 @@ public:
   Engine();
   ~Engine() override;
 
+  /**
+   * @brief Get the plugin format manager
+   */
+  juce::AudioPluginFormatManager& getPluginFormatManager();
+
   //==========================================================================
   // Initialization / Shutdown
   //==========================================================================
@@ -290,6 +295,20 @@ public:
    * tracks
    */
   juce::String createTrack(const juce::String &name, const juce::String &type);
+
+  /**
+   * @brief Add a pre-created track to the engine
+   * @param track Unique pointer to track
+   * @note Message thread only; used by TrackStateSynchronizer
+   */
+  void addTrack(std::unique_ptr<zenith::Track> track);
+
+  /**
+   * @brief Remove a track from the engine
+   * @param index Index of track to remove
+   * @note Message thread only; used by TrackStateSynchronizer
+   */
+  void removeTrack(int index);
 
   //==========================================================================
   // Aux Bus Management (MESSAGE THREAD ONLY)
@@ -583,6 +602,12 @@ private:
    */
   void prepareBuffersForOfflineRender(int blockSize, int numChannels);
 
+  //==========================================================================
+  // Plugin Management
+  //==========================================================================
+
+
+
   /**
    * @brief Render a block of audio into the output buffer
    * @param outputBuffer Buffer to render into
@@ -673,6 +698,11 @@ private:
   std::vector<std::unique_ptr<zenith::AuxBus>> auxBuses_;
   std::vector<juce::AudioBuffer<float>>
       auxBusBuffers_; // Pre-allocated buffers for aux buses
+
+  // Master bus plugins
+  std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
+  juce::CriticalSection masterPluginLock_;
+  juce::AudioBuffer<float> masterPluginBuffer_;
 
   // Phase 11: Master metering (atomic for lock-free GUI access)
   std::atomic<float> masterLevel_{0.0f};

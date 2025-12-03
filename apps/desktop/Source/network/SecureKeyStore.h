@@ -3,7 +3,7 @@
 
     SecureKeyStore.h
     Created: 2025-11-29
-    Author:  Rachel Thompson (Security Team)
+
 
     Platform-specific secure storage for API keys
     - Windows: DPAPI (Data Protection API)

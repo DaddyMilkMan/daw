@@ -8,6 +8,22 @@
 ## System Architecture
 
 Zenith DAW follows a modular, event-driven architecture with clear separation between the audio engine, UI, and integration layers.
+The codebase follows the **Citadel** directory structure pattern to ensure separation of concerns and scalability.
+
+## Directory Structure (Citadel)
+
+The `apps/desktop/Source` directory is organized into distinct domains:
+
+*   **`ui/`**: All user interface components (Views, Editors, Panels).
+*   **`engine/`**: Core audio logic (Engine, ProjectState, Track, Clip).
+*   **`instruments/`**: Built-in synthesizers and samplers.
+*   **`commands/`**: Command pattern implementation and API.
+*   **`network/`**: AI bridge and network services.
+*   **`rendering/`**: Skia context management.
+
+Headers in `apps/desktop/include` mirror this structure:
+*   **`include/ui/`**: Public UI headers.
+*   **`include/`**: Core engine headers.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

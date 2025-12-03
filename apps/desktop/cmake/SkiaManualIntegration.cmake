@@ -17,7 +17,7 @@ set(SKIA_FOUND_AND_READY OFF)
 # ------------------------------------------------------------------------
 
 # A. Try Standard vcpkg package (unofficial-skia)
-find_package(unofficial-skia CONFIG QUIET)
+# find_package(unofficial-skia CONFIG QUIET)
 
 if(unofficial-skia_FOUND)
     message(STATUS "  Strategy: vcpkg (unofficial-skia)")

@@ -3,7 +3,7 @@
 
     GrokAPIClient.cpp
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
+
 
     Full implementation of Grok API client
 

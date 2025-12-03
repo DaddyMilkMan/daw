@@ -227,7 +227,7 @@ private:
   bool parseBankFile(const juce::File &bankFile, SampleBankData &outData);
   bool parseBankJson(const juce::var &json, const juce::File &baseDir,
                      SampleBankData &outData);
-  void applyBankData(std::unique_ptr<SampleBankData> bankData);
+  void applyBankData(std::shared_ptr<SampleBankData> bankData);
 
   //==========================================================================
   // Member variables

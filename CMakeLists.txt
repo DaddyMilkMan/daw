@@ -25,7 +25,7 @@ endif()
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" ON)
 option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
 option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
-option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" ON)
+option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
@@ -50,22 +50,19 @@ FetchContent_MakeAvailable(JUCE)
 set(ZENITH_SOURCES
     # Main
     apps/desktop/Source/Main.cpp
-    apps/desktop/Source/MainWindow.cpp
-    apps/desktop/Source/Engine.cpp
-    apps/desktop/Source/ProjectState.cpp
+    apps/desktop/Source/ui/MainWindow.cpp
+    apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/ProjectState.cpp
     apps/desktop/Source/commands/CommandAPI.cpp
     
     # UI Core
-    apps/desktop/Source/ArrangerComponent.cpp
-    apps/desktop/Source/ArrangementComponent.cpp
-    apps/desktop/Source/ui/ArrangerView.cpp
-    apps/desktop/Source/MixerComponent.cpp
-    apps/desktop/Source/PianoRollComponent.cpp
-    apps/desktop/Source/PianoRollEditor.cpp
-    # apps/desktop/Source/AutomationLaneComponent.cpp
-    # apps/desktop/Source/MarkerLaneComponent.cpp
-    # apps/desktop/Source/TempoLaneComponent.cpp
-    # apps/desktop/Source/PluginBrowserComponent.cpp
+    apps/desktop/Source/ui/ArrangerComponent.cpp
+    apps/desktop/Source/ui/MixerComponent.cpp
+    apps/desktop/Source/ui/PianoRollComponent.cpp
+    apps/desktop/Source/ui/AutomationLaneComponent.cpp
+    apps/desktop/Source/ui/MarkerLaneComponent.cpp
+    apps/desktop/Source/ui/TempoLaneComponent.cpp
+    apps/desktop/Source/ui/PluginBrowserComponent.cpp
     
     # Engine
     apps/desktop/Source/engine/Track.cpp
@@ -89,7 +86,7 @@ set(ZENITH_SOURCES
     apps/desktop/Source/instruments/ZenithSampler.cpp
     apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
     
-    # UI Components (Duplicates removed - using Source locations)
+    # UI Components
     apps/desktop/Source/ui/ClipComponent.cpp
     apps/desktop/Source/ui/MixerView.cpp
     apps/desktop/Source/ui/MixerChannelComponent.cpp
@@ -129,11 +126,11 @@ set(ZENITH_SOURCES
     apps/desktop/Source/rendering/SkiaContextManager.cpp
     
     # Synchronizers
-    apps/desktop/Source/ClipSynchronizer.cpp
-    apps/desktop/Source/TrackStateSynchronizer.cpp
-    apps/desktop/Source/TrackAutomationSynchronizer.cpp
-    # apps/desktop/Source/TempoMapSynchronizer.cpp
-    apps/desktop/Source/TempoMap.cpp
+    apps/desktop/Source/engine/ClipSynchronizer.cpp
+    apps/desktop/Source/engine/TrackStateSynchronizer.cpp
+    apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMapSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMap.cpp
 )
 
 # Test sources (optional, can be disabled)

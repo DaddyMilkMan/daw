@@ -1,0 +1,581 @@
+﻿MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
+  Main.cpp
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(868,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(869,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(870,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(871,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(990,28): warning C4244: 'argument': conversion from 'int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(990,21): warning C4244: 'argument': conversion from 'int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(106,34): warning C4251: 'SkRefCntBase::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkRefCntBase' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkImageInfo.h(199,25): warning C4251: 'SkColorInfo::fColorSpace': 'sk_sp<SkColorSpace>' needs to have dll-interface to be used by clients of 'SkColorInfo' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkColorSpace>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkMatrix.h(99,87): warning C4244: 'argument': conversion from 'int32_t' to 'SkScalar', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkMatrix.h(99,80): warning C4244: 'argument': conversion from 'int32_t' to 'SkScalar', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(664,27): warning C4251: 'SkPaint::fPathEffect': 'sk_sp<SkPathEffect>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkPathEffect>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(665,27): warning C4251: 'SkPaint::fShader': 'sk_sp<SkShader>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkShader>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(666,27): warning C4251: 'SkPaint::fMaskFilter': 'sk_sp<SkMaskFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkMaskFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(667,27): warning C4251: 'SkPaint::fColorFilter': 'sk_sp<SkColorFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkColorFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(668,27): warning C4251: 'SkPaint::fImageFilter': 'sk_sp<SkImageFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkImageFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(669,27): warning C4251: 'SkPaint::fBlender': 'sk_sp<SkBlender>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkBlender>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(272,16): warning C4251: 'SkString::fRec': 'sk_sp<SkString::Rec>' needs to have dll-interface to be used by clients of 'SkString' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkString::Rec>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(284,22): warning C4251: 'SkString::gEmptyRec': 'SkString::Rec' needs to have dll-interface to be used by clients of 'SkString' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(251,12):
+      see declaration of 'SkString::Rec'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1739,30): warning C4251: 'SkCanvas::ImageSetEntry::fImage': 'sk_sp<const SkImage>' needs to have dll-interface to be used by clients of 'SkCanvas::ImageSetEntry' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<const SkImage>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTArray.h(762,62): warning C4267: 'initializing': conversion from 'size_t' to 'const int', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTArray.h(762,62):
+      the template instantiation context (the oldest one first) is
+          C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2494,56):
+          see reference to class template instantiation 'skia_private::STArray<1,sk_sp<SkImageFilter>,true>' being compiled
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2565,21): warning C4251: 'SkCanvas::fRootDevice': 'sk_sp<SkDevice>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkDevice>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2570,46): warning C4251: 'SkCanvas::fAllocator': 'std::unique_ptr<SkRasterHandleAllocator,std::default_delete<SkRasterHandleAllocator>>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<SkRasterHandleAllocator,std::default_delete<SkRasterHandleAllocator>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2743,46): warning C4251: 'SkCanvas::fScratchGlyphRunBuilder': 'std::unique_ptr<sktext::GlyphRunBuilder,std::default_delete<sktext::GlyphRunBuilder>>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<sktext::GlyphRunBuilder,std::default_delete<sktext::GlyphRunBuilder>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1794,19): warning C4251: 'SkPath::RawIter::fIter': 'SkPath::RangeIter' needs to have dll-interface to be used by clients of 'SkPath::RawIter' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1666,11):
+      see declaration of 'SkPath::RangeIter'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1795,19): warning C4251: 'SkPath::RawIter::fEnd': 'SkPath::RangeIter' needs to have dll-interface to be used by clients of 'SkPath::RawIter' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1666,11):
+      see declaration of 'SkPath::RangeIter'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1912,36): warning C4251: 'SkPath::fPathRef': 'sk_sp<SkPathRef>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkPathRef>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1914,36): warning C4251: 'SkPath::fConvexity': 'std::atomic<unsigned char>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<unsigned char>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1915,36): warning C4251: 'SkPath::fFirstDirection': 'std::atomic<unsigned char>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<unsigned char>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\SkWeakRefCnt.h(168,34): warning C4251: 'SkWeakRefCnt::fWeakCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkWeakRefCnt' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTypeface.h(475,25): warning C4251: 'SkTypeface::fBoundsOnce': 'SkOnce' needs to have dll-interface to be used by clients of 'SkTypeface' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkOnce.h(22,7):
+      see declaration of 'SkOnce'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkFont.h(552,23): warning C4251: 'SkFont::fTypeface': 'sk_sp<SkTypeface>' needs to have dll-interface to be used by clients of 'SkFont' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkTypeface>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\modules\skcms\src\skcms_public.h(136,12): warning C4201: nonstandard extension used: nameless struct/union [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\modules\skcms\src\skcms_public.h(143,12): warning C4201: nonstandard extension used: nameless struct/union [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColorSpace.h(421,41): warning C4251: 'SkColorSpace::fLazyDstFieldsOnce': 'SkOnce' needs to have dll-interface to be used by clients of 'SkColorSpace' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkOnce.h(22,7):
+      see declaration of 'SkOnce'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColorSpace.h(266,36): warning C4251: 'SkNVRefCnt<SkColorSpace>::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkNVRefCnt<SkColorSpace>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkData.h(200,25): warning C4251: 'SkData::fSpan': 'SkSpan<std::byte>' needs to have dll-interface to be used by clients of 'SkData' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkSpan_impl.h(65,7):
+      see declaration of 'SkSpan<std::byte>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkData.h(26,36): warning C4251: 'SkNVRefCnt<SkData>::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkNVRefCnt<SkData>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\GrContextOptions.h(87,29): warning C4251: 'GrContextOptions::fVulkanVMALargeHeapBlockSize': 'std::optional<size_t>' needs to have dll-interface to be used by clients of 'GrContextOptions' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\optional(227,7):
+      see declaration of 'std::optional<size_t>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1000,43): warning C4251: 'GrDirectContext::fDeleteCallbackHelper': 'std::unique_ptr<GrDirectContext::DeleteCallbackHelper,std::default_delete<GrDirectContext::DeleteCallbackHelper>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrDirectContext::DeleteCallbackHelper,std::default_delete<GrDirectContext::DeleteCallbackHelper>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1002,45): warning C4251: 'GrDirectContext::fDirectContextID': 'GrDirectContext::DirectContextID' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(929,11):
+      see declaration of 'GrDirectContext::DirectContextID'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1007,47): warning C4251: 'GrDirectContext::fTaskGroup': 'std::unique_ptr<SkTaskGroup,std::default_delete<SkTaskGroup>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<SkTaskGroup,std::default_delete<SkTaskGroup>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1008,47): warning C4251: 'GrDirectContext::fStrikeCache': 'std::unique_ptr<sktext::gpu::StrikeCache,std::default_delete<sktext::gpu::StrikeCache>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<sktext::gpu::StrikeCache,std::default_delete<sktext::gpu::StrikeCache>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1009,47): warning C4251: 'GrDirectContext::fGpu': 'std::unique_ptr<GrGpu,std::default_delete<GrGpu>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrGpu,std::default_delete<GrGpu>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1010,47): warning C4251: 'GrDirectContext::fResourceCache': 'std::unique_ptr<GrResourceCache,std::default_delete<GrResourceCache>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrResourceCache,std::default_delete<GrResourceCache>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1011,47): warning C4251: 'GrDirectContext::fResourceProvider': 'std::unique_ptr<GrResourceProvider,std::default_delete<GrResourceProvider>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrResourceProvider,std::default_delete<GrResourceProvider>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1025,50): warning C4251: 'GrDirectContext::fMappedBufferManager': 'std::unique_ptr<GrClientMappedBufferManager,std::default_delete<GrClientMappedBufferManager>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrClientMappedBufferManager,std::default_delete<GrClientMappedBufferManager>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1026,37): warning C4251: 'GrDirectContext::fAtlasManager': 'std::unique_ptr<GrAtlasManager,std::default_delete<GrAtlasManager>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrAtlasManager,std::default_delete<GrAtlasManager>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1029,55): warning C4251: 'GrDirectContext::fSmallPathAtlasMgr': 'std::unique_ptr<skgpu::ganesh::SmallPathAtlasMgr,std::default_delete<skgpu::ganesh::SmallPathAtlasMgr>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<skgpu::ganesh::SmallPathAtlasMgr,std::default_delete<skgpu::ganesh::SmallPathAtlasMgr>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(60,39): warning C4275: non dll-interface class 'GrRecordingContext' used as base for dll-interface class 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\GrRecordingContext.h(49,7):
+      see declaration of 'GrRecordingContext'
+      C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(60,14):
+      see declaration of 'GrDirectContext'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(134,19): warning C4251: 'GrBackendFormat::fFormatData': 'SkAnySubclass<GrBackendFormatData,80>' needs to have dll-interface to be used by clients of 'GrBackendFormat' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendFormatData,80>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(269,23): warning C4251: 'GrBackendTexture::fLabel': 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' needs to have dll-interface to be used by clients of 'GrBackendTexture' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(541,7):
+      see declaration of 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(273,20): warning C4251: 'GrBackendTexture::fTextureData': 'SkAnySubclass<GrBackendTextureData,176>' needs to have dll-interface to be used by clients of 'GrBackendTexture' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendTextureData,176>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(402,25): warning C4251: 'GrBackendRenderTarget::fRTData': 'SkAnySubclass<GrBackendRenderTargetData,176>' needs to have dll-interface to be used by clients of 'GrBackendRenderTarget' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendRenderTargetData,176>'
+  
+C:\zenith\daw\apps\desktop\Source\Main.cpp(33,16): error C2555: 'ZenithApplication::getApplicationName': overriding virtual function return type differs and is not covariant from 'juce::JUCEApplicationBase::getApplicationName' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\build\_deps\juce-src\modules\juce_events\messages\juce_ApplicationBase.h(112,26):
+      see declaration of 'juce::JUCEApplicationBase::getApplicationName'
+  
+C:\zenith\daw\apps\desktop\Source\Main.cpp(34,16): error C2555: 'ZenithApplication::getApplicationVersion': overriding virtual function return type differs and is not covariant from 'juce::JUCEApplicationBase::getApplicationVersion' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\build\_deps\juce-src\modules\juce_events\messages\juce_ApplicationBase.h(115,26):
+      see declaration of 'juce::JUCEApplicationBase::getApplicationVersion'
+  
+C:\zenith\daw\apps\desktop\Source\Main.cpp(95,27): error C2248: 'MainWindow::saveProject': cannot access private member declared in class 'MainWindow' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\MainWindow.h(271,8):
+      see declaration of 'MainWindow::saveProject'
+      C:\zenith\daw\apps\desktop\include\MainWindow.h(218,7):
+      see declaration of 'MainWindow'
+  
+  MainWindow.cpp
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(868,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(869,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(870,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(871,22): warning C4244: '=': conversion from 'const int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(990,28): warning C4244: 'argument': conversion from 'int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRect.h(990,21): warning C4244: 'argument': conversion from 'int32_t' to 'float', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(106,34): warning C4251: 'SkRefCntBase::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkRefCntBase' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkImageInfo.h(199,25): warning C4251: 'SkColorInfo::fColorSpace': 'sk_sp<SkColorSpace>' needs to have dll-interface to be used by clients of 'SkColorInfo' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkColorSpace>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkMatrix.h(99,87): warning C4244: 'argument': conversion from 'int32_t' to 'SkScalar', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkMatrix.h(99,80): warning C4244: 'argument': conversion from 'int32_t' to 'SkScalar', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(664,27): warning C4251: 'SkPaint::fPathEffect': 'sk_sp<SkPathEffect>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkPathEffect>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(665,27): warning C4251: 'SkPaint::fShader': 'sk_sp<SkShader>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkShader>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(666,27): warning C4251: 'SkPaint::fMaskFilter': 'sk_sp<SkMaskFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkMaskFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(667,27): warning C4251: 'SkPaint::fColorFilter': 'sk_sp<SkColorFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkColorFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(668,27): warning C4251: 'SkPaint::fImageFilter': 'sk_sp<SkImageFilter>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkImageFilter>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(669,27): warning C4251: 'SkPaint::fBlender': 'sk_sp<SkBlender>' needs to have dll-interface to be used by clients of 'SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkBlender>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(272,16): warning C4251: 'SkString::fRec': 'sk_sp<SkString::Rec>' needs to have dll-interface to be used by clients of 'SkString' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkString::Rec>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(284,22): warning C4251: 'SkString::gEmptyRec': 'SkString::Rec' needs to have dll-interface to be used by clients of 'SkString' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkString.h(251,12):
+      see declaration of 'SkString::Rec'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1739,30): warning C4251: 'SkCanvas::ImageSetEntry::fImage': 'sk_sp<const SkImage>' needs to have dll-interface to be used by clients of 'SkCanvas::ImageSetEntry' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<const SkImage>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTArray.h(762,62): warning C4267: 'initializing': conversion from 'size_t' to 'const int', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTArray.h(762,62):
+      the template instantiation context (the oldest one first) is
+          C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2494,56):
+          see reference to class template instantiation 'skia_private::STArray<1,sk_sp<SkImageFilter>,true>' being compiled
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2565,21): warning C4251: 'SkCanvas::fRootDevice': 'sk_sp<SkDevice>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkDevice>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2570,46): warning C4251: 'SkCanvas::fAllocator': 'std::unique_ptr<SkRasterHandleAllocator,std::default_delete<SkRasterHandleAllocator>>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<SkRasterHandleAllocator,std::default_delete<SkRasterHandleAllocator>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(2743,46): warning C4251: 'SkCanvas::fScratchGlyphRunBuilder': 'std::unique_ptr<sktext::GlyphRunBuilder,std::default_delete<sktext::GlyphRunBuilder>>' needs to have dll-interface to be used by clients of 'SkCanvas' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<sktext::GlyphRunBuilder,std::default_delete<sktext::GlyphRunBuilder>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1794,19): warning C4251: 'SkPath::RawIter::fIter': 'SkPath::RangeIter' needs to have dll-interface to be used by clients of 'SkPath::RawIter' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1666,11):
+      see declaration of 'SkPath::RangeIter'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1795,19): warning C4251: 'SkPath::RawIter::fEnd': 'SkPath::RangeIter' needs to have dll-interface to be used by clients of 'SkPath::RawIter' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1666,11):
+      see declaration of 'SkPath::RangeIter'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1912,36): warning C4251: 'SkPath::fPathRef': 'sk_sp<SkPathRef>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkPathRef>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1914,36): warning C4251: 'SkPath::fConvexity': 'std::atomic<unsigned char>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<unsigned char>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkPath.h(1915,36): warning C4251: 'SkPath::fFirstDirection': 'std::atomic<unsigned char>' needs to have dll-interface to be used by clients of 'SkPath' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<unsigned char>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\private\SkWeakRefCnt.h(168,34): warning C4251: 'SkWeakRefCnt::fWeakCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkWeakRefCnt' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTypeface.h(475,25): warning C4251: 'SkTypeface::fBoundsOnce': 'SkOnce' needs to have dll-interface to be used by clients of 'SkTypeface' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkOnce.h(22,7):
+      see declaration of 'SkOnce'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkFont.h(552,23): warning C4251: 'SkFont::fTypeface': 'sk_sp<SkTypeface>' needs to have dll-interface to be used by clients of 'SkFont' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkRefCnt.h(220,44):
+      see declaration of 'sk_sp<SkTypeface>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\modules\skcms\src\skcms_public.h(136,12): warning C4201: nonstandard extension used: nameless struct/union [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\modules\skcms\src\skcms_public.h(143,12): warning C4201: nonstandard extension used: nameless struct/union [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColorSpace.h(421,41): warning C4251: 'SkColorSpace::fLazyDstFieldsOnce': 'SkOnce' needs to have dll-interface to be used by clients of 'SkColorSpace' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkOnce.h(22,7):
+      see declaration of 'SkOnce'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColorSpace.h(266,36): warning C4251: 'SkNVRefCnt<SkColorSpace>::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkNVRefCnt<SkColorSpace>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkData.h(200,25): warning C4251: 'SkData::fSpan': 'SkSpan<std::byte>' needs to have dll-interface to be used by clients of 'SkData' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkSpan_impl.h(65,7):
+      see declaration of 'SkSpan<std::byte>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkData.h(26,36): warning C4251: 'SkNVRefCnt<SkData>::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkNVRefCnt<SkData>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\GrContextOptions.h(87,29): warning C4251: 'GrContextOptions::fVulkanVMALargeHeapBlockSize': 'std::optional<size_t>' needs to have dll-interface to be used by clients of 'GrContextOptions' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\optional(227,7):
+      see declaration of 'std::optional<size_t>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1000,43): warning C4251: 'GrDirectContext::fDeleteCallbackHelper': 'std::unique_ptr<GrDirectContext::DeleteCallbackHelper,std::default_delete<GrDirectContext::DeleteCallbackHelper>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrDirectContext::DeleteCallbackHelper,std::default_delete<GrDirectContext::DeleteCallbackHelper>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1002,45): warning C4251: 'GrDirectContext::fDirectContextID': 'GrDirectContext::DirectContextID' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(929,11):
+      see declaration of 'GrDirectContext::DirectContextID'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1007,47): warning C4251: 'GrDirectContext::fTaskGroup': 'std::unique_ptr<SkTaskGroup,std::default_delete<SkTaskGroup>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<SkTaskGroup,std::default_delete<SkTaskGroup>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1008,47): warning C4251: 'GrDirectContext::fStrikeCache': 'std::unique_ptr<sktext::gpu::StrikeCache,std::default_delete<sktext::gpu::StrikeCache>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<sktext::gpu::StrikeCache,std::default_delete<sktext::gpu::StrikeCache>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1009,47): warning C4251: 'GrDirectContext::fGpu': 'std::unique_ptr<GrGpu,std::default_delete<GrGpu>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrGpu,std::default_delete<GrGpu>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1010,47): warning C4251: 'GrDirectContext::fResourceCache': 'std::unique_ptr<GrResourceCache,std::default_delete<GrResourceCache>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrResourceCache,std::default_delete<GrResourceCache>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1011,47): warning C4251: 'GrDirectContext::fResourceProvider': 'std::unique_ptr<GrResourceProvider,std::default_delete<GrResourceProvider>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrResourceProvider,std::default_delete<GrResourceProvider>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1025,50): warning C4251: 'GrDirectContext::fMappedBufferManager': 'std::unique_ptr<GrClientMappedBufferManager,std::default_delete<GrClientMappedBufferManager>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrClientMappedBufferManager,std::default_delete<GrClientMappedBufferManager>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1026,37): warning C4251: 'GrDirectContext::fAtlasManager': 'std::unique_ptr<GrAtlasManager,std::default_delete<GrAtlasManager>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<GrAtlasManager,std::default_delete<GrAtlasManager>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(1029,55): warning C4251: 'GrDirectContext::fSmallPathAtlasMgr': 'std::unique_ptr<skgpu::ganesh::SmallPathAtlasMgr,std::default_delete<skgpu::ganesh::SmallPathAtlasMgr>>' needs to have dll-interface to be used by clients of 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<skgpu::ganesh::SmallPathAtlasMgr,std::default_delete<skgpu::ganesh::SmallPathAtlasMgr>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(60,39): warning C4275: non dll-interface class 'GrRecordingContext' used as base for dll-interface class 'GrDirectContext' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\gpu\ganesh\GrRecordingContext.h(49,7):
+      see declaration of 'GrRecordingContext'
+      C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrDirectContext.h(60,14):
+      see declaration of 'GrDirectContext'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(134,19): warning C4251: 'GrBackendFormat::fFormatData': 'SkAnySubclass<GrBackendFormatData,80>' needs to have dll-interface to be used by clients of 'GrBackendFormat' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendFormatData,80>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(269,23): warning C4251: 'GrBackendTexture::fLabel': 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>' needs to have dll-interface to be used by clients of 'GrBackendTexture' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\xstring(541,7):
+      see declaration of 'std::basic_string<char,std::char_traits<char>,std::allocator<char>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(273,20): warning C4251: 'GrBackendTexture::fTextureData': 'SkAnySubclass<GrBackendTextureData,176>' needs to have dll-interface to be used by clients of 'GrBackendTexture' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendTextureData,176>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\gpu\ganesh\GrBackendSurface.h(402,25): warning C4251: 'GrBackendRenderTarget::fRTData': 'SkAnySubclass<GrBackendRenderTargetData,176>' needs to have dll-interface to be used by clients of 'GrBackendRenderTarget' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkAnySubclass.h(25,7):
+      see declaration of 'SkAnySubclass<GrBackendRenderTargetData,176>'
+  
+C:\zenith\daw\apps\desktop\Source\ui\InstrumentBrowserPanel.h(24,29): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\InstrumentBrowserPanel.h(28,29): warning C4996: 'juce::Font::Font': Use the constructor that takes a FontOptions argument [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTextBlob.h(320,35): warning C4251: 'SkTextBlob::fCacheID': 'std::atomic<unsigned int>' needs to have dll-interface to be used by clients of 'SkTextBlob' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<unsigned int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTextBlob.h(321,40): warning C4251: 'SkTextBlob::fPurgeDelegate': 'std::atomic<SkTextBlob::PurgeDelegate>' needs to have dll-interface to be used by clients of 'SkTextBlob' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<SkTextBlob::PurgeDelegate>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTextBlob.h(42,40): warning C4251: 'SkNVRefCnt<SkTextBlob>::fRefCnt': 'std::atomic<int>' needs to have dll-interface to be used by clients of 'SkNVRefCnt<SkTextBlob>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\atomic(2131,8):
+      see declaration of 'std::atomic<int>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\include\core\SkTextBlob.h(551,40): warning C4251: 'SkTextBlobBuilder::fStorage': 'skia_private::AutoTMalloc<uint8_t,void>' needs to have dll-interface to be used by clients of 'SkTextBlobBuilder' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\include\private\base\SkTemplates.h(291,7):
+      see declaration of 'skia_private::AutoTMalloc<uint8_t,void>'
+  
+C:\zenith\daw\apps\desktop\Source\MainWindow.cpp(743,18): error C2039: 'browseForFileToSave': is not a member of 'juce::FileChooser' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+      C:\zenith\daw\build\_deps\juce-src\modules\juce_gui_basics\filebrowser\juce_FileChooser.h(64,17):
+      see declaration of 'juce::FileChooser'
+  
+  TrackPluginState.cpp
+  RegisterBuiltInInstruments.cpp
+C:\zenith\daw\apps\desktop\Source\utils\PresetGenerator.h(48,63): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\utils\PresetGenerator.h(49,78): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp')
+  
+  ZenithSampler.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(1106,15): warning C4189: 'bankLoFiKeysJson': local variable is initialized but not referenced [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(1133,15): warning C4189: 'bankFXJson': local variable is initialized but not referenced [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(1080,15): warning C4189: 'bank808Json': local variable is initialized but not referenced [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3630,35): warning C4996: 'juce::AudioParameterFloat::AudioParameterFloat': Prefer the signature taking an Attributes argument [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithSampler.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\memory(3630,35):
+      the template instantiation context (the oldest one first) is
+          C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(72,19):
+          see reference to function template instantiation 'std::unique_ptr<juce::AudioParameterFloat,std::default_delete<juce::AudioParameterFloat>> std::make_unique<juce::AudioParameterFloat,const char(&)[7],const char(&)[7],juce::NormalisableRange<float>,float,const char(&)[2],0>(const char (&)[7],const char (&)[7],juce::NormalisableRange<float> &&,float &&,const char (&)[2])' being compiled
+  
+C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1104,23): error C2338: static_assert failed: 'The target function object type must be copy constructible (N4988 [func.wrap.func.con]/10.1).' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithSampler.cpp')
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1104,23):
+      the template instantiation context (the oldest one first) is
+          C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(343,15):
+          see reference to function template instantiation 'std::function<void (void)>::function<zenith::ZenithSamplerProcessor::loadBankFromJsonAsync::JsonLoadingThread::run::<lambda_1>,0>(_Fx &&)' being compiled
+          with
+          [
+              _Fx=zenith::ZenithSamplerProcessor::loadBankFromJsonAsync::JsonLoadingThread::run::<lambda_1>
+          ]
+              C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(339,42):
+              see the first reference to 'std::function<void (void)>::function' in 'zenith::ZenithSamplerProcessor::loadBankFromJsonAsync::JsonLoadingThread::run'
+  
+  ZenithSamplerEditor.cpp

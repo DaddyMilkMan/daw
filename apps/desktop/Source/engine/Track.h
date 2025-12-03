@@ -199,6 +199,11 @@ public:
    */
   void loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost);
 
+  // Single plugin state helpers
+  void loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host);
+  static void savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& pluginTree);
+
+
 private:
   //==============================================================================
   // Track properties
@@ -209,7 +214,7 @@ private:
 
   //==============================================================================
   // Audio processing state
-  double currentSampleRate = 44100.0;
+  double currentSampleRate = 48000.0;
   int currentBlockSize = 512;
 
   //==============================================================================

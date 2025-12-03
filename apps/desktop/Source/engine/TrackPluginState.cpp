@@ -3,10 +3,17 @@
  * @brief Plugin state persistence implementation (was stub at Track.cpp:523)
  */
 
+#include "Track.h"
+#include "PluginHost.h"
+#include "ZenithLogger.h"
+#include <juce_core/juce_core.h>
+
+namespace zenith {
+
 // Add this method to Track class
 
 void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host) {
-    ZENITH_LOG_INFO("Loading plugin state for track: " + trackNode_.getProperty("name").toString());
+    ZENITH_LOG_INFO("Loading plugin state for track: " + trackName);
     
     if (!pluginTree.isValid()) {
         ZENITH_LOG_ERROR("Invalid plugin state tree");
@@ -48,8 +55,14 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
         auto* blob = stateData.getBinaryData();
         if (blob && blob->getSize() > 0) {
             juce::MemoryBlock block(*blob);
-            instance->setStateInformation(block.getData(), (int)block.getSize());
-            ZENITH_LOG_INFO("Restored plugin state (" + juce::String(block.getSize()) + " bytes)");
+            try {
+                instance->setStateInformation(block.getData(), (int)block.getSize());
+                ZENITH_LOG_INFO("Restored plugin state (" + juce::String(block.getSize()) + " bytes)");
+            } catch (const std::exception& e) {
+                ZENITH_LOG_ERROR("Exception restoring plugin state: " + juce::String(e.what()));
+            } catch (...) {
+                ZENITH_LOG_ERROR("Unknown exception restoring plugin state");
+            }
         }
     } else {
         ZENITH_LOG_WARNING("No state data found for plugin: " + pluginName);
@@ -114,3 +127,5 @@ void Track::savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& 
     
     ZENITH_LOG_INFO("Saved plugin state: " + description.name);
 }
+
+} // namespace zenith

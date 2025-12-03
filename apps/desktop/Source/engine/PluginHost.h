@@ -91,6 +91,12 @@ public:
      * @return Const reference to known plugins
      */
     const juce::KnownPluginList& getKnownPlugins() const { return knownPlugins; }
+    juce::KnownPluginList& getKnownPlugins() { return knownPlugins; }
+
+    /**
+     * @brief Get the plugin format manager
+     */
+    juce::AudioPluginFormatManager& getFormatManager() { return formatManager; }
 
     /**
      * @brief Get plugin descriptions as an array
@@ -144,6 +150,20 @@ public:
         int blockSize,
         juce::String& errorMessage);
 
+    //==============================================================================
+    // Async Scanning
+    //==============================================================================
+    void scanAsync(std::function<void(int, int, const juce::String&)> progressCallback);
+    void cancelScan();
+    bool isScanningPlugins() const;
+
+    // Internal helpers
+    bool knowsAboutPlugin(const juce::PluginDescription& desc) const;
+    void addToKnownPlugins(const juce::PluginDescription& desc);
+
+    // Convenience wrapper
+    std::unique_ptr<juce::AudioPluginInstance> createPlugin(const juce::PluginDescription& description);
+
 private:
     //==============================================================================
     // Member Variables
@@ -158,8 +178,14 @@ private:
     // VST3 format (raw pointer owned by formatManager)
     juce::AudioPluginFormat* vst3Format = nullptr;
 
+    // Scanning state
+    std::atomic<bool> isScanning_{false};
+    std::atomic<bool> shouldCancel_{false};
+    std::thread scanThread_;
+
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginHost)
+    JUCE_DECLARE_WEAK_REFERENCEABLE(PluginHost)
 };
 
 } // namespace zenith

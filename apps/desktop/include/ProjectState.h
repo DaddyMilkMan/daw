@@ -28,6 +28,8 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_graphics/juce_graphics.h>
 
 //==============================================================================
 /**
@@ -167,6 +169,16 @@ public:
    * @return Path to the saved crash dump
    */
   juce::File saveCrashDump();
+
+  /**
+   * @brief Get the current project file
+   */
+  juce::File getProjectFile() const { return projectFile; }
+
+  /**
+   * @brief Set the current project file
+   */
+  void setProjectFile(const juce::File& file) { projectFile = file; }
 
   /**
    * @brief Check if project has unsaved changes
@@ -425,6 +437,17 @@ public:
    */
   void setClipRange(const juce::String &clipId, double newStartBeats,
                     double newLengthBeats, const juce::String &actionName);
+
+  /**
+   * @brief Resize a clip (undoable, sample-based, same track)
+   * @param trackId Track ID
+   * @param clipId Clip ID
+   * @param newLengthSamples New length in samples
+   * @param actionName Optional undo action name
+   */
+  void resizeClip(const juce::String &trackId, const juce::String &clipId,
+                  juce::int64 newLengthSamples,
+                  const juce::String &actionName = "Resize clip");
 
   /**
    * @brief Split a clip (undoable)
@@ -891,6 +914,24 @@ public:
                     const juce::String &actionName);
 
   /**
+   * @brief Move a marker
+   * @param markerId Marker ID
+   * @param newBeats New position in beats
+   * @param actionName Undo action name
+   */
+  void moveMarker(const juce::String &markerId, double newBeats,
+                  const juce::String &actionName);
+
+  /**
+   * @brief Rename a marker
+   * @param markerId Marker ID
+   * @param newName New name
+   * @param actionName Undo action name
+   */
+  void renameMarker(const juce::String &markerId, const juce::String &newName,
+                    const juce::String &actionName);
+
+  /**
    * @brief Get all markers
    * @return ValueTree containing MARKER children
    */
@@ -1007,6 +1048,9 @@ private:
 
   // Dirty flag for unsaved changes
   std::atomic<bool> isDirty{false};
+
+  // Current project file
+  juce::File projectFile;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
 };
