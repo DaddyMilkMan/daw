@@ -89,14 +89,7 @@ struct IsAudio {};
 inline flecs::world createZenithWorld() {
     flecs::world world;
     
-#ifdef JUCE_DEBUG
-    // Enable Flecs Explorer on localhost:27750
-    // Access via browser: http://localhost:27750
-    world.set<flecs::Rest>({});
-    world.import<flecs::monitor>();
-    
-    DBG("Flecs Explorer available at: http://localhost:27750");
-#endif
+    DBG("Flecs world created successfully");
     
     return world;
 }

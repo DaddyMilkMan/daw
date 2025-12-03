@@ -29,13 +29,7 @@ public:
     ECSEngine() 
         : world_(ecs::createZenithWorld())
     {
-        // Create cached queries (CRITICAL: Do this ONCE in constructor)
-        // Cached queries are lock-free and wait-free for iteration
-        activeTracksQuery_ = world_.query_builder<const ecs::TrackState>()
-            .cached()
-            .build();
-        
-        DBG("ECSEngine: Initialized with cached queries");
+        DBG("ECSEngine: Initialized Flecs world");
     }
     
     //==========================================================================
@@ -105,31 +99,20 @@ public:
     // AUDIO THREAD: Real-Time Safe Queries
     //==========================================================================
     
-    /** Example: Iterate all active tracks (REAL-TIME SAFE) */
+    /** Example: Iterate all tracks (simplified for initial integration) */
     void processActiveTracksInAudioCallback(
         juce::AudioBuffer<float>& buffer,
         juce::int64 playheadSamples,
         int numSamples)
     {
-        // CRITICAL: Only iterate cached query, never create new queries here
-        activeTracksQuery_.each([&](flecs::entity trackEntity, const ecs::TrackState& track) {
+        // Simplified version - just demonstrates Flecs integration works
+        // In production, use cached queries for better performance
+        world_.each([&](flecs::entity trackEntity, const ecs::TrackState& track) {
             // Apply track volume/pan
             float leftGain = track.volume * (1.0f - std::max(0.0f, track.pan));
             float rightGain = track.volume * (1.0f + std::min(0.0f, track.pan));
             
-            // Find clips belonging to this track
-            trackEntity.children([&](flecs::entity clipEntity) {
-                if (const auto* clip = clipEntity.get<ecs::ClipState>()) {
-                    // Check if clip is in playback range
-                    juce::int64 clipEnd = clip->startSample + clip->lengthSample;
-                    
-                    if (playheadSamples >= clip->startSample && 
-                        playheadSamples < clipEnd) {
-                        // TODO: Render this clip into buffer
-                        // (Keep using your existing Track.cpp/Clip.cpp DSP code)
-                    }
-                }
-            });
+            // Process track audio here...
         });
     }
     
@@ -173,9 +156,6 @@ public:
     
 private:
     flecs::world world_;
-    
-    // Cached queries (created once, used in audio thread)
-    flecs::query<const ecs::TrackState> activeTracksQuery_;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ECSEngine)
 };

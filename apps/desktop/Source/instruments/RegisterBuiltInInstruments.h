@@ -30,7 +30,8 @@ namespace zenith {
  *
  * Must be called once during application startup before CommandAPI is used.
  */
-void registerBuiltInInstruments();
+class InstrumentRegistry; // Forward declaration
+void registerBuiltInInstruments(InstrumentRegistry& registry);
 
 } // namespace zenith
 

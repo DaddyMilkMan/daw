@@ -42,11 +42,8 @@ namespace zenith {
 class InstrumentRegistry
 {
 public:
-    //==========================================================================
-    /**
-     * @brief Get singleton instance
-     */
-    static InstrumentRegistry& getInstance();
+    InstrumentRegistry();
+    ~InstrumentRegistry() = default;
 
     //==========================================================================
     // Instrument Enumeration
@@ -109,9 +106,6 @@ public:
                            InstrumentFactory factory);
 
 private:
-    InstrumentRegistry();
-    ~InstrumentRegistry() = default;
-
     struct InstrumentInfo
     {
         InstrumentMetadata metadata;

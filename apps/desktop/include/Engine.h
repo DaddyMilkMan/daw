@@ -466,6 +466,12 @@ public:
    */
   zenith::PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
 
+  /**
+   * @brief Get the instrument registry
+   * @return Reference to InstrumentRegistry
+   */
+  zenith::InstrumentRegistry& getInstrumentRegistry();
+
   //==========================================================================
   // Flecs ECS Integration (Optional, Coexists with Legacy Track/Clip)
   //==========================================================================
@@ -727,6 +733,9 @@ private:
   // Phase 3: Plugin hosting
   std::unique_ptr<zenith::PluginHost> pluginHost_;
   std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
+  
+  // Instrument Registry (Level 4: No Singleton)
+  std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
   // Project state reference (non-owning, for tempo/time sig/automation access)
   ProjectState *projectState_ = nullptr;

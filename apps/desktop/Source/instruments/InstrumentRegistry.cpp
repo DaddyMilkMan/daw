@@ -20,12 +20,6 @@ InstrumentRegistry::InstrumentRegistry()
     DBG("InstrumentRegistry: Initialized");
 }
 
-InstrumentRegistry& InstrumentRegistry::getInstance()
-{
-    static InstrumentRegistry instance;
-    return instance;
-}
-
 //==============================================================================
 juce::StringArray InstrumentRegistry::getInstrumentIds() const
 {

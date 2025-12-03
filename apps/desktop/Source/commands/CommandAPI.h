@@ -46,6 +46,9 @@
 #include <memory>
 #include "../engine/Track.h"
 
+#include <unordered_map>
+#include <string>
+
 // Forward declarations
 class Engine;
 class ProjectState;
@@ -62,6 +65,22 @@ namespace zenith {
 class CommandAPI
 {
 public:
+    enum class CommandID {
+        Unknown = 0,
+        ListTracks, CreateTrack, DeleteTrack, RenameTrack, SetTrackVolume, SetTrackPan,
+        ExportAudio, SeparateTrack,
+        ListClips, CreateClip, DeleteClip, SplitClip, MoveClip, ResizeClip,
+        Play, Stop, Record, Rewind, SetLoop, SetTimeSignature,
+        GetSessionGraph, Undo, Redo, History,
+        DescribeInstrument,
+        AddPlugin, RemovePlugin, ListPlugins, SetPluginParam, GetPluginParams,
+        AddAutomationPoint, ClearAutomation, GetAutomation,
+        SetTempo, AddTempoChange, GetTempoMap, AddMarker, GetMarkers, DeleteMarker, GotoMarker,
+        AddNote, MoveNote, DeleteNote, GetNotes, SetNoteVelocity, SetNoteLength, GetMidiData, SetClipNotes,
+        ListPresets, LoadPreset, SavePreset, CreatePreset, DeletePreset, GeneratePreset,
+        GetInstrumentParameters, SetInstrumentParameter, GetInstrumentParameterSchema
+    };
+
     //==============================================================================
     CommandAPI(Engine& eng, ProjectState& state);
     ~CommandAPI();
@@ -215,12 +234,16 @@ private:
 
     Track* findTrackById(const juce::String& trackId);
     Track::Clip* findClipById(Track* track, const juce::String& clipId);
+    
+    void initializeCommandMap();
 
     //==============================================================================
     // Member variables
 
     Engine& engine;
     ProjectState& projectState;
+    
+    std::unordered_map<std::string, CommandID> commandMap;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CommandAPI)

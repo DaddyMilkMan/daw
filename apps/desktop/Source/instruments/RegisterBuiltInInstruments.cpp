@@ -19,9 +19,7 @@
 
 namespace zenith {
 
-void registerBuiltInInstruments() {
-  auto &registry = InstrumentRegistry::getInstance();
-
+void registerBuiltInInstruments(InstrumentRegistry& registry) {
   // Register ZenithPolySynth
   registry.registerInstrument(
       "zenith_poly_synth", ZenithPolySynth::createMetadata(),

@@ -16,6 +16,8 @@
 #include "../engine/PluginHost.h"
 #include "../engine/AuxBus.h"
 #include "../ui/PluginEditorWindow.h"
+#include "../instruments/InstrumentRegistry.h"
+#include "../instruments/RegisterBuiltInInstruments.h"
 
 //==============================================================================
 Engine::Engine()
@@ -29,6 +31,11 @@ Engine::Engine()
     // Phase 3: Initialize plugin host and editor window manager
     pluginHost_ = std::make_unique<zenith::PluginHost>();
     pluginEditorWindowManager_ = std::make_unique<zenith::PluginEditorWindowManager>();
+    
+    // Level 4: Initialize Instrument Registry
+    instrumentRegistry_ = std::make_unique<zenith::InstrumentRegistry>();
+    zenith::registerBuiltInInstruments(*instrumentRegistry_); // Register factories
+    DBG("Engine: InstrumentRegistry initialized");
 
     // Phase 2D: Initialize audio recording infrastructure
     // Create background thread for audio file writing
@@ -758,6 +765,12 @@ zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexce
 {
     jassert(pluginEditorWindowManager_ != nullptr);
     return *pluginEditorWindowManager_;
+}
+
+zenith::InstrumentRegistry& Engine::getInstrumentRegistry()
+{
+    jassert(instrumentRegistry_ != nullptr);
+    return *instrumentRegistry_;
 }
 
 const zenith::TempoMap& Engine::getTempoMap() const noexcept

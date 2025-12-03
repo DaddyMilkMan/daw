@@ -29,6 +29,80 @@ CommandAPI::CommandAPI(Engine& eng, ProjectState& state)
     : engine(eng), projectState(state)
 {
     DBG("CommandAPI: Initialized");
+    initializeCommandMap();
+}
+
+void CommandAPI::initializeCommandMap()
+{
+    commandMap["list_tracks"] = CommandID::ListTracks;
+    commandMap["create_track"] = CommandID::CreateTrack;
+    commandMap["delete_track"] = CommandID::DeleteTrack;
+    commandMap["rename_track"] = CommandID::RenameTrack;
+    commandMap["set_track_volume"] = CommandID::SetTrackVolume;
+    commandMap["set_track_pan"] = CommandID::SetTrackPan;
+    commandMap["export_audio"] = CommandID::ExportAudio;
+    commandMap["separate_track"] = CommandID::SeparateTrack;
+    
+    commandMap["list_clips"] = CommandID::ListClips;
+    commandMap["create_clip"] = CommandID::CreateClip; // add_clip alias? original code checked add_clip
+    commandMap["add_clip"] = CommandID::CreateClip; 
+    commandMap["delete_clip"] = CommandID::DeleteClip;
+    commandMap["split_clip"] = CommandID::SplitClip;
+    commandMap["move_clip"] = CommandID::MoveClip;
+    commandMap["resize_clip"] = CommandID::ResizeClip;
+    
+    commandMap["play"] = CommandID::Play;
+    commandMap["stop"] = CommandID::Stop;
+    commandMap["record"] = CommandID::Record;
+    commandMap["rewind"] = CommandID::Rewind;
+    commandMap["set_loop"] = CommandID::SetLoop;
+    commandMap["set_tempo"] = CommandID::SetTempo;
+    commandMap["set_time_signature"] = CommandID::SetTimeSignature;
+    
+    commandMap["get_session_graph"] = CommandID::GetSessionGraph;
+    commandMap["undo"] = CommandID::Undo;
+    commandMap["redo"] = CommandID::Redo;
+    commandMap["history"] = CommandID::History;
+    
+    commandMap["describe_instrument"] = CommandID::DescribeInstrument;
+    
+    commandMap["add_plugin"] = CommandID::AddPlugin;
+    commandMap["remove_plugin"] = CommandID::RemovePlugin;
+    commandMap["set_plugin_param"] = CommandID::SetPluginParam;
+    commandMap["get_plugin_params"] = CommandID::GetPluginParams;
+    commandMap["list_plugins"] = CommandID::ListPlugins;
+    
+    commandMap["add_automation_point"] = CommandID::AddAutomationPoint;
+    commandMap["clear_automation"] = CommandID::ClearAutomation;
+    commandMap["get_automation"] = CommandID::GetAutomation;
+    
+    commandMap["add_tempo_change"] = CommandID::AddTempoChange;
+    commandMap["get_tempo_map"] = CommandID::GetTempoMap;
+    
+    commandMap["add_marker"] = CommandID::AddMarker;
+    commandMap["get_markers"] = CommandID::GetMarkers;
+    commandMap["delete_marker"] = CommandID::DeleteMarker;
+    commandMap["goto_marker"] = CommandID::GotoMarker;
+    
+    commandMap["add_note"] = CommandID::AddNote;
+    commandMap["delete_note"] = CommandID::DeleteNote;
+    commandMap["move_note"] = CommandID::MoveNote;
+    commandMap["get_notes"] = CommandID::GetNotes;
+    commandMap["set_note_velocity"] = CommandID::SetNoteVelocity;
+    commandMap["set_note_length"] = CommandID::SetNoteLength;
+    commandMap["get_midi_data"] = CommandID::GetMidiData;
+    commandMap["set_clip_notes"] = CommandID::SetClipNotes;
+    
+    commandMap["list_presets"] = CommandID::ListPresets;
+    commandMap["load_preset"] = CommandID::LoadPreset;
+    commandMap["save_preset"] = CommandID::SavePreset;
+    commandMap["create_preset"] = CommandID::CreatePreset;
+    commandMap["delete_preset"] = CommandID::DeletePreset;
+    commandMap["generate_preset"] = CommandID::GeneratePreset;
+    
+    commandMap["get_instrument_parameters"] = CommandID::GetInstrumentParameters;
+    commandMap["set_instrument_parameter"] = CommandID::SetInstrumentParameter;
+    commandMap["get_instrument_parameter_schema"] = CommandID::GetInstrumentParameterSchema;
 }
 
 CommandAPI::~CommandAPI()
@@ -45,121 +119,91 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
     if (!request.hasProperty("command"))
         return createErrorResponse("Missing 'command' field");
 
-    juce::String command = request["command"].toString();
+    juce::String commandStr = request["command"].toString();
     juce::var params = request.hasProperty("params") ? request["params"] : juce::var();
 
-    DBG("CommandAPI: Executing command: " + command);
-
-    // Route to appropriate handler
-    // Track commands
-    if (command == "list_tracks")
-        return listTracks(params);
-    else if (command == "create_track")
-        return createTrack(params);
-    else if (command == "delete_track")
-        return deleteTrack(params);
-
-    // Clip commands
-    else if (command == "add_clip")
-        return createClip(params);
-    else if (command == "delete_clip")
-        return deleteClip(params);
-    else if (command == "move_clip")
-        return moveClip(params);
-    else if (command == "resize_clip")
-        return resizeClip(params);
-
-    // Note commands
-    else if (command == "add_note")
-        return addNote(params);
-    else if (command == "delete_note")
-        return deleteNote(params);
-    else if (command == "move_note")
-        return moveNote(params);
-    else if (command == "get_notes")
-        return getNotes(params);
-
-    // Plugin commands
-    else if (command == "add_plugin")
-        return addPlugin(params);
-    else if (command == "remove_plugin")
-        return removePlugin(params);
-    else if (command == "set_plugin_param")
-        return setPluginParam(params);
-    else if (command == "get_plugin_params")
-        return getPluginParams(params);
-
-    // Automation commands
-    else if (command == "add_automation_point")
-        return addAutomationPoint(params);
-    else if (command == "clear_automation")
-        return clearAutomation(params);
-    else if (command == "get_automation")
-        return getAutomation(params);
-
-    // Transport commands
-    else if (command == "play")
-        return play(params);
-    else if (command == "stop")
-        return stop(params);
-    else if (command == "record")
-        return record(params);
-    else if (command == "rewind")
-        return rewind(params);
-    else if (command == "set_loop")
-        return setLoop(params);
-    else if (command == "set_tempo")
-        return setTempo(params);
-    else if (command == "set_time_signature")
-        return setTimeSignature(params);
-
-    // Export commands
-    else if (command == "export_audio")
-        return exportAudio(params);
-    else if (command == "separate_track")
-        return separateTrack(params);
-
-    // Session/project commands
-    else if (command == "get_session_graph")
-        return getSessionGraph(params);
-
-    // Undo/redo commands
-    else if (command == "undo")
-        return undo(params);
-    else if (command == "redo")
-        return redo(params);
-    else if (command == "history")
-        return history(params);
-
-    // Instrument commands
-    else if (command == "describe_instrument")
-        return describeInstrument(params);
+    DBG("CommandAPI: Executing command: " + commandStr);
     
-    // Preset management commands (NEW)
-    else if (command == "list_presets")
-        return listPresets(params);
-    else if (command == "load_preset")
-        return loadPreset(params);
-    else if (command == "save_preset")
-        return savePreset(params);
-    else if (command == "create_preset")
-        return createPreset(params);
-    else if (command == "delete_preset")
-        return deletePreset(params);
+    // Map Lookup
+    auto it = commandMap.find(commandStr.toStdString());
+    if (it == commandMap.end()) {
+        return createErrorResponse("Unknown command: " + commandStr);
+    }
     
-    // Instrument parameter control (NEW)
-    else if (command == "get_instrument_parameters")
-        return getInstrumentParameters(params);
-    else if (command == "set_instrument_parameter")
-        return setInstrumentParameter(params);
-    else if (command == "get_instrument_parameter_schema")
-        return getInstrumentParameterSchema(params);
+    CommandID id = it->second;
     
-    // AI preset generation (NEW)
-    else if (command == "generate_preset")
-        return generatePreset(params);
-
-    return createErrorResponse("Unknown command: " + command);
+    switch (id) {
+        case CommandID::ListTracks: return listTracks(params);
+        case CommandID::CreateTrack: return createTrack(params);
+        case CommandID::DeleteTrack: return deleteTrack(params);
+        case CommandID::RenameTrack: return renameTrack(params);
+        case CommandID::SetTrackVolume: return setTrackVolume(params);
+        case CommandID::SetTrackPan: return setTrackPan(params);
+        case CommandID::ExportAudio: return exportAudio(params);
+        case CommandID::SeparateTrack: return separateTrack(params);
+        
+        case CommandID::ListClips: return listClips(params);
+        case CommandID::CreateClip: return createClip(params);
+        case CommandID::DeleteClip: return deleteClip(params);
+        case CommandID::SplitClip: return splitClip(params);
+        case CommandID::MoveClip: return moveClip(params);
+        case CommandID::ResizeClip: return resizeClip(params);
+        
+        case CommandID::Play: return play(params);
+        case CommandID::Stop: return stop(params);
+        case CommandID::Record: return record(params);
+        case CommandID::Rewind: return rewind(params);
+        case CommandID::SetLoop: return setLoop(params);
+        case CommandID::SetTempo: return setTempo(params);
+        case CommandID::SetTimeSignature: return setTimeSignature(params);
+        
+        case CommandID::GetSessionGraph: return getSessionGraph(params);
+        case CommandID::Undo: return undo(params);
+        case CommandID::Redo: return redo(params);
+        case CommandID::History: return history(params);
+        
+        case CommandID::DescribeInstrument: return describeInstrument(params);
+        
+        case CommandID::AddPlugin: return addPlugin(params);
+        case CommandID::RemovePlugin: return removePlugin(params);
+        case CommandID::ListPlugins: return listPlugins(params);
+        case CommandID::SetPluginParam: return setPluginParam(params);
+        case CommandID::GetPluginParams: return getPluginParams(params);
+        
+        case CommandID::AddAutomationPoint: return addAutomationPoint(params);
+        case CommandID::ClearAutomation: return clearAutomation(params);
+        case CommandID::GetAutomation: return getAutomation(params);
+        
+        case CommandID::AddTempoChange: return addTempoChange(params);
+        case CommandID::GetTempoMap: return getTempoMap(params);
+        
+        case CommandID::AddMarker: return addMarker(params);
+        case CommandID::GetMarkers: return getMarkers(params);
+        case CommandID::DeleteMarker: return deleteMarker(params);
+        case CommandID::GotoMarker: return gotoMarker(params);
+        
+        case CommandID::AddNote: return addNote(params);
+        case CommandID::DeleteNote: return deleteNote(params);
+        case CommandID::MoveNote: return moveNote(params);
+        case CommandID::GetNotes: return getNotes(params);
+        case CommandID::SetNoteVelocity: return setNoteVelocity(params);
+        case CommandID::SetNoteLength: return setNoteLength(params);
+        case CommandID::GetMidiData: return getMidiData(params);
+        case CommandID::SetClipNotes: return setClipNotes(params);
+        
+        case CommandID::ListPresets: return listPresets(params);
+        case CommandID::LoadPreset: return loadPreset(params);
+        case CommandID::SavePreset: return savePreset(params);
+        case CommandID::CreatePreset: return createPreset(params);
+        case CommandID::DeletePreset: return deletePreset(params);
+        case CommandID::GeneratePreset: return generatePreset(params);
+        
+        case CommandID::GetInstrumentParameters: return getInstrumentParameters(params);
+        case CommandID::SetInstrumentParameter: return setInstrumentParameter(params);
+        case CommandID::GetInstrumentParameterSchema: return getInstrumentParameterSchema(params);
+        
+        default: return createErrorResponse("Command ID not implemented: " + commandStr);
+    }
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String& jsonRequest)

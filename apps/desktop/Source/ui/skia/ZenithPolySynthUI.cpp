@@ -64,6 +64,9 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   
   // Trigger initial layout
   resized();
+  
+  // PHASE 1: Start frame capture timer (60 FPS)
+  startTimer(16); // ~60Hz frame capture
 #endif
 }
 
@@ -231,6 +234,163 @@ void ZenithPolySynthUI::mouseMove(const juce::MouseEvent& e) {
     
     juce::Component::mouseMove(e);
 }
+
+void ZenithPolySynthUI::paint(juce::Graphics& g) {
+    // Fallback for non-Skia builds
+    g.fillAll(juce::Colours::darkgrey);
+    g.setColour(juce::Colours::white);
+    g.drawText("Zenith PolySynth", getLocalBounds(), juce::Justification::centred);
+}
+
+void ZenithPolySynthUI::drawSkiaContent(SkCanvas* canvas) {
+#ifdef ZENITH_USE_SKIA
+    if (!canvas) return;
+    
+    // Debug: Verify we're NOT on Message Thread (we're on OpenGL thread)
+    jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread());
+    
+    // Get latest frame snapshot (lock-free read, NO Component access!)
+    const auto* frame = frameBuffer_.getLatestFrame();
+    
+    // Clear background
+    canvas->clear(SkColorSetRGB(20, 20, 25));
+    
+    // Draw radial gradient background
+    auto bounds = frame->componentBounds.toFloat();
+    if (!bounds.isEmpty()) {
+        SkPaint paint;
+        paint.setAntiAlias(true);
+        
+        SkPoint center = { bounds.getCentreX(), bounds.getCentreY() };
+        SkColor colors[2] = { SkColorSetRGB(30, 30, 40), SkColorSetRGB(10, 10, 15) };
+        float radius = std::max(bounds.getWidth(), bounds.getHeight()) * 0.8f;
+        
+        paint.setShader(SkGradientShader::MakeRadial(center, radius, colors, nullptr, 2, SkTileMode::kClamp));
+        paint.setStyle(SkPaint::kFill_Style);
+        canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), paint);
+        paint.setShader(nullptr);
+    }
+    
+    // Draw all knobs from snapshot (thread-safe!)
+    for (const auto& knob : frame->knobs) {
+        drawKnobFromState(canvas, knob);
+    }
+    
+    // TODO: Draw sliders, buttons, visualizer from state
+    
+#else
+    juce::ignoreUnused(canvas);
+#endif
+}
+
+// ============================================================================
+// PHASE 1: THREAD-SAFE RENDERING
+// ============================================================================
+
+void ZenithPolySynthUI::timerCallback() {
+    // Called on Message Thread at 60Hz
+    captureFrameSnapshot();
+}
+
+void ZenithPolySynthUI::captureFrameSnapshot() {
+    // Debug: Verify we're on Message Thread
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    
+    // Get writable buffer (Message Thread safe)
+    auto* frame = frameBuffer_.getWriteBuffer();
+    frame->clear();
+    
+    // Capture global state
+    frame->isAdvancedMode = isAdvancedMode_;
+    frame->componentBounds = getLocalBounds();
+    frame->frameNumber++;
+    frame->timestamp = juce::Time::getCurrentTime().toMilliseconds();
+    
+    // Snapshot all knob widgets
+    for (auto& widget : widgets_) {
+        if (auto* knob = dynamic_cast<SkiaKnob*>(widget.get())) {
+            frame->knobs.push_back(knob->captureRenderState());
+        }
+    }
+    
+    // TODO: Snapshot sliders, buttons, visualizer when ready
+    
+    // Atomic swap to ready buffer (lock-free)
+    frameBuffer_.swapWriteToReady();
+}
+
+void ZenithPolySynthUI::drawKnobFromState(SkCanvas* canvas, const render::KnobRenderState& state) {
+    if (state.bounds.isEmpty()) return;
+    
+    canvas->save();
+    
+    // Apply hover scale animation
+    if (state.scale > 1.0f) {
+        float cx = state.bounds.centerX();
+        float cy = state.bounds.centerY();
+        canvas->translate(cx, cy);
+        canvas->scale(state.scale, state.scale);
+        canvas->translate(-cx, -cy);
+    }
+    
+    // Calculate knob geometry
+    float cx = state.bounds.centerX();
+    float cy = state.bounds.centerY();
+    float radius = std::min(state.bounds.width(), state.bounds.height()) * 0.35f;
+    SkRect arcRect = SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
+    
+    // Arc parameters (270° rotation range)
+    float startAngle = -135.0f; // -270/2 - 90
+    float sweepAngle = state.value * 270.0f;
+    
+    // 1. Background track (full range)
+    SkPaint trackPaint;
+    trackPaint.setStyle(SkPaint::kStroke_Style);
+    trackPaint.setStrokeWidth(2.5f);
+    trackPaint.setColor(SkColorSetARGB(77, 255, 255, 255)); // 30% white
+    trackPaint.setAntiAlias(true);
+    trackPaint.setStrokeCap(SkPaint::kRound_Cap);
+    canvas->drawArc(arcRect, startAngle, 270.0f, false, trackPaint);
+    
+    // 2. Glow layer (if hovered)
+    if (state.glowIntensity > 0.01f) {
+        SkPaint glowPaint;
+        glowPaint.setStyle(SkPaint::kStroke_Style);
+        glowPaint.setStrokeWidth(5.0f);
+        glowPaint.setColor(SkColorSetA(state.glowColor, static_cast<U8CPU>(state.glowIntensity * 102))); // 40% max alpha
+        glowPaint.setAntiAlias(true);
+        glowPaint.setStrokeCap(SkPaint::kRound_Cap);
+        canvas->drawArc(arcRect, startAngle, sweepAngle, false, glowPaint);
+    }
+    
+    // 3. Value arc (current value)
+    SkPaint valuePaint;
+    valuePaint.setStyle(SkPaint::kStroke_Style);
+    valuePaint.setStrokeWidth(2.5f);
+    valuePaint.setColor(state.baseColor);
+    valuePaint.setAntiAlias(true);
+    valuePaint.setStrokeCap(SkPaint::kRound_Cap);
+    canvas->drawArc(arcRect, startAngle, sweepAngle, false, valuePaint);
+    
+    // 4. Label text
+    if (state.labelText.isNotEmpty()) {
+        SkFont font;
+        font.setSize(12.0f);
+        
+        SkPaint textPaint;
+        textPaint.setColor(SkColorSetRGB(160, 160, 165));
+        
+        float textY = cy + radius + 15.0f;
+        float width = font.measureText(state.labelText.toRawUTF8(), state.labelText.getNumBytesAsUTF8(), SkTextEncoding::kUTF8);
+        canvas->drawString(state.labelText.toRawUTF8(), cx - width / 2.0f, textY, font, textPaint);
+    }
+    
+    canvas->restore();
+}
+
+// ============================================================================
+// STUB IMPLEMENTATIONS (to be removed/implemented later)
+// ============================================================================
 
 void ZenithPolySynthUI::toggleAdvancedMode() {}
 void ZenithPolySynthUI::toggleLearningMode() {}
