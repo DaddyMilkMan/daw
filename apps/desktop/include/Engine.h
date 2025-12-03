@@ -47,6 +47,9 @@
 
 #include "EngineEvent.h"
 
+// Flecs ECS Integration (optional but recommended)
+#include "ECSIntegrationExample.h"
+
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
@@ -464,6 +467,31 @@ public:
   zenith::PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
 
   //==========================================================================
+  // Flecs ECS Integration (Optional, Coexists with Legacy Track/Clip)
+  //==========================================================================
+
+  /**
+   * @brief Get the ECS engine for entity-component system features
+   * @return Pointer to ECS engine, or nullptr if not initialized
+   * @note Use only from message thread for entity creation
+   * @note Audio thread can use cached queries (see ECSIntegrationExample.h)
+   * 
+   * Example usage:
+   *   auto* ecs = engine.getECSEngine();
+   *   if (ecs) {
+   *       auto track = ecs->createTrack("Piano", "track-1");
+   *   }
+   */
+  zenith::ECSEngine* getECSEngine() noexcept { return ecsEngine_.get(); }
+  
+  /**
+   * @brief Enable ECS integration (creates ECS world)
+   * @note Call this before using ECS features
+   * @note Safe to call multiple times (idempotent)
+   */
+  void enableECS();
+
+  //==========================================================================
   // AudioIODeviceCallback interface (AUDIO THREAD)
   //==========================================================================
 
@@ -767,6 +795,9 @@ private:
 
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};
+
+  // Flecs ECS Integration (optional, nullptr if not enabled)
+  std::unique_ptr<zenith::ECSEngine> ecsEngine_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

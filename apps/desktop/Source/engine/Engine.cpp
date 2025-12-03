@@ -763,6 +763,26 @@ const zenith::TempoMap& Engine::getTempoMap() const noexcept
 }
 
 //==============================================================================
+// Flecs ECS Integration
+//==============================================================================
+
+void Engine::enableECS()
+{
+    if (ecsEngine_)
+    {
+        DBG("Engine: ECS already enabled");
+        return;  // Already initialized
+    }
+    
+    DBG("Engine: Enabling Flecs ECS integration");
+    ecsEngine_ = std::make_unique<zenith::ECSEngine>();
+    
+#ifdef JUCE_DEBUG
+    DBG("Engine: Flecs Explorer available at http://localhost:27750");
+#endif
+}
+
+//==============================================================================
 // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
 //==============================================================================
 

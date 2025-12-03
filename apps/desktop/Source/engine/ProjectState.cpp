@@ -1209,22 +1209,6 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     auto it = trackIdMap_.find(trackId);
     if (it != trackIdMap_.end())
         return it->second;
-        
-    // Fallback
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-    if (!tracksNode.isValid())
-        return {};
-
-    for (const auto& track : tracksNode)
-    {
-        if (track[PROP_ID].toString() == trackId)
-        {
-            // Heal the map
-            trackIdMap_[trackId] = track;
-            return track;
-        }
-    }
 
     return {};
 }
