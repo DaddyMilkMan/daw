@@ -84,9 +84,7 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
     }
     
     // Add plugin to track's processing chain
-    // Note: This assumes you have a method to add plugins to the track
-    // You may need to adapt this to your actual Track class API
-    // Example: addPlugin(std::move(instance));
+    addPlugin(std::move(instance));
     
     ZENITH_LOG_INFO("Plugin loaded successfully: " + pluginName);
 }

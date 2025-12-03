@@ -469,22 +469,7 @@ juce::ValueTree Track::getState() const {
     for (auto &plugin : plugins) {
       if (plugin != nullptr) {
         juce::ValueTree pluginState("Plugin");
-
-        // Store plugin identifier
-        auto description = plugin->getPluginDescription();
-        pluginState.setProperty("identifier",
-                                description.createIdentifierString(), nullptr);
-        pluginState.setProperty("name", description.name, nullptr);
-
-        // Store plugin state as binary data
-        juce::MemoryBlock stateData;
-        plugin->getStateInformation(stateData);
-
-        if (stateData.getSize() > 0) {
-          pluginState.setProperty("state", stateData.toBase64Encoding(),
-                                  nullptr);
-        }
-
+        savePluginState(plugin.get(), pluginState);
         pluginsState.appendChild(pluginState, nullptr);
       }
     }
@@ -557,48 +542,12 @@ void Track::loadPluginStates(const juce::ValueTree &state,
   // Clear existing plugins
   clearPlugins();
 
-  // Recreate each plugin
+  // Recreate each plugin using the helper
   for (int i = 0; i < pluginsState.getNumChildren(); ++i) {
     auto pluginState = pluginsState.getChild(i);
-
-    if (!pluginState.hasType("Plugin"))
-      continue;
-
-    // Get plugin identifier
-    juce::String identifier = pluginState.getProperty("identifier", "");
-    juce::String name = pluginState.getProperty("name", "Unknown");
-
-    if (identifier.isEmpty()) {
-      DBG("Track: Skipping plugin with no identifier");
-      continue;
+    if (pluginState.hasType("Plugin")) {
+        loadPluginState(pluginState, pluginHost);
     }
-
-    // Try to create plugin instance
-    juce::String errorMessage;
-    auto instance = pluginHost.createInstance(
-        identifier, currentSampleRate > 0 ? currentSampleRate : 44100.0,
-        currentBlockSize > 0 ? currentBlockSize : 512, errorMessage);
-
-    if (instance == nullptr) {
-      DBG("Track: WARNING - Failed to load plugin '" + name +
-          "': " + errorMessage);
-      continue;
-    }
-
-    // Restore plugin state
-    juce::String stateBase64 = pluginState.getProperty("state", "");
-    if (stateBase64.isNotEmpty()) {
-      juce::MemoryBlock stateData;
-      if (stateData.fromBase64Encoding(stateBase64)) {
-        instance->setStateInformation(stateData.getData(),
-                                      static_cast<int>(stateData.getSize()));
-        DBG("Track: Restored state for plugin '" + name + "'");
-      }
-    }
-
-    // Add to track
-    addPlugin(std::move(instance));
-    DBG("Track: Loaded plugin '" + name + "'");
   }
 
   DBG("Track: Loaded " + juce::String(getNumPlugins()) + " plugins");
