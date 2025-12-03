@@ -1191,11 +1191,43 @@ juce::var CommandAPI::setPluginParam(const juce::var& params)
     int pluginIndex = params["pluginIndex"];
     int paramIndex = params["paramIndex"];
     float value = (float)params["value"];
-
+    
+    // Get track index from ID
     Track* track = findTrackById(trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
+        
+    // Find track index in engine (inefficient search, but safe for now)
+    // Ideally trackId should encode index or we have a lookup
+    int trackIndex = -1;
+    for (int i = 0; i < engine.getNumTracks(); ++i) {
+        if (engine.tracks()[i].get() == track) {
+            trackIndex = i;
+            break;
+        }
+    }
 
+    if (trackIndex >= 0) {
+        // Use fast path for real-time update
+        zenith::EngineEvent e(zenith::EngineEvent::Type::SetPluginParam);
+        e.trackIndex = trackIndex;
+        e.pluginIndex = pluginIndex;
+        e.paramIndex = paramIndex;
+        e.value = value;
+        
+        if (engine.queueEvent(e)) {
+             auto* resultObj = new juce::DynamicObject();
+            resultObj->setProperty("trackId", trackId);
+            resultObj->setProperty("pluginIndex", pluginIndex);
+            resultObj->setProperty("paramIndex", paramIndex);
+            resultObj->setProperty("value", value);
+            resultObj->setProperty("success", true);
+            resultObj->setProperty("mode", "realtime");
+            return createSuccessResponse(juce::var(resultObj));
+        }
+    }
+
+    // Fallback to old slow method if queue full or track not found
     auto* plugin = track->getPlugin(pluginIndex);
     if (plugin == nullptr)
         return createErrorResponse("Plugin not found at index " + juce::String(pluginIndex));
@@ -1216,6 +1248,7 @@ juce::var CommandAPI::setPluginParam(const juce::var& params)
     resultObj->setProperty("paramIndex", paramIndex);
     resultObj->setProperty("value", value);
     resultObj->setProperty("success", true);
+    resultObj->setProperty("mode", "fallback");
 
     return createSuccessResponse(juce::var(resultObj));
 }

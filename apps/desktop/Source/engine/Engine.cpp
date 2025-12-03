@@ -1094,6 +1094,85 @@ void Engine::audioDeviceIOCallbackWithContext(
 }
 
 //==============================================================================
+// Real-time Event Queue
+//==============================================================================
+
+bool Engine::queueEvent(const zenith::EngineEvent& e)
+{
+    int start1, size1, start2, size2;
+    commandFifo_.prepareToWrite(1, start1, size1, start2, size2);
+    
+    if (size1 > 0) {
+        commandBuffer_[start1] = e;
+        commandFifo_.finishedWrite(1);
+        return true;
+    }
+    
+    return false; // Buffer full
+}
+
+void Engine::processEvents()
+{
+    int start1, size1, start2, size2;
+    commandFifo_.prepareToRead(commandFifo_.getNumReady(), start1, size1, start2, size2);
+    
+    if (size1 > 0) {
+        for (int i = 0; i < size1; ++i) {
+            const auto& e = commandBuffer_[start1 + i];
+            // Process event based on snapshot
+            // Note: snapshot is already acquired in processAudio
+            // But we need to access the tracks safely.
+            // Since we are in processAudio, we are safe to modify RT parameters 
+            // IF the track objects support it. 
+            // Zenith tracks generally use atomic parameters or critical sections internally for parameters.
+            
+            if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
+                 // Get thread-safe snapshot (we are in audio thread, so we read snapshot)
+                 // But wait, we need to apply this to the track.
+                 // The track pointer in snapshot is valid.
+                 // Finding the track:
+                 if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                     auto* track = tracksSnapshot_->tracks[e.trackIndex];
+                     if (track) {
+                         auto* plugin = track->getPlugin(e.pluginIndex);
+                         if (plugin) {
+                             auto params = plugin->getParameters();
+                             if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
+                                 // JUCE parameters are thread-safe
+                                 params[e.paramIndex]->setValueNotifyingHost(e.value);
+                             }
+                         }
+                     }
+                 }
+            }
+            // Implement other event types here...
+        }
+    }
+    if (size2 > 0) {
+        for (int i = 0; i < size2; ++i) {
+             const auto& e = commandBuffer_[start2 + i];
+             // (Duplicate logic for wrap-around - ideally factor this out)
+             if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
+                 if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                     auto* track = tracksSnapshot_->tracks[e.trackIndex];
+                     if (track) {
+                         auto* plugin = track->getPlugin(e.pluginIndex);
+                         if (plugin) {
+                             auto params = plugin->getParameters();
+                             if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
+                                 params[e.paramIndex]->setValueNotifyingHost(e.value);
+                             }
+                         }
+                     }
+                 }
+            }
+        }
+    }
+    
+    commandFifo_.finishedRead(size1 + size2);
+}
+
+//==============================================================================
 // Audio Processing (AUDIO THREAD)
 //==============================================================================
 
@@ -1128,6 +1207,9 @@ void Engine::processAudio(
         const juce::SpinLock::ScopedLockType sl(snapshotLock_);
         snapshot = tracksSnapshot_;
     }
+    
+    // Process queued events (Parameter changes, etc.)
+    processEvents();
 
     // Update transport position for all clips in all tracks
     if (snapshot)
@@ -1152,17 +1234,9 @@ void Engine::processAudio(
     
     // Thread-safe MIDI transfer:
     // 1. Create local buffer
-    // 2. Lock and swap/copy from incoming buffer
-    // 3. Process local buffer (lock released)
+    // 2. Drain FIFO into local buffer
     juce::MidiBuffer localMidi;
-    {
-        const juce::ScopedLock sl(midiInputLock_);
-        if (!incomingMidiBuffer_.isEmpty())
-        {
-            localMidi.addEvents(incomingMidiBuffer_, 0, numSamples, 0);
-            incomingMidiBuffer_.clear();
-        }
-    }
+    midiFifo_.drainTo(localMidi, numSamples);
 
     // Fix: Correct argument order (numSamples, position) and pass local MIDI
     renderBlock(outputBuffer, numSamples, position, &localMidi);
@@ -1295,11 +1369,8 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
     }
     #endif
 
-    // Add message to incoming buffer with current timestamp
-    {
-        const juce::ScopedLock sl(midiInputLock_);
-        incomingMidiBuffer_.addEvent(message, 0);  // Will be time-adjusted in audio callback
-    }
+    // Add message to FIFO (lock-free)
+    midiFifo_.push(message);
 
     // Phase 2A: MIDI recording - if recording is active, store with playhead timestamp
     if (isRecording_.load())

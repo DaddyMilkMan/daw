@@ -11,6 +11,7 @@
 */
 
 #include "AIBridgeClient.h"
+#include "MockAIProvider.h"
 
 namespace zenith {
 
@@ -126,48 +127,65 @@ void AIBridgeClient::performRequest(const PendingRequest &request) {
   DBG("AIBridgeClient: Sending request " + request.requestId);
 
   try {
-    // Construct URL
-    juce::URL url(serverUrl + "/wingman");
+    juce::String responseBody;
 
-    // JUCE 8: Use withPOSTData() on the URL, not InputStreamOptions
-    url = url.withPOSTData(request.jsonPayload);
+    // Check for mock mode
+    if (serverUrl == "mock") {
+        DBG("AIBridgeClient: Using MockAIProvider");
+        // Simulate network latency
+        juce::Thread::sleep(500); 
+        responseBody = MockAIProvider::processRequest(request.jsonPayload);
+        
+        // Connection "succeeded"
+        connected = true;
+        {
+            const juce::ScopedLock lock(statusLock);
+            statusMessage = "Connected (Mock)";
+        }
+    } else {
+        // Construct URL
+        juce::URL url(serverUrl + "/wingman");
 
-    // Set up POST request
-    auto stream = url.createInputStream(
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-            .withConnectionTimeoutMs(10000)
-            .withExtraHeaders("Content-Type: application/json")
-            .withNumRedirectsToFollow(0));
+        // JUCE 8: Use withPOSTData() on the URL, not InputStreamOptions
+        url = url.withPOSTData(request.jsonPayload);
 
-    if (stream == nullptr) {
-      // Connection failed
-      connected = false;
+        // Set up POST request
+        auto stream = url.createInputStream(
+            juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
+                .withConnectionTimeoutMs(10000)
+                .withExtraHeaders("Content-Type: application/json")
+                .withNumRedirectsToFollow(0));
 
-      {
-        const juce::ScopedLock lock(statusLock);
-        statusMessage = "Failed to connect to " + serverUrl;
-      }
+        if (stream == nullptr) {
+            // Connection failed
+            connected = false;
 
-      // Queue error response
-      Response errorResponse;
-      errorResponse.requestId = request.requestId;
-      errorResponse.status = "error";
-      errorResponse.errorMessage =
-          "Failed to connect to AI bridge server at " + serverUrl;
+            {
+                const juce::ScopedLock lock(statusLock);
+                statusMessage = "Failed to connect to " + serverUrl;
+            }
 
-      {
-        const juce::ScopedLock lock(responseLock);
-        responseQueue.push(errorResponse);
-      }
+            // Queue error response
+            Response errorResponse;
+            errorResponse.requestId = request.requestId;
+            errorResponse.status = "error";
+            errorResponse.errorMessage =
+                "Failed to connect to AI bridge server at " + serverUrl;
 
-      sendChangeMessage();
+            {
+                const juce::ScopedLock lock(responseLock);
+                responseQueue.push(errorResponse);
+            }
 
-      DBG("AIBridgeClient: Connection failed");
-      return;
+            sendChangeMessage();
+
+            DBG("AIBridgeClient: Connection failed");
+            return;
+        }
+
+        // Read response
+        responseBody = stream->readEntireStreamAsString();
     }
-
-    // Read response
-    juce::String responseBody = stream->readEntireStreamAsString();
 
     if (responseBody.isEmpty()) {
       // Empty response
@@ -189,12 +207,13 @@ void AIBridgeClient::performRequest(const PendingRequest &request) {
       return;
     }
 
-    // Connection succeeded
-    connected = true;
-
-    {
-      const juce::ScopedLock lock(statusLock);
-      statusMessage = "Connected";
+    // Connection succeeded (if not already set by mock)
+    if (serverUrl != "mock") {
+        connected = true;
+        {
+          const juce::ScopedLock lock(statusLock);
+          statusMessage = "Connected";
+        }
     }
 
     // Handle response

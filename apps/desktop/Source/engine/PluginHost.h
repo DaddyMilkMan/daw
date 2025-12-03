@@ -165,6 +165,9 @@ public:
     std::unique_ptr<juce::AudioPluginInstance> createPlugin(const juce::PluginDescription& description);
 
 private:
+    // Internal scanning logic
+    int scanInternal(std::function<void(const juce::String&)> onProgress);
+
     //==============================================================================
     // Member Variables
     //==============================================================================

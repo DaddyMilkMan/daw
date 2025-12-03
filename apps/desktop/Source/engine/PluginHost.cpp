@@ -54,35 +54,25 @@ PluginHost::~PluginHost()
 // Plugin Scanning
 //==============================================================================
 
-int PluginHost::scanDefaultLocations(bool async)
+// Internal scanning logic - runs on ANY thread
+int PluginHost::scanInternal(std::function<void(const juce::String&)> onProgress)
 {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    juce::ignoreUnused(async); // TODO: Implement async scanning in future
-
     if (vst3Format == nullptr)
-    {
-        DBG("PluginHost: Cannot scan - VST3 format not available");
         return 0;
-    }
-
-    DBG("PluginHost: Scanning default VST3 locations...");
 
     // Get default VST3 search paths
     auto defaultLocations = vst3Format->getDefaultLocationsToSearch();
-
     int foundCount = 0;
 
     // Scan each location
     for (int i = 0; i < defaultLocations.getNumPaths(); ++i)
     {
-        auto location = defaultLocations[i];
-        DBG("PluginHost: Scanning " + location.getFullPathName());
+        if (shouldCancel_) break;
 
-        if (!location.exists())
-        {
-            DBG("PluginHost: Location does not exist, skipping");
-            continue;
-        }
+        auto location = defaultLocations[i];
+        if (onProgress) onProgress("Scanning: " + location.getFullPathName());
+
+        if (!location.exists()) continue;
 
         // Use KnownPluginList to scan and add plugins
         juce::PluginDirectoryScanner scanner(
@@ -97,15 +87,68 @@ int PluginHost::scanDefaultLocations(bool async)
 
         while (scanner.scanNextFile(true, pluginBeingScanned))
         {
-            DBG("PluginHost: Scanning " + pluginBeingScanned);
+            if (shouldCancel_) break;
+            if (onProgress) onProgress("Scanning: " + pluginBeingScanned);
         }
 
         foundCount = knownPlugins.getNumTypes();
     }
-
-    DBG("PluginHost: Scan complete - found " + juce::String(foundCount) + " plugins");
-
+    
     return foundCount;
+}
+
+int PluginHost::scanDefaultLocations(bool async)
+{
+    if (async) {
+        scanAsync([](int, int, const juce::String&){});
+        return 0;
+    }
+
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    DBG("PluginHost: Scanning default VST3 locations (Synchronous)...");
+    int count = scanInternal([](const juce::String& msg) { DBG(msg); });
+    DBG("PluginHost: Scan complete - found " + juce::String(count) + " plugins");
+
+    return count;
+}
+
+void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> progressCallback)
+{
+    if (isScanning_) return;
+    
+    isScanning_ = true;
+    shouldCancel_ = false;
+    
+    scanThread_ = std::thread([this, progressCallback]() {
+        DBG("PluginHost: Starting async scan...");
+        
+        int count = scanInternal([progressCallback](const juce::String& name) {
+            juce::MessageManager::callAsync([progressCallback, name]() {
+                progressCallback(0, 0, name);
+            });
+        });
+        
+        isScanning_ = false;
+        
+        juce::MessageManager::callAsync([progressCallback, count]() {
+            progressCallback(100, count, "Done");
+        });
+        
+        DBG("PluginHost: Async scan complete.");
+    });
+    
+    scanThread_.detach();
+}
+
+void PluginHost::cancelScan()
+{
+    shouldCancel_ = true;
+}
+
+bool PluginHost::isScanningPlugins() const
+{
+    return isScanning_;
 }
 
 bool PluginHost::scanPath(const juce::File& path)

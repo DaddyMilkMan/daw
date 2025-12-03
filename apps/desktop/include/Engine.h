@@ -45,6 +45,8 @@
 #include <memory>
 #include <vector>
 
+#include "EngineEvent.h"
+
 // Forward declarations
 class ProjectState;
 class TrackAutomationSynchronizer;
@@ -181,6 +183,18 @@ public:
    * @note Convenience method for record button
    */
   void toggleRecording();
+
+  //==========================================================================
+  // Real-time Event Queue (Phase 2 Refactor)
+  //==========================================================================
+
+  /**
+   * @brief Queue an event for the audio thread
+   * @param e Event to queue
+   * @return true if queued successfully, false if full
+   * @note Lock-free, safe to call from any thread
+   */
+  bool queueEvent(const zenith::EngineEvent& e);
 
   //==========================================================================
   // Phase 1.3: Transport Position & Looping
@@ -534,6 +548,12 @@ private:
                     int numSamples);
 
   /**
+   * @brief Process pending events
+   * @note AUDIO THREAD - Lock-free
+   */
+  void processEvents();
+
+  /**
    * @brief Process audio recording (AUDIO THREAD)
    * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
    */
@@ -710,8 +730,12 @@ private:
 
   // Phase 2A: MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
-  juce::MidiBuffer incomingMidiBuffer_; // Buffered MIDI from input
-  juce::CriticalSection midiInputLock_; // Protects incomingMidiBuffer_
+  zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO
+
+  // Phase 2 Refactor: Lock-free Command Queue
+  static constexpr int kCommandBufferSize = 1024;
+  juce::AbstractFifo commandFifo_{kCommandBufferSize};
+  std::vector<zenith::EngineEvent> commandBuffer_{kCommandBufferSize};
 
   // Phase 2A: MIDI recording state (per-track)
   struct MidiRecordingBuffer {

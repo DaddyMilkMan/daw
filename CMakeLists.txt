@@ -105,6 +105,7 @@ set(ZENITH_SOURCES
 
     # Network/AI
     apps/desktop/Source/network/AIBridgeClient.cpp
+    apps/desktop/Source/network/MockAIProvider.cpp
     apps/desktop/Source/network/GrokAPIClient.cpp
     apps/desktop/Source/network/GrokDAWController.cpp
     apps/desktop/Source/network/SecureKeyStore.cpp
@@ -137,6 +138,7 @@ set(ZENITH_SOURCES
 set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/AudioEngineTests.cpp
     apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
 )
 
 # Create main executable
@@ -178,8 +180,14 @@ target_link_libraries(ZenithDAW PRIVATE
 )
 
 # Skia Integration (Manual)
-set(ZENITH_ENABLE_SKIA ON)
-include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" OFF)
+
+if(ZENITH_ENABLE_SKIA)
+    include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+else()
+    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+endif()
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE
@@ -188,7 +196,6 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_DISPLAY_SPLASH_SCREEN=0
     JUCE_REPORT_APP_USAGE=0
-    ZENITH_USE_SKIA=1
 )
 
 if(MSVC)
