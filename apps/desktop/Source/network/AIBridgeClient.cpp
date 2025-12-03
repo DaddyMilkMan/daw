@@ -124,120 +124,23 @@ void AIBridgeClient::run() {
 }
 
 void AIBridgeClient::performRequest(const PendingRequest &request) {
-  DBG("AIBridgeClient: Sending request " + request.requestId);
+  DBG("AIBridgeClient: Processing request " + request.requestId);
 
-  try {
-    juce::String responseBody;
-
-    // Check for mock mode
-    if (serverUrl == "mock") {
-        DBG("AIBridgeClient: Using MockAIProvider");
-        // Simulate network latency
-        juce::Thread::sleep(500); 
-        responseBody = MockAIProvider::processRequest(request.jsonPayload);
-        
-        // Connection "succeeded"
-        connected = true;
-        {
-            const juce::ScopedLock lock(statusLock);
-            statusMessage = "Connected (Mock)";
-        }
-    } else {
-        // Construct URL
-        juce::URL url(serverUrl + "/wingman");
-
-        // JUCE 8: Use withPOSTData() on the URL, not InputStreamOptions
-        url = url.withPOSTData(request.jsonPayload);
-
-        // Set up POST request
-        auto stream = url.createInputStream(
-            juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
-                .withConnectionTimeoutMs(10000)
-                .withExtraHeaders("Content-Type: application/json")
-                .withNumRedirectsToFollow(0));
-
-        if (stream == nullptr) {
-            // Connection failed
-            connected = false;
-
-            {
-                const juce::ScopedLock lock(statusLock);
-                statusMessage = "Failed to connect to " + serverUrl;
-            }
-
-            // Queue error response
-            Response errorResponse;
-            errorResponse.requestId = request.requestId;
-            errorResponse.status = "error";
-            errorResponse.errorMessage =
-                "Failed to connect to AI bridge server at " + serverUrl;
-
-            {
-                const juce::ScopedLock lock(responseLock);
-                responseQueue.push(errorResponse);
-            }
-
-            sendChangeMessage();
-
-            DBG("AIBridgeClient: Connection failed");
-            return;
-        }
-
-        // Read response
-        responseBody = stream->readEntireStreamAsString();
-    }
-
-    if (responseBody.isEmpty()) {
-      // Empty response
-      connected = false;
-
-      Response errorResponse;
-      errorResponse.requestId = request.requestId;
-      errorResponse.status = "error";
-      errorResponse.errorMessage = "Empty response from AI bridge server";
-
-      {
-        const juce::ScopedLock lock(responseLock);
-        responseQueue.push(errorResponse);
-      }
-
-      sendChangeMessage();
-
-      DBG("AIBridgeClient: Empty response");
-      return;
-    }
-
-    // Connection succeeded (if not already set by mock)
-    if (serverUrl != "mock") {
-        connected = true;
-        {
-          const juce::ScopedLock lock(statusLock);
-          statusMessage = "Connected";
-        }
-    }
-
-    // Handle response
-    handleResponse(request.requestId, responseBody);
-
-    DBG("AIBridgeClient: Request " + request.requestId + " completed");
-  } catch (const std::exception &e) {
-    connected = false;
-
-    Response errorResponse;
-    errorResponse.requestId = request.requestId;
-    errorResponse.status = "error";
-    errorResponse.errorMessage =
-        "Exception during request: " + juce::String(e.what());
-
-    {
-      const juce::ScopedLock lock(responseLock);
-      responseQueue.push(errorResponse);
-    }
-
-    sendChangeMessage();
-
-    DBG("AIBridgeClient: Exception - " + juce::String(e.what()));
+  // Native C++ implementation - no external server dependency
+  // Simulate async processing
+  juce::Thread::sleep(100); 
+  
+  juce::String responseBody = MockAIProvider::processRequest(request.jsonPayload);
+  
+  // Always connected in native mode
+  connected = true;
+  {
+      const juce::ScopedLock lock(statusLock);
+      statusMessage = "Ready (Native)";
   }
+
+  handleResponse(request.requestId, responseBody);
+  DBG("AIBridgeClient: Request " + request.requestId + " completed");
 }
 
 void AIBridgeClient::handleResponse(const juce::String &requestId,

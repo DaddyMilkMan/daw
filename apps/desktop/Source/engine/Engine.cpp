@@ -1145,6 +1145,34 @@ void Engine::processEvents()
                      }
                  }
             }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setVolume(e.value);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setPan(e.value);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setMuted(e.boolValue);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setSolo(e.boolValue);
+                    }
+                }
+            }
             // Implement other event types here...
         }
     }
@@ -1165,6 +1193,34 @@ void Engine::processEvents()
                          }
                      }
                  }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setVolume(e.value);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setPan(e.value);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setMuted(e.boolValue);
+                    }
+                }
+            }
+            else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
+                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
+                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                        track->setSolo(e.boolValue);
+                    }
+                }
             }
         }
     }

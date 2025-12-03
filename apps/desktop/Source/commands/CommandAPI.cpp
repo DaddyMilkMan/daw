@@ -619,6 +619,24 @@ juce::var CommandAPI::setTrackVolume(const juce::var& params)
     // Clamp to reasonable range (0.0 to 2.0 linear = -inf to +6dB)
     gain = juce::jlimit(0.0f, 2.0f, gain);
 
+    // Send RT event for immediate response
+    Track* track = findTrackById(trackId);
+    if (track) {
+        int trackIndex = -1;
+        for (int i = 0; i < engine.getNumTracks(); ++i) {
+            if (engine.tracks()[i].get() == track) {
+                trackIndex = i;
+                break;
+            }
+        }
+        if (trackIndex >= 0) {
+            zenith::EngineEvent e(zenith::EngineEvent::Type::SetTrackVolume);
+            e.trackIndex = trackIndex;
+            e.value = gain;
+            engine.queueEvent(e);
+        }
+    }
+
     // Set volume via ProjectState (undoable)
     juce::String actionName = "Wingman: set_track_volume " + trackId + " to " + juce::String(volumeDb, 1) + " dB";
     projectState.setTrackVolume(trackId, gain, actionName);
@@ -651,6 +669,24 @@ juce::var CommandAPI::setTrackPan(const juce::var& params)
 
     // Clamp to valid range (-1.0 to 1.0)
     float panValue = juce::jlimit(-1.0f, 1.0f, (float)pan);
+
+    // Send RT event
+    Track* track = findTrackById(trackId);
+    if (track) {
+        int trackIndex = -1;
+        for (int i = 0; i < engine.getNumTracks(); ++i) {
+            if (engine.tracks()[i].get() == track) {
+                trackIndex = i;
+                break;
+            }
+        }
+        if (trackIndex >= 0) {
+            zenith::EngineEvent e(zenith::EngineEvent::Type::SetTrackPan);
+            e.trackIndex = trackIndex;
+            e.value = panValue;
+            engine.queueEvent(e);
+        }
+    }
 
     // Set pan via ProjectState (undoable)
     juce::String actionName = "Wingman: set_track_pan " + trackId + " to " + juce::String(panValue, 2);
