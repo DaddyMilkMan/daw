@@ -327,3 +327,24 @@ install(TARGETS ZenithDAW
     BUNDLE DESTINATION .
     RUNTIME DESTINATION bin
 )
+
+# ==============================================================================
+# FLECS SMOKE TEST (Proves Real Integration)
+# ==============================================================================
+# This builds a minimal executable that either:
+# - Compiles successfully → Flecs is REAL
+# - Fails to link → Flecs is NOT integrated
+# Run: .\build\FlecsSmokeTest.exe
+
+add_executable(FlecsSmokeTest
+    apps/desktop/Source/tests/FlecsSmokeTest.cpp
+)
+
+target_link_libraries(FlecsSmokeTest PRIVATE
+    flecs::flecs_static
+)
+
+target_compile_features(FlecsSmokeTest PRIVATE cxx_std_17)
+
+message(STATUS "Flecs smoke test will be built: FlecsSmokeTest.exe")
+

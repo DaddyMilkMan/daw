@@ -107,6 +107,25 @@ ProjectState::~ProjectState()
 // Project Management
 //==============================================================================
 
+void ProjectState::rebuildTrackMap()
+{
+    trackIdMap_.clear();
+    auto tracksNode = state.getChildWithName(ID_TRACKS);
+    
+    if (tracksNode.isValid())
+    {
+        for (const auto& track : tracksNode)
+        {
+            if (track.hasType(ID_TRACK))
+            {
+                juce::String id = track.getProperty(PROP_ID).toString();
+                if (id.isNotEmpty())
+                    trackIdMap_[id] = track;
+            }
+        }
+    }
+}
+
 void ProjectState::newProject()
 {
     DBG("ProjectState: Creating new project");
@@ -116,6 +135,9 @@ void ProjectState::newProject()
 
     // Create default state
     createDefaultState();
+    
+    // Reset cache
+    trackIdMap_.clear();
 
     // Reset ID counter for a fresh project
     idCounter.store(0);
@@ -161,6 +183,9 @@ bool ProjectState::loadFromFile(const juce::File& file)
 
     // Ensure future IDs do not clash with those loaded from disk
     rebuildIdCounter();
+    
+    // Rebuild O(1) lookup map
+    rebuildTrackMap();
 
     // Clear undo history (fresh start)
     undoManager.clearUndoHistory();
@@ -214,6 +239,30 @@ juce::File ProjectState::saveCrashDump()
         return dumpFile;
         
     return juce::File();
+}
+
+void ProjectState::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
+{
+    isDirty = true;
+    
+    if (child.hasType(ID_TRACK))
+    {
+        juce::String id = child.getProperty(PROP_ID).toString();
+        if (id.isNotEmpty())
+            trackIdMap_[id] = child;
+    }
+}
+
+void ProjectState::valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int)
+{
+    isDirty = true;
+    
+    if (child.hasType(ID_TRACK))
+    {
+        juce::String id = child.getProperty(PROP_ID).toString();
+        if (id.isNotEmpty())
+            trackIdMap_.erase(id);
+    }
 }
 
 //==============================================================================
@@ -1156,6 +1205,12 @@ juce::String ProjectState::generateUniqueId(const juce::String& prefix)
 
 juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
 {
+    // O(1) Lookup
+    auto it = trackIdMap_.find(trackId);
+    if (it != trackIdMap_.end())
+        return it->second;
+        
+    // Fallback
     auto tracksNode = state.getChildWithName(ID_TRACKS);
 
     if (!tracksNode.isValid())
@@ -1164,7 +1219,11 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
     for (const auto& track : tracksNode)
     {
         if (track[PROP_ID].toString() == trackId)
+        {
+            // Heal the map
+            trackIdMap_[trackId] = track;
             return track;
+        }
     }
 
     return {};
@@ -1172,16 +1231,10 @@ juce::ValueTree ProjectState::findTrackInternal(const juce::String& trackId)
 
 juce::ValueTree ProjectState::findTrack(const juce::String& trackId) const
 {
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-    if (!tracksNode.isValid())
-        return {};
-
-    for (const auto& track : tracksNode)
-    {
-        if (track[PROP_ID].toString() == trackId)
-            return track;
-    }
+    // O(1) Lookup (const version)
+    auto it = trackIdMap_.find(trackId);
+    if (it != trackIdMap_.end())
+        return it->second;
 
     return {};
 }

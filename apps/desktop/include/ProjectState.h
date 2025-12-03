@@ -189,8 +189,8 @@ public:
   //==========================================================================
   // ValueTree::Listener overrides
   void valueTreePropertyChanged(juce::ValueTree &, const juce::Identifier &) override { isDirty = true; }
-  void valueTreeChildAdded(juce::ValueTree &, juce::ValueTree &) override { isDirty = true; }
-  void valueTreeChildRemoved(juce::ValueTree &, juce::ValueTree &, int) override { isDirty = true; }
+  void valueTreeChildAdded(juce::ValueTree &parent, juce::ValueTree &child) override;
+  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child, int) override;
   void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override { isDirty = true; }
   void valueTreeParentChanged(juce::ValueTree &) override { isDirty = true; }
 
