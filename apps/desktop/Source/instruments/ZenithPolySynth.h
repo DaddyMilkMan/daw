@@ -406,9 +406,6 @@ public:
   void setMonoMode(bool mono) { monoMode_ = mono; }
   void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
 
-  void setDistortion(float amount) { effects_.setDistortion(amount); }
-  void setChorus(float amount) { effects_.setChorus(amount); }
-
   void setSampleRate(double sampleRate);
 
   //==========================================================================
@@ -432,9 +429,6 @@ private:
 
   // Filters
   ZenithFilter filter1_, filter2_;
-
-  // Effects
-  ZenithEffects effects_;
 
   // Envelopes
   juce::ADSR ampEnvelope_;
@@ -491,6 +485,14 @@ private:
   void updateFrequency();
   void computeModulation();
   float getModulationSourceValue(ModulationSource source);
+  
+  // Fast Tanh Approximation (Padé)
+  inline float fast_tanh(float x) {
+      if (x < -3.0f) return -1.0f;
+      if (x > 3.0f) return 1.0f;
+      float x2 = x * x;
+      return x * (27.0f + x2) / (27.0f + 9.0f * x2);
+  }
 };
 
 //==============================================================================
@@ -601,10 +603,18 @@ public:
   // Visualizer Access
   int readFromVisualizer(float* buffer, int numSamples);
   void pushToVisualizer(const float* buffer, int numSamples);
+  
+  // Global Effects Access
+  void setDistortion(float amount) { effects_.setDistortion(amount); }
+  void setChorus(float amount) { effects_.setChorus(amount); }
+  void setReverb(float amount) { effects_.setReverb(amount); }
 
 private:
   juce::Synthesiser synthesiser_;
   juce::AudioProcessorValueTreeState parameters_;
+  
+  // Global Effects Chain (Moved from Voice to Processor)
+  ZenithEffects effects_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
   std::array<ModulationSlot, 64> globalModMatrix_; // Simplified storage

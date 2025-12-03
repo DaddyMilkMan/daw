@@ -96,7 +96,7 @@ juce::Array<juce::var> MockAIProvider::generateMelody(const juce::String& descri
     int currentNoteIndex = 0;
     
     // Seed
-    static std::mt19937 rng(12345); 
+    thread_local static std::mt19937 rng(12345); 
     std::uniform_int_distribution<int> stepDist(-2, 2); 
     std::uniform_int_distribution<int> rhythmDist(0, 2); 
 
