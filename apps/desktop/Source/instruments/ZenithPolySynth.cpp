@@ -570,23 +570,16 @@ void ZenithPolySynthVoice::computeModulation() {
 }
 
 float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {
+    // Optimization: Compiler usually generates jump table.
     switch (source) {
-        case ModulationSource::LFO1:
-            return lfo1Value_;
-        case ModulationSource::LFO2:
-            return lfo2Value_;
-        case ModulationSource::Env1:
-            return ampEnvelope_.getNextSample();
-        case ModulationSource::Env2:
-            return modEnvelope_.getNextSample();
-        case ModulationSource::Velocity:
-            return velocity_;
-        case ModulationSource::ModWheel:
-            return modWheel_;
-        case ModulationSource::Aftertouch:
-            return aftertouch_;
-        default:
-            return 0.0f;
+        case ModulationSource::LFO1: return lfo1Value_;
+        case ModulationSource::LFO2: return lfo2Value_;
+        case ModulationSource::Env1: return ampEnvelope_.getNextSample();
+        case ModulationSource::Env2: return modEnvelope_.getNextSample();
+        case ModulationSource::Velocity: return velocity_;
+        case ModulationSource::ModWheel: return modWheel_;
+        case ModulationSource::Aftertouch: return aftertouch_;
+        default: return 0.0f;
     }
 }
 

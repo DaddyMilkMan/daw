@@ -1040,7 +1040,7 @@ void Engine::audioDeviceIOCallbackWithContext(
     float* const* outputChannelData,
     int numOutputChannels,
     int numSamples,
-    const juce::AudioIODeviceCallbackContext& context)
+    const juce::AudioIODeviceCallbackContext& context) noexcept
 {
     // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
     //
@@ -1131,7 +1131,7 @@ bool Engine::queueEvent(const zenith::EngineEvent& e)
     return false; // Buffer full
 }
 
-void Engine::processEvents()
+void Engine::processEvents() noexcept
 {
     int start1, size1, start2, size2;
     commandFifo_.prepareToRead(commandFifo_.getNumReady(), start1, size1, start2, size2);
@@ -1257,7 +1257,7 @@ void Engine::processAudio(
     int numInputChannels,
     float* const* outputChannelData,
     int numOutputChannels,
-    int numSamples)
+    int numSamples) noexcept
 {
     // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
     //
@@ -1716,7 +1716,7 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
 void Engine::processAudioRecording(
     const float* const* inputChannelData,
     int numInputChannels,
-    int numSamples)
+    int numSamples) noexcept
 {
     // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
     //

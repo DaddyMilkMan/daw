@@ -534,7 +534,7 @@ public:
   void audioDeviceIOCallbackWithContext(
       const float *const *inputChannelData, int numInputChannels,
       float *const *outputChannelData, int numOutputChannels, int numSamples,
-      const juce::AudioIODeviceCallbackContext &context) override;
+      const juce::AudioIODeviceCallbackContext &context) noexcept override;
 
   //==========================================================================
   // Phase 2A: MidiInputCallback interface
@@ -573,20 +573,20 @@ private:
    */
   void processAudio(const float *const *inputChannelData, int numInputChannels,
                     float *const *outputChannelData, int numOutputChannels,
-                    int numSamples);
+                    int numSamples) noexcept;
 
   /**
    * @brief Process pending events
    * @note AUDIO THREAD - Lock-free
    */
-  void processEvents();
+  void processEvents() noexcept;
 
   /**
    * @brief Process audio recording (AUDIO THREAD)
    * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
    */
   void processAudioRecording(const float *const *inputChannelData,
-                             int numInputChannels, int numSamples);
+                             int numInputChannels, int numSamples) noexcept;
 
   //==========================================================================
   // Recording Helpers (MESSAGE THREAD)
