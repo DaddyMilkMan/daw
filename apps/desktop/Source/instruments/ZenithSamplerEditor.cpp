@@ -30,11 +30,11 @@ ZenithSamplerEditor::ZenithSamplerEditor(
     };
 
     // Create preset browser
-    presetBrowser_ = std::make_unique<PresetBrowserComponent>(
-        instrument_.getMetadata().instrumentId,
-        presetManager_);
+    // Create preset browser
+    presetBrowser_ = std::make_unique<PresetBrowserComponent>();
+    presetBrowser_->setInstrumentId(instrument_.getMetadata().instrumentId);
 
-    presetBrowser_->setLoadPresetCallback([this](const ZenithInstrumentPreset& preset)
+    presetBrowser_->setLoadPresetCallback([this](const Preset& preset)
     {
         onPresetLoaded(preset);
     });
@@ -303,7 +303,7 @@ void ZenithSamplerEditor::onPatchSelected()
     }
 }
 
-void ZenithSamplerEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
+void ZenithSamplerEditor::onPresetLoaded(const Preset& preset)
 {
     // Apply all parameters from preset
     for (const auto& [paramId, value] : preset.parameters)
@@ -312,19 +312,20 @@ void ZenithSamplerEditor::onPresetLoaded(const ZenithInstrumentPreset& preset)
     }
 }
 
-std::map<std::string, float> ZenithSamplerEditor::captureCurrentState() const
+Preset ZenithSamplerEditor::captureCurrentState() const
 {
-    std::map<std::string, float> state;
+    Preset preset;
+    preset.instrumentId = instrument_.getMetadata().instrumentId;
 
     // Capture all parameters from metadata
     const auto& metadata = instrument_.getMetadata();
     for (const auto& param : metadata.parameters)
     {
         float value = instrument_.getParameter(param.id);
-        state[param.id.toStdString()] = value;
+        preset.parameters[param.id] = value;
     }
 
-    return state;
+    return preset;
 }
 
 void ZenithSamplerEditor::loadSampleMapData()

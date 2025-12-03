@@ -3,7 +3,7 @@
 
     PresetGenerator.h
     Created: 2025-11-29
-    Author:  Alex Chen (Synthesist)
+
 
     AI Preset Generation Helper
     Validates and generates synth presets based on descriptions

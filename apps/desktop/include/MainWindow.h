@@ -9,11 +9,11 @@
 
 #pragma once
 
-#include "../Source/ui/ArrangerComponent.h"
+#include "ui/ArrangerComponent.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
-#include "MixerComponent.h"
+#include "ui/MixerComponent.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
@@ -34,11 +34,11 @@
 #include "../Source/ui/skia/BrowserPanel.h"
 #include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButtonComponent.h"
-#include "../Source/ui/skia/SkiaButtonNative.h"
-#include "../Source/ui/skia/SkiaColorTestComponent.h"
-#include "../Source/ui/skia/SkiaLabel.h"
+
+
+
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-#include "../Source/ui/skia/SkiaTextDisplay.h"
+
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
 #include "../Source/ui/views/SessionViewComponent.h"
@@ -250,7 +250,12 @@ private:
   private:
     MainWindow &owner;
 
-    enum MenuItems { aboutZenith = 1, quit = 2 };
+    enum MenuItems { 
+        save = 1, 
+        saveAs = 2, 
+        quit = 3, 
+        aboutZenith = 4 
+    };
   };
 
   //==========================================================================
@@ -258,10 +263,24 @@ private:
   //==========================================================================
 
   void showAboutDialog();
+  
+  /**
+   * @brief Save the current project
+   */
+public:
+  void saveProject();
+
+  /**
+   * @brief Save the current project to a new file
+   */
+  void saveProjectAs();
 
   //==========================================================================
   // Member variables
   //==========================================================================
+
+  // Current project file (empty if new project)
+  juce::File currentProjectFile;
 
   // Audio engine (created first, destroyed last)
   std::unique_ptr<Engine> engine;

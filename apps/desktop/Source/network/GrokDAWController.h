@@ -3,7 +3,7 @@
 
     GrokDAWController.h
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
+
 
     High-level controller that connects Grok AI to DAW functions
     Handles natural language commands, function calling, and preset generation

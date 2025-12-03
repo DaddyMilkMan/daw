@@ -45,8 +45,8 @@ private:
     // Preset Management
     //==========================================================================
 
-    void onPresetLoaded(const ZenithInstrumentPreset& preset);
-    std::map<std::string, float> captureCurrentState() const;
+    void onPresetLoaded(const Preset& preset);
+    Preset captureCurrentState() const;
     void loadSampleMapData();
 
     //==========================================================================

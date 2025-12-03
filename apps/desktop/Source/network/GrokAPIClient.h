@@ -3,7 +3,7 @@
 
     GrokAPIClient.h
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
+
 
     Grok API client with function calling support
     Implements xAI Grok API v1 with chat completions and tool use

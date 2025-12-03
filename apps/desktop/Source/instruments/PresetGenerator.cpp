@@ -3,7 +3,7 @@
 
     PresetGenerator.cpp
     Created: 2025-11-29
-    Author:  Alex Chen (Synthesist)
+
 
     AI Preset Generation Implementation
 

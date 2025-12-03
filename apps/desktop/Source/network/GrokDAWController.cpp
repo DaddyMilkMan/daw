@@ -3,7 +3,6 @@
 
     GrokDAWController.cpp
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
 */
 
 #include "GrokDAWController.h"
@@ -44,20 +43,20 @@ public:
     juce::String buildSystemPrompt()
     {
         juce::String prompt = 
-            "You are Wingman, an AI assistant integrated into Zenith DAW. "
-            "You have complete control over the DAW through function calling. "
+            "You are an AI assistant for Zenith DAW. "
+            "You can control the DAW via function calling. "
             "\n\n"
-            "Your capabilities:\n"
-            "- Create, modify, and delete tracks and clips\n"
+            "Capabilities:\n"
+            "- Manage tracks and clips\n"
             "- Control plugins and automation\n"
-            "- Load and save presets\n"
-            "- Generate custom synthesizer presets from descriptions\n"
-            "- Manipulate MIDI notes and audio\n"
-            "- Control tempo, markers, and project settings\n"
-            "- Analyze audio tracks and provide mixing feedback (NEW!)\n"
+            "- Load/save presets\n"
+            "- Generate synthesizer presets\n"
+            "- Edit MIDI\n"
+            "- Control transport and project settings\n"
+            "- Analyze audio tracks\n"
             "\n"
-            "When the user asks you to do something, use the available functions to accomplish it. "
-            "Always confirm what you've done in a friendly, concise way.\n"
+            "Use available functions to fulfill user requests. "
+            "Confirm actions concisely.\n"
             "\n";
         
         // Add current DAW context if available
@@ -349,36 +348,33 @@ public:
 
         if (call.functionName == "separate_stems")
         {
-            // Check for ONNX model
-            juce::File modelFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
-                .getChildFile("ZenithDAW/models/htdemucs.onnx");
+            if (onProgress) onProgress("Separating stems (this may take a moment)...");
             
-            // Also check Resources/models
-            if (!modelFile.existsAsFile())
-            {
-                modelFile = juce::File::getCurrentWorkingDirectory()
-                    .getChildFile("zenith-core/Resources/models/htdemucs.onnx");
-            }
-
-            if (modelFile.existsAsFile())
-            {
-                #if ZENITH_ENABLE_ONNX
-                // Use ONNX backend
-                if (onProgress) onProgress("Using High-Quality AI Model (Demucs v4)...");
-                // TODO: Instantiate ONNXStemSeparator and process
-                // For now, we just simulate success or call the DSP fallback if not fully implemented
-                // But since we want to show it works:
-                onComplete("Stems separated using AI model: " + modelFile.getFileName());
-                return;
-                #else
-                if (onProgress) onProgress("AI Model found but ONNX Runtime not enabled. Using DSP fallback.");
-                #endif
-            }
+            // Delegate to CommandAPI's real implementation
+            auto* cmd = new juce::DynamicObject();
+            cmd->setProperty("command", "separate_track");
+            cmd->setProperty("params", call.arguments);
             
-            // Fallback to DSP
-            if (onProgress) onProgress("Using Standard DSP Separation...");
-            // Call DSP implementation
-            onComplete("Stems separated using Standard DSP");
+            juce::var cmdVar(cmd);
+            juce::var result = commandAPI.executeCommand(cmdVar);
+            
+            bool success = result.getProperty("success", false);
+            
+            if (success)
+            {
+                juce::String msg = "Stems separated successfully. Created tracks: ";
+                auto createdTracks = result.getProperty("createdTracks", juce::var());
+                if (createdTracks.isArray())
+                {
+                    msg += juce::String(createdTracks.size());
+                }
+                onComplete(msg);
+            }
+            else
+            {
+                juce::String error = result.getProperty("error", "Unknown error");
+                onError("Separation failed: " + error);
+            }
             return;
         }
         

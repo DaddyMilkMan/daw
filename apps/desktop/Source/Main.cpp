@@ -30,8 +30,8 @@ public:
   // JUCEApplication interface
   //==========================================================================
 
-  juce::String getApplicationName() override { return "Zenith DAW"; }
-  juce::String getApplicationVersion() override { return "0.1.0"; }
+  const juce::String getApplicationName() override { return "Zenith DAW"; }
+  const juce::String getApplicationVersion() override { return "0.1.0"; }
   bool moreThanOneInstanceAllowed() override { return false; }
 
   //==========================================================================
@@ -90,18 +90,9 @@ public:
         {
           // SECURITY FIX: Prevention of Data Loss
           // Previously, this path would log a TODO and then QUIT, destroying user data.
-          // We now enforce a "Fail-Safe" default: If we cannot save, we DO NOT QUIT.
-          
-          // TODO: Implement actual save logic: projectState->saveProject();
-          // For now, alert the user that saving is unavailable.
-          juce::NativeMessageBox::showMessageBoxAsync(
-              juce::AlertWindow::WarningIcon, "Save Failed",
-              "Saving is currently not implemented.\n\n"
-              "To prevent data loss, the application will NOT quit.\n"
-              "Please manually export your work or choose 'No' to discard changes.",
-              mainWindow.get());
-              
-          // Do NOT call quit() here.
+          // We now enforce a "Fail-Safe" default: save and then quit.
+          mainWindow->saveProject();
+          quit();
         } else if (result == RESULT_NO) // No
         {
           // User explicitly consented to data loss (discard changes).

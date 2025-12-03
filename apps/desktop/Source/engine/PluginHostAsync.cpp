@@ -16,12 +16,17 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
         return;
     }
     
+    // Join previous thread if it exists
+    if (scanThread_.joinable())
+        scanThread_.join();
+
     isScanning_ = true;
+    shouldCancel_ = false;
     ZENITH_LOG_INFO("Starting async plugin scan");
     
     // Launch scan on background thread
-    std::thread scanThread([this, progressCallback]() {
-        jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread());
+    scanThread_ = std::thread([this, progressCallback]() {
+        // jassert(!juce::MessageManager::getInstance()->isThisTheMessageThread()); // This check is fine but thread is obviously not message thread
         
         juce::Array<juce::File> defaultLocations;
         
@@ -39,6 +44,7 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
         
         // First pass: count total plugins
         for (const auto& location : defaultLocations) {
+            if (shouldCancel_) break;
             if (location.exists() && location.isDirectory()) {
                 totalPlugins += location.findChildFiles(
                     juce::File::findFiles, 
@@ -51,6 +57,7 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
         
         // Second pass: scan each plugin
         for (const auto& location : defaultLocations) {
+            if (shouldCancel_) break;
             if (!location.exists() || !location.isDirectory()) continue;
             
             auto pluginFiles = location.findChildFiles(
@@ -59,10 +66,7 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
                 "*.vst3");
             
             for (const auto& pluginFile : pluginFiles) {
-                if (!isScanning_) {
-                    ZENITH_LOG_WARNING("Plugin scan cancelled");
-                    return;
-                }
+                if (shouldCancel_) break;
                 
                 // Report progress on message thread
                 juce::MessageManager::callAsync([progressCallback, scannedCount, totalPlugins, pluginFile]() {
@@ -74,12 +78,19 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
                 // Scan the plugin
                 juce::OwnedArray<juce::PluginDescription> typesFound;
                 
-                if (vst3Format_) {
-                    vst3Format_->findAllTypesForFile(typesFound, pluginFile.getFullPathName());
+                if (vst3Format) {
+                    vst3Format->findAllTypesForFile(typesFound, pluginFile.getFullPathName());
                     
                     for (auto* desc : typesFound) {
                         if (!knowsAboutPlugin(*desc)) {
-                            addToKnownPlugins(*desc);
+                            // Safe callback using WeakReference
+                            auto descCopy = *desc;
+                            juce::WeakReference<PluginHost> weakThis(this);
+                            juce::MessageManager::callAsync([weakThis, descCopy]() {
+                                if (auto* host = weakThis.get()) {
+                                    host->addToKnownPlugins(descCopy);
+                                }
+                            });
                             ZENITH_LOG_DEBUG("Added plugin: " + desc->name);
                         }
                     }
@@ -90,24 +101,31 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
         }
         
         // Final callback
-        juce::MessageManager::callAsync([this, progressCallback, scannedCount]() {
-            isScanning_ = false;
-            ZENITH_LOG_INFO("Plugin scan complete: " + juce::String(scannedCount) + " plugins scanned");
-            ZENITH_LOG_INFO("Total known plugins: " + juce::String(knownPlugins.getNumTypes()));
-            
-            if (progressCallback) {
-                progressCallback(scannedCount, scannedCount, "Complete");
+        juce::WeakReference<PluginHost> weakThis(this);
+        juce::MessageManager::callAsync([weakThis, progressCallback, scannedCount]() {
+            if (auto* host = weakThis.get()) {
+                host->isScanning_ = false;
+                if (host->shouldCancel_) {
+                     ZENITH_LOG_INFO("Plugin scan cancelled");
+                } else {
+                    ZENITH_LOG_INFO("Plugin scan complete: " + juce::String(scannedCount) + " plugins scanned");
+                    ZENITH_LOG_INFO("Total known plugins: " + juce::String(host->knownPlugins.getNumTypes()));
+                    
+                    if (progressCallback) {
+                        progressCallback(scannedCount, scannedCount, "Complete");
+                    }
+                }
             }
         });
     });
-    
-    scanThread.detach(); // Let it run independently
 }
 
 void PluginHost::cancelScan() {
     if (isScanning_) {
         ZENITH_LOG_INFO("Cancelling plugin scan");
-        isScanning_ = false;
+        shouldCancel_ = true;
+        // Thread will exit loop and isScanning_ will be set to false in the final callback or we can wait.
+        // Since this might be called from destructor, we rely on join() there.
     }
 }
 

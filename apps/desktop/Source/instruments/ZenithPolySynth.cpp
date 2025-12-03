@@ -42,6 +42,8 @@ float ZenithOscillator::getNextSample(float frequency, float shape) {
             return processTriangle(frequency);
         case OscillatorWaveform::Noise:
             return processNoise();
+        case OscillatorWaveform::Supersaw:
+            return processSupersaw(frequency);
         default:
             return 0.0f;
     }
@@ -82,6 +84,36 @@ float ZenithOscillator::processTriangle(float frequency) {
 
 float ZenithOscillator::processNoise() {
     return random_.nextFloat() * 2.0f - 1.0f;
+}
+
+float ZenithOscillator::processSupersaw(float frequency) {
+    if (!supersawInit_) {
+        // Initialize detune amounts for 7 saws
+        // Center is 0, others spread out
+        supersawDetunes_[0] = 0.0f;
+        supersawDetunes_[1] = -0.11f; supersawDetunes_[2] = 0.11f;
+        supersawDetunes_[3] = -0.06f; supersawDetunes_[4] = 0.06f;
+        supersawDetunes_[5] = -0.02f; supersawDetunes_[6] = 0.02f;
+        
+        for (auto& phase : supersawPhases_) phase = random_.nextFloat();
+        supersawInit_ = true;
+    }
+
+    float sample = 0.0f;
+    float spread = 1.0f + (detuneCents_ / 100.0f); // Use detune knob for spread
+
+    for (int i = 0; i < 7; ++i) {
+        float detunedFreq = frequency * std::pow(2.0f, (supersawDetunes_[i] * spread) / 12.0f);
+        
+        // PolyBLEP Sawtooth for aliasing reduction could be here, but using simple saw for now
+        float s = 2.0f * static_cast<float>(supersawPhases_[i]) - 1.0f;
+        sample += s;
+        
+        supersawPhases_[i] += detunedFreq / sampleRate_;
+        if (supersawPhases_[i] >= 1.0) supersawPhases_[i] -= 1.0;
+    }
+
+    return sample * 0.15f; // Scale down to avoid clipping
 }
 
 //==============================================================================
@@ -175,6 +207,30 @@ void ZenithEffects::process(float &left, float &right) {
         chorusPhase_ += 2.0f / static_cast<float>(sampleRate_);
         if (chorusPhase_ >= 1.0f) chorusPhase_ -= 1.0f;
     }
+
+    // Reverb
+    if (reverbAmount_ > 0.0f) {
+        initReverb();
+        
+        // Mix left and right for reverb input (mono in)
+        float input = (left + right) * 0.5f * reverbAmount_;
+        
+        // Parallel comb filters
+        float combOut = 0.0f;
+        for (auto& comb : combs_) {
+            combOut += comb.process(input);
+        }
+        
+        // Serial allpass filters
+        float allpassOut = combOut;
+        for (auto& allpass : allpasses_) {
+            allpassOut = allpass.process(allpassOut);
+        }
+        
+        // Wet/Dry mix
+        left += allpassOut * 0.2f; // Scale reverb tail
+        right += allpassOut * 0.2f;
+    }
 }
 
 //==============================================================================
@@ -182,8 +238,8 @@ void ZenithEffects::process(float &left, float &right) {
 //==============================================================================
 
 ZenithPolySynthVoice::ZenithPolySynthVoice() {
-    ampEnvelope_.setSampleRate(44100.0);
-    modEnvelope_.setSampleRate(44100.0);
+    ampEnvelope_.setSampleRate(48000.0);
+    modEnvelope_.setSampleRate(48000.0);
 }
 
 bool ZenithPolySynthVoice::canPlaySound(juce::SynthesiserSound *sound) {
@@ -234,6 +290,9 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffe
                                            int startSample, int numSamples) {
     if (!isVoiceActive()) return;
     
+    // Pre-calculate modulation for the block (control rate)
+    computeModulation();
+
     for (int i = 0; i < numSamples; ++i) {
         // Update frequency with glide
         if (glideTime_ > 0.0f) {
@@ -243,26 +302,95 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffe
             currentFrequency_ = targetFrequency_;
         }
         
-        // Apply pitch bend
+        // Apply pitch bend and modulation
         float pitchMod = static_cast<float>(std::pow(2.0, pitchBend_ / 12.0));
-        float freq = currentFrequency_ * pitchMod;
+        
+        // Add modulation matrix pitch
+        float modPitch = modulationState_.get(ModulationDestination::Osc1Pitch); 
+        // Apply to all oscillators for now unless specific targets added
+        float freq = currentFrequency_ * pitchMod * std::pow(2.0f, modPitch / 12.0f);
         
         // Generate oscillator samples
         float sample = 0.0f;
-        sample += osc1_.getNextSample(freq, oscShape_) * osc1Mix_;
-        sample += osc2_.getNextSample(freq, oscShape_) * osc2Mix_;
-        sample += osc3_.getNextSample(freq, oscShape_) * osc3Mix_;
         
-        // Apply filter
+        // Oscillator 1
+        float osc1Freq = freq * std::pow(2.0f, modulationState_.get(ModulationDestination::Osc1Pitch) / 12.0f);
+        sample += osc1_.getNextSample(osc1Freq, oscShape_) * (osc1Mix_ + modulationState_.get(ModulationDestination::Osc1Mix));
+        
+        // Oscillator 2
+        float osc2Freq = freq * std::pow(2.0f, modulationState_.get(ModulationDestination::Osc2Pitch) / 12.0f);
+        sample += osc2_.getNextSample(osc2Freq, oscShape_) * (osc2Mix_ + modulationState_.get(ModulationDestination::Osc2Mix));
+        
+        // Oscillator 3
+        float osc3Freq = freq * std::pow(2.0f, modulationState_.get(ModulationDestination::Osc3Pitch) / 12.0f);
+        sample += osc3_.getNextSample(osc3Freq, oscShape_) * (osc3Mix_ + modulationState_.get(ModulationDestination::Osc3Mix));
+        
+        // Unison (Oscillator Stacking)
+        if (unisonVoices_ > 1) {
+            float unisonSpread = unisonDetune_ / 100.0f; // Cents to ratio-ish
+            float unisonGain = 1.0f / std::sqrt(static_cast<float>(unisonVoices_));
+            
+            // We use the main oscillators as the "center" and add detuned copies
+            // Note: Ideally we'd have separate oscillator instances for unison to avoid phase correlation artifacts,
+            // but for this architecture we will simulate it by re-sampling the oscillators with detune.
+            // A better approach for "Deeply Accurate" is to use the unisonOscillators_ array.
+            
+            // Let's use the unisonOscillators_ for Osc1 unison copy
+            // This is a simplified Unison that only stacks Osc1 copies for CPU reasons, 
+            // or we can try to stack the whole mix.
+            // Given the structure, let's stack the whole mix by detuning the frequency request 
+            // BUT we can't reuse the same oscillator object for different phases in the same sample step!
+            // So we MUST use unisonOscillators_.
+            
+            for (int u = 0; u < unisonVoices_ - 1 && u < 7; ++u) {
+                // Calculate detune for this unison voice
+                // Spread voices left/right/center
+                float detune = (u % 2 == 0 ? 1.0f : -1.0f) * ((u / 2 + 1) * unisonSpread);
+                float uFreq = freq * std::pow(2.0f, detune / 12.0f);
+                
+                // We need to set waveform on unison oscs to match Osc1 (primary)
+                // This should be done in parameter updates, but let's ensure it here or assume it's done.
+                // For now, let's just use Osc1's waveform for unison layers.
+                unisonOscillators_[u].setWaveform(osc1_.getWaveform()); 
+                
+                sample += unisonOscillators_[u].getNextSample(uFreq, oscShape_) * osc1Mix_ * unisonGain;
+            }
+            
+            sample *= unisonGain; // Normalize main voice too
+        }
+
+        // Apply filter 1
+        float cutoffMod = modulationState_.get(ModulationDestination::FilterCutoff);
+        filter1_.setCutoff(filterCutoff_ * std::pow(2.0f, cutoffMod * 5.0f)); // 5 octaves range
+        filter1_.setResonance(juce::jlimit(0.0f, 1.0f, filter1_.getResonance() + modulationState_.get(ModulationDestination::FilterResonance)));
+        
         sample = filter1_.processSample(sample);
+        
+        // Apply Filter 2
+        if (filter2Cutoff_ > 20.0f) { // If active
+             // Simple serial routing for now
+             if (filterSerial_) {
+                 sample = filter2_.processSample(sample);
+             } else {
+                 // Parallel (not fully implemented in routing, but placeholder)
+                 // sample = (sample + filter2_.processSample(rawSample)) * 0.5f;
+             }
+        }
         
         // Apply amplitude envelope
         float ampEnv = ampEnvelope_.getNextSample();
-        sample *= ampEnv * velocity_;
+        float modAmp = modulationState_.get(ModulationDestination::AmpGain);
+        sample *= (ampEnv + modAmp) * velocity_;
+        
+        // Effects (Per-voice? Usually global, but here it's per voice)
+        float left = sample;
+        float right = sample;
+        effects_.process(left, right);
         
         // Add to output buffer
         for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
-            outputBuffer.addSample(channel, startSample + i, sample);
+            float out = (channel == 0) ? left : right;
+            outputBuffer.addSample(channel, startSample + i, out);
         }
         
         currentAmplitude_ = std::abs(sample);
@@ -344,6 +472,50 @@ void ZenithPolySynthVoice::computeModulation() {
     
     if (lfo1Phase_ >= 1.0) lfo1Phase_ -= 1.0;
     if (lfo2Phase_ >= 1.0) lfo2Phase_ -= 1.0;
+    
+    // Legacy LFO routing (for backward compatibility if needed, or just map to matrix)
+    // We'll assume the Matrix is the source of truth now.
+    
+    // Process Modulation Matrix
+    for (const auto& slot : modulationMatrix_) {
+        if (slot.isActive()) {
+            float sourceValue = getModulationSourceValue(slot.source);
+            modulationState_.add(slot.destination, sourceValue * slot.amount);
+        }
+    }
+    
+    // Hardcoded LFO targets from parameters (if not in matrix)
+    // This ensures the basic knobs still work if the matrix isn't used
+    if (lfo1Amount_ != 0.0f) {
+        // Map legacy target enum to destination
+        ModulationDestination dest = ModulationDestination::None;
+        switch(lfo1Target_) {
+            case LFOTarget::FilterCutoff: dest = ModulationDestination::FilterCutoff; break;
+            case LFOTarget::Osc1Pitch: dest = ModulationDestination::Osc1Pitch; break;
+            case LFOTarget::Osc2Pitch: dest = ModulationDestination::Osc2Pitch; break;
+            case LFOTarget::Osc1Mix: dest = ModulationDestination::Osc1Mix; break;
+            case LFOTarget::Osc2Mix: dest = ModulationDestination::Osc2Mix; break;
+            default: break;
+        }
+        if (dest != ModulationDestination::None) {
+            modulationState_.add(dest, lfo1Value_ * lfo1Amount_);
+        }
+    }
+    
+    if (lfo2Amount_ != 0.0f) {
+         ModulationDestination dest = ModulationDestination::None;
+        switch(lfo2Target_) {
+            case LFOTarget::FilterCutoff: dest = ModulationDestination::FilterCutoff; break;
+            case LFOTarget::Osc1Pitch: dest = ModulationDestination::Osc1Pitch; break;
+            case LFOTarget::Osc2Pitch: dest = ModulationDestination::Osc2Pitch; break;
+            case LFOTarget::Osc1Mix: dest = ModulationDestination::Osc1Mix; break;
+            case LFOTarget::Osc2Mix: dest = ModulationDestination::Osc2Mix; break;
+            default: break;
+        }
+        if (dest != ModulationDestination::None) {
+            modulationState_.add(dest, lfo2Value_ * lfo2Amount_);
+        }
+    }
 }
 
 float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {

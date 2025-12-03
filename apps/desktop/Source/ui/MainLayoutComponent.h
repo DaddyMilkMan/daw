@@ -13,8 +13,8 @@
 
 #pragma once
 
-#include "skia/SkiaComponent.h"
-#include "ArrangerComponent.h"
+#include "../../Source/ui/skia/SkiaComponent.h"
+#include "../../include/ui/ArrangerComponent.h"
 #include "../../include/ProjectState.h"
 
 namespace zenith {

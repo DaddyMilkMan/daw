@@ -3,7 +3,7 @@
 
     AudioAnalysisService.cpp
     Created: 2025-11-29
-    Author:  Dr. Maya Rodriguez (Lead Integration)
+
 
     Implementation of AudioAnalysisService
     Runs Python script via ChildProcess to analyze audio

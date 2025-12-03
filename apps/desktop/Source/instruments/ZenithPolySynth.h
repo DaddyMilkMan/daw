@@ -174,6 +174,12 @@ private:
   float processSquare(float frequency, float pulseWidth);
   float processTriangle(float frequency);
   float processNoise();
+  float processSupersaw(float frequency);
+
+  // Supersaw state
+  std::array<double, 7> supersawPhases_ = {0.0};
+  std::array<float, 7> supersawDetunes_ = {0.0f};
+  bool supersawInit_ = false;
 };
 
 //==============================================================================
@@ -266,6 +272,7 @@ private:
       
       void resize(int size) { buffer.resize(size, 0.0f); }
       float process(float input) {
+          if (buffer.empty()) return input;
           float output = buffer[pos];
           val = output * (1.0f - damp) + val * damp;
           buffer[pos] = input + val * feedback;
@@ -281,6 +288,7 @@ private:
       
       void resize(int size) { buffer.resize(size, 0.0f); }
       float process(float input) {
+          if (buffer.empty()) return input;
           float bufOut = buffer[pos];
           float output = -input + bufOut;
           buffer[pos] = input + (bufOut * feedback);
@@ -296,9 +304,13 @@ private:
   void initReverb() {
       if (reverbInit_) return;
       // Tunings for 44.1kHz (scaled by SR in setSampleRate)
-      int tunings[] = { 1116, 1188, 1277, 1356, 1422, 1491, 1557, 1617 };
-      for (int i=0; i<4; ++i) combs_[i].resize(tunings[i]);
-      for (int i=0; i<2; ++i) allpasses_[i].resize(225 + i*330);
+      // Standard Schroeder/Moorer values
+      int tunings[] = { 1116, 1188, 1277, 1356 }; 
+      for (int i=0; i<4; ++i) combs_[i].resize(static_cast<int>(tunings[i] * (sampleRate_ / 44100.0)));
+      
+      int allpassTunings[] = { 225, 556 };
+      for (int i=0; i<2; ++i) allpasses_[i].resize(static_cast<int>(allpassTunings[i] * (sampleRate_ / 44100.0)));
+      
       reverbInit_ = true;
   }
 };
