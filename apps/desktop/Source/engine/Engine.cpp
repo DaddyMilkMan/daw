@@ -42,6 +42,10 @@ Engine::Engine()
     tempoMap_ = std::make_unique<zenith::TempoMap>();
     DBG("Engine: TempoMap initialized");
 
+    // Phase 4: Flecs Integration
+    ecsEngine_ = std::make_unique<zenith::ECSEngine>();
+    DBG("Engine: Flecs ECS Engine initialized");
+
     // Initialize track snapshot
     updateTrackSnapshot();
 }
@@ -1313,6 +1317,13 @@ void Engine::processAudio(
     // 2. Drain FIFO into local buffer
     juce::MidiBuffer localMidi;
     midiFifo_.drainTo(localMidi, numSamples);
+
+    // ECS Processing (Level 4)
+    // This iterates active tracks via cached query (lock-free)
+    // Currently a no-op/example until fully migrated
+    if (ecsEngine_) {
+        ecsEngine_->processActiveTracksInAudioCallback(outputBuffer, position, numSamples);
+    }
 
     // Fix: Correct argument order (numSamples, position) and pass local MIDI
     renderBlock(outputBuffer, numSamples, position, &localMidi);

@@ -322,4 +322,49 @@ void SkiaKnob::drawSkia(SkCanvas* canvas) {
     }
 }
 
+// ============================================================================
+// RENDER STATE CAPTURE
+// ============================================================================
+
+render::KnobRenderState SkiaKnob::captureRenderState() const {
+    render::KnobRenderState state;
+    
+    // Bounds and geometry
+    state.bounds = SkRect::MakeXYWH(
+        static_cast<float>(getX()),
+        static_cast<float>(getY()),
+        static_cast<float>(getWidth()),
+        static_cast<float>(getHeight())
+    );
+    
+    // Value and display
+    state.value = value_;
+    state.defaultValue = defaultValue_;
+    state.displayMin = displayMin_;
+    state.displayMax = displayMax_;
+    
+    // Pre-format label text
+    state.labelText = juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
+    
+    // Interaction state
+    state.isHovered = isHovered();
+    state.isDragging = isDragging_;
+    
+    // Colors
+    state.baseColor = design::colors::CYAN;
+    if (valueColoring_) {
+        state.baseColor = design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_);
+    }
+    state.glowColor = state.baseColor;
+    
+    // Animation state
+    state.glowIntensity = getAnimatedValue("glow");
+    state.scale = getAnimatedValue("scale");
+    
+    // TODO: Cache glow layer (Phase 2)
+    // state.cachedGlow = getCachedGlowLayer();
+    
+    return state;
+}
+
 } // namespace zenith

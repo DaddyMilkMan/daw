@@ -33,8 +33,6 @@ public:
         // Cached queries are lock-free and wait-free for iteration
         activeTracksQuery_ = world_.query_builder<const ecs::TrackState>()
             .cached()
-            .with<ecs::IsPlaying>()
-            .without<ecs::TrackState>([](const ecs::TrackState& t) { return t.muted; })
             .build();
         
         DBG("ECSEngine: Initialized with cached queries");

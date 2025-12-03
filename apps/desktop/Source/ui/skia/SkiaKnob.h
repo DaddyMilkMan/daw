@@ -20,6 +20,7 @@
 #pragma once
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
+#include "RenderTree.h"
 
 namespace zenith {
 
@@ -229,6 +230,12 @@ public:
     // ========================================================================
     
     void drawSkia(SkCanvas* canvas) override;
+    
+    /**
+     * Capture current knob state for thread-safe rendering.
+     * Called from Message Thread, result used by Render Thread.
+     */
+    render::KnobRenderState captureRenderState() const;
     
 protected:
     // ========================================================================

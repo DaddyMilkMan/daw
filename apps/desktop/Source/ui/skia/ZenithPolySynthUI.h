@@ -19,6 +19,7 @@
 #include "ZenithUIComponents.h"
 #include "../ZenithLookAndFeel.h"
 #include "SkiaMainWindowIntegration.h" 
+#include "RenderTree.h"
 
 namespace zenith {
 
@@ -48,6 +49,9 @@ public:
 protected:
   // SkiaRenderer override
   void drawSkiaContent(SkCanvas* canvas) override;
+  
+  // Timer callback for frame capture (Message Thread)
+  void timerCallback() override;
 
 private:
   ZenithPolySynthProcessor &processor;
@@ -90,6 +94,29 @@ private:
   void loadNextPreset();
   void loadPrevPreset();
   void refreshPresetList();
+
+  // ========================================================================
+  // RENDER TREE (PHASE 1: Thread Safety)
+  // ========================================================================
+  
+  /**
+   * Triple buffer for lock-free frame swapping between threads.
+   * Message Thread: Snapshots UI state -> writes to buffer -> swaps to ready
+   * Render Thread: Reads from render buffer -> draws frame
+   */
+  render::FrameBufferSwap frameBuffer_;
+  
+  /**
+   * Capture current UI state into a frame snapshot.
+   * Called from timerCallback() on the Message Thread.
+   */
+  void captureFrameSnapshot();
+  
+  /**
+   * Draw knob from render state (no Component access).
+   * Called from drawSkiaContent() on the Render Thread.
+   */
+  void drawKnobFromState(SkCanvas* canvas, const render::KnobRenderState& state);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthUI)
 };
