@@ -17,6 +17,8 @@
 #include <effects/SkGradientShader.h>
 #endif
 
+namespace zenith {
+
 //==============================================================================
 TrackHeaderComponent::TrackHeaderComponent(ProjectState& projectState, const juce::String& trackId)
     : projectState_(projectState), trackId_(trackId)
@@ -358,3 +360,5 @@ void TrackHeaderComponent::updateFromState()
 
     repaint();
 }
+
+} // namespace zenith

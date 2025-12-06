@@ -14,8 +14,15 @@
 #pragma once
 
 #include "../../Source/ui/skia/SkiaComponent.h"
+#include "../../Source/ui/skia/BrowserPanel.h"
+#include "../../Source/ui/skia/views/SessionViewComponent.h"
 #include "../../include/ui/ArrangerComponent.h"
 #include "../../include/ProjectState.h"
+
+#include "../browser/BrowserModel.h"
+#include "SampleEditorComponent.h"
+
+class Engine; // Forward declaration
 
 namespace zenith {
 
@@ -27,7 +34,7 @@ namespace zenith {
  */
 class MainLayoutComponent : public SkiaComponent {
 public:
-    explicit MainLayoutComponent(ProjectState& state);
+    explicit MainLayoutComponent(Engine& engine, ProjectState& state);
     ~MainLayoutComponent() override = default;
 
     void paint(juce::Graphics& g) override;
@@ -44,6 +51,7 @@ public:
     bool isBrowserVisible() const { return browserVisible_; }
 
 private:
+    Engine& engine_;
     ProjectState& projectState_;
     
     // View state
@@ -56,7 +64,19 @@ private:
     
     // Components
     std::unique_ptr<ArrangerComponent> arrangerComponent_;
-    // SessionViewComponent would go here when implemented
+    std::unique_ptr<SessionViewComponent> sessionViewComponent_;
+    std::unique_ptr<BrowserPanel> browserPanel_;
+    std::unique_ptr<BrowserModel> browserModel_;
+    std::unique_ptr<SampleEditorComponent> sampleEditorComponent_;
+
+public:
+    void toggleSampleEditor();
+    bool isSampleEditorVisible() const { return sampleEditorVisible_; }
+    SampleEditorComponent* getSampleEditor() { return sampleEditorComponent_.get(); }
+
+private:
+    bool sampleEditorVisible_ = false;    
+    static constexpr int sampleEditorHeight_ = 250;
     
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

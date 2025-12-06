@@ -14,6 +14,8 @@
 
 #include "../../include/ui/MarkerLaneComponent.h"
 
+using namespace zenith;
+
 //==============================================================================
 MarkerLaneComponent::MarkerLaneComponent(ProjectState& state)
     : projectState(state)

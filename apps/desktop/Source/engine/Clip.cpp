@@ -443,10 +443,12 @@ void Track::Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToF
 
     if (audioFileHandle_)
     {
-        // Cast type-erased handle back to AudioFileHandle
-        // Use reinterpret_pointer_cast since void* has no RTTI for dynamic_cast
-        auto handle = std::reinterpret_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
-        if (handle != nullptr)
+        // TYPE SAFETY FIX: Use static_pointer_cast instead of reinterpret_pointer_cast.
+        // This is type-safe because audioFileHandle_ is ONLY ever set by 
+        // setAudioFileFromPool() which stores an AudioFilePool::AudioFileHandle.
+        // The void* type erasure exists to avoid circular includes in Clip.h.
+        auto handle = std::static_pointer_cast<const AudioFilePool::AudioFileHandle>(audioFileHandle_);
+        if (handle != nullptr && handle->isValid())
         {
             sourceBuffer = &handle->buffer;
         }

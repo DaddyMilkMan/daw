@@ -13,57 +13,145 @@
 */
 
 #pragma once
-
-#include <core/SkColor.h>
-#include <core/SkFont.h>
+#include <include/core/SkColor.h>
+#include <include/core/SkFont.h>
+#include <juce_core/juce_core.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_graphics/juce_graphics.h>
+#include <vector>
 
 namespace zenith {
 namespace design {
 
 // ============================================================================
-// COLOR PALETTE - "Neon Noir"
+// COLOR PALETTE - "Neon Noir" (Mutable for Theming)
 // ============================================================================
 
 namespace colors {
     // Primary Accents
-    constexpr SkColor CYAN = 0xFF00FFFF;           // Primary accent
-    constexpr SkColor MAGENTA = 0xFFFF00FF;        // Secondary accent
-    constexpr SkColor NEON_GREEN = 0xFF00FF64;     // Active states
+    inline SkColor CYAN = 0xFF00FFFF;           // Primary accent
+    inline SkColor MAGENTA = 0xFFFF00FF;        // Secondary accent
+    inline SkColor NEON_GREEN = 0xFF00FF64;     // Active states
     
     // Status Colors
-    constexpr SkColor AMBER = 0xFFFFC800;          // Warning
-    constexpr SkColor RED = 0xFFFF3232;            // Danger/Error
-    constexpr SkColor BLUE = 0xFF0080FF;           // Info
+    inline SkColor AMBER = 0xFFFFC800;          // Warning
+    inline SkColor RED = 0xFFFF3232;            // Danger/Error
+    inline SkColor BLUE = 0xFF0080FF;           // Info
     
     // Backgrounds (Dark to Darker)
-    constexpr SkColor BG_DARKEST = 0xFF0A0A0F;     // Deepest background
-    constexpr SkColor BG_DARKER = 0xFF0F0F14;      // Panel backgrounds
-    constexpr SkColor BG_DARK = 0xFF141419;        // Component backgrounds
-    constexpr SkColor BG_MEDIUM = 0xFF1A1A23;      // Hover states
-    constexpr SkColor BG_LIGHT = 0xFF20202D;       // Active states
-    
-    // Glass/Transparency
-    constexpr SkColor GLASS_10 = 0x1AFFFFFF;       // 10% white
-    constexpr SkColor GLASS_20 = 0x33FFFFFF;       // 20% white
-    constexpr SkColor GLASS_30 = 0x4DFFFFFF;       // 30% white
-    constexpr SkColor GLASS_40 = 0x66FFFFFF;       // 40% white
+    inline SkColor BG_DARKEST = 0xFF0A0A0F;     // Deepest background
+    inline SkColor BG_DARKER = 0xFF0F0F14;      // Panel backgrounds
+    inline SkColor BG_DARK = 0xFF141419;        // Component backgrounds
+    inline SkColor BG_MEDIUM = 0xFF1A1A23;      // Hover states
+    inline SkColor BG_LIGHT = 0xFF20202D;       // Active states
     
     // Text
-    constexpr SkColor TEXT_PRIMARY = 0xFFFFFFFF;   // 100% white
-    constexpr SkColor TEXT_SECONDARY = 0xCCFFFFFF; // 80% white
-    constexpr SkColor TEXT_TERTIARY = 0x99FFFFFF;  // 60% white
-    constexpr SkColor TEXT_DISABLED = 0x66FFFFFF;  // 40% white
+    inline SkColor TEXT_PRIMARY = 0xFFFFFFFF;   // 100% white
+    inline SkColor TEXT_SECONDARY = 0xCCFFFFFF; // 80% white
     
     // Borders
-    constexpr SkColor BORDER_SUBTLE = 0x1AFFFFFF;  // 10% white
-    constexpr SkColor BORDER_DEFAULT = 0x33FFFFFF; // 20% white
-    constexpr SkColor BORDER_STRONG = 0x4DFFFFFF;  // 30% white
-    constexpr SkColor BORDER_FOCUS = CYAN;         // Cyan for focus
+    inline SkColor BORDER_DEFAULT = 0x33FFFFFF; // 20% white
+    inline SkColor BORDER_FOCUS = CYAN;         // Cyan for focus
+    inline SkColor BORDER_SUBTLE = 0x1AFFFFFF;  // 10% white - subtle dividers
+    inline SkColor BORDER_STRONG = 0x66FFFFFF;  // 40% white - emphasized borders
+    
+    // Additional text colors
+    inline SkColor TEXT_DISABLED = 0x66FFFFFF;  // 40% white for disabled text
+    
+    // Glassmorphism
+    inline SkColor GLASS_10 = 0x1AFFFFFF;       // 10% white glass effect
+    
+    // Helper to reset to default "Neon Noir"
+    inline void resetToDefault() {
+        CYAN = 0xFF00FFFF;
+        MAGENTA = 0xFFFF00FF;
+        NEON_GREEN = 0xFF00FF64;
+        BG_DARKEST = 0xFF0A0A0F;
+        BG_DARKER = 0xFF0F0F14;
+        BG_DARK = 0xFF141419;
+    }
 }
+
+// ============================================================================
+// THEME MANAGER
+// ============================================================================
+
+class ThemeManager {
+public:
+    static ThemeManager& getInstance() {
+        static ThemeManager instance;
+        return instance;
+    }
+    
+    struct Theme {
+        juce::String name;
+        std::map<juce::String, uint32_t> colors; // name -> ARGB
+    };
+    
+    void saveTheme(const juce::String& name);
+    void loadTheme(const juce::String& name);
+    void deleteTheme(const juce::String& name);
+    
+    juce::StringArray getAvailableThemes() const;
+    
+    // Apply current colors to ZenithDesignSystem::Colors
+    void applyTheme(const Theme& theme);
+    
+private:
+    ThemeManager() = default;
+    
+    juce::File getThemeDir() const {
+        auto dir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("ZenithDAW/Themes");
+        if (!dir.exists()) dir.createDirectory();
+        return dir;
+    }
+};
+
+// ============================================================================
+// LAYOUT MANAGER
+// ============================================================================
+
+class LayoutManager {
+public:
+    static LayoutManager& getInstance() {
+        static LayoutManager instance;
+        return instance;
+    }
+    
+    struct PanelState {
+        juce::String id;
+        juce::Rectangle<float> relativeBounds; // 0.0-1.0 relative to window
+        bool isVisible = true;
+        int zOrder = 0;
+    };
+    
+    void setPanelState(const juce::String& panelId, const PanelState& state);
+    PanelState getPanelState(const juce::String& panelId) const;
+    
+    void saveLayout(const juce::String& name);
+    void loadLayout(const juce::String& name);
+    
+    bool isEditModeEnabled() const { return editMode_; }
+    void setEditModeEnabled(bool enabled) { editMode_ = enabled; }
+    
+private:
+    LayoutManager() = default;
+    std::map<juce::String, PanelState> panels_;
+    bool editMode_ = false;
+    
+    juce::File getLayoutDir() const {
+        auto dir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+            .getChildFile("ZenithDAW/Layouts");
+        if (!dir.exists()) dir.createDirectory();
+        return dir;
+    }
+};
 
 // ============================================================================
 // SPACING SYSTEM - "The Grid"
 // ============================================================================
+// ... (keep rest of file)
 
 namespace spacing {
     constexpr float XS = 4.0f;      // Tiny gaps
@@ -261,6 +349,12 @@ inline SkColor interpolateColor(SkColor c1, SkColor c2, float t) {
             Classic
         };
         static Theme currentTheme;
+        
+        // Accessors for glow intensity
+        static float getGlowIntensity() { return glowIntensity; }
+        static void setGlowIntensity(float intensity) { 
+            glowIntensity = std::clamp(intensity, 0.0f, 2.0f); 
+        }
     };
 
 } // namespace design

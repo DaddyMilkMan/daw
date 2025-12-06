@@ -164,6 +164,18 @@ public:
     // Convenience wrapper
     std::unique_ptr<juce::AudioPluginInstance> createPlugin(const juce::PluginDescription& description);
 
+    //==============================================================================
+    // Custom Search Paths
+    //==============================================================================
+    void addSearchPath(const juce::String& path);
+    void removeSearchPath(int index);
+    juce::StringArray getSearchPaths() const;
+    
+    /**
+     * @brief Scan both default locations and custom paths
+     */
+    int scanAll(bool async = false);
+
 private:
     // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
@@ -185,6 +197,9 @@ private:
     std::atomic<bool> isScanning_{false};
     std::atomic<bool> shouldCancel_{false};
     std::thread scanThread_;
+    
+    // Custom search paths
+    juce::StringArray customSearchPaths;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginHost)

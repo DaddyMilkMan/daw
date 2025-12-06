@@ -22,18 +22,21 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 /**
- * @brief Reusable Skia Renderer that manages OpenGL context and Skia Surface.
+ * @brief Reusable Skia OpenGL Renderer that manages OpenGL context and Skia Surface.
  * 
  * Inherit from this class to add Skia rendering to any JUCE Component.
  * You must pass the component reference to the constructor.
+ * 
+ * NOTE: Renamed from SkiaRenderer to SkiaOpenGLRenderer to avoid conflict
+ * with the standalone SkiaRenderer class in rendering/SkiaRenderer.h
  */
-class SkiaRenderer : public juce::OpenGLRenderer {
+class SkiaOpenGLRenderer : public juce::OpenGLRenderer {
 public:
-    explicit SkiaRenderer(juce::Component* componentToAttach);
-    virtual ~SkiaRenderer();
+    explicit SkiaOpenGLRenderer(juce::Component* componentToAttach);
+    virtual ~SkiaOpenGLRenderer();
 
-    SkiaRenderer(const SkiaRenderer&) = delete;
-    SkiaRenderer& operator=(const SkiaRenderer&) = delete;
+    SkiaOpenGLRenderer(const SkiaOpenGLRenderer&) = delete;
+    SkiaOpenGLRenderer& operator=(const SkiaOpenGLRenderer&) = delete;
 
     // OpenGLRenderer overrides
     void newOpenGLContextCreated() override;
@@ -72,7 +75,7 @@ private:
  * Kept for backward compatibility and simple use cases.
  */
 class SkiaMainWindowIntegration : public juce::Component,
-                                  public SkiaRenderer {
+                                  public SkiaOpenGLRenderer {
 public:
     SkiaMainWindowIntegration();
     ~SkiaMainWindowIntegration() override;

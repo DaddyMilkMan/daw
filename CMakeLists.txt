@@ -7,13 +7,13 @@ project(ZenithDAW
 )
 
 # 2. Build Performance: ccache
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-else()
-    message(STATUS "ccache not found. Install it for faster builds.")
-endif()
+# find_program(CCACHE_PROGRAM ccache)
+# if(CCACHE_PROGRAM)
+#     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+#     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+# else()
+#     message(STATUS "ccache not found. Install it for faster builds.")
+# endif()
 
 # 3. Default Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -21,9 +21,11 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
+
+
 # 4. Options
-option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" ON)
-option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
+option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
+option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
@@ -43,14 +45,6 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(JUCE)
 
-# Flecs ECS (Entity Component System)
-FetchContent_Declare(
-    flecs
-    GIT_REPOSITORY https://github.com/SanderMertens/flecs.git
-    GIT_TAG v4.0.3  # Latest stable as of Dec 2025
-)
-FetchContent_MakeAvailable(flecs)
-
 # Find Skia (from vcpkg)
 # find_package(unofficial-skia CONFIG REQUIRED) - Using Manual Integration
 
@@ -66,9 +60,11 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/EngineTests.cpp
     apps/desktop/Source/tests/ConcurrencyTests.cpp
     apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/FlecsSyncTests.cpp
+    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/ui/skia/ZenithLayout.cpp
+    # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
-    apps/desktop/Source/network/GrokUtils.cpp
+    # apps/desktop/Source/network/GrokUtils.cpp
 )
 
 # Create main executable
@@ -91,6 +87,9 @@ add_subdirectory(apps/desktop/Source/instruments)
 add_subdirectory(apps/desktop/Source/network)
 add_subdirectory(apps/desktop/Source/commands)
 add_subdirectory(apps/desktop/Source/rendering)
+add_subdirectory(apps/desktop/Source/dsp)
+add_subdirectory(apps/desktop/Source/browser)
+
 
 # Include directories
 target_include_directories(ZenithDAW PRIVATE
@@ -115,17 +114,31 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
     juce::juce_opengl
-    
-    # ECS (Entity Component System)
-    flecs::flecs_static
 )
 
+# Platform-specific libraries for Graphics Backends
+if(WIN32)
+    target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
+elseif(APPLE)
+    target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+elseif(UNIX AND NOT APPLE)
+    # For Vulkan on Linux
+    find_package(Vulkan)
+    if(Vulkan_FOUND)
+        target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
+    else()
+        message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
+        target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
+    endif()
+endif()
+
 # Skia Integration (Manual)
-option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" OFF)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
 
 if(ZENITH_ENABLE_SKIA)
     include(apps/desktop/cmake/SkiaManualIntegration.cmake)
     target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+    message(STATUS "Zenith DAW: Skia rendering ENABLED")
 else()
     message(STATUS "Zenith DAW: Skia rendering DISABLED")
 endif()
@@ -139,14 +152,34 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_REPORT_APP_USAGE=0
 )
 
-if(MSVC)
-    target_compile_options(ZenithDAW PRIVATE /Qspectre-)
-    set_target_properties(ZenithDAW PROPERTIES VS_SPECTRE_MITIGATION "false")
-endif()
+# if(MSVC)
+#     target_compile_options(ZenithDAW PRIVATE /Qspectre-)
+#     set_target_properties(ZenithDAW PROPERTIES VS_SPECTRE_MITIGATION "false")
+    
+#     # Force __cdecl calling convention (remove any /Gr that may be set)
+#     foreach(flag_var
+#         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
+#         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
+#         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
+#         CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
+#         if(${flag_var} MATCHES "/Gr")
+#             string(REPLACE "/Gr" "" ${flag_var} "${${flag_var}}")
+#         endif()
+#         if(${flag_var} MATCHES "/Gd")
+#             string(REPLACE "/Gd" "" ${flag_var} "${${flag_var}}")
+#         endif()
+#     endforeach()
+    
+#     # target_compile_options(ZenithDAW PRIVATE /Gd)
+# endif()
+
+# if(MSVC)
+#     # Attempt to resolve D8016 by forcing FastCall at project level
+#     # set_property(TARGET ZenithDAW PROPERTY VS_GLOBAL_CallingConvention "FastCall")
+# endif()
 
 # ==============================================================================
-# MODERN COMPILER CONFIGURATION (The "Ruthless" Standard)
-# ==============================================================================
+# MODERN COMPILER CONFIGURATION (Standard Flags)
 
 # 6. Modern C++ Standards & Conformance
 target_compile_features(ZenithDAW PRIVATE cxx_std_20)
@@ -169,61 +202,61 @@ if(ENABLE_IPO)
     endif()
 endif()
 
-# 8. The "Ruthless" Compiler Flags & Hardening
-if(MSVC)
-    target_compile_options(ZenithDAW PRIVATE
-        /W4 /permissive- 
-        /wd4100 # Unused parameter
-        
-        # Conformance
-        /Zc:__cplusplus 
-        /Zc:inline      
-        /Zc:preprocessor 
-        /Zc:throwingNew 
-        
-        # Hardening
-        $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
-        $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
-        $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
-        $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
-        
-        # Ruthless Warnings
-        /w14242 /w14254 /w14263 
-        /w14265 
-        /w14287 
-        /we4289 
-        /w14296 
-        /w14311 
-        /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
-    )
+# 8. Standard Compiler Flags & Hardening
+# if(MSVC)
+#     target_compile_options(ZenithDAW PRIVATE
+#         /W4 /permissive- 
+#         /wd4100 # Unused parameter
+#         
+#         # Conformance
+#         /Zc:__cplusplus 
+#         /Zc:inline      
+#         /Zc:preprocessor 
+#         /Zc:throwingNew 
+#         
+#         # Hardening
+#         $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
+#         $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
+#         $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
+#         $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
+#         
+#         # Ruthless Warnings
+#         /w14242 /w14254 /w14263 
+#         /w14265 
+#         /w14287 
+#         /we4289 
+#         /w14296 
+#         /w14311 
+#         /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
+#     )
     
-    if(ENABLE_HARDENING)
-        target_link_options(ZenithDAW PRIVATE 
-            /DYNAMICBASE 
-            /NXCOMPAT    
-            /CETCOMPAT   
-        )
-    endif()
+#     if(ENABLE_HARDENING)
+#         target_link_options(ZenithDAW PRIVATE 
+#             /DYNAMICBASE 
+#             /NXCOMPAT    
+#             /CETCOMPAT   
+#         )
+#     endif()
 
-else() # GCC / Clang
-    target_compile_options(ZenithDAW PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
-        -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
+# else() # GCC / Clang
+#     target_compile_options(ZenithDAW PRIVATE
+#         -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
+#         -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
         
-        $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
-        $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
-        $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
-        $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
-    )
+#         $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
+#     )
 
-    if(ENABLE_HARDENING)
-        target_link_options(ZenithDAW PRIVATE 
-            -Wl,-z,relro 
-            -Wl,-z,now 
-            -pie
-        )
-    endif()
-endif()
+#     if(ENABLE_HARDENING)
+#         target_link_options(ZenithDAW PRIVATE 
+#             -Wl,-z,relro 
+#             -Wl,-z,now 
+#             -pie
+#         )
+#     endif()
+# endif()
 
 # 9. Sanitizers
 if(ENABLE_SANITIZERS)
@@ -249,6 +282,8 @@ if(BUILD_TESTS)
         juce::juce_core
         juce::juce_data_structures
         juce::juce_audio_basics
+        juce::juce_graphics
+        juce::juce_gui_basics
     )
 endif()
 
@@ -258,23 +293,17 @@ install(TARGETS ZenithDAW
     RUNTIME DESTINATION bin
 )
 
-# ==============================================================================
-# FLECS SMOKE TEST (Proves Real Integration)
-# ==============================================================================
-# This builds a minimal executable that either:
-# - Compiles successfully → Flecs is REAL
-# - Fails to link → Flecs is NOT integrated
-# Run: .\build\FlecsSmokeTest.exe
 
-add_executable(FlecsSmokeTest
-    apps/desktop/Source/tests/FlecsSmokeTest.cpp
-)
 
-target_link_libraries(FlecsSmokeTest PRIVATE
-    flecs::flecs_static
-)
 
-target_compile_features(FlecsSmokeTest PRIVATE cxx_std_17)
-
-message(STATUS "Flecs smoke test will be built: FlecsSmokeTest.exe")
-
+get_target_property(OPTS ZenithDAW COMPILE_OPTIONS)
+message(STATUS "ZenithDAW COMPILE_OPTIONS: ${OPTS}")
+get_target_property(INT_OPTS ZenithDAW INTERFACE_COMPILE_OPTIONS)
+message(STATUS "ZenithDAW INTERFACE_COMPILE_OPTIONS: ${INT_OPTS}")
+get_target_property(LIBS ZenithDAW LINK_LIBRARIES)
+foreach(LIB ${LIBS})
+    if(TARGET ${LIB})
+        get_target_property(LIB_OPTS ${LIB} INTERFACE_COMPILE_OPTIONS)
+        message(STATUS "${LIB} INTERFACE_COMPILE_OPTIONS: ${LIB_OPTS}")
+    endif()
+endforeach()

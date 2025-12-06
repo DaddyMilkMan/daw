@@ -433,21 +433,21 @@ void ZenithPolySynthVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffe
         sample *= (ampEnv + modAmp) * velocity_;
         
         // Effects (Per-voice)
-        float left = sample;
-        float right = sample;
-        effects_.process(left, right);
+        // float left = sample;
+        // float right = sample;
+        // effects_.process(left, right); // Moved to Processor
         
         // Add to output buffer
         for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
-            float out = (channel == 0) ? left : right;
-            outputBuffer.addSample(channel, startSample + i, out);
+            // float out = (channel == 0) ? left : right;
+            outputBuffer.addSample(channel, startSample + i, sample);
         }
         
         currentAmplitude_ = std::abs(sample);
         
         // Check if voice should stop
-        // Only stop if envelope finished AND effects tail finished
-        if (!ampEnvelope_.isActive() && !effects_.hasTail()) {
+        // Only stop if envelope finished
+        if (!ampEnvelope_.isActive()) {
             clearCurrentNote();
             break;
         }
@@ -460,7 +460,7 @@ void ZenithPolySynthVoice::setSampleRate(double sampleRate) {
     osc3_.setSampleRate(sampleRate);
     filter1_.setSampleRate(sampleRate);
     filter2_.setSampleRate(sampleRate);
-    effects_.setSampleRate(sampleRate);
+    // effects_.setSampleRate(sampleRate); // Moved to Processor
     ampEnvelope_.setSampleRate(sampleRate);
     modEnvelope_.setSampleRate(sampleRate);
 }
@@ -607,7 +607,7 @@ void ZenithPolySynthProcessor::prepareToPlay(double sampleRate, int samplesPerBl
     synthesiser_.setCurrentPlaybackSampleRate(sampleRate);
     
     for (int i = 0; i < synthesiser_.getNumVoices(); ++i) {
-        if (auto *voice = dynamic_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
+        if (auto *voice = static_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
             voice->setSampleRate(sampleRate);
         }
     }
@@ -702,7 +702,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ZenithPolySynthProcessor::cr
 void ZenithPolySynthProcessor::updateVoiceParameters() {
     // Update all voices with current parameter values
     for (int i = 0; i < synthesiser_.getNumVoices(); ++i) {
-        if (auto *voice = dynamic_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
+        if (auto *voice = static_cast<ZenithPolySynthVoice *>(synthesiser_.getVoice(i))) {
             // Update oscillators
             voice->setOsc1Waveform(static_cast<OscillatorWaveform>(static_cast<int>(*parameters_.getRawParameterValue(Osc1Wave))));
             voice->setOsc1Detune(*parameters_.getRawParameterValue(Osc1Detune));

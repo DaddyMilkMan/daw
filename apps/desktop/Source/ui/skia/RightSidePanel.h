@@ -14,14 +14,20 @@
 
 #include <JuceHeader.h>
 #include "SkiaComponent.h"
+#include "../WingmanPanel.h" // Include full header to use unique_ptr
 
 namespace zenith {
+
+// Forward declarations
+class CommandAPI;
+class AIBridgeClient;
+class Engine;
 
 #ifdef ZENITH_USE_SKIA
 
 class RightSidePanel : public SkiaComponent {
 public:
-    RightSidePanel();
+    RightSidePanel(CommandAPI& api, AIBridgeClient& client, Engine& engine);
     ~RightSidePanel() override;
     
     void drawSkia(SkCanvas* canvas) override;
@@ -29,6 +35,9 @@ public:
     void timerCallback() override;
 
 private:
+    // Child components
+    std::unique_ptr<WingmanPanel> wingmanPanel_;
+
     // Cached resources for 60FPS rendering
     SkPaint bgPaint_;
     SkPaint borderPaint_;

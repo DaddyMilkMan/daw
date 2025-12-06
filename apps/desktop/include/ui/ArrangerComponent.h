@@ -3,13 +3,20 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
-#include "ProjectState.h"
+#include "../ProjectState.h"
 #include "../../Source/ui/skia/SkiaComponent.h"
 
 #include <core/SkCanvas.h>
 
-class ArrangerComponent : public zenith::SkiaComponent,
-                          public juce::ValueTree::Listener
+// Forward declaration for browser drag
+namespace zenith { class BrowserDragData; }
+
+
+namespace zenith {
+
+class ArrangerComponent : public SkiaComponent,
+                          public juce::ValueTree::Listener,
+                          public juce::DragAndDropTarget
 {
 public:
     ArrangerComponent(ProjectState& ps);
@@ -25,6 +32,8 @@ public:
     void mouseDoubleClick(const juce::MouseEvent& e) override;
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
 
+    std::function<void(const juce::String& trackId, const juce::String& clipId)> onClipDoubleClicked;
+
     // ValueTree::Listener
     void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
     void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
@@ -34,9 +43,16 @@ public:
     void drawSkia(SkCanvas* canvas) override;
 
     juce::String getTooltip();
+    
+    // DragAndDropTarget interface
+    bool isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDropped(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragExit(const juce::DragAndDropTarget::SourceDetails& details) override;
+    void itemDragMove(const juce::DragAndDropTarget::SourceDetails& details) override;
 
 private:
-    ProjectState& projectState;
+    zenith::ProjectState& projectState;
 
     struct ClipView {
         juce::String clipId;
@@ -92,6 +108,11 @@ private:
     double resizeOriginalLength = 0.0;
     
     juce::Rectangle<float> marqueeRect;
+    
+    // Drop zone state (for browser drag-and-drop)
+    bool isDropTargetActive_ = false;
+    int dropTargetTrackIndex_ = -1;
+    double dropTargetBeats_ = 0.0;
 
     // Methods
     void rebuildClipViews();
@@ -122,3 +143,5 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
+
+} // namespace zenith

@@ -4,7 +4,9 @@
  */
 
 #include "../../include/MainWindow.h"
-#include "../commands/CommandAPI.h"
+#include "../../include/CommandAPI.h"
+#include "../../include/TrackAutomationSynchronizer.h"
+#include "../../include/ClipSynchronizer.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "../network/AIBridgeClient.h"
@@ -13,12 +15,15 @@
 #include "MainLayoutComponent.h"
 #include "WingmanPanel.h"
 #include "../../include/ui/PianoRollComponent.h"
+#include "SettingsComponent.h"
+#include "ZenithLookAndFeel.h" // For colors
 
 #include "SimpleLogger.h"
 
 #ifdef ZENITH_USE_SKIA
 #include "../ui/skia/SkiaComponent.h"
 #include "../ui/skia/SkiaMainWindowIntegration.h"
+#include "../ui/skia/ZenithDesignSystem.h"
 #include <skia/include/core/SkFont.h>
 #include <skia/include/core/SkImage.h>
 #include <skia/include/core/SkImageInfo.h>
@@ -29,13 +34,15 @@
 
 #endif
 
+using namespace zenith;
+
 //==============================================================================
 // MainComponent Implementation
 //==============================================================================
 
-MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
+MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
                              zenith::AIBridgeClient &aiClient,
-                             ProjectState &state)
+                             zenith::ProjectState &state)
     : engine(eng), projectState(state)
 #ifndef ZENITH_USE_SKIA
       ,
@@ -106,7 +113,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 
   // The "Perfect DAW" Tri-Pane Layout Manager
   DBG("→ Creating MainLayoutComponent...");
-  mainLayout = std::make_unique<zenith::MainLayoutComponent>(projectState);
+  mainLayout = std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
   addAndMakeVisible(mainLayout.get());
   DBG("✓ MainLayoutComponent created and made visible at " +
       juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(mainLayout.get())));
@@ -117,7 +124,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
 
   // Right: AI Assistant Panel (Wingman) - Pure Skia
   DBG("→ Creating RightSidePanel...");
-  rightSidePanel = std::make_unique<zenith::RightSidePanel>();
+  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, aiClient, engine);
   addAndMakeVisible(rightSidePanel.get());
   DBG("✓ RightSidePanel created and made visible at " +
       juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(rightSidePanel.get())));
@@ -136,6 +143,19 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
       mainLayout->toggleView();
       DBG("View toggled via MainLayout");
     }
+  };
+  
+  // Connect settings callback
+  transportBar->onSettingsClicked = [this]() {
+      juce::DialogWindow::LaunchOptions options;
+      options.content.setOwned(new zenith::SettingsComponent(engine));
+      options.content->setSize(600, 500);
+      options.dialogTitle = "Zenith DAW Settings";
+      options.dialogBackgroundColour = juce::Colours::black; // Simple fallback or lookandfeel
+      options.escapeKeyTriggersCloseButton = true;
+      options.useNativeTitleBar = true;
+      options.resizable = true;
+      options.launchAsync();
   };
 
   // Start animation timer (SkiaMainWindowIntegration handles this)
@@ -222,7 +242,7 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   addAndMakeVisible(arrangerComponent.get());
 
   // Wingman panel
-  wingmanPanel = std::make_unique<zenith::WingmanPanel>(api, aiClient);
+  wingmanPanel = std::make_unique<zenith::WingmanPanel>(api, aiClient, engine);
   addAndMakeVisible(wingmanPanel.get());
 
   // Instrument Browser
@@ -369,6 +389,21 @@ void MainComponent::drawSkiaContent(SkCanvas* canvas) {
 #endif
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
+  if (zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
+      activeDragComponent = nullptr;
+#ifdef ZENITH_USE_SKIA
+      if (transportBar && transportBar->getBounds().contains(e.getPosition())) activeDragComponent = transportBar.get();
+      else if (rightSidePanel && rightSidePanel->getBounds().contains(e.getPosition())) activeDragComponent = rightSidePanel.get();
+      else if (bottomBar && bottomBar->getBounds().contains(e.getPosition())) activeDragComponent = bottomBar.get();
+      else if (mainLayout && mainLayout->getBounds().contains(e.getPosition())) activeDragComponent = mainLayout.get();
+#endif
+      
+      if (activeDragComponent) {
+          dragStartBounds = activeDragComponent->getBounds();
+          return; // Consume event
+      }
+  }
+
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
     m.addItem("Show Debug Logs", [] {
@@ -376,6 +411,40 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
     });
     m.showMenuAsync(juce::PopupMenu::Options());
   }
+}
+
+void MainComponent::mouseDrag(const juce::MouseEvent& e) {
+    if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
+        auto offset = e.getDistanceFromDragStart();
+        auto newBounds = dragStartBounds.translated(offset.x, offset.y);
+        
+        activeDragComponent->setBounds(newBounds);
+        
+        // Update Manager (persist as relative)
+        auto relative = newBounds.toFloat().getRelativeAsRectangle(getLocalBounds().toFloat());
+        zenith::design::LayoutManager::PanelState state;
+        state.relativeBounds = relative;
+        state.isVisible = true;
+        
+        juce::String id;
+#ifdef ZENITH_USE_SKIA
+        if (activeDragComponent == transportBar.get()) id = "Transport";
+        else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
+        else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
+        else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
+#endif
+        
+        if (id.isNotEmpty()) {
+            state.id = id;
+            zenith::design::LayoutManager::getInstance().setPanelState(id, state);
+        }
+        
+        repaint(); // Skia repaint
+    }
+}
+
+void MainComponent::mouseUp(const juce::MouseEvent& e) {
+    activeDragComponent = nullptr;
 }
 
 void MainComponent::resized() {

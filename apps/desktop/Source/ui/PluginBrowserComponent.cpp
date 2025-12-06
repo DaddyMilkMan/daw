@@ -8,6 +8,8 @@
 #include "../engine/Track.h"
 #include "../engine/PluginHost.h"
 
+using namespace zenith;
+
 //==============================================================================
 // PluginBrowserComponent Implementation
 //==============================================================================

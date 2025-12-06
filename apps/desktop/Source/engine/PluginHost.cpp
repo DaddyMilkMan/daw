@@ -61,15 +61,22 @@ int PluginHost::scanInternal(std::function<void(const juce::String&)> onProgress
         return 0;
 
     // Get default VST3 search paths
-    auto defaultLocations = vst3Format->getDefaultLocationsToSearch();
+    auto searchPaths = vst3Format->getDefaultLocationsToSearch();
+    
+    // Add custom paths
+    for (const auto& path : customSearchPaths)
+    {
+        searchPaths.add(path);
+    }
+
     int foundCount = 0;
 
     // Scan each location
-    for (int i = 0; i < defaultLocations.getNumPaths(); ++i)
+    for (int i = 0; i < searchPaths.getNumPaths(); ++i)
     {
         if (shouldCancel_) break;
 
-        auto location = defaultLocations[i];
+        auto location = searchPaths[i];
         if (onProgress) onProgress("Scanning: " + location.getFullPathName());
 
         if (!location.exists()) continue;
@@ -78,7 +85,7 @@ int PluginHost::scanInternal(std::function<void(const juce::String&)> onProgress
         juce::PluginDirectoryScanner scanner(
             knownPlugins,
             *vst3Format,
-            defaultLocations,
+            searchPaths, // Use combined paths
             true,  // Search recursively
             juce::File()  // No dead-mans pedal file
         );
@@ -294,6 +301,32 @@ std::unique_ptr<juce::AudioPluginInstance> PluginHost::createPlugin(const juce::
     // Use default sample rate and block size if not specified
     // Ideally these should come from the Engine, but for state restoration this is often acceptable initially
     return createInstance(description, 44100.0, 512, errorMessage);
+}
+
+//==============================================================================
+// Custom Search Paths
+//==============================================================================
+
+void PluginHost::addSearchPath(const juce::String& path)
+{
+    if (!customSearchPaths.contains(path))
+        customSearchPaths.add(path);
+}
+
+void PluginHost::removeSearchPath(int index)
+{
+    if (index >= 0 && index < customSearchPaths.size())
+        customSearchPaths.remove(index);
+}
+
+juce::StringArray PluginHost::getSearchPaths() const
+{
+    return customSearchPaths;
+}
+
+int PluginHost::scanAll(bool async)
+{
+    return scanDefaultLocations(async);
 }
 
 } // namespace zenith

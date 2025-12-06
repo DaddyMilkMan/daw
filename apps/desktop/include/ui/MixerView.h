@@ -24,6 +24,8 @@
 #include <memory>
 #include <vector>
 
+namespace zenith {
+
 // Forward declarations
 class Engine;
 class MixerChannelComponent;
@@ -92,4 +94,6 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerView)
 };
+
+} // namespace zenith
 

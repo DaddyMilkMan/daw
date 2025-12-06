@@ -22,6 +22,9 @@
 #include "ProjectState.h"
 
 //==============================================================================
+namespace zenith {
+
+//==============================================================================
 /**
  * @class MarkerLaneComponent
  * @brief UI lane for marker editing
@@ -141,4 +144,6 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MarkerLaneComponent)
 };
+
+} // namespace zenith
 

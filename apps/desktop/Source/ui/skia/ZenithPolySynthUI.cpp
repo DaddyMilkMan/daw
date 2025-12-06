@@ -9,6 +9,7 @@
 */
 
 #include "ZenithPolySynthUI.h"
+#include "ZenithLayout.h"
 
 // Include all Skia headers BEFORE entering namespace zenith
 #ifdef ZENITH_USE_SKIA
@@ -28,23 +29,26 @@ namespace zenith {
 
 ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
     : AudioProcessorEditor(&p), 
-      SkiaRenderer(this), 
       processor(p) {
   
   setSize(kSimpleWidth, kSimpleHeight);
 
+  // Initialize Renderer
+  Settings::getInstance().addChangeListener(this);
+  recreateRenderer();
+
 #ifdef ZENITH_USE_SKIA
   // Initialize Widgets
-  addWidget<SkiaKnob>("CUTOFF", ZenithPolySynthProcessor::FilterCutoff);
-  addWidget<SkiaKnob>("RES", ZenithPolySynthProcessor::FilterResonance);
-  addWidget<SkiaKnob>("ENV AMT", ZenithPolySynthProcessor::FilterEnvAmount);
-  addWidget<SkiaKnob>("SUB", ZenithPolySynthProcessor::SubOscLevel);
-  addWidget<SkiaKnob>("NOISE", ZenithPolySynthProcessor::NoiseLevel);
+  addWidget<ZenithKnob>("CUTOFF", ZenithPolySynthProcessor::FilterCutoff);
+  addWidget<ZenithKnob>("RES", ZenithPolySynthProcessor::FilterResonance);
+  addWidget<ZenithKnob>("ENV AMT", ZenithPolySynthProcessor::FilterEnvAmount);
+  addWidget<ZenithKnob>("SUB", ZenithPolySynthProcessor::SubOscLevel);
+  addWidget<ZenithKnob>("NOISE", ZenithPolySynthProcessor::NoiseLevel);
   
-  addWidget<SkiaSlider>("A", ZenithPolySynthProcessor::AmpAttack);
-  addWidget<SkiaSlider>("D", ZenithPolySynthProcessor::AmpDecay);
-  addWidget<SkiaSlider>("S", ZenithPolySynthProcessor::AmpSustain);
-  addWidget<SkiaSlider>("R", ZenithPolySynthProcessor::AmpRelease);
+  addWidget<ZenithSlider>("A", ZenithPolySynthProcessor::AmpAttack);
+  addWidget<ZenithSlider>("D", ZenithPolySynthProcessor::AmpDecay);
+  addWidget<ZenithSlider>("S", ZenithPolySynthProcessor::AmpSustain);
+  addWidget<ZenithSlider>("R", ZenithPolySynthProcessor::AmpRelease);
   
   // Visualizer (JUCE Component wrapper)
   visualizer_ = std::make_unique<ZenithVisualizer>(processor);
@@ -70,7 +74,18 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
 #endif
 }
 
+void ZenithPolySynthUI::recreateRenderer() {
+    renderer_ = std::make_unique<SkiaRenderer>(*this, Settings::getInstance().getRenderBackend());
+    renderer_->initialize();
+}
+
+void ZenithPolySynthUI::changeListenerCallback(juce::ChangeBroadcaster*) {
+    recreateRenderer();
+    repaint();
+}
+
 ZenithPolySynthUI::~ZenithPolySynthUI() {
+  Settings::getInstance().removeChangeListener(this);
   setLookAndFeel(nullptr);
 }
 
@@ -99,21 +114,33 @@ void ZenithPolySynthUI::resized() {
 }
 
 void ZenithPolySynthUI::layoutWidgets() {
-    // Simple manual layout for now (matching previous resized)
-    int y = 220;
-    
-    // Iterate widgets and layout by name (brittle but functional for refactor)
+    std::vector<juce::Component*> filterGroup;
+    std::vector<juce::Component*> mixGroup;
+    std::vector<juce::Component*> envGroup;
+
     for (auto& w : widgets_) {
-        if (w->name == "CUTOFF") w->bounds = juce::Rectangle<float>(250, y, 100, 100);
-        else if (w->name == "RES") w->bounds = juce::Rectangle<float>(370, y, 80, 80);
-        else if (w->name == "ENV AMT") w->bounds = juce::Rectangle<float>(460, y, 80, 80);
-        else if (w->name == "SUB") w->bounds = juce::Rectangle<float>(20, y, 60, 60);
-        else if (w->name == "NOISE") w->bounds = juce::Rectangle<float>(90, y, 60, 60);
-        else if (w->name == "A") w->bounds = juce::Rectangle<float>(550, y, 30, 150);
-        else if (w->name == "D") w->bounds = juce::Rectangle<float>(590, y, 30, 150);
-        else if (w->name == "S") w->bounds = juce::Rectangle<float>(630, y, 30, 150);
-        else if (w->name == "R") w->bounds = juce::Rectangle<float>(670, y, 30, 150);
+        juce::String name = w->getName();
+        if (name == "CUTOFF" || name == "RES" || name == "ENV AMT") filterGroup.push_back(w.get());
+        else if (name == "SUB" || name == "NOISE") mixGroup.push_back(w.get());
+        else if (name == "A" || name == "D" || name == "S" || name == "R") envGroup.push_back(w.get());
     }
+
+    auto area = getLocalBounds().reduced(20);
+    
+    if (presetBar_) area.removeFromTop(40);
+    if (visualizer_) area.removeFromTop(150);
+    
+    auto mainArea = area;
+    
+    // Layout Filter Group (Top Left)
+    ZenithLayout::row(mainArea.removeFromTop(100).removeFromLeft(350), filterGroup, 10.0f);
+    
+    // Layout Mix Group (Bottom Left)
+    ZenithLayout::row(mainArea.removeFromTop(80).removeFromLeft(200), mixGroup, 10.0f);
+    
+    // Layout Env Group (Right side)
+    // Use vertical slider layout (row of sliders)
+    ZenithLayout::row(area.removeFromRight(200), envGroup, 5.0f);
 }
 
 // Mouse Handling
@@ -158,8 +185,8 @@ void ZenithPolySynthUI::mouseMove(const juce::MouseEvent& e) {
     }
     
     if (newHover != hoveredWidget_) {
-        if (hoveredWidget_) hoveredWidget_->isHovered = false;
-        if (newHover) newHover->isHovered = true;
+        if (hoveredWidget_) hoveredWidget_->setHovered(false);
+        if (newHover) newHover->setHovered(true);
         hoveredWidget_ = newHover;
         repaint();
     }
@@ -168,10 +195,16 @@ void ZenithPolySynthUI::mouseMove(const juce::MouseEvent& e) {
 }
 
 void ZenithPolySynthUI::paint(juce::Graphics& g) {
-    // Fallback for non-Skia builds
-    g.fillAll(juce::Colours::darkgrey);
-    g.setColour(juce::Colours::white);
-    g.drawText("Zenith PolySynth", getLocalBounds(), juce::Justification::centred);
+    if (renderer_) {
+        renderer_->render([this](SkCanvas* canvas) {
+            drawSkiaContent(canvas);
+        });
+    } else {
+        // Fallback for non-Skia builds
+        g.fillAll(juce::Colours::darkgrey);
+        g.setColour(juce::Colours::white);
+        g.drawText("Zenith PolySynth", getLocalBounds(), juce::Justification::centred);
+    }
 }
 
 void ZenithPolySynthUI::drawSkiaContent(SkCanvas* canvas) {
@@ -208,7 +241,17 @@ void ZenithPolySynthUI::drawSkiaContent(SkCanvas* canvas) {
         drawKnobFromState(canvas, knob);
     }
     
-    // TODO: Draw sliders, buttons, visualizer from state
+    // Draw all sliders from snapshot
+    for (const auto& slider : frame->sliders) {
+        drawSliderFromState(canvas, slider);
+    }
+    
+    // TODO: Draw buttons from state (when button widgets are added)
+    // for (const auto& button : frame->buttons) {
+    //     drawButtonFrom State(canvas, button);
+    // }
+    
+    // TODO: Draw visualizer from state (Phase 2)
     
 #else
     juce::ignoreUnused(canvas);
@@ -240,13 +283,41 @@ void ZenithPolySynthUI::captureFrameSnapshot() {
     
     // Snapshot all knob widgets
     for (auto& widget : widgets_) {
-        if (auto* knob = dynamic_cast<SkiaKnob*>(widget.get())) {
-            frame->knobs.push_back(knob->captureRenderState());
+        if (auto* knob = dynamic_cast<ZenithKnob*>(widget.get())) {
+            render::KnobRenderState kState;
+            auto r = knob->getLocalBounds().toFloat();
+            kState.bounds = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+            kState.value = knob->getValue();
+            kState.baseColor = knob->getGlowColor(); 
+            kState.labelText = knob->getName();
+            kState.isHovered = knob->isHovered();
+            frame->knobs.push_back(kState);
         }
     }
     
-    // TODO: Snapshot sliders, buttons, visualizer when ready
+    // Snapshot all slider widgets
+    for (auto& widget : widgets_) {
+        if (auto* slider = dynamic_cast<ZenithSlider*>(widget.get())) {
+             // Construct state manually
+            render::SliderRenderState sState;
+            auto r = slider->getLocalBounds().toFloat();
+            sState.bounds = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+            sState.value = slider->getValue();
+            sState.labelText = slider->getName();
+            sState.isHovered = slider->isHovered();
+            frame->sliders.push_back(sState);
+        }
+    }
     
+    // TODO: Snapshot buttons when button widgets are added
+   // for (auto& widget : widgets_) {
+    //     if (auto* button = dynamic_cast<SkiaButton*>(widget.get())) {
+    //         frame->buttons.push_back(button->captureRenderState());
+    //     }
+    // }
+    
+    // TODO: Snapshot visualizer when ready (Phase 2)
+
     // Atomic swap to ready buffer (lock-free)
     frameBuffer_.swapWriteToReady();
 }
@@ -315,6 +386,97 @@ void ZenithPolySynthUI::drawKnobFromState(SkCanvas* canvas, const render::KnobRe
         float textY = cy + radius + 15.0f;
         float width = font.measureText(state.labelText.toRawUTF8(), state.labelText.getNumBytesAsUTF8(), SkTextEncoding::kUTF8);
         canvas->drawString(state.labelText.toRawUTF8(), cx - width / 2.0f, textY, font, textPaint);
+    }
+    
+    canvas->restore();
+}
+
+void ZenithPolySynthUI::drawSliderFromState(SkCanvas* canvas, const render::SliderRenderState& state) {
+    static ZenithSlider drawer;
+    if (state.bounds.isEmpty()) return;
+    
+    canvas->save();
+    
+    const float trackWidth = 4.0f;
+    const float handleSize = 12.0f;
+    const float labelOffset = 18.0f;
+    
+    // Calculate track rect (vertically centered)
+    float centerX = state.bounds.centerX();
+    SkRect trackRect = SkRect::MakeXYWH(
+        centerX - trackWidth / 2.0f,
+        state.bounds.top(),
+        trackWidth,
+        state.bounds.height() - labelOffset
+    );
+    
+    // 1. Draw background track
+    SkPaint trackPaint;
+    trackPaint.setStyle(SkPaint::kFill_Style);
+    trackPaint.setColor(SkColorSetARGB(77, 255, 255, 255)); // 30% white
+    trackPaint.setAntiAlias(true);
+    canvas->drawRoundRect(trackRect, 2.0f, 2.0f, trackPaint);
+    
+    // 2. Draw filled value bar (bottom to value)
+    if (state.value > 0.0f) {
+        float fillHeight = trackRect.height() * state.value;
+        SkRect fillRect = SkRect::MakeXYWH(
+            trackRect.x(),
+            trackRect.bottom() - fillHeight,
+            trackRect.width(),
+            fillHeight
+        );
+        
+        SkPaint fillPaint;
+        fillPaint.setStyle(SkPaint::kFill_Style);
+        fillPaint.setColor(state.color);
+        fillPaint.setAntiAlias(true);
+        
+        // Add glow if hovered or dragging
+        if (state.isHovered || state.isDragging) {
+            SkPaint glowPaint = fillPaint;
+            glowPaint.setColor(SkColorSetARGB(102, 74, 158, 255)); // 40% cyan glow
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+            canvas->drawRoundRect(fillRect, 2.0f, 2.0f, glowPaint);
+        }
+        
+        canvas->drawRoundRect(fillRect, 2.0f, 2.0f, fillPaint);
+    }
+    
+    // 3. Draw value indicator handle
+    float handleY = trackRect.bottom() - (trackRect.height() * state.value);
+    
+    SkPaint handlePaint;
+    handlePaint.setStyle(SkPaint::kFill_Style);
+    handlePaint.setColor(SK_ColorWHITE);
+    handlePaint.setAntiAlias(true);
+    
+    // Slightly larger if hovered
+    float actualHandleSize = state.isHovered ? handleSize * 1.1f : handleSize;
+    
+    canvas->drawCircle(centerX, handleY, actualHandleSize / 2.0f, handlePaint);
+    
+    // Handle border
+    SkPaint borderPaint;
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.5f);
+    borderPaint.setColor(SkColorSetARGB(180, 0, 0, 0)); // Semi-transparent black
+    borderPaint.setAntiAlias(true);
+    canvas->drawCircle(centerX, handleY, actualHandleSize / 2.0f, borderPaint);
+    
+    // 4. Draw label text below slider
+    if (state.labelText.isNotEmpty()) {
+        SkFont font;
+        font.setSize(11.0f);
+        font.setEdging(SkFont::Edging::kAntiAlias);
+        
+        SkPaint textPaint;
+        textPaint.setColor(SkColorSetRGB(160, 160, 165));
+        
+        float textY = state.bounds.bottom() - 2.0f;
+        float textWidth = font.measureText(state.labelText.toRawUTF8(), state.labelText.getNumBytesAsUTF8(), SkTextEncoding::kUTF8);
+        
+        canvas->drawString(state.labelText.toRawUTF8(), centerX - textWidth / 2.0f, textY, font, textPaint);
     }
     
     canvas->restore();

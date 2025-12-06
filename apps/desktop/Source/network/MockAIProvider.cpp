@@ -18,7 +18,9 @@ juce::String MockAIProvider::processRequest(const juce::String& jsonRequest) {
     auto result = juce::JSON::parse(jsonRequest, requestVar);
 
     if (result.failed()) {
-        return JSON::toString(juce::DynamicObject::Ptr(new juce::DynamicObject())); 
+        juce::DynamicObject::Ptr errObj = new juce::DynamicObject();
+        errObj->setProperty("error", "Failed to parse request");
+        return juce::JSON::toString(juce::var(errObj.get())); 
     }
 
     juce::String requestId = requestVar.getProperty("requestId", "").toString();
@@ -59,7 +61,7 @@ juce::String MockAIProvider::createResponse(const juce::String& requestId,
     juce::var commandsArray(commands);
     response->setProperty("commands", commandsArray);
 
-    return juce::JSON::toString(response);
+    return juce::JSON::toString(juce::var(response.get()));
 }
 
 // Helper to create a command object
@@ -152,7 +154,8 @@ juce::Array<juce::var> MockAIProvider::generateDrums(const juce::String& descrip
     batch.add(createCommand("create_clip", clipParams));
 
     juce::var notesVar;
-    auto* notesArray = notesVar.getArray();
+    // Fix: notesVar is a var, not an array yet.
+    juce::Array<juce::var> notesArray;
 
     // Euclidean Rhythm: 4 kicks in 16 steps, 8 hihats in 16 steps
     auto addEuclidean = [&](int pitch, int steps, int pulses) {
@@ -166,7 +169,7 @@ juce::Array<juce::var> MockAIProvider::generateDrums(const juce::String& descrip
                 note->setProperty("startBeats", i * 0.25);
                 note->setProperty("lengthBeats", 0.25);
                 note->setProperty("velocity", 100);
-                notesArray->add(juce::var(note));
+                notesArray.add(juce::var(note));
             }
         }
     };
@@ -175,6 +178,9 @@ juce::Array<juce::var> MockAIProvider::generateDrums(const juce::String& descrip
     addEuclidean(42, 16, 12); // Hihat
     addEuclidean(38, 16, 4); // Snare (offset? simple euclidean puts on 1)
     
+    // Assign array to var
+    notesVar = notesArray;
+
     juce::DynamicObject::Ptr setNotesParams = new juce::DynamicObject();
     setNotesParams->setProperty("trackId", trackId);
     setNotesParams->setProperty("clipId", clipId);
@@ -191,3 +197,5 @@ juce::Array<juce::var> MockAIProvider::generateBass(const juce::String& descript
 juce::Array<juce::var> MockAIProvider::generateChords(const juce::String& description) {
     return generateMelody(description); // Reuse
 }
+
+} // namespace zenith

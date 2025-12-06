@@ -11,7 +11,11 @@
 */
 
 #include "CommandAPI.h"
+#include "CommandUtils.h"
 #include "SessionGraph.h"
+#include "TrackCommands.h"
+#include "ClipCommands.h"
+#include "TransportCommands.h"
 #include "../../include/Engine.h"
 #include "../../include/ProjectState.h"
 #include "../../include/TempoMap.h"
@@ -21,13 +25,18 @@
 #include "../instruments/InstrumentRegistry.h"
 
 #include "../dsp/ONNXStemSeparator.h"
+#include "../ai/AIMasteringAgent.h"
 
 namespace zenith {
 
 //==============================================================================
-CommandAPI::CommandAPI(Engine& eng, ProjectState& state)
-    : engine(eng), projectState(state)
+CommandAPI::CommandAPI(ProjectState& state, Engine& eng)
+    : projectState(state), engine(eng)
 {
+    trackCommands = std::make_unique<TrackCommands>(engine, projectState);
+    clipCommands = std::make_unique<ClipCommands>(engine, projectState);
+    transportCommands = std::make_unique<TransportCommands>(engine, projectState);
+
     DBG("CommandAPI: Initialized");
     initializeCommandMap();
 }
@@ -41,6 +50,7 @@ void CommandAPI::initializeCommandMap()
     commandMap["set_track_volume"] = CommandID::SetTrackVolume;
     commandMap["set_track_pan"] = CommandID::SetTrackPan;
     commandMap["export_audio"] = CommandID::ExportAudio;
+    commandMap["export_project_advanced"] = CommandID::ExportProjectAdvanced;
     commandMap["separate_track"] = CommandID::SeparateTrack;
     
     commandMap["list_clips"] = CommandID::ListClips;
@@ -103,6 +113,11 @@ void CommandAPI::initializeCommandMap()
     commandMap["get_instrument_parameters"] = CommandID::GetInstrumentParameters;
     commandMap["set_instrument_parameter"] = CommandID::SetInstrumentParameter;
     commandMap["get_instrument_parameter_schema"] = CommandID::GetInstrumentParameterSchema;
+
+    // Quick Wins: Mixer Control
+    commandMap["set_track_send"] = CommandID::SetTrackSend;
+    commandMap["set_track_eq"] = CommandID::SetTrackEQ;
+    commandMap["set_track_compressor"] = CommandID::SetTrackCompressor;
 }
 
 CommandAPI::~CommandAPI()
@@ -133,29 +148,30 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
     CommandID id = it->second;
     
     switch (id) {
-        case CommandID::ListTracks: return listTracks(params);
-        case CommandID::CreateTrack: return createTrack(params);
-        case CommandID::DeleteTrack: return deleteTrack(params);
-        case CommandID::RenameTrack: return renameTrack(params);
-        case CommandID::SetTrackVolume: return setTrackVolume(params);
-        case CommandID::SetTrackPan: return setTrackPan(params);
+        case CommandID::ListTracks: return trackCommands->listTracks(params);
+        case CommandID::CreateTrack: return trackCommands->createTrack(params);
+        case CommandID::DeleteTrack: return trackCommands->deleteTrack(params);
+        case CommandID::RenameTrack: return trackCommands->renameTrack(params);
+        case CommandID::SetTrackVolume: return trackCommands->setTrackVolume(params);
+        case CommandID::SetTrackPan: return trackCommands->setTrackPan(params);
         case CommandID::ExportAudio: return exportAudio(params);
-        case CommandID::SeparateTrack: return separateTrack(params);
+        case CommandID::ExportProjectAdvanced: return exportProjectAdvanced(params);
+        case CommandID::SeparateTrack: return trackCommands->separateTrack(params);
         
-        case CommandID::ListClips: return listClips(params);
-        case CommandID::CreateClip: return createClip(params);
-        case CommandID::DeleteClip: return deleteClip(params);
-        case CommandID::SplitClip: return splitClip(params);
-        case CommandID::MoveClip: return moveClip(params);
-        case CommandID::ResizeClip: return resizeClip(params);
+        case CommandID::ListClips: return clipCommands->listClips(params);
+        case CommandID::CreateClip: return clipCommands->createClip(params);
+        case CommandID::DeleteClip: return clipCommands->deleteClip(params);
+        case CommandID::SplitClip: return clipCommands->splitClip(params);
+        case CommandID::MoveClip: return clipCommands->moveClip(params);
+        case CommandID::ResizeClip: return clipCommands->resizeClip(params);
         
-        case CommandID::Play: return play(params);
-        case CommandID::Stop: return stop(params);
-        case CommandID::Record: return record(params);
-        case CommandID::Rewind: return rewind(params);
-        case CommandID::SetLoop: return setLoop(params);
-        case CommandID::SetTempo: return setTempo(params);
-        case CommandID::SetTimeSignature: return setTimeSignature(params);
+        case CommandID::Play: return transportCommands->play(params);
+        case CommandID::Stop: return transportCommands->stop(params);
+        case CommandID::Record: return transportCommands->record(params);
+        case CommandID::Rewind: return transportCommands->rewind(params);
+        case CommandID::SetLoop: return transportCommands->setLoop(params);
+        case CommandID::SetTempo: return transportCommands->setTempo(params);
+        case CommandID::SetTimeSignature: return transportCommands->setTimeSignature(params);
         
         case CommandID::GetSessionGraph: return getSessionGraph(params);
         case CommandID::Undo: return undo(params);
@@ -174,8 +190,8 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         case CommandID::ClearAutomation: return clearAutomation(params);
         case CommandID::GetAutomation: return getAutomation(params);
         
-        case CommandID::AddTempoChange: return addTempoChange(params);
-        case CommandID::GetTempoMap: return getTempoMap(params);
+        case CommandID::AddTempoChange: return transportCommands->addTempoChange(params);
+        case CommandID::GetTempoMap: return transportCommands->getTempoMap(params);
         
         case CommandID::AddMarker: return addMarker(params);
         case CommandID::GetMarkers: return getMarkers(params);
@@ -189,7 +205,7 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         case CommandID::SetNoteVelocity: return setNoteVelocity(params);
         case CommandID::SetNoteLength: return setNoteLength(params);
         case CommandID::GetMidiData: return getMidiData(params);
-        case CommandID::SetClipNotes: return setClipNotes(params);
+        case CommandID::SetClipNotes: return clipCommands->setClipNotes(params);
         
         case CommandID::ListPresets: return listPresets(params);
         case CommandID::LoadPreset: return loadPreset(params);
@@ -201,6 +217,11 @@ juce::var CommandAPI::executeCommand(const juce::var& request)
         case CommandID::GetInstrumentParameters: return getInstrumentParameters(params);
         case CommandID::SetInstrumentParameter: return setInstrumentParameter(params);
         case CommandID::GetInstrumentParameterSchema: return getInstrumentParameterSchema(params);
+        
+        // Quick Wins: Mixer Control
+        case CommandID::SetTrackSend: return trackCommands->setTrackSend(params);
+        case CommandID::SetTrackEQ: return trackCommands->setTrackEQ(params);
+        case CommandID::SetTrackCompressor: return trackCommands->setTrackCompressor(params);
         
         default: return createErrorResponse("Command ID not implemented: " + commandStr);
     }
@@ -305,445 +326,22 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var>& commands,
 // Command Handlers
 //==============================================================================
 
-juce::var CommandAPI::listTracks(const juce::var& params)
-{
-    juce::ignoreUnused(params);
 
-    juce::var tracksArray;
-    auto* tracksArrayPtr = tracksArray.getArray();
-
-    const auto& tracks = engine.tracks();
-
-    for (size_t i = 0; i < tracks.size(); ++i)
-    {
-        const auto* track = tracks[i].get();
-        if (track == nullptr)
-            continue;
-
-        auto* trackObj = new juce::DynamicObject();
-        trackObj->setProperty("id", "track_" + juce::String((int)i));
-        trackObj->setProperty("name", track->getName());
-        trackObj->setProperty("type", track->getTypeString());
-        trackObj->setProperty("volume", track->getVolume());
-        trackObj->setProperty("pan", track->getPan());
-        trackObj->setProperty("muted", track->isMuted());
-        trackObj->setProperty("soloed", track->isSolo());
-        trackObj->setProperty("numClips", track->getNumClips());
-        trackObj->setProperty("numPlugins", track->getNumPlugins());
-
-        tracksArrayPtr->add(juce::var(trackObj));
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("tracks", tracksArray);
-    resultObj->setProperty("count", (int)tracks.size());
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::createTrack(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("type"))
-        return createErrorResponse("Missing 'type' parameter (must be 'audio' or 'midi')");
-
-    juce::String type = params["type"].toString().toLowerCase();
-    juce::String name = params.hasProperty("name") ? params["name"].toString() : juce::String("New Track");
-
-    // Validate type
-    if (type != "audio" && type != "midi")
-        return createErrorResponse("Invalid type: must be 'audio' or 'midi'");
-
-    // Create track via ProjectState (undoable)
-    juce::String actionName = "Wingman: create_track '" + name + "'";
-    juce::String trackId = projectState.addTrack(name, type);
-
-    if (trackId.isEmpty())
-        return createErrorResponse("Failed to create track");
-
-    // Create result
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("name", name);
-    resultObj->setProperty("type", type);
-
-    DBG("CommandAPI: Created track: " + trackId + " (" + name + ")");
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::deleteTrack(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-
-    // Check if track exists in ProjectState
-    auto trackTree = projectState.getTrack(trackId);
-    if (!trackTree.isValid())
-        return createErrorResponse("Track not found: " + trackId);
-
-    // Delete via ProjectState (undoable)
-    juce::String actionName = "Wingman: delete_track " + trackId;
-    projectState.removeTrack(trackId);
-
-    DBG("CommandAPI: Deleted track: " + trackId);
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("deleted", true);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::renameTrack(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("name"))
-        return createErrorResponse("Missing 'name' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String newName = params["name"].toString();
-
-    // Check if track exists in ProjectState
-    auto trackTree = projectState.getTrack(trackId);
-    if (!trackTree.isValid())
-        return createErrorResponse("Track not found: " + trackId);
-
-    // Rename via ProjectState (undoable)
-    juce::String actionName = "Wingman: rename_track " + trackId + " to '" + newName + "'";
-    projectState.renameTrack(trackId, newName, actionName);
-
-    DBG("CommandAPI: Renamed track: " + trackId + " to " + newName);
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("newName", newName);
-    resultObj->setProperty("success", true);
-
-    return juce::var(resultObj);
-}
 
 // list_clips command
-juce::var CommandAPI::listClips(const juce::var& params)
-{
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
 
-    juce::String trackId = params["trackId"].toString();
-    Track* track = findTrackById(trackId);
-    
-    if (track == nullptr)
-        return createErrorResponse("Track not found: " + trackId);
-
-    juce::var clipsArray;
-    auto* clipsArrayPtr = clipsArray.getArray();
-
-    for (int i = 0; i < track->getNumClips(); ++i)
-    {
-        auto* clip = track->getClip(i);
-        if (clip != nullptr)
-        {
-            auto* clipObj = new juce::DynamicObject();
-            clipObj->setProperty("id", "clip_" + juce::String(i));
-            clipObj->setProperty("name", clip->getName());
-            clipObj->setProperty("start", clip->getStartPosition());
-            clipObj->setProperty("length", clip->getLength());
-            clipObj->setProperty("offset", clip->getOffset());
-            
-            clipsArrayPtr->add(juce::var(clipObj));
-        }
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("clips", clipsArray);
-    resultObj->setProperty("count", track->getNumClips());
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::splitClip(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("clipId"))
-        return createErrorResponse("Missing 'clipId' parameter");
-    if (!params.hasProperty("splitSamples"))
-        return createErrorResponse("Missing 'splitSamples' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String clipId = params["clipId"].toString();
-    juce::int64 splitSamples = params["splitSamples"];
-
-    // Check if clip exists in ProjectState
-    auto clipTree = projectState.getClip(trackId, clipId);
-    if (!clipTree.isValid())
-        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
-
-    // Split via ProjectState (undoable)
-    juce::String actionName = "Wingman: split_clip " + clipId + " at " + juce::String(splitSamples);
-    auto newClipIds = projectState.splitClip(trackId, clipId, splitSamples, actionName);
-
-    if (newClipIds.first.isEmpty() || newClipIds.second.isEmpty())
-        return createErrorResponse("Split failed - invalid split position");
-
-    DBG("CommandAPI: Split clip: " + clipId + " into " + newClipIds.first + " and " + newClipIds.second);
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("originalClipId", clipId);
-    resultObj->setProperty("splitSamples", splitSamples);
-    resultObj->setProperty("leftClipId", newClipIds.first);
-    resultObj->setProperty("rightClipId", newClipIds.second);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::moveClip(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("clipId"))
-        return createErrorResponse("Missing 'clipId' parameter");
-    if (!params.hasProperty("newStartSamples"))
-        return createErrorResponse("Missing 'newStartSamples' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String clipId = params["clipId"].toString();
-    juce::int64 newStartSamples = params["newStartSamples"];
-
-    // Check if clip exists in ProjectState
-    auto clipTree = projectState.getClip(trackId, clipId);
-    if (!clipTree.isValid())
-        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
-
-    // Validate position (must be >= 0)
-    if (newStartSamples < 0)
-        return createErrorResponse("Clip position must be >= 0");
-
-    // Move via ProjectState (undoable)
-    juce::String actionName = "Wingman: move_clip " + clipId + " to " + juce::String(newStartSamples);
-    projectState.moveClip(trackId, clipId, newStartSamples, actionName);
-
-    DBG("CommandAPI: Moved clip: " + clipId + " to " + juce::String(newStartSamples));
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("clipId", clipId);
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("newStartSamples", newStartSamples);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::resizeClip(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("clipId"))
-        return createErrorResponse("Missing 'clipId' parameter");
-    if (!params.hasProperty("newLengthSamples"))
-        return createErrorResponse("Missing 'newLengthSamples' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String clipId = params["clipId"].toString();
-    juce::int64 newLengthSamples = params["newLengthSamples"];
-
-    // Check if clip exists
-    auto clipTree = projectState.getClip(trackId, clipId);
-    if (!clipTree.isValid())
-        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
-
-    if (newLengthSamples <= 0)
-        return createErrorResponse("Clip length must be > 0");
-
-    // Resize via ProjectState (undoable)
-    juce::String actionName = "Wingman: resize_clip " + clipId + " to " + juce::String(newLengthSamples);
-    projectState.resizeClip(trackId, clipId, newLengthSamples, actionName);
-
-    DBG("CommandAPI: Resized clip: " + clipId + " to " + juce::String(newLengthSamples));
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("clipId", clipId);
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("newLengthSamples", newLengthSamples);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
 
 //==============================================================================
 // Transport Commands
 //==============================================================================
 
-juce::var CommandAPI::play(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-    engine.play();
-    return createSuccessResponse(juce::var());
-}
-
-juce::var CommandAPI::stop(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-    engine.stop();
-    return createSuccessResponse(juce::var());
-}
-
-juce::var CommandAPI::record(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-    engine.record();
-    return createSuccessResponse(juce::var());
-}
-
-juce::var CommandAPI::rewind(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-    engine.setPlayheadSamples(0);
-    return createSuccessResponse(juce::var());
-}
-
-juce::var CommandAPI::setLoop(const juce::var& params)
-{
-    if (!params.hasProperty("enabled"))
-        return createErrorResponse("Missing 'enabled' parameter");
-
-    bool enabled = params["enabled"];
-    engine.setLooping(enabled);
-
-    if (params.hasProperty("start") && params.hasProperty("end"))
-    {
-        juce::int64 start = params["start"];
-        juce::int64 end = params["end"];
-        engine.setLoopRegion(start, end);
-    }
-
-    return createSuccessResponse(juce::var());
-}
 
 
 
-juce::var CommandAPI::setTimeSignature(const juce::var& params)
-{
-    if (!params.hasProperty("numerator") || !params.hasProperty("denominator"))
-        return createErrorResponse("Missing numerator/denominator");
 
-    int num = params["numerator"];
-    int den = params["denominator"];
-    
-    projectState.setTimeSignature(num, den);
-    return createSuccessResponse(juce::var());
-}
 
-juce::var CommandAPI::setTrackVolume(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("volumeDb"))
-        return createErrorResponse("Missing 'volumeDb' parameter");
 
-    juce::String trackId = params["trackId"].toString();
-    double volumeDb = params["volumeDb"];
 
-    // Check if track exists in ProjectState
-    auto trackTree = projectState.getTrack(trackId);
-    if (!trackTree.isValid())
-        return createErrorResponse("Track not found: " + trackId);
-
-    // Convert dB to linear gain
-    float gain = juce::Decibels::decibelsToGain((float)volumeDb);
-
-    // Clamp to reasonable range (0.0 to 2.0 linear = -inf to +6dB)
-    gain = juce::jlimit(0.0f, 2.0f, gain);
-
-    // Send RT event for immediate response
-    Track* track = findTrackById(trackId);
-    if (track) {
-        int trackIndex = -1;
-        for (int i = 0; i < engine.getNumTracks(); ++i) {
-            if (engine.tracks()[i].get() == track) {
-                trackIndex = i;
-                break;
-            }
-        }
-        if (trackIndex >= 0) {
-            zenith::EngineEvent e(zenith::EngineEvent::Type::SetTrackVolume);
-            e.trackIndex = trackIndex;
-            e.value = gain;
-            engine.queueEvent(e);
-        }
-    }
-
-    // Set volume via ProjectState (undoable)
-    juce::String actionName = "Wingman: set_track_volume " + trackId + " to " + juce::String(volumeDb, 1) + " dB";
-    projectState.setTrackVolume(trackId, gain, actionName);
-
-    DBG("CommandAPI: Set track volume: " + trackId + " to " + juce::String(volumeDb) + " dB");
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("volumeDb", volumeDb);
-    resultObj->setProperty("volumeLinear", gain);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::setTrackPan(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("pan"))
-        return createErrorResponse("Missing 'pan' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    double pan = params["pan"];
-
-    // Check if track exists in ProjectState
-    auto trackTree = projectState.getTrack(trackId);
-    if (!trackTree.isValid())
-        return createErrorResponse("Track not found: " + trackId);
-
-    // Clamp to valid range (-1.0 to 1.0)
-    float panValue = juce::jlimit(-1.0f, 1.0f, (float)pan);
-
-    // Send RT event
-    Track* track = findTrackById(trackId);
-    if (track) {
-        int trackIndex = -1;
-        for (int i = 0; i < engine.getNumTracks(); ++i) {
-            if (engine.tracks()[i].get() == track) {
-                trackIndex = i;
-                break;
-            }
-        }
-        if (trackIndex >= 0) {
-            zenith::EngineEvent e(zenith::EngineEvent::Type::SetTrackPan);
-            e.trackIndex = trackIndex;
-            e.value = panValue;
-            engine.queueEvent(e);
-        }
-    }
-
-    // Set pan via ProjectState (undoable)
-    juce::String actionName = "Wingman: set_track_pan " + trackId + " to " + juce::String(panValue, 2);
-    projectState.setTrackPan(trackId, panValue, actionName);
-
-    DBG("CommandAPI: Set track pan: " + trackId + " to " + juce::String(panValue));
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("pan", panValue);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
 
 juce::var CommandAPI::exportAudio(const juce::var& params)
 {
@@ -776,235 +374,9 @@ juce::var CommandAPI::exportAudio(const juce::var& params)
     return createSuccessResponse(juce::var(resultObj));
 }
 
-juce::var CommandAPI::separateTrack(const juce::var& params)
-{
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
 
-    juce::String trackId = params["trackId"].toString();
-    Track* track = findTrackById(trackId);
 
-    if (track == nullptr)
-        return createErrorResponse("Track not found: " + trackId);
 
-    // 1. Determine duration
-    juce::int64 maxEnd = 0;
-    for (int i = 0; i < track->getNumClips(); ++i)
-    {
-        auto* clip = track->getClip(i);
-        if (clip)
-        {
-            maxEnd = juce::jmax(maxEnd, clip->getStartPosition() + clip->getLength());
-        }
-    }
-
-    if (maxEnd == 0)
-        return createErrorResponse("Track is empty");
-
-    // 2. Render track to buffer
-    double sampleRate = engine.getSampleRate();
-    if (sampleRate <= 0) sampleRate = 44100.0;
-
-    juce::AudioBuffer<float> trackBuffer(2, (int)maxEnd);
-    trackBuffer.clear();
-
-    // Render in blocks
-    int blockSize = 1024;
-    juce::int64 samplesRendered = 0;
-    
-    // Create a temporary buffer for block processing
-    juce::AudioBuffer<float> blockBuffer(2, blockSize);
-
-    while (samplesRendered < maxEnd)
-    {
-        int numSamples = (int)juce::jmin((juce::int64)blockSize, maxEnd - samplesRendered);
-        
-        blockBuffer.clear();
-        juce::AudioSourceChannelInfo info(&blockBuffer, 0, numSamples);
-        
-        // Render track
-        track->getNextAudioBlock(info, samplesRendered, nullptr);
-        
-        // Copy to main buffer
-        for (int ch = 0; ch < 2; ++ch)
-        {
-            trackBuffer.copyFrom(ch, (int)samplesRendered, blockBuffer, ch, 0, numSamples);
-        }
-        
-        samplesRendered += numSamples;
-    }
-
-    // 3. Perform Separation
-    ONNXStemSeparator separator;
-    // Initialize with dummy path (ONNXStemSeparator handles missing model gracefully via DSP fallback)
-    separator.initialize(juce::File()); 
-    
-    auto result = separator.separate(trackBuffer, sampleRate);
-
-    if (!result.success)
-        return createErrorResponse("Separation failed: " + result.error);
-
-    // 4. Save Stems and Create Tracks
-    juce::File recordingsDir = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-        .getChildFile("ZenithDAW/Stems");
-    
-    if (!recordingsDir.exists())
-        recordingsDir.createDirectory();
-
-    juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    juce::String baseName = track->getName() + "_" + timestamp;
-
-    struct StemInfo {
-        juce::String suffix;
-        juce::AudioBuffer<float>& buffer;
-    };
-
-    StemInfo stems[] = {
-        { "Vocals", result.vocals },
-        { "Drums", result.drums },
-        { "Bass", result.bass },
-        { "Other", result.other }
-    };
-
-    juce::var createdTracks;
-    juce::WavAudioFormat wavFormat;
-
-    for (const auto& stem : stems)
-    {
-        // Save to file
-        juce::File stemFile = recordingsDir.getChildFile(baseName + "_" + stem.suffix + ".wav");
-        std::unique_ptr<juce::FileOutputStream> fileStream(new juce::FileOutputStream(stemFile));
-
-        if (fileStream->openedOk())
-        {
-            std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-                fileStream.release(), sampleRate, 2, 24, {}, 0));
-
-            if (writer)
-            {
-                writer->writeFromAudioSampleBuffer(stem.buffer, 0, stem.buffer.getNumSamples());
-                writer.reset(); // Close file
-
-                // Create Track
-                juce::String newTrackName = track->getName() + " (" + stem.suffix + ")";
-                juce::String newTrackId = projectState.addTrack(newTrackName, "audio");
-                
-                // Create Clip
-                juce::String clipName = stem.suffix;
-                juce::String actionName = "Wingman: create_stem_clip";
-                juce::String clipId = projectState.createClip(newTrackId, "audio", 0, stem.buffer.getNumSamples(), clipName, actionName);
-                
-                // Set Audio File
-                auto clipTree = projectState.getClip(newTrackId, clipId);
-                if (clipTree.isValid())
-                {
-                    clipTree.setProperty(ProjectState::PROP_AUDIO_FILE, stemFile.getFullPathName(), &projectState.getUndoManager());
-                }
-                
-                createdTracks.append(newTrackId);
-            }
-        }
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("originalTrackId", trackId);
-    resultObj->setProperty("createdTracks", createdTracks);
-    resultObj->setProperty("success", true);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::createClip(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("type"))
-        return createErrorResponse("Missing 'type' parameter (must be 'audio' or 'midi')");
-    if (!params.hasProperty("start"))
-        return createErrorResponse("Missing 'start' parameter (samples)");
-    if (!params.hasProperty("length"))
-        return createErrorResponse("Missing 'length' parameter (samples)");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String clipType = params["type"].toString().toLowerCase();
-    juce::int64 startSamples = params["start"];
-    juce::int64 lengthSamples = params["length"];
-    juce::String clipName = params.hasProperty("name") ? params["name"].toString() : juce::String("New Clip");
-
-    // Validate type
-    if (clipType != "audio" && clipType != "midi")
-        return createErrorResponse("Invalid clip type: must be 'audio' or 'midi'");
-
-    // Check if track exists
-    auto trackTree = projectState.getTrack(trackId);
-    if (!trackTree.isValid())
-        return createErrorResponse("Track not found: " + trackId);
-
-    // For audio clips, require audioFile parameter
-    if (clipType == "audio" && !params.hasProperty("audioFile"))
-        return createErrorResponse("Audio clips require 'audioFile' parameter");
-
-    // Create clip via ProjectState (undoable)
-    juce::String actionName = "Wingman: create_clip '" + clipName + "' on " + trackId;
-    juce::String clipId = projectState.createClip(trackId, clipType, startSamples, lengthSamples,
-                                                   clipName, actionName);
-
-    if (clipId.isEmpty())
-        return createErrorResponse("Failed to create clip");
-
-    // If audio clip, set audio file property
-    if (clipType == "audio" && params.hasProperty("audioFile"))
-    {
-        juce::String audioFile = params["audioFile"].toString();
-        auto clip = projectState.getClip(trackId, clipId);
-        if (clip.isValid())
-            clip.setProperty(ProjectState::PROP_AUDIO_FILE, audioFile, &projectState.getUndoManager());
-    }
-
-    // Create result
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("clipId", clipId);
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("name", clipName);
-    resultObj->setProperty("type", clipType);
-    resultObj->setProperty("startSamples", startSamples);
-    resultObj->setProperty("lengthSamples", lengthSamples);
-
-    DBG("CommandAPI: Created clip: " + clipId + " on track " + trackId);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::deleteClip(const juce::var& params)
-{
-    // Validate params
-    if (!params.hasProperty("trackId"))
-        return createErrorResponse("Missing 'trackId' parameter");
-    if (!params.hasProperty("clipId"))
-        return createErrorResponse("Missing 'clipId' parameter");
-
-    juce::String trackId = params["trackId"].toString();
-    juce::String clipId = params["clipId"].toString();
-
-    // Check if clip exists
-    auto clip = projectState.getClip(trackId, clipId);
-    if (!clip.isValid())
-        return createErrorResponse("Clip not found: " + clipId + " on track " + trackId);
-
-    // Delete via ProjectState (undoable)
-    juce::String actionName = "Wingman: delete_clip " + clipId + " from " + trackId;
-    projectState.deleteClip(trackId, clipId, actionName);
-
-    DBG("CommandAPI: Deleted clip: " + clipId + " from track " + trackId);
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("clipId", clipId);
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("deleted", true);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
 
 juce::var CommandAPI::getSessionGraph(const juce::var& params)
 {
@@ -1070,9 +442,17 @@ juce::var CommandAPI::history(const juce::var& params)
     resultObj->setProperty("canUndo", projectState.canUndo());
     resultObj->setProperty("canRedo", projectState.canRedo());
     
-    // In a real implementation, we would list the actual transactions
+    // Get next undo/redo descriptions
     juce::var undoStack;
     juce::var redoStack;
+    
+    if (projectState.canUndo()) {
+        undoStack.append(projectState.getUndoManager().getUndoDescription());
+    }
+    
+    if (projectState.canRedo()) {
+        redoStack.append(projectState.getUndoManager().getRedoDescription());
+    }
     
     resultObj->setProperty("undoStack", undoStack);
     resultObj->setProperty("redoStack", redoStack);
@@ -1089,7 +469,7 @@ juce::var CommandAPI::describeInstrument(const juce::var& params)
     juce::String instrumentId = params["instrumentId"].toString();
 
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
 
     // Check if instrument exists
     InstrumentMetadata metadata;
@@ -1107,52 +487,7 @@ juce::var CommandAPI::describeInstrument(const juce::var& params)
 //==============================================================================
 // Helper Methods
 //==============================================================================
-juce::var CommandAPI::createSuccessResponse(const juce::var& result)
-{
-    auto* response = new juce::DynamicObject();
-    response->setProperty("success", true);
-    response->setProperty("result", result);
-    return juce::var(response);
-}
-
-juce::var CommandAPI::createErrorResponse(const juce::String& errorMessage)
-{
-    auto* response = new juce::DynamicObject();
-    response->setProperty("success", false);
-    response->setProperty("error", errorMessage);
-    return juce::var(response);
-}
-
-Track* CommandAPI::findTrackById(const juce::String& trackId)
-{
-    // Track ID format: "track_N"
-    if (!trackId.startsWith("track_"))
-        return nullptr;
-
-    int trackIndex = trackId.fromLastOccurrenceOf("_", false, false).getIntValue();
-
-    if (trackIndex < 0 || trackIndex >= engine.getNumTracks())
-        return nullptr;
-
-    return const_cast<Track*>(engine.tracks()[trackIndex].get());
-}
-
-Track::Clip* CommandAPI::findClipById(Track* track, const juce::String& clipId)
-{
-    if (track == nullptr)
-        return nullptr;
-
-    // Clip ID format: "clip_N"
-    if (!clipId.startsWith("clip_"))
-        return nullptr;
-
-    int clipIndex = clipId.fromLastOccurrenceOf("_", false, false).getIntValue();
-
-    if (clipIndex < 0 || clipIndex >= track->getNumClips())
-        return nullptr;
-
-    return track->getClip(clipIndex);
-}
+// Helper methods moved to CommandUtils.h
 
 //==============================================================================
 // Plugin Commands
@@ -1197,7 +532,7 @@ juce::var CommandAPI::addPlugin(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     juce::String pluginId = params["pluginId"].toString();
 
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
 
@@ -1237,7 +572,7 @@ juce::var CommandAPI::removePlugin(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     int pluginIndex = params["pluginIndex"];
 
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
 
@@ -1273,7 +608,7 @@ juce::var CommandAPI::setPluginParam(const juce::var& params)
     float value = (float)params["value"];
     
     // Get track index from ID
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
         
@@ -1343,7 +678,7 @@ juce::var CommandAPI::getPluginParams(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     int pluginIndex = params["pluginIndex"];
 
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
 
@@ -1401,7 +736,7 @@ juce::var CommandAPI::addAutomationPoint(const juce::var& params)
     if (paramId != "volume" && paramId != "pan" && paramId != "mute")
         return createErrorResponse("Invalid paramId: must be 'volume', 'pan', or 'mute'");
 
-    juce::String pointId = projectState.addAutomationPoint(trackId, paramId, timeBeats, value, "Wingman: Add Automation Point");
+    juce::String pointId = projectState.addAutomationPoint(trackId, paramId, timeBeats, value, "Add Automation Point");
 
     if (pointId.isEmpty())
         return createErrorResponse("Failed to add automation point");
@@ -1421,7 +756,7 @@ juce::var CommandAPI::clearAutomation(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     juce::String paramId = params["paramId"].toString();
 
-    bool success = projectState.clearAutomation(trackId, paramId, "Wingman: Clear Automation");
+    bool success = projectState.clearAutomation(trackId, paramId, "Clear Automation");
 
     auto* resultObj = new juce::DynamicObject();
     resultObj->setProperty("success", success);
@@ -1478,78 +813,7 @@ juce::var CommandAPI::getAutomation(const juce::var& params)
 // Tempo/Marker Commands
 //==============================================================================
 
-juce::var CommandAPI::setTempo(const juce::var& params)
-{
-    if (!params.hasProperty("bpm")) return createErrorResponse("Missing 'bpm'");
 
-    double bpm = (double)params["bpm"];
-    projectState.setTempo(bpm);
-    
-    // Sync tempo map with new global tempo
-    engine.syncTempoMap();
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("bpm", bpm);
-    resultObj->setProperty("success", true);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::addTempoChange(const juce::var& params)
-{
-    if (!params.hasProperty("timeBeats")) return createErrorResponse("Missing 'timeBeats'");
-    if (!params.hasProperty("bpm")) return createErrorResponse("Missing 'bpm'");
-
-    double timeBeats = (double)params["timeBeats"];
-    double bpm = (double)params["bpm"];
-
-    juce::String pointId = projectState.addTempoChange(timeBeats, bpm, "Wingman: Add Tempo Change");
-    
-    // Sync tempo map with new tempo change
-    engine.syncTempoMap();
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("pointId", pointId);
-    resultObj->setProperty("success", true);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
-
-juce::var CommandAPI::getTempoMap(const juce::var& params)
-{
-    juce::ignoreUnused(params);
-    
-    juce::var changesArray;
-    auto* changesArrayPtr = changesArray.getArray();
-
-    // Add global tempo as first point
-    auto* globalObj = new juce::DynamicObject();
-    globalObj->setProperty("timeBeats", 0.0);
-    globalObj->setProperty("bpm", projectState.getTempo());
-    changesArrayPtr->add(juce::var(globalObj));
-
-    // Add tempo map points
-    auto tempoMap = projectState.getTempoMap();
-    if (tempoMap.isValid())
-    {
-        for (const auto& point : tempoMap)
-        {
-            if (point.hasType(ProjectState::ID_TEMPO_POINT))
-            {
-                auto* pointObj = new juce::DynamicObject();
-                pointObj->setProperty("id", point.getProperty(ProjectState::PROP_ID));
-                pointObj->setProperty("timeBeats", point.getProperty(ProjectState::PROP_TIME_BEATS));
-                pointObj->setProperty("bpm", point.getProperty(ProjectState::PROP_BPM));
-                changesArrayPtr->add(juce::var(pointObj));
-            }
-        }
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("tempoChanges", changesArray);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
 
 juce::var CommandAPI::addMarker(const juce::var& params)
 {
@@ -1866,57 +1130,7 @@ juce::var CommandAPI::getMidiData(const juce::var& params)
     return createSuccessResponse(juce::var(resultObj));
 }
 
-juce::var CommandAPI::setClipNotes(const juce::var& params)
-{
-    if (!params.hasProperty("trackId")) return createErrorResponse("Missing 'trackId'");
-    if (!params.hasProperty("clipId")) return createErrorResponse("Missing 'clipId'");
-    if (!params.hasProperty("notes")) return createErrorResponse("Missing 'notes'");
 
-    const juce::String trackId = params["trackId"].toString();
-    const juce::String clipId = params["clipId"].toString();
-
-    if (!params["notes"].isArray())
-        return createErrorResponse("'notes' must be an array");
-
-    auto clipTree = projectState.getClip(trackId, clipId);
-    if (!clipTree.isValid())
-        return createErrorResponse("Clip not found: " + clipId);
-
-    juce::String clipType = clipTree.getProperty(ProjectState::PROP_TYPE, "audio").toString();
-    if (clipType != "midi")
-        return createErrorResponse("Clip is not a MIDI clip: " + clipId);
-
-    auto existingNotes = projectState.getMidiNotesForClip(clipId);
-    for (const auto& note : existingNotes)
-        projectState.removeMidiNote(clipId, note.id, "Wingman: set_clip_notes (clear)");
-
-    int addedCount = 0;
-    auto* notesArray = params["notes"].getArray();
-    for (const auto& noteVar : *notesArray)
-    {
-        if (!noteVar.isObject())
-            continue;
-
-        ProjectState::MidiNoteSpec spec;
-        spec.id = noteVar.hasProperty("id") ? noteVar["id"].toString() : juce::String();
-        spec.pitch = noteVar.hasProperty("pitch") ? static_cast<int>(noteVar["pitch"]) : 60;
-        spec.startBeats = noteVar.hasProperty("startBeats") ? static_cast<double>(noteVar["startBeats"]) : 0.0;
-        spec.lengthBeats = noteVar.hasProperty("lengthBeats") ? static_cast<double>(noteVar["lengthBeats"]) : 1.0;
-        spec.velocity = noteVar.hasProperty("velocity") ? static_cast<int>(noteVar["velocity"]) : 100;
-        spec.muted = noteVar.hasProperty("muted") ? static_cast<bool>(noteVar["muted"]) : false;
-
-        projectState.addMidiNote(clipId, spec, "Wingman: set_clip_notes (add)");
-        ++addedCount;
-    }
-
-    auto* resultObj = new juce::DynamicObject();
-    resultObj->setProperty("trackId", trackId);
-    resultObj->setProperty("clipId", clipId);
-    resultObj->setProperty("cleared", existingNotes.size());
-    resultObj->setProperty("added", addedCount);
-
-    return createSuccessResponse(juce::var(resultObj));
-}
 
 //==============================================================================
 // Preset Management Commands (NEW - for Grok AI)
@@ -1931,7 +1145,7 @@ juce::var CommandAPI::listPresets(const juce::var& params)
     juce::String instrumentId = params["instrumentId"].toString();
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Check if instrument exists
     InstrumentMetadata metadata;
@@ -1979,7 +1193,7 @@ juce::var CommandAPI::loadPreset(const juce::var& params)
     juce::String presetName = params["presetName"].toString();
     
     // Find track
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
     
@@ -1992,7 +1206,7 @@ juce::var CommandAPI::loadPreset(const juce::var& params)
     juce::String instrumentId = instrument->getMetadata().instrumentId;
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Find preset
     InstrumentPreset preset;
@@ -2041,7 +1255,7 @@ juce::var CommandAPI::savePreset(const juce::var& params)
     juce::String description = params.hasProperty("description") ? params["description"].toString() : "";
     
     // Find track
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
     
@@ -2068,7 +1282,7 @@ juce::var CommandAPI::savePreset(const juce::var& params)
     juce::String instrumentId = metadata.instrumentId;
     
     // Save to registry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     registry.addPreset(instrumentId, preset);
     
     DBG("CommandAPI: Saved preset '" + presetName + "' from track " + trackId);
@@ -2103,7 +1317,7 @@ juce::var CommandAPI::createPreset(const juce::var& params)
         return createErrorResponse("'parameters' must be a JSON object");
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Check if instrument exists
     InstrumentMetadata metadata;
@@ -2160,7 +1374,7 @@ juce::var CommandAPI::deletePreset(const juce::var& params)
     juce::String presetName = params["presetName"].toString();
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Delete preset
     bool deleted = registry.deletePreset(instrumentId, presetName);
@@ -2191,7 +1405,7 @@ juce::var CommandAPI::getInstrumentParameters(const juce::var& params)
     juce::String trackId = params["trackId"].toString();
     
     // Find track
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
     
@@ -2236,7 +1450,7 @@ juce::var CommandAPI::setInstrumentParameter(const juce::var& params)
     juce::var value = params["value"];
     
     // Find track
-    Track* track = findTrackById(trackId);
+    Track* track = findTrackById(engine, trackId);
     if (track == nullptr)
         return createErrorResponse("Track not found: " + trackId);
     
@@ -2271,7 +1485,7 @@ juce::var CommandAPI::getInstrumentParameterSchema(const juce::var& params)
     juce::String instrumentId = params["instrumentId"].toString();
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Check if instrument exists
     InstrumentMetadata metadata;
@@ -2307,7 +1521,7 @@ juce::var CommandAPI::generatePreset(const juce::var& params)
     juce::String genre = params.hasProperty("genre") ? params["genre"].toString() : "";
     
     // Get InstrumentRegistry
-    auto& registry = InstrumentRegistry::getInstance();
+    auto& registry = engine.getInstrumentRegistry();
     
     // Check if instrument exists
     InstrumentMetadata metadata;
@@ -2357,6 +1571,57 @@ juce::var CommandAPI::generatePreset(const juce::var& params)
     resultObj->setProperty("generated", true);
     
     return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::exportProjectAdvanced(const juce::var& params)
+{
+    if (!params.hasProperty("outputPath"))
+        return createErrorResponse("Missing 'outputPath' parameter");
+
+    Engine::ExportOptions opts;
+    opts.outputFile = juce::File(params["outputPath"].toString());
+    
+    if (params.hasProperty("sampleRate"))
+        opts.sampleRate = static_cast<double>(params["sampleRate"]);
+        
+    if (params.hasProperty("bitDepth"))
+        opts.bitDepth = static_cast<int>(params["bitDepth"]);
+        
+    if (params.hasProperty("dither"))
+        opts.enableDither = static_cast<bool>(params["dither"]);
+        
+    if (params.hasProperty("normalize"))
+        opts.normalize = static_cast<bool>(params["normalize"]);
+        
+    if (params.hasProperty("normalizeDb"))
+        opts.normalizeDb = static_cast<double>(params["normalizeDb"]);
+        
+    if (params.hasProperty("durationSeconds"))
+        opts.duration = static_cast<double>(params["durationSeconds"]);
+    
+    if (params.hasProperty("format"))
+    {
+        juce::String fmt = params["format"].toString().toLowerCase();
+        if (fmt == "flac") opts.format = Engine::ExportFormat::FLAC;
+        else if (fmt == "ogg") opts.format = Engine::ExportFormat::OGG;
+        else opts.format = Engine::ExportFormat::WAV;
+    }
+
+    // AI Enhance Trigger
+    if (params.hasProperty("aiEnhance") && static_cast<bool>(params["aiEnhance"]))
+    {
+        zenith::ai::AIMasteringAgent agent(engine);
+        zenith::ai::AIMasteringAgent::MasteringOptions masterOpts;
+        masterOpts.target8Bit = (opts.bitDepth == 8);
+        agent.runMasteringPass(masterOpts);
+    }
+
+    bool success = engine.exportProject(opts);
+    
+    if (!success)
+        return createErrorResponse("Export failed");
+        
+    return createSuccessResponse(juce::var());
 }
 
 } // namespace zenith

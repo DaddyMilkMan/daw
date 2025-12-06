@@ -16,13 +16,14 @@
     #include <include/core/SkFont.h>
     #include <include/core/SkTextBlob.h>
     #include <include/core/SkSurface.h>
+    #include <include/core/SkImageInfo.h>
 #endif
 
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
 
-AutomationLaneComponent::AutomationLaneComponent(ProjectState& state,
+AutomationLaneComponent::AutomationLaneComponent(zenith::ProjectState& state,
                                                  const juce::String& trackId_,
                                                  const juce::String& paramId_)
     : projectState(state),
@@ -124,7 +125,7 @@ void AutomationLaneComponent::paint(juce::Graphics& g)
     {
         juce::Image::BitmapData bitmapData(tempImage, juce::Image::BitmapData::readWrite);
         SkImageInfo info = SkImageInfo::MakeN32Premul(tempImage.getWidth(), tempImage.getHeight());
-        auto skSurface = SkSurface::MakeRasterDirect(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
+        auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
 
         if (skSurface)
         {
@@ -361,8 +362,8 @@ void AutomationLaneComponent::drawEnvelopeCurve(juce::Graphics& g)
     for (int i = 0; i < numPoints; ++i)
     {
         auto pointNode = envelopeNode.getChild(i);
-        double timeBeats = pointNode.getProperty(ProjectState::PROP_TIME_BEATS, 0.0);
-        double value = pointNode.getProperty(ProjectState::PROP_VALUE, 0.0);
+        double timeBeats = pointNode.getProperty(zenith::ProjectState::PROP_TIME_BEATS, 0.0);
+        double value = pointNode.getProperty(zenith::ProjectState::PROP_VALUE, 0.0);
 
         PointData pt;
         pt.timeBeats = timeBeats;
@@ -438,9 +439,9 @@ void AutomationLaneComponent::rebuildPointHandles()
     for (int i = 0; i < numPoints; ++i)
     {
         auto pointNode = envelopeNode.getChild(i);
-        juce::String pointId = pointNode.getProperty(ProjectState::PROP_ID, "");
-        double timeBeats = pointNode.getProperty(ProjectState::PROP_TIME_BEATS, 0.0);
-        double value = pointNode.getProperty(ProjectState::PROP_VALUE, 0.0);
+        juce::String pointId = pointNode.getProperty(zenith::ProjectState::PROP_ID, "");
+        double timeBeats = pointNode.getProperty(zenith::ProjectState::PROP_TIME_BEATS, 0.0);
+        double value = pointNode.getProperty(zenith::ProjectState::PROP_VALUE, 0.0);
 
         PointHandle handle;
         handle.pointId = pointId;
@@ -473,11 +474,11 @@ void AutomationLaneComponent::mouseDown(const juce::MouseEvent& e)
             for (int i = 0; i < envelopeNode.getNumChildren(); ++i)
             {
                 auto pointNode = envelopeNode.getChild(i);
-                juce::String pointId = pointNode.getProperty(ProjectState::PROP_ID, "");
+                juce::String pointId = pointNode.getProperty(zenith::ProjectState::PROP_ID, "");
                 if (pointId == draggedPointId)
                 {
-                    dragStartTimeBeats = pointNode.getProperty(ProjectState::PROP_TIME_BEATS, 0.0);
-                    dragStartValue = pointNode.getProperty(ProjectState::PROP_VALUE, 0.0);
+                    dragStartTimeBeats = pointNode.getProperty(zenith::ProjectState::PROP_TIME_BEATS, 0.0);
+                    dragStartValue = pointNode.getProperty(zenith::ProjectState::PROP_VALUE, 0.0);
                     break;
                 }
             }
@@ -536,11 +537,11 @@ void AutomationLaneComponent::mouseMove(const juce::MouseEvent& e)
             for (int i = 0; i < envelopeNode.getNumChildren(); ++i)
             {
                 auto pointNode = envelopeNode.getChild(i);
-                juce::String pointId = pointNode.getProperty(ProjectState::PROP_ID, "");
+                juce::String pointId = pointNode.getProperty(zenith::ProjectState::PROP_ID, "");
                 if (pointId == hoveredPointId)
                 {
-                    hoveredPointTime = pointNode.getProperty(ProjectState::PROP_TIME_BEATS, 0.0);
-                    hoveredPointValue = pointNode.getProperty(ProjectState::PROP_VALUE, 0.0);
+                    hoveredPointTime = pointNode.getProperty(zenith::ProjectState::PROP_TIME_BEATS, 0.0);
+                    hoveredPointValue = pointNode.getProperty(zenith::ProjectState::PROP_VALUE, 0.0);
                     hoveredPointScreenPos = juce::Point<float>(beatsToPixels(hoveredPointTime),
                                                                 valueToPixelY(hoveredPointValue));
                     break;

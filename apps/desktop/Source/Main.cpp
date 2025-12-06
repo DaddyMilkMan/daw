@@ -5,6 +5,7 @@
  * This file initializes the JUCE application and creates the main window.
  */
 
+#include <JuceHeader.h>
 #include "../include/MainWindow.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
@@ -37,10 +38,7 @@ public:
   //==========================================================================
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
-    // SECURITY: Input Validation
-    // Although currently unused, we explicitly document that this input
-    // is untrusted. Future implementations must validate this against
-    // an allow-list of known flags before processing.
+    // Input validation should be added here for production releases
     juce::ignoreUnused(commandLine);
 
     // Log startup
@@ -48,12 +46,8 @@ public:
     DBG("Version: " + getApplicationVersion());
     DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
 
-    // SECURITY: Information Disclosure Prevention
-    // Only log detailed system info in debug builds to prevent leaking
-    // user environment details in production logs.
-#if JUCE_DEBUG
+    // Log system info
     logSystemInfo();
-#endif
 
     // Create main window
     mainWindow = std::make_unique<MainWindow>(getApplicationName());
@@ -88,9 +82,7 @@ public:
 
         if (result == RESULT_YES) // Yes
         {
-          // SECURITY FIX: Prevention of Data Loss
-          // Previously, this path would log a TODO and then QUIT, destroying user data.
-          // We now enforce a "Fail-Safe" default: save and then quit.
+          // Save and quit
           mainWindow->saveProject();
           quit();
         } else if (result == RESULT_NO) // No
@@ -115,7 +107,7 @@ private:
   //==========================================================================
   void logSystemInfo() {
     DBG("========================================");
-    DBG("System Information (DEBUG ONLY)");
+    DBG("System Information");
     DBG("========================================");
     DBG("OS: " + juce::SystemStats::getOperatingSystemName());
     DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) + " MHz");

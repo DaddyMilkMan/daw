@@ -17,9 +17,10 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../commands/CommandAPI.h"
+#include "CommandAPI.h"
 #include "../network/AIBridgeClient.h"
 #include "../network/GrokDAWController.h"
+#include "../../include/Engine.h"
 
 namespace zenith {
 
@@ -34,7 +35,7 @@ class WingmanPanel : public juce::Component,
 {
 public:
     //==========================================================================
-    WingmanPanel(CommandAPI& api, AIBridgeClient& client);
+    WingmanPanel(CommandAPI& api, AIBridgeClient& client, Engine& engine);
     ~WingmanPanel() override;
     
     //==========================================================================
@@ -81,6 +82,7 @@ private:
     
     CommandAPI& commandAPI;
     AIBridgeClient& aiBridgeClient;
+    Engine& engine_;
     std::unique_ptr<GrokDAWController> grokController;
     
     //==========================================================================

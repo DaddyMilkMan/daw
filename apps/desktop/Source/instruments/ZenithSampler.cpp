@@ -167,13 +167,15 @@ void ZenithSamplerProcessor::processBlock(juce::AudioBuffer<float> &buffer,
 
   // Apply character control (simple saturation)
   float character = *parameters.getRawParameterValue("character");
-  if (character > 0.5f) {
-    float drive = (character - 0.5f) * 4.0f; // 0-2 range
+  if (character > 0.0f) {
+    float drive = character * 4.0f; // 0-4 range
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
       auto *data = buffer.getWritePointer(ch);
       for (int s = 0; s < buffer.getNumSamples(); ++s) {
-        float sample = data[s] * (1.0f + drive);
-        data[s] = std::tanh(sample); // Soft clipping
+        float x = data[s] * (1.0f + drive);
+        // Fast soft clip: x / (1 + |x|)
+        // This is much faster than std::tanh and provides a nice saturation curve
+        data[s] = x / (1.0f + std::abs(x));
       }
     }
   }
@@ -566,8 +568,8 @@ ZenithSamplerSound::ZenithSamplerSound(
       chokeGroup(choke) {
   if (poolHandle) {
     sourceSampleRate = poolHandle->sampleRate;
-    // Point to the pool's buffer (const_cast is safe as we only read)
-    data = const_cast<juce::AudioBuffer<float> *>(&poolHandle->buffer);
+    // Point to the pool's buffer
+    data = &poolHandle->buffer;
   }
 }
 

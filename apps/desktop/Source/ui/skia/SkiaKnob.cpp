@@ -281,10 +281,16 @@ void SkiaKnob::drawSkia(SkCanvas* canvas) {
     valuePaint.setColor(color);
     
     // Glow
-    if (isGlowEnabled() || isHovered()) {
+    float globalGlow = design::Settings::getGlowIntensity();
+    if ((isGlowEnabled() || isHovered()) && globalGlow > 0.01f) {
         SkPaint glowPaint = valuePaint;
         glowPaint.setStrokeWidth(5.0f); // Reduced from 8.0f
-        glowPaint.setColor(design::withAlpha(color, 0.4f * getAnimatedValue("glow")));
+        glowPaint.setColor(design::withAlpha(color, 0.4f * getAnimatedValue("glow") * globalGlow));
+        
+        if (globalGlow > 0.5f) {
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f * globalGlow));
+        }
+        
         canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, glowPaint);
     }
     

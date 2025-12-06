@@ -6,6 +6,8 @@ class ZenithLookAndFeel : public juce::LookAndFeel_V4 {
 public:
     ZenithLookAndFeel();
     
+    static ZenithLookAndFeel& getInstance();
+    
     void drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
                           float sliderPos, const float rotaryStartAngle,
                           const float rotaryEndAngle, juce::Slider& slider) override;
@@ -18,6 +20,12 @@ public:
                               const juce::Colour& backgroundColour,
                               bool shouldDrawButtonAsHighlighted,
                               bool shouldDrawButtonAsDown) override;
+
+    void drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
+                      int buttonX, int buttonY, int buttonW, int buttonH,
+                      juce::ComboBox& box) override;
+
+    void drawPopupMenuBackground(juce::Graphics& g, int width, int height) override;
 
     struct Colors {
         static juce::Colour background;

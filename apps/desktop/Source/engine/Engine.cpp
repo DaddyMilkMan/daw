@@ -3,10 +3,12 @@
  * @brief Audio engine implementation
  */
 
-#include "../../include/Engine.h"
-#include "../../include/TempoMap.h"
-#include "../../include/ProjectState.h"
-#include "../../include/TrackAutomationSynchronizer.h"
+#include "Engine.h"
+#include "TempoMap.h"
+#include "ProjectState.h"
+#include "TrackAutomationSynchronizer.h"
+#include <algorithm> // For std::remove_if
+#include <array>     // For RT-safe stack allocation in audio callback
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../engine/Track.h"
@@ -20,6 +22,8 @@
 #include "../instruments/RegisterBuiltInInstruments.h"
 
 //==============================================================================
+namespace zenith {
+
 Engine::Engine()
 {
     DBG("Engine: Constructor");
@@ -49,9 +53,7 @@ Engine::Engine()
     tempoMap_ = std::make_unique<zenith::TempoMap>();
     DBG("Engine: TempoMap initialized");
 
-    // Phase 4: Flecs Integration
-    ecsEngine_ = std::make_unique<zenith::ECSEngine>();
-    DBG("Engine: Flecs ECS Engine initialized");
+
 
     // Initialize track snapshot
     updateTrackSnapshot();
@@ -467,6 +469,34 @@ void Engine::record()
         DBG("Engine: Creating recording session for track " + juce::String(i) +
             " (" + track->getName() + ")");
 
+        // ROAST FIX #4: Check for pre-prepared session
+        bool foundPrepped = false;
+        AudioRecordingSession sessionToUse;
+        {
+            const juce::ScopedLock sl(preppedSessionsLock_);
+            auto it = std::find_if(preppedSessions_.begin(), preppedSessions_.end(),
+                [i](const auto& s) { return s.trackIndex == static_cast<int>(i); });
+            
+            if (it != preppedSessions_.end())
+            {
+                sessionToUse = std::move(*it);
+                preppedSessions_.erase(it);
+                foundPrepped = true;
+            }
+        }
+
+        if (foundPrepped)
+        {
+            // Update start time and use prepped session
+            sessionToUse.recordingStartSamples = recordStartSamples;
+            audioRecordingSessions_.push_back(std::move(sessionToUse));
+            DBG("Engine: Used pre-prepared recording session for track " + juce::String(i));
+            continue;
+        }
+
+        // Fallback: Create synchronously (BLOCKING I/O)
+        DBG("Engine: Creating recording session synchronously (fallback)");
+
         // Create unique filename with timestamp
         juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
         juce::String filename = track->getName().replaceCharacter(' ', '_') +
@@ -524,6 +554,8 @@ void Engine::record()
         session.sampleRate = sampleRate;
         session.recordingStartSamples = recordStartSamples;
         session.trackIndex = static_cast<int>(i);
+        // ROAST FIX #9: Capture input channel from track
+        session.inputChannelIndex = tracks_[i]->getInputChannel();
 
         audioRecordingSessions_.push_back(std::move(session));
 
@@ -682,7 +714,7 @@ int Engine::getNumTracks() const noexcept
     return static_cast<int>(tracks_.size());
 }
 
-const std::vector<std::unique_ptr<zenith::Track>>& Engine::tracks() const noexcept
+const std::vector<std::shared_ptr<zenith::Track>>& Engine::tracks() const noexcept
 {
     return tracks_;
 }
@@ -700,7 +732,8 @@ void Engine::addTestTracks(int count)
     for (int i = 0; i < count; ++i)
     {
         // Create track with default name and type
-        auto track = std::make_unique<zenith::Track>(
+        // ROAST FIX #1: Use make_shared instead of make_unique
+        auto track = std::make_shared<zenith::Track>(
             "Track " + juce::String(tracks_.size() + 1),
             zenith::Track::Type::Audio);
 
@@ -710,7 +743,7 @@ void Engine::addTestTracks(int count)
             track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
         }
 
-        tracks_.push_back(std::move(track));
+        tracks_.push_back(track); // No std::move needed for shared_ptr
     }
 
     DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
@@ -767,11 +800,7 @@ zenith::PluginEditorWindowManager& Engine::getPluginEditorWindowManager() noexce
     return *pluginEditorWindowManager_;
 }
 
-zenith::InstrumentRegistry& Engine::getInstrumentRegistry()
-{
-    jassert(instrumentRegistry_ != nullptr);
-    return *instrumentRegistry_;
-}
+// getInstrumentRegistry() is now defined inline in Engine.h
 
 const zenith::TempoMap& Engine::getTempoMap() const noexcept
 {
@@ -783,21 +812,7 @@ const zenith::TempoMap& Engine::getTempoMap() const noexcept
 // Flecs ECS Integration
 //==============================================================================
 
-void Engine::enableECS()
-{
-    if (ecsEngine_)
-    {
-        DBG("Engine: ECS already enabled");
-        return;  // Already initialized
-    }
-    
-    DBG("Engine: Enabling Flecs ECS integration");
-    ecsEngine_ = std::make_unique<zenith::ECSEngine>();
-    
-#ifdef JUCE_DEBUG
-    DBG("Engine: Flecs Explorer available at http://localhost:27750");
-#endif
-}
+
 
 //==============================================================================
 // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
@@ -820,6 +835,16 @@ void Engine::setTrackPan(int trackIndex, float pan)
     if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
     {
         tracks_[trackIndex]->setPan(pan);
+    }
+}
+
+void Engine::setTrackInputChannel(int trackIndex, int channelIndex)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
+    {
+        tracks_[trackIndex]->setInputChannel(channelIndex);
     }
 }
 
@@ -850,6 +875,12 @@ void Engine::setTrackArmed(int trackIndex, bool armed)
     if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
     {
         tracks_[trackIndex]->setArmed(armed);
+        
+        // ROAST FIX #4: Prepare recording asynchronously when armed
+        if (armed)
+        {
+            prepareRecordingForTrack(trackIndex);
+        }
     }
 }
 
@@ -918,20 +949,22 @@ juce::String Engine::createTrack(const juce::String& name, const juce::String& t
         DBG("Engine: Creating track without ProjectState (fallback)");
         
         // Fallback: Create track directly in Engine
+        // ROAST FIX #1: Use make_shared instead of make_unique
         zenith::Track::Type trackType = (type == "midi") ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio;
-        auto track = std::make_unique<zenith::Track>(name, trackType);
+        auto track = std::make_shared<zenith::Track>(name, trackType);
         
         // Generate a fake ID
         juce::String trackId = "track_" + juce::String(tracks_.size());
         track->setTrackId(trackId);
 
-        addTrack(std::move(track));
+        addTrack(track); // No std::move for shared_ptr
         
         return trackId;
     }
 }
 
-void Engine::addTrack(std::unique_ptr<zenith::Track> track)
+// ROAST FIX #1: Accept shared_ptr instead of unique_ptr
+void Engine::addTrack(std::shared_ptr<zenith::Track> track)
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     jassert(track != nullptr);
@@ -945,11 +978,12 @@ void Engine::addTrack(std::unique_ptr<zenith::Track> track)
     juce::String name = track->getName();
     juce::String id = track->getTrackId();
 
-    tracks_.push_back(std::move(track));
+    tracks_.push_back(track); // Shared_ptr, no move needed
 
     DBG("Engine: Added track '" + name + "' (ID: " + id + ")");
 
     // Update snapshot for audio thread
+    // ROAST FIX #1: Snapshot now holds shared_ptr, extending track lifetime
     updateTrackSnapshot();
 }
 
@@ -971,6 +1005,31 @@ void Engine::removeTrack(int index)
 
         // Update snapshot for audio thread
         updateTrackSnapshot();
+    }
+}
+
+void Engine::updateTrackSnapshot()
+{
+    // Create new snapshot
+    auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_);
+    
+    // Atomic swap (release semantics for the store)
+    // The audio thread will see the new pointer immediately
+    activeSnapshot_.store(newSnapshot.get());
+    
+    // Manage lifetime of old snapshots
+    // We keep the previous snapshot alive in snapshotTrash_
+    // because the audio thread might still be reading it.
+    snapshotTrash_.push_back(currentSnapshotHolder_);
+    
+    // Update current holder to the new snapshot
+    currentSnapshotHolder_ = newSnapshot;
+    
+    // Garbage collection: Keep last 5 snapshots
+    // At 60Hz updates, this gives plenty of margin for the audio thread to finish
+    if (snapshotTrash_.size() > 5)
+    {
+        snapshotTrash_.erase(snapshotTrash_.begin());
     }
 }
 
@@ -1080,36 +1139,105 @@ void Engine::audioDeviceIOCallbackWithContext(
 
     if (playing)
     {
-        // Process audio
-        processAudio(inputChannelData, numInputChannels,
-                    outputChannelData, numOutputChannels, numSamples);
-
-        // Phase 1.3: Advance playhead with looping support
-        juce::int64 newPosition = playheadSamples_.load() + numSamples;
+        // SAMPLE-ACCURATE LOOPING:
+        // If loop wrap happens mid-buffer, we need to split the processing
+        const juce::int64 currentPos = playheadSamples_.load();
         const bool looping = isLooping_.load();
         const juce::int64 loopEnd = loopEndSamples_.load();
         const juce::int64 loopStart = loopStartSamples_.load();
-
-        if (looping && loopEnd > 0 && newPosition >= loopEnd)
+        
+        // Check if loop wrap occurs within this buffer
+        if (looping && loopEnd > 0 && loopEnd > loopStart)
         {
-            // Handle loop wrap
-            const juce::int64 loopLength = loopEnd - loopStart;
-            if (loopLength > 0)
+            const juce::int64 bufferEndPos = currentPos + numSamples;
+            
+            if (bufferEndPos > loopEnd && currentPos < loopEnd)
             {
-                // Wrap position within loop
-                while (newPosition >= loopEnd)
+                // Loop wrap occurs within this buffer!
+                // Split into two parts: before loop end, and after loop start
+                
+                const int samplesBeforeLoop = static_cast<int>(loopEnd - currentPos);
+                const int samplesAfterLoop = numSamples - samplesBeforeLoop;
+                
+                // Store loop wrap offset for any systems that need it
+                loopWrapSampleOffset_.store(samplesBeforeLoop);
+                
+                // Part 1: Process samples up to loop end
+                if (samplesBeforeLoop > 0)
                 {
-                    newPosition -= loopLength;
+                    // Create temp buffer for first part
+                    juce::AudioBuffer<float> outputBuffer1(outputChannelData, numOutputChannels, samplesBeforeLoop);
+                    outputBuffer1.clear();
+                    
+                    // Render at current position
+                    juce::MidiBuffer localMidi1;
+                    midiFifo_.drainTo(localMidi1, samplesBeforeLoop);
+                    renderAudioGraph(outputBuffer1, samplesBeforeLoop, currentPos, &localMidi1);
                 }
-                // Ensure we're not before loop start
-                if (newPosition < loopStart)
+                
+                // Part 2: Process samples from loop start
+                if (samplesAfterLoop > 0)
                 {
-                    newPosition = loopStart;
+                    // RT-SAFE FIX: Use stack-allocated array instead of heap allocation
+                    // Maximum 32 channels should cover any reasonable audio setup
+                    constexpr int kMaxChannels = 32;
+                    jassert(numOutputChannels <= kMaxChannels);
+                    
+                    std::array<float*, kMaxChannels> offsetOutputStack;
+                    for (int ch = 0; ch < numOutputChannels; ++ch)
+                    {
+                        offsetOutputStack[ch] = outputChannelData[ch] + samplesBeforeLoop;
+                    }
+                    
+                    juce::AudioBuffer<float> outputBuffer2(offsetOutputStack.data(), numOutputChannels, samplesAfterLoop);
+                    outputBuffer2.clear();
+                    
+                    // Render from loop start
+                    juce::MidiBuffer localMidi2;
+                    midiFifo_.drainTo(localMidi2, samplesAfterLoop);
+                    renderAudioGraph(outputBuffer2, samplesAfterLoop, loopStart, &localMidi2);
+                    
+                    // No delete needed - stack allocation
                 }
+                
+                // Update playhead to position after loop
+                playheadSamples_.store(loopStart + samplesAfterLoop);
+            }
+            else
+            {
+                // No loop wrap in this buffer - normal processing
+                loopWrapSampleOffset_.store(-1);
+                processAudioBlock(inputChannelData, numInputChannels,
+                            outputChannelData, numOutputChannels, numSamples);
+                
+                // Advance playhead with loop wrap check
+                juce::int64 newPosition = currentPos + numSamples;
+                if (newPosition >= loopEnd)
+                {
+                    const juce::int64 loopLength = loopEnd - loopStart;
+                    if (loopLength > 0)
+                    {
+                        while (newPosition >= loopEnd)
+                        {
+                            newPosition -= loopLength;
+                        }
+                        if (newPosition < loopStart)
+                        {
+                            newPosition = loopStart;
+                        }
+                    }
+                }
+                playheadSamples_.store(newPosition);
             }
         }
-
-        playheadSamples_.store(newPosition);
+        else
+        {
+            // No looping - simple processing
+            loopWrapSampleOffset_.store(-1);
+            processAudioBlock(inputChannelData, numInputChannels,
+                        outputChannelData, numOutputChannels, numSamples);
+            playheadSamples_.store(currentPos + numSamples);
+        }
     }
     else
     {
@@ -1126,7 +1254,7 @@ void Engine::audioDeviceIOCallbackWithContext(
     // Phase 2D: Process recording (can record even when not playing, but typically we start playback)
     if (recording)
     {
-        processAudioRecording(inputChannelData, numInputChannels, numSamples);
+        captureAudioInput(inputChannelData, numInputChannels, numSamples);
     }
 }
 
@@ -1153,6 +1281,9 @@ void Engine::processEvents() noexcept
     int start1, size1, start2, size2;
     commandFifo_.prepareToRead(commandFifo_.getNumReady(), start1, size1, start2, size2);
     
+    // Load snapshot once for event processing
+    auto* snapshot = activeSnapshot_.load();
+    
     if (size1 > 0) {
         for (int i = 0; i < size1; ++i) {
             const auto& e = commandBuffer_[start1 + i];
@@ -1168,8 +1299,8 @@ void Engine::processEvents() noexcept
                  // But wait, we need to apply this to the track.
                  // The track pointer in snapshot is valid.
                  // Finding the track:
-                 if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                     auto* track = tracksSnapshot_->tracks[e.trackIndex];
+                 if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                     auto* track = snapshot->tracks[e.trackIndex];
                      if (track) {
                          auto* plugin = track->getPlugin(e.pluginIndex);
                          if (plugin) {
@@ -1183,29 +1314,29 @@ void Engine::processEvents() noexcept
                  }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setVolume(e.value);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setPan(e.value);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setMuted(e.boolValue);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setSolo(e.boolValue);
                     }
                 }
@@ -1218,8 +1349,8 @@ void Engine::processEvents() noexcept
              const auto& e = commandBuffer_[start2 + i];
              // (Duplicate logic for wrap-around - ideally factor this out)
              if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
-                 if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                     auto* track = tracksSnapshot_->tracks[e.trackIndex];
+                 if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                     auto* track = snapshot->tracks[e.trackIndex];
                      if (track) {
                          auto* plugin = track->getPlugin(e.pluginIndex);
                          if (plugin) {
@@ -1232,29 +1363,29 @@ void Engine::processEvents() noexcept
                  }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setVolume(e.value);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setPan(e.value);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setMuted(e.boolValue);
                     }
                 }
             }
             else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
-                if (tracksSnapshot_ && e.trackIndex >= 0 && e.trackIndex < (int)tracksSnapshot_->tracks.size()) {
-                    if (auto* track = tracksSnapshot_->tracks[e.trackIndex]) {
+                if (snapshot && e.trackIndex >= 0 && e.trackIndex < (int)snapshot->tracks.size()) {
+                    if (auto* track = snapshot->tracks[e.trackIndex]) {
                         track->setSolo(e.boolValue);
                     }
                 }
@@ -1269,7 +1400,7 @@ void Engine::processEvents() noexcept
 // Audio Processing (AUDIO THREAD)
 //==============================================================================
 
-void Engine::processAudio(
+void Engine::processAudioBlock(
     const float* const* inputChannelData,
     int numInputChannels,
     float* const* outputChannelData,
@@ -1281,7 +1412,6 @@ void Engine::processAudio(
     // CRITICAL WARNING: Accessing 'tracks_' (std::vector) here is NOT thread-safe!
     // If the message thread adds/removes tracks while this runs, the vector may reallocate,
     // causing a segfault.
-    // TODO: Replace tracks_ with a juce::ReferenceCountedArray or use a lock-free swap mechanism.
     //
     // Phase 11: Process all tracks and mix them down to master output
 
@@ -1294,12 +1424,8 @@ void Engine::processAudio(
     juce::int64 position = playheadSamples_.load();
 
     // Update transport position for all clips in all tracks
-    // Get thread-safe snapshot
-    std::shared_ptr<const TrackSnapshot> snapshot;
-    {
-        const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-        snapshot = tracksSnapshot_;
-    }
+    // Get thread-safe snapshot (Lock-free load)
+    auto* snapshot = activeSnapshot_.load();
     
     // Process queued events (Parameter changes, etc.)
     processEvents();
@@ -1331,15 +1457,10 @@ void Engine::processAudio(
     juce::MidiBuffer localMidi;
     midiFifo_.drainTo(localMidi, numSamples);
 
-    // ECS Processing (Level 4)
-    // This iterates active tracks via cached query (lock-free)
-    // Currently a no-op/example until fully migrated
-    if (ecsEngine_) {
-        ecsEngine_->processActiveTracksInAudioCallback(outputBuffer, position, numSamples);
-    }
+
 
     // Fix: Correct argument order (numSamples, position) and pass local MIDI
-    renderBlock(outputBuffer, numSamples, position, &localMidi);
+    renderAudioGraph(outputBuffer, numSamples, position, &localMidi);
 
     // Fallback: If no tracks or all tracks are silent, optionally enable test tone
     // (Only if explicitly enabled via enableTestTone_)
@@ -1472,32 +1593,39 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
     // Add message to FIFO (lock-free)
     midiFifo_.push(message);
 
-    // Phase 2A: MIDI recording - if recording is active, store with playhead timestamp
+    // LOCK-FREE MIDI RECORDING:
+    // Instead of using a mutex, we use a lock-free FIFO to buffer recording events.
+    // The message thread will drain this FIFO in stopRecording().
     if (isRecording_.load())
     {
-        const juce::ScopedLock sl(midiRecordingLock_);
-
         // Get current playhead position
         const juce::int64 playhead = playheadSamples_.load();
-        const juce::int64 recordStart = midiRecording_.recordingStartSamples;
-
-        // Calculate position relative to recording start
-        const double positionInSeconds = static_cast<double>(playhead - recordStart) / currentSampleRate.load();
-
-        // Add to all armed MIDI/Instrument tracks
-        for (size_t i = 0; i < tracks_.size() && i < midiRecording_.trackRecordings.size(); ++i)
+        
+        // Find all armed MIDI/Instrument tracks and queue recording events
+        auto* snapshot = activeSnapshot_.load();
+        if (snapshot != nullptr)
         {
-            auto* track = tracks_[i].get();
-            if (track != nullptr && track->isArmed() &&
-                (track->getType() == zenith::Track::Type::MIDI ||
-                 track->getType() == zenith::Track::Type::Instrument))
+            for (size_t i = 0; i < snapshot->tracks.size(); ++i)
             {
-                // Create timestamped message
-                juce::MidiMessage timestampedMessage(message);
-                timestampedMessage.setTimeStamp(positionInSeconds);
-
-                // Add to track's recording buffer
-                midiRecording_.trackRecordings[i].addEvent(timestampedMessage);
+                auto* track = snapshot->tracks[i];
+                if (track != nullptr && track->isArmed() &&
+                    (track->getType() == zenith::Track::Type::MIDI ||
+                     track->getType() == zenith::Track::Type::Instrument))
+                {
+                    // Queue event to lock-free FIFO
+                    int start1, size1, start2, size2;
+                    midiRecordFifo_.prepareToWrite(1, start1, size1, start2, size2);
+                    
+                    if (size1 > 0)
+                    {
+                        midiRecordBuffer_[start1] = MidiRecordEvent{
+                            message,
+                            static_cast<int>(i),
+                            playhead
+                        };
+                        midiRecordFifo_.finishedWrite(1);
+                    }
+                }
             }
         }
     }
@@ -1527,7 +1655,7 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels)
     DBG("Engine: Buffers prepared successfully");
 }
 
-void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
+void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
                         int numSamples,
                         juce::int64 playheadPosition,
                         const juce::MidiBuffer* incomingMidi)
@@ -1537,12 +1665,8 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
     // Clear output buffer
     outputBuffer.clear();
 
-    // Get thread-safe snapshot
-    std::shared_ptr<const TrackSnapshot> snapshot;
-    {
-        const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-        snapshot = tracksSnapshot_;
-    }
+    // Get thread-safe snapshot (Lock-free load)
+    auto* snapshot = activeSnapshot_.load();
 
     if (!snapshot)
         return;
@@ -1561,10 +1685,24 @@ void Engine::renderBlock(juce::AudioBuffer<float>& outputBuffer,
 
         // CRITICAL: Real-time safety check.
         // If the preallocated buffer is smaller than the requested block, we MUST skip this track
-        // to avoid a buffer overflow. We cannot log this (DBG allocates memory), so we fail silently.
-        // This indicates a logic error in prepareBuffersForOfflineRender or prepareTracks.
+        // to avoid a buffer overflow.
+        // ROAST FIX #5: Don't fail silently! Alert the developer.
         if (trackBuffer.getNumSamples() < numSamples)
         {
+            // This indicates a logic error in prepareBuffersForOfflineRender or prepareTracks.
+            // We assert in debug builds to catch this immediately.
+            jassertfalse; 
+            
+            #if JUCE_DEBUG
+            static bool hasLogged = false;
+            if (!hasLogged) 
+            {
+                DBG("CRITICAL ERROR: Track buffer size (" + juce::String(trackBuffer.getNumSamples()) + 
+                    ") < requested samples (" + juce::String(numSamples) + ")");
+                hasLogged = true;
+            }
+            #endif
+            
             continue;
         }
 
@@ -1704,10 +1842,10 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
                       totalSamples - samplesRendered));
 
         // Render this block
-        // The renderBlock() method will skip any track whose buffer is too small
+        // The renderAudioGraph() method will skip any track whose buffer is too small
         // But since we called prepareBuffersForOfflineRender() with offlineBlockSize,
         // all track buffers are >= offlineBlockSize, so no tracks will be skipped
-        renderBlock(renderBuffer, samplesToRender, samplesRendered);
+        renderAudioGraph(renderBuffer, samplesToRender, samplesRendered);
 
         // Write to file
         if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender))
@@ -1737,7 +1875,7 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
 // Phase 2D: Audio Recording (AUDIO THREAD)
 //==============================================================================
 
-void Engine::processAudioRecording(
+void Engine::captureAudioInput(
     const float* const* inputChannelData,
     int numInputChannels,
     int numSamples) noexcept
@@ -1752,12 +1890,9 @@ void Engine::processAudioRecording(
     if (inputChannelData == nullptr || numInputChannels == 0)
         return;
 
-    // Load track snapshot for safe access
-    std::shared_ptr<const TrackSnapshot> snapshot;
-    {
-        const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-        snapshot = tracksSnapshot_;
-    }
+    // Load track snapshot for safe access (Lock-free load)
+    auto* snapshot = activeSnapshot_.load();
+    // No lock needed!
 
     if (snapshot == nullptr)
         return;
@@ -1922,23 +2057,19 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize)
 {
     DBG("Engine: Baking MIDI recordings into clips (quantize=" + juce::String(quantize ? "true" : "false") + ")");
 
+    // First, drain all events from the lock-free FIFO into recording buffers
+    drainMidiRecordFifo();
+
     // Get project tempo for quantization (default to 120 BPM if no project state)
     const double tempo = (projectState_ != nullptr) ? projectState_->getTempo() : 120.0;
 
-    // Copy recording data while locked (minimize lock time)
-    std::vector<juce::MidiMessageSequence> recordingsCopy;
-    juce::int64 recordStart = 0;
+    // No lock needed - drainMidiRecordFifo already populated midiRecording_.trackRecordings
+    const juce::int64 recordStart = midiRecording_.recordingStartSamples;
 
+    // Process each track's recording
+    for (size_t i = 0; i < midiRecording_.trackRecordings.size() && i < tracks_.size(); ++i)
     {
-        const juce::ScopedLock sl(midiRecordingLock_);
-        recordingsCopy = midiRecording_.trackRecordings;
-        recordStart = midiRecording_.recordingStartSamples;
-    }
-
-    // Process each track's recording (unlocked)
-    for (size_t i = 0; i < recordingsCopy.size() && i < tracks_.size(); ++i)
-    {
-        auto& recording = recordingsCopy[i];
+        auto& recording = midiRecording_.trackRecordings[i];
 
         // Skip empty recordings
         if (recording.getNumEvents() == 0)
@@ -1984,7 +2115,8 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize)
 
 void Engine::clearMidiRecordings()
 {
-    const juce::ScopedLock sl(midiRecordingLock_);
+    // MESSAGE THREAD ONLY - no lock needed with lock-free FIFO pattern
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     for (auto& recording : midiRecording_.trackRecordings)
     {
@@ -1992,6 +2124,15 @@ void Engine::clearMidiRecordings()
     }
 
     midiRecording_.recordingStartSamples = 0;
+    
+    // Also clear the FIFO
+    int numReady = midiRecordFifo_.getNumReady();
+    if (numReady > 0)
+    {
+        int start1, size1, start2, size2;
+        midiRecordFifo_.prepareToRead(numReady, start1, size1, start2, size2);
+        midiRecordFifo_.finishedRead(numReady);
+    }
 
     DBG("Engine: MIDI recordings cleared");
 }
@@ -2040,3 +2181,447 @@ juce::AudioPluginFormatManager& Engine::getPluginFormatManager()
     return pluginHost_->getFormatManager();
 }
 
+void Engine::prepareRecordingForTrack(int trackIndex)
+{
+    // Launch async task to prepare recording file
+    juce::Thread::launch([this, trackIndex]() {
+        DBG("Engine: Preparing recording for track " + juce::String(trackIndex) + "...");
+        
+        if (audioFilePool_ == nullptr || audioWriterThread_ == nullptr)
+            return;
+
+        // Get audio device info
+        auto* device = deviceManager.getCurrentAudioDevice();
+        if (device == nullptr) return;
+
+        double sampleRate = device->getCurrentSampleRate();
+        auto activeInputChannels = device->getActiveInputChannels();
+        int numChannels = activeInputChannels.countNumberOfSetBits(); // Total inputs
+        // Note: We might want per-track channel count, but for now use total inputs or stereo default
+        // ThreadedWriter needs to know how many channels it accepts.
+        // processAudioRecording writes 2 channels max usually.
+        numChannels = 2; // Force stereo for now to match processAudioRecording logic
+
+        // Create recordings directory (need to do this here too)
+        juce::File recordingsDir;
+        if (projectState_ != nullptr && projectState_->getProjectFile().existsAsFile())
+        {
+            recordingsDir = projectState_->getProjectFile().getSiblingFile("Audio Files");
+        }
+        else
+        {
+            recordingsDir = juce::File::getSpecialLocation(
+                juce::File::userDocumentsDirectory).getChildFile("ZenithDAW/Recordings");
+        }
+
+        if (!recordingsDir.exists())
+        {
+            recordingsDir.createDirectory();
+        }
+
+        // Generate filename
+        juce::String trackName = "Track_" + juce::String(trackIndex); // Fallback name since we can't access tracks_ safely
+        juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
+        juce::String filename = trackName + "_" + timestamp + ".wav";
+        juce::File recordFile = recordingsDir.getChildFile(filename);
+        
+        // Create writer
+        auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
+        if (fileStream->failedToOpen())
+        {
+            DBG("Engine: Failed to prepare recording file");
+            return;
+        }
+
+        juce::AudioFormatManager& formatManager = audioFilePool_->getFormatManager();
+        auto* wavFormat = formatManager.findFormatForFileExtension("wav");
+        
+        if (wavFormat == nullptr) return;
+
+        auto* writer = wavFormat->createWriterFor(fileStream.get(), sampleRate, numChannels, 24, {}, 0);
+        if (writer == nullptr) return;
+
+        fileStream.release();
+
+        auto threadedWriter = std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
+            writer, *audioWriterThread_, 32768);
+
+        AudioRecordingSession session;
+        session.writer = std::move(threadedWriter);
+        session.file = recordFile;
+        session.numChannels = numChannels;
+        session.sampleRate = sampleRate;
+        session.trackIndex = trackIndex;
+        // We can't set inputChannelIndex safely here, will be set in record()
+        
+        {
+            const juce::ScopedLock sl(preppedSessionsLock_);
+            // Remove old prep for this track
+            preppedSessions_.erase(std::remove_if(preppedSessions_.begin(), preppedSessions_.end(),
+                [trackIndex](const auto& s) { return s.trackIndex == trackIndex; }), preppedSessions_.end());
+            
+            preppedSessions_.push_back(std::move(session));
+        }
+        
+        DBG("Engine: Recording prepared for track " + juce::String(trackIndex));
+    });
+}
+
+void Engine::registerFormats()
+{
+    formatManager.registerBasicFormats(); 
+    formatManager.registerFormat(new juce::FlacAudioFormat(), false);
+    formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
+}
+
+bool Engine::exportProject(const ExportOptions& options)
+{
+    DBG("Engine: Starting Advanced Export...");
+    registerFormats(); 
+
+    if (options.sampleRate <= 0) return false;
+    
+    if (options.bitDepth == 8 && options.format != ExportFormat::WAV)
+    {
+        DBG("Engine: 8-bit export is only supported for WAV format.");
+        return false;
+    }
+
+    juce::AudioFormat* format = nullptr;
+    switch (options.format) {
+        case ExportFormat::WAV: format = formatManager.findFormatForFileExtension("wav"); break;
+        case ExportFormat::FLAC: format = formatManager.findFormatForFileExtension("flac"); break;
+        case ExportFormat::OGG: format = formatManager.findFormatForFileExtension("ogg"); break;
+    }
+
+    if (!format) return false;
+
+    // Create file stream
+    auto fileStream = std::make_unique<juce::FileOutputStream>(options.outputFile);
+    if (fileStream->failedToOpen()) return false;
+
+    std::unique_ptr<juce::AudioFormatWriter> writer(format->createWriterFor(
+        fileStream.release(),
+        options.sampleRate,
+        2, // Stereo
+        options.bitDepth,
+        {}, // Metadata
+        0   // Quality
+    ));
+
+    if (!writer) return false;
+
+    const int blockSize = 4096;
+    juce::AudioBuffer<float> renderBuffer(2, blockSize);
+    prepareBuffersForOfflineRender(blockSize, 2);
+    
+    if (options.enableDither) dither.prepare(2);
+
+    // Use auto-detect duration if not specified
+    double duration = options.duration > 0 ? options.duration : autoDetectProjectDuration();
+    DBG("Engine: Export duration: " + juce::String(duration, 2) + " seconds");
+    juce::int64 totalSamples = static_cast<juce::int64>(options.sampleRate * duration);
+    juce::int64 samplesWritten = 0;
+
+    while (samplesWritten < totalSamples)
+    {
+        int numSamples = (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
+        
+        // Render Mix
+        // Note: renderAudioGraph is the private method for rendering
+        renderAudioGraph(renderBuffer, numSamples, samplesWritten);
+
+        // Apply Dithering
+        if (options.enableDither && options.bitDepth < 32)
+        {
+            dither.process(renderBuffer, options.bitDepth);
+        }
+        
+        // Normalization (Simple Peak Limiter for now if enabled)
+        if (options.normalize)
+        {
+             applyNormalization(renderBuffer, 1.0f, (float)options.normalizeDb);
+        }
+
+        if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples))
+        {
+            return false;
+        }
+        
+        samplesWritten += numSamples;
+    }
+
+    return true;
+}
+
+void Engine::applyNormalization(juce::AudioBuffer<float>& buffer, float maxPeak, float targetDb)
+{
+    juce::ignoreUnused(maxPeak);
+    float targetLinear = juce::Decibels::decibelsToGain(targetDb);
+    float blockPeak = buffer.getMagnitude(0, buffer.getNumSamples());
+    if (blockPeak > targetLinear)
+    {
+        float gain = targetLinear / blockPeak;
+        buffer.applyGain(gain);
+    }
+}
+
+//==============================================================================
+// Plugin Delay Compensation (PDC)
+//==============================================================================
+
+int Engine::getTrackLatency(int trackIndex) const
+{
+    if (trackIndex >= 0 && trackIndex < static_cast<int>(trackLatencies_.size()))
+    {
+        return trackLatencies_[trackIndex];
+    }
+    return 0;
+}
+
+int Engine::getMasterLatency() const
+{
+    return masterLatency_;
+}
+
+void Engine::recalculatePDC()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    
+    DBG("Engine: Recalculating PDC...");
+    
+    // Calculate per-track latency
+    trackLatencies_.resize(tracks_.size());
+    int maxLatency = 0;
+    
+    for (size_t i = 0; i < tracks_.size(); ++i)
+    {
+        auto* track = tracks_[i].get();
+        if (track == nullptr)
+        {
+            trackLatencies_[i] = 0;
+            continue;
+        }
+        
+        // Sum latency from all plugins in the track
+        int trackLatency = 0;
+        for (int p = 0; p < track->getNumPlugins(); ++p)
+        {
+            auto* plugin = track->getPlugin(p);
+            if (plugin != nullptr)
+            {
+                trackLatency += plugin->getLatencySamples();
+            }
+        }
+        
+        trackLatencies_[i] = trackLatency;
+        if (trackLatency > maxLatency)
+        {
+            maxLatency = trackLatency;
+        }
+    }
+    
+    // Calculate master bus latency
+    masterLatency_ = 0;
+    for (const auto& plugin : masterPlugins_)
+    {
+        if (plugin != nullptr)
+        {
+            masterLatency_ += plugin->getLatencySamples();
+        }
+    }
+    
+    maxTrackLatency_.store(maxLatency);
+    
+    DBG("Engine: PDC calculated - max track latency: " + juce::String(maxLatency) + 
+        " samples, master latency: " + juce::String(masterLatency_) + " samples");
+    
+    // Allocate/resize PDC delay buffers if PDC is enabled
+    if (pdcEnabled_.load() && maxLatency > 0)
+    {
+        pdcDelayBuffers_.resize(tracks_.size());
+        pdcDelayWritePos_.resize(tracks_.size(), 0);
+        
+        for (size_t i = 0; i < tracks_.size(); ++i)
+        {
+            // Calculate delay needed for this track (max - track's own latency)
+            int delayNeeded = maxLatency - trackLatencies_[i];
+            
+            if (delayNeeded > 0)
+            {
+                // Allocate circular buffer for delay
+                pdcDelayBuffers_[i].setSize(2, delayNeeded + currentBufferSize.load(), false, true, false);
+                pdcDelayBuffers_[i].clear();
+                pdcDelayWritePos_[i] = 0;
+            }
+            else
+            {
+                pdcDelayBuffers_[i].setSize(0, 0);  // No delay needed
+            }
+        }
+    }
+}
+
+void Engine::setPDCEnabled(bool enabled)
+{
+    bool wasEnabled = pdcEnabled_.exchange(enabled);
+    if (wasEnabled != enabled)
+    {
+        if (enabled)
+        {
+            recalculatePDC();
+        }
+        DBG("Engine: PDC " + juce::String(enabled ? "enabled" : "disabled"));
+    }
+}
+
+void Engine::applyPDCDelay(juce::AudioBuffer<float>& buffer, int trackIndex, int delaySamples) noexcept
+{
+    // Apply circular buffer delay for PDC
+    if (delaySamples <= 0 || trackIndex < 0 || trackIndex >= static_cast<int>(pdcDelayBuffers_.size()))
+        return;
+    
+    auto& delayBuffer = pdcDelayBuffers_[trackIndex];
+    if (delayBuffer.getNumSamples() == 0)
+        return;
+    
+    const int numSamples = buffer.getNumSamples();
+    const int numChannels = juce::jmin(buffer.getNumChannels(), delayBuffer.getNumChannels());
+    const int delayBufferSize = delayBuffer.getNumSamples();
+    
+    int writePos = pdcDelayWritePos_[trackIndex];
+    
+    for (int ch = 0; ch < numChannels; ++ch)
+    {
+        const float* src = buffer.getReadPointer(ch);
+        float* dst = buffer.getWritePointer(ch);
+        float* delayData = delayBuffer.getWritePointer(ch);
+        
+        int localWritePos = writePos;
+        
+        for (int i = 0; i < numSamples; ++i)
+        {
+            // Read from delay buffer
+            int readPos = (localWritePos - delaySamples + delayBufferSize) % delayBufferSize;
+            float delayedSample = delayData[readPos];
+            
+            // Write current sample to delay buffer
+            delayData[localWritePos] = src[i];
+            
+            // Output delayed sample
+            dst[i] = delayedSample;
+            
+            localWritePos = (localWritePos + 1) % delayBufferSize;
+        }
+    }
+    
+    pdcDelayWritePos_[trackIndex] = (writePos + numSamples) % delayBufferSize;
+}
+
+//==============================================================================
+// Auto-Detect Export Duration
+//==============================================================================
+
+double Engine::autoDetectProjectDuration() const
+{
+    double maxDuration = 0.0;
+    const double sampleRate = currentSampleRate.load();
+    
+    if (sampleRate <= 0.0)
+        return 10.0;  // Fallback
+    
+    // Scan all tracks for the latest clip end position
+    for (const auto& track : tracks_)
+    {
+        if (track == nullptr)
+            continue;
+        
+        for (int i = 0; i < track->getNumClips(); ++i)
+        {
+            const auto* clip = track->getClip(i);
+            if (clip != nullptr)
+            {
+                // Get clip end position in samples and convert to seconds
+                juce::int64 clipEnd = clip->getStartPosition() + clip->getLength();
+                double endSeconds = static_cast<double>(clipEnd) / sampleRate;
+                
+                if (endSeconds > maxDuration)
+                {
+                    maxDuration = endSeconds;
+                }
+            }
+        }
+    }
+    
+    // Add a small tail (2 seconds) for reverb/delay tails
+    if (maxDuration > 0.0)
+    {
+        maxDuration += 2.0;
+    }
+    else
+    {
+        maxDuration = 10.0;  // Default if no clips
+    }
+    
+    return maxDuration;
+}
+
+//==============================================================================
+// Lock-Free MIDI Recording Drain (message thread)
+//==============================================================================
+
+void Engine::drainMidiRecordFifo()
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    
+    // Ensure recording buffers are sized correctly
+    if (midiRecording_.trackRecordings.size() != tracks_.size())
+    {
+        midiRecording_.trackRecordings.resize(tracks_.size());
+    }
+    
+    const juce::int64 recordStart = midiRecording_.recordingStartSamples;
+    const double sampleRate = currentSampleRate.load();
+    
+    // Drain all events from the lock-free FIFO
+    int numReady = midiRecordFifo_.getNumReady();
+    int start1, size1, start2, size2;
+    midiRecordFifo_.prepareToRead(numReady, start1, size1, start2, size2);
+    
+    // Process first segment
+    for (int i = 0; i < size1; ++i)
+    {
+        const auto& event = midiRecordBuffer_[start1 + i];
+        
+        if (event.trackIndex >= 0 && event.trackIndex < static_cast<int>(midiRecording_.trackRecordings.size()))
+        {
+            // Calculate position relative to recording start
+            double positionInSeconds = static_cast<double>(event.timestampSamples - recordStart) / sampleRate;
+            
+            juce::MidiMessage timestampedMsg(event.message);
+            timestampedMsg.setTimeStamp(positionInSeconds);
+            
+            midiRecording_.trackRecordings[event.trackIndex].addEvent(timestampedMsg);
+        }
+    }
+    
+    // Process second segment (wrap-around)
+    for (int i = 0; i < size2; ++i)
+    {
+        const auto& event = midiRecordBuffer_[start2 + i];
+        
+        if (event.trackIndex >= 0 && event.trackIndex < static_cast<int>(midiRecording_.trackRecordings.size()))
+        {
+            double positionInSeconds = static_cast<double>(event.timestampSamples - recordStart) / sampleRate;
+            
+            juce::MidiMessage timestampedMsg(event.message);
+            timestampedMsg.setTimeStamp(positionInSeconds);
+            
+            midiRecording_.trackRecordings[event.trackIndex].addEvent(timestampedMsg);
+        }
+    }
+    
+    midiRecordFifo_.finishedRead(numReady);
+}
+
+} // namespace zenith

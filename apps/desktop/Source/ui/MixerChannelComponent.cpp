@@ -7,7 +7,9 @@
 #include "../../Source/engine/Track.h"
 
 //==============================================================================
-MixerChannelComponent::MixerChannelComponent(zenith::Track* track)
+namespace zenith {
+
+MixerChannelComponent::MixerChannelComponent(Track* track)
     : track_(track)
 #ifdef ZENITH_USE_SKIA
     , faderSlider_("Vol")
@@ -414,4 +416,6 @@ void MixerChannelComponent::LevelMeter::setLevel(float level)
 {
     targetLevel_.store(juce::jlimit(0.0f, 1.0f, level));
 }
+
+} // namespace zenith
 

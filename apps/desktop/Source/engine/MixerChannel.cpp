@@ -5,11 +5,12 @@
     Ported from: ZenithDAW-Native/Source/Audio/MixerChannel.cpp (2025-11-11)
     Author:  Zenith DAW → Zenith DAW
 
-    Mixer channel strip implementation
+    Mixer channel strip implementation with professional compressor
 
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
-    - No container changes needed
+    - Professional ProCompressor with RMS/Lookahead
+    - Lock-free coefficient swapping
 
   ==============================================================================
 */
@@ -42,6 +43,11 @@ MixerChannel::MixerChannel() {
   // Band 3: High shelf at 8kHz
   eqBands[3].type = EQBand::Type::HighShelf;
   eqBands[3].frequency.store(8000.0f);
+  
+  // Initialize coefficient buffers
+  coeffsA_ = std::make_unique<FilterCoefficients>();
+  coeffsB_ = std::make_unique<FilterCoefficients>();
+  activeCoeffs_.store(coeffsA_.get());
 }
 
 MixerChannel::~MixerChannel() {}
@@ -52,9 +58,17 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  // Update all filter coefficients
-  updateFilterCoefficients();
-  updateCompressorCoefficients();
+  // Prepare ProCompressor
+  compressor_.prepare(sampleRate, samplesPerBlockExpected);
+  compressor_.setThreshold(compThreshold.load());
+  compressor_.setRatio(compRatio.load());
+  compressor_.setAttack(compAttack.load());
+  compressor_.setRelease(compRelease.load());
+  compressor_.setMakeup(compMakeup.load());
+  
+  // Pre-calculate filter coefficients on message thread
+  recalculateCoefficients();
+  applyCoefficients();
 }
 
 void MixerChannel::releaseResources() {
@@ -66,6 +80,81 @@ void MixerChannel::releaseResources() {
 
   hpfFilterL.reset();
   hpfFilterR.reset();
+  
+  compressor_.reset();
+}
+
+void MixerChannel::recalculateCoefficients() {
+  // Called from message thread - pre-calculate all coefficients
+  if (currentSampleRate <= 0) return;
+  
+  // Get the inactive buffer to write to
+  FilterCoefficients* target = useCoeffsA_.load() ? coeffsB_.get() : coeffsA_.get();
+  
+  // Calculate HPF coefficients
+  auto hpfCoeffs = juce::IIRCoefficients::makeHighPass(currentSampleRate, hpfFrequency.load());
+  target->hpf = {hpfCoeffs.coefficients[0], hpfCoeffs.coefficients[1], hpfCoeffs.coefficients[2],
+                 1.0, hpfCoeffs.coefficients[3], hpfCoeffs.coefficients[4]};
+  
+  // Calculate EQ coefficients
+  for (int i = 0; i < numEQBands; ++i) {
+    const float freq = eqBands[i].frequency.load();
+    const float gain = eqBands[i].gain.load();
+    const float q = eqBands[i].q.load();
+    
+    juce::IIRCoefficients coeffs;
+    
+    switch (eqBands[i].type) {
+    case EQBand::Type::LowShelf:
+      coeffs = juce::IIRCoefficients::makeLowShelf(currentSampleRate, freq, q,
+                                                   dbToGain(gain));
+      break;
+
+    case EQBand::Type::Peak:
+      coeffs = juce::IIRCoefficients::makePeakFilter(currentSampleRate, freq, q,
+                                                     dbToGain(gain));
+      break;
+
+    case EQBand::Type::HighShelf:
+      coeffs = juce::IIRCoefficients::makeHighShelf(currentSampleRate, freq, q,
+                                                    dbToGain(gain));
+      break;
+    }
+    
+    target->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1], coeffs.coefficients[2],
+                     1.0, coeffs.coefficients[3], coeffs.coefficients[4]};
+  }
+  
+  // Mark for swap
+  coeffsDirty_.store(true);
+}
+
+void MixerChannel::applyCoefficients() {
+  // Called from audio thread - apply pre-calculated coefficients
+  if (!coeffsDirty_.load()) return;
+  
+  // Swap to the newly calculated coefficients
+  bool useA = useCoeffsA_.load();
+  FilterCoefficients* newCoeffs = useA ? coeffsB_.get() : coeffsA_.get();
+  
+  // Apply HPF
+  juce::IIRCoefficients hpf(newCoeffs->hpf[0], newCoeffs->hpf[1], newCoeffs->hpf[2],
+                            newCoeffs->hpf[3], newCoeffs->hpf[4], newCoeffs->hpf[5]);
+  hpfFilterL.setCoefficients(hpf);
+  hpfFilterR.setCoefficients(hpf);
+  
+  // Apply EQ bands
+  for (int i = 0; i < numEQBands; ++i) {
+    juce::IIRCoefficients eq(newCoeffs->eq[i][0], newCoeffs->eq[i][1], newCoeffs->eq[i][2],
+                             newCoeffs->eq[i][3], newCoeffs->eq[i][4], newCoeffs->eq[i][5]);
+    eqFiltersL[i].setCoefficients(eq);
+    eqFiltersR[i].setCoefficients(eq);
+  }
+  
+  // Swap active buffer
+  activeCoeffs_.store(newCoeffs);
+  useCoeffsA_.store(!useA);
+  coeffsDirty_.store(false);
 }
 
 void MixerChannel::getNextAudioBlock(
@@ -76,6 +165,9 @@ void MixerChannel::getNextAudioBlock(
     outputLevel.store(0.0f);
     return;
   }
+
+  // Apply any pending coefficient changes (RT-safe: just pointer swap)
+  applyCoefficients();
 
   // Create a local buffer for processing
   juce::AudioBuffer<float> localBuffer(
@@ -97,7 +189,6 @@ void MixerChannel::getNextAudioBlock(
   // Process EQ
   processEQ(localBuffer);
 
-  // Process compressor
   // Process compressor
   if (compressorEnabled.load()) {
     processCompressor(localBuffer);
@@ -127,10 +218,6 @@ void MixerChannel::processSends(
       continue;
 
     // Apply send level
-    // Note: This is a simple copy-add. In a real scenario, we might want to
-    // apply pan rules or specific send panning. For now, we sum the stereo
-    // source to the send buffer (assuming send buffer is stereo)
-
     const int numChannels =
         juce::jmin(sourceBuffer.getNumChannels(), sendBuffer->getNumChannels());
     const int numSamples = sourceBuffer.getNumSamples();
@@ -160,7 +247,8 @@ void MixerChannel::setHighPassEnabled(bool enabled) {
 
 void MixerChannel::setHighPassFrequency(float frequency) {
   hpfFrequency.store(juce::jlimit(20.0f, 500.0f, frequency));
-  updateFilterCoefficients();
+  // Pre-calculate coefficients on message thread (RT-safe)
+  recalculateCoefficients();
   sendChangeMessage();
 }
 
@@ -175,6 +263,13 @@ const MixerChannel::EQBand &MixerChannel::getEQBand(int bandIndex) const {
   return eqBands[bandIndex];
 }
 
+void MixerChannel::markEQDirty(int bandIndex) {
+  juce::ignoreUnused(bandIndex);
+  // Pre-calculate coefficients on message thread (RT-safe)
+  recalculateCoefficients();
+  sendChangeMessage();
+}
+
 //==============================================================================
 void MixerChannel::setCompressorEnabled(bool enabled) {
   compressorEnabled.store(enabled);
@@ -183,28 +278,51 @@ void MixerChannel::setCompressorEnabled(bool enabled) {
 
 void MixerChannel::setCompressorThreshold(float thresholdDb) {
   compThreshold.store(juce::jlimit(-60.0f, 0.0f, thresholdDb));
+  compressor_.setThreshold(thresholdDb);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRatio(float ratio) {
   compRatio.store(juce::jlimit(1.0f, 20.0f, ratio));
+  compressor_.setRatio(ratio);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
   compAttack.store(juce::jlimit(0.1f, 100.0f, attackMs));
-  updateCompressorCoefficients();
+  compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
   compRelease.store(juce::jlimit(10.0f, 1000.0f, releaseMs));
-  updateCompressorCoefficients();
+  compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorMakeup(float makeupDb) {
   compMakeup.store(juce::jlimit(0.0f, 24.0f, makeupDb));
+  compressor_.setMakeup(makeupDb);
+  sendChangeMessage();
+}
+
+void MixerChannel::setCompressorKnee(float kneeDb) {
+  compressor_.setKnee(juce::jlimit(0.0f, 24.0f, kneeDb));
+  sendChangeMessage();
+}
+
+void MixerChannel::setCompressorLookahead(bool enabled) {
+  compressor_.setLookaheadEnabled(enabled);
+  sendChangeMessage();
+}
+
+void MixerChannel::setCompressorRmsMode(bool useRms) {
+  compressor_.setRmsEnabled(useRms);
+  sendChangeMessage();
+}
+
+void MixerChannel::setCompressorAutoMakeup(bool enabled) {
+  compressor_.setAutoMakeup(enabled);
   sendChangeMessage();
 }
 
@@ -346,6 +464,13 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
   compAttack.store(state.getProperty("compAttack", 10.0f));
   compRelease.store(state.getProperty("compRelease", 100.0f));
   compMakeup.store(state.getProperty("compMakeup", 0.0f));
+  
+  // Update ProCompressor with loaded values
+  compressor_.setThreshold(compThreshold.load());
+  compressor_.setRatio(compRatio.load());
+  compressor_.setAttack(compAttack.load());
+  compressor_.setRelease(compRelease.load());
+  compressor_.setMakeup(compMakeup.load());
 
   // Sends
   int sendIndex = 0;
@@ -363,8 +488,7 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
   muted.store(state.getProperty("muted", false));
   solo.store(state.getProperty("solo", false));
 
-  updateFilterCoefficients();
-  updateCompressorCoefficients();
+  recalculateCoefficients();
   sendChangeMessage();
 }
 
@@ -405,42 +529,8 @@ void MixerChannel::processEQ(juce::AudioBuffer<float> &buffer) {
 }
 
 void MixerChannel::processCompressor(juce::AudioBuffer<float> &buffer) {
-  const float threshold = compThreshold.load();
-  const float ratio = compRatio.load();
-  const float makeupGain = dbToGain(compMakeup.load());
-
-  float maxGR = 0.0f;
-
-  for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-    float *channelData = buffer.getWritePointer(ch);
-
-    for (int i = 0; i < buffer.getNumSamples(); ++i) {
-      const float inputSample = channelData[i];
-      const float inputDb = gainToDb(std::abs(inputSample));
-
-      // Envelope follower
-      if (inputDb > envelopeFollower)
-        envelopeFollower += attackCoeff * (inputDb - envelopeFollower);
-      else
-        envelopeFollower += releaseCoeff * (inputDb - envelopeFollower);
-
-      // Calculate gain reduction
-      float gr = 0.0f;
-      if (envelopeFollower > threshold) {
-        gr = (envelopeFollower - threshold) * (1.0f - 1.0f / ratio);
-      }
-
-      // Track maximum gain reduction
-      if (gr > maxGR)
-        maxGR = gr;
-
-      // Apply compression
-      const float compressionGain = dbToGain(-gr);
-      channelData[i] = inputSample * compressionGain * makeupGain;
-    }
-  }
-
-  gainReduction.store(maxGR);
+  // Use the professional ProCompressor
+  compressor_.process(buffer);
 }
 
 void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
@@ -494,58 +584,4 @@ void MixerChannel::updateMeters(const juce::AudioBuffer<float> &buffer,
   }
 }
 
-void MixerChannel::updateFilterCoefficients() {
-  if (currentSampleRate <= 0)
-    return;
-
-  // Update high-pass filter
-  auto hpfCoeffs = juce::IIRCoefficients::makeHighPass(currentSampleRate,
-                                                       hpfFrequency.load());
-
-  hpfFilterL.setCoefficients(hpfCoeffs);
-  hpfFilterR.setCoefficients(hpfCoeffs);
-
-  // Update EQ filters
-  for (int i = 0; i < numEQBands; ++i) {
-    const float freq = eqBands[i].frequency.load();
-    const float gain = eqBands[i].gain.load();
-    const float q = eqBands[i].q.load();
-
-    juce::IIRCoefficients coeffs;
-
-    switch (eqBands[i].type) {
-    case EQBand::Type::LowShelf:
-      coeffs = juce::IIRCoefficients::makeLowShelf(currentSampleRate, freq, q,
-                                                   dbToGain(gain));
-      break;
-
-    case EQBand::Type::Peak:
-      coeffs = juce::IIRCoefficients::makePeakFilter(currentSampleRate, freq, q,
-                                                     dbToGain(gain));
-      break;
-
-    case EQBand::Type::HighShelf:
-      coeffs = juce::IIRCoefficients::makeHighShelf(currentSampleRate, freq, q,
-                                                    dbToGain(gain));
-      break;
-    }
-
-    eqFiltersL[i].setCoefficients(coeffs);
-    eqFiltersR[i].setCoefficients(coeffs);
-  }
-}
-
-void MixerChannel::updateCompressorCoefficients() {
-  if (currentSampleRate <= 0)
-    return;
-
-  const float attackMs = compAttack.load();
-  const float releaseMs = compRelease.load();
-
-  // Calculate time constants
-  attackCoeff =
-      1.0f - std::exp(-1.0f / (attackMs * 0.001f * currentSampleRate));
-  releaseCoeff =
-      1.0f - std::exp(-1.0f / (releaseMs * 0.001f * currentSampleRate));
-}
 } // namespace zenith

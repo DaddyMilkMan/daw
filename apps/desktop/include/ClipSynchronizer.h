@@ -51,7 +51,7 @@ public:
      * @param projectState Reference to project state (must outlive this object)
      * @param engine Reference to audio engine (must outlive this object)
      */
-    ClipSynchronizer(ProjectState& projectState, Engine& engine);
+    ClipSynchronizer(zenith::ProjectState& projectState, zenith::Engine& engine);
 
     /**
      * @brief Destructor
@@ -123,8 +123,8 @@ private:
     // Member Variables
     //==========================================================================
 
-    ProjectState& projectState;
-    Engine& engine;
+    zenith::ProjectState& projectState;
+    zenith::Engine& engine;
 
     // Track clip counts to detect new clips
     std::map<int, int> engineClipCounts;

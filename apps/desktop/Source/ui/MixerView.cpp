@@ -8,6 +8,8 @@
 #include "../../include/Engine.h"
 #include "../../Source/engine/Track.h"
 
+using namespace zenith;
+
 //==============================================================================
 MixerView::MixerView(Engine& engine)
     : engine_(engine)

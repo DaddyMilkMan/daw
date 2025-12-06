@@ -9,10 +9,10 @@ target_sources(ZenithDAW PRIVATE
     AuxBus.cpp
     ZenithLogger.cpp
     TrackPluginState.cpp
-    PluginHostAsync.cpp
     ClipSynchronizer.cpp
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
     TempoMap.cpp
+    RoutingGraph.cpp
 )

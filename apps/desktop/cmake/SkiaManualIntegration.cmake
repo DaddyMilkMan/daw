@@ -59,6 +59,7 @@ else()
             ${SKIA_INCLUDE_DIR}
             ${SKIA_DIR}/include
             ${SKIA_DIR}/include/skia
+            ${SKIA_DIR}/include/skia/include
             ${SKIA_DIR}
         )
 
@@ -66,6 +67,44 @@ else()
         target_compile_definitions(ZenithDAW PRIVATE SK_GL=1)
         set(SKIA_FOUND_AND_READY ON)
         message(STATUS "  Skia graphics library: LINKED (Manual)")
+
+        # ------------------------------------------------------------------------
+        # AUTOMATIC DLL DEPLOYMENT (User-Friendly Fix)
+        # ------------------------------------------------------------------------
+        if(WIN32)
+            # Try to locate the DLL associated with the import library
+            get_filename_component(SKIA_LIB_DIR "${SKIA_LIBRARY}" DIRECTORY)
+            
+            # Common vcpkg/prebuilt layouts: 
+            # 1. bin/skia.dll (relative to lib/skia.lib) -> ../bin/skia.dll
+            # 2. Same dir
+            find_file(SKIA_DLL
+                NAMES skia.dll
+                PATHS 
+                    "${SKIA_LIB_DIR}/../bin"
+                    "${SKIA_LIB_DIR}"
+                    "${SKIA_DIR}/bin"
+                NO_DEFAULT_PATH
+            )
+
+            if(SKIA_DLL)
+                message(STATUS "  Found Skia DLL: ${SKIA_DLL} - Configuring auto-copy")
+                
+                # Copy to build directory (for running from IDE/CLI)
+                add_custom_command(TARGET ZenithDAW POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${SKIA_DLL}"
+                    "$<TARGET_FILE_DIR:ZenithDAW>"
+                    COMMENT "Deploying skia.dll to output directory..."
+                )
+                
+                # Copy to install directory (for packaging)
+                install(FILES "${SKIA_DLL}" DESTINATION bin)
+            else()
+                message(WARNING "  Could not find skia.dll! Users may need to install it manually.")
+            endif()
+        endif()
+
     else()
         message(WARNING "  Skia graphics library NOT FOUND. Skia UI components will be DISABLED.")
         message(STATUS "  (Hint: Set SKIA_DIR to your vcpkg installation or use the vcpkg toolchain)")

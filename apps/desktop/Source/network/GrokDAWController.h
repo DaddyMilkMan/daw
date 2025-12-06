@@ -15,7 +15,7 @@
 
 #include "GrokAPIClient.h"
 #include "AudioAnalysisService.h"
-#include "../commands/CommandAPI.h"
+#include "../../include/CommandAPI.h"
 #include <juce_core/juce_core.h>
 #include <functional>
 #include <memory>

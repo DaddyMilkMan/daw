@@ -33,6 +33,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 
+namespace zenith {
+
 //==============================================================================
 /**
  * @class TrackStateSynchronizer
@@ -139,3 +141,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackStateSynchronizer)
 };
+
+} // namespace zenith

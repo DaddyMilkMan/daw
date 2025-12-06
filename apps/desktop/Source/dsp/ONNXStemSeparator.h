@@ -32,6 +32,7 @@ public:
         juce::AudioBuffer<float> bass;
         juce::AudioBuffer<float> other;
         bool success = false;
+        bool usedONNX = false; // True if ONNX inference was used, false if DSP fallback
         juce::String error;
     };
 
@@ -42,10 +43,25 @@ public:
      * @return SeparationResult containing the stems
      */
     SeparationResult separate(const juce::AudioBuffer<float>& input, double sampleRate);
+    
+    /**
+     * @brief Get information about the loaded model
+     * @return String with model details
+     */
+    juce::String getModelInfo() const;
+
 
 private:
     struct Impl;
     std::unique_ptr<Impl> pImpl;
+    
+#ifdef ZENITH_USE_ONNX_RUNTIME
+    /**
+     * @brief Helper to copy ONNX tensor data to JUCE AudioBuffer
+     */
+    void copyTensorToBuffer(const float* tensorData, juce::AudioBuffer<float>& buffer, int numChannels, int numSamples);
+#endif
+
 };
 
 }

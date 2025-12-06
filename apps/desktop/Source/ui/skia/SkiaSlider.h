@@ -21,6 +21,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
+#include "RenderTree.h"
 
 namespace zenith {
 
@@ -133,6 +134,12 @@ public:
     // ========================================================================
     
     void drawSkia(SkCanvas* canvas) override;
+    
+    /**
+     * Capture current slider state for thread-safe rendering.
+     * Called from Message Thread, rendered on OpenGL Thread.
+     */
+    render::SliderRenderState captureRenderState() const;
     
 protected:
     // ========================================================================

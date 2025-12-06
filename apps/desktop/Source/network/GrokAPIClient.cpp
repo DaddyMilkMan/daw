@@ -58,8 +58,10 @@ public:
         // Reasoning mode control
         request->setProperty("reasoning", mode == GrokMode::Thinking);
         
-        // Temperature (lower for thinking mode)
-        request->setProperty("temperature", mode == GrokMode::Thinking ? 0.3 : 0.7);
+        // Temperature settings
+        const float TEMP_THINKING = 0.3f; // Lower temperature for precise reasoning
+        const float TEMP_CREATIVE = 0.7f; // Higher temperature for creative tasks
+        request->setProperty("temperature", mode == GrokMode::Thinking ? TEMP_THINKING : TEMP_CREATIVE);
         
         // Build messages array
         juce::Array<juce::var> messages;

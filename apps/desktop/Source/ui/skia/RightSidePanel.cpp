@@ -22,9 +22,14 @@ namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-RightSidePanel::RightSidePanel()
+RightSidePanel::RightSidePanel(CommandAPI& api, AIBridgeClient& client, Engine& engine)
 {
     setSize(300, 600);
+    
+    wingmanPanel_ = std::make_unique<WingmanPanel>(api, client, engine);
+    addChildComponent(wingmanPanel_.get());
+    wingmanPanel_->setVisible(true);
+    
     startTimerHz(60); // Animation timer
 }
 
@@ -47,23 +52,17 @@ void RightSidePanel::drawSkia(SkCanvas* canvas) {
         cachedBounds_ = skBounds;
     }
     
-    // Glassmorphism Background
+    // Glassmorphism Background (Frame)
     canvas->drawRect(skBounds, bgPaint_);
     
     // Left border glow
     canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
     
-    // Header
-    canvas->drawString("WINGMAN AI", 20.0f, 30.0f, headerFont_, textPaint_);
-    
-    // Placeholder content
-    canvas->drawString("Chat with your AI assistant...", 20.0f, 60.0f, bodyFont_, subTextPaint_);
-
     // Master Meter (Visualist Request: Peak vs RMS)
     float meterX = skBounds.width() - 40.0f;
-    float meterY = 80.0f;
+    float meterY = 20.0f; // Moved up since header is gone
     float meterW = 20.0f;
-    float meterH = skBounds.height() - 100.0f;
+    float meterH = skBounds.height() - 40.0f;
 
     // Background
     canvas->drawRect(SkRect::MakeXYWH(meterX, meterY, meterW, meterH), meterBgPaint_);
@@ -132,7 +131,12 @@ void RightSidePanel::updateCachedPaints(const SkRect& bounds) {
 }
 
 void RightSidePanel::resized() {
-    // Layout children
+    auto bounds = getLocalBounds();
+    // Reserve 50px on the right for the meter (drawn in Skia background)
+    // Reduce slightly for margin
+    if (wingmanPanel_) {
+        wingmanPanel_->setBounds(bounds.removeFromLeft(bounds.getWidth() - 50).reduced(10));
+    }
 }
 
 #endif // ZENITH_USE_SKIA

@@ -22,6 +22,8 @@
 #include "ProjectState.h"
 
 //==============================================================================
+namespace zenith {
+
 /**
  * @class TempoLaneComponent
  * @brief UI lane for tempo map editing
@@ -154,4 +156,6 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoLaneComponent)
 };
+
+} // namespace zenith
 

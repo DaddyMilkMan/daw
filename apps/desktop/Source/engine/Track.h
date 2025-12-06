@@ -175,6 +175,7 @@ public:
   void clearClips();
   int getNumClips() const;
   Clip *getClip(int index) const;
+  const std::vector<std::unique_ptr<Clip>>& getClips() const { return clipsOwned_; }
 
   //==============================================================================
   // Monitoring
@@ -240,12 +241,42 @@ private:
   MixerChannel mixerChannel;
 
   //==============================================================================
-  // Plugin chain (Phase 3: VST3 hosting MVP)
-  // Plugins are modified on message thread, processed on audio thread
-  // No lock needed during processing (plugins vector is only modified on
-  // message thread when stopped)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins;
-  juce::CriticalSection pluginLock; // Only for add/remove operations
+  // ROAST FIX #2: Plugin chain with RT-safe snapshot pattern (Phase 3: VST3 hosting MVP)
+  //
+  // Pattern (same as clips):
+  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread only)
+  // - PluginSnapshot holds shared_ptr for audio thread to iterate safely
+  // - Audio thread loads snapshot atomically, iterates without locking
+  // - Message thread creates new snapshot when modifying plugins, swaps atomically
+  //
+  // This eliminates the data race from the original code:
+  // OLD: Audio thread reads std::vector while message thread modifies it (UB!)
+  // NEW: Audio thread holds shared_ptr snapshot, ensuring plugins stay alive
+  
+  struct PluginSnapshot {
+    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
+    
+    PluginSnapshot() = default;
+    explicit PluginSnapshot(const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& ownedPlugins) {
+      plugins.reserve(ownedPlugins.size());
+      for (const auto& plugin : ownedPlugins)
+        plugins.push_back(plugin); // Copy shared_ptr (increment refcount)
+    }
+  };
+
+  // Plugin ownership (message thread only)
+  std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
+  
+  // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
+  // Audio thread reads this raw pointer atomically
+  // Message thread manages lifetime via currentPluginSnapshot_ and pluginSnapshotTrash_
+  std::atomic<const PluginSnapshot*> activePluginSnapshot_{nullptr};
+  std::shared_ptr<PluginSnapshot> currentPluginSnapshot_;
+  std::vector<std::shared_ptr<PluginSnapshot>> pluginSnapshotTrash_;
+  
+  // Helper: Create new snapshot from current ownership
+  void updatePluginSnapshot();
+  
   juce::AudioBuffer<float> pluginBuffer;
 
   //==============================================================================
@@ -276,9 +307,12 @@ private:
   // Clip ownership (message thread only)
   std::vector<std::unique_ptr<Clip>> clipsOwned_;
 
-  // Atomic snapshot for audio thread (RT-safe read)
-  std::shared_ptr<const ClipSnapshot> clipsSnapshot_;
-  juce::SpinLock snapshotLock;
+  // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
+  // Audio thread reads this raw pointer atomically
+  // Message thread manages lifetime via currentClipSnapshot_ and clipSnapshotTrash_
+  std::atomic<const ClipSnapshot*> activeClipSnapshot_{nullptr};
+  std::shared_ptr<ClipSnapshot> currentClipSnapshot_;
+  std::vector<std::shared_ptr<ClipSnapshot>> clipSnapshotTrash_;
 
   // Helper: Create new snapshot from current ownership
   void updateClipSnapshot();

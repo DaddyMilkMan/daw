@@ -50,7 +50,7 @@ class MixerComponent :
 #endif
     public juce::ValueTree::Listener {
 public:
-  MixerComponent(ProjectState &ps);
+  MixerComponent(zenith::ProjectState &ps);
   ~MixerComponent() override;
 
 #ifndef ZENITH_USE_SKIA
@@ -67,12 +67,20 @@ public:
     juce::String trackId;
     juce::String trackName;
 
+#ifdef ZENITH_USE_SKIA
+    std::unique_ptr<zenith::ZenithSlider> volumeSlider;
+    std::unique_ptr<zenith::ZenithKnob> panSlider; // Use Knob for Pan
+    std::unique_ptr<zenith::ZenithButton> muteButton;
+    std::unique_ptr<zenith::ZenithButton> soloButton;
+    std::unique_ptr<zenith::ZenithButton> armButton;
+#else
     std::unique_ptr<juce::Label> nameLabel;
     std::unique_ptr<juce::Slider> volumeSlider;
     std::unique_ptr<juce::Slider> panSlider;
     std::unique_ptr<juce::ToggleButton> muteButton;
     std::unique_ptr<juce::ToggleButton> soloButton;
     std::unique_ptr<juce::ToggleButton> armButton;
+#endif
 
     juce::Rectangle<int> bounds;
 
@@ -159,7 +167,7 @@ private:
   // Member variables
   //==========================================================================
 
-  ProjectState &projectState;
+  zenith::ProjectState &projectState;
 
   std::vector<std::unique_ptr<TrackStrip>> trackStrips;
 

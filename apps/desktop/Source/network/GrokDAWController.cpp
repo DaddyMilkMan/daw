@@ -136,56 +136,64 @@ public:
             }
 
             // Prepare export params
+            auto placeholder = juce::File::createTempFile("analysis_");
+            auto tempPath = placeholder.getFullPathName() + ".wav"; // Ensure .wav extension
+            placeholder.deleteFile(); // Remove placeholder, we just need the unique path
+
             juce::var exportParams;
             auto* paramsObj = new juce::DynamicObject();
-            paramsObj->setProperty("outputPath", juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("analysis_temp.wav").getFullPathName());
+            paramsObj->setProperty("outputPath", tempPath);
             paramsObj->setProperty("durationSeconds", 10.0); // Default 10s
             exportParams = juce::var(paramsObj);
 
-            // Execute export command (must be done on Message Thread for safety with current Engine)
-            bool exportSuccess = false;
-            juce::WaitableEvent exportFinished;
+            // DEADLOCK FIX: Use completion callback pattern instead of blocking wait.
+            // The original code used WaitableEvent::wait() which could deadlock if 
+            // called from the message thread (callAsync would never execute).
+            // Now we use a fully async chain.
             
-            juce::MessageManager::callAsync([this, exportParams, &exportSuccess, &exportFinished]() {
+            juce::MessageManager::callAsync([this, exportParams, tempPath, onComplete, onError, onProgress]() {
                 auto* cmdObj = new juce::DynamicObject();
                 cmdObj->setProperty("command", "export_audio");
                 cmdObj->setProperty("params", exportParams);
                 
                 juce::var exportResult = commandAPI.executeCommand(juce::var(cmdObj));
-                exportSuccess = exportResult.getProperty("success", false);
-                exportFinished.signal();
-            });
-            
-            exportFinished.wait();
-            
-            if (!exportSuccess)
-            {
-                juce::MessageManager::callAsync([onError](){ onError("Failed to export audio for analysis"); });
-                return;
-            }
-
-            // 2. Analyze audio (Safe to run on background thread)
-            if (onProgress) 
-            {
-                 juce::MessageManager::callAsync([onProgress](){ onProgress("Analyzing audio..."); });
-            }
-
-            juce::File tempFile = juce::File::getSpecialLocation(juce::File::tempDirectory).getChildFile("analysis_temp.wav");
-
-            analysisService.analyzeAudioFile(
-                tempFile,
-                [onComplete, tempFile](AudioAnalysisResults results) {
-                    const_cast<juce::File&>(tempFile).deleteFile();
-                    if (results.success)
-                        onComplete(results.toSummary());
-                    else
-                        onComplete("Analysis failed: " + results.errorMessage);
-                },
-                [onError, tempFile](juce::String error) {
-                    const_cast<juce::File&>(tempFile).deleteFile();
-                    onError("Analysis error: " + error);
+                bool exportSuccess = exportResult.getProperty("success", false);
+                
+                if (!exportSuccess)
+                {
+                    onError("Failed to export audio for analysis");
+                    juce::File(tempPath).deleteFile();
+                    return;
                 }
-            );
+
+                // Continue analysis on background thread
+                threadPool.addJob([this, tempPath, onComplete, onError, onProgress]()
+                {
+                    if (onProgress) 
+                    {
+                        juce::MessageManager::callAsync([onProgress](){ onProgress("Analyzing audio..."); });
+                    }
+
+                    // CONST_CAST FIX: Capture tempPath by value (String), create File when needed.
+                    // This avoids the const_cast hack on captured-by-value juce::File.
+                    analysisService.analyzeAudioFile(
+                        juce::File(tempPath),
+                        [onComplete, tempPath](AudioAnalysisResults results) {
+                            // Clean up temp file (no const_cast needed!)
+                            juce::File(tempPath).deleteFile();
+                            if (results.success)
+                                onComplete(results.toSummary());
+                            else
+                                onComplete("Analysis failed: " + results.errorMessage);
+                        },
+                        [onError, tempPath](juce::String error) {
+                            // Clean up temp file (no const_cast needed!)
+                            juce::File(tempPath).deleteFile();
+                            onError("Analysis error: " + error);
+                        }
+                    );
+                });
+            });
         });
     }
 

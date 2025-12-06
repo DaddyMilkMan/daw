@@ -13,13 +13,15 @@
 #include "WingmanPanel.h"
 #include "ZenithLookAndFeel.h"
 #include "../network/SecureKeyStore.h"
+#include "SettingsComponent.h"
 
 namespace zenith {
 
 //==============================================================================
-WingmanPanel::WingmanPanel(CommandAPI& api, AIBridgeClient& client)
+WingmanPanel::WingmanPanel(CommandAPI& api, AIBridgeClient& client, Engine& engine)
     : commandAPI(api),
-      aiBridgeClient(client)
+      aiBridgeClient(client),
+      engine_(engine)
 {
     // Create Grok controller
     grokController = std::make_unique<GrokDAWController>(commandAPI);
@@ -317,50 +319,16 @@ void WingmanPanel::updateModeFromSelector()
 
 void WingmanPanel::showSettings()
 {
-    // Create settings dialog
-    auto* dialog = new juce::AlertWindow("Grok API Settings",
-                                         "Enter your Grok API key:",
-                                         juce::MessageBoxIconType::NoIcon);
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned(new SettingsComponent(engine_));
+    options.content->setSize(600, 500);
+    options.dialogTitle = "Zenith DAW Settings";
+    options.dialogBackgroundColour = ZenithLookAndFeel::Colors::background;
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = true;
+    options.resizable = true;
     
-    dialog->addTextEditor("apiKey", "", "API Key:");
-    
-    // Try to load existing key
-    juce::String existingKey;
-    if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, existingKey))
-    {
-        dialog->getTextEditor("apiKey")->setText(existingKey);
-    }
-    
-    dialog->addButton("Save", 1);
-    dialog->addButton("Cancel", 0);
-    
-    dialog->enterModalState(true, juce::ModalCallbackFunction::create(
-        [this, dialog](int result)
-        {
-            if (result == 1)
-            {
-                auto apiKey = dialog->getTextEditorContents("apiKey");
-                
-                if (apiKey.isNotEmpty())
-                {
-                    // Save to secure storage
-                    SecureKeyStore::storeKey(SecureKeyStore::GrokAPIKey, apiKey);
-                    
-                    // Initialize Grok
-                    if (initializeGrok(apiKey))
-                    {
-                        appendToConversation("System", "Grok API key saved and initialized successfully!");
-                    }
-                    else
-                    {
-                        appendToConversation("System", "Failed to initialize Grok with provided API key.");
-                    }
-                }
-            }
-            
-            delete dialog;
-        }
-    ), true);
+    options.launchAsync();
 }
 
 } // namespace zenith

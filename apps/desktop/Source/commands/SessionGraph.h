@@ -68,11 +68,11 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include "../engine/Track.h"
 
+namespace zenith {
+
 // Forward declarations
 class Engine;
 class ProjectState;
-
-namespace zenith {
 
 //==============================================================================
 /**
@@ -105,10 +105,10 @@ private:
 
     juce::var serializeTransport();
     juce::var serializeTracks();
-    juce::var serializeTrack(Track* track, int trackIndex);
-    juce::var serializePlugins(Track* track);
-    juce::var serializeClips(Track* track);
-    juce::var serializeClip(Track::Clip* clip, int clipIndex);
+    juce::var serializeTrack(const Track* track, int trackIndex);
+    juce::var serializePlugins(const Track* track);
+    juce::var serializeClips(const Track* track);
+    juce::var serializeClip(const Track::Clip* clip, int clipIndex);
 
     //==============================================================================
     // Member variables

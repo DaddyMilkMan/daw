@@ -32,6 +32,8 @@
 #endif
 
 //==============================================================================
+namespace zenith {
+
 /**
  * @class TrackHeaderComponent
  * @brief UI component for a single track header
@@ -141,4 +143,6 @@ private:
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackHeaderComponent)
 };
+
+} // namespace zenith
 

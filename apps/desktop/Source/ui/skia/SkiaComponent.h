@@ -12,16 +12,16 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkPath.h>
-#include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
-#include <core/SkColor.h>
-#include <core/SkRect.h>
-#include <core/SkRRect.h>
-#include <core/SkShader.h>
-#include <core/SkFont.h>
+#include <include/core/SkCanvas.h>
+#include <include/core/SkPaint.h>
+#include <include/core/SkPath.h>
+#include <include/core/SkMaskFilter.h>
+#include <include/core/SkBlurTypes.h>
+#include <include/core/SkColor.h>
+#include <include/core/SkRect.h>
+#include <include/core/SkRRect.h>
+#include <include/core/SkShader.h>
+#include <include/core/SkFont.h>
 
 #include "ZenithDesignSystem.h"
 #include "SkiaAccessibility.h"
@@ -109,6 +109,11 @@ public:
     virtual void onFocusGained() {}
     virtual void onFocusLost() {}
     
+    // Widget delegation hooks
+    virtual void onMouseDown(const juce::MouseEvent& e) { juce::ignoreUnused(e); }
+    virtual void onMouseDrag(const juce::MouseEvent& e) { juce::ignoreUnused(e); }
+    virtual void onMouseUp(const juce::MouseEvent& e) { juce::ignoreUnused(e); }
+    
     void animateTo(const juce::String& property, float target, int durationMs);
     void animateWithSpring(const juce::String& property, float target, float stiffness, float damping);
     void stopAnimation(const juce::String& property);
@@ -118,6 +123,7 @@ public:
     bool isAnimating(const juce::String& property) const;
     
     bool isHovered() const { return isHovered_; }
+    void setHovered(bool hovered) { isHovered_ = hovered; markDirty(); }
     bool isFocused() const { return juce::Component::hasKeyboardFocus(true); }
     
     void markDirty() { needsRepaint_ = true; repaint(); }

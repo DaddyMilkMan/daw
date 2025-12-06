@@ -53,6 +53,7 @@ public:
     std::function<void()> onStopClicked;
     std::function<void()> onRecordClicked;
     std::function<void()> onViewToggleClicked;
+    std::function<void()> onSettingsClicked;
 
 private:
     bool isPlaying_ = false;
@@ -68,6 +69,7 @@ private:
     juce::Rectangle<int> stopButtonBounds_;
     juce::Rectangle<int> recordButtonBounds_;
     juce::Rectangle<int> viewToggleButtonBounds_;
+    juce::Rectangle<int> settingsButtonBounds_;
 
     void drawButton(SkCanvas* canvas, const juce::Rectangle<int>& bounds, 
                     const char* label, bool isActive, uint32_t color);

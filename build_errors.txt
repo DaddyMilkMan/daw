@@ -1,0 +1,814 @@
+﻿MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build_msvc\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
+  Main.cpp
+  ProjectState.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokDAWController.h(18,10): error C1083: Cannot open include file: '../commands/CommandAPI.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1070,21): error C3861: 'findMidiNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1078,9): error C3536: 'parent': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1089,21): error C3861: 'findMidiNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1127,25): error C3861: 'findMidiNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1140,21): error C3861: 'findMidiNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1159,21): error C3861: 'findMidiNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1231,31): error C2039: 'findMidiNote': is not a member of 'ProjectState' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(41,7):
+      see declaration of 'ProjectState'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1233,26): error C3861: 'findClip': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1233,34): error C3617: initializers of structured bindings must be of array or non-union class type; type '<error type>' is not permitted [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1237,48): error C2065: 'ID_NOTES': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1238,10): error C3536: 'midiNotesNode': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,33): error C3312: no callable 'begin' function found for type '<error type>' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,33): error C3312: no callable 'end' function found for type '<error type>' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,22): error C2530: 'noteTree': references must be initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,22): error C3531: 'noteTree': a symbol whose type contains 'auto' must have an initializer [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,31): error C2143: syntax error: missing ';' before ':' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1241,46): error C2143: syntax error: missing ';' before ')' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1243,30): error C2065: 'ID_NOTE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1243,51): error C2065: 'PROP_ID': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,13): error C2440: 'return': cannot convert from '<error type>' to 'juce::ValueTree' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,13):
+      'juce::ValueTree::ValueTree': no overloaded function could convert all the argument types
+          C:\zenith\daw\build_msvc\_deps\juce-src\modules\juce_data_structures\values\juce_ValueTree.h(148,5):
+          could be 'juce::ValueTree::ValueTree(juce::ValueTree &&) noexcept'
+              C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,13):
+              'juce::ValueTree::ValueTree(juce::ValueTree &&) noexcept': cannot convert argument 1 from '<error type>' to 'juce::ValueTree &&'
+                  C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,20):
+                  Reason: cannot convert from '<error type>' to 'juce::ValueTree'
+                  C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,20):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\build_msvc\_deps\juce-src\modules\juce_data_structures\values\juce_ValueTree.h(145,5):
+          or       'juce::ValueTree::ValueTree(const juce::ValueTree &) noexcept'
+              C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,13):
+              'juce::ValueTree::ValueTree(const juce::ValueTree &) noexcept': cannot convert argument 1 from '<error type>' to 'const juce::ValueTree &'
+                  C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,20):
+                  Reason: cannot convert from '<error type>' to 'const juce::ValueTree'
+                  C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,20):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1244,13):
+          while trying to match the argument list '(<error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1530,28): error C2511: 'juce::String ProjectState::addNote(const juce::String &,const juce::String &,double,double,int,int)': overloaded member function not found in 'ProjectState' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(41,7):
+      see declaration of 'ProjectState'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1552,17): error C2352: 'ProjectState::findClip': a call of a non-static member function requires an object [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1300,31):
+      see declaration of 'ProjectState::findClip'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1553,10): error C3536: 'clip': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1560,23): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1568,10): error C3536: 'notesNode': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1571,38): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1576,19): error C2352: 'ProjectState::generateUniqueId': a call of a non-static member function requires an object [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1202,28):
+      see declaration of 'ProjectState::generateUniqueId'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1580,31): error C3536: 'noteId': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1591,32): error C3536: 'existingNote': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1591,61): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1592,52): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1600,44): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1607,20): error C2039: 'removeNote': is not a member of 'ProjectState' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(41,7):
+      see declaration of 'ProjectState'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1613,17): error C3861: 'findClip': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1617,44): error C2065: 'ID_NOTES': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1618,10): error C3536: 'notesNode': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1624,13): error C3536: 'note': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1624,26): error C2065: 'ID_NOTE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1624,43): error C2065: 'PROP_ID': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1626,39): error C2065: 'undoManager': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1635,20): error C2511: 'bool ProjectState::moveNote(const juce::String &,const juce::String &,const juce::String &,double,int)': overloaded member function not found in 'ProjectState' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(41,7):
+      see declaration of 'ProjectState'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1648,17): error C2352: 'ProjectState::findNote': a call of a non-static member function requires an object [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1319,31):
+      see declaration of 'ProjectState::findNote'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1649,10): error C3536: 'note': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1652,44): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1653,35): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1656,56): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1657,45): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1662,21): error C2352: 'ProjectState::findClip': a call of a non-static member function requires an object [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1300,31):
+      see declaration of 'ProjectState::findClip'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1663,26): error C3536: 'clip': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1667,29): error C3536: 'notesNode': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1679,50): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1686,40): error C3536: 'existingNote': cannot be used before it is initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1686,69): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1687,60): error C2088: built-in operator '[' cannot be applied to an operand of type 'const juce::Identifier' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1696,52): error C2597: illegal reference to non-static member 'ProjectState::undoManager' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(396,21):
+      see declaration of 'ProjectState::undoManager'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1705,20): error C2039: 'resizeNote': is not a member of 'ProjectState' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\include\ProjectState.h(41,7):
+      see declaration of 'ProjectState'
+  
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1718,17): error C3861: 'findNote': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1722,22): error C2065: 'PROP_LENGTH_BEATS': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1722,58): error C2065: 'undoManager': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  MainWindow.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokDAWController.h(18,10): error C1083: Cannot open include file: '../commands/CommandAPI.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+  MainLayoutComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MainLayoutComponent.cpp(25,5): error C3861: 'addChild': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\MainLayoutComponent.cpp(29,5): error C3861: 'addChild': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\MainLayoutComponent.cpp(40,5): error C3861: 'addChild': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  MixerComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(380,24): error C2660: 'zenith::ZenithControl::setValue': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithUIComponents.h(64,8):
+      see declaration of 'zenith::ZenithControl::setValue'
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(380,24):
+      while trying to match the argument list '(const juce::var)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22): error C2679: binary '=': no operator found which takes a right-hand operand of type 'MixerComponent::createTrackStrip::<lambda_1>' (or there is no acceptable conversion) [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1181,15):
+      could be 'std::function<void (void)> &std::function<void (void)>::operator =(std::nullptr_t) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::nullptr_t) noexcept': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_1>' to 'std::nullptr_t'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(383,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1160,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(std::function<void (void)> &&) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::function<void (void)> &&) noexcept': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_1>' to 'std::function<void (void)> &&'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(383,3):
+              Reason: cannot convert from 'MixerComponent::createTrackStrip::<lambda_1>' to 'std::function<void (void)>'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(383,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1144,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(const std::function<void (void)> &)'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+          'std::function<void (void)> &std::function<void (void)>::operator =(const std::function<void (void)> &)': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_1>' to 'const std::function<void (void)> &'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(383,3):
+              Reason: cannot convert from 'MixerComponent::createTrackStrip::<lambda_1>' to 'const std::function<void (void)>'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(383,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1187,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(std::reference_wrapper<_Fx>) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::reference_wrapper<_Fx>) noexcept': could not deduce template argument for 'std::reference_wrapper<_Fx>' from 'MixerComponent::createTrackStrip::<lambda_1>'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1169,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(_Fx &&)'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+          'std::function<void (void)> &std::function<void (void)>::operator =(_Fx &&)': could not deduce template argument for '__formal'
+              C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1168,92):
+              '_Enable_if_callable_t': is not a member of any direct or indirect base class of 'std::_Func_class<_Ret>'
+          with
+          [
+              _Ret=void
+          ]
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(381,22):
+      while trying to match the argument list '(std::function<void (void)>, MixerComponent::createTrackStrip::<lambda_1>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(389,21): error C2039: 'setDisplayRange': is not a member of 'zenith::ZenithKnob' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithUIComponents.h(265,7):
+      see declaration of 'zenith::ZenithKnob'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(390,21): error C2660: 'zenith::ZenithControl::setValue': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithUIComponents.h(64,8):
+      see declaration of 'zenith::ZenithControl::setValue'
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(390,21):
+      while trying to match the argument list '(const juce::var)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19): error C2679: binary '=': no operator found which takes a right-hand operand of type 'MixerComponent::createTrackStrip::<lambda_2>' (or there is no acceptable conversion) [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1181,15):
+      could be 'std::function<void (void)> &std::function<void (void)>::operator =(std::nullptr_t) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::nullptr_t) noexcept': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_2>' to 'std::nullptr_t'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(393,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1160,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(std::function<void (void)> &&) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::function<void (void)> &&) noexcept': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_2>' to 'std::function<void (void)> &&'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(393,3):
+              Reason: cannot convert from 'MixerComponent::createTrackStrip::<lambda_2>' to 'std::function<void (void)>'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(393,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1144,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(const std::function<void (void)> &)'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+          'std::function<void (void)> &std::function<void (void)>::operator =(const std::function<void (void)> &)': cannot convert argument 2 from 'MixerComponent::createTrackStrip::<lambda_2>' to 'const std::function<void (void)> &'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(393,3):
+              Reason: cannot convert from 'MixerComponent::createTrackStrip::<lambda_2>' to 'const std::function<void (void)>'
+              C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(393,3):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1187,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(std::reference_wrapper<_Fx>) noexcept'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+          'std::function<void (void)> &std::function<void (void)>::operator =(std::reference_wrapper<_Fx>) noexcept': could not deduce template argument for 'std::reference_wrapper<_Fx>' from 'MixerComponent::createTrackStrip::<lambda_2>'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1169,15):
+      or       'std::function<void (void)> &std::function<void (void)>::operator =(_Fx &&)'
+          C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+          'std::function<void (void)> &std::function<void (void)>::operator =(_Fx &&)': could not deduce template argument for '__formal'
+              C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\functional(1168,92):
+              '_Enable_if_callable_t': is not a member of any direct or indirect base class of 'std::_Func_class<_Ret>'
+          with
+          [
+              _Ret=void
+          ]
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(391,19):
+      while trying to match the argument list '(std::function<void (void)>, MixerComponent::createTrackStrip::<lambda_2>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(538,27): error C2660: 'zenith::ZenithControl::setValue': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithUIComponents.h(64,8):
+      see declaration of 'zenith::ZenithControl::setValue'
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(538,27):
+      while trying to match the argument list '(float)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(549,24): error C2660: 'zenith::ZenithControl::setValue': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithUIComponents.h(64,8):
+      see declaration of 'zenith::ZenithControl::setValue'
+      C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(549,24):
+      while trying to match the argument list '(float)'
+  
+  PianoRollComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25): error C2672: 'std::min': no matching overloaded function found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(109,26):
+      could be '_Ty std::min(std::initializer_list<_Elem>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+          '_Ty std::min(std::initializer_list<_Elem>)': expects 1 arguments - 2 provided
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(106,26):
+      or       '_Ty std::min(std::initializer_list<_Elem>,_Pr)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+          '_Ty std::min(std::initializer_list<_Elem>,_Pr)': could not deduce template argument for 'std::initializer_list<_Elem>' from 'int'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(98,6):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': template parameter '_Ty' is ambiguous
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+              could be 'SkColor'
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+              or       'int'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': could not deduce template argument for 'const _Ty &' from 'SkColor'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(88,33):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+          'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)': expects 3 arguments - 2 provided
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25): error C2660: 'SkColorSetARGB': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColor.h(50,33):
+      see declaration of 'SkColorSetARGB'
+      C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1747,25):
+      while trying to match the argument list '(int)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18): error C2672: 'std::min': no matching overloaded function found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(109,26):
+      could be '_Ty std::min(std::initializer_list<_Elem>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+          '_Ty std::min(std::initializer_list<_Elem>)': expects 1 arguments - 2 provided
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(106,26):
+      or       '_Ty std::min(std::initializer_list<_Elem>,_Pr)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+          '_Ty std::min(std::initializer_list<_Elem>,_Pr)': could not deduce template argument for 'std::initializer_list<_Elem>' from 'int'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(98,6):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': template parameter '_Ty' is ambiguous
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+              could be 'SkColor'
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+              or       'int'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': could not deduce template argument for 'const _Ty &' from 'SkColor'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(88,33):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1766,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)': expects 3 arguments - 2 provided
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18): error C2672: 'std::min': no matching overloaded function found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(109,26):
+      could be '_Ty std::min(std::initializer_list<_Elem>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+          '_Ty std::min(std::initializer_list<_Elem>)': expects 1 arguments - 2 provided
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(106,26):
+      or       '_Ty std::min(std::initializer_list<_Elem>,_Pr)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+          '_Ty std::min(std::initializer_list<_Elem>,_Pr)': could not deduce template argument for 'std::initializer_list<_Elem>' from 'int'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(98,6):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': template parameter '_Ty' is ambiguous
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+              could be 'SkColor'
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+              or       'int'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': could not deduce template argument for 'const _Ty &' from 'SkColor'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(88,33):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1767,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)': expects 3 arguments - 2 provided
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18): error C2672: 'std::min': no matching overloaded function found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(109,26):
+      could be '_Ty std::min(std::initializer_list<_Elem>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+          '_Ty std::min(std::initializer_list<_Elem>)': expects 1 arguments - 2 provided
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(106,26):
+      or       '_Ty std::min(std::initializer_list<_Elem>,_Pr)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+          '_Ty std::min(std::initializer_list<_Elem>,_Pr)': could not deduce template argument for 'std::initializer_list<_Elem>' from 'int'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(98,6):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': template parameter '_Ty' is ambiguous
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+              could be 'SkColor'
+              C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+              or       'int'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &) noexcept(<expr>)': could not deduce template argument for 'const _Ty &' from 'SkColor'
+      C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\include\utility(88,33):
+      or       'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)'
+          C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1768,18):
+          'const _Ty &std::min(const _Ty &,const _Ty &,_Pr) noexcept(<expr>)': expects 3 arguments - 2 provided
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1765,24): error C2660: 'SkColorSetARGB': function does not take 1 arguments [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkColor.h(50,33):
+      see declaration of 'SkColorSetARGB'
+      C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1765,24):
+      while trying to match the argument list '(int)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1871,29): error C2084: function 'SkColor PianoRollComponent::getSkiaColorForVelocity(int) const' already has a body [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1608,29):
+      see previous definition of 'PianoRollComponent::getSkiaColorForVelocity'
+  
+  AutomationLaneComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/AutomationLaneComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\AutomationLaneComponent.cpp(127,37): error C2039: 'MakeRasterDirect': is not a member of 'SkSurface' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\vcpkg\installed\x64-windows\include\skia\include\core\SkSurface.h(162,14):
+      see declaration of 'SkSurface'
+  
+C:\zenith\daw\apps\desktop\Source\ui\AutomationLaneComponent.cpp(127,37): error C3861: 'MakeRasterDirect': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\AutomationLaneComponent.cpp(131,30): error C2530: 'canvas': references must be initialized [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  ClipComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/ClipComponent.cpp')
+  
+  MixerView.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,5): error C2653: 'render': is not a class or namespace name [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerView.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,31): error C3646: 'captureRenderState': unknown override specifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerView.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,49): error C2059: syntax error: '(' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerView.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,57): error C2238: unexpected token(s) preceding ';' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerView.cpp')
+  
+  MixerChannelComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,5): error C2653: 'render': is not a class or namespace name [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerChannelComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,31): error C3646: 'captureRenderState': unknown override specifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerChannelComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,49): error C2059: syntax error: '(' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerChannelComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,57): error C2238: unexpected token(s) preceding ';' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MixerChannelComponent.cpp')
+  
+  TrackHeaderComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TrackHeaderComponent.cpp')
+  
+  TimelineRuler.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(25,42): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2039: 'BORDER_SUBTLE': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(26,48): error C2065: 'BORDER_SUBTLE': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(27,48): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaTheme.h(59,48): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/TimelineRuler.cpp')
+  
+  WingmanPanel.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokDAWController.h(18,10): error C1083: Cannot open include file: '../commands/CommandAPI.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/WingmanPanel.cpp')
+  
+  ZenithLookAndFeel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\ZenithLookAndFeel.cpp(196,39): error C2039: 'getInstance': is not a member of 'zenith::ZenithLookAndFeel' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\ZenithLookAndFeel.h(5,7):
+      see declaration of 'zenith::ZenithLookAndFeel'
+  
+  RightSidePanel.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokDAWController.h(18,10): error C1083: Cannot open include file: '../commands/CommandAPI.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/RightSidePanel.cpp')
+  
+  SkiaButton.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(290,41): error C2039: 'GLASS_10': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(290,41): error C2065: 'GLASS_10': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(307,32): error C2039: 'TEXT_DISABLED': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(307,32): error C2065: 'TEXT_DISABLED': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(319,32): error C2039: 'BORDER_STRONG': is not a member of 'zenith::design::colors' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(30,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(319,32): error C2065: 'BORDER_STRONG': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  SkiaComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaComponent.cpp(93,47): error C2039: 'getGlowIntensity': is not a member of 'zenith::design::Settings' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(333,12):
+      see declaration of 'zenith::design::Settings'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaComponent.cpp(93,47): error C3861: 'getGlowIntensity': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  SkiaKnob.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaKnob.cpp(284,42): error C2039: 'getGlowIntensity': is not a member of 'zenith::design::Settings' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(333,12):
+      see declaration of 'zenith::design::Settings'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaKnob.cpp(284,42): error C3861: 'getGlowIntensity': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  SkiaSlider.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,5): error C2653: 'render': is not a class or namespace name [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/SkiaSlider.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,31): error C3646: 'captureRenderState': unknown override specifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/SkiaSlider.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,49): error C2059: syntax error: '(' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/SkiaSlider.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(141,57): error C2238: unexpected token(s) preceding ';' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/SkiaSlider.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(340,39): error C2039: 'captureRenderState': is not a member of 'zenith::SkiaSlider' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.h(34,7):
+      see declaration of 'zenith::SkiaSlider'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(340,39): error C2270: 'captureRenderState': modifiers not allowed on nonmember functions [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(345,28): error C3861: 'getX': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(346,28): error C3861: 'getY': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(347,28): error C3861: 'getWidth': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(348,28): error C3861: 'getHeight': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(352,19): error C2065: 'value_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(355,23): error C3861: 'isHovered': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(356,24): error C2065: 'isDragging_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(360,9): error C2065: 'valueColoring_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(361,92): error C2065: 'value_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(365,23): error C3861: 'getDescription': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  TransportBar.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.cpp(138,42): error C2039: 'getGlowIntensity': is not a member of 'zenith::design::Settings' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(333,12):
+      see declaration of 'zenith::design::Settings'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.cpp(138,42): error C3861: 'getGlowIntensity': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  ZenithPolySynthUI.cpp
+C:\zenith\daw\apps\desktop\Source\Settings.h(17,10): error C1083: Cannot open include file: '../rendering/SkiaRenderer.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/ZenithPolySynthUI.cpp')
+  
+  ExportDialog.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\ExportDialog.h(19,10): error C1083: Cannot open include file: '../../commands/CommandAPI.h': No such file or directory [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/ExportDialog.cpp')
+  
+  ZenithPolySynth.cpp
+C:\zenith\daw\apps\desktop\Source\rendering\SkiaRenderer.h(72,7): error C2011: 'zenith::SkiaRenderer': 'class' type redefinition [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(71,41): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(71,41): error C2061: syntax error: identifier 'Backend' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(79,19): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(79,27): error C3646: 'getRenderBackend': unknown override specifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(79,43): error C2059: syntax error: '(' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(79,52): error C2334: unexpected token(s) preceding '{'; skipping apparent function body [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(126,19): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(126,27): error C3646: 'renderBackend_': unknown override specifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(126,42): error C2059: syntax error: '=' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(126,58): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(126,71): error C2238: unexpected token(s) preceding ';' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,13): error C2065: 'renderBackend_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,45): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,45): error C2065: 'Backend': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,53): error C2146: syntax error: missing ';' before identifier 'userSettings' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,115): error C2027: use of undefined type 'zenith::SkiaRenderer' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.h(30,7):
+      see declaration of 'zenith::SkiaRenderer'
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(42,124): error C2065: 'Auto': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(60,58): error C2065: 'renderBackend_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(72,13): error C2065: 'renderBackend_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(72,31): error C2065: 'backend': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(73,13): error C2065: 'renderBackend_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\Settings.h(73,30): error C2065: 'backend': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithPolySynthUI.h(59,8): error C3668: 'zenith::ZenithPolySynthUI::timerCallback': method with override specifier 'override' did not override any base class methods [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/instruments/ZenithPolySynth.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(324,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(325,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(326,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(365,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(366,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(367,11): error C2248: 'zenith::ZenithOscillator::updateSupersawRatios': cannot access private member declared in class 'zenith::ZenithOscillator' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(70,24):
+      see declaration of 'zenith::ZenithOscillator::updateSupersawRatios'
+      C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.h(146,7):
+      see declaration of 'zenith::ZenithOscillator'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(438,9): error C2065: 'effects_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(450,42): error C2065: 'effects_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(463,5): error C2065: 'effects_': undeclared identifier [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  MockAIProvider.cpp
+C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(21,16): error C2653: 'JSON': is not a class or namespace name [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(21,22): error C3861: 'toString': identifier not found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(62,24): error C2665: 'juce::JSON::toString': no overloaded function could convert all the argument types [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\build_msvc\_deps\juce-src\modules\juce_core\javascript\juce_JSON.h(152,19):
+      could be 'juce::String juce::JSON::toString(const juce::var &,bool,int)'
+          C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(62,24):
+          'juce::String juce::JSON::toString(const juce::var &,bool,int)': cannot convert argument 1 from 'juce::DynamicObject::Ptr' to 'const juce::var &'
+              C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(62,33):
+              Reason: cannot convert from 'juce::DynamicObject::Ptr' to 'const juce::var'
+              C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(62,33):
+              No user-defined-conversion operator available that can perform this conversion, or the operator cannot be called
+      C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(62,24):
+      while trying to match the argument list '(juce::DynamicObject::Ptr)'
+  
+C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(14,18): error C1075: '{': no matching token found [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  AITools.cpp
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(52,259): error C2143: syntax error: missing ')' before '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(52,259): error C2143: syntax error: missing ';' before '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(52,261): error C2059: syntax error: ',' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(52,262): error C2017: illegal escape sequence [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(53,5): error C2059: syntax error: ')' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(53,6): error C2059: syntax error: ')' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,16): error C3484: syntax error: expected '->' before the return type [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,17): error C3613: missing return type after '->' ('int' assumed) [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,17): error C2146: syntax error: missing ';' before identifier 'add' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,5): error C3927: '->': trailing return type is not allowed after a non-function declarator [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,16): error C3484: syntax error: expected '->' before the return type [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,17): error C3613: missing return type after '->' ('int' assumed) [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,5): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,5): error C2086: 'int myFunctions': redefinition [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+      C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(56,5):
+      see declaration of 'myFunctions'
+  
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(63,17): error C2146: syntax error: missing ';' before identifier 'add' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(69,5): error C2059: syntax error: 'return' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(70,1): error C2059: syntax error: '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(70,1): error C2143: syntax error: missing ';' before '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(72,1): error C2143: syntax error: missing ';' before '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(72,1): error C2059: syntax error: '}' [C:\zenith\daw\build_msvc\ZenithDAW.vcxproj]
+  Generating Code...

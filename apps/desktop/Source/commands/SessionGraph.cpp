@@ -87,14 +87,14 @@ juce::var SessionGraph::serializeTracks()
         const auto* track = tracks[i].get();
         if (track != nullptr)
         {
-            tracksArrayPtr->add(serializeTrack(const_cast<Track*>(track), (int)i));
+            tracksArrayPtr->add(serializeTrack(track, (int)i));
         }
     }
 
     return tracksArray;
 }
 
-juce::var SessionGraph::serializeTrack(Track* track, int trackIndex)
+juce::var SessionGraph::serializeTrack(const Track* track, int trackIndex)
 {
     auto* trackObj = new juce::DynamicObject();
 
@@ -122,7 +122,7 @@ juce::var SessionGraph::serializeTrack(Track* track, int trackIndex)
     return juce::var(trackObj);
 }
 
-juce::var SessionGraph::serializePlugins(Track* track)
+juce::var SessionGraph::serializePlugins(const Track* track)
 {
     juce::var pluginsArray;
     auto* pluginsArrayPtr = pluginsArray.getArray();
@@ -159,7 +159,7 @@ juce::var SessionGraph::serializePlugins(Track* track)
     return pluginsArray;
 }
 
-juce::var SessionGraph::serializeClips(Track* track)
+juce::var SessionGraph::serializeClips(const Track* track)
 {
     juce::var clipsArray;
     auto* clipsArrayPtr = clipsArray.getArray();
@@ -176,7 +176,7 @@ juce::var SessionGraph::serializeClips(Track* track)
     return clipsArray;
 }
 
-juce::var SessionGraph::serializeClip(Track::Clip* clip, int clipIndex)
+juce::var SessionGraph::serializeClip(const Track::Clip* clip, int clipIndex)
 {
     auto* clipObj = new juce::DynamicObject();
 
@@ -258,4 +258,3 @@ juce::var SessionGraph::serializeClip(Track::Clip* clip, int clipIndex)
 }
 
 } // namespace zenith
-

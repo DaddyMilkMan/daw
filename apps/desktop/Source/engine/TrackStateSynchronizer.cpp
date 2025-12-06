@@ -6,6 +6,8 @@
 #include "../include/TrackStateSynchronizer.h"
 #include "engine/Track.h"
 
+namespace zenith {
+
 //==============================================================================
 TrackStateSynchronizer::TrackStateSynchronizer(ProjectState& ps, Engine& eng)
     : projectState(ps), engine(eng)
@@ -113,6 +115,7 @@ void TrackStateSynchronizer::syncAll()
         syncTrackProperty(track, ProjectState::PROP_MUTE);
         syncTrackProperty(track, ProjectState::PROP_SOLO);
         syncTrackProperty(track, ProjectState::PROP_ARMED);
+        syncTrackProperty(track, ProjectState::PROP_INPUT_CHANNEL); // ROAST FIX #9
     }
 
     DBG("TrackStateSynchronizer: Sync complete");
@@ -142,14 +145,14 @@ void TrackStateSynchronizer::valueTreeChildAdded(
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     // Check if a track was added to TRACKS node
-    if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
+    if (parent.hasType(zenith::ProjectState::ID_TRACKS) && child.hasType(zenith::ProjectState::ID_TRACK))
     {
         DBG("TrackStateSynchronizer: Track added - creating Engine track");
         
         // Create new Engine track
-        juce::String name = child[ProjectState::PROP_NAME].toString();
-        juce::String typeStr = child[ProjectState::PROP_TYPE].toString();
-        juce::String id = child[ProjectState::PROP_ID].toString();
+        juce::String name = child[zenith::ProjectState::PROP_NAME].toString();
+        juce::String typeStr = child[zenith::ProjectState::PROP_TYPE].toString();
+        juce::String id = child[zenith::ProjectState::PROP_ID].toString();
         
         zenith::Track::Type type = (typeStr == "midi") ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio;
         
@@ -157,10 +160,11 @@ void TrackStateSynchronizer::valueTreeChildAdded(
         track->setTrackId(id);
         
         // Set initial properties
-        track->setVolume(child[ProjectState::PROP_VOLUME]);
-        track->setPan(child[ProjectState::PROP_PAN]);
-        track->setMuted(child[ProjectState::PROP_MUTE]);
-        track->setSolo(child[ProjectState::PROP_SOLO]);
+        track->setVolume(child[zenith::ProjectState::PROP_VOLUME]);
+        track->setPan(child[zenith::ProjectState::PROP_PAN]);
+        track->setMuted(child[zenith::ProjectState::PROP_MUTE]);
+        track->setSolo(child[zenith::ProjectState::PROP_SOLO]);
+        track->setInputChannel(child[zenith::ProjectState::PROP_INPUT_CHANNEL]); // ROAST FIX #9
         
         // Add to Engine
         engine.addTrack(std::move(track));
@@ -180,7 +184,7 @@ void TrackStateSynchronizer::valueTreeChildRemoved(
     juce::ignoreUnused(index);
 
     // Check if a track was removed from TRACKS node
-    if (parent.hasType(ProjectState::ID_TRACKS) && child.hasType(ProjectState::ID_TRACK))
+    if (parent.hasType(zenith::ProjectState::ID_TRACKS) && child.hasType(zenith::ProjectState::ID_TRACK))
     {
         DBG("TrackStateSynchronizer: Track removed - removing from Engine");
         
@@ -194,7 +198,7 @@ void TrackStateSynchronizer::valueTreeChildRemoved(
         // So 'parent' no longer contains 'child'.
         // But we have 'index' which is where it WAS.
         
-        // If Engine tracks are perfectly synced with ProjectState tracks, 
+        // If Engine tracks are perfectly synced with zenith::ProjectState tracks, 
         // then the Engine track at 'index' is the one to remove.
         
         engine.removeTrack(index);
@@ -235,7 +239,7 @@ void TrackStateSynchronizer::syncTrackProperty(
 {
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    if (!track.isValid() || !track.hasType(ProjectState::ID_TRACK))
+    if (!track.isValid() || !track.hasType(zenith::ProjectState::ID_TRACK))
         return;
 
     const int trackIndex = getEngineTrackIndex(track);
@@ -247,30 +251,35 @@ void TrackStateSynchronizer::syncTrackProperty(
     }
 
     // Sync the property to engine
-    if (property == ProjectState::PROP_VOLUME)
+    if (property == zenith::ProjectState::PROP_VOLUME)
     {
-        const float volume = track[ProjectState::PROP_VOLUME];
+        const float volume = track[zenith::ProjectState::PROP_VOLUME];
         engine.setTrackVolume(trackIndex, volume);
     }
-    else if (property == ProjectState::PROP_PAN)
+    else if (property == zenith::ProjectState::PROP_PAN)
     {
-        const float pan = track[ProjectState::PROP_PAN];
+        const float pan = track[zenith::ProjectState::PROP_PAN];
         engine.setTrackPan(trackIndex, pan);
     }
-    else if (property == ProjectState::PROP_MUTE)
+    else if (property == zenith::ProjectState::PROP_MUTE)
     {
-        const bool muted = track[ProjectState::PROP_MUTE];
+        const bool muted = track[zenith::ProjectState::PROP_MUTE];
         engine.setTrackMute(trackIndex, muted);
     }
-    else if (property == ProjectState::PROP_SOLO)
+    else if (property == zenith::ProjectState::PROP_SOLO)
     {
-        const bool solo = track[ProjectState::PROP_SOLO];
+        const bool solo = track[zenith::ProjectState::PROP_SOLO];
         engine.setTrackSolo(trackIndex, solo);
     }
-    else if (property == ProjectState::PROP_ARMED)
+    else if (property == zenith::ProjectState::PROP_ARMED)
     {
-        const bool armed = track[ProjectState::PROP_ARMED];
+        const bool armed = track[zenith::ProjectState::PROP_ARMED];
         engine.setTrackArmed(trackIndex, armed);
+    }
+    else if (property == zenith::ProjectState::PROP_INPUT_CHANNEL)
+    {
+        const int channel = track[zenith::ProjectState::PROP_INPUT_CHANNEL];
+        engine.setTrackInputChannel(trackIndex, channel);
     }
 }
 
@@ -281,13 +290,13 @@ int TrackStateSynchronizer::getEngineTrackIndex(const juce::ValueTree& track) co
 
     // Find the index of this track in the TRACKS node
     auto& state = projectState.getState();
-    auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+    auto tracksNode = state.getChildWithName(zenith::ProjectState::ID_TRACKS);
 
     if (!tracksNode.isValid())
         return -1;
 
     // For Phase 11, we use simple index-based mapping
-    // (ProjectState track index == Engine track index)
+    // (zenith::ProjectState track index == Engine track index)
     for (int i = 0; i < tracksNode.getNumChildren(); ++i)
     {
         if (tracksNode.getChild(i) == track)
@@ -301,7 +310,7 @@ void TrackStateSynchronizer::addTrackListener(const juce::ValueTree& track)
 {
     // Create mutable copy since addListener is non-const
     auto mutableTrack = track;
-    if (mutableTrack.isValid() && mutableTrack.hasType(ProjectState::ID_TRACK))
+    if (mutableTrack.isValid() && mutableTrack.hasType(zenith::ProjectState::ID_TRACK))
     {
         mutableTrack.addListener(this);
     }
@@ -311,9 +320,11 @@ void TrackStateSynchronizer::removeTrackListener(const juce::ValueTree& track)
 {
     // Create mutable copy since removeListener is non-const
     auto mutableTrack = track;
-    if (mutableTrack.isValid() && mutableTrack.hasType(ProjectState::ID_TRACK))
+    if (mutableTrack.isValid() && mutableTrack.hasType(zenith::ProjectState::ID_TRACK))
     {
         mutableTrack.removeListener(this);
     }
 }
+
+} // namespace zenith
 

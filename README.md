@@ -50,22 +50,22 @@ build.bat --clean
 
 ```
 zenith-daw/
-├── zenith-core/              # Core DAW engine and UI
-│   ├── Source/
-│   │   ├── engine/           # Audio engine, tracks, clips
-│   │   ├── ui/               # User interface components
-│   │   ├── instruments/      # Built-in instruments (synths, samplers)
-│   │   ├── dsp/              # DSP processors (stem separation, etc.)
-│   │   ├── network/          # AI integration (Grok API)
-│   │   └── commands/         # Command API for AI assistant
-│   ├── Resources/            # Audio samples, presets, icons
-│   └── CMakeLists.txt
+├── apps/
+│   └── desktop/              # Desktop application
+│       ├── Source/
+│       │   ├── engine/       # Audio engine, tracks, clips
+│       │   ├── ui/           # User interface components
+│       │   ├── instruments/  # Built-in instruments (synths, samplers)
+│       │   ├── dsp/          # DSP processors (stem separation, etc.)
+│       │   ├── network/      # AI integration (Grok API)
+│       │   ├── commands/     # Command API for AI assistant
+│       │   └── rendering/    # Skia rendering system
+│       ├── Resources/        # Audio samples, presets, icons
+│       └── include/          # Public headers
 ├── Content/                  # User content (presets, examples)
 ├── docs/                     # Documentation
 ├── scripts/                  # Build and utility scripts
-├── build.bat                 # Master build script
-├── rebuild.bat               # Quick rebuild
-└── run.bat                   # Launch application
+└── CMakeLists.txt            # Build configuration
 ```
 
 ---

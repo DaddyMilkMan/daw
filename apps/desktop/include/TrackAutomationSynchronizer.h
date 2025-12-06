@@ -21,25 +21,19 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "ProjectState.h"
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 #include <memory>
 #include <vector>
 
-
+// Forward declarations to break circular include
 namespace zenith {
+class ProjectState;
+class Engine;
 class Track;
-}
 
 //==============================================================================
 /**
@@ -138,7 +132,7 @@ private:
    * @param track Track object to update
    * @param playbackBeats Current playback position in beats
    */
-  void updateTrackAutomation(const juce::String &trackId, zenith::Track *track,
+  void updateTrackAutomation(const juce::String &trackId, Track *track,
                              double playbackBeats);
 
   /**
@@ -159,3 +153,5 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TrackAutomationSynchronizer)
 };
+
+} // namespace zenith

@@ -8,8 +8,10 @@ namespace zenith {
 
 class InstrumentBrowserPanel : public juce::Component {
 public:
-    InstrumentBrowserPanel(Engine& engine, ProjectState& state) {
-        juce::ignoreUnused(engine, state);
+    InstrumentBrowserPanel(Engine& engine, ProjectState& state) 
+        : engine_(engine) 
+    {
+        juce::ignoreUnused(state);
         refreshInstruments();
     }
 
@@ -28,13 +30,13 @@ public:
         g.setFont(juce::Font(14.0f));
         int y = 40;
         
-        if (instrumentIds.isEmpty()) {
+        if (instrumentIds_.isEmpty()) {
              g.setColour(juce::Colours::grey);
              g.drawText("No instruments found.", 0, 40, getWidth(), 40, juce::Justification::centred, true);
              return;
         }
 
-        for (const auto& id : instrumentIds) {
+        for (const auto& id : instrumentIds_) {
             // Simple hover effect could be added here if we tracked mouse
             g.setColour(juce::Colours::white);
             g.drawText(id, 20, y, getWidth() - 40, 24, juce::Justification::left, true);
@@ -49,16 +51,19 @@ public:
     
     void refreshInstruments() {
         // Fetch available instruments from the registry
-        instrumentIds = InstrumentRegistry::getInstance().getInstrumentIds();
+        instrumentIds_ = engine_.getInstrumentRegistry().getInstrumentIds();
         repaint();
     }
     
     void mouseDown(const juce::MouseEvent& e) override {
+        juce::ignoreUnused(e);
         // Simple click handling to refresh or select (future)
         refreshInstruments();
     }
 
 private:
-    juce::StringArray instrumentIds;
+    Engine& engine_;
+    juce::StringArray instrumentIds_;
 };
-}
+
+} // namespace zenith

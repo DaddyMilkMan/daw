@@ -39,6 +39,8 @@ namespace zenith {
 
 // Alias for compatibility with UI components expecting SkiaCanvasComponent
 using SkiaCanvasComponent = SkiaComponent;
+// Alias for lightweight widget system
+using SkiaWidget = SkiaComponent;
 
 class ZenithControl : public SkiaComponent,
                       public juce::AudioProcessorParameter::Listener {
@@ -76,14 +78,20 @@ public:
 
   // ParameterListener - Thread-safe parameter update
   void parameterValueChanged(int parameterIndex, float newValue) override {
+    juce::ignoreUnused(parameterIndex);
     // Store normalized value directly from audio thread (thread-safe)
     if (parameter_) {
       float convertedValue = parameter_->convertFrom0to1(newValue);
       cachedValue_.store(convertedValue, std::memory_order_release);
     }
-    // Trigger repaint on message thread
-    juce::MessageManager::callAsync([this]() {
-      repaint();
+    // SAFETY FIX: Use SafePointer to prevent use-after-free if component
+    // is destroyed before async callback fires. This lambda may execute
+    // after the component is deleted (e.g., editor closed during playback).
+    juce::Component::SafePointer<ZenithControl> safeThis(this);
+    juce::MessageManager::callAsync([safeThis]() {
+      if (safeThis != nullptr) {
+        safeThis->repaint();
+      }
     });
   }
 

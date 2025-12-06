@@ -3,11 +3,16 @@
  * @brief Automation synchronizer implementation
  */
 
-#include "../include/TrackAutomationSynchronizer.h"
-#include "../include/TempoMap.h"
+#include "TrackAutomationSynchronizer.h"
+#include "ProjectState.h"
+#include "Engine.h"
+#include "TempoMap.h"
 
 // Forward declare Track from namespace
 #include "../Source/engine/Track.h"
+
+//==============================================================================
+namespace zenith {
 
 //==============================================================================
 TrackAutomationSynchronizer::TrackAutomationSynchronizer(ProjectState& ps, Engine& eng)
@@ -75,17 +80,17 @@ void TrackAutomationSynchronizer::timerCallback()
     double playbackBeats = engine.getTempoMap().samplesToBeats(playheadSamples, sampleRate);
 
     // Update all tracks with automation
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
     if (!tracksNode.isValid())
         return;
 
     int trackIndex = 0;
     for (const auto& trackNode : tracksNode)
     {
-        if (!trackNode.hasType(ProjectState::ID_TRACK))
+        if (!trackNode.hasType(zenith::ProjectState::ID_TRACK))
             continue;
 
-        juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+        juce::String trackId = trackNode[zenith::ProjectState::PROP_ID].toString();
 
         // Get corresponding engine track
         if (trackIndex < engine.getNumTracks())
@@ -112,28 +117,28 @@ void TrackAutomationSynchronizer::timerCallback()
 void TrackAutomationSynchronizer::valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property)
 {
     // If a track property changed (mute, solo, armed, volume, pan), trigger immediate sync
-    if (tree.hasType(ProjectState::ID_TRACK))
+    if (tree.hasType(zenith::ProjectState::ID_TRACK))
     {
-        if (property == ProjectState::PROP_MUTE ||
-            property == ProjectState::PROP_SOLO ||
-            property == ProjectState::PROP_ARMED ||
-            property == ProjectState::PROP_VOLUME ||
-            property == ProjectState::PROP_PAN)
+        if (property == zenith::ProjectState::PROP_MUTE ||
+            property == zenith::ProjectState::PROP_SOLO ||
+            property == zenith::ProjectState::PROP_ARMED ||
+            property == zenith::ProjectState::PROP_VOLUME ||
+            property == zenith::ProjectState::PROP_PAN)
         {
             // Get track ID
-            juce::String trackId = tree[ProjectState::PROP_ID].toString();
+            juce::String trackId = tree[zenith::ProjectState::PROP_ID].toString();
 
             // Find corresponding engine track
-            auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+            auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
             if (!tracksNode.isValid())
                 return;
 
             int trackIndex = 0;
             for (const auto& trackNode : tracksNode)
             {
-                if (trackNode.hasType(ProjectState::ID_TRACK))
+                if (trackNode.hasType(zenith::ProjectState::ID_TRACK))
                 {
-                    if (trackNode[ProjectState::PROP_ID].toString() == trackId)
+                    if (trackNode[zenith::ProjectState::PROP_ID].toString() == trackId)
                     {
                         // Found the track, update it immediately
                         if (trackIndex < engine.getNumTracks())
@@ -163,9 +168,9 @@ void TrackAutomationSynchronizer::valueTreeChildAdded(juce::ValueTree& parent, j
     juce::ignoreUnused(parent);
 
     // If automation node or envelope added, rebuild
-    if (child.hasType(ProjectState::ID_AUTOMATION) ||
-        child.hasType(ProjectState::ID_ENVELOPE) ||
-        child.hasType(ProjectState::ID_POINT))
+    if (child.hasType(zenith::ProjectState::ID_AUTOMATION) ||
+        child.hasType(zenith::ProjectState::ID_ENVELOPE) ||
+        child.hasType(zenith::ProjectState::ID_POINT))
     {
         rebuildListeners();
     }
@@ -176,9 +181,9 @@ void TrackAutomationSynchronizer::valueTreeChildRemoved(juce::ValueTree& parent,
     juce::ignoreUnused(parent, index);
 
     // If automation node or envelope removed, rebuild
-    if (child.hasType(ProjectState::ID_AUTOMATION) ||
-        child.hasType(ProjectState::ID_ENVELOPE) ||
-        child.hasType(ProjectState::ID_POINT))
+    if (child.hasType(zenith::ProjectState::ID_AUTOMATION) ||
+        child.hasType(zenith::ProjectState::ID_ENVELOPE) ||
+        child.hasType(zenith::ProjectState::ID_POINT))
     {
         rebuildListeners();
     }
@@ -212,10 +217,10 @@ double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelo
     for (int i = 0; i < numPoints; ++i)
     {
         auto point = envelope.getChild(i);
-        if (!point.hasType(ProjectState::ID_POINT))
+        if (!point.hasType(zenith::ProjectState::ID_POINT))
             continue;
 
-        double pointTime = point[ProjectState::PROP_TIME_BEATS];
+        double pointTime = point[zenith::ProjectState::PROP_TIME_BEATS];
 
         if (pointTime <= timeBeats)
         {
@@ -230,21 +235,21 @@ double TrackAutomationSynchronizer::sampleEnvelope(const juce::ValueTree& envelo
 
     // No points before current time - use first point value
     if (!prevPoint.isValid() && nextPoint.isValid())
-        return nextPoint[ProjectState::PROP_VALUE];
+        return nextPoint[zenith::ProjectState::PROP_VALUE];
 
     // No points after current time - hold last value
     if (prevPoint.isValid() && !nextPoint.isValid())
-        return prevPoint[ProjectState::PROP_VALUE];
+        return prevPoint[zenith::ProjectState::PROP_VALUE];
 
     // No points at all
     if (!prevPoint.isValid() && !nextPoint.isValid())
         return -1.0;
 
     // Interpolate between two points
-    double prevTime = prevPoint[ProjectState::PROP_TIME_BEATS];
-    double prevValue = prevPoint[ProjectState::PROP_VALUE];
-    double nextTime = nextPoint[ProjectState::PROP_TIME_BEATS];
-    double nextValue = nextPoint[ProjectState::PROP_VALUE];
+    double prevTime = prevPoint[zenith::ProjectState::PROP_TIME_BEATS];
+    double prevValue = prevPoint[zenith::ProjectState::PROP_VALUE];
+    double nextTime = nextPoint[zenith::ProjectState::PROP_TIME_BEATS];
+    double nextValue = nextPoint[zenith::ProjectState::PROP_VALUE];
 
     // Linear interpolation
     double t = (timeBeats - prevTime) / (nextTime - prevTime);
@@ -260,7 +265,7 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
     if (track == nullptr)
         return;
 
-    // Get track node from ProjectState
+    // Get track node from zenith::ProjectState
     auto trackNode = projectState.getTrack(trackId);
     if (!trackNode.isValid())
         return;
@@ -272,17 +277,17 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
     // Only apply static mute/solo/armed if there's no automation for them
     if (!hasMuteAutomation)
     {
-        bool muted = trackNode[ProjectState::PROP_MUTE];
+        bool muted = trackNode[zenith::ProjectState::PROP_MUTE];
         if (track->isMuted() != muted)
             track->setMuted(muted);
     }
 
     // Solo and armed don't have automation, always sync them
-    bool soloed = trackNode[ProjectState::PROP_SOLO];
+    bool soloed = trackNode[zenith::ProjectState::PROP_SOLO];
     if (track->isSolo() != soloed)
         track->setSolo(soloed);
 
-    bool armed = trackNode[ProjectState::PROP_ARMED];
+    bool armed = trackNode[zenith::ProjectState::PROP_ARMED];
     if (track->isArmed() != armed)
         track->setArmed(armed);
 
@@ -298,8 +303,8 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
     }
     else
     {
-        // No automation, sync static volume from ProjectState
-        float volume = trackNode[ProjectState::PROP_VOLUME];
+        // No automation, sync static volume from zenith::ProjectState
+        float volume = trackNode[zenith::ProjectState::PROP_VOLUME];
         if (std::abs(track->getVolume() - volume) > 0.001f)
             track->setVolume(volume);
     }
@@ -316,8 +321,8 @@ void TrackAutomationSynchronizer::updateTrackAutomation(const juce::String& trac
     }
     else
     {
-        // No automation, sync static pan from ProjectState
-        float pan = trackNode[ProjectState::PROP_PAN];
+        // No automation, sync static pan from zenith::ProjectState
+        float pan = trackNode[zenith::ProjectState::PROP_PAN];
         if (std::abs(track->getPan() - pan) > 0.001f)
             track->setPan(pan);
     }
@@ -339,17 +344,17 @@ void TrackAutomationSynchronizer::rebuildListeners()
     // Clear existing mapping
     trackIdToIndex.clear();
 
-    // Rebuild mapping from ProjectState track IDs to Engine track indices
-    auto tracksNode = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    // Rebuild mapping from zenith::ProjectState track IDs to Engine track indices
+    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
     if (!tracksNode.isValid())
         return;
 
     int index = 0;
     for (const auto& trackNode : tracksNode)
     {
-        if (trackNode.hasType(ProjectState::ID_TRACK))
+        if (trackNode.hasType(zenith::ProjectState::ID_TRACK))
         {
-            juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+            juce::String trackId = trackNode[zenith::ProjectState::PROP_ID].toString();
             trackIdToIndex[trackId] = index;
             ++index;
         }
@@ -357,4 +362,6 @@ void TrackAutomationSynchronizer::rebuildListeners()
 
     DBG("TrackAutomationSynchronizer: Rebuilt listeners for " + juce::String(trackIdToIndex.size()) + " tracks");
 }
+
+} // namespace zenith
 

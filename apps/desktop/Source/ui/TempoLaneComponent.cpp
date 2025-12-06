@@ -13,6 +13,8 @@
 
 #include "../../include/ui/TempoLaneComponent.h"
 
+using namespace zenith;
+
 //==============================================================================
 TempoLaneComponent::TempoLaneComponent(ProjectState& state)
     : projectState(state)

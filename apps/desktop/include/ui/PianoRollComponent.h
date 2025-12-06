@@ -31,8 +31,16 @@
 #include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "ProjectState.h"
+#include "../../Source/ui/skia/SkiaComponent.h"
 #include <vector>
 #include <memory>
+
+#ifdef ZENITH_USE_SKIA
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
+#include <core/SkColor.h>
+#endif
 
 //==============================================================================
 /**
@@ -55,12 +63,12 @@ struct MidiClipContext
  * @class PianoRollComponent
  * @brief Professional-grade MIDI piano roll editor component
  */
-class PianoRollComponent : public juce::Component,
+class PianoRollComponent : public zenith::SkiaComponent,
                            private juce::ValueTree::Listener
 {
 public:
     //==========================================================================
-    explicit PianoRollComponent(ProjectState& state);
+    explicit PianoRollComponent(zenith::ProjectState& state);
     ~PianoRollComponent() override;
 
     //==========================================================================
@@ -77,6 +85,9 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
     
+    // Skia Rendering
+    void drawSkia(SkCanvas* canvas) override;
+    
     void mouseDown(const juce::MouseEvent& e) override;
     void mouseDrag(const juce::MouseEvent& e) override;
     void mouseUp(const juce::MouseEvent& e) override;
@@ -84,9 +95,9 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     void mouseDoubleClick(const juce::MouseEvent& e) override;
     
-    bool keyPressed(const juce::KeyPress& key) override;
+    bool keyPressed(const juce::KeyPress& key) override; // from SkiaComponent/Component
     
-    juce::MouseCursor getMouseCursor() override;
+    juce::MouseCursor getMouseCursor() override; // from SkiaComponent/Component
 
     //==========================================================================
     // Public API - Advanced Features
@@ -291,6 +302,16 @@ private:
     //==========================================================================
     
     juce::Colour getColorForVelocity(int velocity) const;
+    SkColor getSkiaColorForVelocity(int velocity) const;
+    
+    // Skia Drawing Helpers
+    void drawPianoKeys(SkCanvas* canvas, const SkRect& area);
+    void drawGrid(SkCanvas* canvas, const SkRect& area);
+    void drawNotes(SkCanvas* canvas, const SkRect& area);
+    void drawVelocityLane(SkCanvas* canvas, const SkRect& area);
+    void drawChordName(SkCanvas* canvas);
+
+    // JUCE Fallback (if needed, but we're moving to Skia)
     void drawPianoKeys(juce::Graphics& g, const juce::Rectangle<int>& area);
     void drawGrid(juce::Graphics& g, const juce::Rectangle<int>& area);
     void drawNotes(juce::Graphics& g, const juce::Rectangle<int>& area);
@@ -309,7 +330,7 @@ private:
     // Member Variables
     //==========================================================================
     
-    ProjectState& projectState;
+    zenith::ProjectState& projectState;
     MidiClipContext currentClip;
     
     std::vector<NoteRect> noteRects;
@@ -365,7 +386,7 @@ private:
 class PianoRollWindow : public juce::DocumentWindow
 {
 public:
-    PianoRollWindow(ProjectState& state, const juce::String& trackId, const juce::String& clipId)
+    PianoRollWindow(zenith::ProjectState& state, const juce::String& trackId, const juce::String& clipId)
         : DocumentWindow("Piano Roll",
                          juce::Desktop::getInstance().getDefaultLookAndFeel()
                              .findColour(juce::ResizableWindow::backgroundColourId),
@@ -385,9 +406,9 @@ public:
         auto [track, clip] = state.findClip(clipId);
         if (clip.isValid())
         {
-            context.clipName = clip.getProperty(ProjectState::PROP_NAME).toString();
-            context.clipStartBeats = clip.getProperty(ProjectState::PROP_START);
-            context.clipLengthBeats = clip.getProperty(ProjectState::PROP_LENGTH);
+            context.clipName = clip.getProperty(zenith::ProjectState::PROP_NAME).toString();
+            context.clipStartBeats = clip.getProperty(zenith::ProjectState::PROP_START);
+            context.clipLengthBeats = clip.getProperty(zenith::ProjectState::PROP_LENGTH);
         }
         
         content->setClipContext(context);

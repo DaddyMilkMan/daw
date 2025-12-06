@@ -124,6 +124,11 @@ public:
      */
     juce::int64 getMemoryUsage() const;
 
+    /**
+     * Get the format manager
+     */
+    juce::AudioFormatManager& getFormatManager() { return formatManager_; }
+
 private:
     //==============================================================================
     // File cache: path → audio handle

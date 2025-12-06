@@ -411,6 +411,21 @@ Before committing:
 
 ---
 
+## Quality Standards
+
+### The "No Stubs" Policy
+Zenith DAW adheres to a strict "No Stubs" policy for all committed code.
+- **UI Components:** Must render correctly and respond to interactions. Do not commit blank panels or non-functional buttons.
+- **Audio Classes:** Must implement actual processing logic. Empty `processBlock` methods are not allowed for active features.
+- **Backend Logic:** Must be fully wired. If you add a "Scan Plugins" button, it must actually scan plugins, not just print a log message.
+
+### "No Shortcuts" Engineering
+- **Thread Safety:** Never compromise on thread safety for speed of implementation. Use lock-free structures (FIFOs, atomics) for audio threads.
+- **Error Handling:** Handle edge cases (file not found, device disconnected) gracefully. Do not assume "happy path".
+- **Architecture:** Respect the `ProjectState` (Data) vs `Engine` (Audio) vs `Component` (UI) separation. Do not bypass architectural layers for convenience.
+
+---
+
 ## Troubleshooting Development Issues
 
 ### "CMake Error: Could not find JUCE"

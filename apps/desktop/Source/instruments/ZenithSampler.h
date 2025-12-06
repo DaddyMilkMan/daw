@@ -314,7 +314,7 @@ public:
   bool appliesToChannel(int midiChannel) override;
 
   juce::String getName() const { return soundName; }
-  juce::AudioBuffer<float> *getAudioData() { return data; }
+  const juce::AudioBuffer<float> *getAudioData() const { return data; }
   double getSampleRate() const { return sourceSampleRate; }
   int getRootNote() const { return rootNote; }
   LoopMode getLoopMode() const { return loopMode; }
@@ -347,7 +347,7 @@ private:
   // Can hold audio data directly or via pool handle
   std::unique_ptr<juce::AudioBuffer<float>> ownedData;
   AudioFilePool::HandlePtr poolHandle;
-  juce::AudioBuffer<float> *data =
+  const juce::AudioBuffer<float> *data =
       nullptr; // Points to either ownedData or poolHandle->buffer
 
   double sourceSampleRate;

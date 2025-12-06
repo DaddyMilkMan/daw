@@ -90,14 +90,22 @@ void SkiaComponent::paintFallback(juce::Graphics& g) {
 
 void SkiaComponent::applyGlow(SkPaint& paint, float intensity) {
     // Apply global glow intensity
-    float globalIntensity = design::Settings::glowIntensity;
+    float globalIntensity = design::Settings::getGlowIntensity();
     float finalIntensity = intensity * globalIntensity;
     
     float clampedIntensity = juce::jlimit(0.0f, 1.0f, finalIntensity);
     
     // Glow with blur
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, clampedIntensity * 4.0f));
-    paint.setColor(design::withAlpha(glowColor_, clampedIntensity * 0.8f));
+    // If global intensity is 0 (Flat Mode), disable blur completely
+    if (globalIntensity < 0.01f) {
+        paint.setMaskFilter(nullptr);
+        // Make it solid but semi-transparent
+        paint.setColor(design::withAlpha(glowColor_, 0.8f));
+    } else {
+        paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, clampedIntensity * 4.0f));
+        paint.setColor(design::withAlpha(glowColor_, clampedIntensity * 0.8f));
+    }
+    
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(2.0f + (clampedIntensity * 3.0f));
 }

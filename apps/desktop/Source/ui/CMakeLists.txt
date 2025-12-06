@@ -1,6 +1,7 @@
 target_sources(ZenithDAW PRIVATE
     MainWindow.cpp
     MainLayoutComponent.cpp
+    SampleEditorComponent.cpp
     ArrangerComponent.cpp
     MixerComponent.cpp
     PianoRollComponent.cpp
@@ -21,3 +22,5 @@ target_sources(ZenithDAW PRIVATE
     ZenithLookAndFeel.cpp
     ZenithTheme.cpp
 )
+
+add_subdirectory(skia)

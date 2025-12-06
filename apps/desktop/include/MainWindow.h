@@ -41,7 +41,7 @@
 
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
-#include "../Source/ui/views/SessionViewComponent.h"
+#include "../Source/ui/skia/views/SessionViewComponent.h"
 #endif
 
 namespace zenith {
@@ -82,8 +82,8 @@ class MainComponent : public juce::Component,
 {
 public:
   //==========================================================================
-  MainComponent(Engine &engine, zenith::CommandAPI &api,
-                zenith::AIBridgeClient &aiClient, ProjectState &state);
+  MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
+                zenith::AIBridgeClient &aiClient, zenith::ProjectState &state);
   ~MainComponent() override;
 
   //==========================================================================
@@ -93,6 +93,8 @@ public:
   void paint(juce::Graphics &g) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
 
 #ifdef ZENITH_USE_SKIA
 protected:
@@ -108,6 +110,10 @@ public:
                   Component *originatingComponent) override;
 
 private:
+    // Layout Editing State
+    juce::Component* activeDragComponent = nullptr;
+    juce::Rectangle<int> dragStartBounds;
+
 #ifndef ZENITH_USE_SKIA
   //==========================================================================
   // Timer interface (for status updates)
@@ -137,8 +143,8 @@ private:
   // Member variables
   //==========================================================================
 
-  Engine &engine;
-  ProjectState &projectState;
+  zenith::Engine &engine;
+  zenith::ProjectState &projectState;
 
   // ============================================================================
   // Modern DAW Layout Panels
@@ -182,7 +188,7 @@ private:
   // Phase 9: Arranger component with interactive clip editing (center)
   // Now managed by MainLayoutComponent in Skia builds
 #ifndef ZENITH_USE_SKIA
-  std::unique_ptr<ArrangerComponent> arrangerComponent;
+  std::unique_ptr<zenith::ArrangerComponent> arrangerComponent;
 #endif
 
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
@@ -227,7 +233,7 @@ public:
 
   void closeButtonPressed() override;
 
-  ProjectState* getProjectState() const { return projectState.get(); }
+  zenith::ProjectState* getProjectState() const { return projectState.get(); }
 
 private:
   //==========================================================================
@@ -283,16 +289,16 @@ public:
   juce::File currentProjectFile;
 
   // Audio engine (created first, destroyed last)
-  std::unique_ptr<Engine> engine;
+  std::unique_ptr<zenith::Engine> engine;
 
   // Project state
-  std::unique_ptr<ProjectState> projectState;
+  std::unique_ptr<zenith::ProjectState> projectState;
 
   // Phase 11: Track state synchronizer (general track state sync)
-  std::unique_ptr<TrackStateSynchronizer> trackSynchronizer;
+  std::unique_ptr<zenith::TrackStateSynchronizer> trackSynchronizer;
 
   // Phase 13: Automation synchronizer (automation-specific sync)
-  std::unique_ptr<TrackAutomationSynchronizer> automationSync;
+  std::unique_ptr<zenith::TrackAutomationSynchronizer> automationSync;
 
   // Phase 5: Wingman command API
   std::unique_ptr<zenith::CommandAPI> commandAPI;

@@ -34,18 +34,19 @@ void TransportBar::resized() {
     recordButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(spacing);
     
     // View Toggle Button (Right side)
-    viewToggleButtonBounds_ = area.removeFromRight(60).reduced(10);
+    auto rightSection = area.removeFromRight(120); // Increased width
+    settingsButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
+    viewToggleButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
+
+    // Update cached resources on Message Thread (Safe)
+    SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
+    updateCachedPaints(skBounds);
+    cachedBounds_ = skBounds;
 }
 
 void TransportBar::drawSkia(SkCanvas* canvas) {
     auto bounds = getLocalBounds().toFloat();
     SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-
-    // Lazy update of cached resources on the Render Thread
-    if (skBounds != cachedBounds_) {
-        updateCachedPaints(skBounds);
-        cachedBounds_ = skBounds;
-    }
     
     // 1. Background Gradient (Zero allocation)
     canvas->drawRect(skBounds, bgPaint_);
@@ -60,6 +61,9 @@ void TransportBar::drawSkia(SkCanvas* canvas) {
     
     // View Toggle
     drawButton(canvas, viewToggleButtonBounds_, "↹", false, 0xFFFFFFFF);
+    
+    // Settings Button
+    drawButton(canvas, settingsButtonBounds_, "⚙", false, 0xFFFFFFFF);
     
     // 4. Draw Info Text (Tempo & Project)
     SkPaint textPaint; // Stack alloc is cheap
@@ -131,13 +135,14 @@ void TransportBar::drawButton(SkCanvas* canvas, const juce::Rectangle<int>& boun
     paint.setShader(nullptr);
     
     // Active Glow (Outer)
-    if (isActive) {
+    float globalGlow = design::Settings::getGlowIntensity();
+    if (isActive && globalGlow > 0.01f) {
         SkPaint glowPaint;
         glowPaint.setAntiAlias(true);
         glowPaint.setStyle(SkPaint::kStroke_Style);
         glowPaint.setStrokeWidth(2.0f);
         glowPaint.setColor(SkColorSetA(color, 150));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f * globalGlow));
         canvas->drawRRect(rrect, glowPaint);
     }
     
@@ -214,6 +219,8 @@ void TransportBar::mouseDown(const juce::MouseEvent& e) {
         if (onRecordClicked) onRecordClicked();
     } else if (viewToggleButtonBounds_.contains(e.getPosition())) {
         if (onViewToggleClicked) onViewToggleClicked();
+    } else if (settingsButtonBounds_.contains(e.getPosition())) {
+        if (onSettingsClicked) onSettingsClicked();
     }
 }
 

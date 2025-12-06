@@ -1,0 +1,55 @@
+﻿-- The CXX compiler identification is MSVC 19.44.35221.0
+-- The C compiler identification is MSVC 19.44.35221.0
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: C:/Program Files (x86)/Microsoft Visual Studio/2022/BuildTools/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Using ccache: C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin/ccache.exe
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- ============================================
+-- Configuring Skia Integration (Audited)
+-- ============================================
+--   Strategy: Manual Search (unofficial-skia not found)
+--   Skia headers: C:/vcpkg/installed/x64-windows/include/skia
+--   Skia library: C:/vcpkg/installed/x64-windows/lib/skia.dll.lib
+--   Skia graphics library: LINKED (Manual)
+--   Found Skia DLL: C:/vcpkg/installed/x64-windows/bin/skia.dll - Configuring auto-copy
+--   Enabling Skia UI Components...
+--   Skia UI components: ENABLED
+-- ============================================
+-- Zenith DAW: Skia rendering ENABLED
+-- IPO/LTO enabled for ZenithDAW
+-- Configuring done (72.8s)
+cmake : CMake Error at 
+apps/desktop/Source/engine/CMakeLists.txt:1 
+(target_sources):
+At line:1 char:1
++ cmake -B build_check -G "Visual Studio 17 
+2022" -A x64 2>&1 | Out-Fil ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (CM 
+   ake Error at ...arget_sources)::String) [],  
+   RemoteException
+    + FullyQualifiedErrorId : NativeCommandErro 
+   r
+ 
+  Cannot find source file:
+
+    C:/zenith/daw/apps/desktop/Source/engine/Plu
+ginHostAsync.cpp
+
+
+-- Generating done (0.3s)
+CMake Generate step failed.  Build files cannot 
+be regenerated correctly.

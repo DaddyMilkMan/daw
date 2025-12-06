@@ -20,6 +20,8 @@
 #include "../ZenithLookAndFeel.h"
 #include "SkiaMainWindowIntegration.h" 
 #include "RenderTree.h"
+#include "../../Settings.h"
+#include "../../rendering/SkiaRenderer.h"
 
 namespace zenith {
 
@@ -30,7 +32,8 @@ namespace zenith {
     Manages a list of lightweight SkiaWidgets.
 */
 class ZenithPolySynthUI : public juce::AudioProcessorEditor,
-                          public SkiaRenderer {
+                          public juce::ChangeListener,
+                          public juce::Timer { // Listen for settings changes
 public:
   ZenithPolySynthUI(ZenithPolySynthProcessor &p);
   ~ZenithPolySynthUI() override;
@@ -46,9 +49,12 @@ public:
   void mouseUp(const juce::MouseEvent& e) override;
   void mouseMove(const juce::MouseEvent& e) override;
 
+  // Settings Listener
+  void changeListenerCallback(juce::ChangeBroadcaster*) override;
+
 protected:
-  // SkiaRenderer override
-  void drawSkiaContent(SkCanvas* canvas) override;
+  // Skia draw callback
+  void drawSkiaContent(SkCanvas* canvas);
   
   // Timer callback for frame capture (Message Thread)
   void timerCallback() override;
@@ -56,6 +62,10 @@ protected:
 private:
   ZenithPolySynthProcessor &processor;
   ZenithLookAndFeel zenithLookAndFeel_;
+  
+  // Skia Renderer (Composition)
+  std::unique_ptr<SkiaRenderer> renderer_;
+  void recreateRenderer();
 
   // UI State
   bool isAdvancedMode_ = false;
@@ -86,6 +96,7 @@ private:
   
   void layoutWidgets();
   void toggleAdvancedMode();
+  void toggleLearningMode();
   
   // Preset Management
   std::vector<PresetMetadata> presetList_;
@@ -117,6 +128,13 @@ private:
    * Called from drawSkiaContent() on the Render Thread.
    */
   void drawKnobFromState(SkCanvas* canvas, const render::KnobRenderState& state);
+  
+  /**
+   * Draw slider from render state (no Component access).
+   * Called from drawSkiaContent() on the Render Thread.
+   */
+  void drawSliderFromState(SkCanvas* canvas, const render::SliderRenderState& state);
+
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthUI)
 };

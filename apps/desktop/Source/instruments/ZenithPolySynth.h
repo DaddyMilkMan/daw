@@ -161,6 +161,12 @@ public:
    * @return Sample value in range [-1, 1]
    */
   float getNextSample(float frequency, float shape = 0.5f);
+  
+  /**
+   * @brief Update supersaw frequency ratios after detune change
+   * Must be called after setDetune() to update cached ratios.
+   */
+  void updateSupersawRatios();
 
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
@@ -182,7 +188,6 @@ private:
   std::array<float, 7> supersawRatios_ = {1.0f}; // Precalculated frequency multipliers
   bool supersawInit_ = false;
 
-  void updateSupersawRatios();
   // PolyBLEP anti-aliasing helper
   // t: current phase (0..1)
   // dt: phase increment per sample

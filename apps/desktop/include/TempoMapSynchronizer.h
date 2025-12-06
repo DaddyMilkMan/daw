@@ -2,7 +2,7 @@
  * @file TempoMapSynchronizer.h
  * @brief Synchronizes tempo map from ProjectState to Engine
  *
- * Phase 15: Tempo Map & Global Markers MVP
+ * Tempo Map & Global Markers
  *
  * This class bridges the message-thread ProjectState (ValueTree) with the
  * Engine's TempoMap. It:
@@ -51,7 +51,7 @@ public:
      * @param projectState Reference to project state (must outlive this object)
      * @param tempoMap Reference to engine's tempo map (must outlive this object)
      */
-    TempoMapSynchronizer(ProjectState& projectState, zenith::TempoMap& tempoMap);
+    TempoMapSynchronizer(zenith::ProjectState& projectState, zenith::TempoMap& tempoMap);
 
     /**
      * @brief Destructor
@@ -105,7 +105,7 @@ private:
     // Member Variables
     //==========================================================================
 
-    ProjectState& projectState;
+    zenith::ProjectState& projectState;
     zenith::TempoMap& tempoMap;
 
     bool isActive = false;

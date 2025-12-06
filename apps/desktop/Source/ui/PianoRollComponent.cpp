@@ -15,7 +15,7 @@
 // Constructor / Destructor
 //==============================================================================
 
-PianoRollComponent::PianoRollComponent(ProjectState& state)
+PianoRollComponent::PianoRollComponent(zenith::ProjectState& state)
     : projectState(state)
 {
     setWantsKeyboardFocus(true);
@@ -29,7 +29,7 @@ PianoRollComponent::~PianoRollComponent()
         auto [track, clip] = projectState.findClip(currentClip.clipId);
         if (clip.isValid())
         {
-            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_NOTES);
+            auto midiNotesNode = clip.getChildWithName(zenith::ProjectState::ID_NOTES);
             if (midiNotesNode.isValid())
                 midiNotesNode.removeListener(this);
         }
@@ -48,7 +48,7 @@ void PianoRollComponent::setClipContext(const MidiClipContext& context)
         auto [oldTrack, oldClip] = projectState.findClip(currentClip.clipId);
         if (oldClip.isValid())
         {
-            auto midiNotesNode = oldClip.getChildWithName(ProjectState::ID_NOTES);
+            auto midiNotesNode = oldClip.getChildWithName(zenith::ProjectState::ID_NOTES);
             if (midiNotesNode.isValid())
                 midiNotesNode.removeListener(this);
         }
@@ -62,10 +62,10 @@ void PianoRollComponent::setClipContext(const MidiClipContext& context)
         auto [track, clip] = projectState.findClip(currentClip.clipId);
         if (clip.isValid())
         {
-            auto midiNotesNode = clip.getChildWithName(ProjectState::ID_NOTES);
+            auto midiNotesNode = clip.getChildWithName(zenith::ProjectState::ID_NOTES);
             if (!midiNotesNode.isValid())
             {
-                midiNotesNode = juce::ValueTree(ProjectState::ID_NOTES);
+                midiNotesNode = juce::ValueTree(zenith::ProjectState::ID_NOTES);
                 clip.appendChild(midiNotesNode, nullptr);
             }
             midiNotesNode.addListener(this);
@@ -293,7 +293,7 @@ juce::MouseCursor PianoRollComponent::getMouseCursor()
 
 void PianoRollComponent::valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child)
 {
-    if (parent.hasType(ProjectState::ID_NOTES))
+    if (parent.hasType(zenith::ProjectState::ID_NOTES))
     {
         refreshNotesFromProjectState();
     }
@@ -305,7 +305,7 @@ void PianoRollComponent::valueTreeChildRemoved(
     (void)child;
     (void)index;
     
-    if (parent.hasType(ProjectState::ID_NOTES))
+    if (parent.hasType(zenith::ProjectState::ID_NOTES))
     {
         refreshNotesFromProjectState();
     }
@@ -316,7 +316,7 @@ void PianoRollComponent::valueTreePropertyChanged(
 {
     (void)property;
     
-    if (tree.hasType(ProjectState::ID_NOTE))
+    if (tree.hasType(zenith::ProjectState::ID_NOTE))
     {
         refreshNotesFromProjectState();
     }
@@ -611,7 +611,7 @@ void PianoRollComponent::createNoteAtPosition(float x, float y)
     double lengthBeats = gridBeats;
 
     // Create note
-    ProjectState::MidiNoteSpec note;
+    zenith::ProjectState::MidiNoteSpec note;
     note.pitch = pitch;
     note.startBeats = startBeats;
     note.lengthBeats = lengthBeats;
@@ -701,7 +701,7 @@ void PianoRollComponent::pasteNotes()
 
     for (const auto& clipNote : clipboard)
     {
-        ProjectState::MidiNoteSpec note;
+        zenith::ProjectState::MidiNoteSpec note;
         note.pitch = clipNote.pitch;
         note.startBeats = pasteTime + clipNote.startBeats;
         note.lengthBeats = clipNote.lengthBeats;
@@ -1262,7 +1262,7 @@ void PianoRollComponent::smartDuplicate()
     {
         if (note.selected)
         {
-            ProjectState::MidiNoteSpec newNote;
+            zenith::ProjectState::MidiNoteSpec newNote;
             newNote.pitch = note.pitch;
             newNote.startBeats = note.startBeats + patternLength;
             newNote.lengthBeats = note.lengthBeats;
@@ -1294,7 +1294,7 @@ void PianoRollComponent::createRoll(float x, float y, double rollSpeed)
 
     for (int i = 0; i < numNotes; ++i)
     {
-        ProjectState::MidiNoteSpec note;
+        zenith::ProjectState::MidiNoteSpec note;
         note.pitch = pitch;
         note.startBeats = startBeats + (i * rollSpeed);
         note.lengthBeats = rollSpeed * 0.9;  // Slight gap
@@ -1602,80 +1602,89 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress& key)
 }
 
 //==============================================================================
-// Color Helpers
+// Rendering - Helpers
 //==============================================================================
+
+SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const
+{
+    // Gradient from blue (low) -> green (mid) -> orange/red (high)
+    float normalized = velocity / 127.0f;
+    
+    uint8_t r, g, b;
+    
+    if (normalized < 0.33f) {
+        // Low: Blueish
+        float t = normalized / 0.33f;
+        r = (uint8_t)(100 * t);
+        g = (uint8_t)(100 + 100 * t);
+        b = 255;
+    } else if (normalized < 0.67f) {
+        // Mid: Greenish
+        float t = (normalized - 0.33f) / 0.34f;
+        r = (uint8_t)(100 + 100 * t);
+        g = 255;
+        b = (uint8_t)(255 - 200 * t);
+    } else {
+        // High: Reddish
+        float t = (normalized - 0.67f) / 0.33f;
+        r = 255;
+        g = (uint8_t)(255 - 155 * t);
+        b = 50;
+    }
+    
+    return SkColorSetRGB(r, g, b);
+}
 
 juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const
 {
-    // Gradient from blue (low) â†’ green (mid) â†’ orange/red (high)
-    float normalized = velocity / 127.0f;
-
-    if (normalized < 0.33f)
-    {
-        // Low velocity: Blue
-        float t = normalized / 0.33f;
-        return juce::Colour::fromHSV(0.6f, 0.7f, 0.5f + t * 0.3f, 1.0f);
-    }
-    else if (normalized < 0.67f)
-    {
-        // Mid velocity: Green
-        float t = (normalized - 0.33f) / 0.34f;
-        return juce::Colour::fromHSV(0.4f - t * 0.15f, 0.7f, 0.6f + t * 0.2f, 1.0f);
-    }
-    else
-    {
-        // High velocity: Orange/Red
-        float t = (normalized - 0.67f) / 0.33f;
-        return juce::Colour::fromHSV(0.1f - t * 0.1f, 0.8f, 0.7f + t * 0.3f, 1.0f);
-    }
+    // Keep for compatibility if needed, but unused in Skia path
+    return juce::Colour(getSkiaColorForVelocity(velocity));
 }
 
 //==============================================================================
 // Rendering - Piano Keys
 //==============================================================================
 
-void PianoRollComponent::drawPianoKeys(juce::Graphics& g, const juce::Rectangle<int>& area)
+void PianoRollComponent::drawPianoKeys(SkCanvas* canvas, const SkRect& area)
 {
+    SkPaint paint;
+    SkFont font;
+    font.setSize(10.0f);
+    
     for (int pitch = 0; pitch <= 127; ++pitch)
     {
         float y = RULER_HEIGHT + pitchToPixels(pitch);
         
-        if (y < RULER_HEIGHT || y > area.getBottom())
+        if (y < RULER_HEIGHT || y > area.bottom())
             continue;
 
         int noteInOctave = pitch % 12;
         bool isBlackKey = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 ||
                           noteInOctave == 8 || noteInOctave == 10);
 
-        // Piano key background
+        // Background
         if (scaleHighlight.enabled && isNoteInScale(pitch))
         {
-            // Highlighted notes (in scale)
-            g.setColour(isBlackKey ? juce::Colour(0xff4a4a5a) : juce::Colour(0xff3a3a4a));
+            paint.setColor(isBlackKey ? SkColorSetRGB(74, 74, 90) : SkColorSetRGB(58, 58, 74));
         }
         else
         {
-            // Non-highlighted notes
-            g.setColour(isBlackKey ? juce::Colour(0xff3a3a3a) : juce::Colour(0xff2a2a2a));
+            paint.setColor(isBlackKey ? SkColorSetRGB(58, 58, 58) : SkColorSetRGB(42, 42, 42));
         }
         
-        g.fillRect(0.0f, y, static_cast<float>(PIANO_WIDTH), pixelsPerPitch);
+        canvas->drawRect(SkRect::MakeXYWH(0.0f, y, (float)PIANO_WIDTH, (float)pixelsPerPitch), paint);
 
-        // C note labels
+        // Labels (C notes)
         if (noteInOctave == 0)
         {
-            g.setColour(juce::Colours::white.withAlpha(0.6f));
-            g.setFont(juce::FontOptions(10.0f));
+            paint.setColor(SkColorSetARGB(150, 255, 255, 255));
             juce::String label = "C" + juce::String((pitch / 12) - 2);
-            g.drawText(label, 4, static_cast<int>(y), PIANO_WIDTH - 8, 
-                      static_cast<int>(pixelsPerPitch), 
-                      juce::Justification::centredLeft, false);
+            canvas->drawString(label.toRawUTF8(), 4.0f, y + pixelsPerPitch - 4.0f, font, paint);
         }
 
-        // Key border
-        g.setColour(juce::Colour(0xff404040));
-        g.drawHorizontalLine(static_cast<int>(y + pixelsPerPitch), 
-                            0.0f, static_cast<float>(PIANO_WIDTH));
+        // Border
+        paint.setColor(SkColorSetRGB(64, 64, 64));
+        canvas->drawLine(0.0f, y + pixelsPerPitch, (float)PIANO_WIDTH, y + pixelsPerPitch, paint);
     }
 }
 
@@ -1683,18 +1692,19 @@ void PianoRollComponent::drawPianoKeys(juce::Graphics& g, const juce::Rectangle<
 // Rendering - Grid
 //==============================================================================
 
-void PianoRollComponent::drawGrid(juce::Graphics& g, const juce::Rectangle<int>& area)
+void PianoRollComponent::drawGrid(SkCanvas* canvas, const SkRect& area)
 {
-    // Horizontal pitch lines (every octave = C note)
+    SkPaint paint;
+    paint.setStrokeWidth(1.0f);
+
+    // Horizontal pitch lines
     for (int pitch = 0; pitch <= 127; pitch += 12)
     {
         float y = RULER_HEIGHT + pitchToPixels(pitch);
-        if (y >= RULER_HEIGHT && y <= area.getBottom())
+        if (y >= RULER_HEIGHT && y <= area.bottom())
         {
-            g.setColour(juce::Colour(0xff505050));
-            g.drawHorizontalLine(static_cast<int>(y), 
-                                static_cast<float>(PIANO_WIDTH), 
-                                static_cast<float>(area.getRight()));
+            paint.setColor(SkColorSetRGB(80, 80, 80));
+            canvas->drawLine((float)PIANO_WIDTH, y, area.right(), y, paint);
         }
     }
 
@@ -1702,14 +1712,11 @@ void PianoRollComponent::drawGrid(juce::Graphics& g, const juce::Rectangle<int>&
     for (double beat = 0.0; beat <= currentClip.clipLengthBeats; beat += gridBeats)
     {
         float x = PIANO_WIDTH + beatsToPixels(beat);
-        if (x >= PIANO_WIDTH && x <= area.getRight())
+        if (x >= PIANO_WIDTH && x <= area.right())
         {
-            // Measure lines (every 4 beats) are brighter
             bool isMeasureLine = (std::fmod(beat, 4.0) < 0.001);
-            g.setColour(isMeasureLine ? juce::Colour(0xff606060) : juce::Colour(0xff404040));
-            g.drawVerticalLine(static_cast<int>(x), 
-                              static_cast<float>(RULER_HEIGHT), 
-                              static_cast<float>(area.getBottom()));
+            paint.setColor(isMeasureLine ? SkColorSetRGB(96, 96, 96) : SkColorSetRGB(64, 64, 64));
+            canvas->drawLine(x, (float)RULER_HEIGHT, x, area.bottom(), paint);
         }
     }
 }
@@ -1718,59 +1725,55 @@ void PianoRollComponent::drawGrid(juce::Graphics& g, const juce::Rectangle<int>&
 // Rendering - Notes
 //==============================================================================
 
-void PianoRollComponent::drawNotes(juce::Graphics& g, const juce::Rectangle<int>& area)
+void PianoRollComponent::drawNotes(SkCanvas* canvas, const SkRect& area)
 {
-    (void)area;
+    SkPaint paint;
+    paint.setAntiAlias(true);
 
     for (const auto& note : noteRects)
     {
-        // Skip notes outside visible area
-        if (note.bounds.getRight() < PIANO_WIDTH || note.bounds.getX() > getWidth())
-            continue;
-        if (note.bounds.getBottom() < RULER_HEIGHT || note.bounds.getY() > getHeight())
-            continue;
+        if (note.bounds.getRight() < PIANO_WIDTH || note.bounds.getX() > getWidth()) continue;
+        if (note.bounds.getBottom() < RULER_HEIGHT || note.bounds.getY() > getHeight()) continue;
 
-        // Note fill color
-        juce::Colour noteColor;
+        SkColor noteColor;
+        if (note.muted) noteColor = SkColorSetARGB(128, 60, 60, 60);
+        else if (note.selected) noteColor = SkColorSetRGB(255, 160, 50); // Orange
+        else noteColor = getSkiaColorForVelocity(note.velocity);
+
+        if (note.isHovered) {
+            // Lighten
+            noteColor = SkColorSetRGB(
+                (uint8_t)std::min(255, (int)SkColorGetR(noteColor) + 40),
+                (uint8_t)std::min(255, (int)SkColorGetG(noteColor) + 40),
+                (uint8_t)std::min(255, (int)SkColorGetB(noteColor) + 40)
+            );
+        }
+
+        SkRect r = SkRect::MakeXYWH(note.bounds.getX() + 1, note.bounds.getY() + 1, 
+                                    note.bounds.getWidth() - 2, note.bounds.getHeight() - 2);
         
-        if (note.muted)
-        {
-            noteColor = juce::Colours::darkgrey.withAlpha(0.5f);
-        }
-        else if (note.selected)
-        {
-            noteColor = juce::Colours::orange.brighter(0.3f);
-        }
-        else
-        {
-            // Color by velocity (gradient)
-            noteColor = getColorForVelocity(note.velocity);
-        }
+        // Fill
+        paint.setStyle(SkPaint::kFill_Style);
+        paint.setColor(noteColor);
+        canvas->drawRoundRect(r, 3.0f, 3.0f, paint);
 
-        // Hover state: brighten
-        if (note.isHovered)
-        {
-            noteColor = noteColor.brighter(0.2f);
-        }
-
-        g.setColour(noteColor);
-        g.fillRoundedRectangle(note.bounds.reduced(1.0f), 3.0f);
-
-        // Note border
-        g.setColour(noteColor.brighter(0.3f));
-        g.drawRoundedRectangle(note.bounds.reduced(1.0f), 3.0f, 1.5f);
-
-        // Resize handle indicators (subtle dots)
+        // Border
+        paint.setStyle(SkPaint::kStroke_Style);
+        paint.setStrokeWidth(1.5f);
+        paint.setColor(SkColorSetARGB(255, 
+            (uint8_t)std::min(255, (int)SkColorGetR(noteColor) + 50),
+            (uint8_t)std::min(255, (int)SkColorGetG(noteColor) + 50),
+            (uint8_t)std::min(255, (int)SkColorGetB(noteColor) + 50)));
+        canvas->drawRoundRect(r, 3.0f, 3.0f, paint);
+        
+        // Resize handles
         if (note.isHovered || note.selected)
         {
-            g.setColour(juce::Colours::white.withAlpha(0.4f));
-            
-            // Left handle
-            float handleY = note.bounds.getCentreY();
-            g.fillEllipse(note.bounds.getX() + 3, handleY - 2, 4, 4);
-            
-            // Right handle
-            g.fillEllipse(note.bounds.getRight() - 7, handleY - 2, 4, 4);
+            paint.setStyle(SkPaint::kFill_Style);
+            paint.setColor(SkColorSetARGB(100, 255, 255, 255));
+            float cy = r.centerY();
+            canvas->drawCircle(r.fLeft + 4, cy, 2, paint);
+            canvas->drawCircle(r.fRight - 4, cy, 2, paint);
         }
     }
 }
@@ -1779,179 +1782,183 @@ void PianoRollComponent::drawNotes(juce::Graphics& g, const juce::Rectangle<int>
 // Rendering - Velocity Lane
 //==============================================================================
 
-void PianoRollComponent::drawVelocityLane(juce::Graphics& g, const juce::Rectangle<int>& area)
+void PianoRollComponent::drawVelocityLane(SkCanvas* canvas, const SkRect& area)
 {
+    SkPaint paint;
+    
     // Background
-    g.setColour(juce::Colour(0xff1a1a1a));
-    g.fillRect(area);
+    paint.setColor(SkColorSetRGB(26, 26, 26));
+    canvas->drawRect(area, paint);
 
     // Border
-    g.setColour(juce::Colour(0xff505050));
-    g.drawHorizontalLine(area.getY(), 0.0f, static_cast<float>(getWidth()));
+    paint.setColor(SkColorSetRGB(80, 80, 80));
+    canvas->drawLine(area.fLeft, area.fTop, area.fRight, area.fTop, paint);
 
-    // Grid lines (every 32 velocity units)
+    // Grid lines
+    paint.setStrokeWidth(1.0f);
+    paint.setColor(SkColorSetRGB(48, 48, 48));
+    SkFont font;
+    font.setSize(9.0f);
+    SkPaint textPaint;
+    textPaint.setColor(SkColorSetARGB(80, 255, 255, 255));
+
     for (int vel = 0; vel <= 127; vel += 32)
     {
-        float y = area.getY() + velocityToPixels(vel);
-        g.setColour(juce::Colour(0xff303030));
-        g.drawHorizontalLine(static_cast<int>(y), 
-                            static_cast<float>(PIANO_WIDTH), 
-                            static_cast<float>(getWidth()));
+        float y = area.fTop + velocityToPixels(vel);
+        canvas->drawLine((float)PIANO_WIDTH, y, area.fRight, y, paint);
         
-        // Velocity labels
-        g.setColour(juce::Colours::white.withAlpha(0.3f));
-        g.setFont(juce::FontOptions(9.0f));
-        g.drawText(juce::String(vel), 2, static_cast<int>(y) - 6, PIANO_WIDTH - 4, 12, 
-                   juce::Justification::centredRight, false);
+        juce::String label = juce::String(vel);
+        canvas->drawString(label.toRawUTF8(), PIANO_WIDTH + 4.0f, y - 2.0f, font, textPaint);
     }
 
-    // Velocity bars for each note
+    // Velocity Bars
+    paint.setStyle(SkPaint::kFill_Style);
     for (const auto& note : noteRects)
     {
-        if (note.velocityBounds.getRight() < PIANO_WIDTH || 
-            note.velocityBounds.getX() > getWidth())
-            continue;
+        if (note.velocityBounds.getRight() < PIANO_WIDTH || note.velocityBounds.getX() > getWidth()) continue;
 
-        juce::Colour barColor;
-        
-        if (note.selected)
-        {
-            barColor = juce::Colours::orange.withAlpha(0.8f);
-        }
-        else
-        {
-            barColor = getColorForVelocity(note.velocity).withAlpha(0.6f);
+        SkColor barColor;
+        if (note.selected) barColor = SkColorSetARGB(200, 255, 165, 0);
+        else {
+            SkColor c = getSkiaColorForVelocity(note.velocity);
+            barColor = SkColorSetA(c, 150);
         }
 
-        g.setColour(barColor);
-        g.fillRect(note.velocityBounds.reduced(1.0f, 0.0f));
+        paint.setColor(barColor);
+        SkRect r = SkRect::MakeXYWH(note.velocityBounds.getX() + 1, note.velocityBounds.getY(),
+                                    note.velocityBounds.getWidth() - 2, note.velocityBounds.getHeight());
+        canvas->drawRect(r, paint);
     }
 }
 
 //==============================================================================
-// Rendering - Chord Name Overlay
+// Rendering - Chord Name
 //==============================================================================
 
-void PianoRollComponent::drawChordName(juce::Graphics& g)
+void PianoRollComponent::drawChordName(SkCanvas* canvas)
 {
-    if (getSelectedNoteCount() < 3)
-        return;
+    if (getSelectedNoteCount() < 3) return;
 
     juce::String chordName = getCurrentChordName();
-    if (chordName.isEmpty())
-        return;
+    if (chordName.isEmpty()) return;
 
-    // Draw chord name in top-right corner
-    g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.setFont(juce::FontOptions(16.0f, juce::Font::bold));
+    SkPaint paint;
+    paint.setColor(SkColorSetARGB(200, 255, 255, 255));
+    paint.setAntiAlias(true);
     
-    juce::Rectangle<int> textArea(getWidth() - 200, RULER_HEIGHT + 10, 180, 30);
-    g.fillRoundedRectangle(textArea.toFloat(), 5.0f);
+    // Background pill
+    SkRect r = SkRect::MakeXYWH(getWidth() - 200.0f, RULER_HEIGHT + 10.0f, 180.0f, 30.0f);
+    canvas->drawRoundRect(r, 5.0f, 5.0f, paint);
     
-    g.setColour(juce::Colours::black);
-    g.drawText(chordName, textArea, juce::Justification::centred, false);
+    // Text
+    SkFont font;
+    font.setSize(16.0f);
+    font.setEmbolden(true);
+    
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorBLACK);
+    
+    float width = font.measureText(chordName.toRawUTF8(), chordName.length(), SkTextEncoding::kUTF8);
+    canvas->drawString(chordName.toRawUTF8(), r.centerX() - width/2, r.centerY() + 6.0f, font, textPaint);
 }
 
 //==============================================================================
-// Main Paint Method
+// Rendering - Helpers
 //==============================================================================
 
-void PianoRollComponent::paint(juce::Graphics& g)
+// Removed duplicate getSkiaColorForVelocity - already defined at line 1608
+
+void PianoRollComponent::drawSkia(SkCanvas* canvas)
 {
     auto bounds = getLocalBounds();
+    SkRect fullRect = SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight());
 
     // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    SkPaint paint;
+    paint.setColor(SkColorSetRGB(42, 42, 42));
+    canvas->drawRect(fullRect, paint);
 
     if (!currentClip.isValid())
     {
-        g.setColour(juce::Colours::white);
-        g.setFont(juce::FontOptions(16.0f));
-        g.drawText("No clip loaded", bounds, juce::Justification::centred);
+        SkFont font;
+        font.setSize(16.0f);
+        SkPaint textPaint;
+        textPaint.setColor(SK_ColorWHITE);
+        const char* msg = "No clip loaded";
+        float w = font.measureText(msg, strlen(msg), SkTextEncoding::kUTF8);
+        canvas->drawString(msg, fullRect.centerX() - w/2, fullRect.centerY(), font, textPaint);
         return;
     }
 
-    // Calculate areas
-    auto ruler = bounds.removeFromTop(RULER_HEIGHT);
-    auto velocityLane = bounds.removeFromBottom(velocityLaneHeight);
-    auto pianoKeys = bounds.removeFromLeft(PIANO_WIDTH);
-    auto noteGrid = bounds;
+    // Layout Areas
+    SkRect rulerRect = SkRect::MakeWH((float)bounds.getWidth(), (float)RULER_HEIGHT);
+    SkRect velocityRect = SkRect::MakeXYWH(0.0f, (float)(bounds.getHeight() - velocityLaneHeight), 
+                                           (float)bounds.getWidth(), (float)velocityLaneHeight);
+    SkRect pianoRect = SkRect::MakeXYWH(0.0f, 0.0f, (float)PIANO_WIDTH, (float)bounds.getHeight());
+    SkRect gridRect = fullRect; // Grid fills everything conceptually
 
-    // Draw ruler (placeholder - draw beat numbers)
-    g.setColour(juce::Colour(0xff1e1e1e));
-    g.fillRect(ruler);
-    g.setColour(juce::Colours::white.withAlpha(0.6f));
-    g.setFont(juce::FontOptions(10.0f));
+    // Ruler
+    paint.setColor(SkColorSetRGB(30, 30, 30));
+    canvas->drawRect(rulerRect, paint);
+    
+    SkFont rulerFont;
+    rulerFont.setSize(10.0f);
+    SkPaint rulerTextPaint;
+    rulerTextPaint.setColor(SkColorSetARGB(150, 255, 255, 255));
+
     for (double beat = 0.0; beat <= currentClip.clipLengthBeats; beat += 1.0)
     {
         float x = PIANO_WIDTH + beatsToPixels(beat);
-        if (x >= PIANO_WIDTH && x <= getWidth())
+        if (x >= PIANO_WIDTH && x <= bounds.getWidth())
         {
-            g.drawText(juce::String(static_cast<int>(beat)), 
-                      static_cast<int>(x) - 10, 5, 20, 20, 
-                      juce::Justification::centred, false);
+            juce::String s = juce::String(static_cast<int>(beat));
+            canvas->drawString(s.toRawUTF8(), x - 4.0f, 20.0f, rulerFont, rulerTextPaint);
         }
     }
 
-    // Draw piano keys
-    drawPianoKeys(g, pianoKeys);
-
-    // Draw note grid background (alternating rows for C notes)
-    g.setColour(juce::Colour(0xff1e1e1e));
-    g.fillRect(noteGrid);
-
-    for (int pitch = 0; pitch <= 127; ++pitch)
-    {
+    // Components
+    drawPianoKeys(canvas, pianoRect);
+    
+    // Note Grid Background
+    // We want background behind notes but above base
+    SkRect noteArea = SkRect::MakeLTRB((float)PIANO_WIDTH, (float)RULER_HEIGHT, 
+                                       (float)bounds.getWidth(), velocityRect.fTop);
+    paint.setColor(SkColorSetRGB(30, 30, 30));
+    canvas->drawRect(noteArea, paint);
+    
+    // Row highlights (C notes)
+    paint.setColor(SkColorSetRGB(37, 37, 37));
+    for (int pitch = 0; pitch <= 127; pitch += 12) {
         float y = RULER_HEIGHT + pitchToPixels(pitch);
-        int noteInOctave = pitch % 12;
-
-        if (noteInOctave == 0)
-        {
-            g.setColour(juce::Colour(0xff252525));
-            g.fillRect(static_cast<float>(PIANO_WIDTH), y, 
-                      static_cast<float>(noteGrid.getWidth()), pixelsPerPitch);
+        if (y >= RULER_HEIGHT && y <= noteArea.bottom()) {
+            canvas->drawRect(SkRect::MakeXYWH(noteArea.fLeft, y, noteArea.width(), pixelsPerPitch), paint);
         }
     }
 
-    // Draw grid lines
-    drawGrid(g, noteGrid);
+    drawGrid(canvas, noteArea);
+    drawNotes(canvas, noteArea);
+    drawVelocityLane(canvas, velocityRect);
 
-    // Draw notes
-    drawNotes(g, noteGrid);
-
-    // Draw velocity lane
-    drawVelocityLane(g, velocityLane);
-
-    // Draw marquee selection
+    // Marquee
     if (currentDragMode == DragMode::MarqueeSelect && !marqueeRect.isEmpty())
     {
-        g.setColour(juce::Colours::white.withAlpha(0.2f));
-        g.fillRect(marqueeRect);
-
-        g.setColour(juce::Colours::white.withAlpha(0.8f));
-        g.drawRect(marqueeRect, 1.5f);
+        SkRect mRect = SkRect::MakeXYWH(marqueeRect.getX(), marqueeRect.getY(), 
+                                        marqueeRect.getWidth(), marqueeRect.getHeight());
+        paint.setColor(SkColorSetARGB(50, 255, 255, 255));
+        canvas->drawRect(mRect, paint);
+        paint.setStyle(SkPaint::kStroke_Style);
+        paint.setColor(SkColorSetARGB(200, 255, 255, 255));
+        canvas->drawRect(mRect, paint);
     }
 
-    // Draw chord name overlay
-    drawChordName(g);
+    drawChordName(canvas);
 
-    // Draw clip name in top-left corner
-    g.setColour(juce::Colours::white.withAlpha(0.8f));
-    g.setFont(juce::FontOptions(12.0f));
-    g.drawText(currentClip.clipName, 
-              PIANO_WIDTH + 10, 5, 200, 20, 
-              juce::Justification::centredLeft, false);
-
-    // Draw selection count
-    if (getSelectedNoteCount() > 0)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.6f));
-        g.setFont(juce::FontOptions(11.0f));
-        juce::String selectionText = juce::String(getSelectedNoteCount()) + " notes selected";
-        g.drawText(selectionText, 
-                  getWidth() - 150, 5, 140, 20, 
-                  juce::Justification::centredRight, false);
-    }
+    // Clip Name Overlay
+    SkFont titleFont;
+    titleFont.setSize(12.0f);
+    SkPaint titlePaint;
+    titlePaint.setColor(SkColorSetARGB(200, 255, 255, 255));
+    canvas->drawString(currentClip.clipName.toRawUTF8(), PIANO_WIDTH + 10.0f, 20.0f, titleFont, titlePaint);
 }
 
 //==============================================================================

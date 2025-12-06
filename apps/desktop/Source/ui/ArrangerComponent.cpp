@@ -4,7 +4,6 @@
  */
 
 #include "../../include/ui/ArrangerComponent.h"
-#include "../rendering/SkiaContextManager.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <skia/include/core/SkCanvas.h>
@@ -15,8 +14,10 @@
 #include <skia/include/core/SkTypeface.h>
 #endif
 
+#include "../browser/BrowserDragSource.h"
+
 //==============================================================================
-// Constructor / Destructor
+namespace zenith {
 //==============================================================================
 
 ArrangerComponent::ArrangerComponent(ProjectState &ps) : projectState(ps) {
@@ -84,24 +85,24 @@ void ArrangerComponent::rebuildClipViews() {
   clipViews.clear();
 
   auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (!tracksNode.isValid())
     return;
 
   int trackIndex = 0;
   for (const auto &track : tracksNode) {
-    auto trackId = track[ProjectState::PROP_ID].toString();
-    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+    auto trackId = track[zenith::ProjectState::PROP_ID].toString();
+    auto clipsNode = track.getChildWithName(zenith::ProjectState::ID_CLIPS);
 
     if (clipsNode.isValid()) {
       for (const auto &clip : clipsNode) {
         ClipView view;
-        view.clipId = clip[ProjectState::PROP_ID].toString();
+        view.clipId = clip[zenith::ProjectState::PROP_ID].toString();
         view.trackId = trackId;
-        view.startBeats = clip[ProjectState::PROP_START];
-        view.lengthBeats = clip[ProjectState::PROP_LENGTH];
+        view.startBeats = clip[zenith::ProjectState::PROP_START];
+        view.lengthBeats = clip[zenith::ProjectState::PROP_LENGTH];
 
-        auto clipType = clip[ProjectState::PROP_TYPE].toString();
+        auto clipType = clip[zenith::ProjectState::PROP_TYPE].toString();
         view.isMidi = (clipType == "midi");
 
         view.isSelected = selectedClipIds.contains(view.clipId);
@@ -121,10 +122,10 @@ void ArrangerComponent::recomputeClipBounds() {
     // Find track index for this clip
     int trackIndex = 0;
     auto tracksNode =
-        projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+        projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
     if (tracksNode.isValid()) {
       for (const auto &track : tracksNode) {
-        if (track[ProjectState::PROP_ID].toString() == clipView.trackId)
+        if (track[zenith::ProjectState::PROP_ID].toString() == clipView.trackId)
           break;
         trackIndex++;
       }
@@ -243,12 +244,12 @@ void ArrangerComponent::createClipAtPoint(juce::Point<float> point) {
 
   // Get track at index
   auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (!tracksNode.isValid() || trackIndex >= tracksNode.getNumChildren())
     return;
 
   auto track = tracksNode.getChild(trackIndex);
-  auto trackId = track[ProjectState::PROP_ID].toString();
+  auto trackId = track[zenith::ProjectState::PROP_ID].toString();
 
   // Calculate clip position
   double startBeats = snapToGrid(xToBeats(point.x));
@@ -276,7 +277,7 @@ void ArrangerComponent::deleteSelectedClips() {
     auto [track, clip] = projectState.findClip(clipId);
     if (track.isValid() && clip.isValid()) {
       juce::String trackId =
-          track.getProperty(ProjectState::PROP_ID).toString();
+          track.getProperty(zenith::ProjectState::PROP_ID).toString();
       projectState.deleteClip(trackId, clipId, "Delete clips");
     }
   }
@@ -305,8 +306,8 @@ void ArrangerComponent::duplicateSelectedClips() {
       continue;
 
     auto trackId = track[ProjectState::PROP_ID].toString();
-    double startBeats = clip[ProjectState::PROP_START];
-    double lengthBeats = clip[ProjectState::PROP_LENGTH];
+    double startBeats = clip[ProjectState::PROP_START_BEATS];
+    double lengthBeats = clip[ProjectState::PROP_LENGTH_BEATS];
     bool isMidi = (clip[ProjectState::PROP_TYPE].toString() == "midi");
     auto name = clip[ProjectState::PROP_NAME].toString();
 
@@ -391,7 +392,7 @@ void ArrangerComponent::paintTracks(juce::Graphics &g) {
   const juce::Colour gridLineColour = juce::Colour(0xff505050);
 
   auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (!tracksNode.isValid())
     return;
 
@@ -424,10 +425,10 @@ void ArrangerComponent::paintTracks(juce::Graphics &g) {
 
     // Track name and status indicators
     auto track = tracksNode.getChild(i);
-    auto trackName = track[ProjectState::PROP_NAME].toString();
-    bool isMuted = track[ProjectState::PROP_MUTE];
-    bool isSoloed = track[ProjectState::PROP_SOLO];
-    bool isArmed = track[ProjectState::PROP_ARMED];
+    auto trackName = track[zenith::ProjectState::PROP_NAME].toString();
+    bool isMuted = track[zenith::ProjectState::PROP_MUTE];
+    bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
+    bool isArmed = track[zenith::ProjectState::PROP_ARMED];
 
     int textX = 10;
 
@@ -491,7 +492,7 @@ void ArrangerComponent::paintClips(juce::Graphics &g) {
       // Get clip name from ProjectState
       auto [track, clip] = projectState.findClip(clipView.clipId);
       if (clip.isValid()) {
-        auto clipName = clip[ProjectState::PROP_NAME].toString();
+        auto clipName = clip[zenith::ProjectState::PROP_NAME].toString();
         g.drawText(clipName, textBounds.toNearestInt(),
                    juce::Justification::centredLeft, true);
       }
@@ -561,10 +562,10 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
           // Find track index
           int trackIndex = 0;
           auto tracksNode =
-              projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+              projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
           if (tracksNode.isValid()) {
             for (const auto &track : tracksNode) {
-              if (track[ProjectState::PROP_ID].toString() == view->trackId)
+              if (track[zenith::ProjectState::PROP_ID].toString() == view->trackId)
                 break;
               trackIndex++;
             }
@@ -620,11 +621,11 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
 
         // Update track (if changed)
         auto tracksNode =
-            projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+            projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
         if (tracksNode.isValid() &&
             newTrackIndex < tracksNode.getNumChildren()) {
           auto newTrack = tracksNode.getChild(newTrackIndex);
-          view->trackId = newTrack[ProjectState::PROP_ID].toString();
+          view->trackId = newTrack[zenith::ProjectState::PROP_ID].toString();
         }
       }
     }
@@ -737,9 +738,9 @@ juce::String ArrangerComponent::getTooltip() {
   if (clip != nullptr) {
     auto [track, clipNode] = projectState.findClip(clip->clipId);
     if (clipNode.isValid()) {
-      auto clipName = clipNode[ProjectState::PROP_NAME].toString();
-      auto startBeats = clipNode[ProjectState::PROP_START_BEATS].toString();
-      auto lengthBeats = clipNode[ProjectState::PROP_LENGTH_BEATS].toString();
+      auto clipName = clipNode[zenith::ProjectState::PROP_NAME].toString();
+      auto startBeats = clipNode[zenith::ProjectState::PROP_START_BEATS].toString();
+      auto lengthBeats = clipNode[zenith::ProjectState::PROP_LENGTH_BEATS].toString();
       return clipName + " (" + startBeats + " beats, " + lengthBeats +
              " beats)";
     }
@@ -756,8 +757,12 @@ void ArrangerComponent::mouseDoubleClick(const juce::MouseEvent &e) {
   if (clip == nullptr) {
     // Double-clicked empty area - create clip
     createClipAtPoint(e.position);
+  } else {
+    // Double-clicked existing clip - trigger callback
+    if (onClipDoubleClicked) {
+      onClipDoubleClicked(clip->trackId, clip->clipId);
+    }
   }
-  // else: could open piano roll in future
 }
 
 void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
@@ -794,7 +799,7 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     firstVisibleTrackIndex -= static_cast<int>(wheel.deltaY * 2.0);
 
     auto tracksNode =
-        projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+        projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
     int maxTrackIndex =
         tracksNode.isValid() ? tracksNode.getNumChildren() - 1 : 0;
 
@@ -816,7 +821,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
 
   // Tracks
   auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (tracksNode.isValid()) {
     int numTracks = tracksNode.getNumChildren();
     float width = (float)bounds.getWidth();
@@ -865,10 +870,10 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
 
       // Track name and status indicators
       auto track = tracksNode.getChild(i);
-      juce::String name = track[ProjectState::PROP_NAME].toString();
-      bool isMuted = track[ProjectState::PROP_MUTE];
-      bool isSoloed = track[ProjectState::PROP_SOLO];
-      bool isArmed = track[ProjectState::PROP_ARMED];
+      juce::String name = track[zenith::ProjectState::PROP_NAME].toString();
+      bool isMuted = track[zenith::ProjectState::PROP_MUTE];
+      bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
+      bool isArmed = track[zenith::ProjectState::PROP_ARMED];
 
       float textX = 10.0f;
       float indicatorY = y + 14.0f; // Center vertically relative to text roughly
@@ -924,7 +929,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
         if (clipRect.width() > 20.0f) {
             auto [track, clip] = projectState.findClip(clipView.clipId);
             if (clip.isValid()) {
-                juce::String name = clip[ProjectState::PROP_NAME].toString();
+                juce::String name = clip[zenith::ProjectState::PROP_NAME].toString();
                 SkFont font;
                 font.setSize(12.0f);
                 font.setEdging(SkFont::Edging::kAntiAlias);
@@ -1044,3 +1049,183 @@ bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
   return false;
 }
 
+//==============================================================================
+// DragAndDropTarget Interface
+//==============================================================================
+
+bool ArrangerComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details)
+{
+    // Check if this is a browser drag
+    juce::String description = details.description.toString();
+    
+    if (zenith::BrowserDragSource::isBrowserDrag(description))
+    {
+        auto type = zenith::BrowserDragSource::getTypeFromDescription(description);
+        
+        // Accept audio files, MIDI files, instruments, and plugins
+        return type == zenith::BrowserItemType::AudioFile ||
+               type == zenith::BrowserItemType::MidiFile ||
+               type == zenith::BrowserItemType::Instrument ||
+               type == zenith::BrowserItemType::Plugin;
+    }
+    
+    return false;
+}
+
+void ArrangerComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details)
+{
+    juce::ignoreUnused(details);
+    isDropTargetActive_ = true;
+    repaint();
+}
+
+void ArrangerComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails& details)
+{
+    juce::ignoreUnused(details);
+    isDropTargetActive_ = false;
+    dropTargetTrackIndex_ = -1;
+    repaint();
+}
+
+void ArrangerComponent::itemDragMove(const juce::DragAndDropTarget::SourceDetails& details)
+{
+    // Calculate drop position
+    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+    
+    dropTargetTrackIndex_ = yToTrackIndex(localPos.y);
+    dropTargetBeats_ = snapToGrid(xToBeats(localPos.x));
+    
+    repaint();
+}
+
+void ArrangerComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& details)
+{
+    isDropTargetActive_ = false;
+    
+    // Parse drag description to get item info
+    juce::String description = details.description.toString();
+    
+    zenith::BrowserItemType itemType;
+    juce::String itemId;
+    juce::String itemName;
+    
+    if (!zenith::BrowserDragSource::parseDragDescription(description, itemType, itemId, itemName))
+    {
+        DBG("ArrangerComponent: Drop failed - could not parse drag description");
+        dropTargetTrackIndex_ = -1;
+        repaint();
+        return;
+    }
+    
+    // Calculate drop position
+    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+    int trackIndex = yToTrackIndex(localPos.y);
+    double dropBeats = snapToGrid(xToBeats(localPos.x));
+    
+    DBG("ArrangerComponent: Dropped " + itemName + " at track " + 
+        juce::String(trackIndex) + ", beat " + juce::String(dropBeats));
+    
+    // Get or create target track
+    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+    juce::String targetTrackId;
+    
+    if (tracksNode.isValid() && trackIndex >= 0 && trackIndex < tracksNode.getNumChildren())
+    {
+        // Use existing track
+        auto track = tracksNode.getChild(trackIndex);
+        targetTrackId = track[zenith::ProjectState::PROP_ID].toString();
+    }
+    else
+    {
+        // Create new track for the dropped item
+        bool isMidiItem = itemType == zenith::BrowserItemType::MidiFile ||
+                          itemType == zenith::BrowserItemType::Instrument;
+        
+        targetTrackId = projectState.createTrack(
+            isMidiItem ? "midi" : "audio",
+            itemName,
+            "Drop new track"
+        );
+        
+        DBG("ArrangerComponent: Created new track: " + targetTrackId);
+    }
+    
+    if (targetTrackId.isEmpty())
+    {
+        DBG("ArrangerComponent: Drop failed - no target track");
+        dropTargetTrackIndex_ = -1;
+        repaint();
+        return;
+    }
+    
+    // Handle different item types
+    switch (itemType)
+    {
+        case zenith::BrowserItemType::AudioFile:
+        {
+            // Create audio clip with the file
+            juce::File audioFile(itemId);
+            double clipLength = 4.0; // Default, will be updated when file loads
+            
+            juce::String clipId = projectState.createEmptyClip(
+                targetTrackId, dropBeats, clipLength, false, 
+                audioFile.getFileNameWithoutExtension(),
+                "Drop audio file"
+            );
+            
+            // Set the audio file path on the clip
+            auto [track, clip] = projectState.findClip(clipId);
+            if (clip.isValid())
+            {
+                clip.setProperty(zenith::ProjectState::PROP_AUDIO_FILE, audioFile.getFullPathName(), 
+                                 &projectState.getUndoManager());
+            }
+            
+            DBG("ArrangerComponent: Created audio clip from " + audioFile.getFileName());
+            break;
+        }
+        
+        case zenith::BrowserItemType::MidiFile:
+        {
+            // Create MIDI clip
+            juce::File midiFile(itemId);
+            
+            juce::String clipId = projectState.createEmptyClip(
+                targetTrackId, dropBeats, 4.0, true,
+                midiFile.getFileNameWithoutExtension(),
+                "Drop MIDI file"
+            );
+            
+            DBG("ArrangerComponent: Created MIDI clip from " + midiFile.getFileName());
+            break;
+        }
+        
+        case zenith::BrowserItemType::Instrument:
+        {
+            // Create MIDI clip and load instrument
+            juce::String clipId = projectState.createEmptyClip(
+                targetTrackId, dropBeats, 4.0, true,
+                itemName,
+                "Drop instrument"
+            );
+            
+            DBG("ArrangerComponent: Created clip for instrument " + itemName);
+            break;
+        }
+        
+        case zenith::BrowserItemType::Plugin:
+        {
+            DBG("ArrangerComponent: Would load plugin " + itemName);
+            break;
+        }
+        
+        default:
+            DBG("ArrangerComponent: Unhandled drop type");
+            break;
+    }
+    
+    dropTargetTrackIndex_ = -1;
+    repaint();
+}
+
+} // namespace zenith

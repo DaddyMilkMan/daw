@@ -23,10 +23,10 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 // ============================================================================
-// SkiaRenderer Implementation
+// SkiaOpenGLRenderer Implementation
 // ============================================================================
 
-SkiaRenderer::SkiaRenderer(juce::Component* componentToAttach) 
+SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component* componentToAttach) 
     : targetComponent_(componentToAttach)
 {
     // Attach OpenGL context to this component
@@ -37,13 +37,13 @@ SkiaRenderer::SkiaRenderer(juce::Component* componentToAttach)
     }
 }
 
-SkiaRenderer::~SkiaRenderer() {
+SkiaOpenGLRenderer::~SkiaOpenGLRenderer() {
     surface_.reset();
     grContext_.reset();
     openGLContext_.detach();
 }
 
-void SkiaRenderer::newOpenGLContextCreated() {
+void SkiaOpenGLRenderer::newOpenGLContextCreated() {
     auto glInterface = GrGLMakeNativeInterface();
     grContext_ = GrDirectContexts::MakeGL(glInterface);
     
@@ -56,7 +56,7 @@ void SkiaRenderer::newOpenGLContextCreated() {
     recreateSurface();
 }
 
-void SkiaRenderer::renderOpenGL() {
+void SkiaOpenGLRenderer::renderOpenGL() {
     if (!contextInitialized_ || !grContext_) {
         return;
     }
@@ -87,7 +87,7 @@ void SkiaRenderer::renderOpenGL() {
     skiaCanvas_ = nullptr;
 }
 
-void SkiaRenderer::openGLContextClosing() {
+void SkiaOpenGLRenderer::openGLContextClosing() {
     if (surface_) {
         surface_.reset();
     }
@@ -97,7 +97,7 @@ void SkiaRenderer::openGLContextClosing() {
     contextInitialized_ = false;
 }
 
-void SkiaRenderer::recreateSurface() {
+void SkiaOpenGLRenderer::recreateSurface() {
     if (!grContext_) {
         return;
     }
@@ -157,7 +157,7 @@ void SkiaRenderer::recreateSurface() {
 // ============================================================================
 
 SkiaMainWindowIntegration::SkiaMainWindowIntegration() 
-    : SkiaRenderer(this)
+    : SkiaOpenGLRenderer(this)
 {
 }
 

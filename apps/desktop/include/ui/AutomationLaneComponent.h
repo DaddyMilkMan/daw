@@ -58,7 +58,7 @@ public:
      * @param trackId Track identifier
      * @param paramId Parameter identifier ("volume", "pan", or "mute")
      */
-    AutomationLaneComponent(ProjectState& state,
+    AutomationLaneComponent(zenith::ProjectState& state,
                            const juce::String& trackId,
                            const juce::String& paramId);
 
@@ -148,7 +148,7 @@ private:
     // Data Binding
     //==========================================================================
 
-    ProjectState& projectState;
+    zenith::ProjectState& projectState;
     juce::String trackId;
     juce::String paramId;
     juce::ValueTree envelopeNode;  // Cached reference to automation envelope

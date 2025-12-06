@@ -4,7 +4,6 @@
  */
 
 #include "../../include/ui/MixerComponent.h"
-#include "../rendering/SkiaContextManager.h"
 #include "../ui/ZenithLookAndFeel.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -18,7 +17,7 @@
 #include "../ui/skia/SkiaTheme.h"
 
 //==============================================================================
-MixerComponent::MixerComponent(ProjectState &ps) : projectState(ps) {
+MixerComponent::MixerComponent(zenith::ProjectState &ps) : projectState(ps) {
   // Listen to the entire state tree for changes
   projectState.getState().addListener(this);
 
@@ -198,28 +197,30 @@ void MixerComponent::resized() {
     auto area = strip->bounds;
 
     // 1. Track Name (Top)
-    if (strip->nameLabel)
-      strip->nameLabel->setBounds(area.removeFromTop(20));
+    auto nameArea = area.removeFromTop(20);
+#ifndef ZENITH_USE_SKIA
+    if (strip->nameLabel) strip->nameLabel->setBounds(nameArea);
+#endif
 
-    // 2. Volume Slider (Vertical)
-    auto volumeArea = area.removeFromTop(area.getHeight() - 100);
-    if (strip->volumeSlider)
-      strip->volumeSlider->setBounds(
-          volumeArea.reduced(ZenithLookAndFeel::Spacing::s, 0));
+    // 2. Arm Button (Below Name)
+    auto armArea = area.removeFromTop(25);
+    if (strip->armButton)
+        strip->armButton->setBounds(armArea.reduced(10, 2));
 
-    // 3. Pan Slider (Knob)
-    auto panArea = area.removeFromTop(60);
-    if (strip->panSlider)
-      strip->panSlider->setBounds(
-          panArea.reduced(ZenithLookAndFeel::Spacing::s));
-
-    // 4. Mute/Solo Buttons (Bottom)
-    auto buttonArea = area.removeFromBottom(40);
+    // 5. Mute/Solo Buttons (Bottom)
+    auto buttonArea = area.removeFromBottom(30);
     auto muteArea = buttonArea.removeFromLeft(buttonArea.getWidth() / 2);
-    if (strip->muteButton)
-      strip->muteButton->setBounds(muteArea.reduced(2));
-    if (strip->soloButton)
-      strip->soloButton->setBounds(buttonArea.reduced(2));
+    if (strip->muteButton) strip->muteButton->setBounds(muteArea.reduced(2));
+    if (strip->soloButton) strip->soloButton->setBounds(buttonArea.reduced(2));
+
+    // 4. Pan Slider (Above Buttons)
+    auto panArea = area.removeFromBottom(60);
+    if (strip->panSlider)
+        strip->panSlider->setBounds(panArea.reduced(ZenithLookAndFeel::Spacing::s));
+
+    // 3. Volume Slider (Remaining Middle)
+    if (strip->volumeSlider)
+        strip->volumeSlider->setBounds(area.reduced(ZenithLookAndFeel::Spacing::s, 0));
 
     x += localStripWidth + localStripSpacing;
   }
@@ -231,11 +232,11 @@ void MixerComponent::valueTreePropertyChanged(
     juce::ValueTree &treeWhosePropertyHasChanged,
     const juce::Identifier &property) {
   // Check if this is a track node
-  if (treeWhosePropertyHasChanged.getType() != ProjectState::ID_TRACK)
+  if (treeWhosePropertyHasChanged.getType() != zenith::ProjectState::ID_TRACK)
     return;
 
   // Get track ID
-  auto trackId = treeWhosePropertyHasChanged[ProjectState::PROP_ID].toString();
+  auto trackId = treeWhosePropertyHasChanged[zenith::ProjectState::PROP_ID].toString();
 
   if (trackId.isEmpty())
     return;
@@ -247,12 +248,12 @@ void MixerComponent::valueTreePropertyChanged(
     return;
 
   // Update the strip from state (only if the property changed is relevant)
-  if (property == ProjectState::PROP_NAME ||
-      property == ProjectState::PROP_VOLUME ||
-      property == ProjectState::PROP_PAN ||
-      property == ProjectState::PROP_MUTE ||
-      property == ProjectState::PROP_SOLO ||
-      property == ProjectState::PROP_ARMED) {
+  if (property == zenith::ProjectState::PROP_NAME ||
+      property == zenith::ProjectState::PROP_VOLUME ||
+      property == zenith::ProjectState::PROP_PAN ||
+      property == zenith::ProjectState::PROP_MUTE ||
+      property == zenith::ProjectState::PROP_SOLO ||
+      property == zenith::ProjectState::PROP_ARMED) {
     updatingFromState = true;
     updateTrackStripFromState(*strip, treeWhosePropertyHasChanged);
     updatingFromState = false;
@@ -262,12 +263,31 @@ void MixerComponent::valueTreePropertyChanged(
 void MixerComponent::valueTreeChildAdded(
     juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) {
   // Check if a track was added
-  if (parentTree.getType() == ProjectState::ID_TRACKS &&
-      childWhichHasBeenAdded.getType() == ProjectState::ID_TRACK) {
-    // Rebuild all strips
-    rebuildTrackStrips();
-    resized();
-    repaint();
+  if (parentTree.getType() == zenith::ProjectState::ID_TRACKS &&
+      childWhichHasBeenAdded.getType() == zenith::ProjectState::ID_TRACK) {
+    
+    // ROAST FIX #3: Incremental update instead of full rebuild
+    // Find where to insert the new strip
+    int index = parentTree.indexOf(childWhichHasBeenAdded);
+    
+    if (index >= 0) {
+        auto strip = createTrackStrip(childWhichHasBeenAdded);
+        if (strip) {
+            // Ensure index is valid for vector
+            index = juce::jmin(index, static_cast<int>(trackStrips.size()));
+            trackStrips.insert(trackStrips.begin() + index, std::move(strip));
+            
+            DBG("MixerComponent: Incrementally added track strip at index " + juce::String(index));
+            
+            resized();
+            repaint();
+        }
+    } else {
+        // Fallback if index not found (shouldn't happen)
+        rebuildTrackStrips();
+        resized();
+        repaint();
+    }
   }
 }
 
@@ -275,12 +295,25 @@ void MixerComponent::valueTreeChildRemoved(
     juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenRemoved,
     int indexFromWhichChildWasRemoved) {
   // Check if a track was removed
-  if (parentTree.getType() == ProjectState::ID_TRACKS &&
-      childWhichHasBeenRemoved.getType() == ProjectState::ID_TRACK) {
-    // Rebuild all strips
-    rebuildTrackStrips();
-    resized();
-    repaint();
+  if (parentTree.getType() == zenith::ProjectState::ID_TRACKS &&
+      childWhichHasBeenRemoved.getType() == zenith::ProjectState::ID_TRACK) {
+    
+    // ROAST FIX #3: Incremental update instead of full rebuild
+    if (indexFromWhichChildWasRemoved >= 0 && 
+        indexFromWhichChildWasRemoved < static_cast<int>(trackStrips.size())) {
+        
+        trackStrips.erase(trackStrips.begin() + indexFromWhichChildWasRemoved);
+        
+        DBG("MixerComponent: Incrementally removed track strip at index " + juce::String(indexFromWhichChildWasRemoved));
+        
+        resized();
+        repaint();
+    } else {
+        // Fallback if index invalid
+        rebuildTrackStrips();
+        resized();
+        repaint();
+    }
   }
 }
 
@@ -288,7 +321,7 @@ void MixerComponent::valueTreeChildOrderChanged(
     juce::ValueTree &parentTreeWhoseChildrenHaveMoved, int oldIndex,
     int newIndex) {
   // If tracks were reordered, rebuild
-  if (parentTreeWhoseChildrenHaveMoved.getType() == ProjectState::ID_TRACKS) {
+  if (parentTreeWhoseChildrenHaveMoved.getType() == zenith::ProjectState::ID_TRACKS) {
     rebuildTrackStrips();
     resized();
     repaint();
@@ -305,7 +338,7 @@ void MixerComponent::rebuildTrackStrips() {
 
   // Get tracks node
   auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
 
   if (!tracksNode.isValid())
     return;
@@ -314,7 +347,7 @@ void MixerComponent::rebuildTrackStrips() {
   for (int i = 0; i < tracksNode.getNumChildren(); ++i) {
     auto trackNode = tracksNode.getChild(i);
 
-    if (trackNode.getType() != ProjectState::ID_TRACK)
+    if (trackNode.getType() != zenith::ProjectState::ID_TRACK)
       continue;
 
     auto strip = createTrackStrip(trackNode);
@@ -332,11 +365,71 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   auto strip = std::make_unique<TrackStrip>();
 
   // Get track info
-  strip->trackId = trackNode[ProjectState::PROP_ID].toString();
-  strip->trackName = trackNode[ProjectState::PROP_NAME].toString();
+  strip->trackId = trackNode[zenith::ProjectState::PROP_ID].toString();
+  strip->trackName = trackNode[zenith::ProjectState::PROP_NAME].toString();
 
   if (strip->trackId.isEmpty())
     return nullptr;
+
+#ifdef ZENITH_USE_SKIA
+  // --- SKIA CONTROLS ---
+
+  // Volume Slider (Vertical)
+  strip->volumeSlider = std::make_unique<zenith::ZenithSlider>("Vol");
+  strip->volumeSlider->setRange(0.0, 1.0);
+  strip->volumeSlider->setValue(trackNode[zenith::ProjectState::PROP_VOLUME], false);
+  
+  // Capture raw pointer to slider safely since the slider owns the callback but we need its value
+  auto* volSlider = strip->volumeSlider.get();
+  strip->volumeSlider->onValueChange = [this, trackId = strip->trackId, volSlider]() {
+    if (!updatingFromState) onVolumeChanged(trackId, volSlider->getValue());
+  };
+  addAndMakeVisible(*strip->volumeSlider);
+
+  // Pan Knob
+  strip->panSlider = std::make_unique<zenith::ZenithKnob>("Pan");
+  strip->panSlider->setRange(-1.0, 1.0);
+  // Display range not supported on ZenithKnob
+  strip->panSlider->setValue(trackNode[zenith::ProjectState::PROP_PAN], false);
+  
+  auto* panKnob = strip->panSlider.get();
+  strip->panSlider->onValueChange = [this, trackId = strip->trackId, panKnob]() {
+    if (!updatingFromState) onPanChanged(trackId, panKnob->getValue());
+  };
+  addAndMakeVisible(*strip->panSlider);
+
+  // Mute Button
+  strip->muteButton = std::make_unique<zenith::ZenithButton>("M");
+  strip->muteButton->setToggleable(true);
+  strip->muteButton->setToggleState(trackNode[zenith::ProjectState::PROP_MUTE], false);
+  strip->muteButton->setButtonStyle(zenith::ZenithButton::Danger); // Red when muted? Or standard?
+  strip->muteButton->onClick = [this, trackId = strip->trackId, btn = strip->muteButton.get()]() {
+    if (!updatingFromState) onMuteClicked(trackId, btn->getToggleState());
+  };
+  addAndMakeVisible(*strip->muteButton);
+
+  // Solo Button
+  strip->soloButton = std::make_unique<zenith::ZenithButton>("S");
+  strip->soloButton->setToggleable(true);
+  strip->soloButton->setToggleState(trackNode[zenith::ProjectState::PROP_SOLO], false);
+  strip->soloButton->setButtonStyle(zenith::ZenithButton::Warning); // Yellow/Amber
+  strip->soloButton->onClick = [this, trackId = strip->trackId, btn = strip->soloButton.get()]() {
+    if (!updatingFromState) onSoloClicked(trackId, btn->getToggleState());
+  };
+  addAndMakeVisible(*strip->soloButton);
+
+  // Arm Button
+  strip->armButton = std::make_unique<zenith::ZenithButton>("R");
+  strip->armButton->setToggleable(true);
+  strip->armButton->setToggleState(trackNode[zenith::ProjectState::PROP_ARMED], false);
+  strip->armButton->setButtonStyle(zenith::ZenithButton::Danger); // Red
+  strip->armButton->onClick = [this, trackId = strip->trackId, btn = strip->armButton.get()]() {
+    if (!updatingFromState) onArmClicked(trackId, btn->getToggleState());
+  };
+  addAndMakeVisible(*strip->armButton);
+
+#else
+  // --- JUCE CONTROLS ---
 
   // Create name label
   strip->nameLabel = std::make_unique<juce::Label>();
@@ -355,7 +448,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   strip->volumeSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50,
                                        20);
   strip->volumeSlider->setRange(0.0, 1.0, 0.01);
-  strip->volumeSlider->setValue(trackNode[ProjectState::PROP_VOLUME],
+  strip->volumeSlider->setValue(trackNode[zenith::ProjectState::PROP_VOLUME],
                                 juce::dontSendNotification);
   // Capture trackId by value for the lambda
   strip->volumeSlider->onValueChange = [this, trackId = strip->trackId,
@@ -370,7 +463,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   strip->panSlider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
   strip->panSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
   strip->panSlider->setRange(-1.0, 1.0, 0.01);
-  strip->panSlider->setValue(trackNode[ProjectState::PROP_PAN],
+  strip->panSlider->setValue(trackNode[zenith::ProjectState::PROP_PAN],
                              juce::dontSendNotification);
   strip->panSlider->onValueChange = [this, trackId = strip->trackId,
                                      slider = strip->panSlider.get()]() {
@@ -382,7 +475,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   // Create mute button
   strip->muteButton = std::make_unique<juce::ToggleButton>("M");
   strip->muteButton->setClickingTogglesState(true);
-  strip->muteButton->setToggleState(trackNode[ProjectState::PROP_MUTE],
+  strip->muteButton->setToggleState(trackNode[zenith::ProjectState::PROP_MUTE],
                                     juce::dontSendNotification);
   strip->muteButton->onClick = [this, trackId = strip->trackId,
                                 button = strip->muteButton.get()]() {
@@ -397,7 +490,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   // Create solo button
   strip->soloButton = std::make_unique<juce::ToggleButton>("S");
   strip->soloButton->setClickingTogglesState(true);
-  strip->soloButton->setToggleState(trackNode[ProjectState::PROP_SOLO],
+  strip->soloButton->setToggleState(trackNode[zenith::ProjectState::PROP_SOLO],
                                     juce::dontSendNotification);
   strip->soloButton->onClick = [this, trackId = strip->trackId,
                                 button = strip->soloButton.get()]() {
@@ -412,7 +505,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   // Create arm button
   strip->armButton = std::make_unique<juce::ToggleButton>("R");
   strip->armButton->setClickingTogglesState(true);
-  strip->armButton->setToggleState(trackNode[ProjectState::PROP_ARMED],
+  strip->armButton->setToggleState(trackNode[zenith::ProjectState::PROP_ARMED],
                                    juce::dontSendNotification);
   strip->armButton->onClick = [this, trackId = strip->trackId,
                                button = strip->armButton.get()]() {
@@ -423,6 +516,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
       juce::ToggleButton::textColourId,
       juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
   addAndMakeVisible(*strip->armButton);
+#endif
 
   return strip;
 }
@@ -430,46 +524,70 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
 void MixerComponent::updateTrackStripFromState(
     TrackStrip &strip, const juce::ValueTree &trackNode) {
   // Update track name
-  auto newName = trackNode[ProjectState::PROP_NAME].toString();
+  auto newName = trackNode[zenith::ProjectState::PROP_NAME].toString();
   if (newName != strip.trackName) {
     strip.trackName = newName;
+#ifndef ZENITH_USE_SKIA
     if (strip.nameLabel)
       strip.nameLabel->setText(newName, juce::dontSendNotification);
+#endif
+    // In Skia mode, we just redraw
+    repaint(); 
   }
 
   // Update volume slider
   if (strip.volumeSlider) {
-    float volume = trackNode[ProjectState::PROP_VOLUME];
+    float volume = trackNode[zenith::ProjectState::PROP_VOLUME];
     if (std::abs(strip.volumeSlider->getValue() - volume) > 0.001)
+#ifdef ZENITH_USE_SKIA
+      strip.volumeSlider->setValue(volume, false);
+#else
       strip.volumeSlider->setValue(volume, juce::dontSendNotification);
+#endif
   }
 
   // Update pan slider
   if (strip.panSlider) {
-    float pan = trackNode[ProjectState::PROP_PAN];
+    float pan = trackNode[zenith::ProjectState::PROP_PAN];
     if (std::abs(strip.panSlider->getValue() - pan) > 0.001)
+#ifdef ZENITH_USE_SKIA
+      strip.panSlider->setValue(pan, false);
+#else
       strip.panSlider->setValue(pan, juce::dontSendNotification);
+#endif
   }
 
   // Update mute button
   if (strip.muteButton) {
-    bool mute = trackNode[ProjectState::PROP_MUTE];
+    bool mute = trackNode[zenith::ProjectState::PROP_MUTE];
     if (strip.muteButton->getToggleState() != mute)
+#ifdef ZENITH_USE_SKIA
+      strip.muteButton->setToggleState(mute, false);
+#else
       strip.muteButton->setToggleState(mute, juce::dontSendNotification);
+#endif
   }
 
   // Update solo button
   if (strip.soloButton) {
-    bool solo = trackNode[ProjectState::PROP_SOLO];
+    bool solo = trackNode[zenith::ProjectState::PROP_SOLO];
     if (strip.soloButton->getToggleState() != solo)
+#ifdef ZENITH_USE_SKIA
+      strip.soloButton->setToggleState(solo, false);
+#else
       strip.soloButton->setToggleState(solo, juce::dontSendNotification);
+#endif
   }
 
   // Update arm button
   if (strip.armButton) {
-    bool armed = trackNode[ProjectState::PROP_ARMED];
+    bool armed = trackNode[zenith::ProjectState::PROP_ARMED];
     if (strip.armButton->getToggleState() != armed)
+#ifdef ZENITH_USE_SKIA
+      strip.armButton->setToggleState(armed, false);
+#else
       strip.armButton->setToggleState(armed, juce::dontSendNotification);
+#endif
   }
 }
 

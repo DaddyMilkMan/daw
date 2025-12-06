@@ -16,6 +16,8 @@
 #include "../../include/ui/ClipComponent.h"
 #include "../../include/ProjectState.h"
 
+using namespace zenith;
+
 #ifdef ZENITH_USE_SKIA
 #include "../../Source/ui/skia/SkiaTheme.h"
 #include <core/SkCanvas.h>

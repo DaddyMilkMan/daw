@@ -1,18 +1,17 @@
+
 /**
  * @file Engine.h
  * @brief Core audio engine for Zenith DAW
  *
- * CANONICAL IMPLEMENTATION: This is the authoritative Engine for Zenith.
- * Supersedes: src/audio/AudioEngine.*, src/juce-engine/,
- * VexelDAW-Native/Source/Audio/AudioEngine.*
+ * This is the authoritative Engine for Zenith.
  *
- * Phase 1-2 Complete:
+ * Features:
  * - RT-safe track mixdown with unified render path
- * - Lock-free clip snapshots (Phase 2A)
+ * - Lock-free clip snapshots
  * - Atomic playhead tracking with loop support
  * - AudioFilePool integration for audio file caching
- * - MIDI input routing and recording (Phase 2A/2C)
- * - Audio input recording (Phase 2D)
+ * - MIDI input routing and recording
+ * - Audio input recording
  * - Pre-allocated buffers (trackBuffers_, clipBuffer_)
  *
  * Manages:
@@ -46,16 +45,13 @@
 #include <vector>
 
 #include "EngineEvent.h"
+#include "../Source/dsp/Dither.h"
 
-// Flecs ECS Integration (optional but recommended)
-#include "ECSIntegrationExample.h"
 
 // Forward declarations
+namespace zenith {
 class ProjectState;
 class TrackAutomationSynchronizer;
-
-// Forward declarations for engine primitives
-namespace zenith {
 class Track;
 class Clip;
 class MixerChannel;
@@ -64,7 +60,7 @@ class PluginHost;
 class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
-} // namespace zenith
+class InstrumentRegistry;
 
 //==============================================================================
 /**
@@ -75,8 +71,8 @@ class AuxBus;
  * 1. Audio device I/O
  * 2. Transport (play/stop/record)
  * 3. Audio routing and mixing
- * 4. MIDI input routing (Phase 2A)
- * 5. Audio input recording (Phase 2D)
+ * 4. MIDI input routing
+ * 5. Audio input recording
  * 6. CPU usage monitoring
  */
 class Engine : public juce::AudioIODeviceCallback,
@@ -90,6 +86,11 @@ public:
    * @brief Get the plugin format manager
    */
   juce::AudioPluginFormatManager& getPluginFormatManager();
+
+  /**
+   * @brief Get the audio device manager
+   */
+  juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
 
   //==========================================================================
   // Initialization / Shutdown
@@ -188,7 +189,7 @@ public:
   void toggleRecording();
 
   //==========================================================================
-  // Real-time Event Queue (Phase 2 Refactor)
+  // Real-time Event Queue
   //==========================================================================
 
   /**
@@ -200,7 +201,7 @@ public:
   bool queueEvent(const zenith::EngineEvent& e);
 
   //==========================================================================
-  // Phase 1.3: Transport Position & Looping
+  // Transport Position & Looping
   //==========================================================================
 
   /**
@@ -249,6 +250,44 @@ public:
   juce::int64 getLoopEnd() const { return loopEndSamples_.load(); }
 
   //==========================================================================
+  // Plugin Delay Compensation (PDC)
+  //==========================================================================
+
+  /**
+   * @brief Get total plugin latency for a track in samples
+   * @param trackIndex Track index
+   * @return Total latency from all plugins in the track's chain
+   */
+  int getTrackLatency(int trackIndex) const;
+
+  /**
+   * @brief Get master bus total latency in samples
+   * @return Total latency from all master bus plugins
+   */
+  int getMasterLatency() const;
+
+  /**
+   * @brief Recalculate PDC for all tracks
+   * @note Call after adding/removing plugins or changing plugin latency
+   */
+  void recalculatePDC();
+
+  /**
+   * @brief Check if PDC is enabled
+   */
+  bool isPDCEnabled() const { return pdcEnabled_.load(); }
+
+  /**
+   * @brief Enable/disable PDC
+   */
+  void setPDCEnabled(bool enabled);
+
+  /**
+   * @brief Get maximum track latency (for PDC compensation)
+   */
+  int getMaxTrackLatency() const { return maxTrackLatency_.load(); }
+
+  //==========================================================================
   // Audio Device Management
   //==========================================================================
 
@@ -279,6 +318,17 @@ public:
   double getCpuUsage() const;
 
   //==========================================================================
+  // Instrument Registry
+  //==========================================================================
+
+  /**
+   * @brief Get the instrument registry
+   * @return Reference to the instrument registry
+   */
+  InstrumentRegistry& getInstrumentRegistry() { return *instrumentRegistry_; }
+  const InstrumentRegistry& getInstrumentRegistry() const { return *instrumentRegistry_; }
+
+  //==========================================================================
   // Track Management
   //==========================================================================
 
@@ -294,7 +344,7 @@ public:
    * @return Const reference to tracks vector
    * @note Use only from message thread; do NOT iterate from audio thread
    */
-  const std::vector<std::unique_ptr<zenith::Track>> &tracks() const noexcept;
+  const std::vector<std::shared_ptr<Track>> &tracks() const noexcept;
 
   /**
    * @brief Debug helper to create test tracks (message thread only)
@@ -315,10 +365,10 @@ public:
 
   /**
    * @brief Add a pre-created track to the engine
-   * @param track Unique pointer to track
+   * @param track Shared pointer to track
    * @note Message thread only; used by TrackStateSynchronizer
    */
-  void addTrack(std::unique_ptr<zenith::Track> track);
+  void addTrack(std::shared_ptr<Track> track);
 
   /**
    * @brief Remove a track from the engine
@@ -358,7 +408,7 @@ public:
    * @return Pointer to aux bus, or nullptr if invalid
    * @note Message thread only
    */
-  zenith::AuxBus *getAuxBus(int auxIndex) noexcept;
+  AuxBus *getAuxBus(int auxIndex) noexcept;
 
   /**
    * @brief Get aux bus meters
@@ -369,22 +419,22 @@ public:
   float getAuxBusPeakLevel(int auxIndex) const;
 
   //==========================================================================
-  // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+  // Mixer Control (MESSAGE THREAD ONLY)
   //==========================================================================
 
   /**
    * @brief Set track mixer controls (message thread only)
    * @note These methods update the engine Track objects directly
-   * @note In Phase 11, these are called by TrackStateSynchronizer
    */
   void setTrackVolume(int trackIndex, float volume);
   void setTrackPan(int trackIndex, float pan);
   void setTrackMute(int trackIndex, bool muted);
   void setTrackSolo(int trackIndex, bool solo);
   void setTrackArmed(int trackIndex, bool armed);
+  void setTrackInputChannel(int trackIndex, int channelIndex); // ROAST FIX #9
 
   //==========================================================================
-  // Phase 11: Metering (MESSAGE THREAD SAFE)
+  // Metering (MESSAGE THREAD SAFE)
   //==========================================================================
 
   /**
@@ -424,7 +474,7 @@ public:
   void resetPeakMeters();
 
   //==========================================================================
-  // Phase 1.2: Audio File Pool
+  // Audio File Pool
   //==========================================================================
 
   /**
@@ -432,17 +482,17 @@ public:
    * @return Reference to the audio file pool
    * @note Thread-safe; pool handles internal locking
    */
-  zenith::AudioFilePool &getAudioFilePool();
+  AudioFilePool &getAudioFilePool();
 
   /**
    * @brief Get the tempo map for beat/time conversions
    * @return Reference to TempoMap
    * @note Thread-safe; uses lock-free snapshot mechanism
    */
-  const zenith::TempoMap &getTempoMap() const noexcept;
+  const TempoMap &getTempoMap() const noexcept;
 
   //==========================================================================
-  // Plugin Hosting (Phase 3: VST3 hosting MVP)
+  // Plugin Hosting
   //==========================================================================
 
   /**
@@ -450,7 +500,7 @@ public:
    * @return Reference to PluginHost
    * @note Use only from message thread
    */
-  zenith::PluginHost &getPluginHost() noexcept;
+  PluginHost &getPluginHost() noexcept;
 
   /**
    * @brief Scan for plugins in default locations
@@ -464,38 +514,9 @@ public:
    * @return Reference to PluginEditorWindowManager
    * @note Use only from message thread
    */
-  zenith::PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
+  PluginEditorWindowManager &getPluginEditorWindowManager() noexcept;
 
-  /**
-   * @brief Get the instrument registry
-   * @return Reference to InstrumentRegistry
-   */
-  zenith::InstrumentRegistry& getInstrumentRegistry();
-
-  //==========================================================================
-  // Flecs ECS Integration (Optional, Coexists with Legacy Track/Clip)
-  //==========================================================================
-
-  /**
-   * @brief Get the ECS engine for entity-component system features
-   * @return Pointer to ECS engine, or nullptr if not initialized
-   * @note Use only from message thread for entity creation
-   * @note Audio thread can use cached queries (see ECSIntegrationExample.h)
-   * 
-   * Example usage:
-   *   auto* ecs = engine.getECSEngine();
-   *   if (ecs) {
-   *       auto track = ecs->createTrack("Piano", "track-1");
-   *   }
-   */
-  zenith::ECSEngine* getECSEngine() noexcept { return ecsEngine_.get(); }
-  
-  /**
-   * @brief Enable ECS integration (creates ECS world)
-   * @note Call this before using ECS features
-   * @note Safe to call multiple times (idempotent)
-   */
-  void enableECS();
+  // getInstrumentRegistry() is defined inline earlier in the file
 
   //==========================================================================
   // AudioIODeviceCallback interface (AUDIO THREAD)
@@ -543,7 +564,7 @@ public:
       const juce::AudioIODeviceCallbackContext &context) noexcept override;
 
   //==========================================================================
-  // Phase 2A: MidiInputCallback interface
+  // MidiInputCallback interface
   //==========================================================================
 
   /**
@@ -568,6 +589,29 @@ public:
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
                           int bitDepth, double durationInSeconds);
 
+    enum class ExportFormat {
+        WAV,
+        FLAC,
+        OGG
+    };
+
+    struct ExportOptions {
+        juce::File outputFile;
+        double sampleRate = 44100.0;
+        int bitDepth = 24;          // 8, 16, 24, 32
+        ExportFormat format = ExportFormat::WAV;
+        bool enableDither = true;
+        bool normalize = false;
+        double normalizeDb = -0.1;
+        double duration = 0.0;
+    };
+
+    /**
+     * @brief Advanced Project Export
+     * Supports WAV/FLAC/OGG, Dithering, Normalization, and 8-bit.
+     */
+    bool exportProject(const ExportOptions& options);
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
@@ -577,7 +621,11 @@ private:
    * @brief Process audio when playing
    * @note AUDIO THREAD - real-time safe!
    */
-  void processAudio(const float *const *inputChannelData, int numInputChannels,
+  /**
+   * @brief Process audio when playing
+   * @note AUDIO THREAD - real-time safe!
+   */
+  void processAudioBlock(const float *const *inputChannelData, int numInputChannels,
                     float *const *outputChannelData, int numOutputChannels,
                     int numSamples) noexcept;
 
@@ -591,7 +639,11 @@ private:
    * @brief Process audio recording (AUDIO THREAD)
    * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
    */
-  void processAudioRecording(const float *const *inputChannelData,
+  /**
+   * @brief Process audio recording (AUDIO THREAD)
+   * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
+   */
+  void captureAudioInput(const float *const *inputChannelData,
                              int numInputChannels, int numSamples) noexcept;
 
   //==========================================================================
@@ -610,7 +662,7 @@ private:
                                    double sampleRate);
 
   //==========================================================================
-  // Phase 2C: MIDI Recording Helpers (MESSAGE THREAD)
+  // MIDI Recording Helpers (MESSAGE THREAD)
   //==========================================================================
 
   /**
@@ -637,10 +689,23 @@ private:
   quantizeMidiSequence(const juce::MidiMessageSequence &input, double tempo,
                        double quantizeGrid);
 
+  /**
+   * @brief Drain MIDI record FIFO into recording buffers (lock-free)
+   * @note MESSAGE THREAD ONLY - Call this before baking clips
+   */
+  void drainMidiRecordFifo();
+
+  /**
+   * @brief Auto-detect project duration from clip end positions
+   * @return Duration in seconds (with 2s tail for reverb/delay)
+   * @note MESSAGE THREAD ONLY
+   */
+  double autoDetectProjectDuration() const;
+
   // Track management (message thread only)
   void prepareTracks(int samplesPerBlockExpected, double sampleRate);
 
-  // Phase 2A: MIDI input management (message thread only)
+  // MIDI input management (message thread only)
   void enableMidiInput();
   void disableMidiInput();
 
@@ -669,9 +734,17 @@ private:
    * @param playheadPosition Current playhead position in samples
    * @note MESSAGE THREAD - used for offline rendering only
    */
-  void renderBlock(juce::AudioBuffer<float> &outputBuffer, int numSamples,
+  void renderAudioGraph(juce::AudioBuffer<float>& outputBuffer, int numSamples,
                    juce::int64 playheadPosition,
                    const juce::MidiBuffer *incomingMidi = nullptr);
+
+    juce::AudioFormatManager formatManager;
+    zenith::dsp::Dither dither;
+    
+    void registerFormats();
+    
+    // Helper to apply normalization gain to a buffer
+    void applyNormalization(juce::AudioBuffer<float>& buffer, float maxPeak, float targetDb);
 
   //==========================================================================
   // Member Variables
@@ -692,39 +765,46 @@ private:
   mutable std::atomic<double> cpuUsage_{0.0};
   juce::int64 lastCpuCheckTime{0};
 
-  // Phase 1.3: Transport position tracking (atomic for RT-safe access)
+  // Transport position tracking (atomic for RT-safe access)
   std::atomic<juce::int64> playheadSamples_{0};
   std::atomic<bool> isLooping_{false};
   std::atomic<juce::int64> loopStartSamples_{0};
   std::atomic<juce::int64> loopEndSamples_{0}; // 0 = no loop end set
 
-  // Test tone generator (Phase 0 testing)
+  // Test tone generator
   double phase{0.0};
   std::atomic<bool> enableTestTone_{false};
 
   // Track container (message thread for modification)
-  std::vector<std::unique_ptr<zenith::Track>> tracks_;
+  // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot sharing
+  std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
+  // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for lifetime (safety)
   struct TrackSnapshot {
-    std::vector<zenith::Track *> tracks; // Raw pointers (non-owning)
+    std::vector<zenith::Track*> tracks; // Raw pointers for fast, lock-free iteration
+    std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
+
     TrackSnapshot() = default;
-    explicit TrackSnapshot(const std::vector<std::unique_ptr<zenith::Track>> &ownedTracks) {
+    explicit TrackSnapshot(const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks) {
       tracks.reserve(ownedTracks.size());
-      for (const auto &track : ownedTracks)
+      lifecycle.reserve(ownedTracks.size());
+      for (const auto &track : ownedTracks) {
         tracks.push_back(track.get());
+        lifecycle.push_back(track); // Increment refcount (Main Thread only)
+      }
     }
   };
 
-  std::shared_ptr<const TrackSnapshot> tracksSnapshot_;
-  juce::SpinLock snapshotLock_; // Protects the swap of the shared_ptr
+  // Lock-free snapshot mechanism
+  // Audio thread reads activeSnapshot_ (atomic raw pointer)
+  // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
+  std::atomic<TrackSnapshot*> activeSnapshot_{nullptr};
+  std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
+  std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
 
-  void updateTrackSnapshot() {
-    auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_);
-    const juce::SpinLock::ScopedLockType sl(snapshotLock_);
-    tracksSnapshot_ = newSnapshot;
-  }
+  void updateTrackSnapshot();
 
   // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for
   // access)
@@ -765,6 +845,27 @@ private:
   std::atomic<float> masterLevel_{0.0f};
   std::atomic<float> masterPeakLevel_{0.0f};
 
+  //==========================================================================
+  // Plugin Delay Compensation (PDC)
+  //==========================================================================
+  
+  std::atomic<bool> pdcEnabled_{true};
+  std::atomic<int> maxTrackLatency_{0};  // Maximum latency across all tracks
+  std::vector<int> trackLatencies_;       // Per-track latency values
+  std::vector<juce::AudioBuffer<float>> pdcDelayBuffers_;  // Delay buffers for PDC
+  std::vector<int> pdcDelayWritePos_;     // Write positions for circular buffers
+  int masterLatency_{0};                  // Master bus total latency
+  
+  void applyPDCDelay(juce::AudioBuffer<float>& buffer, int trackIndex, int delaySamples) noexcept;
+  
+  //==========================================================================
+  // Sample-Accurate Looping State
+  //==========================================================================
+  
+  // Sample-accurate loop: stores where in the buffer the loop wrap occurs
+  // -1 means no loop wrap in current buffer
+  std::atomic<int> loopWrapSampleOffset_{-1};
+
   // Phase 2A: MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
   zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO
@@ -774,13 +875,25 @@ private:
   juce::AbstractFifo commandFifo_{kCommandBufferSize};
   std::vector<zenith::EngineEvent> commandBuffer_{kCommandBufferSize};
 
-  // Phase 2A: MIDI recording state (per-track)
+  // Phase 2A: MIDI recording state (per-track) - LOCK-FREE USING FIFO
+  struct MidiRecordEvent {
+    juce::MidiMessage message;
+    int trackIndex;
+    juce::int64 timestampSamples;
+  };
+  
+  // Lock-free FIFO for MIDI recording events
+  static constexpr int kMidiRecordFifoSize = 4096;
+  juce::AbstractFifo midiRecordFifo_{kMidiRecordFifoSize};
+  std::vector<MidiRecordEvent> midiRecordBuffer_{kMidiRecordFifoSize};
+  
+  // Baked recordings (message thread only, after stopRecording)
   struct MidiRecordingBuffer {
     std::vector<juce::MidiMessageSequence> trackRecordings; // One per track
     juce::int64 recordingStartSamples = 0; // Playhead when recording started
   };
   MidiRecordingBuffer midiRecording_;
-  juce::CriticalSection midiRecordingLock_;
+  mutable juce::CriticalSection midiRecordingLock_;
 
   //==========================================================================
   // Phase 2D: Audio Recording Infrastructure
@@ -797,16 +910,23 @@ private:
     double sampleRate = 44100.0;
     juce::int64 recordingStartSamples = 0;
     int trackIndex = -1; // Which track this session belongs to
+    int inputChannelIndex = 0; // ROAST FIX #9: Which input channel to record from
   };
 
   // Active recording sessions (message thread creates, audio thread writes)
   std::vector<AudioRecordingSession> audioRecordingSessions_;
 
+  // ROAST FIX #4: Pre-prepared sessions to avoid blocking I/O on record start
+  std::vector<AudioRecordingSession> preppedSessions_;
+  juce::CriticalSection preppedSessionsLock_;
+  
+  // Helper to prepare recording asynchronously
+  void prepareRecordingForTrack(int trackIndex);
+
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};
 
-  // Flecs ECS Integration (optional, nullptr if not enabled)
-  std::unique_ptr<zenith::ECSEngine> ecsEngine_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };
+} // namespace zenith

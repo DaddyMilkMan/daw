@@ -19,6 +19,7 @@
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkBlurTypes.h>
+#include "RenderTree.h"
 
 namespace zenith {
 
@@ -330,6 +331,40 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
             canvas->drawRect(handleRect, glowPaint);
         }
     }
+}
+
+// ============================================================================
+// RENDER STATE CAPTURE
+// ============================================================================
+
+render::SliderRenderState SkiaSlider::captureRenderState() const {
+    render::SliderRenderState state;
+    
+    // Bounds
+    state.bounds = SkRect::MakeXYWH(
+        static_cast<float>(getX()),
+        static_cast<float>(getY()),
+        static_cast<float>(getWidth()),
+        static_cast<float>(getHeight())
+    );
+    
+    // Value
+    state.value = value_;
+    
+    // Interaction state
+    state.isHovered = isHovered();
+    state.isDragging = isDragging_;
+    
+    // Color
+    state.color = design::colors::CYAN;
+    if (valueColoring_) {
+        state.color = design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_);
+    }
+    
+    // Label text (pre-format for thread-safe rendering)
+    state.labelText = getDescription();
+    
+    return state;
 }
 
 } // namespace zenith

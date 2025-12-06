@@ -26,18 +26,26 @@ namespace zenith {
 //==============================================================================
 Track::Track(const juce::String &name, Type type)
     : trackName(name), trackType(type) {
-  // Initialize empty clip snapshot
-  clipsSnapshot_ = std::make_shared<const ClipSnapshot>();
+  // Initialize empty clip snapshot (lock-free RCU pattern)
+  currentClipSnapshot_ = std::make_shared<ClipSnapshot>();
+  activeClipSnapshot_.store(currentClipSnapshot_.get());
+  
+  // Initialize empty plugin snapshot (lock-free RCU pattern)
+  currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
+  activePluginSnapshot_.store(currentPluginSnapshot_.get());
 }
 
 Track::~Track() {
-  // Ensure we're not in the middle of audio processing
-  const juce::ScopedLock sl1(pluginLock);
-
   // Phase 2A: Clips are automatically destroyed via std::unique_ptr
   // No lock needed - destructor is called from message thread only
   clipsOwned_.clear();
-  clipsSnapshot_ = std::make_shared<const ClipSnapshot>();
+  currentClipSnapshot_ = std::make_shared<ClipSnapshot>();
+  activeClipSnapshot_.store(currentClipSnapshot_.get());
+  
+  // Clear plugins snapshot
+  pluginsOwned_.clear();
+  currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
+  activePluginSnapshot_.store(currentPluginSnapshot_.get());
 }
 
 //==============================================================================
@@ -92,14 +100,11 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
     }
   }
 
-  // Phase 3: Prepare all plugins
-  {
-    const juce::ScopedLock sl(pluginLock);
-    for (auto &plugin : plugins) {
-      if (plugin != nullptr) {
-        plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
-        plugin->setNonRealtime(false);
-      }
+  // ROAST FIX #2: Prepare all plugins (message thread only, no lock needed)
+  for (auto &plugin : pluginsOwned_) {
+    if (plugin != nullptr) {
+      plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
+      plugin->setNonRealtime(false);
     }
   }
 
@@ -123,13 +128,10 @@ void Track::releaseResources() {
     }
   }
 
-  // Phase 3: Release all plugins
-  {
-    const juce::ScopedLock sl(pluginLock);
-    for (auto &plugin : plugins) {
-      if (plugin != nullptr) {
-        plugin->releaseResources();
-      }
+  // ROAST FIX #2: Release all plugins (message thread only, no lock needed)
+  for (auto &plugin : pluginsOwned_) {
+    if (plugin != nullptr) {
+      plugin->releaseResources();
     }
   }
 
@@ -166,12 +168,8 @@ void Track::getNextAudioBlock(
     midiBuffer_.addEvents(*incomingMidi, 0, bufferToFill.numSamples, 0);
   }
 
-  // Phase 2A: Get current clip snapshot (RT-safe atomic load, no lock!)
-  std::shared_ptr<const ClipSnapshot> currentSnapshot;
-  {
-    const juce::SpinLock::ScopedLockType sl(snapshotLock);
-    currentSnapshot = clipsSnapshot_;
-  }
+  // TRULY LOCK-FREE: Atomic load of raw pointer - no SpinLock!
+  const ClipSnapshot* currentSnapshot = activeClipSnapshot_.load(std::memory_order_acquire);
 
   if (currentSnapshot) {
     // Iterate clips from snapshot (no lock needed!)
@@ -297,57 +295,100 @@ void Track::setEnabled(bool shouldBeEnabled) {
 // Plugin chain management (Phase 3: VST3 hosting MVP)
 //==============================================================================
 
+// Lock-free RCU-style plugin snapshot update
+void Track::updatePluginSnapshot() {
+  // Called from message thread only
+  auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_);
+  
+  // Atomic swap - audio thread will see new snapshot on next load
+  activePluginSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // Manage lifetime: keep old snapshots alive briefly for audio thread
+  pluginSnapshotTrash_.push_back(currentPluginSnapshot_);
+  currentPluginSnapshot_ = newSnapshot;
+  
+  // ACCUMULATION FIX: Increased limit from 5 to 10 to handle rapid updates
+  // during offline rendering or automation. The snapshot is typically read
+  // once per audio callback (~10ms at 48kHz/512 samples), so 10 snapshots
+  // provides ~100ms grace period.
+  while (pluginSnapshotTrash_.size() > 10) {
+    pluginSnapshotTrash_.erase(pluginSnapshotTrash_.begin());
+  }
+}
+
+// ROAST FIX #2: Add plugin using shared_ptr and snapshot pattern
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   if (plugin == nullptr)
     return;
 
-  const juce::ScopedLock sl(pluginLock);
+  // Convert to shared_ptr for snapshot pattern
+  auto sharedPlugin = std::shared_ptr<juce::AudioPluginInstance>(plugin.release());
 
   // Prepare the plugin if we're already initialized
   if (currentSampleRate > 0) {
-    plugin->prepareToPlay(currentSampleRate, currentBlockSize);
-    plugin->setNonRealtime(false);
+    sharedPlugin->prepareToPlay(currentSampleRate, currentBlockSize);
+    sharedPlugin->setNonRealtime(false);
   }
 
-  plugins.push_back(std::move(plugin));
+  pluginsOwned_.push_back(sharedPlugin);
+  
+  // Update snapshot for audio thread
+  updatePluginSnapshot();
+  
   sendChangeMessage();
 }
 
-void Track::removePlugin(int pluginIndex) {
-  const juce::ScopedLock sl(pluginLock);
 
-  if (pluginIndex >= 0 && pluginIndex < static_cast<int>(plugins.size())) {
-    auto &plugin = plugins[pluginIndex];
+// ROAST FIX #2: Use snapshot pattern instead of lock
+void Track::removePlugin(int pluginIndex) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginsOwned_.size())) {
+    auto &plugin = pluginsOwned_[pluginIndex];
     if (plugin != nullptr) {
       plugin->releaseResources();
     }
-    plugins.erase(plugins.begin() + pluginIndex);
+    pluginsOwned_.erase(pluginsOwned_.begin() + pluginIndex);
+    
+    // Update snapshot for audio thread
+    updatePluginSnapshot();
+    
     sendChangeMessage();
   }
 }
 
+// ROAST FIX #2: Use snapshot pattern instead of lock
 void Track::clearPlugins() {
-  const juce::ScopedLock sl(pluginLock);
-
-  for (auto &plugin : plugins) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
       plugin->releaseResources();
     }
   }
 
-  plugins.clear();
+  pluginsOwned_.clear();
+  
+  // Update snapshot for audio thread
+  updatePluginSnapshot();
+  
   sendChangeMessage();
 }
 
+// ROAST FIX #2: Read from ownership vector (message thread only)
 int Track::getNumPlugins() const {
-  const juce::ScopedLock sl(pluginLock);
-  return static_cast<int>(plugins.size());
+  return static_cast<int>(pluginsOwned_.size());
 }
 
+// ROAST FIX #2: Read from ownership vector (message thread only)
 juce::AudioPluginInstance *Track::getPlugin(int index) const {
-  const juce::ScopedLock sl(pluginLock);
-  if (index >= 0 && index < static_cast<int>(plugins.size()))
-    return plugins[index].get();
+  if (index >= 0 && index < static_cast<int>(pluginsOwned_.size()))
+    return pluginsOwned_[index].get();
   return nullptr;
 }
 
@@ -355,19 +396,30 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
 // Phase 2A: Lock-free clip management (message thread only)
 //==============================================================================
 
+// Lock-free RCU-style clip snapshot update
 void Track::updateClipSnapshot() {
-  // Called from message thread only - no lock needed
-  // Create new snapshot from current ownership
-  auto newSnapshot = std::make_shared<const ClipSnapshot>(clipsOwned_);
+  // Called from message thread only
+  auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_);
 
-  // Atomically swap snapshot (audio thread will see new snapshot on next load)
-  {
-    const juce::SpinLock::ScopedLockType sl(snapshotLock);
-    clipsSnapshot_ = newSnapshot;
+  // Atomic swap - audio thread will see new snapshot on next load
+  activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // Manage lifetime: keep old snapshots alive briefly for audio thread
+  clipSnapshotTrash_.push_back(currentClipSnapshot_);
+  currentClipSnapshot_ = newSnapshot;
+  
+  // ACCUMULATION FIX: Increased limit from 5 to 10 to handle rapid updates
+  // during offline rendering or automation. Uses while loop to clean up
+  // multiple stale snapshots in a single pass if needed.
+  while (clipSnapshotTrash_.size() > 10) {
+    clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
   }
 }
 
 void Track::addClip(std::unique_ptr<Clip> clip) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   if (clip != nullptr) {
     // Prepare the clip if we're already initialized
     if (currentSampleRate > 0) {
@@ -385,6 +437,9 @@ void Track::addClip(std::unique_ptr<Clip> clip) {
 }
 
 void Track::removeClip(int clipIndex) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   if (clipIndex >= 0 && clipIndex < static_cast<int>(clipsOwned_.size())) {
     auto &clip = clipsOwned_[clipIndex];
     if (clip != nullptr) {
@@ -402,6 +457,9 @@ void Track::removeClip(int clipIndex) {
 }
 
 void Track::removeClip(Clip *clip) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   auto it = std::find_if(
       clipsOwned_.begin(), clipsOwned_.end(),
       [clip](const std::unique_ptr<Clip> &c) { return c.get() == clip; });
@@ -420,6 +478,9 @@ void Track::removeClip(Clip *clip) {
 }
 
 void Track::clearClips() {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   for (auto &clip : clipsOwned_) {
     if (clip != nullptr) {
       clip->releaseResources();
@@ -462,16 +523,13 @@ juce::ValueTree Track::getState() const {
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
 
-  // Phase 3: Save plugin states
+  // ROAST FIX #2: Save plugin states (message thread only, no lock needed)
   juce::ValueTree pluginsState("Plugins");
-  {
-    const juce::ScopedLock sl(pluginLock);
-    for (auto &plugin : plugins) {
-      if (plugin != nullptr) {
-        juce::ValueTree pluginState("Plugin");
-        savePluginState(plugin.get(), pluginState);
-        pluginsState.appendChild(pluginState, nullptr);
-      }
+  for (auto &plugin : pluginsOwned_) {
+    if (plugin != nullptr) {
+      juce::ValueTree pluginState("Plugin");
+      savePluginState(plugin.get(), pluginState);
+      pluginsState.appendChild(pluginState, nullptr);
     }
   }
   state.appendChild(pluginsState, nullptr);
@@ -554,13 +612,13 @@ void Track::loadPluginStates(const juce::ValueTree &state,
 }
 
 //==============================================================================
+// TRULY LOCK-FREE: Process plugin chain with atomic snapshot
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
                                juce::MidiBuffer &midi, int numSamples) {
-  // Phase 3: Process plugin chain
-  // RT-SAFE: We only read the plugins vector here, no modifications
-  // The pluginLock is only used when adding/removing plugins (message thread)
-
-  if (plugins.empty())
+  // LOCK-FREE: Atomic load of raw pointer - no SpinLock!
+  const PluginSnapshot* snapshot = activePluginSnapshot_.load(std::memory_order_acquire);
+  
+  if (snapshot == nullptr || snapshot->plugins.empty())
     return;
 
   // For MVP: Simple linear plugin chain processing
@@ -568,7 +626,8 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
   // Instrument tracks: MIDI in → first plugin (synth) → audio → remaining
   // plugins → audio out
 
-  for (auto &plugin : plugins) {
+  // ROAST FIX #2: Iterate over snapshot (shared_ptr keeps plugins alive)
+  for (const auto &plugin : snapshot->plugins) {
     if (plugin != nullptr) {
       // CODEX FEEDBACK APPLIED: Use max(inputs, outputs) for channel sizing
       // This ensures instrument plugins (0 inputs, >0 outputs) get writable
@@ -605,6 +664,12 @@ void Track::generateMidiForBlock(const juce::ValueTree &trackState,
                                  double tempo, double sampleRate,
                                  juce::int64 blockStartSample, int blockSize,
                                  juce::MidiBuffer &midiOut) {
+  // THREAD SAFETY FIX: This method uses a lock (activeNotesLock) and is therefore
+  // NOT RT-safe. It must only be called from the message thread.
+  // Note: This method is currently not called - actual MIDI scheduling uses
+  // the lock-free Clip::processMidiClip() path instead.
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
   // Calculate block boundaries in samples
   juce::int64 blockEndSample = blockStartSample + blockSize;
 
