@@ -47,15 +47,8 @@ SkiaComponent::~SkiaComponent() {
 
 void SkiaComponent::paint(juce::Graphics& g) {
     juce::ignoreUnused(g);
-    // In our manual Skia integration, the parent (MainComponent) renders us 
-    // via drawSkia() into the OpenGL context.
-    // We should NOT paint anything here, otherwise we might overwrite the Skia output
-    // or draw a fallback error box on top of it.
-    
-    // Only draw fallback/debug if we are NOT in a Skia hierarchy or for debugging
-    #ifdef ZENITH_DEBUG_SKIA_FALLBACK
-        paintFallback(g);
-    #endif
+    // Skia components are rendered via drawSkia() by the parent renderer.
+    // No JUCE painting or fallback.
 }
 
 SkCanvas* SkiaComponent::getSkiaCanvas(juce::Graphics& g) {
@@ -65,28 +58,8 @@ SkCanvas* SkiaComponent::getSkiaCanvas(juce::Graphics& g) {
     return nullptr;
 }
 
-void SkiaComponent::paintFallback(juce::Graphics& g) {
-    // ARGUMENT #10: What should fallback rendering look like?
-    // - Viktor: "Red error box!"
-    // - Yuki: "Simple grey placeholder!"
-    // - Leo: "At least make it LOOK nice!"
-    // - RESULT: Styled placeholder (compromise)
-    
-    auto bounds = getLocalBounds();
-    
-    // Background
-    g.setColour(juce::Colour::fromRGBA(20, 20, 25, 255));
-    g.fillRect(bounds);
-    
-    // Border
-    g.setColour(juce::Colour::fromRGBA(100, 100, 100, 100));
-    g.drawRect(bounds, 1);
-    
-    // Text
-    g.setColour(juce::Colours::white);
-    g.setFont(12.0f);
-    g.drawText("Skia unavailable", bounds, juce::Justification::centred);
-}
+// paintFallback removed
+
 
 void SkiaComponent::applyGlow(SkPaint& paint, float intensity) {
     // Apply global glow intensity

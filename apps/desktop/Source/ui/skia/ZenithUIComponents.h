@@ -827,15 +827,26 @@ private:
 //==============================================================================
 /**
     Real-time Visualizer (Oscilloscope/Spectrum)
+    Now supports stereo display with left (cyan) and right (magenta) channels.
 */
 class ZenithVisualizer : public SkiaComponent {
 public:
   explicit ZenithVisualizer(ZenithPolySynthProcessor& p) : processor_(p) {
     juce::Timer::startTimerHz(60);
-    // Initialize display buffer
-    displayBuffer_.resize(4096, 0.0f);
-    tempBuffer_.resize(4096, 0.0f);
+    // Initialize display buffers for stereo
+    displayBufferL_.resize(4096, 0.0f);
+    displayBufferR_.resize(4096, 0.0f);
+    tempBufferL_.resize(4096, 0.0f);
+    tempBufferR_.resize(4096, 0.0f);
   }
+  
+  enum DisplayMode {
+    Stereo,       // Show both L (cyan) and R (magenta)
+    LissajousXY,  // X-Y display (stereo field visualization)
+    Mono          // Mixed mono display
+  };
+  
+  void setDisplayMode(DisplayMode mode) { displayMode_ = mode; repaint(); }
 
   void drawSkia(SkCanvas * const canvas) override {
 #ifdef ZENITH_USE_SKIA
@@ -856,58 +867,120 @@ public:
     paint.setStrokeWidth(1.0f);
     for (float x = 0; x < w; x += 40.0f) canvas->drawLine(x, 0, x, h, paint);
     for (float y = 0; y < h; y += 40.0f) canvas->drawLine(0, y, w, y, paint);
+    
+    // Center line
+    paint.setColor(SkColorSetARGB(40, 255, 255, 255));
+    canvas->drawLine(0, cy, w, cy, paint);
 
-    // Waveform
-    SkPath path;
-    path.moveTo(0, cy);
-
-    // Draw the latest N samples that fit the width
-    int numSamplesToDraw = (int)w; // 1 pixel per sample
-    int bufferSize = (int)displayBuffer_.size();
-
-    // Thread-safe read of write pointer
+    int numSamplesToDraw = (int)w;
+    int bufferSize = (int)displayBufferL_.size();
     int currentWritePtr = writePtr_.load(std::memory_order_acquire);
     int readPtr = (currentWritePtr - numSamplesToDraw + bufferSize) % bufferSize;
 
-    for (int x = 0; x < numSamplesToDraw; ++x) {
-      // Read sample from display buffer
-      float sample = displayBuffer_[(readPtr + x) % bufferSize];
-      float y = cy - sample * (h * 0.4f); // Scale amplitude
-      if (x == 0) path.moveTo((float)x, y);
-      else path.lineTo((float)x, y);
+    if (displayMode_ == Stereo || displayMode_ == Mono) {
+      // Left channel (Cyan)
+      SkPath pathL;
+      for (int x = 0; x < numSamplesToDraw; ++x) {
+        float sampleL = displayBufferL_[(readPtr + x) % bufferSize];
+        float y = (displayMode_ == Mono) 
+            ? cy - (sampleL + displayBufferR_[(readPtr + x) % bufferSize]) * 0.5f * (h * 0.4f)
+            : cy - sampleL * (h * 0.4f);
+        if (x == 0) pathL.moveTo((float)x, y);
+        else pathL.lineTo((float)x, y);
+      }
+
+      // Glow effect (Left)
+      paint.setStyle(SkPaint::kStroke_Style);
+      paint.setStrokeWidth(3.0f);
+      paint.setColor(SkColorSetRGB(0, 255, 255)); // Cyan
+      paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+      canvas->drawPath(pathL, paint);
+
+      // Sharp line (Left)
+      paint.setMaskFilter(nullptr);
+      paint.setStrokeWidth(2.0f);
+      paint.setColor(SkColorSetRGB(200, 255, 255));
+      canvas->drawPath(pathL, paint);
+      
+      // Right channel (Magenta) - Only in Stereo mode
+      if (displayMode_ == Stereo) {
+        SkPath pathR;
+        for (int x = 0; x < numSamplesToDraw; ++x) {
+          float sampleR = displayBufferR_[(readPtr + x) % bufferSize];
+          float y = cy - sampleR * (h * 0.4f);
+          if (x == 0) pathR.moveTo((float)x, y);
+          else pathR.lineTo((float)x, y);
+        }
+
+        // Glow effect (Right)
+        paint.setStrokeWidth(3.0f);
+        paint.setColor(SkColorSetRGB(255, 0, 255)); // Magenta
+        paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+        canvas->drawPath(pathR, paint);
+
+        // Sharp line (Right)
+        paint.setMaskFilter(nullptr);
+        paint.setStrokeWidth(2.0f);
+        paint.setColor(SkColorSetRGB(255, 200, 255));
+        canvas->drawPath(pathR, paint);
+      }
     }
-
-    // Glow effect
-    paint.setStyle(SkPaint::kStroke_Style);
-    paint.setStrokeWidth(3.0f);
-    paint.setColor(SkColorSetRGB(0, 255, 255)); // Cyan
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
-    canvas->drawPath(path, paint);
-
-    // Sharp line
-    paint.setMaskFilter(nullptr);
-    paint.setStrokeWidth(2.0f);
-    paint.setColor(SkColorSetRGB(200, 255, 255));
-    canvas->drawPath(path, paint);
+    else if (displayMode_ == LissajousXY) {
+      // X-Y stereo field display
+      float cx = w / 2.0f;
+      SkPath pathXY;
+      float scale = std::min(w, h) * 0.4f;
+      
+      for (int i = 0; i < numSamplesToDraw; ++i) {
+        float sampleL = displayBufferL_[(readPtr + i) % bufferSize];
+        float sampleR = displayBufferR_[(readPtr + i) % bufferSize];
+        float x = cx + sampleL * scale;
+        float y = cy - sampleR * scale;
+        if (i == 0) pathXY.moveTo(x, y);
+        else pathXY.lineTo(x, y);
+      }
+      
+      paint.setStyle(SkPaint::kStroke_Style);
+      paint.setStrokeWidth(2.0f);
+      paint.setColor(SkColorSetARGB(200, 100, 255, 200)); // Green-ish
+      paint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+      canvas->drawPath(pathXY, paint);
+      paint.setMaskFilter(nullptr);
+      canvas->drawPath(pathXY, paint);
+    }
+    
+    // Channel labels
+    if (displayMode_ == Stereo) {
+      SkFont font;
+      font.setSize(10.0f);
+      paint.setStyle(SkPaint::kFill_Style);
+      paint.setColor(SkColorSetRGB(0, 255, 255));
+      canvas->drawString("L", 5.0f, 15.0f, font, paint);
+      paint.setColor(SkColorSetRGB(255, 0, 255));
+      canvas->drawString("R", 20.0f, 15.0f, font, paint);
+    }
 #else
     juce::ignoreUnused(canvas);
 #endif
   }
 
   void timerCallback() override {
-    // Read from processor (audio thread writes to processor's internal buffer)
-    int numRead = processor_.readFromVisualizer(tempBuffer_.data(), (int)tempBuffer_.size());
+    // Read stereo data from processor
+    // For now, we read mono to both channels since processor pushes mono.
+    // Future: processor should push interleaved stereo or have separate L/R methods.
+    int numRead = processor_.readFromVisualizer(tempBufferL_.data(), (int)tempBufferL_.size());
     if (numRead > 0) {
-        int bufferSize = (int)displayBuffer_.size();
+        int bufferSize = (int)displayBufferL_.size();
         int currentWritePtr = writePtr_.load(std::memory_order_acquire);
 
-        // Write to ring buffer
+        // Write to ring buffer (currently mono duplicated to both channels)
+        // TODO: When processor supports stereo, read L and R separately
         for (int i = 0; i < numRead; ++i) {
-            displayBuffer_[currentWritePtr] = tempBuffer_[i];
+            displayBufferL_[currentWritePtr] = tempBufferL_[i];
+            displayBufferR_[currentWritePtr] = tempBufferL_[i]; // Duplicate for now
             currentWritePtr = (currentWritePtr + 1) % bufferSize;
         }
 
-        // Thread-safe update of write pointer
         writePtr_.store(currentWritePtr, std::memory_order_release);
         repaint();
     }
@@ -915,10 +988,14 @@ public:
 
 private:
   ZenithPolySynthProcessor& processor_;
-  std::vector<float> tempBuffer_;  // Non-atomic temp buffer for reading from processor
-  std::vector<float> displayBuffer_;  // Display buffer (thread-safe access via mutex or single-writer pattern)
-  std::atomic<int> writePtr_{0};  // Thread-safe write pointer
+  std::vector<float> tempBufferL_;
+  std::vector<float> tempBufferR_;
+  std::vector<float> displayBufferL_;
+  std::vector<float> displayBufferR_;
+  std::atomic<int> writePtr_{0};
+  DisplayMode displayMode_ = Stereo;
 };
+
 
 //==============================================================================
 /**

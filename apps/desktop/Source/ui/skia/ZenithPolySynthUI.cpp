@@ -38,17 +38,38 @@ ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
   recreateRenderer();
 
 #ifdef ZENITH_USE_SKIA
-  // Initialize Widgets
+  // ===== OSCILLATOR CONTROLS =====
+  addWidget<ZenithKnob>("OSC1", ZenithPolySynthProcessor::Osc1Wave);
+  addWidget<ZenithKnob>("OSC2", ZenithPolySynthProcessor::Osc2Wave);
+  addWidget<ZenithKnob>("OSC3", ZenithPolySynthProcessor::Osc3Wave);
+  addWidget<ZenithKnob>("MIX 1", ZenithPolySynthProcessor::Osc1Mix);
+  addWidget<ZenithKnob>("MIX 2", ZenithPolySynthProcessor::Osc2Mix);
+  addWidget<ZenithKnob>("MIX 3", ZenithPolySynthProcessor::Osc3Mix);
+  
+  // ===== FILTER CONTROLS =====
   addWidget<ZenithKnob>("CUTOFF", ZenithPolySynthProcessor::FilterCutoff);
   addWidget<ZenithKnob>("RES", ZenithPolySynthProcessor::FilterResonance);
-  addWidget<ZenithKnob>("ENV AMT", ZenithPolySynthProcessor::FilterEnvAmount);
-  addWidget<ZenithKnob>("SUB", ZenithPolySynthProcessor::SubOscLevel);
-  addWidget<ZenithKnob>("NOISE", ZenithPolySynthProcessor::NoiseLevel);
+  addWidget<ZenithKnob>("DRIVE", ZenithPolySynthProcessor::FilterDrive);
   
+  // ===== ENVELOPE CONTROLS =====
   addWidget<ZenithSlider>("A", ZenithPolySynthProcessor::AmpAttack);
   addWidget<ZenithSlider>("D", ZenithPolySynthProcessor::AmpDecay);
   addWidget<ZenithSlider>("S", ZenithPolySynthProcessor::AmpSustain);
   addWidget<ZenithSlider>("R", ZenithPolySynthProcessor::AmpRelease);
+  
+  // ===== LFO CONTROLS =====
+  addWidget<ZenithKnob>("LFO1 RATE", ZenithPolySynthProcessor::LFO1Rate);
+  addWidget<ZenithKnob>("LFO1 AMT", ZenithPolySynthProcessor::LFO1Amount);
+  addWidget<ZenithKnob>("LFO2 RATE", ZenithPolySynthProcessor::LFO2Rate);
+  addWidget<ZenithKnob>("LFO2 AMT", ZenithPolySynthProcessor::LFO2Amount);
+  
+  // ===== EFFECTS CONTROLS (GLOBAL) =====
+  addWidget<ZenithKnob>("DIST", ZenithPolySynthProcessor::DistortionAmount);
+  addWidget<ZenithKnob>("CHORUS", ZenithPolySynthProcessor::ChorusAmount);
+  addWidget<ZenithKnob>("REVERB", ZenithPolySynthProcessor::ReverbAmount);
+  
+  // ===== MASTER CONTROLS =====
+  addWidget<ZenithKnob>("MASTER", ZenithPolySynthProcessor::MasterGain);
   
   // Visualizer (JUCE Component wrapper)
   visualizer_ = std::make_unique<ZenithVisualizer>(processor);
@@ -114,15 +135,30 @@ void ZenithPolySynthUI::resized() {
 }
 
 void ZenithPolySynthUI::layoutWidgets() {
-    std::vector<juce::Component*> filterGroup;
+    std::vector<juce::Component*> oscGroup;
     std::vector<juce::Component*> mixGroup;
+    std::vector<juce::Component*> filterGroup;
     std::vector<juce::Component*> envGroup;
+    std::vector<juce::Component*> lfoGroup;
+    std::vector<juce::Component*> fxGroup;
+    std::vector<juce::Component*> masterGroup;
 
     for (auto& w : widgets_) {
         juce::String name = w->getName();
-        if (name == "CUTOFF" || name == "RES" || name == "ENV AMT") filterGroup.push_back(w.get());
-        else if (name == "SUB" || name == "NOISE") mixGroup.push_back(w.get());
+        // Oscillators
+        if (name == "OSC1" || name == "OSC2" || name == "OSC3") oscGroup.push_back(w.get());
+        // Mix levels
+        else if (name == "MIX 1" || name == "MIX 2" || name == "MIX 3") mixGroup.push_back(w.get());
+        // Filter
+        else if (name == "CUTOFF" || name == "RES" || name == "DRIVE") filterGroup.push_back(w.get());
+        // Envelope
         else if (name == "A" || name == "D" || name == "S" || name == "R") envGroup.push_back(w.get());
+        // LFO
+        else if (name.contains("LFO")) lfoGroup.push_back(w.get());
+        // Effects
+        else if (name == "DIST" || name == "CHORUS" || name == "REVERB") fxGroup.push_back(w.get());
+        // Master
+        else if (name == "MASTER") masterGroup.push_back(w.get());
     }
 
     auto area = getLocalBounds().reduced(20);
@@ -130,17 +166,34 @@ void ZenithPolySynthUI::layoutWidgets() {
     if (presetBar_) area.removeFromTop(40);
     if (visualizer_) area.removeFromTop(150);
     
-    auto mainArea = area;
+    // Calculate layout based on mode
+    int rowHeight = isAdvancedMode_ ? 80 : 100;
+    int knobWidth = isAdvancedMode_ ? 70 : 80;
     
-    // Layout Filter Group (Top Left)
-    ZenithLayout::row(mainArea.removeFromTop(100).removeFromLeft(350), filterGroup, 10.0f);
+    // Row 1: Oscillators + Mix
+    auto row1 = area.removeFromTop(rowHeight);
+    ZenithLayout::row(row1.removeFromLeft(3 * knobWidth + 20), oscGroup, 10.0f);
+    ZenithLayout::row(row1.removeFromLeft(3 * knobWidth + 20), mixGroup, 10.0f);
     
-    // Layout Mix Group (Bottom Left)
-    ZenithLayout::row(mainArea.removeFromTop(80).removeFromLeft(200), mixGroup, 10.0f);
+    // Row 2: Filter + Effects
+    auto row2 = area.removeFromTop(rowHeight);
+    ZenithLayout::row(row2.removeFromLeft(3 * knobWidth + 20), filterGroup, 10.0f);
+    ZenithLayout::row(row2.removeFromLeft(3 * knobWidth + 20), fxGroup, 10.0f);
     
-    // Layout Env Group (Right side)
-    // Use vertical slider layout (row of sliders)
-    ZenithLayout::row(area.removeFromRight(200), envGroup, 5.0f);
+    // Row 3: LFO + Master (if advanced mode, or just master)
+    if (isAdvancedMode_) {
+        auto row3 = area.removeFromTop(rowHeight);
+        ZenithLayout::row(row3.removeFromLeft(4 * knobWidth + 30), lfoGroup, 10.0f);
+        ZenithLayout::row(row3.removeFromLeft(knobWidth + 10), masterGroup, 10.0f);
+    } else {
+        // Simple mode: master at bottom right
+        auto masterArea = area.removeFromRight(knobWidth + 20);
+        ZenithLayout::row(masterArea.removeFromTop(rowHeight), masterGroup, 10.0f);
+    }
+    
+    // Envelope sliders on the right side
+    auto envArea = area.removeFromRight(200);
+    ZenithLayout::row(envArea, envGroup, 5.0f);
 }
 
 // Mouse Handling
@@ -199,11 +252,6 @@ void ZenithPolySynthUI::paint(juce::Graphics& g) {
         renderer_->render([this](SkCanvas* canvas) {
             drawSkiaContent(canvas);
         });
-    } else {
-        // Fallback for non-Skia builds
-        g.fillAll(juce::Colours::darkgrey);
-        g.setColour(juce::Colours::white);
-        g.drawText("Zenith PolySynth", getLocalBounds(), juce::Justification::centred);
     }
 }
 

@@ -56,7 +56,7 @@ struct BrowserItemMetadata
     int channels = 0;
     
     // Plugin specific
-    int version = 0;
+    juce::String version;
     bool isInstrument = false;
 };
 

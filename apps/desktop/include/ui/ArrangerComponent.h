@@ -5,6 +5,7 @@
 #include <juce_events/juce_events.h>
 #include "../ProjectState.h"
 #include "../../Source/ui/skia/SkiaComponent.h"
+#include "../Engine.h"
 
 #include <core/SkCanvas.h>
 
@@ -14,12 +15,40 @@ namespace zenith { class BrowserDragData; }
 
 namespace zenith {
 
+//==============================================================================
+// Grid resolution options for snapping
+enum class GridResolution {
+    Bar_1 = 0,      // 4 beats (in 4/4)
+    Beat_1,         // 1 beat (quarter note)
+    Beat_1_2,       // 1/2 beat (eighth note)
+    Beat_1_4,       // 1/4 beat (sixteenth note)
+    Beat_1_8,       // 1/8 beat (thirty-second)
+    Beat_1_3,       // 1/3 beat (triplet eighth)
+    Beat_1_6,       // 1/6 beat (triplet sixteenth)
+    Off             // No snap
+};
+
+// Convert grid resolution to beat value
+inline double gridResolutionToBeats(GridResolution res) {
+    switch (res) {
+        case GridResolution::Bar_1:    return 4.0;
+        case GridResolution::Beat_1:   return 1.0;
+        case GridResolution::Beat_1_2: return 0.5;
+        case GridResolution::Beat_1_4: return 0.25;
+        case GridResolution::Beat_1_8: return 0.125;
+        case GridResolution::Beat_1_3: return 1.0 / 3.0;
+        case GridResolution::Beat_1_6: return 1.0 / 6.0;
+        case GridResolution::Off:      return 0.0;
+        default:                       return 1.0;
+    }
+}
+
 class ArrangerComponent : public SkiaComponent,
                           public juce::ValueTree::Listener,
                           public juce::DragAndDropTarget
 {
 public:
-    ArrangerComponent(ProjectState& ps);
+    ArrangerComponent(Engine& engine, ProjectState& ps);
     ~ArrangerComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -51,7 +80,15 @@ public:
     void itemDragExit(const juce::DragAndDropTarget::SourceDetails& details) override;
     void itemDragMove(const juce::DragAndDropTarget::SourceDetails& details) override;
 
+    // Grid resolution control
+    void setGridResolution(GridResolution res);
+    GridResolution getGridResolution() const { return gridResolution_; }
+
+    // Timer callback for playhead updates
+    void timerCallback() override;
+
 private:
+    Engine& engine_;
     zenith::ProjectState& projectState;
 
     struct ClipView {
@@ -84,6 +121,17 @@ private:
     float trackHeight = 60.0f;
     float rulerHeight = 30.0f;
     double gridSnapBeats = 1.0;
+    GridResolution gridResolution_ = GridResolution::Beat_1;
+
+    // Playhead state (updated from Engine via timer)
+    double playheadBeats_ = 0.0;
+    bool isPlaying_ = false;
+    bool followPlayhead_ = true;  // Auto-scroll to follow playhead
+
+    // Loop region state
+    bool loopEnabled_ = false;
+    double loopStartBeats_ = 0.0;
+    double loopEndBeats_ = 8.0;
 
     // Drag state
     enum class DragMode {
@@ -135,11 +183,9 @@ private:
     void deleteSelectedClips();
     void duplicateSelectedClips();
 
-    void paintBackground(juce::Graphics& g);
-    void paintTimeRuler(juce::Graphics& g);
-    void paintTracks(juce::Graphics& g);
-    void paintClips(juce::Graphics& g);
-    void paintMarquee(juce::Graphics& g);
+    // Utility
+    void updatePlayheadFromEngine();
+    double samplesToBeats(juce::int64 samples) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };

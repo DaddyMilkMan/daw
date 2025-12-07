@@ -24,6 +24,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <string>
 #include <vector>
+#include <functional>
+#include <memory>
 
 
 namespace zenith {
@@ -208,6 +210,8 @@ struct InstrumentMetadata {
   juce::String category;     // Category (e.g., "Synth", "Sampler")
   juce::String description;  // Brief description
   juce::StringArray tags;    // Search tags (e.g., "drums", "808", "vintage")
+
+  std::function<std::unique_ptr<juce::AudioProcessor>()> createProcessor;
 
   std::vector<ParameterMetadata> parameters;
   std::vector<MacroMetadata> macros;

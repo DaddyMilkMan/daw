@@ -159,7 +159,7 @@ public:
 protected:
     void drawChildren(SkCanvas* canvas); // Helper to draw child components
     SkCanvas* getSkiaCanvas(juce::Graphics& g);
-    virtual void paintFallback(juce::Graphics& g);
+
     void applyGlow(SkPaint& paint, float intensity = 1.0f);
     void animateColorChange();
     

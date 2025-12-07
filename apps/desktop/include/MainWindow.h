@@ -28,21 +28,14 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#ifdef ZENITH_USE_SKIA
-
 #include "../Source/ui/skia/BottomBar.h"
 #include "../Source/ui/skia/BrowserPanel.h"
 #include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButtonComponent.h"
-
-
-
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
 #include "../Source/ui/skia/views/SessionViewComponent.h"
-#endif
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -71,14 +64,8 @@ class WingmanPanel;
  * - Supports piano roll editing for MIDI clips
  * - Automation display and editing
  */
-#ifdef ZENITH_USE_SKIA
 class MainComponent : public zenith::SkiaMainWindowIntegration,
                       public juce::KeyListener
-#else
-class MainComponent : public juce::Component,
-                      private juce::Timer,
-                      public juce::KeyListener
-#endif
 {
 public:
   //==========================================================================
@@ -96,11 +83,9 @@ public:
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
 
-#ifdef ZENITH_USE_SKIA
 protected:
   void drawSkiaContent(SkCanvas* canvas) override;
 public:
-#endif
 
   //==========================================================================
   // KeyListener interface (for undo/redo shortcuts)
@@ -114,19 +99,9 @@ private:
     juce::Component* activeDragComponent = nullptr;
     juce::Rectangle<int> dragStartBounds;
 
-#ifndef ZENITH_USE_SKIA
-  //==========================================================================
-  // Timer interface (for status updates)
-  //==========================================================================
 
-  void timerCallback() override;
-#endif
 
-  //==========================================================================
-  // C4: Track count monitoring (read-only, dirty-checked)
-  //==========================================================================
 
-  void refreshTrackCountLabel();
 
   //==========================================================================
   // Integration: Piano roll opener
@@ -150,7 +125,6 @@ private:
   // Modern DAW Layout Panels
   // ============================================================================
 
-#ifdef ZENITH_USE_SKIA
   // Top: Transport bar with play/stop/record, tempo, CPU, etc.
   std::unique_ptr<zenith::TransportBar> transportBar;
 
@@ -163,39 +137,10 @@ private:
 
   // Bottom: Piano keyboard + mixer strip
   std::unique_ptr<zenith::BottomBar> bottomBar;
-#else
-  // JUCE fallback UI components
-  juce::Label statusLabel;
-  juce::Label cpuLabel;
-  juce::TextButton playButton;
-  juce::TextButton stopButton;
-  juce::TextButton recordButton;
-  juce::TextButton importButton;
-  juce::TextButton virtualKeyboardButton;
-  juce::Label audioDeviceLabel;
-  juce::Label trackCountLabel;
-
-  MixerComponent mixerComponent;
-  std::unique_ptr<zenith::WingmanPanel> wingmanPanel;
-  std::unique_ptr<zenith::InstrumentBrowserPanel> instrumentBrowserPanel;
-
-  std::unique_ptr<juce::MidiKeyboardComponent> midiKeyboard;
-  bool virtualKeyboardVisible = false;
-#endif
-
-  int lastTrackCount = -1;
-
-  // Phase 9: Arranger component with interactive clip editing (center)
-  // Now managed by MainLayoutComponent in Skia builds
-#ifndef ZENITH_USE_SKIA
-  std::unique_ptr<zenith::ArrangerComponent> arrangerComponent;
-#endif
 
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
   // Skia)
-#ifdef ZENITH_USE_SKIA
   std::unique_ptr<zenith::WingmanPanel> wingmanPanelPtr_;
-#endif
 
   // Virtual MIDI Keyboard state (shared between Skia and JUCE builds)
   juce::MidiKeyboardState midiKeyboardState;

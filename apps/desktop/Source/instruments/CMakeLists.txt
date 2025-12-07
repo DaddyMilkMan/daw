@@ -3,6 +3,10 @@ target_sources(ZenithDAW PRIVATE
     InstrumentRegistry.cpp
     RegisterBuiltInInstruments.cpp
     PresetGenerator.cpp
+    ZenithOscillator.cpp
+    ZenithFilter.cpp
+    ZenithEffects.cpp
+    ZenithPolySynthVoice.cpp
     ZenithPolySynth.cpp
     ZenithPolySynthEditor.cpp
     ZenithPresetManager.cpp

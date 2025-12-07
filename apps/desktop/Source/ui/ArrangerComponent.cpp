@@ -20,7 +20,8 @@
 namespace zenith {
 //==============================================================================
 
-ArrangerComponent::ArrangerComponent(ProjectState &ps) : projectState(ps) {
+ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
+    : engine_(eng), projectState(ps) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   setWantsKeyboardFocus(true);
@@ -31,10 +32,14 @@ ArrangerComponent::ArrangerComponent(ProjectState &ps) : projectState(ps) {
   // Initial clip view build
   rebuildClipViews();
 
+  // Start timer for playhead position updates (30Hz is plenty for visual feedback)
+  startTimerHz(30);
+
   DBG("ArrangerComponent: Created");
 }
 
 ArrangerComponent::~ArrangerComponent() {
+  stopTimer();
   projectState.getState().removeListener(this);
   DBG("ArrangerComponent: Destroyed");
 }
@@ -332,182 +337,13 @@ void ArrangerComponent::duplicateSelectedClips() {
 }
 
 //==============================================================================
-// Component interface - Painting
+// Component interface - Painting (Pure Skia - All rendering in drawSkia())
 //==============================================================================
 
 void ArrangerComponent::paint(juce::Graphics &g) {
-#ifndef ZENITH_USE_SKIA
-  // JUCE Fallback (keep existing code below)
-  paintBackground(g);
-  paintTracks(g);
-  paintClips(g);
-  paintTimeRuler(g);
-  paintMarquee(g);
-#else
-  // When using Skia, the MainLayoutComponent handles rendering via paintSkia.
-  // We just fill with background color to ensure opaque background if needed.
+  // Pure Skia rendering - just fill background for opaque base
+  // All actual rendering happens in drawSkia()
   g.fillAll(juce::Colour(0xff1e1e1e));
-#endif
-}
-
-void ArrangerComponent::paintBackground(juce::Graphics &g) {
-  g.fillAll(juce::Colour(0xff1e1e1e));
-}
-
-void ArrangerComponent::paintTimeRuler(juce::Graphics &g) {
-  // Color definitions
-  const juce::Colour gridLineColour = juce::Colour(0xff505050);
-
-  g.setColour(juce::Colour(0xff2a2a2a));
-  g.fillRect((float)0, (float)0, (float)getWidth(), (float)rulerHeight);
-
-  g.setColour(juce::Colours::white);
-  g.setFont(juce::FontOptions(12.0f));
-
-  // Draw beat markers
-  double startBeat = std::floor(viewStartBeats);
-  double endBeat = viewStartBeats + (getWidth() / pixelsPerBeat);
-
-  for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
-    float x = beatsToX(beat);
-    if (x < 0 || x > getWidth())
-      continue;
-
-    // Draw tick
-    g.setColour(gridLineColour);
-    g.drawLine(x, rulerHeight - 8.0f, x, static_cast<float>(rulerHeight), 1.0f);
-
-    // Draw beat number
-    g.setColour(juce::Colours::lightgrey);
-    g.drawText(juce::String(static_cast<int>(beat + 1)),
-               static_cast<int>(x - 15), 2, 30, rulerHeight - 10,
-               juce::Justification::centred, false);
-  }
-}
-
-void ArrangerComponent::paintTracks(juce::Graphics &g) {
-  // Color definitions
-  const juce::Colour trackLaneColour = juce::Colour(0xff2a2a2a);
-  const juce::Colour trackDividerColour = juce::Colour(0xff3c3c3c);
-  const juce::Colour gridLineColour = juce::Colour(0xff505050);
-
-  auto tracksNode =
-      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
-  if (!tracksNode.isValid())
-    return;
-
-  int numTracks = tracksNode.getNumChildren();
-
-  for (int i = firstVisibleTrackIndex; i < numTracks; ++i) {
-    float y = trackIndexToY(i);
-    if (y > getHeight())
-      break;
-
-    // Alternate track colors
-    g.setColour(i % 2 == 0 ? trackLaneColour : trackLaneColour.darker(0.1f));
-    g.fillRect(0.0f, y, static_cast<float>(getWidth()),
-               static_cast<float>(trackHeight));
-
-    // Track divider
-    g.setColour(trackDividerColour);
-    g.drawLine(0.0f, y, static_cast<float>(getWidth()), y, 1.0f);
-
-    // Draw vertical grid lines
-    double startBeat = std::floor(viewStartBeats);
-    double endBeat = viewStartBeats + (getWidth() / pixelsPerBeat);
-
-    g.setColour(gridLineColour.withAlpha(0.3f));
-    for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
-      float x = beatsToX(beat);
-      if (x >= 0 && x <= getWidth())
-        g.drawLine(x, y, x, y + trackHeight, 1.0f);
-    }
-
-    // Track name and status indicators
-    auto track = tracksNode.getChild(i);
-    auto trackName = track[zenith::ProjectState::PROP_NAME].toString();
-    bool isMuted = track[zenith::ProjectState::PROP_MUTE];
-    bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
-    bool isArmed = track[zenith::ProjectState::PROP_ARMED];
-
-    int textX = 10;
-
-    // Draw indicators
-    if (isArmed)
-    {
-        g.setColour(juce::Colours::red);
-        g.fillEllipse(textX, y + 6, 8, 8);
-        textX += 12;
-    }
-    if (isSoloed)
-    {
-        g.setColour(juce::Colours::orange);
-        g.fillEllipse(textX, y + 6, 8, 8);
-        textX += 12;
-    }
-    if (isMuted)
-    {
-        g.setColour(juce::Colours::grey);
-        g.fillEllipse(textX, y + 6, 8, 8);
-        textX += 12;
-    }
-
-    g.setColour(juce::Colours::white.withAlpha(0.7f));
-    if (isMuted) g.setColour(juce::Colours::grey); // Dim text if muted
-    
-    g.setFont(juce::FontOptions(14.0f));
-    g.drawText(trackName, textX, static_cast<int>(y + 5), 200, 20,
-               juce::Justification::centredLeft, false);
-  }
-}
-
-void ArrangerComponent::paintClips(juce::Graphics &g) {
-  // Color definitions
-  const juce::Colour midiClipColour = juce::Colour(0xff4a90e2);
-  const juce::Colour audioClipColour = juce::Colour(0xffe27a4a);
-  const juce::Colour selectedClipColour = juce::Colour(0xffffffff);
-
-  for (const auto &clipView : clipViews) {
-    // Clip color
-    juce::Colour clipColour =
-        clipView.isMidi ? midiClipColour : audioClipColour;
-
-    if (clipView.isSelected) {
-      // Draw selection border
-      g.setColour(selectedClipColour);
-      g.drawRect(clipView.bounds, 2.0f);
-      clipColour = clipColour.brighter(0.2f);
-    }
-
-    // Draw clip fill
-    g.setColour(clipColour);
-    g.fillRect(clipView.bounds.reduced(1.0f));
-
-    // Draw clip name
-    g.setColour(juce::Colours::black.withAlpha(0.8f));
-    g.setFont(juce::FontOptions(12.0f));
-
-    auto textBounds = clipView.bounds.reduced(4.0f, 2.0f);
-    if (textBounds.getWidth() > 20.0f) {
-      // Get clip name from ProjectState
-      auto [track, clip] = projectState.findClip(clipView.clipId);
-      if (clip.isValid()) {
-        auto clipName = clip[zenith::ProjectState::PROP_NAME].toString();
-        g.drawText(clipName, textBounds.toNearestInt(),
-                   juce::Justification::centredLeft, true);
-      }
-    }
-  }
-}
-
-void ArrangerComponent::paintMarquee(juce::Graphics &g) {
-  if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
-    g.setColour(juce::Colours::white.withAlpha(0.1f));
-    g.fillRect(marqueeRect);
-
-    g.setColour(juce::Colours::white.withAlpha(0.5f));
-    g.drawRect(marqueeRect, 1.0f);
-  }
 }
 
 void ArrangerComponent::resized() { recomputeClipBounds(); }
@@ -994,6 +830,76 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
         borderPaint.setStyle(SkPaint::kStroke_Style);
         canvas->drawRect(mRect, borderPaint);
     }
+
+    // Loop Region (Skia)
+    if (loopEnabled_) {
+        float loopStartX = beatsToX(loopStartBeats_);
+        float loopEndX = beatsToX(loopEndBeats_);
+        float width = static_cast<float>(bounds.getWidth());
+        float height = static_cast<float>(bounds.getHeight());
+        
+        // Clamp to visible area
+        if (loopEndX > 0 && loopStartX < width) {
+            loopStartX = juce::jmax(0.0f, loopStartX);
+            loopEndX = juce::jmin(width, loopEndX);
+            
+            // Loop region highlight in ruler
+            SkPaint loopRulerPaint;
+            loopRulerPaint.setColor(SkColorSetARGB(68, 0, 170, 255));  // Semi-transparent blue
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, loopEndX - loopStartX, rulerHeight), loopRulerPaint);
+            
+            // Loop region tint over track area
+            SkPaint loopTrackPaint;
+            loopTrackPaint.setColor(SkColorSetARGB(16, 0, 170, 255));  // Very subtle blue
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, rulerHeight, loopEndX - loopStartX, height - rulerHeight), loopTrackPaint);
+            
+            // Loop brackets
+            SkPaint bracketPaint;
+            bracketPaint.setColor(SkColorSetRGB(0, 170, 255));
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 3, rulerHeight), bracketPaint);
+            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 3, 0, 3, rulerHeight), bracketPaint);
+            
+            // L/R markers
+            SkFont markerFont;
+            markerFont.setSize(10.0f);
+            SkPaint markerTextPaint;
+            markerTextPaint.setColor(SK_ColorWHITE);
+            markerTextPaint.setAntiAlias(true);
+            canvas->drawString("L", loopStartX + 5, 10, markerFont, markerTextPaint);
+            canvas->drawString("R", loopEndX - 12, 10, markerFont, markerTextPaint);
+        }
+    }
+
+    // Playhead (Skia)
+    {
+        float x = beatsToX(playheadBeats_);
+        float height = static_cast<float>(bounds.getHeight());
+        
+        if (x >= 0 && x <= bounds.getWidth()) {
+            // Playhead color
+            SkColor playheadColor = isPlaying_ 
+                ? SkColorSetRGB(0, 255, 255)   // Cyan when playing
+                : SkColorSetRGB(170, 170, 170); // Grey when stopped
+            
+            SkPaint playheadPaint;
+            playheadPaint.setColor(playheadColor);
+            playheadPaint.setStrokeWidth(2.0f);
+            playheadPaint.setAntiAlias(true);
+            
+            // Main line
+            canvas->drawLine(x, 0, x, height, playheadPaint);
+            
+            // Triangle at top
+            SkPath triangle;
+            triangle.moveTo(x - 6, 0);
+            triangle.lineTo(x + 6, 0);
+            triangle.lineTo(x, 10);
+            triangle.close();
+            
+            playheadPaint.setStyle(SkPaint::kFill_Style);
+            canvas->drawPath(triangle, playheadPaint);
+        }
+    }
 }
 #endif
 //==============================================================================
@@ -1225,6 +1131,85 @@ void ArrangerComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails
     }
     
     dropTargetTrackIndex_ = -1;
+    repaint();
+}
+
+//==============================================================================
+// Timer callback - Updates playhead position from Engine
+//==============================================================================
+
+void ArrangerComponent::timerCallback() {
+    updatePlayheadFromEngine();
+}
+
+void ArrangerComponent::updatePlayheadFromEngine() {
+    // Get current playhead position from engine
+    juce::int64 playheadSamples = engine_.getPlayheadSamples();
+    bool wasPlaying = isPlaying_;
+    isPlaying_ = engine_.isPlaying();
+    
+    // Convert samples to beats
+    double newPlayheadBeats = samplesToBeats(playheadSamples);
+    
+    // Only repaint if position changed significantly (avoid unnecessary repaints)
+    if (std::abs(newPlayheadBeats - playheadBeats_) > 0.01 || wasPlaying != isPlaying_) {
+        playheadBeats_ = newPlayheadBeats;
+        
+        // Auto-scroll to follow playhead if enabled and playing
+        if (followPlayhead_ && isPlaying_) {
+            float playheadX = beatsToX(playheadBeats_);
+            float visibleWidth = static_cast<float>(getWidth());
+            
+            // If playhead is off-screen or near the right edge, scroll
+            if (playheadX > visibleWidth * 0.8f || playheadX < 0) {
+                viewStartBeats = playheadBeats_ - (visibleWidth * 0.2 / pixelsPerBeat);
+                viewStartBeats = juce::jmax(0.0, viewStartBeats);
+                recomputeClipBounds();
+            }
+        }
+        
+        repaint();
+    }
+    
+    // Update loop state from engine
+    bool wasLoopEnabled = loopEnabled_;
+    loopEnabled_ = engine_.isLooping();
+    
+    if (loopEnabled_) {
+        double newLoopStart = samplesToBeats(engine_.getLoopStart());
+        double newLoopEnd = samplesToBeats(engine_.getLoopEnd());
+        
+        if (std::abs(newLoopStart - loopStartBeats_) > 0.01 ||
+            std::abs(newLoopEnd - loopEndBeats_) > 0.01 ||
+            wasLoopEnabled != loopEnabled_) {
+            loopStartBeats_ = newLoopStart;
+            loopEndBeats_ = newLoopEnd;
+            repaint();
+        }
+    } else if (wasLoopEnabled != loopEnabled_) {
+        repaint();
+    }
+}
+
+double ArrangerComponent::samplesToBeats(juce::int64 samples) const {
+    double sampleRate = engine_.getSampleRate();
+    if (sampleRate <= 0.0) sampleRate = 44100.0;
+    
+    double tempo = projectState.getTempo();
+    if (tempo <= 0.0) tempo = 120.0;
+    
+    double seconds = static_cast<double>(samples) / sampleRate;
+    double beatsPerSecond = tempo / 60.0;
+    return seconds * beatsPerSecond;
+}
+
+//==============================================================================
+// Grid resolution
+//==============================================================================
+
+void ArrangerComponent::setGridResolution(GridResolution res) {
+    gridResolution_ = res;
+    gridSnapBeats = gridResolutionToBeats(res);
     repaint();
 }
 

@@ -23,7 +23,7 @@ MainLayoutComponent::MainLayoutComponent(Engine& engine, ProjectState& state)
     : engine_(engine), projectState_(state)
 {
     // Create Arranger
-    arrangerComponent_ = std::make_unique<ArrangerComponent>(projectState_);
+    arrangerComponent_ = std::make_unique<ArrangerComponent>(engine_, projectState_);
     addAndMakeVisible(arrangerComponent_.get()); 
 
     // Create Session View
