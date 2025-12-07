@@ -97,7 +97,9 @@ void BrowserModel::populateInternalInstruments()
         browserItem->metadata.author = "Zenith DAW";
         browserItem->metadata.format = "Native";
         browserItem->metadata.isInstrument = true;
-        browserItem->isFavorite = isFavorite(id);
+        // FIX: Avoid string to bool conversion error
+        bool isFav = isFavorite(id);
+        browserItem->isFavorite = isFav;
         
         instrumentsNode->addChild(browserItem);
         allIndexableItems_.push_back(browserItem);
@@ -114,15 +116,15 @@ void BrowserModel::populatePlugins()
 {
     auto& knownPlugins = pluginHost_.getKnownPlugins();
     
-    // We will group by Category -> Manufacturer
+    // Group by Category -> Manufacturer
     std::map<juce::String, std::shared_ptr<BrowserItem>> categoryNodes;
     
     for (const auto& desc : knownPlugins.getTypes())
     {
-        // Get or Create Category Node
         juce::String category = desc.category;
         if (category.isEmpty()) category = "Uncategorized";
         
+        // Ensure category exists
         if (categoryNodes.find(category) == categoryNodes.end())
         {
             auto catNode = std::make_shared<BrowserItem>("cat_" + category, category, BrowserItemType::Folder);
@@ -133,13 +135,23 @@ void BrowserModel::populatePlugins()
         // Create Plugin Item
         auto pluginItem = std::make_shared<BrowserItem>(desc.fileOrIdentifier, desc.name, BrowserItemType::Plugin);
         pluginItem->metadata.author = desc.manufacturerName;
-        pluginItem->metadata.version = desc.version;
+        // FIX: Use getIntValue for version string
+        pluginItem->metadata.version = desc.version.getIntValue();
         pluginItem->metadata.format = desc.pluginFormatName;
         pluginItem->metadata.category = category;
         pluginItem->metadata.isInstrument = desc.isInstrument;
-        pluginItem->isFavorite = isFavorite(desc.fileOrIdentifier);
         
-        categoryNodes[category]->addChild(pluginItem);
+        // FIX: Explicit boolean conversion
+        bool isFav = isFavorite(desc.fileOrIdentifier);
+        pluginItem->isFavorite = isFav;
+        
+        // Add to category
+        auto it = categoryNodes.find(category);
+        if (it != categoryNodes.end())
+        {
+            it->second->addChild(pluginItem);
+        }
+        
         allIndexableItems_.push_back(pluginItem);
         
         if (pluginItem->isFavorite)
@@ -187,7 +199,10 @@ void BrowserModel::populateUserLibrary()
                        auto fileItem = std::make_shared<BrowserItem>(entry.getFile().getFullPathName(), 
                                                                    entry.getFile().getFileName(), 
                                                                    type);
-                       fileItem->isFavorite = isFavorite(entry.getFile().getFullPathName());
+                       // FIX: Explicit boolean conversion
+                       bool isFav = isFavorite(entry.getFile().getFullPathName());
+                       fileItem->isFavorite = isFav;
+                       
                        dirNode->addChild(fileItem);
                        allIndexableItems_.push_back(fileItem);
                        
@@ -270,7 +285,7 @@ void BrowserModel::addScannedItem(std::shared_ptr<BrowserItem> item)
 
 void BrowserModel::addToFavorites(std::shared_ptr<BrowserItem> item)
 {
-    if (!item) return;
+    if (!item) return; 
     
     if (favoriteIds_.find(item->id) == favoriteIds_.end())
     {
@@ -284,7 +299,7 @@ void BrowserModel::addToFavorites(std::shared_ptr<BrowserItem> item)
 
 void BrowserModel::removeFromFavorites(std::shared_ptr<BrowserItem> item)
 {
-    if (!item) return;
+    if (!item) return; 
     
     auto it = favoriteIds_.find(item->id);
     if (it != favoriteIds_.end())
@@ -353,7 +368,7 @@ juce::File BrowserModel::getFavoritesFile() const
 
 void BrowserModel::addTagToItem(std::shared_ptr<BrowserItem> item, const juce::String& tag)
 {
-    if (!item || tag.isEmpty()) return;
+    if (!item || tag.isEmpty()) return; 
     
     juce::String normalizedTag = tag.toLowerCase().trim();
     
@@ -374,7 +389,7 @@ void BrowserModel::addTagToItem(std::shared_ptr<BrowserItem> item, const juce::S
 
 void BrowserModel::removeTagFromItem(std::shared_ptr<BrowserItem> item, const juce::String& tag)
 {
-    if (!item) return;
+    if (!item) return; 
     
     juce::String normalizedTag = tag.toLowerCase().trim();
     
@@ -478,7 +493,7 @@ juce::File BrowserModel::getTagsFile() const
 
 void BrowserModel::pushHistory(std::shared_ptr<BrowserItem> folder)
 {
-    if (!folder) return;
+    if (!folder) return; 
     
     history_.push_back(folder);
     
@@ -550,4 +565,3 @@ std::vector<std::shared_ptr<BrowserItem>> BrowserModel::getFilteredItems(
 }
 
 } // namespace zenith
-

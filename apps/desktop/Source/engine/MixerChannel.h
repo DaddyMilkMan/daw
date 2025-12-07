@@ -311,6 +311,9 @@ public:
   void releaseResources() override;
   void
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
+  
+  // Overload with Aux Sends support
+  void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill, const std::vector<juce::AudioBuffer<float>*>& auxBuffers);
 
   //==============================================================================
   // Input section
@@ -394,6 +397,10 @@ public:
 
   void setSolo(bool shouldBeSolo) [[maybe_unused]];
   bool isSolo() const { return solo.load(); }
+  
+  // Sol-In-Place Logic
+  void setSilencedBySolo(bool silenced) { silencedBySolo.store(silenced); }
+  bool isSilencedBySolo() const { return silencedBySolo.load(); }
 
   //==============================================================================
   // Metering
@@ -461,6 +468,7 @@ private:
   std::atomic<float> pan{0.0f};
   std::atomic<bool> muted{false};
   std::atomic<bool> solo{false};
+  std::atomic<bool> silencedBySolo{false};
 
   //==============================================================================
   // Metering
@@ -481,7 +489,8 @@ private:
   void processEQ(juce::AudioBuffer<float> &buffer);
   void processCompressor(juce::AudioBuffer<float> &buffer);
   void processSends(const juce::AudioBuffer<float> &sourceBuffer,
-                    std::vector<juce::AudioBuffer<float> *> &sendBuffers);
+                    const std::vector<juce::AudioBuffer<float> *> &sendBuffers,
+                    bool matchPreFader);
   void processOutput(juce::AudioBuffer<float> &buffer);
   void updateMeters(const juce::AudioBuffer<float> &buffer, bool isInput)
       [[maybe_unused]];

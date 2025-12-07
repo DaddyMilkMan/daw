@@ -19,6 +19,8 @@
 #include "../instruments/Instrument.h"
 #include "Clip.h"
 #include "PluginHost.h"
+#include "../../include/ProjectState.h"
+#include "../../include/TempoMap.h"
 #include <algorithm>
 
 namespace zenith {
@@ -33,6 +35,10 @@ Track::Track(const juce::String &name, Type type)
   // Initialize empty plugin snapshot (lock-free RCU pattern)
   currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
   activePluginSnapshot_.store(currentPluginSnapshot_.get());
+
+  // Initialize empty automation snapshot
+  currentAutomationSnapshot_ = std::make_shared<AutomationSnapshot>();
+  activeAutomationSnapshot_.store(currentAutomationSnapshot_.get());
 }
 
 Track::~Track() {
@@ -46,6 +52,11 @@ Track::~Track() {
   pluginsOwned_.clear();
   currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
   activePluginSnapshot_.store(currentPluginSnapshot_.get());
+
+  // Clear automation snapshot
+  automationLanesOwned_.clear();
+  currentAutomationSnapshot_ = std::make_shared<AutomationSnapshot>();
+  activeAutomationSnapshot_.store(currentAutomationSnapshot_.get());
 }
 
 //==============================================================================
@@ -150,7 +161,8 @@ void Track::releaseResources() {
 void Track::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
     const juce::MidiBuffer *incomingMidi,
-    const std::vector<juce::AudioBuffer<float> *> &auxBuffers) {
+    const std::vector<juce::AudioBuffer<float> *> &auxBuffers,
+    const TempoMap* tempoMap) {
   // Clear the buffer first
   bufferToFill.clearActiveBufferRegion();
 
@@ -158,6 +170,32 @@ void Track::getNextAudioBlock(
   if (!enabled.load()) {
     midiBuffer_.clear();
     return;
+  }
+
+  // Automation Application (Tier 1 Feature)
+  // We apply automation at the start of the block (Control Rate)
+  if (tempoMap != nullptr) {
+      auto* automationSnapshot = activeAutomationSnapshot_.load(std::memory_order_acquire);
+      if (automationSnapshot) {
+          // Calculate time in beats at start of block
+          double startBeats = tempoMap->samplesToBeats(playheadSamples, currentSampleRate);
+          
+          // Volume Automation
+          auto volIt = automationSnapshot->lanes.find("volume");
+          if (volIt != automationSnapshot->lanes.end()) {
+             float val = volIt->second->getValueAt(startBeats);
+             mixerChannel.setVolume(val); 
+          }
+          
+          // Pan Automation
+          auto panIt = automationSnapshot->lanes.find("pan");
+          if (panIt != automationSnapshot->lanes.end()) {
+             float val = panIt->second->getValueAt(startBeats);
+             mixerChannel.setPan(val);
+          }
+          
+          // TODO: Plugin parameter automation
+      }
   }
 
   // Phase 2A: Clear MIDI buffer for this block
@@ -242,16 +280,10 @@ void Track::getNextAudioBlock(
 
   // Delegate all mixer processing to MixerChannel
   // This includes: input gain, HPF, EQ, compressor, volume, pan, metering
+  // Also processes Aux Sends (Pre and Post fader)
   juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
                                          bufferToFill.numSamples);
-  mixerChannel.getNextAudioBlock(mixerInfo);
-
-  // Process aux sends (post-fader by default; pre-fader can be configured in
-  // MixerChannel) We pass the processed buffer to the sends
-  // Note: Aux send processing is handled by the Engine at mix-down time,
-  // as MixerChannel::processSends is private. The Engine reads send levels
-  // from MixerChannel and routes accordingly.
-  (void)auxBuffers; // Suppress unused parameter warning
+  mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
 }
 
 // Legacy overload: uses default playhead of 0
@@ -509,6 +541,34 @@ Track::Clip *Track::getClip(int index) const {
 }
 
 //==============================================================================
+// Automation Management (Message Thread)
+//==============================================================================
+
+void Track::updateAutomationSnapshot() {
+  auto newSnapshot = std::make_shared<AutomationSnapshot>(automationLanesOwned_);
+  activeAutomationSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  automationSnapshotTrash_.push_back(currentAutomationSnapshot_);
+  currentAutomationSnapshot_ = newSnapshot;
+  
+  while (automationSnapshotTrash_.size() > 10) {
+    automationSnapshotTrash_.erase(automationSnapshotTrash_.begin());
+  }
+}
+
+void Track::addAutomationLane(const juce::String& paramId, std::shared_ptr<AutomationLane> lane) {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    automationLanesOwned_[paramId] = lane;
+    updateAutomationSnapshot();
+}
+
+void Track::clearAutomationLanes() {
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    automationLanesOwned_.clear();
+    updateAutomationSnapshot();
+}
+
+//==============================================================================
 
 //==============================================================================
 juce::ValueTree Track::getState() const {
@@ -581,6 +641,33 @@ void Track::loadState(const juce::ValueTree &state) {
       clip->loadState(clipState);
       addClip(std::move(clip));
     }
+  }
+
+  // Load Automation
+  clearAutomationLanes();
+  auto automationNode = state.getChildWithName(ProjectState::ID_AUTOMATION);
+  if (automationNode.isValid()) {
+      for (auto envNode : automationNode) {
+          if (envNode.hasType(ProjectState::ID_ENVELOPE)) {
+              juce::String paramId = envNode.getProperty(ProjectState::PROP_PARAM_ID);
+              std::vector<AutomationPoint> points;
+              for (auto pointNode : envNode) {
+                  if (pointNode.hasType(ProjectState::ID_POINT)) {
+                      points.push_back({
+                          static_cast<double>(pointNode.getProperty(ProjectState::PROP_TIME_BEATS)),
+                          static_cast<float>(pointNode.getProperty(ProjectState::PROP_VALUE)),
+                          0.5f // Curve default (linear)
+                      });
+                  }
+              }
+              // Ensure sorted
+              std::sort(points.begin(), points.end(), [](const auto& a, const auto& b){ return a.timeBeats < b.timeBeats; });
+              
+              if (!points.empty()) {
+                  addAutomationLane(paramId, std::make_shared<AutomationLane>(points));
+              }
+          }
+      }
   }
 
   sendChangeMessage();

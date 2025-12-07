@@ -922,6 +922,9 @@ private:
   
   // Helper to prepare recording asynchronously
   void prepareRecordingForTrack(int trackIndex);
+  
+  // Helper to update SIP (Solo In Place) logic
+  void updateSoloState();
 
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};

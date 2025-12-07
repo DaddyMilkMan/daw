@@ -6,11 +6,10 @@ on:
   pull_request:
     branches: [ main, develop ]
     paths:
-      - 'zenith-core/Source/instruments/**'
-      - 'zenith-core/include/CommandAPI.h'
-      - 'zenith-core/src/CommandAPI.cpp'
-      - 'zenith-core/tests/**'
-      - 'zenith-core/CMakeLists.txt'
+      - 'apps/desktop/Source/**'
+      - 'apps/desktop/include/**'
+      - 'apps/desktop/Source/tests/**'
+      - 'CMakeLists.txt'
       - '.github/workflows/test.yml'
 
 jobs:
@@ -45,23 +44,19 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cd zenith-core
         mkdir -p build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
     - name: Build Tests
       run: |
-        cd zenith-core/build
-        cmake --build . --target ProjectStateTests -j$(nproc)
-        cmake --build . --target RecordingAutomationTests -j$(nproc)
-        cmake --build . --target InstrumentValidationTests -j$(nproc)
-        cmake --build . --target PresetRegressionTests -j$(nproc)
+        cd build
+        cmake --build . --target ZenithDAWTests -j$(nproc)
 
     - name: Run Tests
       run: |
-        cd zenith-core/build
-        ctest --output-on-failure --verbose
+        cd build
+        ./ZenithDAWTests
 
     - name: Upload test results
       if: failure()
@@ -123,23 +118,19 @@ jobs:
 
     - name: Configure CMake
       run: |
-        cd zenith-core
         mkdir build
         cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 
     - name: Build Tests
       run: |
-        cd zenith-core/build
-        cmake --build . --config Release --target ProjectStateTests
-        cmake --build . --config Release --target RecordingAutomationTests
-        cmake --build . --config Release --target InstrumentValidationTests
-        cmake --build . --config Release --target PresetRegressionTests
+        cd build
+        cmake --build . --config Release --target ZenithDAWTests
 
     - name: Run Tests
       run: |
-        cd zenith-core/build
-        ctest -C Release --output-on-failure --verbose
+        cd build
+        .\ZenithDAWTests.exe
 
     - name: Upload test results
       if: failure()

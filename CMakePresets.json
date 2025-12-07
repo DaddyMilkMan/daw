@@ -22,9 +22,10 @@
             "displayName": "Windows MSVC",
             "description": "Visual Studio 2022",
             "generator": "Visual Studio 17 2022",
-            "binaryDir": "${sourceDir}/build_msvc",
+            "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
-                "CMAKE_CONFIGURATION_TYPES": "Debug;Release"
+                "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
             }
         }
     ],

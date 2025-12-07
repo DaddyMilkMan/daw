@@ -176,6 +176,9 @@ public:
 
   void setFadeOut(int64_t fadeOutSamples);
   int64_t getFadeOut() const { return fadeOutLength.load(); }
+  
+  void setFadeCurve(float curve) { fadeCurve.store(curve); }
+  float getFadeCurve() const { return fadeCurve.load(); }
 
   //==============================================================================
   // Gain control
@@ -221,6 +224,7 @@ private:
   std::atomic<bool> playing{false};
   std::atomic<int64_t> fadeInLength{0};
   std::atomic<int64_t> fadeOutLength{0};
+  std::atomic<float> fadeCurve{0.5f}; // 0.5 = Linear
   std::atomic<float> gain{1.0f};
   std::atomic<bool> looping{false};
 

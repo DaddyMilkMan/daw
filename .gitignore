@@ -27,3 +27,18 @@ npm-debug.log
 # 5. Local Env
 .env
 *.local
+
+# 6. Build Logs and Error Files
+build_errors*.txt
+build_log*.txt
+build_verbose.txt
+cmake_error*.log
+msbuild_*.log
+*.log
+
+# 7. Backup Files
+*.bak
+*.old
+*.tmp
+*.backup
+*.orig

@@ -29,9 +29,35 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File& file, juce::S
 {
     // ⚠️ MESSAGE THREAD ONLY - Does file I/O!
 
+    // Security: Validate and sanitize file path
+    // Prevent path traversal attacks (e.g., ../../../etc/passwd)
+    juce::String filePath = file.getFullPathName();
+    
+    // Check for path traversal attempts
+    if (filePath.contains("..") || filePath.contains("~"))
+    {
+        errorMessage = "Invalid file path: path traversal detected";
+        return nullptr;
+    }
+    
+    // Check path length (prevent excessive paths)
+    if (filePath.length() > 4096)  // MAX_PATH on Windows is 260, but allow longer for safety
+    {
+        errorMessage = "File path too long (max 4096 characters)";
+        return nullptr;
+    }
+    
+    // Validate file exists and is actually a file (not directory)
     if (!file.existsAsFile())
     {
         errorMessage = "File does not exist: " + file.getFullPathName();
+        return nullptr;
+    }
+    
+    // Additional security: Ensure file is readable
+    if (!file.hasReadAccess())
+    {
+        errorMessage = "File is not readable: " + file.getFullPathName();
         return nullptr;
     }
 
