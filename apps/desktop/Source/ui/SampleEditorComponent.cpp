@@ -93,9 +93,15 @@ void SampleEditorComponent::setClipToEdit(const juce::String& trackId, const juc
                     audioHandle_ = engine_.getAudioFilePool().loadFile(audioFile);
                 if (audioHandle_) {
                     // Create mutable copy for editing
-                    editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(*audioHandle_->buffer.getArrayOfReadPointers(), 
-                                                                             audioHandle_->buffer.getNumChannels(),
-                                                                             audioHandle_->buffer.getNumSamples());
+                    int numChannels = audioHandle_->buffer.getNumChannels();
+                    int numSamples = audioHandle_->buffer.getNumSamples();
+                    
+                    editBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChannels, numSamples);
+                    
+                    for (int i = 0; i < numChannels; ++i) {
+                        editBuffer_->copyFrom(i, 0, audioHandle_->buffer, i, 0, numSamples);
+                    }
+                    
                     fitToWindow();
                 }
             }

@@ -18,6 +18,7 @@
 #pragma once
 
 #include "MixerChannel.h"
+#include "AutomationLane.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -29,10 +30,12 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 // Forward declarations
 namespace zenith {
 class Instrument;
+class TempoMap;
 }
 
 namespace zenith {
@@ -71,11 +74,12 @@ public:
   getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
 
   // Phase 1.3: Version that takes explicit playhead position and optional
-  // incoming MIDI and aux buffers
+  // incoming MIDI and aux buffers. Added optional TempoMap for automation.
   void getNextAudioBlock(
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
-      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {});
+      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
+      const TempoMap* tempoMap = nullptr);
 
   //==============================================================================
   // Track properties
@@ -105,6 +109,9 @@ public:
 
   void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
   bool isSolo() const { return mixerChannel.isSolo(); }
+  
+  void setSilencedBySolo(bool silenced) { mixerChannel.setSilencedBySolo(silenced); }
+  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
@@ -204,6 +211,13 @@ public:
   void loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host);
   static void savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& pluginTree);
 
+  //==============================================================================
+  // Automation Management
+  //==============================================================================
+  
+  // Message thread only: update automation for a specific parameter
+  void addAutomationLane(const juce::String& paramId, std::shared_ptr<AutomationLane> lane);
+  void clearAutomationLanes();
 
 private:
   //==============================================================================
@@ -322,6 +336,29 @@ private:
 
   // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback and instruments
   juce::MidiBuffer midiBuffer_;
+
+  //==============================================================================
+  // Automation State (Lock-free RCU)
+  //==============================================================================
+
+  struct AutomationSnapshot {
+    std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> lanes;
+
+    AutomationSnapshot() = default;
+    explicit AutomationSnapshot(const std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>& ownedLanes) {
+        lanes = ownedLanes;
+    }
+  };
+
+  // Ownership (Message thread)
+  std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> automationLanesOwned_;
+  
+  // RT Snapshot
+  std::atomic<const AutomationSnapshot*> activeAutomationSnapshot_{nullptr};
+  std::shared_ptr<AutomationSnapshot> currentAutomationSnapshot_;
+  std::vector<std::shared_ptr<AutomationSnapshot>> automationSnapshotTrash_;
+
+  void updateAutomationSnapshot();
 
   //==============================================================================
   // Helper methods

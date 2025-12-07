@@ -415,13 +415,20 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
 void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
-        auto offset = e.getDistanceFromDragStart();
+        auto offset = e.getOffsetFromDragStart();
         auto newBounds = dragStartBounds.translated(offset.x, offset.y);
         
         activeDragComponent->setBounds(newBounds);
         
         // Update Manager (persist as relative)
-        auto relative = newBounds.toFloat().getRelativeAsRectangle(getLocalBounds().toFloat());
+        auto parentBounds = getLocalBounds().toFloat();
+        juce::Rectangle<float> relative(
+            static_cast<float>(newBounds.getX()) / parentBounds.getWidth(),
+            static_cast<float>(newBounds.getY()) / parentBounds.getHeight(),
+            static_cast<float>(newBounds.getWidth()) / parentBounds.getWidth(),
+            static_cast<float>(newBounds.getHeight()) / parentBounds.getHeight()
+        );
+
         zenith::design::LayoutManager::PanelState state;
         state.relativeBounds = relative;
         state.isVisible = true;
@@ -698,26 +705,26 @@ MainWindow::MainWindow(const juce::String &name)
               juce::ResizableWindow::backgroundColourId),
           DocumentWindow::allButtons) {
   // Create audio engine first
-  engine = std::make_unique<Engine>();
+  engine = std::move(std::make_unique<zenith::Engine>());
 
   // Create project state
-  projectState = std::make_unique<ProjectState>();
+  projectState = std::move(std::make_unique<zenith::ProjectState>());
 
   // Phase 13: Create automation synchronizer
   automationSync =
-      std::make_unique<TrackAutomationSynchronizer>(*projectState, *engine);
+      std::move(std::make_unique<TrackAutomationSynchronizer>(*projectState, *engine));
 
   // Phase 5: Create Wingman command API
-  commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
+  commandAPI = std::move(std::make_unique<zenith::CommandAPI>(*projectState, *engine));
 
   // Phase 7: Create AI bridge client
-  aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
+  aiBridgeClient = std::move(std::make_unique<zenith::AIBridgeClient>());
 
   // Phase 13: Connect project state to engine for automation
   engine->setProjectState(projectState.get());
 
   // Integration: Create clip synchronizer
-  clipSynchronizer = std::make_unique<ClipSynchronizer>(*projectState, *engine);
+  clipSynchronizer = std::move(std::make_unique<ClipSynchronizer>(*projectState, *engine));
 
   // Add some demo tracks for testing (Phase 9 + existing features)
   projectState->addTrack("Audio 1", "audio");
@@ -726,8 +733,8 @@ MainWindow::MainWindow(const juce::String &name)
 
   // Create main content (Phase 14: Automation + Phase 10: Mixer + Phase 9:
   // Arranger + Wingman AI)
-  mainComponent = std::make_unique<MainComponent>(
-      *engine, *commandAPI, *aiBridgeClient, *projectState);
+  mainComponent = std::move(std::make_unique<MainComponent>(
+      *engine, *commandAPI, *aiBridgeClient, *projectState));
 
   // Create menu bar
   menuBar = std::make_unique<ZenithMenuBar>(*this);

@@ -865,6 +865,7 @@ void Engine::setTrackSolo(int trackIndex, bool solo)
     if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size()))
     {
         tracks_[trackIndex]->setSolo(solo);
+        updateSoloState();
     }
 }
 
@@ -981,6 +982,9 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track)
     tracks_.push_back(track); // Shared_ptr, no move needed
 
     DBG("Engine: Added track '" + name + "' (ID: " + id + ")");
+    
+    // Update Solo State (new track might need to be silenced if others are soloed)
+    updateSoloState();
 
     // Update snapshot for audio thread
     // ROAST FIX #1: Snapshot now holds shared_ptr, extending track lifetime
@@ -1002,6 +1006,9 @@ void Engine::removeTrack(int index)
         tracks_.erase(tracks_.begin() + index);
         
         DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
+        
+        // Update Solo State (removed track might have been the only soloed one)
+        updateSoloState();
 
         // Update snapshot for audio thread
         updateTrackSnapshot();
@@ -1077,6 +1084,18 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
     // Prepare master buffer
     masterBuffer_.setSize(2, bufferSize);
     masterBuffer_.clear();
+
+    // Prepare Aux Bus buffers
+    auxBusBuffers_.clear();
+    auxBusBuffers_.resize(auxBuses_.size());
+    for (size_t i = 0; i < auxBusBuffers_.size(); ++i) {
+        auxBusBuffers_[i].setSize(2, bufferSize);
+        auxBusBuffers_[i].clear();
+        
+        if (auxBuses_[i]) {
+            auxBuses_[i]->prepareToPlay(bufferSize, currentSampleRate.load());
+        }
+    }
 
     // Phase 11: Master buffer already allocated above
 
@@ -1652,6 +1671,13 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels)
         trackBuffers_[i].clear();
     }
 
+    // Resize Aux Bus buffers
+    auxBusBuffers_.resize(auxBuses_.size());
+    for (size_t i = 0; i < auxBusBuffers_.size(); ++i) {
+        auxBusBuffers_[i].setSize(numChannels, blockSize, false, true, false);
+        auxBusBuffers_[i].clear();
+    }
+
     DBG("Engine: Buffers prepared successfully");
 }
 
@@ -1664,6 +1690,19 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
 
     // Clear output buffer
     outputBuffer.clear();
+
+    // Clear Aux Buffers (Tier 1 Feature)
+    for (auto& buf : auxBusBuffers_) {
+        buf.clear();
+    }
+    
+    // Create vector of pointers to aux buffers for Tracks
+    // Note: We do this on the stack every block. Optimization: Pre-allocate this vector?
+    std::vector<juce::AudioBuffer<float>*> auxBufferPtrs;
+    auxBufferPtrs.reserve(auxBusBuffers_.size());
+    for (auto& buf : auxBusBuffers_) {
+        auxBufferPtrs.push_back(&buf);
+    }
 
     // Get thread-safe snapshot (Lock-free load)
     auto* snapshot = activeSnapshot_.load();
@@ -1725,7 +1764,8 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
         }
 
         // Render track audio (and process MIDI)
-        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput);
+        // Pass Aux Buffer Pointers and TempoMap (Tier 1 Features)
+        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput, auxBufferPtrs, tempoMap_.get());
         // - Apply track volume, pan, mute, solo
         // - Apply track effects chain
 
@@ -1736,6 +1776,27 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
             outputBuffer.addFrom(channel, 0,
                                trackBuffer.getReadPointer(channel),
                                numSamples);
+        }
+    }
+    
+    // Process Aux Buses (Tier 1 Item 3)
+    // We iterate over the available buses and process them.
+    for (size_t i = 0; i < auxBuses_.size() && i < auxBusBuffers_.size(); ++i) {
+        if (auxBuses_[i]) {
+            // Process the bus (Apply effects)
+            juce::AudioSourceChannelInfo auxInfo(&auxBusBuffers_[i], 0, numSamples);
+            auxBuses_[i]->getNextAudioBlock(auxInfo);
+            
+            // Mix to Master Output
+            // Aux buses are routed to Master (for now)
+             for (int channel = 0; channel < juce::jmin(outputBuffer.getNumChannels(),
+                                                         auxBusBuffers_[i].getNumChannels()); ++channel)
+            {
+                outputBuffer.addFrom(channel, 0,
+                                   auxBusBuffers_[i],
+                                   channel, 0,
+                                   numSamples);
+            }
         }
     }
 
@@ -2622,6 +2683,29 @@ void Engine::drainMidiRecordFifo()
     }
     
     midiRecordFifo_.finishedRead(numReady);
+}
+
+void Engine::updateSoloState()
+{
+    bool anySolo = false;
+    for (const auto& track : tracks_) {
+        if (track && track->isSolo()) {
+            anySolo = true;
+            break;
+        }
+    }
+    
+    for (const auto& track : tracks_) {
+        if (track) {
+            if (anySolo) {
+                // If any track is soloed, mute this track unless it is also soloed
+                track->setSilencedBySolo(!track->isSolo());
+            } else {
+                // No solo active, unmute everyone (from solo perspective)
+                track->setSilencedBySolo(false);
+            }
+        }
+    }
 }
 
 } // namespace zenith
