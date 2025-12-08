@@ -11,8 +11,19 @@ PORT = 54320 # Signaling port (UDP now preferred for Hole Punching exchange, but
 # So we need a UDP socket on the server side too.
 UDP_PORT = 54321
 
-# Database: { '1234': { 'ip': '...', 'port': 12345, 'client_conn': socket } }
+# Database: { '1234': { 'ip': '...', 'port': 12345, 'timestamp': 1234567890 } }
 sessions = {}
+
+def cleanup_loop():
+    """Removes sessions older than 5 minutes to free memory"""
+    while True:
+        time.sleep(60)
+        now = time.time()
+        expired = [k for k, v in sessions.items() if now - v.get('timestamp', 0) > 300]
+        for k in expired:
+            del sessions[k]
+        if expired:
+            print(f"Cleaned up {len(expired)} old sessions")
 
 def udp_listener():
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -30,6 +41,7 @@ def udp_listener():
                 code = msg.split(":")[1]
                 if code in sessions:
                     sessions[code]['host'] = addr # (ip, port)
+                    sessions[code]['timestamp'] = time.time() # Update activity
                     print(f"Host {code} UDP registered at {addr}")
                     
             elif msg.startswith("JOIN:"):
@@ -63,7 +75,7 @@ def handle_tcp_client(conn, addr):
             # Create a Session
             import random
             code = str(random.randint(1000, 9999))
-            sessions[code] = {} # Initialize
+            sessions[code] = {'timestamp': time.time()} # Initialize with time
             response = {'status': 'OK', 'code': code}
             print(f"TCP: Registered Session {code}")
 
@@ -92,5 +104,6 @@ def tcp_server():
 
 if __name__ == "__main__":
     # Run UDP and TCP in parallel
+    threading.Thread(target=cleanup_loop, daemon=True).start()
     threading.Thread(target=udp_listener, daemon=True).start()
     tcp_server()

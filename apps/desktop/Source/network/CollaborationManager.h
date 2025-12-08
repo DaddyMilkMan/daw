@@ -3,7 +3,6 @@
 #include <functional>
 #include <vector>
 
-
 struct RemoteUser {
   juce::String id;
   juce::String name;
@@ -62,7 +61,7 @@ private:
   juce::CriticalSection usersLock;
 
   // --- Networking ---
-  const juce::String SIGNALING_SERVER_IP = "127.0.0.1";
+  const juce::String SIGNALING_SERVER_IP = "216.126.231.46"; // Production VPS
   const int SIGNALING_TCP_PORT = 54320;
   const int SIGNALING_UDP_PORT = 54321;
 

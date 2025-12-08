@@ -246,6 +246,25 @@ void CollaborationManager::startLocalSignalingServer() {
     juce::StringArray args;
     args.add("python");
     args.add(scriptFile.getFullPathName());
-    signalingProcess.start(args);
+
+    if (signalingProcess.start(args)) {
+      DBG("Collab: Started Local Signaling Server (python)");
+    } else {
+      args.set(0, "python3");
+      if (signalingProcess.start(args)) {
+        DBG("Collab: Started Local Signaling Server (python3)");
+      } else {
+        // Try 'py' launcher for Windows
+        args.set(0, "py");
+        if (signalingProcess.start(args)) {
+          DBG("Collab: Started Local Signaling Server (py)");
+        } else {
+          DBG("Collab: FAILED to start Signaling Server. Ensure Python is "
+              "installed.");
+          // We could alert the user here, but for now we rely on the connection
+          // failing logic.
+        }
+      }
+    }
   }
 }
