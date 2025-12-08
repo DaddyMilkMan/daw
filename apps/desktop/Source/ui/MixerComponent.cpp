@@ -3,10 +3,11 @@
  * @brief Mixer component implementation
  */
 
-#include "../../include/ui/MixerComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
-#include "../../include/Engine.h"
-#include "../../include/ui/MixerChannelComponent.h"
+#include \"../../Source/ui/skia/ZenithDesignSystem.h\"
+#include \"../../include/Engine.h\"
+#include \"../../include/ui/MixerChannelComponent.h\"
+#include \"../../include/ui/MixerComponent.h\"
+#include \"../engine/Track.h\"
 
 
 // Check for Skia availability
@@ -84,9 +85,12 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
 
   // 4. Empty state
   if (channels_.empty()) {
-    ZenithDesignSystem::drawText(
-        canvas, "No Tracks", skBounds.centerX(), skBounds.centerY(),
-        SkColorSetARGB(100, 255, 255, 255), 24.0f, true);
+    SkPaint textPaint;
+    textPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+    textPaint.setAntiAlias(true);
+    SkFont textFont(nullptr, 24.0f);
+    canvas->drawString("No Tracks", skBounds.centerX() - 50, skBounds.centerY(),
+                       textFont, textPaint);
   }
 }
 

@@ -19,6 +19,7 @@
 #include "WingmanPanel.h"
 #include "ZenithLookAndFeel.h" // For colors
 
+#include "../ai/SessionDebuggerAgent.h"
 #include "SimpleLogger.h"
 
 #include "../ui/skia/SkiaComponent.h"
@@ -137,6 +138,13 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   logToFile("→ Creating BottomBar...");
   bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
+
+  // Connect Session Debugger
+  if (auto *debugger = engine.getSessionDebugger()) {
+    bottomBar->setDebugger(debugger);
+    DBG("✓ Session Debugger connected to BottomBar");
+  }
+
   addAndMakeVisible(bottomBar.get());
   logToFile("✓ BottomBar created");
   DBG("✓ BottomBar created and made visible at " +
@@ -273,8 +281,7 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
   if (zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
     activeDragComponent = nullptr;
-    if (transportBar &&
-             transportBar->getBounds().contains(e.getPosition()))
+    if (transportBar && transportBar->getBounds().contains(e.getPosition()))
       activeDragComponent = transportBar.get();
     else if (rightSidePanel &&
              rightSidePanel->getBounds().contains(e.getPosition()))
@@ -362,9 +369,9 @@ void MainComponent::resized() {
     DBG("  ✗ TransportBar is NULL!");
   }
 
-  // Bottom: Piano Keyboard + Mixer Strip (96px height when visible)
+  // Bottom: Piano Keyboard + Mixer Strip (128px height when visible)
   if (bottomBar) {
-    auto bottomBounds = bounds.removeFromBottom(96);
+    auto bottomBounds = bounds.removeFromBottom(128);
     bottomBar->setBounds(bottomBounds);
     DBG("  ✓ BottomBar positioned at: " + bottomBounds.toString());
   } else {

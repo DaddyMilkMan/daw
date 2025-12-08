@@ -49,9 +49,24 @@ namespace ai {
 
 //==============================================================================
 /**
+    Target Role for evolution context
+*/
+enum class TargetRole {
+  Bass,   // Low frequency, mono-compatible, solid fundamental
+  Lead,   // High harmonic content, present, piercing
+  Pad,    // Evolving, wide stereo, mid-range warmth
+  FX,     // Noisy, high dynamic range, weird spectral characteristics
+  General // Balanced (default behavior)
+};
+
+//==============================================================================
+/**
     Evolution configuration parameters
 */
 struct EvolutionConfig {
+  // Target Context
+  TargetRole targetRole = TargetRole::General;
+
   // Population size
   int populationSize = 50;
 

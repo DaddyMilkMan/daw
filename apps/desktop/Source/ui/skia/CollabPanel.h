@@ -19,6 +19,7 @@ public:
   CollabPanel() {
     setWantsKeyboardFocus(true);
     CollaborationManager::getInstance().addChangeListener(this);
+    setSize(350, 600);
     startTimerHz(30); // Animation updates
   }
 
@@ -28,6 +29,14 @@ public:
 
   void changeListenerCallback(juce::ChangeBroadcaster *) override {
     markDirty();
+  }
+
+  void timerCallback() override {
+    auto state = CollaborationManager::getInstance().getState();
+    if (state != CollaborationManager::ConnectionState::Disconnected &&
+        state != CollaborationManager::ConnectionState::Error) {
+      markDirty(); // Continuous repaint for animations
+    }
   }
 
   void drawSkia(SkCanvas *canvas) override {
@@ -162,11 +171,13 @@ public:
     // Check text fields
     if (nameInputBounds_.contains(pos.x, pos.y)) {
       activeField_ = Field::Name;
+      grabKeyboardFocus();
       markDirty();
       return;
     }
     if (codeInputBounds_.contains(pos.x, pos.y)) {
       activeField_ = Field::Code;
+      grabKeyboardFocus();
       markDirty();
       return;
     }

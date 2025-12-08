@@ -35,8 +35,9 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_dsp/juce_dsp.h>
 #include <memory>
+#include <set>
+#include <unordered_set>
 #include <vector>
-
 
 namespace zenith {
 namespace ai {
@@ -380,6 +381,18 @@ public:
    */
   bool bypassHighLatencyPlugin(int trackIndex, int pluginIndex);
 
+  /**
+   * @brief Lock a track to prevent the debugger from making changes
+   * @param trackIndex Track to lock/unlock
+   * @param locked true to lock, false to unlock
+   */
+  void setTrackDebuggingLocked(int trackIndex, bool locked);
+
+  /**
+   * @brief Check if a track is locked
+   */
+  bool isTrackDebuggingLocked(int trackIndex) const;
+
   //==========================================================================
   // Configuration
   //==========================================================================
@@ -488,6 +501,7 @@ private:
   float measureTrackRmsLevel(int trackIndex) const;
   int getPluginLatencySamples(juce::AudioPluginInstance *plugin) const;
   float samplesToMs(int samples) const;
+  bool isPluginIntentionalDistortion(const juce::String &pluginName) const;
 
   //==========================================================================
   // Member Variables
@@ -522,6 +536,14 @@ private:
   // Bypassed plugins (for undo)
   std::vector<std::pair<int, int>>
       bypassedPlugins_; // (trackIndex, pluginIndex)
+
+  // Locked tracks (user manually excluded from debugging)
+  std::unordered_set<int> lockedTracks_;
+  juce::CriticalSection lockedTracksLock_;
+
+  // Whitelist for plugins that intentionally clip (Distortion, Bitcrusher,
+  // etc.)
+  std::vector<juce::String> intentionalClippingKeywords_;
 
   // Listeners
   juce::ListenerList<Listener> listeners_;

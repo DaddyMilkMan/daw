@@ -89,6 +89,7 @@ struct UIIssue {
 
   juce::Time detectedAt;
   bool isFixed = false;
+  bool fixPending = false; // Fix is scheduled in queue
   juce::String fixApplied;
 
   UIIssue() : detectedAt(juce::Time::getCurrentTime()) {}
@@ -445,6 +446,27 @@ private:
   void updateHealthScore();
 
   //==========================================================================
+  // Async Task Queue (Time Slicing)
+  //==========================================================================
+
+  /**
+   * @brief Schedule a UI task to be executed on the message thread
+   * Avoids freezing the UI by spreading heavy tasks across multiple frames.
+   */
+  void scheduleTask(std::function<void()> task);
+
+  /**
+   * @brief Process a batch of pending tasks
+   * Called by timerCallback.
+   */
+  void processPendingTasks();
+
+  /**
+   * @brief Clear pending tasks
+   */
+  void clearPendingTasks();
+
+  //==========================================================================
   // Member Variables
   //==========================================================================
 
@@ -473,6 +495,10 @@ private:
   std::vector<UIIssue> issues_;
   std::vector<UIFixAction> fixHistory_;
   juce::CriticalSection issuesLock_;
+
+  // Task Queue
+  std::vector<std::function<void()>> uiTaskQueue_;
+  const int maxTasksPerFrame_ = 3; // Limit tasks/frame to prevent stutter
 
   // Health metrics
   std::atomic<float> uiHealthScore_{100.0f};

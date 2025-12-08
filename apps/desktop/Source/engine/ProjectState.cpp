@@ -100,6 +100,8 @@ const juce::Identifier ProjectState::PROP_BPM("bpm");
 const juce::Identifier ProjectState::PROP_COLOR("color");
 const juce::Identifier ProjectState::PROP_NEXT_ID("nextId");
 const juce::Identifier ProjectState::PROP_INPUT_CHANNEL("inputChannel");
+const juce::Identifier ProjectState::PROP_MANUALLY_COLORED("manuallyColored");
+const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
 //==============================================================================
 ProjectState::ProjectState() {
@@ -2281,6 +2283,19 @@ void ProjectState::renameMarker(const juce::String &markerId,
 
 juce::ValueTree ProjectState::getMarkers() const {
   return state.getChildWithName(ID_MARKERS);
+}
+
+void ProjectState::setTrackColor(const juce::String &trackId,
+                                 const juce::Colour &color, bool manuallySet,
+                                 const juce::String &actionName) {
+  auto track = findTrack(trackId);
+  if (track.isValid()) {
+    undoManager.beginNewTransaction(actionName);
+    track.setProperty(PROP_COLOR, color.toString(), &undoManager);
+    if (manuallySet) {
+      track.setProperty(PROP_MANUALLY_COLORED, true, &undoManager);
+    }
+  }
 }
 
 } // namespace zenith

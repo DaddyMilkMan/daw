@@ -14,6 +14,7 @@
 #include "../../include/ui/ClipComponent.h"
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../ui/skia/SkiaComponent.h"
+#include <algorithm>
 #include <typeinfo>
 
 namespace zenith {
@@ -98,14 +99,51 @@ void UXDirectorAgent::runAnalysis() {
 //==============================================================================
 
 void UXDirectorAgent::timerCallback() {
+  // 1. Process pending UI tasks (Time Slicing)
+  processPendingTasks();
+
+  // 2. Run analysis periodically
   runAnalysis();
 
-  // Apply auto-fixes if configured
+  // 3. Schedule auto-fixes if configured
   if (config_.autoBindOrphans || config_.autoStyleComponents ||
       config_.autoFixLayout || config_.autoUpdateNames) {
     applyAutomaticFixes();
   }
 }
+
+//==============================================================================
+// Async Task Queue
+//==============================================================================
+
+void UXDirectorAgent::scheduleTask(std::function<void()> task) {
+  uiTaskQueue_.push_back(task);
+}
+
+void UXDirectorAgent::processPendingTasks() {
+  if (uiTaskQueue_.empty())
+    return;
+
+  // Execute a small batch of tasks to avoid freezing the UI
+  int executedCount = 0;
+
+  // Create a copy of tasks to run, or iterate carefully
+  // We use a consumption loop
+  while (!uiTaskQueue_.empty() && executedCount < maxTasksPerFrame_) {
+    auto task = uiTaskQueue_.front();
+    // Remove from queue before execution to prevent loop if task re-schedules
+    uiTaskQueue_.erase(uiTaskQueue_.begin());
+
+    // Execute
+    if (task) {
+      task();
+    }
+
+    executedCount++;
+  }
+}
+
+void UXDirectorAgent::clearPendingTasks() { uiTaskQueue_.clear(); }
 
 //==============================================================================
 // ChangeListener (for Track changes)
@@ -532,47 +570,77 @@ int UXDirectorAgent::applyAllFixes() {
 }
 
 int UXDirectorAgent::applyFixesForType(UIIssueType type) {
-  int fixCount = 0;
+  int scheduledCount = 0;
+  juce::ScopedLock sl(issuesLock_);
 
-  for (size_t i = 0; i < issues_.size(); ++i) {
-    auto &issue = issues_[i];
-    if (issue.isFixed || issue.type != type)
+  for (auto &issue : issues_) {
+    if (issue.isFixed || issue.fixPending || issue.type != type)
       continue;
 
-    bool success = false;
+    // Mark as pending immediately to avoid double-scheduling
+    issue.fixPending = true;
 
-    switch (type) {
-    case UIIssueType::OrphanComponent:
-    case UIIssueType::MissingBinding:
-      success = applyOrphanBinding(issue.component);
-      break;
+    // Capture state for the task
+    // We use a WeakReference or SafePointer equivalent if available,
+    // but Component::SafePointer is best.
+    // Since we are inside the agent, we can capture 'this'.
+    juce::Component::SafePointer<juce::Component> safeComp(issue.component);
 
-    case UIIssueType::UnstyledComponent:
-      success = applyStyleFix(issue.component);
-      break;
+    scheduleTask([this, safeComp, type]() {
+      // 1. Verify component still exists
+      if (safeComp == nullptr)
+        return;
 
-    case UIIssueType::LayoutOverlap:
-    case UIIssueType::ZeroSizeComponent:
-    case UIIssueType::LayoutOffscreen:
-      success = applyLayoutFix(issue.component);
-      break;
+      juce::Component *comp = safeComp;
+      bool success = false;
 
-    case UIIssueType::StaleData:
-    case UIIssueType::InconsistentState:
-      success = applyNameSync(issue.component);
-      break;
+      // 2. Perform the fix
+      switch (type) {
+      case UIIssueType::OrphanComponent:
+      case UIIssueType::MissingBinding:
+        success = applyOrphanBinding(comp);
+        break;
 
-    default:
-      break;
-    }
+      case UIIssueType::UnstyledComponent:
+        success = applyStyleFix(comp);
+        break;
 
-    if (success) {
-      resolveIssue(i, "Auto-fixed by UX Director");
-      ++fixCount;
-    }
+      case UIIssueType::LayoutOverlap:
+      case UIIssueType::ZeroSizeComponent:
+      case UIIssueType::LayoutOffscreen:
+        success = applyLayoutFix(comp);
+        break;
+
+      case UIIssueType::StaleData:
+      case UIIssueType::InconsistentState:
+        success = applyNameSync(comp);
+        break;
+
+      default:
+        break;
+      }
+
+      // 3. Update Issue Status (Thread-safe)
+      {
+        juce::ScopedLock sl(issuesLock_);
+        for (auto &issue : issues_) {
+          if (issue.component == comp && issue.type == type) {
+            if (success) {
+              issue.isFixed = true;
+              issue.fixApplied = "Auto-fixed by UX Director (Async)";
+            }
+            // Always clear pending flag so it can be re-evaluated if failed
+            issue.fixPending = false;
+            break;
+          }
+        }
+      }
+    });
+
+    ++scheduledCount;
   }
 
-  return fixCount;
+  return scheduledCount;
 }
 
 void UXDirectorAgent::applyAutomaticFixes() {
@@ -580,11 +648,13 @@ void UXDirectorAgent::applyAutomaticFixes() {
   if (getUnresolvedIssueCount() == 0)
     return;
 
-  int fixes = applyAllFixes();
+  // This now returns scheduled count
+  int scheduled = applyAllFixes();
 
-  if (fixes > 0) {
-    DBG("UXDirectorAgent: Applied " + juce::String(fixes) + " automatic fixes");
-    sendChangeMessage();
+  if (scheduled > 0) {
+    DBG("UXDirectorAgent: Scheduled " + juce::String(scheduled) + " fixes");
+    // Don't send change message yet, wait for fixes?
+    // Actually sending it is fine, listeners see "Pending".
   }
 }
 
@@ -760,13 +830,31 @@ Track *UXDirectorAgent::findTrackForComponent(juce::Component *component) {
   if (tracks.empty())
     return nullptr;
 
-  // For MixerChannelComponent, try to match by position in parent
+  // 1. Existing Association Check
+  // For MixerChannelComponent, try to match by internal pointer
   if (auto *mixer = dynamic_cast<zenith::MixerChannelComponent *>(component)) {
-    // Already has a track associated
     if (mixer->getTrack() != nullptr)
       return mixer->getTrack();
   }
 
+  // 2. ID-Based Binding (Primary Heuristic)
+  // Check if component has an ID like "track_{GUID}"
+  juce::String compId = component->getComponentID();
+  if (compId.startsWith("track_")) {
+    juce::String trackId = compId.substring(6); // Remove "track_"
+
+    // Scan tracks for this ID
+    for (const auto &track : tracks) {
+      if (track->getTrackId() == trackId) {
+        return track.get();
+      }
+    }
+    // Explicit ID detected but not found in engine.
+    // Do NOT fall back to heuristics as this leads to incorrect bindings.
+    return nullptr;
+  }
+
+  // 3. Fallback: Sequential Binding (Risky but necessary for initial setup)
   // Heuristic: assign to next unbound track in order
   for (const auto &track : tracks) {
     bool isBound = false;
@@ -780,7 +868,7 @@ Track *UXDirectorAgent::findTrackForComponent(juce::Component *component) {
       return track.get();
   }
 
-  // Fall back to track at nextOrphanTrackIndex_
+  // 4. Last Resort: Index-based
   if (nextOrphanTrackIndex_ < static_cast<int>(tracks.size())) {
     return tracks[nextOrphanTrackIndex_++].get();
   }

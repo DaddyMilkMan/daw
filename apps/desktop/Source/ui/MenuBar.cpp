@@ -4,7 +4,7 @@
  */
 
 #include "MenuBar.h"
-#include "CollabPopup.h"
+#include "skia/CollabPanel.h"
 
 namespace zenith {
 
@@ -22,7 +22,7 @@ ZenithMenuBar::ZenithMenuBar() {
   collabButton.setColour(juce::TextButton::buttonColourId,
                          juce::Colours::purple);
   collabButton.onClick = [this] {
-    auto *content = new CollabPopup();
+    auto *content = new CollabPanel();
     collabCallout.reset(new juce::CallOutBox(
         *content, collabButton.getScreenBounds(), nullptr));
     collabCallout->setVisible(true);

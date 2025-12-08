@@ -403,27 +403,109 @@ void PresetGeneticistAgent::evaluateIndividual(Individual &individual) {
   // Calculate fitness score
   float fitness = 0.0f;
 
-  // Harmonic richness (more harmonics = better)
-  fitness += individual.harmonicRichness * config_.harmonicRichnessWeight;
+  // Context-Aware Fitness Scoring
+  switch (config_.targetRole) {
+  case TargetRole::Bass: {
+    // Bass: Low centroid, solid fundamental, mono compatible
 
-  // Dynamic range (more dynamic = better, within limits)
-  float dynamicRangeNorm =
-      juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 40.0f);
-  fitness += dynamicRangeNorm * config_.dynamicRangeWeight;
+    // 1. Spectral Centroid (Ideal: 100-300 Hz)
+    float idealCentroid = 200.0f;
+    float centroidScore = std::max(
+        0.0f, 1.0f - (std::abs(individual.spectralCentroid - idealCentroid) /
+                      500.0f));
+    fitness += centroidScore * 0.5f;
 
-  // Spectral balance (mid-range centroid preferred)
-  // Ideal spectral centroid around 1000-2000 Hz
-  float idealCentroid = 1500.0f;
-  float centroidDiff = std::abs(individual.spectralCentroid - idealCentroid);
-  float centroidScore = std::max(0.0f, 1.0f - (centroidDiff / 3000.0f));
-  fitness += centroidScore * config_.spectralBalanceWeight;
+    // 2. Harmonic Richness (Punish high richness/noise for sub bass, reward for
+    // rich bass) We want some richness but not white noise
+    float richnessScore = 1.0f - std::abs(individual.harmonicRichness - 0.3f);
+    fitness += richnessScore * 0.3f;
 
-  // RMS level (not too quiet, not too loud)
-  // Ideal RMS around -18 to -12 dB
-  float idealRms = -15.0f;
-  float rmsDiff = std::abs(individual.rmsDb - idealRms);
-  float rmsScore = std::max(0.0f, 1.0f - (rmsDiff / 20.0f));
-  fitness += rmsScore * config_.uniquenessWeight;
+    // 3. Dynamic Range (Bass should be relatively consistent)
+    float dynamicScore =
+        1.0f - juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 20.0f);
+    fitness += dynamicScore * 0.2f;
+    break;
+  }
+
+  case TargetRole::Lead: {
+    // Lead: High harmonic content, present, piercing
+
+    // 1. Harmonic Richness (Reward high)
+    fitness += individual.harmonicRichness * 0.5f;
+
+    // 2. Spectral Centroid (Ideal: 1500-3000 Hz)
+    float idealCentroid = 2000.0f;
+    float centroidScore = std::max(
+        0.0f, 1.0f - (std::abs(individual.spectralCentroid - idealCentroid) /
+                      2000.0f));
+    fitness += centroidScore * 0.3f;
+
+    // 3. Dynamic Range (Moderate)
+    float dynamicNorm =
+        juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 30.0f);
+    fitness += dynamicNorm * 0.2f;
+    break;
+  }
+
+  case TargetRole::Pad: {
+    // Pad: Evolving, mid-range warmth, dynamic
+
+    // 1. Dynamic Range (Reward high dynamics for evolving pads)
+    float dynamicNorm =
+        juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 40.0f);
+    fitness += dynamicNorm * 0.4f;
+
+    // 2. Harmonic Richness (Rich but not harsh)
+    fitness += individual.harmonicRichness * 0.3f;
+
+    // 3. Spectral Centroid (Ideal: 500-1500 Hz)
+    float idealCentroid = 1000.0f;
+    float centroidScore = std::max(
+        0.0f, 1.0f - (std::abs(individual.spectralCentroid - idealCentroid) /
+                      1000.0f));
+    fitness += centroidScore * 0.3f;
+    break;
+  }
+
+  case TargetRole::FX: {
+    // FX: Extreme values preferred
+
+    // 1. Uniqueness (Extreme Centroid or Richness)
+    float centroidExtremity =
+        std::abs(individual.spectralCentroid - 2000.0f) / 2000.0f;
+    fitness += centroidExtremity * 0.4f;
+
+    // 2. Dynamic Range (High)
+    float dynamicNorm =
+        juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 50.0f);
+    fitness += dynamicNorm * 0.4f;
+
+    // 3. Richness (High)
+    fitness += individual.harmonicRichness * 0.2f;
+    break;
+  }
+
+  case TargetRole::General:
+  default: {
+    // Balanced Profile
+    fitness += individual.harmonicRichness * config_.harmonicRichnessWeight;
+
+    float dynamicRangeNorm =
+        juce::jlimit(0.0f, 1.0f, individual.dynamicRange / 40.0f);
+    fitness += dynamicRangeNorm * config_.dynamicRangeWeight;
+
+    float idealCentroid = 1500.0f;
+    float centroidDiff = std::abs(individual.spectralCentroid - idealCentroid);
+    float centroidScore = std::max(0.0f, 1.0f - (centroidDiff / 3000.0f));
+    fitness += centroidScore * config_.spectralBalanceWeight;
+
+    float idealRms = -15.0f;
+    float rmsDiff = std::abs(individual.rmsDb - idealRms);
+    float rmsScore = std::max(0.0f, 1.0f - (rmsDiff / 20.0f));
+    fitness += rmsScore * config_.uniquenessWeight;
+    break;
+  }
+  }
 
   individual.fitness = juce::jlimit(0.0f, 1.0f, fitness);
   individual.evaluated = true;
@@ -744,8 +826,8 @@ PresetGeneticistAgent::renderPreset(const Preset &preset) {
     samplesRendered += samplesThisBlock;
   }
 
-  // Release resources
-  synthProcessor_->releaseResources();
+  // Release resources? NO - keep allocated for next run to avoid thrashing
+  // synthProcessor_->releaseResources();
 
   return outputBuffer;
 }

@@ -21,6 +21,11 @@ namespace ai {
 //==============================================================================
 
 SessionDebuggerAgent::SessionDebuggerAgent(Engine &engine) : engine_(engine) {
+  // Initialize whitelist
+  intentionalClippingKeywords_ = {
+      "Distortion", "Saturator", "Bitcrusher", "Overdrive", "Fuzz",     "Amp",
+      "Cabinet",    "Tube",      "Drive",      "Clip",      "Rectifier"};
+
   DBG("SessionDebuggerAgent: Initialized");
 }
 
@@ -312,6 +317,24 @@ bool SessionDebuggerAgent::bypassHighLatencyPlugin(int trackIndex,
   return bypassPlugin(trackIndex, pluginIndex);
 }
 
+void SessionDebuggerAgent::setTrackDebuggingLocked(int trackIndex,
+                                                   bool locked) {
+  juce::ScopedLock lock(lockedTracksLock_);
+  if (locked) {
+    lockedTracks_.insert(trackIndex);
+    DBG("SessionDebuggerAgent: Locked track " + juce::String(trackIndex) +
+        " from debugging");
+  } else {
+    lockedTracks_.erase(trackIndex);
+    DBG("SessionDebuggerAgent: Unlocked track " + juce::String(trackIndex));
+  }
+}
+
+bool SessionDebuggerAgent::isTrackDebuggingLocked(int trackIndex) const {
+  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(lockedTracksLock_));
+  return lockedTracks_.find(trackIndex) != lockedTracks_.end();
+}
+
 //==============================================================================
 // Session Statistics
 //==============================================================================
@@ -422,12 +445,32 @@ void SessionDebuggerAgent::analyzeGainStaging() {
     if (!track)
       continue;
 
+    // Skip locked tracks
+    if (isTrackDebuggingLocked(static_cast<int>(i))) {
+      continue;
+    }
+
+    // Check for intentional distortion plugins
+    bool hasIntentionalDistortion = false;
+    for (int p = 0; p < track->getNumPlugins(); ++p) {
+      auto *plugin = track->getPlugin(p);
+      if (plugin && isPluginIntentionalDistortion(plugin->getName())) {
+        hasIntentionalDistortion = true;
+        break;
+      }
+    }
+
+    // If intentional distortion exists, be much more lenient or skip
+    // We'll skip unless levels are extremely dangerous (> +12dB)
+    float safeThreshold =
+        hasIntentionalDistortion ? 12.0f : config_.outputClipThreshold;
+
     // Get peak level
     float peakLevel = track->getPeakLevel();
     float peakDb = juce::Decibels::gainToDecibels(peakLevel);
 
     // Check for clipping (output level)
-    if (peakDb > config_.outputClipThreshold) {
+    if (peakDb > safeThreshold) {
       ++clippingCount;
 
       SessionIssue issue;
@@ -443,6 +486,10 @@ void SessionDebuggerAgent::analyzeGainStaging() {
       for (int p = 0; p < track->getNumPlugins(); ++p) {
         auto *plugin = track->getPlugin(p);
         if (plugin && plugin->getName().containsIgnoreCase("compressor")) {
+          // If we have intentional distortion, don't blame the compressor input
+          if (hasIntentionalDistortion)
+            continue;
+
           hasCompressor = true;
           issue.pluginName = plugin->getName();
           issue.pluginIndex = p;
@@ -456,16 +503,23 @@ void SessionDebuggerAgent::analyzeGainStaging() {
       }
 
       if (!hasCompressor) {
-        issue.description = "Track \"" + track->getName() +
-                            "\" output is clipping (+" +
-                            juce::String(peakDb, 1) + "dB)";
+        if (hasIntentionalDistortion) {
+          issue.description = "Track \"" + track->getName() +
+                              "\" output is dangerously high (+" +
+                              juce::String(peakDb, 1) +
+                              "dB) despite distortion";
+        } else {
+          issue.description = "Track \"" + track->getName() +
+                              "\" output is clipping (+" +
+                              juce::String(peakDb, 1) + "dB)";
+        }
       }
 
       float neededReduction = peakDb - config_.headroomTarget;
       issue.suggestedFix = "Lower Trim on Track \"" + track->getName() +
                            "\" by " + juce::String(neededReduction, 1) + "dB";
       issue.value = peakDb;
-      issue.threshold = config_.outputClipThreshold;
+      issue.threshold = safeThreshold;
       addIssue(issue);
     }
 
@@ -608,6 +662,10 @@ void SessionDebuggerAgent::applyAutomaticFixes() {
     case IssueType::OutputClipping:
       if (config_.autoFixClipping && issue.severity >= IssueSeverity::Warning &&
           issue.trackIndex >= 0) {
+
+        // Re-check lock status before applying fix
+        if (isTrackDebuggingLocked(issue.trackIndex))
+          continue;
 
         float neededReduction = -(issue.value - config_.headroomTarget);
 
@@ -951,6 +1009,15 @@ float SessionDebuggerAgent::samplesToMs(int samples) const {
            1000.0f;
   }
   return 0.0f;
+}
+
+bool SessionDebuggerAgent::isPluginIntentionalDistortion(
+    const juce::String &pluginName) const {
+  for (const auto &keyword : intentionalClippingKeywords_) {
+    if (pluginName.containsIgnoreCase(keyword))
+      return true;
+  }
+  return false;
 }
 
 } // namespace ai

@@ -35,7 +35,6 @@
 #include <memory>
 #include <vector>
 
-
 namespace zenith {
 namespace ai {
 
@@ -238,13 +237,14 @@ struct RefactorPlan {
   // Track groups to create
   std::vector<TrackGroupDef> groupsToCreate;
 
-  // Clips to delete (dead code)
-  struct ClipDeletion {
+  // Clips to archive (dead code)
+  struct ClipArchive {
     juce::String trackId;
     juce::String clipId;
     juce::String reason;
+    juce::String targetTrackId; // ID of the quarantine track
   };
-  std::vector<ClipDeletion> clipsToDelete;
+  std::vector<ClipArchive> clipsToArchive;
 
   // Samples to consolidate
   struct SampleConsolidation {
@@ -259,12 +259,12 @@ struct RefactorPlan {
   int tracksToRename = 0;
   int tracksToColor = 0;
   int groupsToCreate_ = 0;
-  int clipsToRemove = 0;
+  int clipsToArchiveCount = 0;
   int samplesToMove = 0;
 
   bool isEmpty() const {
     return trackRenames.empty() && colorChanges.empty() &&
-           groupsToCreate.empty() && clipsToDelete.empty() &&
+           groupsToCreate.empty() && clipsToArchive.empty() &&
            samplesToConsolidate.empty();
   }
 
@@ -295,11 +295,11 @@ struct RefactorPlan {
       lines.add("");
     }
 
-    if (!clipsToDelete.empty()) {
-      lines.add("Dead Clips to Remove (" + juce::String(clipsToDelete.size()) +
-                "):");
-      for (const auto &c : clipsToDelete)
-        lines.add("  • " + c.reason);
+    if (!clipsToArchive.empty()) {
+      lines.add("Dead Clips to Archive (" +
+                juce::String(clipsToArchive.size()) + "):");
+      for (const auto &c : clipsToArchive)
+        lines.add("  • " + c.reason + " (Moving to Quarantine)");
       lines.add("");
     }
 
@@ -352,9 +352,10 @@ public:
     bool renameGenericTracks = true; // Rename "Audio 1" → "Kick"
     bool assignTrackColors = true;   // Color tracks by category
     bool createTrackGroups = true;   // Group related tracks
-    bool removeDeadClips = true;     // Remove muted/out-of-bounds clips
-    bool consolidateSamples = true;  // Copy external samples to project
-    bool removeEmptyTracks = false;  // Delete tracks with no clips
+    bool archiveDeadClips =
+        true; // Move muted/out-of-bounds clips to quarantine
+    bool consolidateSamples = true; // Copy external samples to project
+    bool removeEmptyTracks = false; // Delete tracks with no clips
 
     double songStartBeats = 0.0; // Song start point (for dead clip detection)
     double songEndBeats = -1.0;  // Song end point (-1 = auto-detect)
@@ -416,7 +417,7 @@ public:
   */
   void executeTrackRenames(const RefactorPlan &plan);
   void executeColorChanges(const RefactorPlan &plan);
-  void executeClipDeletions(const RefactorPlan &plan);
+  void executeClipArchival(const RefactorPlan &plan);
   void executeSampleConsolidation(const RefactorPlan &plan);
 
   /**

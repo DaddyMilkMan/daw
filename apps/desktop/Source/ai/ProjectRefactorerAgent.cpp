@@ -11,7 +11,7 @@
 */
 
 #include "ProjectRefactorerAgent.h"
-#include "../engine/AudioFilePool.h"
+
 #include <algorithm>
 #include <regex>
 
@@ -53,7 +53,7 @@ RefactorPlan ProjectRefactorerAgent::analyzeQuick() {
   if (options_.renameGenericTracks)
     detectGenericNames();
 
-  if (options_.removeDeadClips)
+  if (options_.archiveDeadClips)
     detectDeadClips();
 
   if (options_.consolidateSamples)
@@ -126,7 +126,7 @@ void ProjectRefactorerAgent::analyze(
     }
 
     // Step 2: Dead clips
-    if (options_.removeDeadClips)
+    if (options_.archiveDeadClips)
       detectDeadClips();
 
     progress.currentStep = 3;
@@ -343,6 +343,10 @@ void ProjectRefactorerAgent::detectMissingColors() {
     auto track = tracksNode.getChild(i);
     juce::String trackId = track[ProjectState::PROP_ID].toString();
 
+    // Respect user intent: Skip manually colored tracks
+    if ((bool)track.getProperty(ProjectState::PROP_MANUALLY_COLORED))
+      continue;
+
     if (!track.hasProperty(ProjectState::PROP_COLOR)) {
       issues_.emplace_back(RefactorIssue::Type::NoTrackColor, trackId,
                            "Track has no color assigned");
@@ -440,6 +444,10 @@ void ProjectRefactorerAgent::buildRefactorPlan() {
         issue.type == RefactorIssue::Type::GenericTrackName) {
       auto track = projectState_.getTrack(issue.trackId);
       if (track.isValid()) {
+        // Second check for safety (in case issue is stale)
+        if (track.hasProperty(ProjectState::PROP_MANUALLY_COLORED))
+          continue;
+
         juce::String name = track[ProjectState::PROP_NAME].toString();
         InstrumentCategory cat = classifyFromName(name);
 
@@ -451,15 +459,16 @@ void ProjectRefactorerAgent::buildRefactorPlan() {
     }
   }
 
-  // Build clip deletions
+  // Build clip archiving
   for (const auto &issue : issues_) {
     if (issue.type == RefactorIssue::Type::MutedClip ||
         issue.type == RefactorIssue::Type::ClipOutOfBounds) {
-      RefactorPlan::ClipDeletion deletion;
-      deletion.trackId = issue.trackId;
-      deletion.clipId = issue.clipId;
-      deletion.reason = issue.description;
-      currentPlan_.clipsToDelete.push_back(deletion);
+      RefactorPlan::ClipArchive archive;
+      archive.trackId = issue.trackId;
+      archive.clipId = issue.clipId;
+      archive.reason = issue.description;
+      // Target track ID will be resolved during execution
+      currentPlan_.clipsToArchive.push_back(archive);
     }
   }
 
@@ -508,8 +517,8 @@ void ProjectRefactorerAgent::buildRefactorPlan() {
       static_cast<int>(currentPlan_.colorChanges.size());
   currentPlan_.groupsToCreate_ =
       static_cast<int>(currentPlan_.groupsToCreate.size());
-  currentPlan_.clipsToRemove =
-      static_cast<int>(currentPlan_.clipsToDelete.size());
+  currentPlan_.clipsToArchiveCount =
+      static_cast<int>(currentPlan_.clipsToArchive.size());
   currentPlan_.samplesToMove =
       static_cast<int>(currentPlan_.samplesToConsolidate.size());
 }
@@ -545,14 +554,14 @@ void ProjectRefactorerAgent::execute(
 
       executeColorChanges(plan);
 
-      // Step 3: Delete clips
+      // Step 3: Archive clips
       progress.currentStep = 3;
-      progress.currentOperation = "Removing dead clips...";
+      progress.currentOperation = "Archiving dead clips to Quarantine...";
       progress.progressPercent = 60.0f;
       if (onProgress)
         onProgress(progress);
 
-      executeClipDeletions(plan);
+      executeClipArchival(plan);
 
       // Step 4: Consolidate samples
       progress.currentStep = 4;
@@ -578,8 +587,8 @@ void ProjectRefactorerAgent::execute(
                                juce::String(plan.colorChanges.size()) +
                                " tracks colored\n"
                                "• " +
-                               juce::String(plan.clipsToDelete.size()) +
-                               " clips removed\n"
+                               juce::String(plan.clipsToArchive.size()) +
+                               " clips archived\n"
                                "• " +
                                juce::String(plan.samplesToConsolidate.size()) +
                                " samples consolidated";
@@ -614,12 +623,77 @@ void ProjectRefactorerAgent::executeColorChanges(const RefactorPlan &plan) {
   }
 }
 
-void ProjectRefactorerAgent::executeClipDeletions(const RefactorPlan &plan) {
-  for (const auto &deletion : plan.clipsToDelete) {
-    projectState_.deleteClip(deletion.trackId, deletion.clipId,
-                             "Refactor: Remove dead clip");
-    DBG("ProjectRefactorerAgent: Deleted clip " + deletion.clipId + " (" +
-        deletion.reason + ")");
+void ProjectRefactorerAgent::executeClipArchival(const RefactorPlan &plan) {
+  if (plan.clipsToArchive.empty())
+    return;
+
+  // Find or create Quarantine Track
+  juce::String quarantineTrackId;
+  auto &state = projectState_.getState();
+  auto tracksNode = state.getChildWithName(ProjectState::ID_TRACKS);
+
+  // Check for existing quarantine track
+  if (tracksNode.isValid()) {
+    for (int i = 0; i < tracksNode.getNumChildren(); ++i) {
+      auto track = tracksNode.getChild(i);
+      if (track.hasProperty(ProjectState::PROP_IS_QUARANTINE)) {
+        quarantineTrackId = track[ProjectState::PROP_ID].toString();
+        break;
+      }
+      // Fallback: check name too
+      if (track[ProjectState::PROP_NAME].toString().containsIgnoreCase(
+              "Quarantine") ||
+          track[ProjectState::PROP_NAME].toString().containsIgnoreCase(
+              "Trash")) {
+        quarantineTrackId = track[ProjectState::PROP_ID].toString();
+        track.setProperty(ProjectState::PROP_IS_QUARANTINE, true, nullptr);
+        break;
+      }
+    }
+  }
+
+  // Create if missing
+  if (quarantineTrackId.isEmpty()) {
+    quarantineTrackId =
+        projectState_.addTrack("Quarantine / Trash", "audio"); // Or hybrid
+    auto track = projectState_.getTrack(quarantineTrackId);
+    if (track.isValid()) {
+      track.setProperty(ProjectState::PROP_IS_QUARANTINE, true,
+                        &projectState_.getUndoManager());
+      track.setProperty(ProjectState::PROP_COLOR, "ff505050",
+                        nullptr);                                // Dark Grey
+      track.setProperty(ProjectState::PROP_MUTE, true, nullptr); // Auto-mute
+    }
+  }
+
+  // Move clips
+  for (const auto &archive : plan.clipsToArchive) {
+    auto [track, clip] = projectState_.findClip(archive.clipId);
+    if (clip.isValid()) {
+      // We use the raw moveClip via XML/ProjectState manipulation or built-in
+      // move method ProjectState::moveClip usually changes start time. We need
+      // to move TRACKS.
+
+      // We can use the moveClip(clipId, newTrackId, start) method if available,
+      // or implement it via raw valueTree operations if 'moveClip' only handles
+      // timeline position.
+
+      // Let's check ProjectState::moveClip(clipId, newTrackId, double
+      // newStartBeats...) We want to keep the same start time if possible, or
+      // stack them? Stacking them at the end might be safer to avoid overlap
+      // hell, but keeping time is "least destructive" visually. Let's keep
+      // time.
+
+      double startBeats = clip[ProjectState::PROP_START];
+      projectState_.moveClip(archive.clipId, quarantineTrackId, startBeats,
+                             "Refactor: Archive clip");
+
+      // Color it grey to indicate "trash" status
+      clip.setProperty(ProjectState::PROP_COLOR, "ff808080", nullptr);
+
+      DBG("ProjectRefactorerAgent: Archived clip " + archive.clipId +
+          " to Quarantine");
+    }
   }
 }
 

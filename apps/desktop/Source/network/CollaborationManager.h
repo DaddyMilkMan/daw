@@ -45,7 +45,10 @@ public:
 
   // --- Real-time Sync ---
   void updateLocalCursor(float x, float y);
-  const std::vector<RemoteUser> &getRemoteUsers() const { return remoteUsers; }
+  std::vector<RemoteUser> getRemoteUsers() const {
+    const juce::ScopedLock sl(usersLock);
+    return remoteUsers;
+  }
   void broadcastEdit(const juce::String &commandData);
 
   // --- User Identity ---
@@ -65,7 +68,7 @@ private:
   juce::String sessionCode;
   juce::String localUserName = "User";
   std::vector<RemoteUser> remoteUsers;
-  juce::CriticalSection usersLock;
+  mutable juce::CriticalSection usersLock;
 
   // --- Networking ---
   const juce::String SIGNALING_SERVER_IP = "216.126.231.46"; // Production VPS

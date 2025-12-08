@@ -55,7 +55,7 @@ void CollaborationManager::joinSession(const juce::String &code) {
 void CollaborationManager::disconnect() {
   signalThreadShouldExit();
   stopThread(1000);
-  p2pSocket.close();
+  p2pSocket.shutdown();
 
   currentState = ConnectionState::Disconnected;
   remoteUsers.clear();
@@ -83,8 +83,8 @@ void CollaborationManager::run() {
   for (int i = 0; i < 5; ++i) {
     if (threadShouldExit())
       return;
-    p2pSocket.write(punchMsg.toRawUTF8(), punchMsg.length(),
-                    SIGNALING_SERVER_IP, SIGNALING_UDP_PORT);
+    p2pSocket.write(SIGNALING_SERVER_IP, SIGNALING_UDP_PORT,
+                    punchMsg.toRawUTF8(), (int)punchMsg.length());
     wait(200);
   }
 
@@ -105,13 +105,24 @@ void CollaborationManager::run() {
     // KeepAlive / Punch Continuation
     if (currentState == ConnectionState::Punching) {
       // Keep telling server we are here until we get a PEER
-      p2pSocket.write(punchMsg.toRawUTF8(), punchMsg.length(),
-                      SIGNALING_SERVER_IP, SIGNALING_UDP_PORT);
+      p2pSocket.write(SIGNALING_SERVER_IP, SIGNALING_UDP_PORT,
+                      punchMsg.toRawUTF8(), (int)punchMsg.length());
 
       // If we have Peer Info (from handleIncomingPacket), punch THEM
       if (peerIP.isNotEmpty()) {
         juce::String hello = "HELLO_PEER";
-        p2pSocket.write(hello.toRawUTF8(), hello.length(), peerIP, peerPort);
+        p2pSocket.write(peerIP, peerPort, hello.toRawUTF8(),
+                        (int)hello.length());
+      }
+    } else if (currentState == ConnectionState::Connected) {
+      static int64 lastKeepAlive = 0;
+      auto now = juce::Time::currentTimeMillis();
+      if (now - lastKeepAlive > 2000) {
+        juce::MemoryBlock msg;
+        int t = (int)PacketType::KeepAlive;
+        msg.append(&t, sizeof(int));
+        p2pSocket.write(peerIP, peerPort, msg.getData(), (int)msg.getSize());
+        lastKeepAlive = now;
       }
     }
   }
@@ -148,7 +159,7 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       int t = (int)PacketType::Hello;
       m.append(&t, sizeof(int));
       m.append(localUserName.toRawUTF8(), localUserName.length());
-      p2pSocket.write(m.getData(), m.getSize(), peerIP, peerPort);
+      p2pSocket.write(peerIP, peerPort, m.getData(), (int)m.getSize());
     }
 
     if (size < 4)
@@ -194,8 +205,15 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
         remoteUsers[0].isOnline = true;
       }
       sendChangeMessage();
+    } else if (type == PacketType::EditCommand) {
+      if (payloadSize > 0) {
+        juce::String cmdData = juce::String::fromUTF8(payloadPtr, payloadSize);
+        if (onEditReceived) {
+          juce::MessageManager::callAsync(
+              [this, cmdData]() { onEditReceived(cmdData); });
+        }
+      }
     }
-    // ... Other types
   }
 }
 
@@ -208,7 +226,7 @@ void CollaborationManager::sendPacket(PacketType type, const void *data,
   int t = (int)type;
   msg.append(&t, sizeof(int));
   msg.append(data, size);
-  p2pSocket.write(msg.getData(), msg.getSize(), peerIP, peerPort);
+  p2pSocket.write(peerIP, peerPort, msg.getData(), (int)msg.getSize());
 }
 
 void CollaborationManager::updateLocalCursor(float x, float y) {
@@ -217,7 +235,8 @@ void CollaborationManager::updateLocalCursor(float x, float y) {
 }
 
 void CollaborationManager::broadcastEdit(const juce::String &commandData) {
-  // ...
+  sendPacket(PacketType::EditCommand, commandData.toRawUTF8(),
+             commandData.length());
 }
 
 // --- Helpers ---

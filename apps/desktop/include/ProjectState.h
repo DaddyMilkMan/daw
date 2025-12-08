@@ -86,6 +86,8 @@ public:
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
   static const juce::Identifier PROP_LANE_INDEX;
+  static const juce::Identifier PROP_MANUALLY_COLORED;
+  static const juce::Identifier PROP_IS_QUARANTINE;
 
   // Automation properties
   static const juce::Identifier PROP_PARAM;
@@ -176,6 +178,9 @@ public:
 
   void renameTrack(const juce::String &trackId, const juce::String &newName,
                    const juce::String &actionName = "Rename track");
+  void setTrackColor(const juce::String &trackId, const juce::Colour &color,
+                     bool manuallySet = false,
+                     const juce::String &actionName = "Set track color");
   void setTrackVolume(const juce::String &trackId, float volumeLinear,
                       const juce::String &actionName = "Set track volume");
   float getTrackVolume(const juce::String &trackId) const;
