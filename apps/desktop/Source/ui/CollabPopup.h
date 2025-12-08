@@ -1,3 +1,5 @@
+// DEPRECATED: This JUCE-based popup has been replaced with a Skia-based
+// version. Use zenith::CollabPanel from ui/skia/CollabPanel.h instead.
 #pragma once
 #include "../network/CollaborationManager.h"
 #include <JuceHeader.h>

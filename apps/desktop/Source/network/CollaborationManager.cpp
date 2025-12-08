@@ -143,13 +143,11 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       DBG("Collab: P2P UDP Connection Established!");
       sendChangeMessage();
 
-      // Handshake
-      juce::String myName =
-          "User_" + juce::String(juce::Random::getSystemRandom().nextInt(100));
+      // Handshake - send our name
       juce::MemoryBlock m;
       int t = (int)PacketType::Hello;
       m.append(&t, sizeof(int));
-      m.append(myName.toRawUTF8(), myName.length());
+      m.append(localUserName.toRawUTF8(), localUserName.length());
       p2pSocket.write(m.getData(), m.getSize(), peerIP, peerPort);
     }
 
@@ -166,7 +164,26 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
     char *payloadPtr = (char *)data + headerSize;
     int payloadSize = size - headerSize;
 
-    if (type == PacketType::CursorMove && payloadSize == sizeof(float) * 2) {
+    if (type == PacketType::Hello && payloadSize > 0) {
+      // Received remote user's name
+      juce::String remoteName = juce::String::fromUTF8(payloadPtr, payloadSize);
+      {
+        const juce::ScopedLock sl(usersLock);
+        if (remoteUsers.empty()) {
+          remoteUsers.push_back({});
+        }
+        remoteUsers[0].name = remoteName;
+        remoteUsers[0].isOnline = true;
+        remoteUsers[0].id = senderIP + ":" + juce::String(senderPort);
+        // Assign a color based on name hash
+        int hash = remoteName.hashCode();
+        remoteUsers[0].color =
+            juce::Colour::fromHSV((hash & 0xFF) / 255.0f, 0.7f, 0.9f, 1.0f);
+      }
+      DBG("Collab: Remote user joined: " + remoteName);
+      sendChangeMessage();
+    } else if (type == PacketType::CursorMove &&
+               payloadSize == sizeof(float) * 2) {
       float pos[2];
       memcpy(pos, payloadPtr, sizeof(pos));
       {

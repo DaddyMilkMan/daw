@@ -21,6 +21,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithTheme.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
 )
 
 add_subdirectory(skia)

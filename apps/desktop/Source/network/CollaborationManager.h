@@ -29,7 +29,9 @@ public:
   enum class ConnectionState {
     Disconnected,
     Registering, // Getting Code from TCP
+    Connecting,  // Joiner waiting for connection
     Punching,    // Sending UDP to Server to open ports
+    Hosting,     // Acting as session host
     Connected,   // P2P UDP Stream Active
     Error
   };
@@ -46,6 +48,10 @@ public:
   const std::vector<RemoteUser> &getRemoteUsers() const { return remoteUsers; }
   void broadcastEdit(const juce::String &commandData);
 
+  // --- User Identity ---
+  void setLocalUserName(const juce::String &name) { localUserName = name; }
+  juce::String getLocalUserName() const { return localUserName; }
+
   std::function<void(const juce::String &)> onEditReceived;
 
 private:
@@ -57,6 +63,7 @@ private:
 
   ConnectionState currentState = ConnectionState::Disconnected;
   juce::String sessionCode;
+  juce::String localUserName = "User";
   std::vector<RemoteUser> remoteUsers;
   juce::CriticalSection usersLock;
 

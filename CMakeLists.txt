@@ -92,6 +92,7 @@ add_subdirectory(apps/desktop/Source/commands)
 add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
+add_subdirectory(apps/desktop/Source/ai)
 
 
 # Include directories

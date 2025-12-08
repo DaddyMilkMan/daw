@@ -21,6 +21,10 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
 #endif
 {
   jassert(track_ != nullptr);
+  track_->addChangeListener(this);
+
+  // Initialize UI from track
+  updateFromTrack();
 
   // Track name label
   nameLabel_.setText(track_->getName(), juce::dontSendNotification);
@@ -95,7 +99,19 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
   setSize(80, 400);
 }
 
-MixerChannelComponent::~MixerChannelComponent() { stopTimer(); }
+MixerChannelComponent::~MixerChannelComponent() {
+  if (track_)
+    track_->removeChangeListener(this);
+  stopTimer();
+}
+
+void MixerChannelComponent::changeListenerCallback(
+    juce::ChangeBroadcaster *source) {
+  if (source == track_) {
+    // UI update on message thread
+    updateFromTrack();
+  }
+}
 
 //==============================================================================
 void MixerChannelComponent::drawSkia(SkCanvas *canvas) {

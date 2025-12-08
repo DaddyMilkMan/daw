@@ -11,6 +11,7 @@
 #include <array>     // For RT-safe stack allocation in audio callback
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
+#include "../ai/SessionDebuggerAgent.h"
 #include "../engine/AudioFilePool.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
@@ -41,6 +42,10 @@ Engine::Engine() {
   zenith::registerBuiltInInstruments(
       *instrumentRegistry_); // Register factories
   DBG("Engine: InstrumentRegistry initialized");
+
+  // Initialize Session Debugger Agent (AI Technical Integrity)
+  sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
+  DBG("Engine: SessionDebuggerAgent initialized");
 
   // Phase 2D: Initialize audio recording infrastructure
   // Create background thread for audio file writing
@@ -279,12 +284,24 @@ bool Engine::initialize() {
   addTestTracks(8);
 #endif
 
+  // Start Session Debugger monitoring (AI Technical Integrity Agent)
+  if (sessionDebugger_) {
+    sessionDebugger_->startMonitoring(500); // Analyze every 500ms
+    DBG("Engine: SessionDebugger monitoring started");
+  }
+
   DBG("Engine: Initialization complete!");
   return true;
 }
 
 void Engine::shutdown() {
   DBG("Engine: Shutting down...");
+
+  // Stop Session Debugger monitoring first
+  if (sessionDebugger_) {
+    sessionDebugger_->stopMonitoring();
+    DBG("Engine: SessionDebugger monitoring stopped");
+  }
 
   // Stop playback
   stop();
