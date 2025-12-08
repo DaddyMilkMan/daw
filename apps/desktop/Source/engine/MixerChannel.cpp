@@ -159,7 +159,14 @@ void MixerChannel::applyCoefficients() {
 
 void MixerChannel::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill) {
-  if (muted.load()) {
+  getNextAudioBlock(bufferToFill, {});
+}
+
+void MixerChannel::getNextAudioBlock(
+    const juce::AudioSourceChannelInfo &bufferToFill,
+    const std::vector<juce::AudioBuffer<float>*>& auxBuffers) {
+    
+  if (muted.load() || silencedBySolo.load()) {
     bufferToFill.clearActiveBufferRegion();
     inputLevel.store(0.0f);
     outputLevel.store(0.0f);
@@ -194,11 +201,14 @@ void MixerChannel::getNextAudioBlock(
     processCompressor(localBuffer);
   }
 
-  // Sends are processed explicitly by the owner (Track) using processSends()
-  // because we need access to the external send buffers.
+  // Process PRE-FADER Sends
+  processSends(localBuffer, auxBuffers, true);
 
   // Process output section (pan, volume)
   processOutput(localBuffer);
+  
+  // Process POST-FADER Sends
+  processSends(localBuffer, auxBuffers, false);
 
   // Update output meters
   updateMeters(localBuffer, false);
@@ -206,9 +216,14 @@ void MixerChannel::getNextAudioBlock(
 
 void MixerChannel::processSends(
     const juce::AudioBuffer<float> &sourceBuffer,
-    std::vector<juce::AudioBuffer<float> *> &sendBuffers) {
+    const std::vector<juce::AudioBuffer<float> *> &sendBuffers,
+    bool matchPreFader) {
   for (int i = 0; i < numSends && i < static_cast<int>(sendBuffers.size());
        ++i) {
+    // Check if this send matches the requested pre/post mode
+    if (sendPreFader[i].load() != matchPreFader)
+        continue;
+           
     auto *sendBuffer = sendBuffers[i];
     if (sendBuffer == nullptr)
       continue;

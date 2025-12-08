@@ -80,6 +80,9 @@ juce_generate_juce_header(ZenithDAW)
 
 target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 
+# Skia Integration (must be defined before subdirectories)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
+
 # Modularized Source Groups (Complaint #6 Fix)
 add_subdirectory(apps/desktop/Source/engine)
 add_subdirectory(apps/desktop/Source/ui)
@@ -89,6 +92,7 @@ add_subdirectory(apps/desktop/Source/commands)
 add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
+add_subdirectory(apps/desktop/Source/ai)
 
 
 # Include directories
@@ -132,9 +136,7 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Skia Integration (Manual)
-option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
-
+# Skia Integration (Manual) - option defined earlier
 if(ZENITH_ENABLE_SKIA)
     include(apps/desktop/cmake/SkiaManualIntegration.cmake)
     target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
@@ -152,31 +154,8 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_REPORT_APP_USAGE=0
 )
 
-# if(MSVC)
-#     target_compile_options(ZenithDAW PRIVATE /Qspectre-)
-#     set_target_properties(ZenithDAW PROPERTIES VS_SPECTRE_MITIGATION "false")
-    
-#     # Force __cdecl calling convention (remove any /Gr that may be set)
-#     foreach(flag_var
-#         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-#         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
-#         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-#         CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
-#         if(${flag_var} MATCHES "/Gr")
-#             string(REPLACE "/Gr" "" ${flag_var} "${${flag_var}}")
-#         endif()
-#         if(${flag_var} MATCHES "/Gd")
-#             string(REPLACE "/Gd" "" ${flag_var} "${${flag_var}}")
-#         endif()
-#     endforeach()
-    
-#     # target_compile_options(ZenithDAW PRIVATE /Gd)
-# endif()
-
-# if(MSVC)
-#     # Attempt to resolve D8016 by forcing FastCall at project level
-#     # set_property(TARGET ZenithDAW PROPERTY VS_GLOBAL_CallingConvention "FastCall")
-# endif()
+# Removed commented-out MSVC calling convention code (2025-01-XX)
+# If needed in future, see git history for previous implementation
 
 # ==============================================================================
 # MODERN COMPILER CONFIGURATION (Standard Flags)
