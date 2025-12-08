@@ -6,14 +6,12 @@
 #include "../../include/ui/MixerComponent.h"
 #include "../ui/ZenithLookAndFeel.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
 #include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
-#endif
 #include "../ui/skia/SkiaTheme.h"
 
 //==============================================================================
@@ -36,29 +34,6 @@ MixerComponent::~MixerComponent() {
 //==============================================================================
 // Component interface
 //==============================================================================
-
-#ifndef ZENITH_USE_SKIA
-void MixerComponent::paint(juce::Graphics &g) {
-  // Background
-  g.fillAll(juce::Colour(zenith::ZenithLookAndFeel::Colors::backgroundPanel));
-
-  // Draw border
-  g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::border));
-  g.drawRect(getLocalBounds(), 1);
-
-  // If no tracks, show hint
-  if (trackStrips.empty()) {
-    g.setColour(juce::Colour(zenith::ZenithLookAndFeel::Colors::textSecondary));
-    g.setFont(zenith::ZenithLookAndFeel::getFontBody());
-    g.drawText("No tracks - Add a track to see mixer controls",
-               getLocalBounds(), juce::Justification::centred, true);
-  }
-}
-#endif
-
-// ... (resized and other methods remain unchanged)
-
-#ifdef ZENITH_USE_SKIA
 
 void MixerComponent::drawSkia(SkCanvas *canvas) {
   SkRect bounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
@@ -173,7 +148,6 @@ void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
 
   canvas->restore();
 }
-#endif
 
 //==============================================================================
 
@@ -197,10 +171,7 @@ void MixerComponent::resized() {
     auto area = strip->bounds;
 
     // 1. Track Name (Top)
-    auto nameArea = area.removeFromTop(20);
-#ifndef ZENITH_USE_SKIA
-    if (strip->nameLabel) strip->nameLabel->setBounds(nameArea);
-#endif
+    // Handled by drawSkia
 
     // 2. Arm Button (Below Name)
     auto armArea = area.removeFromTop(25);
@@ -371,7 +342,6 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   if (strip->trackId.isEmpty())
     return nullptr;
 
-#ifdef ZENITH_USE_SKIA
   // --- SKIA CONTROLS ---
 
   // Volume Slider (Vertical)
@@ -428,96 +398,6 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   };
   addAndMakeVisible(*strip->armButton);
 
-#else
-  // --- JUCE CONTROLS ---
-
-  // Create name label
-  strip->nameLabel = std::make_unique<juce::Label>();
-  strip->nameLabel->setText(strip->trackName, juce::dontSendNotification);
-  strip->nameLabel->setJustificationType(juce::Justification::centred);
-  strip->nameLabel->setFont(
-      zenith::ZenithLookAndFeel::getFontSmall().withStyle(juce::Font::bold));
-  strip->nameLabel->setColour(
-      juce::Label::textColourId,
-      juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
-  addAndMakeVisible(*strip->nameLabel);
-
-  // Create volume slider (vertical)
-  strip->volumeSlider = std::make_unique<juce::Slider>();
-  strip->volumeSlider->setSliderStyle(juce::Slider::LinearVertical);
-  strip->volumeSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50,
-                                       20);
-  strip->volumeSlider->setRange(0.0, 1.0, 0.01);
-  strip->volumeSlider->setValue(trackNode[zenith::ProjectState::PROP_VOLUME],
-                                juce::dontSendNotification);
-  // Capture trackId by value for the lambda
-  strip->volumeSlider->onValueChange = [this, trackId = strip->trackId,
-                                        slider = strip->volumeSlider.get()]() {
-    if (!updatingFromState)
-      onVolumeChanged(trackId, (float)slider->getValue());
-  };
-  addAndMakeVisible(*strip->volumeSlider);
-
-  // Create pan slider (rotary)
-  strip->panSlider = std::make_unique<juce::Slider>();
-  strip->panSlider->setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-  strip->panSlider->setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-  strip->panSlider->setRange(-1.0, 1.0, 0.01);
-  strip->panSlider->setValue(trackNode[zenith::ProjectState::PROP_PAN],
-                             juce::dontSendNotification);
-  strip->panSlider->onValueChange = [this, trackId = strip->trackId,
-                                     slider = strip->panSlider.get()]() {
-    if (!updatingFromState)
-      onPanChanged(trackId, (float)slider->getValue());
-  };
-  addAndMakeVisible(*strip->panSlider);
-
-  // Create mute button
-  strip->muteButton = std::make_unique<juce::ToggleButton>("M");
-  strip->muteButton->setClickingTogglesState(true);
-  strip->muteButton->setToggleState(trackNode[zenith::ProjectState::PROP_MUTE],
-                                    juce::dontSendNotification);
-  strip->muteButton->onClick = [this, trackId = strip->trackId,
-                                button = strip->muteButton.get()]() {
-    if (!updatingFromState)
-      onMuteClicked(trackId, button->getToggleState());
-  };
-  strip->muteButton->setColour(
-      juce::ToggleButton::textColourId,
-      juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
-  addAndMakeVisible(*strip->muteButton);
-
-  // Create solo button
-  strip->soloButton = std::make_unique<juce::ToggleButton>("S");
-  strip->soloButton->setClickingTogglesState(true);
-  strip->soloButton->setToggleState(trackNode[zenith::ProjectState::PROP_SOLO],
-                                    juce::dontSendNotification);
-  strip->soloButton->onClick = [this, trackId = strip->trackId,
-                                button = strip->soloButton.get()]() {
-    if (!updatingFromState)
-      onSoloClicked(trackId, button->getToggleState());
-  };
-  strip->soloButton->setColour(
-      juce::ToggleButton::textColourId,
-      juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
-  addAndMakeVisible(*strip->soloButton);
-
-  // Create arm button
-  strip->armButton = std::make_unique<juce::ToggleButton>("R");
-  strip->armButton->setClickingTogglesState(true);
-  strip->armButton->setToggleState(trackNode[zenith::ProjectState::PROP_ARMED],
-                                   juce::dontSendNotification);
-  strip->armButton->onClick = [this, trackId = strip->trackId,
-                               button = strip->armButton.get()]() {
-    if (!updatingFromState)
-      onArmClicked(trackId, button->getToggleState());
-  };
-  strip->armButton->setColour(
-      juce::ToggleButton::textColourId,
-      juce::Colour(zenith::ZenithLookAndFeel::Colors::textPrimary));
-  addAndMakeVisible(*strip->armButton);
-#endif
-
   return strip;
 }
 
@@ -527,10 +407,6 @@ void MixerComponent::updateTrackStripFromState(
   auto newName = trackNode[zenith::ProjectState::PROP_NAME].toString();
   if (newName != strip.trackName) {
     strip.trackName = newName;
-#ifndef ZENITH_USE_SKIA
-    if (strip.nameLabel)
-      strip.nameLabel->setText(newName, juce::dontSendNotification);
-#endif
     // In Skia mode, we just redraw
     repaint(); 
   }
@@ -539,55 +415,35 @@ void MixerComponent::updateTrackStripFromState(
   if (strip.volumeSlider) {
     float volume = trackNode[zenith::ProjectState::PROP_VOLUME];
     if (std::abs(strip.volumeSlider->getValue() - volume) > 0.001)
-#ifdef ZENITH_USE_SKIA
       strip.volumeSlider->setValue(volume, false);
-#else
-      strip.volumeSlider->setValue(volume, juce::dontSendNotification);
-#endif
   }
 
   // Update pan slider
   if (strip.panSlider) {
     float pan = trackNode[zenith::ProjectState::PROP_PAN];
     if (std::abs(strip.panSlider->getValue() - pan) > 0.001)
-#ifdef ZENITH_USE_SKIA
       strip.panSlider->setValue(pan, false);
-#else
-      strip.panSlider->setValue(pan, juce::dontSendNotification);
-#endif
   }
 
   // Update mute button
   if (strip.muteButton) {
     bool mute = trackNode[zenith::ProjectState::PROP_MUTE];
     if (strip.muteButton->getToggleState() != mute)
-#ifdef ZENITH_USE_SKIA
       strip.muteButton->setToggleState(mute, false);
-#else
-      strip.muteButton->setToggleState(mute, juce::dontSendNotification);
-#endif
   }
 
   // Update solo button
   if (strip.soloButton) {
     bool solo = trackNode[zenith::ProjectState::PROP_SOLO];
     if (strip.soloButton->getToggleState() != solo)
-#ifdef ZENITH_USE_SKIA
       strip.soloButton->setToggleState(solo, false);
-#else
-      strip.soloButton->setToggleState(solo, juce::dontSendNotification);
-#endif
   }
 
   // Update arm button
   if (strip.armButton) {
     bool armed = trackNode[zenith::ProjectState::PROP_ARMED];
     if (strip.armButton->getToggleState() != armed)
-#ifdef ZENITH_USE_SKIA
       strip.armButton->setToggleState(armed, false);
-#else
-      strip.armButton->setToggleState(armed, juce::dontSendNotification);
-#endif
   }
 }
 

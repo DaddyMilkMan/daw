@@ -27,17 +27,11 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
 
-// Conditional Skia components (GPU-accelerated with spring physics)
-#ifdef ZENITH_USE_SKIA
-    #include "../../Source/ui/skia/SkiaSlider.h"
-    #include "../../Source/ui/skia/SkiaKnob.h"
-    #include "../../Source/ui/skia/SkiaButton.h"
-#else
-    // Fallback custom JUCE components
-    #include "ZenithSlider.h"
-    #include "ZenithKnob.h"
-    #include "ZenithButton.h"
-#endif
+#include "../../Source/ui/skia/SkiaSlider.h"
+#include "../../Source/ui/skia/SkiaKnob.h"
+#include "../../Source/ui/skia/SkiaButton.h"
+#include "../../Source/ui/skia/SkiaComponent.h"
+#include "../../Source/ui/skia/ZenithDesignSystem.h"
 
 // Forward declarations
 namespace zenith {
@@ -52,8 +46,7 @@ namespace zenith {
  * Represents one track in the mixer view with all its controls.
  * Communicates directly with the Track object via thread-safe atomics.
  */
-class MixerChannelComponent : public juce::Component,
-                               private juce::Timer
+class MixerChannelComponent : public zenith::SkiaComponent
 {
 public:
     //==========================================================================
@@ -68,7 +61,7 @@ public:
     // Component interface
     //==========================================================================
 
-    void paint(juce::Graphics& g) override;
+    void drawSkia(SkCanvas* canvas) override;
     void resized() override;
 
     //==========================================================================
@@ -110,29 +103,20 @@ private:
     // UI components
     juce::Label nameLabel_;
 
-#ifdef ZENITH_USE_SKIA
     // GPU-accelerated Skia components with spring physics
     zenith::SkiaSlider faderSlider_;      // Vertical fader for volume
     zenith::SkiaKnob panKnob_;            // Rotary knob for pan
     zenith::SkiaButton muteButton_;
     zenith::SkiaButton soloButton_;
-#else
-    // Fallback custom JUCE components
-    zenith::ZenithSlider faderSlider_;      // Vertical fader for volume
-    zenith::ZenithKnob panKnob_;            // Rotary knob for pan
-    zenith::ZenithButton muteButton_;
-    zenith::ZenithButton soloButton_;
-#endif
 
     // Beautiful custom level meter component with smooth animations
-    class LevelMeter : public juce::Component,
-                       public juce::Timer
+    class LevelMeter : public zenith::SkiaComponent
     {
     public:
         LevelMeter();
         ~LevelMeter() override;
 
-        void paint(juce::Graphics& g) override;
+        void drawSkia(SkCanvas* canvas) override;
         void setLevel(float level) [[maybe_unused]];  // 0.0 to 1.0
         void timerCallback() override;
 
@@ -143,7 +127,7 @@ private:
         int peakHoldCounter_{0};    // Frames to hold peak
     };
 
-    LevelMeter meter_;
+    LevelMeter meter_; // Integrated Skia Level Meter
 
     // State tracking
     bool updatingControls_ = false;  // Prevent feedback loops

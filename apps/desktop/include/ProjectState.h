@@ -58,7 +58,8 @@ public:
   static const juce::Identifier ID_MIXER;
   static const juce::Identifier ID_AUTOMATION;
   static const juce::Identifier ID_ENVELOPE;
-  static const juce::Identifier ID_POINT;
+  static const juce::Identifier ID_POINTS;      // Container for points
+  static const juce::Identifier ID_POINT;       // Individual point
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
@@ -91,6 +92,8 @@ public:
   static const juce::Identifier PROP_PARAM_ID;
   static const juce::Identifier PROP_TIME_BEATS;
   static const juce::Identifier PROP_VALUE;
+  static const juce::Identifier PROP_CURVE_TYPE;
+  static const juce::Identifier PROP_TENSION;
 
   // MIDI Note properties
   static const juce::Identifier PROP_START_BEATS;  // Note start time in beats
@@ -272,6 +275,12 @@ public:
 
   juce::String addAutomationPoint(const juce::String &trackId,
                                   const juce::String &paramId, double timeBeats,
+                                  double value, float tension, int curveType,
+                                  const juce::String &actionName);
+
+  // Overload for backward compatibility
+  juce::String addAutomationPoint(const juce::String &trackId,
+                                  const juce::String &paramId, double timeBeats,
                                   double value, const juce::String &actionName);
   bool moveAutomationPoint(const juce::String &trackId,
                            const juce::String &paramId,
@@ -283,6 +292,16 @@ public:
                              const juce::String &actionName);
   bool clearAutomation(const juce::String &trackId, const juce::String &paramId,
                        const juce::String &actionName);
+
+  bool setAutomationTension(const juce::String &trackId,
+                            const juce::String &paramId,
+                            const juce::String &pointId, float tension,
+                            const juce::String &actionName);
+
+  bool setAutomationCurveType(const juce::String &trackId,
+                              const juce::String &paramId,
+                              const juce::String &pointId, int curveType,
+                              const juce::String &actionName);
 
   //==========================================================================
   // MIDI Note Management
@@ -357,6 +376,10 @@ public:
 
   void setMidiNoteMuted(const juce::String &clipId, const juce::String &noteId,
                         bool muted, const juce::String &actionName);
+
+  void setMidiNoteProbability(const juce::String &clipId,
+                              const juce::String &noteId, float probability,
+                              const juce::String &actionName);
 
   //==========================================================================
   // Tempo Map & Markers

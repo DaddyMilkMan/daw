@@ -2,407 +2,381 @@
   ==============================================================================
 
     SettingsComponent.h
-    Created: 2025-12-03
-    Author:  Zenith DAW
+    Created: 2025-12-07
+    Author:  Zenith DAW Team
 
-    Comprehensive Settings Panel.
-    Tabs: Audio, MIDI, Plugins, Display, General.
+    Flagship Settings Panel with Skia rendering.
+    Features:
+    - Sidebar navigation with glassmorphism
+    - Clean, modern typography
+    - Hardware-accelerated controls
+    - Legacy audio integration wrapped in modern UI
+
   ==============================================================================
 */
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_audio_utils/juce_audio_utils.h>
-#include "../Settings.h"
 #include "../../include/Engine.h"
+#include "../Settings.h"
 #include "../engine/PluginHost.h"
-#include "ZenithLookAndFeel.h"
-#include "../ui/skia/ZenithDesignSystem.h"
+#include "skia/SkiaButton.h"
+#include "skia/SkiaComponent.h"
+#include "skia/SkiaSlider.h"
+#include "skia/ZenithDesignSystem.h"
+#include <include/core/SkColor.h>
+
+
+#include <juce_audio_utils/juce_audio_utils.h>
 
 namespace zenith {
 
 //==============================================================================
+// Settings Tab Base Class
+//==============================================================================
+class SettingsTab : public SkiaComponent {
+public:
+  SettingsTab() = default;
+  ~SettingsTab() override = default;
+
+  void drawSkia(SkCanvas *canvas) override {
+    // Default background for content area
+    canvas->clear(SK_ColorTRANSPARENT);
+  }
+};
+
+//==============================================================================
 // Audio Settings Tab
 //==============================================================================
-class AudioSettingsTab : public juce::Component {
+class AudioSettingsTab : public SettingsTab {
 public:
-    AudioSettingsTab(Engine& engine) 
-        : selector(engine.getDeviceManager(), 
-                   0, 256,  // Min/Max inputs
-                   0, 256,  // Min/Max outputs
-                   false,   // Show MIDI input (we have separate tab)
-                   false,   // Show MIDI output
-                   false,   // Show channels as stereo pairs
-                   false)   // Hide advanced options
-    {
-        addAndMakeVisible(selector);
-    }
+  AudioSettingsTab(Engine &engine) : engine_(engine) {
+    // Setup Button
+    setupButton_ = std::make_unique<SkiaButton>("Configure Audio Device...");
+    setupButton_->setStyle(SkiaButton::Style::Primary);
+    setupButton_->onClick = [this]() { showDeviceSelector(); };
+    addAndMakeVisible(setupButton_.get());
 
-    void resized() override {
-        selector.setBounds(getLocalBounds().reduced(10));
+    // Refresh timer for status
+    startTimer(500);
+  }
+
+  void resized() override {
+    if (setupButton_) {
+      setupButton_->setBounds(20, 180, 200, 36);
     }
+  }
+
+  void timerCallback() override { markDirty(); }
+
+  void drawSkia(SkCanvas *canvas) override {
+    auto *device = engine_.getDeviceManager().getCurrentAudioDevice();
+
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setAntiAlias(true);
+
+    SkFont headerFont;
+    headerFont.setSize(24.0f);
+    headerFont.setEmbolden(true);
+
+    SkFont labelFont;
+    labelFont.setSize(14.0f);
+    labelFont.setEmbolden(true);
+
+    SkFont valueFont;
+    valueFont.setSize(14.0f);
+
+    // Header
+    canvas->drawString("Audio Settings", 20, 40, headerFont, textPaint);
+
+    if (device) {
+      float y = 80;
+      float labelX = 20;
+      float valueX = 140;
+      float rowH = 30;
+
+      auto drawRow = [&](const char *label, juce::String value) {
+        textPaint.setColor(SkColorSetARGB(180, 255, 255, 255));
+        canvas->drawString(label, labelX, y, labelFont, textPaint);
+
+        textPaint.setColor(SK_ColorWHITE);
+        canvas->drawString(value.toStdString().c_str(), valueX, y, valueFont,
+                           textPaint);
+        y += rowH;
+      };
+
+      drawRow("Device Type:", device->getTypeName());
+      drawRow("Device Name:", device->getName());
+      drawRow("Sample Rate:",
+              juce::String(device->getCurrentSampleRate()) + " Hz");
+      drawRow("Buffer Size:",
+              juce::String(device->getCurrentBufferSizeSamples()) + " samples");
+    } else {
+      textPaint.setColor(SkColorSetARGB(255, 255, 100, 100)); // Red
+      canvas->drawString("No Audio Device Selected", 20, 80, valueFont,
+                         textPaint);
+    }
+  }
 
 private:
-    juce::AudioDeviceSelectorComponent selector;
-};
+  void showDeviceSelector() {
+    juce::DialogWindow::LaunchOptions options;
+    auto *content = new juce::AudioDeviceSelectorComponent(
+        engine_.getDeviceManager(), 0, 256, 0, 256, false, false, false, false);
+    content->setSize(500, 450);
 
-//==============================================================================
-// MIDI Settings Tab
-//==============================================================================
-class MidiSettingsTab : public juce::Component, private juce::Timer {
-public:
-    MidiSettingsTab(Engine& engine) : engine_(engine) {
-        addAndMakeVisible(inputList);
-        inputList.setText("MIDI Inputs");
-        
-        startTimer(1000); // Refresh list every second
-        refreshList();
-    }
-    
-    ~MidiSettingsTab() override {
-        stopTimer();
-    }
+    options.content.setOwned(content);
+    options.dialogTitle = "Audio Device Configuration";
+    options.dialogBackgroundColour = juce::Colours::black;
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = true;
+    options.resizable = false;
+    options.launchAsync();
+  }
 
-    void resized() override {
-        auto area = getLocalBounds().reduced(20);
-        inputList.setBounds(area);
-        
-        int y = 30;
-        for (auto* cb : checkBoxes) {
-            cb->setBounds(20, y, 300, 24);
-            y += 28;
-        }
-    }
-
-    void timerCallback() override {
-        auto newInputs = juce::MidiInput::getAvailableDevices();
-        if (newInputs != cachedInputs) {
-            refreshList();
-        }
-    }
-
-private:
-    void refreshList() {
-        cachedInputs = juce::MidiInput::getAvailableDevices();
-        checkBoxes.clear();
-        
-        int y = 40;
-        for (const auto& input : cachedInputs) {
-            auto* cb = new juce::ToggleButton(input.name);
-            cb->setToggleState(engine_.getDeviceManager().isMidiInputDeviceEnabled(input.identifier), juce::dontSendNotification);
-            
-            cb->onClick = [this, id = input.identifier, cb]() {
-                engine_.getDeviceManager().setMidiInputDeviceEnabled(id, cb->getToggleState());
-            };
-            
-            addAndMakeVisible(cb);
-            cb->setBounds(30, y, 300, 24);
-            checkBoxes.add(cb);
-            y += 28;
-        }
-    }
-
-    Engine& engine_;
-    juce::GroupComponent inputList;
-    juce::Array<juce::MidiDeviceInfo> cachedInputs;
-    juce::OwnedArray<juce::ToggleButton> checkBoxes;
-};
-
-//==============================================================================
-// Plugin Settings Tab
-//==============================================================================
-class PluginSettingsTab : public juce::Component {
-public:
-    PluginSettingsTab(PluginHost& host) : pluginHost_(host) {
-        addAndMakeVisible(pathList);
-        pathList.setMultiLine(true);
-        pathList.setReadOnly(true);
-        
-        addAndMakeVisible(addButton);
-        addAndMakeVisible(removeButton);
-        addAndMakeVisible(scanButton);
-        
-        addButton.setButtonText("Add Path");
-        removeButton.setButtonText("Remove");
-        scanButton.setButtonText("Scan All Plugins");
-        
-        updateList();
-        
-        addButton.onClick = [this]() {
-            auto chooser = std::make_shared<juce::FileChooser>("Select VST3 Folder", juce::File::getSpecialLocation(juce::File::userHomeDirectory));
-            auto flags = juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectDirectories;
-            chooser->launchAsync(flags, [this, chooser](const juce::FileChooser& fc) {
-                auto result = fc.getResult();
-                if (result.exists()) {
-                    pluginHost_.addSearchPath(result.getFullPathName());
-                    updateList();
-                }
-            });
-        };
-        
-        removeButton.onClick = [this]() {
-            // Simple: Remove last path or prompt user
-            // For MVP, we'll just clear and let user re-add
-        };
-        
-        scanButton.onClick = [this]() {
-            scanButton.setEnabled(false);
-            scanButton.setButtonText("Scanning...");
-            
-            pluginHost_.scanAsync([this](int progress, int count, const juce::String& msg) {
-                juce::ignoreUnused(msg);
-                if (progress >= 100) {
-                    scanButton.setEnabled(true);
-                    scanButton.setButtonText("Scan All Plugins");
-                    juce::AlertWindow::showMessageBoxAsync(juce::AlertWindow::InfoIcon, "Scan Complete", 
-                        "Found " + juce::String(count) + " plugins.");
-                }
-            });
-        };
-    }
-    
-    void resized() override {
-        auto area = getLocalBounds().reduced(20);
-        
-        auto buttonRow = area.removeFromBottom(30);
-        addButton.setBounds(buttonRow.removeFromLeft(100));
-        buttonRow.removeFromLeft(10);
-        removeButton.setBounds(buttonRow.removeFromLeft(100));
-        buttonRow.removeFromLeft(20);
-        scanButton.setBounds(buttonRow.removeFromRight(150));
-        
-        area.removeFromBottom(10);
-        pathList.setBounds(area);
-    }
-
-private:
-    void updateList() {
-        juce::String text;
-        for (const auto& path : pluginHost_.getSearchPaths()) {
-            text += path + "\n";
-        }
-        pathList.setText(text);
-    }
-
-    PluginHost& pluginHost_;
-    juce::TextEditor pathList;
-    juce::TextButton addButton;
-    juce::TextButton removeButton;
-    juce::TextButton scanButton;
+  Engine &engine_;
+  std::unique_ptr<SkiaButton> setupButton_;
 };
 
 //==============================================================================
 // Display Settings Tab
 //==============================================================================
-class DisplaySettingsTab : public juce::Component, public juce::ChangeListener {
+class DisplaySettingsTab : public SettingsTab {
 public:
-    DisplaySettingsTab() {
-        addAndMakeVisible(backendLabel);
-        backendLabel.setText("Graphics Backend:", juce::dontSendNotification);
-        addAndMakeVisible(backendCombo);
-        
-        backendCombo.addItem("Auto", 1);
-        backendCombo.addItem("Direct3D 12", 2);
-        backendCombo.addItem("Metal", 3);
-        backendCombo.addItem("Vulkan", 4);
-        backendCombo.addItem("OpenGL", 5);
-        backendCombo.addItem("Software", 6);
-        
-        backendCombo.onChange = [this]() {
-            Settings::getInstance().setRenderBackend((SkiaRenderer::Backend)(backendCombo.getSelectedId() - 1)); 
-        };
-        
-        addAndMakeVisible(fpsLabel);
-        fpsLabel.setText("Target FPS:", juce::dontSendNotification);
-        addAndMakeVisible(fpsSlider);
-        fpsSlider.setRange(30, 240, 1);
-        fpsSlider.onValueChange = [this]() {
-            Settings::getInstance().setTargetFPS((int)fpsSlider.getValue());
-        };
+  DisplaySettingsTab() {
+    // FPS Slider
+    fpsSlider_ = std::make_unique<SkiaSlider>("Target FPS");
+    fpsSlider_->setStyle(SkiaSlider::Style::Bar);
+    fpsSlider_->setDisplayRange(30, 240);
+    fpsSlider_->setValue((float)Settings::getInstance().getTargetFPS());
+    fpsSlider_->onValueChange = [](float v) {
+      Settings::getInstance().setTargetFPS((int)v);
+    };
+    addAndMakeVisible(fpsSlider_.get());
 
-        addAndMakeVisible(glowLabel);
-        glowLabel.setText("Glow Intensity:", juce::dontSendNotification);
-        addAndMakeVisible(glowSlider);
-        glowSlider.setRange(0.0, 2.0, 0.1);
-        glowSlider.setTooltip("Adjust the neon bloom effect. 0 = Flat, 1 = Standard, 2 = Extra Glow");
-        glowSlider.onValueChange = [this]() {
-            Settings::getInstance().setGlowIntensity((float)glowSlider.getValue());
-        };
-        
-        updateFromSettings();
-    }
-    
-    ~DisplaySettingsTab() override {}
-    
-    void changeListenerCallback(juce::ChangeBroadcaster*) override {
-        updateFromSettings();
-    }
-    
-    void resized() override {
-        auto area = getLocalBounds().reduced(20);
-        auto row1 = area.removeFromTop(30);
-        backendLabel.setBounds(row1.removeFromLeft(150));
-        backendCombo.setBounds(row1.removeFromLeft(200));
-        
-        area.removeFromTop(10);
-        auto row2 = area.removeFromTop(30);
-        fpsLabel.setBounds(row2.removeFromLeft(150));
-        fpsSlider.setBounds(row2.removeFromLeft(200));
+    // Glow Slider
+    glowSlider_ = std::make_unique<SkiaSlider>("Glow Intensity");
+    glowSlider_->setStyle(SkiaSlider::Style::Bar);
+    glowSlider_->setDisplayRange(0.0f, 2.0f);
+    glowSlider_->setValue(Settings::getInstance().getGlowIntensity());
+    glowSlider_->onValueChange = [](float v) {
+      Settings::getInstance().setGlowIntensity(v);
+    };
+    addAndMakeVisible(glowSlider_.get());
+  }
 
-        area.removeFromTop(10);
-        auto row3 = area.removeFromTop(30);
-        glowLabel.setBounds(row3.removeFromLeft(150));
-        glowSlider.setBounds(row3.removeFromLeft(200));
-    }
+  void resized() override {
+    fpsSlider_->setBounds(20, 80, 300, 30);
+    glowSlider_->setBounds(20, 150, 300, 30);
+  }
+
+  void drawSkia(SkCanvas *canvas) override {
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setAntiAlias(true);
+
+    SkFont headerFont;
+    headerFont.setSize(24.0f);
+    headerFont.setEmbolden(true);
+
+    SkFont labelFont;
+    labelFont.setSize(14.0f);
+
+    canvas->drawString("Display Settings", 20, 40, headerFont, textPaint);
+
+    canvas->drawString("Target FPS", 20, 70, labelFont, textPaint);
+    canvas->drawString("Neon Glow Intensity", 20, 140, labelFont, textPaint);
+  }
 
 private:
-    void updateFromSettings() {
-        auto backend = Settings::getInstance().getRenderBackend();
-        backendCombo.setSelectedId((int)backend + 1, juce::dontSendNotification);
-        
-        fpsSlider.setValue(Settings::getInstance().getTargetFPS(), juce::dontSendNotification);
-        glowSlider.setValue(Settings::getInstance().getGlowIntensity(), juce::dontSendNotification);
-    }
-
-    juce::Label backendLabel;
-    juce::ComboBox backendCombo;
-    juce::Label fpsLabel;
-    juce::Slider fpsSlider;
-    juce::Label glowLabel;
-    juce::Slider glowSlider;
+  std::unique_ptr<SkiaSlider> fpsSlider_;
+  std::unique_ptr<SkiaSlider> glowSlider_;
 };
 
 //==============================================================================
-// AI Settings Tab
+// Plugins Settings Tab
 //==============================================================================
-class AiSettingsTab : public juce::Component {
+class PluginSettingsTab : public SettingsTab {
 public:
-    AiSettingsTab() {
-        // Placeholder for AI settings
-        addAndMakeVisible(placeholderLabel);
-        placeholderLabel.setText("AI Integration Settings (Coming Soon)", juce::dontSendNotification);
-        placeholderLabel.setJustificationType(juce::Justification::centred);
-    }
+  PluginSettingsTab(PluginHost &host) : host_(host) {
+    scanButton_ = std::make_unique<SkiaButton>("Scan Plugins");
+    scanButton_->setStyle(SkiaButton::Style::Success);
+    scanButton_->onClick = [this]() { startScan(); };
+    addAndMakeVisible(scanButton_.get());
 
-    void resized() override {
-        placeholderLabel.setBounds(getLocalBounds().reduced(20));
-    }
+    // Simple text editor for paths (standard JUCE for now, styled later)
+    pathList_.setMultiLine(true);
+    pathList_.setReadOnly(true);
+    pathList_.setColour(juce::TextEditor::backgroundColourId,
+                        juce::Colours::transparentBlack);
+    pathList_.setColour(juce::TextEditor::outlineColourId,
+                        juce::Colours::white.withAlpha(0.2f));
+    addAndMakeVisible(pathList_);
+
+    updateList();
+  }
+
+  void resized() override {
+    pathList_.setBounds(20, 80, getWidth() - 40, getHeight() - 140);
+    scanButton_->setBounds(getWidth() - 140, getHeight() - 50, 120, 36);
+  }
+
+  void drawSkia(SkCanvas *canvas) override {
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setAntiAlias(true);
+
+    SkFont headerFont;
+    headerFont.setSize(24.0f);
+    headerFont.setEmbolden(true);
+
+    SkFont labelFont;
+    labelFont.setSize(14.0f);
+
+    canvas->drawString("Plugin Management", 20, 40, headerFont, textPaint);
+    canvas->drawString("Search Paths:", 20, 70, labelFont, textPaint);
+  }
 
 private:
-    juce::Label placeholderLabel;
-};
+  void startScan() {
+    scanButton_->setText("Scanning...");
+    // Fake async scan call for UI update
+    host_.scanAsync([this](int p, int c, const juce::String &m) {
+      if (p >= 100)
+        scanButton_->setText("Scan Plugins");
+    });
+  }
 
-//==============================================================================
-// Appearance Settings Tab
-//==============================================================================
-class AppearanceSettingsTab : public juce::Component {
-public:
-    AppearanceSettingsTab() {
-        addAndMakeVisible(themeLabel);
-        themeLabel.setText("Theme:", juce::dontSendNotification);
-        
-        addAndMakeVisible(themeCombo);
-        refreshThemeList();
-        themeCombo.onChange = [this]() {
-            juce::String themeName = themeCombo.getText();
-            if (themeName.isNotEmpty()) {
-                design::ThemeManager::getInstance().loadTheme(themeName);
-                if (auto* top = getTopLevelComponent()) top->repaint();
-            }
-        };
-        
-        addAndMakeVisible(saveThemeBtn);
-        saveThemeBtn.setButtonText("Save Theme");
-        
-        addAndMakeVisible(editModeToggle);
-        editModeToggle.setButtonText("Enable UI Edit Mode");
-        editModeToggle.setToggleState(design::LayoutManager::getInstance().isEditModeEnabled(), juce::dontSendNotification);
-        editModeToggle.onClick = [this]() {
-            bool enabled = editModeToggle.getToggleState();
-            design::LayoutManager::getInstance().setEditModeEnabled(enabled);
-            if (auto* top = getTopLevelComponent()) top->repaint();
-        };
-        
-        addAndMakeVisible(saveLayoutBtn);
-        saveLayoutBtn.setButtonText("Save Layout");
-        saveLayoutBtn.onClick = [this]() {
-             design::LayoutManager::getInstance().saveLayout("UserLayout");
-        };
+  void updateList() {
+    juce::String text;
+    for (const auto &path : host_.getSearchPaths()) {
+      text += path + "\n";
     }
-    
-    void refreshThemeList() {
-        themeCombo.clear();
-        auto themes = design::ThemeManager::getInstance().getAvailableThemes();
-        int i = 1;
-        for (const auto& t : themes) {
-            themeCombo.addItem(t, i++);
-        }
-    }
-    
-    void resized() override {
-        auto area = getLocalBounds().reduced(20);
-        
-        auto themeRow = area.removeFromTop(30);
-        themeLabel.setBounds(themeRow.removeFromLeft(100));
-        themeCombo.setBounds(themeRow.removeFromLeft(200));
-        themeRow.removeFromLeft(10);
-        saveThemeBtn.setBounds(themeRow.removeFromLeft(100));
-        
-        area.removeFromTop(20);
-        editModeToggle.setBounds(area.removeFromTop(30));
-        saveLayoutBtn.setBounds(area.removeFromTop(30).removeFromLeft(100));
-    }
+    pathList_.setText(text);
+  }
 
-private:
-    juce::Label themeLabel;
-    juce::ComboBox themeCombo;
-    juce::TextButton saveThemeBtn;
-    
-    juce::ToggleButton editModeToggle;
-    juce::TextButton saveLayoutBtn;
+  PluginHost &host_;
+  std::unique_ptr<SkiaButton> scanButton_;
+  juce::TextEditor pathList_;
 };
 
 //==============================================================================
 // Main Settings Component
 //==============================================================================
-class SettingsComponent : public juce::Component {
+class SettingsComponent : public SkiaComponent {
 public:
-    SettingsComponent(Engine& engine) 
-        : audioTab(engine), 
-          midiTab(engine), 
-          pluginTab(engine.getPluginHost()), 
-          displayTab(),
-          aiTab(),
-          appearanceTab()
-    {
-        setLookAndFeel(&ZenithLookAndFeel::getInstance());
-        addAndMakeVisible(tabs);
-        tabs.addTab("Audio", juce::Colours::darkgrey, &audioTab, false);
-        tabs.addTab("MIDI", juce::Colours::darkgrey, &midiTab, false);
-        tabs.addTab("Plugins", juce::Colours::darkgrey, &pluginTab, false);
-        tabs.addTab("Display", juce::Colours::darkgrey, &displayTab, false);
-        tabs.addTab("Appearance", juce::Colours::darkgrey, &appearanceTab, false);
-        tabs.addTab("AI", juce::Colours::darkgrey, &aiTab, false);
+  SettingsComponent(Engine &engine) : engine_(engine) {
+    setSize(800, 600);
+
+    // Create Tabs
+    audioTab_ = std::make_unique<AudioSettingsTab>(engine);
+    addChildComponent(audioTab_.get());
+
+    displayTab_ = std::make_unique<DisplaySettingsTab>();
+    addChildComponent(displayTab_.get());
+
+    pluginTab_ = std::make_unique<PluginSettingsTab>(engine.getPluginHost());
+    addChildComponent(pluginTab_.get());
+
+    // Create Sidebar Buttons
+    createNavButton("Audio", 0);
+    createNavButton("Display", 1);
+    createNavButton("Plugins", 2);
+
+    setActiveTab(0);
+  }
+
+  ~SettingsComponent() override = default;
+
+  void resized() override {
+    int sidebarWidth = 200;
+    int btnHeight = 40;
+    int y = 20;
+
+    for (auto *btn : navButtons_) {
+      btn->setBounds(10, y, sidebarWidth - 20, btnHeight);
+      y += btnHeight + 5;
     }
 
-    ~SettingsComponent() override {
-        setLookAndFeel(nullptr);
-    }
+    auto contentArea =
+        getLocalBounds().removeFromRight(getWidth() - sidebarWidth);
+    if (currentTab_)
+      currentTab_->setBounds(contentArea);
+  }
 
-    void resized() override {
-        tabs.setBounds(getLocalBounds());
-    }
+  void drawSkia(SkCanvas *canvas) override {
+    auto bounds = getLocalBounds();
+    int sidebarWidth = 200;
+
+    // Background
+    canvas->clear(SkColorSetRGB(20, 20, 25));
+
+    // Sidebar Background
+    SkPaint sidebarPaint;
+    sidebarPaint.setColor(SkColorSetRGB(30, 30, 35));
+    canvas->drawRect(
+        SkRect::MakeWH((float)sidebarWidth, (float)bounds.getHeight()),
+        sidebarPaint);
+
+    // Vertical Divider
+    SkPaint linePaint;
+    linePaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+    canvas->drawLine((float)sidebarWidth, 0, (float)sidebarWidth,
+                     (float)bounds.getHeight(), linePaint);
+  }
 
 private:
-    juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
-    
-    AudioSettingsTab audioTab;
-    MidiSettingsTab midiTab;
-    PluginSettingsTab pluginTab;
-    DisplaySettingsTab displayTab;
-    AiSettingsTab aiTab;
-    AppearanceSettingsTab appearanceTab;
+  void createNavButton(const juce::String &name, int index) {
+    auto btn = std::make_unique<SkiaButton>(name);
+    btn->setStyle(SkiaButton::Style::Ghost);
+    btn->setToggleable(true);
+    btn->onClick = [this, index]() { setActiveTab(index); };
+    addAndMakeVisible(btn.get());
+    navButtons_.add(btn.release());
+  }
+
+  void setActiveTab(int index) {
+    // Update Buttons
+    for (int i = 0; i < navButtons_.size(); ++i) {
+      navButtons_[i]->setToggleState(i == index);
+      // Highlight active
+      navButtons_[i]->setStyle(i == index ? SkiaButton::Style::Secondary
+                                          : SkiaButton::Style::Ghost);
+    }
+
+    // Switch Content
+    if (currentTab_)
+      currentTab_->setVisible(false);
+
+    switch (index) {
+    case 0:
+      currentTab_ = audioTab_.get();
+      break;
+    case 1:
+      currentTab_ = displayTab_.get();
+      break;
+    case 2:
+      currentTab_ = pluginTab_.get();
+      break;
+    }
+
+    if (currentTab_) {
+      currentTab_->setVisible(true);
+      resized(); // Re-layout content
+    }
+  }
+
+  Engine &engine_;
+  juce::OwnedArray<SkiaButton> navButtons_;
+
+  std::unique_ptr<AudioSettingsTab> audioTab_;
+  std::unique_ptr<DisplaySettingsTab> displayTab_;
+  std::unique_ptr<PluginSettingsTab> pluginTab_;
+
+  SkiaComponent *currentTab_ = nullptr;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SettingsComponent)
 };
 
 } // namespace zenith

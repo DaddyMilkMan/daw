@@ -9,13 +9,11 @@
 
 #include "../../include/ui/TrackHeaderComponent.h"
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-#endif
 
 namespace zenith {
 
@@ -84,7 +82,6 @@ TrackHeaderComponent::~TrackHeaderComponent()
 }
 
 //==============================================================================
-#ifdef ZENITH_USE_SKIA
 void TrackHeaderComponent::drawSkia(SkCanvas* canvas)
 {
     auto bounds = getLocalBounds();
@@ -147,72 +144,6 @@ void TrackHeaderComponent::drawSkia(SkCanvas* canvas)
         canvas->drawRRect(focusRRect, focusPaint);
     }
 }
-#else
-void TrackHeaderComponent::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds().toFloat();
-
-    // Minimal gradient - very subtle
-    juce::ColourGradient backgroundGradient(
-        juce::Colour(0xff242424), bounds.getCentreX(), bounds.getY(),
-        juce::Colour(0xff1f1f1f), bounds.getCentreX(), bounds.getBottom(),
-        false);
-    g.setGradientFill(backgroundGradient);
-    g.fillRoundedRectangle(bounds, 6.0f);
-
-    // Delicate hover glow
-    if (isHovered_)
-    {
-        g.setColour(juce::Colours::white.withAlpha(0.02f));
-        g.fillRoundedRectangle(bounds, 6.0f);
-    }
-
-    // Soft shadow for separation
-    juce::Path shadowPath;
-    shadowPath.addRoundedRectangle(bounds, 6.0f);
-    juce::DropShadow shadow(juce::Colours::black.withAlpha(0.2f), 4, juce::Point<int>(0, 1));
-    shadow.drawForPath(g, shadowPath);
-
-    // Color stripe (left edge, 6px wide) with rounded corners
-    auto colorStripe = bounds.removeFromLeft(6.0f);
-
-    // Enhanced color stripe with gradient
-    juce::ColourGradient stripeGradient(
-        trackColour_.brighter(0.1f), colorStripe.getCentreX(), colorStripe.getY(),
-        trackColour_.darker(0.2f), colorStripe.getCentreX(), colorStripe.getBottom(),
-        false);
-    g.setGradientFill(stripeGradient);
-
-    juce::Path stripePath;
-    stripePath.addRoundedRectangle(colorStripe.getX(), colorStripe.getY(),
-                                   colorStripe.getWidth(), colorStripe.getHeight(),
-                                   4.0f, 4.0f, true, false, true, false);  // Round left side only
-    g.fillPath(stripePath);
-
-    // Stripe highlight (left edge)
-    g.setColour(juce::Colours::white.withAlpha(0.2f));
-    g.drawLine(colorStripe.getX() + 1.0f, colorStripe.getY() + 4.0f,
-              colorStripe.getX() + 1.0f, colorStripe.getBottom() - 4.0f, 1.0f);
-
-    // Inner highlight at top (subtle)
-    g.setColour(juce::Colour(0xffffffff).withAlpha(0.03f));
-    auto highlightBounds = bounds.withHeight(bounds.getHeight() * 0.4f);
-    g.fillRoundedRectangle(highlightBounds, 4.0f);
-
-    // Subtle bottom border with gradient
-    g.setColour(juce::Colour(0xff3A3A3C).withAlpha(0.5f));
-    g.drawLine(2.0f, bounds.getBottom() - 0.5f,
-              bounds.getRight() - 2.0f, bounds.getBottom() - 0.5f, 0.5f);
-
-    // Name editor focus glow
-    if (nameFocusAnim_ > 0.01f)
-    {
-        auto nameBounds = nameLabel_.getBounds().toFloat().expanded(2.0f);
-        g.setColour(juce::Colour(0xff0A84FF).withAlpha(nameFocusAnim_ * 0.3f));
-        g.drawRoundedRectangle(nameBounds, 3.0f, 2.0f);
-    }
-}
-#endif
 
 void TrackHeaderComponent::resized()
 {

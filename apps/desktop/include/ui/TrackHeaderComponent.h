@@ -25,11 +25,8 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include "../ProjectState.h"
 #include "../../Source/ui/skia/SkiaButton.h"
-
-#ifdef ZENITH_USE_SKIA
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../../Source/ui/skia/SkiaTheme.h"
-#endif
 
 //==============================================================================
 namespace zenith {
@@ -49,14 +46,8 @@ namespace zenith {
  * S = Solo button
  * R = Record arm button
  */
-class TrackHeaderComponent :
-#ifdef ZENITH_USE_SKIA
-                               public zenith::SkiaComponent,
-#else
-                               public juce::Component,
-                               public juce::Timer,
-#endif
-                               private juce::ValueTree::Listener
+class TrackHeaderComponent : public zenith::SkiaComponent,
+                             private juce::ValueTree::Listener
 {
 public:
     //==========================================================================
@@ -76,11 +67,7 @@ public:
     // Component interface
     //==========================================================================
 
-#ifdef ZENITH_USE_SKIA
     void drawSkia(SkCanvas* canvas) override;
-#else
-    void paint(juce::Graphics& g) override;
-#endif
     void resized() override;
     void timerCallback() override;
 

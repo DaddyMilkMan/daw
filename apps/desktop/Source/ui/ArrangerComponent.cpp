@@ -9,12 +9,27 @@
 #include <skia/include/core/SkCanvas.h>
 #include <skia/include/core/SkColor.h>
 #include <skia/include/core/SkFont.h>
+#include <skia/include/core/SkFontMgr.h>   // Added
+#include <skia/include/core/SkFontStyle.h> // Added
 #include <skia/include/core/SkPaint.h>
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkTypeface.h>
+#include <skia/include/effects/SkGradientShader.h> // Added
+
 #endif
 
+#include "../../Source/engine/AudioFilePool.h"
 #include "../browser/BrowserDragSource.h"
+#include "skia/ZenithDesignSystem.h"
+
+using namespace zenith::design;
+
+// Constants
+static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float RULER_HEIGHT = 30.0f;
+static constexpr float TRACK_HEIGHT =
+    80.0f; // Taller tracks for better visibility
+static constexpr float SCROLLBAR_HEIGHT = 14.0f;
 
 //==============================================================================
 namespace zenith {
@@ -32,7 +47,8 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // Initial clip view build
   rebuildClipViews();
 
-  // Start timer for playhead position updates (30Hz is plenty for visual feedback)
+  // Start timer for playhead position updates (30Hz is plenty for visual
+  // feedback)
   startTimerHz(30);
 
   DBG("ArrangerComponent: Created");
@@ -126,8 +142,8 @@ void ArrangerComponent::recomputeClipBounds() {
   for (auto &clipView : clipViews) {
     // Find track index for this clip
     int trackIndex = 0;
-    auto tracksNode =
-        projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+    auto tracksNode = projectState.getState().getChildWithName(
+        zenith::ProjectState::ID_TRACKS);
     if (tracksNode.isValid()) {
       for (const auto &track : tracksNode) {
         if (track[zenith::ProjectState::PROP_ID].toString() == clipView.trackId)
@@ -139,13 +155,15 @@ void ArrangerComponent::recomputeClipBounds() {
     float x = beatsToX(clipView.startBeats);
     float y = trackIndexToY(trackIndex);
     float width = static_cast<float>(clipView.lengthBeats * pixelsPerBeat);
-    float height = static_cast<float>(trackHeight - 4); // 2px margin top/bottom
+    float height =
+        static_cast<float>(TRACK_HEIGHT - 4); // 2px margin top/bottom
 
     clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, height);
   }
 }
 
-ArrangerComponent::ClipView *ArrangerComponent::findClipView(const juce::String &clipId) {
+ArrangerComponent::ClipView *
+ArrangerComponent::findClipView(const juce::String &clipId) {
   for (auto &clipView : clipViews) {
     if (clipView.clipId == clipId)
       return &clipView;
@@ -153,7 +171,8 @@ ArrangerComponent::ClipView *ArrangerComponent::findClipView(const juce::String 
   return nullptr;
 }
 
-ArrangerComponent::ClipView *ArrangerComponent::findClipAtPoint(juce::Point<float> point) {
+ArrangerComponent::ClipView *
+ArrangerComponent::findClipAtPoint(juce::Point<float> point) {
   // Search in reverse order so topmost clips are hit first
   for (int i = clipViews.size() - 1; i >= 0; --i) {
     if (clipViews.getReference(i).bounds.contains(point))
@@ -167,23 +186,24 @@ ArrangerComponent::ClipView *ArrangerComponent::findClipAtPoint(juce::Point<floa
 //==============================================================================
 
 float ArrangerComponent::beatsToX(double beats) const {
-  return static_cast<float>((beats - viewStartBeats) * pixelsPerBeat);
+  return HEADER_WIDTH +
+         static_cast<float>((beats - viewStartBeats) * pixelsPerBeat);
 }
 
 double ArrangerComponent::xToBeats(float x) const {
-  return viewStartBeats + (x / pixelsPerBeat);
+  return viewStartBeats + ((x - HEADER_WIDTH) / pixelsPerBeat);
 }
 
 float ArrangerComponent::trackIndexToY(int trackIndex) const {
-  return rulerHeight + (trackIndex - firstVisibleTrackIndex) * trackHeight;
+  return RULER_HEIGHT + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT;
 }
 
 int ArrangerComponent::yToTrackIndex(float y) const {
-  if (y < rulerHeight)
+  if (y < RULER_HEIGHT)
     return -1;
 
   return firstVisibleTrackIndex +
-         static_cast<int>((y - rulerHeight) / trackHeight);
+         static_cast<int>((y - RULER_HEIGHT) / TRACK_HEIGHT);
 }
 
 double ArrangerComponent::snapToGrid(double beats) const {
@@ -242,6 +262,9 @@ bool ArrangerComponent::isClipSelected(const juce::String &clipId) const {
 
 void ArrangerComponent::createClipAtPoint(juce::Point<float> point) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (point.x < HEADER_WIDTH)
+    return; // Don't create clips in header
 
   int trackIndex = yToTrackIndex(point.y);
   if (trackIndex < 0)
@@ -340,12 +363,6 @@ void ArrangerComponent::duplicateSelectedClips() {
 // Component interface - Painting (Pure Skia - All rendering in drawSkia())
 //==============================================================================
 
-void ArrangerComponent::paint(juce::Graphics &g) {
-  // Pure Skia rendering - just fill background for opaque base
-  // All actual rendering happens in drawSkia()
-  g.fillAll(juce::Colour(0xff1e1e1e));
-}
-
 void ArrangerComponent::resized() { recomputeClipBounds(); }
 
 //==============================================================================
@@ -364,49 +381,43 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
   auto *clip = findClipAtPoint(e.position);
 
   if (clip != nullptr) {
-    // Check for resize zones
+    // Check for resize zones (standard logic)
     if (clip->isInLeftResizeZone(e.position)) {
       currentDragMode = DragMode::ResizeClipLeft;
       resizingClipId = clip->clipId;
       resizeOriginalStart = clip->startBeats;
       resizeOriginalLength = clip->lengthBeats;
-      DBG("ArrangerComponent: Start resize left");
     } else if (clip->isInRightResizeZone(e.position)) {
       currentDragMode = DragMode::ResizeClipRight;
       resizingClipId = clip->clipId;
       resizeOriginalStart = clip->startBeats;
       resizeOriginalLength = clip->lengthBeats;
-      DBG("ArrangerComponent: Start resize right");
     } else {
       // Move mode
       currentDragMode = DragMode::MoveClips;
-
       bool isCtrlOrCmd = e.mods.isCommandDown();
 
-      // Handle selection
       if (!clip->isSelected) {
         selectClip(clip->clipId, isCtrlOrCmd);
       } else if (isCtrlOrCmd) {
-        // Ctrl-click on selected clip = deselect
         selectClip(clip->clipId, true);
       }
 
-      // Cache original positions for all selected clips
+      // Cache original positions
       clipDragStates.clear();
       for (const auto &clipId : selectedClipIds) {
         if (auto *view = findClipView(clipId)) {
-          // Find track index
           int trackIndex = 0;
-          auto tracksNode =
-              projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+          auto tracksNode = projectState.getState().getChildWithName(
+              zenith::ProjectState::ID_TRACKS);
           if (tracksNode.isValid()) {
             for (const auto &track : tracksNode) {
-              if (track[zenith::ProjectState::PROP_ID].toString() == view->trackId)
+              if (track[zenith::ProjectState::PROP_ID].toString() ==
+                  view->trackId)
                 break;
               trackIndex++;
             }
           }
-
           ClipDragState state;
           state.clipId = clipId;
           state.originalStartBeats = view->startBeats;
@@ -414,27 +425,64 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
           clipDragStates.add(state);
         }
       }
-
-      DBG("ArrangerComponent: Start move " +
-          juce::String(clipDragStates.size()) + " clips");
     }
   } else {
     // Clicked empty area
-    bool isShift = e.mods.isShiftDown();
+    if (e.position.x < HEADER_WIDTH && e.position.y > RULER_HEIGHT) {
+      // Track Header Interaction
+      int trackIndex = yToTrackIndex(e.position.y);
+      auto tracksNode = projectState.getState().getChildWithName(
+          zenith::ProjectState::ID_TRACKS);
+      if (tracksNode.isValid() && trackIndex >= 0 &&
+          trackIndex < tracksNode.getNumChildren()) {
+        auto track = tracksNode.getChild(trackIndex);
+        // Basic hit testing for M/S/R buttons
+        // Assuming buttons are at x=120 (M), 150 (S), 180 (R) approx
+        float relativeX = e.position.x;
+        float rowY = trackIndexToY(trackIndex);
+        float relY = e.position.y - rowY;
 
-    if (isShift) {
-      // Start marquee selection
-      currentDragMode = DragMode::Marquee;
-      marqueeRect = juce::Rectangle<float>(e.position, e.position);
+        // Layout: Name (0-110), M(120), S(150), R(180)
+        if (relY >= 45 && relY <= 70) { // Button row
+          if (relativeX >= 120 && relativeX <= 145) {
+            bool m = track[zenith::ProjectState::PROP_MUTE];
+            track.setProperty(zenith::ProjectState::PROP_MUTE, !m,
+                              &projectState.getUndoManager());
+          } else if (relativeX >= 150 && relativeX <= 175) {
+            bool s = track[zenith::ProjectState::PROP_SOLO];
+            track.setProperty(zenith::ProjectState::PROP_SOLO, !s,
+                              &projectState.getUndoManager());
+          } else if (relativeX >= 180 && relativeX <= 205) {
+            bool r = track[zenith::ProjectState::PROP_ARMED];
+            track.setProperty(zenith::ProjectState::PROP_ARMED, !r,
+                              &projectState.getUndoManager());
+          }
+        }
+      }
     } else {
-      // Clear selection
-      clearSelection();
+      // Timeline Interaction
+      bool isShift = e.mods.isShiftDown();
+      if (isShift) {
+        currentDragMode = DragMode::Marquee;
+        marqueeRect = juce::Rectangle<float>(e.position, e.position);
+      } else {
+        clearSelection();
+      }
     }
   }
 }
 
 void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (currentDragMode == DragMode::None) {
+    if (e.getDistanceFromDragStart() > 5) {
+      currentDragMode = DragMode::Marquee;
+      marqueeRect = juce::Rectangle<float>(dragStartPoint, e.position);
+      repaint();
+    }
+    return;
+  }
 
   if (currentDragMode == DragMode::MoveClips) {
     // Calculate delta
@@ -456,8 +504,8 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
         view->startBeats = newStart;
 
         // Update track (if changed)
-        auto tracksNode =
-            projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+        auto tracksNode = projectState.getState().getChildWithName(
+            zenith::ProjectState::ID_TRACKS);
         if (tracksNode.isValid() &&
             newTrackIndex < tracksNode.getNumChildren()) {
           auto newTrack = tracksNode.getChild(newTrackIndex);
@@ -575,8 +623,10 @@ juce::String ArrangerComponent::getTooltip() {
     auto [track, clipNode] = projectState.findClip(clip->clipId);
     if (clipNode.isValid()) {
       auto clipName = clipNode[zenith::ProjectState::PROP_NAME].toString();
-      auto startBeats = clipNode[zenith::ProjectState::PROP_START_BEATS].toString();
-      auto lengthBeats = clipNode[zenith::ProjectState::PROP_LENGTH_BEATS].toString();
+      auto startBeats =
+          clipNode[zenith::ProjectState::PROP_START_BEATS].toString();
+      auto lengthBeats =
+          clipNode[zenith::ProjectState::PROP_LENGTH_BEATS].toString();
       return clipName + " (" + startBeats + " beats, " + lengthBeats +
              " beats)";
     }
@@ -634,8 +684,8 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     // Scroll vertical
     firstVisibleTrackIndex -= static_cast<int>(wheel.deltaY * 2.0);
 
-    auto tracksNode =
-        projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+    auto tracksNode = projectState.getState().getChildWithName(
+        zenith::ProjectState::ID_TRACKS);
     int maxTrackIndex =
         tracksNode.isValid() ? tracksNode.getNumChildren() - 1 : 0;
 
@@ -644,262 +694,395 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
 
     repaint();
   }
-
-  recomputeClipBounds();
-  repaint();
 }
 
 #ifdef ZENITH_USE_SKIA
-void ArrangerComponent::drawSkia(SkCanvas* canvas) {
+void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
-  // Background
-  canvas->clear(SkColorSetRGB(30, 30, 30)); // 0xff1e1e1e
+  float w = (float)bounds.getWidth();
+  float h = (float)bounds.getHeight();
 
-  // Tracks
+  // 1. Background (Darkest)
+  canvas->clear(design::colors::BG_DARKEST);
+
+  // 2. Grid & Timeline Area (Clipped to right of Header)
+  canvas->save();
+  canvas->clipRect(SkRect::MakeXYWH(HEADER_WIDTH, 0, w - HEADER_WIDTH, h));
+
   auto tracksNode =
       projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (tracksNode.isValid()) {
     int numTracks = tracksNode.getNumChildren();
-    float width = (float)bounds.getWidth();
 
-    SkPaint trackPaint;
-    SkPaint dividerPaint;
-    dividerPaint.setColor(SkColorSetRGB(60, 60, 60)); // trackDividerColour
-    dividerPaint.setStrokeWidth(1.0f);
+    // Grid Paints
+    SkPaint gridPaintMain;
+    gridPaintMain.setColor(
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.1f));
+    gridPaintMain.setStrokeWidth(1.0f);
 
-    SkPaint gridPaint;
-    gridPaint.setColor(
-        SkColorSetARGB(76, 100, 100, 100)); // gridLineColour alpha 0.3
-    gridPaint.setStrokeWidth(1.0f);
+    SkPaint gridPaintBeat;
+    gridPaintBeat.setColor(
+        design::withAlpha(design::colors::BORDER_SUBTLE, 0.05f));
 
-    SkFont trackFont;
-    trackFont.setSize(14.0f);
-    trackFont.setEdging(SkFont::Edging::kAntiAlias);
-    SkPaint trackTextPaint;
-    trackTextPaint.setColor(
-        SkColorSetARGB(178, 255, 255, 255)); // white alpha 0.7
-    trackTextPaint.setAntiAlias(true);
-
-    double startBeat = std::floor(viewStartBeats);
-    double endBeat = viewStartBeats + (width / pixelsPerBeat);
-
+    // Draw Tracks Backgrounds (Alternating)
     for (int i = firstVisibleTrackIndex; i < numTracks; ++i) {
       float y = trackIndexToY(i);
-      if (y > bounds.getHeight())
+      if (y > h)
         break;
 
-      // Track lane background
-      SkColor laneColor =
-          (i % 2 == 0) ? SkColorSetRGB(40, 40, 40) : SkColorSetRGB(35, 35, 35);
-      trackPaint.setColor(laneColor);
-      canvas->drawRect(SkRect::MakeXYWH(0, y, width, (float)trackHeight), trackPaint);
+      SkPaint trackBgPaint;
+      trackBgPaint.setColor((i % 2 == 0) ? design::colors::BG_DARKER
+                                         : design::colors::BG_DARK);
+      canvas->drawRect(
+          SkRect::MakeXYWH(HEADER_WIDTH, y, w - HEADER_WIDTH, TRACK_HEIGHT),
+          trackBgPaint);
 
-      // Divider
-      canvas->drawLine(0, y, width, y, dividerPaint);
+      // Horizontal Divider
+      SkPaint dividerPaint;
+      dividerPaint.setColor(design::colors::BORDER_SUBTLE);
+      canvas->drawLine(HEADER_WIDTH, y + TRACK_HEIGHT, w, y + TRACK_HEIGHT,
+                       dividerPaint);
+    }
 
-      // Vertical grid lines
-      for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
-        float x = beatsToX(beat);
-        if (x >= 0 && x <= width)
-          canvas->drawLine(x, y, x, y + (float)trackHeight, gridPaint);
-      }
+    // Vertical Grid Lines
+    double startBeat = std::floor(viewStartBeats);
+    double endBeat = viewStartBeats + ((w - HEADER_WIDTH) / pixelsPerBeat);
 
-      // Track name and status indicators
-      auto track = tracksNode.getChild(i);
-      juce::String name = track[zenith::ProjectState::PROP_NAME].toString();
-      bool isMuted = track[zenith::ProjectState::PROP_MUTE];
-      bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
-      bool isArmed = track[zenith::ProjectState::PROP_ARMED];
-
-      float textX = 10.0f;
-      float indicatorY = y + 14.0f; // Center vertically relative to text roughly
-
-      SkPaint indicatorPaint;
-      indicatorPaint.setAntiAlias(true);
-
-      if (isArmed) {
-          indicatorPaint.setColor(SkColorSetRGB(255, 50, 50)); // Red
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
-      if (isSoloed) {
-          indicatorPaint.setColor(SkColorSetRGB(255, 165, 0)); // Orange
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
-      if (isMuted) {
-          indicatorPaint.setColor(SkColorSetRGB(100, 100, 100)); // Grey
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
-
-      if (isMuted) {
-          trackTextPaint.setColor(SkColorSetARGB(128, 150, 150, 150));
+    for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
+      float x = beatsToX(beat);
+      // Draw Bar line (assuming 4/4)
+      if (std::abs(std::fmod(beat, 4.0)) < 0.001) {
+        canvas->drawLine(x, 0, x, h, gridPaintMain);
       } else {
-          trackTextPaint.setColor(SkColorSetARGB(178, 255, 255, 255));
+        canvas->drawLine(x, 0, x, h, gridPaintBeat);
+      }
+    }
+
+    // 3. Clips
+    for (const auto &clipView : clipViews) {
+      if (clipView.bounds.getRight() < HEADER_WIDTH ||
+          clipView.bounds.getX() > w)
+        continue;
+
+      SkRect clipRect = SkRect::MakeXYWH((float)clipView.bounds.getX(),
+                                         (float)clipView.bounds.getY(),
+                                         (float)clipView.bounds.getWidth(),
+                                         (float)clipView.bounds.getHeight());
+
+      // Clip Body - Rounded Rect
+      SkRRect rrect =
+          SkRRect::MakeRectXY(clipRect, design::dimensions::RADIUS_MD,
+                              design::dimensions::RADIUS_MD);
+
+      SkPaint clipPaint;
+      SkColor baseColor =
+          clipView.isMidi ? design::colors::MAGENTA : design::colors::CYAN;
+
+      if (clipView.isSelected) {
+        baseColor = design::lighten(baseColor, 0.2f);
       }
 
-      canvas->drawString(name.toRawUTF8(), textX, y + 20, trackFont,
-                        trackTextPaint);
+      // Gradient
+      SkPoint pts[] = {{clipRect.fLeft, clipRect.fTop},
+                       {clipRect.fLeft, clipRect.fBottom}};
+      SkColor colors[2] = {design::withAlpha(baseColor, 0.3f),
+                           design::withAlpha(baseColor, 0.1f)};
+      clipPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
+                                                       SkTileMode::kClamp));
+
+      canvas->drawRRect(rrect, clipPaint);
+
+      // Border
+      SkPaint borderPaint;
+      borderPaint.setColor(clipView.isSelected
+                               ? design::colors::TEXT_PRIMARY
+                               : design::withAlpha(baseColor, 0.5f));
+      borderPaint.setStyle(SkPaint::kStroke_Style);
+      borderPaint.setStrokeWidth(clipView.isSelected ? 2.0f : 1.0f);
+      borderPaint.setAntiAlias(true);
+      canvas->drawRRect(rrect, borderPaint);
+
+      // Clip Content (Waveform or MIDI)
+      auto [track, clip] = projectState.findClip(clipView.clipId);
+      if (clip.isValid()) {
+        // Clip Name
+        juce::String name = clip[zenith::ProjectState::PROP_NAME].toString();
+
+        // Name Background Bar
+        SkPaint nameBgPaint;
+        nameBgPaint.setColor(design::withAlpha(baseColor, 0.8f));
+        // Top bar for name
+        SkPath headerPath;
+        SkRect headerRect = SkRect::MakeXYWH(clipRect.fLeft, clipRect.fTop,
+                                             clipRect.width(), 16.0f);
+        float radii[] = {design::dimensions::RADIUS_MD,
+                         design::dimensions::RADIUS_MD,
+                         design::dimensions::RADIUS_MD,
+                         design::dimensions::RADIUS_MD,
+                         0,
+                         0,
+                         0,
+                         0};
+        SkRRect headerRRect;
+        headerRRect.setRectRadii(headerRect, (const SkVector *)radii);
+        // Actually standard RRect clipped? simpler: just fill top part
+        canvas->drawRect(headerRect, nameBgPaint);
+
+        SkFont font;
+        font.setSize(10.0f);
+        SkPaint textPaint;
+        textPaint.setColor(design::colors::BG_DARKEST);
+        textPaint.setAntiAlias(true);
+        canvas->drawString(name.toRawUTF8(), clipRect.fLeft + 4.0f,
+                           clipRect.fTop + 12.0f, font, textPaint);
+
+        if (!clipView.isMidi) {
+          // Draw Waveform
+          juce::File audioFile(
+              clip.getProperty(zenith::ProjectState::PROP_AUDIO_FILE)
+                  .toString());
+          if (audioFile.existsAsFile()) {
+            auto audioHandle = engine_.getAudioFilePool().getFile(audioFile);
+            if (audioHandle) {
+              SkPaint wavePaint;
+              wavePaint.setColor(design::withAlpha(baseColor, 0.8f));
+              wavePaint.setStyle(SkPaint::kStroke_Style);
+              wavePaint.setStrokeWidth(1.0f);
+
+              SkPath path;
+              float midY = clipRect.centerY() + 8; // Offset for header
+              float height = clipRect.height() - 16;
+
+              // Very simple decimated waveform
+              // Map pixels to samples
+              int numSamples = audioHandle->buffer.getNumSamples();
+              float samplesPerPixel = (float)numSamples / clipRect.width();
+
+              // Optimization: don't draw every pixel if zoomed out too much
+              int step = 2;
+
+              const float *samples =
+                  audioHandle->buffer.getReadPointer(0); // Left channel
+              bool first = true;
+
+              for (float px = 0; px < clipRect.width(); px += step) {
+                int sampleIdx = (int)(px * samplesPerPixel);
+                if (sampleIdx < numSamples) {
+                  float val = samples[sampleIdx];
+                  float y = midY - (val * height * 0.5f);
+                  if (first) {
+                    path.moveTo(clipRect.fLeft + px, y);
+                    first = false;
+                  } else {
+                    path.lineTo(clipRect.fLeft + px, y);
+                  }
+                }
+              }
+              canvas->drawPath(path, wavePaint);
+            }
+          }
+        } else {
+          // Draw Mini-Notes from ProjectState
+          SkPaint notePaint;
+          notePaint.setColor(
+              design::withAlpha(design::colors::TEXT_PRIMARY, 0.6f));
+
+          auto notesNode =
+              clip.getChildWithName(zenith::ProjectState::ID_NOTES);
+
+          if (notesNode.isValid()) {
+            float pxPerBeat = clipRect.width() / (float)clipView.lengthBeats;
+
+            for (int k = 0; k < notesNode.getNumChildren(); ++k) {
+              auto note = notesNode.getChild(k);
+              int pitch = note[zenith::ProjectState::PROP_PITCH];
+              double start = note[zenith::ProjectState::PROP_START];
+              double length = note[zenith::ProjectState::PROP_LENGTH];
+
+              float normalizedPitch =
+                  1.0f - ((pitch - 21) / 88.0f); // Piano range
+              float nx = clipRect.fLeft + (float)(start * pxPerBeat);
+              float nw = (float)(length * pxPerBeat);
+              float ny = clipRect.fTop + 16 +
+                         (normalizedPitch * (clipRect.height() - 20));
+
+              if (nx < clipRect.fRight && nx + nw > clipRect.fLeft) {
+                SkRect noteRect = SkRect::MakeXYWH(nx, ny, nw, 3.0f);
+                canvas->drawRect(noteRect, notePaint);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  // End Tracks Node check
+
+  // Restore clip (so we can draw headers/ruler over)
+  canvas->restore();
+
+  // 4. Track Headers (Fixed Left Panel)
+  {
+    // Panel Background (Frosted Glass style)
+    SkPaint headerBgPaint;
+    headerBgPaint.setColor(design::colors::BG_DARK);
+    canvas->drawRect(SkRect::MakeXYWH(0, 0, HEADER_WIDTH, h), headerBgPaint);
+
+    // Divider
+    SkPaint divPaint;
+    divPaint.setColor(design::colors::BORDER_STRONG);
+    canvas->drawLine(HEADER_WIDTH, 0, HEADER_WIDTH, h, divPaint);
+
+    if (tracksNode.isValid()) {
+      int numTracks = tracksNode.getNumChildren();
+      for (int i = firstVisibleTrackIndex; i < numTracks; ++i) {
+        float y = trackIndexToY(i);
+        if (y > h)
+          break;
+
+        auto track = tracksNode.getChild(i);
+        juce::String name = track[zenith::ProjectState::PROP_NAME].toString();
+        bool isMuted = track[zenith::ProjectState::PROP_MUTE];
+        bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
+        bool isArmed = track[zenith::ProjectState::PROP_ARMED];
+
+        // Font
+        SkFont nameFont;
+        nameFont.setSize(14.0f);
+        SkPaint textPaint;
+        textPaint.setColor(design::colors::TEXT_PRIMARY);
+        textPaint.setAntiAlias(true);
+        canvas->drawString(name.toRawUTF8(), 10.0f, y + 25.0f, nameFont,
+                           textPaint);
+
+        // Controls Row
+        float btnY = y + 50.0f;
+        float btnSize = 25.0f;
+
+        auto drawButton = [&](float bx, const char *label, bool active,
+                              SkColor activeColor) {
+          SkPaint btnP;
+          btnP.setAntiAlias(true);
+          btnP.setColor(active ? activeColor : design::colors::BG_LIGHT);
+          canvas->drawCircle(bx, btnY, 12.0f, btnP);
+
+          // Stroke
+          SkPaint stroke;
+          stroke.setAntiAlias(true);
+          stroke.setStyle(SkPaint::kStroke_Style);
+          stroke.setColor(active ? design::colors::TEXT_PRIMARY
+                                 : design::colors::BORDER_DEFAULT);
+          canvas->drawCircle(bx, btnY, 12.0f, stroke);
+
+          // Label
+          SkFont lblFont;
+          lblFont.setSize(10.0f);
+          SkPaint lblP;
+          lblP.setColor(active ? design::colors::TEXT_PRIMARY
+                               : design::colors::TEXT_SECONDARY);
+          lblP.setAntiAlias(true);
+          // Center text roughly
+          canvas->drawString(label, bx - 4.0f, btnY + 4.0f, lblFont, lblP);
+        };
+
+        drawButton(132.0f, "M", isMuted, design::colors::BLUE);
+        drawButton(162.0f, "S", isSoloed, design::colors::AMBER);
+        drawButton(192.0f, "R", isArmed, design::colors::RED);
+      }
     }
   }
 
-    // Clips
-    for (const auto &clipView : clipViews) {
-        SkRect clipRect = SkRect::MakeXYWH(
-            (float)clipView.bounds.getX(), (float)clipView.bounds.getY(),
-            (float)clipView.bounds.getWidth(), (float)clipView.bounds.getHeight());
+  // 5. Ruler (Top)
+  {
+    SkPaint rulerBg;
+    rulerBg.setColor(design::colors::BG_DARKEST);
+    canvas->drawRect(
+        SkRect::MakeXYWH(HEADER_WIDTH, 0, w - HEADER_WIDTH, RULER_HEIGHT),
+        rulerBg);
 
-        SkPaint clipPaint;
+    // Divider
+    SkPaint div;
+    div.setColor(design::colors::BORDER_DEFAULT);
+    canvas->drawLine(0, RULER_HEIGHT, w, RULER_HEIGHT, div);
 
-        // Selection border
-        if (clipView.isSelected) {
-            SkPaint borderPaint;
-            borderPaint.setColor(SkColorSetRGB(255, 255, 255));
-            borderPaint.setStyle(SkPaint::kStroke_Style);
-            borderPaint.setStrokeWidth(2.0f);
-            canvas->drawRect(clipRect, borderPaint);
-        }
+    SkFont font;
+    font.setSize(10.0f);
+    SkPaint textP;
+    textP.setColor(design::colors::TEXT_SECONDARY);
+    textP.setAntiAlias(true);
 
-        // Clip name
-        if (clipRect.width() > 20.0f) {
-            auto [track, clip] = projectState.findClip(clipView.clipId);
-            if (clip.isValid()) {
-                juce::String name = clip[zenith::ProjectState::PROP_NAME].toString();
-                SkFont font;
-                font.setSize(12.0f);
-                font.setEdging(SkFont::Edging::kAntiAlias);
-                SkPaint textPaint;
-                textPaint.setColor(SkColorSetARGB(204, 0, 0, 0)); // black alpha 0.8
-                textPaint.setAntiAlias(true);
-                canvas->drawString(name.toRawUTF8(), clipRect.fLeft + 4.0f,
-                                   clipRect.fTop + 14.0f, font, textPaint);
-            }
-        }
+    double startBeat = std::floor(viewStartBeats);
+    double endBeat = viewStartBeats + ((w - HEADER_WIDTH) / pixelsPerBeat);
+
+    for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
+      float x = beatsToX(beat);
+      if (x < HEADER_WIDTH || x > w)
+        continue;
+
+      // Big tick
+      SkPaint tick;
+      tick.setColor(design::colors::TEXT_SECONDARY);
+      canvas->drawLine(x, 15, x, 30, tick);
+
+      // Number
+      juce::String numStr = juce::String(static_cast<int>(beat + 1));
+      canvas->drawString(numStr.toRawUTF8(), x + 2, 12, font, textP);
     }
 
-    // Time Ruler
-    {
-        SkPaint rulerBgPaint;
-        rulerBgPaint.setColor(SkColorSetRGB(42, 42, 42));
-        canvas->drawRect(
-            SkRect::MakeXYWH(0.0f, 0.0f, (float)bounds.getWidth(), (float)rulerHeight),
-            rulerBgPaint);
+    // Header Top Label
+    SkPaint headerTopBg;
+    headerTopBg.setColor(design::colors::BG_DARKER);
+    canvas->drawRect(SkRect::MakeXYWH(0, 0, HEADER_WIDTH, RULER_HEIGHT),
+                     headerTopBg);
 
-        SkPaint tickPaint;
-        tickPaint.setColor(SkColorSetRGB(100, 100, 100));
-        tickPaint.setStrokeWidth(1.0f);
+    SkFont hFont;
+    hFont.setSize(12.0f);
+    canvas->drawString("TRACKS", 10, 20, hFont, textP);
+  }
 
-        SkFont font;
-        font.setSize(12.0f);
-        font.setEdging(SkFont::Edging::kAntiAlias);
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetRGB(200, 200, 200));
-        textPaint.setAntiAlias(true);
+  // 6. Playhead
+  float phX = beatsToX(playheadBeats_);
+  if (phX >= HEADER_WIDTH && phX <= w) {
+    SkPaint phPaint;
+    phPaint.setColor(design::colors::CYAN);
+    phPaint.setStrokeWidth(1.0f);
+    phPaint.setAntiAlias(true);
 
-        double startBeat = std::floor(viewStartBeats);
-        double endBeat = viewStartBeats + (bounds.getWidth() / pixelsPerBeat);
+    // Glow
+    SkPaint glowPaint = phPaint;
+    glowPaint.setStrokeWidth(2.0f);
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur((SkBlurStyle)0, 4.0f));
+    canvas->drawLine(phX, 0, phX, h, glowPaint);
 
-        for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
-            float x = beatsToX(beat);
-            if (x < 0 || x > bounds.getWidth())
-                continue;
+    // Main line
+    canvas->drawLine(phX, 0, phX, h, phPaint);
 
-            canvas->drawLine(x, (float)rulerHeight - 8.0f, x, (float)rulerHeight, tickPaint);
+    // Head
+    SkPath head;
+    head.moveTo(phX - 6, 0);
+    head.lineTo(phX + 6, 0);
+    head.lineTo(phX, 10);
+    head.close();
 
-            juce::String numStr = juce::String(static_cast<int>(beat + 1));
-            float textWidth = font.measureText(numStr.toRawUTF8(), numStr.length(),
-                                               SkTextEncoding::kUTF8);
-            canvas->drawString(numStr.toRawUTF8(), x - textWidth / 2.0f, 15.0f, font,
-                               textPaint);
-        }
-    }
+    // Draw head with glow
+    canvas->drawPath(head, glowPaint);
+    canvas->drawPath(head, phPaint);
+  }
 
-    // Marquee
-    if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
-        SkRect mRect =
-            SkRect::MakeXYWH((float)marqueeRect.getX(), (float)marqueeRect.getY(),
-                             (float)marqueeRect.getWidth(), (float)marqueeRect.getHeight());
+  // 7. Marquee
+  if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
+    SkPaint fill;
+    fill.setColor(design::withAlpha(design::colors::CYAN, 0.2f));
+    SkRect mRect =
+        SkRect::MakeXYWH(marqueeRect.getX(), marqueeRect.getY(),
+                         marqueeRect.getWidth(), marqueeRect.getHeight());
+    canvas->drawRect(mRect, fill);
 
-        SkPaint fillPaint;
-        fillPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
-        canvas->drawRect(mRect, fillPaint);
-
-        SkPaint borderPaint;
-        borderPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
-        borderPaint.setStyle(SkPaint::kStroke_Style);
-        canvas->drawRect(mRect, borderPaint);
-    }
-
-    // Loop Region (Skia)
-    if (loopEnabled_) {
-        float loopStartX = beatsToX(loopStartBeats_);
-        float loopEndX = beatsToX(loopEndBeats_);
-        float width = static_cast<float>(bounds.getWidth());
-        float height = static_cast<float>(bounds.getHeight());
-        
-        // Clamp to visible area
-        if (loopEndX > 0 && loopStartX < width) {
-            loopStartX = juce::jmax(0.0f, loopStartX);
-            loopEndX = juce::jmin(width, loopEndX);
-            
-            // Loop region highlight in ruler
-            SkPaint loopRulerPaint;
-            loopRulerPaint.setColor(SkColorSetARGB(68, 0, 170, 255));  // Semi-transparent blue
-            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, loopEndX - loopStartX, rulerHeight), loopRulerPaint);
-            
-            // Loop region tint over track area
-            SkPaint loopTrackPaint;
-            loopTrackPaint.setColor(SkColorSetARGB(16, 0, 170, 255));  // Very subtle blue
-            canvas->drawRect(SkRect::MakeXYWH(loopStartX, rulerHeight, loopEndX - loopStartX, height - rulerHeight), loopTrackPaint);
-            
-            // Loop brackets
-            SkPaint bracketPaint;
-            bracketPaint.setColor(SkColorSetRGB(0, 170, 255));
-            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 3, rulerHeight), bracketPaint);
-            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 3, 0, 3, rulerHeight), bracketPaint);
-            
-            // L/R markers
-            SkFont markerFont;
-            markerFont.setSize(10.0f);
-            SkPaint markerTextPaint;
-            markerTextPaint.setColor(SK_ColorWHITE);
-            markerTextPaint.setAntiAlias(true);
-            canvas->drawString("L", loopStartX + 5, 10, markerFont, markerTextPaint);
-            canvas->drawString("R", loopEndX - 12, 10, markerFont, markerTextPaint);
-        }
-    }
-
-    // Playhead (Skia)
-    {
-        float x = beatsToX(playheadBeats_);
-        float height = static_cast<float>(bounds.getHeight());
-        
-        if (x >= 0 && x <= bounds.getWidth()) {
-            // Playhead color
-            SkColor playheadColor = isPlaying_ 
-                ? SkColorSetRGB(0, 255, 255)   // Cyan when playing
-                : SkColorSetRGB(170, 170, 170); // Grey when stopped
-            
-            SkPaint playheadPaint;
-            playheadPaint.setColor(playheadColor);
-            playheadPaint.setStrokeWidth(2.0f);
-            playheadPaint.setAntiAlias(true);
-            
-            // Main line
-            canvas->drawLine(x, 0, x, height, playheadPaint);
-            
-            // Triangle at top
-            SkPath triangle;
-            triangle.moveTo(x - 6, 0);
-            triangle.lineTo(x + 6, 0);
-            triangle.lineTo(x, 10);
-            triangle.close();
-            
-            playheadPaint.setStyle(SkPaint::kFill_Style);
-            canvas->drawPath(triangle, playheadPaint);
-        }
-    }
+    SkPaint stroke;
+    stroke.setColor(design::colors::CYAN);
+    stroke.setStyle(SkPaint::kStroke_Style);
+    canvas->drawRect(mRect, stroke);
+  }
 }
 #endif
 //==============================================================================
@@ -959,248 +1142,234 @@ bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
 // DragAndDropTarget Interface
 //==============================================================================
 
-bool ArrangerComponent::isInterestedInDragSource(const juce::DragAndDropTarget::SourceDetails& details)
-{
-    // Check if this is a browser drag
-    juce::String description = details.description.toString();
-    
-    if (zenith::BrowserDragSource::isBrowserDrag(description))
-    {
-        auto type = zenith::BrowserDragSource::getTypeFromDescription(description);
-        
-        // Accept audio files, MIDI files, instruments, and plugins
-        return type == zenith::BrowserItemType::AudioFile ||
-               type == zenith::BrowserItemType::MidiFile ||
-               type == zenith::BrowserItemType::Instrument ||
-               type == zenith::BrowserItemType::Plugin;
-    }
-    
-    return false;
+bool ArrangerComponent::isInterestedInDragSource(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  // Check if this is a browser drag
+  juce::String description = details.description.toString();
+
+  if (zenith::BrowserDragSource::isBrowserDrag(description)) {
+    auto type = zenith::BrowserDragSource::getTypeFromDescription(description);
+
+    // Accept audio files, MIDI files, instruments, and plugins
+    return type == zenith::BrowserItemType::AudioFile ||
+           type == zenith::BrowserItemType::MidiFile ||
+           type == zenith::BrowserItemType::Instrument ||
+           type == zenith::BrowserItemType::Plugin;
+  }
+
+  return false;
 }
 
-void ArrangerComponent::itemDragEnter(const juce::DragAndDropTarget::SourceDetails& details)
-{
-    juce::ignoreUnused(details);
-    isDropTargetActive_ = true;
-    repaint();
+void ArrangerComponent::itemDragEnter(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  juce::ignoreUnused(details);
+  isDropTargetActive_ = true;
+  repaint();
 }
 
-void ArrangerComponent::itemDragExit(const juce::DragAndDropTarget::SourceDetails& details)
-{
-    juce::ignoreUnused(details);
-    isDropTargetActive_ = false;
+void ArrangerComponent::itemDragExit(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  juce::ignoreUnused(details);
+  isDropTargetActive_ = false;
+  dropTargetTrackIndex_ = -1;
+  repaint();
+}
+
+void ArrangerComponent::itemDragMove(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  // Calculate drop position
+  auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+
+  dropTargetTrackIndex_ = yToTrackIndex(localPos.y);
+  dropTargetBeats_ = snapToGrid(xToBeats(localPos.x));
+
+  repaint();
+}
+
+void ArrangerComponent::itemDropped(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  isDropTargetActive_ = false;
+
+  // Parse drag description to get item info
+  juce::String description = details.description.toString();
+
+  zenith::BrowserItemType itemType;
+  juce::String itemId;
+  juce::String itemName;
+
+  if (!zenith::BrowserDragSource::parseDragDescription(description, itemType,
+                                                       itemId, itemName)) {
+    DBG("ArrangerComponent: Drop failed - could not parse drag "
+        "description");
     dropTargetTrackIndex_ = -1;
     repaint();
-}
+    return;
+  }
 
-void ArrangerComponent::itemDragMove(const juce::DragAndDropTarget::SourceDetails& details)
-{
-    // Calculate drop position
-    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
-    
-    dropTargetTrackIndex_ = yToTrackIndex(localPos.y);
-    dropTargetBeats_ = snapToGrid(xToBeats(localPos.x));
-    
-    repaint();
-}
+  // Calculate drop position
+  auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
+  int trackIndex = yToTrackIndex(localPos.y);
+  double dropBeats = snapToGrid(xToBeats(localPos.x));
 
-void ArrangerComponent::itemDropped(const juce::DragAndDropTarget::SourceDetails& details)
-{
-    isDropTargetActive_ = false;
-    
-    // Parse drag description to get item info
-    juce::String description = details.description.toString();
-    
-    zenith::BrowserItemType itemType;
-    juce::String itemId;
-    juce::String itemName;
-    
-    if (!zenith::BrowserDragSource::parseDragDescription(description, itemType, itemId, itemName))
-    {
-        DBG("ArrangerComponent: Drop failed - could not parse drag description");
-        dropTargetTrackIndex_ = -1;
-        repaint();
-        return;
-    }
-    
-    // Calculate drop position
-    auto localPos = getLocalPoint(details.sourceComponent, details.localPosition);
-    int trackIndex = yToTrackIndex(localPos.y);
-    double dropBeats = snapToGrid(xToBeats(localPos.x));
-    
-    DBG("ArrangerComponent: Dropped " + itemName + " at track " + 
-        juce::String(trackIndex) + ", beat " + juce::String(dropBeats));
-    
-    // Get or create target track
-    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
-    juce::String targetTrackId;
-    
-    if (tracksNode.isValid() && trackIndex >= 0 && trackIndex < tracksNode.getNumChildren())
-    {
-        // Use existing track
-        auto track = tracksNode.getChild(trackIndex);
-        targetTrackId = track[zenith::ProjectState::PROP_ID].toString();
-    }
-    else
-    {
-        // Create new track for the dropped item
-        bool isMidiItem = itemType == zenith::BrowserItemType::MidiFile ||
-                          itemType == zenith::BrowserItemType::Instrument;
-        
-        targetTrackId = projectState.createTrack(
-            isMidiItem ? "midi" : "audio",
-            itemName,
-            "Drop new track"
-        );
-        
-        DBG("ArrangerComponent: Created new track: " + targetTrackId);
-    }
-    
-    if (targetTrackId.isEmpty())
-    {
-        DBG("ArrangerComponent: Drop failed - no target track");
-        dropTargetTrackIndex_ = -1;
-        repaint();
-        return;
-    }
-    
-    // Handle different item types
-    switch (itemType)
-    {
-        case zenith::BrowserItemType::AudioFile:
-        {
-            // Create audio clip with the file
-            juce::File audioFile(itemId);
-            double clipLength = 4.0; // Default, will be updated when file loads
-            
-            juce::String clipId = projectState.createEmptyClip(
-                targetTrackId, dropBeats, clipLength, false, 
-                audioFile.getFileNameWithoutExtension(),
-                "Drop audio file"
-            );
-            
-            // Set the audio file path on the clip
-            auto [track, clip] = projectState.findClip(clipId);
-            if (clip.isValid())
-            {
-                clip.setProperty(zenith::ProjectState::PROP_AUDIO_FILE, audioFile.getFullPathName(), 
-                                 &projectState.getUndoManager());
-            }
-            
-            DBG("ArrangerComponent: Created audio clip from " + audioFile.getFileName());
-            break;
-        }
-        
-        case zenith::BrowserItemType::MidiFile:
-        {
-            // Create MIDI clip
-            juce::File midiFile(itemId);
-            
-            juce::String clipId = projectState.createEmptyClip(
-                targetTrackId, dropBeats, 4.0, true,
-                midiFile.getFileNameWithoutExtension(),
-                "Drop MIDI file"
-            );
-            
-            DBG("ArrangerComponent: Created MIDI clip from " + midiFile.getFileName());
-            break;
-        }
-        
-        case zenith::BrowserItemType::Instrument:
-        {
-            // Create MIDI clip and load instrument
-            juce::String clipId = projectState.createEmptyClip(
-                targetTrackId, dropBeats, 4.0, true,
-                itemName,
-                "Drop instrument"
-            );
-            
-            DBG("ArrangerComponent: Created clip for instrument " + itemName);
-            break;
-        }
-        
-        case zenith::BrowserItemType::Plugin:
-        {
-            DBG("ArrangerComponent: Would load plugin " + itemName);
-            break;
-        }
-        
-        default:
-            DBG("ArrangerComponent: Unhandled drop type");
-            break;
-    }
-    
+  DBG("ArrangerComponent: Dropped " + itemName + " at track " +
+      juce::String(trackIndex) + ", beat " + juce::String(dropBeats));
+
+  // Get or create target track
+  auto tracksNode = this->projectState.getState().getChildWithName(
+      zenith::ProjectState::ID_TRACKS);
+  juce::String targetTrackId;
+
+  if (tracksNode.isValid() && trackIndex >= 0 &&
+      trackIndex < tracksNode.getNumChildren()) {
+    // Use existing track
+    auto track = tracksNode.getChild(trackIndex);
+    targetTrackId = track[zenith::ProjectState::PROP_ID].toString();
+  } else {
+    // Create new track for the dropped item
+    bool isMidiItem = itemType == zenith::BrowserItemType::MidiFile ||
+                      itemType == zenith::BrowserItemType::Instrument;
+
+    targetTrackId = projectState.createTrack(isMidiItem ? "midi" : "audio",
+                                             itemName, "Drop new track");
+
+    DBG("ArrangerComponent: Created new track: " + targetTrackId);
+  }
+
+  if (targetTrackId.isEmpty()) {
+    DBG("ArrangerComponent: Drop failed - no target track");
     dropTargetTrackIndex_ = -1;
     repaint();
+    return;
+  }
+
+  // Handle different item types
+  switch (itemType) {
+  case zenith::BrowserItemType::AudioFile: {
+    // Create audio clip with the file
+    juce::File audioFile(itemId);
+    double clipLength = 4.0; // Default, will be updated when file loads
+
+    juce::String clipId = projectState.createEmptyClip(
+        targetTrackId, dropBeats, clipLength, false,
+        audioFile.getFileNameWithoutExtension(), "Drop audio file");
+
+    // Set the audio file path on the clip
+    auto [track, clip] = projectState.findClip(clipId);
+    if (clip.isValid()) {
+      clip.setProperty(zenith::ProjectState::PROP_AUDIO_FILE,
+                       audioFile.getFullPathName(),
+                       &projectState.getUndoManager());
+    }
+
+    DBG("ArrangerComponent: Created audio clip from " +
+        audioFile.getFileName());
+    break;
+  }
+
+  case zenith::BrowserItemType::MidiFile: {
+    // Create MIDI clip
+    juce::File midiFile(itemId);
+
+    juce::String clipId = projectState.createEmptyClip(
+        targetTrackId, dropBeats, 4.0, true,
+        midiFile.getFileNameWithoutExtension(), "Drop MIDI file");
+
+    DBG("ArrangerComponent: Created MIDI clip from " + midiFile.getFileName());
+    break;
+  }
+
+  case zenith::BrowserItemType::Instrument: {
+    // Create MIDI clip and load instrument
+    juce::String clipId = projectState.createEmptyClip(
+        targetTrackId, dropBeats, 4.0, true, itemName, "Drop instrument");
+
+    DBG("ArrangerComponent: Created clip for instrument " + itemName);
+    break;
+  }
+
+  case zenith::BrowserItemType::Plugin: {
+    DBG("ArrangerComponent: Would load plugin " + itemName);
+    break;
+  }
+
+  default:
+    DBG("ArrangerComponent: Unhandled drop type");
+    break;
+  }
+
+  dropTargetTrackIndex_ = -1;
+  repaint();
 }
 
 //==============================================================================
 // Timer callback - Updates playhead position from Engine
 //==============================================================================
 
-void ArrangerComponent::timerCallback() {
-    updatePlayheadFromEngine();
-}
+void ArrangerComponent::timerCallback() { updatePlayheadFromEngine(); }
 
 void ArrangerComponent::updatePlayheadFromEngine() {
-    // Get current playhead position from engine
-    juce::int64 playheadSamples = engine_.getPlayheadSamples();
-    bool wasPlaying = isPlaying_;
-    isPlaying_ = engine_.isPlaying();
-    
-    // Convert samples to beats
-    double newPlayheadBeats = samplesToBeats(playheadSamples);
-    
-    // Only repaint if position changed significantly (avoid unnecessary repaints)
-    if (std::abs(newPlayheadBeats - playheadBeats_) > 0.01 || wasPlaying != isPlaying_) {
-        playheadBeats_ = newPlayheadBeats;
-        
-        // Auto-scroll to follow playhead if enabled and playing
-        if (followPlayhead_ && isPlaying_) {
-            float playheadX = beatsToX(playheadBeats_);
-            float visibleWidth = static_cast<float>(getWidth());
-            
-            // If playhead is off-screen or near the right edge, scroll
-            if (playheadX > visibleWidth * 0.8f || playheadX < 0) {
-                viewStartBeats = playheadBeats_ - (visibleWidth * 0.2 / pixelsPerBeat);
-                viewStartBeats = juce::jmax(0.0, viewStartBeats);
-                recomputeClipBounds();
-            }
-        }
-        
-        repaint();
+  // Get current playhead position from engine
+  juce::int64 playheadSamples = engine_.getPlayheadSamples();
+  bool wasPlaying = isPlaying_;
+  isPlaying_ = engine_.isPlaying();
+
+  // Convert samples to beats
+  double newPlayheadBeats = samplesToBeats(playheadSamples);
+
+  // Only repaint if position changed significantly (avoid unnecessary
+  // repaints)
+  if (std::abs(newPlayheadBeats - playheadBeats_) > 0.01 ||
+      wasPlaying != isPlaying_) {
+    playheadBeats_ = newPlayheadBeats;
+
+    // Auto-scroll to follow playhead if enabled and playing
+    if (followPlayhead_ && isPlaying_) {
+      float playheadX = beatsToX(playheadBeats_);
+      float visibleWidth = static_cast<float>(getWidth());
+
+      // If playhead is off-screen or near the right edge, scroll
+      if (playheadX > visibleWidth * 0.8f || playheadX < 0) {
+        viewStartBeats = playheadBeats_ - (visibleWidth * 0.2 / pixelsPerBeat);
+        viewStartBeats = juce::jmax(0.0, viewStartBeats);
+        recomputeClipBounds();
+      }
     }
-    
-    // Update loop state from engine
-    bool wasLoopEnabled = loopEnabled_;
-    loopEnabled_ = engine_.isLooping();
-    
-    if (loopEnabled_) {
-        double newLoopStart = samplesToBeats(engine_.getLoopStart());
-        double newLoopEnd = samplesToBeats(engine_.getLoopEnd());
-        
-        if (std::abs(newLoopStart - loopStartBeats_) > 0.01 ||
-            std::abs(newLoopEnd - loopEndBeats_) > 0.01 ||
-            wasLoopEnabled != loopEnabled_) {
-            loopStartBeats_ = newLoopStart;
-            loopEndBeats_ = newLoopEnd;
-            repaint();
-        }
-    } else if (wasLoopEnabled != loopEnabled_) {
-        repaint();
+
+    repaint();
+  }
+
+  // Update loop state from engine
+  bool wasLoopEnabled = loopEnabled_;
+  loopEnabled_ = engine_.isLooping();
+
+  if (loopEnabled_) {
+    double newLoopStart = samplesToBeats(engine_.getLoopStart());
+    double newLoopEnd = samplesToBeats(engine_.getLoopEnd());
+
+    if (std::abs(newLoopStart - loopStartBeats_) > 0.01 ||
+        std::abs(newLoopEnd - loopEndBeats_) > 0.01 ||
+        wasLoopEnabled != loopEnabled_) {
+      loopStartBeats_ = newLoopStart;
+      loopEndBeats_ = newLoopEnd;
+      repaint();
     }
+  } else if (wasLoopEnabled != loopEnabled_) {
+    repaint();
+  }
 }
 
 double ArrangerComponent::samplesToBeats(juce::int64 samples) const {
-    double sampleRate = engine_.getSampleRate();
-    if (sampleRate <= 0.0) sampleRate = 44100.0;
-    
-    double tempo = projectState.getTempo();
-    if (tempo <= 0.0) tempo = 120.0;
-    
-    double seconds = static_cast<double>(samples) / sampleRate;
-    double beatsPerSecond = tempo / 60.0;
-    return seconds * beatsPerSecond;
+  double sampleRate = engine_.getSampleRate();
+  if (sampleRate <= 0.0)
+    sampleRate = 44100.0;
+
+  double tempo = projectState.getTempo();
+  if (tempo <= 0.0)
+    tempo = 120.0;
+
+  double seconds = static_cast<double>(samples) / sampleRate;
+  double beatsPerSecond = tempo / 60.0;
+  return seconds * beatsPerSecond;
 }
 
 //==============================================================================
@@ -1208,9 +1377,9 @@ double ArrangerComponent::samplesToBeats(juce::int64 samples) const {
 //==============================================================================
 
 void ArrangerComponent::setGridResolution(GridResolution res) {
-    gridResolution_ = res;
-    gridSnapBeats = gridResolutionToBeats(res);
-    repaint();
+  gridResolution_ = res;
+  gridSnapBeats = gridResolutionToBeats(res);
+  repaint();
 }
 
 } // namespace zenith

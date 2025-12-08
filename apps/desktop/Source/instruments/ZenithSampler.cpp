@@ -174,7 +174,8 @@ void ZenithSamplerProcessor::processBlock(juce::AudioBuffer<float> &buffer,
       for (int s = 0; s < buffer.getNumSamples(); ++s) {
         float x = data[s] * (1.0f + drive);
         // Fast soft clip: x / (1 + |x|)
-        // This is much faster than std::tanh and provides a nice saturation curve
+        // This is much faster than std::tanh and provides a nice saturation
+        // curve
         data[s] = x / (1.0f + std::abs(x));
       }
     }
@@ -289,11 +290,10 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
 
       if (processor.parseBankFile(bankFile, *bankData)) {
         // Apply on message thread
-        juce::MessageManager::callAsync(
-            [this, data = bankData]() mutable {
-              processor.applyBankData(std::move(data));
-              processor.isLoadingPatch.store(false);
-            });
+        juce::MessageManager::callAsync([this, data = bankData]() mutable {
+          processor.applyBankData(std::move(data));
+          processor.isLoadingPatch.store(false);
+        });
       } else {
         processor.isLoadingPatch.store(false);
         DBG("Failed to load bank: " << bankFile.getFullPathName());
@@ -338,11 +338,10 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
 
         if (processor.parseBankJson(json, baseDir, *bankData)) {
           // Apply on message thread
-          juce::MessageManager::callAsync(
-              [this, data = bankData]() mutable {
-                processor.applyBankData(data);
-                processor.isLoadingPatch.store(false);
-              });
+          juce::MessageManager::callAsync([this, data = bankData]() mutable {
+            processor.applyBankData(data);
+            processor.isLoadingPatch.store(false);
+          });
           return;
         }
       }
@@ -525,10 +524,11 @@ void ZenithSamplerProcessor::applyBankData(
 //==============================================================================
 
 juce::AudioProcessorEditor *ZenithSamplerProcessor::createEditor() {
-  // [STUB AUDIT] - Returning GenericAudioProcessorEditor instead of nullptr
-  // because ZenithSamplerEditor requires dependencies not yet available here.
-  // This ensures the plugin has a UI (parameters only) instead of crashing or showing nothing.
-  DBG("[STUB AUDIT] ZenithSamplerProcessor::createEditor - Using GenericAudioProcessorEditor");
+  // Using GenericAudioProcessorEditor for now as ZenithSampler integration
+  // with SampleEditorComponent is handled at the workspace level.
+  // This ensures the plugin has a basic parameter UI.
+  DBG("ZenithSamplerProcessor::createEditor - Using "
+      "GenericAudioProcessorEditor");
   return new juce::GenericAudioProcessorEditor(*this);
 }
 

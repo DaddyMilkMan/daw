@@ -1363,7 +1363,7 @@ void BrowserPanel::showContextMenu(int itemIndex, juce::Point<int> position)
                                 repaint();
                             }
                         }
-                        delete alertWindow;
+                        // AlertWindow is managed by JUCE, no manual deletion needed
                     }));
             }
             else if (result >= 100)

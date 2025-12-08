@@ -1,11 +1,13 @@
 #pragma once
-#pragma once
 // #include "../Source/ui/debug/DebugLogOverlay.h"
 #include <fstream>
 #include <iostream>
 #include <string>
 
 #if JUCE_WINDOWS
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #include <windows.h>
 #endif
 

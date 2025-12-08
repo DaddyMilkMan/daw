@@ -19,7 +19,8 @@
 #include <core/SkColor.h>
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
+#include <core/SkBlurTypes.h> // Explicitly include
+
 
 using namespace zenith;
 

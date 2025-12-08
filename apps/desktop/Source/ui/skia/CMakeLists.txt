@@ -12,6 +12,7 @@ if(ZENITH_ENABLE_SKIA)
         ZenithDesignSystem.cpp
         ZenithLayout.cpp
         ZenithPolySynthUI.cpp
+        ../../rendering/SkiaRenderer.cpp
         ExportDialog.cpp
     )
 endif()

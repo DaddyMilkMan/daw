@@ -80,6 +80,9 @@ juce_generate_juce_header(ZenithDAW)
 
 target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 
+# Skia Integration (must be defined before subdirectories)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
+
 # Modularized Source Groups (Complaint #6 Fix)
 add_subdirectory(apps/desktop/Source/engine)
 add_subdirectory(apps/desktop/Source/ui)
@@ -132,9 +135,7 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Skia Integration (Manual)
-option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
-
+# Skia Integration (Manual) - option defined earlier
 if(ZENITH_ENABLE_SKIA)
     include(apps/desktop/cmake/SkiaManualIntegration.cmake)
     target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)

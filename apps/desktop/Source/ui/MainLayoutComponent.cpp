@@ -83,12 +83,6 @@ MainLayoutComponent::MainLayoutComponent(Engine& engine, ProjectState& state)
     browserPanel_->setVisible(browserVisible_);
 }
 
-void MainLayoutComponent::paint(juce::Graphics& g)
-{
-    // Background handled by SkiaMainWindowIntegration or children
-    // No JUCE painting needed
-}
-
 void MainLayoutComponent::drawSkia(SkCanvas* canvas)
 {
     // Background

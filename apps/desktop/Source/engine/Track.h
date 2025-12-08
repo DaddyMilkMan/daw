@@ -17,8 +17,8 @@
 
 #pragma once
 
-#include "MixerChannel.h"
 #include "AutomationLane.h"
+#include "MixerChannel.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -29,14 +29,15 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
-#include <vector>
 #include <unordered_map>
+#include <vector>
+
 
 // Forward declarations
 namespace zenith {
 class Instrument;
 class TempoMap;
-}
+} // namespace zenith
 
 namespace zenith {
 
@@ -59,7 +60,9 @@ public:
   enum class Type {
     Audio,
     MIDI,
-    Instrument // MIDI track with instrument plugin
+    Instrument, // MIDI track with instrument plugin
+    Bus,        // Audio bus (aux/submix)
+    Master      // Master output track
   };
 
   //==============================================================================
@@ -79,7 +82,7 @@ public:
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
-      const TempoMap* tempoMap = nullptr);
+      const TempoMap *tempoMap = nullptr);
 
   //==============================================================================
   // Track properties
@@ -109,8 +112,10 @@ public:
 
   void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
   bool isSolo() const { return mixerChannel.isSolo(); }
-  
-  void setSilencedBySolo(bool silenced) { mixerChannel.setSilencedBySolo(silenced); }
+
+  void setSilencedBySolo(bool silenced) {
+    mixerChannel.setSilencedBySolo(silenced);
+  }
   bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
@@ -182,7 +187,9 @@ public:
   void clearClips();
   int getNumClips() const;
   Clip *getClip(int index) const;
-  const std::vector<std::unique_ptr<Clip>>& getClips() const { return clipsOwned_; }
+  const std::vector<std::unique_ptr<Clip>> &getClips() const {
+    return clipsOwned_;
+  }
 
   //==============================================================================
   // Monitoring
@@ -208,15 +215,17 @@ public:
   void loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost);
 
   // Single plugin state helpers
-  void loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host);
-  static void savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& pluginTree);
+  void loadPluginState(const juce::ValueTree &pluginTree, PluginHost &host);
+  static void savePluginState(juce::AudioPluginInstance *plugin,
+                              juce::ValueTree &pluginTree);
 
   //==============================================================================
   // Automation Management
   //==============================================================================
-  
+
   // Message thread only: update automation for a specific parameter
-  void addAutomationLane(const juce::String& paramId, std::shared_ptr<AutomationLane> lane);
+  void addAutomationLane(const juce::String &paramId,
+                         std::shared_ptr<AutomationLane> lane);
   void clearAutomationLanes();
 
 private:
@@ -255,42 +264,48 @@ private:
   MixerChannel mixerChannel;
 
   //==============================================================================
-  // ROAST FIX #2: Plugin chain with RT-safe snapshot pattern (Phase 3: VST3 hosting MVP)
+  // ROAST FIX #2: Plugin chain with RT-safe snapshot pattern (Phase 3: VST3
+  // hosting MVP)
   //
   // Pattern (same as clips):
-  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread only)
+  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread
+  // only)
   // - PluginSnapshot holds shared_ptr for audio thread to iterate safely
   // - Audio thread loads snapshot atomically, iterates without locking
-  // - Message thread creates new snapshot when modifying plugins, swaps atomically
+  // - Message thread creates new snapshot when modifying plugins, swaps
+  // atomically
   //
   // This eliminates the data race from the original code:
   // OLD: Audio thread reads std::vector while message thread modifies it (UB!)
   // NEW: Audio thread holds shared_ptr snapshot, ensuring plugins stay alive
-  
+
   struct PluginSnapshot {
     std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
-    
+
     PluginSnapshot() = default;
-    explicit PluginSnapshot(const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& ownedPlugins) {
+    explicit PluginSnapshot(
+        const std::vector<std::shared_ptr<juce::AudioPluginInstance>>
+            &ownedPlugins) {
       plugins.reserve(ownedPlugins.size());
-      for (const auto& plugin : ownedPlugins)
+      for (const auto &plugin : ownedPlugins)
         plugins.push_back(plugin); // Copy shared_ptr (increment refcount)
     }
   };
 
   // Plugin ownership (message thread only)
   std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
-  
+
   // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
   // Audio thread reads this raw pointer atomically
-  // Message thread manages lifetime via currentPluginSnapshot_ and pluginSnapshotTrash_
-  std::atomic<const PluginSnapshot*> activePluginSnapshot_{nullptr};
+  // Message thread manages lifetime via currentPluginSnapshot_ and
+  // pluginSnapshotTrash_
+  std::atomic<const PluginSnapshot *> activePluginSnapshot_{nullptr};
   std::shared_ptr<PluginSnapshot> currentPluginSnapshot_;
   std::vector<std::shared_ptr<PluginSnapshot>> pluginSnapshotTrash_;
-  
+
   // Helper: Create new snapshot from current ownership
   void updatePluginSnapshot();
-  
+
   juce::AudioBuffer<float> pluginBuffer;
 
   //==============================================================================
@@ -323,8 +338,9 @@ private:
 
   // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
   // Audio thread reads this raw pointer atomically
-  // Message thread manages lifetime via currentClipSnapshot_ and clipSnapshotTrash_
-  std::atomic<const ClipSnapshot*> activeClipSnapshot_{nullptr};
+  // Message thread manages lifetime via currentClipSnapshot_ and
+  // clipSnapshotTrash_
+  std::atomic<const ClipSnapshot *> activeClipSnapshot_{nullptr};
   std::shared_ptr<ClipSnapshot> currentClipSnapshot_;
   std::vector<std::shared_ptr<ClipSnapshot>> clipSnapshotTrash_;
 
@@ -345,16 +361,19 @@ private:
     std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> lanes;
 
     AutomationSnapshot() = default;
-    explicit AutomationSnapshot(const std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>& ownedLanes) {
-        lanes = ownedLanes;
+    explicit AutomationSnapshot(
+        const std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>
+            &ownedLanes) {
+      lanes = ownedLanes;
     }
   };
 
   // Ownership (Message thread)
-  std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> automationLanesOwned_;
-  
+  std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>
+      automationLanesOwned_;
+
   // RT Snapshot
-  std::atomic<const AutomationSnapshot*> activeAutomationSnapshot_{nullptr};
+  std::atomic<const AutomationSnapshot *> activeAutomationSnapshot_{nullptr};
   std::shared_ptr<AutomationSnapshot> currentAutomationSnapshot_;
   std::vector<std::shared_ptr<AutomationSnapshot>> automationSnapshotTrash_;
 

@@ -16,19 +16,10 @@
 
 #pragma once
 
-#ifdef ZENITH_USE_SKIA
 #include "../Source/ui/skia/ZenithUIComponents.h"
 #include "../Source/ui/skia/SkiaComponent.h"
 
-class SkCanvas;
-struct SkRect;
-#endif
-
 #include "ProjectState.h"
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-#include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_events/juce_events.h>
@@ -37,50 +28,34 @@ struct SkRect;
 #include <memory>
 #include <vector>
 
+class SkCanvas;
+struct SkRect;
+
 //==============================================================================
 /**
  * @class MixerComponent
  * @brief Mixer panel with vertical track strips
  */
-class MixerComponent :
-#ifdef ZENITH_USE_SKIA
-    public zenith::SkiaComponent,
-#else
-    public juce::Component,
-#endif
-    public juce::ValueTree::Listener {
+class MixerComponent : public zenith::SkiaComponent,
+                       public juce::ValueTree::Listener {
 public:
   MixerComponent(zenith::ProjectState &ps);
   ~MixerComponent() override;
 
-#ifndef ZENITH_USE_SKIA
-  void paint(juce::Graphics &g) override;
-#endif
   void resized() override;
 
-#ifdef ZENITH_USE_SKIA
   void drawSkia(SkCanvas *canvas) override;
-#endif
 
   //==============================================================================
   struct TrackStrip {
     juce::String trackId;
     juce::String trackName;
 
-#ifdef ZENITH_USE_SKIA
     std::unique_ptr<zenith::ZenithSlider> volumeSlider;
     std::unique_ptr<zenith::ZenithKnob> panSlider; // Use Knob for Pan
     std::unique_ptr<zenith::ZenithButton> muteButton;
     std::unique_ptr<zenith::ZenithButton> soloButton;
     std::unique_ptr<zenith::ZenithButton> armButton;
-#else
-    std::unique_ptr<juce::Label> nameLabel;
-    std::unique_ptr<juce::Slider> volumeSlider;
-    std::unique_ptr<juce::Slider> panSlider;
-    std::unique_ptr<juce::ToggleButton> muteButton;
-    std::unique_ptr<juce::ToggleButton> soloButton;
-    std::unique_ptr<juce::ToggleButton> armButton;
-#endif
 
     juce::Rectangle<int> bounds;
 
@@ -143,7 +118,6 @@ private:
    */
   TrackStrip *findTrackStrip(const juce::String &trackId);
 
-#ifdef ZENITH_USE_SKIA
   /**
    * @brief Draw a single track strip background using Skia
    * Child components (volumeSlider, panSlider, muteButton, soloButton,
@@ -151,7 +125,6 @@ private:
    */
   void drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
                           const TrackStrip &strip);
-#endif
 
   //==========================================================================
   // Control callbacks

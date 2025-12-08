@@ -16,12 +16,13 @@
 */
 
 #include "Track.h"
+#include "../../include/ProjectState.h"
+#include "../../include/TempoMap.h"
 #include "../instruments/Instrument.h"
 #include "Clip.h"
 #include "PluginHost.h"
-#include "../../include/ProjectState.h"
-#include "../../include/TempoMap.h"
 #include <algorithm>
+
 
 namespace zenith {
 
@@ -31,7 +32,7 @@ Track::Track(const juce::String &name, Type type)
   // Initialize empty clip snapshot (lock-free RCU pattern)
   currentClipSnapshot_ = std::make_shared<ClipSnapshot>();
   activeClipSnapshot_.store(currentClipSnapshot_.get());
-  
+
   // Initialize empty plugin snapshot (lock-free RCU pattern)
   currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
   activePluginSnapshot_.store(currentPluginSnapshot_.get());
@@ -47,7 +48,7 @@ Track::~Track() {
   clipsOwned_.clear();
   currentClipSnapshot_ = std::make_shared<ClipSnapshot>();
   activeClipSnapshot_.store(currentClipSnapshot_.get());
-  
+
   // Clear plugins snapshot
   pluginsOwned_.clear();
   currentPluginSnapshot_ = std::make_shared<PluginSnapshot>();
@@ -162,7 +163,7 @@ void Track::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     const std::vector<juce::AudioBuffer<float> *> &auxBuffers,
-    const TempoMap* tempoMap) {
+    const TempoMap *tempoMap) {
   // Clear the buffer first
   bufferToFill.clearActiveBufferRegion();
 
@@ -175,27 +176,55 @@ void Track::getNextAudioBlock(
   // Automation Application (Tier 1 Feature)
   // We apply automation at the start of the block (Control Rate)
   if (tempoMap != nullptr) {
-      auto* automationSnapshot = activeAutomationSnapshot_.load(std::memory_order_acquire);
-      if (automationSnapshot) {
-          // Calculate time in beats at start of block
-          double startBeats = tempoMap->samplesToBeats(playheadSamples, currentSampleRate);
-          
-          // Volume Automation
-          auto volIt = automationSnapshot->lanes.find("volume");
-          if (volIt != automationSnapshot->lanes.end()) {
-             float val = volIt->second->getValueAt(startBeats);
-             mixerChannel.setVolume(val); 
-          }
-          
-          // Pan Automation
-          auto panIt = automationSnapshot->lanes.find("pan");
-          if (panIt != automationSnapshot->lanes.end()) {
-             float val = panIt->second->getValueAt(startBeats);
-             mixerChannel.setPan(val);
-          }
-          
-          // TODO: Plugin parameter automation
+    auto *automationSnapshot =
+        activeAutomationSnapshot_.load(std::memory_order_acquire);
+    if (automationSnapshot) {
+      // Calculate time in beats at start of block
+      double startBeats =
+          tempoMap->samplesToBeats(playheadSamples, currentSampleRate);
+
+      // Volume Automation
+      auto volIt = automationSnapshot->lanes.find("volume");
+      if (volIt != automationSnapshot->lanes.end()) {
+        float val = volIt->second->getValueAt(startBeats);
+        mixerChannel.setVolume(val);
       }
+
+      // Pan Automation
+      auto panIt = automationSnapshot->lanes.find("pan");
+      if (panIt != automationSnapshot->lanes.end()) {
+        float val = panIt->second->getValueAt(startBeats);
+        mixerChannel.setPan(val);
+      }
+
+      // Plugin parameter automation
+      // Iterate over plugin-specific automation lanes (format:
+      // "plugin_X_paramY")
+      for (const auto &[laneId, lane] : automationSnapshot->lanes) {
+        if (laneId.startsWith("plugin_")) {
+          // Parse plugin index and param index from laneId
+          auto parts = juce::StringArray::fromTokens(laneId, "_", "");
+          if (parts.size() >= 3) {
+            int pluginIdx = parts[1].getIntValue();
+            int paramIdx = parts[2].getIntValue();
+
+            auto *pluginSnapshot =
+                activePluginSnapshot_.load(std::memory_order_acquire);
+            if (pluginSnapshot && pluginIdx >= 0 &&
+                pluginIdx < (int)pluginSnapshot->plugins.size()) {
+              auto &plugin = pluginSnapshot->plugins[pluginIdx];
+              if (plugin) {
+                auto params = plugin->getParameters();
+                if (paramIdx >= 0 && paramIdx < params.size()) {
+                  float val = lane->getValueAt(startBeats);
+                  params[paramIdx]->setValueNotifyingHost(val);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   }
 
   // Phase 2A: Clear MIDI buffer for this block
@@ -207,7 +236,8 @@ void Track::getNextAudioBlock(
   }
 
   // TRULY LOCK-FREE: Atomic load of raw pointer - no SpinLock!
-  const ClipSnapshot* currentSnapshot = activeClipSnapshot_.load(std::memory_order_acquire);
+  const ClipSnapshot *currentSnapshot =
+      activeClipSnapshot_.load(std::memory_order_acquire);
 
   if (currentSnapshot) {
     // Iterate clips from snapshot (no lock needed!)
@@ -331,14 +361,14 @@ void Track::setEnabled(bool shouldBeEnabled) {
 void Track::updatePluginSnapshot() {
   // Called from message thread only
   auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_);
-  
+
   // Atomic swap - audio thread will see new snapshot on next load
   activePluginSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  
+
   // Manage lifetime: keep old snapshots alive briefly for audio thread
   pluginSnapshotTrash_.push_back(currentPluginSnapshot_);
   currentPluginSnapshot_ = newSnapshot;
-  
+
   // ACCUMULATION FIX: Increased limit from 5 to 10 to handle rapid updates
   // during offline rendering or automation. The snapshot is typically read
   // once per audio callback (~10ms at 48kHz/512 samples), so 10 snapshots
@@ -352,12 +382,13 @@ void Track::updatePluginSnapshot() {
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   if (plugin == nullptr)
     return;
 
   // Convert to shared_ptr for snapshot pattern
-  auto sharedPlugin = std::shared_ptr<juce::AudioPluginInstance>(plugin.release());
+  auto sharedPlugin =
+      std::shared_ptr<juce::AudioPluginInstance>(plugin.release());
 
   // Prepare the plugin if we're already initialized
   if (currentSampleRate > 0) {
@@ -366,29 +397,29 @@ void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   }
 
   pluginsOwned_.push_back(sharedPlugin);
-  
+
   // Update snapshot for audio thread
   updatePluginSnapshot();
-  
+
   sendChangeMessage();
 }
-
 
 // ROAST FIX #2: Use snapshot pattern instead of lock
 void Track::removePlugin(int pluginIndex) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
-  if (pluginIndex >= 0 && pluginIndex < static_cast<int>(pluginsOwned_.size())) {
+
+  if (pluginIndex >= 0 &&
+      pluginIndex < static_cast<int>(pluginsOwned_.size())) {
     auto &plugin = pluginsOwned_[pluginIndex];
     if (plugin != nullptr) {
       plugin->releaseResources();
     }
     pluginsOwned_.erase(pluginsOwned_.begin() + pluginIndex);
-    
+
     // Update snapshot for audio thread
     updatePluginSnapshot();
-    
+
     sendChangeMessage();
   }
 }
@@ -397,7 +428,7 @@ void Track::removePlugin(int pluginIndex) {
 void Track::clearPlugins() {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
       plugin->releaseResources();
@@ -405,10 +436,10 @@ void Track::clearPlugins() {
   }
 
   pluginsOwned_.clear();
-  
+
   // Update snapshot for audio thread
   updatePluginSnapshot();
-  
+
   sendChangeMessage();
 }
 
@@ -435,11 +466,11 @@ void Track::updateClipSnapshot() {
 
   // Atomic swap - audio thread will see new snapshot on next load
   activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  
+
   // Manage lifetime: keep old snapshots alive briefly for audio thread
   clipSnapshotTrash_.push_back(currentClipSnapshot_);
   currentClipSnapshot_ = newSnapshot;
-  
+
   // ACCUMULATION FIX: Increased limit from 5 to 10 to handle rapid updates
   // during offline rendering or automation. Uses while loop to clean up
   // multiple stale snapshots in a single pass if needed.
@@ -451,7 +482,7 @@ void Track::updateClipSnapshot() {
 void Track::addClip(std::unique_ptr<Clip> clip) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   if (clip != nullptr) {
     // Prepare the clip if we're already initialized
     if (currentSampleRate > 0) {
@@ -471,7 +502,7 @@ void Track::addClip(std::unique_ptr<Clip> clip) {
 void Track::removeClip(int clipIndex) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   if (clipIndex >= 0 && clipIndex < static_cast<int>(clipsOwned_.size())) {
     auto &clip = clipsOwned_[clipIndex];
     if (clip != nullptr) {
@@ -491,7 +522,7 @@ void Track::removeClip(int clipIndex) {
 void Track::removeClip(Clip *clip) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   auto it = std::find_if(
       clipsOwned_.begin(), clipsOwned_.end(),
       [clip](const std::unique_ptr<Clip> &c) { return c.get() == clip; });
@@ -512,7 +543,7 @@ void Track::removeClip(Clip *clip) {
 void Track::clearClips() {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   for (auto &clip : clipsOwned_) {
     if (clip != nullptr) {
       clip->releaseResources();
@@ -545,27 +576,29 @@ Track::Clip *Track::getClip(int index) const {
 //==============================================================================
 
 void Track::updateAutomationSnapshot() {
-  auto newSnapshot = std::make_shared<AutomationSnapshot>(automationLanesOwned_);
+  auto newSnapshot =
+      std::make_shared<AutomationSnapshot>(automationLanesOwned_);
   activeAutomationSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-  
+
   automationSnapshotTrash_.push_back(currentAutomationSnapshot_);
   currentAutomationSnapshot_ = newSnapshot;
-  
+
   while (automationSnapshotTrash_.size() > 10) {
     automationSnapshotTrash_.erase(automationSnapshotTrash_.begin());
   }
 }
 
-void Track::addAutomationLane(const juce::String& paramId, std::shared_ptr<AutomationLane> lane) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    automationLanesOwned_[paramId] = lane;
-    updateAutomationSnapshot();
+void Track::addAutomationLane(const juce::String &paramId,
+                              std::shared_ptr<AutomationLane> lane) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  automationLanesOwned_[paramId] = lane;
+  updateAutomationSnapshot();
 }
 
 void Track::clearAutomationLanes() {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    automationLanesOwned_.clear();
-    updateAutomationSnapshot();
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  automationLanesOwned_.clear();
+  updateAutomationSnapshot();
 }
 
 //==============================================================================
@@ -619,16 +652,14 @@ void Track::loadState(const juce::ValueTree &state) {
   armed.store(state.getProperty("armed", false));
   enabled.store(state.getProperty("enabled", true));
 
-  // Phase 3: Load plugin states
-  // NOTE: Plugin loading requires PluginHost to recreate instances.
-  // This should be called from Engine/ProjectState level where PluginHost is
-  // available. For now, we just clear plugins and document the requirement.
-  // TODO(Phase 3+): Add loadPluginState(ValueTree, PluginHost&) method
+  // Load plugin states using the dedicated method if PluginHost is available
+  // Note: This basic loadState doesn't have PluginHost context,
+  // so plugin loading must be deferred to loadPluginStates() call from Engine
   auto pluginsState = state.getChildWithName("Plugins");
   if (pluginsState.isValid()) {
+    // Store plugin state for later loading when PluginHost is available
+    // For now, just clear - Engine will call loadPluginStates() after this
     clearPlugins();
-    // Plugin recreation needs to happen at Engine level with access to
-    // PluginHost See ProjectState integration for proper plugin loading
   }
 
   // Load clip states
@@ -647,27 +678,32 @@ void Track::loadState(const juce::ValueTree &state) {
   clearAutomationLanes();
   auto automationNode = state.getChildWithName(ProjectState::ID_AUTOMATION);
   if (automationNode.isValid()) {
-      for (auto envNode : automationNode) {
-          if (envNode.hasType(ProjectState::ID_ENVELOPE)) {
-              juce::String paramId = envNode.getProperty(ProjectState::PROP_PARAM_ID);
-              std::vector<AutomationPoint> points;
-              for (auto pointNode : envNode) {
-                  if (pointNode.hasType(ProjectState::ID_POINT)) {
-                      points.push_back({
-                          static_cast<double>(pointNode.getProperty(ProjectState::PROP_TIME_BEATS)),
-                          static_cast<float>(pointNode.getProperty(ProjectState::PROP_VALUE)),
-                          0.5f // Curve default (linear)
-                      });
-                  }
-              }
-              // Ensure sorted
-              std::sort(points.begin(), points.end(), [](const auto& a, const auto& b){ return a.timeBeats < b.timeBeats; });
-              
-              if (!points.empty()) {
-                  addAutomationLane(paramId, std::make_shared<AutomationLane>(points));
-              }
+    for (auto envNode : automationNode) {
+      if (envNode.hasType(ProjectState::ID_ENVELOPE)) {
+        juce::String paramId = envNode.getProperty(ProjectState::PROP_PARAM_ID);
+        std::vector<AutomationPoint> points;
+        for (auto pointNode : envNode) {
+          if (pointNode.hasType(ProjectState::ID_POINT)) {
+            points.push_back({
+                static_cast<double>(
+                    pointNode.getProperty(ProjectState::PROP_TIME_BEATS)),
+                static_cast<float>(
+                    pointNode.getProperty(ProjectState::PROP_VALUE)),
+                0.5f // Curve default (linear)
+            });
           }
+        }
+        // Ensure sorted
+        std::sort(points.begin(), points.end(),
+                  [](const auto &a, const auto &b) {
+                    return a.timeBeats < b.timeBeats;
+                  });
+
+        if (!points.empty()) {
+          addAutomationLane(paramId, std::make_shared<AutomationLane>(points));
+        }
       }
+    }
   }
 
   sendChangeMessage();
@@ -691,7 +727,7 @@ void Track::loadPluginStates(const juce::ValueTree &state,
   for (int i = 0; i < pluginsState.getNumChildren(); ++i) {
     auto pluginState = pluginsState.getChild(i);
     if (pluginState.hasType("Plugin")) {
-        loadPluginState(pluginState, pluginHost);
+      loadPluginState(pluginState, pluginHost);
     }
   }
 
@@ -703,8 +739,9 @@ void Track::loadPluginStates(const juce::ValueTree &state,
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
                                juce::MidiBuffer &midi, int numSamples) {
   // LOCK-FREE: Atomic load of raw pointer - no SpinLock!
-  const PluginSnapshot* snapshot = activePluginSnapshot_.load(std::memory_order_acquire);
-  
+  const PluginSnapshot *snapshot =
+      activePluginSnapshot_.load(std::memory_order_acquire);
+
   if (snapshot == nullptr || snapshot->plugins.empty())
     return;
 
@@ -751,12 +788,12 @@ void Track::generateMidiForBlock(const juce::ValueTree &trackState,
                                  double tempo, double sampleRate,
                                  juce::int64 blockStartSample, int blockSize,
                                  juce::MidiBuffer &midiOut) {
-  // THREAD SAFETY FIX: This method uses a lock (activeNotesLock) and is therefore
-  // NOT RT-safe. It must only be called from the message thread.
+  // THREAD SAFETY FIX: This method uses a lock (activeNotesLock) and is
+  // therefore NOT RT-safe. It must only be called from the message thread.
   // Note: This method is currently not called - actual MIDI scheduling uses
   // the lock-free Clip::processMidiClip() path instead.
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   // Calculate block boundaries in samples
   juce::int64 blockEndSample = blockStartSample + blockSize;
 

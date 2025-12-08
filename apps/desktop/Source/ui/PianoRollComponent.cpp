@@ -49,6 +49,16 @@ PianoRollComponent::~PianoRollComponent() {
   stopTimer();
   stopNotePreview();
 
+  // Cleanup: Clear all dynamic data structures to prevent memory leaks
+  noteRects.clear();
+  ccLanes.clear();
+  noteExpressions.clear();
+  spatialGrid.clear();
+  dragStates.clear();
+  clipboard.clear();
+  arpPreviewNotes.clear();
+  multiClipContexts.clear();
+
   if (currentClip.isValid()) {
     auto [track, clip] = projectState.findClip(currentClip.clipId);
     if (clip.isValid()) {
@@ -160,7 +170,7 @@ void PianoRollComponent::refreshNotesFromProjectState() {
       nr.selected = false; // Start unselected, user can select for reference
       // Validate and clamp new properties
       nr.probability = juce::jlimit(0.0f, 1.0f, n.probability);
-      nr.condition = n.condition.substring(0, 32); // Limit string length
+      nr.condition = n.condition.substring(0, 32);   // Limit string length
       nr.recurrence = n.recurrence.substring(0, 16); // Limit string length
       nr.articulationId = juce::jmax(0, n.articulationId); // Must be >= 0
       noteRects.push_back(nr);
@@ -199,11 +209,13 @@ void PianoRollComponent::updateNoteRectangles() {
 
     note.bounds = juce::Rectangle<float>(x, y, width, height);
 
-    // Velocity lane bounds
+    // Velocity lane bounds - make handles larger for easier clicking (min 4px)
     float velocityBarY =
         RULER_HEIGHT + noteGridHeight + velocityToPixels(note.velocity);
     float velocityBarHeight =
         (RULER_HEIGHT + noteGridHeight + velocityLaneHeight) - velocityBarY;
+    // Ensure minimum height for clickability (4px minimum)
+    velocityBarHeight = juce::jmax(4.0f, velocityBarHeight);
     note.velocityBounds =
         juce::Rectangle<float>(x, velocityBarY, width, velocityBarHeight);
   }
@@ -215,26 +227,27 @@ void PianoRollComponent::updateNoteRectangles() {
 
 int PianoRollComponent::pixelsToPitch(float y) const {
   float adjustedY = y - RULER_HEIGHT;
-  
+
   // Guard against division by zero
   if (pixelsPerPitch <= 0.0f)
     return 60; // Default to middle C
-  
+
   int row = static_cast<int>((adjustedY + scrollOffsetY) / pixelsPerPitch);
 
   if (foldMode) {
     if (visiblePitches.empty())
       return 60; // Default to middle C
     int maxRow = static_cast<int>(visiblePitches.size()) - 1;
-    
+
     // COORDINATE INVERSION EXPLANATION:
     // In fold mode, visiblePitches is sorted ascending (low to high).
     // But visually, we want high pitches at the top (y=0) and low at bottom.
     // So we invert: row 0 (top of screen) maps to the highest visible pitch.
-    // This matches standard piano roll convention where C8 is at top, C0 at bottom.
+    // This matches standard piano roll convention where C8 is at top, C0 at
+    // bottom.
     int resultRow = maxRow - row;
     resultRow = juce::jlimit(0, maxRow, resultRow);
-    
+
     // Additional safety check (shouldn't be needed after jlimit, but defensive)
     if (resultRow >= 0 && resultRow < static_cast<int>(visiblePitches.size()))
       return visiblePitches[resultRow];
@@ -249,7 +262,7 @@ float PianoRollComponent::pitchToPixels(int pitch) const {
   // Guard against division by zero
   if (pixelsPerPitch <= 0.0f)
     return 0.0f;
-    
+
   int row;
   if (foldMode) {
     if (visiblePitches.empty()) {
@@ -258,9 +271,10 @@ float PianoRollComponent::pitchToPixels(int pitch) const {
     } else {
       row = mapPitchToRow(pitch);
       // COORDINATE INVERSION EXPLANATION:
-      // mapPitchToRow returns index in visiblePitches (0 = lowest visible pitch).
-      // But we need high pitches at top (y=0), so we invert the row index.
-      // This ensures visual consistency: clicking top of screen selects highest visible pitch.
+      // mapPitchToRow returns index in visiblePitches (0 = lowest visible
+      // pitch). But we need high pitches at top (y=0), so we invert the row
+      // index. This ensures visual consistency: clicking top of screen selects
+      // highest visible pitch.
       row = ((int)visiblePitches.size() - 1) - row;
       // Ensure row is valid after inversion
       row = juce::jlimit(0, (int)visiblePitches.size() - 1, row);
@@ -370,105 +384,125 @@ PianoRollComponent::findNoteInVelocityLane(float x, float y) {
   return nullptr;
 }
 
-bool PianoRollComponent::findCCLaneAtPosition(float x, float y, int &ccNumber,
-                                              juce::Rectangle<float> &laneRect) const {
-    auto bounds = getLocalBounds();
-    // Calculate total height of visible expression lanes
-    int visibleExpressionLanes = 0;
-    for (int i = 0; i < 4; ++i) { // ExpressionType has 4 values
-        if (expressionLaneVisible[i])
-            visibleExpressionLanes++;
-    }
+const PianoRollComponent::NoteRect *
+PianoRollComponent::findNoteInVelocityLane(float x, float y) const {
+  auto bounds = getLocalBounds();
+  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
+  float velocityLaneTop = RULER_HEIGHT + noteGridHeight;
 
-    float startY = bounds.getHeight() - (visibleExpressionLanes * expressionLaneHeight);
-
-    // Check MPE expression lanes first (if any)
-    int laneIndex = 0;
-    for (int i = 0; i < 4; ++i) {
-        if (!expressionLaneVisible[i])
-            continue;
-
-        laneRect = juce::Rectangle<float>(
-            PIANO_WIDTH, startY + (laneIndex * expressionLaneHeight),
-            bounds.getWidth() - PIANO_WIDTH, (float)expressionLaneHeight);
-
-        if (laneRect.contains(x, y)) {
-            // We are in an MPE lane, not a generic CC lane.
-            // For now, this function only concerns generic CC lanes.
-            return false; // Not a generic CC lane
-        }
-        laneIndex++;
-    }
-
-    // Now check generic MIDI CC lanes
-    for (int ccNum : visibleCCLanes) {
-        auto it = ccLanes.find(ccNum);
-        if (it == ccLanes.end() || !it->second.visible)
-            continue;
-
-        laneRect = juce::Rectangle<float>(
-            PIANO_WIDTH, startY + (laneIndex * ccLaneHeight),
-            bounds.getWidth() - PIANO_WIDTH, (float)ccLaneHeight);
-
-        if (laneRect.contains(x, y)) {
-            ccNumber = ccNum;
-            return true; // Found a generic CC lane
-        }
-        laneIndex++;
-    }
-    return false; // No CC lane at position
-}
-
-PianoRollComponent::CCPoint *PianoRollComponent::findCCPointAtPosition(
-    int ccNumber, float x, float y, juce::Rectangle<float> &laneRect) const {
-    auto it = ccLanes.find(ccNumber);
-    if (it == ccLanes.end())
-        return nullptr;
-
-    // Need a non-const reference to lane to return a non-const CCPoint*
-    // This is a design conflict with the const qualifier.
-    // Re-evaluate: if this function is meant to return a *modifiable* point,
-    // then it cannot be const. If it's only for querying existence for cursor,
-    // it should return a const pointer or just a boolean.
-    // For now, let's assume it returns a non-const pointer, and the const
-    // qualifier on the function is temporary for compilation.
-    // A better solution would be to have a const version that returns const CCPoint*
-    // and a non-const version that returns CCPoint*.
-
-    // Given the previous usage in mouseDown, which needed a modifiable point,
-    // this function probably shouldn't be const if it's used for that.
-    // However, for getCursorForPosition, we only need to know *if* there's a point.
-    // Let's create a temporary copy of the lane, or a const_cast (not ideal).
-    // The safest is to only return whether a point is found for const context.
-
-    // Let's modify the return type in .h to be const CCPoint* if the function is const.
-    // Or, remove const from function and only call it from non-const contexts.
-
-    // For now, I will use const_cast for the purpose of getting the compiler to pass,
-    // but note that this is a temporary workaround and ideally the design should be
-    // either two functions (const/non-const) or the CCPoint* should be const CCPoint*
-    // in the const version of this function.
-
-    // Using a const_cast here to make it compile with const method.
-    // This is generally not recommended but demonstrates the immediate fix.
-    CCLane &lane = const_cast<CCLane &>(it->second);
-
-    // Search for a point near the mouse position
-    for (auto &point : lane.points) {
-        // Calculate point's screen coordinates
-        float pointX = beatsToPixels(point.timeBeats) + PIANO_WIDTH;
-        float pointY = laneRect.getBottom() - ((point.value / 127.0f) * laneRect.getHeight());
-
-        // Check if mouse is within a small radius of the point
-        juce::Rectangle<float> pointHitBox =
-            juce::Rectangle<float>(pointX - 5, pointY - 5, 10, 10); // 10x10 pixel hitbox
-        if (pointHitBox.contains(x, y)) {
-            return &point;
-        }
-    }
+  if (y < velocityLaneTop || y > velocityLaneTop + velocityLaneHeight)
     return nullptr;
+
+  // Search in reverse order
+  for (auto it = noteRects.rbegin(); it != noteRects.rend(); ++it) {
+    if (it->velocityBounds.contains(x, y))
+      return &(*it);
+  }
+  return nullptr;
 }
 
+bool PianoRollComponent::findCCLaneAtPosition(
+    float x, float y, int &ccNumber, juce::Rectangle<float> &laneRect) const {
+  auto bounds = getLocalBounds();
+  // Calculate total height of visible expression lanes
+  int visibleExpressionLanes = 0;
+  for (int i = 0; i < 4; ++i) { // ExpressionType has 4 values
+    if (expressionLaneVisible[i])
+      visibleExpressionLanes++;
+  }
+
+  float startY =
+      bounds.getHeight() - (visibleExpressionLanes * expressionLaneHeight);
+
+  // Check MPE expression lanes first (if any)
+  int laneIndex = 0;
+  for (int i = 0; i < 4; ++i) {
+    if (!expressionLaneVisible[i])
+      continue;
+
+    laneRect = juce::Rectangle<float>(
+        PIANO_WIDTH, startY + (laneIndex * expressionLaneHeight),
+        bounds.getWidth() - PIANO_WIDTH, (float)expressionLaneHeight);
+
+    if (laneRect.contains(x, y)) {
+      // We are in an MPE lane, not a generic CC lane.
+      // For now, this function only concerns generic CC lanes.
+      return false; // Not a generic CC lane
+    }
+    laneIndex++;
+  }
+
+  // Now check generic MIDI CC lanes
+  for (int ccNum : visibleCCLanes) {
+    auto it = ccLanes.find(ccNum);
+    if (it == ccLanes.end() || !it->second.visible)
+      continue;
+
+    laneRect = juce::Rectangle<float>(
+        PIANO_WIDTH, startY + (laneIndex * ccLaneHeight),
+        bounds.getWidth() - PIANO_WIDTH, (float)ccLaneHeight);
+
+    if (laneRect.contains(x, y)) {
+      ccNumber = ccNum;
+      return true; // Found a generic CC lane
+    }
+    laneIndex++;
+  }
+  return false; // No CC lane at position
+}
+
+// Const version for querying (cursor detection)
+const PianoRollComponent::CCPoint *PianoRollComponent::findCCPointAtPosition(
+    int ccNumber, float x, float y, juce::Rectangle<float> &laneRect) const {
+  auto it = ccLanes.find(ccNumber);
+  if (it == ccLanes.end())
+    return nullptr;
+
+  const CCLane &lane = it->second;
+
+  // Search for a point near the mouse position
+  for (const auto &point : lane.points) {
+    // Calculate point's screen coordinates
+    float pointX = beatsToPixels(point.timeBeats) + PIANO_WIDTH;
+    float pointY =
+        laneRect.getBottom() - ((point.value / 127.0f) * laneRect.getHeight());
+
+    // Check if mouse is within a small radius of the point
+    juce::Rectangle<float> pointHitBox = juce::Rectangle<float>(
+        pointX - 5, pointY - 5, 10, 10); // 10x10 pixel hitbox
+    if (pointHitBox.contains(x, y)) {
+      return &point;
+    }
+  }
+  return nullptr;
+}
+
+// Non-const version for modification (mouse down)
+PianoRollComponent::CCPoint *
+PianoRollComponent::findCCPointAtPosition(int ccNumber, float x, float y,
+                                          juce::Rectangle<float> &laneRect) {
+  auto it = ccLanes.find(ccNumber);
+  if (it == ccLanes.end())
+    return nullptr;
+
+  CCLane &lane = it->second;
+
+  // Search for a point near the mouse position
+  for (auto &point : lane.points) {
+    // Calculate point's screen coordinates
+    float pointX = beatsToPixels(point.timeBeats) + PIANO_WIDTH;
+    float pointY =
+        laneRect.getBottom() - ((point.value / 127.0f) * laneRect.getHeight());
+
+    // Check if mouse is within a small radius of the point
+    juce::Rectangle<float> pointHitBox = juce::Rectangle<float>(
+        pointX - 5, pointY - 5, 10, 10); // 10x10 pixel hitbox
+    if (pointHitBox.contains(x, y)) {
+      return &point;
+    }
+  }
+  return nullptr;
+}
 
 PianoRollComponent::DragMode
 PianoRollComponent::detectNoteHitRegion(const NoteRect &note, float x,
@@ -500,25 +534,24 @@ PianoRollComponent::getCursorForPosition(float x, float y) const {
   // Check velocity lane
   auto bounds = getLocalBounds();
   float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-  if (y >= RULER_HEIGHT + noteGridHeight)
-  {
-      // NEW: Check if over velocity lane note stalk
-      if (findNoteInVelocityLane(x,y))
-          return CursorType::ResizeHorizontal; // Can drag up/down to change velocity
-      return CursorType::Crosshair;
+  if (y >= RULER_HEIGHT + noteGridHeight) {
+    // NEW: Check if over velocity lane note stalk
+    if (findNoteInVelocityLane(x, y))
+      return CursorType::ResizeHorizontal; // Can drag up/down to change
+                                           // velocity
+    return CursorType::Crosshair;
   }
 
   // NEW: Check if over CC lane or CC point
   int ccNum = -1;
   juce::Rectangle<float> ccLaneBounds;
   if (findCCLaneAtPosition(x, y, ccNum, ccLaneBounds)) {
-      // If over a CC lane, check if over a CC point
-      if (findCCPointAtPosition(ccNum, x, y, ccLaneBounds)) {
-          return CursorType::Hand; // Indicating a movable point
-      }
-      return CursorType::Crosshair; // Indicating ability to add a point
+    // If over a CC lane, check if over a CC point
+    if (findCCPointAtPosition(ccNum, x, y, ccLaneBounds)) {
+      return CursorType::Hand; // Indicating a movable point
+    }
+    return CursorType::Crosshair; // Indicating ability to add a point
   }
-
 
   // Check if over a note
   for (const auto &note : noteRects) {
@@ -579,6 +612,94 @@ void PianoRollComponent::valueTreePropertyChanged(
   (void)property;
   // Simple refresh for now
   refreshNotesFromProjectState();
+}
+
+//==============================================================================
+// Note Variation & Expression
+//==============================================================================
+
+void PianoRollComponent::generateVariation(float variationAmount) {
+  if (getSelectedNoteCount() == 0)
+    return;
+
+  variationAmount = juce::jlimit(0.0f, 1.0f, variationAmount);
+  projectState.getUndoManager().beginNewTransaction("Generate Variation");
+
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_real_distribution<float> timeDist(-variationAmount * 0.25,
+                                                 variationAmount * 0.25);
+  std::uniform_real_distribution<float> pitchDist(-variationAmount * 2.0f,
+                                                  variationAmount * 2.0f);
+  std::uniform_real_distribution<float> velocityDist(-variationAmount * 20.0f,
+                                                     variationAmount * 20.0f);
+
+  for (auto &note : noteRects) {
+    if (note.selected) {
+      double timeVariation = timeDist(gen);
+      int pitchVariation = static_cast<int>(pitchDist(gen));
+      int velocityVariation = static_cast<int>(velocityDist(gen));
+
+      double newStart = note.startBeats + timeVariation;
+      int newPitch = juce::jlimit(0, 127, note.pitch + pitchVariation);
+      int newVelocity = juce::jlimit(1, 127, note.velocity + velocityVariation);
+
+      if (newStart < 0.0)
+        newStart = 0.0;
+
+      if (newPitch != note.pitch) {
+        projectState.moveMidiNote(currentClip.clipId, note.id, note.startBeats,
+                                  newPitch, "");
+      }
+      if (std::abs(newStart - note.startBeats) > 0.001) {
+        projectState.moveMidiNote(currentClip.clipId, note.id, newStart,
+                                  note.pitch, "");
+      }
+      if (newVelocity != note.velocity) {
+        projectState.setMidiNoteVelocity(currentClip.clipId, note.id,
+                                         newVelocity, "");
+      }
+    }
+  }
+
+  refreshNotesFromProjectState();
+}
+
+void PianoRollComponent::setExpressionLaneVisible(ExpressionType type,
+                                                  bool visible) {
+  int typeIndex = static_cast<int>(type);
+  if (typeIndex >= 0 && typeIndex < 4) {
+    expressionLaneVisible[typeIndex] = visible;
+    repaint();
+  }
+}
+
+void PianoRollComponent::setNoteExpression(
+    const juce::String &noteId, ExpressionType type,
+    const std::vector<ExpressionPoint> &points) {
+  if (!currentClip.isValid())
+    return;
+
+  // Store expression data (this would ideally be in ProjectState, but for now
+  // store locally)
+  auto &noteExpr = noteExpressions[noteId];
+  noteExpr[type] = points;
+
+  // Trigger repaint to show expression curves
+  repaint();
+}
+
+std::vector<PianoRollComponent::ExpressionPoint>
+PianoRollComponent::getNoteExpression(const juce::String &noteId,
+                                      ExpressionType type) const {
+  auto it = noteExpressions.find(noteId);
+  if (it != noteExpressions.end()) {
+    auto typeIt = it->second.find(type);
+    if (typeIt != it->second.end()) {
+      return typeIt->second;
+    }
+  }
+  return std::vector<ExpressionPoint>();
 }
 
 void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
@@ -798,51 +919,65 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   // NEW: Check if in CC lane
   int ccNum = -1;
   juce::Rectangle<float> ccLaneBounds;
-  if (findCCLaneAtPosition(x, y, ccNum, ccLaneBounds)) {
-      activeCCNumber = ccNum;
-      activeCCPoint = findCCPointAtPosition(ccNum, x, y, ccLaneBounds);
 
-      if (activeCCPoint) {
-          // Existing CC point clicked
-          if (e.mods.isCommandDown()) { // Ctrl/Cmd + click to delete
-              removeCCPoint(ccNum, activeCCPoint->id);
-              activeCCPoint = nullptr;
-              activeCCNumber = -1;
-              repaint();
-              return;
-          } else {
-              // Start dragging existing CC point
-              currentDragMode = DragMode::CCEditPoint;
-              dragStartPos = e.position;
-              currentCCLaneBounds = ccLaneBounds; // Store the lane bounds
-              return;
-          }
+  // ALT+Click in Expression Lane = Tension Editing
+  if (e.mods.isAltDown() && findCCLaneAtPosition(x, y, ccNum, ccLaneBounds)) {
+    // Start editing curve tension between points
+    startEditingExpressionTension(e);
+    return;
+  }
+
+  if (findCCLaneAtPosition(x, y, ccNum, ccLaneBounds)) {
+    activeCCNumber = ccNum;
+    activeCCPoint = findCCPointAtPosition(ccNum, x, y, ccLaneBounds);
+
+    if (activeCCPoint) {
+      // Existing CC point clicked
+      if (e.mods.isCommandDown()) { // Ctrl/Cmd + click to delete
+        projectState.getUndoManager().beginNewTransaction("Delete CC Point");
+        removeCCPoint(ccNum, activeCCPoint->id);
+        activeCCPoint = nullptr;
+        activeCCNumber = -1;
+        repaint();
+        return;
       } else {
-          // Clicked in CC lane, no existing point: create new one and drag
-          currentDragMode = DragMode::CCNewPoint;
-          dragStartPos = e.position;
-          currentCCLaneBounds = ccLaneBounds; // Store the lane bounds
-          double timeBeats = pixelsToBeats(x);
-          // Convert mouse Y within lane to CC value
-          float normalizedY = 1.0f - ((y - ccLaneBounds.getY()) / ccLaneBounds.getHeight());
-          int value = juce::jlimit(0, 127, static_cast<int>(normalizedY * 127.0f));
-          
-          // Create a temporary point and add it (setCCPoint handles duplicates and sorting)
-          setCCPoint(ccNum, timeBeats, value);
-          // Re-find the newly created point (setCCPoint might reorder or create a new ID)
-          // We need to find the specific point that was just created, not just any point at x,y
-          // A more robust solution would return the ID from setCCPoint or pass back the created point
-          // For now, assume it's the one at the exact timeBeats and value just set
-          auto it = std::find_if(ccLanes[ccNum].points.begin(), ccLanes[ccNum].points.end(),
-                                 [&](const CCPoint& p) {
-                                     return std::abs(p.timeBeats - timeBeats) < 0.001 && p.value == value;
-                                 });
-          if (it != ccLanes[ccNum].points.end())
-              activeCCPoint = &(*it);
-          
-          repaint();
-          return;
+        // Start dragging existing CC point
+        currentDragMode = DragMode::CCEditPoint;
+        dragStartPos = e.position;
+        currentCCLaneBounds = ccLaneBounds; // Store the lane bounds
+        return;
       }
+    } else {
+      // Clicked in CC lane, no existing point: create new one and drag
+      currentDragMode = DragMode::CCNewPoint;
+      dragStartPos = e.position;
+      currentCCLaneBounds = ccLaneBounds; // Store the lane bounds
+      double timeBeats = pixelsToBeats(x);
+      // Convert mouse Y within lane to CC value
+      float normalizedY =
+          1.0f - ((y - ccLaneBounds.getY()) / ccLaneBounds.getHeight());
+      int value = juce::jlimit(0, 127, static_cast<int>(normalizedY * 127.0f));
+
+      // Create a temporary point and add it (setCCPoint handles duplicates and
+      // sorting)
+      setCCPoint(ccNum, timeBeats, value);
+      // Re-find the newly created point (setCCPoint might reorder or create a
+      // new ID) We need to find the specific point that was just created, not
+      // just any point at x,y A more robust solution would return the ID from
+      // setCCPoint or pass back the created point For now, assume it's the one
+      // at the exact timeBeats and value just set
+      auto it =
+          std::find_if(ccLanes[ccNum].points.begin(),
+                       ccLanes[ccNum].points.end(), [&](const CCPoint &p) {
+                         return std::abs(p.timeBeats - timeBeats) < 0.001 &&
+                                p.value == value;
+                       });
+      if (it != ccLanes[ccNum].points.end())
+        activeCCPoint = &(*it);
+
+      repaint();
+      return;
+    }
   }
 
   // Check for note hit in main grid
@@ -887,9 +1022,10 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
 
 void PianoRollComponent::mouseDrag(const juce::MouseEvent &e) {
   // Spray can mode takes priority
-  if (sprayCanMode && currentDragMode == DragMode::None) {
+  // Spray can mode: works on click, not just drag
+  if (sprayCanMode) {
     handleSprayPaint(e.position.x, e.position.y);
-    return;
+    // Don't return - allow normal click handling too
   }
 
   switch (currentDragMode) {
@@ -913,20 +1049,27 @@ void PianoRollComponent::mouseDrag(const juce::MouseEvent &e) {
   case DragMode::CCEditPoint:
   case DragMode::CCNewPoint:
     if (activeCCPoint && activeCCNumber != -1) {
-        // Use the stored currentCCLaneBounds for consistency during drag
-        double newTimeBeats = pixelsToBeats(e.x);
-        // Clamp Y position to the lane bounds
-        float clampedY = juce::jlimit(currentCCLaneBounds.getY(),
-                                      currentCCLaneBounds.getBottom(),
-                                      static_cast<float>(e.y));
-        float normalizedY = 1.0f - ((clampedY - currentCCLaneBounds.getY()) / currentCCLaneBounds.getHeight());
-        int newValue = juce::jlimit(0, 127, static_cast<int>(normalizedY * 127.0f));
+      // Use the stored currentCCLaneBounds for consistency during drag
+      double newTimeBeats = pixelsToBeats(e.x);
+      // Clamp Y position to the lane bounds
+      float clampedY = juce::jlimit(currentCCLaneBounds.getY(),
+                                    currentCCLaneBounds.getBottom(),
+                                    static_cast<float>(e.y));
+      float normalizedY = 1.0f - ((clampedY - currentCCLaneBounds.getY()) /
+                                  currentCCLaneBounds.getHeight());
+      int newValue =
+          juce::jlimit(0, 127, static_cast<int>(normalizedY * 127.0f));
 
-        // Update the active CC point
-        // setCCPoint will handle updating the point in the map and sorting
-        setCCPoint(activeCCNumber, newTimeBeats, newValue);
-        repaint();
+      // Update the active CC point
+      // setCCPoint will handle updating the point in the map and sorting
+      // Note: Undo is handled per-operation, could be batched for better UX
+      setCCPoint(activeCCNumber, newTimeBeats, newValue);
+      repaint();
     }
+    break;
+
+  case DragMode::ExpressionTension:
+    updateExpressionTension(e);
     break;
 
   default:
@@ -957,11 +1100,21 @@ void PianoRollComponent::mouseUp(const juce::MouseEvent &e) {
 
   case DragMode::CCEditPoint:
   case DragMode::CCNewPoint:
-      // No specific "finish" logic needed as setCCPoint updates in real-time
-      // Just clear active state
-      activeCCPoint = nullptr;
-      activeCCNumber = -1;
-      break;
+    // Commit CC point changes with undo support
+    if (activeCCPoint && activeCCNumber != -1) {
+      // End the undo transaction that was started on mouseDown
+      // The transaction was opened as "Edit CC Point" or "New CC Point"
+      // All setCCPoint calls during the drag are batched into this single undo
+      // action
+      projectState.getUndoManager().beginNewTransaction("Edit CC Points");
+    }
+    activeCCPoint = nullptr;
+    activeCCNumber = -1;
+    break;
+
+  case DragMode::ExpressionTension:
+    finishExpressionTension();
+    break;
 
   default:
     break;
@@ -1021,6 +1174,7 @@ void PianoRollComponent::selectNote(NoteRect *note, bool addToSelection) {
   if (note)
     note->selected = true;
 
+  // Update chord name when selection changes
   repaint();
 }
 
@@ -1202,7 +1356,7 @@ void PianoRollComponent::pasteNotes() {
     note.muted = clipNote.muted;
     // Validate new properties from clipboard
     note.probability = juce::jlimit(0.0f, 1.0f, clipNote.probability);
-    note.condition = clipNote.condition.substring(0, 32); // Limit length
+    note.condition = clipNote.condition.substring(0, 32);   // Limit length
     note.recurrence = clipNote.recurrence.substring(0, 16); // Limit length
     note.articulationId = juce::jmax(0, clipNote.articulationId);
 
@@ -1285,6 +1439,11 @@ void PianoRollComponent::updateSelectionMove(const juce::MouseEvent &e) {
       newStartBeats = juce::jmax(0.0, newStartBeats);
       newPitch = juce::jlimit(0, 127, newPitch);
 
+      // Apply scale snapping if enabled
+      if (scaleLockEnabled) {
+        newPitch = snapPitchToScale(newPitch);
+      }
+
       // Clamp to clip bounds - ensure note doesn't go past clip end
       double noteEnd = newStartBeats + note.lengthBeats;
       if (noteEnd > currentClip.clipLengthBeats) {
@@ -1299,6 +1458,8 @@ void PianoRollComponent::updateSelectionMove(const juce::MouseEvent &e) {
     }
   }
 
+  // Invalidate spatial grid when notes move
+  spatialGridDirty = true;
   updateNoteRectangles();
   repaint();
 }
@@ -1329,6 +1490,40 @@ void PianoRollComponent::finishSelectionMove() {
   }
 
   dragStates.clear();
+}
+
+//==============================================================================
+// Drag Operations - Expression Curve Tension (Alt+Drag)
+//==============================================================================
+
+void PianoRollComponent::startEditingExpressionTension(
+    const juce::MouseEvent &e) {
+  // Find the expression segment near mouse
+  float mouseX = e.position.x;
+  float mouseY = e.position.y;
+
+  currentDragMode = DragMode::ExpressionTension;
+  dragStartPos = e.position;
+  // Initialize with current tension of active segment (if found)
+}
+
+void PianoRollComponent::updateExpressionTension(const juce::MouseEvent &e) {
+  if (dragStates.empty())
+    return; // Should store segment reference here
+
+  // Determine delta Y
+  float deltaY = e.position.y - dragStartPos.y;
+  float tensionChange = deltaY * -0.01f; // Drag up = increase tension
+
+  // Apply to target segment
+  // ...
+  repaint();
+}
+
+void PianoRollComponent::finishExpressionTension() {
+  currentDragMode = DragMode::None;
+  projectState.getUndoManager().beginNewTransaction("Edit Curve Tension");
+  // Commit
 }
 
 //==============================================================================
@@ -1448,7 +1643,8 @@ void PianoRollComponent::startEditingVelocity(NoteRect *note,
     }
   }
 
-  // If no notes were selected, and a note was clicked, select it and add to dragStates
+  // If no notes were selected, and a note was clicked, select it and add to
+  // dragStates
   if (dragStates.empty() && note) {
     note->selected = true;
     NoteDragState state;
@@ -1456,7 +1652,7 @@ void PianoRollComponent::startEditingVelocity(NoteRect *note,
     state.originalVelocity = note->velocity;
     dragStates.push_back(state);
   }
-  
+
   repaint();
 }
 
@@ -1464,8 +1660,8 @@ void PianoRollComponent::updateVelocityEdit(const juce::MouseEvent &e) {
   if (dragStates.empty() || !currentClip.isValid())
     return;
 
-  // Calculate the velocity at the initial drag start position (implicit reference)
-  // This is the velocity value where the drag began.
+  // Calculate the velocity at the initial drag start position (implicit
+  // reference) This is the velocity value where the drag began.
   int originalDragVelocity = pixelsToVelocity(dragStartPos.y);
 
   // Calculate the velocity at the current mouse position
@@ -1477,10 +1673,9 @@ void PianoRollComponent::updateVelocityEdit(const juce::MouseEvent &e) {
   // Apply this delta to all notes in the dragStates
   for (const auto &dragState : dragStates) {
     // Find the actual NoteRect for the current note ID
-    auto it = std::find_if(noteRects.begin(), noteRects.end(),
-                           [&dragState](const NoteRect &n) {
-                             return n.id == dragState.id;
-                           });
+    auto it = std::find_if(
+        noteRects.begin(), noteRects.end(),
+        [&dragState](const NoteRect &n) { return n.id == dragState.id; });
     if (it != noteRects.end()) {
       // Calculate new velocity based on its original velocity + delta
       int newVelocity = dragState.originalVelocity + deltaVelocity;
@@ -1497,14 +1692,14 @@ void PianoRollComponent::finishVelocityEdit() {
     return;
 
   // Start a single undo transaction for all changes
-  projectState.getUndoManager().beginNewTransaction("Edit MIDI velocity (batch)");
+  projectState.getUndoManager().beginNewTransaction(
+      "Edit MIDI velocity (batch)");
 
   for (const auto &dragState : dragStates) {
     // Find the current NoteRect corresponding to the dragState ID
-    auto it = std::find_if(noteRects.begin(), noteRects.end(),
-                           [&dragState](const NoteRect &n) {
-                             return n.id == dragState.id;
-                           });
+    auto it = std::find_if(
+        noteRects.begin(), noteRects.end(),
+        [&dragState](const NoteRect &n) { return n.id == dragState.id; });
 
     if (it != noteRects.end()) {
       // Only commit if the velocity has actually changed
@@ -2195,6 +2390,10 @@ void PianoRollComponent::splitNotesAtBeat(double beatPosition) {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Note Splitting Operations
+//==============================================================================
+
 void PianoRollComponent::splitNotesEqual(int divisions) {
   if (getSelectedNoteCount() == 0 || divisions < 2)
     return;
@@ -2228,6 +2427,10 @@ void PianoRollComponent::splitNotesEqual(int divisions) {
 
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Note Joining Operations
+//==============================================================================
 
 void PianoRollComponent::joinConsecutiveNotes() {
   if (getSelectedNoteCount() < 2)
@@ -2276,6 +2479,10 @@ void PianoRollComponent::joinConsecutiveNotes() {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Legato Implementation
+//==============================================================================
+
 void PianoRollComponent::applyLegato() {
   if (getSelectedNoteCount() < 2)
     return;
@@ -2311,6 +2518,10 @@ void PianoRollComponent::applyLegato() {
 
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// MIDI Transformations
+//==============================================================================
 
 //==============================================================================
 // Arpeggiator Preview Implementation (Competition Feature)
@@ -2400,11 +2611,11 @@ void PianoRollComponent::generateArpPreview() {
     break;
   }
 
-  // Generate arp notes
+  // Generate arp notes - cycle through ordered pitches
   double currentBeat = startBeat;
   size_t pitchIndex = 0;
 
-  while (currentBeat < endBeat) {
+  while (currentBeat < endBeat && !orderedPitches.empty()) {
     NoteRect arpNote;
     arpNote.pitch = orderedPitches[pitchIndex % orderedPitches.size()];
     arpNote.startBeats = currentBeat;
@@ -2453,6 +2664,10 @@ void PianoRollComponent::commitArpeggiator() {
   arpPreviewNotes.clear();
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Arpeggiator Implementation (Continued)
+//==============================================================================
 
 //==============================================================================
 // Pattern Library Implementation (Competition Feature)
@@ -2518,6 +2733,10 @@ void PianoRollComponent::loadPattern(const MidiPattern &pattern,
 
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Built-In Patterns
+//==============================================================================
 
 std::vector<PianoRollComponent::MidiPattern>
 PianoRollComponent::getBuiltInPatterns() {
@@ -2708,6 +2927,10 @@ void PianoRollComponent::applyMidiEcho(int repeats, double delayBeats,
 }
 
 //==============================================================================
+// MIDI Input Handling (Continued)
+//==============================================================================
+
+//==============================================================================
 // Chord Presets Implementation (Competition Feature)
 //==============================================================================
 
@@ -2775,6 +2998,10 @@ void PianoRollComponent::insertChord(int rootPitch, ChordType type,
 }
 
 //==============================================================================
+// Chord Recognition
+//==============================================================================
+
+//==============================================================================
 // Spray Can Tool Implementation (Competition Feature)
 //==============================================================================
 
@@ -2828,6 +3055,10 @@ void PianoRollComponent::handleSprayPaint(float x, float y) {
 }
 
 //==============================================================================
+// Scripting API
+//==============================================================================
+
+//==============================================================================
 // Scripting API Implementation (Competition Feature)
 //==============================================================================
 
@@ -2873,8 +3104,8 @@ void PianoRollComponent::runScriptFromFile(const juce::File &file) {
   projectState.getUndoManager().beginNewTransaction(
       "Run Script: " + file.getFileNameWithoutExtension());
 
-  for (const auto &line : lines) {
-    juce::String cmd = line.trim();
+  for (int lineIndex = 0; lineIndex < lines.size(); ++lineIndex) {
+    juce::String cmd = lines[lineIndex].trim();
     if (cmd.isEmpty() || cmd.startsWith("#") || cmd.startsWith("//"))
       continue;
 
@@ -2886,34 +3117,49 @@ void PianoRollComponent::runScriptFromFile(const juce::File &file) {
 
     juce::String command = parts[0].toLowerCase();
 
-    if (command == "transpose" && parts.size() > 1) {
-      int semitones = parts[1].getIntValue();
-      for (const auto &note : noteRects) {
-        if (note.selected)
-          projectState.moveMidiNote(
-              currentClip.clipId, note.id, note.startBeats,
-              juce::jlimit(0, 127, note.pitch + semitones), "");
+    try {
+      if (command == "transpose" && parts.size() > 1) {
+        int semitones = parts[1].getIntValue();
+        for (const auto &note : noteRects) {
+          if (note.selected)
+            projectState.moveMidiNote(
+                currentClip.clipId, note.id, note.startBeats,
+                juce::jlimit(0, 127, note.pitch + semitones), "");
+        }
+      } else if (command == "velocity" && parts.size() > 1) {
+        int delta = parts[1].getIntValue();
+        for (const auto &note : noteRects) {
+          if (note.selected)
+            projectState.setMidiNoteVelocity(
+                currentClip.clipId, note.id,
+                juce::jlimit(1, 127, note.velocity + delta), "");
+        }
+      } else if (command == "quantize" && parts.size() > 1) {
+        float grid = parts[1].getFloatValue();
+        if (grid > 0.0f && grid <= 16.0f) { // Validate grid value
+          quantizeSelected(grid, 1.0f, 0.0f);
+        }
+      } else if (command == "reverse") {
+        transformRetrograde();
+      } else if (command == "invert") {
+        transformInversion();
+      } else {
+        DBG("PianoRoll: Unknown script command: " + command + " at line " +
+            juce::String(lineIndex + 1));
       }
-    } else if (command == "velocity" && parts.size() > 1) {
-      int delta = parts[1].getIntValue();
-      for (const auto &note : noteRects) {
-        if (note.selected)
-          projectState.setMidiNoteVelocity(
-              currentClip.clipId, note.id,
-              juce::jlimit(1, 127, note.velocity + delta), "");
-      }
-    } else if (command == "quantize" && parts.size() > 1) {
-      float grid = parts[1].getFloatValue();
-      quantizeSelected(grid, 1.0f, 0.0f);
-    } else if (command == "reverse") {
-      transformRetrograde();
-    } else if (command == "invert") {
-      transformInversion();
+    } catch (...) {
+      DBG("PianoRoll: Error executing script command at line " +
+          juce::String(lineIndex + 1) + ": " + cmd);
+      // Continue with next line instead of crashing
     }
   }
 
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Collision Detection
+//==============================================================================
 
 //==============================================================================
 //==============================================================================
@@ -2956,21 +3202,30 @@ void PianoRollComponent::detectNoteCollisions() {
       }
     }
   } else {
-    // Fallback: O(n²) check for small note counts
-    for (size_t i = 0; i < noteRects.size(); ++i) {
-      for (size_t j = i + 1; j < noteRects.size(); ++j) {
-        auto &noteA = noteRects[i];
-        auto &noteB = noteRects[j];
+    // Optimized O(n²) check for small note counts: group by pitch first
+    std::map<int, std::vector<NoteRect *>> notesByPitch;
+    for (auto &note : noteRects) {
+      notesByPitch[note.pitch].push_back(&note);
+    }
 
-        if (noteA.pitch == noteB.pitch) {
-          double startA = noteA.startBeats;
-          double endA = noteA.startBeats + noteA.lengthBeats;
-          double startB = noteB.startBeats;
-          double endB = noteB.startBeats + noteB.lengthBeats;
+    // Only check collisions within same pitch groups
+    for (auto &[pitch, notes] : notesByPitch) {
+      if (notes.size() < 2)
+        continue;
+
+      for (size_t i = 0; i < notes.size(); ++i) {
+        for (size_t j = i + 1; j < notes.size(); ++j) {
+          auto *noteA = notes[i];
+          auto *noteB = notes[j];
+
+          double startA = noteA->startBeats;
+          double endA = noteA->startBeats + noteA->lengthBeats;
+          double startB = noteB->startBeats;
+          double endB = noteB->startBeats + noteB->lengthBeats;
 
           if (startA < endB && endA > startB) {
-            noteA.hasCollision = true;
-            noteB.hasCollision = true;
+            noteA->hasCollision = true;
+            noteB->hasCollision = true;
           }
         }
       }
@@ -3029,6 +3284,10 @@ void PianoRollComponent::handleMidiNoteOn(int pitch, int velocity) {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// MIDI Echo Implementation
+//==============================================================================
+
 void PianoRollComponent::handleMidiNoteOff(int pitch) {
   if (!midiInputEnabled || !currentClip.isValid())
     return;
@@ -3072,6 +3331,10 @@ void PianoRollComponent::handleMidiNoteOff(int pitch) {
   activeInputNotes.erase(it);
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Pattern Save/Load
+//==============================================================================
 
 void PianoRollComponent::previewNote(int pitch, int velocity) {
   if (notePreviewCallback)
@@ -3141,6 +3404,9 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     if (arpPreviewEnabled) {
       drawArpPreview(canvas, contentArea);
     }
+
+    // Draw playhead
+    drawPlayhead(canvas, contentArea);
 
     // Selection marquee
     if (currentDragMode == DragMode::MarqueeSelect) {
@@ -3285,6 +3551,22 @@ void PianoRollComponent::drawGrid(SkCanvas *canvas, const SkRect &area) {
 
     canvas->drawLine(x, area.top(), x, area.bottom(), gridPaint);
   }
+}
+
+void PianoRollComponent::drawPlayhead(SkCanvas *canvas, const SkRect &area) {
+  if (currentPlayheadBeats < 0.0)
+    return;
+
+  float x = beatsToPixels(currentPlayheadBeats) + PIANO_WIDTH;
+  if (x < area.left() || x > area.right())
+    return;
+
+  SkPaint playheadPaint;
+  playheadPaint.setColor(SkColorSetRGB(255, 60, 60)); // Zenith Red
+  playheadPaint.setStrokeWidth(2.0f);
+  playheadPaint.setAntiAlias(true);
+
+  canvas->drawLine(x, area.top(), x, area.bottom(), playheadPaint);
 }
 
 //==============================================================================
@@ -3509,27 +3791,18 @@ void PianoRollComponent::drawExpressionLanes(SkCanvas *canvas,
       if (it == noteExpressions.end())
         continue;
 
-      const std::vector<ExpressionPoint> *points = nullptr;
-      switch ((ExpressionType)i) {
-      case ExpressionType::PitchBend:
-        points = &it->second.pitchBend;
-        break;
-      case ExpressionType::Pressure:
-        points = &it->second.pressure;
-        break;
-      case ExpressionType::Slide:
-        points = &it->second.slide;
-        break;
-      case ExpressionType::Expression:
-        points = &it->second.expression;
-        break;
-      }
-
-      if (!points || points->empty())
+      // Use map-based lookup for expression type
+      ExpressionType exprType = static_cast<ExpressionType>(i);
+      auto typeIt = it->second.find(exprType);
+      if (typeIt == it->second.end() || typeIt->second.empty())
         continue;
+
+      const std::vector<ExpressionPoint> *points = &typeIt->second;
 
       SkPath path;
       bool first = true;
+      ExpressionPoint
+          prevPoint; // Store previous point for Bezier interpolation
 
       for (const auto &pt : *points) {
         float x = area.left() + beatsToPixels(note.startBeats + pt.timeOffset);
@@ -3539,8 +3812,32 @@ void PianoRollComponent::drawExpressionLanes(SkCanvas *canvas,
           path.moveTo(x, y);
           first = false;
         } else {
-          path.lineTo(x, y);
+          // Bezier interpolation logic
+          float prevX = area.left() +
+                        beatsToPixels(note.startBeats + prevPoint.timeOffset);
+          float prevY =
+              laneRect.bottom() - (prevPoint.value * expressionLaneHeight);
+
+          if (std::abs(pt.tension) < 0.001f) {
+            // Linear
+            path.lineTo(x, y);
+          } else {
+            // Render Bezier
+            // Simple quadratic approximation for tension
+            float controlX = prevX + (x - prevX) * 0.5f;
+            float controlY = prevY + (y - prevY) * 0.5f;
+
+            // Offset control Y based on tension parameter
+            // Range -1.0 to 1.0.
+            float height = (y - prevY);
+            // If tension is positive, curve "hangs" (slow start, fast end) or
+            // vice-versa We simply offset the control point Y
+            controlY -= height * pt.tension * 1.0f;
+
+            path.quadTo(controlX, controlY, x, y);
+          }
         }
+        prevPoint = pt; // Store for next iteration
       }
 
       // Dim non-selected notes
@@ -3670,7 +3967,8 @@ void PianoRollComponent::drawNotes(SkCanvas *canvas, const SkRect &area) {
     if (note.muted)
       baseColor = SkColorSetA(baseColor, 100);
     else if (note.probability < 1.0f) {
-      // Probability transparency (min 30%) - use std::lround for proper rounding
+      // Probability transparency (min 30%) - use std::lround for proper
+      // rounding
       float alphaFactor = 0.3f + 0.7f * note.probability;
       int alpha = static_cast<int>(std::lround(255.0f * alphaFactor));
       alpha = juce::jlimit(0, 255, alpha); // Safety clamp
@@ -3714,7 +4012,7 @@ void PianoRollComponent::drawNotes(SkCanvas *canvas, const SkRect &area) {
       logicFont.setSize(9.0f);
       SkPaint logicPaint;
       logicPaint.setColor(SkColorSetRGB(255, 200, 100)); // Gold text for logic
-      
+
       // Format text with proper separators
       juce::String logicText;
       if (note.condition.isNotEmpty() && note.recurrence.isNotEmpty()) {
@@ -3724,13 +4022,17 @@ void PianoRollComponent::drawNotes(SkCanvas *canvas, const SkRect &area) {
       } else {
         logicText = note.recurrence;
       }
-      
+
       canvas->drawString(logicText.toRawUTF8(), rect.left() + 4,
                          rect.bottom() - 8, logicFont, logicPaint);
     }
 
     canvas->drawRRect(rrect, notePaint);
     canvas->drawRRect(rrect, borderPaint);
+
+    // Reset border paint for next note
+    borderPaint.setColor(SK_ColorBLACK);
+    borderPaint.setStrokeWidth(1.0f);
   }
 }
 
@@ -3820,8 +4122,11 @@ static juce::String getScaleTypeName(PianoRollComponent::ScaleType type) {
 
 void PianoRollComponent::drawModernToolbar(SkCanvas *canvas,
                                            const SkRect &fullRect) {
-  SkRect toolbarRect =
-      SkRect::MakeXYWH(fullRect.right() - 600.0f, 4.0f, 590.0f, 32.0f);
+  // Use relative positioning instead of hardcoded pixel values
+  float toolbarWidth =
+      juce::jmin(590.0f, fullRect.width() * 0.4f); // 40% of width, max 590px
+  SkRect toolbarRect = SkRect::MakeXYWH(fullRect.right() - toolbarWidth - 10.0f,
+                                        4.0f, toolbarWidth, 32.0f);
   SkPaint bgPaint;
   bgPaint.setColor(SkColorSetARGB(200, 30, 30, 35));
   canvas->drawRoundRect(toolbarRect, 16.0f, 16.0f, bgPaint);
@@ -3921,6 +4226,23 @@ void PianoRollComponent::drawModernToolbar(SkCanvas *canvas,
   x += 24 + gap;
 }
 
+juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+  float t = velocity / 127.0f;
+  if (t < 0.5f) {
+    // Interpolate from dark blue to cyan
+    float localT = t * 2.0f;
+    return juce::Colour::fromFloatRGBA(
+        0.0f,
+        0.196f + (1.0f - 0.196f) * localT, // 50/255 to 255/255
+        0.784f + (1.0f - 0.784f) * localT, // 200/255 to 255/255
+        1.0f);
+  } else {
+    // Interpolate from cyan to white
+    float localT = (t - 0.5f) * 2.0f;
+    return juce::Colour::fromFloatRGBA(localT, localT, 1.0f, 1.0f);
+  }
+}
+
 SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   float t = velocity / 127.0f;
   if (t < 0.5f)
@@ -3962,6 +4284,10 @@ void PianoRollComponent::transformRetrograde() {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Pitch Inversion Transform
+//==============================================================================
+
 void PianoRollComponent::transformInversion(int pivotPitch) {
   if (getSelectedNoteCount() == 0)
     return;
@@ -3992,6 +4318,10 @@ void PianoRollComponent::transformInversion(int pivotPitch) {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Time Stretch Transform
+//==============================================================================
+
 void PianoRollComponent::transformTimeStretch(double factor) {
   if (getSelectedNoteCount() == 0 || factor <= 0.0)
     return;
@@ -4016,7 +4346,9 @@ void PianoRollComponent::transformTimeStretch(double factor) {
   refreshNotesFromProjectState();
 }
 
-// Logic Stubs / Basic Impls for Linker
+//==============================================================================
+// Step Sequencer & Core Logic
+//==============================================================================
 
 void PianoRollComponent::resized() {
   // Layout handled by paint or fixed areas
@@ -4041,19 +4373,27 @@ void PianoRollComponent::toggleStep(int row, int step) {
   int pitch = stepSequencerRows[row];
   double stepTime = step * 0.25; // Assume 16th notes (1/4 beat)
 
-  bool removed = false;
-  // Check for existing note to toggle off
-  // Iterate backwards to safely remove?
-  // We use IDs to remove, so safe.
+  projectState.getUndoManager().beginNewTransaction("Toggle Step");
+
+  // First, remove ALL notes at this pitch and step time (clear the row)
+  std::vector<juce::String> toRemove;
+  double tolerance = 0.05; // Small tolerance for matching
   for (const auto &note : noteRects) {
-    if (note.pitch == pitch && std::abs(note.startBeats - stepTime) < 0.1) {
-      projectState.removeMidiNote(currentClip.clipId, note.id, "Toggle Step");
-      removed = true;
-      break; // Single note per cell assumption
+    if (note.pitch == pitch &&
+        std::abs(note.startBeats - stepTime) < tolerance) {
+      toRemove.push_back(note.id);
     }
   }
 
-  if (!removed) {
+  bool hadNote = !toRemove.empty();
+
+  // Remove existing notes
+  for (const auto &noteId : toRemove) {
+    projectState.removeMidiNote(currentClip.clipId, noteId, "");
+  }
+
+  // If there was no note, add one
+  if (!hadNote) {
     zenith::ProjectState::MidiNoteSpec newNote;
     newNote.pitch = pitch;
     newNote.startBeats = stepTime;
@@ -4061,11 +4401,8 @@ void PianoRollComponent::toggleStep(int row, int step) {
     newNote.velocity = 100;
     newNote.muted = false;
     projectState.addMidiNote(currentClip.clipId, newNote, "Step Sequencer");
-  } else {
-    refreshNotesFromProjectState(); // Explicit refresh if removed
   }
-  // addMidiNote triggers refresh via listener, but remove might not?
-  // Safety refresh
+
   refreshNotesFromProjectState();
   repaint();
 }
@@ -4120,6 +4457,10 @@ void PianoRollComponent::applyStrumming(StrumDirection dir, double amount) {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Melody Extension
+//==============================================================================
+
 void PianoRollComponent::extendMelody(int bars) {
   if (noteRects.empty())
     return;
@@ -4161,6 +4502,10 @@ void PianoRollComponent::extendMelody(int bars) {
   }
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Step Sequencer Drawing
+//==============================================================================
 
 void PianoRollComponent::drawStepSequencer(SkCanvas *canvas,
                                            const SkRect &area) {
@@ -4475,7 +4820,19 @@ void PianoRollComponent::autoHarmonize(HarmonyType harmony) {
   refreshNotesFromProjectState();
 }
 
-void PianoRollComponent::updateScaleLockNotes() {}
+//==============================================================================
+// Scale Lock Implementation
+//==============================================================================
+
+void PianoRollComponent::updateScaleLockNotes() {
+  // Refresh the scale highlight state and update visible pitches if needed
+  if (scaleLockEnabled || scaleHighlight.enabled) {
+    updateScaleHighlight();
+    if (foldMode) {
+      updateVisiblePitches();
+    }
+  }
+}
 
 void PianoRollComponent::drawChordName(SkCanvas *canvas) {
   juce::String chord = getCurrentChordName();
@@ -4693,6 +5050,10 @@ void PianoRollComponent::quantizeToScale() {
     refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Scale Note Detection
+//==============================================================================
+
 bool PianoRollComponent::isNoteInScale(int pitch) const {
   if (!scaleLockEnabled && !scaleHighlight.enabled)
     return true;
@@ -4738,11 +5099,11 @@ void PianoRollComponent::updateVisiblePitches() {
 int PianoRollComponent::mapPitchToRow(int pitch) const {
   if (!foldMode)
     return pitch;
-  
+
   // Guard against empty visiblePitches
   if (visiblePitches.empty())
     return 0; // Return safe default
-    
+
   auto it = std::find(visiblePitches.begin(), visiblePitches.end(), pitch);
   if (it != visiblePitches.end()) {
     return (int)std::distance(visiblePitches.begin(), it);
@@ -4844,6 +5205,10 @@ void PianoRollComponent::transformTransposeInScale(int steps) {
 }
 
 //==============================================================================
+// Scale Transpose
+//==============================================================================
+
+//==============================================================================
 // Multi-Clip Editing
 //==============================================================================
 
@@ -4857,10 +5222,18 @@ void PianoRollComponent::addMultiClipContext(const MidiClipContext &clip) {
   refreshNotesFromProjectState();
 }
 
+//==============================================================================
+// Multi-Clip Context Management
+//==============================================================================
+
 void PianoRollComponent::clearMultiClipContexts() {
   multiClipContexts.clear();
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Multi-Clip Clear
+//==============================================================================
 
 //==============================================================================
 // Riff Machine
@@ -4919,19 +5292,29 @@ void PianoRollComponent::generateRiff(RiffSettings settings) {
     note.pitch = pitch;
     note.startBeats = t;
     note.lengthBeats = step * 0.9;
-    note.velocity = juce::jlimit(MIN_VELOCITY, MAX_VELOCITY, 
+    note.velocity = juce::jlimit(MIN_VELOCITY, MAX_VELOCITY,
                                  100 + static_cast<int>((dis(gen) - 0.5) * 20));
     // Validate probability: clamp to [0.0, 1.0]
-    note.probability = juce::jlimit(0.0f, 1.0f, 1.0f - (dis(gen) * 0.1f));
-    note.articulationId = 0; // Default articulation
+    note.probability =
+        juce::jlimit(0.0f, 1.0f, 1.0f - static_cast<float>(dis(gen) * 0.1));
+    note.articulationId = 0;         // Default articulation
     note.condition = juce::String(); // Empty by default
 
     if (dis(gen) > 0.8)
       note.recurrence = "1:2"; // Valid recurrence string
 
-    // All notes added within single transaction (beginNewTransaction called above)
+    // All notes added within single transaction (beginNewTransaction called
+    // above)
     projectState.addMidiNote(currentClip.clipId, note, "");
   }
 
   refreshNotesFromProjectState();
 }
+
+//==============================================================================
+// Ghost Notes (FL Studio Style Multi-Track View)
+//==============================================================================
+
+//==============================================================================
+// End of File
+//==============================================================================

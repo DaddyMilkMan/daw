@@ -9,14 +9,22 @@
 
 #pragma once
 
-#include "ui/ArrangerComponent.h"
+#include "../Source/ui/skia/BottomBar.h"
+#include "../Source/ui/skia/BrowserPanel.h"
+#include "../Source/ui/skia/RightSidePanel.h"
+#include "../Source/ui/skia/SkiaButton.h"
+#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
+#include "../Source/ui/skia/TransportBar.h"
+#include "../Source/ui/skia/views/SessionViewComponent.h"
+#include "../Source/ui/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
-#include "ui/MixerComponent.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
+#include "ui/ArrangerComponent.h"
+#include "ui/MixerComponent.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -24,18 +32,6 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-
-#include "../Source/ui/skia/BottomBar.h"
-#include "../Source/ui/skia/BrowserPanel.h"
-#include "../Source/ui/skia/RightSidePanel.h"
-#include "../Source/ui/skia/SkiaButtonComponent.h"
-#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-#include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/views/PianoKeyboardViewSkia.h"
-#include "../Source/ui/skia/views/SessionViewComponent.h"
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -43,6 +39,7 @@ class CommandAPI;
 class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
+class ZenithMenuBar;
 } // namespace zenith
 
 //==============================================================================
@@ -65,8 +62,7 @@ class WingmanPanel;
  * - Automation display and editing
  */
 class MainComponent : public zenith::SkiaMainWindowIntegration,
-                      public juce::KeyListener
-{
+                      public juce::KeyListener {
 public:
   //==========================================================================
   MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
@@ -84,9 +80,9 @@ public:
   void mouseUp(const juce::MouseEvent &e) override;
 
 protected:
-  void drawSkiaContent(SkCanvas* canvas) override;
-public:
+  void drawSkiaContent(SkCanvas *canvas) override;
 
+public:
   //==========================================================================
   // KeyListener interface (for undo/redo shortcuts)
   //==========================================================================
@@ -95,13 +91,9 @@ public:
                   Component *originatingComponent) override;
 
 private:
-    // Layout Editing State
-    juce::Component* activeDragComponent = nullptr;
-    juce::Rectangle<int> dragStartBounds;
-
-
-
-
+  // Layout Editing State
+  juce::Component *activeDragComponent = nullptr;
+  juce::Rectangle<int> dragStartBounds;
 
   //==========================================================================
   // Integration: Piano roll opener
@@ -155,16 +147,11 @@ private:
 };
 
 //==============================================================================
+
+//==============================================================================
 /**
  * @class MainWindow
  * @brief Top-level application window
- *
- * Manages:
- * - Window lifecycle
- * - Menu bar
- * - Main content component
- * - Audio engine
- * - Project state
  */
 class MainWindow : public juce::DocumentWindow {
 public:
@@ -178,43 +165,22 @@ public:
 
   void closeButtonPressed() override;
 
-  zenith::ProjectState* getProjectState() const { return projectState.get(); }
+  zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
 private:
   //==========================================================================
   // Menu bar model
   //==========================================================================
 
-  /**
-   * @class ZenithMenuBar
-   * @brief Menu bar model for the application
-   */
-  class ZenithMenuBar : public juce::MenuBarModel {
-  public:
-    explicit ZenithMenuBar(MainWindow &owner);
-
-    juce::StringArray getMenuBarNames() override;
-    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex,
-                                    const juce::String &menuName) override;
-    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
-
-  private:
-    MainWindow &owner;
-
-    enum MenuItems { 
-        save = 1, 
-        saveAs = 2, 
-        quit = 3, 
-        aboutZenith = 4 
-    };
-  };
+  // Legacy MenuBar removed
+  // Custom menu bar is now part of MainComponent
 
   //==========================================================================
   // Menu handlers
   //==========================================================================
 
   void showAboutDialog();
-  
+
   /**
    * @brief Save the current project
    */
@@ -252,13 +218,10 @@ public:
   std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
   // Integration: Clip synchronizer
-  std::unique_ptr<ClipSynchronizer> clipSynchronizer;
+  std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
-
-  // Menu bar
-  std::unique_ptr<ZenithMenuBar> menuBar;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

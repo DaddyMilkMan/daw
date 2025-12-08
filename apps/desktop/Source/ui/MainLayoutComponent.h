@@ -37,7 +37,6 @@ public:
     explicit MainLayoutComponent(Engine& engine, ProjectState& state);
     ~MainLayoutComponent() override = default;
 
-    void paint(juce::Graphics& g) override;
     void resized() override;
     
     // Skia rendering

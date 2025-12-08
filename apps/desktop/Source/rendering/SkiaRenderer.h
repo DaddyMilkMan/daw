@@ -27,9 +27,8 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 
-
 #ifdef ZENITH_USE_SKIA
-#include "include/core/SkRefCnt.h" // For sk_sp
+#include <core/SkRefCnt.h> // For sk_sp
 #endif
 
 // Forward declare Skia types to avoid including headers here

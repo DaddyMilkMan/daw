@@ -14,20 +14,20 @@
 #include "../../include/Engine.h"
 #include "../../include/ProjectState.h"
 #include "../../include/TempoMap.h"
+#include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/Track.h"
 #include "../instruments/InstrumentRegistry.h"
+#include "../ui/skia/SkiaComponent.h"
 #include "ClipCommands.h"
 #include "CommandUtils.h"
 #include "SessionGraph.h"
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
-
 #include "../ai/AIMasteringAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
-
 
 namespace zenith {
 
@@ -104,23 +104,182 @@ void CommandAPI::initializeCommandMap() {
   commandMap["get_midi_data"] = CommandID::GetMidiData;
   commandMap["set_clip_notes"] = CommandID::SetClipNotes;
 
+  // Presets & Instruments
   commandMap["list_presets"] = CommandID::ListPresets;
   commandMap["load_preset"] = CommandID::LoadPreset;
   commandMap["save_preset"] = CommandID::SavePreset;
   commandMap["create_preset"] = CommandID::CreatePreset;
   commandMap["delete_preset"] = CommandID::DeletePreset;
   commandMap["generate_preset"] = CommandID::GeneratePreset;
-
   commandMap["get_instrument_parameters"] = CommandID::GetInstrumentParameters;
   commandMap["set_instrument_parameter"] = CommandID::SetInstrumentParameter;
   commandMap["get_instrument_parameter_schema"] =
       CommandID::GetInstrumentParameterSchema;
 
+  // Aux Bus Commands
+  commandMap["create_aux_bus"] = CommandID::CreateAuxBus;
+  commandMap["remove_aux_bus"] = CommandID::RemoveAuxBus;
+  commandMap["set_aux_bus_volume"] = CommandID::SetAuxBusVolume;
+  commandMap["set_aux_bus_pan"] = CommandID::SetAuxBusPan;
+  commandMap["set_aux_bus_mute"] = CommandID::SetAuxBusMute;
+  commandMap["get_aux_buses"] = CommandID::GetAuxBuses;
+
+  // Vision Command
+  commandMap["get_ui_state"] = CommandID::GetUIState;
+
   // Quick Wins: Mixer Control
   commandMap["set_track_send"] = CommandID::SetTrackSend;
   commandMap["set_track_eq"] = CommandID::SetTrackEQ;
   commandMap["set_track_compressor"] = CommandID::SetTrackCompressor;
+
+  // Register Handlers
+  registerCommand("list_tracks", [this](const juce::var &p) {
+    return trackCommands->listTracks(p);
+  });
+  registerCommand("create_track", [this](const juce::var &p) {
+    return trackCommands->createTrack(p);
+  });
+  registerCommand("delete_track", [this](const juce::var &p) {
+    return trackCommands->deleteTrack(p);
+  });
+  registerCommand("rename_track", [this](const juce::var &p) {
+    return trackCommands->renameTrack(p);
+  });
+  registerCommand("set_track_volume", [this](const juce::var &p) {
+    return trackCommands->setTrackVolume(p);
+  });
+  registerCommand("set_track_pan", [this](const juce::var &p) {
+    return trackCommands->setTrackPan(p);
+  });
+
+  registerCommand("export_audio",
+                  [this](const juce::var &p) { return exportAudio(p); });
+  registerCommand("export_project_advanced", [this](const juce::var &p) {
+    return exportProjectAdvanced(p);
+  });
+  registerCommand("get_session_graph",
+                  [this](const juce::var &p) { return getSessionGraph(p); });
+
+  registerCommand("undo", [this](const juce::var &p) { return undo(p); });
+  registerCommand("redo", [this](const juce::var &p) { return redo(p); });
+  registerCommand("history", [this](const juce::var &p) { return history(p); });
+
+  registerCommand("create_clip", [this](const juce::var &p) {
+    return clipCommands->createClip(p);
+  });
+  registerCommand("add_clip", [this](const juce::var &p) {
+    return clipCommands->createClip(p);
+  });
+  registerCommand("delete_clip", [this](const juce::var &p) {
+    return clipCommands->deleteClip(p);
+  });
+  registerCommand("list_clips", [this](const juce::var &p) {
+    return clipCommands->listClips(p);
+  });
+  registerCommand("move_clip", [this](const juce::var &p) {
+    return clipCommands->moveClip(p);
+  });
+  registerCommand("resize_clip", [this](const juce::var &p) {
+    return clipCommands->resizeClip(p);
+  });
+  registerCommand("split_clip", [this](const juce::var &p) {
+    return clipCommands->splitClip(p);
+  });
+
+  registerCommand("play", [this](const juce::var &p) {
+    return transportCommands->play(p);
+  });
+  registerCommand("stop", [this](const juce::var &p) {
+    return transportCommands->stop(p);
+  });
+  registerCommand("record", [this](const juce::var &p) {
+    return transportCommands->record(p);
+  });
+  registerCommand("rewind", [this](const juce::var &p) {
+    return transportCommands->rewind(p);
+  });
+  registerCommand("set_loop", [this](const juce::var &p) {
+    return transportCommands->setLoop(p);
+  });
+  registerCommand("set_tempo", [this](const juce::var &p) {
+    return transportCommands->setTempo(p);
+  });
+  registerCommand("set_time_signature", [this](const juce::var &p) {
+    return transportCommands->setTimeSignature(p);
+  });
+
+  registerCommand("add_plugin",
+                  [this](const juce::var &p) { return addPlugin(p); });
+  registerCommand("remove_plugin",
+                  [this](const juce::var &p) { return removePlugin(p); });
+  registerCommand("list_plugins",
+                  [this](const juce::var &p) { return listPlugins(p); });
+  registerCommand("set_plugin_param",
+                  [this](const juce::var &p) { return setPluginParam(p); });
+  registerCommand("get_plugin_params",
+                  [this](const juce::var &p) { return getPluginParams(p); });
+
+  registerCommand("add_automation_point",
+                  [this](const juce::var &p) { return addAutomationPoint(p); });
+  registerCommand("clear_automation",
+                  [this](const juce::var &p) { return clearAutomation(p); });
+  registerCommand("get_automation",
+                  [this](const juce::var &p) { return getAutomation(p); });
+
+  registerCommand("add_marker",
+                  [this](const juce::var &p) { return addMarker(p); });
+  registerCommand("get_markers",
+                  [this](const juce::var &p) { return getMarkers(p); });
+  registerCommand("delete_marker",
+                  [this](const juce::var &p) { return deleteMarker(p); });
+  registerCommand("goto_marker",
+                  [this](const juce::var &p) { return gotoMarker(p); });
+
+  registerCommand("add_note",
+                  [this](const juce::var &p) { return addNote(p); });
+  registerCommand("delete_note",
+                  [this](const juce::var &p) { return deleteNote(p); });
+  registerCommand("move_note",
+                  [this](const juce::var &p) { return moveNote(p); });
+  registerCommand("get_notes",
+                  [this](const juce::var &p) { return getNotes(p); });
+  registerCommand("set_note_velocity",
+                  [this](const juce::var &p) { return setNoteVelocity(p); });
+  registerCommand("set_note_length",
+                  [this](const juce::var &p) { return setNoteLength(p); });
+  registerCommand("get_midi_data",
+                  [this](const juce::var &p) { return getMidiData(p); });
+
+  registerCommand("describe_instrument",
+                  [this](const juce::var &p) { return describeInstrument(p); });
+
+  // Aux Bus Handlers
+  registerCommand("create_aux_bus",
+                  [this](const juce::var &p) { return createAuxBus(p); });
+  registerCommand("remove_aux_bus",
+                  [this](const juce::var &p) { return removeAuxBus(p); });
+  registerCommand("set_aux_bus_volume",
+                  [this](const juce::var &p) { return setAuxBusVolume(p); });
+  registerCommand("set_aux_bus_pan",
+                  [this](const juce::var &p) { return setAuxBusPan(p); });
+  registerCommand("set_aux_bus_mute",
+                  [this](const juce::var &p) { return setAuxBusMute(p); });
+  registerCommand("get_aux_buses",
+                  [this](const juce::var &p) { return getAuxBuses(p); });
+
+  // Vision Handler
+  registerCommand("get_ui_state",
+                  [this](const juce::var &p) { return getUIState(p); });
 }
+
+void CommandAPI::registerCommand(const juce::String &commandName,
+                                 CommandHandler handler) {
+  commandHandlers[commandName] = handler;
+}
+
+//==============================================================================
+// Track Commands
+//==============================================================================
 
 CommandAPI::~CommandAPI() {}
 
@@ -1606,8 +1765,49 @@ juce::var CommandAPI::generatePreset(const juce::var &params) {
 
   juce::var generatedParams = params["generatedParameters"];
 
-  // Validate generated parameters
-  // TODO: Add instrument-specific validation
+  // Validate generated parameters based on instrument parameter schema
+  if (generatedParams.isObject()) {
+    auto paramSchema = registry.getParameterSchema(instrumentId);
+
+    for (auto &prop : generatedParams.getDynamicObject()->getProperties()) {
+      juce::String paramId = prop.name.toString();
+
+      // Check if parameter exists in schema
+      bool paramExists = false;
+      if (paramSchema.isArray()) {
+        for (const auto &schemaParam : *paramSchema.getArray()) {
+          if (schemaParam.hasProperty("id") &&
+              schemaParam["id"].toString() == paramId) {
+            paramExists = true;
+
+            // Validate range if specified
+            if (schemaParam.hasProperty("min") &&
+                schemaParam.hasProperty("max")) {
+              float minVal = static_cast<float>(schemaParam["min"]);
+              float maxVal = static_cast<float>(schemaParam["max"]);
+              float currentVal = static_cast<float>(prop.value);
+
+              if (currentVal < minVal || currentVal > maxVal) {
+                // Clamp to valid range
+                float clampedVal = juce::jlimit(minVal, maxVal, currentVal);
+                generatedParams.getDynamicObject()->setProperty(prop.name,
+                                                                clampedVal);
+                DBG("CommandAPI: Clamped parameter " + paramId +
+                    " to valid range");
+              }
+            }
+            break;
+          }
+        }
+      }
+
+      // Log unknown parameters but don't fail
+      if (!paramExists && paramSchema.isArray() &&
+          paramSchema.getArray()->size() > 0) {
+        DBG("CommandAPI: Warning - unknown parameter in preset: " + paramId);
+      }
+    }
+  }
 
   // Create preset name from description
   juce::String presetName = description.substring(0, 50); // Limit length
@@ -1708,6 +1908,175 @@ juce::var CommandAPI::createSuccessResponse(const juce::var &result) const {
   if (!result.isVoid())
     response->setProperty("result", result);
   return juce::var(response);
+}
+
+//==============================================================================
+// Aux Bus Commands
+//==============================================================================
+
+juce::var CommandAPI::createAuxBus(const juce::var &params) {
+  if (!params.hasProperty("name"))
+    return createErrorResponse("Missing 'name'");
+
+  juce::String name = params["name"].toString();
+
+  // Check for message thread
+  // CommandAPI is usually called from message thread, but Engine methods assert
+  // it.
+
+  int index = engine.createAuxBus(name);
+  auto *bus = engine.getAuxBus(index);
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("index", index);
+  if (bus) {
+    resultObj->setProperty("id", bus->getId());
+  }
+  resultObj->setProperty("success", true);
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::removeAuxBus(const juce::var &params) {
+  if (!params.hasProperty("index"))
+    return createErrorResponse("Missing 'index'");
+
+  int index = static_cast<int>(params["index"]);
+
+  engine.removeAuxBus(index);
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("success", true);
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::setAuxBusVolume(const juce::var &params) {
+  if (!params.hasProperty("index"))
+    return createErrorResponse("Missing 'index'");
+  if (!params.hasProperty("volume"))
+    return createErrorResponse("Missing 'volume'");
+
+  int index = static_cast<int>(params["index"]);
+  float volume = static_cast<float>(params["volume"]);
+
+  auto *bus = engine.getAuxBus(index);
+  if (bus) {
+    bus->setVolume(volume);
+    return createSuccessResponse();
+  }
+  return createErrorResponse("Aux Bus not found");
+}
+
+juce::var CommandAPI::setAuxBusPan(const juce::var &params) {
+  if (!params.hasProperty("index"))
+    return createErrorResponse("Missing 'index'");
+  if (!params.hasProperty("pan"))
+    return createErrorResponse("Missing 'pan'");
+
+  int index = static_cast<int>(params["index"]);
+  float pan = static_cast<float>(params["pan"]);
+
+  auto *bus = engine.getAuxBus(index);
+  if (bus) {
+    bus->setPan(pan);
+    return createSuccessResponse();
+  }
+  return createErrorResponse("Aux Bus not found");
+}
+
+juce::var CommandAPI::setAuxBusMute(const juce::var &params) {
+  if (!params.hasProperty("index"))
+    return createErrorResponse("Missing 'index'");
+  if (!params.hasProperty("mute"))
+    return createErrorResponse("Missing 'mute'");
+
+  int index = static_cast<int>(params["index"]);
+  bool mute = static_cast<bool>(params["mute"]);
+
+  auto *bus = engine.getAuxBus(index);
+  if (bus) {
+    bus->setMuted(mute);
+    return createSuccessResponse();
+  }
+  return createErrorResponse("Aux Bus not found");
+}
+
+juce::var CommandAPI::getAuxBuses(const juce::var &params) {
+  juce::var buses;
+
+  int count = engine.getNumAuxBuses();
+  for (int i = 0; i < count; ++i) {
+    auto *bus = engine.getAuxBus(i);
+    if (bus) {
+      auto *obj = new juce::DynamicObject();
+      obj->setProperty("index", i);
+      obj->setProperty("name", bus->getName());
+      obj->setProperty("id", bus->getId());
+      obj->setProperty("volume", bus->getVolume());
+      obj->setProperty("pan", bus->getPan());
+      obj->setProperty("mute", bus->isMuted());
+      buses.append(juce::var(obj));
+    }
+  }
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("buses", buses);
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+//==============================================================================
+// Vision Command
+//==============================================================================
+
+// Recursive helper to traverse component tree
+static void traverseComponentTree(juce::Component *comp,
+                                  juce::Array<juce::var> &elements) {
+  if (!comp)
+    return;
+
+  // Check if it's a SkiaComponent
+  if (auto *skiaComp = dynamic_cast<SkiaComponent *>(comp)) {
+    auto inspectables = skiaComp->getInspectableElements();
+    for (const auto &info : inspectables) {
+      auto *obj = new juce::DynamicObject();
+      obj->setProperty("type", info.type);
+      obj->setProperty("parameterId", info.parameterId);
+      obj->setProperty("value", info.currentValue);
+
+      // Screen coordinates
+      auto screenBounds = comp->localAreaToGlobal(
+          juce::Rectangle<int>(info.bounds.left(), info.bounds.top(),
+                               info.bounds.width(), info.bounds.height()));
+
+      obj->setProperty("x", screenBounds.getX());
+      obj->setProperty("y", screenBounds.getY());
+      obj->setProperty("width", screenBounds.getWidth());
+      obj->setProperty("height", screenBounds.getHeight());
+
+      elements.add(juce::var(obj));
+    }
+  }
+
+  // Recurse children
+  for (auto *child : comp->getChildren()) {
+    traverseComponentTree(child, elements);
+  }
+}
+
+juce::var CommandAPI::getUIState(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  juce::Array<juce::var> uiElements;
+
+  // Find the main window(s)
+  for (int i = 0; i < juce::TopLevelWindow::getNumTopLevelWindows(); ++i) {
+    traverseComponentTree(juce::TopLevelWindow::getTopLevelWindow(i),
+                          uiElements);
+  }
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("elements", uiElements);
+  return createSuccessResponse(juce::var(resultObj));
 }
 
 } // namespace zenith

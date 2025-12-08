@@ -46,6 +46,7 @@
 
 #include "EngineEvent.h"
 #include "../Source/dsp/Dither.h"
+#include "../Source/engine/RoutingGraph.h"
 
 
 // Forward declarations
@@ -779,20 +780,39 @@ private:
   // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot sharing
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
+  // Routing Graph (Source of Truth for connections and processing order)
+  RoutingGraph routingGraph_;
+
+public:
+    RoutingGraph& getRoutingGraph() { return routingGraph_; }
+    const RoutingGraph& getRoutingGraph() const { return routingGraph_; }
+
+private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
   // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for lifetime (safety)
   struct TrackSnapshot {
     std::vector<zenith::Track*> tracks; // Raw pointers for fast, lock-free iteration
+    std::vector<zenith::AuxBus*> auxBuses; // Raw pointers for buses
+    
     std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
+    std::vector<std::shared_ptr<zenith::AuxBus>> lifecycleAux; // Keeps buses alive
 
     TrackSnapshot() = default;
-    explicit TrackSnapshot(const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks) {
+    TrackSnapshot(const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
+                  const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
       tracks.reserve(ownedTracks.size());
       lifecycle.reserve(ownedTracks.size());
       for (const auto &track : ownedTracks) {
         tracks.push_back(track.get());
-        lifecycle.push_back(track); // Increment refcount (Main Thread only)
+        lifecycle.push_back(track); // Increment refcount
+      }
+      
+      auxBuses.reserve(ownedBuses.size());
+      lifecycleAux.reserve(ownedBuses.size());
+      for (const auto &bus : ownedBuses) {
+        auxBuses.push_back(bus.get());
+        lifecycleAux.push_back(bus);
       }
     }
   };
@@ -832,7 +852,7 @@ private:
   juce::AudioBuffer<float> masterBuffer_;
 
   // Aux buses (send/return effects)
-  std::vector<std::unique_ptr<zenith::AuxBus>> auxBuses_;
+  std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
   std::vector<juce::AudioBuffer<float>>
       auxBusBuffers_; // Pre-allocated buffers for aux buses
 
@@ -925,6 +945,9 @@ private:
   
   // Helper to update SIP (Solo In Place) logic
   void updateSoloState();
+  
+  // ID Counter for Aux Busses
+  std::atomic<int> auxBusIdCounter{0};
 
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};

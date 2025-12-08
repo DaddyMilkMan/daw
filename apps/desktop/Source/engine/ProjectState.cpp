@@ -43,6 +43,7 @@ const juce::Identifier ProjectState::ID_CLIP("CLIP");
 const juce::Identifier ProjectState::ID_MIXER("MIXER");
 const juce::Identifier ProjectState::ID_AUTOMATION("AUTOMATION");
 const juce::Identifier ProjectState::ID_ENVELOPE("ENVELOPE");
+const juce::Identifier ProjectState::ID_POINTS("POINTS");
 const juce::Identifier ProjectState::ID_POINT("POINT");
 const juce::Identifier ProjectState::ID_NOTES("NOTES");
 const juce::Identifier ProjectState::ID_NOTE("NOTE");
@@ -89,7 +90,10 @@ const juce::Identifier ProjectState::PROP_ARTICULATION_ID("articulationId");
 const juce::Identifier ProjectState::PROP_PARAM("param");
 const juce::Identifier ProjectState::PROP_PARAM_ID("paramId");
 const juce::Identifier ProjectState::PROP_TIME_BEATS("timeBeats");
+
 const juce::Identifier ProjectState::PROP_VALUE("value");
+const juce::Identifier ProjectState::PROP_CURVE_TYPE("curveType");
+const juce::Identifier ProjectState::PROP_TENSION("tension");
 
 // Tempo/Marker properties
 const juce::Identifier ProjectState::PROP_BPM("bpm");
@@ -656,9 +660,25 @@ bool ProjectState::setClipAudioFile(const juce::String &trackId,
     return false;
   }
 
-  // Store absolute path for now
-  // TODO(zenith-core#1): Make relative to project file when project is saved
-  clip.setProperty(PROP_AUDIO_FILE, audioFile.getFullPathName(), &undoManager);
+  // Store path - make relative to project file if project has been saved
+  juce::String pathToStore;
+  if (projectFile.exists()) {
+    // Make path relative to project file directory
+    juce::File projectDir = projectFile.getParentDirectory();
+    juce::String relativePath = audioFile.getRelativePathFrom(projectDir);
+    // Only use relative path if it doesn't go up too many levels
+    if (!relativePath.startsWith("..\\..\\..") &&
+        !relativePath.startsWith("../../..")) {
+      pathToStore = relativePath;
+    } else {
+      pathToStore = audioFile.getFullPathName();
+    }
+  } else {
+    // No project file yet - store absolute path
+    pathToStore = audioFile.getFullPathName();
+  }
+
+  clip.setProperty(PROP_AUDIO_FILE, pathToStore, &undoManager);
 
   DBG("ProjectState: Set audio file for clip " + clipId + ": " +
       audioFile.getFileName());
@@ -748,7 +768,7 @@ ProjectState::getOrCreateAutomationEnvelope(const juce::String &trackId,
   envelope.setProperty(PROP_PARAM_ID, paramId, nullptr);
 
   // Create POINTS container
-  envelope.appendChild(juce::ValueTree(ID_POINT), nullptr);
+  envelope.appendChild(juce::ValueTree(ID_POINTS), nullptr);
 
   automationNode.appendChild(envelope, &undoManager);
 
@@ -783,13 +803,14 @@ bool ProjectState::hasAutomation(const juce::String &trackId,
   if (!envelope.isValid())
     return false;
 
-  auto pointsNode = envelope.getChildWithName(ID_POINT);
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
   return pointsNode.isValid() && pointsNode.getNumChildren() > 0;
 }
 
 juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
                                               const juce::String &paramId,
                                               double timeBeats, double value,
+                                              float tension, int curveType,
                                               const juce::String &actionName) {
   auto envelope = getOrCreateAutomationEnvelope(trackId, paramId);
   if (!envelope.isValid()) {
@@ -797,7 +818,7 @@ juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
     return {};
   }
 
-  auto pointsNode = envelope.getChildWithName(ID_POINT);
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
   if (!pointsNode.isValid()) {
     DBG("ProjectState: POINTS node not found");
     return {};
@@ -811,6 +832,8 @@ juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
   point.setProperty(PROP_ID, pointId, nullptr);
   point.setProperty(PROP_TIME_BEATS, timeBeats, nullptr);
   point.setProperty(PROP_VALUE, value, nullptr);
+  point.setProperty(PROP_TENSION, tension, nullptr);
+  point.setProperty(PROP_CURVE_TYPE, curveType, nullptr);
 
   // Begin undo transaction
   undoManager.beginNewTransaction(actionName);
@@ -832,6 +855,15 @@ juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
   return pointId;
 }
 
+juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
+                                              const juce::String &paramId,
+                                              double timeBeats, double value,
+                                              const juce::String &actionName) {
+  // Delegate to 7-arg version with defaults
+  return addAutomationPoint(trackId, paramId, timeBeats, value, 0.0f, 0,
+                            actionName);
+}
+
 bool ProjectState::moveAutomationPoint(const juce::String &trackId,
                                        const juce::String &paramId,
                                        const juce::String &pointId,
@@ -850,7 +882,7 @@ bool ProjectState::moveAutomationPoint(const juce::String &trackId,
   point.setProperty(PROP_VALUE, newValue, &undoManager);
 
   // Re-sort points by time if necessary
-  auto pointsNode = envelope.getChildWithName(ID_POINT);
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
   if (pointsNode.isValid()) {
     // Remove and re-insert to maintain sorted order
     int currentIndex = pointsNode.indexOf(point);
@@ -884,7 +916,7 @@ bool ProjectState::deleteAutomationPoint(const juce::String &trackId,
   if (!envelope.isValid())
     return false;
 
-  auto pointsNode = envelope.getChildWithName(ID_POINT);
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
   if (!pointsNode.isValid())
     return false;
 
@@ -906,7 +938,7 @@ bool ProjectState::clearAutomation(const juce::String &trackId,
   if (!envelope.isValid())
     return false;
 
-  auto pointsNode = envelope.getChildWithName(ID_POINT);
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
   if (!pointsNode.isValid())
     return false;
 
@@ -915,6 +947,44 @@ bool ProjectState::clearAutomation(const juce::String &trackId,
 
   DBG("ProjectState: Cleared all automation points for " + trackId + " / " +
       paramId);
+  return true;
+}
+
+bool ProjectState::setAutomationTension(const juce::String &trackId,
+                                        const juce::String &paramId,
+                                        const juce::String &pointId,
+                                        float tension,
+                                        const juce::String &actionName) {
+  auto envelope = getAutomationEnvelope(trackId, paramId);
+  if (!envelope.isValid())
+    return false;
+
+  auto point = findAutomationPoint(envelope, pointId);
+  if (!point.isValid())
+    return false;
+
+  undoManager.beginNewTransaction(actionName);
+  point.setProperty(PROP_TENSION, tension, &undoManager);
+
+  return true;
+}
+
+bool ProjectState::setAutomationCurveType(const juce::String &trackId,
+                                          const juce::String &paramId,
+                                          const juce::String &pointId,
+                                          int curveType,
+                                          const juce::String &actionName) {
+  auto envelope = getAutomationEnvelope(trackId, paramId);
+  if (!envelope.isValid())
+    return false;
+
+  auto point = findAutomationPoint(envelope, pointId);
+  if (!point.isValid())
+    return false;
+
+  undoManager.beginNewTransaction(actionName);
+  point.setProperty(PROP_CURVE_TYPE, curveType, &undoManager);
+
   return true;
 }
 
@@ -1156,6 +1226,27 @@ void ProjectState::setMidiNoteMuted(const juce::String &clipId,
       juce::String(muted ? "true" : "false"));
 }
 
+void ProjectState::setMidiNoteProbability(const juce::String &clipId,
+                                          const juce::String &noteId,
+                                          float probability,
+                                          const juce::String &actionName) {
+  auto noteTree = findMidiNote(clipId, noteId);
+  if (!noteTree.isValid()) {
+    DBG("ProjectState: Cannot set probability - note not found: " + noteId);
+    return;
+  }
+
+  undoManager.beginNewTransaction(actionName);
+
+  // Clamp probability
+  probability = juce::jlimit(0.0f, 1.0f, probability);
+
+  noteTree.setProperty(PROP_PROBABILITY, probability, &undoManager);
+
+  DBG("ProjectState: Set probability for note " + noteId + " to " +
+      juce::String(probability));
+}
+
 //==============================================================================
 // Helper Methods
 //==============================================================================
@@ -1218,8 +1309,12 @@ ProjectState::findAutomationPoint(const juce::ValueTree &envelope,
   if (!envelope.isValid())
     return {};
 
-  // Points are direct children of the envelope, not in a POINTS container
-  for (const auto &point : envelope) {
+  // Points are stored in the ID_POINTS container
+  auto pointsNode = envelope.getChildWithName(ID_POINTS);
+  if (!pointsNode.isValid())
+    return {};
+
+  for (const auto &point : pointsNode) {
     if (point.hasType(ID_POINT) && point[PROP_ID].toString() == pointId)
       return point;
   }

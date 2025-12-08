@@ -38,13 +38,10 @@
 #include <set>
 #include <vector>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
-
-#endif
 
 //==============================================================================
 /**
@@ -356,15 +353,18 @@ public:
   void setExpressionLaneVisible(ExpressionType type, bool visible);
   bool getExpressionLaneVisible(ExpressionType type) const;
 
-  /** Set expression value for a note at a specific time */
+  /** Expression automation point for a note */
+  struct ExpressionPoint {
+    double timeOffset;    // Offset from note start (0.0 = note start)
+    float value;          // 0.0 to 1.0
+    float tension = 0.0f; // Bezier curve tension (-1.0 to 1.0, 0 = linear)
+  };
+
+  /** Set expression automation points for a note */
   void setNoteExpression(const juce::String &noteId, ExpressionType type,
-                         double timeOffset, float value);
+                         const std::vector<ExpressionPoint> &points);
 
   /** Get expression automation points for a note */
-  struct ExpressionPoint {
-    double timeOffset; // Offset from note start (0.0 = note start)
-    float value;       // 0.0 to 1.0
-  };
   std::vector<ExpressionPoint> getNoteExpression(const juce::String &noteId,
                                                  ExpressionType type) const;
 
@@ -662,8 +662,9 @@ private:
     ResizeRight,
     VelocityEdit,
     MarqueeSelect,
-    CCEditPoint,   // New: Editing an existing CC point
-    CCNewPoint     // New: Creating and dragging a new CC point
+    CCEditPoint,      // Editing an existing CC point
+    CCNewPoint,       // Creating and dragging a new CC point
+    ExpressionTension // Editing expression curve tension
   };
 
   enum class CursorType {
@@ -828,14 +829,19 @@ private:
 
   NoteRect *findNoteAtPosition(float x, float y);
   NoteRect *findNoteInVelocityLane(float x, float y);
+  const NoteRect *findNoteInVelocityLane(float x, float y) const;
   DragMode detectNoteHitRegion(const NoteRect &note, float x, float y) const;
   CursorType getCursorForPosition(float x, float y) const;
 
-    // New CC Lane Interaction Helpers
-    bool findCCLaneAtPosition(float x, float y, int &ccNumber,
-                              juce::Rectangle<float> &laneRect) const;
-    CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
-                                   juce::Rectangle<float> &laneRect) const;
+  // New CC Lane Interaction Helpers
+  bool findCCLaneAtPosition(float x, float y, int &ccNumber,
+                            juce::Rectangle<float> &laneRect) const;
+  // Const version for querying (cursor detection)
+  const CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
+                                       juce::Rectangle<float> &laneRect) const;
+  // Non-const version for modification (mouse down)
+  CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
+                                 juce::Rectangle<float> &laneRect);
 
   //==========================================================================
   // Editing Operations (with batched undo)
@@ -879,6 +885,10 @@ private:
   void updateMarqueeSelect(const juce::MouseEvent &e);
   void finishMarqueeSelect();
 
+  void startEditingExpressionTension(const juce::MouseEvent &e);
+  void updateExpressionTension(const juce::MouseEvent &e);
+  void finishExpressionTension();
+
   //==========================================================================
   // Zoom & Scroll
   //==========================================================================
@@ -898,6 +908,7 @@ private:
   // Skia Drawing Helpers
   void drawPianoKeys(SkCanvas *canvas, const SkRect &area);
   void drawGrid(SkCanvas *canvas, const SkRect &area);
+  void drawPlayhead(SkCanvas *canvas, const SkRect &area);
   void drawNotes(SkCanvas *canvas, const SkRect &area);
   void drawVelocityLane(SkCanvas *canvas, const SkRect &area);
   void drawChordName(SkCanvas *canvas);
@@ -905,13 +916,6 @@ private:
   // Modern UI Drawing
   void drawModernToolbar(SkCanvas *canvas, const SkRect &fullRect);
   void drawExpressionLanes(SkCanvas *canvas, const SkRect &area);
-
-  // JUCE Fallback (if needed, but we're moving to Skia)
-  void drawPianoKeys(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawGrid(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawNotes(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawVelocityLane(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawChordName(juce::Graphics &g);
 
   //==========================================================================
   // ValueTree::Listener
@@ -956,9 +960,10 @@ private:
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
-  CCPoint* activeCCPoint = nullptr; // New: Currently dragged CC point
+  CCPoint *activeCCPoint = nullptr; // New: Currently dragged CC point
   int activeCCNumber = -1;          // New: CC number of the activeCCPoint
-  juce::Rectangle<float> currentCCLaneBounds; // New: Bounds of the active CC lane during drag
+  juce::Rectangle<float>
+      currentCCLaneBounds; // New: Bounds of the active CC lane during drag
 
   juce::Point<float> dragStartPos;
   juce::Rectangle<float> marqueeRect;
@@ -1029,12 +1034,9 @@ private:
   // MPE Expression State
   //==========================================================================
 
-  struct NoteExpressionData {
-    std::vector<ExpressionPoint> pitchBend;
-    std::vector<ExpressionPoint> pressure;
-    std::vector<ExpressionPoint> slide;
-    std::vector<ExpressionPoint> expression;
-  };
+  // Map-based NoteExpressionData for dynamic ExpressionType lookup
+  using NoteExpressionData =
+      std::map<ExpressionType, std::vector<ExpressionPoint>>;
 
   std::map<juce::String, NoteExpressionData>
       noteExpressions; // noteId -> expression data
