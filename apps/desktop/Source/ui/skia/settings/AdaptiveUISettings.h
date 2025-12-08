@@ -12,11 +12,10 @@
 
 #pragma once
 
+#include "../SkiaButton.h"
 #include "../SkiaComponent.h"
-#include "../components/SkiaButton.h"
 #include "../components/SkiaComboBox.h"
 #include "../components/SkiaLabel.h"
-
 
 namespace zenith {
 namespace settings {

@@ -4,6 +4,7 @@
  */
 
 #include "MenuBar.h"
+#include "CollabPopup.h"
 
 namespace zenith {
 
@@ -15,6 +16,17 @@ ZenithMenuBar::ZenithMenuBar() {
            {"Edit", {}, false},
            {"View", {}, false},
            {"Help", {}, false}};
+
+  addAndMakeVisible(collabButton);
+  collabButton.setButtonText("Collab");
+  collabButton.setColour(juce::TextButton::buttonColourId,
+                         juce::Colours::purple);
+  collabButton.onClick = [this] {
+    auto *content = new CollabPopup();
+    collabCallout.reset(new juce::CallOutBox(
+        *content, collabButton.getScreenBounds(), nullptr));
+    collabCallout->setVisible(true);
+  };
 }
 
 void ZenithMenuBar::paint(juce::Graphics &g) {
@@ -76,6 +88,8 @@ void ZenithMenuBar::updateLayout() {
     item.bounds = juce::Rectangle<int>(x, 0, itemWidth, getHeight());
     x += itemWidth;
   }
+
+  collabButton.setBounds(getLocalBounds().removeFromRight(100).reduced(5));
 }
 
 void ZenithMenuBar::mouseMove(const juce::MouseEvent &e) {

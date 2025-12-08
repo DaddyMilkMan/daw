@@ -41,8 +41,8 @@ void AdaptiveUISettings::createUI() {
   addAndMakeVisible(enabledLabel_.get());
 
   enabledButton_ = std::make_unique<SkiaButton>();
-  enabledButton_->setButtonText("ON");
-  enabledButton_->setButtonStyle(SkiaButton::Style::Primary);
+  enabledButton_->setText("ON");
+  enabledButton_->setStyle(SkiaButton::Style::Primary);
   enabledButton_->setToggleable(true);
   enabledButton_->onClick = [this]() {
     adaptiveUIEnabled_ = enabledButton_->getToggleState();
@@ -136,15 +136,15 @@ void AdaptiveUISettings::createUI() {
 
   // Reset button
   resetButton_ = std::make_unique<SkiaButton>();
-  resetButton_->setButtonText("Reset Learning Data");
-  resetButton_->setButtonStyle(SkiaButton::Style::Secondary);
+  resetButton_->setText("Reset Learning Data");
+  resetButton_->setStyle(SkiaButton::Style::Secondary);
   resetButton_->onClick = [this]() { resetLearningData(); };
   addAndMakeVisible(resetButton_.get());
 
   // Apply button
   applyButton_ = std::make_unique<SkiaButton>();
-  applyButton_->setButtonText("Apply Settings");
-  applyButton_->setButtonStyle(SkiaButton::Style::Primary);
+  applyButton_->setText("Apply Settings");
+  applyButton_->setStyle(SkiaButton::Style::Primary);
   applyButton_->onClick = [this]() { saveSettings(); };
   addAndMakeVisible(applyButton_.get());
 }
@@ -260,7 +260,7 @@ void AdaptiveUISettings::saveSettings() {
 void AdaptiveUISettings::updateButtonStates() {
   if (enabledButton_) {
     enabledButton_->setToggleState(adaptiveUIEnabled_, false);
-    enabledButton_->setButtonText(adaptiveUIEnabled_ ? "ON" : "OFF");
+    enabledButton_->setText(adaptiveUIEnabled_ ? "ON" : "OFF");
   }
 }
 

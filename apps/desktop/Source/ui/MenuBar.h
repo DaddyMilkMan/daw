@@ -48,6 +48,9 @@ private:
 
   void updateLayout();
 
+  juce::TextButton collabButton;
+  std::unique_ptr<juce::CallOutBox> collabCallout;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithMenuBar)
 };
 

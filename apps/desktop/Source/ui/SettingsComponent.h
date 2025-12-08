@@ -26,7 +26,6 @@
 #include "skia/ZenithDesignSystem.h"
 #include <include/core/SkColor.h>
 
-
 #include <juce_audio_utils/juce_audio_utils.h>
 
 namespace zenith {

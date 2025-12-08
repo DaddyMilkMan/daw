@@ -7,8 +7,10 @@
 
 #include "SampleEditorComponent.h"
 #include "skia/ZenithDesignSystem.h"
+#include <include/core/SkFont.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 
 namespace zenith {
 
@@ -1819,16 +1821,100 @@ void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
                                               const SkRect &bounds,
                                               const char *icon,
                                               const char *tooltip,
-                                              bool isActive, bool isEnabled) {}
+                                              bool isActive, bool isEnabled) {
+  SkPaint bgPaint;
+  bgPaint.setAntiAlias(true);
+
+  if (isActive) {
+    bgPaint.setColor(Colors::buttonActive);
+  } else if (!isEnabled) {
+    bgPaint.setColor(SkColorSetA(Colors::buttonHover, 50));
+  } else {
+    bgPaint.setColor(Colors::buttonHover);
+  }
+
+  canvas->drawRoundRect(bounds, 4.0f, 4.0f, bgPaint);
+
+  SkPaint textPaint;
+  textPaint.setAntiAlias(true);
+  textPaint.setColor(isEnabled ? SK_ColorWHITE
+                               : SkColorSetA(SK_ColorWHITE, 100));
+
+  SkFont font;
+  font.setSize(16.0f);
+
+  float textWidth = font.measureText(icon, strlen(icon), SkTextEncoding::kUTF8);
+  float x = bounds.centerX() - textWidth / 2.0f;
+  float y = bounds.centerY() + 6.0f;
+
+  canvas->drawString(icon, x, y, font, textPaint);
+}
 
 // Recording
-void SampleEditorComponent::startRecording() {}
-void SampleEditorComponent::stopRecording() {}
+void SampleEditorComponent::startRecording() {
+  isRecording_ = true;
+  repaint();
+  // TODO: Hook into Engine input
+}
+void SampleEditorComponent::stopRecording() {
+  isRecording_ = false;
+  repaint();
+}
 
 // Save/Export
-void SampleEditorComponent::saveToFile() {}
-void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {}
-void SampleEditorComponent::exportSelection(const juce::File &targetFile) {}
+void SampleEditorComponent::saveToFile() {
+  if (!audioHandle_ || !audioHandle_->sourceFile.exists())
+    return;
+  saveAsNewFile(audioHandle_->sourceFile);
+}
+
+void SampleEditorComponent::saveAsNewFile(const juce::File &targetFile) {
+  if ((!editBuffer_ && !audioHandle_) || targetFile == juce::File())
+    return;
+
+  const juce::AudioBuffer<float> *bufferToSave =
+      editBuffer_ ? editBuffer_.get() : &audioHandle_->buffer;
+  double sampleRate = audioHandle_ ? audioHandle_->sampleRate : 44100.0;
+
+  targetFile.deleteFile();
+  juce::WavAudioFormat format;
+  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
+      new juce::FileOutputStream(targetFile), sampleRate,
+      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+
+  if (writer) {
+    writer->writeFromAudioSampleBuffer(*bufferToSave, 0,
+                                       bufferToSave->getNumSamples());
+    if (targetFile == audioHandle_->sourceFile)
+      hasUnsavedChanges_ = false;
+  }
+}
+
+void SampleEditorComponent::exportSelection(const juce::File &targetFile) {
+  if (!hasSelection() || targetFile == juce::File())
+    return;
+
+  const juce::AudioBuffer<float> *bufferToSave =
+      editBuffer_ ? editBuffer_.get() : &audioHandle_->buffer;
+
+  double sampleRate = audioHandle_ ? audioHandle_->sampleRate : 44100.0;
+  int startSample = (int)timeToSamples(selection_.getStart());
+  int endSample = (int)timeToSamples(selection_.getEnd());
+  int numSamples = endSample - startSample;
+
+  if (numSamples <= 0)
+    return;
+
+  targetFile.deleteFile();
+  juce::WavAudioFormat format;
+  std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
+      new juce::FileOutputStream(targetFile), sampleRate,
+      (unsigned int)bufferToSave->getNumChannels(), 24, {}, 0));
+
+  if (writer) {
+    writer->writeFromAudioSampleBuffer(*bufferToSave, startSample, numSamples);
+  }
+}
 
 // Warp Markers
 void SampleEditorComponent::addWarpMarker(double originalTime,
@@ -1870,7 +1956,32 @@ void SampleEditorComponent::applySimpleReverb(float roomSize, float damping,
 void SampleEditorComponent::applyBlur(float amount) {}
 
 // Stereo Tools
-void SampleEditorComponent::convertToMono() {}
+void SampleEditorComponent::convertToMono() {
+  if (!editBuffer_ && !audioHandle_)
+    return;
+
+  pushUndoState("Convert to Mono");
+
+  const juce::AudioBuffer<float> *src =
+      editBuffer_ ? editBuffer_.get() : &audioHandle_->buffer;
+  if (src->getNumChannels() == 1)
+    return;
+
+  auto newBuffer =
+      std::make_unique<juce::AudioBuffer<float>>(1, src->getNumSamples());
+
+  const float *L = src->getReadPointer(0);
+  const float *R = src->getReadPointer(1);
+  float *D = newBuffer->getWritePointer(0);
+
+  for (int i = 0; i < src->getNumSamples(); ++i) {
+    D[i] = (L[i] + R[i]) * 0.5f;
+  }
+
+  editBuffer_ = std::move(newBuffer);
+  hasUnsavedChanges_ = true;
+  repaint();
+}
 void SampleEditorComponent::convertToStereo() {}
 void SampleEditorComponent::swapChannels() {}
 void SampleEditorComponent::adjustStereoWidth(float width) {}
