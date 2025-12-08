@@ -16,15 +16,13 @@
 #include "../../include/ui/ClipComponent.h"
 #include "../../include/ProjectState.h"
 
-using namespace zenith;
-
-#ifdef ZENITH_USE_SKIA
 #include "../../Source/ui/skia/SkiaTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
-#endif
+
+using namespace zenith;
 
 ClipComponent::ClipComponent(juce::ValueTree clipNode)
     : clip(clipNode)
@@ -60,7 +58,6 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height
     setBounds(x, yPosition, width, height);
 }
 
-#ifdef ZENITH_USE_SKIA
 void ClipComponent::drawSkia(SkCanvas* canvas)
 {
     auto bounds = getLocalBounds();
@@ -135,100 +132,6 @@ void ClipComponent::drawSkia(SkCanvas* canvas)
         canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(), SkTextEncoding::kUTF8, textX, textY, font, textPaint);
     }
 }
-#else
-void ClipComponent::paint(juce::Graphics& g)
-{
-    auto bounds = getLocalBounds().toFloat();
-
-    // Determine beautiful colors based on clip type (modern DAW palette)
-    juce::Colour baseColor;
-    juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
-
-    if (clipType == "midi") {
-        baseColor = juce::Colour(0xff34c759);  // Apple green for MIDI
-    } else {
-        baseColor = juce::Colour(0xff4a9eff);  // Apple blue for audio
-    }
-
-    // Apply hover and selection scaling
-    auto scaledBounds = bounds;
-    if (isHovered || isSelected) {
-        float scale = isSelected ? 0.98f : (isHovered ? 1.02f : 1.0f);
-        scale = juce::jlimit(0.95f, 1.05f, scale + hoverAnimation * 0.05f);
-
-        float centerX = bounds.getCentreX();
-        float centerY = bounds.getCentreY();
-        float newWidth = bounds.getWidth() * scale;
-        float newHeight = bounds.getHeight() * scale;
-
-        scaledBounds = juce::Rectangle<float>(
-            centerX - newWidth / 2.0f,
-            centerY - newHeight / 2.0f,
-            newWidth,
-            newHeight
-        );
-    }
-
-    // Draw subtle shadow for depth (modern DAW style)
-    if (!isHovered) {
-        g.setColour(juce::Colour(0x00000000).withAlpha(0.3f));
-        g.fillRoundedRectangle(scaledBounds.translated(0.0f, 2.0f), 8.0f);
-    }
-
-    // Draw beautiful gradient background (Ableton-style: lighter at top, darker at bottom)
-    juce::ColourGradient gradient(
-        baseColor.brighter(0.2f), scaledBounds.getCentreX(), scaledBounds.getY(),
-        baseColor.darker(0.3f), scaledBounds.getCentreX(), scaledBounds.getBottom(),
-        false
-    );
-    g.setGradientFill(gradient);
-    g.fillRoundedRectangle(scaledBounds, 8.0f);
-
-    // Add subtle inner highlight (top 30%) for depth
-    g.setColour(juce::Colour(0xffffffff).withAlpha(0.15f));
-    auto highlightBounds = scaledBounds.withHeight(scaledBounds.getHeight() * 0.3f);
-    g.fillRoundedRectangle(highlightBounds, 8.0f);
-
-    // Draw selection glow/ring with pulse animation
-    if (isSelected) {
-        float glowAlpha = 0.4f + 0.2f * std::sin(selectionPulse * juce::MathConstants<float>::twoPi);
-        g.setColour(baseColor.brighter(0.5f).withAlpha(glowAlpha));
-        g.drawRoundedRectangle(scaledBounds.expanded(2.0f), 8.0f, 3.0f);
-    }
-
-    // Draw hover glow
-    if (isHovered && !isSelected) {
-        g.setColour(baseColor.brighter(0.3f).withAlpha(0.3f));
-        g.drawRoundedRectangle(scaledBounds.expanded(1.0f), 8.0f, 2.0f);
-    }
-
-    // Border (subtle, modern)
-    g.setColour(baseColor.darker(0.2f).withAlpha(0.8f));
-    g.drawRoundedRectangle(scaledBounds.reduced(0.5f), 8.0f, 1.5f);
-
-    // Clip name with better typography
-    g.setColour(juce::Colour(0xffffffff).withAlpha(0.95f));
-    g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
-
-    juce::String clipName = getClipId();
-    auto textBounds = scaledBounds.reduced(8.0f, 4.0f);
-    g.drawText(clipName, textBounds.toNearestInt(), juce::Justification::centredLeft, true);
-
-    // Optional: Draw waveform preview hint for audio clips (simplified for now)
-    if (clipType == "audio" && scaledBounds.getWidth() > 40.0f) {
-        g.setColour(juce::Colour(0xffffffff).withAlpha(0.1f));
-        auto waveformBounds = scaledBounds.reduced(4.0f, scaledBounds.getHeight() * 0.35f);
-
-        // Draw simplified waveform representation
-        for (int i = 0; i < 20; ++i) {
-            float x = waveformBounds.getX() + (waveformBounds.getWidth() / 20.0f) * i;
-            float height = std::sin(i * 0.5f) * waveformBounds.getHeight() * 0.4f;
-            g.drawLine(x, waveformBounds.getCentreY() - height,
-                      x, waveformBounds.getCentreY() + height, 1.0f);
-        }
-    }
-}
-#endif
 
 void ClipComponent::mouseEnter(const juce::MouseEvent& event)
 {

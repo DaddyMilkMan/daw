@@ -71,38 +71,60 @@ else()
         # ------------------------------------------------------------------------
         # AUTOMATIC DLL DEPLOYMENT (User-Friendly Fix)
         # ------------------------------------------------------------------------
+        # ------------------------------------------------------------------------
+        # AUTOMATIC DLL DEPLOYMENT (User-Friendly Fix)
+        # ------------------------------------------------------------------------
         if(WIN32)
             # Try to locate the DLL associated with the import library
             get_filename_component(SKIA_LIB_DIR "${SKIA_LIBRARY}" DIRECTORY)
             
-            # Common vcpkg/prebuilt layouts: 
-            # 1. bin/skia.dll (relative to lib/skia.lib) -> ../bin/skia.dll
-            # 2. Same dir
-            find_file(SKIA_DLL
-                NAMES skia.dll
-                PATHS 
-                    "${SKIA_LIB_DIR}/../bin"
-                    "${SKIA_LIB_DIR}"
-                    "${SKIA_DIR}/bin"
-                NO_DEFAULT_PATH
+            # Common dependencies for Skia (vcpkg build)
+            # We explicitly look for these because Skia doesn't statically link them in this configuration
+            set(SKIA_DEPENDENCY_DLLS 
+                skia.dll
+                libpng16.dll
+                jpeg62.dll
+                libwebpdecoder.dll
+                libwebpdemux.dll
+                libwebpmux.dll
+                libwebp.dll
+                libsharpyuv.dll
+                libexpat.dll
+                zlib1.dll
             )
 
-            if(SKIA_DLL)
-                message(STATUS "  Found Skia DLL: ${SKIA_DLL} - Configuring auto-copy")
-                
-                # Copy to build directory (for running from IDE/CLI)
-                add_custom_command(TARGET ZenithDAW POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${SKIA_DLL}"
-                    "$<TARGET_FILE_DIR:ZenithDAW>"
-                    COMMENT "Deploying skia.dll to output directory..."
+            foreach(DLL_NAME ${SKIA_DEPENDENCY_DLLS})
+                find_file(FOUND_${DLL_NAME}
+                    NAMES ${DLL_NAME}
+                    PATHS 
+                        "${SKIA_LIB_DIR}/../bin"
+                        "${SKIA_LIB_DIR}"
+                        "${SKIA_DIR}/bin"
+                    NO_DEFAULT_PATH
                 )
                 
-                # Copy to install directory (for packaging)
-                install(FILES "${SKIA_DLL}" DESTINATION bin)
-            else()
-                message(WARNING "  Could not find skia.dll! Users may need to install it manually.")
-            endif()
+                if(FOUND_${DLL_NAME})
+                    message(STATUS "  Found dependency: ${FOUND_${DLL_NAME}} - Configuring auto-copy")
+                    
+                    # Copy to build directory (for running from IDE/CLI)
+                    add_custom_command(TARGET ZenithDAW POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${FOUND_${DLL_NAME}}"
+                        "$<TARGET_FILE_DIR:ZenithDAW>"
+                        COMMENT "Deploying ${DLL_NAME}..."
+                    )
+                    
+                    # Copy to install directory (for packaging)
+                    install(FILES "${FOUND_${DLL_NAME}}" DESTINATION bin)
+                else()
+                    # Only warn for skia.dll as others might be statically linked in some builds
+                    if("${DLL_NAME}" STREQUAL "skia.dll")
+                        message(WARNING "  Could not find skia.dll! Users may need to install it manually.")
+                    endif()
+                endif()
+                
+                unset(FOUND_${DLL_NAME} CACHE) 
+            endforeach()
         endif()
 
     else()

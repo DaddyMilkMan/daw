@@ -28,10 +28,10 @@
 #include <unordered_map>
 #include <vector>
 
+#include "../Source/engine/RoutingGraph.h"
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
-#include "engine/RoutingGraph.h"
 
 //==============================================================================
 //==============================================================================
@@ -58,7 +58,8 @@ public:
   static const juce::Identifier ID_MIXER;
   static const juce::Identifier ID_AUTOMATION;
   static const juce::Identifier ID_ENVELOPE;
-  static const juce::Identifier ID_POINT;
+  static const juce::Identifier ID_POINTS;      // Container for points
+  static const juce::Identifier ID_POINT;       // Individual point
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
@@ -85,24 +86,36 @@ public:
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
   static const juce::Identifier PROP_LANE_INDEX;
+  static const juce::Identifier PROP_MANUALLY_COLORED;
+  static const juce::Identifier PROP_IS_QUARANTINE;
 
   // Automation properties
   static const juce::Identifier PROP_PARAM;
   static const juce::Identifier PROP_PARAM_ID;
   static const juce::Identifier PROP_TIME_BEATS;
   static const juce::Identifier PROP_VALUE;
+  static const juce::Identifier PROP_CURVE_TYPE;
+  static const juce::Identifier PROP_TENSION;
 
   // MIDI Note properties
   static const juce::Identifier PROP_START_BEATS;  // Note start time in beats
   static const juce::Identifier PROP_LENGTH_BEATS; // Note length in beats
   static const juce::Identifier PROP_PITCH;        // MIDI pitch (0-127)
   static const juce::Identifier PROP_VELOCITY;     // MIDI velocity (0-127)
+  static const juce::Identifier PROP_PROBABILITY;  // Note chance (0.0-1.0)
+  static const juce::Identifier
+      PROP_CONDITION; // Logic condition (e.g. "PreviousPlayed")
+  static const juce::Identifier PROP_RECURRENCE; // Loop recurrence (e.g. "1:4")
+  static const juce::Identifier
+      PROP_ARTICULATION_ID; // Articulation/Keyswitch ID
 
   // Tempo/Marker properties
   static const juce::Identifier PROP_BPM;   // Tempo in BPM
   static const juce::Identifier PROP_COLOR; // Marker color (hex string)
-  static const juce::Identifier PROP_NEXT_ID; // Next available ID (for O(1) generation)
-  static const juce::Identifier PROP_INPUT_CHANNEL; // Input channel index for recording
+  static const juce::Identifier
+      PROP_NEXT_ID; // Next available ID (for O(1) generation)
+  static const juce::Identifier
+      PROP_INPUT_CHANNEL; // Input channel index for recording
 
   //==========================================================================
   ProjectState();
@@ -117,15 +130,22 @@ public:
   bool saveToFile(const juce::File &file);
   juce::File saveCrashDump();
   juce::File getProjectFile() const { return projectFile; }
-  void setProjectFile(const juce::File& file) { projectFile = file; }
+  void setProjectFile(const juce::File &file) { projectFile = file; }
   bool hasUnsavedChanges() const { return isDirty.load(); }
 
   //==========================================================================
   // ValueTree::Listener overrides
-  void valueTreePropertyChanged(juce::ValueTree &, const juce::Identifier &) override { isDirty = true; }
-  void valueTreeChildAdded(juce::ValueTree &parent, juce::ValueTree &child) override;
-  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child, int) override;
-  void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override { isDirty = true; }
+  void valueTreePropertyChanged(juce::ValueTree &,
+                                const juce::Identifier &) override {
+    isDirty = true;
+  }
+  void valueTreeChildAdded(juce::ValueTree &parent,
+                           juce::ValueTree &child) override;
+  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
+                             int) override;
+  void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override {
+    isDirty = true;
+  }
   void valueTreeParentChanged(juce::ValueTree &) override { isDirty = true; }
 
   //==========================================================================
@@ -158,6 +178,9 @@ public:
 
   void renameTrack(const juce::String &trackId, const juce::String &newName,
                    const juce::String &actionName = "Rename track");
+  void setTrackColor(const juce::String &trackId, const juce::Colour &color,
+                     bool manuallySet = false,
+                     const juce::String &actionName = "Set track color");
   void setTrackVolume(const juce::String &trackId, float volumeLinear,
                       const juce::String &actionName = "Set track volume");
   float getTrackVolume(const juce::String &trackId) const;
@@ -257,6 +280,12 @@ public:
 
   juce::String addAutomationPoint(const juce::String &trackId,
                                   const juce::String &paramId, double timeBeats,
+                                  double value, float tension, int curveType,
+                                  const juce::String &actionName);
+
+  // Overload for backward compatibility
+  juce::String addAutomationPoint(const juce::String &trackId,
+                                  const juce::String &paramId, double timeBeats,
                                   double value, const juce::String &actionName);
   bool moveAutomationPoint(const juce::String &trackId,
                            const juce::String &paramId,
@@ -268,6 +297,16 @@ public:
                              const juce::String &actionName);
   bool clearAutomation(const juce::String &trackId, const juce::String &paramId,
                        const juce::String &actionName);
+
+  bool setAutomationTension(const juce::String &trackId,
+                            const juce::String &paramId,
+                            const juce::String &pointId, float tension,
+                            const juce::String &actionName);
+
+  bool setAutomationCurveType(const juce::String &trackId,
+                              const juce::String &paramId,
+                              const juce::String &pointId, int curveType,
+                              const juce::String &actionName);
 
   //==========================================================================
   // MIDI Note Management
@@ -287,12 +326,24 @@ public:
     int velocity;
     bool muted;
 
+    float probability = 1.0f; // 0.0 to 1.0
+    juce::String condition;   // e.g., "fill", "not-fill", "pre"
+    juce::String recurrence;  // e.g., "1:4"
+    int articulationId = 0;   // 0 = Default
+
     MidiNoteSpec()
         : pitch(60), startBeats(0.0), lengthBeats(1.0), velocity(100),
-          muted(false) {}
+          muted(false), probability(1.0f) {}
+
+    MidiNoteSpec(const juce::String &id, int pitch, double startBeats,
+                 double lengthBeats, int velocity, bool muted,
+                 float probability = 1.0f)
+        : id(id), pitch(pitch), startBeats(startBeats),
+          lengthBeats(lengthBeats), velocity(velocity), muted(muted),
+          probability(probability) {}
   };
 
-  void addNotes(const juce::String &clipId, 
+  void addNotes(const juce::String &clipId,
                 const std::vector<MidiNoteSpec> &notes,
                 const juce::String &actionName);
 
@@ -327,6 +378,13 @@ public:
 
   void setMidiNoteLength(const juce::String &clipId, const juce::String &noteId,
                          double newLengthBeats, const juce::String &actionName);
+
+  void setMidiNoteMuted(const juce::String &clipId, const juce::String &noteId,
+                        bool muted, const juce::String &actionName);
+
+  void setMidiNoteProbability(const juce::String &clipId,
+                              const juce::String &noteId, float probability,
+                              const juce::String &actionName);
 
   //==========================================================================
   // Tempo Map & Markers
@@ -367,8 +425,8 @@ public:
   //==========================================================================
   // Routing Graph
   //==========================================================================
-  zenith::RoutingGraph& getRoutingGraph() { return routingGraph; }
-  const zenith::RoutingGraph& getRoutingGraph() const { return routingGraph; }
+  zenith::RoutingGraph &getRoutingGraph() { return routingGraph; }
+  const zenith::RoutingGraph &getRoutingGraph() const { return routingGraph; }
 
   //==========================================================================
   // Debug Helpers
@@ -394,7 +452,8 @@ private:
                                       const juce::String &pointId) const;
   void rebuildIdCounter();
   void rebuildTrackMap();
-  juce::ValueTree findMidiNote(const juce::String &clipId, const juce::String &noteId) const;
+  juce::ValueTree findMidiNote(const juce::String &clipId,
+                               const juce::String &noteId) const;
 
   //==========================================================================
   // Member Variables

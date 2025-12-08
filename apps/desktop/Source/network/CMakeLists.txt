@@ -8,4 +8,5 @@ target_sources(ZenithDAW PRIVATE
     AudioAnalysisService.cpp
     AITools.cpp
     AIPrompts.cpp
+    CollaborationManager.cpp
 )

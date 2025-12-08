@@ -26,9 +26,7 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
 
-#ifdef ZENITH_USE_SKIA
 #include "../../Source/ui/skia/SkiaComponent.h"
-#endif
 
 /**
  * @class ClipComponent
@@ -40,12 +38,7 @@
  * - Simple 1-2px selection border
  * - Rounded corners (4px, 8px grid)
  */
-#ifdef ZENITH_USE_SKIA
 class ClipComponent : public zenith::SkiaComponent
-#else
-class ClipComponent : public juce::Component,
-                     public juce::Timer
-#endif
 {
 public:
     /**
@@ -88,11 +81,8 @@ public:
     // Component interface
     //==========================================================================
 
-#ifdef ZENITH_USE_SKIA
     void drawSkia(SkCanvas* canvas) override;
-#else
-    void paint(juce::Graphics& g) override;
-#endif
+
     void mouseDown(const juce::MouseEvent& event) override;
     void mouseDrag(const juce::MouseEvent& event) override;
     void mouseEnter(const juce::MouseEvent& event) override;

@@ -6,28 +6,29 @@
 #include "SkiaRenderer.h"
 
 // Skia headers
-#include "include/core/SkCanvas.h"
-#include "include/core/SkColorSpace.h"
-#include "include/core/SkSurface.h"
-#include "include/gpu/GpuTypes.h"
-#include "include/gpu/ganesh/GrBackendSurface.h"
-#include "include/gpu/ganesh/GrDirectContext.h"
-#include "include/gpu/ganesh/SkSurfaceGanesh.h"
+#include <core/SkCanvas.h>
+#include <core/SkColorSpace.h>
+#include <core/SkSurface.h>
+#include <gpu/GpuTypes.h>
+#include <gpu/ganesh/GrBackendSurface.h>
+#include <gpu/ganesh/GrDirectContext.h>
+#include <gpu/ganesh/SkSurfaceGanesh.h>
 
 // Platform-specific headers and implementations
 #if 0 // JUCE_WINDOWS - Disabled D3D12 temporarily to fix build
-    #define SK_DIRECT3D 1
-    #include "include/gpu/ganesh/d3d/GrD3DBackendContext.h"
-    #include "include/gpu/ganesh/d3d/GrD3DTypes.h"
-    #include <d3d12.h>
-    #include <d3d12sdklayers.h>
-    #include <dxgi1_6.h>
-    #include <wrl/client.h>
+#define SK_DIRECT3D 1
+#include <d3d12.h>
+#include <d3d12sdklayers.h>
+#include <dxgi1_6.h>
+#include <gpu/ganesh/d3d/GrD3DBackendContext.h>
+#include <gpu/ganesh/d3d/GrD3DTypes.h>
+#include <wrl/client.h>
+
     
     // Link against required libs
-    #pragma comment(lib, "d3d12.lib")
-    #pragma comment(lib, "dxgi.lib")
-    #pragma comment(lib, "dcomp.lib")
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "dcomp.lib")
 
     using Microsoft::WRL::ComPtr;
 
@@ -47,24 +48,25 @@
     };
 
 #elif JUCE_MAC
-    #define SK_METAL 1
-    #include "include/gpu/ganesh/mtl/GrMtlBackendContext.h"
-    #include "include/gpu/ganesh/mtl/GrMtlTypes.h"
-    #include <objc/runtime.h>
-    #include <objc/message.h>
-    #include <dlfcn.h>
+#define SK_METAL 1
+#include <dlfcn.h>
+#include <gpu/ganesh/mtl/GrMtlBackendContext.h>
+#include <gpu/ganesh/mtl/GrMtlTypes.h>
+#include <objc/message.h>
+#include <objc/runtime.h>
+
 
 #elif JUCE_LINUX
-    #define SK_VULKAN 1
-    #include "include/gpu/ganesh/vk/GrVkBackendContext.h"
-    #include "include/gpu/ganesh/vk/GrVkTypes.h"
-    // Minimal Vulkan loader
-    #include <vulkan/vulkan.h>
+#define SK_VULKAN 1
+#include <gpu/ganesh/vk/GrVkBackendContext.h>
+#include <gpu/ganesh/vk/GrVkTypes.h>
+// Minimal Vulkan loader
+#include <vulkan/vulkan.h>
 #endif
 
 // OpenGL backend (always available as fallback)
-#include "include/gpu/ganesh/gl/GrGLDirectContext.h"
-#include "include/gpu/ganesh/gl/GrGLInterface.h"
+#include <gpu/ganesh/gl/GrGLDirectContext.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 
 namespace zenith {
 
@@ -88,7 +90,8 @@ SkiaRenderer::~SkiaRenderer() { shutdown(); }
 //==============================================================================
 
 bool SkiaRenderer::initialize() {
-  if (initialized_) return true;
+  if (initialized_)
+    return true;
 
   DBG("Initializing SkiaRenderer...");
 
@@ -96,8 +99,9 @@ bool SkiaRenderer::initialize() {
     DBG("ERROR: Failed to create GPU context, trying fallback...");
     // Fallback chain
     if (backend_ != Backend::OpenGL) {
-        backend_ = Backend::OpenGL;
-        if (createGpuContext()) goto success;
+      backend_ = Backend::OpenGL;
+      if (createGpuContext())
+        goto success;
     }
     backend_ = Backend::Software;
     // Software doesn't need GPU context
@@ -117,7 +121,8 @@ success:
 }
 
 void SkiaRenderer::shutdown() {
-  if (!initialized_) return;
+  if (!initialized_)
+    return;
 
   surface_.reset();
   grContext_.reset();
@@ -144,15 +149,18 @@ void SkiaRenderer::shutdown() {
 //==============================================================================
 
 void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
-  if (!initialized_ || !surface_) return;
+  if (!initialized_ || !surface_)
+    return;
 
   auto startTime = juce::Time::getCurrentTime();
   SkCanvas *canvas = surface_->getCanvas();
   canvas->clear(SK_ColorBLACK);
 
-  if (drawCallback) drawCallback(canvas);
+  if (drawCallback)
+    drawCallback(canvas);
 
-  if (grContext_) grContext_->flushAndSubmit();
+  if (grContext_)
+    grContext_->flushAndSubmit();
 
 #if 0 // JUCE_WINDOWS && defined(SK_DIRECT3D)
   if (platformHandle_ && backend_ == Backend::Direct3D) {
@@ -176,17 +184,19 @@ void SkiaRenderer::render(std::function<void(SkCanvas *)> drawCallback) {
 #endif
 
   updateStats();
-  
+
   if (vsyncEnabled_) {
     auto frameTime = juce::Time::getCurrentTime() - startTime;
-    auto targetFrameTime = juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
+    auto targetFrameTime =
+        juce::RelativeTime::milliseconds((juce::int64)(1000.0 / targetFPS_));
     if (frameTime < targetFrameTime)
       juce::Thread::sleep((int)(targetFrameTime - frameTime).inMilliseconds());
   }
 }
 
 void SkiaRenderer::resize(int width, int height) {
-  if (initialized_) createSurface(width, height);
+  if (initialized_)
+    createSurface(width, height);
 }
 
 //==============================================================================
@@ -197,26 +207,34 @@ SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if 0 // JUCE_WINDOWS
     return Backend::Direct3D;
 #elif JUCE_MAC
-    return Backend::Metal;
+  return Backend::Metal;
 #elif JUCE_LINUX
-    return Backend::Vulkan;
+  return Backend::Vulkan;
 #else
-    return Backend::OpenGL;
+  return Backend::OpenGL;
 #endif
 }
 
 const char *SkiaRenderer::getBackendName(Backend backend) {
   switch (backend) {
-    case Backend::Direct3D: return "Direct3D 12";
-    case Backend::Metal:    return "Metal";
-    case Backend::Vulkan:   return "Vulkan";
-    case Backend::OpenGL:   return "OpenGL";
-    case Backend::Software: return "Software";
-    default:                return "Unknown";
+  case Backend::Direct3D:
+    return "Direct3D 12";
+  case Backend::Metal:
+    return "Metal";
+  case Backend::Vulkan:
+    return "Vulkan";
+  case Backend::OpenGL:
+    return "OpenGL";
+  case Backend::Software:
+    return "Software";
+  default:
+    return "Unknown";
   }
 }
 
-void SkiaRenderer::setTargetFPS(int fps) { targetFPS_ = juce::jlimit(1, 300, fps); }
+void SkiaRenderer::setTargetFPS(int fps) {
+  targetFPS_ = juce::jlimit(1, 300, fps);
+}
 void SkiaRenderer::setVSyncEnabled(bool enable) { vsyncEnabled_ = enable; }
 
 //==============================================================================
@@ -229,34 +247,42 @@ bool SkiaRenderer::createGpuContext() {
     case Backend::Direct3D: return createD3DContext();
 #endif
 #if JUCE_MAC
-    case Backend::Metal:    return createMetalContext();
+  case Backend::Metal:
+    return createMetalContext();
 #endif
 #if JUCE_LINUX
-    case Backend::Vulkan:   return createVulkanContext();
+  case Backend::Vulkan:
+    return createVulkanContext();
 #endif
-    case Backend::OpenGL: {
-        auto glInterface = GrGLMakeNativeInterface();
-        if (!glInterface) return false;
-        grContext_ = GrDirectContexts::MakeGL(glInterface);
-        return grContext_ != nullptr;
-    }
-    case Backend::Software: return true;
-    default: return false;
+  case Backend::OpenGL: {
+    auto glInterface = GrGLMakeNativeInterface();
+    if (!glInterface)
+      return false;
+    grContext_ = GrDirectContexts::MakeGL(glInterface);
+    return grContext_ != nullptr;
+  }
+  case Backend::Software:
+    return true;
+  default:
+    return false;
   }
 }
 
 bool SkiaRenderer::createSurface(int width, int height) {
-  if (width <= 0 || height <= 0) return false;
+  if (width <= 0 || height <= 0)
+    return false;
   surface_.reset();
 
   if (backend_ == Backend::Software) {
     SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
     surface_ = SkSurfaces::Raster(info);
   } else {
-    if (!grContext_) return false;
-    
-    SkImageInfo info = SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
-    
+    if (!grContext_)
+      return false;
+
+    SkImageInfo info =
+        SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
+
     // Platform specific surface creation if needed (e.g. swapchain)
     // For D3D, we usually bind to the swapchain buffer.
 #if 0 // JUCE_WINDOWS && defined(SK_DIRECT3D)
@@ -289,17 +315,19 @@ bool SkiaRenderer::createSurface(int width, int height) {
     } else
 #endif
     {
-        // Generic GPU surface (offscreen)
-        surface_ = SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
+      // Generic GPU surface (offscreen)
+      surface_ = SkSurfaces::RenderTarget(grContext_.get(),
+                                          skgpu::Budgeted::kNo, info);
     }
   }
   return surface_ != nullptr;
 }
 
 void SkiaRenderer::updateStats() {
-    // Simple stats update
-    stats_.frameTime = (juce::Time::getCurrentTime() - lastFrameTime_).inMilliseconds();
-    lastFrameTime_ = juce::Time::getCurrentTime();
+  // Simple stats update
+  stats_.frameTime =
+      (juce::Time::getCurrentTime() - lastFrameTime_).inMilliseconds();
+  lastFrameTime_ = juce::Time::getCurrentTime();
 }
 
 //==============================================================================
@@ -309,7 +337,7 @@ void SkiaRenderer::updateStats() {
 #if 0 // JUCE_WINDOWS && defined(SK_DIRECT3D)
 bool SkiaRenderer::createD3DContext() {
     auto d3dCtx = std::make_unique<D3D12Context>();
-    
+
 #ifdef DEBUG
     ComPtr<ID3D12Debug> debugController;
     if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
@@ -399,84 +427,94 @@ bool SkiaRenderer::createD3DContext() {
 
 #if JUCE_MAC && defined(SK_METAL)
 bool SkiaRenderer::createMetalContext() {
-    // Pure C++ Metal Initialization via Obj-C Runtime
-    // Avoids needing .mm files
-    
-    // id<MTLDevice> device = MTLCreateSystemDefaultDevice();
-    void* device = ((void*(*)())dlsym(RTLD_DEFAULT, "MTLCreateSystemDefaultDevice"))();
-    if (!device) return false;
+  // Pure C++ Metal Initialization via Obj-C Runtime
+  // Avoids needing .mm files
 
-    // id<MTLCommandQueue> queue = [device newCommandQueue];
-    void* queue = nullptr;
-    
-    // objc_msgSend(device, @selector(newCommandQueue))
-    typedef void* (*SendMsgFn)(void*, void*);
-    SendMsgFn sendMsg = (SendMsgFn)objc_msgSend;
-    SEL newCommandQueueSel = sel_registerName("newCommandQueue");
-    queue = sendMsg(device, newCommandQueueSel);
-    
-    if (!queue) return false;
+  // id<MTLDevice> device = MTLCreateSystemDefaultDevice();
+  void *device =
+      ((void *(*)())dlsym(RTLD_DEFAULT, "MTLCreateSystemDefaultDevice"))();
+  if (!device)
+    return false;
 
-    GrMtlBackendContext backendContext;
-    backendContext.fDevice.retain(device);
-    backendContext.fQueue.retain(queue);
-    
-    grContext_ = GrDirectContext::MakeMetal(backendContext);
-    return grContext_ != nullptr;
+  // id<MTLCommandQueue> queue = [device newCommandQueue];
+  void *queue = nullptr;
+
+  // objc_msgSend(device, @selector(newCommandQueue))
+  typedef void *(*SendMsgFn)(void *, void *);
+  SendMsgFn sendMsg = (SendMsgFn)objc_msgSend;
+  SEL newCommandQueueSel = sel_registerName("newCommandQueue");
+  queue = sendMsg(device, newCommandQueueSel);
+
+  if (!queue)
+    return false;
+
+  GrMtlBackendContext backendContext;
+  backendContext.fDevice.retain(device);
+  backendContext.fQueue.retain(queue);
+
+  grContext_ = GrDirectContext::MakeMetal(backendContext);
+  return grContext_ != nullptr;
 }
 #endif
 
 #if JUCE_LINUX && defined(SK_VULKAN)
 bool SkiaRenderer::createVulkanContext() {
-    // Minimal Vulkan Instance
-    VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
-    appInfo.pApplicationName = "ZenithDAW";
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+  // Minimal Vulkan Instance
+  VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
+  appInfo.pApplicationName = "ZenithDAW";
+  appInfo.apiVersion = VK_API_VERSION_1_0;
 
-    VkInstanceCreateInfo createInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
-    createInfo.pApplicationInfo = &appInfo;
+  VkInstanceCreateInfo createInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
+  createInfo.pApplicationInfo = &appInfo;
 
-    VkInstance instance;
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) return false;
+  VkInstance instance;
+  if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS)
+    return false;
 
-    // Pick physical device (first one)
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
-    if (deviceCount == 0) return false;
-    
-    VkPhysicalDevice physicalDevice;
-    vkEnumeratePhysicalDevices(instance, &deviceCount, &physicalDevice);
+  // Pick physical device (first one)
+  uint32_t deviceCount = 0;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
+  if (deviceCount == 0)
+    return false;
 
-    // Create logical device
-    float queuePriority = 1.0f;
-    VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
-    queueCreateInfo.queueFamilyIndex = 0; // Assuming graphics queue at 0 for simplicity
-    queueCreateInfo.queueCount = 1;
-    queueCreateInfo.pQueuePriorities = &queuePriority;
+  VkPhysicalDevice physicalDevice;
+  vkEnumeratePhysicalDevices(instance, &deviceCount, &physicalDevice);
 
-    VkDeviceCreateInfo deviceInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
-    deviceInfo.queueCreateInfoCount = 1;
-    deviceInfo.pQueueCreateInfos = &queueCreateInfo;
+  // Create logical device
+  float queuePriority = 1.0f;
+  VkDeviceQueueCreateInfo queueCreateInfo = {
+      VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO};
+  queueCreateInfo.queueFamilyIndex =
+      0; // Assuming graphics queue at 0 for simplicity
+  queueCreateInfo.queueCount = 1;
+  queueCreateInfo.pQueuePriorities = &queuePriority;
 
-    VkDevice device;
-    if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device) != VK_SUCCESS) return false;
+  VkDeviceCreateInfo deviceInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
+  deviceInfo.queueCreateInfoCount = 1;
+  deviceInfo.pQueueCreateInfos = &queueCreateInfo;
 
-    VkQueue queue;
-    vkGetDeviceQueue(device, 0, 0, &queue);
+  VkDevice device;
+  if (vkCreateDevice(physicalDevice, &deviceInfo, nullptr, &device) !=
+      VK_SUCCESS)
+    return false;
 
-    skgpu::VulkanBackendContext backendContext;
-    backendContext.fInstance = instance;
-    backendContext.fPhysicalDevice = physicalDevice;
-    backendContext.fDevice = device;
-    backendContext.fQueue = queue;
-    backendContext.fGraphicsQueueIndex = 0;
-    backendContext.fGetProc = [](const char* name, VkInstance i, VkDevice d) {
-        if (d) return vkGetDeviceProcAddr(d, name);
-        return vkGetInstanceProcAddr(i, name);
-    };
+  VkQueue queue;
+  vkGetDeviceQueue(device, 0, 0, &queue);
 
-    grContext_ = GrDirectContext::MakeVulkan(backendContext);
-    return grContext_ != nullptr;
+  skgpu::VulkanBackendContext backendContext;
+  backendContext.fInstance = instance;
+  backendContext.fPhysicalDevice = physicalDevice;
+  backendContext.fDevice = device;
+  backendContext.fQueue = queue;
+  backendContext.fGraphicsQueueIndex = 0;
+  backendContext.fGetProc = [](const char *name, VkInstance i, VkDevice d) {
+    if (d)
+      return vkGetDeviceProcAddr(d, name);
+    return vkGetInstanceProcAddr(i, name);
+  };
+
+  grContext_ = GrDirectContext::MakeVulkan(backendContext);
+  return grContext_ != nullptr;
 }
 #endif
 

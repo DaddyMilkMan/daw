@@ -9,134 +9,148 @@
 */
 
 #include "RightSidePanel.h"
+#include "../../SimpleLogger.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
+#include <core/SkColor.h>
+#include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
-#include <core/SkFont.h>
-#include <core/SkColor.h>
+
 #endif
 
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-RightSidePanel::RightSidePanel(CommandAPI& api, AIBridgeClient& client, Engine& engine)
-{
-    setSize(300, 600);
-    
-    wingmanPanel_ = std::make_unique<WingmanPanel>(api, client, engine);
-    addChildComponent(wingmanPanel_.get());
-    wingmanPanel_->setVisible(true);
-    
-    startTimerHz(60); // Animation timer
+RightSidePanel::RightSidePanel(CommandAPI &api, AIBridgeClient &client,
+                               Engine &engine) {
+  logToFile("RightSidePanel: Constructor started");
+  setSize(300, 600);
+
+  logToFile("RightSidePanel: Creating WingmanPanel...");
+  wingmanPanel_ = std::make_unique<WingmanPanel>(api, client, engine);
+  logToFile("RightSidePanel: WingmanPanel created. Adding child...");
+  addChildComponent(wingmanPanel_.get());
+  wingmanPanel_->setVisible(true);
+
+  logToFile("RightSidePanel: Starting timer...");
+  startTimerHz(60); // Animation timer
+  logToFile("RightSidePanel: Constructor complete");
 }
 
-RightSidePanel::~RightSidePanel() {
-    stopTimer();
-}
+RightSidePanel::~RightSidePanel() { stopTimer(); }
 
 void RightSidePanel::timerCallback() {
-    animationPhase_ += 0.05f;
-    repaint();
+  animationPhase_ += 0.05f;
+  repaint();
 }
 
-void RightSidePanel::drawSkia(SkCanvas* canvas) {
-    auto bounds = getLocalBounds().toFloat();
-    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+void RightSidePanel::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds().toFloat();
+  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-    // Lazy update of cached resources on the Render Thread
-    if (skBounds != cachedBounds_) {
-        updateCachedPaints(skBounds);
-        cachedBounds_ = skBounds;
-    }
-    
-    // Glassmorphism Background (Frame)
-    canvas->drawRect(skBounds, bgPaint_);
-    
-    // Left border glow
-    canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
-    
-    // Master Meter (Visualist Request: Peak vs RMS)
-    float meterX = skBounds.width() - 40.0f;
-    float meterY = 20.0f; // Moved up since header is gone
-    float meterW = 20.0f;
-    float meterH = skBounds.height() - 40.0f;
+  // Lazy update of cached resources on the Render Thread
+  if (skBounds != cachedBounds_) {
+    updateCachedPaints(skBounds);
+    cachedBounds_ = skBounds;
+  }
 
-    // Background
-    canvas->drawRect(SkRect::MakeXYWH(meterX, meterY, meterW, meterH), meterBgPaint_);
+  // Glassmorphism Background (Frame)
+  canvas->drawRect(skBounds, bgPaint_);
 
-    // Simulated Levels
-    float peakLevel = (std::sin(animationPhase_) * 0.5f + 0.5f) * 0.8f + 0.1f; // 0.1 to 0.9
-    float rmsLevel = peakLevel * 0.7f; // RMS is usually lower
+  // Left border glow
+  canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
 
-    // Peak Bar (Fast, Green/Red)
-    float peakH = meterH * peakLevel;
-    meterPeakPaint_.setColor(peakLevel > 0.8f ? SkColorSetRGB(255, 50, 50) : SkColorSetRGB(0, 255, 100));
-    canvas->drawRect(SkRect::MakeXYWH(meterX, meterY + meterH - peakH, meterW, peakH), meterPeakPaint_);
+  // Master Meter (Visualist Request: Peak vs RMS)
+  float meterX = skBounds.width() - 40.0f;
+  float meterY = 20.0f; // Moved up since header is gone
+  float meterW = 20.0f;
+  float meterH = skBounds.height() - 40.0f;
 
-    // RMS Bar (Slow, Solid White line inside)
-    float rmsH = meterH * rmsLevel;
-    canvas->drawRect(SkRect::MakeXYWH(meterX + 5.0f, meterY + meterH - rmsH, meterW - 10.0f, rmsH), meterRmsPaint_);
+  // Background
+  canvas->drawRect(SkRect::MakeXYWH(meterX, meterY, meterW, meterH),
+                   meterBgPaint_);
 
-    // Label
-    canvas->drawString("RMS", meterX, meterY + meterH + 15.0f, labelFont_, subTextPaint_);
+  // Simulated Levels
+  float peakLevel =
+      (std::sin(animationPhase_) * 0.5f + 0.5f) * 0.8f + 0.1f; // 0.1 to 0.9
+  float rmsLevel = peakLevel * 0.7f; // RMS is usually lower
+
+  // Peak Bar (Fast, Green/Red)
+  float peakH = meterH * peakLevel;
+  meterPeakPaint_.setColor(peakLevel > 0.8f ? SkColorSetRGB(255, 50, 50)
+                                            : SkColorSetRGB(0, 255, 100));
+  canvas->drawRect(
+      SkRect::MakeXYWH(meterX, meterY + meterH - peakH, meterW, peakH),
+      meterPeakPaint_);
+
+  // RMS Bar (Slow, Solid White line inside)
+  float rmsH = meterH * rmsLevel;
+  canvas->drawRect(SkRect::MakeXYWH(meterX + 5.0f, meterY + meterH - rmsH,
+                                    meterW - 10.0f, rmsH),
+                   meterRmsPaint_);
+
+  // Label
+  canvas->drawString("RMS", meterX, meterY + meterH + 15.0f, labelFont_,
+                     subTextPaint_);
 }
 
-void RightSidePanel::updateCachedPaints(const SkRect& bounds) {
-    // 1. Background Paint
-    bgPaint_.setAntiAlias(true);
-    bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
-    bgPaint_.setStyle(SkPaint::kFill_Style);
+void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
+  // 1. Background Paint
+  bgPaint_.setAntiAlias(true);
+  bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
+  bgPaint_.setStyle(SkPaint::kFill_Style);
 
-    // 2. Border Paint
-    borderPaint_.setAntiAlias(true);
-    borderPaint_.setStyle(SkPaint::kStroke_Style);
-    borderPaint_.setStrokeWidth(1.0f);
-    borderPaint_.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
+  // 2. Border Paint
+  borderPaint_.setAntiAlias(true);
+  borderPaint_.setStyle(SkPaint::kStroke_Style);
+  borderPaint_.setStrokeWidth(1.0f);
+  borderPaint_.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
 
-    // 3. Text Paints
-    textPaint_.setAntiAlias(true);
-    textPaint_.setStyle(SkPaint::kFill_Style);
-    textPaint_.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
+  // 3. Text Paints
+  textPaint_.setAntiAlias(true);
+  textPaint_.setStyle(SkPaint::kFill_Style);
+  textPaint_.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
 
-    subTextPaint_.setAntiAlias(true);
-    subTextPaint_.setStyle(SkPaint::kFill_Style);
-    subTextPaint_.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
+  subTextPaint_.setAntiAlias(true);
+  subTextPaint_.setStyle(SkPaint::kFill_Style);
+  subTextPaint_.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
 
-    // 4. Fonts
-    headerFont_.setSize(16.0f);
-    headerFont_.setEmbolden(true);
-    headerFont_.setSubpixel(true);
+  // 4. Fonts
+  headerFont_.setSize(16.0f);
+  headerFont_.setEmbolden(true);
+  headerFont_.setSubpixel(true);
 
-    bodyFont_.setSize(12.0f);
-    bodyFont_.setEmbolden(false);
-    bodyFont_.setSubpixel(true);
+  bodyFont_.setSize(12.0f);
+  bodyFont_.setEmbolden(false);
+  bodyFont_.setSubpixel(true);
 
-    labelFont_.setSize(10.0f);
-    labelFont_.setSubpixel(true);
+  labelFont_.setSize(10.0f);
+  labelFont_.setSubpixel(true);
 
-    // 5. Meter Paints
-    meterBgPaint_.setAntiAlias(true);
-    meterBgPaint_.setColor(SkColorSetARGB(100, 10, 10, 10));
-    meterBgPaint_.setStyle(SkPaint::kFill_Style);
+  // 5. Meter Paints
+  meterBgPaint_.setAntiAlias(true);
+  meterBgPaint_.setColor(SkColorSetARGB(100, 10, 10, 10));
+  meterBgPaint_.setStyle(SkPaint::kFill_Style);
 
-    meterPeakPaint_.setAntiAlias(true);
-    meterPeakPaint_.setStyle(SkPaint::kFill_Style);
+  meterPeakPaint_.setAntiAlias(true);
+  meterPeakPaint_.setStyle(SkPaint::kFill_Style);
 
-    meterRmsPaint_.setAntiAlias(true);
-    meterRmsPaint_.setColor(SkColorSetARGB(200, 255, 255, 255));
-    meterRmsPaint_.setStyle(SkPaint::kFill_Style);
+  meterRmsPaint_.setAntiAlias(true);
+  meterRmsPaint_.setColor(SkColorSetARGB(200, 255, 255, 255));
+  meterRmsPaint_.setStyle(SkPaint::kFill_Style);
 }
 
 void RightSidePanel::resized() {
-    auto bounds = getLocalBounds();
-    // Reserve 50px on the right for the meter (drawn in Skia background)
-    // Reduce slightly for margin
-    if (wingmanPanel_) {
-        wingmanPanel_->setBounds(bounds.removeFromLeft(bounds.getWidth() - 50).reduced(10));
-    }
+  auto bounds = getLocalBounds();
+  // Reserve 50px on the right for the meter (drawn in Skia background)
+  // Reduce slightly for margin
+  if (wingmanPanel_) {
+    wingmanPanel_->setBounds(
+        bounds.removeFromLeft(bounds.getWidth() - 50).reduced(10));
+  }
 }
 
 #endif // ZENITH_USE_SKIA

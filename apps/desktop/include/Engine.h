@@ -44,9 +44,9 @@
 #include <memory>
 #include <vector>
 
-#include "EngineEvent.h"
 #include "../Source/dsp/Dither.h"
-
+#include "../Source/engine/RoutingGraph.h"
+#include "EngineEvent.h"
 
 // Forward declarations
 namespace zenith {
@@ -61,6 +61,10 @@ class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
 class InstrumentRegistry;
+
+namespace ai {
+class SessionDebuggerAgent;
+}
 
 //==============================================================================
 /**
@@ -85,12 +89,12 @@ public:
   /**
    * @brief Get the plugin format manager
    */
-  juce::AudioPluginFormatManager& getPluginFormatManager();
+  juce::AudioPluginFormatManager &getPluginFormatManager();
 
   /**
    * @brief Get the audio device manager
    */
-  juce::AudioDeviceManager& getDeviceManager() { return deviceManager; }
+  juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
 
   //==========================================================================
   // Initialization / Shutdown
@@ -198,7 +202,7 @@ public:
    * @return true if queued successfully, false if full
    * @note Lock-free, safe to call from any thread
    */
-  bool queueEvent(const zenith::EngineEvent& e);
+  bool queueEvent(const zenith::EngineEvent &e);
 
   //==========================================================================
   // Transport Position & Looping
@@ -325,8 +329,26 @@ public:
    * @brief Get the instrument registry
    * @return Reference to the instrument registry
    */
-  InstrumentRegistry& getInstrumentRegistry() { return *instrumentRegistry_; }
-  const InstrumentRegistry& getInstrumentRegistry() const { return *instrumentRegistry_; }
+  InstrumentRegistry &getInstrumentRegistry() { return *instrumentRegistry_; }
+  const InstrumentRegistry &getInstrumentRegistry() const {
+    return *instrumentRegistry_;
+  }
+
+  //==========================================================================
+  // Session Debugger Agent (AI Technical Integrity)
+  //==========================================================================
+
+  /**
+   * @brief Get the session debugger agent
+   * @return Pointer to the session debugger agent (may be null before
+   * initialization)
+   */
+  ai::SessionDebuggerAgent *getSessionDebugger() {
+    return sessionDebugger_.get();
+  }
+  const ai::SessionDebuggerAgent *getSessionDebugger() const {
+    return sessionDebugger_.get();
+  }
 
   //==========================================================================
   // Track Management
@@ -589,28 +611,24 @@ public:
   bool exportProjectToWav(const juce::File &outputFile, double sampleRate,
                           int bitDepth, double durationInSeconds);
 
-    enum class ExportFormat {
-        WAV,
-        FLAC,
-        OGG
-    };
+  enum class ExportFormat { WAV, FLAC, OGG };
 
-    struct ExportOptions {
-        juce::File outputFile;
-        double sampleRate = 44100.0;
-        int bitDepth = 24;          // 8, 16, 24, 32
-        ExportFormat format = ExportFormat::WAV;
-        bool enableDither = true;
-        bool normalize = false;
-        double normalizeDb = -0.1;
-        double duration = 0.0;
-    };
+  struct ExportOptions {
+    juce::File outputFile;
+    double sampleRate = 44100.0;
+    int bitDepth = 24; // 8, 16, 24, 32
+    ExportFormat format = ExportFormat::WAV;
+    bool enableDither = true;
+    bool normalize = false;
+    double normalizeDb = -0.1;
+    double duration = 0.0;
+  };
 
-    /**
-     * @brief Advanced Project Export
-     * Supports WAV/FLAC/OGG, Dithering, Normalization, and 8-bit.
-     */
-    bool exportProject(const ExportOptions& options);
+  /**
+   * @brief Advanced Project Export
+   * Supports WAV/FLAC/OGG, Dithering, Normalization, and 8-bit.
+   */
+  bool exportProject(const ExportOptions &options);
 
 private:
   //==========================================================================
@@ -625,9 +643,9 @@ private:
    * @brief Process audio when playing
    * @note AUDIO THREAD - real-time safe!
    */
-  void processAudioBlock(const float *const *inputChannelData, int numInputChannels,
-                    float *const *outputChannelData, int numOutputChannels,
-                    int numSamples) noexcept;
+  void processAudioBlock(const float *const *inputChannelData,
+                         int numInputChannels, float *const *outputChannelData,
+                         int numOutputChannels, int numSamples) noexcept;
 
   /**
    * @brief Process pending events
@@ -644,7 +662,7 @@ private:
    * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
    */
   void captureAudioInput(const float *const *inputChannelData,
-                             int numInputChannels, int numSamples) noexcept;
+                         int numInputChannels, int numSamples) noexcept;
 
   //==========================================================================
   // Recording Helpers (MESSAGE THREAD)
@@ -725,8 +743,6 @@ private:
   // Plugin Management
   //==========================================================================
 
-
-
   /**
    * @brief Render a block of audio into the output buffer
    * @param outputBuffer Buffer to render into
@@ -734,17 +750,18 @@ private:
    * @param playheadPosition Current playhead position in samples
    * @note MESSAGE THREAD - used for offline rendering only
    */
-  void renderAudioGraph(juce::AudioBuffer<float>& outputBuffer, int numSamples,
-                   juce::int64 playheadPosition,
-                   const juce::MidiBuffer *incomingMidi = nullptr);
+  void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
+                        juce::int64 playheadPosition,
+                        const juce::MidiBuffer *incomingMidi = nullptr);
 
-    juce::AudioFormatManager formatManager;
-    zenith::dsp::Dither dither;
-    
-    void registerFormats();
-    
-    // Helper to apply normalization gain to a buffer
-    void applyNormalization(juce::AudioBuffer<float>& buffer, float maxPeak, float targetDb);
+  juce::AudioFormatManager formatManager;
+  zenith::dsp::Dither dither;
+
+  void registerFormats();
+
+  // Helper to apply normalization gain to a buffer
+  void applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
+                          float targetDb);
 
   //==========================================================================
   // Member Variables
@@ -776,23 +793,47 @@ private:
   std::atomic<bool> enableTestTone_{false};
 
   // Track container (message thread for modification)
-  // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot sharing
+  // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot
+  // sharing
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
+  // Routing Graph (Source of Truth for connections and processing order)
+  RoutingGraph routingGraph_;
+
+public:
+  RoutingGraph &getRoutingGraph() { return routingGraph_; }
+  const RoutingGraph &getRoutingGraph() const { return routingGraph_; }
+
+private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
-  // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for lifetime (safety)
+  // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
+  // lifetime (safety)
   struct TrackSnapshot {
-    std::vector<zenith::Track*> tracks; // Raw pointers for fast, lock-free iteration
+    std::vector<zenith::Track *>
+        tracks; // Raw pointers for fast, lock-free iteration
+    std::vector<zenith::AuxBus *> auxBuses; // Raw pointers for buses
+
     std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
+    std::vector<std::shared_ptr<zenith::AuxBus>>
+        lifecycleAux; // Keeps buses alive
 
     TrackSnapshot() = default;
-    explicit TrackSnapshot(const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks) {
+    TrackSnapshot(
+        const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
       tracks.reserve(ownedTracks.size());
       lifecycle.reserve(ownedTracks.size());
       for (const auto &track : ownedTracks) {
         tracks.push_back(track.get());
-        lifecycle.push_back(track); // Increment refcount (Main Thread only)
+        lifecycle.push_back(track); // Increment refcount
+      }
+
+      auxBuses.reserve(ownedBuses.size());
+      lifecycleAux.reserve(ownedBuses.size());
+      for (const auto &bus : ownedBuses) {
+        auxBuses.push_back(bus.get());
+        lifecycleAux.push_back(bus);
       }
     }
   };
@@ -800,7 +841,7 @@ private:
   // Lock-free snapshot mechanism
   // Audio thread reads activeSnapshot_ (atomic raw pointer)
   // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
-  std::atomic<TrackSnapshot*> activeSnapshot_{nullptr};
+  std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
   std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
 
@@ -813,9 +854,12 @@ private:
   // Phase 3: Plugin hosting
   std::unique_ptr<zenith::PluginHost> pluginHost_;
   std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
-  
+
   // Instrument Registry (Level 4: No Singleton)
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
+
+  // Session Debugger Agent (AI Technical Integrity)
+  std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
 
   // Project state reference (non-owning, for tempo/time sig/automation access)
   ProjectState *projectState_ = nullptr;
@@ -832,7 +876,7 @@ private:
   juce::AudioBuffer<float> masterBuffer_;
 
   // Aux buses (send/return effects)
-  std::vector<std::unique_ptr<zenith::AuxBus>> auxBuses_;
+  std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
   std::vector<juce::AudioBuffer<float>>
       auxBusBuffers_; // Pre-allocated buffers for aux buses
 
@@ -848,20 +892,22 @@ private:
   //==========================================================================
   // Plugin Delay Compensation (PDC)
   //==========================================================================
-  
+
   std::atomic<bool> pdcEnabled_{true};
-  std::atomic<int> maxTrackLatency_{0};  // Maximum latency across all tracks
-  std::vector<int> trackLatencies_;       // Per-track latency values
-  std::vector<juce::AudioBuffer<float>> pdcDelayBuffers_;  // Delay buffers for PDC
-  std::vector<int> pdcDelayWritePos_;     // Write positions for circular buffers
-  int masterLatency_{0};                  // Master bus total latency
-  
-  void applyPDCDelay(juce::AudioBuffer<float>& buffer, int trackIndex, int delaySamples) noexcept;
-  
+  std::atomic<int> maxTrackLatency_{0}; // Maximum latency across all tracks
+  std::vector<int> trackLatencies_;     // Per-track latency values
+  std::vector<juce::AudioBuffer<float>>
+      pdcDelayBuffers_;               // Delay buffers for PDC
+  std::vector<int> pdcDelayWritePos_; // Write positions for circular buffers
+  int masterLatency_{0};              // Master bus total latency
+
+  void applyPDCDelay(juce::AudioBuffer<float> &buffer, int trackIndex,
+                     int delaySamples) noexcept;
+
   //==========================================================================
   // Sample-Accurate Looping State
   //==========================================================================
-  
+
   // Sample-accurate loop: stores where in the buffer the loop wrap occurs
   // -1 means no loop wrap in current buffer
   std::atomic<int> loopWrapSampleOffset_{-1};
@@ -881,12 +927,12 @@ private:
     int trackIndex;
     juce::int64 timestampSamples;
   };
-  
+
   // Lock-free FIFO for MIDI recording events
   static constexpr int kMidiRecordFifoSize = 4096;
   juce::AbstractFifo midiRecordFifo_{kMidiRecordFifoSize};
   std::vector<MidiRecordEvent> midiRecordBuffer_{kMidiRecordFifoSize};
-  
+
   // Baked recordings (message thread only, after stopRecording)
   struct MidiRecordingBuffer {
     std::vector<juce::MidiMessageSequence> trackRecordings; // One per track
@@ -910,7 +956,8 @@ private:
     double sampleRate = 44100.0;
     juce::int64 recordingStartSamples = 0;
     int trackIndex = -1; // Which track this session belongs to
-    int inputChannelIndex = 0; // ROAST FIX #9: Which input channel to record from
+    int inputChannelIndex =
+        0; // ROAST FIX #9: Which input channel to record from
   };
 
   // Active recording sessions (message thread creates, audio thread writes)
@@ -919,13 +966,18 @@ private:
   // ROAST FIX #4: Pre-prepared sessions to avoid blocking I/O on record start
   std::vector<AudioRecordingSession> preppedSessions_;
   juce::CriticalSection preppedSessionsLock_;
-  
+
   // Helper to prepare recording asynchronously
   void prepareRecordingForTrack(int trackIndex);
 
+  // Helper to update SIP (Solo In Place) logic
+  void updateSoloState();
+
+  // ID Counter for Aux Busses
+  std::atomic<int> auxBusIdCounter{0};
+
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};
-
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

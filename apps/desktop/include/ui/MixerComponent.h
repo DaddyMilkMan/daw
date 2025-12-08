@@ -2,184 +2,91 @@
  * @file MixerComponent.h
  * @brief Mixer panel component for Zenith DAW
  *
- * Displays track mixer controls:
+ * Displays track mixer controls using the Zenith Design System.
  * - Volume fader
  * - Pan knob
  * - Mute/Solo/Arm buttons
  * - Track name label
  *
- * Phase 10: Mixer MVP
- * - Basic mixer UI with track strips
- * - Integration with ProjectState
- * - Undo/redo support
+ * This component acts as a container for MixerChannelComponents.
  */
 
 #pragma once
 
-#ifdef ZENITH_USE_SKIA
-#include "../Source/ui/skia/ZenithUIComponents.h"
+#include "../Engine.h"
 #include "../Source/ui/skia/SkiaComponent.h"
-
-class SkCanvas;
-struct SkRect;
-#endif
-
+#include "../Source/ui/skia/ZenithDesignSystem.h" // Import ZenithDesignSystem
+#include "MixerChannelComponent.h"
 #include "ProjectState.h"
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-#include <juce_audio_processors/juce_audio_processors.h>
+
+
 #include <juce_core/juce_core.h>
-#include <juce_data_structures/juce_data_structures.h>
-#include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <vector>
 
-//==============================================================================
-/**
- * @class MixerComponent
- * @brief Mixer panel with vertical track strips
- */
-class MixerComponent :
-#ifdef ZENITH_USE_SKIA
-    public zenith::SkiaComponent,
-#else
-    public juce::Component,
-#endif
-    public juce::ValueTree::Listener {
+
+namespace zenith {
+
+class MixerComponent : public SkiaComponent, public juce::ValueTree::Listener {
 public:
-  MixerComponent(zenith::ProjectState &ps);
+  //==========================================================================
+  /**
+   * @brief Constructor
+   * @param engine Reference to the audio engine (for Track access)
+   * @param state Reference to project state (for listeners/order)
+   */
+  MixerComponent(Engine &engine, ProjectState &state);
   ~MixerComponent() override;
 
-#ifndef ZENITH_USE_SKIA
-  void paint(juce::Graphics &g) override;
-#endif
+  //==========================================================================
+  // Component interface
+  //==========================================================================
+
+  void paint(juce::Graphics &g) override; // JUCE fallback
   void resized() override;
-
-#ifdef ZENITH_USE_SKIA
-  void drawSkia(SkCanvas *canvas) override;
-#endif
-
-  //==============================================================================
-  struct TrackStrip {
-    juce::String trackId;
-    juce::String trackName;
-
-#ifdef ZENITH_USE_SKIA
-    std::unique_ptr<zenith::ZenithSlider> volumeSlider;
-    std::unique_ptr<zenith::ZenithKnob> panSlider; // Use Knob for Pan
-    std::unique_ptr<zenith::ZenithButton> muteButton;
-    std::unique_ptr<zenith::ZenithButton> soloButton;
-    std::unique_ptr<zenith::ZenithButton> armButton;
-#else
-    std::unique_ptr<juce::Label> nameLabel;
-    std::unique_ptr<juce::Slider> volumeSlider;
-    std::unique_ptr<juce::Slider> panSlider;
-    std::unique_ptr<juce::ToggleButton> muteButton;
-    std::unique_ptr<juce::ToggleButton> soloButton;
-    std::unique_ptr<juce::ToggleButton> armButton;
-#endif
-
-    juce::Rectangle<int> bounds;
-
-    TrackStrip() = default;
-    ~TrackStrip() = default;
-
-    // Delete copy and move to prevent issues with unique_ptr
-    TrackStrip(const TrackStrip &) = delete;
-    TrackStrip &operator=(const TrackStrip &) = delete;
-    TrackStrip(TrackStrip &&) = default;
-    TrackStrip &operator=(TrackStrip &&) = default;
-  };
+  void drawSkia(SkCanvas *canvas) override; // Skia rendering
 
   //==========================================================================
   // ValueTree::Listener interface
   //==========================================================================
 
-  void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
+  void valueTreePropertyChanged(juce::ValueTree &tree,
                                 const juce::Identifier &property) override;
-
-  void valueTreeChildAdded(juce::ValueTree &parentTree,
-                           juce::ValueTree &childWhichHasBeenAdded) override;
-
-  void valueTreeChildRemoved(juce::ValueTree &parentTree,
-                             juce::ValueTree &childWhichHasBeenRemoved,
-                             int indexFromWhichChildWasRemoved) override;
-
-  void
-  valueTreeChildOrderChanged(juce::ValueTree &parentTreeWhoseChildrenHaveMoved,
-                             int oldIndex, int newIndex) override;
-
-  void
-  valueTreeParentChanged(juce::ValueTree &treeWhoseParentHasChanged) override {}
-  void valueTreeRedirected(juce::ValueTree &treeWhichHasBeenChanged) override {}
+  void valueTreeChildAdded(juce::ValueTree &parent,
+                           juce::ValueTree &child) override;
+  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
+                             int index) override;
+  void valueTreeChildOrderChanged(juce::ValueTree &parent, int oldIndex,
+                                  int newIndex) override;
+  void valueTreeParentChanged(juce::ValueTree &tree) override;
 
 private:
   //==========================================================================
-  // Helper methods
+  // Internal methods
   //==========================================================================
 
-  /**
-   * @brief Rebuild all track strips from current ProjectState
-   */
-  void rebuildTrackStrips();
-
-  /**
-   * @brief Create a new track strip for a track
-   */
-  std::unique_ptr<TrackStrip>
-  createTrackStrip(const juce::ValueTree &trackNode);
-
-  /**
-   * @brief Update a track strip from ProjectState
-   */
-  void updateTrackStripFromState(TrackStrip &strip,
-                                 const juce::ValueTree &trackNode);
-
-  /**
-   * @brief Find track strip by track ID
-   */
-  TrackStrip *findTrackStrip(const juce::String &trackId);
-
-#ifdef ZENITH_USE_SKIA
-  /**
-   * @brief Draw a single track strip background using Skia
-   * Child components (volumeSlider, panSlider, muteButton, soloButton,
-   * armButton) render themselves to avoid double-rendering issues.
-   */
-  void drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
-                          const TrackStrip &strip);
-#endif
-
-  //==========================================================================
-  // Control callbacks
-  //==========================================================================
-
-  void onVolumeChanged(const juce::String &trackId, float value);
-  void onPanChanged(const juce::String &trackId, float value);
-  void onMuteClicked(const juce::String &trackId, bool state);
-  void onSoloClicked(const juce::String &trackId, bool state);
-  void onArmClicked(const juce::String &trackId, bool state);
+  void rebuildChannels();
+  Track *findTrackById(const juce::String &trackId);
 
   //==========================================================================
   // Member variables
   //==========================================================================
 
-  zenith::ProjectState &projectState;
+  Engine &engine_;
+  ProjectState &projectState_;
 
-  std::vector<std::unique_ptr<TrackStrip>> trackStrips;
+  // List of channel strips
+  std::vector<std::unique_ptr<MixerChannelComponent>> channels_;
 
-  // UI constants
-  static constexpr int stripWidth = 80;
+  // Layout constants
+  static constexpr int stripWidth = 100;
   static constexpr int stripSpacing = 4;
-  static constexpr int topMargin = 10;
-  static constexpr int bottomMargin = 10;
-  static constexpr int sideMargin = 10;
-
-  // Flag to prevent feedback loops
-  bool updatingFromState = false;
+  static constexpr int topMargin = 0;
+  static constexpr int bottomMargin = 0;
+  static constexpr int sideMargin = 0;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerComponent)
 };
+
+} // namespace zenith
