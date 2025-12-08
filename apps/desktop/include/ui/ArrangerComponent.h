@@ -8,6 +8,8 @@
 #include "../Engine.h"
 
 #include <core/SkCanvas.h>
+#include <unordered_map>
+#include <vector>
 
 // Forward declaration for browser drag
 namespace zenith { class BrowserDragData; }
@@ -91,6 +93,26 @@ private:
     Engine& engine_;
     zenith::ProjectState& projectState;
 
+    //==========================================================================
+    // Waveform Cache Entry (pre-computed peak data for fast rendering)
+    //==========================================================================
+    struct WaveformCache {
+        juce::String audioFilePath;
+        std::vector<float> minPeaks;  // Downsampled min peaks
+        std::vector<float> maxPeaks;  // Downsampled max peaks
+        int samplesPerPixel = 512;    // Resolution
+        bool isValid = false;
+    };
+
+    //==========================================================================
+    // MIDI Note Blob (for clip thumbnail rendering)
+    //==========================================================================
+    struct MidiNoteBlob {
+        int pitch;
+        double startBeats;
+        double lengthBeats;
+    };
+
     struct ClipView {
         juce::String clipId;
         juce::String trackId;
@@ -99,6 +121,10 @@ private:
         bool isMidi;
         bool isSelected;
         juce::Rectangle<float> bounds;
+
+        // Cached content for rendering
+        juce::String audioFilePath;         // For audio clips
+        std::vector<MidiNoteBlob> noteBlobs; // For MIDI clips
 
         bool isInLeftResizeZone(juce::Point<float> p) const {
             return p.x >= bounds.getX() && p.x <= bounds.getX() + 5.0f;
@@ -186,6 +212,23 @@ private:
     // Utility
     void updatePlayheadFromEngine();
     double samplesToBeats(juce::int64 samples) const;
+
+    //==========================================================================
+    // Clip Content Rendering Helpers (Skia)
+    //==========================================================================
+#ifdef ZENITH_USE_SKIA
+    void drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect);
+    void drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect);
+#endif
+
+    // Bar.Beat.Tick formatting
+    juce::String formatBarBeatTick(double beats) const;
+    int getBeatsPerBar() const;
+
+    // Waveform cache (file path -> cached peaks)
+    std::unordered_map<juce::String, WaveformCache> waveformCache_;
+    void buildWaveformCache(const juce::String& audioFilePath);
+    const WaveformCache* getWaveformCache(const juce::String& audioFilePath) const;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };

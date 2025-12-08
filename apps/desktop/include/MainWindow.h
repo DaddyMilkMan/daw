@@ -252,7 +252,7 @@ public:
   std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
   // Integration: Clip synchronizer
-  std::unique_ptr<ClipSynchronizer> clipSynchronizer;
+  std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;

@@ -33,6 +33,8 @@
 #include <map>
 
 //==============================================================================
+namespace zenith {
+
 /**
  * @class ClipSynchronizer
  * @brief Syncs Engine clips to ProjectState clips
@@ -51,7 +53,7 @@ public:
      * @param projectState Reference to project state (must outlive this object)
      * @param engine Reference to audio engine (must outlive this object)
      */
-    ClipSynchronizer(zenith::ProjectState& projectState, zenith::Engine& engine);
+    ClipSynchronizer(ProjectState& projectState, Engine& engine);
 
     /**
      * @brief Destructor
@@ -123,8 +125,8 @@ private:
     // Member Variables
     //==========================================================================
 
-    zenith::ProjectState& projectState;
-    zenith::Engine& engine;
+    ProjectState& projectState;
+    Engine& engine;
 
     // Track clip counts to detect new clips
     std::map<int, int> engineClipCounts;
@@ -132,3 +134,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSynchronizer)
 };
 
+} // namespace zenith

@@ -279,26 +279,35 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
 void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
-        auto offset = e.getDistanceFromDragStart();
+        auto offset = e.getOffsetFromDragStart();
         auto newBounds = dragStartBounds.translated(offset.x, offset.y);
         
         activeDragComponent->setBounds(newBounds);
         
         // Update Manager (persist as relative)
-        auto relative = newBounds.toFloat().getRelativeAsRectangle(getLocalBounds().toFloat());
-        zenith::design::LayoutManager::PanelState state;
-        state.relativeBounds = relative;
-        state.isVisible = true;
-        
-        juce::String id;
-        if (activeDragComponent == transportBar.get()) id = "Transport";
-        else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
-        else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
-        else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
-        
-        if (id.isNotEmpty()) {
-            state.id = id;
-            zenith::design::LayoutManager::getInstance().setPanelState(id, state);
+        auto localBounds = getLocalBounds().toFloat();
+        if (localBounds.getWidth() > 0 && localBounds.getHeight() > 0) {
+            juce::Rectangle<float> relative(
+                newBounds.getX() / localBounds.getWidth(),
+                newBounds.getY() / localBounds.getHeight(),
+                newBounds.getWidth() / localBounds.getWidth(),
+                newBounds.getHeight() / localBounds.getHeight()
+            );
+            
+            zenith::design::LayoutManager::PanelState state;
+            state.relativeBounds = relative;
+            state.isVisible = true;
+            
+            juce::String id;
+            if (activeDragComponent == transportBar.get()) id = "Transport";
+            else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
+            else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
+            else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
+            
+            if (id.isNotEmpty()) {
+                state.id = id;
+                zenith::design::LayoutManager::getInstance().setPanelState(id, state);
+            }
         }
         
         repaint(); // Skia repaint
@@ -460,7 +469,7 @@ MainWindow::MainWindow(const juce::String &name)
       std::make_unique<zenith::TrackAutomationSynchronizer>(*projectState, *engine);
 
   // Phase 5: Create Wingman command API
-  commandAPI = std::make_unique<zenith::CommandAPI>(*engine, *projectState);
+  commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
 
   // Phase 7: Create AI bridge client
   aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();

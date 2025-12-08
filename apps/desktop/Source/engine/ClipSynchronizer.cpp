@@ -7,8 +7,10 @@
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
 
+namespace zenith {
+
 //==============================================================================
-ClipSynchronizer::ClipSynchronizer(zenith::ProjectState& ps, zenith::Engine& eng)
+ClipSynchronizer::ClipSynchronizer(ProjectState& ps, Engine& eng)
     : projectState(ps), engine(eng)
 {
     DBG("ClipSynchronizer: Constructor");
@@ -257,3 +259,4 @@ double ClipSynchronizer::samplesToBeats(int64_t samples, double tempo, double sa
     return seconds / (60.0 / tempo);
 }
 
+} // namespace zenith

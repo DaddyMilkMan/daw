@@ -10,11 +10,14 @@
 #include <skia/include/core/SkColor.h>
 #include <skia/include/core/SkFont.h>
 #include <skia/include/core/SkPaint.h>
+#include <skia/include/core/SkRRect.h>
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkTypeface.h>
+#include "skia/ZenithDesignSystem.h"
 #endif
 
 #include "../browser/BrowserDragSource.h"
+#include "../engine/AudioFilePool.h"
 
 //==============================================================================
 namespace zenith {
@@ -111,6 +114,27 @@ void ArrangerComponent::rebuildClipViews() {
         view.isMidi = (clipType == "midi");
 
         view.isSelected = selectedClipIds.contains(view.clipId);
+
+        // Populate clip content for thumbnail rendering
+        if (view.isMidi) {
+            // Get MIDI notes for blob preview
+            auto notes = projectState.getMidiNotesForClip(view.clipId);
+            for (const auto& note : notes) {
+                MidiNoteBlob blob;
+                blob.pitch = note.pitch;
+                blob.startBeats = note.startBeats;
+                blob.lengthBeats = note.lengthBeats;
+                view.noteBlobs.push_back(blob);
+            }
+        } else {
+            // Get audio file path for waveform preview
+            view.audioFilePath = clip[zenith::ProjectState::PROP_AUDIO_FILE].toString();
+            
+            // Trigger waveform cache build if needed
+            if (view.audioFilePath.isNotEmpty()) {
+                buildWaveformCache(view.audioFilePath);
+            }
+        }
 
         clipViews.add(view);
       }
@@ -651,33 +675,36 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
 
 #ifdef ZENITH_USE_SKIA
 void ArrangerComponent::drawSkia(SkCanvas* canvas) {
-  auto bounds = getLocalBounds();
-  // Background
-  canvas->clear(SkColorSetRGB(30, 30, 30)); // 0xff1e1e1e
+  using namespace zenith::design;
 
-  // Tracks
+  auto bounds = getLocalBounds();
+  float width = (float)bounds.getWidth();
+  float height = (float)bounds.getHeight();
+
+  // 1. Background
+  canvas->clear(colors::BG_DARKEST);
+
+  // 2. Tracks & Grid
   auto tracksNode =
       projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
   if (tracksNode.isValid()) {
     int numTracks = tracksNode.getNumChildren();
-    float width = (float)bounds.getWidth();
 
     SkPaint trackPaint;
     SkPaint dividerPaint;
-    dividerPaint.setColor(SkColorSetRGB(60, 60, 60)); // trackDividerColour
+    dividerPaint.setColor(colors::BORDER_SUBTLE);
     dividerPaint.setStrokeWidth(1.0f);
 
     SkPaint gridPaint;
-    gridPaint.setColor(
-        SkColorSetARGB(76, 100, 100, 100)); // gridLineColour alpha 0.3
+    gridPaint.setColor(colors::BORDER_SUBTLE);
     gridPaint.setStrokeWidth(1.0f);
+    // Optional: make grid dashed if desired, solid is fine for now
 
     SkFont trackFont;
-    trackFont.setSize(14.0f);
+    trackFont.setSize(typography::FONT_MD);
     trackFont.setEdging(SkFont::Edging::kAntiAlias);
+    
     SkPaint trackTextPaint;
-    trackTextPaint.setColor(
-        SkColorSetARGB(178, 255, 255, 255)); // white alpha 0.7
     trackTextPaint.setAntiAlias(true);
 
     double startBeat = std::floor(viewStartBeats);
@@ -685,12 +712,11 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
 
     for (int i = firstVisibleTrackIndex; i < numTracks; ++i) {
       float y = trackIndexToY(i);
-      if (y > bounds.getHeight())
+      if (y > height)
         break;
 
-      // Track lane background
-      SkColor laneColor =
-          (i % 2 == 0) ? SkColorSetRGB(40, 40, 40) : SkColorSetRGB(35, 35, 35);
+      // Track lane background - Zebra striping
+      SkColor laneColor = (i % 2 == 0) ? colors::BG_DARKER : colors::BG_DARK;
       trackPaint.setColor(laneColor);
       canvas->drawRect(SkRect::MakeXYWH(0, y, width, (float)trackHeight), trackPaint);
 
@@ -711,189 +737,235 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
       bool isSoloed = track[zenith::ProjectState::PROP_SOLO];
       bool isArmed = track[zenith::ProjectState::PROP_ARMED];
 
-      float textX = 10.0f;
-      float indicatorY = y + 14.0f; // Center vertically relative to text roughly
+      float textX = spacing::SM;
+      float contentY = y + (trackHeight / 2.0f);
 
       SkPaint indicatorPaint;
       indicatorPaint.setAntiAlias(true);
 
-      if (isArmed) {
-          indicatorPaint.setColor(SkColorSetRGB(255, 50, 50)); // Red
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
-      if (isSoloed) {
-          indicatorPaint.setColor(SkColorSetRGB(255, 165, 0)); // Orange
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
-      if (isMuted) {
-          indicatorPaint.setColor(SkColorSetRGB(100, 100, 100)); // Grey
-          canvas->drawCircle(textX + 4, indicatorY - 4, 4, indicatorPaint);
-          textX += 14.0f;
-      }
+      // Helper for glowing dots
+      auto drawIndicator = [&](SkColor color) {
+          // Glow
+          indicatorPaint.setColor(withAlpha(color, 0.4f));
+          canvas->drawCircle(textX + 4, contentY, 6, indicatorPaint);
+          // Core
+          indicatorPaint.setColor(color);
+          canvas->drawCircle(textX + 4, contentY, 3, indicatorPaint);
+          textX += spacing::MD;
+      };
 
-      if (isMuted) {
-          trackTextPaint.setColor(SkColorSetARGB(128, 150, 150, 150));
-      } else {
-          trackTextPaint.setColor(SkColorSetARGB(178, 255, 255, 255));
-      }
+      if (isArmed) drawIndicator(colors::RED);
+      if (isSoloed) drawIndicator(colors::AMBER);
+      if (isMuted) drawIndicator(colors::TEXT_DISABLED);
 
-      canvas->drawString(name.toRawUTF8(), textX, y + 20, trackFont,
+      // Text Color - Muted tracks overlap with muted text
+      SkColor textColor = isMuted ? colors::TEXT_DISABLED : colors::TEXT_PRIMARY;
+      trackTextPaint.setColor(textColor);
+
+      // Draw text centered vertically approx
+      canvas->drawString(name.toRawUTF8(), textX, contentY + (typography::FONT_MD * 0.35f), trackFont,
                         trackTextPaint);
     }
   }
 
-    // Clips
+    // 3. Clips
     for (const auto &clipView : clipViews) {
         SkRect clipRect = SkRect::MakeXYWH(
             (float)clipView.bounds.getX(), (float)clipView.bounds.getY(),
             (float)clipView.bounds.getWidth(), (float)clipView.bounds.getHeight());
 
-        SkPaint clipPaint;
+        // Rounded corners
+        SkRRect roundedClip;
+        roundedClip.setRectXY(clipRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
 
-        // Selection border
+        SkPaint clipFill;
+        SkPaint clipBorder;
+        clipFill.setAntiAlias(true);
+        clipBorder.setAntiAlias(true);
+        clipBorder.setStyle(SkPaint::kStroke_Style);
+
         if (clipView.isSelected) {
-            SkPaint borderPaint;
-            borderPaint.setColor(SkColorSetRGB(255, 255, 255));
-            borderPaint.setStyle(SkPaint::kStroke_Style);
-            borderPaint.setStrokeWidth(2.0f);
-            canvas->drawRect(clipRect, borderPaint);
+            // Selected: Cyan Tint + Cyan Border
+            clipFill.setColor(withAlpha(colors::CYAN, 0.2f));
+            clipBorder.setColor(colors::BORDER_FOCUS);
+            clipBorder.setStrokeWidth(2.0f);
+        } else {
+            // Normal: Light BG + Strong Border
+            clipFill.setColor(colors::BG_LIGHT);
+            clipBorder.setColor(colors::BORDER_STRONG);
+            clipBorder.setStrokeWidth(1.0f);
         }
 
-        // Clip name
+        canvas->drawRRect(roundedClip, clipFill);
+        canvas->drawRRect(roundedClip, clipBorder);
+
+        // Clip Name
         if (clipRect.width() > 20.0f) {
             auto [track, clip] = projectState.findClip(clipView.clipId);
             if (clip.isValid()) {
                 juce::String name = clip[zenith::ProjectState::PROP_NAME].toString();
+                
                 SkFont font;
-                font.setSize(12.0f);
+                font.setSize(typography::FONT_SM);
                 font.setEdging(SkFont::Edging::kAntiAlias);
+                
                 SkPaint textPaint;
-                textPaint.setColor(SkColorSetARGB(204, 0, 0, 0)); // black alpha 0.8
+                // High contrast text inside clips
+                textPaint.setColor(clipView.isSelected ? colors::CYAN : colors::TEXT_SECONDARY);
                 textPaint.setAntiAlias(true);
-                canvas->drawString(name.toRawUTF8(), clipRect.fLeft + 4.0f,
-                                   clipRect.fTop + 14.0f, font, textPaint);
+                
+                // Add padding
+                canvas->drawString(name.toRawUTF8(), clipRect.fLeft + spacing::XS,
+                                   clipRect.fTop + typography::FONT_SM + spacing::XS, font, textPaint);
+            }
+        }
+
+        // Draw clip content (waveform or MIDI blobs)
+        if (clipView.isMidi) {
+            drawClipMidiBlobs(canvas, clipView, clipRect);
+        } else {
+            drawClipWaveform(canvas, clipView, clipRect);
+        }
+    }
+
+    // 4. Time Ruler (Professional Bar.Beat.Tick format)
+    {
+        // Background
+        SkPaint rulerBgPaint;
+        rulerBgPaint.setColor(colors::BG_DARKER);
+        canvas->drawRect(
+            SkRect::MakeXYWH(0.0f, 0.0f, width, (float)rulerHeight),
+            rulerBgPaint);
+
+        // Bottom border
+        SkPaint rulerBorderPaint;
+        rulerBorderPaint.setColor(colors::BORDER_SUBTLE);
+        canvas->drawLine(0, rulerHeight, width, rulerHeight, rulerBorderPaint);
+
+        SkPaint tickPaint;
+        tickPaint.setColor(colors::TEXT_DISABLED);
+        tickPaint.setStrokeWidth(1.0f);
+        tickPaint.setAntiAlias(true);
+
+        SkPaint barTickPaint;
+        barTickPaint.setColor(colors::TEXT_SECONDARY);
+        barTickPaint.setStrokeWidth(1.5f);
+        barTickPaint.setAntiAlias(true);
+
+        SkFont font;
+        font.setSize(typography::FONT_XS);
+        font.setEdging(SkFont::Edging::kAntiAlias);
+        
+        SkPaint textPaint;
+        textPaint.setColor(colors::TEXT_SECONDARY);
+        textPaint.setAntiAlias(true);
+
+        int beatsPerBar = getBeatsPerBar();
+        if (beatsPerBar <= 0) beatsPerBar = 4;
+
+        double startBeat = std::floor(viewStartBeats);
+        double endBeat = viewStartBeats + (width / pixelsPerBeat);
+
+        for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
+            float x = beatsToX(beat);
+            if (x < 0 || x > width)
+                continue;
+
+            int beatInt = static_cast<int>(beat);
+            bool isBarLine = (beatInt % beatsPerBar == 0);
+
+            if (isBarLine) {
+                // Bar line - taller tick, show bar number
+                canvas->drawLine(x, (float)rulerHeight - 12.0f, x, (float)rulerHeight, barTickPaint);
+                
+                int barNumber = (beatInt / beatsPerBar) + 1;
+                juce::String barStr = juce::String(barNumber);
+                float textWidth = font.measureText(barStr.toRawUTF8(), barStr.length(),
+                                                   SkTextEncoding::kUTF8);
+                canvas->drawString(barStr.toRawUTF8(), x - textWidth / 2.0f, 12.0f, font,
+                                   textPaint);
+            } else {
+                // Beat tick - shorter
+                canvas->drawLine(x, (float)rulerHeight - 4.0f, x, (float)rulerHeight, tickPaint);
             }
         }
     }
 
-    // Time Ruler
-    {
-        SkPaint rulerBgPaint;
-        rulerBgPaint.setColor(SkColorSetRGB(42, 42, 42));
-        canvas->drawRect(
-            SkRect::MakeXYWH(0.0f, 0.0f, (float)bounds.getWidth(), (float)rulerHeight),
-            rulerBgPaint);
-
-        SkPaint tickPaint;
-        tickPaint.setColor(SkColorSetRGB(100, 100, 100));
-        tickPaint.setStrokeWidth(1.0f);
-
-        SkFont font;
-        font.setSize(12.0f);
-        font.setEdging(SkFont::Edging::kAntiAlias);
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetRGB(200, 200, 200));
-        textPaint.setAntiAlias(true);
-
-        double startBeat = std::floor(viewStartBeats);
-        double endBeat = viewStartBeats + (bounds.getWidth() / pixelsPerBeat);
-
-        for (double beat = startBeat; beat <= endBeat; beat += 1.0) {
-            float x = beatsToX(beat);
-            if (x < 0 || x > bounds.getWidth())
-                continue;
-
-            canvas->drawLine(x, (float)rulerHeight - 8.0f, x, (float)rulerHeight, tickPaint);
-
-            juce::String numStr = juce::String(static_cast<int>(beat + 1));
-            float textWidth = font.measureText(numStr.toRawUTF8(), numStr.length(),
-                                               SkTextEncoding::kUTF8);
-            canvas->drawString(numStr.toRawUTF8(), x - textWidth / 2.0f, 15.0f, font,
-                               textPaint);
-        }
-    }
-
-    // Marquee
+    // 5. Marquee
     if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
         SkRect mRect =
             SkRect::MakeXYWH((float)marqueeRect.getX(), (float)marqueeRect.getY(),
                              (float)marqueeRect.getWidth(), (float)marqueeRect.getHeight());
 
         SkPaint fillPaint;
-        fillPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
+        fillPaint.setColor(withAlpha(colors::CYAN, 0.1f));
         canvas->drawRect(mRect, fillPaint);
 
         SkPaint borderPaint;
-        borderPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
+        borderPaint.setColor(withAlpha(colors::CYAN, 0.5f));
         borderPaint.setStyle(SkPaint::kStroke_Style);
         canvas->drawRect(mRect, borderPaint);
     }
 
-    // Loop Region (Skia)
+    // 6. Loop Region
     if (loopEnabled_) {
         float loopStartX = beatsToX(loopStartBeats_);
         float loopEndX = beatsToX(loopEndBeats_);
-        float width = static_cast<float>(bounds.getWidth());
-        float height = static_cast<float>(bounds.getHeight());
         
         // Clamp to visible area
         if (loopEndX > 0 && loopStartX < width) {
             loopStartX = juce::jmax(0.0f, loopStartX);
             loopEndX = juce::jmin(width, loopEndX);
             
-            // Loop region highlight in ruler
+            // Highlight in ruler
             SkPaint loopRulerPaint;
-            loopRulerPaint.setColor(SkColorSetARGB(68, 0, 170, 255));  // Semi-transparent blue
+            loopRulerPaint.setColor(withAlpha(colors::BLUE, 0.3f));
             canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, loopEndX - loopStartX, rulerHeight), loopRulerPaint);
             
-            // Loop region tint over track area
+            // Subtle tint over track area
             SkPaint loopTrackPaint;
-            loopTrackPaint.setColor(SkColorSetARGB(16, 0, 170, 255));  // Very subtle blue
+            loopTrackPaint.setColor(withAlpha(colors::BLUE, 0.05f));
             canvas->drawRect(SkRect::MakeXYWH(loopStartX, rulerHeight, loopEndX - loopStartX, height - rulerHeight), loopTrackPaint);
             
             // Loop brackets
             SkPaint bracketPaint;
-            bracketPaint.setColor(SkColorSetRGB(0, 170, 255));
-            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 3, rulerHeight), bracketPaint);
-            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 3, 0, 3, rulerHeight), bracketPaint);
+            bracketPaint.setColor(colors::BLUE); // Solid blue
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 2, rulerHeight), bracketPaint);
+            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 2, 0, 2, rulerHeight), bracketPaint);
             
-            // L/R markers
+            // Labels
             SkFont markerFont;
-            markerFont.setSize(10.0f);
+            markerFont.setSize(typography::FONT_XS);
             SkPaint markerTextPaint;
-            markerTextPaint.setColor(SK_ColorWHITE);
+            markerTextPaint.setColor(colors::TEXT_PRIMARY);
             markerTextPaint.setAntiAlias(true);
-            canvas->drawString("L", loopStartX + 5, 10, markerFont, markerTextPaint);
-            canvas->drawString("R", loopEndX - 12, 10, markerFont, markerTextPaint);
+            canvas->drawString("L", loopStartX + 4, 12, markerFont, markerTextPaint);
+            canvas->drawString("R", loopEndX - 10, 12, markerFont, markerTextPaint);
         }
     }
 
-    // Playhead (Skia)
+    // 7. Playhead
     {
         float x = beatsToX(playheadBeats_);
-        float height = static_cast<float>(bounds.getHeight());
         
-        if (x >= 0 && x <= bounds.getWidth()) {
-            // Playhead color
+        if (x >= 0 && x <= width) {
             SkColor playheadColor = isPlaying_ 
-                ? SkColorSetRGB(0, 255, 255)   // Cyan when playing
-                : SkColorSetRGB(170, 170, 170); // Grey when stopped
+                ? colors::CYAN        // Neon Cyan when playing
+                : colors::TEXT_DISABLED; // Dimmed when stopped
             
             SkPaint playheadPaint;
             playheadPaint.setColor(playheadColor);
-            playheadPaint.setStrokeWidth(2.0f);
+            playheadPaint.setStrokeWidth(1.5f);
             playheadPaint.setAntiAlias(true);
             
-            // Main line
+            // Line
             canvas->drawLine(x, 0, x, height, playheadPaint);
             
-            // Triangle at top
+            // Triangle Head
             SkPath triangle;
             triangle.moveTo(x - 6, 0);
             triangle.lineTo(x + 6, 0);
-            triangle.lineTo(x, 10);
+            triangle.lineTo(x, 12);
             triangle.close();
             
             playheadPaint.setStyle(SkPaint::kFill_Style);
@@ -1212,5 +1284,230 @@ void ArrangerComponent::setGridResolution(GridResolution res) {
     gridSnapBeats = gridResolutionToBeats(res);
     repaint();
 }
+
+//==============================================================================
+// Waveform Cache Management
+//==============================================================================
+
+void ArrangerComponent::buildWaveformCache(const juce::String& audioFilePath) {
+    // Check if already cached
+    if (waveformCache_.find(audioFilePath) != waveformCache_.end()) {
+        return;
+    }
+
+    // Get audio file from pool
+    auto& pool = engine_.getAudioFilePool();
+    juce::File file(audioFilePath);
+    
+    auto handle = pool.getFile(file);
+    if (!handle || !handle->isValid()) {
+        // File not loaded, try to load it
+        juce::String error;
+        handle = pool.loadFile(file, error);
+        if (!handle || !handle->isValid()) {
+            return; // Failed to load
+        }
+    }
+
+    // Build waveform cache
+    WaveformCache cache;
+    cache.audioFilePath = audioFilePath;
+    cache.samplesPerPixel = 512; // Resolution for thumbnail
+
+    const juce::AudioBuffer<float>& buffer = handle->buffer;
+    int numSamples = static_cast<int>(handle->lengthInSamples);
+    int numChannels = handle->numChannels;
+    
+    if (numSamples <= 0 || numChannels <= 0) {
+        return;
+    }
+
+    int numPeaks = (numSamples + cache.samplesPerPixel - 1) / cache.samplesPerPixel;
+    cache.minPeaks.resize(numPeaks, 0.0f);
+    cache.maxPeaks.resize(numPeaks, 0.0f);
+
+    // Mix down to mono and compute peaks
+    for (int peakIdx = 0; peakIdx < numPeaks; ++peakIdx) {
+        int startSample = peakIdx * cache.samplesPerPixel;
+        int endSample = juce::jmin(startSample + cache.samplesPerPixel, numSamples);
+        
+        float minVal = 0.0f;
+        float maxVal = 0.0f;
+        
+        for (int s = startSample; s < endSample; ++s) {
+            float sample = 0.0f;
+            for (int ch = 0; ch < numChannels; ++ch) {
+                sample += buffer.getSample(ch, s);
+            }
+            sample /= static_cast<float>(numChannels);
+            
+            minVal = juce::jmin(minVal, sample);
+            maxVal = juce::jmax(maxVal, sample);
+        }
+        
+        cache.minPeaks[peakIdx] = minVal;
+        cache.maxPeaks[peakIdx] = maxVal;
+    }
+
+    cache.isValid = true;
+    waveformCache_[audioFilePath] = std::move(cache);
+}
+
+const ArrangerComponent::WaveformCache* ArrangerComponent::getWaveformCache(const juce::String& audioFilePath) const {
+    auto it = waveformCache_.find(audioFilePath);
+    if (it != waveformCache_.end() && it->second.isValid) {
+        return &it->second;
+    }
+    return nullptr;
+}
+
+//==============================================================================
+// Bar.Beat.Tick Formatting
+//==============================================================================
+
+int ArrangerComponent::getBeatsPerBar() const {
+    return projectState.getTimeSignatureNumerator();
+}
+
+juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
+    int beatsPerBar = getBeatsPerBar();
+    if (beatsPerBar <= 0) beatsPerBar = 4;
+
+    int totalBeats = static_cast<int>(beats);
+    int bar = (totalBeats / beatsPerBar) + 1;
+    int beat = (totalBeats % beatsPerBar) + 1;
+    
+    // Tick is the fractional part (0-99 for display)
+    double fractional = beats - static_cast<double>(totalBeats);
+    int tick = static_cast<int>(fractional * 100.0);
+    
+    return juce::String(bar) + "." + juce::String(beat) + "." + juce::String(tick).paddedLeft('0', 2);
+}
+
+#ifdef ZENITH_USE_SKIA
+//==============================================================================
+// Clip Content Drawing - Waveform
+//==============================================================================
+
+void ArrangerComponent::drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect) {
+    using namespace zenith::design;
+
+    if (clip.audioFilePath.isEmpty()) {
+        return;
+    }
+
+    const WaveformCache* cache = getWaveformCache(clip.audioFilePath);
+    if (!cache || cache->minPeaks.empty()) {
+        return;
+    }
+
+    float clipWidth = clipRect.width();
+    float clipHeight = clipRect.height();
+    float centerY = clipRect.centerY();
+    float waveHeight = (clipHeight - 20.0f) * 0.5f; // Leave room for name
+
+    // Calculate visible range
+    int numPeaks = static_cast<int>(cache->minPeaks.size());
+    float peaksPerPixel = static_cast<float>(numPeaks) / clipWidth;
+
+    SkPaint wavePaint;
+    wavePaint.setAntiAlias(true);
+    wavePaint.setColor(clip.isSelected ? colors::CYAN : withAlpha(colors::BLUE, 0.7f));
+    wavePaint.setStrokeWidth(1.0f);
+    wavePaint.setStyle(SkPaint::kStroke_Style);
+
+    // Draw waveform as vertical lines
+    for (float px = 0; px < clipWidth; px += 1.0f) {
+        int peakIdx = static_cast<int>(px * peaksPerPixel);
+        if (peakIdx >= numPeaks) break;
+
+        float minVal = cache->minPeaks[peakIdx];
+        float maxVal = cache->maxPeaks[peakIdx];
+
+        float y1 = centerY - (maxVal * waveHeight);
+        float y2 = centerY - (minVal * waveHeight);
+
+        // Clamp to clip bounds
+        y1 = juce::jmax(clipRect.fTop + 14.0f, y1);  // Below clip name
+        y2 = juce::jmin(clipRect.fBottom - 2.0f, y2);
+
+        if (y2 > y1) {
+            canvas->drawLine(clipRect.fLeft + px, y1, clipRect.fLeft + px, y2, wavePaint);
+        }
+    }
+}
+
+//==============================================================================
+// Clip Content Drawing - MIDI Blobs
+//==============================================================================
+
+void ArrangerComponent::drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect) {
+    using namespace zenith::design;
+
+    if (clip.noteBlobs.empty()) {
+        return;
+    }
+
+    // Find pitch range for scaling
+    int minPitch = 127;
+    int maxPitch = 0;
+    for (const auto& blob : clip.noteBlobs) {
+        minPitch = juce::jmin(minPitch, blob.pitch);
+        maxPitch = juce::jmax(maxPitch, blob.pitch);
+    }
+    
+    if (maxPitch == minPitch) {
+        minPitch -= 6;
+        maxPitch += 6;
+    }
+    
+    int pitchRange = maxPitch - minPitch;
+    if (pitchRange < 12) {
+        int expand = (12 - pitchRange) / 2;
+        minPitch -= expand;
+        maxPitch += expand;
+        pitchRange = maxPitch - minPitch;
+    }
+
+    float clipWidth = clipRect.width();
+    float noteAreaTop = clipRect.fTop + 14.0f; // Below clip name
+    float noteAreaHeight = clipRect.height() - 16.0f;
+
+    SkPaint blobPaint;
+    blobPaint.setAntiAlias(true);
+    blobPaint.setColor(clip.isSelected ? colors::NEON_GREEN : withAlpha(colors::NEON_GREEN, 0.7f));
+
+    for (const auto& blob : clip.noteBlobs) {
+        // Calculate position relative to clip
+        float noteStartRatio = static_cast<float>((blob.startBeats) / clip.lengthBeats);
+        float noteLengthRatio = static_cast<float>(blob.lengthBeats / clip.lengthBeats);
+        
+        float x = clipRect.fLeft + (noteStartRatio * clipWidth);
+        float w = noteLengthRatio * clipWidth;
+        w = juce::jmax(2.0f, w); // Minimum width of 2px
+        
+        // Y position (inverted - higher pitch = higher on screen)
+        float pitchRatio = static_cast<float>(blob.pitch - minPitch) / static_cast<float>(pitchRange);
+        float y = noteAreaTop + noteAreaHeight * (1.0f - pitchRatio);
+        float h = juce::jmax(2.0f, noteAreaHeight / static_cast<float>(pitchRange));
+        h = juce::jmin(h, 6.0f); // Max height of 6px for blob
+
+        // Clamp to clip bounds
+        if (x < clipRect.fLeft) {
+            w -= (clipRect.fLeft - x);
+            x = clipRect.fLeft;
+        }
+        if (x + w > clipRect.fRight) {
+            w = clipRect.fRight - x;
+        }
+
+        if (w > 0) {
+            SkRRect roundedNote;
+            roundedNote.setRectXY(SkRect::MakeXYWH(x, y - h / 2.0f, w, h), 1.0f, 1.0f);
+            canvas->drawRRect(roundedNote, blobPaint);
+        }
+    }
+}
+#endif
 
 } // namespace zenith
