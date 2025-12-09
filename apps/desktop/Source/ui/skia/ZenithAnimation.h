@@ -372,4 +372,3 @@ namespace duration {
 
 } // namespace animation
 } // namespace zenith
-

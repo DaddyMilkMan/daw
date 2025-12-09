@@ -1048,7 +1048,6 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
 #endif
 
 //==============================================================================
-namespace zenith {
 
 bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

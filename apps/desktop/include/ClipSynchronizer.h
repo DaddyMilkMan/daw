@@ -1,55 +1,30 @@
 /**
  * @file ClipSynchronizer.h
- * @brief Synchronizes clips between Engine and ProjectState
+ * @brief Synchronizes clips between ProjectState and Engine
  *
- * Integration stub: Shows how ClipSynchronizer would work when recording
- * features are merged from U3 branch.
- *
- * Data Flow:
- * 1. RecordingManager creates clips in Engine tracks (zenith::Clip)
- * 2. ClipSynchronizer monitors Engine track changes
- * 3. When new Engine clip appears, creates corresponding ProjectState CLIP node
- * 4. ArrangerView listens to ProjectState changes and displays clips
- *
- * Thread Safety:
- * - Runs on MESSAGE THREAD (timer-based polling)
- * - Reads Engine clips from message thread (safe via dirty flags)
- * - Writes to ProjectState (message thread only)
+ * This class is responsible for ensuring that the clip data in the ProjectState
+ * (which is UI-facing and manages persistent storage) is consistent with the
+ * clips used by the audio Engine (which processes audio in real-time).
  */
 
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_audio_formats/juce_audio_formats.h>
-#include <juce_audio_processors/juce_audio_processors.h>
-#include <juce_data_structures/juce_data_structures.h>
-#include "ProjectState.h"
-#include "Engine.h"
 #include <map>
+
+// Forward declarations
+namespace zenith {
+class ProjectState;
+class Engine;
 
 //==============================================================================
 /**
  * @class ClipSynchronizer
- * @brief Syncs Engine clips to ProjectState clips
- *
- * This class bridges the audio engine's clip data with the project state:
- * - When recording creates new clips in Engine, they appear in ProjectState
- * - When user adds clips via UI, they're created in both Engine and ProjectState
- * - Keeps clip positions, lengths, and properties synchronized
+ * @brief Synchronizes clips between ProjectState and Engine
  */
-<<<<<<< Updated upstream
-class ClipSynchronizer : public juce::Timer
-{
-=======
-
-
+//==============================================================================
 class ClipSynchronizer : public juce::Timer {
->>>>>>> Stashed changes
 public:
     //==========================================================================
     /**
@@ -138,3 +113,4 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSynchronizer)
 };
 
+} // namespace zenith

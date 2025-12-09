@@ -1,6 +1,6 @@
 /*
   ==============================================================================
-
+*/
 #include "../../include/ui/MixerComponent.h"
 #include "../ui/ZenithLookAndFeel.h"
 #include "../../Source/engine/Track.h"
@@ -16,7 +16,7 @@
 #include "../ui/skia/SkiaTheme.h"
 
 //==============================================================================
-MixerComponent::MixerComponent(zenith::ProjectState &ps) : projectState(ps) {
+MixerComponent::MixerComponent(zenith::Engine &engine, zenith::ProjectState &ps) : projectState(ps) {
   // Listen to the entire state tree for changes
   projectState.getState().addListener(this);
 
@@ -507,7 +507,7 @@ MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   strip->armButton->setToggleState(trackNode[zenith::ProjectState::PROP_ARMED],
                                    juce::dontSendNotification);
   strip->armButton->onClick = [this, trackId = strip->trackId,
-                               button = strip->armButton.get()]() {
+                                button = strip->armButton.get()]() {
     if (!updatingFromState)
       onArmClicked(trackId, button->getToggleState());
   };
@@ -532,6 +532,7 @@ void MixerComponent::updateTrackStripFromState(
 #endif
     // In Skia mode, we just redraw
     repaint(); 
+  }
 
   // Update volume slider
   if (strip.volumeSlider) {

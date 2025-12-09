@@ -2,10 +2,10 @@
   ==============================================================================
 
     SkiaSlider.cpp
-    Created: 2025-11-30
-    Authors: Kenji Nakamura (lead), Leo Rossi, Diego Martinez, Isabella Moretti
+    Created: 2025-11-28
+    Author:  Zenith DAW AI Team
 
-    Implementation of SkiaSlider.
+    Skia-based UI slider component.
 
   ==============================================================================
 */
@@ -17,171 +17,147 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <core/SkColor.h>
-#include <core/SkRect.h>
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
-#include "RenderTree.h"
+#include <cmath>
 
 namespace zenith {
 
-SkiaSlider::SkiaSlider(const juce::String& name) {
-    setSize(40, 150); // Vertical default
-    
-    // Accessibility
-    setDescription(name.isEmpty() ? "Slider" : name);
-    setWantsKeyboardFocus(true);
-    
-    // Initial history
-    valueHistory_.push(value_);
+// ============================================================================
+// CONSTRUCTION
+// ============================================================================
+
+SkiaSlider::SkiaSlider(juce::String name) : name_(std::move(name)) {
+    // Default values
+    setRange(0.0, 1.0);
+    setValue(0.5);
+    setOrientation(Orientation::Vertical);
+    setStyle(Style::Fader);
+    setValueColoring(true);
+
+    // Make sure to setComponentID for AI interaction
+    setComponentID(this->name_);
+
+    // Default animation config for sliders
+    animation::Spring::Config sliderSpringConfig = animation::Spring::Config::smooth();
+    addAnimationProperty("scale", sliderSpringConfig);
+    addAnimationProperty("glow", sliderSpringConfig);
 }
 
 SkiaSlider::~SkiaSlider() {
+    // Nothing to do
 }
 
 // ============================================================================
-// APPEARANCE
+// CONFIGURATION
 // ============================================================================
 
-void SkiaSlider::setStyle(Style style) {
-    if (style_ != style) {
-        style_ = style;
-        markDirty();
-    }
+void SkiaSlider::setRange(double min, double max, double interval) {
+    range_ = juce::NormalisableRange<double>(min, max, interval);
+    // Update current value to fit new range
+    setValue(juce::jlimit(range_.start, range_.end, value_));
 }
 
-void SkiaSlider::setOrientation(Orientation orientation) {
-    if (orientation_ != orientation) {
-        orientation_ = orientation;
-        // Swap dimensions if needed for better default feel
-        if (orientation == Orientation::Horizontal && getWidth() < getHeight()) {
-            setSize(getHeight(), getWidth());
-        } else if (orientation == Orientation::Vertical && getWidth() > getHeight()) {
-            setSize(getHeight(), getWidth());
-        }
-        markDirty();
-    }
+void SkiaSlider::setSkewFactor(double skew) {
+    range_.setSkewForCentre(skew);
+    // Update current value to fit new range
+    setValue(juce::jlimit(range_.start, range_.end, value_));
 }
 
-void SkiaSlider::setValueColoring(bool enabled) {
-    valueColoring_ = enabled;
-    markDirty();
-}
+void SkiaSlider::setValue(double newValue, juce::NotificationType notification) {
+    if (newValue == value_) return;
 
-// ============================================================================
-// VALUE CONTROL
-// ============================================================================
+    value_ = juce::jlimit(range_.start, range_.end, newValue);
 
-void SkiaSlider::setValue(float value) {
-    float clampedValue = juce::jlimit(0.0f, 1.0f, value);
-    
-    if (std::abs(value_ - clampedValue) > 0.0001f) {
-        value_ = clampedValue;
-        
+    if (notification != juce::dontSendNotification) {
+        // Trigger callback
         if (onValueChange) {
-            onValueChange(value_);
+            onValueChange();
         }
-        
-        markDirty();
     }
+    repaint();
 }
 
-void SkiaSlider::setDefaultValue(float value) {
-    defaultValue_ = juce::jlimit(0.0f, 1.0f, value);
-}
-
-void SkiaSlider::setDisplayRange(float min, float max) {
-    displayMin_ = min;
-    displayMax_ = max;
-    markDirty();
-}
-
-void SkiaSlider::setSnapToValue(bool enabled, float snapValue, float tolerance) {
-    snapEnabled_ = enabled;
-    snapValue_ = snapValue;
-    snapTolerance_ = tolerance;
+void SkiaSlider::setDefaultValue(double defValue) {
+    defaultValue_ = juce::jlimit(range_.start, range_.end, defValue);
 }
 
 // ============================================================================
-// INTERACTION
+// MOUSE INTERACTION
 // ============================================================================
 
 void SkiaSlider::mouseDown(const juce::MouseEvent& e) {
-    // Context Menu
-    if (e.mods.isPopupMenu()) {
-        showContextMenu();
-        return;
-    }
-    
-    // Fine control
-    isFineControl_ = e.mods.isShiftDown();
-    
+    if (e.mods.isPopupMenu()) return; // Right click for context menu
+
     isDragging_ = true;
-    valueHistory_.push(value_); // Save for undo
+    dragStartValue_ = value_;
+    dragStartMousePosition_ = (orientation_ == Orientation::Vertical) ? e.position.y : e.position.x;
+
+    // Bring to front on click
+    toFront(true);
     
-    // Jump to value immediately on click (pro behavior)
-    setValue(positionToValue(e.getPosition()));
-    
-    if (onDragStart) {
-        onDragStart();
-    }
-    
-    grabKeyboardFocus();
+    // Quick press-down animation (snappier spring)
+    animateWithSpring("scale", 0.98f, 600.0f, 35.0f);
+
+    if (onDragStart) onDragStart();
 }
 
 void SkiaSlider::mouseDrag(const juce::MouseEvent& e) {
     if (!isDragging_) return;
+
+    float mousePos = (orientation_ == Orientation::Vertical) ? e.position.y : e.position.x;
+    float boundsSize = (orientation_ == Orientation::Vertical) ? (float)getHeight() : (float)getWidth();
+
+    // Invert vertical drag
+    float dist = (orientation_ == Orientation::Vertical) ? dragStartMousePosition_ - mousePos : mousePos - dragStartMousePosition_;
+
+    // Sensitivity (can be adjusted)
+    float sensitivity = 0.005f;
+
+    // Calculate new normalized value (0.0 - 1.0)
+    float delta = dist * sensitivity;
+    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(dragStartValue_) + delta);
     
-    // Fine control update
-    isFineControl_ = e.mods.isShiftDown();
-    
-    float newValue = positionToValue(e.getPosition());
-    
-    // Snapping logic
-    if (snapEnabled_) {
-        if (std::abs(newValue - snapValue_) < snapTolerance_) {
-            newValue = snapValue_;
-        }
+    // Convert back to actual value
+    double newValue = range_.convertFrom0to1(newValueNorm);
+
+    // Apply snap to interval if set
+    if (range_.interval > 0.0) {
+        newValue = range_.snapToLegalValue(newValue);
     }
-    
-    setValue(newValue);
+
+    setValue(newValue, juce::sendNotification);
 }
 
 void SkiaSlider::mouseUp(const juce::MouseEvent& e) {
     juce::ignoreUnused(e);
-    if (isDragging_) {
-        isDragging_ = false;
-        if (onDragEnd) {
-            onDragEnd();
-        }
-    }
+    isDragging_ = false;
+
+    // Bouncy release animation
+    animateWithSpring("scale", isHovered() ? 1.05f : 1.0f, 300.0f, 15.0f);
+
+    if (onDragEnd) onDragEnd();
 }
 
 void SkiaSlider::mouseDoubleClick(const juce::MouseEvent& e) {
-    juce::ignoreUnused(e);
-    resetToDefault();
+    if (e.mods.isPopupMenu()) return; // Right click for context menu
+    if (e.originalComponent == this) {
+        setValue(defaultValue_, juce::sendNotification);
+    }
 }
 
 void SkiaSlider::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
-    float delta = (orientation_ == Orientation::Vertical ? wheel.deltaY : wheel.deltaX) * 0.1f;
-    if (e.mods.isShiftDown()) delta *= 0.1f;
-    
-    setValue(juce::jlimit(0.0f, 1.0f, value_ + delta));
-}
+    if (isDragging_) return; // Don't interfere with dragging
 
-float SkiaSlider::positionToValue(const juce::Point<int>& pos) const {
-    auto bounds = getLocalBounds().toFloat();
-    float val = 0.0f;
-    
-    if (orientation_ == Orientation::Vertical) {
-        // Bottom is 0, Top is 1
-        val = 1.0f - (pos.y / bounds.getHeight());
-    } else {
-        // Left is 0, Right is 1
-        val = pos.x / bounds.getWidth();
+    float delta = wheel.deltaY * 0.05f; // Adjust sensitivity
+    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(value_) + delta);
+    double newValue = range_.convertFrom0to1(newValueNorm);
+
+    // Apply snap to interval if set
+    if (range_.interval > 0.0) {
+        newValue = range_.snapToLegalValue(newValue);
     }
-    
-    return juce::jlimit(0.0f, 1.0f, val);
+    setValue(newValue, juce::sendNotification);
 }
 
 void SkiaSlider::onHoverEnter() {
@@ -194,47 +170,40 @@ void SkiaSlider::onHoverExit() {
     animateWithSpring("scale", 1.0f, 300.0f, 25.0f);
 }
 
-// ============================================================================
-// CONTEXT MENU & UNDO/REDO
-// ============================================================================
+bool SkiaSlider::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
+    juce::ignoreUnused(origin);
+    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+        setValue(defaultValue_, juce::sendNotification);
+        return true;
+    }
+    return false;
+}
 
-void SkiaSlider::resetToDefault() {
-    valueHistory_.push(value_);
-    setValue(defaultValue_);
+void SkiaSlider::getTextValue(juce::String& text) const {
+    text = juce::String(value_, 2); // default 2 decimal places for slider
+}
+
+void SkiaSlider::setTextValue(const juce::String& text) {
+    double newValue = text.getDoubleValue();
+    if (newValue != value_) {
+        setValue(newValue, juce::sendNotification);
+    }
+}
+
+void SkiaSlider::cutValue() {
+    juce::SystemClipboard::copyText(juce::String(value_, 2));
+    setValue(defaultValue_, juce::sendNotification);
 }
 
 void SkiaSlider::copyValue() {
-    juce::SystemClipboard::copyTextToClipboard(juce::String(value_));
+    juce::SystemClipboard::copyText(juce::String(value_, 2));
 }
 
 void SkiaSlider::pasteValue() {
-    juce::String text = juce::SystemClipboard::getTextFromClipboard();
-    float val = text.getFloatValue();
-    if (val >= 0.0f && val <= 1.0f) {
-        valueHistory_.push(value_);
-        setValue(val);
+    juce::String clipboardText = juce::SystemClipboard::getTextFromClipboard();
+    if (clipboardText.isNotEmpty()) {
+        setTextValue(clipboardText);
     }
-}
-
-bool SkiaSlider::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
-    // Undo: Ctrl + Z
-    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
-        if (valueHistory_.canUndo()) {
-            setValue(valueHistory_.undo());
-            return true;
-        }
-    }
-    
-    // Redo: Ctrl + Y or Ctrl + Shift + Z
-    if (key == juce::KeyPress('y', juce::ModifierKeys::commandModifier, 0) ||
-        key == juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0)) {
-        if (valueHistory_.canRedo()) {
-            setValue(valueHistory_.redo());
-            return true;
-        }
-    }
-    
-    return SkiaComponent::keyPressed(key, origin);
 }
 
 // ============================================================================
@@ -254,12 +223,12 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
         canvas->scale(scale, scale);
         canvas->translate(-cx, -cy);
     }
-    
+
     // Track
     SkPaint trackPaint;
     trackPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
     trackPaint.setAntiAlias(true);
-    
+
     SkRect trackRect;
     if (orientation_ == Orientation::Vertical) {
         float w = (style_ == Style::Line) ? 2.0f : 6.0f; // Thinner track
@@ -268,27 +237,26 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
         float h = (style_ == Style::Line) ? 2.0f : 6.0f;
         trackRect = SkRect::MakeXYWH(0.0f, bounds.getCentreY() - h/2.0f, bounds.getWidth(), h);
     }
-    
+
     canvas->drawRoundRect(trackRect, 2.0f, 2.0f, trackPaint);
-    
+
     // Fill (for Bar style)
     if (style_ == Style::Bar) {
         SkPaint fillPaint;
-        SkColor color = valueColoring_ ? 
+        SkColor color = valueColoring_ ?
             design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_) : 
             design::colors::CYAN;
-            
+
         fillPaint.setColor(color);
         fillPaint.setAntiAlias(true);
-        
-        SkRect fillRect = trackRect;
+
+        SkRect fillRect;
         if (orientation_ == Orientation::Vertical) {
-            float h = trackRect.height() * value_;
-            fillRect.setXYWH(trackRect.x(), trackRect.bottom() - h, trackRect.width(), h);
+            fillRect = SkRect::MakeXYWH(trackRect.x(), trackRect.bottom() - (trackRect.height() * value_), trackRect.width(), trackRect.height() * value_);
         } else {
-            fillRect.setXYWH(trackRect.x(), trackRect.y(), trackRect.width() * value_, trackRect.height());
+            fillRect = SkRect::MakeXYWH(trackRect.x(), trackRect.y(), trackRect.width() * value_, trackRect.height());
         }
-        
+
         // Glow
         float glowIntensity = getAnimatedValue("glow");
         float globalGlow = design::Settings::getGlowIntensity();
@@ -296,20 +264,20 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
         if ((glowIntensity > 0.01f || isHovered()) && globalGlow > 0.01f) {
             SkPaint glowPaint = fillPaint;
             float intensity = std::max(glowIntensity, isHovered() ? 0.5f : 0.0f);
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f * globalGlow));
-            glowPaint.setAlpha(static_cast<U8CPU>(150 * intensity));
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+            glowPaint.setAlpha(static_cast<U8CPU>(100 * intensity));
             canvas->drawRoundRect(fillRect, 2.0f, 2.0f, glowPaint);
         }
-        
+
         canvas->drawRoundRect(fillRect, 2.0f, 2.0f, fillPaint);
     }
-    
+
     // Handle (for Line and Fader styles)
     if (style_ != Style::Bar) {
         SkRect handleRect;
         float handleSize = (style_ == Style::Fader) ? 24.0f : 14.0f;
         float handleThickness = (style_ == Style::Fader) ? 12.0f : 14.0f;
-        
+
         if (orientation_ == Orientation::Vertical) {
             float y = bounds.getHeight() * (1.0f - value_);
             // Clamp handle within bounds
@@ -320,16 +288,16 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
             x = juce::jlimit(handleThickness/2.0f, bounds.getWidth() - handleThickness/2.0f, x);
             handleRect = SkRect::MakeXYWH(x - handleThickness/2.0f, bounds.getCentreY() - handleSize/2.0f, handleThickness, handleSize);
         }
-        
+
         SkPaint handlePaint;
         handlePaint.setAntiAlias(true);
-        
+
         // Fader cap detail
         if (style_ == Style::Fader) {
             // Modern Fader Cap
             handlePaint.setColor(design::colors::BG_LIGHT); // Dark body
             canvas->drawRoundRect(handleRect, 2.0f, 2.0f, handlePaint);
-            
+
             // Border
             SkPaint borderPaint;
             borderPaint.setStyle(SkPaint::kStroke_Style);
@@ -337,19 +305,19 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
             borderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
             borderPaint.setAntiAlias(true);
             canvas->drawRoundRect(handleRect, 2.0f, 2.0f, borderPaint);
-            
+
             // Center Indicator Line
             SkPaint linePaint;
             linePaint.setColor(design::colors::CYAN);
             linePaint.setStrokeWidth(2.0f);
             linePaint.setAntiAlias(true);
-            
+
             // Glow on indicator
             float glow = getAnimatedValue("glow");
             if (glow > 0.01f) {
                 linePaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 3.0f * glow));
             }
-            
+
             if (orientation_ == Orientation::Vertical) {
                 canvas->drawLine(handleRect.left() + 2, handleRect.centerY(), handleRect.right() - 2, handleRect.centerY(), linePaint);
             } else {
@@ -360,7 +328,7 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
             handlePaint.setColor(SK_ColorWHITE);
             canvas->drawCircle(handleRect.centerX(), handleRect.centerY(), handleSize/2.0f, handlePaint);
         }
-        
+
         // Handle Hover Glow
         float glow = getAnimatedValue("glow");
         if (glow > 0.01f) {
@@ -374,37 +342,21 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
 }
 
 // ============================================================================
-// RENDER STATE CAPTURE
+// DEBUGGING / AI
 // ============================================================================
 
-render::SliderRenderState SkiaSlider::captureRenderState() const {
-    render::SliderRenderState state;
-    
-    // Bounds
-    state.bounds = SkRect::MakeXYWH(
-        static_cast<float>(getX()),
-        static_cast<float>(getY()),
-        static_cast<float>(getWidth()),
-        static_cast<float>(getHeight())
-    );
-    
-    // Value
-    state.value = value_;
-    
-    // Interaction state
-    state.isHovered = isHovered();
-    state.isDragging = isDragging_;
-    
-    // Color
-    state.color = design::colors::CYAN;
-    if (valueColoring_) {
-        state.color = design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_);
-    }
-    
-    // Label text (pre-format for thread-safe rendering)
-    state.labelText = getDescription();
-    
-    return state;
+std::vector<SkiaComponent::AIElementInfo> SkiaSlider::getInspectableElements() {
+  SkiaComponent::AIElementInfo info;
+
+  auto bounds = getLocalBounds().toFloat();
+  info.bounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                 bounds.getWidth(), bounds.getHeight());
+
+  info.type = "slider";
+  info.parameterId = getName();
+  info.currentValue = value_;
+
+  return {info};
 }
 
 } // namespace zenith

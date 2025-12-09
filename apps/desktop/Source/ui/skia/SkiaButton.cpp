@@ -12,6 +12,8 @@
 #include "SkiaButton.h"
 #include "ZenithAnimation.h"
 #include "../ZenithTypography.h"
+#include "ZenithAnimation.h"
+#include "../ZenithTypography.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>

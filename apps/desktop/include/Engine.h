@@ -46,6 +46,7 @@
 
 #include "EngineEvent.h"
 #include "../Source/dsp/Dither.h"
+#include "../Source/engine/RoutingGraph.h"
 
 
 // Forward declarations
@@ -774,7 +775,6 @@ private:
   // Test tone generator
   double phase{0.0};
   std::atomic<bool> enableTestTone_{false};
-
   // Track container (message thread for modification)
   // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot sharing
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
@@ -825,6 +825,9 @@ private:
 
   // Phase 15: Tempo map
   std::unique_ptr<zenith::TempoMap> tempoMap_;
+
+  // Routing graph (audio signal flow)
+  RoutingGraph routingGraph_;
 
   // Unified render path: Pre-allocated track buffers (avoid allocation in audio
   // thread)

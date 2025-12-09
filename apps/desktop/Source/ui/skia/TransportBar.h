@@ -46,7 +46,7 @@ class TransportBar : public SkiaComponent {
 public:
     TransportBar();
     ~TransportBar() override = default;
-
+    
     void drawSkia(SkCanvas* canvas) override;
     void resized() override;
     void mouseDown(const juce::MouseEvent& e) override;
@@ -158,11 +158,10 @@ private:
     bool paintsInitialized_ = false;
     
     void initializePaints();
-    
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 };
 
 #endif // ZENITH_USE_SKIA
 
 } // namespace zenith
-

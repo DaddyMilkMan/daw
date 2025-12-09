@@ -50,7 +50,7 @@ class MixerComponent :
 #endif
     public juce::ValueTree::Listener {
 public:
-  MixerComponent(zenith::ProjectState &ps);
+  MixerComponent(zenith::Engine &engine, zenith::ProjectState &ps);
   ~MixerComponent() override;
 
 #ifndef ZENITH_USE_SKIA

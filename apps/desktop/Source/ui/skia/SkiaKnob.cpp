@@ -12,161 +12,161 @@
 
 // Debug helper
 static void logKnob(const juce::String& msg) {
-    // DBG("SkiaKnob: " + msg);
+#ifdef JUCE_DEBUG
+  DBG(msg);
+#endif
 }
-namespace zenith {
 
 // ============================================================================
 // CONSTRUCTION
 // ============================================================================
 
-SkiaKnob::SkiaKnob(const juce::String& name) {
-    logKnob("Constructor start");
-    // Default size
-    setSize(60, 80);
-    logKnob("setSize done");
-    
-    // Accessibility
-    setDescription(name.isEmpty() ? "Knob" : name);
-    setWantsKeyboardFocus(true);
-    
-    // Initial history
-    valueHistory_.push(value_);
-    logKnob("Constructor done");
+namespace zenith {
+
+SkiaKnob::SkiaKnob(juce::String name) : name_(std::move(name)) {
+    // Default values
+    setRange(0.0, 1.0);
+    setValue(0.5);
+    setLabelPosition(LabelPosition::Below);
+    setRotationRange(300.0f); // Default to 300 degrees
+    setValueColoring(false);
+    setStyle(Style::ArcAndDot);
+
+    // Make sure to setComponentID for AI interaction
+    setComponentID(this->name_);
+
+    // Default animation config for knobs
+    animation::Spring::Config knobSpringConfig = animation::Spring::Config::smooth();
+    addAnimationProperty("scale", knobSpringConfig);
+    addAnimationProperty("glow", knobSpringConfig);
 }
 
 SkiaKnob::~SkiaKnob() {
+    // Nothing to do
 }
 
 // ============================================================================
-// APPEARANCE
+// CONFIGURATION
 // ============================================================================
 
-void SkiaKnob::setStyle(Style style) {
-    if (style_ != style) {
-        style_ = style;
-        markDirty();
-    }
-}
-
-void SkiaKnob::setRotationRange(float degrees) {
-    rotationRange_ = degrees;
-    markDirty();
-}
-
-void SkiaKnob::setValueColoring(bool enabled) {
-    valueColoring_ = enabled;
-    markDirty();
-}
-
-// ============================================================================
-// VALUE CONTROL
-// ============================================================================
-
-void SkiaKnob::setValue(float value) {
-    float clampedValue = juce::jlimit(0.0f, 1.0f, value);
-    
-    if (std::abs(value_ - clampedValue) > 0.0001f) {
-        value_ = clampedValue;
-        
-        if (onValueChange) {
-            onValueChange(value_);
-        }
-        
-        markDirty();
-    }
-}
-
-void SkiaKnob::setDefaultValue(float value) {
-    defaultValue_ = juce::jlimit(0.0f, 1.0f, value);
-}
-
-void SkiaKnob::setDisplayRange(float min, float max) {
+void SkiaKnob::setRange(double min, double max, double interval) {
+    range_ = juce::NormalisableRange<double>(min, max, interval);
     displayMin_ = min;
     displayMax_ = max;
-    markDirty(); // For label update
-}
-void SkiaKnob::setSnapToIncrement(bool snap, float increment) {
-    snapEnabled_ = snap;
-    snapIncrement_ = increment;
+    if (interval == 0.0) {
+        // Continuous range, use 3 decimal places
+        decimalPlaces_ = 3;
+    } else {
+        // Discrete range, infer decimal places
+        juce::String intervalStr = juce::String(interval);
+        if (intervalStr.containsChar('.')) {
+            decimalPlaces_ = intervalStr.substring(intervalStr.indexOfChar('.') + 1).length();
+        } else {
+            decimalPlaces_ = 0;
+        }
+    }
+    // Update current value to fit new range
+    setValue(juce::jlimit(range_.start, range_.end, value_));
 }
 
-void SkiaKnob::setSnapToValue(bool enabled, float snapValue, float tolerance) {
-    snapEnabled_ = enabled;
-    snapIncrement_ = snapValue; // Using snapIncrement_ to store the snap value for simplicity in this context, though semantics differ slightly
-    snapTolerance_ = tolerance;
+void SkiaKnob::setSkewFactor(double skew) {
+    range_.setSkewForCentre(skew);
+    // Update current value to fit new range
+    setValue(juce::jlimit(range_.start, range_.end, value_));
+}
+
+void SkiaKnob::setValue(double newValue, juce::NotificationType notification) {
+    if (newValue == value_) return;
+
+    value_ = juce::jlimit(range_.start, range_.end, newValue);
+
+    if (notification != juce::dontSendNotification) {
+        // Trigger callback
+        if (onValueChange) {
+            onValueChange();
+        }
+    }
+    repaint();
+}
+
+void SkiaKnob::setDefaultValue(double defValue) {
+    defaultValue_ = juce::jlimit(range_.start, range_.end, defValue);
 }
 
 // ============================================================================
-// INTERACTION
+// MOUSE INTERACTION
 // ============================================================================
 
 void SkiaKnob::mouseDown(const juce::MouseEvent& e) {
-    // Context Menu (Right Click)
-    if (e.mods.isPopupMenu()) {
-        showContextMenu();
-        return;
-    }
-    
-    // Fine control
-    if (e.mods.isShiftDown() || e.mods.isRightButtonDown()) {
-        isFineControl_ = true;
-    } else {
-        isFineControl_ = false;
-    }
-    
+    if (e.mods.isPopupMenu()) return; // Right click for context menu
+
     isDragging_ = true;
+    dragStartAngle_ = valueToAngle(value_);
     dragStartValue_ = value_;
-    dragStartY_ = e.y;
+    dragStartMouseY_ = e.position.y;
+
+    // Bring to front on click
+    toFront(true);
     
-    // Push current value to history before change
-    valueHistory_.push(value_);
-    
-    if (onDragStart) {
-        onDragStart();
-    }
-    
-    // Focus for keyboard control
-    grabKeyboardFocus();
+    // Quick press-down animation (snappier spring)
+    animateWithSpring("scale", 0.95f, 600.0f, 35.0f);
+
+    if (onDragStart) onDragStart();
 }
 
 void SkiaKnob::mouseDrag(const juce::MouseEvent& e) {
     if (!isDragging_) return;
+
+    // Calculate vertical distance dragged
+    float dist = dragStartMouseY_ - e.position.y;
+
+    // Sensitivity (can be adjusted)
+    float sensitivity = 0.005f;
+
+    // Calculate new normalized value (0.0 - 1.0)
+    float delta = dist * sensitivity;
+    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(dragStartValue_) + delta);
     
-    float sensitivity = dragSensitivity_ * (isFineControl_ ? 0.1f : 1.0f);
-    float delta = (dragStartY_ - e.y) / 200.0f * sensitivity;
-    
-    float newValue = juce::jlimit(0.0f, 1.0f, dragStartValue_ + delta);
-    
-    if (snapEnabled_) {
-        newValue = std::round(newValue / snapIncrement_) * snapIncrement_;
+    // Convert back to actual value
+    double newValue = range_.convertFrom0to1(newValueNorm);
+
+    // Apply snap to interval if set
+    if (range_.interval > 0.0) {
+        newValue = range_.snapToLegalValue(newValue);
     }
-    
-    setValue(newValue);
+
+    setValue(newValue, juce::sendNotification);
 }
 
 void SkiaKnob::mouseUp(const juce::MouseEvent& e) {
     juce::ignoreUnused(e);
-    if (isDragging_) {
-        isDragging_ = false;
-        if (onDragEnd) {
-            onDragEnd();
-        }
-    }
+    isDragging_ = false;
+    
+    // Bouncy release animation
+    animateWithSpring("scale", isHovered() ? 1.04f : 1.0f, 300.0f, 15.0f);
+
+    if (onDragEnd) onDragEnd();
 }
 
 void SkiaKnob::mouseDoubleClick(const juce::MouseEvent& e) {
-    juce::ignoreUnused(e);
-    if (doubleClickReset_) {
-        resetToDefault();
+    if (e.mods.isPopupMenu()) return; // Right click for context menu
+    if (e.originalComponent == this) {
+        setValue(defaultValue_, juce::sendNotification);
     }
 }
 
 void SkiaKnob::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
-    float delta = wheel.deltaY * 0.1f;
-    if (e.mods.isShiftDown()) delta *= 0.1f;
-    
-    setValue(juce::jlimit(0.0f, 1.0f, value_ + delta));
+    if (isDragging_) return; // Don't interfere with dragging
+
+    float delta = wheel.deltaY * 0.1f; // Adjust sensitivity
+    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(value_) + delta);
+    double newValue = range_.convertFrom0to1(newValueNorm);
+
+    // Apply snap to interval if set
+    if (range_.interval > 0.0) {
+        newValue = range_.snapToLegalValue(newValue);
+    }
+    setValue(newValue, juce::sendNotification);
 }
 
 void SkiaKnob::onHoverEnter() {
@@ -180,48 +180,38 @@ void SkiaKnob::onHoverExit() {
 }
 
 bool SkiaKnob::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
-    // Undo: Ctrl + Z
-    if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
-        if (valueHistory_.canUndo()) {
-            float val = valueHistory_.undo();
-            setValue(val);
-            return true;
-        }
+    juce::ignoreUnused(origin);
+    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
+        setValue(defaultValue_, juce::sendNotification);
+        return true;
     }
-    
-    // Redo: Ctrl + Y or Ctrl + Shift + Z
-    if (key == juce::KeyPress('y', juce::ModifierKeys::commandModifier, 0) ||
-        key == juce::KeyPress('z', juce::ModifierKeys::commandModifier | juce::ModifierKeys::shiftModifier, 0)) {
-        if (valueHistory_.canRedo()) {
-            float val = valueHistory_.redo();
-            setValue(val);
-            return true;
-        }
-    }
-    
-    // Call base class for context menu shortcut
-    return SkiaComponent::keyPressed(key, origin);
+    return false;
 }
 
-// ============================================================================
-// CONTEXT MENU & UNDO/REDO
-// ============================================================================
+void SkiaKnob::getTextValue(juce::String& text) const {
+    text = juce::String(value_, decimalPlaces_);
+}
 
-void SkiaKnob::resetToDefault() {
-    valueHistory_.push(value_); // Save before reset
-    setValue(defaultValue_);
+void SkiaKnob::setTextValue(const juce::String& text) {
+    double newValue = text.getDoubleValue();
+    if (newValue != value_) {
+        setValue(newValue, juce::sendNotification);
+    }
+}
+
+void SkiaKnob::cutValue() {
+    juce::SystemClipboard::copyText(juce::String(value_, decimalPlaces_));
+    setValue(defaultValue_, juce::sendNotification);
 }
 
 void SkiaKnob::copyValue() {
-    juce::SystemClipboard::copyTextToClipboard(juce::String(value_));
+    juce::SystemClipboard::copyText(juce::String(value_, decimalPlaces_));
 }
 
 void SkiaKnob::pasteValue() {
-    juce::String text = juce::SystemClipboard::getTextFromClipboard();
-    float val = text.getFloatValue();
-    if (val >= 0.0f && val <= 1.0f) { // Simple validation
-        valueHistory_.push(value_);
-        setValue(val);
+    juce::String clipboardText = juce::SystemClipboard::getTextFromClipboard();
+    if (clipboardText.isNotEmpty()) {
+        setTextValue(clipboardText);
     }
 }
 
@@ -360,7 +350,7 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
 }
 
 // ============================================================================
-// RENDER STATE CAPTURE
+// DEBUGGING / AI
 // ============================================================================
 
 render::KnobRenderState SkiaKnob::captureRenderState() const {

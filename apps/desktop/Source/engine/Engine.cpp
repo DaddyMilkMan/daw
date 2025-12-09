@@ -1045,8 +1045,8 @@ void Engine::removeTrack(int index)
         // Release resources
         tracks_[index]->releaseResources();
         
-        // Remove from vector
-        tracks_[index]->getRoutingGraph().removeNode(tracks_[index]->getTrackId()); // Remove from RoutingGraph
+        // Remove from routing graph
+        routingGraph_.removeNode(tracks_[index]->getTrackId());
         tracks_.erase(tracks_.begin() + index);
         
         DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
@@ -1692,7 +1692,7 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
                             static_cast<int>(i),
                             playhead
                         };
-                        midiFifo_.finishedWrite(1);
+                        midiRecordFifo_.finishedWrite(1);
                     }
                 }
             }
@@ -2416,7 +2416,7 @@ bool Engine::exportProject(const ExportOptions& options)
         options.sampleRate,
         2, // Stereo
         options.bitDepth,
-        {}, // Metadata
+        {},
         0   // Quality
     ));
 

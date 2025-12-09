@@ -14,9 +14,6 @@
 #include "TransportBar.h"
 #include "ZenithDesignSystem.h"
 
-#include "TransportBar.h"
-#include "ZenithDesignSystem.h"
-
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -30,245 +27,6 @@
 
 namespace zenith {
 
-<<<<<<< Updated upstream
-TransportBar::TransportBar() {
-    setSize(800, 60);
-    initializeButtons();
-    
-    // Start animation timer at 60fps
-    startTimerHz(60);
-}
-
-void TransportBar::initializeButtons() {
-    // Play button - green
-    playButton_.label = "▶";
-    playButton_.activeColor = design::colors::NEON_GREEN;
-    
-    // Stop button - blue
-    stopButton_.label = "■";
-    stopButton_.activeColor = design::colors::BLUE;
-    
-    // Record button - red
-    recordButton_.label = "●";
-    recordButton_.activeColor = design::colors::RED;
-    
-    // View toggle - cyan
-    viewToggleButton_.label = "↹";
-    viewToggleButton_.activeColor = design::colors::CYAN;
-    
-    // Settings - white
-    settingsButton_.label = "⚙";
-    settingsButton_.activeColor = 0xFFFFFFFF;
-}
-
-void TransportBar::initializePaints() {
-    if (paintsInitialized_) return;
-    
-    // Initialize typography
-    ZenithTypography::initialize();
-    transportFont_ = ZenithTypography::transportFont();
-    labelFont_ = ZenithTypography::labelFont();
-    
-    paintsInitialized_ = true;
-}
-
-// ============================================================================
-// STATE MANAGEMENT
-// ============================================================================
-
-void TransportBar::setPlaying(bool playing) {
-    if (isPlaying_ == playing) return;
-    isPlaying_ = playing;
-    playButton_.isActive = playing;
-    
-    // Trigger play pulse animation
-    if (playing) {
-        playPulse_.setTarget(1.0f);
-    } else {
-        playPulse_.setTarget(0.0f);
-    }
-    
-    playButton_.glowIntensity.setTarget(playing ? 1.0f : 0.0f);
-    stopButton_.isActive = !playing;
-    stopButton_.glowIntensity.setTarget(!playing ? 0.3f : 0.0f);
-    
-    repaint();
-}
-
-void TransportBar::setRecording(bool recording) {
-    if (isRecording_ == recording) return;
-    isRecording_ = recording;
-    recordButton_.isActive = recording;
-    
-    // Trigger record pulse
-    if (recording) {
-        recordPulse_.setTarget(1.0f);
-    } else {
-        recordPulse_.setTarget(0.0f);
-    }
-    
-    recordButton_.glowIntensity.setTarget(recording ? 1.0f : 0.0f);
-    repaint();
-}
-
-void TransportBar::setTempo(double bpm) {
-    tempo_ = bpm;
-    repaint();
-}
-
-void TransportBar::setCPU(float percent) {
-    cpuUsage_ = percent;
-    repaint();
-}
-
-void TransportBar::setPosition(double seconds) {
-    position_ = seconds;
-    repaint();
-}
-
-void TransportBar::setProjectName(const juce::String& name) {
-    projectName_ = name;
-    repaint();
-}
-
-void TransportBar::setTimeSignature(int num, int den) {
-    timeSigNum_ = num;
-    timeSigDen_ = den;
-    repaint();
-}
-
-// ============================================================================
-// LAYOUT
-// ============================================================================
-
-void TransportBar::resized() {
-    initializePaints();
-    updateButtonBounds();
-}
-
-void TransportBar::updateButtonBounds() {
-    auto area = getLocalBounds().toFloat();
-    const float buttonSize = 44.0f;
-    const float buttonSpacing = 8.0f;
-    const float padding = 12.0f;
-    
-    float x = padding;
-    float y = (area.getHeight() - buttonSize) / 2.0f;
-    
-    // Transport buttons (left side)
-    playButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
-    x += buttonSize + buttonSpacing;
-    
-    stopButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
-    x += buttonSize + buttonSpacing;
-    
-    recordButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
-    
-    // Right side buttons
-    float rightX = area.getWidth() - padding - buttonSize;
-    settingsButton_.bounds = juce::Rectangle<float>(rightX, y, buttonSize, buttonSize);
-    rightX -= buttonSize + buttonSpacing;
-    
-    viewToggleButton_.bounds = juce::Rectangle<float>(rightX, y, buttonSize, buttonSize);
-}
-
-// ============================================================================
-// ANIMATION
-// ============================================================================
-
-void TransportBar::timerCallback() {
-    const float deltaSeconds = 1.0f / 60.0f;
-    
-    // Update button animations
-    playButton_.updateAnimations(deltaSeconds);
-    stopButton_.updateAnimations(deltaSeconds);
-    recordButton_.updateAnimations(deltaSeconds);
-    viewToggleButton_.updateAnimations(deltaSeconds);
-    settingsButton_.updateAnimations(deltaSeconds);
-    
-    // Update pulse animations
-    playPulse_.update(deltaSeconds);
-    recordPulse_.update(deltaSeconds);
-    
-    // Continuous pulse phase for active states
-    if (isPlaying_ || isRecording_) {
-        pulsePhase_ += deltaSeconds * 2.0f;  // 2 cycles per second
-        if (pulsePhase_ > 6.28318f) pulsePhase_ -= 6.28318f;
-    }
-    
-    // Check if we need to keep repainting
-    bool needsRepaint = playButton_.isAnimating() || 
-                        stopButton_.isAnimating() ||
-                        recordButton_.isAnimating() ||
-                        viewToggleButton_.isAnimating() ||
-                        settingsButton_.isAnimating() ||
-                        playPulse_.isAnimating() ||
-                        recordPulse_.isAnimating() ||
-                        isPlaying_ || isRecording_;  // Always repaint when playing/recording
-    
-    if (needsRepaint) {
-        repaint();
-    }
-}
-
-// ============================================================================
-// MOUSE HANDLING
-// ============================================================================
-
-TransportBar::ButtonState* TransportBar::findButtonAt(const juce::Point<int>& pos) {
-    juce::Point<float> posF(static_cast<float>(pos.x), static_cast<float>(pos.y));
-    
-    if (playButton_.bounds.contains(posF)) return &playButton_;
-    if (stopButton_.bounds.contains(posF)) return &stopButton_;
-    if (recordButton_.bounds.contains(posF)) return &recordButton_;
-    if (viewToggleButton_.bounds.contains(posF)) return &viewToggleButton_;
-    if (settingsButton_.bounds.contains(posF)) return &settingsButton_;
-    
-    return nullptr;
-}
-
-void TransportBar::updateHoverState(const juce::Point<int>& pos) {
-    ButtonState* buttons[] = {&playButton_, &stopButton_, &recordButton_, 
-                              &viewToggleButton_, &settingsButton_};
-    
-    ButtonState* hoveredButton = findButtonAt(pos);
-    
-    for (auto* btn : buttons) {
-        bool wasHovered = btn->isHovered;
-        btn->isHovered = (btn == hoveredButton);
-        
-        if (btn->isHovered && !wasHovered) {
-            // Just started hovering - animate scale up
-            btn->hoverScale.setTarget(1.08f);  // 8% larger
-            btn->glowIntensity.setTarget(btn->isActive ? 1.2f : 0.4f);
-        } else if (!btn->isHovered && wasHovered) {
-            // Just stopped hovering - animate back
-            btn->hoverScale.setTarget(1.0f);
-            btn->glowIntensity.setTarget(btn->isActive ? 1.0f : 0.0f);
-        }
-    }
-}
-
-void TransportBar::mouseMove(const juce::MouseEvent& e) {
-    updateHoverState(e.getPosition());
-}
-
-void TransportBar::mouseExit(const juce::MouseEvent& e) {
-    juce::ignoreUnused(e);
-    
-    // Reset all hover states
-    ButtonState* buttons[] = {&playButton_, &stopButton_, &recordButton_, 
-                              &viewToggleButton_, &settingsButton_};
-    for (auto* btn : buttons) {
-        if (btn->isHovered) {
-            btn->isHovered = false;
-            btn->hoverScale.setTarget(1.0f);
-            btn->glowIntensity.setTarget(btn->isActive ? 1.0f : 0.0f);
-        }
-    }
-}
-
-=======
 // ============================================================================
 // CONSTRUCTION
 // ============================================================================
@@ -276,7 +34,7 @@ void TransportBar::mouseExit(const juce::MouseEvent& e) {
 TransportBar::TransportBar() {
     setSize(800, 60);
     initializeButtons();
-    
+
     // Start animation timer at 60fps
     startTimerHz(60);
 }
@@ -583,7 +341,7 @@ void TransportBar::drawBackground(SkCanvas* canvas) {
     bgPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
     bgPaint.setAntiAlias(true);
     canvas->drawRect(skBounds, bgPaint);
-    
+
     // Bottom border glow
     SkPaint borderPaint;
     borderPaint.setColor(design::colors::CYAN);
@@ -623,11 +381,11 @@ void TransportBar::drawTransportButton(SkCanvas* canvas, ButtonState& button) {
         glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f * glowIntensity));
         canvas->drawRRect(rrect, glowPaint);
     }
-    
+
     // Button background
     SkPaint bgPaint;
     bgPaint.setAntiAlias(true);
-    
+
     SkPoint pts[2] = {{scaledBounds.left(), scaledBounds.top()}, 
                       {scaledBounds.left(), scaledBounds.bottom()}};
     
@@ -664,7 +422,7 @@ void TransportBar::drawTransportButton(SkCanvas* canvas, ButtonState& button) {
     SkRRect borderRRect = rrect;
     borderRRect.inset(0.5f, 0.5f);
     canvas->drawRRect(borderRRect, borderPaint);
-    
+
     // Icon/Label
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
@@ -690,7 +448,7 @@ void TransportBar::drawTransportButton(SkCanvas* canvas, ButtonState& button) {
     // Main text
     canvas->drawSimpleText(label, strlen(label), SkTextEncoding::kUTF8, 
                            textX, textY, iconFont, textPaint);
-    
+
     // Active pulse ring (for play/record)
     if (button.isActive && (&button == &playButton_ || &button == &recordButton_)) {
         float pulseIntensity = (&button == &playButton_) ? 
@@ -707,7 +465,7 @@ void TransportBar::drawTransportButton(SkCanvas* canvas, ButtonState& button) {
             pulsePaint.setStrokeWidth(2.0f);
             pulsePaint.setColor(button.activeColor);
             pulsePaint.setAlpha(static_cast<U8CPU>(pulseIntensity * 150));
-            
+
             SkRRect pulseRRect = rrect;
             pulseRRect.outset(3.0f * pulseIntensity, 3.0f * pulseIntensity);
             canvas->drawRRect(pulseRRect, pulsePaint);
@@ -753,7 +511,7 @@ void TransportBar::drawTempoDisplay(SkCanvas* canvas) {
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
     textPaint.setColor(design::colors::TEXT_PRIMARY);
-    
+
     canvas->drawString(tempoStr, x, y + 6.0f, transportFont_, textPaint);
     
     // BPM label
@@ -791,7 +549,7 @@ void TransportBar::drawCPUMeter(SkCanvas* canvas) {
     if (fillWidth > 0) {
         SkRect fillBounds = SkRect::MakeXYWH(x, y, fillWidth, meterHeight);
         SkRRect fillRRect = SkRRect::MakeRectXY(fillBounds, 4.0f, 4.0f);
-        
+
         // Color based on load
         SkColor fillColor;
         if (cpuUsage_ > 80.0f) {
@@ -801,13 +559,13 @@ void TransportBar::drawCPUMeter(SkCanvas* canvas) {
         } else {
             fillColor = design::colors::NEON_GREEN;
         }
-        
+
         SkPaint fillPaint;
         fillPaint.setAntiAlias(true);
         fillPaint.setColor(fillColor);
         canvas->drawRRect(fillRRect, fillPaint);
     }
-    
+
     // Label
     SkPaint labelPaint;
     labelPaint.setAntiAlias(true);
@@ -826,10 +584,4 @@ void TransportBar::drawProjectName(SkCanvas* canvas) {
     textPaint.setAlpha(180);
     
     canvas->drawString(projectName_.toStdString().c_str(), x, y, labelFont_, textPaint);
->>>>>>> Stashed changes
 }
-
-} // namespace zenith
-
-#endif // ZENITH_USE_SKIA
-
