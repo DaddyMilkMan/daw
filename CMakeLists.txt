@@ -106,6 +106,7 @@ target_include_directories(ZenithDAW PRIVATE
 # Link JUCE modules
 target_link_libraries(ZenithDAW PRIVATE
     juce::juce_core
+    juce::juce_cryptography
     juce::juce_data_structures
     juce::juce_events
     juce::juce_graphics

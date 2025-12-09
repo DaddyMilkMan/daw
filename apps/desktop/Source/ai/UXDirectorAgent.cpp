@@ -117,7 +117,24 @@ void UXDirectorAgent::timerCallback() {
 //==============================================================================
 
 void UXDirectorAgent::scheduleTask(std::function<void()> task) {
-  uiTaskQueue_.push_back(task);
+  // OVERFLOW PROTECTION: If queue is too large, something is wrong.
+  // Either issues are being generated faster than fixed, or fixes are failing.
+  // Clear the queue to prevent unbounded memory growth.
+  static constexpr size_t maxQueueSize = 100;
+
+  if (uiTaskQueue_.size() >= maxQueueSize) {
+    DBG("UXDirectorAgent: Task queue overflow! Clearing " +
+        juce::String(uiTaskQueue_.size()) + " pending tasks.");
+    uiTaskQueue_.clear();
+
+    // Also clear fixPending flags so issues can be re-scheduled
+    juce::ScopedLock sl(issuesLock_);
+    for (auto &issue : issues_) {
+      issue.fixPending = false;
+    }
+  }
+
+  uiTaskQueue_.push_back(std::move(task));
 }
 
 void UXDirectorAgent::processPendingTasks() {
@@ -127,23 +144,35 @@ void UXDirectorAgent::processPendingTasks() {
   // Execute a small batch of tasks to avoid freezing the UI
   int executedCount = 0;
 
-  // Create a copy of tasks to run, or iterate carefully
-  // We use a consumption loop
+  // Consume tasks from front of queue
   while (!uiTaskQueue_.empty() && executedCount < maxTasksPerFrame_) {
-    auto task = uiTaskQueue_.front();
-    // Remove from queue before execution to prevent loop if task re-schedules
+    auto task = std::move(uiTaskQueue_.front());
     uiTaskQueue_.erase(uiTaskQueue_.begin());
 
-    // Execute
+    // Execute task - lambda already has SafePointer for component safety
     if (task) {
       task();
     }
 
     executedCount++;
   }
+
+  // Log queue status if it's building up (early warning)
+  if (uiTaskQueue_.size() > 50) {
+    DBG("UXDirectorAgent: Warning - task queue has " +
+        juce::String(uiTaskQueue_.size()) + " pending items");
+  }
 }
 
-void UXDirectorAgent::clearPendingTasks() { uiTaskQueue_.clear(); }
+void UXDirectorAgent::clearPendingTasks() {
+  uiTaskQueue_.clear();
+
+  // Clear pending flags so issues can be re-processed
+  juce::ScopedLock sl(issuesLock_);
+  for (auto &issue : issues_) {
+    issue.fixPending = false;
+  }
+}
 
 //==============================================================================
 // ChangeListener (for Track changes)
@@ -731,10 +760,11 @@ bool UXDirectorAgent::applyLayoutFix(juce::Component *component) {
     }
   }
 
-  // Use message thread for UI updates
-  juce::MessageManager::callAsync([component, bounds]() {
-    if (component != nullptr) {
-      component->setBounds(bounds);
+  // Use message thread for UI updates - SafePointer to prevent dangling access
+  juce::Component::SafePointer<juce::Component> safeComp(component);
+  juce::MessageManager::callAsync([safeComp, bounds]() {
+    if (safeComp != nullptr) {
+      safeComp->setBounds(bounds);
     }
   });
 

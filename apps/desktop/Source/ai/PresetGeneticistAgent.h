@@ -427,6 +427,17 @@ private:
   // FFT for spectral analysis
   juce::dsp::FFT fft_{10}; // 1024-point FFT
 
+  // ==== PRE-ALLOCATED BUFFERS (Avoid heap allocation in render loop) ====
+  // Block buffer for rendering - pre-allocated to max block size
+  juce::AudioBuffer<float> blockBuffer_;
+
+  // FFT data buffer - pre-allocated for spectral analysis
+  std::vector<float> fftData_;
+
+  // MIDI buffer for block processing
+  juce::MidiBuffer blockMidiBuffer_;
+  // ======================================================================
+
   // Random number generator
   std::mt19937 rng_;
 
@@ -440,6 +451,15 @@ private:
   static const std::vector<juce::String> &getParameterIds();
   static const std::map<juce::String, std::pair<float, float>> &
   getParameterRanges();
+
+  // Discrete parameter registry - these need integer-snapping during mutation
+  static const std::set<juce::String> &getDiscreteParameters();
+
+  // Helper: Check if a parameter is discrete (needs integer snapping)
+  static bool isDiscreteParameter(const juce::String &paramId);
+
+  // Helper: Get the number of discrete steps for a parameter (0 = continuous)
+  static int getDiscreteSteps(const juce::String &paramId);
 
   //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PresetGeneticistAgent)

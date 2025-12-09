@@ -10,6 +10,7 @@
 */
 
 #include "SampleHunterAgent.h"
+#include "../network/SecureKeyStore.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_cryptography/juce_cryptography.h>
 
@@ -47,8 +48,17 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   // Create Grok client for AI-powered query generation
   grokClient_ = std::make_unique<GrokAPIClient>();
 
-  // Initialize with a placeholder or default key (in production, fetch from
-  // SecureKeyStore) freesoundConfig_.apiKey = "YOUR_API_KEY_HERE";
+  // Load Freesound API key from secure storage (NEVER hardcode!)
+  freesoundConfig_.apiKey =
+      SecureKeyStore::getInstance().getKey("freesound_api_key");
+
+  if (freesoundConfig_.apiKey.isEmpty()) {
+    DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
+        "SecureKeyStore!");
+    DBG("SampleHunterAgent: Set key via "
+        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
+        "\"YOUR_KEY\")");
+  }
 
   DBG("SampleHunterAgent: Initialized");
 }
@@ -198,6 +208,12 @@ void SampleHunterAgent::run() {
     size_t processedCount = 0;
     size_t totalToProcess = downloadQueue_.size();
 
+    // Batching: Collect samples to notify UI in batches
+    constexpr size_t UI_BATCH_SIZE = 10;
+    std::vector<FoundSample> pendingDownloadNotifications;
+    std::vector<FoundSample> pendingAnalysisNotifications;
+    std::vector<juce::File> pendingImportNotifications;
+
     while (!downloadQueue_.empty() && !threadShouldExit()) {
       size_t index = downloadQueue_.front();
       downloadQueue_.pop();
@@ -208,64 +224,82 @@ void SampleHunterAgent::run() {
 
       if (downloadSample(sample)) {
         stats_.downloadsSucceeded++;
-        stats_.totalBytesDownloaded += sample.fileSize; // or actual bytes
+        stats_.totalBytesDownloaded += sample.fileSize;
 
-        juce::MessageManager::callAsync([this, sample]() {
-          listeners_.call(&Listener::sampleDownloaded, sample);
-        });
+        // Queue for batch notification
+        pendingDownloadNotifications.push_back(sample);
 
         // Analyze
         setStatus("Analyzing: " + sample.title);
         analyzeSample(sample);
         stats_.samplesAnalyzed++;
 
-        juce::MessageManager::callAsync([this, sample]() {
-          listeners_.call(&Listener::sampleAnalyzed, sample);
-        });
+        pendingAnalysisNotifications.push_back(sample);
 
         // Import
         if (importToPool(sample)) {
           stats_.samplesImported++;
-          juce::File f = sample.localFile;
-          juce::MessageManager::callAsync(
-              [this, f]() { listeners_.call(&Listener::sampleImported, f); });
+          pendingImportNotifications.push_back(sample.localFile);
         }
 
-      } else {
-        stats_.downloadsFailed++;
+        // Batch UI update: Notify every UI_BATCH_SIZE downloads
+        if (pendingDownloadNotifications.size() >= UI_BATCH_SIZE) {
+          auto downloadBatch = pendingDownloadNotifications;
+          auto analysisBatch = pendingAnalysisNotifications;
+          auto importBatch = pendingImportNotifications;
+
+          juce::MessageManager::callAsync(
+              [this, downloadBatch, analysisBatch, importBatch]() {
+                for (const auto &s : downloadBatch)
+                  listeners_.call(&Listener::sampleDownloaded, s);
+                for (const auto &s : analysisBatch)
+                  listeners_.call(&Listener::sampleAnalyzed, s);
+                for (const auto &f : importBatch)
+                  listeners_.call(&Listener::sampleImported, f);
+              });
+
+          pendingDownloadNotifications.clear();
+          pendingAnalysisNotifications.clear();
+          pendingImportNotifications.clear();
+        }
+              [this, f]() {
+          listeners_.call(&Listener::sampleImported, f); });
       }
-
-      processedCount++;
-      float p = static_cast<float>(processedCount) /
-                (float)std::max((size_t)1, totalToProcess);
-      updateProgress(downloadStartProgress +
-                     (downloadEndProgress - downloadStartProgress) * p);
-
-      if (processedCount >= (size_t)config_.maxTotalDownloads)
-        break;
-
-      wait(config_.delayBetweenDownloadsMs);
+    }
+    else {
+      stats_.downloadsFailed++;
     }
 
-    // Complete
-    stats_.endTime = juce::Time::getCurrentTime();
-    updateProgress(1.0f);
-    setStatus("Sample hunt complete!");
+    processedCount++;
+    float p = static_cast<float>(processedCount) /
+              (float)std::max((size_t)1, totalToProcess);
+    updateProgress(downloadStartProgress +
+                   (downloadEndProgress - downloadStartProgress) * p);
 
-    juce::MessageManager::callAsync([this]() {
-      listeners_.call(&Listener::huntingComplete, stats_, true);
-      sendChangeMessage();
-    });
+    if (processedCount >= (size_t)config_.maxTotalDownloads)
+      break;
 
-  } catch (const std::exception &e) {
-    DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
-    setStatus("Error: " + juce::String(e.what()));
-    juce::MessageManager::callAsync([this]() {
-      listeners_.call(&Listener::huntingComplete, stats_, false);
-    });
+    wait(config_.delayBetweenDownloadsMs);
   }
 
-  isHunting_.store(false);
+  // Complete
+  stats_.endTime = juce::Time::getCurrentTime();
+  updateProgress(1.0f);
+  setStatus("Sample hunt complete!");
+
+  juce::MessageManager::callAsync([this]() {
+    listeners_.call(&Listener::huntingComplete, stats_, true);
+    sendChangeMessage();
+  });
+}
+catch (const std::exception &e) {
+  DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
+  setStatus("Error: " + juce::String(e.what()));
+  juce::MessageManager::callAsync(
+      [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
+}
+
+isHunting_.store(false);
 }
 
 //==============================================================================

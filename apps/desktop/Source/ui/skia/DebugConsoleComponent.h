@@ -19,7 +19,6 @@
 #include "SkiaComponent.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
@@ -34,8 +33,7 @@ namespace zenith {
     - Quick status indicators for CPU, Clipping, Latency
 */
 class DebugConsoleComponent : public SkiaComponent,
-                              public ai::SessionDebuggerAgent::Listener,
-                              public juce::Timer {
+                              public ai::SessionDebuggerAgent::Listener {
 public:
   //==========================================================================
   explicit DebugConsoleComponent(ai::SessionDebuggerAgent &debugger);
