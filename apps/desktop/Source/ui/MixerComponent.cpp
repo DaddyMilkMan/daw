@@ -3,6 +3,8 @@
 
 #include "../../include/ui/MixerComponent.h"
 #include "../ui/ZenithLookAndFeel.h"
+#include "../../Source/engine/Track.h"
+
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
@@ -357,7 +359,6 @@ void MixerComponent::rebuildTrackStrips() {
       " track strips");
 }
 
-<<<<<<< Updated upstream
 std::unique_ptr<MixerComponent::TrackStrip>
 MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   auto strip = std::make_unique<TrackStrip>();
@@ -625,4 +626,3 @@ void MixerComponent::onArmClicked(const juce::String &trackId, bool state) {
 //==============================================================================
 // Skia Rendering Implementation
 //==============================================================================
-

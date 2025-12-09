@@ -131,7 +131,6 @@ void Engine::syncWithProjectState()
 {
     DBG("Engine: Syncing with project state");
 
-<<<<<<< Updated upstream
   if (projectState_ == nullptr) {
     DBG("Engine: No project state, clearing tracks");
     // Remove all track nodes from routing graph
@@ -573,7 +572,7 @@ void Engine::record()
                 sampleRate,
                 static_cast<unsigned int>(numChannels),
                 24,  // 24-bit depth
-                {},  // Default metadata
+                {},
                 0    // Default quality
             ));
 
@@ -607,7 +606,7 @@ void Engine::record()
     }
 
     // ==========================================================================
-    // CODEX FIX P1: Enable recording flag AFTER sessions are set up
+    // CODEX P1 FIX: Enable recording flag AFTER sessions are set up
     // This prevents the audio thread from accessing sessions before they're ready
     // ==========================================================================
     isRecording_.store(true);
@@ -1047,6 +1046,7 @@ void Engine::removeTrack(int index)
         tracks_[index]->releaseResources();
         
         // Remove from vector
+        tracks_[index]->getRoutingGraph().removeNode(tracks_[index]->getTrackId()); // Remove from RoutingGraph
         tracks_.erase(tracks_.begin() + index);
         
         DBG("Engine: Removed track '" + name + "' at index " + juce::String(index));
@@ -1376,7 +1376,6 @@ void Engine::processEvents() noexcept
                          if (plugin) {
                              auto params = plugin->getParameters();
                              if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
-                                 // JUCE parameters are thread-safe
                                  params[e.paramIndex]->setValueNotifyingHost(e.value);
                              }
                          }
@@ -1693,7 +1692,7 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput* source, const juce::Midi
                             static_cast<int>(i),
                             playhead
                         };
-                        midiRecordFifo_.finishedWrite(1);
+                        midiFifo_.finishedWrite(1);
                     }
                 }
             }
@@ -1930,8 +1929,8 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
         sampleRate,
         static_cast<unsigned int>(numChannels),
         bitDepth,
-        {},  // metadata
-        0    // quality option (not used for WAV)
+        {},
+        0    // Default quality
     ));
 
     if (writer == nullptr)
@@ -1972,7 +1971,7 @@ bool Engine::exportProjectToWav(const juce::File& outputFile,
         if (samplesRendered % static_cast<juce::int64>(sampleRate) == 0)
         {
             double progress = static_cast<double>(samplesRendered) / totalSamples * 100.0;
-            DBG("Engine: Export progress: " + juce::String(progress, 1) + "%");
+            DBG("Engine: Export progress: " + juce::String(progress, 1) + "%\n");
         }
     }
 
@@ -2212,13 +2211,13 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize)
 
         // Add clip to track
         auto* track = tracks_[i].get();
-        if (track != nullptr)
-        {
+        if (track != nullptr) {
             track->addClip(std::move(clip));
             DBG("Engine: Created MIDI clip on track " + juce::String(i) +
                 " (start=" + juce::String(recordStart) +
                 ", length=" + juce::String(clipLengthSamples) +
-                ", events=" + juce::String(finalSequence.getNumEvents()) + ")");
+                ", events=" + juce::String(finalSequence.getNumEvents()) +
+                ")");
         }
     }
 
@@ -2491,11 +2490,6 @@ int Engine::getTrackLatency(int trackIndex) const
     return 0;
 }
 
-<<<<<<< Updated upstream
-int Engine::getMasterLatency() const
-{
-    return masterLatency_;
-=======
 int Engine::getMasterLatency() const { return masterLatency_; }
 
 void Engine::recalculatePDC() {
@@ -2556,85 +2550,6 @@ void Engine::recalculatePDC() {
       
       // if (delayNeeded > 0) DBG("  Track " + track->getName() + " compensation: " + juce::String(delayNeeded));
   }
->>>>>>> Stashed changes
-}
-
-void Engine::recalculatePDC()
-{
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    
-    DBG("Engine: Recalculating PDC...");
-    
-    // Calculate per-track latency
-    trackLatencies_.resize(tracks_.size());
-    int maxLatency = 0;
-    
-    for (size_t i = 0; i < tracks_.size(); ++i)
-    {
-        auto* track = tracks_[i].get();
-        if (track == nullptr)
-        {
-            trackLatencies_[i] = 0;
-            continue;
-        }
-        
-        // Sum latency from all plugins in the track
-        int trackLatency = 0;
-        for (int p = 0; p < track->getNumPlugins(); ++p)
-        {
-            auto* plugin = track->getPlugin(p);
-            if (plugin != nullptr)
-            {
-                trackLatency += plugin->getLatencySamples();
-            }
-        }
-        
-        trackLatencies_[i] = trackLatency;
-        if (trackLatency > maxLatency)
-        {
-            maxLatency = trackLatency;
-        }
-    }
-    
-    // Calculate master bus latency
-    masterLatency_ = 0;
-    for (const auto& plugin : masterPlugins_)
-    {
-        if (plugin != nullptr)
-        {
-            masterLatency_ += plugin->getLatencySamples();
-        }
-    }
-    
-    maxTrackLatency_.store(maxLatency);
-    
-    DBG("Engine: PDC calculated - max track latency: " + juce::String(maxLatency) + 
-        " samples, master latency: " + juce::String(masterLatency_) + " samples");
-    
-    // Allocate/resize PDC delay buffers if PDC is enabled
-    if (pdcEnabled_.load() && maxLatency > 0)
-    {
-        pdcDelayBuffers_.resize(tracks_.size());
-        pdcDelayWritePos_.resize(tracks_.size(), 0);
-        
-        for (size_t i = 0; i < tracks_.size(); ++i)
-        {
-            // Calculate delay needed for this track (max - track's own latency)
-            int delayNeeded = maxLatency - trackLatencies_[i];
-            
-            if (delayNeeded > 0)
-            {
-                // Allocate circular buffer for delay
-                pdcDelayBuffers_[i].setSize(2, delayNeeded + currentBufferSize.load(), false, true, false);
-                pdcDelayBuffers_[i].clear();
-                pdcDelayWritePos_[i] = 0;
-            }
-            else
-            {
-                pdcDelayBuffers_[i].setSize(0, 0);  // No delay needed
-            }
-        }
-    }
 }
 
 void Engine::setPDCEnabled(bool enabled)
