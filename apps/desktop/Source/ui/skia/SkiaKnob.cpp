@@ -1,17 +1,14 @@
-/*
-  ==============================================================================
-    SkiaKnob.cpp
-  ==============================================================================
-*/
-
 #include "SkiaKnob.h"
+#include "ZenithAnimation.h"
+#include "../ZenithTypography.h"
+#include <cmath>
+#include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkColor.h>
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
-#include <cmath>
 
 // Debug helper
 static void logKnob(const juce::String& msg) {
@@ -173,13 +170,13 @@ void SkiaKnob::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelD
 }
 
 void SkiaKnob::onHoverEnter() {
-    animateTo("scale", 1.05f, design::animation::DURATION_FAST);
-    animateTo("glow", 1.0f, design::animation::DURATION_FAST);
+  animateWithSpring("scale", 1.1f, 300.0f, 20.0f); // Bouncy hover
+  animateWithSpring("glow", 1.0f, 200.0f, 20.0f);
 }
 
 void SkiaKnob::onHoverExit() {
-    animateTo("scale", 1.0f, design::animation::DURATION_FAST);
-    animateTo("glow", 0.0f, design::animation::DURATION_FAST);
+  animateWithSpring("scale", 1.0f, 300.0f, 25.0f);
+  animateWithSpring("glow", 0.0f, 300.0f, 25.0f);
 }
 
 bool SkiaKnob::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
@@ -232,100 +229,134 @@ void SkiaKnob::pasteValue() {
 // RENDERING
 // ============================================================================
 
-void SkiaKnob::drawSkia(SkCanvas* canvas) {
-    auto bounds = getLocalBounds().toFloat();
-    float cx = bounds.getCentreX();
-    float cy = bounds.getCentreY();
-    
-    // Calculate radius (leave room for label)
-    float radius = std::min(bounds.getWidth(), bounds.getHeight()) * 0.35f;
-    
-    // Apply hover scale
-    float scale = getAnimatedValue("scale");
-    if (scale > 0.0f) {
-        canvas->translate(cx, cy);
-        canvas->scale(scale, scale);
-        canvas->translate(-cx, -cy);
-    }
-    
-    // Draw Arc
-    float startAngle = -rotationRange_ / 2.0f - 90.0f;
-    float endAngle = startAngle + (value_ * rotationRange_);
-    juce::ignoreUnused(endAngle); // Used for dot calculation
-    
-    // Background track
-    SkPaint trackPaint;
-    trackPaint.setStyle(SkPaint::kStroke_Style);
-    trackPaint.setStrokeWidth(2.5f); // Thinner for pro look (was 4.0f)
-    trackPaint.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
-    trackPaint.setAntiAlias(true);
-    trackPaint.setStrokeCap(SkPaint::kRound_Cap);
-    
-    SkRect arcRect = SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
-    canvas->drawArc(arcRect, startAngle, rotationRange_, false, trackPaint);
-    
-    // Value arc
-    SkPaint valuePaint;
-    valuePaint.setStyle(SkPaint::kStroke_Style);
-    valuePaint.setStrokeWidth(2.5f); // Match track width
-    valuePaint.setAntiAlias(true);
-    valuePaint.setStrokeCap(SkPaint::kRound_Cap);
-    
-    // Color
-    SkColor color = design::colors::CYAN;
-    if (valueColoring_) {
-        // Gradient from Blue to Cyan
-        // Simple interpolation for now
-        color = design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_);
-    }
-    valuePaint.setColor(color);
-    
-    // Glow
-    float globalGlow = design::Settings::getGlowIntensity();
-    if ((isGlowEnabled() || isHovered()) && globalGlow > 0.01f) {
-        SkPaint glowPaint = valuePaint;
-        glowPaint.setStrokeWidth(5.0f); // Reduced from 8.0f
-        glowPaint.setColor(design::withAlpha(color, 0.4f * getAnimatedValue("glow") * globalGlow));
-        
-        if (globalGlow > 0.5f) {
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f * globalGlow));
-        }
-        
+std::vector<SkiaComponent::AIElementInfo> SkiaKnob::getInspectableElements() {
+  SkiaComponent::AIElementInfo info;
+
+  auto bounds = getLocalBounds().toFloat();
+  info.bounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                 bounds.getWidth(), bounds.getHeight());
+
+  info.type = "knob";
+  info.parameterId = getName();
+  info.currentValue = value_;
+
+  return {info};
+}
+
+void SkiaKnob::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds().toFloat();
+  float cx = bounds.getCentreX();
+  float cy = bounds.getCentreY();
+
+  // Calculate radius (leave room for label)
+  float radius = std::min(bounds.getWidth(), bounds.getHeight()) * 0.35f;
+
+  // Apply hover scale - use spring physics value
+  float scale = getAnimatedValue("scale");
+  // If scale is 0 (uninitialized), default to 1
+  if (scale < 0.01f) scale = 1.0f;
+  
+  if (std::abs(scale - 1.0f) > 0.001f) {
+    canvas->translate(cx, cy);
+    canvas->scale(scale, scale);
+    canvas->translate(-cx, -cy);
+  }
+
+  // Draw Arc
+  float startAngle = -rotationRange_ / 2.0f - 90.0f;
+  
+  SkRect arcRect =
+      SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
+
+  // 1. Background track (Darker, more subtle)
+  SkPaint trackPaint;
+  trackPaint.setStyle(SkPaint::kStroke_Style);
+  trackPaint.setStrokeWidth(3.0f); 
+  trackPaint.setColor(SkColorSetARGB(40, 255, 255, 255)); // 15% white
+  trackPaint.setAntiAlias(true);
+  trackPaint.setStrokeCap(SkPaint::kRound_Cap);
+  
+  canvas->drawArc(arcRect, startAngle, rotationRange_, false, trackPaint);
+  
+  // 2. Value arc
+  SkPaint valuePaint;
+  valuePaint.setStyle(SkPaint::kStroke_Style);
+  valuePaint.setStrokeWidth(3.0f);
+  valuePaint.setAntiAlias(true);
+  valuePaint.setStrokeCap(SkPaint::kRound_Cap);
+
+  // Color gradient
+  SkColor color = design::colors::CYAN;
+  if (valueColoring_) {
+    color = design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_);
+  }
+  valuePaint.setColor(color);
+
+  // Draw active arc
+  if (value_ > 0.001f) {
+      canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, valuePaint);
+  }
+
+  // 3. Glow effect (Dynamic based on interaction)
+  float glowIntensity = getAnimatedValue("glow");
+  float globalGlow = design::Settings::getGlowIntensity();
+  
+  if (glowIntensity > 0.01f && globalGlow > 0.01f) {
+      SkPaint glowPaint = valuePaint;
+      glowPaint.setStrokeWidth(3.0f);
+      // More intense glow when active
+      glowPaint.setColor(design::withAlpha(color, 0.6f * glowIntensity * globalGlow));
+      glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f * glowIntensity));
+      
+      if (value_ > 0.001f) {
         canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, glowPaint);
-    }
+      }
+  }
+
+  // 4. Dot indicator / Handle
+  if (style_ == Style::Dot || style_ == Style::ArcAndDot) {
+    float endAngleRad = (startAngle + value_ * rotationRange_) * (3.14159f / 180.0f);
+    float dotRadius = 3.5f;
     
-    canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, valuePaint);
-    
-    // Dot indicator
-    if (style_ == Style::Dot || style_ == Style::ArcAndDot) {
-        float angleRad = (endAngle) * (3.14159f / 180.0f);
-        float dotX = cx + std::cos(angleRad) * radius;
-        float dotY = cy + std::sin(angleRad) * radius;
-        
-        SkPaint dotPaint;
-        dotPaint.setColor(SK_ColorWHITE);
-        dotPaint.setAntiAlias(true);
-        canvas->drawCircle(dotX, dotY, 3.0f, dotPaint);
+    // Position on the ring
+    float dotX = cx + std::cos(endAngleRad) * radius;
+    float dotY = cy + std::sin(endAngleRad) * radius;
+
+    // Dot Glow
+    if (glowIntensity > 0.01f) {
+        SkPaint dotGlowPaint;
+        dotGlowPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.5f * glowIntensity));
+        dotGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+        canvas->drawCircle(dotX, dotY, dotRadius + 2.0f, dotGlowPaint);
     }
+
+    SkPaint dotPaint;
+    dotPaint.setColor(SK_ColorWHITE);
+    dotPaint.setAntiAlias(true);
+    canvas->drawCircle(dotX, dotY, dotRadius, dotPaint);
+  }
+
+  // 5. Label
+  if (labelPosition_ != LabelPosition::None) {
+    SkFont font = ZenithTypography::valueFont(); // Use mono font for values
     
-    // Label
-    if (labelPosition_ != LabelPosition::None) {
-        SkFont font;
-        font.setSize(12.0f);
-        
-        juce::String labelText = juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
-        
-        SkPaint textPaint;
-        textPaint.setColor(design::colors::TEXT_SECONDARY);
-        
-        float textY = cy;
-        if (labelPosition_ == LabelPosition::Below) textY += radius + 15.0f;
-        if (labelPosition_ == LabelPosition::Above) textY -= radius + 15.0f;
-        
-        // Simple center text (Skia text centering is manual)
-        float width = font.measureText(labelText.toRawUTF8(), labelText.length(), SkTextEncoding::kUTF8);
-        canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY, font, textPaint);
-    }
+    juce::String labelText =
+        juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
+
+    SkPaint textPaint;
+    textPaint.setColor(design::colors::TEXT_SECONDARY);
+    textPaint.setAntiAlias(true);
+
+    float textY = cy;
+    if (labelPosition_ == LabelPosition::Below)
+      textY += radius + 15.0f;
+    if (labelPosition_ == LabelPosition::Above)
+      textY -= radius + 15.0f;
+
+    // Center text
+    float width = font.measureText(labelText.toRawUTF8(), labelText.length(), SkTextEncoding::kUTF8);
+    canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY + 4.0f, font, textPaint);
+  }
 }
 
 // ============================================================================
@@ -333,44 +364,30 @@ void SkiaKnob::drawSkia(SkCanvas* canvas) {
 // ============================================================================
 
 render::KnobRenderState SkiaKnob::captureRenderState() const {
-    render::KnobRenderState state;
-    
-    // Bounds and geometry
-    state.bounds = SkRect::MakeXYWH(
-        static_cast<float>(getX()),
-        static_cast<float>(getY()),
-        static_cast<float>(getWidth()),
-        static_cast<float>(getHeight())
-    );
-    
-    // Value and display
-    state.value = value_;
-    state.defaultValue = defaultValue_;
-    state.displayMin = displayMin_;
-    state.displayMax = displayMax_;
-    
-    // Pre-format label text
-    state.labelText = juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
-    
-    // Interaction state
-    state.isHovered = isHovered();
-    state.isDragging = isDragging_;
-    
-    // Colors
-    state.baseColor = design::colors::CYAN;
-    if (valueColoring_) {
-        state.baseColor = design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_);
-    }
-    state.glowColor = state.baseColor;
-    
-    // Animation state
-    state.glowIntensity = getAnimatedValue("glow");
-    state.scale = getAnimatedValue("scale");
-    
-    // TODO: Cache glow layer (Phase 2)
-    // state.cachedGlow = getCachedGlowLayer();
-    
-    return state;
+  render::KnobRenderState state;
+
+  state.bounds = SkRect::MakeXYWH(
+      static_cast<float>(getX()), static_cast<float>(getY()),
+      static_cast<float>(getWidth()), static_cast<float>(getHeight()));
+
+  state.value = value_;
+  state.defaultValue = defaultValue_;
+  state.displayMin = displayMin_;
+  state.displayMax = displayMax_;
+  state.labelText = juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
+  state.isHovered = isHovered();
+  state.isDragging = isDragging_;
+  
+  state.baseColor = design::colors::CYAN;
+  if (valueColoring_) {
+    state.baseColor = design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_);
+  }
+  state.glowColor = state.baseColor;
+  state.glowIntensity = getAnimatedValue("glow");
+  state.scale = getAnimatedValue("scale");
+  state.cachedGlowAlpha = static_cast<uint8_t>(state.glowIntensity * 102); 
+
+  return state;
 }
 
 } // namespace zenith

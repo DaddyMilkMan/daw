@@ -13,5 +13,6 @@ if(ZENITH_ENABLE_SKIA)
         ZenithLayout.cpp
         ZenithPolySynthUI.cpp
         ExportDialog.cpp
+        DebugConsoleComponent.cpp
     )
 endif()

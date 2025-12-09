@@ -979,24 +979,76 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
         }
     }
 
-    // Marquee
-    if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
-        SkRect mRect =
-            SkRect::MakeXYWH((float)marqueeRect.getX(), (float)marqueeRect.getY(),
-                             (float)marqueeRect.getWidth(), (float)marqueeRect.getHeight());
+    // 6. Loop Region
+    if (loopEnabled_) {
+        float loopStartX = beatsToX(loopStartBeats_);
+        float loopEndX = beatsToX(loopEndBeats_);
+        
+        // Clamp to visible area
+        if (loopEndX > 0 && loopStartX < width) {
+            loopStartX = juce::jmax(0.0f, loopStartX);
+            loopEndX = juce::jmin(width, loopEndX);
+            
+            // Highlight in ruler
+            SkPaint loopRulerPaint;
+            loopRulerPaint.setColor(withAlpha(colors::BLUE, 0.3f));
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, loopEndX - loopStartX, RULER_HEIGHT), loopRulerPaint);
+            
+            // Subtle tint over track area
+            SkPaint loopTrackPaint;
+            loopTrackPaint.setColor(withAlpha(colors::BLUE, 0.05f));
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, RULER_HEIGHT, loopEndX - loopStartX, height - RULER_HEIGHT), loopTrackPaint);
+            
+            // Loop brackets
+            SkPaint bracketPaint;
+            bracketPaint.setColor(colors::BLUE); // Solid blue
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 2, RULER_HEIGHT), bracketPaint);
+            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 2, 0, 2, RULER_HEIGHT), bracketPaint);
+            
+            // Labels
+            SkFont markerFont;
+            markerFont.setSize(typography::FONT_XS);
+            SkPaint markerTextPaint;
+            markerTextPaint.setColor(colors::TEXT_PRIMARY);
+            markerTextPaint.setAntiAlias(true);
+            canvas->drawString("L", loopStartX + 4, 12, markerFont, markerTextPaint);
+            canvas->drawString("R", loopEndX - 10, 12, markerFont, markerTextPaint);
+        }
+    }
 
-        SkPaint fillPaint;
-        fillPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
-        canvas->drawRect(mRect, fillPaint);
-
-        SkPaint borderPaint;
-        borderPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
-        borderPaint.setStyle(SkPaint::kStroke_Style);
-        canvas->drawRect(mRect, borderPaint);
+    // 7. Playhead
+    {
+        float x = beatsToX(playheadBeats_);
+        
+        if (x >= 0 && x <= width) {
+            SkColor playheadColor = isPlaying_ 
+                ? colors::CYAN        // Neon Cyan when playing
+                : colors::TEXT_DISABLED; // Dimmed when stopped
+            
+            SkPaint playheadPaint;
+            playheadPaint.setColor(playheadColor);
+            playheadPaint.setStrokeWidth(1.5f);
+            playheadPaint.setAntiAlias(true);
+            
+            // Line
+            canvas->drawLine(x, 0, x, height, playheadPaint);
+            
+            // Triangle Head
+            SkPath triangle;
+            triangle.moveTo(x - 6, 0);
+            triangle.lineTo(x + 6, 0);
+            triangle.lineTo(x, 12);
+            triangle.close();
+            
+            playheadPaint.setStyle(SkPaint::kFill_Style);
+            canvas->drawPath(triangle, playheadPaint);
+        }
     }
 }
 #endif
+
 //==============================================================================
+namespace zenith {
 
 bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

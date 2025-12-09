@@ -1,11 +1,8 @@
-/**
- * @file MixerComponent.cpp
- * @brief Mixer component implementation
- */
+/*
+  ==============================================================================
 
 #include "../../include/ui/MixerComponent.h"
 #include "../ui/ZenithLookAndFeel.h"
-
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
 #include <include/core/SkFont.h>
@@ -360,6 +357,7 @@ void MixerComponent::rebuildTrackStrips() {
       " track strips");
 }
 
+<<<<<<< Updated upstream
 std::unique_ptr<MixerComponent::TrackStrip>
 MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   auto strip = std::make_unique<TrackStrip>();
@@ -533,7 +531,6 @@ void MixerComponent::updateTrackStripFromState(
 #endif
     // In Skia mode, we just redraw
     repaint(); 
-  }
 
   // Update volume slider
   if (strip.volumeSlider) {

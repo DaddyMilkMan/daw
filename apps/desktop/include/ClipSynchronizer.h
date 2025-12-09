@@ -42,8 +42,14 @@
  * - When user adds clips via UI, they're created in both Engine and ProjectState
  * - Keeps clip positions, lengths, and properties synchronized
  */
+<<<<<<< Updated upstream
 class ClipSynchronizer : public juce::Timer
 {
+=======
+
+
+class ClipSynchronizer : public juce::Timer {
+>>>>>>> Stashed changes
 public:
     //==========================================================================
     /**

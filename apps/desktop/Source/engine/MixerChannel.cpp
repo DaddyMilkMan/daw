@@ -69,6 +69,12 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   // Pre-calculate filter coefficients on message thread
   recalculateCoefficients();
   applyCoefficients();
+
+  // Initialize smoothers (50ms ramp for de-zippering)
+  smoothedVolume.reset(sampleRate, 0.05);
+  smoothedPan.reset(sampleRate, 0.05);
+  smoothedVolume.setCurrentAndTargetValue(volume.load());
+  smoothedPan.setCurrentAndTargetValue(pan.load());
 }
 
 void MixerChannel::releaseResources() {
@@ -172,6 +178,10 @@ void MixerChannel::getNextAudioBlock(
     outputLevel.store(0.0f);
     return;
   }
+
+  // Update smoother targets from atomic state (thread-safe sync)
+  smoothedVolume.setTargetValue(volume.load());
+  smoothedPan.setTargetValue(pan.load());
 
   // Apply any pending coefficient changes (RT-safe: just pointer swap)
   applyCoefficients();
@@ -549,19 +559,42 @@ void MixerChannel::processCompressor(juce::AudioBuffer<float> &buffer) {
 }
 
 void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
-  const float vol = volume.load();
-  const float panValue = pan.load();
-
-  // Calculate left and right gains from pan (-3dB center, constant power)
+  const int numSamples = buffer.getNumSamples();
+  const int numChannels = buffer.getNumChannels();
   const float piOver4 = juce::MathConstants<float>::pi / 4.0f;
-  const float leftGain = vol * std::cos(piOver4 * (1.0f + panValue));
-  const float rightGain = vol * std::sin(piOver4 * (1.0f + panValue));
 
-  if (buffer.getNumChannels() >= 2) {
-    buffer.applyGain(0, 0, buffer.getNumSamples(), leftGain);
-    buffer.applyGain(1, 0, buffer.getNumSamples(), rightGain);
-  } else if (buffer.getNumChannels() == 1) {
-    buffer.applyGain(0, 0, buffer.getNumSamples(), vol);
+  if (numChannels == 2) {
+    float *left = buffer.getWritePointer(0);
+    float *right = buffer.getWritePointer(1);
+
+    for (int i = 0; i < numSamples; ++i) {
+        float vol = smoothedVolume.getNextValue();
+        float panVal = smoothedPan.getNextValue();
+
+        float leftGain = vol * std::cos(piOver4 * (1.0f + panVal));
+        float rightGain = vol * std::sin(piOver4 * (1.0f + panVal));
+
+        left[i] *= leftGain;
+        right[i] *= rightGain;
+    }
+  } else if (numChannels == 1) {
+    float *data = buffer.getWritePointer(0);
+    for (int i = 0; i < numSamples; ++i) {
+        float vol = smoothedVolume.getNextValue();
+        // Skip pan calc for mono
+        smoothedPan.getNextValue(); 
+        data[i] *= vol;
+    }
+  } else {
+    // Multi-channel fallback (apply to all)
+    // We iterate just to advance smoothers correctly
+    for (int i = 0; i < numSamples; ++i) {
+        float vol = smoothedVolume.getNextValue();
+        smoothedPan.getNextValue();
+        for (int ch = 0; ch < numChannels; ++ch) {
+            buffer.setSample(ch, i, buffer.getSample(ch, i) * vol);
+        }
+    }
   }
 }
 

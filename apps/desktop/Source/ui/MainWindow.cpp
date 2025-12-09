@@ -406,12 +406,49 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] {
-      // Debug logs action
-    });
+<<<<<<< Updated upstream
+    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
     m.showMenuAsync(juce::PopupMenu::Options());
   }
 }
+
+void MainComponent::mouseDrag(const juce::MouseEvent& e) {
+    if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
+        auto offset = e.getOffsetFromDragStart();
+        auto newBounds = dragStartBounds.translated(offset.x, offset.y);
+        
+        activeDragComponent->setBounds(newBounds);
+        
+        // Update Manager (persist as relative)
+        auto parentBounds = getLocalBounds().toFloat();
+        juce::Rectangle<float> relative(
+            static_cast<float>(newBounds.getX()) / parentBounds.getWidth(),
+            static_cast<float>(newBounds.getY()) / parentBounds.getHeight(),
+            static_cast<float>(newBounds.getWidth()) / parentBounds.getWidth(),
+            static_cast<float>(newBounds.getHeight()) / parentBounds.getHeight()
+        );
+
+        zenith::design::LayoutManager::PanelState state;
+        state.relativeBounds = relative;
+        state.isVisible = true;
+        
+        juce::String id;
+#ifdef ZENITH_USE_SKIA
+        if (activeDragComponent == transportBar.get()) id = "Transport";
+        else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
+        else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
+        else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
+#endif
+        
+        if (id.isNotEmpty()) {
+            state.id = id;
+            zenith::design::LayoutManager::getInstance().setPanelState(id, state);
+        }
+        
+        repaint(); // Skia repaint
+    }
+}
+
 
 void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {

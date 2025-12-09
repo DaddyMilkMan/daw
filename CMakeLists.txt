@@ -6,14 +6,16 @@ project(ZenithDAW
     LANGUAGES CXX C
 )
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 # 2. Build Performance: ccache
-# find_program(CCACHE_PROGRAM ccache)
-# if(CCACHE_PROGRAM)
-#     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-#     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-# else()
-#     message(STATUS "ccache not found. Install it for faster builds.")
-# endif()
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+else()
+    message(STATUS "ccache not found. Install it for faster builds.")
+endif()
 
 # 3. Default Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -203,60 +205,61 @@ if(ENABLE_IPO)
 endif()
 
 # 8. Standard Compiler Flags & Hardening
-# if(MSVC)
-#     target_compile_options(ZenithDAW PRIVATE
-#         /W4 /permissive- 
-#         /wd4100 # Unused parameter
-#         
-#         # Conformance
-#         /Zc:__cplusplus 
-#         /Zc:inline      
-#         /Zc:preprocessor 
-#         /Zc:throwingNew 
-#         
-#         # Hardening
-#         $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
-#         $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
-#         $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
-#         $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
-#         
-#         # Ruthless Warnings
-#         /w14242 /w14254 /w14263 
-#         /w14265 
-#         /w14287 
-#         /we4289 
-#         /w14296 
-#         /w14311 
-#         /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
-#     )
-    
-#     if(ENABLE_HARDENING)
-#         target_link_options(ZenithDAW PRIVATE 
-#             /DYNAMICBASE 
-#             /NXCOMPAT    
-#             /CETCOMPAT   
-#         )
-#     endif()
-
-# else() # GCC / Clang
-#     target_compile_options(ZenithDAW PRIVATE
-#         -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
-#         -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
+# 8. Standard Compiler Flags & Hardening
+if(MSVC)
+    target_compile_options(ZenithDAW PRIVATE
+        /W4 /permissive- 
+        /wd4100 # Unused parameter
         
-#         $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
-#         $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
-#         $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
-#         $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
-#     )
+        # Conformance
+        /Zc:__cplusplus 
+        /Zc:inline      
+        /Zc:preprocessor 
+        /Zc:throwingNew 
+        
+        # Hardening
+        $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
+        $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
+        $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
+        $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
+        
+        # Ruthless Warnings
+        /w14242 /w14254 /w14263 
+        /w14265 
+        /w14287 
+        /we4289 
+        /w14296 
+        /w14311 
+        /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
+    )
+    
+    if(ENABLE_HARDENING)
+        target_link_options(ZenithDAW PRIVATE 
+            /DYNAMICBASE 
+            /NXCOMPAT    
+            /CETCOMPAT   
+        )
+    endif()
 
-#     if(ENABLE_HARDENING)
-#         target_link_options(ZenithDAW PRIVATE 
-#             -Wl,-z,relro 
-#             -Wl,-z,now 
-#             -pie
-#         )
-#     endif()
-# endif()
+else() # GCC / Clang
+    target_compile_options(ZenithDAW PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
+        -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
+        
+        $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
+        $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
+        $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
+        $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
+    )
+
+    if(ENABLE_HARDENING)
+        target_link_options(ZenithDAW PRIVATE 
+            -Wl,-z,relro 
+            -Wl,-z,now 
+            -pie
+        )
+    endif()
+endif()
 
 # 9. Sanitizers
 if(ENABLE_SANITIZERS)

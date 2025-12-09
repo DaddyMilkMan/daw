@@ -128,6 +128,11 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
 
   // Prepare mixer channel
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
+
+  // Buffer for PDC (2 seconds max)
+  compensationBuffer.setSize(2, static_cast<int>(sampleRate * 2.0));
+  compensationBuffer.clear();
+  compensationWritePos = 0;
 }
 
 void Track::releaseResources() {
@@ -284,6 +289,33 @@ void Track::getNextAudioBlock(
   juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
                                          bufferToFill.numSamples);
   mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
+
+  // Apply PDC (Plugin Delay Compensation)
+  const int delaySamples = latencyCompensationSamples.load();
+  if (delaySamples > 0 && compensationBuffer.getNumSamples() > 0) {
+      const int numSamples = bufferToFill.numSamples;
+      const int bufferLen = compensationBuffer.getNumSamples();
+      const int numChannels = juce::jmin(bufferToFill.buffer->getNumChannels(), compensationBuffer.getNumChannels());
+
+      for (int ch = 0; ch < numChannels; ++ch) {
+          float* channelData = bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample);
+          const float* compRead = compensationBuffer.getReadPointer(ch);
+          float* compWrite = compensationBuffer.getWritePointer(ch);
+
+          for (int i = 0; i < numSamples; ++i) {
+              // Write current sample to delay line
+              compWrite[(compensationWritePos + i) % bufferLen] = channelData[i];
+
+              // Read delayed sample
+              int readIndex = (compensationWritePos + i - delaySamples);
+              while (readIndex < 0) readIndex += bufferLen;
+              readIndex %= bufferLen;
+
+              channelData[i] = compRead[readIndex];
+          }
+      }
+      compensationWritePos = (compensationWritePos + numSamples) % bufferLen;
+  }
 }
 
 // Legacy overload: uses default playhead of 0
@@ -423,6 +455,35 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
     return pluginsOwned_[index].get();
   return nullptr;
 }
+
+// ROAST FIX #3: Implement PDC latency reporting
+// ROAST FIX #3: Implement PDC latency reporting
+int Track::getLatencySamples() const {
+  // If called from message thread, use owned list
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    int latency = 0;
+    for (size_t i = 0; i < pluginsOwned_.size(); ++i) {
+      if (pluginsOwned_[i])
+        latency += pluginsOwned_[i]->getLatencySamples();
+    }
+    return latency;
+  }
+
+  // If called from audio thread, use snapshot
+  const auto* snapshot = activePluginSnapshot_.load(std::memory_order_acquire);
+  if (snapshot == nullptr)
+    return 0;
+
+  int latency = 0;
+  for (size_t i = 0; i < snapshot->plugins.size(); ++i) {
+    if (snapshot->plugins[i])
+      latency += snapshot->plugins[i]->getLatencySamples();
+  }
+  return latency;
+}
+
+
+
 
 //==============================================================================
 // Phase 2A: Lock-free clip management (message thread only)
@@ -567,6 +628,8 @@ void Track::clearAutomationLanes() {
     automationLanesOwned_.clear();
     updateAutomationSnapshot();
 }
+
+
 
 //==============================================================================
 

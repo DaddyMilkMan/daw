@@ -470,6 +470,10 @@ private:
   std::atomic<bool> solo{false};
   std::atomic<bool> silencedBySolo{false};
 
+  // Smoothing for de-zippering automation (Audio Thread)
+  juce::LinearSmoothedValue<float> smoothedVolume;
+  juce::LinearSmoothedValue<float> smoothedPan;
+
   //==============================================================================
   // Metering
   std::atomic<float> inputLevel{0.0f};
