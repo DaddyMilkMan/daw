@@ -1,153 +1,57 @@
 # ============================================================================
-# Skia Graphics Library Integration
+# Standard Skia Integration (vcpkg)
 # ============================================================================
-#
-# This module integrates Skia graphics library for GPU-accelerated rendering.
-#
-# USAGE:
-#
-# Option 1: Install via vcpkg (RECOMMENDED)
-#   vcpkg install skia:x64-windows
-#   cmake .. -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DZENITH_ENABLE_SKIA=ON
-#
-# Option 2: Provide Skia path manually
-#   cmake .. -DSKIA_DIR=C:/path/to/skia -DZENITH_ENABLE_SKIA=ON
-#
-# Option 3: Build without Skia (default)
-#   cmake ..
-#
+# Relies entirely on vcpkg to provide 'unofficial-skia'.
 # ============================================================================
 
-message(STATUS "Configuring Skia graphics library...")
+message(STATUS "============================================")
+message(STATUS "Configuring Skia Integration (vcpkg)")
+message(STATUS "============================================")
 
-# Option to enable Skia
-option(ZENITH_ENABLE_SKIA "Enable Skia GPU rendering" OFF)
+set(SKIA_FOUND_AND_READY OFF)
 
-if(NOT ZENITH_ENABLE_SKIA)
-    message(STATUS "Skia rendering is DISABLED")
-    message(STATUS "  To enable: cmake .. -DZENITH_ENABLE_SKIA=ON")
-    message(STATUS "  See BUILD_SKIA.md for installation instructions")
+# 1. Find Package (Required)
+find_package(unofficial-skia CONFIG REQUIRED)
 
-    # Create dummy target
-    add_library(Skia::Skia INTERFACE IMPORTED)
-    return()
-endif()
-
-message(STATUS "Skia rendering is ENABLED")
-
-# Try to find Skia
-if(DEFINED SKIA_DIR)
-    # User provided SKIA_DIR
-    message(STATUS "Using SKIA_DIR: ${SKIA_DIR}")
-    set(SKIA_INCLUDE_DIR "${SKIA_DIR}/include")
-    set(SKIA_LIBRARY_DIR "${SKIA_DIR}/out/Release-x64")
-
-    if(NOT EXISTS "${SKIA_INCLUDE_DIR}")
-        message(FATAL_ERROR "Skia include directory not found: ${SKIA_INCLUDE_DIR}")
-    endif()
-
-else()
-    # Try to find via find_package (works with vcpkg)
-    # Note: vcpkg uses unofficial-skia package config
-    find_package(unofficial-skia CONFIG QUIET)
-
-    if(NOT unofficial-skia_FOUND)
-        # Try old package name for backward compatibility
-        find_package(Skia QUIET)
-    endif()
-
-    if(NOT unofficial-skia_FOUND AND NOT Skia_FOUND)
-        message(FATAL_ERROR
-            "Skia not found! Please either:\n"
-            "  1. Install via vcpkg: vcpkg install skia:x64-windows\n"
-            "  2. Provide SKIA_DIR: cmake .. -DSKIA_DIR=C:/path/to/skia\n"
-            "  3. Build without Skia: cmake .. (removes -DZENITH_ENABLE_SKIA=ON)\n"
-            "See BUILD_SKIA.md for detailed instructions"
-        )
-    endif()
-
-    if(unofficial-skia_FOUND)
-        message(STATUS "Found Skia via find_package(unofficial-skia CONFIG)")
-    else()
-        message(STATUS "Found Skia via find_package(Skia)")
-    endif()
-endif()
-
-# Create or use Skia interface library
 if(unofficial-skia_FOUND)
-    # Create an alias to vcpkg's unofficial-skia target
-    message(STATUS "Creating Skia::Skia alias for unofficial::skia::skia target")
-    add_library(Skia::Skia INTERFACE IMPORTED)
-    target_link_libraries(Skia::Skia INTERFACE unofficial::skia::skia)
-else()
-    # Create manual interface library
-    add_library(Skia::Skia INTERFACE IMPORTED)
+    message(STATUS "  Found Skia via vcpkg")
+    target_link_libraries(ZenithDAW PRIVATE unofficial::skia::skia)
+    target_compile_definitions(ZenithDAW PRIVATE SK_GL=1)
+    set(SKIA_FOUND_AND_READY ON)
 endif()
 
-# Configure manual Skia target if not using vcpkg
-if(NOT unofficial-skia_FOUND)
-    # Set include directories (adjust paths as needed for your Skia installation)
-    if(DEFINED SKIA_INCLUDE_DIR)
-        target_include_directories(Skia::Skia INTERFACE
-            ${SKIA_INCLUDE_DIR}
-            ${SKIA_INCLUDE_DIR}/core
-            ${SKIA_INCLUDE_DIR}/gpu
-            ${SKIA_INCLUDE_DIR}/effects
-            ${SKIA_INCLUDE_DIR}/utils
-        )
-    endif()
+# 2. UI Components (Conditional on Skia Library)
+if(SKIA_FOUND_AND_READY)
+    message(STATUS "  Enabling Skia UI Components...")
+    
+    # Define ZENITH_USE_SKIA globally
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
 
-    # Link libraries based on platform
-    if(WIN32)
-        # Windows: Link D3D12 and DXGI
-        target_link_libraries(Skia::Skia INTERFACE
-            d3d12.lib
-            dxgi.lib
-            d3dcompiler.lib
-        )
-
-        # If SKIA_LIBRARY_DIR is set, link Skia library
-        if(DEFINED SKIA_LIBRARY_DIR AND EXISTS "${SKIA_LIBRARY_DIR}/skia.lib")
-            target_link_libraries(Skia::Skia INTERFACE
-                ${SKIA_LIBRARY_DIR}/skia.lib
-            )
-            message(STATUS "Linking Skia library: ${SKIA_LIBRARY_DIR}/skia.lib")
-        endif()
-
-    elseif(APPLE)
-        # macOS: Link Metal frameworks
-        target_link_libraries(Skia::Skia INTERFACE
-            "-framework Metal"
-            "-framework MetalKit"
-            "-framework QuartzCore"
-        )
-
-    elseif(UNIX)
-        # Linux: Link Vulkan
-        target_link_libraries(Skia::Skia INTERFACE
-            pthread
-            dl
-        )
-    endif()
-
-    # Compiler definitions
-    target_compile_definitions(Skia::Skia INTERFACE
-        SK_GANESH  # Use Ganesh GPU backend
-        $<$<PLATFORM_ID:Windows>:SK_D3D>
-        $<$<PLATFORM_ID:Darwin>:SK_METAL>
-        $<$<PLATFORM_ID:Linux>:SK_VULKAN>
+    # Add Skia UI source files
+    target_sources(ZenithDAW PRIVATE
+        apps/desktop/Source/ui/skia/SkiaComponent.cpp
+        apps/desktop/Source/ui/skia/SkiaButton.cpp
+        apps/desktop/Source/ui/skia/SkiaKnob.cpp
+        apps/desktop/Source/ui/skia/SkiaSlider.cpp
+        apps/desktop/Source/ui/skia/SkiaMainWindowIntegration.cpp
+        apps/desktop/Source/ui/skia/TransportBar.cpp
+        apps/desktop/Source/ui/skia/BottomBar.cpp
+        apps/desktop/Source/ui/skia/BrowserPanel.cpp
+        apps/desktop/Source/ui/skia/RightSidePanel.cpp
+        apps/desktop/Source/ui/skia/ZenithPolySynthUI.cpp
+        apps/desktop/Source/ui/skia/ZenithDesignSystem.cpp
+        apps/desktop/Source/ui/skia/views/PianoKeyboardViewSkia.cpp
+        apps/desktop/Source/ui/skia/ZenithUIComponents.h
+        apps/desktop/Source/ui/skia/DebugConsoleComponent.cpp
     )
 
-    # C++17 required by Skia
-    target_compile_features(Skia::Skia INTERFACE cxx_std_17)
+    target_include_directories(ZenithDAW PRIVATE
+        apps/desktop/Source/ui/skia
+    )
+    
+    message(STATUS "  Skia UI components: ENABLED")
 else()
-    # vcpkg unofficial-skia already configures everything needed
-    # Just ensure C++17 is used
-    if(TARGET unofficial::skia::skia)
-        message(STATUS "Skia target: unofficial::skia::skia")
-    endif()
+    message(FATAL_ERROR "Skia library not found! Install it via vcpkg: 'vcpkg install unofficial-skia'")
 endif()
 
-message(STATUS "Skia integration configured successfully!")
-message(STATUS "  Backend: $<$<PLATFORM_ID:Windows>:Direct3D>$<$<PLATFORM_ID:Darwin>:Metal>$<$<PLATFORM_ID:Linux>:Vulkan>")
-
+message(STATUS "============================================")
