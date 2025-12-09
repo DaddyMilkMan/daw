@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "Track.h"
+// #include "Track.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -70,7 +70,7 @@ struct MidiNoteSpec {
     Thread-safe design allows clips to be modified from the UI thread while
     playing back on the audio thread.
 */
-class Track::Clip : public juce::AudioSource {
+class Clip : public juce::AudioSource {
 public:
   //==============================================================================
   enum class Type { Audio, MIDI };
@@ -90,6 +90,9 @@ public:
   // Clip properties
   Type getType() const { return clipType; }
   void setType(Type type) { clipType = type; }
+
+  const juce::String &getClipId() const { return clipId; }
+  void setClipId(const juce::String &id) { clipId = id; }
 
   const juce::String &getName() const { return clipName; }
   void setName(const juce::String &name) { clipName = name; }
@@ -209,6 +212,7 @@ private:
   //==============================================================================
   // Clip properties
   Type clipType = Type::Audio;
+  juce::String clipId{juce::Uuid().toString()}; // Default distinct ID
   juce::String clipName{"Clip"};
   juce::Colour clipColor{juce::Colours::blue};
 

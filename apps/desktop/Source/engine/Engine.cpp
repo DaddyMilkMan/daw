@@ -15,6 +15,7 @@
 #include "../ui/PluginEditorWindow.h"
 #include "../instruments/InstrumentRegistry.h"
 #include "../instruments/RegisterBuiltInInstruments.h"
+#include "../include/TrackAutomationSynchronizer.h"
 
 namespace zenith {
 

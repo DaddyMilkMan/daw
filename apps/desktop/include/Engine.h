@@ -136,6 +136,12 @@ public:
   bool initialize();
 
   /**
+   * @brief Get the last initialization error, if any.
+   * @return Error description from the last failed initialize() call, or empty string.
+   */
+  juce::String getLastInitError() const;
+
+  /**
    * @brief Shutdown the audio engine
    *
    * This:
@@ -933,6 +939,8 @@ private:
   // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
   std::atomic<bool> isShuttingDown_{false};
 
+  // Last initialization error (message thread only)
+  juce::String lastInitError_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

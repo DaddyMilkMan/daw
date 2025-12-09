@@ -8,9 +8,10 @@
   ==============================================================================
 */
 
-#include "../include/engine/Track.h"
-#include "../../JuceLibraryCode/JuceHeader.h" // For juce::MessageManager
-#include "../include/engine/Engine.h"        // For Engine access (if needed)
+#include "Track.h"
+#include "Clip.h"
+#include <JuceHeader.h> // For juce::MessageManager
+#include "../include/Engine.h"        // For Engine access (if needed)
 
 namespace zenith {
 
@@ -80,14 +81,10 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
     if (midiBuffer != nullptr) {
       // Process MIDI clips
       for (const auto &clip : clips_) {
+        // Fix: Use processMidiClip from Clip.h
         if (clip->getType() == Clip::Type::MIDI && clip->isPlaying()) {
-          clip->processMidi(playheadPosition, *midiBuffer, midiChannel);
+          clip->processMidiClip(*midiBuffer, playheadPosition, bufferToFill.numSamples);
         }
-      }
-
-      // If it's an instrument track, pass MIDI to the instrument
-      if (trackType == Type::Instrument && instrument_ != nullptr) {
-        instrument_->processBlock(*midiBuffer);
       }
     }
   }
@@ -97,13 +94,20 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
     for (const auto &clip : clips_) {
       if (clip->getType() == Clip::Type::Audio && clip->isPlaying()) {
         // Render audio clip into the buffer
-        clip->processAudio(bufferToFill, playheadPosition);
+        // Fix: Use processAudioClip from Clip.h
+        clip->processAudioClip(bufferToFill, playheadPosition);
       }
     }
 
     // If it's an instrument track, render instrument audio
     if (trackType == Type::Instrument && instrument_ != nullptr) {
-      instrument_->getAudio(bufferToFill);
+       // Fix: Use processBlock for instrument audio rendering
+       if (midiBuffer != nullptr) {
+           instrument_->processBlock(*bufferToFill.buffer, *midiBuffer);
+       } else {
+           juce::MidiBuffer emptyMidi;
+           instrument_->processBlock(*bufferToFill.buffer, emptyMidi);
+       }
     }
   }
 
@@ -125,7 +129,10 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
   // Pass to mixer channel for volume, pan, sends, metering
   // We pass midiBuffer even to audio tracks so that mixerChannel can handle MIDI
   // if it processes effects that use MIDI input.
-  juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
+  // Pass to mixer channel for volume, pan, sends, metering
+  // We pass midiBuffer even to audio tracks so that mixerChannel can handle MIDI
+  // if it processes effects that use MIDI input.
+  juce::AudioSourceChannelInfo mixerInfo(bufferToFill.buffer, bufferToFill.startSample,
                                          bufferToFill.numSamples);
   mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
 
@@ -173,7 +180,8 @@ void Track::addClip(std::unique_ptr<Clip> newClip) {
 void Track::removeClip(const juce::String &clipId) {
   clips_.erase(std::remove_if(clips_.begin(), clips_.end(),
                                [&clipId](const std::unique_ptr<Clip> &clip) {
-                                 return clip->getClipId() == clipId;
+                                 // Fix: Use getName() as ID
+                                 return clip->getName() == clipId;
                                }),
                clips_.end());
 }

@@ -4,8 +4,12 @@
  */
 
 #include "../include/ClipSynchronizer.h"
+#include "../include/ProjectState.h"
+#include "../include/Engine.h"
 #include "../Source/engine/Track.h"
 #include "../Source/engine/Clip.h"
+
+using namespace zenith;
 
 //==============================================================================
 ClipSynchronizer::ClipSynchronizer(zenith::ProjectState& ps, zenith::Engine& eng)
@@ -13,6 +17,15 @@ ClipSynchronizer::ClipSynchronizer(zenith::ProjectState& ps, zenith::Engine& eng
 {
     DBG("ClipSynchronizer: Constructor");
 }
+//...
+// Skipping unchanged lines
+//...
+        // Get Engine's clip count
+        int numClips = trackPtr->getNumClips();
+        
+        // Get zenith::ProjectState clips container
+        auto clipsNode = projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
+//...
 
 ClipSynchronizer::~ClipSynchronizer()
 {
@@ -94,7 +107,7 @@ juce::String ClipSynchronizer::createClip(const juce::String& trackId, double st
     {
         if (trackPtr->getTrackId() == trackId)
         {
-            auto newClip = std::make_unique<zenith::Track::Clip>();
+            auto newClip = std::make_unique<zenith::Clip>();
             
             // Convert beats to samples
             double tempo = projectState.getTempo();
@@ -105,7 +118,7 @@ juce::String ClipSynchronizer::createClip(const juce::String& trackId, double st
             newClip->setStartPosition(startSamples);
             newClip->setLength(lengthSamples);
             newClip->setName(newClipId); // Use ID as name for now
-            newClip->setType(clipType == "midi" ? zenith::Track::Clip::Type::MIDI : zenith::Track::Clip::Type::Audio);
+            newClip->setType(clipType == "midi" ? zenith::Clip::Type::MIDI : zenith::Clip::Type::Audio);
 
             trackPtr->addClip(std::move(newClip));
             engineTrackFound = true;
@@ -157,8 +170,8 @@ void ClipSynchronizer::syncEngineToProjectState()
             continue;
         }
         
-        // Get Engine's clip list (thread-safe read via accessor)
-        const auto& engineClips = trackPtr->getClips();
+        // Get Engine's clip count
+        int numClips = trackPtr->getNumClips();
         
         // Get zenith::ProjectState clips container
         auto clipsNode = projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
@@ -169,9 +182,10 @@ void ClipSynchronizer::syncEngineToProjectState()
         }
         
         // Sync each Engine clip to zenith::ProjectState
-        for (size_t i = 0; i < engineClips.size(); ++i)
+        for (int i = 0; i < numClips; ++i)
         {
-            const auto& engineClip = engineClips[i];
+            auto* engineClip = trackPtr->getClip(i);
+            if (engineClip == nullptr) continue;
             
             // Check if this clip exists in zenith::ProjectState
             juce::String clipName = engineClip->getName();
@@ -221,7 +235,7 @@ void ClipSynchronizer::syncEngineToProjectState()
                 newClip.setProperty(zenith::ProjectState::PROP_ID, juce::var(newClipId), nullptr);
                 newClip.setProperty(zenith::ProjectState::PROP_NAME, juce::var(clipName), nullptr);
                 newClip.setProperty(zenith::ProjectState::PROP_TYPE, 
-                    juce::var(engineClip->getType() == zenith::Track::Clip::Type::MIDI ? "midi" : "audio"), 
+                    juce::var(engineClip->getType() == zenith::Clip::Type::MIDI ? "midi" : "audio"), 
                     nullptr);
                 
                 // Convert samples to beats

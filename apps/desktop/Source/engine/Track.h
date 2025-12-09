@@ -17,7 +17,7 @@
 #include <memory>
 #include <vector>
 
-#include "../include/engine/MixerChannel.h"
+#include "MixerChannel.h"
 #include "AudioFilePool.h"
 #include "AutomationLane.h"
 #include "Clip.h"
@@ -149,7 +149,6 @@ public:
   void removePlugin(int index);
   juce::AudioPluginInstance *getPlugin(int index) const;
   int getNumPlugins() const;
-  juce::AudioPluginInstance *getPlugin(int index) const;
 
   /**
    * @brief Get total latency of the track in samples (PDC)
@@ -169,9 +168,9 @@ public:
   // Metering (Thread-safe)
   //==============================================================================
 
-  float getCurrentLevel() const { return mixerChannel.getCurrentLevel(); }
-  float getPeakLevel() const { return mixerChannel.getPeakLevel(); }
-  void resetPeakLevel() { mixerChannel.resetPeakLevel(); }
+  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+  void resetPeakLevel() { mixerChannel.resetPeaks(); }
 
   //==============================================================================
   // Automation

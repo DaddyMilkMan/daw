@@ -708,8 +708,8 @@ void MainComponent::handleImportAudio() {
         }
 
         // Create a new clip
-        auto clip = std::make_unique<zenith::Track::Clip>();
-        clip->setType(zenith::Track::Clip::Type::Audio);
+        auto clip = std::make_unique<zenith::Clip>();
+        clip->setType(zenith::Clip::Type::Audio);
         clip->setName(file.getFileNameWithoutExtension());
 
         // Load audio file through pool (message thread - safe to do I/O)

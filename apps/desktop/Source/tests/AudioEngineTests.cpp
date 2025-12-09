@@ -105,7 +105,7 @@ public:
 
         beginTest("Clip Timing Accuracy");
         {
-            zenith::Track::Clip clip;
+            zenith::Clip clip;
             clip.setStartPosition(kClipStart);
             clip.setLength(kClipLength);
             
@@ -145,7 +145,7 @@ public:
         
         beginTest("Clip start/stop");
         {
-            zenith::Track::Clip clip;
+            zenith::Clip clip;
             clip.setStartPosition(0);
             clip.setLength(1000);
             juce::AudioBuffer<float> content(1, 1000);
@@ -160,7 +160,7 @@ public:
         
         beginTest("Clip looping");
         {
-            zenith::Track::Clip clip;
+            zenith::Clip clip;
             clip.setStartPosition(0);
             clip.setLength(100); // Short clip
             clip.setLooping(true);
