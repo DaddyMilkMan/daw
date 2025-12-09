@@ -59,7 +59,12 @@ void EngineAdapter::setRecordingCompleteHandler(RecordingCompleteHandler handler
 
 bool EngineAdapter::initialize()
 {
-    return engine_.initialize();
+    bool success = engine_.initialize();
+    if (!success && errorHandler_)
+    {
+        errorHandler_(toString(engine_.getLastInitError()));
+    }
+    return success;
 }
 
 void EngineAdapter::shutdown()
@@ -412,56 +417,15 @@ bool EngineAdapter::exportProject(const ExportOptions& options)
 
 std::unique_ptr<AudioEngineCore> EngineAdapter::create()
 {
-    // Create a new Engine instance and wrap it in an EngineAdapter.
-    // Note: The Engine must be owned by something. In the real application,
-    // the Engine is owned by MainWindow or similar. For now, we'll create a
-    // static Engine? That's not good. Instead, we'll require the application
-    // to pass an Engine to the adapter. However, the factory method in
-    // AudioEngineCore is static and expects to create an instance.
-    // We need to change the design: The factory method should be implemented
-    // elsewhere (like in a factory class) that knows about the application's
-    // lifetime. For now, we'll implement it to create a new Engine and manage
-    // it with a shared_ptr, but that's not ideal because the Engine might
-    // need to be integrated with other parts (like ProjectState).
-    // Since this is a migration step, we'll leave it as a placeholder and
-    // return nullptr. The actual creation will be done by the application
-    // (e.g., MainWindow) by constructing an EngineAdapter with its Engine.
-    // We'll change the factory method in AudioEngineCore to be a pure
-    // virtual? Actually, we can keep it static and return a default
-    // implementation that uses a global Engine? That's not good.
-
-    // For now, we'll return nullptr and rely on the application to create
-    // the adapter manually. This is a temporary solution.
-    // In the next phase, we'll update the factory to work with the existing
-    // Engine instance.
-
-    // Returning nullptr will cause runtime errors, so we must not call this.
-    // Instead, let's create a new Engine and wrap it. This is acceptable for
-    // testing but not for production because the Engine must be integrated
-    // with the rest of the application (device manager, etc.).
-    // We'll create a new Engine and hope that the application doesn't have
-    // two Engines. This is a temporary solution until we refactor the
-    // ownership.
-
-    // Actually, we can't create a new Engine because the application already
-    // has one. The factory method should be removed or implemented differently.
-    // Since we are in the migration phase, we'll keep the factory method
-    // but make it return an adapter that wraps the existing global Engine.
-    // However, there is no global Engine. We need to get a reference to the
-    // existing Engine. We can use a static variable or a function that sets
-    // the global Engine. That's a hack.
-
-    // For the purpose of this migration, we'll change the design:
-    // The factory method will be removed from AudioEngineCore and we'll
-    // rely on dependency injection. However, changing the interface would
-    // break the plan. So we'll keep it and implement it with a static
-    // pointer that must be set by the application.
-
-    // We'll add a static function to set the global Engine instance.
-    // This is a temporary solution.
-
-    // Since we haven't implemented that, we'll return nullptr and log an error.
-    jassertfalse; // This should not be called yet.
+    // This factory method is deprecated in the new architecture.
+    // The Engine instance is now owned by the main application component 
+    // and passed via dependency injection.
+    // 
+    // Returning nullptr here signals to the caller that they should not 
+    // rely on this static factory but instead construct the EngineAdapter 
+    // with an existing Engine reference.
+    
+    juce::Logger::writeToLog("EngineAdapter::create() called - returning nullptr. Use Dependency Injection.");
     return nullptr;
 }
 

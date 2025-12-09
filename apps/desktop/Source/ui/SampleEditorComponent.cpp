@@ -506,7 +506,42 @@ void SampleEditorComponent::drawEmptyState(SkCanvas* canvas, float w, float h)
 
 void SampleEditorComponent::drawBackground(SkCanvas*, float, float, float) {}
 void SampleEditorComponent::drawBorder(SkCanvas*, float, float, float) {}
-void SampleEditorComponent::drawSpectrogram(SkCanvas*, const SkRect&) {} // TODO
+void SampleEditorComponent::drawSpectrogram(SkCanvas* canvas, const SkRect& bounds) {
+    // Stylized Spectrogram Visualization (Placeholder for real FFT)
+    // Uses a vertical gradient to simulate frequency energy distribution
+    
+    SkColor colors[3] = {
+        SkColorSetARGB(255, 20, 20, 30),   // Low freq (dark)
+        SkColorSetARGB(255, 60, 40, 100),  // Mid freq (purple)
+        SkColorSetARGB(255, 100, 200, 255) // High freq (bright)
+    };
+    
+    SkScalar pos[3] = { 0.0f, 0.5f, 1.0f };
+    
+    SkPoint points[2] = {
+        { bounds.left(), bounds.bottom() },
+        { bounds.left(), bounds.top() }
+    };
+    
+    auto shader = SkGradientShader::MakeLinear(points, colors, pos, 3, SkTileMode::kClamp);
+    
+    SkPaint paint;
+    paint.setShader(shader);
+    
+    canvas->drawRect(bounds, paint);
+    
+    // Add some random noise/texture to look more like data
+    // (In a real implementation, this would be the FFT bitmap)
+    SkPaint gridPaint;
+    gridPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+    gridPaint.setStrokeWidth(1.0f);
+    
+    // Fake frequency grid
+    for (int i = 1; i < 10; ++i) {
+        float y = bounds.top() + (bounds.height() * i / 10.0f);
+        canvas->drawLine(bounds.left(), y, bounds.right(), y, gridPaint);
+    }
+}
 
 //==============================================================================
 // Coordinate conversion
