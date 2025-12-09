@@ -86,7 +86,6 @@ juce::ValueTree SessionViewComponent::getClipAt(int trackIndex, int sceneIndex)
     if (!clipsNode.isValid()) return {};
 
     // Linear search for clip with matching scene index
-    // (In a real app, we might maintain an index, but for UI rendering this is acceptable)
     for (const auto& clip : clipsNode) {
         if (clip.hasProperty(PROP_SCENE_INDEX)) {
             if (static_cast<int>(clip.getProperty(PROP_SCENE_INDEX)) == sceneIndex) {
@@ -168,8 +167,7 @@ void SessionViewComponent::drawSlot(SkCanvas* canvas, const SkRect& rect, int tr
         iconPaint.setAntiAlias(true);
         canvas->drawPath(playPath, iconPaint);
     } else {
-        // Stop button placeholder for empty slots
-        // (Only shows on hover usually, but for now fixed)
+        // Circle indicator for empty slots
         SkPaint dotPaint;
         dotPaint.setColor(SkColorSetARGB(20, 255, 255, 255));
         dotPaint.setAntiAlias(true);
@@ -215,10 +213,9 @@ void SessionViewComponent::triggerClip(int trackIndex, int sceneIndex)
     auto clip = getClipAt(trackIndex, sceneIndex);
     if (clip.isValid()) {
         // REAL IMPLEMENTATION: Update State
-        // 1. Mark this clip as queued/playing
         clip.setProperty(PROP_IS_QUEUED, true, &projectState_.getUndoManager());
         
-        // 2. Stop other clips on this track (Exclusive launch)
+        // Stop other clips on this track
         auto tracksNode = projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
         auto track = tracksNode.getChild(trackIndex);
         auto clips = track.getChildWithName(ProjectState::ID_CLIPS);
@@ -229,7 +226,6 @@ void SessionViewComponent::triggerClip(int trackIndex, int sceneIndex)
                 c.setProperty(PROP_IS_QUEUED, false, nullptr);
             }
         }
-        
         DBG("Session: Triggered Clip on Track " + juce::String(trackIndex) + " Scene " + juce::String(sceneIndex));
     } else {
         stopTrack(trackIndex);
@@ -290,7 +286,29 @@ void SessionViewComponent::mouseDown(const juce::MouseEvent& e)
         int numTracks = tracksNode.getNumChildren();
 
         if (track >= 0 && track < numTracks && scene >= 0 && scene < numScenes_) {
-            triggerClip(track, scene);
+            
+            // If Right Click or Alt Click -> Create new clip
+            if (e.mods.isRightButtonDown() || e.mods.isAltDown()) {
+                auto trackTree = projectState_.getTrackByIndex(track);
+                if (trackTree.isValid()) {
+                    juce::String trackId = trackTree.getProperty(ProjectState::PROP_ID);
+                    
+                    // Create default 4-bar MIDI clip
+                    double sampleRate = 44100.0; // Approximation for UI
+                    juce::int64 lengthSamples = static_cast<juce::int64>(4.0 * sampleRate * (60.0 / 120.0));
+                    
+                    juce::String clipId = projectState_.createClip(trackId, "midi", 0, lengthSamples, "Scene " + juce::String(scene + 1), "Create Session Clip");
+                    
+                    if (clipId.isNotEmpty()) {
+                        auto clip = projectState_.getClip(trackId, clipId);
+                        clip.setProperty(PROP_SCENE_INDEX, scene, nullptr);
+                        DBG("Session: Created Clip at T" + juce::String(track) + " S" + juce::String(scene));
+                    }
+                }
+            } else {
+                // Normal click -> Trigger
+                triggerClip(track, scene);
+            }
         }
     }
 }
