@@ -23,8 +23,10 @@ The repository is located at `C:\zenith\daw`.
             *   `PianoRollAdvanced.cpp`: Algorithms (Quantize, Humanize, etc.).
             *   `MainWindow.cpp`: Main application window and layout.
     *   **`include/`**: Public headers.
-*   **`services/`**: Microservices.
-    *   **`auth/`**: Node.js/Express authentication service (MongoDB).
+    *   **`services/`**: Microservices.
+        *   **`auth/`**: Node.js/Express authentication service.
+            *   **Features**: JWT (Access/Refresh), Google OAuth 2.0 (Passport), MongoDB.
+            *   **Security**: bcrypt, helmet, rate-limiting.
 *   **`docs/`**: Documentation.
 *   **`logs/`**: Build logs and debug output.
 *   **`tools/`**: Utility scripts (Python).
@@ -38,26 +40,28 @@ The repository is located at `C:\zenith\daw`.
     *   **PDC**: Plugin Delay Compensation is fully implemented in `Engine` and `Track`.
     *   **Lock-Free**: The audio thread uses lock-free patterns (FIFOs, atomics) to communicate with the message thread.
     *   **Graph**: `RoutingGraph` manages signal flow.
+    *   **Components**: `EngineLifecycle`, `EngineTransport`, `EngineExport`, `EngineRecording`.
 
 ## 3. Coding Conventions
 
 *   **Files**: Split large classes into logical files (e.g., `Class.cpp`, `ClassRendering.cpp`, `ClassLogic.cpp`).
-*   **Stubs**: **DO NOT** leave empty stubs. If you add a function, implement a basic version or a log message explaining why it's empty.
+*   **Stubs**: **DO NOT** leave empty stubs. If you add a function, implement a basic version (visual placeholder or simulated logic) or a log message explaining why it's empty.
 *   **Safety**: Always checking pointers (`nullptr`) before access. Use `jassert` for invariants.
 *   **Formatting**: Standard JUCE style (Allman braces, 4 spaces).
 
 ## 4. Key Files to Know
 
-*   **`Engine.cpp`**: The heart of the audio processing.
-*   **`PianoRollComponent.cpp`**: The complex MIDI editor.
+*   **`Engine.cpp`**: The heart of the audio processing (Core loop).
+*   **`PianoRollComponent.cpp`**: The complex MIDI editor (Split into Core, Rendering, Advanced).
 *   **`TransportBar.cpp`**: The UI control center (Skia-based).
-*   **`authController.js`**: Backend auth logic.
+*   **`authController.js`**: Backend auth logic (including Google callback).
 
 ## 5. Recent Changes (Refactoring)
 
-*   **Split Engine**: `Engine.cpp` was monolithic; it is now split into 5 files.
+*   **Split Engine**: `Engine.cpp` was monolithic; it is now split into 5 files (`Engine.cpp`, `EngineLifecycle.cpp`, `EngineTransport.cpp`, `EngineExport.cpp`, `EngineRecording.cpp`).
 *   **Split PianoRoll**: `PianoRollComponent.cpp` was monolithic; it is now split into 3 files.
 *   **Cleanup**: Logs moved to `logs/`, unused files deleted.
-*   **Auth**: Added `services/auth` for JWT authentication.
+*   **Auth**: Added `services/auth` for JWT authentication with Google Login.
+*   **Build**: Automated Skia integration via vcpkg (no manual paths required).
 
 Use this guide to orient yourself before making changes.
