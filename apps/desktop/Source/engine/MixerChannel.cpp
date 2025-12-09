@@ -629,7 +629,44 @@ void MixerChannel::updateMeters(const juce::AudioBuffer<float> &buffer,
 
     if (maxLevel > outputPeak.load())
       outputPeak.store(maxLevel);
+
+    // Push samples to visualizer FIFO
+    if (buffer.getNumChannels() > 0) {
+        pushToVisualizer(buffer.getReadPointer(0), buffer.getNumSamples());
+    }
   }
+}
+
+//==============================================================================
+int MixerChannel::readFromVisualizer(float* dest, int numSamples) {
+    int numReady = visualizerFifo_.getNumReady();
+    int numToRead = std::min(numReady, numSamples);
+    
+    if (numToRead > 0) {
+        int start1, size1, start2, size2;
+        visualizerFifo_.prepareToRead(numToRead, start1, size1, start2, size2);
+        
+        if (size1 > 0) std::memcpy(dest, visualizerBuffer_.data() + start1, size1 * sizeof(float));
+        if (size2 > 0) std::memcpy(dest + size1, visualizerBuffer_.data() + start2, size2 * sizeof(float));
+        
+        visualizerFifo_.finishedRead(numToRead);
+    }
+    return numToRead;
+}
+
+void MixerChannel::pushToVisualizer(const float* data, int numSamples) {
+    int numFree = visualizerFifo_.getFreeSpace();
+    int numToWrite = std::min(numFree, numSamples);
+    
+    if (numToWrite > 0) {
+        int start1, size1, start2, size2;
+        visualizerFifo_.prepareToWrite(numToWrite, start1, size1, start2, size2);
+        
+        if (size1 > 0) std::memcpy(visualizerBuffer_.data() + start1, data, size1 * sizeof(float));
+        if (size2 > 0) std::memcpy(visualizerBuffer_.data() + start2, data + size1, size2 * sizeof(float));
+        
+        visualizerFifo_.finishedWrite(numToWrite);
+    }
 }
 
 } // namespace zenith

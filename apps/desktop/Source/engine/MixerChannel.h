@@ -411,6 +411,14 @@ public:
 
   void resetPeaks();
 
+  // Visualizer Tap
+  int readFromVisualizer(float* dest, int numSamples);
+  void pushToVisualizer(const float* data, int numSamples);
+
+private:
+  juce::AbstractFifo visualizerFifo_ { 4096 };
+  std::vector<float> visualizerBuffer_ { 4096 };
+
   //==============================================================================
   // State management
   juce::ValueTree getState() const;

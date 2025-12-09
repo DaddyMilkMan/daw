@@ -24,6 +24,7 @@ target_sources(ZenithDAW PRIVATE
     AudioFeedback.cpp
     ZenithLookAndFeel.cpp
     ZenithTheme.cpp
+    SettingsComponent.cpp
 )
 
 add_subdirectory(skia)

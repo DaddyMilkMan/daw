@@ -87,6 +87,20 @@ MixerChannelComponent::MixerChannelComponent(Track* track)
     // Level meter
     addAndMakeVisible(meter_);
 
+#ifdef ZENITH_USE_SKIA
+    // Mini spectrum analyzer (GPU-accelerated FFT visualization)
+    spectrumAnalyzer_ = std::make_unique<SkiaSpectrumComponent>(SkiaSpectrumComponent::FFTSize::Size512);
+    spectrumAnalyzer_->setDisplayMode(SkiaSpectrumComponent::DisplayMode::FilledCurve);
+    spectrumAnalyzer_->setGradientColors(
+        design::colors::BLUE,
+        design::colors::CYAN,
+        design::colors::MAGENTA
+    );
+    spectrumAnalyzer_->setLineWidth(1.5f);
+    spectrumAnalyzer_->setDecaySpeed(0.9f);
+    addAndMakeVisible(*spectrumAnalyzer_);
+#endif
+
     // Start timer for meter updates (30 Hz)
     startTimer(33);
 
@@ -129,6 +143,15 @@ void MixerChannelComponent::resized()
     nameLabel_.setBounds(bounds.removeFromTop(30));
     bounds.removeFromTop(4);  // Spacing
 
+#ifdef ZENITH_USE_SKIA
+    // Mini spectrum analyzer below track name
+    if (spectrumAnalyzer_) {
+        auto spectrumBounds = bounds.removeFromTop(40);
+        spectrumAnalyzer_->setBounds(spectrumBounds.reduced(2, 2));
+        bounds.removeFromTop(4);  // Spacing
+    }
+#endif
+
     // Mute/Solo buttons at bottom
     auto buttonArea = bounds.removeFromBottom(64);
     muteButton_.setBounds(buttonArea.removeFromTop(30).reduced(2));
@@ -162,6 +185,22 @@ void MixerChannelComponent::timerCallback()
         float level = track_->getCurrentLevel();
         meter_.setLevel(level);
         meter_.repaint();
+
+#ifdef ZENITH_USE_SKIA
+        // Get samples from MixerChannel's visualizer FIFO and push to spectrum analyzer
+        if (spectrumAnalyzer_) {
+            // Read samples in chunks from the MixerChannel's internal FIFO
+            // (The FIFO size needs to be larger than the block size the mixer passes)
+            constexpr int chunkSize = 512; 
+            std::array<float, chunkSize> tempBuffer;
+            
+            // Read available samples and push to the spectrum analyzer's FIFO
+            int numRead = track_->getMixerChannel().readFromVisualizer(tempBuffer.data(), chunkSize);
+            if (numRead > 0) {
+                spectrumAnalyzer_->getAudioFifo().pushSamples(tempBuffer.data(), numRead);
+            }
+        }
+#endif
     }
 }
 
