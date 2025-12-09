@@ -1690,6 +1690,57 @@ juce::var CommandAPI::exportProjectAdvanced(const juce::var &params) {
   return createSuccessResponse(juce::var());
 }
 
+juce::var CommandAPI::syncProjectToCloud(const juce::var& params) {
+    // 1. Get Project File
+    auto projectFile = projectState.getProjectFile();
+    if (!projectFile.existsAsFile()) {
+        return createErrorResponse("Project must be saved locally before syncing to cloud.");
+    }
+
+    // 2. Get Auth Token
+    // In a production environment, retrieve this from a secure credential store or SessionManager
+    juce::String token = ""; 
+    if (params.hasProperty("token")) {
+        token = params["token"].toString();
+    } else {
+        // Fallback for testing
+        token = "test_token";
+    }
+
+    // 3. Prepare Request
+    // Use localhost for the accompanying auth service
+    juce::URL url("http://localhost:5000/api/projects/upload");
+    
+    url = url.withFileToUpload("projectFile", projectFile, "application/octet-stream");
+    url = url.withParameter("name", projectState.getProjectName());
+    url = url.withParameter("description", "Synced from Zenith DAW");
+    url = url.withParameter("isPublic", "false");
+
+    // 4. Execute Upload
+    // Note: This is a blocking call. In a UI context, run this in a Thread or Task.
+    int statusCode = 0;
+    std::unique_ptr<juce::InputStream> stream = url.createInputStream(
+        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+            .withExtraHeaders("Authorization: Bearer " + token)
+            .withConnectionTimeoutMs(30000) // 30s timeout for uploads
+            .withStatusCode(&statusCode)
+    );
+
+    if (stream != nullptr && (statusCode == 200 || statusCode == 201)) {
+        juce::String responseText = stream->readEntireStreamAsString();
+        auto jsonResponse = juce::JSON::parse(responseText);
+        DBG("Cloud Sync Successful: " + responseText);
+        return createSuccessResponse(jsonResponse);
+    } else {
+        juce::String errorMsg = "Upload failed. Status: " + juce::String(statusCode);
+        if (stream) {
+            errorMsg += " Response: " + stream->readEntireStreamAsString();
+        }
+        DBG(errorMsg);
+        return createErrorResponse(errorMsg);
+    }
+}
+
 //==============================================================================
 // Helper Method Implementations
 //==============================================================================

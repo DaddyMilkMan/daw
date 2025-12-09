@@ -14,6 +14,7 @@ dotenv.config();
 require('./config/passport')(passport);
 
 const authRoutes = require('./routes/authRoutes');
+const projectRoutes = require('./routes/projectRoutes');
 
 const app = express();
 
@@ -50,6 +51,9 @@ const connectDB = async () => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/projects', projectRoutes);
+// Serve uploaded files securely (e.g. for re-download) - In prod use nginx/S3 presigned URLs
+app.use('/uploads', express.static('uploads'));
 
 // Basic Health Check
 app.get('/', (req, res) => {
