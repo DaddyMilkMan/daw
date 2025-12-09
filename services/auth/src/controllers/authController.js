@@ -173,19 +173,12 @@ const googleCallback = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
-    // For a Desktop App, we typically redirect to a custom URI scheme
-    // Example: zenith://auth?access_token=...&refresh_token=...
-    // For now, we'll redirect to a success page or return JSON if tested via Postman
-    // But browsers expect a redirect.
-    
-    // Option A: Redirect to Deep Link (Production)
-    // res.redirect(`zenith://oauth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+    // Pass the Google Access Token to the client
+    // WARNING: In production, encryption is recommended for this handoff.
+    const googleToken = user.googleAccessToken;
 
-    // Option B: Return JSON (for testing, but doesn't work well with direct browser navigation)
-    // res.json({ accessToken, refreshToken });
-
-    // Option C: Redirect to a local success page that the C++ app's WebView detects
-    res.redirect(`http://localhost:5000/auth/success?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+    // Redirect to local success page (or deep link)
+    res.redirect(`http://localhost:5000/auth/success?accessToken=${accessToken}&refreshToken=${refreshToken}&googleToken=${googleToken}`);
 
   } catch (error) {
     console.error(error);

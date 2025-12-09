@@ -18,7 +18,15 @@ router.post('/logout', logoutUser);
 router.get('/me', protect, getMe);
 
 // Google OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', passport.authenticate('google', { 
+  scope: [
+    'profile', 
+    'email',
+    'https://www.googleapis.com/auth/drive.file' // Permission to write files
+  ],
+  accessType: 'offline', // Get refresh token to stay logged in
+  prompt: 'consent'
+}));
 router.get('/google/callback', 
   passport.authenticate('google', { session: false, failureRedirect: '/login' }),
   googleCallback

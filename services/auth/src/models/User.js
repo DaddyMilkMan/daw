@@ -25,8 +25,10 @@ const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
     unique: true,
-    sparse: true // Allows null/undefined values to coexist with unique index
+    sparse: true
   },
+  googleAccessToken: String,
+  googleRefreshToken: String,
   refreshToken: {
     type: String
   },

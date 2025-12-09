@@ -1701,44 +1701,69 @@ juce::var CommandAPI::syncProjectToCloud(const juce::var& params) {
         return createErrorResponse("Project must be saved locally before syncing to cloud.");
     }
 
-    // 2. Get Auth Token
-    // In a production environment, retrieve this from a secure credential store or SessionManager
-    juce::String token = ""; 
-    if (params.hasProperty("token")) {
-        token = params["token"].toString();
+    // 2. Get Google Access Token
+    // The UI must have retrieved this from the login callback
+    juce::String googleToken = ""; 
+    if (params.hasProperty("googleToken")) {
+        googleToken = params["googleToken"].toString();
     } else {
-        // Fallback for testing
-        token = "test_token";
+        return createErrorResponse("No Google Drive access token provided. Please log in.");
     }
 
-    // 3. Prepare Request
-    // Use localhost for the accompanying auth service
-    juce::URL url("http://localhost:5000/api/projects/upload");
+    // 3. Prepare Google Drive API Request (Multipart)
+    // We upload to https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart
+    juce::URL url("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart");
     
-    url = url.withFileToUpload("projectFile", projectFile, "application/octet-stream");
-    url = url.withParameter("name", projectState.getProjectName());
-    url = url.withParameter("description", "Synced from Zenith DAW");
-    url = url.withParameter("isPublic", "false");
+    // Metadata part (JSON)
+    juce::DynamicObject* metadata = new juce::DynamicObject();
+    metadata->setProperty("name", projectFile.getFileName());
+    metadata->setProperty("description", "Uploaded from Zenith DAW");
+    metadata->setProperty("mimeType", "application/octet-stream"); // Or custom mime
+    
+    juce::String metadataJson = juce::JSON::toString(juce::var(metadata));
+
+    // Construct Multipart Body manually (JUCE's withFileToUpload is too simple for this)
+    juce::String boundary = "-------ZenithBoundary" + juce::String::toHexString(juce::Random::getSystemRandom().nextInt64());
+    
+    juce::MemoryOutputStream bodyStream;
+    
+    // Part 1: Metadata
+    bodyStream << "--" << boundary << "\r\n";
+    bodyStream << "Content-Type: application/json; charset=UTF-8\r\n\r\n";
+    bodyStream << metadataJson << "\r\n";
+    
+    // Part 2: File Data
+    bodyStream << "--" << boundary << "\r\n";
+    bodyStream << "Content-Type: application/octet-stream\r\n\r\n";
+    
+    // Read file into stream
+    juce::FileInputStream fileInput(projectFile);
+    bodyStream.writeFromInputStream(fileInput, -1);
+    
+    bodyStream << "\r\n--" << boundary << "--\r\n";
 
     // 4. Execute Upload
-    // Note: This is a blocking call. In a UI context, run this in a Thread or Task.
     int statusCode = 0;
-    std::unique_ptr<juce::InputStream> stream = url.createInputStream(
-        juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-            .withExtraHeaders("Authorization: Bearer " + token)
-            .withConnectionTimeoutMs(30000) // 30s timeout for uploads
-            .withStatusCode(&statusCode)
-    );
+    
+    // Create stream from the body data
+    std::unique_ptr<juce::InputStream> responseStream = url
+        .withPOSTData(bodyStream.getMemoryBlock())
+        .withExtraHeaders("Authorization: Bearer " + googleToken + "\n" +
+                          "Content-Type: multipart/related; boundary=" + boundary)
+        .withConnectionTimeoutMs(60000) // 60s timeout for large files
+        .createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
+            .withStatusCode(&statusCode));
 
-    if (stream != nullptr && (statusCode == 200 || statusCode == 201)) {
-        juce::String responseText = stream->readEntireStreamAsString();
-        auto jsonResponse = juce::JSON::parse(responseText);
-        DBG("Cloud Sync Successful: " + responseText);
-        return createSuccessResponse(jsonResponse);
+    if (responseStream != nullptr && (statusCode == 200 || statusCode == 201)) {
+        juce::String responseText = responseStream->readEntireStreamAsString();
+        DBG("Google Drive Upload Successful: " + responseText);
+        
+        auto result = juce::JSON::parse(responseText);
+        return createSuccessResponse(result); // Returns file ID, etc.
     } else {
-        juce::String errorMsg = "Upload failed. Status: " + juce::String(statusCode);
-        if (stream) {
-            errorMsg += " Response: " + stream->readEntireStreamAsString();
+        juce::String errorMsg = "Google Drive Upload failed. Status: " + juce::String(statusCode);
+        if (responseStream) {
+            errorMsg += " Response: " + responseStream->readEntireStreamAsString();
         }
         DBG(errorMsg);
         return createErrorResponse(errorMsg);

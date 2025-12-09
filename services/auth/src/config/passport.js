@@ -13,17 +13,22 @@ module.exports = function(passport) {
       let user = await User.findOne({ googleId: profile.id });
 
       if (user) {
+        // Update tokens
+        user.googleAccessToken = accessToken;
+        if (refreshToken) user.googleRefreshToken = refreshToken;
+        await user.save();
         return done(null, user);
       }
 
       // 2. Check if user exists with this email (link account)
-      // Note: Google emails are verified, so this is generally safe.
       const email = profile.emails[0].value;
       user = await User.findOne({ email: email });
 
       if (user) {
-        // Link Google ID to existing account
+        // Link Google ID
         user.googleId = profile.id;
+        user.googleAccessToken = accessToken;
+        if (refreshToken) user.googleRefreshToken = refreshToken;
         await user.save();
         return done(null, user);
       }
@@ -33,7 +38,8 @@ module.exports = function(passport) {
         googleId: profile.id,
         email: email,
         username: profile.displayName || email.split('@')[0],
-        // No password needed
+        googleAccessToken: accessToken,
+        googleRefreshToken: refreshToken
       };
 
       user = await User.create(newUser);
