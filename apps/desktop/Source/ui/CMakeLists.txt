@@ -5,6 +5,8 @@ target_sources(ZenithDAW PRIVATE
     ArrangerComponent.cpp
     MixerComponent.cpp
     PianoRollComponent.cpp
+    PianoRollRendering.cpp
+    PianoRollAdvanced.cpp
     AutomationLaneComponent.cpp
     MarkerLaneComponent.cpp
     TempoLaneComponent.cpp
