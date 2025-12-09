@@ -7,6 +7,7 @@ target_sources(ZenithDAW PRIVATE
     PianoRollComponent.cpp
     PianoRollRendering.cpp
     PianoRollAdvanced.cpp
+    SessionViewComponent.cpp
     AutomationLaneComponent.cpp
     MarkerLaneComponent.cpp
     TempoLaneComponent.cpp
