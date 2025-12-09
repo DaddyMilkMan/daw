@@ -9,4 +9,5 @@ target_sources(ZenithDAW PRIVATE
     AITools.cpp
     AIPrompts.cpp
     ZenithCloudClient.cpp
+    CollaborationManager.cpp
 )

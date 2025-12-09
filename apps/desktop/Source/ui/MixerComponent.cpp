@@ -2,6 +2,7 @@
   ==============================================================================
 */
 #include "../../include/ui/MixerComponent.h"
+<<<<<<< HEAD
 #include "../ui/ZenithLookAndFeel.h"
 #include "../../Source/engine/Track.h"
 
@@ -15,97 +16,101 @@
 
 //==============================================================================
 MixerComponent::MixerComponent(zenith::Engine &engine, zenith::ProjectState &ps) : projectState(ps) {
+=======
+#include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "../../include/Engine.h"
+#include "../../include/ui/MixerChannelComponent.h"
+#include "../engine/Track.h"
+
+// Check for Skia availability
+#ifdef ZENITH_USE_SKIA
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkRRect.h>
+#include <effects/SkGradientShader.h>
+#endif
+
+namespace zenith {
+
+//==============================================================================
+MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
+    : engine_(engine), projectState_(state) {
+>>>>>>> origin/master
   // Listen to the entire state tree for changes
-  projectState.getState().addListener(this);
+  projectState_.getState().addListener(this);
 
   // Build initial track strips
-  rebuildTrackStrips();
+  rebuildChannels();
 }
 
 MixerComponent::~MixerComponent() {
   // Stop listening
-  projectState.getState().removeListener(this);
-
-  // Clear all strips (will destroy all child components)
-  trackStrips.clear();
+  projectState_.getState().removeListener(this);
+  channels_.clear();
 }
 
 //==============================================================================
 // Component interface
 //==============================================================================
 
+<<<<<<< HEAD
+=======
+void MixerComponent::paint(juce::Graphics &g) {
+  // Basic background for JUCE fallback
+  g.fillAll(juce::Colour(0xff1e1e1e));
+}
+
+>>>>>>> origin/master
 void MixerComponent::drawSkia(SkCanvas *canvas) {
-  SkRect bounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
+  auto bounds = getLocalBounds().toFloat();
+
+  // Use Zenith Design System for background
+  // ZenithDesignSystem::drawPanel(g, ...) logic via Skia directly
 
   // 1. Draw Background with Gradient
-  SkPoint gradientPoints[2] = {{bounds.x(), bounds.y()},
-                               {bounds.x(), bounds.y() + bounds.height()}};
+  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+  SkPoint gradientPoints[2] = {
+      {skBounds.x(), skBounds.y()},
+      {skBounds.x(), skBounds.y() + skBounds.height()}};
 
   SkColor gradientColors[2] = {
-      SkColorSetARGB(255, 30, 30, 30), // Dark grey top
-      SkColorSetARGB(255, 20, 20, 20)  // Darker bottom
+      SkColorSetARGB(255, 30, 30, 35), // Dark grey/blue top
+      SkColorSetARGB(255, 20, 20, 25)  // Darker bottom
   };
 
-  SkScalar gradientPositions[2] = {0.0f, 1.0f};
-
-  auto gradient = SkGradientShader::MakeLinear(
-      gradientPoints, gradientColors, gradientPositions, 2, SkTileMode::kClamp);
+  auto gradient = SkGradientShader::MakeLinear(gradientPoints, gradientColors,
+                                               nullptr, 2, SkTileMode::kClamp);
 
   SkPaint bgPaint;
   bgPaint.setShader(gradient);
-  canvas->drawRect(bounds, bgPaint);
+  canvas->drawRect(skBounds, bgPaint);
 
-  // 2. Draw Top Border
+  // 2. Draw Top Border/Glow
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(128, 80, 80, 80));
+  borderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
   borderPaint.setStrokeWidth(1.0f);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setAntiAlias(true);
 
-  canvas->drawLine(bounds.x(), bounds.y(), bounds.right(), bounds.y(),
+  canvas->drawLine(skBounds.x(), skBounds.y(), skBounds.right(), skBounds.y(),
                    borderPaint);
 
-  // 3. Draw Track Strips
-  const float startX = bounds.x() + static_cast<float>(sideMargin);
-  float currentX = startX;
-  const float marginTop = static_cast<float>(topMargin);
-  const float marginBottom = static_cast<float>(bottomMargin);
+  // 3. Children are drawn automatically by SkiaComponent
+  drawChildren(canvas);
 
-  const float sWidth = static_cast<float>(stripWidth);
-  const float sSpacing = static_cast<float>(stripSpacing);
-
-  for (const auto &strip : trackStrips) {
-    if (!strip)
-      continue;
-
-    SkRect stripBounds =
-        SkRect::MakeXYWH(currentX, bounds.y() + marginTop, sWidth,
-                         bounds.height() - marginTop - marginBottom);
-
-    drawTrackStripSkia(canvas, stripBounds, *strip);
-    currentX += sWidth + sSpacing;
-  }
-
-  // 4. Draw Empty State Message
-  if (trackStrips.empty()) {
-    SkFont font;
-    font.setSize(14);
-    font.setEdging(SkFont::Edging::kAntiAlias);
-
+  // 4. Empty state
+  if (channels_.empty()) {
     SkPaint textPaint;
-    textPaint.setColor(SkColorSetARGB(128, 255, 255, 255));
+    textPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
     textPaint.setAntiAlias(true);
-
-    const char *message = "No tracks - Add a track to see mixer controls";
-    SkRect textBounds;
-    font.measureText(message, strlen(message), SkTextEncoding::kUTF8,
-                     &textBounds);
-
-    canvas->drawString(message, bounds.centerX() - textBounds.width() / 2.0f,
-                       bounds.centerY(), font, textPaint);
+    SkFont textFont(nullptr, 24.0f);
+    canvas->drawString("No Tracks", skBounds.centerX() - 50, skBounds.centerY(),
+                       textFont, textPaint);
   }
 }
 
+<<<<<<< HEAD
 void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
                                         const TrackStrip &strip) {
   canvas->save();
@@ -150,9 +155,13 @@ void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
 
 //==============================================================================
 
+=======
+>>>>>>> origin/master
 void MixerComponent::resized() {
-  using namespace zenith;
+  auto bounds = getLocalBounds();
+  int x = sideMargin;
 
+<<<<<<< HEAD
   auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Spacing::m);
   int x = 0;
   const int localStripWidth = 80; // Fixed strip width
@@ -195,10 +204,17 @@ void MixerComponent::resized() {
         strip->volumeSlider->setBounds(area.reduced(ZenithLookAndFeel::Spacing::s, 0));
 
     x += localStripWidth + localStripSpacing;
+=======
+  for (auto &channel : channels_) {
+    channel->setBounds(x, topMargin, stripWidth,
+                       bounds.getHeight() - topMargin - bottomMargin);
+    x += stripWidth + stripSpacing;
+>>>>>>> origin/master
   }
 }
 
 //==============================================================================
+<<<<<<< HEAD
 
 void MixerComponent::valueTreePropertyChanged(
     juce::ValueTree &treeWhosePropertyHasChanged,
@@ -302,36 +318,36 @@ void MixerComponent::valueTreeChildOrderChanged(
 
 //==============================================================================
 // Helper methods
+=======
+// Internal logic
+>>>>>>> origin/master
 //==============================================================================
 
-void MixerComponent::rebuildTrackStrips() {
-  // Clear existing strips
-  trackStrips.clear();
+void MixerComponent::rebuildChannels() {
+  channels_.clear();
 
-  // Get tracks node
+  // Iterate tracks from ProjectState to maintain order
   auto tracksNode =
-      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
-
+      projectState_.getState().getChildWithName(ProjectState::ID_TRACKS);
   if (!tracksNode.isValid())
     return;
 
-  // Create a strip for each track
-  for (int i = 0; i < tracksNode.getNumChildren(); ++i) {
-    auto trackNode = tracksNode.getChild(i);
+  for (const auto &trackNode : tracksNode) {
+    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
 
-    if (trackNode.getType() != zenith::ProjectState::ID_TRACK)
-      continue;
-
-    auto strip = createTrackStrip(trackNode);
-
-    if (strip)
-      trackStrips.push_back(std::move(strip));
+    Track *track = findTrackById(trackId);
+    if (track) {
+      auto channel = std::make_unique<MixerChannelComponent>(track);
+      addAndMakeVisible(channel.get());
+      channels_.push_back(std::move(channel));
+    }
   }
 
-  DBG("MixerComponent: Rebuilt " + juce::String(trackStrips.size()) +
-      " track strips");
+  resized();
+  repaint();
 }
 
+<<<<<<< HEAD
 std::unique_ptr<MixerComponent::TrackStrip>
 MixerComponent::createTrackStrip(const juce::ValueTree &trackNode) {
   auto strip = std::make_unique<TrackStrip>();
@@ -455,29 +471,54 @@ MixerComponent::findTrackStrip(const juce::String &trackId) {
       return strip.get();
   }
 
+=======
+Track *MixerComponent::findTrackById(const juce::String &trackId) {
+  // Safe message-thread iteration of Engine tracks
+  // Engine::tracks() returns const ref to vector<shared_ptr<Track>>
+  const auto &tracks = engine_.tracks();
+  for (const auto &track : tracks) {
+    if (track->getTrackId() == trackId) {
+      return track.get();
+    }
+  }
+>>>>>>> origin/master
   return nullptr;
 }
 
 //==============================================================================
-// Control callbacks
+// ValueTree::Listener
 //==============================================================================
 
-void MixerComponent::onVolumeChanged(const juce::String &trackId, float value) {
-  projectState.setTrackVolume(trackId, value, "Set track volume");
+void MixerComponent::valueTreePropertyChanged(
+    juce::ValueTree &tree, const juce::Identifier &property) {
+  // Check if name changed? MixerChannelComponent mostly handles its own updates
+  // via Track listeners, but if the structure changes (e.g. tracks reordered?)
+  // Actually MixerChannel handle name changes via Track listener.
+  // So we might not need much here, unless it affects layout (e.g. new track).
 }
 
-void MixerComponent::onPanChanged(const juce::String &trackId, float value) {
-  projectState.setTrackPan(trackId, value, "Set track pan");
+void MixerComponent::valueTreeChildAdded(juce::ValueTree &parent,
+                                         juce::ValueTree &child) {
+  if (parent.getType() == ProjectState::ID_TRACKS) {
+    rebuildChannels();
+  }
 }
 
-void MixerComponent::onMuteClicked(const juce::String &trackId, bool state) {
-  projectState.setTrackMute(trackId, state, "Set track mute");
+void MixerComponent::valueTreeChildRemoved(juce::ValueTree &parent,
+                                           juce::ValueTree &child, int index) {
+  if (parent.getType() == ProjectState::ID_TRACKS) {
+    rebuildChannels();
+  }
 }
 
-void MixerComponent::onSoloClicked(const juce::String &trackId, bool state) {
-  projectState.setTrackSolo(trackId, state, "Set track solo");
+void MixerComponent::valueTreeChildOrderChanged(juce::ValueTree &parent,
+                                                int oldIndex, int newIndex) {
+  if (parent.getType() == ProjectState::ID_TRACKS) {
+    rebuildChannels();
+  }
 }
 
+<<<<<<< HEAD
 void MixerComponent::onArmClicked(const juce::String &trackId, bool state) {
   projectState.setTrackArmed(trackId, state, "Set track armed");
 }
@@ -485,3 +526,8 @@ void MixerComponent::onArmClicked(const juce::String &trackId, bool state) {
 //==============================================================================
 // Skia Rendering Implementation
 //==============================================================================
+=======
+void MixerComponent::valueTreeParentChanged(juce::ValueTree &tree) {}
+
+} // namespace zenith
+>>>>>>> origin/master

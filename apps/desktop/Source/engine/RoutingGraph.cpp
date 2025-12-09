@@ -34,7 +34,70 @@ RoutingGraph::~RoutingGraph()
 void RoutingGraph::updateSnapshot()
 {
     // Called from message thread while holding writeLock_
-    auto newSnapshot = std::make_shared<Snapshot>(nodes_, connections_);
+
+    // 1. Calculate Processing Order (Kahn's Algorithm)
+    std::vector<juce::String> processingOrder;
+    std::unordered_map<std::string, int> inDegree;
+    std::unordered_map<std::string, std::vector<std::string>> adjList;
+
+    // Initialize in-degrees
+    for (const auto& pair : nodes_) {
+        inDegree[pair.first] = 0;
+    }
+
+    // Build graph and calculate in-degrees
+    for (const auto& c : connections_) {
+        std::string src = c.sourceId.toStdString();
+        std::string dst = c.destId.toStdString();
+        
+        if (nodes_.count(src) && nodes_.count(dst)) {
+            adjList[src].push_back(dst);
+            inDegree[dst]++;
+        }
+    }
+
+    // Queue for nodes with 0 in-degree
+    std::vector<std::string> queue;
+    for (const auto& pair : inDegree) {
+        if (pair.second == 0) {
+            queue.push_back(pair.first);
+        }
+    }
+
+    // Process queue
+    size_t queueIndex = 0;
+    while (queueIndex < queue.size()) {
+        std::string u = queue[queueIndex++];
+        processingOrder.push_back(u);
+
+        for (const auto& v : adjList[u]) {
+            inDegree[v]--;
+            if (inDegree[v] == 0) {
+                queue.push_back(v);
+            }
+        }
+    }
+
+    // Handle Cycles: If we have a cycle, some nodes weren't added.
+    // We append them at the end to ensure they still run (albeit with potential feedback delay issues).
+    if (processingOrder.size() < nodes_.size()) {
+        for (const auto& pair : nodes_) {
+            bool alreadyAdded = false;
+            // Simple linear scan is fine here as this only happens on cycles (error case) 
+            // and graph size is usually small (< 1000 nodes).
+            for (const auto& id : processingOrder) {
+                if (id == pair.second.id) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if (!alreadyAdded) {
+                processingOrder.push_back(pair.second.id);
+            }
+        }
+    }
+
+    auto newSnapshot = std::make_shared<Snapshot>(nodes_, connections_, processingOrder);
     
     // Atomic swap
     activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
@@ -188,6 +251,14 @@ std::vector<RoutingGraph::Connection> RoutingGraph::getConnectionsTo(const juce:
             result.push_back(c);
     }
     return result;
+}
+
+std::vector<juce::String> RoutingGraph::getProcessingOrder() const
+{
+    // RT-SAFE: Uses atomic snapshot load
+    const auto* snapshot = getSnapshot();
+    if (!snapshot) return {};
+    return snapshot->processingOrder;
 }
 
 //==============================================================================

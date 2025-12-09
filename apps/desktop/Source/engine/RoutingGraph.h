@@ -74,6 +74,7 @@ public:
     const Node* getNode(const juce::String& nodeId) const;
     std::vector<Connection> getConnectionsFrom(const juce::String& sourceId) const;
     std::vector<Connection> getConnectionsTo(const juce::String& destId) const;
+    std::vector<juce::String> getProcessingOrder() const;
     
     //==============================================================================
     // Serialization (MESSAGE THREAD ONLY)
@@ -90,11 +91,13 @@ private:
     {
         std::unordered_map<std::string, Node> nodes;
         std::vector<Connection> connections;
+        std::vector<juce::String> processingOrder;
         
         Snapshot() = default;
         Snapshot(const std::unordered_map<std::string, Node>& n, 
-                 const std::vector<Connection>& c)
-            : nodes(n), connections(c) {}
+                 const std::vector<Connection>& c,
+                 const std::vector<juce::String>& order)
+            : nodes(n), connections(c), processingOrder(order) {}
     };
     
     // Owning data (message thread only, protected by lock)
