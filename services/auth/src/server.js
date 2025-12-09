@@ -5,9 +5,13 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const passport = require('passport');
 
 // Load env vars
 dotenv.config();
+
+// Passport Config
+require('./config/passport')(passport);
 
 const authRoutes = require('./routes/authRoutes');
 
@@ -17,6 +21,7 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+app.use(passport.initialize());
 
 // Logging
 if (process.env.NODE_ENV === 'development') {

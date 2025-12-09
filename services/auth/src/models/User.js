@@ -19,8 +19,13 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function() { return !this.googleId; }, // Required only if not using Google
     minlength: 6
+  },
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true // Allows null/undefined values to coexist with unique index
   },
   refreshToken: {
     type: String
@@ -33,7 +38,7 @@ const userSchema = new mongoose.Schema({
 
 // Pre-save hook to hash password
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) {
+  if (!this.isModified('password') || !this.password) {
     return next();
   }
   
@@ -48,6 +53,7 @@ userSchema.pre('save', async function(next) {
 
 // Method to compare passwords
 userSchema.methods.matchPassword = async function(enteredPassword) {
+  if (!this.password) return false; // User logged in with Google, has no password
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

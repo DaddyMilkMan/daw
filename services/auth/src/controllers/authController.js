@@ -159,10 +159,45 @@ const getMe = async (req, res) => {
   res.status(200).json(req.user);
 };
 
+// @desc    Google OAuth Callback
+// @route   GET /api/auth/google/callback
+// @access  Public
+const googleCallback = async (req, res) => {
+  try {
+    const user = req.user; // Passport attaches this
+
+    const accessToken = generateAccessToken(user._id);
+    const refreshToken = generateRefreshToken(user._id);
+
+    // Update refresh token in DB
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // For a Desktop App, we typically redirect to a custom URI scheme
+    // Example: zenith://auth?access_token=...&refresh_token=...
+    // For now, we'll redirect to a success page or return JSON if tested via Postman
+    // But browsers expect a redirect.
+    
+    // Option A: Redirect to Deep Link (Production)
+    // res.redirect(`zenith://oauth/callback?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+
+    // Option B: Return JSON (for testing, but doesn't work well with direct browser navigation)
+    // res.json({ accessToken, refreshToken });
+
+    // Option C: Redirect to a local success page that the C++ app's WebView detects
+    res.redirect(`http://localhost:5000/auth/success?accessToken=${accessToken}&refreshToken=${refreshToken}`);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error during Google Auth' });
+  }
+};
+
 module.exports = {
   registerUser,
   loginUser,
   refreshToken,
   logoutUser,
   getMe,
+  googleCallback
 };
