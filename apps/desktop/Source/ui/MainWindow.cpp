@@ -20,7 +20,6 @@
 
 #include "SimpleLogger.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "../ui/skia/SkiaComponent.h"
 #include "../ui/skia/SkiaMainWindowIntegration.h"
 #include "../ui/skia/ZenithDesignSystem.h"
@@ -32,8 +31,6 @@
 #include <skia/include/core/SkSurface.h>
 #include <skia/include/core/SkTextBlob.h>
 
-#endif
-
 using namespace zenith;
 
 //==============================================================================
@@ -44,10 +41,6 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
                              zenith::AIBridgeClient &aiClient,
                              zenith::ProjectState &state)
     : engine(eng), projectState(state)
-#ifndef ZENITH_USE_SKIA
-      ,
-      mixerComponent(state)
-#endif
 {
   // Register as key listener for undo/redo shortcuts
   addKeyListener(this);
@@ -66,7 +59,6 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   DBG("MainComponent Constructor - Modern DAW Layout");
   DBG("========================================");
 
-#ifdef ZENITH_USE_SKIA
   logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
             "EXECUTING <<<");
 
@@ -161,105 +153,6 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Start animation timer (SkiaMainWindowIntegration handles this)
   DBG("✓ Animation timer managed by SkiaMainWindowIntegration");
 
-#else
-  // ============================================================================
-  // JUCE Fallback Layout (Legacy)
-  // ============================================================================
-
-  DBG("ZENITH_USE_SKIA is NOT DEFINED - Using JUCE fallback layout");
-
-  // Status label
-  statusLabel.setText("Zenith DAW - JUCE Fallback Mode",
-                      juce::dontSendNotification);
-  statusLabel.setJustificationType(juce::Justification::centredLeft);
-  statusLabel.setFont(juce::Font(16.0f, juce::Font::bold));
-  addAndMakeVisible(statusLabel);
-
-  // CPU usage label
-  cpuLabel.setText("CPU: 0%", juce::dontSendNotification);
-  cpuLabel.setJustificationType(juce::Justification::centredRight);
-  addAndMakeVisible(cpuLabel);
-
-  // Audio device label
-  audioDeviceLabel.setText("Audio Device: Not initialized",
-                           juce::dontSendNotification);
-  audioDeviceLabel.setJustificationType(juce::Justification::centredLeft);
-  addAndMakeVisible(audioDeviceLabel);
-
-  // Track count label
-  trackCountLabel.setText("Tracks: 0", juce::dontSendNotification);
-  trackCountLabel.setJustificationType(juce::Justification::centredRight);
-  addAndMakeVisible(trackCountLabel);
-
-  // Transport buttons
-  playButton.setButtonText("Play");
-  playButton.onClick = [this]() {
-    engine.play();
-    DBG("Play button clicked");
-  };
-  addAndMakeVisible(playButton);
-
-  stopButton.setButtonText("Stop");
-  stopButton.onClick = [this]() {
-    engine.stop();
-    DBG("Stop button clicked");
-  };
-  addAndMakeVisible(stopButton);
-
-  recordButton.setButtonText("Record");
-  recordButton.onClick = [this]() {
-    engine.toggleRecording();
-    bool isRecording = engine.isRecording();
-    recordButton.setColour(juce::TextButton::buttonColourId,
-                           isRecording ? juce::Colours::red
-                                       : juce::Colours::darkgrey);
-    DBG((isRecording ? "Recording started" : "Recording stopped"));
-  };
-  addAndMakeVisible(recordButton);
-
-  // Import Audio button
-  importButton.setButtonText("Import Audio...");
-  importButton.onClick = [this]() { handleImportAudio(); };
-  addAndMakeVisible(importButton);
-
-  // Virtual MIDI Keyboard toggle button
-  virtualKeyboardButton.setButtonText("🎹 Keyboard (M)");
-  virtualKeyboardButton.setClickingTogglesState(true);
-  virtualKeyboardButton.onClick = [this]() {
-    virtualKeyboardVisible = virtualKeyboardButton.getToggleState();
-    if (midiKeyboard)
-      midiKeyboard->setVisible(virtualKeyboardVisible);
-    resized();
-  };
-  addAndMakeVisible(virtualKeyboardButton);
-
-  // Mixer component
-  addAndMakeVisible(mixerComponent);
-
-  // Arranger component
-  arrangerComponent =
-      std::make_unique<ArrangerComponent>(*engine.getProjectState());
-  addAndMakeVisible(arrangerComponent.get());
-
-  // Wingman panel
-  wingmanPanel = std::make_unique<zenith::WingmanPanel>(api, aiClient, engine);
-  addAndMakeVisible(wingmanPanel.get());
-
-  // Instrument Browser
-  instrumentBrowserPanel =
-      std::make_unique<zenith::InstrumentBrowserPanel>(engine, projectState);
-  addAndMakeVisible(instrumentBrowserPanel.get());
-
-  // Virtual MIDI Keyboard
-  midiKeyboard = std::make_unique<juce::MidiKeyboardComponent>(
-      midiKeyboardState, juce::MidiKeyboardComponent::horizontalKeyboard);
-  midiKeyboard->setVisible(false);
-  addAndMakeVisible(midiKeyboard.get());
-
-  // Start timer for CPU monitoring
-  startTimer(16);
-#endif
-
   DBG("========================================");
   DBG("MainComponent Constructor COMPLETE");
   DBG("========================================");
@@ -268,10 +161,6 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 MainComponent::~MainComponent() {
   DBG("MainComponent Destructor called");
   removeKeyListener(this);
-
-#ifndef ZENITH_USE_SKIA
-  stopTimer();
-#endif
 }
 
 bool MainComponent::keyPressed(const juce::KeyPress &key,
@@ -303,20 +192,14 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
   // M key: Toggle virtual MIDI keyboard (like Ableton Live)
   if (key.getTextCharacter() == 'm' || key.getTextCharacter() == 'M') {
-#ifndef ZENITH_USE_SKIA
-    virtualKeyboardButton.setToggleState(
-        !virtualKeyboardButton.getToggleState(), juce::sendNotification);
-#else
     if (bottomBar) {
       bottomBar->setKeyboardVisible(!bottomBar->isKeyboardVisible());
       resized();
     }
-#endif
     DBG("Keyboard shortcut: Toggle Virtual MIDI Keyboard (M)");
     return true;
   }
 
-#ifdef ZENITH_USE_SKIA
   // Tab key: Toggle between Session View and Arranger View
   if (key == juce::KeyPress::tabKey &&
       !key.getModifiers().isAnyModifierKeyDown() &&
@@ -325,34 +208,15 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
       DBG("Keyboard shortcut: Toggle Session/Arranger View (Tab)");
       return true;
   }
-#endif
 
   return false; // Key not handled
 }
 
 void MainComponent::paint(juce::Graphics &g) {
-#ifdef ZENITH_USE_SKIA
   // Delegate to base class which handles initialization status
   SkiaMainWindowIntegration::paint(g);
-#else
-  // JUCE fallback rendering (when Skia disabled)
-  static int paintCallCount = 0;
-  if (paintCallCount < 3) {
-    paintCallCount++;
-    DBG("paint() call #" << paintCallCount
-                         << " using juce::Graphics (JUCE fallback)");
-    if (paintCallCount == 1) {
-      DBG("  paint() receives juce::Graphics, not SkCanvas");
-      DBG("  This confirms JUCE rendering is active, NOT Skia");
-    }
-  }
-
-  // Background (ArrangerComponent handles its own painting)
-  g.fillAll(juce::Colour(0xff1e1e1e)); // Dark grey (LUNA-inspired)
-#endif
 }
 
-#ifdef ZENITH_USE_SKIA
 void MainComponent::drawSkiaContent(SkCanvas* canvas) {
     // Clear background
     canvas->clear(SkColorSetRGB(20, 20, 25)); // Dark background
@@ -386,17 +250,14 @@ void MainComponent::drawSkiaContent(SkCanvas* canvas) {
     // 5. Wingman Panel (if hosted directly, but currently inside RightSidePanel)
     // If it were direct: drawChild(wingmanPanelPtr_.get(), wingmanPanelPtr_.get());
 }
-#endif
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
   if (zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
       activeDragComponent = nullptr;
-#ifdef ZENITH_USE_SKIA
       if (transportBar && transportBar->getBounds().contains(e.getPosition())) activeDragComponent = transportBar.get();
       else if (rightSidePanel && rightSidePanel->getBounds().contains(e.getPosition())) activeDragComponent = rightSidePanel.get();
       else if (bottomBar && bottomBar->getBounds().contains(e.getPosition())) activeDragComponent = bottomBar.get();
       else if (mainLayout && mainLayout->getBounds().contains(e.getPosition())) activeDragComponent = mainLayout.get();
-#endif
       
       if (activeDragComponent) {
           dragStartBounds = activeDragComponent->getBounds();
@@ -406,7 +267,6 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-<<<<<<< Updated upstream
     m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
     m.showMenuAsync(juce::PopupMenu::Options());
   }
@@ -433,50 +293,10 @@ void MainComponent::mouseDrag(const juce::MouseEvent& e) {
         state.isVisible = true;
         
         juce::String id;
-#ifdef ZENITH_USE_SKIA
         if (activeDragComponent == transportBar.get()) id = "Transport";
         else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
         else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
         else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
-#endif
-        
-        if (id.isNotEmpty()) {
-            state.id = id;
-            zenith::design::LayoutManager::getInstance().setPanelState(id, state);
-        }
-        
-        repaint(); // Skia repaint
-    }
-}
-
-
-void MainComponent::mouseDrag(const juce::MouseEvent& e) {
-    if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
-        auto offset = e.getOffsetFromDragStart();
-        auto newBounds = dragStartBounds.translated(offset.x, offset.y);
-        
-        activeDragComponent->setBounds(newBounds);
-        
-        // Update Manager (persist as relative)
-        auto parentBounds = getLocalBounds().toFloat();
-        juce::Rectangle<float> relative(
-            static_cast<float>(newBounds.getX()) / parentBounds.getWidth(),
-            static_cast<float>(newBounds.getY()) / parentBounds.getHeight(),
-            static_cast<float>(newBounds.getWidth()) / parentBounds.getWidth(),
-            static_cast<float>(newBounds.getHeight()) / parentBounds.getHeight()
-        );
-
-        zenith::design::LayoutManager::PanelState state;
-        state.relativeBounds = relative;
-        state.isVisible = true;
-        
-        juce::String id;
-#ifdef ZENITH_USE_SKIA
-        if (activeDragComponent == transportBar.get()) id = "Transport";
-        else if (activeDragComponent == rightSidePanel.get()) id = "RightPanel";
-        else if (activeDragComponent == bottomBar.get()) id = "BottomBar";
-        else if (activeDragComponent == mainLayout.get()) id = "MainLayout";
-#endif
         
         if (id.isNotEmpty()) {
             state.id = id;
@@ -497,7 +317,6 @@ void MainComponent::resized() {
   DBG("MainComponent::resized() called - Total bounds: " +
       juce::String(bounds.getWidth()) + "x" + juce::String(bounds.getHeight()));
 
-#ifdef ZENITH_USE_SKIA
   // ============================================================================
   // Modern DAW Layout with Skia Panels
   // ============================================================================
@@ -540,98 +359,7 @@ void MainComponent::resized() {
   } else {
     DBG("  ✗ MainLayoutComponent is NULL!");
   }
-
-#else
-  // ============================================================================
-  // JUCE Fallback Layout
-  // ============================================================================
-
-  // Top bar (status)
-  auto topBar = bounds.removeFromTop(40);
-  statusLabel.setBounds(topBar.removeFromLeft(500).reduced(10, 8));
-
-  auto trackCountArea = topBar.removeFromRight(120);
-  trackCountLabel.setBounds(trackCountArea.reduced(10, 8));
-
-  cpuLabel.setBounds(topBar.removeFromRight(150).reduced(10, 8));
-
-  // Bottom bar (transport + audio device)
-  auto bottomBar = bounds.removeFromBottom(50);
-
-  auto deviceSection = bottomBar.removeFromLeft(400);
-  audioDeviceLabel.setBounds(deviceSection.reduced(10, 12));
-
-  auto importSection = bottomBar.removeFromLeft(140);
-  importButton.setBounds(importSection.reduced(10, 8));
-
-  auto keyboardButtonSection = bottomBar.removeFromLeft(160);
-  virtualKeyboardButton.setBounds(keyboardButtonSection.reduced(10, 8));
-
-  // Center transport buttons
-  auto transportSection = bottomBar.reduced(10, 8);
-  int buttonWidth = 100;
-  int totalWidth = buttonWidth * 3 + 20;
-  int startX = transportSection.getCentreX() - totalWidth / 2;
-
-  playButton.setBounds(startX, transportSection.getY(), buttonWidth,
-                       transportSection.getHeight());
-  stopButton.setBounds(startX + buttonWidth + 10, transportSection.getY(),
-                       buttonWidth, transportSection.getHeight());
-  recordButton.setBounds(startX + (buttonWidth + 10) * 2,
-                         transportSection.getY(), buttonWidth,
-                         transportSection.getHeight());
-
-  // Virtual MIDI Keyboard
-  if (virtualKeyboardVisible && midiKeyboard) {
-    auto keyboardArea = bounds.removeFromBottom(80);
-    midiKeyboard->setBounds(keyboardArea);
-  }
-
-  // Mixer panel
-  auto mixerArea = bounds.removeFromBottom(220);
-  mixerComponent.setBounds(mixerArea);
-
-  // Wingman panel (right)
-  if (wingmanPanel) {
-    auto wingmanBounds = bounds.removeFromRight(400);
-    wingmanPanel->setBounds(wingmanBounds);
-  }
-
-  // Instrument Browser (left)
-  if (instrumentBrowserPanel) {
-    auto browserBounds = bounds.removeFromLeft(300);
-    instrumentBrowserPanel->setBounds(browserBounds);
-  }
-
-  // Arranger Component (center)
-  if (arrangerComponent)
-    arrangerComponent->setBounds(bounds);
-#endif
 }
-
-#ifndef ZENITH_USE_SKIA
-void MainComponent::timerCallback() {
-  // JUCE fallback timer updates
-  double cpuUsage = engine.getCpuUsage();
-  cpuLabel.setText("CPU: " + juce::String(cpuUsage, 1) + "%",
-                   juce::dontSendNotification);
-
-  auto deviceInfo = engine.getAudioDeviceInfo();
-  audioDeviceLabel.setText("Audio: " + deviceInfo, juce::dontSendNotification);
-
-  refreshTrackCountLabel();
-
-  if (virtualKeyboardVisible) {
-    juce::MidiBuffer midiMessages;
-    midiKeyboardState.processNextMidiBuffer(midiMessages, 0, 16, true);
-
-    for (const auto metadata : midiMessages) {
-      auto message = metadata.getMessage();
-      engine.handleIncomingMidiMessage(nullptr, message);
-    }
-  }
-}
-#endif
 
 //==============================================================================
 // C4: Track count monitoring (read-only, dirty-checked)
@@ -645,10 +373,7 @@ void MainComponent::refreshTrackCountLabel() {
 
   lastTrackCount = count;
   // No heavy formatting, no repaint storm
-#ifndef ZENITH_USE_SKIA
-  trackCountLabel.setText("Tracks: " + juce::String(count),
-                          juce::dontSendNotification);
-#endif
+  // (No UI label in Skia mode, but we could update a status bar if needed)
 }
 
 //==============================================================================
@@ -929,4 +654,3 @@ void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID,
     break;
   }
 }
-
