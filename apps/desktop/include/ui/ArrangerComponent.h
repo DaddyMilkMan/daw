@@ -8,9 +8,7 @@
 
 #include <core/SkCanvas.h>
 
-// Forward declaration for browser drag
-namespace zenith { class BrowserDragData; }
-
+class Engine; // Forward declaration
 
 namespace zenith {
 
@@ -19,7 +17,7 @@ class ArrangerComponent : public SkiaComponent,
                           public juce::DragAndDropTarget
 {
 public:
-    ArrangerComponent(ProjectState& ps);
+    ArrangerComponent(ProjectState& ps, Engine& engine);
     ~ArrangerComponent() override;
 
     void paint(juce::Graphics& g) override;
@@ -51,7 +49,10 @@ public:
     void itemDragExit(const juce::DragAndDropTarget::SourceDetails& details) override;
     void itemDragMove(const juce::DragAndDropTarget::SourceDetails& details) override;
 
+    void paintMarquee(juce::Graphics& g);
+
 private:
+    Engine& engine;
     zenith::ProjectState& projectState;
 
     struct ClipView {

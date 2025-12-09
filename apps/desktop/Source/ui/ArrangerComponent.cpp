@@ -19,19 +19,11 @@
 //==============================================================================
 namespace zenith {
 //==============================================================================
-
-ArrangerComponent::ArrangerComponent(ProjectState &ps) : projectState(ps) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  setWantsKeyboardFocus(true);
-
-  // Listen to ProjectState changes
-  projectState.getState().addListener(this);
-
-  // Initial clip view build
-  rebuildClipViews();
-
-  DBG("ArrangerComponent: Created");
+ArrangerComponent::ArrangerComponent(zenith::ProjectState& ps, zenith::Engine& eng)
+    : projectState(ps), engine(eng)
+{
+    projectState.getState().addListener(this);
+    setWantsKeyboardFocus(true);
 }
 
 ArrangerComponent::~ArrangerComponent() {
@@ -336,18 +328,8 @@ void ArrangerComponent::duplicateSelectedClips() {
 //==============================================================================
 
 void ArrangerComponent::paint(juce::Graphics &g) {
-#ifndef ZENITH_USE_SKIA
-  // JUCE Fallback (keep existing code below)
-  paintBackground(g);
-  paintTracks(g);
-  paintClips(g);
-  paintTimeRuler(g);
-  paintMarquee(g);
-#else
-  // When using Skia, the MainLayoutComponent handles rendering via paintSkia.
-  // We just fill with background color to ensure opaque background if needed.
-  g.fillAll(juce::Colour(0xff1e1e1e));
-#endif
+    // Pure Skia rendering; just fill background to avoid garbage.
+    g.fillAll(juce::Colour(0xff1e1e1e));
 }
 
 void ArrangerComponent::paintBackground(juce::Graphics &g) {

@@ -15,7 +15,7 @@
 
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../../Source/ui/skia/BrowserPanel.h"
-#include "../../Source/ui/skia/views/SessionViewComponent.h"
+#include "../../include/ui/SessionViewComponent.h"
 #include "../../include/ui/ArrangerComponent.h"
 #include "../../include/ProjectState.h"
 

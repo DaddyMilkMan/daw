@@ -10,7 +10,7 @@
 
 #include "MainLayoutComponent.h"
 #include "skia/BrowserPanel.h"
-#include "skia/views/SessionViewComponent.h"
+#include "../../include/ui/SessionViewComponent.h"
 #include "skia/SkiaMainWindowIntegration.h"
 #include "../../include/Engine.h"
 #include "../instruments/InstrumentRegistry.h"
@@ -23,11 +23,11 @@ MainLayoutComponent::MainLayoutComponent(Engine& engine, ProjectState& state)
     : engine_(engine), projectState_(state)
 {
     // Create Arranger
-    arrangerComponent_ = std::make_unique<ArrangerComponent>(projectState_);
+    arrangerComponent_ = std::make_unique<ArrangerComponent>(projectState_, engine_);
     addAndMakeVisible(arrangerComponent_.get()); 
 
     // Create Session View
-    sessionViewComponent_ = std::make_unique<SessionViewComponent>(projectState_);
+    sessionViewComponent_ = std::make_unique<SessionViewComponent>(projectState_, engine_);
     addAndMakeVisible(sessionViewComponent_.get());
     sessionViewComponent_->setVisible(false); // Default to Arranger
 

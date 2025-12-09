@@ -98,6 +98,7 @@ void CommandAPI::initializeCommandMap() {
   commandMap["add_note"] = CommandID::AddNote;
   commandMap["delete_note"] = CommandID::DeleteNote;
   commandMap["move_note"] = CommandID::MoveNote;
+  commandMap["sync_project"] = CommandID::SyncProject;
   commandMap["get_notes"] = CommandID::GetNotes;
   commandMap["set_note_velocity"] = CommandID::SetNoteVelocity;
   commandMap["set_note_length"] = CommandID::SetNoteLength;
@@ -283,6 +284,9 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
     return trackCommands->setTrackEQ(params);
   case CommandID::SetTrackCompressor:
     return trackCommands->setTrackCompressor(params);
+
+  case CommandID::SyncProject:
+    return syncProjectToCloud(params);
 
   default:
     return createErrorResponse("Command ID not implemented: " + commandStr);
