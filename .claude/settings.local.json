@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(zenith.exe)",
+      "Bash(start \"\" \"daw\\build\\zenith-core\\ZenithDAW_artefacts\\Release\\Zenith DAW.exe\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
