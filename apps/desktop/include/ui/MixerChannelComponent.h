@@ -43,8 +43,6 @@
 namespace zenith {
     class Track;
 
-<<<<<<< Updated upstream
-
 //==============================================================================
 /**
  * @class MixerChannelComponent
@@ -53,8 +51,9 @@ namespace zenith {
  * Represents one track in the mixer view with all its controls.
  * Communicates directly with the Track object via thread-safe atomics.
  */
-class MixerChannelComponent : public juce::Component,
-                               private juce::Timer
+class MixerChannelComponent : public SkiaComponent,
+                              public juce::ChangeListener,
+                              private juce::Timer
 {
 public:
     //==========================================================================
@@ -64,13 +63,6 @@ public:
      */
     explicit MixerChannelComponent(zenith::Track* track);
     ~MixerChannelComponent() override;
-=======
-class MixerChannelComponent : public SkiaComponent,
-                              public juce::ChangeListener {
-public:
-  explicit MixerChannelComponent(Track *track);
-  ~MixerChannelComponent() override;
->>>>>>> Stashed changes
 
     //==========================================================================
     // Component interface
@@ -79,7 +71,6 @@ public:
     void paint(juce::Graphics& g) override;
     void resized() override;
 
-<<<<<<< Updated upstream
     //==========================================================================
     // Channel operations
     //==========================================================================
@@ -93,39 +84,12 @@ public:
      * @brief Update UI from track state (called periodically via timer)
      */
     void updateFromTrack();
-=======
-  Track *getTrack() const { return track_; }
-  void updateFromTrack();
->>>>>>> Stashed changes
 
 private:
     //==========================================================================
     // Timer interface (for meter updates)
     //==========================================================================
 
-<<<<<<< Updated upstream
-=======
-  void onFaderChanged();
-  void onPanChanged();
-  void onMuteClicked();
-  void onSoloClicked();
-
-  Track *track_;
-
-  juce::Label nameLabel_;
-
-  SkiaSlider faderSlider_;
-  SkiaKnob panKnob_;
-  SkiaButton muteButton_;
-  SkiaButton soloButton_;
-
-  class LevelMeter : public SkiaComponent {
-  public:
-    LevelMeter();
-    ~LevelMeter() override;
-    void drawSkia(SkCanvas *canvas) override;
-    void setLevel(float level);
->>>>>>> Stashed changes
     void timerCallback() override;
 
     //==========================================================================
@@ -169,7 +133,7 @@ private:
         ~LevelMeter() override;
 
         void paint(juce::Graphics& g) override;
-        void setLevel(float level) [[maybe_unused]];  // 0.0 to 1.0
+        void setLevel(float level) ;  // 0.0 to 1.0
         void timerCallback() override;
 
     private:
@@ -188,4 +152,3 @@ private:
 };
 
 } // namespace zenith
-
