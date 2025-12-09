@@ -4,20 +4,22 @@
  */
 
 #include "../../include/MainWindow.h"
+#include "../../include/ClipSynchronizer.h"
 #include "../../include/CommandAPI.h"
 #include "../../include/TrackAutomationSynchronizer.h"
-#include "../../include/ClipSynchronizer.h"
+#include "../../include/ui/ArrangerComponent.h"
+#include "../../include/ui/PianoRollComponent.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "../network/AIBridgeClient.h"
-#include "../../include/ui/ArrangerComponent.h"
 #include "InstrumentBrowserPanel.h"
 #include "MainLayoutComponent.h"
-#include "WingmanPanel.h"
-#include "../../include/ui/PianoRollComponent.h"
+#include "MenuBar.h" // New MenuBar header
 #include "SettingsComponent.h"
+#include "WingmanPanel.h"
 #include "ZenithLookAndFeel.h" // For colors
 
+#include "../ai/SessionDebuggerAgent.h" // From origin/master
 #include "SimpleLogger.h"
 
 #include "../ui/skia/SkiaComponent.h"
@@ -74,6 +76,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 
   // Top: Transport Bar
   DBG("→ Creating TransportBar...");
+  logToFile("→ Creating TransportBar..."); // Duplicated in origin/master - keep one
   transportBar = std::make_unique<zenith::TransportBar>();
   transportBar->setProjectName("Zenith DAW");
   transportBar->setTempo(120.0);
@@ -100,15 +103,21 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   };
 
   addAndMakeVisible(transportBar.get());
+  logToFile("✓ TransportBar created"); // Duplicated in origin/master - keep one
   DBG("✓ TransportBar created and made visible at " +
-      juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(transportBar.get())));
+      juce::String::toHexString(
+          reinterpret_cast<juce::pointer_sized_int>(transportBar.get())));
 
   // The "Perfect DAW" Tri-Pane Layout Manager
   DBG("→ Creating MainLayoutComponent...");
-  mainLayout = std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
+  logToFile("→ Creating MainLayoutComponent..."); // Duplicated in origin/master - keep one
+  mainLayout =
+      std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
   addAndMakeVisible(mainLayout.get());
+  logToFile("✓ MainLayoutComponent created"); // Duplicated in origin/master - keep one
   DBG("✓ MainLayoutComponent created and made visible at " +
-      juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(mainLayout.get())));
+      juce::String::toHexString(
+          reinterpret_cast<juce::pointer_sized_int>(mainLayout.get())));
 
   // Connect browser collapse callback (proxied through MainLayout if needed, or
   // handled internally) For now, MainLayout handles its own resizing when
@@ -116,18 +125,32 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 
   // Right: AI Assistant Panel (Wingman) - Pure Skia
   DBG("→ Creating RightSidePanel...");
-  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, aiClient, engine);
+  logToFile("→ Creating RightSidePanel..."); // Duplicated in origin/master - keep one
+  rightSidePanel =
+      std::make_unique<zenith::RightSidePanel>(api, aiClient, engine);
   addAndMakeVisible(rightSidePanel.get());
+  logToFile("✓ RightSidePanel created"); // Duplicated in origin/master - keep one
   DBG("✓ RightSidePanel created and made visible at " +
-      juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(rightSidePanel.get())));
+      juce::String::toHexString(
+          reinterpret_cast<juce::pointer_sized_int>(rightSidePanel.get())));
 
   // Bottom: Piano Keyboard + Mixer Strip
   DBG("→ Creating BottomBar...");
+  logToFile("→ Creating BottomBar..."); // Duplicated in origin/master - keep one
   bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
+
+  // Connect Session Debugger (from origin/master)
+  if (auto *debugger = engine.getSessionDebugger()) {
+    bottomBar->setDebugger(debugger);
+    DBG("✓ Session Debugger connected to BottomBar");
+  }
+
   addAndMakeVisible(bottomBar.get());
+  logToFile("✓ BottomBar created"); // Duplicated in origin/master - keep one
   DBG("✓ BottomBar created and made visible at " +
-      juce::String::toHexString(reinterpret_cast<juce::pointer_sized_int>(bottomBar.get())));
+      juce::String::toHexString(
+          reinterpret_cast<juce::pointer_sized_int>(bottomBar.get())));
 
   // Connect view toggle callback
   transportBar->onViewToggleClicked = [this]() {
@@ -136,18 +159,19 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
       DBG("View toggled via MainLayout");
     }
   };
-  
+
   // Connect settings callback
   transportBar->onSettingsClicked = [this]() {
-      juce::DialogWindow::LaunchOptions options;
-      options.content.setOwned(new zenith::SettingsComponent(engine));
-      options.content->setSize(600, 500);
-      options.dialogTitle = "Zenith DAW Settings";
-      options.dialogBackgroundColour = juce::Colours::black; // Simple fallback or lookandfeel
-      options.escapeKeyTriggersCloseButton = true;
-      options.useNativeTitleBar = true;
-      options.resizable = true;
-      options.launchAsync();
+    juce::DialogWindow::LaunchOptions options;
+    options.content.setOwned(new zenith::SettingsComponent(engine));
+    options.content->setSize(600, 500);
+    options.dialogTitle = "Zenith DAW Settings";
+    options.dialogBackgroundColour =
+        juce::Colours::black; // Simple fallback or lookandfeel
+    options.escapeKeyTriggersCloseButton = true;
+    options.useNativeTitleBar = true;
+    options.resizable = true;
+    options.launchAsync();
   };
 
   // Start animation timer (SkiaMainWindowIntegration handles this)
@@ -170,24 +194,25 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
   // Ctrl+Z or Cmd+Z for undo
   if (key.getTextCharacter() == 'z' && key.getModifiers().isCommandDown() &&
       !key.getModifiers().isShiftDown() && projectState.canUndo()) {
-      projectState.undo();
-      DBG("Keyboard shortcut: Undo");
-      return true;
+    projectState.undo();
+    DBG("Keyboard shortcut: Undo");
+    return true;
   }
 
   // Ctrl+Shift+Z or Cmd+Shift+Z for redo
   if (key.getTextCharacter() == 'Z' && key.getModifiers().isCommandDown() &&
       key.getModifiers().isShiftDown() && projectState.canRedo()) {
-      projectState.redo();
-      DBG("Keyboard shortcut: Redo");
-      return true;
+    projectState.redo();
+    DBG("Keyboard shortcut: Redo");
+    return true;
   }
 
   // Ctrl+Y or Cmd+Y for redo (alternative)
-  if (key.getTextCharacter() == 'y' && key.getModifiers().isCommandDown() && projectState.canRedo()) {
-      projectState.redo();
-      DBG("Keyboard shortcut: Redo (Y)");
-      return true;
+  if (key.getTextCharacter() == 'y' && key.getModifiers().isCommandDown() &&
+      projectState.canRedo()) {
+    projectState.redo();
+    DBG("Keyboard shortcut: Redo (Y)");
+    return true;
   }
 
   // M key: Toggle virtual MIDI keyboard (like Ableton Live)
@@ -202,11 +227,11 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
   // Tab key: Toggle between Session View and Arranger View
   if (key == juce::KeyPress::tabKey &&
-      !key.getModifiers().isAnyModifierKeyDown() &&
-      transportBar && transportBar->onViewToggleClicked) {
-      transportBar->onViewToggleClicked();
-      DBG("Keyboard shortcut: Toggle Session/Arranger View (Tab)");
-      return true;
+      !key.getModifiers().isAnyModifierKeyDown() && transportBar &&
+      transportBar->onViewToggleClicked) {
+    transportBar->onViewToggleClicked();
+    DBG("Keyboard shortcut: Toggle Session/Arranger View (Tab)");
+    return true;
   }
 
   return false; // Key not handled
@@ -217,62 +242,70 @@ void MainComponent::paint(juce::Graphics &g) {
   SkiaMainWindowIntegration::paint(g);
 }
 
-void MainComponent::drawSkiaContent(SkCanvas* canvas) {
-    // Clear background
-    canvas->clear(SkColorSetRGB(20, 20, 25)); // Dark background
-    
-    // Helper lambda to draw a child if visible
-    auto drawChild = [&](juce::Component* child, zenith::SkiaComponent* skiaChild) {
-        if (child && child->isVisible() && skiaChild) {
-            canvas->save();
-            auto bounds = child->getBounds();
-            canvas->translate((float)bounds.getX(), (float)bounds.getY());
-            canvas->clipRect(SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight()));
-            skiaChild->drawSkia(canvas);
-            canvas->restore();
-        }
-    };
+void MainComponent::drawSkiaContent(SkCanvas *canvas) {
+  // Clear background
+  canvas->clear(SkColorSetRGB(20, 20, 25)); // Dark background
 
-    // Draw known children in order (Zero-Allocation, No Dynamic Cast)
-    
-    // 1. Transport Bar
-    drawChild(transportBar.get(), transportBar.get());
+  // Helper lambda to draw a child if visible
+  auto drawChild = [&](juce::Component *child, 
+                       zenith::SkiaComponent *skiaChild) {
+    if (child && child->isVisible() && skiaChild) {
+      canvas->save();
+      auto bounds = child->getBounds();
+      canvas->translate((float)bounds.getX(), (float)bounds.getY());
+      canvas->clipRect(
+          SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight()));
+      skiaChild->drawSkia(canvas);
+      canvas->restore();
+    }
+  };
 
-    // 2. Main Layout (Browser + Session/Arranger)
-    drawChild(mainLayout.get(), mainLayout.get());
+  // Draw known children in order (Zero-Allocation, No Dynamic Cast)
 
-    // 3. Right Side Panel
-    drawChild(rightSidePanel.get(), rightSidePanel.get());
+  // 1. Transport Bar
+  drawChild(transportBar.get(), transportBar.get());
 
-    // 4. Bottom Bar
-    drawChild(bottomBar.get(), bottomBar.get());
-    
-    // 5. Wingman Panel (if hosted directly, but currently inside RightSidePanel)
-    // If it were direct: drawChild(wingmanPanelPtr_.get(), wingmanPanelPtr_.get());
+  // 2. Main Layout (Browser + Session/Arranger)
+  drawChild(mainLayout.get(), mainLayout.get());
+
+  // 3. Right Side Panel
+  drawChild(rightSidePanel.get(), rightSidePanel.get());
+
+  // 4. Bottom Bar
+  drawChild(bottomBar.get(), bottomBar.get());
+
+  // 5. Wingman Panel (if hosted directly, but currently inside RightSidePanel)
+  // If it were direct: drawChild(wingmanPanelPtr_.get(), 
+  // wingmanPanelPtr_.get());
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
   if (zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
-      activeDragComponent = nullptr;
-      if (transportBar && transportBar->getBounds().contains(e.getPosition())) activeDragComponent = transportBar.get();
-      else if (rightSidePanel && rightSidePanel->getBounds().contains(e.getPosition())) activeDragComponent = rightSidePanel.get();
-      else if (bottomBar && bottomBar->getBounds().contains(e.getPosition())) activeDragComponent = bottomBar.get();
-      else if (mainLayout && mainLayout->getBounds().contains(e.getPosition())) activeDragComponent = mainLayout.get();
-      
-      if (activeDragComponent) {
-          dragStartBounds = activeDragComponent->getBounds();
-          return; // Consume event
-      }
+    activeDragComponent = nullptr;
+    if (transportBar && transportBar->getBounds().contains(e.getPosition()))
+      activeDragComponent = transportBar.get();
+    else if (rightSidePanel &&
+             rightSidePanel->getBounds().contains(e.getPosition()))
+      activeDragComponent = rightSidePanel.get();
+    else if (bottomBar && bottomBar->getBounds().contains(e.getPosition()))
+      activeDragComponent = bottomBar.get();
+    else if (mainLayout && mainLayout->getBounds().contains(e.getPosition()))
+      activeDragComponent = mainLayout.get();
+
+    if (activeDragComponent) {
+      dragStartBounds = activeDragComponent->getBounds();
+      return; // Consume event
+    }
   }
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
+    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); }); // My HEAD had lambda version
     m.showMenuAsync(juce::PopupMenu::Options());
   }
 }
 
-void MainComponent::mouseDrag(const juce::MouseEvent& e) {
+void MainComponent::mouseDrag(const juce::MouseEvent& e) { // From my HEAD
     if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
         auto offset = e.getOffsetFromDragStart();
         auto newBounds = dragStartBounds.translated(offset.x, offset.y);
@@ -307,8 +340,8 @@ void MainComponent::mouseDrag(const juce::MouseEvent& e) {
     }
 }
 
-void MainComponent::mouseUp(const juce::MouseEvent& e) {
-    activeDragComponent = nullptr;
+void MainComponent::mouseUp(const juce::MouseEvent &e) {
+  activeDragComponent = nullptr;
 }
 
 void MainComponent::resized() {
@@ -331,9 +364,9 @@ void MainComponent::resized() {
     DBG("  ✗ TransportBar is NULL!");
   }
 
-  // Bottom: Piano Keyboard + Mixer Strip (96px height when visible)
+  // Bottom: Piano Keyboard + Mixer Strip (96px height when visible - my HEAD)
   if (bottomBar) {
-    auto bottomBounds = bounds.removeFromBottom(96);
+    auto bottomBounds = bounds.removeFromBottom(96); // Keep my HEAD's 96px
     bottomBar->setBounds(bottomBounds);
     DBG("  ✓ BottomBar positioned at: " + bottomBounds.toString());
   } else {
@@ -362,7 +395,7 @@ void MainComponent::resized() {
 }
 
 //==============================================================================
-// C4: Track count monitoring (read-only, dirty-checked)
+// C4: Track count monitoring (read-only, dirty-checked) - From my HEAD
 //==============================================================================
 
 void MainComponent::refreshTrackCountLabel() {
@@ -375,6 +408,7 @@ void MainComponent::refreshTrackCountLabel() {
   // No heavy formatting, no repaint storm
   // (No UI label in Skia mode, but we could update a status bar if needed)
 }
+
 
 //==============================================================================
 // Integration: Piano roll opener
@@ -467,40 +501,41 @@ MainWindow::MainWindow(const juce::String &name)
               juce::ResizableWindow::backgroundColourId),
           DocumentWindow::allButtons) {
   // Create audio engine first
-  engine = std::move(std::make_unique<zenith::Engine>());
+  engine = std::make_unique<zenith::Engine>();
 
   // Create project state
-  projectState = std::move(std::make_unique<zenith::ProjectState>());
+  projectState = std::make_unique<zenith::ProjectState>();
 
   // Phase 13: Create automation synchronizer
-  automationSync =
-      std::move(std::make_unique<TrackAutomationSynchronizer>(*projectState, *engine));
+  automationSync = std::make_unique<zenith::TrackAutomationSynchronizer>(
+      *projectState, *engine);
 
   // Phase 5: Create Wingman command API
-  commandAPI = std::move(std::make_unique<zenith::CommandAPI>(*projectState, *engine));
+  commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
 
   // Phase 7: Create AI bridge client
-  aiBridgeClient = std::move(std::make_unique<zenith::AIBridgeClient>());
+  aiBridgeClient = std::make_unique<zenith::AIBridgeClient>();
 
   // Phase 13: Connect project state to engine for automation
   engine->setProjectState(projectState.get());
 
   // Integration: Create clip synchronizer
-  clipSynchronizer = std::move(std::make_unique<ClipSynchronizer>(*projectState, *engine));
+  clipSynchronizer =
+      std::make_unique<zenith::ClipSynchronizer>(*projectState, *engine);
 
   // Add some demo tracks for testing (Phase 9 + existing features)
   projectState->addTrack("Audio 1", "audio");
   projectState->addTrack("MIDI 1", "midi");
   projectState->addTrack("Audio 2", "audio");
 
-  // Create main content (Phase 14: Automation + Phase 10: Mixer + Phase 9:
-  // Arranger + Wingman AI)
-  mainComponent = std::move(std::make_unique<MainComponent>(
-      *engine, *commandAPI, *aiBridgeClient, *projectState));
+  // Main content
+  mainComponent = std::make_unique<MainComponent>(
+      *engine, *commandAPI, *aiBridgeClient, *projectState);
 
-  // Create menu bar
-  menuBar = std::make_unique<ZenithMenuBar>(*this);
-  setMenuBar(menuBar.get());
+  // Create menu bar (new way using MenuBar.cpp)
+  // The ZenithMenuBar is a SkiaComponent, so it will be added to MainComponent directly
+  // Here, we just set the JUCE menu bar (if needed, or nullptr)
+  setMenuBar(nullptr); // Explicitly remove default JUCE menu bar
 
   // Set up window
   setUsingNativeTitleBar(true);
@@ -525,9 +560,8 @@ MainWindow::MainWindow(const juce::String &name)
 }
 
 MainWindow::~MainWindow() {
-  // Clear menu bar first
+  // Clear menu bar first (if any was set)
   setMenuBar(nullptr);
-  menuBar.reset();
 
   // Shutdown audio engine before destroying components
   if (engine)
@@ -559,98 +593,40 @@ void MainWindow::showAboutDialog() {
                                          "OK");
 }
 
-void MainWindow::saveProject()
-{
-    if (currentProjectFile.existsAsFile())
-    {
-        projectState->saveToFile(currentProjectFile);
-    }
-    else
-    {
-        saveProjectAs();
-    }
+void MainWindow::saveProject() {
+  if (currentProjectFile.existsAsFile()) {
+    projectState->saveToFile(currentProjectFile);
+  } else {
+    saveProjectAs();
+  }
 }
 
-void MainWindow::saveProjectAs()
-{
-    auto chooser = std::make_shared<juce::FileChooser>(
-        "Save Project As...",
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
-        "*.zth");
+void MainWindow::saveProjectAs() {
+  auto chooser = std::make_shared<juce::FileChooser>(
+      "Save Project As...",
+      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+      "*.zth");
 
-    auto chooserFlags = juce::FileBrowserComponent::saveMode |
-                        juce::FileBrowserComponent::canSelectFiles;
+  auto chooserFlags = juce::FileBrowserComponent::saveMode |
+                      juce::FileBrowserComponent::canSelectFiles;
 
-    chooser->launchAsync(chooserFlags, [this, chooser](const juce::FileChooser& fc)
-    {
+  chooser->launchAsync(
+      chooserFlags, [this, chooser](const juce::FileChooser &fc) {
         auto file = fc.getResult();
         if (file == juce::File{})
-            return;
+          return;
 
         // Ensure extension
         if (!file.hasFileExtension(".zth"))
-            file = file.withFileExtension(".zth");
+          file = file.withFileExtension(".zth");
 
-        if (projectState->saveToFile(file))
-        {
-            currentProjectFile = file;
-            setName("Zenith DAW - " + file.getFileNameWithoutExtension());
+        if (projectState->saveToFile(file)) {
+          currentProjectFile = file;
+          setName("Zenith DAW - " + file.getFileNameWithoutExtension());
         }
-    });
+      });
 }
 
-//==============================================================================
-// ZenithMenuBar Implementation
-//==============================================================================
-
-MainWindow::ZenithMenuBar::ZenithMenuBar(MainWindow &mainWindow)
-    : owner(mainWindow) {}
-
-juce::StringArray MainWindow::ZenithMenuBar::getMenuBarNames() {
-  return {"File", "Help"};
-}
-
-juce::PopupMenu
-MainWindow::ZenithMenuBar::getMenuForIndex(int topLevelMenuIndex,
-                                           const juce::String &menuName) {
-  juce::PopupMenu menu;
-
-  if (topLevelMenuIndex == 0) // File menu
-  {
-    menu.addItem(save, "Save", true, false);
-    menu.addItem(saveAs, "Save As...", true, false);
-    menu.addSeparator();
-#if !(JUCE_IOS || JUCE_ANDROID)
-    menu.addItem(quit, "Quit", true, false);
-#endif
-  } else if (topLevelMenuIndex == 1) // Help menu
-  {
-    menu.addItem(aboutZenith, "About Zenith DAW...", true, false);
-  }
-
-  return menu;
-}
-
-void MainWindow::ZenithMenuBar::menuItemSelected(int menuItemID,
-                                                 int /*topLevelMenuIndex*/) {
-  switch (menuItemID) {
-  case save:
-    owner.saveProject();
-    break;
-
-  case saveAs:
-    owner.saveProjectAs();
-    break;
-
-  case aboutZenith:
-    owner.showAboutDialog();
-    break;
-
-  case quit:
-    juce::JUCEApplication::getInstance()->systemRequestedQuit();
-    break;
-
-  default:
-    break;
-  }
-}
+// Legacy ZenithMenuBar Implementation removed
+// All logic moved to Source/ui/MenuBar.cpp
+// Helper method implementations are now gone.

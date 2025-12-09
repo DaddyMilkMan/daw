@@ -24,7 +24,6 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 
-
 # 4. Options
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
 option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
@@ -91,6 +90,7 @@ add_subdirectory(apps/desktop/Source/commands)
 add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
+add_subdirectory(apps/desktop/Source/ai)
 
 
 # Include directories
@@ -104,6 +104,7 @@ target_include_directories(ZenithDAW PRIVATE
 # Link JUCE modules
 target_link_libraries(ZenithDAW PRIVATE
     juce::juce_core
+    juce::juce_cryptography
     juce::juce_data_structures
     juce::juce_events
     juce::juce_graphics
@@ -148,31 +149,8 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_REPORT_APP_USAGE=0
 )
 
-# if(MSVC)
-#     target_compile_options(ZenithDAW PRIVATE /Qspectre-)
-#     set_target_properties(ZenithDAW PROPERTIES VS_SPECTRE_MITIGATION "false")
-    
-#     # Force __cdecl calling convention (remove any /Gr that may be set)
-#     foreach(flag_var
-#         CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE
-#         CMAKE_CXX_FLAGS_MINSIZEREL CMAKE_CXX_FLAGS_RELWITHDEBINFO
-#         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE
-#         CMAKE_C_FLAGS_MINSIZEREL CMAKE_C_FLAGS_RELWITHDEBINFO)
-#         if(${flag_var} MATCHES "/Gr")
-#             string(REPLACE "/Gr" "" ${flag_var} "${${flag_var}}")
-#         endif()
-#         if(${flag_var} MATCHES "/Gd")
-#             string(REPLACE "/Gd" "" ${flag_var} "${${flag_var}}")
-#         endif()
-#     endforeach()
-    
-#     # target_compile_options(ZenithDAW PRIVATE /Gd)
-# endif()
-
-# if(MSVC)
-#     # Attempt to resolve D8016 by forcing FastCall at project level
-#     # set_property(TARGET ZenithDAW PROPERTY VS_GLOBAL_CallingConvention "FastCall")
-# endif()
+# Removed commented-out MSVC calling convention code (2025-01-XX)
+# If needed in future, see git history for previous implementation
 
 # ==============================================================================
 # MODERN COMPILER CONFIGURATION (Standard Flags)
@@ -198,7 +176,6 @@ if(ENABLE_IPO)
     endif()
 endif()
 
-# 8. Standard Compiler Flags & Hardening
 # 8. Standard Compiler Flags & Hardening
 if(MSVC)
     target_compile_options(ZenithDAW PRIVATE

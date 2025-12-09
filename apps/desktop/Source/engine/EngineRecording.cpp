@@ -332,8 +332,7 @@ void Engine::bakeAudioRecordingIntoTrack(
     clip->setLength(fileHandle->lengthInSamples);
     clip->setAudioFile(file);
 
-    track.addClip(std::move(clip));
-
+                track.addClip(std::move(clip));
     // Sync with ProjectState
     if (projectState_ != nullptr)
     {
@@ -380,7 +379,7 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize)
 
         auto* track = tracks_[i].get();
         if (track != nullptr) {
-            track->addClip(std::move(clip));
+            track.addClip(std::move(clip));
         }
     }
 }

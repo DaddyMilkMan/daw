@@ -35,7 +35,8 @@
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/views/PianoKeyboardViewSkia.h"
-#include "../Source/ui/skia/views/SessionViewComponent.h"
+#Source/ui/skia/views/SessionViewComponent.h" // Fixed include path
+#include "../Source/ui/MenuBar.h" // New MenuBar header
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -132,7 +133,7 @@ private:
   std::unique_ptr<zenith::TransportBar> transportBar;
 
   // The "Perfect DAW" Tri-Pane Layout Manager
-  // Manages Browser, Session View, and Arranger View
+  // Manages Browser, Session, and Arranger View
   std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
 
   // Right: Scratch Pads + Wingman Console
@@ -187,32 +188,8 @@ public:
 
 private:
   //==========================================================================
-  // Menu bar model
+  // Menu bar model - now handled by ZenithMenuBar (SkiaComponent in MainComponent)
   //==========================================================================
-
-  /**
-   * @class ZenithMenuBar
-   * @brief Menu bar model for the application
-   */
-  class ZenithMenuBar : public juce::MenuBarModel {
-  public:
-    explicit ZenithMenuBar(MainWindow &owner);
-
-    juce::StringArray getMenuBarNames() override;
-    juce::PopupMenu getMenuForIndex(int topLevelMenuIndex,
-                                    const juce::String &menuName) override;
-    void menuItemSelected(int menuItemID, int topLevelMenuIndex) override;
-
-  private:
-    MainWindow &owner;
-
-    enum MenuItems { 
-        save = 1, 
-        saveAs = 2, 
-        quit = 3, 
-        aboutZenith = 4 
-    };
-  };
 
   //==========================================================================
   // Menu handlers
@@ -262,8 +239,8 @@ public:
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
 
-  // Menu bar
-  std::unique_ptr<ZenithMenuBar> menuBar;
+  // The ZenithMenuBar is now a SkiaComponent within MainComponent, not here.
+  // std::unique_ptr<ZenithMenuBar> menuBar; // REMOVED
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };
