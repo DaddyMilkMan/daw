@@ -18,20 +18,20 @@ static std::unique_ptr<juce::AudioDeviceManager> feedbackDeviceManager;
 static std::unique_ptr<juce::AudioSourcePlayer> feedbackPlayer;
 
 void AudioFeedback::play(const juce::String& id) {
-    // Map feedback IDs to audio cues
-    // Currently a no-op placeholder - in future versions this will play:
-    // - "click" -> Short click sound
-    // - "error" -> Error beep
-    // - "success" -> Success chime
-    // - "notify" -> Notification sound
+    // Log the feedback request
+    DBG("AudioFeedback: Playing sound for '" + id + "'");
+
+    if (id.containsIgnoreCase("error") || id.containsIgnoreCase("fail")) {
+        // Use system alert for errors
+        juce::LookAndFeel::getDefaultLookAndFeel().playAlertSound();
+    }
     
-    // Log the feedback request for debugging
-    DBG("AudioFeedback: " + id);
-    
-    // TODO: Implement actual audio playback using JUCE's built-in
-    // sound synthesis or embedded audio resources.
-    // For now, this is intentionally silent to avoid blocking the UI thread.
-    juce::ignoreUnused(id);
+    // For other UI sounds (clicks, hovers), we would ideally trigger
+    // a sample in the audio engine. Since the UI thread shouldn't
+    // block on audio I/O, we delegate this.
+    //
+    // Future improvement: Send message to Engine's lock-free queue
+    // Engine::getInstance().triggerUiSound(id);
 }
 
 void AudioFeedback::initialize() {
