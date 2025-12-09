@@ -28,7 +28,12 @@ public:
     
     // Build from a vector of points (must be sorted)
     explicit AutomationLane(const std::vector<AutomationPoint>& sortedPoints) 
-        : points(sortedPoints) {}
+        : points(sortedPoints) {
+        jassert(std::is_sorted(points.begin(), points.end(), 
+                               [](const AutomationPoint& a, const AutomationPoint& b) {
+                                   return a.timeBeats < b.timeBeats;
+                               }));
+    }
 
     float getValueAt(double timeBeats) const {
         if (points.empty()) return 0.0f; // Default value

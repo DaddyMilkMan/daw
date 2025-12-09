@@ -1141,6 +1141,13 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice* device)
         }
     }
 
+    // NEW CODE: Fill auxBufferPtrs_ member
+    auxBufferPtrs_.clear();
+    auxBufferPtrs_.reserve(auxBusBuffers_.size());
+    for (auto& buf : auxBusBuffers_) {
+        auxBufferPtrs_.push_back(&buf);
+    }
+
     // Phase 11: Master buffer already allocated above
 
     // Phase 11: Prepare all tracks for playback
@@ -1742,11 +1749,11 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
     
     // Create vector of pointers to aux buffers for Tracks
     // Note: We do this on the stack every block. Optimization: Pre-allocate this vector?
-    std::vector<juce::AudioBuffer<float>*> auxBufferPtrs;
-    auxBufferPtrs.reserve(auxBusBuffers_.size());
-    for (auto& buf : auxBusBuffers_) {
-        auxBufferPtrs.push_back(&buf);
-    }
+    // REMOVED: std::vector<juce::AudioBuffer<float>*> auxBufferPtrs;
+    // REMOVED: auxBufferPtrs.reserve(auxBusBuffers_.size());
+    // REMOVED: for (auto& buf : auxBusBuffers_) {
+    // REMOVED:     auxBufferPtrs.push_back(&buf);
+    // REMOVED: }
 
     // Get thread-safe snapshot (Lock-free load)
     auto* snapshot = activeSnapshot_.load();
@@ -1809,7 +1816,7 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float>& outputBuffer,
 
         // Render track audio (and process MIDI)
         // Pass Aux Buffer Pointers and TempoMap (Tier 1 Features)
-        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput, auxBufferPtrs, tempoMap_.get());
+        track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput, auxBufferPtrs_, tempoMap_.get());
         // - Apply track volume, pan, mute, solo
         // - Apply track effects chain
 

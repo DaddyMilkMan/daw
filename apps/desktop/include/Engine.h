@@ -835,6 +835,7 @@ private:
   std::vector<std::unique_ptr<zenith::AuxBus>> auxBuses_;
   std::vector<juce::AudioBuffer<float>>
       auxBusBuffers_; // Pre-allocated buffers for aux buses
+  std::vector<juce::AudioBuffer<float>*> auxBufferPtrs_; // Pointers to aux bus buffers for RT processing
 
   // Master bus plugins
   std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
