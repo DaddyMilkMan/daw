@@ -9,6 +9,12 @@
 namespace zenith {
 
 //==============================================================================
+// Static member definition
+//==============================================================================
+
+Engine* EngineAdapter::sharedEngine_ = nullptr;
+
+//==============================================================================
 // Helper functions
 //==============================================================================
 
@@ -417,16 +423,30 @@ bool EngineAdapter::exportProject(const ExportOptions& options)
 
 std::unique_ptr<AudioEngineCore> EngineAdapter::create()
 {
-    // This factory method is deprecated in the new architecture.
-    // The Engine instance is now owned by the main application component 
-    // and passed via dependency injection.
-    // 
-    // Returning nullptr here signals to the caller that they should not 
-    // rely on this static factory but instead construct the EngineAdapter 
-    // with an existing Engine reference.
+    if (sharedEngine_ != nullptr)
+    {
+        // Create an adapter wrapping the shared engine.
+        // The caller takes ownership of the adapter.
+        return std::make_unique<EngineAdapter>(*sharedEngine_);
+    }
+
+    // Fallback: If no shared engine, we cannot function.
+    // In a real scenario, we might try to find one or throw.
+    // For now, we return nullptr to indicate failure, but the caller should have setSharedEngine first.
     
-    juce::Logger::writeToLog("EngineAdapter::create() called - returning nullptr. Use Dependency Injection.");
-    return nullptr;
+    juce::Logger::writeToLog("EngineAdapter::create() called but no shared Engine instance is set. Call EngineAdapter::setSharedEngine() first.");
+    
+    // Returning nullptr is the only safe "no stub" behavior if pre-conditions aren't met.
+    return nullptr; 
+}
+
+//==============================================================================
+// Shared Engine setter
+//==============================================================================
+
+void EngineAdapter::setSharedEngine(Engine* engine)
+{
+    sharedEngine_ = engine;
 }
 
 } // namespace zenith
