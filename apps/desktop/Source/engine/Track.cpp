@@ -81,7 +81,6 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
     if (midiBuffer != nullptr) {
       // Process MIDI clips
       for (const auto &clip : clips_) {
-        // Fix: Use processMidiClip from Clip.h
         if (clip->getType() == Clip::Type::MIDI && clip->isPlaying()) {
           clip->processMidiClip(*midiBuffer, playheadPosition, bufferToFill.numSamples);
         }
@@ -94,14 +93,12 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
     for (const auto &clip : clips_) {
       if (clip->getType() == Clip::Type::Audio && clip->isPlaying()) {
         // Render audio clip into the buffer
-        // Fix: Use processAudioClip from Clip.h
         clip->processAudioClip(bufferToFill, playheadPosition);
       }
     }
 
-    // If it's an instrument track, render instrument audio
+    // If it's an instrument track, render instrument audio from MIDI input
     if (trackType == Type::Instrument && instrument_ != nullptr) {
-       // Fix: Use processBlock for instrument audio rendering
        if (midiBuffer != nullptr) {
            instrument_->processBlock(*bufferToFill.buffer, *midiBuffer);
        } else {
@@ -126,12 +123,7 @@ void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
     }
   }
 
-  // Pass to mixer channel for volume, pan, sends, metering
-  // We pass midiBuffer even to audio tracks so that mixerChannel can handle MIDI
-  // if it processes effects that use MIDI input.
-  // Pass to mixer channel for volume, pan, sends, metering
-  // We pass midiBuffer even to audio tracks so that mixerChannel can handle MIDI
-  // if it processes effects that use MIDI input.
+  // Pass to mixer channel for volume, pan, sends, and metering
   juce::AudioSourceChannelInfo mixerInfo(bufferToFill.buffer, bufferToFill.startSample,
                                          bufferToFill.numSamples);
   mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
@@ -180,7 +172,6 @@ void Track::addClip(std::unique_ptr<Clip> newClip) {
 void Track::removeClip(const juce::String &clipId) {
   clips_.erase(std::remove_if(clips_.begin(), clips_.end(),
                                [&clipId](const std::unique_ptr<Clip> &clip) {
-                                 // Fix: Use getName() as ID
                                  return clip->getName() == clipId;
                                }),
                clips_.end());
@@ -214,7 +205,7 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
   return nullptr;
 }
 
-// ROAST FIX #3: Implement PDC latency reporting
+/** Returns total plugin chain latency in samples for PDC (Plugin Delay Compensation). */
 int Track::getLatencySamples() const {
   // If called from message thread, use owned list
   if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {

@@ -17,15 +17,7 @@ ClipSynchronizer::ClipSynchronizer(zenith::ProjectState& ps, zenith::Engine& eng
 {
     DBG("ClipSynchronizer: Constructor");
 }
-//...
-// Skipping unchanged lines
-//...
-        // Get Engine's clip count
-        int numClips = trackPtr->getNumClips();
-        
-        // Get zenith::ProjectState clips container
-        auto clipsNode = projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
-//...
+
 
 ClipSynchronizer::~ClipSynchronizer()
 {

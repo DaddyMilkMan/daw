@@ -76,29 +76,126 @@ namespace colors {
 // THEME MANAGER
 // ============================================================================
 
-class ThemeManager {
+/**
+ * @class ThemeManager
+ * @brief Manages color themes with real-time updates and persistence
+ * 
+ * Features:
+ * - Load/save themes to JSON files
+ * - Real-time color updates with listener notification
+ * - Default "Neon Noir" theme
+ */
+class ThemeManager : public juce::ChangeBroadcaster {
 public:
     static ThemeManager& getInstance() {
         static ThemeManager instance;
         return instance;
     }
     
+    /**
+     * @struct Theme
+     * @brief Complete theme definition with all color values
+     */
     struct Theme {
-        juce::String name;
-        std::map<juce::String, uint32_t> colors; // name -> ARGB
+        juce::String name = "Neon Noir";
+        
+        // Primary Accents
+        SkColor primary = 0xFF00FFFF;       // Cyan
+        SkColor secondary = 0xFFFF00FF;     // Magenta
+        SkColor accent = 0xFF00FF64;        // Neon Green
+        
+        // Status Colors
+        SkColor warning = 0xFFFFC800;       // Amber
+        SkColor danger = 0xFFFF3232;        // Red
+        SkColor info = 0xFF0080FF;          // Blue
+        
+        // Backgrounds
+        SkColor bgDarkest = 0xFF0A0A0F;
+        SkColor bgDarker = 0xFF0F0F14;
+        SkColor bgDark = 0xFF141419;
+        SkColor bgMedium = 0xFF1A1A23;
+        SkColor bgLight = 0xFF20202D;
+        
+        // Text
+        SkColor textPrimary = 0xFFFFFFFF;
+        SkColor textSecondary = 0xCCFFFFFF;
+        SkColor textDisabled = 0x66FFFFFF;
+        
+        // Convert to map for serialization
+        std::map<juce::String, uint32_t> toMap() const {
+            return {
+                {"primary", primary},
+                {"secondary", secondary},
+                {"accent", accent},
+                {"warning", warning},
+                {"danger", danger},
+                {"info", info},
+                {"bgDarkest", bgDarkest},
+                {"bgDarker", bgDarker},
+                {"bgDark", bgDark},
+                {"bgMedium", bgMedium},
+                {"bgLight", bgLight},
+                {"textPrimary", textPrimary},
+                {"textSecondary", textSecondary},
+                {"textDisabled", textDisabled}
+            };
+        }
+        
+        // Load from map
+        void fromMap(const std::map<juce::String, uint32_t>& map) {
+            auto get = [&](const juce::String& key, SkColor defaultVal) {
+                auto it = map.find(key);
+                return it != map.end() ? it->second : defaultVal;
+            };
+            primary = get("primary", primary);
+            secondary = get("secondary", secondary);
+            accent = get("accent", accent);
+            warning = get("warning", warning);
+            danger = get("danger", danger);
+            info = get("info", info);
+            bgDarkest = get("bgDarkest", bgDarkest);
+            bgDarker = get("bgDarker", bgDarker);
+            bgDark = get("bgDark", bgDark);
+            bgMedium = get("bgMedium", bgMedium);
+            bgLight = get("bgLight", bgLight);
+            textPrimary = get("textPrimary", textPrimary);
+            textSecondary = get("textSecondary", textSecondary);
+            textDisabled = get("textDisabled", textDisabled);
+        }
     };
+    
+    //==========================================================================
+    // Theme Operations
+    //==========================================================================
     
     void saveTheme(const juce::String& name);
     void loadTheme(const juce::String& name);
     void deleteTheme(const juce::String& name);
-    
     juce::StringArray getAvailableThemes() const;
     
-    // Apply current colors to ZenithDesignSystem::Colors
+    /** Apply a theme, updating all global colors */
     void applyTheme(const Theme& theme);
     
+    /** Get the current active theme */
+    const Theme& getCurrentTheme() const { return currentTheme_; }
+    
+    /** Set a specific color and notify listeners */
+    void setColor(const juce::String& colorName, SkColor color);
+    
+    /** Get a specific color by name */
+    SkColor getColor(const juce::String& colorName) const;
+    
+    /** Reset to default "Neon Noir" theme */
+    void resetToDefault();
+    
 private:
-    ThemeManager() = default;
+    ThemeManager() {
+        // Initialize with default theme
+        currentTheme_ = Theme();
+        applyTheme(currentTheme_);
+    }
+    
+    Theme currentTheme_;
     
     juce::File getThemeDir() const {
         auto dir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)

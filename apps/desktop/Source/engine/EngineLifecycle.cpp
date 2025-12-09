@@ -231,6 +231,7 @@ void Engine::syncWithProjectState()
 bool Engine::initialize()
 {
     DBG("Engine: Initializing...");
+    lastInitError_.clear();
 
     // Initialize audio device manager
     auto error = deviceManager.initialiseWithDefaultDevices(2, 2);  // 2 in, 2 out
@@ -238,11 +239,7 @@ bool Engine::initialize()
     if (error.isNotEmpty())
     {
         DBG("Engine: Failed to initialize audio device: " + error);
-        juce::AlertWindow::showMessageBoxAsync(
-            juce::AlertWindow::WarningIcon,
-            "Audio Device Error",
-            "Failed to initialize audio device:\n" + error,
-            "OK");
+        lastInitError_ = "Failed to initialize audio device:\n" + error;
         return false;
     }
 

@@ -1184,9 +1184,7 @@ void ProjectState::createDefaultState() {
 
 juce::String ProjectState::generateUniqueId(const juce::String &prefix) {
   int id = idCounter.fetch_add(1);
-  // ROAST FIX #8: Persist the next ID so we don't have to scan on load
-  // We don't use undoManager here to avoid polluting the undo stack with ID
-  // increments
+  // Persist next ID to avoid O(N) scan on project load
   state.setProperty(PROP_NEXT_ID, id + 1, nullptr);
   return prefix + "_" + juce::String(id);
 }
@@ -1228,7 +1226,7 @@ ProjectState::findAutomationPoint(const juce::ValueTree &envelope,
 }
 
 void ProjectState::rebuildIdCounter() {
-  // ROAST FIX #8: Check if we have a stored nextId to avoid O(N) scan
+  // Use stored nextId if available for O(1) lookup instead of O(N) tree scan
   if (state.hasProperty(PROP_NEXT_ID)) {
     idCounter.store(static_cast<int>(state[PROP_NEXT_ID]));
     return;

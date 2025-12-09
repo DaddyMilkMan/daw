@@ -189,6 +189,25 @@ public:
   float getGain() const { return gain.load(); }
 
   //==============================================================================
+  // Time-stretching / Playback Rate
+  /**
+   * @brief Set playback rate for time-stretching
+   * @param rate Playback rate (1.0 = normal speed, 0.5 = half speed/double length, 2.0 = double speed/half length)
+   * 
+   * Note: Phase 1 uses linear interpolation (affects pitch).
+   * Set preservePitch to true for WSOLA-based pitch-preserving time stretch.
+   */
+  void setPlaybackRate(float rate);
+  float getPlaybackRate() const { return playbackRate_.load(); }
+
+  /**
+   * @brief Enable/disable pitch preservation during time-stretch
+   * @param preserve If true, uses WSOLA algorithm to preserve pitch during speed changes
+   */
+  void setPreservePitch(bool preserve);
+  bool isPreservingPitch() const { return preservePitch_.load(); }
+
+  //==============================================================================
   // Looping
   void setLooping(bool shouldLoop);
   bool isLooping() const { return looping.load(); }
@@ -231,6 +250,22 @@ private:
   std::atomic<float> fadeCurve{0.5f}; // 0.5 = Linear
   std::atomic<float> gain{1.0f};
   std::atomic<bool> looping{false};
+  
+  //==============================================================================
+  // Time-stretching state
+  std::atomic<float> playbackRate_{1.0f};     // Playback rate (1.0 = normal)
+  std::atomic<bool> preservePitch_{false};    // Use WSOLA for pitch preservation
+  mutable double readPosition_{0.0};          // Fractional read position for interpolation
+  
+  // WSOLA (Waveform Similarity Overlap-Add) state for pitch-preserving time stretch
+  // These are pre-allocated to avoid RT allocation
+  static constexpr int kWsolaWindowSize = 2048;  // Analysis window size in samples
+  static constexpr int kWsolaOverlap = 4;        // Overlap factor (window/overlap = hop)
+  mutable std::vector<float> wsolaWindow_;       // Hann window for overlap-add
+  mutable std::vector<float> wsolaOutputBuffer_; // Circular output buffer
+  mutable int wsolaWritePos_{0};                 // Write position in output buffer
+  mutable int wsolaReadPos_{0};                  // Read position in output buffer
+  mutable bool wsolaInitialized_{false};         // Whether WSOLA buffers are ready
 
   //==============================================================================
   // Audio data

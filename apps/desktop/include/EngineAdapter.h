@@ -162,7 +162,16 @@ public:
   //==========================================================================
   static std::unique_ptr<AudioEngineCore> create();
 
+  /**
+   * @brief Set the shared Engine instance to be used by create().
+   * @param engine Pointer to the main Engine (must outlive any adapters)
+   * @note This must be called before create() if you want to wrap the existing engine.
+   */
+  static void setSharedEngine(Engine* engine);
+
 private:
+  static Engine* sharedEngine_;  // Global pointer to the main engine (optional)
+
   Engine& engine_;
   ErrorHandler errorHandler_;
   StatusHandler statusHandler_;

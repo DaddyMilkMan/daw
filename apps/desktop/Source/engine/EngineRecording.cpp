@@ -380,7 +380,7 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize)
 
         auto* track = tracks_[i].get();
         if (track != nullptr) {
-            track.addClip(std::move(clip));
+            track->addClip(std::move(clip));
         }
     }
 }

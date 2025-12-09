@@ -32,6 +32,7 @@
     #include "../../Source/ui/skia/SkiaSlider.h"
     #include "../../Source/ui/skia/SkiaKnob.h"
     #include "../../Source/ui/skia/SkiaButton.h"
+    #include "../../Source/ui/skia/SkiaSpectrumComponent.h"
 #else
     // Fallback custom JUCE components
     #include "ZenithSlider.h"
@@ -84,6 +85,19 @@ public:
      * @brief Update UI from track state (called periodically via timer)
      */
     void updateFromTrack();
+
+#ifdef ZENITH_USE_SKIA
+    /**
+     * @brief Get reference to spectrum analyzer's audio FIFO
+     * @return Pointer to AudioFifo, or nullptr if no spectrum analyzer
+     * 
+     * Usage: Audio thread calls fifo->pushSamples() or pushStereoAsMono()
+     * Thread Safety: The returned FIFO is lock-free SPSC safe
+     */
+    AudioFifo* getSpectrumFifo() { 
+        return spectrumAnalyzer_ ? &spectrumAnalyzer_->getAudioFifo() : nullptr; 
+    }
+#endif
 
 private:
     //==========================================================================
@@ -144,6 +158,11 @@ private:
     };
 
     LevelMeter meter_;
+
+#ifdef ZENITH_USE_SKIA
+    // Mini spectrum analyzer (GPU-accelerated)
+    std::unique_ptr<SkiaSpectrumComponent> spectrumAnalyzer_;
+#endif
 
     // State tracking
     bool updatingControls_ = false;  // Prevent feedback loops

@@ -134,16 +134,10 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Skia Integration (Manual)
-option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
-
-if(ZENITH_ENABLE_SKIA)
-    include(apps/desktop/cmake/SkiaIntegration.cmake)
-    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-    message(STATUS "Zenith DAW: Skia rendering ENABLED")
-else()
-    message(STATUS "Zenith DAW: Skia rendering DISABLED")
-endif()
+# Skia Integration (Mandatory for Pure Skia UI)
+include(apps/desktop/cmake/SkiaIntegration.cmake)
+target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+message(STATUS "Zenith DAW: Pure Skia rendering ENABLED (JUCE UI fallbacks removed)")
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE

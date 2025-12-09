@@ -27,6 +27,7 @@ namespace zenith {
 
 // Forward declarations
 class Engine;
+class PluginHost;
 
 /**
  * @class Track
@@ -184,6 +185,12 @@ public:
   // PDC Support
   void setLatencyCompensation(int samples);
   int getLatencyCompensation() const { return latencyCompensationSamples.load(); }
+
+  //==============================================================================
+  // Persistence
+  //==============================================================================
+  void loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host);
+  static void savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& pluginTree);
 
 private:
   // PDC State

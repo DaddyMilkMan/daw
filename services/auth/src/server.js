@@ -15,6 +15,7 @@ require('./config/passport')(passport);
 
 const authRoutes = require('./routes/authRoutes');
 const projectRoutes = require('./routes/projectRoutes');
+const presetRoutes = require('./routes/presetRoutes');
 
 const app = express();
 
@@ -52,6 +53,7 @@ const connectDB = async () => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/presets', presetRoutes);
 // Serve uploaded files securely (e.g. for re-download) - In prod use nginx/S3 presigned URLs
 app.use('/uploads', express.static('uploads'));
 
@@ -63,7 +65,7 @@ app.get('/', (req, res) => {
 // Connect to DB and Start Server (only if not in test mode)
 if (process.env.NODE_ENV !== 'test') {
   connectDB();
-  
+
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
