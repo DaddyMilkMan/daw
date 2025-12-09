@@ -17,7 +17,7 @@ set(SKIA_FOUND_AND_READY OFF)
 # ------------------------------------------------------------------------
 
 # A. Try Standard vcpkg package (unofficial-skia)
-# find_package(unofficial-skia CONFIG QUIET)
+find_package(unofficial-skia CONFIG QUIET)
 
 if(unofficial-skia_FOUND)
     message(STATUS "  Strategy: vcpkg (unofficial-skia)")
@@ -67,6 +67,22 @@ else()
         target_compile_definitions(ZenithDAW PRIVATE SK_GL=1)
         set(SKIA_FOUND_AND_READY ON)
         message(STATUS "  Skia graphics library: LINKED (Manual)")
+
+        # ------------------------------------------------------------------------
+        # CALLING CONVENTION FIX: Skia vcpkg may inject /Gr (fastcall) which
+        # conflicts with JUCE's /Gd (cdecl). We explicitly force /Gd.
+        # ------------------------------------------------------------------------
+        if(MSVC)
+            # Strip any /Gr flags that may have been injected
+            get_target_property(COMPILE_OPTS ZenithDAW COMPILE_OPTIONS)
+            if(COMPILE_OPTS)
+                list(FILTER COMPILE_OPTS EXCLUDE REGEX "/Gr")
+                set_target_properties(ZenithDAW PROPERTIES COMPILE_OPTIONS "${COMPILE_OPTS}")
+            endif()
+            # Force cdecl calling convention
+            target_compile_options(ZenithDAW PRIVATE /Gd)
+            message(STATUS "  Calling convention: Forced /Gd (cdecl)")
+        endif()
 
         # ------------------------------------------------------------------------
         # AUTOMATIC DLL DEPLOYMENT (User-Friendly Fix)
