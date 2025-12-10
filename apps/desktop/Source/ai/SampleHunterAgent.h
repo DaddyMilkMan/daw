@@ -231,6 +231,22 @@ public:
   ~SampleHunterAgent() override;
 
   //==========================================================================
+  // Simple Command Interface (for WingmanPanel/AI Chat)
+  //==========================================================================
+
+  /**
+   * Start a hunt with a natural language query
+   * e.g., hunt("punchy 808 kick")
+   */
+  void hunt(const juce::String &query);
+
+  /**
+   * Download a specific result by index from the last search
+   * @return true if download was queued
+   */
+  bool downloadResult(int index);
+
+  //==========================================================================
   // Agent Control
   //==========================================================================
 

@@ -34,6 +34,7 @@ constexpr int64_t kMaxResponseSizeBytes = 10 * 1024 * 1024; // 10MB max response
 constexpr int64_t kMaxDownloadSizeBytes = 50 * 1024 * 1024; // 50MB max download
 constexpr int kMinDownloadSpeedBps = 1024;                  // 1KB/s minimum
 constexpr int kSpeedCheckIntervalMs = 2000; // Check speed every 2s
+const juce::String kBaseUrlStr = "https://freesound.org/apiv2";
 } // namespace
 
 //==============================================================================
@@ -42,13 +43,12 @@ constexpr int kSpeedCheckIntervalMs = 2000; // Check speed every 2s
 
 FreesoundClient::FreesoundClient() {
   // Load API key from secure storage
-  apiKey_ = SecureKeyStore::getInstance().getKey("freesound_api_key");
+  SecureKeyStore::retrieveKey("freesound_api_key", apiKey_);
 
   if (apiKey_.isEmpty()) {
     DBG("FreesoundClient: WARNING - No API key found!");
     DBG("FreesoundClient: Set via "
-        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
-        "\"YOUR_KEY\")");
+        "SecureKeyStore::storeKey(\"freesound_api_key\", \"YOUR_KEY\")");
   }
 }
 
@@ -62,7 +62,7 @@ bool FreesoundClient::hasApiKey() const { return apiKey_.isNotEmpty(); }
 
 void FreesoundClient::setApiKey(const juce::String &key) {
   apiKey_ = key;
-  SecureKeyStore::getInstance().setKey("freesound_api_key", key);
+  SecureKeyStore::storeKey("freesound_api_key", key);
 }
 
 std::vector<SampleResult>
@@ -80,7 +80,7 @@ FreesoundClient::searchSounds(const juce::String &query, int page,
   enforceRateLimit();
 
   // Build URL
-  juce::URL url(kBaseUrl + "/search/text/");
+  juce::URL url(kBaseUrlStr + "/search/text/");
   url =
       url.withParameter("query", query)
           .withParameter("fields", "id,name,previews,username,license,type,"

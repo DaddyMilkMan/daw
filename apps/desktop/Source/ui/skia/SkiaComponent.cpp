@@ -114,15 +114,18 @@ void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
   if (globalIntensity < 0.01f) {
     paint.setMaskFilter(nullptr);
     // Make it solid but semi-transparent
-    paint.setColor(design::withAlpha(glowColor_, 0.8f));
+    paint.setColor(
+        design::withAlpha(glowColor_, design::effects::OPACITY_INTENSE));
   } else {
-    paint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, clampedIntensity * 4.0f));
-    paint.setColor(design::withAlpha(glowColor_, clampedIntensity * 0.8f));
+    paint.setMaskFilter(SkMaskFilter::MakeBlur(
+        kNormal_SkBlurStyle, clampedIntensity * design::effects::GLOW_MEDIUM));
+    paint.setColor(design::withAlpha(
+        glowColor_, clampedIntensity * design::effects::OPACITY_INTENSE));
   }
 
   paint.setStyle(SkPaint::kStroke_Style);
-  paint.setStrokeWidth(2.0f + (clampedIntensity * 3.0f));
+  paint.setStrokeWidth(design::effects::GLOW_SUBTLE +
+                       (clampedIntensity * 3.0f));
 }
 
 #ifdef DEBUG

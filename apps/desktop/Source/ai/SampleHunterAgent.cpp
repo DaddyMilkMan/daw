@@ -66,6 +66,63 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
 SampleHunterAgent::~SampleHunterAgent() { stopHunting(); }
 
 //==============================================================================
+// Simple Command Interface
+//==============================================================================
+
+void SampleHunterAgent::hunt(const juce::String &query) {
+  // Create config with the query as the primary search
+  HuntingConfig config;
+
+  // Override the default genre-based searching with direct query
+  // We'll inject this query into the search queue
+  searchQueue_.clear();
+  searchQueue_.add(query);
+
+  // Also add some variations
+  searchQueue_.add(query + " loops");
+  searchQueue_.add(query + " samples");
+
+  // Store query in genre context for reference
+  genreContext_.primaryGenre = query;
+
+  // Start the hunt
+  startHunting(config);
+
+  DBG("SampleHunterAgent: Hunt started for: " + query);
+}
+
+bool SampleHunterAgent::downloadResult(int index) {
+  if (index < 0 || index >= static_cast<int>(foundSamples_.size())) {
+    DBG("SampleHunterAgent: Invalid result index: " + juce::String(index));
+    return false;
+  }
+
+  // If already hunting, just queue it
+  if (isHunting()) {
+    downloadQueue_.push(static_cast<size_t>(index));
+    return true;
+  }
+
+  // Otherwise, download directly on a background thread
+  auto &sample = foundSamples_[static_cast<size_t>(index)];
+
+  if (sample.downloaded) {
+    DBG("SampleHunterAgent: Sample already downloaded: " + sample.title);
+    return true;
+  }
+
+  // Queue for download and start a mini-hunt
+  downloadQueue_.push(static_cast<size_t>(index));
+
+  // Start thread just for downloading
+  HuntingConfig config;
+  config.maxTotalDownloads = 1;
+  startHunting(config);
+
+  return true;
+}
+
+//==============================================================================
 // Control
 //==============================================================================
 
