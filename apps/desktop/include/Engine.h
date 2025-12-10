@@ -47,8 +47,9 @@
 #include "../Source/dsp/EnvelopeFollower.h"
 #include "../Source/dsp/GlobalLFO.h"
 #include "../Source/engine/MacroControl.h"
-#include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
+#include "../Source/engine/RoutingGraph.h"
+#include "../Source/engine/AudioRecorder.h"
 
 // Forward declarations
 namespace zenith {
@@ -1083,31 +1084,13 @@ private:
   // Phase 2D: Audio Recording Infrastructure
   //==========================================================================
 
-  // Background thread for audio file writing
-  std::unique_ptr<juce::TimeSliceThread> audioWriterThread_;
+  // Audio Recorder
+  AudioRecorder audioRecorder_;
 
-  // Audio recording session (per-track)
-  struct AudioRecordingSession {
-    std::unique_ptr<juce::AudioFormatWriter::ThreadedWriter> writer;
-    juce::File file;
-    int numChannels = 0;
-    double sampleRate = 44100.0;
-    juce::int64 recordingStartSamples = 0;
-    int trackIndex = -1; // Which track this session belongs to
-    int inputChannelIndex =
-        0; // ROAST FIX #9: Which input channel to record from
-  };
-
-  // Active recording sessions (message thread creates, audio thread writes)
-  std::vector<AudioRecordingSession> audioRecordingSessions_;
-
-  // ROAST FIX #4: Pre-prepared sessions to avoid blocking I/O on record start
-  std::vector<AudioRecordingSession> preppedSessions_;
-  juce::CriticalSection preppedSessionsLock_;
-
-  // Helper to prepare recording asynchronously
-  void prepareRecordingForTrack(int trackIndex);
-
+  // Pre-prepared sessions to avoid blocking I/O on record start
+  // Now managed by AudioRecorder but we keep this here for now if AudioRecorder doesn't handle prep
+  // Actually, AudioRecorder handles the writing. The preparation logic is mostly file creation.
+  
   // Helper to update SIP (Solo In Place) logic
   void updateSoloState();
 

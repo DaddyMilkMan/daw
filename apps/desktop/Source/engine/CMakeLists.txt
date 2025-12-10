@@ -8,11 +8,13 @@ target_sources(ZenithDAW PRIVATE
     PluginHost.cpp
     AuxBus.cpp
     ZenithLogger.cpp
-    TrackPluginState.cpp
+    ZenithLogger.h
+    AudioRecorder.cpp
+    RoutingGraph.cpp
     ClipSynchronizer.cpp
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
-    TempoMapSynchronizer.cpp
+    TrackPluginState.cpp
     TempoMap.cpp
-    RoutingGraph.cpp
+    TempoMapSynchronizer.cpp
 )

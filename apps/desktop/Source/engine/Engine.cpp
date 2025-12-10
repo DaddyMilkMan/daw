@@ -63,14 +63,9 @@ Engine::Engine() {
   sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
   DBG("Engine: SessionDebuggerAgent initialized");
 
-  // Phase 2D: Initialize audio recording infrastructure
-  // Create background thread for audio file writing
-  // Priority: normal priority, suitable for disk I/O
-  audioWriterThread_ =
-      std::make_unique<juce::TimeSliceThread>("Audio Writer Thread");
-  audioWriterThread_->startThread(juce::Thread::Priority::normal);
-
-  DBG("Engine: Audio recording infrastructure initialized");
+  // Initialize Audio Recorder
+  // Writer thread is started in AudioRecorder constructor
+  DBG("Engine: AudioRecorder initialized");
 
   // Phase 15: Initialize tempo map
   tempoMap_ = std::make_unique<zenith::TempoMap>();
@@ -91,13 +86,7 @@ Engine::~Engine() {
 
   shutdown();
 
-  // Phase 2D: Cleanup audio recording infrastructure
-  // Stop writer thread
-  if (audioWriterThread_ != nullptr) {
-    audioWriterThread_->stopThread(
-        kAudioThreadShutdownTimeoutMs); // Wait up to 1 second
-    audioWriterThread_.reset();
-  }
+  // AudioRecorder cleans up its own thread in destructor
 
   // Clear audio file pool
   if (audioFilePool_ != nullptr) {
@@ -461,131 +450,15 @@ void Engine::record() {
     recordingsDir.createDirectory();
   }
 
-  // Create recording sessions for all armed audio tracks
-  audioRecordingSessions_.clear();
-
-  for (size_t i = 0; i < tracks_.size(); ++i) {
-    auto &track = tracks_[i];
-
-    // Skip if not armed or not an audio track
-    if (!track->isArmed() || track->getType() != zenith::Track::Type::Audio)
-      continue;
-
-    DBG("Engine: Creating recording session for track " + juce::String(i) +
-        " (" + track->getName() + ")");
-
-    // ROAST FIX #4: Check for pre-prepared session
-    bool foundPrepped = false;
-    AudioRecordingSession sessionToUse;
-    {
-      const juce::ScopedLock sl(preppedSessionsLock_);
-      auto it = std::find_if(
-          preppedSessions_.begin(), preppedSessions_.end(),
-          [i](const auto &s) { return s.trackIndex == static_cast<int>(i); });
-
-      if (it != preppedSessions_.end()) {
-        sessionToUse = std::move(*it);
-        preppedSessions_.erase(it);
-        foundPrepped = true;
-      }
-    }
-
-    if (foundPrepped) {
-      // Update start time and use prepped session
-      sessionToUse.recordingStartSamples = recordStartSamples;
-      audioRecordingSessions_.push_back(std::move(sessionToUse));
-      DBG("Engine: Used pre-prepared recording session for track " +
-          juce::String(i));
-      continue;
-    }
-
-    // Fallback: Create synchronously (BLOCKING I/O)
-    DBG("Engine: Creating recording session synchronously (fallback)");
-
-    // Create unique filename with timestamp
-    juce::String timestamp =
-        juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    juce::String filename =
-        track->getName().replaceCharacter(' ', '_') + "_" + timestamp + ".wav";
-    juce::File recordFile = recordingsDir.getChildFile(filename);
-
-    // CODEX P1 FIX: Respect actual input channel count instead of hardcoding
-    // Get the number of active input channels from the device
-    auto *device = deviceManager.getCurrentAudioDevice();
-    const int deviceInputChannels =
-        device ? device->getActiveInputChannels().countNumberOfSetBits() : 1;
-
-    // For now: use mono (1 channel) or stereo (2 channels) based on device
-    // capability Clamp to min(2, deviceInputChannels) to avoid exceeding device
-    // capabilities
-    const int numChannels = juce::jmin(
-        kMaxStereoChannels, juce::jmax(kMinMonoChannels, deviceInputChannels));
-
-    // Create WAV writer
-    juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::FileOutputStream> fileStream(
-        new juce::FileOutputStream(recordFile));
-
-    if (!fileStream->openedOk()) {
-      DBG("Engine: Failed to create output stream for " +
-          recordFile.getFullPathName());
-      continue;
-    }
-
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(fileStream.release(), sampleRate,
-                                  static_cast<unsigned int>(numChannels),
-                                  kAudioDepth, // 24-bit depth
-                                  {},          // Default metadata
-                                  0            // Default quality
-                                  ));
-
-    if (writer == nullptr) {
-      DBG("Engine: Failed to create audio writer for " +
-          recordFile.getFullPathName());
-      continue;
-    }
-
-    // Wrap in ThreadedWriter for RT-safe writing
-    auto threadedWriter =
-        std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
-            writer.release(), *audioWriterThread_,
-            kFileWriteBufferSize // 32KB FIFO buffer
-        );
-
-    // Create session
-    AudioRecordingSession session;
-    session.writer = std::move(threadedWriter);
-    session.file = recordFile;
-    session.numChannels = numChannels;
-    session.sampleRate = sampleRate;
-    session.recordingStartSamples = recordStartSamples;
-    session.trackIndex = static_cast<int>(i);
-    // ROAST FIX #9: Capture input channel from track
-    session.inputChannelIndex = tracks_[i]->getInputChannel();
-
-    audioRecordingSessions_.push_back(std::move(session));
-
-    DBG("Engine: Recording to " + recordFile.getFullPathName());
-  }
-
-  // ==========================================================================
-  // CODEX FIX P1: Enable recording flag AFTER sessions are set up
-  // This prevents the audio thread from accessing sessions before they're ready
-  // ==========================================================================
-  isRecording_.store(true);
+  // Delegate to AudioRecorder
+  audioRecorder_.startRecording(tracks_, deviceManager, recordStartSamples, recordingsDir);
 
   DBG("Engine: Recording started at sample " +
       juce::String(recordStartSamples));
-  DBG("Engine: Audio sessions: " +
-      juce::String(audioRecordingSessions_.size()));
 }
 
 void Engine::stopRecording() {
   DBG("Engine: Stop recording");
-
-  // Stop accepting new samples immediately
-  isRecording_.store(false);
 
   // ==========================================================================
   // CODEX FIX P2: Guard async callback against use-after-free
@@ -603,38 +476,30 @@ void Engine::stopRecording() {
   clearMidiRecordings();
 
   // ==========================================================================
-  // Phase 2D: Process audio recordings asynchronously
-  // This MUST be async because we need to flush writers on the message thread
+  // Phase 2D: Process audio recordings
   // ==========================================================================
-  juce::MessageManager::callAsync([this]() {
+  auto results = audioRecorder_.stopRecording();
+  
+  juce::MessageManager::callAsync([this, results]() {
     // Double-check we're not shutting down
     if (isShuttingDown_.load()) {
       DBG("Engine: Shutdown detected in async callback, aborting");
       return;
     }
 
-    DBG("Engine: Flushing and closing " +
-        juce::String(audioRecordingSessions_.size()) + " recording sessions");
-
     // Flush and close all writers, then create clips
-    for (auto &session : audioRecordingSessions_) {
-      // Flush and delete writer (triggers file close)
-      session.writer.reset();
-
-      DBG("Engine: Closed recording: " + session.file.getFullPathName());
+    for (const auto &result : results) {
+      DBG("Engine: Processing recording: " + result.file.getFullPathName());
 
       // Create audio clip from recording
-      if (session.trackIndex >= 0 &&
-          session.trackIndex < static_cast<int>(tracks_.size())) {
-        auto &track = tracks_[session.trackIndex];
-        bakeAudioRecordingIntoTrack(*track, session.file,
-                                    session.recordingStartSamples,
-                                    session.sampleRate);
+      if (result.trackIndex >= 0 &&
+          result.trackIndex < static_cast<int>(tracks_.size())) {
+        auto &track = tracks_[result.trackIndex];
+        bakeAudioRecordingIntoTrack(*track, result.file,
+                                    result.startSample,
+                                    result.sampleRate);
       }
     }
-
-    // Clear sessions
-    audioRecordingSessions_.clear();
 
     DBG("Engine: All recording sessions processed");
   });
@@ -856,7 +721,7 @@ void Engine::setTrackArmed(int trackIndex, bool armed) {
 
     // ROAST FIX #4: Prepare recording asynchronously when armed
     if (armed) {
-      prepareRecordingForTrack(trackIndex);
+      // prepareRecordingForTrack(trackIndex); // Removed in refactor
     }
   }
 }
@@ -1375,7 +1240,8 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Phase 2D: Process recording (can record even when not playing, but
   // typically we start playback)
   if (recording) {
-    captureAudioInput(inputChannelData, numInputChannels, numSamples);
+    // Cast away constness for legacy compatibility if needed, but AudioRecorder should handle it
+    audioRecorder_.processBlock(inputChannelData, numInputChannels, numSamples);
   }
 }
 
@@ -2019,83 +1885,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 // Phase 2D: Audio Recording (AUDIO THREAD)
 //==============================================================================
 
-void Engine::captureAudioInput(const float *const *inputChannelData,
-                               int numInputChannels, int numSamples) noexcept {
-  // ⚠️ AUDIO THREAD - MUST BE REAL-TIME SAFE!
-  //
-  // This function writes audio input to ThreadedWriter instances,
-  // which use a lock-free FIFO. This is RT-safe.
-  //
-  // NO allocations, NO locks, NO system calls here!
-
-  if (inputChannelData == nullptr || numInputChannels == 0)
-    return;
-
-  // Load track snapshot for safe access (Lock-free load)
-  auto *snapshot = activeSnapshot_.load();
-  // No lock needed!
-
-  if (snapshot == nullptr)
-    return;
-
-  // Write to each active recording session
-  for (auto &session : audioRecordingSessions_) {
-    if (session.writer == nullptr)
-      continue;
-
-    // Get track input channel
-    int inputChannel = 0; // Default to channel 0
-
-    if (session.trackIndex >= 0 &&
-        session.trackIndex < static_cast<int>(snapshot->tracks.size())) {
-      auto *track = snapshot->tracks[session.trackIndex];
-      if (track != nullptr) {
-        inputChannel = track->getInputChannel();
-      }
-    }
-
-    // Determine which input channel(s) to use for this session
-    // If mono, use inputChannel. If stereo, use inputChannel and
-    // inputChannel+1
-
-    // For mono recording: write single channel
-    if (session.numChannels == 1) {
-      if (inputChannel < numInputChannels &&
-          inputChannelData[inputChannel] != nullptr) {
-        const float *channelData[1] = {inputChannelData[inputChannel]};
-        session.writer->write(channelData, numSamples);
-      }
-    }
-    // For stereo recording: write two channels
-    else if (session.numChannels == 2) {
-      int leftCh = inputChannel;
-      int rightCh = inputChannel + 1;
-
-      // Handle edge case where right channel is out of bounds
-      // If input is mono (1 channel), duplicate it? Or silence?
-      // If we have at least 2 input channels, try to map.
-
-      const float *leftData =
-          (leftCh < numInputChannels) ? inputChannelData[leftCh] : nullptr;
-      const float *rightData =
-          (rightCh < numInputChannels) ? inputChannelData[rightCh] : nullptr;
-
-      // If right channel missing but left exists, maybe duplicate left?
-      // For now, let's just use what we have, passing nullptr for missing
-      // channels (writer handles it?) Actually ThreadedWriter::write
-      // expects valid pointers.
-
-      if (leftData && rightData) {
-        const float *channelData[2] = {leftData, rightData};
-        session.writer->write(channelData, numSamples);
-      } else if (leftData) {
-        // Duplicate mono to stereo
-        const float *channelData[2] = {leftData, leftData};
-        session.writer->write(channelData, numSamples);
-      }
-    }
-  }
-}
+// captureAudioInput moved to AudioRecorder::processBlock
 
 //==============================================================================
 // Phase 2D: Audio Recording Helpers (MESSAGE THREAD)
@@ -2311,105 +2101,9 @@ juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
   return pluginHost_->getFormatManager();
 }
 
-void Engine::prepareRecordingForTrack(int trackIndex) {
-  // Launch async task to prepare recording file
-  juce::Thread::launch([this, trackIndex]() {
-    DBG("Engine: Preparing recording for track " + juce::String(trackIndex) +
-        "...");
+// prepareRecordingForTrack removed - managed by AudioRecorder
 
-    if (audioFilePool_ == nullptr || audioWriterThread_ == nullptr)
-      return;
 
-    // Get audio device info
-    auto *device = deviceManager.getCurrentAudioDevice();
-    if (device == nullptr)
-      return;
-
-    double sampleRate = device->getCurrentSampleRate();
-    auto activeInputChannels = device->getActiveInputChannels();
-    int numChannels =
-        activeInputChannels.countNumberOfSetBits(); // Total inputs
-    // Note: We might want per-track channel count, but for now use total
-    // inputs or stereo default ThreadedWriter needs to know how many
-    // channels it accepts. processAudioRecording writes 2 channels max
-    // usually.
-    numChannels =
-        2; // Force stereo for now to match processAudioRecording logic
-
-    // Create recordings directory (need to do this here too)
-    juce::File recordingsDir;
-    if (projectState_ != nullptr &&
-        projectState_->getProjectFile().existsAsFile()) {
-      recordingsDir =
-          projectState_->getProjectFile().getSiblingFile("Audio Files");
-    } else {
-      recordingsDir =
-          juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-              .getChildFile("ZenithDAW/Recordings");
-    }
-
-    if (!recordingsDir.exists()) {
-      recordingsDir.createDirectory();
-    }
-
-    // Generate filename
-    juce::String trackName =
-        "Track_" + juce::String(trackIndex); // Fallback name since we can't
-                                             // access tracks_ safely
-    juce::String timestamp =
-        juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    juce::String filename = trackName + "_" + timestamp + ".wav";
-    juce::File recordFile = recordingsDir.getChildFile(filename);
-
-    // Create writer
-    auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
-    if (fileStream->failedToOpen()) {
-      DBG("Engine: Failed to prepare recording file");
-      return;
-    }
-
-    juce::AudioFormatManager &formatManager =
-        audioFilePool_->getFormatManager();
-    auto *wavFormat = formatManager.findFormatForFileExtension("wav");
-
-    if (wavFormat == nullptr)
-      return;
-
-    auto *writer = wavFormat->createWriterFor(fileStream.get(), sampleRate,
-                                              numChannels, 24, {}, 0);
-    if (writer == nullptr)
-      return;
-
-    fileStream.release();
-
-    auto threadedWriter =
-        std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
-            writer, *audioWriterThread_, 32768);
-
-    AudioRecordingSession session;
-    session.writer = std::move(threadedWriter);
-    session.file = recordFile;
-    session.numChannels = numChannels;
-    session.sampleRate = sampleRate;
-    session.trackIndex = trackIndex;
-    // We can't set inputChannelIndex safely here, will be set in record()
-
-    {
-      const juce::ScopedLock sl(preppedSessionsLock_);
-      // Remove old prep for this track
-      preppedSessions_.erase(std::remove_if(preppedSessions_.begin(),
-                                            preppedSessions_.end(),
-                                            [trackIndex](const auto &s) {
-                                              return s.trackIndex == trackIndex;
-                                            }),
-                             preppedSessions_.end());
-
-      preppedSessions_.push_back(std::move(session));
-    }
-
-    DBG("Engine: Recording prepared for track " + juce::String(trackIndex));
-  });
-}
 
 void Engine::registerFormats() {
   formatManager.registerBasicFormats();
