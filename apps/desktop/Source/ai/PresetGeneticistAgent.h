@@ -99,6 +99,9 @@ struct EvolutionConfig {
   // Batch saving
   int saveEveryNGenerations = 10; // Save elite every N generations
   int maxPresetsToSave = 10;      // Max presets saved per batch
+
+  // Target Matching
+  bool useTargetMatching = false; // If true, evolves to match target audio
 };
 
 //==============================================================================
@@ -277,7 +280,25 @@ public:
   /**
    * @brief Get the output directory for saved presets
    */
+  /**
+   * @brief Get the output directory for saved presets
+   */
   juce::File getOutputDirectory() const;
+
+  //==========================================================================
+  // Target Matching
+  //==========================================================================
+
+  /**
+   * @brief Set a target audio file to mimic
+   * @param file The audio file to analyze and match
+   */
+  void setTargetAudio(const juce::File &file);
+
+  /**
+   * @brief Set target from an audio buffer
+   */
+  void setTargetAudio(const juce::AudioBuffer<float> &buffer);
 
   //==========================================================================
   // Listeners
@@ -395,6 +416,12 @@ private:
   std::pair<float, float>
   calculateLevels(const juce::AudioBuffer<float> &buffer);
 
+  /**
+   * @brief Calculate fitness based on similarity to target
+   */
+  float calculatesimilarity(const Individual &candidate,
+                            const Individual &target);
+
   //==========================================================================
   // Helpers
   //==========================================================================
@@ -424,8 +451,16 @@ private:
   // Synth processor for rendering
   std::unique_ptr<ZenithPolySynthProcessor> synthProcessor_;
 
+  // Synthesis for rendering
+  std::unique_ptr<ZenithPolySynthProcessor> synthProcessor_;
+
   // FFT for spectral analysis
   juce::dsp::FFT fft_{10}; // 1024-point FFT
+
+  // Target Matching
+  juce::AudioBuffer<float> targetAudioBuffer_;
+  Individual targetFeatures_; // Stores the analyzed features of the target
+  bool hasTarget_ = false;
 
   // ==== PRE-ALLOCATED BUFFERS (Avoid heap allocation in render loop) ====
   // Block buffer for rendering - pre-allocated to max block size
