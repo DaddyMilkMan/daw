@@ -31,6 +31,12 @@ UXDirectorAgent::UXDirectorAgent(Engine &engine, ProjectState &projectState,
   // Initial analysis on construction
   rebuildBindingsFromTracks();
 
+  // Initialize activity time
+  lastUserActivityTime_ = juce::Time::currentTimeMillis();
+
+  // Load learned preferences
+  loadPreferences();
+
   DBG("UXDirectorAgent: Initialized with root component: " +
       rootComponent.getName());
 }
@@ -109,6 +115,22 @@ void UXDirectorAgent::timerCallback() {
   if (config_.autoBindOrphans || config_.autoStyleComponents ||
       config_.autoFixLayout || config_.autoUpdateNames) {
     applyAutomaticFixes();
+  }
+
+  // 4. Proactive Assistance: Check for idle state and infer intent
+  if (proactiveConfig_.enabled && canShowSuggestion()) {
+    // Check idle time
+    juce::int64 now = juce::Time::currentTimeMillis();
+    juce::int64 idleTime = now - lastUserActivityTime_;
+
+    if (idleTime > proactiveConfig_.idleThresholdMs) {
+      // Re-infer intent based on idle state
+      inferIntent();
+
+      if (currentIntent_.type != UserIntentType::None) {
+        dispatchSuggestion();
+      }
+    }
   }
 }
 
@@ -1077,6 +1099,435 @@ juce::String UXDirectorAgent::getFixSummary() const {
 //==============================================================================
 
 void UXDirectorAgent::notifyListeners() { sendChangeMessage(); }
+
+//==============================================================================
+// Autonomous Interface Controller - Observation Layer
+//==============================================================================
+
+void UXDirectorAgent::observe(const UIEvent &event) {
+  if (!proactiveConfig_.enabled)
+    return;
+
+  // Update last activity time
+  lastUserActivityTime_ = juce::Time::currentTimeMillis();
+
+  {
+    juce::ScopedLock sl(historyLock_);
+
+    // Coalesce repeated events
+    if (!actionHistory_.empty()) {
+      auto &last = actionHistory_.back();
+      if (last.type == event.type && last.targetId == event.targetId) {
+        last.repeatCount++;
+        last.timestamp = event.timestamp;
+        // Don't add duplicate, just update
+        goto afterAdd;
+      }
+    }
+
+    // Add to rolling history
+    actionHistory_.push_back(event);
+
+    // Trim to max size
+    while (static_cast<int>(actionHistory_.size()) >
+           proactiveConfig_.maxHistorySize) {
+      actionHistory_.pop_front();
+    }
+  }
+afterAdd:
+
+  // Track plugin opens per track for struggling detection
+  if (event.type == UIEventType::PluginOpened) {
+    juce::String key = event.targetId + "_" + event.additionalInfo;
+    pluginOpenCounts_[key]++;
+  }
+
+  // Track selection
+  if (event.type == UIEventType::TrackSelected) {
+    lastSelectedTrackId_ = event.targetId;
+  }
+
+  // Analyze intent after each observation
+  inferIntent();
+
+  // Dispatch suggestion if appropriate
+  if (canShowSuggestion() && currentIntent_.type != UserIntentType::None) {
+    dispatchSuggestion();
+  }
+
+  DBG("UXDirectorAgent: Observed " +
+      juce::String(static_cast<int>(event.type)) + " on " + event.targetId);
+}
+
+//==============================================================================
+// Autonomous Interface Controller - Intent Inference
+//==============================================================================
+
+void UXDirectorAgent::inferIntent() {
+  juce::ScopedLock sl(historyLock_);
+
+  if (actionHistory_.empty()) {
+    currentIntent_ = UserIntent();
+    return;
+  }
+
+  juce::int64 now = juce::Time::currentTimeMillis();
+  UserIntent bestIntent;
+  bestIntent.confidence = 0.0f;
+
+  // Heuristic 1: User opened same plugin type 3+ times on same track
+  for (const auto &[key, count] : pluginOpenCounts_) {
+    if (count >= proactiveConfig_.pluginOpenThreshold) {
+      // Check if this is an EQ-type plugin
+      if (key.containsIgnoreCase("eq") || key.containsIgnoreCase("equalizer")) {
+        UserIntent intent;
+        intent.type = UserIntentType::StrugglingWithEQ;
+        intent.confidence = juce::jmin(1.0f, static_cast<float>(count) / 5.0f);
+        intent.description = "You've opened the EQ " + juce::String(count) +
+                             " times. Need help with frequency balance?";
+        intent.targetTrackId = key.upToFirstOccurrenceOf("_", false, false);
+
+        if (intent.confidence > bestIntent.confidence) {
+          bestIntent = intent;
+        }
+      }
+    }
+  }
+
+  // Heuristic 2: User is idle on empty track for threshold time
+  juce::int64 idleTime = now - lastUserActivityTime_;
+  if (idleTime > proactiveConfig_.idleThresholdMs &&
+      lastSelectedTrackId_.isNotEmpty()) {
+    // Check if track is empty (has no clips)
+    const auto &tracks = engine_.tracks();
+    for (const auto &track : tracks) {
+      if (track->getTrackId() == lastSelectedTrackId_ &&
+          track->getNumClips() == 0) {
+        UserIntent intent;
+        intent.type = UserIntentType::WaitingForInspiration;
+        intent.confidence =
+            juce::jmin(1.0f, static_cast<float>(idleTime) / 30000.0f);
+        intent.description =
+            "Looking for inspiration? Let me suggest some sounds.";
+        intent.targetTrackId = lastSelectedTrackId_;
+
+        if (intent.confidence > bestIntent.confidence) {
+          bestIntent = intent;
+        }
+        break;
+      }
+    }
+  }
+
+  // Heuristic 3: Record pressed but no MIDI input detected
+  bool recordPressed = false;
+  bool midiReceived = false;
+  for (const auto &event : actionHistory_) {
+    if (event.type == UIEventType::RecordStarted)
+      recordPressed = true;
+    if (event.type == UIEventType::MIDIInputReceived)
+      midiReceived = true;
+  }
+
+  if (recordPressed && !midiReceived) {
+    // Check if recording is still active
+    if (engine_.isRecording()) {
+      juce::int64 recordTime = 0;
+      for (auto it = actionHistory_.rbegin(); it != actionHistory_.rend();
+           ++it) {
+        if (it->type == UIEventType::RecordStarted) {
+          recordTime = now - it->timestamp;
+          break;
+        }
+      }
+
+      if (recordTime > 5000) { // 5 seconds of recording with no MIDI
+        UserIntent intent;
+        intent.type = UserIntentType::InputRoutingIssue;
+        intent.confidence =
+            juce::jmin(1.0f, static_cast<float>(recordTime) / 10000.0f);
+        intent.description =
+            "Recording but no MIDI input detected. Check your input routing?";
+
+        if (intent.confidence > bestIntent.confidence) {
+          bestIntent = intent;
+        }
+      }
+    }
+  }
+
+  // Heuristic 4: Gain staging issues (check with SessionDebugger if available)
+  if (sessionDebugger_ != nullptr) {
+    // Check for clipping or very low levels
+    for (const auto &track : engine_.tracks()) {
+      float peak = track->getPeakLevel();
+      if (peak > 0.95f) {
+        UserIntent intent;
+        intent.type = UserIntentType::GainStagingIssue;
+        intent.confidence = 0.9f;
+        intent.description =
+            "Track '" + track->getName() + "' is clipping! Auto-fix?";
+        intent.targetTrackId = track->getTrackId();
+
+        if (intent.confidence > bestIntent.confidence) {
+          bestIntent = intent;
+        }
+        break;
+      }
+    }
+  }
+
+  // Apply confidence threshold
+  if (bestIntent.confidence >= proactiveConfig_.minConfidenceThreshold) {
+    currentIntent_ = bestIntent;
+  } else {
+    currentIntent_ = UserIntent();
+  }
+}
+
+//==============================================================================
+// Autonomous Interface Controller - Dispatch System
+//==============================================================================
+
+bool UXDirectorAgent::canShowSuggestion() const {
+  if (!proactiveConfig_.enabled)
+    return false;
+  if (hasPendingSuggestion())
+    return false;
+
+  // Cooldown check
+  juce::int64 now = juce::Time::currentTimeMillis();
+  if (now - lastSuggestionTime_ < proactiveConfig_.suggestionCooldownMs) {
+    return false;
+  }
+
+  // Don't interrupt during playback
+  if (engine_.isPlaying())
+    return false;
+
+  return true;
+}
+
+float UXDirectorAgent::getSuggestionProbability(SuggestionType type) const {
+  if (!proactiveConfig_.respectDismissals)
+    return 1.0f;
+
+  auto it = suggestionDismissals_.find(static_cast<int>(type));
+  if (it == suggestionDismissals_.end())
+    return 1.0f;
+
+  // Reduce probability by 20% for each dismissal, min 10%
+  float prob = 1.0f - (static_cast<float>(it->second) * 0.2f);
+  return juce::jmax(0.1f, prob);
+}
+
+void UXDirectorAgent::dispatchSuggestion() {
+  if (currentIntent_.type == UserIntentType::None)
+    return;
+
+  Suggestion suggestion;
+
+  switch (currentIntent_.type) {
+  case UserIntentType::StrugglingWithEQ:
+    suggestion.type = SuggestionType::SessionDebuggerAnalysis;
+    suggestion.title = "💡 Need EQ help?";
+    suggestion.description = currentIntent_.description;
+    suggestion.primaryAction = "Analyze Frequencies";
+    suggestion.dismissAction = "Dismiss";
+    suggestion.targetTrackId = currentIntent_.targetTrackId;
+    suggestion.priority = 0.8f;
+    break;
+
+  case UserIntentType::WaitingForInspiration:
+    suggestion.type = SuggestionType::SampleHunterSuggestion;
+    suggestion.title = "🎵 Looking for sounds?";
+    suggestion.description = currentIntent_.description;
+    suggestion.primaryAction = "Find Samples";
+    suggestion.dismissAction = "I'm good";
+    suggestion.targetTrackId = currentIntent_.targetTrackId;
+    suggestion.priority = 0.6f;
+    break;
+
+  case UserIntentType::InputRoutingIssue:
+    suggestion.type = SuggestionType::InputRoutingHelp;
+    suggestion.title = "🎹 No MIDI input detected";
+    suggestion.description = currentIntent_.description;
+    suggestion.primaryAction = "Check Inputs";
+    suggestion.dismissAction = "Dismiss";
+    suggestion.priority = 0.9f;
+    break;
+
+  case UserIntentType::GainStagingIssue:
+    suggestion.type = SuggestionType::GainStagingFix;
+    suggestion.title = "⚠️ Clipping detected!";
+    suggestion.description = currentIntent_.description;
+    suggestion.primaryAction = "Auto-Fix Levels";
+    suggestion.dismissAction = "I'll handle it";
+    suggestion.targetTrackId = currentIntent_.targetTrackId;
+    suggestion.priority = 0.95f;
+    break;
+
+  default:
+    return; // No suggestion for this intent
+  }
+
+  // Apply learning adjustment
+  float prob = getSuggestionProbability(suggestion.type);
+  if (juce::Random::getSystemRandom().nextFloat() > prob) {
+    DBG("UXDirectorAgent: Skipped suggestion due to learning (prob: " +
+        juce::String(prob, 2) + ")");
+    return;
+  }
+
+  currentSuggestion_ = suggestion;
+  lastSuggestionTime_ = juce::Time::currentTimeMillis();
+
+  // Notify listeners
+  suggestionListeners_.call([&suggestion](SuggestionListener &l) {
+    l.suggestionAvailable(suggestion);
+  });
+
+  DBG("UXDirectorAgent: Dispatched suggestion: " + suggestion.title);
+}
+
+void UXDirectorAgent::acceptSuggestion() {
+  if (!hasPendingSuggestion())
+    return;
+
+  currentSuggestion_.wasAccepted = true;
+  executeSuggestionAction(currentSuggestion_);
+
+  // Clear current suggestion
+  Suggestion accepted = currentSuggestion_;
+  currentSuggestion_ = Suggestion();
+
+  DBG("UXDirectorAgent: User accepted suggestion: " + accepted.title);
+}
+
+void UXDirectorAgent::dismissSuggestion() {
+  if (!hasPendingSuggestion())
+    return;
+
+  currentSuggestion_.wasDismissed = true;
+
+  // Record dismissal for learning
+  suggestionDismissals_[static_cast<int>(currentSuggestion_.type)]++;
+
+  // Clear current suggestion
+  Suggestion dismissed = currentSuggestion_;
+  currentSuggestion_ = Suggestion();
+
+  // Notify listeners
+  suggestionListeners_.call(
+      [](SuggestionListener &l) { l.suggestionDismissed(); });
+
+  // Save updated preferences
+  savePreferences();
+
+  DBG("UXDirectorAgent: User dismissed suggestion: " + dismissed.title);
+}
+
+void UXDirectorAgent::executeSuggestionAction(const Suggestion &suggestion) {
+  switch (suggestion.type) {
+  case SuggestionType::SessionDebuggerAnalysis:
+    if (sessionDebugger_ != nullptr) {
+      // Find track index from ID
+      const auto &tracks = engine_.tracks();
+      for (size_t i = 0; i < tracks.size(); ++i) {
+        if (tracks[i]->getTrackId() == suggestion.targetTrackId) {
+          // SessionDebugger analyzes all tracks, but we could focus on one
+          sessionDebugger_->runAnalysis();
+          break;
+        }
+      }
+    }
+    break;
+
+  case SuggestionType::SampleHunterSuggestion:
+    if (sampleHunter_ != nullptr) {
+      // Start a sample hunt based on context
+      // For now, just trigger a generic search
+      DBG("UXDirectorAgent: Would dispatch to SampleHunter for track: " +
+          suggestion.targetTrackId);
+    }
+    break;
+
+  case SuggestionType::GainStagingFix:
+    if (sessionDebugger_ != nullptr) {
+      // Apply automatic gain fixes
+      sessionDebugger_->applyAutomaticFixes();
+    }
+    break;
+
+  case SuggestionType::InputRoutingHelp:
+    // Could open input routing dialog
+    DBG("UXDirectorAgent: Would open input routing helper");
+    break;
+
+  default:
+    break;
+  }
+}
+
+//==============================================================================
+// Autonomous Interface Controller - Learning & Persistence
+//==============================================================================
+
+void UXDirectorAgent::savePreferences() {
+  auto prefsFile =
+      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+          .getChildFile("Zenith DAW")
+          .getChildFile("ux_director_prefs.json");
+
+  prefsFile.getParentDirectory().createDirectory();
+
+  // Build JSON
+  juce::DynamicObject::Ptr root = new juce::DynamicObject();
+
+  // Save dismissal counts
+  juce::DynamicObject::Ptr dismissals = new juce::DynamicObject();
+  for (const auto &[type, count] : suggestionDismissals_) {
+    dismissals->setProperty(juce::String(type), count);
+  }
+  root->setProperty("dismissals", dismissals.get());
+
+  // Save timestamp
+  root->setProperty("savedAt", juce::Time::currentTimeMillis());
+
+  // Write to file
+  juce::String json = juce::JSON::toString(juce::var(root.get()));
+  prefsFile.replaceWithText(json);
+
+  DBG("UXDirectorAgent: Saved preferences to " + prefsFile.getFullPathName());
+}
+
+void UXDirectorAgent::loadPreferences() {
+  auto prefsFile =
+      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+          .getChildFile("Zenith DAW")
+          .getChildFile("ux_director_prefs.json");
+
+  if (!prefsFile.existsAsFile())
+    return;
+
+  juce::var parsed = juce::JSON::parse(prefsFile.loadFileAsString());
+  if (parsed.isVoid())
+    return;
+
+  // Load dismissal counts
+  if (auto *root = parsed.getDynamicObject()) {
+    if (auto *dismissals = root->getProperty("dismissals").getDynamicObject()) {
+      for (const auto &prop : dismissals->getProperties()) {
+        int type = prop.name.getIntValue();
+        int count = static_cast<int>(prop.value);
+        suggestionDismissals_[type] = count;
+      }
+    }
+  }
+
+  DBG("UXDirectorAgent: Loaded preferences from " +
+      prefsFile.getFullPathName());
+}
 
 } // namespace ai
 } // namespace zenith
