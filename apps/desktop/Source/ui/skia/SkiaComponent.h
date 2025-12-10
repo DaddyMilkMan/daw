@@ -11,24 +11,22 @@
 
 #pragma once
 
+#include <core/SkCanvas.h>
+#include <core/SkColor.h>
+#include <core/SkFont.h>
+#include <core/SkMaskFilter.h>
+#include <core/SkPaint.h>
+#include <core/SkPath.h>
+#include <core/SkRRect.h>
+#include <core/SkRect.h>
+#include <core/SkShader.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <skia/include/core/SkCanvas.h>
-#include <skia/include/core/SkColor.h>
-#include <skia/include/core/SkFont.h>
-#include <skia/include/core/SkMaskFilter.h>
-#include <skia/include/core/SkPaint.h>
-#include <skia/include/core/SkPath.h>
-#include <skia/include/core/SkRRect.h>
-#include <skia/include/core/SkRect.h>
-#include <skia/include/core/SkShader.h>
-
 
 #include "SkiaAccessibility.h"
 #include "ZenithDesignSystem.h"
 #include <functional>
 #include <map>
 #include <memory>
-#include <string>
 #include <vector>
 
 namespace zenith {
@@ -90,22 +88,15 @@ public:
     juce::String type; // "knob", "fader", "button"
     juce::String parameterId;
     float currentValue;
-    SkColor color = SK_ColorWHITE;
   };
 
   explicit SkiaComponent();
   ~SkiaComponent() override;
 
-  // Primary Immediate Mode Rendering Hook
-  virtual void onPaint(SkCanvas *canvas);
-
-  // Legacy/Adapter for SkiaRenderer.
-  // Defaults to calling onPaint(canvas) to support Immediate Mode.
-  virtual void drawSkia(SkCanvas *canvas);
+  virtual void drawSkia(SkCanvas *canvas) = 0;
 
   // AI Vision Hook
   virtual std::vector<AIElementInfo> getInspectableElements() { return {}; }
-  std::string getUIStateDescription();
 
 #ifdef DEBUG
   virtual void drawDebug(SkCanvas *canvas);

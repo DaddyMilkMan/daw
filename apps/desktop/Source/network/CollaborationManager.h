@@ -1,5 +1,4 @@
 #pragma once
-#include "../engine/ZenithLogger.h"
 #include <JuceHeader.h>
 #include <functional>
 #include <vector>
@@ -10,7 +9,6 @@ struct RemoteUser {
   juce::Colour color;
   juce::Point<float> mousePosition;
   bool isOnline;
-  juce::int64 lastSeen = 0;
 };
 
 enum class PacketType {
@@ -21,8 +19,7 @@ enum class PacketType {
 };
 
 class CollaborationManager : public juce::ChangeBroadcaster,
-                             public juce::Thread,
-                             public juce::Timer {
+                             private juce::Thread {
 public:
   static CollaborationManager &getInstance() {
     static CollaborationManager instance;
@@ -49,7 +46,7 @@ public:
   // --- Real-time Sync ---
   void updateLocalCursor(float x, float y);
   std::vector<RemoteUser> getRemoteUsers() const {
-    const juce::ScopedReadLock sl(usersLock);
+    const juce::ScopedLock sl(usersLock);
     return remoteUsers;
   }
   void broadcastEdit(const juce::String &commandData);
@@ -59,9 +56,6 @@ public:
   juce::String getLocalUserName() const { return localUserName; }
 
   std::function<void(const juce::String &)> onEditReceived;
-
-  // Timer: Dead Man's Switch
-  void timerCallback() override;
 
 private:
   CollaborationManager();
@@ -74,7 +68,7 @@ private:
   juce::String sessionCode;
   juce::String localUserName = "User";
   std::vector<RemoteUser> remoteUsers;
-  mutable juce::ReadWriteLock usersLock;
+  mutable juce::CriticalSection usersLock;
 
   // --- Networking ---
   const juce::String SIGNALING_SERVER_IP = "216.126.231.46"; // Production VPS
@@ -100,7 +94,6 @@ private:
   void sendPacket(PacketType type, const void *data, size_t size);
   void handleIncomingPacket(const void *data, int size,
                             const juce::String &senderIP, int senderPort);
-  void handleKeepAlive();
 
   // Hole Punching Logic
   void startHolePunching();

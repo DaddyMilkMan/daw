@@ -12,6 +12,8 @@
 
 #include "DebugConsoleComponent.h"
 
+#define ZENITH_USE_SKIA 1 // Force for debugging
+
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>

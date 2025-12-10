@@ -55,16 +55,12 @@ set(ZENITH_SOURCES
 
 # Test sources (optional, can be disabled)
 set(ZENITH_TEST_SOURCES
-    # apps/desktop/Source/tests/AudioEngineTests.cpp
-    # apps/desktop/Source/tests/ProjectStateTests.cpp
-    # apps/desktop/Source/tests/EngineTests.cpp
-    # apps/desktop/Source/tests/ConcurrencyTests.cpp
-    # apps/desktop/Source/tests/AITests.cpp
-    # apps/desktop/Source/tests/UITests.cpp
-    apps/desktop/Source/tests/GraphStressTest.cpp
-    apps/desktop/Source/tests/TestMain.cpp
-    apps/desktop/Source/engine/RoutingGraph.cpp
-    apps/desktop/Source/engine/ZenithLogger.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/UITests.cpp
     apps/desktop/Source/ui/skia/ZenithLayout.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
@@ -97,7 +93,6 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
-add_subdirectory(apps/desktop/Source/utils)
 
 
 # Include directories
@@ -174,11 +169,6 @@ set_target_properties(ZenithDAW PROPERTIES
     # Enforce specific runtime library to prevent mismatches
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 )
-
-if(MSVC)
-    add_compile_options(/FS)
-    target_compile_options(ZenithDAW PRIVATE /FS)
-endif()
 
 # 7. Interprocedural Optimization (LTO)
 if(ENABLE_IPO)

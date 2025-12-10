@@ -28,8 +28,15 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+<<<<<<< HEAD
+
+#include "EngineConstants.h"
+=======
+>>>>>>> origin/master
 
 namespace zenith {
+
+class AudioFifo; // Forward declaration
 
 //==============================================================================
 /**
@@ -48,14 +55,24 @@ public:
   void prepare(double sampleRate, int maxBlockSize) {
     sampleRate_ = sampleRate;
 
+<<<<<<< HEAD
+    // Lookahead buffer (5ms - use constant)
+    lookaheadSamples_ = static_cast<int>(sampleRate * constants::kCompLookaheadMs / 1000.0);
+=======
     // Lookahead buffer (5ms)
     lookaheadSamples_ = static_cast<int>(sampleRate * 0.005);
+>>>>>>> origin/master
     lookaheadBuffer_.setSize(2, lookaheadSamples_ + maxBlockSize);
     lookaheadBuffer_.clear();
     lookaheadWritePos_ = 0;
 
+<<<<<<< HEAD
+    // RMS buffer (10ms window - use constant)
+    rmsWindowSamples_ = static_cast<int>(sampleRate * constants::kCompRmsWindowMs / 1000.0);
+=======
     // RMS buffer (10ms window)
     rmsWindowSamples_ = static_cast<int>(sampleRate * 0.010);
+>>>>>>> origin/master
     rmsBuffer_.resize(rmsWindowSamples_, 0.0f);
     rmsWritePos_ = 0;
     rmsSum_ = 0.0f;
@@ -202,6 +219,15 @@ public:
   }
 
 private:
+<<<<<<< HEAD
+  double sampleRate_ = constants::kDefaultSampleRate;
+
+  // Parameters (initialized from EngineConstants)
+  float threshold_ = constants::kDefaultCompThresholdDb;
+  float ratio_ = constants::kDefaultCompRatio;
+  float attackMs_ = constants::kDefaultCompAttackMs;
+  float releaseMs_ = constants::kDefaultCompReleaseMs;
+=======
   double sampleRate_ = 44100.0;
 
   // Parameters
@@ -209,6 +235,7 @@ private:
   float ratio_ = 4.0f;
   float attackMs_ = 10.0f;
   float releaseMs_ = 100.0f;
+>>>>>>> origin/master
   float makeup_ = 0.0f;
   float knee_ = 6.0f; // Soft knee width in dB
   float autoMakeup_ = 0.0f;
@@ -315,6 +342,9 @@ public:
   MixerChannel();
   ~MixerChannel() override;
 
+  // Spectrum Analyzer Integration
+  void setSpectrumFifo(AudioFifo* fifo) { std::atomic_store(&spectrumFifo_, fifo); }
+
   //==============================================================================
   // AudioSource interface
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
@@ -349,7 +379,7 @@ public:
     std::atomic<bool> enabled{false};
     std::atomic<float> frequency{1000.0f};
     std::atomic<float> gain{0.0f}; // In dB
-    std::atomic<float> q{0.707f};
+    std::atomic<float> q{constants::kDefaultEQQ};
 
     enum class Type { LowShelf, Peak, HighShelf };
     Type type = Type::Peak;
@@ -433,6 +463,8 @@ private:
   // Input section
   std::atomic<float> inputGain{0.0f}; // In dB
   std::atomic<bool> phaseInvert{false};
+  
+  std::atomic<AudioFifo*> spectrumFifo_{nullptr};
 
   //==============================================================================
   // High-pass filter
@@ -442,7 +474,7 @@ private:
 
   //==============================================================================
   // EQ section
-  static constexpr int numEQBands = 4;
+  static constexpr int numEQBands = constants::kNumEQBands;
   EQBand eqBands[numEQBands];
   juce::IIRFilter eqFiltersL[numEQBands];
   juce::IIRFilter eqFiltersR[numEQBands];
@@ -462,15 +494,15 @@ private:
   // Dynamics section - Now using ProCompressor
   ProCompressor compressor_;
   std::atomic<bool> compressorEnabled{false};
-  std::atomic<float> compThreshold{-10.0f};
-  std::atomic<float> compRatio{4.0f};
-  std::atomic<float> compAttack{10.0f};
-  std::atomic<float> compRelease{100.0f};
+  std::atomic<float> compThreshold{constants::kDefaultCompThresholdDb};
+  std::atomic<float> compRatio{constants::kDefaultCompRatio};
+  std::atomic<float> compAttack{constants::kDefaultCompAttackMs};
+  std::atomic<float> compRelease{constants::kDefaultCompReleaseMs};
   std::atomic<float> compMakeup{0.0f};
 
   //==============================================================================
   // Send effects
-  static constexpr int numSends = 4;
+  static constexpr int numSends = constants::kNumSends;
   std::atomic<float> sendLevels[numSends];
   std::atomic<bool> sendPreFader[numSends];
 
@@ -491,8 +523,8 @@ private:
 
   //==============================================================================
   // Processing state
-  double currentSampleRate = 44100.0;
-  int currentBlockSize = 512;
+  double currentSampleRate = constants::kDefaultSampleRate;
+  int currentBlockSize = constants::kDefaultBufferSize;
 
   //==============================================================================
   // Helper methods

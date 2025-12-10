@@ -16,7 +16,7 @@
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/TransportBar.h"
 #include "../Source/ui/skia/views/SessionViewComponent.h"
-#include "../Source/ui/views/PianoKeyboardViewSkia.h"
+#include "../Source/ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"

@@ -32,6 +32,7 @@
 #include <unordered_map>
 #include <vector>
 
+
 // Forward declarations
 namespace zenith {
 class Instrument;
@@ -125,6 +126,11 @@ public:
 
   void setInputChannel(int channel) { inputChannelIndex.store(channel); }
   int getInputChannel() const { return inputChannelIndex.load(); }
+
+  //==============================================================================
+  // Freeze state (for CPU optimization)
+  void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
+  bool isFrozen() const { return frozen.load(); }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
@@ -227,9 +233,6 @@ public:
                          std::shared_ptr<AutomationLane> lane);
   void clearAutomationLanes();
 
-  // RT-Safe Parameter Modulation
-  void applyModulation(int pluginIndex, int paramIndex, float value);
-
 private:
   //==============================================================================
   // Track properties
@@ -248,6 +251,7 @@ private:
   // Note: armed and enabled are track-specific, not channel-strip specific
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
+  std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
 
   // Input routing
   std::atomic<int> inputChannelIndex{0};

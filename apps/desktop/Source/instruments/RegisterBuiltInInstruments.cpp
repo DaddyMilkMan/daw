@@ -11,7 +11,7 @@
 */
 
 #include "RegisterBuiltInInstruments.h"
-#include "../utils/PresetGenerator.h"
+#include "../utils/FactoryPresetGenerator.h"
 #include "InstrumentRegistry.h"
 #include "ZenithPolySynth.h"
 #include "ZenithSampler.h"
@@ -229,7 +229,7 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
 
   // Generate factory presets for testing (one-time generation logic could be
   // added here) For now, we regenerate them on startup to ensure they exist
-  PresetGenerator::generateFactoryPresets();
+  FactoryPresetGenerator::generateFactoryPresets();
 }
 
 } // namespace zenith

@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../views/PianoKeyboardViewSkia.h"
+#include "views/PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
 #include <JuceHeader.h>
 

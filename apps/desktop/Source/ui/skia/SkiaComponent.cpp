@@ -46,52 +46,6 @@ void SkiaComponent::paint(juce::Graphics &g) {
   // No JUCE painting or fallback.
 }
 
-void SkiaComponent::onPaint(SkCanvas *canvas) {
-  juce::ignoreUnused(canvas);
-  // Base implementation does nothing.
-  // Subclasses should override this for Immediate Mode rendering.
-}
-
-void SkiaComponent::drawSkia(SkCanvas *canvas) {
-  // Default adapter: Call onPaint for Immediate Mode support.
-  onPaint(canvas);
-}
-
-// ============================================================================
-// AI & INTROSPECTION
-// ============================================================================
-
-std::string SkiaComponent::getUIStateDescription() {
-  auto bounds = getLocalBounds();
-
-  // Create JSON object
-  juce::DynamicObject::Ptr root = new juce::DynamicObject();
-  root->setProperty("type", "SkiaComponent");
-  root->setProperty("visible", isVisible());
-  root->setProperty("bounds", juce::String::formatted(
-                                  "%d,%d,%d,%d", bounds.getX(), bounds.getY(),
-                                  bounds.getWidth(), bounds.getHeight()));
-
-  // Inspectable elements
-  juce::Array<juce::var> elementsArray;
-  for (const auto &elem : getInspectableElements()) {
-    juce::DynamicObject::Ptr elemObj = new juce::DynamicObject();
-    elemObj->setProperty("type", elem.type);
-    elemObj->setProperty("paramId", elem.parameterId);
-    elemObj->setProperty("value", elem.currentValue);
-    elemObj->setProperty("bounds", juce::String::formatted(
-                                       "%.1f,%.1f,%.1f,%.1f", elem.bounds.fLeft,
-                                       elem.bounds.fTop, elem.bounds.width(),
-                                       elem.bounds.height()));
-    elemObj->setProperty("color", juce::String::formatted("#%08X", elem.color));
-
-    elementsArray.add(juce::var(elemObj.get()));
-  }
-  root->setProperty("elements", elementsArray);
-
-  return juce::JSON::toString(juce::var(root)).toStdString();
-}
-
 SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
   juce::ignoreUnused(g);
   // This method is legacy/experimental for when JUCE_USE_SKIA is enabled
@@ -114,18 +68,15 @@ void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
   if (globalIntensity < 0.01f) {
     paint.setMaskFilter(nullptr);
     // Make it solid but semi-transparent
-    paint.setColor(
-        design::withAlpha(glowColor_, design::effects::OPACITY_INTENSE));
+    paint.setColor(design::withAlpha(glowColor_, 0.8f));
   } else {
-    paint.setMaskFilter(SkMaskFilter::MakeBlur(
-        kNormal_SkBlurStyle, clampedIntensity * design::effects::GLOW_MEDIUM));
-    paint.setColor(design::withAlpha(
-        glowColor_, clampedIntensity * design::effects::OPACITY_INTENSE));
+    paint.setMaskFilter(
+        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, clampedIntensity * 4.0f));
+    paint.setColor(design::withAlpha(glowColor_, clampedIntensity * 0.8f));
   }
 
   paint.setStyle(SkPaint::kStroke_Style);
-  paint.setStrokeWidth(design::effects::GLOW_SUBTLE +
-                       (clampedIntensity * 3.0f));
+  paint.setStrokeWidth(2.0f + (clampedIntensity * 3.0f));
 }
 
 #ifdef DEBUG

@@ -243,7 +243,7 @@ void MainComponent::paint(juce::Graphics &g) {
 
 void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   // Clear background
-  canvas->clear(SkColorSetRGB(20, 20, 25)); // Dark background
+  canvas->clear(zenith::design::colors::BG_DARKEST);
 
   // Helper lambda to draw a child if visible
   auto drawChild = [&](juce::Component *child,
@@ -300,20 +300,14 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
     m.addItem("Show Debug Logs", [] {
-      // Debug logs action
-      DBG("Show Debug Logs clicked");
+      DBG("Debug logs requested");
     });
-
-    m.showMenuAsync(juce::PopupMenu::Options());
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr), nullptr);
   }
 }
 
 void MainComponent::mouseDrag(const juce::MouseEvent &e) {
-  if (activeDragComponent) {
-    auto drag = e.getOffsetFromDragStart();
-    activeDragComponent->setTopLeftPosition(dragStartBounds.getX() + drag.x,
-                                            dragStartBounds.getY() + drag.y);
-  }
+    juce::ignoreUnused(e);
 }
 
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
@@ -517,9 +511,15 @@ MainWindow::MainWindow(const juce::String &name)
 MainWindow::~MainWindow() {
   // Clear menu bar first
   // Clear menu bar first
+  // setMenuBar(nullptr);
+  // menuBar.reset(); (Already removed from header)
+
   // Shutdown audio engine before destroying components
   if (engine)
     engine->shutdown();
+
+  // Clear content
+  setContentOwned(nullptr, true);
 
   DBG("MainWindow destroyed");
 }

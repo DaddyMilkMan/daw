@@ -99,7 +99,11 @@ void BrowserModel::populateInternalInstruments() {
     browserItem->metadata.author = "Zenith DAW";
     browserItem->metadata.format = "Native";
     browserItem->metadata.isInstrument = true;
+<<<<<<< HEAD
+    // Use explicit bool variable to avoid implicit string/bool conversion
+=======
     // FIX: Avoid string to bool conversion error
+>>>>>>> origin/master
     bool isFav = isFavorite(id);
     browserItem->isFavorite = isFav;
 
@@ -136,13 +140,21 @@ void BrowserModel::populatePlugins() {
     auto pluginItem = std::make_shared<BrowserItem>(
         desc.fileOrIdentifier, desc.name, BrowserItemType::Plugin);
     pluginItem->metadata.author = desc.manufacturerName;
+<<<<<<< HEAD
+    // Version is stored as string, not int
+=======
     // FIX: Use getIntValue for version string
+>>>>>>> origin/master
     pluginItem->metadata.version = desc.version;
     pluginItem->metadata.format = desc.pluginFormatName;
     pluginItem->metadata.category = category;
     pluginItem->metadata.isInstrument = desc.isInstrument;
 
+<<<<<<< HEAD
+    // Use explicit bool variable for clarity
+=======
     // FIX: Explicit boolean conversion
+>>>>>>> origin/master
     bool isFav = isFavorite(desc.fileOrIdentifier);
     pluginItem->isFavorite = isFav;
 
@@ -193,7 +205,11 @@ void BrowserModel::populateUserLibrary() {
             auto fileItem = std::make_shared<BrowserItem>(
                 entry.getFile().getFullPathName(),
                 entry.getFile().getFileName(), type);
+<<<<<<< HEAD
+            // Use explicit bool variable for clarity
+=======
             // FIX: Explicit boolean conversion
+>>>>>>> origin/master
             bool isFav = isFavorite(entry.getFile().getFullPathName());
             fileItem->isFavorite = isFav;
 

@@ -1,3 +1,4 @@
+
 /**
  * @file Engine.h
  * @brief Core audio engine for Zenith DAW
@@ -40,14 +41,13 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <functional>
 #include <memory>
 #include <vector>
 
 #include "../Source/dsp/Dither.h"
-#include "../Source/dsp/EnvelopeFollower.h"
-#include "../Source/dsp/GlobalLFO.h"
-#include "../Source/engine/AudioRecorder.h"
-#include "../Source/engine/MacroControl.h"
+#include "../Source/dsp/MasterLimiter.h"
+#include "../Source/engine/EngineConstants.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
 
@@ -64,67 +64,14 @@ class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
 class InstrumentRegistry;
+class TrackFreezeManager;
+class AudioRenderer;
+class RecordingManager;
+class TransportController;
 
 namespace ai {
 class SessionDebuggerAgent;
-class SampleHunterAgent;
-} // namespace ai
-
-//==============================================================================
-// Global Constants & Types
-//==============================================================================
-
-constexpr int kNumGlobalLFOs = 4;
-
-enum class ModulationRoutingSourceType {
-  AudioEnvelope, // From track audio (EnvelopeFollower)
-  GlobalLFO,     // Global LFO (0-3)
-  Macro          // Macro control (0-7)
-};
-
-struct ModulationRoutingSource {
-  ModulationRoutingSourceType type = ModulationRoutingSourceType::AudioEnvelope;
-  int index = 0;        // LFO index (0-3), Macro index (0-7)
-  juce::String trackId; // For AudioEnvelope type
-  float amount = 1.0f;  // Modulation depth (-1.0 to 1.0)
-  bool bipolar = false; // If true, modulate around center (for LFOs)
-
-  // Get the current value from this source
-  // NOTE: This must be called from the audio thread with valid pointers
-  float getValue(
-      const std::array<zenith::dsp::GlobalLFO, kNumGlobalLFOs> *lfos,
-      const MacroBank *macros,
-      const std::unordered_map<std::string,
-                               std::shared_ptr<zenith::dsp::EnvelopeFollower>>
-          *followers) const {
-    float rawValue = 0.0f;
-
-    switch (type) {
-    case ModulationRoutingSourceType::GlobalLFO:
-      if (lfos && index >= 0 && index < kNumGlobalLFOs) {
-        rawValue = (*lfos)[static_cast<size_t>(index)].getValue();
-      }
-      break;
-    case ModulationRoutingSourceType::Macro:
-      if (macros && index >= 0 && index < MacroBank::kNumMacros) {
-        // Macros are 0-1, convert to -1 to 1 for bipolar
-        rawValue = bipolar ? (*macros)[index].getValueBipolar()
-                           : (*macros)[index].getValue();
-      }
-      break;
-    case ModulationRoutingSourceType::AudioEnvelope:
-      if (followers) {
-        auto it = followers->find(trackId.toStdString());
-        if (it != followers->end() && it->second) {
-          rawValue = it->second->getCurrentValue();
-        }
-      }
-      break;
-    }
-
-    return rawValue * amount;
-  }
-};
+}
 
 //==============================================================================
 /**
@@ -225,7 +172,7 @@ public:
   /**
    * @brief Check if playing
    */
-  bool isPlaying() const { return isPlaying_.load(); }
+  bool isPlaying() const { return transportController_ ? transportController_->isPlaying() : false; }
 
   /**
    * @brief Start recording
@@ -244,7 +191,7 @@ public:
   /**
    * @brief Check if recording
    */
-  bool isRecording() const { return isRecording_.load(); }
+  bool isRecording() const { return recordingManager_ ? recordingManager_->isRecording() : false; }
 
   /**
    * @brief Toggle recording on/off
@@ -271,12 +218,12 @@ public:
   /**
    * @brief Get current playback position in samples
    */
-  juce::int64 getPlayheadSamples() const { return playheadSamples_.load(); }
+  juce::int64 getPlayheadSamples() const { return transportController_ ? transportController_->getPlayheadSamples() : 0; }
 
   /**
    * @brief Get current playback position in samples (legacy accessor)
    */
-  juce::int64 getPlaybackPosition() const { return playheadSamples_.load(); }
+  juce::int64 getPlaybackPosition() const { return transportController_ ? transportController_->getPlayheadSamples() : 0; }
 
   /**
    * @brief Get current playback position in beats
@@ -296,7 +243,7 @@ public:
   /**
    * @brief Check if looping is enabled
    */
-  bool isLooping() const { return isLooping_.load(); }
+  bool isLooping() const;
 
   /**
    * @brief Set loop region in samples (MESSAGE THREAD ONLY)
@@ -306,12 +253,12 @@ public:
   /**
    * @brief Get loop start position in samples
    */
-  juce::int64 getLoopStart() const { return loopStartSamples_.load(); }
+  juce::int64 getLoopStart() const;
 
   /**
    * @brief Get loop end position in samples
    */
-  juce::int64 getLoopEnd() const { return loopEndSamples_.load(); }
+  juce::int64 getLoopEnd() const;
 
   //==========================================================================
   // Plugin Delay Compensation (PDC)
@@ -339,7 +286,7 @@ public:
   /**
    * @brief Check if PDC is enabled
    */
-  bool isPDCEnabled() const { return pdcEnabled_.load(); }
+  bool isPDCEnabled() const;
 
   /**
    * @brief Enable/disable PDC
@@ -349,7 +296,7 @@ public:
   /**
    * @brief Get maximum track latency (for PDC compensation)
    */
-  int getMaxTrackLatency() const { return maxTrackLatency_.load(); }
+  int getMaxTrackLatency() const;
 
   //==========================================================================
   // Audio Device Management
@@ -409,17 +356,6 @@ public:
   const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
-
-  //==========================================================================
-  // Sample Hunter Agent (AI Asset Acquisition)
-  //==========================================================================
-
-  /**
-   * @brief Get the sample hunter agent for finding samples via Freesound
-   * @return Pointer to the sample hunter agent (may be null)
-   */
-  ai::SampleHunterAgent *getSampleHunterAgent();
-  const ai::SampleHunterAgent *getSampleHunterAgent() const;
 
   //==========================================================================
   // Track Management
@@ -565,6 +501,69 @@ public:
    * @note Safe to call from message thread
    */
   void resetPeakMeters();
+
+  //==========================================================================
+  // Master Limiter (prevents clipping on master bus)
+  //==========================================================================
+
+  /**
+   * @brief Enable/disable the master limiter
+   * @param enabled true to enable limiting, false to bypass
+   */
+  void setMasterLimiterEnabled(bool enabled);
+
+  /**
+   * @brief Check if master limiter is enabled
+   */
+  bool isMasterLimiterEnabled() const;
+
+  /**
+   * @brief Set master limiter ceiling
+   * @param ceilingDb Maximum output level in dB (typically -0.1 to -1.0)
+   */
+  void setMasterLimiterCeiling(float ceilingDb);
+
+  /**
+   * @brief Get current master limiter gain reduction
+   * @return Gain reduction in dB (0.0 = no reduction)
+   */
+  float getMasterLimiterGainReduction() const;
+
+  /**
+   * @brief Get master limiter latency for PDC compensation
+   * @return Latency in samples (includes lookahead and oversampling)
+   */
+  int getMasterLimiterLatency() const;
+
+  //==========================================================================
+  // Track Freeze (CPU optimization)
+  //==========================================================================
+
+  /**
+   * @brief Freeze a track, rendering it to audio and disabling plugins
+   * @param trackIndex Index of track to freeze
+   * @param progress Optional progress callback
+   * @return true if freeze started successfully
+   * @note MESSAGE THREAD ONLY - rendering is async
+   */
+  bool freezeTrack(int trackIndex, 
+                   std::function<void(float, const juce::String&)> progress = nullptr);
+
+  /**
+   * @brief Unfreeze a track, restoring original plugins
+   * @param trackIndex Index of track to unfreeze
+   * @return true if unfreeze succeeded
+   * @note MESSAGE THREAD ONLY
+   */
+  bool unfreezeTrack(int trackIndex);
+
+  /**
+   * @brief Check if a track is frozen
+   * @param trackIndex Index of track to check
+   * @return true if track is frozen
+   * @note Thread-safe
+   */
+  bool isTrackFrozen(int trackIndex) const;
 
   //==========================================================================
   // Audio File Pool
@@ -724,73 +723,6 @@ private:
    */
   void processEvents() noexcept;
 
-  /**
-   * @brief Process audio recording (AUDIO THREAD)
-   * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
-   */
-  /**
-   * @brief Process audio recording (AUDIO THREAD)
-   * @note RT-safe: only writes to ThreadedWriter (lock-free FIFO)
-   */
-  void captureAudioInput(const float *const *inputChannelData,
-                         int numInputChannels, int numSamples) noexcept;
-
-  //==========================================================================
-  // Recording Helpers (MESSAGE THREAD)
-  //==========================================================================
-
-  /**
-   * @brief Convert a completed audio recording into an AudioClip
-   * @param track Track to add clip to
-   * @param file Recorded audio file
-   * @param recordingStartSamples Timeline position where recording started
-   * @param sampleRate Sample rate of recording
-   */
-  void bakeAudioRecordingIntoTrack(zenith::Track &track, const juce::File &file,
-                                   juce::int64 recordingStartSamples,
-                                   double sampleRate);
-
-  //==========================================================================
-  // MIDI Recording Helpers (MESSAGE THREAD)
-  //==========================================================================
-
-  /**
-   * @brief Convert recorded MIDI into clips on tracks
-   * @param quantize If true, quantize events to 1/16 note grid
-   * @note MESSAGE THREAD ONLY
-   */
-  void bakeMidiRecordingsIntoClips(bool quantize);
-
-  /**
-   * @brief Clear all MIDI recording buffers
-   * @note MESSAGE THREAD ONLY
-   */
-  void clearMidiRecordings();
-
-  /**
-   * @brief Quantize MIDI sequence to grid
-   * @param input Original sequence
-   * @param tempo Project tempo in BPM
-   * @param quantizeGrid Grid size (0.25 = 1/16, 0.5 = 1/8, etc.)
-   * @return Quantized sequence
-   */
-  juce::MidiMessageSequence
-  quantizeMidiSequence(const juce::MidiMessageSequence &input, double tempo,
-                       double quantizeGrid);
-
-  /**
-   * @brief Drain MIDI record FIFO into recording buffers (lock-free)
-   * @note MESSAGE THREAD ONLY - Call this before baking clips
-   */
-  void drainMidiRecordFifo();
-
-  /**
-   * @brief Auto-detect project duration from clip end positions
-   * @return Duration in seconds (with 2s tail for reverb/delay)
-   * @note MESSAGE THREAD ONLY
-   */
-  double autoDetectProjectDuration() const;
-
   // Track management (message thread only)
   void prepareTracks(int samplesPerBlockExpected, double sampleRate);
 
@@ -841,10 +773,6 @@ private:
   // Audio device manager
   juce::AudioDeviceManager deviceManager;
 
-  // Transport state (std::atomic for thread-safe access)
-  std::atomic<bool> isPlaying_{false};
-  std::atomic<bool> isRecording_{false};
-
   // Audio settings (std::atomic for thread-safe access)
   std::atomic<double> currentSampleRate{44100.0};
   std::atomic<int> currentBufferSize{512};
@@ -852,12 +780,6 @@ private:
   // CPU usage tracking
   mutable std::atomic<double> cpuUsage_{0.0};
   juce::int64 lastCpuCheckTime{0};
-
-  // Transport position tracking (atomic for RT-safe access)
-  std::atomic<juce::int64> playheadSamples_{0};
-  std::atomic<bool> isLooping_{false};
-  std::atomic<juce::int64> loopStartSamples_{0};
-  std::atomic<juce::int64> loopEndSamples_{0}; // 0 = no loop end set
 
   // Test tone generator
   double phase{0.0};
@@ -871,81 +793,19 @@ private:
   // Routing Graph (Source of Truth for connections and processing order)
   RoutingGraph routingGraph_;
 
-  // Modulation System
-  std::unordered_map<std::string,
-                     std::shared_ptr<zenith::dsp::EnvelopeFollower>>
-      envelopeFollowers_;
-  std::unordered_map<std::string, float>
-      globalModulationBus_; // ID -> current value (0.0 - 1.0)
-
-  // Global LFOs (4 instances)
-  std::array<zenith::dsp::GlobalLFO, kNumGlobalLFOs> globalLFOs_;
-
-  // Macro Controls (8 instances)
-  MacroBank macroBank_;
-
-  // Helper to ensure followers exist for active sources
-  void updateEnvelopeFollowers();
-
 public:
   RoutingGraph &getRoutingGraph() { return routingGraph_; }
   const RoutingGraph &getRoutingGraph() const { return routingGraph_; }
-
-  // Global LFO Access
-  zenith::dsp::GlobalLFO &getGlobalLFO(int index) {
-    jassert(index >= 0 && index < kNumGlobalLFOs);
-    return globalLFOs_[static_cast<size_t>(index)];
-  }
-  const zenith::dsp::GlobalLFO &getGlobalLFO(int index) const {
-    jassert(index >= 0 && index < kNumGlobalLFOs);
-    return globalLFOs_[static_cast<size_t>(index)];
-  }
-  static constexpr int getNumGlobalLFOs() { return kNumGlobalLFOs; }
-
-  // Macro Access
-  MacroBank &getMacroBank() { return macroBank_; }
-  const MacroBank &getMacroBank() const { return macroBank_; }
-  MacroControl &getMacro(int index) { return macroBank_[index]; }
-  const MacroControl &getMacro(int index) const { return macroBank_[index]; }
-  static constexpr int getNumMacros() { return MacroBank::kNumMacros; }
 
 private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
   // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
   // lifetime (safety)
-
-  // Render Graph Structures
-  struct MixOp {
-    int sourceBufferIndex = -1;
-    bool isSourceAux = false;
-    float gain = 1.0f;
-    bool isFeedback = false;
-  };
-
-  struct ModulationInput {
-    ModulationRoutingSource source;
-    int targetPluginIndex = -1;
-    int targetParamIndex = -1;
-    std::shared_ptr<zenith::dsp::EnvelopeFollower> sourceFollower;
-  };
-
-  struct RenderNode {
-    Track *track = nullptr;
-    AuxBus *bus = nullptr;
-    int outputBufferIndex = -1;
-    std::vector<MixOp> inputs;
-    std::vector<ModulationInput> modulationInputs; // Pre-bound inputs
-    std::shared_ptr<zenith::dsp::EnvelopeFollower>
-        follower; // Modulation Source
-    float masterGain = 1.0f;
-  };
-
   struct TrackSnapshot {
     std::vector<zenith::Track *>
         tracks; // Raw pointers for fast, lock-free iteration
     std::vector<zenith::AuxBus *> auxBuses; // Raw pointers for buses
-    std::vector<RenderNode> sequence;       // Topological render sequence
 
     std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
     std::vector<std::shared_ptr<zenith::AuxBus>>
@@ -954,9 +814,7 @@ private:
     TrackSnapshot() = default;
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses,
-        const std::vector<RenderNode> &renderSequence = {})
-        : sequence(renderSequence) {
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
       tracks.reserve(ownedTracks.size());
       lifecycle.reserve(ownedTracks.size());
       for (const auto &track : ownedTracks) {
@@ -982,116 +840,55 @@ private:
 
   void updateTrackSnapshot();
 
-  // Phase 1.2: Audio file pool (message thread for load/unload, RT-safe for
-  // access)
+  // Phase 1.2: Audio file pool
   std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
 
   // Phase 3: Plugin hosting
   std::unique_ptr<zenith::PluginHost> pluginHost_;
   std::unique_ptr<zenith::PluginEditorWindowManager> pluginEditorWindowManager_;
 
-  // Instrument Registry (Level 4: No Singleton)
+  // Instrument Registry
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
-  // Session Debugger Agent (AI Technical Integrity)
+  // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
 
-  // Sample Hunter Agent (AI Asset Acquisition)
-  std::unique_ptr<ai::SampleHunterAgent> sampleHunter_;
-
-  // Project state reference (non-owning, for tempo/time sig/automation access)
+  // Project state reference
   ProjectState *projectState_ = nullptr;
 
   // Automation synchronizer
   std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
-
-  // Phase 15: Tempo map
-  std::unique_ptr<zenith::TempoMap> tempoMap_;
-
-  // Unified render path: Pre-allocated track buffers (avoid allocation in audio
-  // thread)
-  std::vector<juce::AudioBuffer<float>> trackBuffers_;
-  juce::AudioBuffer<float> masterBuffer_;
-
-  // Aux buses (send/return effects)
+  
+  //==========================================================================
+  // Modular Engine Components (Refactor 2025-12-09)
+  //==========================================================================
+  
+  std::unique_ptr<AudioRenderer> audioRenderer_;
+  std::unique_ptr<RecordingManager> recordingManager_;
+  std::unique_ptr<TransportController> transportController_;
+  std::unique_ptr<zenith::TempoMap> tempoMap_; // Kept for now, shared with controllers
+  
+  // Aux buses (Managed by Engine, rendered by AudioRenderer)
   std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
-  std::vector<juce::AudioBuffer<float>>
-      auxBusBuffers_; // Pre-allocated buffers for aux buses
 
-  // Master bus plugins
+  // Master bus plugins (Managed by Engine, rendered by AudioRenderer)
   std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
   juce::CriticalSection masterPluginLock_;
-  juce::AudioBuffer<float> masterPluginBuffer_;
 
-  // Phase 11: Master metering (atomic for lock-free GUI access)
-  std::atomic<float> masterLevel_{0.0f};
-  std::atomic<float> masterPeakLevel_{0.0f};
+  // Master Limiter (Used by AudioRenderer)
+  MasterLimiter masterLimiter_;
 
-  //==========================================================================
-  // Plugin Delay Compensation (PDC)
-  //==========================================================================
+  // Track Freeze Manager
+  std::unique_ptr<TrackFreezeManager> freezeManager_;
 
-  std::atomic<bool> pdcEnabled_{true};
-  std::atomic<int> maxTrackLatency_{0}; // Maximum latency across all tracks
-  std::vector<int> trackLatencies_;     // Per-track latency values
-  std::vector<juce::AudioBuffer<float>>
-      pdcDelayBuffers_;               // Delay buffers for PDC
-  std::vector<int> pdcDelayWritePos_; // Write positions for circular buffers
-  int masterLatency_{0};              // Master bus total latency
-
-  void applyPDCDelay(juce::AudioBuffer<float> &buffer, int trackIndex,
-                     int delaySamples) noexcept;
-
-  //==========================================================================
-  // Sample-Accurate Looping State
-  //==========================================================================
-
-  // Sample-accurate loop: stores where in the buffer the loop wrap occurs
-  // -1 means no loop wrap in current buffer
-  std::atomic<int> loopWrapSampleOffset_{-1};
-
-  // Phase 2A: MIDI input handling
+  // MIDI input handling
   std::vector<std::unique_ptr<juce::MidiInput>> midiInputs_;
-  zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO
+  zenith::MidiFifo midiFifo_; // Lock-free MIDI FIFO for input routing
 
-  // Phase 2 Refactor: Lock-free Command Queue
+  // Lock-free Command Queue
   static constexpr int kCommandBufferSize = 1024;
   juce::AbstractFifo commandFifo_{kCommandBufferSize};
-  std::vector<zenith::EngineEvent> commandBuffer_ =
-      std::vector<zenith::EngineEvent>(kCommandBufferSize);
-
-  // Phase 2A: MIDI recording state (per-track) - LOCK-FREE USING FIFO
-  struct MidiRecordEvent {
-    juce::MidiMessage message;
-    int trackIndex;
-    juce::int64 timestampSamples;
-  };
-
-  // Lock-free FIFO for MIDI recording events
-  static constexpr int kMidiRecordFifoSize = 4096;
-  juce::AbstractFifo midiRecordFifo_{kMidiRecordFifoSize};
-  std::vector<MidiRecordEvent> midiRecordBuffer_ =
-      std::vector<MidiRecordEvent>(kMidiRecordFifoSize);
-
-  // Baked recordings (message thread only, after stopRecording)
-  struct MidiRecordingBuffer {
-    std::vector<juce::MidiMessageSequence> trackRecordings; // One per track
-    juce::int64 recordingStartSamples = 0; // Playhead when recording started
-  };
-  MidiRecordingBuffer midiRecording_;
-  mutable juce::CriticalSection midiRecordingLock_;
-
-  //==========================================================================
-  // Phase 2D: Audio Recording Infrastructure
-  //==========================================================================
-
-  // Audio Recorder
-  AudioRecorder audioRecorder_;
-
-  // Pre-prepared sessions to avoid blocking I/O on record start
-  // Now managed by AudioRecorder but we keep this here for now if AudioRecorder
-  // doesn't handle prep Actually, AudioRecorder handles the writing. The
-  // preparation logic is mostly file creation.
+  std::vector<zenith::EngineEvent> commandBuffer_{kCommandBufferSize};
 
   // Helper to update SIP (Solo In Place) logic
   void updateSoloState();
@@ -1099,7 +896,7 @@ private:
   // ID Counter for Aux Busses
   std::atomic<int> auxBusIdCounter{0};
 
-  // Flag to prevent use-after-free in async callbacks (CODEX FIX P2)
+  // Flag to prevent use-after-free in async callbacks
   std::atomic<bool> isShuttingDown_{false};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)

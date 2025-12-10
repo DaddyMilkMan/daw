@@ -34,7 +34,6 @@
 #include "../ui/skia/SkiaComponent.h"
 #include "../ui/skia/ZenithDesignSystem.h"
 #include <atomic>
-#include <deque>
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
@@ -43,15 +42,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
-
-// Forward declarations for AI agents
-namespace zenith {
-namespace ai {
-class SessionDebuggerAgent;
-class SampleHunterAgent;
-class PresetGeneticistAgent;
-} // namespace ai
-} // namespace zenith
 
 namespace zenith {
 namespace ai {
@@ -187,128 +177,6 @@ struct DataBinding {
   DataBinding(juce::Component *ui, Track *track)
       : uiComponent(ui), linkedTrack(track),
         trackId(track ? track->getTrackId() : ""), isValid(track != nullptr) {}
-};
-
-//==============================================================================
-/**
-    User interface event types for behavior observation
-*/
-enum class UIEventType {
-  TrackSelected,
-  PluginOpened,
-  PluginClosed,
-  PlaybackStarted,
-  PlaybackStopped,
-  RecordStarted,
-  RecordStopped,
-  MIDIInputReceived,
-  TrackCreated,
-  TrackDeleted,
-  ClipMoved,
-  ClipCreated,
-  Undo,
-  Redo,
-  Idle,
-  ParameterChanged,
-  FileImported,
-  FileExported
-};
-
-/**
-    Represents a user interface event for behavioral tracking
-*/
-struct UIEvent {
-  UIEventType type = UIEventType::Idle;
-  juce::String targetId;       // Track ID, plugin ID, etc.
-  juce::String targetName;     // Human-readable name
-  juce::String additionalInfo; // Extra context
-  juce::int64 timestamp = 0;   // Time of event (ms since epoch)
-  int repeatCount = 1;         // How many times this exact event occurred
-
-  UIEvent() : timestamp(juce::Time::currentTimeMillis()) {}
-  UIEvent(UIEventType t, const juce::String &id = "",
-          const juce::String &name = "")
-      : type(t), targetId(id), targetName(name),
-        timestamp(juce::Time::currentTimeMillis()) {}
-};
-
-/**
-    Inferred user intent types
-*/
-enum class UserIntentType {
-  None,
-  StrugglingWithEQ,      // Opened EQ multiple times on same track
-  StrugglingWithMixing,  // Constant volume/pan adjustments
-  WaitingForInspiration, // Idle on empty track
-  InputRoutingIssue,     // Record pressed but no input
-  LookingForSound,       // Browsing presets/samples
-  LoopingSection,        // Repeatedly playing same section
-  GainStagingIssue,      // Clipping or very low levels
-  FrequencyClash,        // Multiple tracks fighting for same frequencies
-  ArrangementBlock       // Stuck on arrangement
-};
-
-/**
-    Represents an inferred user intent with confidence
-*/
-struct UserIntent {
-  UserIntentType type = UserIntentType::None;
-  float confidence = 0.0f;    // 0.0 - 1.0
-  juce::String description;   // Human-readable explanation
-  juce::String targetTrackId; // Which track this applies to (if any)
-  juce::int64 detectedAt = 0;
-
-  UserIntent() : detectedAt(juce::Time::currentTimeMillis()) {}
-};
-
-/**
-    Suggestion types that can be offered to the user
-*/
-enum class SuggestionType {
-  None,
-  SessionDebuggerAnalysis,    // Offer frequency analysis
-  SampleHunterSuggestion,     // Offer sample suggestions
-  PresetGeneticistSuggestion, // Offer preset evolution
-  InputRoutingHelp,           // Offer input routing diagnostic
-  GainStagingFix,             // Offer automatic gain correction
-  QuickTip                    // General workflow tip
-};
-
-/**
-    A proactive suggestion for the user
-*/
-struct Suggestion {
-  SuggestionType type = SuggestionType::None;
-  juce::String title;         // e.g., "💡 Tip: Your bass seems muddy"
-  juce::String description;   // Longer explanation
-  juce::String primaryAction; // e.g., "Auto-Fix"
-  juce::String dismissAction; // e.g., "Dismiss"
-  juce::String targetTrackId; // Which track this suggestion is for
-  float priority = 0.5f;      // 0.0-1.0, higher = more important
-  bool wasDismissed = false;
-  bool wasAccepted = false;
-  juce::int64 shownAt = 0;
-
-  Suggestion() : shownAt(juce::Time::currentTimeMillis()) {}
-};
-
-/**
-    Configuration for the proactive assistance system
-*/
-struct ProactiveConfig {
-  bool enabled = true;                 // Master switch
-  int suggestionCooldownMs = 30000;    // Min 30s between suggestions
-  int idleThresholdMs = 10000;         // 10s of idle = trigger
-  int maxHistorySize = 50;             // Rolling action history size
-  int pluginOpenThreshold = 3;         // N opens of same plugin = struggling
-  float minConfidenceThreshold = 0.6f; // Min confidence to show suggestion
-  bool respectDismissals = true;       // Learn from user dismissals
-
-  // Additional thresholds for heuristics
-  int recordNoInputTimeoutMs = 5000; // 5s of no MIDI during record = issue
-  float clippingThreshold = 0.95f;   // Peak level above this = clipping
-  float maxConfidenceRecordTime = 10000.0f; // Record time for max confidence
-  float maxConfidenceIdleTime = 30000.0f;   // Idle time for max confidence
 };
 
 //==============================================================================
@@ -517,97 +385,6 @@ public:
   HealthBreakdown getHealthBreakdown() const;
 
   //==========================================================================
-  // Autonomous Interface Controller (Proactive Assistance)
-  //==========================================================================
-
-  /**
-   * @brief Observe a user interface event
-   * Called by UI components to report user actions for behavioral analysis.
-   * @param event The event that occurred
-   */
-  void observe(const UIEvent &event);
-
-  /**
-   * @brief Get the action history for debugging/analysis
-   * @return Rolling history of recent user actions
-   */
-  const std::deque<UIEvent> &getActionHistory() const { return actionHistory_; }
-
-  /**
-   * @brief Get the current inferred user intent
-   * @return The most recently inferred intent with confidence
-   */
-  UserIntent getCurrentIntent() const { return currentIntent_; }
-
-  /**
-   * @brief Get the current active suggestion (if any)
-   * @return The suggestion currently being shown to the user
-   */
-  Suggestion getCurrentSuggestion() const { return currentSuggestion_; }
-
-  /**
-   * @brief Check if there's an active suggestion
-   */
-  bool hasPendingSuggestion() const {
-    return currentSuggestion_.type != SuggestionType::None;
-  }
-
-  /**
-   * @brief User accepted the current suggestion
-   * Triggers the associated action and records positive feedback.
-   */
-  void acceptSuggestion();
-
-  /**
-   * @brief User dismissed the current suggestion
-   * Records negative feedback to reduce future suggestions of this type.
-   */
-  void dismissSuggestion();
-
-  /**
-   * @brief Get proactive assistance configuration
-   */
-  ProactiveConfig &getProactiveConfig() { return proactiveConfig_; }
-  const ProactiveConfig &getProactiveConfig() const { return proactiveConfig_; }
-
-  /**
-   * @brief Set proactive assistance configuration
-   */
-  void setProactiveConfig(const ProactiveConfig &config) {
-    proactiveConfig_ = config;
-  }
-
-  /**
-   * @brief Register AI agents for dispatch
-   * The UX Director can dispatch work to these agents when it infers user
-   * intent.
-   */
-  void setSessionDebugger(SessionDebuggerAgent *agent) {
-    sessionDebugger_ = agent;
-  }
-  void setSampleHunter(SampleHunterAgent *agent) { sampleHunter_ = agent; }
-  void setPresetGeneticist(PresetGeneticistAgent *agent) {
-    presetGeneticist_ = agent;
-  }
-
-  /**
-   * @brief Listener interface for suggestion notifications
-   */
-  class SuggestionListener {
-  public:
-    virtual ~SuggestionListener() = default;
-    virtual void suggestionAvailable(const Suggestion &suggestion) = 0;
-    virtual void suggestionDismissed() = 0;
-  };
-
-  void addSuggestionListener(SuggestionListener *listener) {
-    suggestionListeners_.add(listener);
-  }
-  void removeSuggestionListener(SuggestionListener *listener) {
-    suggestionListeners_.remove(listener);
-  }
-
-  //==========================================================================
   // ChangeListener (for Track changes)
   //==========================================================================
   void changeListenerCallback(juce::ChangeBroadcaster *source) override;
@@ -733,96 +510,6 @@ private:
   // Debounce for change notifications
   juce::int64 lastAnalysisTime_ = 0;
   static constexpr int minAnalysisIntervalMs_ = 100;
-
-  //==========================================================================
-  // Autonomous Interface Controller State
-  //==========================================================================
-
-  // Proactive assistance configuration
-  ProactiveConfig proactiveConfig_;
-
-  // Rolling action history (observation layer)
-  std::deque<UIEvent> actionHistory_;
-  juce::CriticalSection historyLock_;
-
-  // Current inferred intent
-  UserIntent currentIntent_;
-
-  // Current active suggestion
-  Suggestion currentSuggestion_;
-  juce::int64 lastSuggestionTime_ = 0;
-
-  // Dismissal tracking for learning (type -> dismissal count)
-  std::unordered_map<int, int> suggestionDismissals_;
-
-  // Suggestion listeners
-  juce::ListenerList<SuggestionListener> suggestionListeners_;
-
-  // AI agent references (non-owning pointers)
-  // These agents are owned by the Engine or ProjectState and share the same
-  // lifecycle as the UXDirector. It is guaranteed that UXDirector is destroyed
-  // before or at the same time as these agents during Engine teardown.
-  SessionDebuggerAgent *sessionDebugger_ = nullptr;
-  SampleHunterAgent *sampleHunter_ = nullptr;
-  PresetGeneticistAgent *presetGeneticist_ = nullptr;
-
-  // Track-specific counters for heuristics
-  std::unordered_map<juce::String, int>
-      pluginOpenCounts_; // trackId_pluginType -> count
-  juce::String lastSelectedTrackId_;
-  std::atomic<juce::int64> lastUserActivityTime_{0};
-
-  //==========================================================================
-  // Proactive Assistance Methods
-  //==========================================================================
-
-  /**
-   * @brief Analyze action history to infer user intent
-   */
-  void inferIntent();
-
-  /**
-   * @brief Create and offer a suggestion based on current intent
-   */
-  void dispatchSuggestion();
-
-  /**
-   * @brief Check if we can show a suggestion (respecting cooldown)
-   */
-  bool canShowSuggestion() const;
-
-  /**
-   * @brief Get adjusted probability for a suggestion type (learning)
-   */
-  float getSuggestionProbability(SuggestionType type) const;
-
-  /**
-   * @brief Execute the action associated with a suggestion
-   */
-  void executeSuggestionAction(const Suggestion &suggestion);
-
-  /**
-   * @brief Save learned preferences to file
-   */
-  void savePreferences();
-
-  /**
-   * @brief Load learned preferences from file
-   */
-  void loadPreferences();
-
-  /**
-   * @brief Helper to generate a smart search query from a track
-   */
-  juce::String generateSmartQuery(Track *track) const;
-
-  // Analysis snapshot struct to minimize lock time
-  struct IntentAnalysisSnapshot {
-    std::deque<UIEvent> history;
-    std::unordered_map<juce::String, int> pluginCounts;
-    juce::String selectedTrackId;
-    juce::int64 lastSelectedTime;
-  };
 
   //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UXDirectorAgent)

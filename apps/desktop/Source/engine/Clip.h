@@ -34,6 +34,8 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <vector>
+#include <atomic>
 
 
 namespace zenith {
@@ -196,6 +198,14 @@ public:
   juce::Colour getColor() const { return clipColor; }
 
   //==============================================================================
+  // Time Stretching
+  void setPlaybackRate(double rate);
+  double getPlaybackRate() const;
+  
+  void setPreservePitch(bool preserve);
+  bool isPreservingPitch() const;
+
+  //==============================================================================
   // State management
   juce::ValueTree getState() const;
   void loadState(const juce::ValueTree &state);
@@ -232,8 +242,10 @@ private:
   // Audio data
   juce::File audioFile;
   juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
-  std::unique_ptr<juce::AudioFormatReaderSource> audioSource; // Unused legacy
   juce::CriticalSection audioLock;
+
+  // Legacy audio source (required for setAudioFile)
+  std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
 
   // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
   std::shared_ptr<const void>
@@ -243,6 +255,17 @@ private:
   // MIDI data
   juce::MidiMessageSequence midiSequence;
   juce::CriticalSection midiLock;
+
+  //==============================================================================
+  // Time Stretching State
+  std::atomic<double> playbackRate_{1.0};
+  std::atomic<bool> preservePitch_{false};
+  
+  // WSOLA State
+  static constexpr int kWsolaWindowSize = 1024;
+  std::vector<float> wsolaWindow_;
+  std::vector<float> wsolaOutputBuffer_;
+  double readPosition_ = 0.0; // Fractional read position for interpolation
 
   //==============================================================================
   // Processing state

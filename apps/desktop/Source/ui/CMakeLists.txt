@@ -22,8 +22,6 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithTheme.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/views/PresetGeneticistView.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/views/ModulationMatrixView.cpp
 )
 
 add_subdirectory(skia)

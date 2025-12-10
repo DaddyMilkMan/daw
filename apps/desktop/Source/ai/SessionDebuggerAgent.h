@@ -393,12 +393,6 @@ public:
    */
   bool isTrackDebuggingLocked(int trackIndex) const;
 
-  /**
-   * @brief Apply all pending automatic fixes
-   * Called by UXDirectorAgent when it detects gain staging issues
-   */
-  void applyAutomaticFixes();
-
   //==========================================================================
   // Configuration
   //==========================================================================
@@ -479,6 +473,8 @@ private:
   //==========================================================================
   // Fix Methods
   //==========================================================================
+
+  void applyAutomaticFixes();
 
   bool freezeTrack(int trackIndex);
   bool unfreezeTrack(int trackIndex);

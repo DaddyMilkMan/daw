@@ -15,19 +15,22 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
+
 #include "../../Source/ui/skia/SkiaButton.h"
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../../Source/ui/skia/SkiaKnob.h"
 #include "../../Source/ui/skia/SkiaSlider.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "../../Source/ui/skia/SkiaSpectrumComponent.h"
+
 
 namespace zenith {
 class Track;
 
-class MixerChannelComponent : public zenith::SkiaComponent,
+class MixerChannelComponent : public SkiaComponent,
                               public juce::ChangeListener {
 public:
-  explicit MixerChannelComponent(zenith::Track *track);
+  explicit MixerChannelComponent(Track *track);
   ~MixerChannelComponent() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -36,8 +39,14 @@ public:
   // ChangeListener
   void changeListenerCallback(juce::ChangeBroadcaster *source) override;
 
-  zenith::Track *getTrack() const { return track_; }
+  Track *getTrack() const { return track_; }
   void updateFromTrack();
+  
+  // Accessor for the spectrum analyzer's FIFO
+  AudioFifo* getSpectrumFifo() const { 
+      if (spectrumAnalyzer_) return &spectrumAnalyzer_->getAudioFifo(); 
+      return nullptr; 
+  }
 
 private:
   void timerCallback() override;
@@ -47,16 +56,18 @@ private:
   void onMuteClicked();
   void onSoloClicked();
 
-  zenith::Track *track_;
+  Track *track_;
 
-  // juce::Label nameLabel_; // Removed in favor of Skia drawing
+  juce::Label nameLabel_;
 
-  zenith::SkiaSlider faderSlider_;
-  zenith::SkiaKnob panKnob_;
-  zenith::SkiaButton muteButton_;
-  zenith::SkiaButton soloButton_;
+  SkiaSlider faderSlider_;
+  SkiaKnob panKnob_;
+  SkiaButton muteButton_;
+  SkiaButton soloButton_;
+  
+  std::unique_ptr<SkiaSpectrumComponent> spectrumAnalyzer_;
 
-  class LevelMeter : public zenith::SkiaComponent {
+  class LevelMeter : public SkiaComponent {
   public:
     LevelMeter();
     ~LevelMeter() override;
@@ -73,13 +84,6 @@ private:
 
   LevelMeter meter_;
   bool updatingControls_ = false;
-
-  // Cached Layout (Critique #2: Allocations in Paint Loop)
-  std::string cachedName_;
-  float cachedNameWidth_ = 0.0f;
-  float cachedNameX_ = 0.0f;
-  float cachedNameY_ = 0.0f;
-  void updateNameCache(); // Helper
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };

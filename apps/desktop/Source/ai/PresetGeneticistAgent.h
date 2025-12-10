@@ -99,9 +99,6 @@ struct EvolutionConfig {
   // Batch saving
   int saveEveryNGenerations = 10; // Save elite every N generations
   int maxPresetsToSave = 10;      // Max presets saved per batch
-
-  // Target Matching
-  bool useTargetMatching = false; // If true, evolves to match target audio
 };
 
 //==============================================================================
@@ -119,9 +116,6 @@ struct Individual {
   float harmonicRichness = 0.0f;
   float dynamicRange = 0.0f;
   float spectralCentroid = 0.0f;
-
-  // Spectrum for visualization (Frequency magnitudes)
-  std::vector<float> spectrum;
 
   // Death flags
   bool isDead = false;
@@ -283,44 +277,7 @@ public:
   /**
    * @brief Get the output directory for saved presets
    */
-  /**
-   * @brief Get the output directory for saved presets
-   */
   juce::File getOutputDirectory() const;
-
-  //==========================================================================
-  // Target Matching
-  //==========================================================================
-
-  /**
-   * @brief Set a target audio file to mimic
-   * @param file The audio file to analyze and match
-   */
-  void setTargetAudio(const juce::File &file);
-
-  /**
-   * @brief Set target from an audio buffer
-   */
-  /**
-   * @brief Set target from an audio buffer
-   */
-  void setTargetAudio(const juce::AudioBuffer<float> &buffer);
-
-  //==========================================================================
-  // Visualization Data Expose
-  //==========================================================================
-
-  /**
-   * @brief Get the current best spectrum for visualization
-   * Thread-safe.
-   */
-  std::vector<float> getCurrentBestSpectrum() const;
-
-  /**
-   * @brief Get the target spectrum for visualization
-   * Thread-safe.
-   */
-  std::vector<float> getTargetSpectrum() const;
 
   //==========================================================================
   // Listeners
@@ -415,21 +372,12 @@ private:
   /**
    * @brief Calculate harmonic richness from spectral data
    */
-  /**
-   * @brief Calculate spectral centroid from pre-computed spectrum
-   */
-  float calculateSpectralCentroid(const std::vector<float> &spectrum,
-                                  float sampleRate);
+  float calculateHarmonicRichness(const juce::AudioBuffer<float> &buffer);
 
   /**
-   * @brief Calculate harmonic richness from pre-computed spectrum
+   * @brief Calculate spectral centroid
    */
-  float calculateHarmonicRichness(const std::vector<float> &spectrum);
-
-  /**
-   * @brief Compute magnitude spectrum from audio buffer
-   */
-  std::vector<float> computeSpectrum(const juce::AudioBuffer<float> &buffer);
+  float calculateSpectralCentroid(const juce::AudioBuffer<float> &buffer);
 
   /**
    * @brief Check if audio is silent
@@ -446,12 +394,6 @@ private:
    */
   std::pair<float, float>
   calculateLevels(const juce::AudioBuffer<float> &buffer);
-
-  /**
-   * @brief Calculate fitness based on similarity to target
-   */
-  float calculatesimilarity(const Individual &candidate,
-                            const Individual &target);
 
   //==========================================================================
   // Helpers
@@ -484,16 +426,6 @@ private:
 
   // FFT for spectral analysis
   juce::dsp::FFT fft_{10}; // 1024-point FFT
-
-  // Target Matching
-  juce::AudioBuffer<float> targetAudioBuffer_;
-  Individual targetFeatures_; // Stores the analyzed features of the target
-  bool hasTarget_ = false;
-
-  // Visualization Data
-  std::vector<float> currentBestSpectrum_;
-  std::vector<float> targetSpectrum_;
-  mutable std::mutex spectrumMutex_;
 
   // ==== PRE-ALLOCATED BUFFERS (Avoid heap allocation in render loop) ====
   // Block buffer for rendering - pre-allocated to max block size

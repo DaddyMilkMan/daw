@@ -16,6 +16,9 @@
 */
 
 #include "MixerChannel.h"
+#include "EngineConstants.h"
+#include "../dsp/SIMDHelpers.h"
+#include "../ui/skia/AudioFifo.h"
 
 namespace zenith {
 
@@ -562,6 +565,11 @@ void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
     buffer.applyGain(1, 0, buffer.getNumSamples(), rightGain);
   } else if (buffer.getNumChannels() == 1) {
     buffer.applyGain(0, 0, buffer.getNumSamples(), vol);
+  }
+  
+  // Push to visualizer (post-fader, post-pan)
+  if (auto* fifo = spectrumFifo_.load(std::memory_order_relaxed)) {
+      fifo->pushStereoAsMono(buffer, buffer.getNumSamples());
   }
 }
 

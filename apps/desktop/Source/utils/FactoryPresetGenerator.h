@@ -1,12 +1,14 @@
 /*
   ==============================================================================
 
-    PresetGenerator.h
+    FactoryPresetGenerator.h
     Created: 2025-11-20
     Author:  Zenith DAW
 
     Utility to generate procedural presets for built-in instruments.
 */
+#pragma once
+
 #include <juce_data_structures/juce_data_structures.h>
 #include "../instruments/InstrumentPreset.h"
 #include "../instruments/ZenithPolySynth.h"
@@ -14,7 +16,7 @@
 
 namespace zenith {
 
-class PresetGenerator
+class FactoryPresetGenerator
 {
 public:
     static void generateFactoryPresets()
@@ -56,12 +58,8 @@ private:
             preset.author = "Zenith AI";
             
             preset.category = type;
-            // preset.soundType = type; // Removed in new struct
             preset.tags.push_back(character);
             preset.tags.push_back(type);
-            // preset.engines.push_back("Subtractive"); // Removed
-            // preset.version = "1.0"; // Removed
-            // preset.description = ... // Removed
 
             // Set parameters based on type and character
             setPolySynthParameters(preset, type, character, random);

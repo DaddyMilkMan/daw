@@ -49,13 +49,22 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Load Freesound API key from secure storage (NEVER hardcode!)
+<<<<<<< HEAD
   SecureKeyStore::retrieveKey("freesound_api_key", freesoundConfig_.apiKey);
+=======
+  freesoundConfig_.apiKey =
+      SecureKeyStore::getInstance().getKey("freesound_api_key");
+>>>>>>> origin/master
 
   if (freesoundConfig_.apiKey.isEmpty()) {
     DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
         "SecureKeyStore!");
     DBG("SampleHunterAgent: Set key via "
+<<<<<<< HEAD
         "SecureKeyStore::storeKey(\"freesound_api_key\", "
+=======
+        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
+>>>>>>> origin/master
         "\"YOUR_KEY\")");
   }
 
@@ -63,63 +72,6 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
 }
 
 SampleHunterAgent::~SampleHunterAgent() { stopHunting(); }
-
-//==============================================================================
-// Simple Command Interface
-//==============================================================================
-
-void SampleHunterAgent::hunt(const juce::String &query) {
-  // Create config with the query as the primary search
-  HuntingConfig config;
-
-  // Override the default genre-based searching with direct query
-  // We'll inject this query into the search queue
-  searchQueue_.clear();
-  searchQueue_.add(query);
-
-  // Also add some variations
-  searchQueue_.add(query + " loops");
-  searchQueue_.add(query + " samples");
-
-  // Store query in genre context for reference
-  genreContext_.primaryGenre = query;
-
-  // Start the hunt
-  startHunting(config);
-
-  DBG("SampleHunterAgent: Hunt started for: " + query);
-}
-
-bool SampleHunterAgent::downloadResult(int index) {
-  if (index < 0 || index >= static_cast<int>(foundSamples_.size())) {
-    DBG("SampleHunterAgent: Invalid result index: " + juce::String(index));
-    return false;
-  }
-
-  // If already hunting, just queue it
-  if (isHunting()) {
-    downloadQueue_.push(static_cast<size_t>(index));
-    return true;
-  }
-
-  // Otherwise, download directly on a background thread
-  auto &sample = foundSamples_[static_cast<size_t>(index)];
-
-  if (sample.downloaded) {
-    DBG("SampleHunterAgent: Sample already downloaded: " + sample.title);
-    return true;
-  }
-
-  // Queue for download and start a mini-hunt
-  downloadQueue_.push(static_cast<size_t>(index));
-
-  // Start thread just for downloading
-  HuntingConfig config;
-  config.maxTotalDownloads = 1;
-  startHunting(config);
-
-  return true;
-}
 
 //==============================================================================
 // Control
@@ -318,58 +270,50 @@ void SampleHunterAgent::run() {
           pendingAnalysisNotifications.clear();
           pendingImportNotifications.clear();
         }
+<<<<<<< HEAD
       } else {
         stats_.downloadsFailed++;
       }
-
-      processedCount++;
-      float p =
-          static_cast<float>(processedCount) /
-          static_cast<float>(std::max(static_cast<size_t>(1), totalToProcess));
-      updateProgress(downloadStartProgress +
-                     (downloadEndProgress - downloadStartProgress) * p);
-
-      if (processedCount >= static_cast<size_t>(config_.maxTotalDownloads))
-        break;
-
-      wait(config_.delayBetweenDownloadsMs);
+=======
+              [this, f]() {
+          listeners_.call(&Listener::sampleImported, f); });
+      }
     }
-
-    // Flush remaining batch notifications
-    if (!pendingDownloadNotifications.empty()) {
-      auto downloadBatch = pendingDownloadNotifications;
-      auto analysisBatch = pendingAnalysisNotifications;
-      auto importBatch = pendingImportNotifications;
-
-      juce::MessageManager::callAsync(
-          [this, downloadBatch, analysisBatch, importBatch]() {
-            for (const auto &s : downloadBatch)
-              listeners_.call(&Listener::sampleDownloaded, s);
-            for (const auto &s : analysisBatch)
-              listeners_.call(&Listener::sampleAnalyzed, s);
-            for (const auto &f : importBatch)
-              listeners_.call(&Listener::sampleImported, f);
-          });
+    else {
+      stats_.downloadsFailed++;
     }
+>>>>>>> origin/master
 
-    // Complete
-    stats_.endTime = juce::Time::getCurrentTime();
-    updateProgress(1.0f);
-    setStatus("Sample hunt complete!");
+    processedCount++;
+    float p = static_cast<float>(processedCount) /
+              (float)std::max((size_t)1, totalToProcess);
+    updateProgress(downloadStartProgress +
+                   (downloadEndProgress - downloadStartProgress) * p);
 
-    juce::MessageManager::callAsync([this]() {
-      listeners_.call(&Listener::huntingComplete, stats_, true);
-      sendChangeMessage();
-    });
-  } catch (const std::exception &e) {
-    DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
-    setStatus("Error: " + juce::String(e.what()));
-    juce::MessageManager::callAsync([this]() {
-      listeners_.call(&Listener::huntingComplete, stats_, false);
-    });
+    if (processedCount >= (size_t)config_.maxTotalDownloads)
+      break;
+
+    wait(config_.delayBetweenDownloadsMs);
   }
 
-  isHunting_.store(false);
+  // Complete
+  stats_.endTime = juce::Time::getCurrentTime();
+  updateProgress(1.0f);
+  setStatus("Sample hunt complete!");
+
+  juce::MessageManager::callAsync([this]() {
+    listeners_.call(&Listener::huntingComplete, stats_, true);
+    sendChangeMessage();
+  });
+}
+catch (const std::exception &e) {
+  DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
+  setStatus("Error: " + juce::String(e.what()));
+  juce::MessageManager::callAsync(
+      [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
+}
+
+isHunting_.store(false);
 }
 
 //==============================================================================

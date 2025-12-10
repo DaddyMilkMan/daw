@@ -155,6 +155,7 @@ if(SKIA_FOUND_AND_READY)
         apps/desktop/Source/ui/skia/BrowserPanel.cpp
         apps/desktop/Source/ui/skia/RightSidePanel.cpp
         apps/desktop/Source/ui/skia/ZenithPolySynthUI.cpp
+        apps/desktop/Source/ui/skia/SkiaSpectrumComponent.cpp
         apps/desktop/Source/ui/skia/ZenithDesignSystem.cpp
         apps/desktop/Source/ui/skia/views/PianoKeyboardViewSkia.cpp
         apps/desktop/Source/ui/skia/ZenithUIComponents.h

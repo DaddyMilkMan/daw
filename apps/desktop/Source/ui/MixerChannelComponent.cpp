@@ -6,27 +6,35 @@
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../../Source/engine/Track.h"
 #include "../../Source/ui/skia/SkiaTheme.h" // For SkiaTheme
+#include "../../Source/ui/skia/ZenithDesignSystem.h" // For ThemeManager
 
-#include <skia/include/core/SkCanvas.h>
-#include <skia/include/core/SkRRect.h>
+#include <core/SkCanvas.h>
+#include <core/SkRRect.h>
 
 //==============================================================================
 namespace zenith {
 
 MixerChannelComponent::MixerChannelComponent(Track *track)
-    : track_(track), faderSlider_("Vol"), panKnob_("Pan"), muteButton_("M"),
-      soloButton_("S") {
+    : track_(track)
+#ifdef ZENITH_USE_SKIA
+      ,
+      faderSlider_("Vol"), panKnob_("Pan"), muteButton_("M"), soloButton_("S")
+#endif
+{
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
+  zenith::design::ThemeManager::getInstance().addChangeListener(this);
 
-  // Initialize UI from track
   // Initialize UI from track
   updateFromTrack();
-  updateNameCache(); // Initialize cache
 
   // Track name label
-  // Track name is drawn in drawSkia
+  nameLabel_.setText(track_->getName(), juce::dontSendNotification);
+  nameLabel_.setJustificationType(juce::Justification::centred);
+  nameLabel_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
+  addAndMakeVisible(nameLabel_);
 
+#ifdef ZENITH_USE_SKIA
   // GPU-accelerated volume fader with spring physics
   faderSlider_.setOrientation(zenith::SkiaSlider::Orientation::Vertical);
   faderSlider_.setStyle(zenith::SkiaSlider::Style::Fader);
@@ -54,6 +62,46 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
   soloButton_.setToggleState(track_->isSolo());
   soloButton_.onClick = [this]() { onSoloClicked(); };
   addAndMakeVisible(soloButton_);
+#else
+  // Fallback: Traditional JUCE custom components
+  faderSlider_.setRange(0.0f, 1.0f, 0.7f); // Min, Max, Default
+  faderSlider_.setValue(track_->getVolume(), false);
+  faderSlider_.setLabel("Vol");
+  faderSlider_.setSuffix("dB");
+  faderSlider_.onValueChange = [this](float value) { onFaderChanged(); };
+  addAndMakeVisible(faderSlider_);
+
+  panKnob_.setRange(-1.0f, 1.0f, 0.0f); // Min, Max, Default (center)
+  panKnob_.setValue(track_->getPan(), false);
+  panKnob_.setLabel("Pan");
+  panKnob_.onValueChange = [this](float value) { onPanChanged(); };
+  addAndMakeVisible(panKnob_);
+
+  muteButton_.setButtonText("M");
+  muteButton_.setToggleable(true);
+  muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+  muteButton_.setToggleState(track_->isMuted(), false);
+  muteButton_.onClick = [this]() { onMuteClicked(); };
+  addAndMakeVisible(muteButton_);
+
+  soloButton_.setButtonText("S");
+  soloButton_.setToggleable(true);
+  soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+  soloButton_.setToggleState(track_->isSolo(), false);
+  soloButton_.onClick = [this]() { onSoloClicked(); };
+  addAndMakeVisible(soloButton_);
+#endif
+
+  // Spectrum Analyzer
+  spectrumAnalyzer_ = std::make_unique<SkiaSpectrumComponent>();
+  // Use vertical bars for small channel strip view
+  spectrumAnalyzer_->setDisplayMode(SkiaSpectrumComponent::DisplayMode::FilledCurve);
+  addAndMakeVisible(spectrumAnalyzer_.get());
+  
+  // Link to track's audio processing
+  if (track_) {
+      track_->getMixerChannel().setSpectrumFifo(&spectrumAnalyzer_->getAudioFifo());
+  }
 
   // Level meter
   addAndMakeVisible(meter_);
@@ -67,6 +115,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
 MixerChannelComponent::~MixerChannelComponent() {
   if (track_)
     track_->removeChangeListener(this);
+  zenith::design::ThemeManager::getInstance().removeChangeListener(this);
   stopTimer();
 }
 
@@ -75,19 +124,21 @@ void MixerChannelComponent::changeListenerCallback(
   if (source == track_) {
     // UI update on message thread
     updateFromTrack();
+  } else if (source == &zenith::design::ThemeManager::getInstance()) {
+    repaint();
   }
 }
 
 //==============================================================================
 void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith;
+  using namespace zenith::design;
 
-  // Background with Ableton-style gradient
+  // Background with subtle gradient
   SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
                              {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {design::colors::BG_DARK,
-                             design::colors::BG_DARKER};
+  SkColor bgGradColors[2] = {colors::BG_DARK,
+                             colors::BG_DARKER};
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -98,57 +149,45 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight()),
-      6.0f, 6.0f);
+      dimensions::RADIUS_MD, dimensions::RADIUS_MD);
   canvas->drawRRect(rrect, bgPaint);
 
-  // Inner highlight at top (subtle)
+  // Inner highlight at top (subtle glass)
   SkRect highlightBounds =
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight() * 0.2f);
-  // SkiaTheme::getInstance().getColors().white.withAlpha(0.03f)
   SkPaint highlightPaint;
-  highlightPaint.setColor(SkColorSetARGB(7, 255, 255, 255)); // 3% white
-  SkRRect highlightRRect = SkRRect::MakeRectXY(highlightBounds, 6.0f, 6.0f);
+  highlightPaint.setColor(colors::GLASS_HIGHLIGHT); 
+  SkRRect highlightRRect = SkRRect::MakeRectXY(highlightBounds, dimensions::RADIUS_MD, dimensions::RADIUS_MD);
   canvas->drawRRect(highlightRRect, highlightPaint);
+
   // Subtle border
   SkPaint borderPaint;
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(SkColorSetARGB(128, 58, 58, 58)); // 50% grey
+  borderPaint.setColor(colors::BORDER_SUBTLE); 
   borderPaint.setAntiAlias(true);
   SkRRect borderRect = rrect;
   borderRect.inset(0.5f, 0.5f);
   canvas->drawRRect(borderRect, borderPaint);
 
-  // Draw Track Name
-  if (track_ != nullptr) {
-    // Draw Cached Track Name (Critique #2: Zero allocations in paint)
-    SkFont font; // Font is light, but ideally cached too. Skia handles font
-                 // cache well.
-    font.setSize(design::dimensions::MIXER_TRACK_HEADER_TEXT_SIZE);
-    font.setEdging(SkFont::Edging::kAntiAlias);
-
-    SkPaint textPaint;
-    textPaint.setColor(SK_ColorWHITE);
-    textPaint.setAntiAlias(true);
-
-    canvas->drawSimpleText(cachedName_.c_str(), cachedName_.length(),
-                           SkTextEncoding::kUTF8, cachedNameX_, cachedNameY_,
-                           font, textPaint);
-  }
-
   // Children are drawn by SkiaComponent::drawChildren
   drawChildren(canvas);
 }
 
+
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds().reduced(8);
-  updateNameCache(); // Re-calculate text position on resize
 
   // Track name at top
-  // Track name is drawn directly, just reserve space
-  bounds.removeFromTop(30);
+  nameLabel_.setBounds(bounds.removeFromTop(30));
   bounds.removeFromTop(4); // Spacing
+  
+  // Spectrum Analyzer
+  if (spectrumAnalyzer_) {
+      spectrumAnalyzer_->setBounds(bounds.removeFromTop(60).reduced(2));
+      bounds.removeFromTop(4);
+  }
 
   // Mute/Solo buttons at bottom
   auto buttonArea = bounds.removeFromBottom(64);
@@ -196,42 +235,29 @@ void MixerChannelComponent::updateFromTrack() {
   // Update pan knob
   panKnob_.setValue(track_->getPan());
 
+#ifdef ZENITH_USE_SKIA
   // Skia buttons: toggle state provides visual feedback
   muteButton_.setToggleState(track_->isMuted());
   soloButton_.setToggleState(track_->isSolo());
+#else
+  // JUCE buttons: toggle state + style changes
+  muteButton_.setToggleState(track_->isMuted(), false);
+  if (track_->isMuted())
+    muteButton_.setButtonStyle(zenith::ZenithButton::Danger);
+  else
+    muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+
+  soloButton_.setToggleState(track_->isSolo(), false);
+  if (track_->isSolo())
+    soloButton_.setButtonStyle(zenith::ZenithButton::Warning);
+  else
+    soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+#endif
 
   // Update name
-  // Update name cache
-  updateNameCache(); // Recalculate text content/width if name changed
+  nameLabel_.setText(track_->getName(), juce::dontSendNotification);
 
   updatingControls_ = false;
-}
-
-void MixerChannelComponent::updateNameCache() {
-  if (track_ == nullptr)
-    return;
-
-  // Convert string once
-  cachedName_ = track_->getName().toStdString();
-
-  // Calculate layout once
-  auto bounds = getLocalBounds().toFloat(); // JUCE float rect
-  // Convert to Skia Layout
-  SkRect skBounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
-                                     bounds.getWidth(), bounds.getHeight());
-
-  SkFont font;
-  font.setSize(design::dimensions::MIXER_TRACK_HEADER_TEXT_SIZE);
-
-  SkRect textBounds;
-  font.measureText(cachedName_.c_str(), cachedName_.length(),
-                   SkTextEncoding::kUTF8, &textBounds);
-
-  cachedNameWidth_ = textBounds.width();
-  cachedNameX_ = skBounds.centerX() - (cachedNameWidth_ / 2.0f);
-  // Use Design Token for Padding (Critique #3 Fix)
-  cachedNameY_ =
-      skBounds.top() + design::dimensions::MIXER_TRACK_HEADER_PADDING_TOP;
 }
 
 //==============================================================================
@@ -260,6 +286,14 @@ void MixerChannelComponent::onMuteClicked() {
   // Toggle mute (thread-safe via atomic)
   bool newMuted = muteButton_.getToggleState();
   track_->setMuted(newMuted);
+
+#ifndef ZENITH_USE_SKIA
+  // Update button style (JUCE buttons only)
+  if (newMuted)
+    muteButton_.setButtonStyle(zenith::ZenithButton::Danger);
+  else
+    muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+#endif
 }
 
 void MixerChannelComponent::onSoloClicked() {
@@ -269,6 +303,14 @@ void MixerChannelComponent::onSoloClicked() {
   // Toggle solo (thread-safe via atomic)
   bool newSolo = soloButton_.getToggleState();
   track_->setSolo(newSolo);
+
+#ifndef ZENITH_USE_SKIA
+  // Update button style (JUCE buttons only)
+  if (newSolo)
+    soloButton_.setButtonStyle(zenith::ZenithButton::Warning);
+  else
+    soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
+#endif
 }
 
 //==============================================================================
@@ -315,13 +357,13 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
 
 void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith;
+  using namespace zenith::design;
 
   // Background with gradient (darker at top, lighter at bottom)
   SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
                              {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {design::colors::BG_DARK,
-                             design::colors::BG_DARKER};
+  SkColor bgGradColors[2] = {colors::BG_DARK,
+                             colors::BG_DARKER};
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -332,7 +374,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight()),
-      3.0f, 3.0f);
+      dimensions::RADIUS_SM, dimensions::RADIUS_SM);
   canvas->drawRRect(rrect, bgPaint);
 
   // Inner shadow at top
@@ -360,20 +402,20 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
     SkColor topColor, bottomColor;
     if (normalizedLevel > 0.9f) {
       // Clipping warning - red gradient
-      topColor = design::colors::RED;
-      bottomColor = design::colors::RED;
+      topColor = colors::RED;
+      bottomColor = colors::RED;
     } else if (normalizedLevel > 0.7f) {
       // Hot - orange/yellow gradient
-      topColor = design::colors::AMBER;
-      bottomColor = design::colors::AMBER;
+      topColor = colors::AMBER;
+      bottomColor = colors::AMBER;
     } else if (normalizedLevel > 0.4f) {
       // Moderate - green/yellow gradient
-      topColor = design::colors::NEON_GREEN;
-      bottomColor = design::colors::NEON_GREEN;
+      topColor = colors::NEON_GREEN;
+      bottomColor = colors::NEON_GREEN;
     } else {
       // Normal - blue/green gradient
-      topColor = design::colors::BLUE;
-      bottomColor = design::colors::BLUE;
+      topColor = colors::BLUE;
+      bottomColor = colors::BLUE;
     }
 
     // Apply gradient to meter bar
@@ -416,7 +458,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
 
     // Peak color (red if clipping, otherwise white)
     SkColor peakColor = normalizedPeak > 0.95f
-                            ? design::colors::RED // Red for clipping
+                            ? colors::RED // Red for clipping
                             : SK_ColorWHITE;      // White for normal
 
     SkPaint peakPaint;
@@ -427,7 +469,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
 
   // Subtle border
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(128, 58, 58, 58)); // 50% grey
+  borderPaint.setColor(colors::BORDER_SUBTLE);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
   borderPaint.setAntiAlias(true);
