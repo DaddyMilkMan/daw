@@ -9,6 +9,7 @@
 */
 
 #include "StemSeparationJob.h"
+#include <juce_events/juce_events.h>
 
 namespace zenith {
 namespace utils {
@@ -32,7 +33,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
-    return juce::jobHasFinished;
+    return juce::ThreadPoolJob::jobHasFinished;
   }
 
   // 2. Load Audio File
@@ -47,7 +48,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
-    return juce::jobHasFinished;
+    return juce::ThreadPoolJob::jobHasFinished;
   }
 
   juce::AudioBuffer<float> buffer(static_cast<int>(reader->numChannels),
@@ -68,7 +69,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
-    return juce::jobHasFinished;
+    return juce::ThreadPoolJob::jobHasFinished;
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);
@@ -79,7 +80,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
-    return juce::jobHasFinished;
+    return juce::ThreadPoolJob::jobHasFinished;
   }
 
   // 4. Write Outputs
@@ -109,7 +110,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
         [cb = callback_, res = result]() { cb(res); });
   }
 
-  return juce::jobHasFinished;
+  return juce::ThreadPoolJob::jobHasFinished;
 }
 
 juce::File

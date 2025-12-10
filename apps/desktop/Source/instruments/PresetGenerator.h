@@ -14,6 +14,7 @@
 #pragma once
 
 #include "../instruments/InstrumentPreset.h"
+#include "../instruments/ZenithPresetManager.h"
 #include <juce_core/juce_core.h>
 
 
@@ -99,6 +100,11 @@ public:
   */
   static void mutatePreset(ZenithInstrumentPreset &preset,
                            float mutationAmount);
+
+  /**
+      Mutate a lightweight Preset (for PresetGeneticistAgent).
+  */
+  static void mutatePreset(Preset &preset, float mutationAmount);
 
 private:
   //==========================================================================

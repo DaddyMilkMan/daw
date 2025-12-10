@@ -176,6 +176,7 @@ set_target_properties(ZenithDAW PROPERTIES
 )
 
 if(MSVC)
+    add_compile_options(/FS)
     target_compile_options(ZenithDAW PRIVATE /FS)
 endif()
 

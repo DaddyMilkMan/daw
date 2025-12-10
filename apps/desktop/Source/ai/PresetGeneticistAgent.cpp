@@ -215,6 +215,7 @@ void PresetGeneticistAgent::setTargetAudio(
   targetFeatures_.preset.name = "Target"; // Dummy
   analyzeAudio(targetAudioBuffer_, targetFeatures_);
 
+  DBG("Target Analyzed. Centroid: " << targetFeatures_.spectralCentroid
       << ", Richness: " << targetFeatures_.harmonicRichness
       << ", RMS: " << targetFeatures_.rmsDb);
 

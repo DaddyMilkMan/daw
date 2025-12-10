@@ -13,6 +13,7 @@
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/SessionDebuggerAgent.h"
+#include "../ai/SampleHunterAgent.h"
 #include "../engine/AudioFilePool.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
@@ -1196,6 +1197,15 @@ void Engine::audioDeviceAboutToStart(juce::AudioIODevice *device) {
   masterBuffer_.setSize(2, bufferSize);
   masterBuffer_.clear();
 
+  // Initialize Global LFOs
+  for (int i = 0; i < kNumGlobalLFOs; ++i) {
+    globalLFOs_[static_cast<size_t>(i)].setSampleRate(currentSampleRate.load());
+    globalLFOs_[static_cast<size_t>(i)].reset();
+  }
+
+  // Initialize Macro Bank
+  macroBank_.setSampleRate(currentSampleRate.load());
+
   // Prepare Aux Bus buffers
   auxBusBuffers_.clear();
   auxBusBuffers_.resize(auxBuses_.size());
@@ -1782,8 +1792,9 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
 
     // 2a. Apply Modulation Inputs (Block-Rate Modulation)
     for (const auto &mod : node.modulationInputs) {
-      if (mod.sourceFollower && node.track) {
-        float value = mod.sourceFollower->getCurrentValue();
+      if (node.track) {
+        float value = mod.source.getValue(&globalLFOs_, &macroBank_,
+                                          &persistentFollowers_);
         node.track->applyModulation(mod.targetPluginIndex, mod.targetParamIndex,
                                     value);
       }

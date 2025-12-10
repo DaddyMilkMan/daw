@@ -46,6 +46,8 @@
 
 #include "../Source/dsp/Dither.h"
 #include "../Source/dsp/EnvelopeFollower.h"
+#include "../Source/dsp/GlobalLFO.h"
+#include "../Source/engine/MacroControl.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
 
@@ -65,7 +67,8 @@ class InstrumentRegistry;
 
 namespace ai {
 class SessionDebuggerAgent;
-}
+class SampleHunterAgent;
+} // namespace ai
 
 //==============================================================================
 /**
@@ -349,6 +352,19 @@ public:
   }
   const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
+  }
+
+  //==========================================================================
+  // Sample Hunter Agent (AI Asset Acquisition)
+  //==========================================================================
+
+  /**
+   * @brief Get the sample hunter agent for finding samples via Freesound
+   * @return Pointer to the sample hunter agent (may be null)
+   */
+  ai::SampleHunterAgent *getSampleHunterAgent() { return sampleHunter_.get(); }
+  const ai::SampleHunterAgent *getSampleHunterAgent() const {
+    return sampleHunter_.get();
   }
 
   //==========================================================================
@@ -808,6 +824,13 @@ private:
   std::unordered_map<std::string, float>
       globalModulationBus_; // ID -> current value (0.0 - 1.0)
 
+  // Global LFOs (4 instances)
+  static constexpr int kNumGlobalLFOs = 4;
+  std::array<zenith::dsp::GlobalLFO, kNumGlobalLFOs> globalLFOs_;
+
+  // Macro Controls (8 instances)
+  MacroBank macroBank_;
+
   // Helper to ensure followers exist for active sources
   void updateEnvelopeFollowers();
 
@@ -815,11 +838,77 @@ public:
   RoutingGraph &getRoutingGraph() { return routingGraph_; }
   const RoutingGraph &getRoutingGraph() const { return routingGraph_; }
 
+  // Global LFO Access
+  zenith::dsp::GlobalLFO &getGlobalLFO(int index) {
+    jassert(index >= 0 && index < kNumGlobalLFOs);
+    return globalLFOs_[static_cast<size_t>(index)];
+  }
+  const zenith::dsp::GlobalLFO &getGlobalLFO(int index) const {
+    jassert(index >= 0 && index < kNumGlobalLFOs);
+    return globalLFOs_[static_cast<size_t>(index)];
+  }
+  static constexpr int getNumGlobalLFOs() { return kNumGlobalLFOs; }
+
+  // Macro Access
+  MacroBank &getMacroBank() { return macroBank_; }
+  const MacroBank &getMacroBank() const { return macroBank_; }
+  MacroControl &getMacro(int index) { return macroBank_[index]; }
+  const MacroControl &getMacro(int index) const { return macroBank_[index]; }
+  static constexpr int getNumMacros() { return MacroBank::kNumMacros; }
+
 private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
   // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
   // lifetime (safety)
+
+  //==========================================================================
+  // Universal Modulation Source System
+  //==========================================================================
+
+  // Unified modulation source types
+  enum class ModulationSourceType {
+    AudioEnvelope, // From track audio (EnvelopeFollower)
+    GlobalLFO,     // Global LFO (0-3)
+    Macro          // Macro control (0-7)
+  };
+
+  struct ModulationSource {
+    ModulationSourceType type = ModulationSourceType::AudioEnvelope;
+    int index = 0;        // LFO index (0-3), Macro index (0-7)
+    juce::String trackId; // For AudioEnvelope type
+    float amount = 1.0f;  // Modulation depth (-1.0 to 1.0)
+    bool bipolar = false; // If true, modulate around center
+
+    // Get the current value from this source
+    // NOTE: This must be called from the audio thread with valid pointers
+    float getValue(
+        const std::array<zenith::dsp::GlobalLFO, kNumGlobalLFOs> *lfos,
+        const MacroBank *macros,
+        const std::unordered_map<std::string,
+                                 std::shared_ptr<zenith::dsp::EnvelopeFollower>>
+            *followers) const {
+      switch (type) {
+      case ModulationSourceType::GlobalLFO:
+        if (lfos && index >= 0 && index < kNumGlobalLFOs)
+          return (*lfos)[static_cast<size_t>(index)].getValue() * amount;
+        break;
+      case ModulationSourceType::Macro:
+        if (macros && index >= 0 && index < MacroBank::kNumMacros)
+          return (*macros)[index].getValue() * amount;
+        break;
+      case ModulationSourceType::AudioEnvelope:
+        if (followers) {
+          auto it = followers->find(trackId.toStdString());
+          if (it != followers->end() && it->second)
+            return it->second->getCurrentValue() * amount;
+        }
+        break;
+      }
+      return 0.0f;
+    }
+  };
+
   // Render Graph Structures
   struct MixOp {
     int sourceBufferIndex = -1;
@@ -829,7 +918,7 @@ private:
   };
 
   struct ModulationInput {
-    std::shared_ptr<zenith::dsp::EnvelopeFollower> sourceFollower;
+    ModulationSource source;
     int targetPluginIndex = -1;
     int targetParamIndex = -1;
   };
@@ -905,6 +994,9 @@ private:
 
   // Session Debugger Agent (AI Technical Integrity)
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+
+  // Sample Hunter Agent (AI Asset Acquisition)
+  std::unique_ptr<ai::SampleHunterAgent> sampleHunter_;
 
   // Project state reference (non-owning, for tempo/time sig/automation access)
   ProjectState *projectState_ = nullptr;

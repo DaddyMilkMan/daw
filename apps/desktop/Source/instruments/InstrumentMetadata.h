@@ -209,6 +209,9 @@ struct InstrumentMetadata {
   juce::String name;         // Human-readable name
   juce::String category;     // Category (e.g., "Synth", "Sampler")
   juce::String description;  // Brief description
+  juce::String version;      // Version string
+  juce::String author;       // Author name
+  bool isBuiltIn = false;    // Whether this is a built-in instrument
   juce::StringArray tags;    // Search tags (e.g., "drums", "808", "vintage")
 
   std::function<std::unique_ptr<juce::AudioProcessor>()> createProcessor;

@@ -308,6 +308,14 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
   }
 }
 
+void MainComponent::mouseDrag(const juce::MouseEvent &e) {
+  if (activeDragComponent) {
+    auto drag = e.getOffsetFromDragStart();
+    activeDragComponent->setTopLeftPosition(dragStartBounds.getX() + drag.x,
+                                            dragStartBounds.getY() + drag.y);
+  }
+}
+
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
   activeDragComponent = nullptr;
 }

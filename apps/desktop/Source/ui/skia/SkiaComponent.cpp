@@ -85,7 +85,7 @@ std::string SkiaComponent::getUIStateDescription() {
                                        elem.bounds.height()));
     elemObj->setProperty("color", juce::String::formatted("#%08X", elem.color));
 
-    elementsArray.add(elemObj);
+    elementsArray.add(elemObj.get());
   }
   root->setProperty("elements", elementsArray);
 

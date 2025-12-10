@@ -504,4 +504,55 @@ void PresetGenerator::mutatePreset(ZenithInstrumentPreset &preset,
   // preset.name += " (M)";
 }
 
+void PresetGenerator::mutatePreset(Preset &preset, float mutationAmount) {
+  juce::Random random;
+
+  // Iterate over parameters
+  for (auto &[name, value] : preset.parameters) {
+    // Skip some parameters occasionally to preserve character
+    if (random.nextFloat() > 0.7f + (mutationAmount * 0.2f))
+      continue;
+
+    if (isDiscreteParameter(name)) {
+      if (random.nextFloat() < mutationAmount) {
+        int currentVal = static_cast<int>(std::round(value));
+        int maxVal = 1;
+
+        if (name.contains("waveform"))
+          maxVal = 5;
+        else if (name.contains("filter_type"))
+          maxVal = 2;
+        else if (name.contains("target"))
+          maxVal = 5;
+        else if (name.contains("source"))
+          maxVal = 7;
+        else if (name.contains("destination"))
+          maxVal = 10;
+
+        if (random.nextBool()) {
+          currentVal = currentVal + (random.nextBool() ? 1 : -1);
+        } else {
+          currentVal = random.nextInt(maxVal + 1);
+        }
+
+        if (currentVal < 0)
+          currentVal = maxVal;
+        if (currentVal > maxVal)
+          currentVal = 0;
+
+        value = static_cast<float>(currentVal);
+      }
+    } else {
+      float range = getParameterRange(name);
+      float r = random.nextFloat() * 2.0f - 1.0f;
+      float drift = r * r * r * mutationAmount * range * 0.5f;
+
+      value += drift;
+
+      juce::var clamped = clampParameter(name, value, "zenith_poly_synth");
+      value = static_cast<float>(clamped);
+    }
+  }
+}
+
 } // namespace zenith
