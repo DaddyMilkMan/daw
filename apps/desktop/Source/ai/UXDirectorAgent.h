@@ -34,6 +34,7 @@
 #include "../ui/skia/SkiaComponent.h"
 #include "../ui/skia/ZenithDesignSystem.h"
 #include <atomic>
+#include <deque>
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
@@ -42,6 +43,15 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+// Forward declarations for AI agents
+namespace zenith {
+namespace ai {
+class SessionDebuggerAgent;
+class SampleHunterAgent;
+class PresetGeneticistAgent;
+} // namespace ai
+} // namespace zenith
 
 namespace zenith {
 namespace ai {
