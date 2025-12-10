@@ -170,6 +170,10 @@ set_target_properties(ZenithDAW PROPERTIES
     MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL"
 )
 
+if(MSVC)
+    target_compile_options(ZenithDAW PRIVATE /FS)
+endif()
+
 # 7. Interprocedural Optimization (LTO)
 if(ENABLE_IPO)
     include(CheckIPOSupported)

@@ -120,6 +120,9 @@ struct Individual {
   float dynamicRange = 0.0f;
   float spectralCentroid = 0.0f;
 
+  // Spectrum for visualization (Frequency magnitudes)
+  std::vector<float> spectrum;
+
   // Death flags
   bool isDead = false;
   juce::String deathReason;
@@ -298,7 +301,26 @@ public:
   /**
    * @brief Set target from an audio buffer
    */
+  /**
+   * @brief Set target from an audio buffer
+   */
   void setTargetAudio(const juce::AudioBuffer<float> &buffer);
+
+  //==========================================================================
+  // Visualization Data Expose
+  //==========================================================================
+
+  /**
+   * @brief Get the current best spectrum for visualization
+   * Thread-safe.
+   */
+  std::vector<float> getCurrentBestSpectrum() const;
+
+  /**
+   * @brief Get the target spectrum for visualization
+   * Thread-safe.
+   */
+  std::vector<float> getTargetSpectrum() const;
 
   //==========================================================================
   // Listeners
@@ -393,12 +415,21 @@ private:
   /**
    * @brief Calculate harmonic richness from spectral data
    */
-  float calculateHarmonicRichness(const juce::AudioBuffer<float> &buffer);
+  /**
+   * @brief Calculate spectral centroid from pre-computed spectrum
+   */
+  float calculateSpectralCentroid(const std::vector<float> &spectrum,
+                                  float sampleRate);
 
   /**
-   * @brief Calculate spectral centroid
+   * @brief Calculate harmonic richness from pre-computed spectrum
    */
-  float calculateSpectralCentroid(const juce::AudioBuffer<float> &buffer);
+  float calculateHarmonicRichness(const std::vector<float> &spectrum);
+
+  /**
+   * @brief Compute magnitude spectrum from audio buffer
+   */
+  std::vector<float> computeSpectrum(const juce::AudioBuffer<float> &buffer);
 
   /**
    * @brief Check if audio is silent
@@ -451,9 +482,6 @@ private:
   // Synth processor for rendering
   std::unique_ptr<ZenithPolySynthProcessor> synthProcessor_;
 
-  // Synthesis for rendering
-  std::unique_ptr<ZenithPolySynthProcessor> synthProcessor_;
-
   // FFT for spectral analysis
   juce::dsp::FFT fft_{10}; // 1024-point FFT
 
@@ -461,6 +489,11 @@ private:
   juce::AudioBuffer<float> targetAudioBuffer_;
   Individual targetFeatures_; // Stores the analyzed features of the target
   bool hasTarget_ = false;
+
+  // Visualization Data
+  std::vector<float> currentBestSpectrum_;
+  std::vector<float> targetSpectrum_;
+  mutable std::mutex spectrumMutex_;
 
   // ==== PRE-ALLOCATED BUFFERS (Avoid heap allocation in render loop) ====
   // Block buffer for rendering - pre-allocated to max block size

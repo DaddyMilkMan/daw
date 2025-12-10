@@ -203,10 +203,23 @@ void PresetGeneticistAgent::setTargetAudio(
   targetFeatures_.preset.name = "Target"; // Dummy
   analyzeAudio(targetAudioBuffer_, targetFeatures_);
 
-  DBG("PresetGeneticist: Target Set. Features - Centroid: "
-      << targetFeatures_.spectralCentroid
       << ", Richness: " << targetFeatures_.harmonicRichness
       << ", RMS: " << targetFeatures_.rmsDb);
+
+      {
+        std::lock_guard<std::mutex> lock(spectrumMutex_);
+        targetSpectrum_ = targetFeatures_.spectrum;
+      }
+}
+
+std::vector<float> PresetGeneticistAgent::getCurrentBestSpectrum() const {
+  std::lock_guard<std::mutex> lock(spectrumMutex_);
+  return currentBestSpectrum_;
+}
+
+std::vector<float> PresetGeneticistAgent::getTargetSpectrum() const {
+  std::lock_guard<std::mutex> lock(spectrumMutex_);
+  return targetSpectrum_;
 }
 
 //==============================================================================
@@ -910,53 +923,66 @@ void PresetGeneticistAgent::analyzeAudio(const juce::AudioBuffer<float> &buffer,
   // Calculate dynamic range
   individual.dynamicRange = peak - rms;
 
-  // Calculate harmonic richness
-  individual.harmonicRichness = calculateHarmonicRichness(buffer);
+  // Compute full spectrum efficiently
+  individual.spectrum = computeSpectrum(buffer);
 
-  // Calculate spectral centroid
-  individual.spectralCentroid = calculateSpectralCentroid(buffer);
+  // Calculate harmonic richness from spectrum
+  individual.harmonicRichness = calculateHarmonicRichness(individual.spectrum);
+
+  // Calculate spectral centroid from spectrum
+  individual.spectralCentroid =
+      calculateSpectralCentroid(individual.spectrum, config_.renderSampleRate);
 }
 
-float PresetGeneticistAgent::calculateHarmonicRichness(
-    const juce::AudioBuffer<float> &buffer) {
-  // Harmonic richness: ratio of harmonic energy to total energy
-  // Approximated by looking at spectrum flatness (lower = more harmonic)
-
+std::vector<float>
+PresetGeneticistAgent::computeSpectrum(const juce::AudioBuffer<float> &buffer) {
   const int fftSize = 1024;
   const int numSamples = buffer.getNumSamples();
+  std::vector<float> spectrum(static_cast<size_t>(fftSize / 2),
+                              0.0f); // Magnitude only
 
   if (numSamples < fftSize)
-    return 0.0f;
+    return spectrum;
 
-  // Prepare FFT data
-  std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
+  // Prepare FFT data (time domain)
+  std::vector<float> fftWorkBuffer(static_cast<size_t>(fftSize * 2), 0.0f);
 
-  // Copy mid-section of audio (skip attack)
+  // Use mid-section
   int startSample = numSamples / 4;
   const float *data = buffer.getReadPointer(0);
-  for (int i = 0; i < fftSize; ++i) {
-    fftData[static_cast<size_t>(i)] = data[startSample + i];
-  }
-
-  // Apply Hann window
   for (int i = 0; i < fftSize; ++i) {
     float window =
         0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi *
                                 static_cast<float>(i) /
                                 static_cast<float>(fftSize - 1)));
-    fftData[static_cast<size_t>(i)] *= window;
+    fftWorkBuffer[static_cast<size_t>(i)] = data[startSample + i] * window;
   }
 
   // Perform FFT
-  fft_.performFrequencyOnlyForwardTransform(fftData.data());
+  fft_.performFrequencyOnlyForwardTransform(fftWorkBuffer.data());
 
-  // Calculate spectral flatness (geometric mean / arithmetic mean)
+  // Copy magnitude to output (first half)
+  for (int i = 0; i < fftSize / 2; ++i) {
+    spectrum[static_cast<size_t>(i)] = fftWorkBuffer[static_cast<size_t>(i)];
+  }
+
+  return spectrum;
+}
+
+float PresetGeneticistAgent::calculateHarmonicRichness(
+    const std::vector<float> &spectrum) {
+  // Harmonic richness: ratio of harmonic energy to total energy
+  // Approximated by spectrum flatness
+
+  if (spectrum.empty())
+    return 0.0f;
+
   float logSum = 0.0f;
   float linearSum = 0.0f;
   int count = 0;
 
-  for (int i = 1; i < fftSize / 2; ++i) { // Skip DC
-    float mag = std::abs(fftData[static_cast<size_t>(i)]);
+  for (size_t i = 1; i < spectrum.size(); ++i) { // Skip DC
+    float mag = std::abs(spectrum[i]);
     if (mag > 1e-10f) {
       logSum += std::log(mag);
       linearSum += mag;
@@ -971,42 +997,21 @@ float PresetGeneticistAgent::calculateHarmonicRichness(
   float arithmeticMean = linearSum / static_cast<float>(count);
   float flatness = geometricMean / arithmeticMean;
 
-  // Convert flatness to richness (lower flatness = more tonal = more "rich")
-  float richness = 1.0f - juce::jlimit(0.0f, 1.0f, flatness);
-
-  return richness;
+  return 1.0f - juce::jlimit(0.0f, 1.0f, flatness);
 }
 
 float PresetGeneticistAgent::calculateSpectralCentroid(
-    const juce::AudioBuffer<float> &buffer) {
-  const int fftSize = 1024;
-  const int numSamples = buffer.getNumSamples();
-
-  if (numSamples < fftSize)
+    const std::vector<float> &spectrum, float sampleRate) {
+  if (spectrum.empty())
     return 0.0f;
 
-  // Prepare FFT data
-  std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
-
-  // Use mid-section
-  int startSample = numSamples / 4;
-  const float *data = buffer.getReadPointer(0);
-  for (int i = 0; i < fftSize; ++i) {
-    fftData[static_cast<size_t>(i)] = data[startSample + i];
-  }
-
-  // Perform FFT
-  fft_.performFrequencyOnlyForwardTransform(fftData.data());
-
-  // Calculate spectral centroid
+  const int fftSize = 1024; // Implicit from generate
   float weightedSum = 0.0f;
   float totalMag = 0.0f;
+  float binWidth = sampleRate / static_cast<float>(fftSize);
 
-  float binWidth = static_cast<float>(config_.renderSampleRate) /
-                   static_cast<float>(fftSize);
-
-  for (int i = 1; i < fftSize / 2; ++i) {
-    float mag = std::abs(fftData[static_cast<size_t>(i)]);
+  for (size_t i = 1; i < spectrum.size(); ++i) {
+    float mag = spectrum[i];
     float freq = static_cast<float>(i) * binWidth;
 
     weightedSum += mag * freq;
@@ -1085,6 +1090,12 @@ void PresetGeneticistAgent::updateStats() {
       if (individual.fitness > best) {
         best = individual.fitness;
         bestName = individual.preset.name;
+
+        // Update best spectrum for UI
+        {
+          std::lock_guard<std::mutex> spectrumLock(spectrumMutex_);
+          currentBestSpectrum_ = individual.spectrum;
+        }
       }
       if (individual.fitness < worst) {
         worst = individual.fitness;
