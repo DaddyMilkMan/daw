@@ -15,6 +15,7 @@
 #include <juce_core/juce_core.h>
 #include <array>
 #include <vector>
+#include "ZenithPolySynthDefs.h"
 
 namespace zenith {
 
@@ -25,7 +26,8 @@ class ZenithEffects {
 public:
   ZenithEffects() = default;
 
-  void setSampleRate(double sampleRate) { sampleRate_ = sampleRate; }
+  void setSampleRate(double sampleRate);
+  void initDelay();
   void reset() {
     // Clear delay buffers
     delayBufferL_.fill(0.0f);
@@ -37,14 +39,28 @@ public:
   void setDistortion(float amount) { distortionAmount_ = amount; }
   void setChorus(float amount) { chorusAmount_ = amount; }
   void setReverb(float amount) { reverbAmount_ = amount; }
+      delayTime_ = time; delayFeedback_ = feedback; delayMix_ = mix;
+  }
+  void setBpm(double bpm) { bpm_ = bpm; }
+  void setDelaySync(bool sync, SyncRate rate) { delaySync_ = sync; delaySyncRate_ = rate; }
 
   void process(float &left, float &right);
 
 private:
   double sampleRate_ = 44100.0;
+  double bpm_ = 120.0;
+  bool delaySync_ = false;
+  SyncRate delaySyncRate_ = SyncRate::_1_4;
   float distortionAmount_ = 0.0f;
   float chorusAmount_ = 0.0f;
   float reverbAmount_ = 0.0f;
+  
+  float delayTime_ = 0.5f;     // Seconds
+  float delayFeedback_ = 0.5f; // 0..1
+  float delayMix_ = 0.0f;      // 0..1
+  std::vector<float> echoBufferL_;
+  std::vector<float> echoBufferR_;
+  int echoPos_ = 0;
 
   // Chorus LFO
   float chorusPhase_ = 0.0f;

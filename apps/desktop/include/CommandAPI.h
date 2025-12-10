@@ -39,7 +39,10 @@ public:
       ListPresets, LoadPreset, SavePreset, CreatePreset, DeletePreset, GeneratePreset,
       GetInstrumentParameters, SetInstrumentParameter, GetInstrumentParameterSchema,
       SetTrackSend, SetTrackEQ, SetTrackCompressor,
-      SyncProject
+      // Aux Bus Commands
+      CreateAuxBus, RemoveAuxBus, SetAuxBusVolume, SetAuxBusPan, SetAuxBusMute, GetAuxBuses,
+      // Vision Command
+      GetUIState
   };
 
   //==========================================================================
@@ -97,7 +100,17 @@ private:
   juce::var getInstrumentParameters(const juce::var& params);
   juce::var setInstrumentParameter(const juce::var& params);
   juce::var getInstrumentParameterSchema(const juce::var& params);
-  juce::var syncProjectToCloud(const juce::var& params);
+
+  // Aux Bus Handlers
+  juce::var createAuxBus(const juce::var& params);
+  juce::var removeAuxBus(const juce::var& params);
+  juce::var setAuxBusVolume(const juce::var& params);
+  juce::var setAuxBusPan(const juce::var& params);
+  juce::var setAuxBusMute(const juce::var& params);
+  juce::var getAuxBuses(const juce::var& params);
+
+  // Vision Handler
+  juce::var getUIState(const juce::var& params);
 
   // Helpers
   juce::String createResponse(const juce::var &data) const;

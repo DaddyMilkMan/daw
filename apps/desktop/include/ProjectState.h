@@ -28,7 +28,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "engine/RoutingGraph.h"
+#include "../Source/engine/RoutingGraph.h"
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
@@ -58,7 +58,8 @@ public:
   static const juce::Identifier ID_MIXER;
   static const juce::Identifier ID_AUTOMATION;
   static const juce::Identifier ID_ENVELOPE;
-  static const juce::Identifier ID_POINT;
+  static const juce::Identifier ID_POINTS;      // Container for points
+  static const juce::Identifier ID_POINT;       // Individual point
   static const juce::Identifier ID_NOTES;       // MIDI notes container
   static const juce::Identifier ID_NOTE;        // Individual MIDI note
   static const juce::Identifier ID_TEMPO_MAP;   // Container for tempo changes
@@ -85,12 +86,16 @@ public:
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
   static const juce::Identifier PROP_LANE_INDEX;
+  static const juce::Identifier PROP_MANUALLY_COLORED;
+  static const juce::Identifier PROP_IS_QUARANTINE;
 
   // Automation properties
   static const juce::Identifier PROP_PARAM;
   static const juce::Identifier PROP_PARAM_ID;
   static const juce::Identifier PROP_TIME_BEATS;
   static const juce::Identifier PROP_VALUE;
+  static const juce::Identifier PROP_CURVE_TYPE;
+  static const juce::Identifier PROP_TENSION;
 
   // MIDI Note properties
   static const juce::Identifier PROP_START_BEATS;  // Note start time in beats
@@ -173,6 +178,9 @@ public:
 
   void renameTrack(const juce::String &trackId, const juce::String &newName,
                    const juce::String &actionName = "Rename track");
+  void setTrackColor(const juce::String &trackId, const juce::Colour &color,
+                     bool manuallySet = false,
+                     const juce::String &actionName = "Set track color");
   void setTrackVolume(const juce::String &trackId, float volumeLinear,
                       const juce::String &actionName = "Set track volume");
   float getTrackVolume(const juce::String &trackId) const;
@@ -272,6 +280,12 @@ public:
 
   juce::String addAutomationPoint(const juce::String &trackId,
                                   const juce::String &paramId, double timeBeats,
+                                  double value, float tension, int curveType,
+                                  const juce::String &actionName);
+
+  // Overload for backward compatibility
+  juce::String addAutomationPoint(const juce::String &trackId,
+                                  const juce::String &paramId, double timeBeats,
                                   double value, const juce::String &actionName);
   bool moveAutomationPoint(const juce::String &trackId,
                            const juce::String &paramId,
@@ -283,6 +297,16 @@ public:
                              const juce::String &actionName);
   bool clearAutomation(const juce::String &trackId, const juce::String &paramId,
                        const juce::String &actionName);
+
+  bool setAutomationTension(const juce::String &trackId,
+                            const juce::String &paramId,
+                            const juce::String &pointId, float tension,
+                            const juce::String &actionName);
+
+  bool setAutomationCurveType(const juce::String &trackId,
+                              const juce::String &paramId,
+                              const juce::String &pointId, int curveType,
+                              const juce::String &actionName);
 
   //==========================================================================
   // MIDI Note Management
@@ -357,6 +381,10 @@ public:
 
   void setMidiNoteMuted(const juce::String &clipId, const juce::String &noteId,
                         bool muted, const juce::String &actionName);
+
+  void setMidiNoteProbability(const juce::String &clipId,
+                              const juce::String &noteId, float probability,
+                              const juce::String &actionName);
 
   //==========================================================================
   // Tempo Map & Markers

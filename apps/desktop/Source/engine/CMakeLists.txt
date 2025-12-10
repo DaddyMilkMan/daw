@@ -1,9 +1,5 @@
 target_sources(ZenithDAW PRIVATE
     Engine.cpp
-    EngineLifecycle.cpp
-    EngineTransport.cpp
-    EngineExport.cpp
-    EngineRecording.cpp
     ProjectState.cpp
     Track.cpp
     Clip.cpp
@@ -19,4 +15,8 @@ target_sources(ZenithDAW PRIVATE
     TempoMapSynchronizer.cpp
     TempoMap.cpp
     RoutingGraph.cpp
+    TrackFreeze.cpp
+    AudioRenderer.cpp
+    RecordingManager.cpp
+    TransportController.cpp
 )

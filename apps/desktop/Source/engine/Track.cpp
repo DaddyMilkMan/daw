@@ -2,8 +2,15 @@
   ==============================================================================
 
     Track.cpp
-    Created: 26 May 2024 1:35:46pm
-    Author:  Administrator
+    Ported from: ZenithDAW-Native/Source/Audio/Track.cpp (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
+
+    Audio/MIDI track implementation
+
+    JUCE 8 / C++20 adaptations:
+    - Wrapped in namespace zenith
+    - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
+    - Plugin hosting stubbed for Phase 2
 
   ==============================================================================
 */
@@ -13,20 +20,15 @@
 #include "../../include/TempoMap.h"
 #include "../instruments/Instrument.h"
 #include "Clip.h"
-#include <JuceHeader.h> // For juce::MessageManager
-#include "../include/Engine.h"        // For Engine access (if needed)
-#include "../network/NetworkManager.h" // For network features (AI, Cloud)
+#include "PluginHost.h"
+#include <algorithm>
+
 
 namespace zenith {
 
 //==============================================================================
 Track::Track(const juce::String &name, Type type)
-    : trackName(name), trackType(type),
-      // PDC State (from HEAD)
-      latencyCompensationSamples{0},
-      currentSampleRate(0.0), // Initialize to safe default
-      currentBlockSize(0)     // Initialize to safe default
-{
+    : trackName(name), trackType(type) {
   // Initialize empty clip snapshot (lock-free RCU pattern)
   currentClipSnapshot_ = std::make_shared<ClipSnapshot>();
   activeClipSnapshot_.store(currentClipSnapshot_.get());
@@ -88,30 +90,68 @@ void Track::setInstrument(std::unique_ptr<Instrument> instrument) {
 
 //==============================================================================
 void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
-  // Store these for later
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  // Prepare plugins
+  // Prepare instrument buffer (fixed size, no reallocation on audio thread)
+  instrumentBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
+
+  // Phase 1: Pre-allocate clip buffer to avoid RT allocations
+  clipBuffer_.setSize(2, samplesPerBlockExpected, false, true, true);
+
+  // Prepare plugin buffer
+  pluginBuffer.setSize(2, samplesPerBlockExpected);
+
+  // Prepare instrument if present
+  if (instrument_ != nullptr) {
+    auto *processor = instrument_->getAudioProcessor();
+    if (processor != nullptr) {
+      processor->setPlayConfigDetails(0, 2, sampleRate,
+                                      samplesPerBlockExpected);
+      processor->prepareToPlay(sampleRate, samplesPerBlockExpected);
+    }
+  }
+
+  // ROAST FIX #2: Prepare all plugins (message thread only, no lock needed)
   for (auto &plugin : pluginsOwned_) {
-    if (plugin != nullptr)
+    if (plugin != nullptr) {
       plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
+      plugin->setNonRealtime(false);
+    }
+  }
+
+  // Phase 2A: Prepare all clips (message thread only, no lock needed)
+  for (auto &clip : clipsOwned_) {
+    if (clip != nullptr) {
+      clip->prepareToPlay(samplesPerBlockExpected, sampleRate);
+    }
   }
 
   // Prepare mixer channel
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
-
-  // Buffer for PDC (2 seconds max) - from HEAD
-  compensationBuffer.setSize(2, static_cast<int>(sampleRate * 2.0));
-  compensationBuffer.clear();
-  compensationWritePos = 0;
 }
 
 void Track::releaseResources() {
-  // Release plugins
+  // Release instrument if present
+  if (instrument_ != nullptr) {
+    auto *processor = instrument_->getAudioProcessor();
+    if (processor != nullptr) {
+      processor->releaseResources();
+    }
+  }
+
+  // ROAST FIX #2: Release all plugins (message thread only, no lock needed)
   for (auto &plugin : pluginsOwned_) {
-    if (plugin != nullptr)
+    if (plugin != nullptr) {
       plugin->releaseResources();
+    }
+  }
+
+  // Phase 2A: Release all clips (message thread only, no lock needed)
+  for (auto &clip : clipsOwned_) {
+    if (clip != nullptr) {
+      clip->releaseResources();
+    }
   }
 
   // Release mixer channel
@@ -120,7 +160,7 @@ void Track::releaseResources() {
 
 // Phase 1.3 / 2A: Process with explicit playhead position (lock-free)
 void Track::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill, juce::int64 playheadSamples,
+    const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
     const juce::MidiBuffer *incomingMidi,
     const std::vector<juce::AudioBuffer<float> *> &auxBuffers,
     const TempoMap *tempoMap) {
@@ -128,7 +168,7 @@ void Track::getNextAudioBlock(
   bufferToFill.clearActiveBufferRegion();
 
   // If track is disabled, return silence
-  if (!enabled.load() || isMuted() || isSilencedBySolo()) { // Add my mute/solo logic
+  if (!enabled.load()) {
     midiBuffer_.clear();
     return;
   }
@@ -196,12 +236,12 @@ void Track::getNextAudioBlock(
   }
 
   // TRULY LOCK-FREE: Atomic load of raw pointer - no SpinLock!
-  const ClipSnapshot *currentClipSnapshot =
+  const ClipSnapshot *currentSnapshot =
       activeClipSnapshot_.load(std::memory_order_acquire);
 
-  if (currentClipSnapshot) {
+  if (currentSnapshot) {
     // Iterate clips from snapshot (no lock needed!)
-    for (auto *clip : currentClipSnapshot->clips) {
+    for (auto *clip : currentSnapshot->clips) {
       if (clip != nullptr && clip->isPlaying() &&
           clip->isActiveAt(playheadSamples)) {
         if (clip->getType() == Clip::Type::Audio) {
@@ -233,169 +273,84 @@ void Track::getNextAudioBlock(
     }
   }
 
-  // If it's an instrument track, render instrument audio from MIDI input
-  if (trackType == Type::Instrument && instrument_ != nullptr) {
-    instrument_->processBlock(*bufferToFill.buffer, midiBuffer_);
+  // Create a local buffer reference for processing
+  juce::AudioBuffer<float> localBuffer(
+      bufferToFill.buffer->getArrayOfWritePointers(),
+      bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
+      bufferToFill.numSamples);
+
+  // Process instrument if present (for Instrument tracks)
+  if (instrument_ != nullptr && trackType == Type::Instrument) {
+    auto *processor = instrument_->getAudioProcessor();
+    if (processor != nullptr) {
+      // Use preallocated buffer (RT-safe, no reallocation)
+      // instrumentBuffer_ was sized in prepareToPlay
+      const int numSamples = bufferToFill.numSamples;
+
+      // Clear instrument buffer for this block
+      instrumentBuffer_.clear();
+
+      // Process instrument (RT-safe as long as numSamples <= currentBlockSize)
+      processor->processBlock(instrumentBuffer_, midiBuffer_);
+
+      // Mix instrument output into track buffer
+      for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(),
+                                       instrumentBuffer_.getNumChannels());
+           ++ch) {
+        localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, numSamples);
+      }
+
+      // Clear MIDI buffer for next block
+      midiBuffer_.clear();
+    }
   }
 
-  // Process plugin chain (using lock-free snapshot)
-  processPluginChain(*bufferToFill.buffer, midiBuffer_, bufferToFill.numSamples);
+  // Process through plugin chain with MIDI support
+  processPluginChain(localBuffer, midiBuffer_, bufferToFill.numSamples);
 
   // Delegate all mixer processing to MixerChannel
   // This includes: input gain, HPF, EQ, compressor, volume, pan, metering
   // Also processes Aux Sends (Pre and Post fader)
-  juce::AudioSourceChannelInfo mixerInfo(bufferToFill.buffer, bufferToFill.startSample,
-                                         bufferToFill.numSamples); // Pass original buffer
+  juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0,
+                                         bufferToFill.numSamples);
   mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
-
-  // Apply PDC (Plugin Delay Compensation) - from HEAD
-  const int delaySamples = latencyCompensationSamples.load();
-  if (delaySamples > 0 && compensationBuffer.getNumSamples() > 0) {
-      const int numSamples = bufferToFill.numSamples;
-      const int bufferLen = compensationBuffer.getNumSamples();
-      const int numChannels = juce::jmin(bufferToFill.buffer->getNumChannels(), compensationBuffer.getNumChannels());
-
-      for (int ch = 0; ch < numChannels; ++ch) {
-          float* channelData = bufferToFill.buffer->getWritePointer(ch, bufferToFill.startSample);
-          const float* compRead = compensationBuffer.getReadPointer(ch);
-          float* compWrite = compensationBuffer.getWritePointer(ch);
-
-          for (int i = 0; i < numSamples; ++i) {
-              // Write current sample to delay line
-              compWrite[(compensationWritePos + i) % bufferLen] = channelData[i];
-
-              // Read delayed sample
-              int readIndex = (compensationWritePos + i - delaySamples);
-              while (readIndex < 0) readIndex += bufferLen;
-              readIndex %= bufferLen;
-
-              channelData[i] = compRead[readIndex];
-          }
-      }
-      compensationWritePos = (compensationWritePos + numSamples) % bufferLen;
-  }
 }
 
-// Legacy overload: uses default playhead of 0 (from HEAD)
-void Track::getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill) {
-  juce::MidiBuffer midiBuffer; // Empty midi buffer
-  AuxBufferList emptyAuxBuffers;
-  getNextAudioBlock(bufferToFill, 0, &midiBuffer, emptyAuxBuffers,
-                    nullptr); // Pass nullptr for tempoMap
+// Legacy overload: uses default playhead of 0
+void Track::getNextAudioBlock(
+    const juce::AudioSourceChannelInfo &bufferToFill) {
+  getNextAudioBlock(bufferToFill, 0);
 }
 
 //==============================================================================
-void Track::updateClipSnapshot() {
-  // Create new snapshot
-  auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_);
-
-  // Atomically swap (release semantics for the store)
-  // The audio thread will see the new pointer immediately
-  activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release); // Use std::memory_order_release
-
-  // Manage lifetime of old snapshots
-  // We keep the previous snapshot alive in clipSnapshotTrash_
-  // because the audio thread might still be reading it.
-  clipSnapshotTrash_.push_back(currentClipSnapshot_); // Use currentClipSnapshot_ from origin/master
-
-  // Update current holder to the new snapshot
-  currentClipSnapshot_ = newSnapshot; // Use currentClipSnapshot_ from origin/master
-
-  // Garbage collection: Keep last 10 snapshots (from origin/master)
-  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
-  while (clipSnapshotTrash_.size() > 10) { // Use while loop from origin/master
-    clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
-  }
-}
-
-void Track::addClip(std::unique_ptr<Clip> clip) {
-  // THREAD SAFETY: Message thread only
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  if (clip != nullptr) {
-    // Prepare the clip if we're already initialized
-    if (currentSampleRate > 0) {
-      clip->prepareToPlay(currentBlockSize, currentSampleRate);
-    }
-
-    // Add to ownership vector
-    clipsOwned_.push_back(std::move(clip));
-
-    // Update snapshot for audio thread
-    updateClipSnapshot();
-
-    sendChangeMessage();
-  }
-}
-
-void Track::removeClip(int clipIndex) {
-  // THREAD SAFETY: Message thread only
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  if (clipIndex >= 0 && clipIndex < static_cast<int>(clipsOwned_.size())) {
-    auto &clip = clipsOwned_[clipIndex];
-    if (clip != nullptr) {
-      clip->releaseResources();
-    }
-    clipsOwned_.erase(clipsOwned_.begin() + clipIndex);
-
-    // Update snapshot for audio thread
-    updateClipSnapshot();
-
-    sendChangeMessage();
-  }
-}
-
-void Track::removeClip(Clip *clip) {
-  // THREAD SAFETY: Message thread only
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  auto it = std::find_if(
-      clipsOwned_.begin(), clipsOwned_.end(),
-      [clip](const std::unique_ptr<Clip> &c) { return c.get() == clip; });
-
-  if (it != clipsOwned_.end()) {
-    (*it)->releaseResources();
-
-    // Remove from ownership vector
-    clipsOwned_.erase(it);
-
-    // Update snapshot for audio thread
-    updateClipSnapshot();
-
-    sendChangeMessage();
-  }
-}
-
-void Track::clearClips() {
-  // THREAD SAFETY: Message thread only
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  for (auto &clip : clipsOwned_) {
-    if (clip != nullptr) {
-      clip->releaseResources();
-    }
-  }
-
-  // Clear ownership vector
-  clipsOwned_.clear();
-
-  // Update snapshot for audio thread
-  updateClipSnapshot();
-
+void Track::setName(const juce::String &newName) {
+  trackName = newName;
   sendChangeMessage();
 }
 
-int Track::getNumClips() const {
-  // Message thread access - read ownership vector directly
-  return static_cast<int>(clipsOwned_.size());
+juce::String Track::getTypeString() const {
+  switch (trackType) {
+  case Type::Audio:
+    return "Audio";
+  case Type::MIDI:
+    return "MIDI";
+  case Type::Instrument:
+    return "Instrument";
+  default:
+    return "Unknown";
+  }
 }
 
-Track::Clip *Track::getClip(int index) const {
-  // Message thread access - read ownership vector directly
-  if (index >= 0 && index < static_cast<int>(clipsOwned_.size()))
-    return clipsOwned_[index].get();
-  return nullptr;
+//==============================================================================
+
+void Track::setArmed(bool shouldBeArmed) {
+  armed.store(shouldBeArmed);
+  sendChangeMessage();
+}
+
+void Track::setEnabled(bool shouldBeEnabled) {
+  enabled.store(shouldBeEnabled);
+  sendChangeMessage();
 }
 
 //==============================================================================
@@ -500,31 +455,121 @@ juce::AudioPluginInstance *Track::getPlugin(int index) const {
   return nullptr;
 }
 
-/** Returns total plugin chain latency in samples for PDC (Plugin Delay Compensation). */
-int Track::getLatencySamples() const {
-  // If called from message thread, use owned list
-  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
-    int latency = 0;
-    for (size_t i = 0; i < pluginsOwned_.size(); ++i) {
-      if (pluginsOwned_[i])
-        latency += pluginsOwned_[i]->getLatencySamples();
-    }
-    return latency;
-  }
+//==============================================================================
+// Phase 2A: Lock-free clip management (message thread only)
+//==============================================================================
 
-  // If called from audio thread, use snapshot
-  const auto* snapshot = activePluginSnapshot_.load(std::memory_order_acquire);
-  if (snapshot == nullptr)
-    return 0;
+// Lock-free RCU-style clip snapshot update
+void Track::updateClipSnapshot() {
+  // Called from message thread only
+  auto newSnapshot = std::make_shared<ClipSnapshot>(clipsOwned_);
 
-  int latency = 0;
-  for (size_t i = 0; i < snapshot->plugins.size(); ++i) {
-    if (snapshot->plugins[i])
-      latency += snapshot->plugins[i]->getLatencySamples();
+  // Atomic swap - audio thread will see new snapshot on next load
+  activeClipSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+
+  // Manage lifetime: keep old snapshots alive briefly for audio thread
+  clipSnapshotTrash_.push_back(currentClipSnapshot_);
+  currentClipSnapshot_ = newSnapshot;
+
+  // ACCUMULATION FIX: Increased limit from 5 to 10 to handle rapid updates
+  // during offline rendering or automation. Uses while loop to clean up
+  // multiple stale snapshots in a single pass if needed.
+  while (clipSnapshotTrash_.size() > 10) {
+    clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
   }
-  return latency;
 }
 
+void Track::addClip(std::unique_ptr<Clip> clip) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (clip != nullptr) {
+    // Prepare the clip if we're already initialized
+    if (currentSampleRate > 0) {
+      clip->prepareToPlay(currentBlockSize, currentSampleRate);
+    }
+
+    // Add to ownership vector
+    clipsOwned_.push_back(std::move(clip));
+
+    // Update snapshot for audio thread
+    updateClipSnapshot();
+
+    sendChangeMessage();
+  }
+}
+
+void Track::removeClip(int clipIndex) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (clipIndex >= 0 && clipIndex < static_cast<int>(clipsOwned_.size())) {
+    auto &clip = clipsOwned_[clipIndex];
+    if (clip != nullptr) {
+      clip->releaseResources();
+    }
+
+    // Remove from ownership vector
+    clipsOwned_.erase(clipsOwned_.begin() + clipIndex);
+
+    // Update snapshot for audio thread
+    updateClipSnapshot();
+
+    sendChangeMessage();
+  }
+}
+
+void Track::removeClip(Clip *clip) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  auto it = std::find_if(
+      clipsOwned_.begin(), clipsOwned_.end(),
+      [clip](const std::unique_ptr<Clip> &c) { return c.get() == clip; });
+
+  if (it != clipsOwned_.end()) {
+    (*it)->releaseResources();
+
+    // Remove from ownership vector
+    clipsOwned_.erase(it);
+
+    // Update snapshot for audio thread
+    updateClipSnapshot();
+
+    sendChangeMessage();
+  }
+}
+
+void Track::clearClips() {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  for (auto &clip : clipsOwned_) {
+    if (clip != nullptr) {
+      clip->releaseResources();
+    }
+  }
+
+  // Clear ownership vector
+  clipsOwned_.clear();
+
+  // Update snapshot for audio thread
+  updateClipSnapshot();
+
+  sendChangeMessage();
+}
+
+int Track::getNumClips() const {
+  // Message thread access - read ownership vector directly
+  return static_cast<int>(clipsOwned_.size());
+}
+
+Track::Clip *Track::getClip(int index) const {
+  // Message thread access - read ownership vector directly
+  if (index >= 0 && index < static_cast<int>(clipsOwned_.size()))
+    return clipsOwned_[index].get();
+  return nullptr;
+}
 
 //==============================================================================
 // Automation Management (Message Thread)
@@ -557,126 +602,8 @@ void Track::clearAutomationLanes() {
 }
 
 //==============================================================================
-// MIDI Scheduling
-//==============================================================================
-
-void Track::generateMidiForBlock(const juce::ValueTree &trackState,
-                                 double tempo, double sampleRate,
-                                 juce::int64 blockStartSample, int blockSize,
-                                 juce::MidiBuffer &midiOut) {
-  // THREAD SAFETY FIX: This method uses a lock (activeNotesLock) and is
-  // therefore NOT RT-safe. It must only be called from the message thread.
-  // Note: This method is currently not called - actual MIDI scheduling uses
-  // the lock-free Clip::processMidiClip() path instead.
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  // Calculate block boundaries in samples
-  juce::int64 blockEndSample = blockStartSample + blockSize;
-
-  // Convert to beats
-  // Formula: beats = (samples / sampleRate) * (tempo / 60)
-  double beatsPerSample = (tempo / 60.0) / sampleRate;
-  double blockStartBeats = blockStartSample * beatsPerSample;
-  double blockEndBeats = blockEndSample * beatsPerBeat; // Fix: was sampleRate
-
-  // Get CLIPS node from track state
-  auto clipsNode = trackState.getChildWithName(juce::Identifier("CLIPS"));
-  if (!clipsNode.isValid())
-    return;
-
-  // Process each clip
-  for (const auto &clip : clipsNode) {
-    // Get clip position (in beats or samples - need to check)
-    // For now, assume clip.start is in beats
-    double clipStartBeats = clip.getProperty("start", 0.0);
-    double clipLengthBeats = clip.getProperty("length", 0.0);
-
-    // Skip clips that don't overlap this block
-    if (clipStartBeats + clipLengthBeats < blockStartBeats ||
-        clipStartBeats > blockEndBeats)
-      continue;
-
-    // Get NOTES node from clip
-    auto notesNode = clip.getChildWithName(juce::Identifier("NOTES"));
-    if (!notesNode.isValid())
-      continue;
-
-    // Process each note in the clip
-    for (const auto &note : notesNode) {
-      // Get note properties
-      double noteStartBeats = note.getProperty("startBeats", 0.0);
-      double noteLengthBeats = note.getProperty("lengthBeats", 0.0);
-      int pitch = note.getProperty("pitch", 60);
-      int velocity = note.getProperty("velocity", 100);
-      juce::String noteId = note.getProperty("id", "");
-
-      // Convert note times to absolute timeline beats (relative to clip)
-      double absNoteStartBeats = clipStartBeats + noteStartBeats;
-      double absNoteEndBeats = absNoteStartBeats + noteLengthBeats;
-
-      // Convert to samples
-      double samplesPerBeat = sampleRate * 60.0 / tempo;
-      juce::int64 noteStartSample =
-          static_cast<juce::int64>(absNoteStartBeats * samplesPerBeat);
-      juce::int64 noteEndSample =
-          static_cast<juce::int64>(absNoteEndBeats * samplesPerBeat);
-
-      // Check if note-on happens in this block
-      if (noteStartSample >= blockStartSample &&
-          noteStartSample < blockEndSample) {
-        // Calculate offset within this block
-        int sampleOffset = static_cast<int>(noteStartSample - blockStartSample);
-
-        // Create note-on event
-        juce::MidiMessage noteOn = juce::MidiMessage::noteOn(
-            1, pitch, static_cast<juce::uint8>(velocity));
-        midiOut.addEvent(noteOn, sampleOffset);
-
-        // Track this note as active (with thread synchronization)
-        ActiveNote activeNote;
-        activeNote.pitch = pitch;
-        activeNote.channel = 1;
-        activeNote.noteId = noteId;
-        {
-          const juce::ScopedLock sl(activeNotesLock);
-          activeNotes.push_back(activeNote);
-        }
-      }
-
-      // Check if note-off happens in this block
-      if (noteEndSample >= blockStartSample && noteEndSample < blockEndSample) {
-        // Calculate offset within this block
-        int sampleOffset = static_cast<int>(noteEndSample - blockStartSample);
-
-        // Create note-off event
-        juce::MidiMessage noteOff =
-            juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
-        midiOut.addEvent(noteOff, sampleOffset);
-
-        // Remove from active notes (with thread synchronization)
-        {
-          const juce::ScopedLock sl(activeNotesLock);
-          activeNotes.erase(std::remove_if(activeNotes.begin(),
-                                           activeNotes.end(),
-                                           [&](const ActiveNote &n) {
-                                             return n.noteId == noteId;
-                                           }),
-                            activeNotes.end());
-        }
-      }
-    }
-  }
-}
-
-
-void Track::setLatencyCompensation(int samples) {
-    latencyCompensationSamples.store(samples);
-}
 
 //==============================================================================
-// State management
-//==============================================================================
-
 juce::ValueTree Track::getState() const {
   juce::ValueTree state("Track");
 
@@ -689,7 +616,7 @@ juce::ValueTree Track::getState() const {
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
 
-  // Save plugin states (message thread only, no lock needed)
+  // ROAST FIX #2: Save plugin states (message thread only, no lock needed)
   juce::ValueTree pluginsState("Plugins");
   for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
@@ -805,6 +732,164 @@ void Track::loadPluginStates(const juce::ValueTree &state,
   }
 
   DBG("Track: Loaded " + juce::String(getNumPlugins()) + " plugins");
+}
+
+//==============================================================================
+// TRULY LOCK-FREE: Process plugin chain with atomic snapshot
+void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
+                               juce::MidiBuffer &midi, int numSamples) {
+  // LOCK-FREE: Atomic load of raw pointer - no SpinLock!
+  const PluginSnapshot *snapshot =
+      activePluginSnapshot_.load(std::memory_order_acquire);
+
+  if (snapshot == nullptr || snapshot->plugins.empty())
+    return;
+
+  // For MVP: Simple linear plugin chain processing
+  // Audio tracks: audio in → plugins → audio out
+  // Instrument tracks: MIDI in → first plugin (synth) → audio → remaining
+  // plugins → audio out
+
+  // ROAST FIX #2: Iterate over snapshot (shared_ptr keeps plugins alive)
+  for (const auto &plugin : snapshot->plugins) {
+    if (plugin != nullptr) {
+      // CODEX FEEDBACK APPLIED: Use max(inputs, outputs) for channel sizing
+      // This ensures instrument plugins (0 inputs, >0 outputs) get writable
+      // channels instead of receiving an empty buffer.
+      const int bufferChannels = buffer.getNumChannels();
+      const int pluginInputs = plugin->getTotalNumInputChannels();
+      const int pluginOutputs = plugin->getTotalNumOutputChannels();
+
+      // Use max(inputs, outputs) so instrument plugins (0 in, >0 out) get
+      // actual audio
+      const int numChannels =
+          juce::jmin(bufferChannels, juce::jmax(pluginInputs, pluginOutputs));
+
+      // Create a view of the buffer with the correct number of channels
+      juce::AudioBuffer<float> pluginView(buffer.getArrayOfWritePointers(),
+                                          numChannels, 0, numSamples);
+
+      // Process this plugin
+      // Note: processBlock expects the full buffer, not just a section
+      // We're processing in-place
+      // MIDI buffer is passed through the chain:
+      // - Instrument plugins consume note-on/off events
+      // - Effect plugins typically ignore MIDI (but some use it for modulation)
+      plugin->processBlock(pluginView, midi);
+    }
+  }
+}
+
+//==============================================================================
+// MIDI Scheduling
+//==============================================================================
+
+void Track::generateMidiForBlock(const juce::ValueTree &trackState,
+                                 double tempo, double sampleRate,
+                                 juce::int64 blockStartSample, int blockSize,
+                                 juce::MidiBuffer &midiOut) {
+  // THREAD SAFETY FIX: This method uses a lock (activeNotesLock) and is
+  // therefore NOT RT-safe. It must only be called from the message thread.
+  // Note: This method is currently not called - actual MIDI scheduling uses
+  // the lock-free Clip::processMidiClip() path instead.
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  // Calculate block boundaries in samples
+  juce::int64 blockEndSample = blockStartSample + blockSize;
+
+  // Convert to beats
+  // Formula: beats = (samples / sampleRate) * (tempo / 60)
+  double beatsPerSample = (tempo / 60.0) / sampleRate;
+  double blockStartBeats = blockStartSample * beatsPerSample;
+  double blockEndBeats = blockEndSample * beatsPerSample;
+
+  // Get CLIPS node from track state
+  auto clipsNode = trackState.getChildWithName(juce::Identifier("CLIPS"));
+  if (!clipsNode.isValid())
+    return;
+
+  // Process each clip
+  for (const auto &clip : clipsNode) {
+    // Get clip position (in beats or samples - need to check)
+    // For now, assume clip.start is in beats
+    double clipStartBeats = clip.getProperty("start", 0.0);
+    double clipLengthBeats = clip.getProperty("length", 0.0);
+
+    // Skip clips that don't overlap this block
+    if (clipStartBeats + clipLengthBeats < blockStartBeats ||
+        clipStartBeats > blockEndBeats)
+      continue;
+
+    // Get NOTES node from clip
+    auto notesNode = clip.getChildWithName(juce::Identifier("NOTES"));
+    if (!notesNode.isValid())
+      continue;
+
+    // Process each note in the clip
+    for (const auto &note : notesNode) {
+      // Get note properties
+      double noteStartBeats = note.getProperty("startBeats", 0.0);
+      double noteLengthBeats = note.getProperty("lengthBeats", 0.0);
+      int pitch = note.getProperty("pitch", 60);
+      int velocity = note.getProperty("velocity", 100);
+      juce::String noteId = note.getProperty("id", "");
+
+      // Convert note times to absolute timeline beats (relative to clip)
+      double absNoteStartBeats = clipStartBeats + noteStartBeats;
+      double absNoteEndBeats = absNoteStartBeats + noteLengthBeats;
+
+      // Convert to samples
+      double samplesPerBeat = sampleRate * 60.0 / tempo;
+      juce::int64 noteStartSample =
+          static_cast<juce::int64>(absNoteStartBeats * samplesPerBeat);
+      juce::int64 noteEndSample =
+          static_cast<juce::int64>(absNoteEndBeats * samplesPerBeat);
+
+      // Check if note-on happens in this block
+      if (noteStartSample >= blockStartSample &&
+          noteStartSample < blockEndSample) {
+        // Calculate offset within this block
+        int sampleOffset = static_cast<int>(noteStartSample - blockStartSample);
+
+        // Create note-on event
+        juce::MidiMessage noteOn = juce::MidiMessage::noteOn(
+            1, pitch, static_cast<juce::uint8>(velocity));
+        midiOut.addEvent(noteOn, sampleOffset);
+
+        // Track this note as active (with thread synchronization)
+        ActiveNote activeNote;
+        activeNote.pitch = pitch;
+        activeNote.channel = 1;
+        activeNote.noteId = noteId;
+        {
+          const juce::ScopedLock sl(activeNotesLock);
+          activeNotes.push_back(activeNote);
+        }
+      }
+
+      // Check if note-off happens in this block
+      if (noteEndSample >= blockStartSample && noteEndSample < blockEndSample) {
+        // Calculate offset within this block
+        int sampleOffset = static_cast<int>(noteEndSample - blockStartSample);
+
+        // Create note-off event
+        juce::MidiMessage noteOff =
+            juce::MidiMessage::noteOff(1, pitch, static_cast<juce::uint8>(0));
+        midiOut.addEvent(noteOff, sampleOffset);
+
+        // Remove from active notes (with thread synchronization)
+        {
+          const juce::ScopedLock sl(activeNotesLock);
+          activeNotes.erase(std::remove_if(activeNotes.begin(),
+                                           activeNotes.end(),
+                                           [&](const ActiveNote &n) {
+                                             return n.noteId == noteId;
+                                           }),
+                            activeNotes.end());
+        }
+      }
+    }
+  }
 }
 
 } // namespace zenith

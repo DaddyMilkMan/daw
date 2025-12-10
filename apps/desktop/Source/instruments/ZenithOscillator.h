@@ -45,14 +45,20 @@ public:
    * @brief Update supersaw frequency ratios after detune change
    * Must be called after setDetune() to update cached ratios.
    */
-  void updateSupersawRatios();
+  // Flagship Features
+  void setSync(bool enabled) { syncEnabled_ = enabled; }
+  void resetPhase() { phase_ = 0.0; } 
+  double getPhase() const { return phase_; }
+  void reducePhase(double amount) { phase_ -= amount; } // For adjusting phase after sync reset
 
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
   double phase_ = 0.0;
   double sampleRate_ = 44100.0;
   float detuneCents_ = 0.0f;
-  juce::Random random_;
+  
+  // Flagship State
+  bool syncEnabled_ = false;
 
   float processSine(float frequency);
   float processSaw(float frequency);
@@ -60,6 +66,7 @@ private:
   float processTriangle(float frequency);
   float processNoise();
   float processSupersaw(float frequency);
+  float processWavetable(float frequency, float shape);
 
   // Supersaw state
   std::array<double, 7> supersawPhases_ = {0.0};

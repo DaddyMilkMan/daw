@@ -14,34 +14,20 @@
 #include "../../include/Engine.h"
 #include "../../include/ProjectState.h"
 #include "../../include/TempoMap.h"
-<<<<<<< HEAD
-=======
 #include "../engine/AuxBus.h"
->>>>>>> origin/master
 #include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/Track.h"
 #include "../instruments/InstrumentRegistry.h"
-<<<<<<< HEAD
-=======
 #include "../ui/skia/SkiaComponent.h"
->>>>>>> origin/master
 #include "ClipCommands.h"
 #include "CommandUtils.h"
 #include "SessionGraph.h"
 #include "TrackCommands.h"
 #include "TransportCommands.h"
-<<<<<<< HEAD
-
 
 #include "../ai/AIMasteringAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
-
-=======
-
-#include "../ai/AIMasteringAgent.h"
-#include "../dsp/ONNXStemSeparator.h"
->>>>>>> origin/master
 
 namespace zenith {
 
@@ -112,37 +98,24 @@ void CommandAPI::initializeCommandMap() {
   commandMap["add_note"] = CommandID::AddNote;
   commandMap["delete_note"] = CommandID::DeleteNote;
   commandMap["move_note"] = CommandID::MoveNote;
-<<<<<<< HEAD
-  commandMap["sync_project"] = CommandID::SyncProject;
-=======
->>>>>>> origin/master
   commandMap["get_notes"] = CommandID::GetNotes;
   commandMap["set_note_velocity"] = CommandID::SetNoteVelocity;
   commandMap["set_note_length"] = CommandID::SetNoteLength;
   commandMap["get_midi_data"] = CommandID::GetMidiData;
   commandMap["set_clip_notes"] = CommandID::SetClipNotes;
 
-<<<<<<< HEAD
-=======
   // Presets & Instruments
->>>>>>> origin/master
   commandMap["list_presets"] = CommandID::ListPresets;
   commandMap["load_preset"] = CommandID::LoadPreset;
   commandMap["save_preset"] = CommandID::SavePreset;
   commandMap["create_preset"] = CommandID::CreatePreset;
   commandMap["delete_preset"] = CommandID::DeletePreset;
   commandMap["generate_preset"] = CommandID::GeneratePreset;
-<<<<<<< HEAD
-
-=======
->>>>>>> origin/master
   commandMap["get_instrument_parameters"] = CommandID::GetInstrumentParameters;
   commandMap["set_instrument_parameter"] = CommandID::SetInstrumentParameter;
   commandMap["get_instrument_parameter_schema"] =
       CommandID::GetInstrumentParameterSchema;
 
-<<<<<<< HEAD
-=======
   // Aux Bus Commands
   commandMap["create_aux_bus"] = CommandID::CreateAuxBus;
   commandMap["remove_aux_bus"] = CommandID::RemoveAuxBus;
@@ -154,30 +127,10 @@ void CommandAPI::initializeCommandMap() {
   // Vision Command
   commandMap["get_ui_state"] = CommandID::GetUIState;
 
->>>>>>> origin/master
   // Quick Wins: Mixer Control
   commandMap["set_track_send"] = CommandID::SetTrackSend;
   commandMap["set_track_eq"] = CommandID::SetTrackEQ;
   commandMap["set_track_compressor"] = CommandID::SetTrackCompressor;
-<<<<<<< HEAD
-}
-
-CommandAPI::~CommandAPI() {}
-
-//==============================================================================
-juce::var CommandAPI::executeCommand(const juce::var &request) {
-  // Validate request structure
-  if (!request.isObject())
-    return createErrorResponse("Invalid request: must be JSON object");
-
-  if (!request.hasProperty("command"))
-    return createErrorResponse("Missing 'command' field");
-
-  juce::String commandStr = request["command"].toString();
-  juce::var params =
-      request.hasProperty("params") ? request["params"] : juce::var();
-
-=======
 
   // Register Handlers
   registerCommand("list_tracks", [this](const juce::var &p) {
@@ -343,7 +296,6 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
   juce::var params =
       request.hasProperty("params") ? request["params"] : juce::var();
 
->>>>>>> origin/master
   DBG("CommandAPI: Executing command: " + commandStr);
 
   // Map Lookup
@@ -491,12 +443,6 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
   case CommandID::SetTrackCompressor:
     return trackCommands->setTrackCompressor(params);
 
-<<<<<<< HEAD
-  case CommandID::SyncProject:
-    return syncProjectToCloud(params);
-
-=======
->>>>>>> origin/master
   default:
     return createErrorResponse("Command ID not implemented: " + commandStr);
   }
@@ -1819,10 +1765,6 @@ juce::var CommandAPI::generatePreset(const juce::var &params) {
 
   juce::var generatedParams = params["generatedParameters"];
 
-<<<<<<< HEAD
-  // Validate generated parameters
-  // TODO: Add instrument-specific validation
-=======
   // Validate generated parameters based on instrument parameter schema
   if (generatedParams.isObject()) {
     auto paramSchema = registry.getParameterSchema(instrumentId);
@@ -1866,7 +1808,6 @@ juce::var CommandAPI::generatePreset(const juce::var &params) {
       }
     }
   }
->>>>>>> origin/master
 
   // Create preset name from description
   juce::String presetName = description.substring(0, 50); // Limit length
@@ -1949,13 +1890,6 @@ juce::var CommandAPI::exportProjectAdvanced(const juce::var &params) {
   return createSuccessResponse(juce::var());
 }
 
-<<<<<<< HEAD
-juce::var CommandAPI::syncProjectToCloud(const juce::var& params) {
-    // 1. Get Project File
-    auto projectFile = projectState.getProjectFile();
-    if (!projectFile.existsAsFile()) {
-        return createErrorResponse("Project must be saved locally before syncing to cloud.");
-=======
 //==============================================================================
 // Helper Method Implementations
 //==============================================================================
@@ -2082,19 +2016,9 @@ juce::var CommandAPI::getAuxBuses(const juce::var &params) {
       obj->setProperty("pan", bus->getPan());
       obj->setProperty("mute", bus->isMuted());
       buses.append(juce::var(obj));
->>>>>>> origin/master
     }
   }
 
-<<<<<<< HEAD
-    // 2. Get Google Access Token
-    // The UI must have retrieved this from the login callback
-    juce::String googleToken = ""; 
-    if (params.hasProperty("googleToken")) {
-        googleToken = params["googleToken"].toString();
-    } else {
-        return createErrorResponse("No Google Drive access token provided. Please log in.");
-=======
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("buses", buses);
   return createSuccessResponse(juce::var(resultObj));
@@ -2130,90 +2054,9 @@ static void traverseComponentTree(juce::Component *comp,
       obj->setProperty("height", screenBounds.getHeight());
 
       elements.add(juce::var(obj));
->>>>>>> origin/master
     }
   }
 
-<<<<<<< HEAD
-    // 3. Prepare Google Drive API Request (Multipart)
-    // We upload to https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart
-    juce::URL url("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart");
-    
-    // Metadata part (JSON)
-    juce::DynamicObject* metadata = new juce::DynamicObject();
-    metadata->setProperty("name", projectFile.getFileName());
-    metadata->setProperty("description", "Uploaded from Zenith DAW");
-    metadata->setProperty("mimeType", "application/octet-stream"); // Or custom mime
-    
-    juce::String metadataJson = juce::JSON::toString(juce::var(metadata));
-
-    // Construct Multipart Body manually (JUCE's withFileToUpload is too simple for this)
-    juce::String boundary = "-------ZenithBoundary" + juce::String::toHexString(juce::Random::getSystemRandom().nextInt64());
-    
-    juce::MemoryOutputStream bodyStream;
-    
-    // Part 1: Metadata
-    bodyStream << "--" << boundary << "\r\n";
-    bodyStream << "Content-Type: application/json; charset=UTF-8\r\n\r\n";
-    bodyStream << metadataJson << "\r\n";
-    
-    // Part 2: File Data
-    bodyStream << "--" << boundary << "\r\n";
-    bodyStream << "Content-Type: application/octet-stream\r\n\r\n";
-    
-    // Read file into stream
-    juce::FileInputStream fileInput(projectFile);
-    bodyStream.writeFromInputStream(fileInput, -1);
-    
-    bodyStream << "\r\n--" << boundary << "--\r\n";
-
-    // 4. Execute Upload
-    int statusCode = 0;
-    
-    // Create stream from the body data
-    std::unique_ptr<juce::InputStream> responseStream = url
-        .withPOSTData(bodyStream.getMemoryBlock())
-        .withExtraHeaders("Authorization: Bearer " + googleToken + "\n" +
-                          "Content-Type: multipart/related; boundary=" + boundary)
-        .withConnectionTimeoutMs(60000) // 60s timeout for large files
-        .createInputStream(juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inPostData)
-            .withStatusCode(&statusCode));
-
-    if (responseStream != nullptr && (statusCode == 200 || statusCode == 201)) {
-        juce::String responseText = responseStream->readEntireStreamAsString();
-        DBG("Google Drive Upload Successful: " + responseText);
-        
-        auto result = juce::JSON::parse(responseText);
-        return createSuccessResponse(result); // Returns file ID, etc.
-    } else {
-        juce::String errorMsg = "Google Drive Upload failed. Status: " + juce::String(statusCode);
-        if (responseStream) {
-            errorMsg += " Response: " + responseStream->readEntireStreamAsString();
-        }
-        DBG(errorMsg);
-        return createErrorResponse(errorMsg);
-    }
-}
-
-//==============================================================================
-// Helper Method Implementations
-//==============================================================================
-
-juce::String
-CommandAPI::createErrorResponse(const juce::String &errorMessage) const {
-  auto *response = new juce::DynamicObject();
-  response->setProperty("success", false);
-  response->setProperty("error", errorMessage);
-  return juce::JSON::toString(juce::var(response));
-}
-
-juce::var CommandAPI::createSuccessResponse(const juce::var &result) const {
-  auto *response = new juce::DynamicObject();
-  response->setProperty("success", true);
-  if (!result.isVoid())
-    response->setProperty("result", result);
-  return juce::var(response);
-=======
   // Recurse children
   for (auto *child : comp->getChildren()) {
     traverseComponentTree(child, elements);
@@ -2234,7 +2077,6 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("elements", uiElements);
   return createSuccessResponse(juce::var(resultObj));
->>>>>>> origin/master
 }
 
 } // namespace zenith

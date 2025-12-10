@@ -31,6 +31,7 @@ enum class OscillatorWaveform {
   Triangle,
   Noise,
   Supersaw,
+  Wavetable, // Flagship Feature
   NumWaveforms
 };
 
@@ -50,6 +51,18 @@ enum class QualityPreset {
 };
 
 /**
+    LFO waveform shapes
+*/
+enum class LFOWaveform {
+  Sine = 0,
+  Triangle,
+  Saw,
+  Square,
+  SampleAndHold,
+  NumWaveforms
+};
+
+/**
     LFO target parameters (legacy - now part of modulation matrix)
 */
 enum class LFOTarget {
@@ -58,7 +71,36 @@ enum class LFOTarget {
   Osc2Pitch,
   Osc1Mix,
   Osc2Mix,
+  AmpGain,
+  Osc1Shape,
   NumTargets
+};
+
+/**
+    Filter key tracking modes
+*/
+enum class FilterKeyTrack {
+  Off = 0,
+  Half,    // 50% tracking
+  Full,    // 100% tracking
+  NumModes
+};
+
+/**
+    Rhythmic sync rates
+*/
+enum class SyncRate {
+  Free = 0, // Frequency in Hz
+  _1_64,
+  _1_32,
+  _1_16,
+  _1_8,
+  _1_4,
+  _1_2,
+  _1_1,
+  _2_1,
+  _4_1,
+  NumRates
 };
 
 //==============================================================================
@@ -94,6 +136,11 @@ enum class ModulationDestination {
   FilterCutoff,
   FilterResonance,
   AmpGain,
+  Osc1Shape,
+  Osc2Shape,
+  Osc3Shape,
+  LFO1Rate,
+  LFO2Rate,
   NumDestinations
 };
 

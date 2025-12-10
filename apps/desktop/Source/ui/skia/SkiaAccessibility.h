@@ -18,6 +18,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
+#include <core/SkRRect.h>
 #include "ZenithDesignSystem.h"
 
 namespace zenith {

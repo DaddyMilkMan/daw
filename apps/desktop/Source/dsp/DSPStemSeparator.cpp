@@ -12,6 +12,9 @@
 */
 
 #include "DSPStemSeparator.h"
+#include <vector>
+#include <cmath>
+#include <algorithm>
 
 namespace zenith {
 
@@ -94,7 +97,10 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             std::copy(mid.begin(), mid.end(), lowFreq.begin());
             
             // Apply 4th order Linkwitz-Riley lowpass
-            juce::dsp::AudioBlock<float> lowBlock(&lowFreq[0], 1, static_cast<size_t>(numSamples));
+            // Apply 4th order Linkwitz-Riley lowpass
+            float* lowPtr = &lowFreq[0];
+            float* channels[] = { lowPtr };
+            juce::dsp::AudioBlock<float> lowBlock(channels, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> lowContext(lowBlock);
             lowPassFilter_.process(lowContext);
             
@@ -114,7 +120,10 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             std::copy(mid.begin(), mid.end(), highFreq.begin());
             
             // Apply 4th order Linkwitz-Riley highpass (removes bass frequencies)
-            juce::dsp::AudioBlock<float> highBlock(&highFreq[0], 1, static_cast<size_t>(numSamples));
+            // Apply 4th order Linkwitz-Riley highpass (removes bass frequencies)
+            float* highPtr = &highFreq[0];
+            float* channels[] = { highPtr };
+            juce::dsp::AudioBlock<float> highBlock(channels, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> highContext(highBlock);
             highPassFilter_.process(highContext);
             
@@ -140,7 +149,9 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             
             // Get low frequencies from mid (for kick drum)
             std::copy(mid.begin(), mid.end(), lowFreq.begin());
-            juce::dsp::AudioBlock<float> lowBlock(&lowFreq[0], 1, static_cast<size_t>(numSamples));
+            float* lowPtr = &lowFreq[0];
+            float* channels[] = { lowPtr };
+            juce::dsp::AudioBlock<float> lowBlock(channels, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> lowContext(lowBlock);
             lowPassFilter_.process(lowContext);
             
@@ -151,7 +162,9 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             // Add high frequencies from mid (for centered snare attack)
             std::vector<float> midHigh(static_cast<size_t>(numSamples));
             std::copy(mid.begin(), mid.end(), midHigh.begin());
-            juce::dsp::AudioBlock<float> midHighBlock(&midHigh[0], 1, static_cast<size_t>(numSamples));
+            float* midHighPtr = &midHigh[0];
+            float* channels[] = { midHighPtr };
+            juce::dsp::AudioBlock<float> midHighBlock(channels, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> midHighContext(midHighBlock);
             highPassFilter_.process(midHighContext);
             
@@ -196,7 +209,9 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             
             // Apply highpass to remove any bass bleed
             std::copy(side.begin(), side.end(), highFreq.begin());
-            juce::dsp::AudioBlock<float> sideBlock(&highFreq[0], 1, static_cast<size_t>(numSamples));
+            float* sidePtr = &highFreq[0];
+            float* channels[] = { sidePtr };
+            juce::dsp::AudioBlock<float> sideBlock(channels, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> sideContext(sideBlock);
             highPassFilter_.process(sideContext);
             
@@ -216,4 +231,3 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
 }
 
 } // namespace zenith
-

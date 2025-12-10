@@ -3,21 +3,11 @@
  * @brief ClipSynchronizer implementation (integration stub)
  */
 
-<<<<<<< HEAD
-#include "../include/ClipSynchronizer.h"
-#include "../include/ProjectState.h"
-#include "../include/Engine.h"
-#include "../Source/engine/Track.h"
-#include "../Source/engine/Clip.h"
-=======
 #include "../../include/ClipSynchronizer.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
 
 namespace zenith {
->>>>>>> origin/master
-
-using namespace zenith;
 
 //==============================================================================
 ClipSynchronizer::ClipSynchronizer(ProjectState& ps, Engine& eng)
@@ -26,17 +16,9 @@ ClipSynchronizer::ClipSynchronizer(ProjectState& ps, Engine& eng)
     DBG("ClipSynchronizer: Constructor");
 }
 
-<<<<<<< HEAD
-
-ClipSynchronizer::~ClipSynchronizer()
-{
-    stop();
-    DBG("ClipSynchronizer: Destructor");
-=======
 ClipSynchronizer::~ClipSynchronizer() {
   stop();
   DBG("ClipSynchronizer: Destructor");
->>>>>>> origin/master
 }
 
 //==============================================================================
@@ -127,43 +109,8 @@ juce::String ClipSynchronizer::createClip(const juce::String &trackId,
     DBG("ClipSynchronizer: Warning - Track not found in Engine: " + trackId);
   }
 
-<<<<<<< HEAD
-    bool engineTrackFound = false;
-    for (const auto& trackPtr : engine.tracks())
-    {
-        if (trackPtr->getTrackId() == trackId)
-        {
-            auto newClip = std::make_unique<zenith::Clip>();
-            
-            // Convert beats to samples
-            double tempo = projectState.getTempo();
-            double sampleRate = engine.getSampleRate();
-            int64_t startSamples = beatsToSamples(startBeats, tempo, sampleRate);
-            int64_t lengthSamples = beatsToSamples(lengthBeats, tempo, sampleRate);
-
-            newClip->setStartPosition(startSamples);
-            newClip->setLength(lengthSamples);
-            newClip->setName(newClipId); // Use ID as name for now
-            newClip->setType(clipType == "midi" ? zenith::Clip::Type::MIDI : zenith::Clip::Type::Audio);
-
-            trackPtr->addClip(std::move(newClip));
-            engineTrackFound = true;
-            DBG("ClipSynchronizer: Added clip to Engine track " + trackId);
-            break;
-        }
-    }
-
-    if (!engineTrackFound)
-    {
-        DBG("ClipSynchronizer: Warning - Track not found in Engine: " + trackId);
-    }
-
-    DBG("ClipSynchronizer: Created clip " + newClipId);
-    return newClipId;
-=======
   DBG("ClipSynchronizer: Created clip " + newClipId);
   return newClipId;
->>>>>>> origin/master
 }
 
 //==============================================================================
@@ -173,117 +120,6 @@ void ClipSynchronizer::timerCallback() {
 }
 
 //==============================================================================
-<<<<<<< HEAD
-void ClipSynchronizer::syncEngineToProjectState()
-{
-    // This method implements Engine→zenith::ProjectState sync for recorded clips.
-    // Called from timer (Message Thread), so safe to modify zenith::ProjectState.
-    
-    // Thread safety note: This runs on Message Thread (via timer),
-    // Engine access must be done carefully to avoid blocking audio thread.
-    
-    // Get all Engine tracks (read-only access, should be lock-free)
-    const auto& engineTracks = engine.tracks();
-    
-    // Iterate Engine tracks to find new/modified clips
-    for (const auto& trackPtr : engineTracks)
-    {
-        if (!trackPtr) continue;
-        
-        juce::String trackId = trackPtr->getTrackId();
-        
-        // Get corresponding zenith::ProjectState track
-        auto projectTrack = projectState.getTrack(trackId);
-        if (!projectTrack.isValid())
-        {
-            DBG("ClipSynchronizer: Track " + trackId + " not found in zenith::ProjectState - skipping sync");
-            continue;
-        }
-        
-        // Get Engine's clip count
-        int numClips = trackPtr->getNumClips();
-        
-        // Get zenith::ProjectState clips container
-        auto clipsNode = projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
-        if (!clipsNode.isValid())
-        {
-            clipsNode = juce::ValueTree(zenith::ProjectState::ID_CLIPS);
-            projectTrack.appendChild(clipsNode, nullptr);
-        }
-        
-        // Sync each Engine clip to zenith::ProjectState
-        for (int i = 0; i < numClips; ++i)
-        {
-            auto* engineClip = trackPtr->getClip(i);
-            if (engineClip == nullptr) continue;
-            
-            // Check if this clip exists in zenith::ProjectState
-            juce::String clipName = engineClip->getName();
-            bool foundInProjectState = false;
-            
-            for (auto clipNode : clipsNode)
-            {
-                if (clipNode[zenith::ProjectState::PROP_NAME].toString() == clipName)
-                {
-                    foundInProjectState = true;
-                    
-                    // Update clip properties if changed
-                    int64_t engineStart = engineClip->getStartPosition();
-                    int64_t engineLength = engineClip->getLength();
-                    
-                    // Convert samples to beats
-                    double tempo = projectState.getTempo();
-                    double sampleRate = engine.getSampleRate();
-                    
-                    double startBeats = samplesToBeats(engineStart, tempo, sampleRate);
-                    double lengthBeats = samplesToBeats(engineLength, tempo, sampleRate);
-                    
-                    // Update if different (with small tolerance for float precision)
-                    double currentStart = clipNode[zenith::ProjectState::PROP_START];
-                    double currentLength = clipNode[zenith::ProjectState::PROP_LENGTH];
-                    
-                    const double tolerance = 0.001; // ~1ms at 120bpm
-                    if (std::abs(currentStart - startBeats) > tolerance || 
-                        std::abs(currentLength - lengthBeats) > tolerance)
-                    {
-                        clipNode.setProperty(zenith::ProjectState::PROP_START, startBeats, &projectState.getUndoManager());
-                        clipNode.setProperty(zenith::ProjectState::PROP_LENGTH, lengthBeats, &projectState.getUndoManager());
-                        
-                        DBG("ClipSynchronizer: Updated clip " + clipName + " in track " + trackId);
-                    }
-                    break;
-                }
-            }
-            
-            // If clip not found in zenith::ProjectState, it was just recorded - add it
-            if (!foundInProjectState)
-            {
-                // This would typically only happen for newly recorded clips
-                juce::ValueTree newClip(zenith::ProjectState::ID_CLIP);
-                
-                juce::String newClipId = "clip_" + juce::Uuid().toString().substring(0, 8);
-                newClip.setProperty(zenith::ProjectState::PROP_ID, juce::var(newClipId), nullptr);
-                newClip.setProperty(zenith::ProjectState::PROP_NAME, juce::var(clipName), nullptr);
-                newClip.setProperty(zenith::ProjectState::PROP_TYPE, 
-                    juce::var(engineClip->getType() == zenith::Clip::Type::MIDI ? "midi" : "audio"), 
-                    nullptr);
-                
-                // Convert samples to beats
-                double tempo = projectState.getTempo();
-                double sampleRate = engine.getSampleRate();
-                
-                double startBeats = samplesToBeats(engineClip->getStartPosition(), tempo, sampleRate);
-                double lengthBeats = samplesToBeats(engineClip->getLength(), tempo, sampleRate);
-                
-                newClip.setProperty(zenith::ProjectState::PROP_START, startBeats, nullptr);
-                newClip.setProperty(zenith::ProjectState::PROP_LENGTH, lengthBeats, nullptr);
-                
-                clipsNode.appendChild(newClip, &projectState.getUndoManager());
-                
-                DBG("ClipSynchronizer: Added new recorded clip " + clipName + " to track " + trackId);
-            }
-        }
-=======
 void ClipSynchronizer::syncEngineToProjectState() {
   // This method implements Engine→ProjectState sync for recorded clips.
   // Called from timer (Message Thread), so safe to modify ProjectState.
@@ -303,7 +139,6 @@ void ClipSynchronizer::syncEngineToProjectState() {
     if (!projectTrack.isValid()) {
       // Typically skips if track not in UI, but Engine might have temp tracks
       continue;
->>>>>>> origin/master
     }
 
     // Get Engine's clip list (thread-safe read via accessor)

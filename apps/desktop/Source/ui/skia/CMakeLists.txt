@@ -2,6 +2,7 @@ if(ZENITH_ENABLE_SKIA)
     target_sources(ZenithDAW PRIVATE
         BottomBar.cpp
         BrowserPanel.cpp
+        DebugConsoleComponent.cpp
         RightSidePanel.cpp
         SkiaButton.cpp
         SkiaComponent.cpp
@@ -12,7 +13,7 @@ if(ZENITH_ENABLE_SKIA)
         ZenithDesignSystem.cpp
         ZenithLayout.cpp
         ZenithPolySynthUI.cpp
+        ../../rendering/SkiaRenderer.cpp
         ExportDialog.cpp
-        DebugConsoleComponent.cpp
     )
 endif()

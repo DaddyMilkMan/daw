@@ -30,7 +30,7 @@ inline Track* findTrackById(Engine& engine, const juce::String& trackId) {
     return nullptr;
 }
 
-inline Clip* findClipById(ProjectState& state, Track* track, const juce::String& clipId) {
+inline Track::Clip* findClipById(ProjectState& state, Track* track, const juce::String& clipId) {
     if (track == nullptr) return nullptr;
     
     // Get track ID to query ProjectState

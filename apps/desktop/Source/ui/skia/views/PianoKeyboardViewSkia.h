@@ -50,6 +50,14 @@ private:
     // Helper to get note at position
     int getNoteAtPosition(juce::Point<float> pos);
     
+    // Cached resources for 60FPS rendering
+    SkPaint whiteKeyPaint_;
+    SkPaint blackKeyPaint_;
+    SkPaint activeKeyPaint_;
+    SkRect cachedBounds_;
+    
+    void updateCachedPaints(const SkRect& bounds);
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoKeyboardViewSkia)
 };
 

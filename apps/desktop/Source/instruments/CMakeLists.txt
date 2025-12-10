@@ -7,6 +7,8 @@ target_sources(ZenithDAW PRIVATE
     ZenithFilter.cpp
     ZenithEffects.cpp
     ZenithPolySynthVoice.cpp
+    ZenithPolySynth.cpp
+
 
     ZenithPolySynthEditor.cpp
     ZenithPresetManager.cpp

@@ -18,7 +18,6 @@
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
-#include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkPoint.h>
@@ -40,11 +39,11 @@ DebugConsoleComponent::DebugConsoleComponent(ai::SessionDebuggerAgent &debugger)
   setSize(300, static_cast<int>(kCollapsedHeight));
 
   // Start animation timer
-  juce::Timer::startTimerHz(30); // 30 FPS for smooth animations
+  startTimerHz(30); // 30 FPS for smooth animations
 }
 
 DebugConsoleComponent::~DebugConsoleComponent() {
-  juce::Timer::stopTimer();
+  stopTimer();
   debugger_.removeListener(this);
 }
 

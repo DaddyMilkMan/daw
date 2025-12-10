@@ -16,6 +16,9 @@
 */
 
 #include "MixerChannel.h"
+#include "EngineConstants.h"
+#include "../dsp/SIMDHelpers.h"
+#include "../ui/skia/AudioFifo.h"
 
 namespace zenith {
 
@@ -69,12 +72,6 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   // Pre-calculate filter coefficients on message thread
   recalculateCoefficients();
   applyCoefficients();
-
-  // Initialize smoothers (50ms ramp for de-zippering)
-  smoothedVolume.reset(sampleRate, 0.05);
-  smoothedPan.reset(sampleRate, 0.05);
-  smoothedVolume.setCurrentAndTargetValue(volume.load());
-  smoothedPan.setCurrentAndTargetValue(pan.load());
 }
 
 void MixerChannel::releaseResources() {
@@ -178,10 +175,6 @@ void MixerChannel::getNextAudioBlock(
     outputLevel.store(0.0f);
     return;
   }
-
-  // Update smoother targets from atomic state (thread-safe sync)
-  smoothedVolume.setTargetValue(volume.load());
-  smoothedPan.setTargetValue(pan.load());
 
   // Apply any pending coefficient changes (RT-safe: just pointer swap)
   applyCoefficients();
@@ -559,42 +552,24 @@ void MixerChannel::processCompressor(juce::AudioBuffer<float> &buffer) {
 }
 
 void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
-  const int numSamples = buffer.getNumSamples();
-  const int numChannels = buffer.getNumChannels();
+  const float vol = volume.load();
+  const float panValue = pan.load();
+
+  // Calculate left and right gains from pan (-3dB center, constant power)
   const float piOver4 = juce::MathConstants<float>::pi / 4.0f;
+  const float leftGain = vol * std::cos(piOver4 * (1.0f + panValue));
+  const float rightGain = vol * std::sin(piOver4 * (1.0f + panValue));
 
-  if (numChannels == 2) {
-    float *left = buffer.getWritePointer(0);
-    float *right = buffer.getWritePointer(1);
-
-    for (int i = 0; i < numSamples; ++i) {
-        float vol = smoothedVolume.getNextValue();
-        float panVal = smoothedPan.getNextValue();
-
-        float leftGain = vol * std::cos(piOver4 * (1.0f + panVal));
-        float rightGain = vol * std::sin(piOver4 * (1.0f + panVal));
-
-        left[i] *= leftGain;
-        right[i] *= rightGain;
-    }
-  } else if (numChannels == 1) {
-    float *data = buffer.getWritePointer(0);
-    for (int i = 0; i < numSamples; ++i) {
-        float vol = smoothedVolume.getNextValue();
-        // Skip pan calc for mono
-        smoothedPan.getNextValue(); 
-        data[i] *= vol;
-    }
-  } else {
-    // Multi-channel fallback (apply to all)
-    // We iterate just to advance smoothers correctly
-    for (int i = 0; i < numSamples; ++i) {
-        float vol = smoothedVolume.getNextValue();
-        smoothedPan.getNextValue();
-        for (int ch = 0; ch < numChannels; ++ch) {
-            buffer.setSample(ch, i, buffer.getSample(ch, i) * vol);
-        }
-    }
+  if (buffer.getNumChannels() >= 2) {
+    buffer.applyGain(0, 0, buffer.getNumSamples(), leftGain);
+    buffer.applyGain(1, 0, buffer.getNumSamples(), rightGain);
+  } else if (buffer.getNumChannels() == 1) {
+    buffer.applyGain(0, 0, buffer.getNumSamples(), vol);
+  }
+  
+  // Push to visualizer (post-fader, post-pan)
+  if (auto* fifo = spectrumFifo_.load(std::memory_order_relaxed)) {
+      fifo->pushStereoAsMono(buffer, buffer.getNumSamples());
   }
 }
 
@@ -629,44 +604,7 @@ void MixerChannel::updateMeters(const juce::AudioBuffer<float> &buffer,
 
     if (maxLevel > outputPeak.load())
       outputPeak.store(maxLevel);
-
-    // Push samples to visualizer FIFO
-    if (buffer.getNumChannels() > 0) {
-        pushToVisualizer(buffer.getReadPointer(0), buffer.getNumSamples());
-    }
   }
-}
-
-//==============================================================================
-int MixerChannel::readFromVisualizer(float* dest, int numSamples) {
-    int numReady = visualizerFifo_.getNumReady();
-    int numToRead = std::min(numReady, numSamples);
-    
-    if (numToRead > 0) {
-        int start1, size1, start2, size2;
-        visualizerFifo_.prepareToRead(numToRead, start1, size1, start2, size2);
-        
-        if (size1 > 0) std::memcpy(dest, visualizerBuffer_.data() + start1, size1 * sizeof(float));
-        if (size2 > 0) std::memcpy(dest + size1, visualizerBuffer_.data() + start2, size2 * sizeof(float));
-        
-        visualizerFifo_.finishedRead(numToRead);
-    }
-    return numToRead;
-}
-
-void MixerChannel::pushToVisualizer(const float* data, int numSamples) {
-    int numFree = visualizerFifo_.getFreeSpace();
-    int numToWrite = std::min(numFree, numSamples);
-    
-    if (numToWrite > 0) {
-        int start1, size1, start2, size2;
-        visualizerFifo_.prepareToWrite(numToWrite, start1, size1, start2, size2);
-        
-        if (size1 > 0) std::memcpy(visualizerBuffer_.data() + start1, data, size1 * sizeof(float));
-        if (size2 > 0) std::memcpy(visualizerBuffer_.data() + start2, data + size1, size2 * sizeof(float));
-        
-        visualizerFifo_.finishedWrite(numToWrite);
-    }
 }
 
 } // namespace zenith

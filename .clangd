@@ -2,9 +2,6 @@
 # This file configures clangd to find JUCE, Skia, and project headers
 
 # Note: clangd uses this file when compile_commands.json is not available
-<<<<<<< HEAD
-# or to override/supplement its settings
-=======
 # or to override/supplement its settings
 
 CompileFlags:
@@ -90,4 +87,3 @@ InlayHints:
 
 Index:
   Background: Build
->>>>>>> origin/master

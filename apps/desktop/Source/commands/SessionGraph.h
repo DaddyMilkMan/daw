@@ -108,7 +108,7 @@ private:
     juce::var serializeTrack(const Track* track, int trackIndex);
     juce::var serializePlugins(const Track* track);
     juce::var serializeClips(const Track* track);
-    juce::var serializeClip(const Clip* clip, int clipIndex);
+    juce::var serializeClip(const Track::Clip* clip, int clipIndex);
 
     //==============================================================================
     // Member variables

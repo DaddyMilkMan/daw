@@ -42,18 +42,26 @@ public:
   float processSample(float input);
 
 private:
+  void setModel(int model) { model_ = model; } // 0=SVF, 1=Ladder
+
+private:
   FilterType type_ = FilterType::Lowpass;
+  int model_ = 0; // 0=SVF, 1=Ladder
   double sampleRate_ = 44100.0;
 
   // Smoothed parameters to avoid zipper noise
   juce::SmoothedValue<float> cutoffSmoothed_;
   juce::SmoothedValue<float> resonanceSmoothed_;
-
   float drive_ = 1.0f;
 
-  // State variables filter implementation
-  float v0_ = 0.0f, v1_ = 0.0f, v2_ = 0.0f;
+  // SVF State
   float ic1eq_ = 0.0f, ic2eq_ = 0.0f;
+  
+  // Ladder State (Huovilainen / Stilson)
+  double l_z1 = 0, l_z2 = 0, l_z3 = 0, l_z4 = 0;
+
+  float processSVF(float input);
+  float processLadder(float input);
 };
 
 } // namespace zenith

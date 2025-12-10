@@ -457,46 +457,6 @@ void BrowserPanel::drawItemList(SkCanvas* canvas)
     canvas->clipRect(SkRect::MakeXYWH(listAreaBounds_.getX(), listAreaBounds_.getY(),
                                        listAreaBounds_.getWidth(), listAreaBounds_.getHeight()));
     
-    // Cloud mode - show cloud presets
-    if (viewMode_ == BrowserViewMode::Cloud)
-    {
-        if (isLoadingCloudPresets_ || cloudLoadError_.isNotEmpty() || cloudPresets_.empty())
-        {
-            drawCloudLoadingState(canvas);
-        }
-        else
-        {
-            int maxVisible = listAreaBounds_.getHeight() / itemHeight_;
-            int visibleStart = scrollOffset_;
-            int visibleEnd = juce::jmin(visibleStart + maxVisible + 1, static_cast<int>(cloudPresets_.size()));
-            
-            for (int i = visibleStart; i < visibleEnd; ++i)
-            {
-                int itemY = listAreaBounds_.getY() + (i - scrollOffset_) * itemHeight_;
-                auto itemBounds = juce::Rectangle<int>(0, itemY, getWidth(), itemHeight_);
-                
-                drawCloudItem(canvas, i, itemBounds);
-            }
-            
-            // Scrollbar for cloud items
-            if (cloudPresets_.size() > static_cast<size_t>(maxVisible))
-            {
-                float ratio = static_cast<float>(maxVisible) / static_cast<float>(cloudPresets_.size());
-                float scrollbarHeight = ratio * listAreaBounds_.getHeight();
-                float scrollbarY = listAreaBounds_.getY() + 
-                                  (static_cast<float>(scrollOffset_) / static_cast<float>(cloudPresets_.size())) * listAreaBounds_.getHeight();
-                
-                SkPaint scrollPaint;
-                scrollPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
-                canvas->drawRoundRect(SkRect::MakeXYWH(getWidth() - 6, scrollbarY, 4, scrollbarHeight), 2, 2, scrollPaint);
-            }
-        }
-        
-        canvas->restore();
-        return;
-    }
-    
-    // Local mode - show local items
     int maxVisible = listAreaBounds_.getHeight() / itemHeight_;
     int visibleStart = scrollOffset_;
     int visibleEnd = juce::jmin(visibleStart + maxVisible + 1, (int)displayItems_.size());
@@ -510,7 +470,7 @@ void BrowserPanel::drawItemList(SkCanvas* canvas)
     }
     
     // Scrollbar
-    if (displayItems_.size() > static_cast<size_t>(maxVisible))
+    if (displayItems_.size() > maxVisible)
     {
         float ratio = (float)maxVisible / (float)displayItems_.size();
         float scrollbarHeight = ratio * listAreaBounds_.getHeight();
@@ -964,7 +924,6 @@ void BrowserPanel::mouseDown(const juce::MouseEvent& e)
     {
         if (filterAllBounds_.contains(e.getPosition()))
         {
-            setViewMode(BrowserViewMode::Local);
             model_.clearFilter();
             updateDisplayItems();
             repaint();
@@ -972,7 +931,6 @@ void BrowserPanel::mouseDown(const juce::MouseEvent& e)
         }
         if (filterAudioBounds_.contains(e.getPosition()))
         {
-            setViewMode(BrowserViewMode::Local);
             model_.setActiveFilter(BrowserItemType::AudioFile);
             updateDisplayItems();
             repaint();
@@ -980,7 +938,6 @@ void BrowserPanel::mouseDown(const juce::MouseEvent& e)
         }
         if (filterMidiBounds_.contains(e.getPosition()))
         {
-            setViewMode(BrowserViewMode::Local);
             model_.setActiveFilter(BrowserItemType::MidiFile);
             updateDisplayItems();
             repaint();
@@ -988,15 +945,9 @@ void BrowserPanel::mouseDown(const juce::MouseEvent& e)
         }
         if (filterPluginBounds_.contains(e.getPosition()))
         {
-            setViewMode(BrowserViewMode::Local);
             model_.setActiveFilter(BrowserItemType::Plugin);
             updateDisplayItems();
             repaint();
-            return;
-        }
-        if (filterCloudBounds_.contains(e.getPosition()))
-        {
-            setViewMode(BrowserViewMode::Cloud);
             return;
         }
     }
@@ -1020,25 +971,6 @@ void BrowserPanel::mouseDown(const juce::MouseEvent& e)
     {
         int clickedIndex = getItemIndexAt(e.y);
         
-        // Cloud mode - handle cloud preset selection
-        if (viewMode_ == BrowserViewMode::Cloud)
-        {
-            // Click on error state to retry
-            if (cloudLoadError_.isNotEmpty())
-            {
-                refreshCloudPresets();
-                return;
-            }
-            
-            if (clickedIndex >= 0 && clickedIndex < static_cast<int>(cloudPresets_.size()))
-            {
-                cloudSelectedIndex_ = clickedIndex;
-                repaint();
-            }
-            return;
-        }
-        
-        // Local mode - handle local item selection
         if (clickedIndex >= 0 && clickedIndex < (int)displayItems_.size())
         {
             selectedIndex_ = clickedIndex;
@@ -1097,24 +1029,6 @@ void BrowserPanel::mouseDoubleClick(const juce::MouseEvent& e)
     {
         int clickedIndex = getItemIndexAt(e.y);
         
-        // Cloud mode - double-click downloads preset
-        if (viewMode_ == BrowserViewMode::Cloud)
-        {
-            if (clickedIndex >= 0 && clickedIndex < static_cast<int>(cloudPresets_.size()))
-            {
-                const auto& preset = cloudPresets_[clickedIndex];
-                
-                // Trigger download
-                downloadCloudPreset(preset.id);
-                
-                // Also notify via callback if set
-                if (onCloudPresetDoubleClicked)
-                    onCloudPresetDoubleClicked(preset);
-            }
-            return;
-        }
-        
-        // Local mode
         if (clickedIndex >= 0 && clickedIndex < (int)displayItems_.size())
         {
             auto item = displayItems_[clickedIndex];
@@ -1137,61 +1051,25 @@ void BrowserPanel::mouseMove(const juce::MouseEvent& e)
     {
         int newHoverIndex = getItemIndexAt(e.y);
         
-        // Cloud mode
-        if (viewMode_ == BrowserViewMode::Cloud)
-        {
-            if (newHoverIndex != cloudHoverIndex_)
-            {
-                cloudHoverIndex_ = newHoverIndex;
-                repaint();
-            }
-            return;
-        }
-        
-        // Local mode
         if (newHoverIndex != hoverIndex_)
         {
             hoverIndex_ = newHoverIndex;
             repaint();
         }
     }
-    else 
+    else if (hoverIndex_ != -1)
     {
-        if (viewMode_ == BrowserViewMode::Cloud)
-        {
-            if (cloudHoverIndex_ != -1)
-            {
-                cloudHoverIndex_ = -1;
-                repaint();
-            }
-        }
-        else if (hoverIndex_ != -1)
-        {
-            hoverIndex_ = -1;
-            repaint();
-        }
+        hoverIndex_ = -1;
+        repaint();
     }
 }
 
 void BrowserPanel::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel)
 {
-    juce::ignoreUnused(e);
+    if (displayItems_.empty()) return;
     
     int delta = (wheel.deltaY > 0) ? -3 : 3;
-    int maxScroll = 0;
-    
-    // Calculate max scroll based on mode
-    if (viewMode_ == BrowserViewMode::Cloud)
-    {
-        if (cloudPresets_.empty()) return;
-        maxScroll = std::max(0, static_cast<int>(cloudPresets_.size()) - (listAreaBounds_.getHeight() / itemHeight_));
-    }
-    else
-    {
-        if (displayItems_.empty()) return;
-        maxScroll = std::max(0, static_cast<int>(displayItems_.size()) - (listAreaBounds_.getHeight() / itemHeight_));
-    }
-    
+    int maxScroll = std::max(0, (int)displayItems_.size() - (listAreaBounds_.getHeight() / itemHeight_));
     scrollOffset_ = juce::jlimit(0, maxScroll, scrollOffset_ + delta);
     repaint();
 }
@@ -1338,8 +1216,8 @@ void BrowserPanel::drawFilterBar(SkCanvas* canvas)
     bgPaint.setColor(SkColorSetRGB(28, 28, 32));
     canvas->drawRect(SkRect::MakeXYWH(0, y, w, h), bgPaint);
     
-    // Calculate tab widths - now 5 tabs
-    int tabWidth = (getWidth() - 16) / 5;
+    // Calculate tab widths
+    int tabWidth = (getWidth() - 16) / 4;
     int x = 8;
     
     filterAllBounds_ = juce::Rectangle<int>(x, static_cast<int>(y) + 4, tabWidth - 4, static_cast<int>(h) - 8);
@@ -1349,57 +1227,13 @@ void BrowserPanel::drawFilterBar(SkCanvas* canvas)
     filterMidiBounds_ = juce::Rectangle<int>(x, static_cast<int>(y) + 4, tabWidth - 4, static_cast<int>(h) - 8);
     x += tabWidth;
     filterPluginBounds_ = juce::Rectangle<int>(x, static_cast<int>(y) + 4, tabWidth - 4, static_cast<int>(h) - 8);
-    x += tabWidth;
-    filterCloudBounds_ = juce::Rectangle<int>(x, static_cast<int>(y) + 4, tabWidth - 4, static_cast<int>(h) - 8);
     
     // Draw tabs
     auto activeFilter = model_.getActiveFilter();
-    bool isCloudMode = (viewMode_ == BrowserViewMode::Cloud);
-    
-    drawFilterTab(canvas, filterAllBounds_, "All", !model_.hasActiveFilter() && !isCloudMode);
-    drawFilterTab(canvas, filterAudioBounds_, "Audio", activeFilter == BrowserItemType::AudioFile && !isCloudMode);
-    drawFilterTab(canvas, filterMidiBounds_, "MIDI", activeFilter == BrowserItemType::MidiFile && !isCloudMode);
-    drawFilterTab(canvas, filterPluginBounds_, "Plugins", activeFilter == BrowserItemType::Plugin && !isCloudMode);
-    
-    // Cloud tab with special styling
-    SkPaint cloudTabPaint;
-    if (isCloudMode)
-    {
-        // Active cloud tab - cyan accent
-        cloudTabPaint.setColor(SkColorSetARGB(70, 0, 200, 255));
-    }
-    else
-    {
-        cloudTabPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
-    }
-    cloudTabPaint.setAntiAlias(true);
-    canvas->drawRoundRect(SkRect::MakeXYWH(filterCloudBounds_.getX(), filterCloudBounds_.getY(), 
-                                            filterCloudBounds_.getWidth(), filterCloudBounds_.getHeight()),
-                          4, 4, cloudTabPaint);
-    
-    // Cloud indicator line
-    if (isCloudMode)
-    {
-        SkPaint indicatorPaint;
-        indicatorPaint.setColor(SkColorSetRGB(0, 200, 255));
-        canvas->drawRect(SkRect::MakeXYWH(filterCloudBounds_.getX() + 4, filterCloudBounds_.getBottom() - 2, 
-                                           filterCloudBounds_.getWidth() - 8, 2), indicatorPaint);
-    }
-    
-    // Cloud icon + text
-    float cloudIconX = filterCloudBounds_.getX() + 12;
-    float cloudIconY = filterCloudBounds_.getCentreY();
-    drawCloudIcon(canvas, cloudIconX, cloudIconY, 10);
-    
-    SkFont cloudFont;
-    cloudFont.setSize(11.0f);
-    cloudFont.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-    
-    SkPaint cloudTextPaint;
-    cloudTextPaint.setColor(isCloudMode ? SkColorSetRGB(150, 230, 255) : SkColorSetARGB(150, 255, 255, 255));
-    cloudTextPaint.setAntiAlias(true);
-    
-    canvas->drawString("Cloud", filterCloudBounds_.getX() + 24, filterCloudBounds_.getCentreY() + 4, cloudFont, cloudTextPaint);
+    drawFilterTab(canvas, filterAllBounds_, "All", !model_.hasActiveFilter());
+    drawFilterTab(canvas, filterAudioBounds_, "Audio", activeFilter == BrowserItemType::AudioFile);
+    drawFilterTab(canvas, filterMidiBounds_, "MIDI", activeFilter == BrowserItemType::MidiFile);
+    drawFilterTab(canvas, filterPluginBounds_, "Plugins", activeFilter == BrowserItemType::Plugin);
     
     // Bottom border
     SkPaint borderPaint;
@@ -1529,7 +1363,7 @@ void BrowserPanel::showContextMenu(int itemIndex, juce::Point<int> position)
                                 repaint();
                             }
                         }
-                        delete alertWindow;
+                        // AlertWindow is managed by JUCE, no manual deletion needed
                     }));
             }
             else if (result >= 100)
@@ -1568,272 +1402,6 @@ void BrowserPanel::toggleFavorite(std::shared_ptr<BrowserItem> item)
     }
     
     repaint();
-}
-
-//==============================================================================
-// Cloud Features
-//==============================================================================
-
-void BrowserPanel::setViewMode(BrowserViewMode mode)
-{
-    if (viewMode_ != mode)
-    {
-        viewMode_ = mode;
-        scrollOffset_ = 0;
-        selectedIndex_ = -1;
-        cloudSelectedIndex_ = -1;
-        
-        if (mode == BrowserViewMode::Cloud)
-        {
-            // Load cloud presets if not already loaded
-            if (cloudPresets_.empty() && !isLoadingCloudPresets_)
-            {
-                refreshCloudPresets();
-            }
-        }
-        
-        repaint();
-    }
-}
-
-void BrowserPanel::refreshCloudPresets()
-{
-    if (isLoadingCloudPresets_)
-        return;
-    
-    isLoadingCloudPresets_ = true;
-    cloudLoadError_ = "";
-    repaint();
-    
-    cloudClient_.fetchPublicPresets(
-        [this](const std::vector<CloudPreset>& presets, bool success)
-        {
-            isLoadingCloudPresets_ = false;
-            
-            if (success)
-            {
-                cloudPresets_ = presets;
-                cloudLoadError_ = "";
-                DBG("BrowserPanel: Loaded " + juce::String(presets.size()) + " cloud presets");
-            }
-            else
-            {
-                cloudLoadError_ = cloudClient_.getLastError();
-                if (cloudLoadError_.isEmpty())
-                    cloudLoadError_ = "Failed to load cloud presets";
-                DBG("BrowserPanel: " + cloudLoadError_);
-            }
-            
-            repaint();
-        });
-}
-
-void BrowserPanel::downloadCloudPreset(const juce::String& presetId)
-{
-    // Get the destination folder (user's presets directory)
-    juce::File presetsFolder = juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-                                .getChildFile("Zenith").getChildFile("Presets");
-    
-    if (!presetsFolder.exists())
-        presetsFolder.createDirectory();
-    
-    cloudClient_.downloadPreset(presetId, presetsFolder,
-        [this, presetId](const juce::File& savedFile, bool success)
-        {
-            if (success)
-            {
-                DBG("BrowserPanel: Downloaded preset to " + savedFile.getFullPathName());
-                
-                // Optionally refresh local browser to show new preset
-                // model_.refresh();
-                
-                // Show success notification (in a real app, use a toast/notification system)
-                juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::InfoIcon,
-                    "Preset Downloaded",
-                    "Preset saved to: " + savedFile.getFullPathName());
-            }
-            else
-            {
-                DBG("BrowserPanel: Failed to download preset " + presetId);
-                juce::AlertWindow::showMessageBoxAsync(
-                    juce::MessageBoxIconType::WarningIcon,
-                    "Download Failed",
-                    "Could not download the preset. Please try again.");
-            }
-        },
-        [](float progress)
-        {
-            // Could show a progress indicator here
-            DBG("Download progress: " + juce::String(progress * 100, 1) + "%");
-        });
-}
-
-void BrowserPanel::drawCloudIcon(SkCanvas* canvas, float x, float y, float size)
-{
-    SkPaint cloudPaint;
-    cloudPaint.setColor(SkColorSetARGB(200, 100, 200, 255));
-    cloudPaint.setAntiAlias(true);
-    cloudPaint.setStyle(SkPaint::kFill_Style);
-    
-    // Simple cloud shape using circles
-    float scale = size / 10.0f;
-    
-    // Main cloud body (overlapping circles)
-    canvas->drawCircle(x - 3 * scale, y, 4 * scale, cloudPaint);
-    canvas->drawCircle(x + 3 * scale, y, 4 * scale, cloudPaint);
-    canvas->drawCircle(x, y - 2 * scale, 5 * scale, cloudPaint);
-    
-    // Base rectangle to fill gaps
-    canvas->drawRect(SkRect::MakeXYWH(x - 7 * scale, y - 2 * scale, 14 * scale, 5 * scale), cloudPaint);
-}
-
-void BrowserPanel::drawCloudItem(SkCanvas* canvas, int index, const juce::Rectangle<int>& bounds)
-{
-    if (index < 0 || index >= static_cast<int>(cloudPresets_.size()))
-        return;
-    
-    const auto& preset = cloudPresets_[index];
-    float x = static_cast<float>(bounds.getX());
-    float y = static_cast<float>(bounds.getY());
-    float w = static_cast<float>(bounds.getWidth());
-    float h = static_cast<float>(bounds.getHeight());
-    
-    // Selection / Hover Background
-    if (index == cloudSelectedIndex_)
-    {
-        SkPoint selGradPoints[2] = {{x, 0}, {x + w, 0}};
-        SkColor selGradColors[2] = {SkColorSetARGB(60, 0, 200, 255), SkColorSetARGB(20, 0, 200, 255)};
-        auto selGradient = SkGradientShader::MakeLinear(selGradPoints, selGradColors, nullptr, 2, SkTileMode::kClamp);
-        
-        SkPaint selPaint;
-        selPaint.setShader(selGradient);
-        canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
-        
-        // Selection bar
-        SkPaint barPaint;
-        barPaint.setColor(SkColorSetRGB(0, 220, 255));
-        canvas->drawRect(SkRect::MakeXYWH(0, y + 2, 3, h - 4), barPaint);
-    }
-    else if (index == cloudHoverIndex_)
-    {
-        SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
-        SkColor hovGradColors[2] = {SkColorSetARGB(35, 255, 255, 255), SkColorSetARGB(5, 255, 255, 255)};
-        auto hovGradient = SkGradientShader::MakeLinear(hovGradPoints, hovGradColors, nullptr, 2, SkTileMode::kClamp);
-        
-        SkPaint hovPaint;
-        hovPaint.setShader(hovGradient);
-        canvas->drawRoundRect(SkRect::MakeXYWH(x + 4, y + 1, w - 8, h - 2), 4, 4, hovPaint);
-    }
-    
-    // Cloud icon
-    drawCloudIcon(canvas, x + 18, bounds.getCentreY(), 12);
-    
-    // Preset name
-    SkFont font;
-    font.setSize(13.0f);
-    font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-    
-    SkPaint textPaint;
-    textPaint.setColor(index == cloudSelectedIndex_ ? SkColorSetRGB(150, 235, 255) : SkColorSetRGB(220, 220, 225));
-    textPaint.setAntiAlias(true);
-    
-    canvas->drawString(preset.name.toStdString().c_str(), x + 38, bounds.getCentreY() + 4, font, textPaint);
-    
-    // Author name (smaller, dimmed)
-    if (preset.ownerName.isNotEmpty())
-    {
-        SkFont authorFont;
-        authorFont.setSize(10.0f);
-        authorFont.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-        
-        SkPaint authorPaint;
-        authorPaint.setColor(SkColorSetARGB(120, 255, 255, 255));
-        authorPaint.setAntiAlias(true);
-        
-        // Position after name
-        SkRect nameBounds;
-        font.measureText(preset.name.toStdString().c_str(), preset.name.length(), SkTextEncoding::kUTF8, &nameBounds);
-        float authorX = x + 38 + nameBounds.width() + 8;
-        
-        if (authorX < w - 80) // Only show if there's space
-        {
-            canvas->drawString(("by " + preset.ownerName).toStdString().c_str(), 
-                              authorX, bounds.getCentreY() + 4, authorFont, authorPaint);
-        }
-    }
-    
-    // Download count (right side)
-    SkFont metaFont;
-    metaFont.setSize(10.0f);
-    metaFont.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-    
-    SkPaint metaPaint;
-    metaPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
-    metaPaint.setAntiAlias(true);
-    
-    juce::String dlStr = juce::String(preset.downloads) + " DL";
-    canvas->drawString(dlStr.toStdString().c_str(), w - 50, bounds.getCentreY() + 3, metaFont, metaPaint);
-}
-
-void BrowserPanel::drawCloudLoadingState(SkCanvas* canvas)
-{
-    if (isLoadingCloudPresets_)
-    {
-        // Loading spinner/text
-        SkFont font;
-        font.setSize(14.0f);
-        font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-        
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetARGB(180, 0, 200, 255));
-        textPaint.setAntiAlias(true);
-        
-        float centerY = listAreaBounds_.getCentreY();
-        canvas->drawString("Loading cloud presets...", 
-                          listAreaBounds_.getCentreX() - 80, centerY, font, textPaint);
-    }
-    else if (cloudLoadError_.isNotEmpty())
-    {
-        // Error message
-        SkFont font;
-        font.setSize(13.0f);
-        font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-        
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetARGB(180, 255, 100, 100));
-        textPaint.setAntiAlias(true);
-        
-        float centerY = listAreaBounds_.getCentreY();
-        canvas->drawString(cloudLoadError_.toStdString().c_str(), 
-                          listAreaBounds_.getX() + 20, centerY, font, textPaint);
-        
-        // Retry hint
-        SkPaint hintPaint;
-        hintPaint.setColor(SkColorSetARGB(120, 255, 255, 255));
-        hintPaint.setAntiAlias(true);
-        
-        canvas->drawString("Click to retry", 
-                          listAreaBounds_.getX() + 20, centerY + 20, font, hintPaint);
-    }
-    else if (cloudPresets_.empty())
-    {
-        // Empty state
-        SkFont font;
-        font.setSize(14.0f);
-        font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
-        
-        SkPaint textPaint;
-        textPaint.setColor(SkColorSetARGB(120, 255, 255, 255));
-        textPaint.setAntiAlias(true);
-        
-        float centerY = listAreaBounds_.getCentreY();
-        canvas->drawString("No cloud presets available", 
-                          listAreaBounds_.getCentreX() - 90, centerY, font, textPaint);
-        
-        // Cloud icon
-        drawCloudIcon(canvas, listAreaBounds_.getCentreX(), centerY - 40, 24);
-    }
 }
 
 } // namespace zenith

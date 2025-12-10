@@ -10,10 +10,6 @@
 */
 
 #include "SkiaButton.h"
-#include "ZenithAnimation.h"
-#include "../ZenithTypography.h"
-#include "ZenithAnimation.h"
-#include "../ZenithTypography.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
@@ -23,7 +19,8 @@
 #include <core/SkColor.h>
 #include <effects/SkGradientShader.h>
 #include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
+#include <core/SkBlurTypes.h> // Explicitly include
+
 
 using namespace zenith;
 
@@ -205,15 +202,14 @@ void SkiaButton::drawSkia(SkCanvas* canvas) {
 
 void SkiaButton::onHoverEnter() {
     invalidateColors();
-    // Use spring physics for more natural feel
-    animateWithSpring("scale", 1.04f, 400.0f, 25.0f);  // Snappy config
-    animateWithSpring("glow", 0.8f, 300.0f, 20.0f);
+    animateTo("scale", 1.02f, design::animation::DURATION_FAST);
+    animateTo("glow", 1.0f, design::animation::DURATION_FAST);
 }
 
 void SkiaButton::onHoverExit() {
     invalidateColors();
-    animateWithSpring("scale", 1.0f, 350.0f, 25.0f);
-    animateWithSpring("glow", 0.0f, 300.0f, 25.0f);
+    animateTo("scale", 1.0f, design::animation::DURATION_FAST);
+    animateTo("glow", 0.0f, design::animation::DURATION_FAST);
 }
 
 void SkiaButton::mouseDown(const juce::MouseEvent& e) {
@@ -222,8 +218,7 @@ void SkiaButton::mouseDown(const juce::MouseEvent& e) {
     pressed_ = true;
     invalidateColors();
     
-    // Quick press-down animation (snappier spring)
-    animateWithSpring("scale", 0.95f, 600.0f, 35.0f);
+    animateTo("scale", 0.98f, design::animation::DURATION_INSTANT);
     
     // Handle click
     if (getLocalBounds().contains(e.getPosition())) {
@@ -241,20 +236,19 @@ void SkiaButton::mouseUp(const juce::MouseEvent& e) {
     juce::ignoreUnused(e);
     pressed_ = false;
     invalidateColors();
-    // Bouncy release animation
-    animateWithSpring("scale", isHovered() ? 1.04f : 1.0f, 300.0f, 15.0f);
+    animateTo("scale", 1.0f, design::animation::DURATION_FAST);
 }
 
 void SkiaButton::focusGained(juce::Component::FocusChangeType cause) {
     juce::ignoreUnused(cause);
     setGlowEnabled(true);
-    animateWithSpring("glow", 1.0f, 200.0f, 20.0f);
+    animateTo("glow", 0.8f, design::animation::DURATION_NORMAL);
 }
 
 void SkiaButton::focusLost(juce::Component::FocusChangeType cause) {
     juce::ignoreUnused(cause);
     setGlowEnabled(style_ == Style::Primary || style_ == Style::Danger);
-    animateWithSpring("glow", 0.0f, 200.0f, 25.0f);
+    animateTo("glow", 0.0f, design::animation::DURATION_NORMAL);
 }
 
 // ============================================================================

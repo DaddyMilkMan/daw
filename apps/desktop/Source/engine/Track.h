@@ -2,8 +2,15 @@
   ==============================================================================
 
     Track.h
-    Created: 26 May 2024 1:35:46pm
-    Author:  Administrator
+    Ported from: ZenithDAW-Native/Source/Audio/Track.h (2025-11-11)
+    Author:  Zenith DAW → Zenith DAW
+
+    Audio/MIDI track with clip playback, plugin chain, and mixer controls
+
+    JUCE 8 / C++20 adaptations:
+    - Wrapped in namespace zenith
+    - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
+    - Plugin hosting stubbed for Phase 2
 
   ==============================================================================
 */
@@ -13,18 +20,23 @@
 #include "AutomationLane.h"
 #include "MixerChannel.h"
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
-#include <map>
+#include <juce_data_structures/juce_data_structures.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
 
 // Forward declarations
 namespace zenith {
 class Instrument;
 class TempoMap;
-class Clip; // Explicitly forward declare Clip
 } // namespace zenith
 
 namespace zenith {
@@ -32,14 +44,17 @@ namespace zenith {
 // Forward declaration
 class PluginHost;
 
+//==============================================================================
 /**
- * @class Track
- * @brief Represents an audio or MIDI track in the DAW.
- *
- * Manages clips, plugins, volume, pan, mute, solo, and arm state.
- * Designed to be real-time safe for audio processing where possible.
- */
-class Track {
+    Represents an audio or MIDI track in the DAW.
+
+    Each track can contain multiple clips, has its own plugin chain,
+    and provides mixer controls (volume, pan, mute, solo).
+
+    This class is designed to be used from both the audio thread and the
+    message thread, so all controls use atomic operations for lock-free access.
+*/
+class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
   //==============================================================================
   enum class Type {
@@ -51,104 +66,129 @@ public:
   };
 
   //==============================================================================
-  /**
-   * @brief Constructor
-   * @param name Initial name of the track
-   * @param type Type of track (Audio, MIDI, Instrument)
-   */
-  Track(juce::String name, Type type);
-  ~Track();
+  Track(const juce::String &name, Type type);
+  ~Track() override;
 
   //==============================================================================
-  // Lifecycle
-  //==============================================================================
+  // AudioSource interface
+  void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+  void releaseResources() override;
+  void
+  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
 
-  /**
-   * @brief Prepares track for audio playback.
-   * @param samplesPerBlockExpected The expected number of samples in each audio
-   * block
-   * @param sampleRate The sample rate of the audio context
-   */
-  void prepareToPlay(int samplesPerBlockExpected, double sampleRate);
-
-  /**
-   * @brief Releases any resources used by the track.
-   */
-  void releaseResources();
+  // Phase 1.3: Version that takes explicit playhead position and optional
+  // incoming MIDI and aux buffers. Added optional TempoMap for automation.
+  void getNextAudioBlock(
+      const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
+      const juce::MidiBuffer *incomingMidi = nullptr,
+      const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
+      const TempoMap *tempoMap = nullptr);
 
   //==============================================================================
-  // Audio Processing (Realtime Safe)
-  //==============================================================================
+  // Track properties
+  const juce::String &getName() const { return trackName; }
+  void setName(const juce::String &newName);
 
-  using AuxBufferList = const std::vector<juce::AudioBuffer<float> *>;
+  const juce::String &getTrackId() const { return trackId; }
+  void setTrackId(const juce::String &id) { trackId = id; }
 
-  /**
-   * @brief Processes the next block of audio for this track.
-   * @param bufferToFill The audio buffer to fill with processed audio.
-   * @param playheadPosition The current playhead position in samples.
-   * @param incomingMidi Optional: MIDI messages to process (from external controller).
-   * @param auxBuffers Optional: List of aux bus buffers to send audio to.
-   * @param tempoMap Optional: Current tempo map for beat calculations.
-   * @note This method must be real-time safe.
-   */
-  void getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill,
-                         juce::int64 playheadPosition,
-                         const juce::MidiBuffer *incomingMidi = nullptr,
-                         const AuxBufferList &auxBuffers = {},
-                         const TempoMap *tempoMap = nullptr);
-
-  /**
-   * @brief Legacy overload for simple audio processing without advanced
-   * context.
-   * @param bufferToFill The audio buffer to fill.
-   */
-  void getNextAudioBlock(juce::AudioSourceChannelInfo &bufferToFill);
-
-  //==============================================================================
-  // Properties (Thread-safe where appropriate)
-  //==============================================================================
-
-  void setTrackId(const juce::String &newId) { trackId = newId; }
-  juce::String getTrackId() const { return trackId; }
-
-  void setName(const juce::String &newName) { trackName = newName; sendChangeMessage(); }
-  juce::String getName() const { return trackName; }
-
-  void setType(Type newType) { trackType = newType; sendChangeMessage(); }
   Type getType() const { return trackType; }
+  juce::String getTypeString() const;
 
-  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); sendChangeMessage(); }
+  int getTrackIndex() const { return trackIndex; }
+  void setTrackIndex(int index) { trackIndex = index; }
+
+  //==============================================================================
+  // Mixer controls (thread-safe using atomics)
+  // Mixer controls (thread-safe using atomics)
+  void setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
   float getVolume() const { return mixerChannel.getVolume(); }
 
-  void setPan(float newPan) { mixerChannel.setPan(newPan); sendChangeMessage(); }
+  void setPan(float newPan) { mixerChannel.setPan(newPan); }
   float getPan() const { return mixerChannel.getPan(); }
 
-  void setMuted(bool newMuted) { mixerChannel.setMuted(newMuted); sendChangeMessage(); }
+  void setMuted(bool shouldBeMuted) { mixerChannel.setMuted(shouldBeMuted); }
   bool isMuted() const { return mixerChannel.isMuted(); }
 
-  void setSolo(bool newSolo) { mixerChannel.setSolo(newSolo); sendChangeMessage(); }
+  void setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
   bool isSolo() const { return mixerChannel.isSolo(); }
+
+  void setSilencedBySolo(bool silenced) {
+    mixerChannel.setSilencedBySolo(silenced);
+  }
+  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
 
   void setArmed(bool shouldBeArmed); // For recording
   bool isArmed() const { return armed.load(); }
 
-  // Special setter for Engine's solo logic
-  void setSilencedBySolo(bool silenced) { mixerChannel.setSilencedBySolo(silenced); }
-  bool isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
+  void setEnabled(bool shouldBeEnabled);
+  bool isEnabled() const { return enabled.load(); }
 
-  void setInputChannel(int channelIndex) { inputChannelIndex = channelIndex; sendChangeMessage(); }
-  int getInputChannel() const { return inputChannelIndex; }
-
-  void setMidiChannel(int channel) { midiChannel = channel; sendChangeMessage(); }
-  int getMidiChannel() const { return midiChannel; }
+  void setInputChannel(int channel) { inputChannelIndex.store(channel); }
+  int getInputChannel() const { return inputChannelIndex.load(); }
 
   //==============================================================================
-  // Clips
+  // Freeze state (for CPU optimization)
+  void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
+  bool isFrozen() const { return frozen.load(); }
+
+  MixerChannel &getMixerChannel() { return mixerChannel; }
+  const MixerChannel &getMixerChannel() const { return mixerChannel; }
+
   //==============================================================================
+  // Instrument management (for Instrument tracks)
+  /**
+   * @brief Set the instrument for this track
+   * @param instrument Instrument instance (must be non-null)
+   * @note Message thread only
+   */
+  void setInstrument(std::unique_ptr<Instrument> instrument);
+
+  /**
+   * @brief Get the current instrument (if any)
+   * @return Pointer to instrument, or nullptr if no instrument set
+   * @note Message thread only
+   */
+  Instrument *getInstrument() const { return instrument_.get(); }
+
+  /**
+   * @brief Check if track has an instrument
+   */
+  bool hasInstrument() const { return instrument_ != nullptr; }
+
+  //==============================================================================
+  // Plugin chain management (Phase 3: VST3 hosting MVP)
+  // MESSAGE THREAD ONLY for add/remove/clear
+  // Audio thread can process existing plugins safely (no modifications during
+  // playback)
+  void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+  void removePlugin(int pluginIndex);
+  void clearPlugins();
+  int getNumPlugins() const;
+  juce::AudioPluginInstance *getPlugin(int index) const;
+
+  //==============================================================================
+  // MIDI Scheduling
+  /**
+   * @brief Generate MIDI events for the current audio block from NOTES in clips
+   * @param trackState ValueTree for this track from ProjectState
+   * @param tempo Current tempo in BPM
+   * @param sampleRate Current sample rate
+   * @param blockStartSample Transport position at start of block
+   * @param blockSize Number of samples in block
+   * @param midiOut MIDI buffer to fill with events
+   */
+  void generateMidiForBlock(const juce::ValueTree &trackState, double tempo,
+                            double sampleRate, juce::int64 blockStartSample,
+                            int blockSize, juce::MidiBuffer &midiOut);
+
+  //==============================================================================
+  // Clip management
+  class Clip; // Forward declaration
 
   void addClip(std::unique_ptr<Clip> clip);
   void removeClip(int clipIndex);
-  void removeClip(Clip *clip); // Overload for raw pointer
+  void removeClip(Clip *clip);
   void clearClips();
   int getNumClips() const;
   Clip *getClip(int index) const;
@@ -157,66 +197,41 @@ public:
   }
 
   //==============================================================================
-  // Plugins / FX Chain
-  //==============================================================================
-
-  void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
-  void removePlugin(int pluginIndex);
-  void clearPlugins();
-  int getNumPlugins() const;
-  juce::AudioPluginInstance *getPlugin(int index) const;
-
-  /**
-   * @brief Get total latency of the track in samples (PDC)
-   * Sums the latency of all plugins in the chain.
-   */
-  int getLatencySamples() const;
-
-  //==============================================================================
-  // MIDI Scheduling
-  /**
-   * @brief Sets the internal instrument for instrument tracks.
-   * @param instrument The instrument to use (owned by the track)
-   */
-  void setInstrument(std::unique_ptr<Instrument> instrument);
-  Instrument* getInstrument() const { return instrument_.get(); } // Added getter
-
-  //==============================================================================
-  // Metering (Thread-safe)
-  //==============================================================================
-
+  // Monitoring
+  // Monitoring
   float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
   float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
   void resetPeakLevel() { mixerChannel.resetPeaks(); }
-
-  //==============================================================================
-  // Automation
-  //==============================================================================
-
-  void addAutomationLane(const juce::String &paramId,
-                         std::shared_ptr<AutomationLane> lane);
-  void clearAutomationLanes();
-
-  // PDC Support
-  void setLatencyCompensation(int samples);
-  int getLatencyCompensation() const { return latencyCompensationSamples.load(); }
-
-  //==============================================================================
-  // Persistence
-  //==============================================================================
-  void loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host);
-  static void savePluginState(juce::AudioPluginInstance* plugin, juce::ValueTree& pluginTree);
 
   //==============================================================================
   // State management
   juce::ValueTree getState() const;
   void loadState(const juce::ValueTree &state);
 
+  /**
+   * @brief Load plugin states from ValueTree
+   *
+   * This must be called AFTER loadState() and requires access to PluginHost
+   * to recreate plugin instances.
+   *
+   * @param state The track state ValueTree
+   * @param pluginHost Reference to PluginHost for plugin instantiation
+   */
+  void loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost);
+
+  // Single plugin state helpers
+  void loadPluginState(const juce::ValueTree &pluginTree, PluginHost &host);
+  static void savePluginState(juce::AudioPluginInstance *plugin,
+                              juce::ValueTree &pluginTree);
 
   //==============================================================================
-  // Expose MixerChannel for direct access (e.g. from MixerChannelComponent)
-  MixerChannel& getMixerChannel() { return mixerChannel; }
-  const MixerChannel& getMixerChannel() const { return mixerChannel; }
+  // Automation Management
+  //==============================================================================
+
+  // Message thread only: update automation for a specific parameter
+  void addAutomationLane(const juce::String &paramId,
+                         std::shared_ptr<AutomationLane> lane);
+  void clearAutomationLanes();
 
 private:
   //==============================================================================
@@ -224,27 +239,35 @@ private:
   juce::String trackName;
   juce::String trackId;
   Type trackType;
-  std::atomic<bool> armed{false}; // Changed from isArmed_ to armed to match new state
-  std::atomic<bool> enabled{true}; // Added from origin/master
-  int inputChannelIndex;
-  int midiChannel = 1; // Default MIDI channel
-
-  // PDC State
-  std::atomic<int> latencyCompensationSamples{0};
-  juce::AudioBuffer<float> compensationBuffer;
-  int compensationWritePos = 0;
-
-  // Current sample rate and block size (for plugin/clip preparation)
-  double currentSampleRate;
-  int currentBlockSize;
+  int trackIndex = -1;
 
   //==============================================================================
-  // Mixer & FX Chain
+  // Audio processing state
+  double currentSampleRate = 48000.0;
+  int currentBlockSize = 512;
+
   //==============================================================================
+  // Mixer controls (delegated to MixerChannel)
+  // Note: armed and enabled are track-specific, not channel-strip specific
+  std::atomic<bool> armed{false};
+  std::atomic<bool> enabled{true};
+  std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
 
-  MixerChannel mixerChannel; // Handles volume, pan, sends, metering
+  // Input routing
+  std::atomic<int> inputChannelIndex{0};
 
-  std::unique_ptr<Instrument> instrument_; // Special plugin for instrument tracks
+  //==============================================================================
+  // Level monitoring (delegated to MixerChannel)
+  // We keep wrappers for compatibility but they read from MixerChannel
+
+  //==============================================================================
+  // Instrument (for Instrument tracks)
+  std::unique_ptr<Instrument> instrument_;
+  juce::AudioBuffer<float> instrumentBuffer_;
+
+  //==============================================================================
+  // Mixer Channel Strip (EQ, Comp, Sends, Volume, Pan)
+  MixerChannel mixerChannel;
 
   //==============================================================================
   // ROAST FIX #2: Plugin chain with RT-safe snapshot pattern (Phase 3: VST3
@@ -289,7 +312,7 @@ private:
   // Helper: Create new snapshot from current ownership
   void updatePluginSnapshot();
 
-  juce::AudioBuffer<float> pluginBuffer; // From origin/master, not PDC
+  juce::AudioBuffer<float> pluginBuffer;
 
   //==============================================================================
   // Phase 2A: Lock-free clip list using RCU-style atomic snapshot
@@ -305,8 +328,15 @@ private:
   // This eliminates clipsLock from the audio thread (RT-safe).
 
   struct ClipSnapshot {
-    std::vector<Clip *> clips;
-    explicit ClipSnapshot(const std::vector<std::unique_ptr<Clip>> &c); // Definition in Track.cpp
+    std::vector<Clip *> clips; // Raw pointers (non-owning)
+
+    ClipSnapshot() = default;
+    explicit ClipSnapshot(
+        const std::vector<std::unique_ptr<Clip>> &ownedClips) {
+      clips.reserve(ownedClips.size());
+      for (const auto &clip : ownedClips)
+        clips.push_back(clip.get());
+    }
   };
 
   // Clip ownership (message thread only)
@@ -359,25 +389,22 @@ private:
   // Helper methods
   void processPluginChain(juce::AudioBuffer<float> &buffer,
                           juce::MidiBuffer &midi, int numSamples);
-  // These were from origin/master, not in HEAD. I will assume they are needed.
   void applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples);
   void updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                          int numSamples);
 
-  // MIDI Scheduler state (from origin/master)
+  // MIDI Scheduler state
   struct ActiveNote {
     int pitch;
     int channel;
     juce::String noteId; // For tracking which ValueTree note this came from
   };
-  juce::CriticalSection activeNotesLock; // Lock for activeNotes (from origin/master)
-  std::vector<ActiveNote> activeNotes;   // Currently active notes (from origin/master)
-  void generateMidiForBlock(const juce::ValueTree &trackState,
-                            double tempo, double sampleRate,
-                            juce::int64 blockStartSample, int blockSize,
-                            juce::MidiBuffer &midiOut);
+  std::vector<ActiveNote> activeNotes;
+  juce::CriticalSection
+      activeNotesLock; // Protects activeNotes vector for thread safety
+  juce::int64 lastProcessedSample = 0;
 
-
+  //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)
 };
 

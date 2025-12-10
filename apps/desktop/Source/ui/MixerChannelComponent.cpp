@@ -6,6 +6,7 @@
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../../Source/engine/Track.h"
 #include "../../Source/ui/skia/SkiaTheme.h" // For SkiaTheme
+#include "../../Source/ui/skia/ZenithDesignSystem.h" // For ThemeManager
 
 #include <core/SkCanvas.h>
 #include <core/SkRRect.h>
@@ -22,6 +23,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
 {
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
+  zenith::design::ThemeManager::getInstance().addChangeListener(this);
 
   // Initialize UI from track
   updateFromTrack();
@@ -90,6 +92,17 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
   addAndMakeVisible(soloButton_);
 #endif
 
+  // Spectrum Analyzer
+  spectrumAnalyzer_ = std::make_unique<SkiaSpectrumComponent>();
+  // Use vertical bars for small channel strip view
+  spectrumAnalyzer_->setDisplayMode(SkiaSpectrumComponent::DisplayMode::FilledCurve);
+  addAndMakeVisible(spectrumAnalyzer_.get());
+  
+  // Link to track's audio processing
+  if (track_) {
+      track_->getMixerChannel().setSpectrumFifo(&spectrumAnalyzer_->getAudioFifo());
+  }
+
   // Level meter
   addAndMakeVisible(meter_);
 
@@ -102,6 +115,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
 MixerChannelComponent::~MixerChannelComponent() {
   if (track_)
     track_->removeChangeListener(this);
+  zenith::design::ThemeManager::getInstance().removeChangeListener(this);
   stopTimer();
 }
 
@@ -110,19 +124,21 @@ void MixerChannelComponent::changeListenerCallback(
   if (source == track_) {
     // UI update on message thread
     updateFromTrack();
+  } else if (source == &zenith::design::ThemeManager::getInstance()) {
+    repaint();
   }
 }
 
 //==============================================================================
 void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith;
+  using namespace zenith::design;
 
-  // Background with Ableton-style gradient
+  // Background with subtle gradient
   SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
                              {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {design::colors::BG_DARK,
-                             design::colors::BG_DARKER};
+  SkColor bgGradColors[2] = {colors::BG_DARK,
+                             colors::BG_DARKER};
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -133,23 +149,23 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight()),
-      6.0f, 6.0f);
+      dimensions::RADIUS_MD, dimensions::RADIUS_MD);
   canvas->drawRRect(rrect, bgPaint);
 
-  // Inner highlight at top (subtle)
+  // Inner highlight at top (subtle glass)
   SkRect highlightBounds =
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight() * 0.2f);
-  // SkiaTheme::getInstance().getColors().white.withAlpha(0.03f)
   SkPaint highlightPaint;
-  highlightPaint.setColor(SkColorSetARGB(7, 255, 255, 255)); // 3% white
-  SkRRect highlightRRect = SkRRect::MakeRectXY(highlightBounds, 6.0f, 6.0f);
+  highlightPaint.setColor(colors::GLASS_HIGHLIGHT); 
+  SkRRect highlightRRect = SkRRect::MakeRectXY(highlightBounds, dimensions::RADIUS_MD, dimensions::RADIUS_MD);
   canvas->drawRRect(highlightRRect, highlightPaint);
+
   // Subtle border
   SkPaint borderPaint;
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(SkColorSetARGB(128, 58, 58, 58)); // 50% grey
+  borderPaint.setColor(colors::BORDER_SUBTLE); 
   borderPaint.setAntiAlias(true);
   SkRRect borderRect = rrect;
   borderRect.inset(0.5f, 0.5f);
@@ -159,12 +175,19 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   drawChildren(canvas);
 }
 
+
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds().reduced(8);
 
   // Track name at top
   nameLabel_.setBounds(bounds.removeFromTop(30));
   bounds.removeFromTop(4); // Spacing
+  
+  // Spectrum Analyzer
+  if (spectrumAnalyzer_) {
+      spectrumAnalyzer_->setBounds(bounds.removeFromTop(60).reduced(2));
+      bounds.removeFromTop(4);
+  }
 
   // Mute/Solo buttons at bottom
   auto buttonArea = bounds.removeFromBottom(64);
@@ -234,33 +257,7 @@ void MixerChannelComponent::updateFromTrack() {
   // Update name
   nameLabel_.setText(track_->getName(), juce::dontSendNotification);
 
-<<<<<<< HEAD
-#ifdef ZENITH_USE_SKIA
-    // Mini spectrum analyzer (GPU-accelerated FFT visualization)
-    spectrumAnalyzer_ = std::make_unique<SkiaSpectrumComponent>(SkiaSpectrumComponent::FFTSize::Size512);
-    spectrumAnalyzer_->setDisplayMode(SkiaSpectrumComponent::DisplayMode::FilledCurve);
-    spectrumAnalyzer_->setGradientColors(
-        design::colors::BLUE,
-        design::colors::CYAN,
-        design::colors::MAGENTA
-    );
-    spectrumAnalyzer_->setLineWidth(1.5f);
-    spectrumAnalyzer_->setDecaySpeed(0.9f);
-    addAndMakeVisible(*spectrumAnalyzer_);
-#endif
-
-    // Start timer for meter updates (30 Hz)
-    startTimer(33);
-
-    setSize(80, 400);
-}
-
-MixerChannelComponent::~MixerChannelComponent()
-{
-    stopTimer();
-=======
   updatingControls_ = false;
->>>>>>> origin/master
 }
 
 //==============================================================================
@@ -277,72 +274,6 @@ void MixerChannelComponent::onPanChanged() {
   if (updatingControls_ || track_ == nullptr)
     return;
 
-<<<<<<< HEAD
-    // Track name at top
-    nameLabel_.setBounds(bounds.removeFromTop(30));
-    bounds.removeFromTop(4);  // Spacing
-
-#ifdef ZENITH_USE_SKIA
-    // Mini spectrum analyzer below track name
-    if (spectrumAnalyzer_) {
-        auto spectrumBounds = bounds.removeFromTop(40);
-        spectrumAnalyzer_->setBounds(spectrumBounds.reduced(2, 2));
-        bounds.removeFromTop(4);  // Spacing
-    }
-#endif
-
-    // Mute/Solo buttons at bottom
-    auto buttonArea = bounds.removeFromBottom(64);
-    muteButton_.setBounds(buttonArea.removeFromTop(30).reduced(2));
-    buttonArea.removeFromTop(4);  // Spacing
-    soloButton_.setBounds(buttonArea.removeFromTop(30).reduced(2));
-
-    // Pan knob above buttons
-    auto panArea = bounds.removeFromBottom(80);
-    panKnob_.setBounds(panArea.withSizeKeepingCentre(70, 70));
-
-    // Small spacing
-    bounds.removeFromBottom(8);
-
-    // Split remaining space between meter and fader
-    auto meterBounds = bounds.removeFromLeft(18);
-    meter_.setBounds(meterBounds.reduced(0, 5));
-
-    // Small spacing between meter and fader
-    bounds.removeFromLeft(4);
-
-    // Fader takes remaining space
-    faderSlider_.setBounds(bounds.reduced(2, 5));
-}
-
-//==============================================================================
-void MixerChannelComponent::timerCallback()
-{
-    // Update meter from track level (thread-safe read via atomic)
-    if (track_ != nullptr)
-    {
-        float level = track_->getCurrentLevel();
-        meter_.setLevel(level);
-        meter_.repaint();
-
-#ifdef ZENITH_USE_SKIA
-        // Get samples from MixerChannel's visualizer FIFO and push to spectrum analyzer
-        if (spectrumAnalyzer_) {
-            // Read samples in chunks from the MixerChannel's internal FIFO
-            // (The FIFO size needs to be larger than the block size the mixer passes)
-            constexpr int chunkSize = 512; 
-            std::array<float, chunkSize> tempBuffer;
-            
-            // Read available samples and push to the spectrum analyzer's FIFO
-            int numRead = track_->getMixerChannel().readFromVisualizer(tempBuffer.data(), chunkSize);
-            if (numRead > 0) {
-                spectrumAnalyzer_->getAudioFifo().pushSamples(tempBuffer.data(), numRead);
-            }
-        }
-#endif
-    }
-}
-=======
   // Update track pan (thread-safe via atomic)
   float newPan = panKnob_.getValue();
   track_->setPan(newPan);
@@ -351,7 +282,6 @@ void MixerChannelComponent::timerCallback()
 void MixerChannelComponent::onMuteClicked() {
   if (updatingControls_ || track_ == nullptr)
     return;
->>>>>>> origin/master
 
   // Toggle mute (thread-safe via atomic)
   bool newMuted = muteButton_.getToggleState();
@@ -427,13 +357,13 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
 
 void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith;
+  using namespace zenith::design;
 
   // Background with gradient (darker at top, lighter at bottom)
   SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
                              {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {design::colors::BG_DARK,
-                             design::colors::BG_DARKER};
+  SkColor bgGradColors[2] = {colors::BG_DARK,
+                             colors::BG_DARKER};
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -444,7 +374,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(
       SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
                        bounds.getHeight()),
-      3.0f, 3.0f);
+      dimensions::RADIUS_SM, dimensions::RADIUS_SM);
   canvas->drawRRect(rrect, bgPaint);
 
   // Inner shadow at top
@@ -472,20 +402,20 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
     SkColor topColor, bottomColor;
     if (normalizedLevel > 0.9f) {
       // Clipping warning - red gradient
-      topColor = design::colors::RED;
-      bottomColor = design::colors::RED;
+      topColor = colors::RED;
+      bottomColor = colors::RED;
     } else if (normalizedLevel > 0.7f) {
       // Hot - orange/yellow gradient
-      topColor = design::colors::AMBER;
-      bottomColor = design::colors::AMBER;
+      topColor = colors::AMBER;
+      bottomColor = colors::AMBER;
     } else if (normalizedLevel > 0.4f) {
       // Moderate - green/yellow gradient
-      topColor = design::colors::NEON_GREEN;
-      bottomColor = design::colors::NEON_GREEN;
+      topColor = colors::NEON_GREEN;
+      bottomColor = colors::NEON_GREEN;
     } else {
       // Normal - blue/green gradient
-      topColor = design::colors::BLUE;
-      bottomColor = design::colors::BLUE;
+      topColor = colors::BLUE;
+      bottomColor = colors::BLUE;
     }
 
     // Apply gradient to meter bar
@@ -528,7 +458,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
 
     // Peak color (red if clipping, otherwise white)
     SkColor peakColor = normalizedPeak > 0.95f
-                            ? design::colors::RED // Red for clipping
+                            ? colors::RED // Red for clipping
                             : SK_ColorWHITE;      // White for normal
 
     SkPaint peakPaint;
@@ -539,7 +469,7 @@ void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
 
   // Subtle border
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(128, 58, 58, 58)); // 50% grey
+  borderPaint.setColor(colors::BORDER_SUBTLE);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
   borderPaint.setAntiAlias(true);

@@ -1,218 +1,240 @@
+/*
+  ==============================================================================
+    SkiaKnob.cpp
+  ==============================================================================
+*/
+
 #include "SkiaKnob.h"
-#include "ZenithAnimation.h"
-#include "../ZenithTypography.h"
 #include <cmath>
 #include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
+#include <core/SkColor.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
-#include <core/SkColor.h>
 #include <effects/SkGradientShader.h>
-#include <core/SkMaskFilter.h>
+
 
 // Debug helper
-static void logKnob(const juce::String& msg) {
-#ifdef JUCE_DEBUG
-  DBG(msg);
-#endif
+static void logKnob(const juce::String &msg) {
+  // DBG("SkiaKnob: " + msg);
 }
+namespace zenith {
 
 // ============================================================================
 // CONSTRUCTION
 // ============================================================================
 
-namespace zenith {
+SkiaKnob::SkiaKnob(const juce::String &name) {
+  logKnob("Constructor start");
+  // Default size
+  setSize(60, 80);
+  logKnob("setSize done");
 
-SkiaKnob::SkiaKnob(juce::String name) : name_(std::move(name)) {
-    // Default values
-    setRange(0.0, 1.0);
-    setValue(0.5);
-    setLabelPosition(LabelPosition::Below);
-    setRotationRange(300.0f); // Default to 300 degrees
-    setValueColoring(false);
-    setStyle(Style::ArcAndDot);
+  // Accessibility
+  setDescription(name.isEmpty() ? "Knob" : name);
+  setWantsKeyboardFocus(true);
 
-    // Make sure to setComponentID for AI interaction
-    setComponentID(this->name_);
-
-    // Default animation config for knobs
-    animation::Spring::Config knobSpringConfig = animation::Spring::Config::smooth();
-    addAnimationProperty("scale", knobSpringConfig);
-    addAnimationProperty("glow", knobSpringConfig);
+  // Initial history
+  valueHistory_.push(value_);
+  logKnob("Constructor done");
 }
 
-SkiaKnob::~SkiaKnob() {
-    // Nothing to do
+SkiaKnob::~SkiaKnob() {}
+
+// ============================================================================
+// APPEARANCE
+// ============================================================================
+
+void SkiaKnob::setStyle(Style style) {
+  if (style_ != style) {
+    style_ = style;
+    markDirty();
+  }
+}
+
+void SkiaKnob::setRotationRange(float degrees) {
+  rotationRange_ = degrees;
+  markDirty();
+}
+
+void SkiaKnob::setValueColoring(bool enabled) {
+  valueColoring_ = enabled;
+  markDirty();
 }
 
 // ============================================================================
-// CONFIGURATION
+// VALUE CONTROL
 // ============================================================================
 
-void SkiaKnob::setRange(double min, double max, double interval) {
-    range_ = juce::NormalisableRange<double>(min, max, interval);
-    displayMin_ = min;
-    displayMax_ = max;
-    if (interval == 0.0) {
-        // Continuous range, use 3 decimal places
-        decimalPlaces_ = 3;
-    } else {
-        // Discrete range, infer decimal places
-        juce::String intervalStr = juce::String(interval);
-        if (intervalStr.containsChar('.')) {
-            decimalPlaces_ = intervalStr.substring(intervalStr.indexOfChar('.') + 1).length();
-        } else {
-            decimalPlaces_ = 0;
-        }
-    }
-    // Update current value to fit new range
-    setValue(juce::jlimit(range_.start, range_.end, value_));
-}
+void SkiaKnob::setValue(float value) {
+  float clampedValue = juce::jlimit(0.0f, 1.0f, value);
 
-void SkiaKnob::setSkewFactor(double skew) {
-    range_.setSkewForCentre(skew);
-    // Update current value to fit new range
-    setValue(juce::jlimit(range_.start, range_.end, value_));
-}
+  if (std::abs(value_ - clampedValue) > 0.0001f) {
+    value_ = clampedValue;
 
-void SkiaKnob::setValue(double newValue, juce::NotificationType notification) {
-    if (newValue == value_) return;
-
-    value_ = juce::jlimit(range_.start, range_.end, newValue);
-
-    if (notification != juce::dontSendNotification) {
-        // Trigger callback
-        if (onValueChange) {
-            onValueChange();
-        }
-    }
-    repaint();
-}
-
-void SkiaKnob::setDefaultValue(double defValue) {
-    defaultValue_ = juce::jlimit(range_.start, range_.end, defValue);
-}
-
-// ============================================================================
-// MOUSE INTERACTION
-// ============================================================================
-
-void SkiaKnob::mouseDown(const juce::MouseEvent& e) {
-    if (e.mods.isPopupMenu()) return; // Right click for context menu
-
-    isDragging_ = true;
-    dragStartAngle_ = valueToAngle(value_);
-    dragStartValue_ = value_;
-    dragStartMouseY_ = e.position.y;
-
-    // Bring to front on click
-    toFront(true);
-    
-    // Quick press-down animation (snappier spring)
-    animateWithSpring("scale", 0.95f, 600.0f, 35.0f);
-
-    if (onDragStart) onDragStart();
-}
-
-void SkiaKnob::mouseDrag(const juce::MouseEvent& e) {
-    if (!isDragging_) return;
-
-    // Calculate vertical distance dragged
-    float dist = dragStartMouseY_ - e.position.y;
-
-    // Sensitivity (can be adjusted)
-    float sensitivity = 0.005f;
-
-    // Calculate new normalized value (0.0 - 1.0)
-    float delta = dist * sensitivity;
-    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(dragStartValue_) + delta);
-    
-    // Convert back to actual value
-    double newValue = range_.convertFrom0to1(newValueNorm);
-
-    // Apply snap to interval if set
-    if (range_.interval > 0.0) {
-        newValue = range_.snapToLegalValue(newValue);
+    if (onValueChange) {
+      onValueChange(value_);
     }
 
-    setValue(newValue, juce::sendNotification);
+    markDirty();
+  }
 }
 
-void SkiaKnob::mouseUp(const juce::MouseEvent& e) {
-    juce::ignoreUnused(e);
+void SkiaKnob::setDefaultValue(float value) {
+  defaultValue_ = juce::jlimit(0.0f, 1.0f, value);
+}
+
+void SkiaKnob::setDisplayRange(float min, float max) {
+  displayMin_ = min;
+  displayMax_ = max;
+  markDirty(); // For label update
+}
+void SkiaKnob::setSnapToIncrement(bool snap, float increment) {
+  snapEnabled_ = snap;
+  snapIncrement_ = increment;
+}
+
+void SkiaKnob::setSnapToValue(bool enabled, float snapValue, float tolerance) {
+  snapEnabled_ = enabled;
+  snapIncrement_ =
+      snapValue; // Using snapIncrement_ to store the snap value for simplicity
+                 // in this context, though semantics differ slightly
+  snapTolerance_ = tolerance;
+}
+
+// ============================================================================
+// INTERACTION
+// ============================================================================
+
+void SkiaKnob::mouseDown(const juce::MouseEvent &e) {
+  // Context Menu (Right Click)
+  if (e.mods.isPopupMenu()) {
+    showContextMenu();
+    return;
+  }
+
+  // Fine control
+  if (e.mods.isShiftDown() || e.mods.isRightButtonDown()) {
+    isFineControl_ = true;
+  } else {
+    isFineControl_ = false;
+  }
+
+  isDragging_ = true;
+  dragStartValue_ = value_;
+  dragStartY_ = e.y;
+
+  // Push current value to history before change
+  valueHistory_.push(value_);
+
+  if (onDragStart) {
+    onDragStart();
+  }
+
+  // Focus for keyboard control
+  grabKeyboardFocus();
+}
+
+void SkiaKnob::mouseDrag(const juce::MouseEvent &e) {
+  if (!isDragging_)
+    return;
+
+  float sensitivity = dragSensitivity_ * (isFineControl_ ? 0.1f : 1.0f);
+  float delta = (dragStartY_ - e.y) / 200.0f * sensitivity;
+
+  float newValue = juce::jlimit(0.0f, 1.0f, dragStartValue_ + delta);
+
+  if (snapEnabled_) {
+    newValue = std::round(newValue / snapIncrement_) * snapIncrement_;
+  }
+
+  setValue(newValue);
+}
+
+void SkiaKnob::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  if (isDragging_) {
     isDragging_ = false;
-    
-    // Bouncy release animation
-    animateWithSpring("scale", isHovered() ? 1.04f : 1.0f, 300.0f, 15.0f);
-
-    if (onDragEnd) onDragEnd();
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  }
 }
 
-void SkiaKnob::mouseDoubleClick(const juce::MouseEvent& e) {
-    if (e.mods.isPopupMenu()) return; // Right click for context menu
-    if (e.originalComponent == this) {
-        setValue(defaultValue_, juce::sendNotification);
-    }
+void SkiaKnob::mouseDoubleClick(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  if (doubleClickReset_) {
+    resetToDefault();
+  }
 }
 
-void SkiaKnob::mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) {
-    if (isDragging_) return; // Don't interfere with dragging
+void SkiaKnob::mouseWheelMove(const juce::MouseEvent &e,
+                              const juce::MouseWheelDetails &wheel) {
+  float delta = wheel.deltaY * 0.1f;
+  if (e.mods.isShiftDown())
+    delta *= 0.1f;
 
-    float delta = wheel.deltaY * 0.1f; // Adjust sensitivity
-    float newValueNorm = juce::jlimit(0.0f, 1.0f, (float)range_.convertTo0to1(value_) + delta);
-    double newValue = range_.convertFrom0to1(newValueNorm);
-
-    // Apply snap to interval if set
-    if (range_.interval > 0.0) {
-        newValue = range_.snapToLegalValue(newValue);
-    }
-    setValue(newValue, juce::sendNotification);
+  setValue(juce::jlimit(0.0f, 1.0f, value_ + delta));
 }
 
 void SkiaKnob::onHoverEnter() {
-  animateWithSpring("scale", 1.1f, 300.0f, 20.0f); // Bouncy hover
-  animateWithSpring("glow", 1.0f, 200.0f, 20.0f);
+  animateTo("scale", 1.05f, design::animation::DURATION_FAST);
+  animateTo("glow", 1.0f, design::animation::DURATION_FAST);
 }
 
 void SkiaKnob::onHoverExit() {
-  animateWithSpring("scale", 1.0f, 300.0f, 25.0f);
-  animateWithSpring("glow", 0.0f, 300.0f, 25.0f);
+  animateTo("scale", 1.0f, design::animation::DURATION_FAST);
+  animateTo("glow", 0.0f, design::animation::DURATION_FAST);
 }
 
-bool SkiaKnob::keyPressed(const juce::KeyPress& key, juce::Component* origin) {
-    juce::ignoreUnused(origin);
-    if (key == juce::KeyPress::returnKey || key == juce::KeyPress::spaceKey) {
-        setValue(defaultValue_, juce::sendNotification);
-        return true;
+bool SkiaKnob::keyPressed(const juce::KeyPress &key, juce::Component *origin) {
+  // Undo: Ctrl + Z
+  if (key == juce::KeyPress('z', juce::ModifierKeys::commandModifier, 0)) {
+    if (valueHistory_.canUndo()) {
+      float val = valueHistory_.undo();
+      setValue(val);
+      return true;
     }
-    return false;
-}
+  }
 
-void SkiaKnob::getTextValue(juce::String& text) const {
-    text = juce::String(value_, decimalPlaces_);
-}
-
-void SkiaKnob::setTextValue(const juce::String& text) {
-    double newValue = text.getDoubleValue();
-    if (newValue != value_) {
-        setValue(newValue, juce::sendNotification);
+  // Redo: Ctrl + Y or Ctrl + Shift + Z
+  if (key == juce::KeyPress('y', juce::ModifierKeys::commandModifier, 0) ||
+      key == juce::KeyPress('z',
+                            juce::ModifierKeys::commandModifier |
+                                juce::ModifierKeys::shiftModifier,
+                            0)) {
+    if (valueHistory_.canRedo()) {
+      float val = valueHistory_.redo();
+      setValue(val);
+      return true;
     }
+  }
+
+  // Call base class for context menu shortcut
+  return SkiaComponent::keyPressed(key, origin);
 }
 
-void SkiaKnob::cutValue() {
-    juce::SystemClipboard::copyText(juce::String(value_, decimalPlaces_));
-    setValue(defaultValue_, juce::sendNotification);
+// ============================================================================
+// CONTEXT MENU & UNDO/REDO
+// ============================================================================
+
+void SkiaKnob::resetToDefault() {
+  valueHistory_.push(value_); // Save before reset
+  setValue(defaultValue_);
 }
 
 void SkiaKnob::copyValue() {
-    juce::SystemClipboard::copyText(juce::String(value_, decimalPlaces_));
+  juce::SystemClipboard::copyTextToClipboard(juce::String(value_));
 }
 
 void SkiaKnob::pasteValue() {
-    juce::String clipboardText = juce::SystemClipboard::getTextFromClipboard();
-    if (clipboardText.isNotEmpty()) {
-        setTextValue(clipboardText);
-    }
+  juce::String text = juce::SystemClipboard::getTextFromClipboard();
+  float val = text.getFloatValue();
+  if (val >= 0.0f && val <= 1.0f) { // Simple validation
+    valueHistory_.push(value_);
+    setValue(val);
+  }
 }
 
 // ============================================================================
@@ -223,6 +245,7 @@ std::vector<SkiaComponent::AIElementInfo> SkiaKnob::getInspectableElements() {
   SkiaComponent::AIElementInfo info;
 
   auto bounds = getLocalBounds().toFloat();
+  // Convert juce::Rectangle to SkRect
   info.bounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
                                  bounds.getWidth(), bounds.getHeight());
 
@@ -241,12 +264,9 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
   // Calculate radius (leave room for label)
   float radius = std::min(bounds.getWidth(), bounds.getHeight()) * 0.35f;
 
-  // Apply hover scale - use spring physics value
+  // Apply hover scale
   float scale = getAnimatedValue("scale");
-  // If scale is 0 (uninitialized), default to 1
-  if (scale < 0.01f) scale = 1.0f;
-  
-  if (std::abs(scale - 1.0f) > 0.001f) {
+  if (scale > 0.0f) {
     canvas->translate(cx, cy);
     canvas->scale(scale, scale);
     canvas->translate(-cx, -cy);
@@ -254,88 +274,80 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
 
   // Draw Arc
   float startAngle = -rotationRange_ / 2.0f - 90.0f;
-  
-  SkRect arcRect =
-      SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
+  float endAngle = startAngle + (value_ * rotationRange_);
+  juce::ignoreUnused(endAngle); // Used for dot calculation
 
-  // 1. Background track (Darker, more subtle)
+  // Background track
   SkPaint trackPaint;
   trackPaint.setStyle(SkPaint::kStroke_Style);
-  trackPaint.setStrokeWidth(3.0f); 
-  trackPaint.setColor(SkColorSetARGB(40, 255, 255, 255)); // 15% white
+  trackPaint.setStrokeWidth(2.5f); // Thinner for pro look (was 4.0f)
+  trackPaint.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
   trackPaint.setAntiAlias(true);
   trackPaint.setStrokeCap(SkPaint::kRound_Cap);
-  
+
+  SkRect arcRect =
+      SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
   canvas->drawArc(arcRect, startAngle, rotationRange_, false, trackPaint);
-  
-  // 2. Value arc
+
+  // Value arc
   SkPaint valuePaint;
   valuePaint.setStyle(SkPaint::kStroke_Style);
-  valuePaint.setStrokeWidth(3.0f);
+  valuePaint.setStrokeWidth(2.5f); // Match track width
   valuePaint.setAntiAlias(true);
   valuePaint.setStrokeCap(SkPaint::kRound_Cap);
 
-  // Color gradient
+  // Color
   SkColor color = design::colors::CYAN;
   if (valueColoring_) {
-    color = design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_);
+    // Gradient from Blue to Cyan
+    // Simple interpolation for now
+    color = design::interpolateColor(design::colors::BLUE, design::colors::CYAN,
+                                     value_);
   }
   valuePaint.setColor(color);
 
-  // Draw active arc
-  if (value_ > 0.001f) {
-      canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, valuePaint);
-  }
-
-  // 3. Glow effect (Dynamic based on interaction)
-  float glowIntensity = getAnimatedValue("glow");
+  // Glow
   float globalGlow = design::Settings::getGlowIntensity();
-  
-  if (glowIntensity > 0.01f && globalGlow > 0.01f) {
-      SkPaint glowPaint = valuePaint;
-      glowPaint.setStrokeWidth(3.0f);
-      // More intense glow when active
-      glowPaint.setColor(design::withAlpha(color, 0.6f * glowIntensity * globalGlow));
-      glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f * glowIntensity));
-      
-      if (value_ > 0.001f) {
-        canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false, glowPaint);
-      }
+  if ((isGlowEnabled() || isHovered()) && globalGlow > 0.01f) {
+    SkPaint glowPaint = valuePaint;
+    glowPaint.setStrokeWidth(5.0f); // Reduced from 8.0f
+    glowPaint.setColor(
+        design::withAlpha(color, 0.4f * getAnimatedValue("glow") * globalGlow));
+
+    if (globalGlow > 0.5f) {
+      glowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f * globalGlow));
+    }
+
+    canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false,
+                    glowPaint);
   }
 
-  // 4. Dot indicator / Handle
-  if (style_ == Style::Dot || style_ == Style::ArcAndDot) {
-    float endAngleRad = (startAngle + value_ * rotationRange_) * (3.14159f / 180.0f);
-    float dotRadius = 3.5f;
-    
-    // Position on the ring
-    float dotX = cx + std::cos(endAngleRad) * radius;
-    float dotY = cy + std::sin(endAngleRad) * radius;
+  canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false,
+                  valuePaint);
 
-    // Dot Glow
-    if (glowIntensity > 0.01f) {
-        SkPaint dotGlowPaint;
-        dotGlowPaint.setColor(design::withAlpha(SK_ColorWHITE, 0.5f * glowIntensity));
-        dotGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
-        canvas->drawCircle(dotX, dotY, dotRadius + 2.0f, dotGlowPaint);
-    }
+  // Dot indicator
+  if (style_ == Style::Dot || style_ == Style::ArcAndDot) {
+    float angleRad = (endAngle) * (3.14159f / 180.0f);
+    float dotX = cx + std::cos(angleRad) * radius;
+    float dotY = cy + std::sin(angleRad) * radius;
 
     SkPaint dotPaint;
     dotPaint.setColor(SK_ColorWHITE);
     dotPaint.setAntiAlias(true);
-    canvas->drawCircle(dotX, dotY, dotRadius, dotPaint);
+    canvas->drawCircle(dotX, dotY, 3.0f, dotPaint);
   }
 
-  // 5. Label
+  // Label
   if (labelPosition_ != LabelPosition::None) {
-    SkFont font = ZenithTypography::valueFont(); // Use mono font for values
-    
+    SkFont font;
+    font.setSize(12.0f);
+
     juce::String labelText =
         juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
 
     SkPaint textPaint;
     textPaint.setColor(design::colors::TEXT_SECONDARY);
-    textPaint.setAntiAlias(true);
 
     float textY = cy;
     if (labelPosition_ == LabelPosition::Below)
@@ -343,39 +355,57 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
     if (labelPosition_ == LabelPosition::Above)
       textY -= radius + 15.0f;
 
-    // Center text
-    float width = font.measureText(labelText.toRawUTF8(), labelText.length(), SkTextEncoding::kUTF8);
-    canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY + 4.0f, font, textPaint);
+    // Simple center text (Skia text centering is manual)
+    float width = font.measureText(labelText.toRawUTF8(), labelText.length(),
+                                   SkTextEncoding::kUTF8);
+    canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY, font,
+                       textPaint);
   }
 }
 
 // ============================================================================
-// DEBUGGING / AI
+// RENDER STATE CAPTURE
 // ============================================================================
 
 render::KnobRenderState SkiaKnob::captureRenderState() const {
   render::KnobRenderState state;
 
+  // Bounds and geometry
   state.bounds = SkRect::MakeXYWH(
       static_cast<float>(getX()), static_cast<float>(getY()),
       static_cast<float>(getWidth()), static_cast<float>(getHeight()));
 
+  // Value and display
   state.value = value_;
   state.defaultValue = defaultValue_;
   state.displayMin = displayMin_;
   state.displayMax = displayMax_;
-  state.labelText = juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
+
+  // Pre-format label text
+  state.labelText =
+      juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
+
+  // Interaction state
   state.isHovered = isHovered();
   state.isDragging = isDragging_;
-  
+
+  // Colors
   state.baseColor = design::colors::CYAN;
   if (valueColoring_) {
-    state.baseColor = design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_);
+    state.baseColor = design::interpolateColor(design::colors::BLUE,
+                                               design::colors::CYAN, value_);
   }
   state.glowColor = state.baseColor;
+
+  // Animation state
   state.glowIntensity = getAnimatedValue("glow");
   state.scale = getAnimatedValue("scale");
-  state.cachedGlowAlpha = static_cast<uint8_t>(state.glowIntensity * 102); 
+
+  // Cache glow layer for performance optimization
+  // The glow intensity is pre-computed so rendering can skip blur calculations
+  // when glow is minimal (< 0.1) - enables GPU shader reuse
+  state.cachedGlowAlpha =
+      static_cast<uint8_t>(state.glowIntensity * 102); // 40% max alpha
 
   return state;
 }

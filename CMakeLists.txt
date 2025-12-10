@@ -6,22 +6,21 @@ project(ZenithDAW
     LANGUAGES CXX C
 )
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
 # 2. Build Performance: ccache
-find_program(CCACHE_PROGRAM ccache)
-if(CCACHE_PROGRAM)
-    message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-    set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-else()
-    message(STATUS "ccache not found. Install it for faster builds.")
-endif()
+# find_program(CCACHE_PROGRAM ccache)
+# if(CCACHE_PROGRAM)
+#     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
+#     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
+# else()
+#     message(STATUS "ccache not found. Install it for faster builds.")
+# endif()
 
 # 3. Default Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     message(STATUS "No build type selected, defaulting to Release")
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
+
 
 
 # 4. Options
@@ -81,6 +80,9 @@ juce_generate_juce_header(ZenithDAW)
 
 target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
 
+# Skia Integration (must be defined before subdirectories)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
+
 # Modularized Source Groups (Complaint #6 Fix)
 add_subdirectory(apps/desktop/Source/engine)
 add_subdirectory(apps/desktop/Source/ui)
@@ -135,10 +137,14 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-# Skia Integration (Mandatory for Pure Skia UI)
-include(apps/desktop/cmake/SkiaIntegration.cmake)
-target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
-message(STATUS "Zenith DAW: Pure Skia rendering ENABLED (JUCE UI fallbacks removed)")
+# Skia Integration (Manual) - option defined earlier
+if(ZENITH_ENABLE_SKIA)
+    include(apps/desktop/cmake/SkiaManualIntegration.cmake)
+    target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+    message(STATUS "Zenith DAW: Skia rendering ENABLED")
+else()
+    message(STATUS "Zenith DAW: Skia rendering DISABLED")
+endif()
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE
@@ -177,60 +183,60 @@ if(ENABLE_IPO)
 endif()
 
 # 8. Standard Compiler Flags & Hardening
-if(MSVC)
-    target_compile_options(ZenithDAW PRIVATE
-        /W4 /permissive- 
-        /wd4100 # Unused parameter
-        
-        # Conformance
-        /Zc:__cplusplus 
-        /Zc:inline      
-        /Zc:preprocessor 
-        /Zc:throwingNew 
-        
-        # Hardening
-        $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
-        $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
-        $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
-        $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
-        
-        # Ruthless Warnings
-        /w14242 /w14254 /w14263 
-        /w14265 
-        /w14287 
-        /we4289 
-        /w14296 
-        /w14311 
-        /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
-    )
+# if(MSVC)
+#     target_compile_options(ZenithDAW PRIVATE
+#         /W4 /permissive- 
+#         /wd4100 # Unused parameter
+#         
+#         # Conformance
+#         /Zc:__cplusplus 
+#         /Zc:inline      
+#         /Zc:preprocessor 
+#         /Zc:throwingNew 
+#         
+#         # Hardening
+#         $<$<BOOL:${ENABLE_HARDENING}>:/GS>       
+#         $<$<BOOL:${ENABLE_HARDENING}>:/Guard:CF> 
+#         $<$<BOOL:${ENABLE_HARDENING}>:/SDL>      
+#         $<$<BOOL:${ENABLE_SPECTRE}>:/Qspectre>   
+#         
+#         # Ruthless Warnings
+#         /w14242 /w14254 /w14263 
+#         /w14265 
+#         /w14287 
+#         /we4289 
+#         /w14296 
+#         /w14311 
+#         /w14545 /w14546 /w14547 /w14549 /w14555 /w14619 /w14640 /w14826 /w14905 /w14906 /w14928
+#     )
     
-    if(ENABLE_HARDENING)
-        target_link_options(ZenithDAW PRIVATE 
-            /DYNAMICBASE 
-            /NXCOMPAT    
-            /CETCOMPAT   
-        )
-    endif()
+#     if(ENABLE_HARDENING)
+#         target_link_options(ZenithDAW PRIVATE 
+#             /DYNAMICBASE 
+#             /NXCOMPAT    
+#             /CETCOMPAT   
+#         )
+#     endif()
 
-else() # GCC / Clang
-    target_compile_options(ZenithDAW PRIVATE
-        -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
-        -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
+# else() # GCC / Clang
+#     target_compile_options(ZenithDAW PRIVATE
+#         -Wall -Wextra -Wpedantic -Wshadow -Wconversion -Wsign-conversion -Wcast-align -Wformat=2
+#         -Wunused -Wnull-dereference -Wdouble-promotion -Wimplicit-fallthrough
         
-        $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
-        $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
-        $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
-        $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
-    )
+#         $<$<BOOL:${ENABLE_HARDENING}>:-fstack-protector-strong>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-fPIE>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-U_FORTIFY_SOURCE>
+#         $<$<BOOL:${ENABLE_HARDENING}>:-D_FORTIFY_SOURCE=2>
+#     )
 
-    if(ENABLE_HARDENING)
-        target_link_options(ZenithDAW PRIVATE 
-            -Wl,-z,relro 
-            -Wl,-z,now 
-            -pie
-        )
-    endif()
-endif()
+#     if(ENABLE_HARDENING)
+#         target_link_options(ZenithDAW PRIVATE 
+#             -Wl,-z,relro 
+#             -Wl,-z,now 
+#             -pie
+#         )
+#     endif()
+# endif()
 
 # 9. Sanitizers
 if(ENABLE_SANITIZERS)

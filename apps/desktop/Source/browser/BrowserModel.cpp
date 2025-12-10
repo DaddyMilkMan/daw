@@ -84,35 +84,6 @@ void BrowserModel::buildStructure() {
   loadTags();
 }
 
-<<<<<<< HEAD
-void BrowserModel::populateInternalInstruments()
-{
-    auto list = instrumentRegistry_.getInstrumentList();
-    
-    for (const auto& item : list)
-    {
-        juce::String id = item.getProperty("id", "").toString();
-        juce::String name = item.getProperty("name", "Unknown").toString();
-        juce::String category = item.getProperty("category", "Uncategorized").toString();
-        
-        auto browserItem = std::make_shared<BrowserItem>(id, name, BrowserItemType::Instrument);
-        browserItem->metadata.category = category;
-        browserItem->metadata.author = "Zenith DAW";
-        browserItem->metadata.format = "Native";
-        browserItem->metadata.isInstrument = true;
-        // FIX: Avoid string to bool conversion error
-        bool isFav = isFavorite(id);
-        browserItem->isFavorite = isFav;
-        
-        instrumentsNode->addChild(browserItem);
-        allIndexableItems_.push_back(browserItem);
-        
-        // Add to favorites node if it's a favorite
-        if (browserItem->isFavorite)
-        {
-            favoritesNode_->addChild(browserItem);
-        }
-=======
 void BrowserModel::populateInternalInstruments() {
   auto list = instrumentRegistry_.getInstrumentList();
 
@@ -128,7 +99,7 @@ void BrowserModel::populateInternalInstruments() {
     browserItem->metadata.author = "Zenith DAW";
     browserItem->metadata.format = "Native";
     browserItem->metadata.isInstrument = true;
-    // FIX: Avoid string to bool conversion error
+    // Use explicit bool variable to avoid implicit string/bool conversion
     bool isFav = isFavorite(id);
     browserItem->isFavorite = isFav;
 
@@ -138,59 +109,10 @@ void BrowserModel::populateInternalInstruments() {
     // Add to favorites node if it's a favorite
     if (browserItem->isFavorite) {
       favoritesNode_->addChild(browserItem);
->>>>>>> origin/master
     }
   }
 }
 
-<<<<<<< HEAD
-void BrowserModel::populatePlugins()
-{
-    auto& knownPlugins = pluginHost_.getKnownPlugins();
-    
-    // Group by Category -> Manufacturer
-    std::map<juce::String, std::shared_ptr<BrowserItem>> categoryNodes;
-    
-    for (const auto& desc : knownPlugins.getTypes())
-    {
-        juce::String category = desc.category;
-        if (category.isEmpty()) category = "Uncategorized";
-        
-        // Ensure category exists
-        if (categoryNodes.find(category) == categoryNodes.end())
-        {
-            auto catNode = std::make_shared<BrowserItem>("cat_" + category, category, BrowserItemType::Folder);
-            pluginsNode->addChild(catNode);
-            categoryNodes[category] = catNode;
-        }
-        
-        // Create Plugin Item
-        auto pluginItem = std::make_shared<BrowserItem>(desc.fileOrIdentifier, desc.name, BrowserItemType::Plugin);
-        pluginItem->metadata.author = desc.manufacturerName;
-        // FIX: Use getIntValue for version string
-        pluginItem->metadata.version = desc.version.getIntValue();
-        pluginItem->metadata.format = desc.pluginFormatName;
-        pluginItem->metadata.category = category;
-        pluginItem->metadata.isInstrument = desc.isInstrument;
-        
-        // FIX: Explicit boolean conversion
-        bool isFav = isFavorite(desc.fileOrIdentifier);
-        pluginItem->isFavorite = isFav;
-        
-        // Add to category
-        auto it = categoryNodes.find(category);
-        if (it != categoryNodes.end())
-        {
-            it->second->addChild(pluginItem);
-        }
-        
-        allIndexableItems_.push_back(pluginItem);
-        
-        if (pluginItem->isFavorite)
-        {
-            favoritesNode_->addChild(pluginItem);
-        }
-=======
 void BrowserModel::populatePlugins() {
   auto &knownPlugins = pluginHost_.getKnownPlugins();
 
@@ -208,20 +130,19 @@ void BrowserModel::populatePlugins() {
                                                    BrowserItemType::Folder);
       pluginsNode->addChild(catNode);
       categoryNodes[category] = catNode;
->>>>>>> origin/master
     }
 
     // Create Plugin Item
     auto pluginItem = std::make_shared<BrowserItem>(
         desc.fileOrIdentifier, desc.name, BrowserItemType::Plugin);
     pluginItem->metadata.author = desc.manufacturerName;
-    // FIX: Use getIntValue for version string
+    // Version is stored as string, not int
     pluginItem->metadata.version = desc.version;
     pluginItem->metadata.format = desc.pluginFormatName;
     pluginItem->metadata.category = category;
     pluginItem->metadata.isInstrument = desc.isInstrument;
 
-    // FIX: Explicit boolean conversion
+    // Use explicit bool variable for clarity
     bool isFav = isFavorite(desc.fileOrIdentifier);
     pluginItem->isFavorite = isFav;
 
@@ -239,59 +160,6 @@ void BrowserModel::populatePlugins() {
   }
 }
 
-<<<<<<< HEAD
-void BrowserModel::populateUserLibrary()
-{
-    // Real file scanning
-    juce::StringArray supportedExtensions = { ".wav", ".aif", ".aiff", ".mp3", ".ogg", ".mid", ".midi" };
-    
-    for (const auto& path : userLibraryPaths_)
-    {
-        juce::File dir(path);
-        if (dir.isDirectory())
-        {
-            auto dirNode = std::make_shared<BrowserItem>(path, dir.getFileName(), BrowserItemType::Folder);
-            userLibraryNode->addChild(dirNode);
-            
-            // Scan 1 level deep for now to avoid freezing 
-            // Phase 2: Move this to background thread with deeper recursion
-            juce::RangedDirectoryIterator iter(dir, false, "*", juce::File::findFilesAndDirectories);
-            
-            for (const auto& entry : iter)
-            {
-                if (entry.isDirectory())
-                {
-                    auto subDir = std::make_shared<BrowserItem>(entry.getFile().getFullPathName(), 
-                                                              entry.getFile().getFileName(), 
-                                                              BrowserItemType::Folder);
-                    dirNode->addChild(subDir);
-                }
-                else
-                {
-                   juce::String ext = entry.getFile().getFileExtension().toLowerCase();
-                   if (supportedExtensions.contains(ext))
-                   {
-                       BrowserItemType type = (ext == ".mid" || ext == ".midi") 
-                           ? BrowserItemType::MidiFile 
-                           : BrowserItemType::AudioFile;
-                           
-                       auto fileItem = std::make_shared<BrowserItem>(entry.getFile().getFullPathName(), 
-                                                                   entry.getFile().getFileName(), 
-                                                                   type);
-                       // FIX: Explicit boolean conversion
-                       bool isFav = isFavorite(entry.getFile().getFullPathName());
-                       fileItem->isFavorite = isFav;
-                       
-                       dirNode->addChild(fileItem);
-                       allIndexableItems_.push_back(fileItem);
-                       
-                       if (fileItem->isFavorite)
-                       {
-                           favoritesNode_->addChild(fileItem);
-                       }
-                   }
-                }
-=======
 void BrowserModel::populateUserLibrary() {
   // Real file scanning
   juce::StringArray supportedExtensions = {".wav", ".aif", ".aiff", ".mp3",
@@ -325,7 +193,7 @@ void BrowserModel::populateUserLibrary() {
             auto fileItem = std::make_shared<BrowserItem>(
                 entry.getFile().getFullPathName(),
                 entry.getFile().getFileName(), type);
-            // FIX: Explicit boolean conversion
+            // Use explicit bool variable for clarity
             bool isFav = isFavorite(entry.getFile().getFullPathName());
             fileItem->isFavorite = isFav;
 
@@ -334,7 +202,6 @@ void BrowserModel::populateUserLibrary() {
 
             if (fileItem->isFavorite) {
               favoritesNode_->addChild(fileItem);
->>>>>>> origin/master
             }
           }
         }
@@ -403,42 +270,6 @@ void BrowserModel::addScannedItem(std::shared_ptr<BrowserItem> item) {
 // Favorites
 //==============================================================================
 
-<<<<<<< HEAD
-void BrowserModel::addToFavorites(std::shared_ptr<BrowserItem> item)
-{
-    if (!item) return; 
-    
-    if (favoriteIds_.find(item->id) == favoriteIds_.end())
-    {
-        favoriteIds_.insert(item->id);
-        item->isFavorite = true;
-        favoritesNode_->addChild(item);
-        saveFavorites();
-        sendChangeMessage();
-    }
-}
-
-void BrowserModel::removeFromFavorites(std::shared_ptr<BrowserItem> item)
-{
-    if (!item) return; 
-    
-    auto it = favoriteIds_.find(item->id);
-    if (it != favoriteIds_.end())
-    {
-        favoriteIds_.erase(it);
-        item->isFavorite = false;
-        
-        // Remove from favorites node
-        auto& children = favoritesNode_->children;
-        children.erase(
-            std::remove_if(children.begin(), children.end(),
-                [&](const std::shared_ptr<BrowserItem>& child) { return child->id == item->id; }),
-            children.end());
-        
-        saveFavorites();
-        sendChangeMessage();
-    }
-=======
 void BrowserModel::addToFavorites(std::shared_ptr<BrowserItem> item) {
   if (!item)
     return;
@@ -473,7 +304,6 @@ void BrowserModel::removeFromFavorites(std::shared_ptr<BrowserItem> item) {
     saveFavorites();
     sendChangeMessage();
   }
->>>>>>> origin/master
 }
 
 bool BrowserModel::isFavorite(const juce::String &itemId) const {
@@ -517,45 +347,6 @@ juce::File BrowserModel::getFavoritesFile() const {
 // Tagging
 //==============================================================================
 
-<<<<<<< HEAD
-void BrowserModel::addTagToItem(std::shared_ptr<BrowserItem> item, const juce::String& tag)
-{
-    if (!item || tag.isEmpty()) return; 
-    
-    juce::String normalizedTag = tag.toLowerCase().trim();
-    
-    // Add to item's metadata
-    auto& tags = item->metadata.tags;
-    if (std::find(tags.begin(), tags.end(), normalizedTag) == tags.end())
-    {
-        tags.push_back(normalizedTag);
-    }
-    
-    // Add to global tag map
-    itemTags_[item->id].push_back(normalizedTag);
-    allTags_.insert(normalizedTag);
-    
-    saveTags();
-    sendChangeMessage();
-}
-
-void BrowserModel::removeTagFromItem(std::shared_ptr<BrowserItem> item, const juce::String& tag)
-{
-    if (!item) return; 
-    
-    juce::String normalizedTag = tag.toLowerCase().trim();
-    
-    // Remove from item metadata
-    auto& tags = item->metadata.tags;
-    tags.erase(std::remove(tags.begin(), tags.end(), normalizedTag), tags.end());
-    
-    // Remove from map
-    auto& itemTagList = itemTags_[item->id];
-    itemTagList.erase(std::remove(itemTagList.begin(), itemTagList.end(), normalizedTag), itemTagList.end());
-    
-    saveTags();
-    sendChangeMessage();
-=======
 void BrowserModel::addTagToItem(std::shared_ptr<BrowserItem> item,
                                 const juce::String &tag) {
   if (!item || tag.isEmpty())
@@ -596,7 +387,6 @@ void BrowserModel::removeTagFromItem(std::shared_ptr<BrowserItem> item,
 
   saveTags();
   sendChangeMessage();
->>>>>>> origin/master
 }
 
 std::vector<juce::String>
@@ -675,19 +465,6 @@ juce::File BrowserModel::getTagsFile() const {
 // History
 //==============================================================================
 
-<<<<<<< HEAD
-void BrowserModel::pushHistory(std::shared_ptr<BrowserItem> folder)
-{
-    if (!folder) return; 
-    
-    history_.push_back(folder);
-    
-    // Limit history size
-    while (history_.size() > maxHistorySize_)
-    {
-        history_.pop_front();
-    }
-=======
 void BrowserModel::pushHistory(std::shared_ptr<BrowserItem> folder) {
   if (!folder)
     return;
@@ -698,7 +475,6 @@ void BrowserModel::pushHistory(std::shared_ptr<BrowserItem> folder) {
   while (history_.size() > maxHistorySize_) {
     history_.pop_front();
   }
->>>>>>> origin/master
 }
 
 std::shared_ptr<BrowserItem> BrowserModel::popHistory() {

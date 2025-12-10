@@ -9,14 +9,22 @@
 
 #pragma once
 
-#include "ui/ArrangerComponent.h"
+#include "../Source/ui/skia/BottomBar.h"
+#include "../Source/ui/skia/BrowserPanel.h"
+#include "../Source/ui/skia/RightSidePanel.h"
+#include "../Source/ui/skia/SkiaButton.h"
+#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
+#include "../Source/ui/skia/TransportBar.h"
+#include "../Source/ui/skia/views/SessionViewComponent.h"
+#include "../Source/ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
-#include "ui/MixerComponent.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
+#include "ui/ArrangerComponent.h"
+#include "ui/MixerComponent.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -24,19 +32,6 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include <juce_events/juce_events.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-
-#include "../Source/ui/skia/BottomBar.h"
-#include "../Source/ui/skia/BrowserPanel.h"
-#include "../Source/ui/skia/RightSidePanel.h"
-#include "../Source/ui/skia/SkiaButtonComponent.h"
-#include "../Source/ui/skia/SkiaMainWindowIntegration.h"
-#include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/views/PianoKeyboardViewSkia.h"
-#Source/ui/skia/views/SessionViewComponent.h" // Fixed include path
-#include "../Source/ui/MenuBar.h" // New MenuBar header
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -44,6 +39,7 @@ class CommandAPI;
 class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
+class ZenithMenuBar;
 } // namespace zenith
 
 //==============================================================================
@@ -66,8 +62,7 @@ class WingmanPanel;
  * - Automation display and editing
  */
 class MainComponent : public zenith::SkiaMainWindowIntegration,
-                      public juce::KeyListener
-{
+                      public juce::KeyListener {
 public:
   //==========================================================================
   MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
@@ -85,10 +80,9 @@ public:
   void mouseUp(const juce::MouseEvent &e) override;
 
 protected:
-  void drawSkiaContent(SkCanvas* canvas) override;
+  void drawSkiaContent(SkCanvas *canvas) override;
 
 public:
-
   //==========================================================================
   // KeyListener interface (for undo/redo shortcuts)
   //==========================================================================
@@ -97,15 +91,9 @@ public:
                   Component *originatingComponent) override;
 
 private:
-    // Layout Editing State
-    juce::Component* activeDragComponent = nullptr;
-    juce::Rectangle<int> dragStartBounds;
-
-  //==========================================================================
-  // C4: Track count monitoring (read-only, dirty-checked)
-  //==========================================================================
-
-  void refreshTrackCountLabel();
+  // Layout Editing State
+  juce::Component *activeDragComponent = nullptr;
+  juce::Rectangle<int> dragStartBounds;
 
   //==========================================================================
   // Integration: Piano roll opener
@@ -133,7 +121,7 @@ private:
   std::unique_ptr<zenith::TransportBar> transportBar;
 
   // The "Perfect DAW" Tri-Pane Layout Manager
-  // Manages Browser, Session, and Arranger View
+  // Manages Browser, Session View, and Arranger View
   std::unique_ptr<zenith::MainLayoutComponent> mainLayout;
 
   // Right: Scratch Pads + Wingman Console
@@ -141,8 +129,6 @@ private:
 
   // Bottom: Piano keyboard + mixer strip
   std::unique_ptr<zenith::BottomBar> bottomBar;
-
-  int lastTrackCount = -1;
 
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
   // Skia)
@@ -161,16 +147,11 @@ private:
 };
 
 //==============================================================================
+
+//==============================================================================
 /**
  * @class MainWindow
  * @brief Top-level application window
- *
- * Manages:
- * - Window lifecycle
- * - Menu bar
- * - Main content component
- * - Audio engine
- * - Project state
  */
 class MainWindow : public juce::DocumentWindow {
 public:
@@ -184,19 +165,22 @@ public:
 
   void closeButtonPressed() override;
 
-  zenith::ProjectState* getProjectState() const { return projectState.get(); }
+  zenith::ProjectState *getProjectState() const { return projectState.get(); }
 
 private:
   //==========================================================================
-  // Menu bar model - now handled by ZenithMenuBar (SkiaComponent in MainComponent)
+  // Menu bar model
   //==========================================================================
+
+  // Legacy MenuBar removed
+  // Custom menu bar is now part of MainComponent
 
   //==========================================================================
   // Menu handlers
   //==========================================================================
 
   void showAboutDialog();
-  
+
   /**
    * @brief Save the current project
    */
@@ -238,9 +222,6 @@ public:
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
-
-  // The ZenithMenuBar is now a SkiaComponent within MainComponent, not here.
-  // std::unique_ptr<ZenithMenuBar> menuBar; // REMOVED
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

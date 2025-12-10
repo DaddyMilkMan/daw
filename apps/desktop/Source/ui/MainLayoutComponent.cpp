@@ -9,12 +9,6 @@
 */
 
 #include "MainLayoutComponent.h"
-<<<<<<< HEAD
-#include "skia/BrowserPanel.h"
-#include "../../include/ui/SessionViewComponent.h"
-#include "skia/SkiaMainWindowIntegration.h"
-=======
->>>>>>> origin/master
 #include "../../include/Engine.h"
 #include "../engine/PluginHost.h"
 #include "../instruments/InstrumentRegistry.h"
@@ -26,19 +20,6 @@
 
 namespace zenith {
 
-<<<<<<< HEAD
-MainLayoutComponent::MainLayoutComponent(Engine& engine, ProjectState& state)
-    : engine_(engine), projectState_(state)
-{
-    // Create Arranger
-    arrangerComponent_ = std::make_unique<ArrangerComponent>(projectState_, engine_);
-    addAndMakeVisible(arrangerComponent_.get()); 
-
-    // Create Session View
-    sessionViewComponent_ = std::make_unique<SessionViewComponent>(projectState_, engine_);
-    addAndMakeVisible(sessionViewComponent_.get());
-    sessionViewComponent_->setVisible(false); // Default to Arranger
-=======
 MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
     : engine_(engine), projectState_(state) {
   // Create Arranger
@@ -50,7 +31,6 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   sessionViewComponent_ = std::make_unique<SessionViewComponent>(projectState_);
   addAndMakeVisible(sessionViewComponent_.get());
   sessionViewComponent_->setVisible(false); // Default to Arranger
->>>>>>> origin/master
 
   // Create Browser Model (requires InstrumentRegistry and PluginHost)
   browserModel_ = std::make_unique<BrowserModel>(

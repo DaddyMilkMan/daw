@@ -101,10 +101,12 @@ public:
   static const juce::String LFO1Rate;
   static const juce::String LFO1Amount;
   static const juce::String LFO1Target;
+  static const juce::String LFO1Waveform;
 
   static const juce::String LFO2Rate;
   static const juce::String LFO2Amount;
   static const juce::String LFO2Target;
+  static const juce::String LFO2Waveform;
 
   static const juce::String GlideTime;
   static const juce::String MonoMode;
@@ -113,10 +115,41 @@ public:
   static const juce::String MaxVoices;
   static const juce::String QualitySetting;
   
+  // New Parameters - Phase 1 Fixes
+  static const juce::String FilterKeyTrack;
+  static const juce::String PitchBendRange;
+  static const juce::String SubOscOctave;
+  static const juce::String VelocityCurve;
+  
+  // Unison Params
+  static const juce::String UnisonVoices;
+  static const juce::String UnisonDetune;
+  
+  // Flagship Features
+  static const juce::String Osc2Sync;    // Sync Osc 2 to Osc 1
+  static const juce::String Osc2FM;      // FM Amount (Osc 1 -> Osc 2)
+  static const juce::String RingMod;     // Ring Mod Amount/Mix
+  static const juce::String FilterModel; // SVF vs Ladder
+  
   // Effects Parameters
   static const juce::String DistortionAmount;
   static const juce::String ChorusAmount;
   static const juce::String ReverbAmount;
+  
+  // Delay
+  static const juce::String DelayTime;
+  static const juce::String DelayFeedback;
+  static const juce::String DelayMix;
+  static const juce::String DelaySync;
+  static const juce::String DelaySyncRate;
+
+  // LFO Sync
+  static const juce::String LFO1Sync;     // Bool
+  static const juce::String LFO1SyncRate; // Choice
+  static const juce::String LFO1Retr;     // Bool
+  static const juce::String LFO2Sync;
+  static const juce::String LFO2SyncRate;
+  static const juce::String LFO2Retr;
 
   // Modulation Matrix Access
   float getModulationMatrix(ModulationSource src, ModulationDestination dst) const;
@@ -126,6 +159,11 @@ public:
   int readFromVisualizer(float* buffer, int numSamples);
   void pushToVisualizer(const float* buffer, int numSamples);
   
+  // Shape / Pulse Width / Wavetable Position
+  static const juce::String Osc1Shape;
+  static const juce::String Osc2Shape;
+  static const juce::String Osc3Shape;
+
   // Global Effects Access
   void setDistortion(float amount) { effects_.setDistortion(amount); }
   void setChorus(float amount) { effects_.setChorus(amount); }
@@ -133,6 +171,7 @@ public:
 
 private:
   juce::Synthesiser synthesiser_;
+  double currentBpm_ = 120.0;
   juce::AudioProcessorValueTreeState parameters_;
   
   // Global Effects Chain

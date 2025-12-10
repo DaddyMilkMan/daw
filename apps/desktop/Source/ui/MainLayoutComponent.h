@@ -14,13 +14,8 @@
 #pragma once
 
 #include "../../Source/ui/skia/BrowserPanel.h"
-<<<<<<< HEAD
-#include "../../include/ui/SessionViewComponent.h"
-#include "../../include/ui/ArrangerComponent.h"
-=======
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../../Source/ui/skia/views/SessionViewComponent.h"
->>>>>>> origin/master
 #include "../../include/ProjectState.h"
 #include "../../include/ui/ArrangerComponent.h"
 

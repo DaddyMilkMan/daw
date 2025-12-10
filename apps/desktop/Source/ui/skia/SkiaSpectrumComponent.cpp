@@ -5,411 +5,251 @@
     Created: 2025-12-08
     Author:  Zenith DAW
 
-    Implementation of the real-time Spectrum Analyzer.
-
   ==============================================================================
 */
 
 #include "SkiaSpectrumComponent.h"
-#include <cmath>
+#include <include/effects/SkGradientShader.h>
 
 namespace zenith {
 
-//==============================================================================
-// Construction/Destruction
-//==============================================================================
-
 SkiaSpectrumComponent::SkiaSpectrumComponent(FFTSize fftSize)
-    : fftSize_(static_cast<int>(fftSize))
-    , fft_(static_cast<int>(std::log2(fftSize_)))
-    , fftInput_(static_cast<size_t>(fftSize_ * 2), 0.0f)
-    , fftOutput_(static_cast<size_t>(fftSize_ * 2), 0.0f)
-    , magnitudes_(static_cast<size_t>(fftSize_ / 2), kMinDb)
-    , smoothedMagnitudes_(static_cast<size_t>(fftSize_ / 2), kMinDb)
-    , window_(static_cast<size_t>(fftSize_), juce::dsp::WindowingFunction<float>::hann)
-    , audioFifo_(fftSize_ * 4)  // 4x FFT size for buffering
-    , inputBuffer_(static_cast<size_t>(fftSize_), 0.0f)
-    , peakMagnitudes_(static_cast<size_t>(fftSize_ / 2), kMinDb)
-    , peakHoldCounters_(static_cast<size_t>(fftSize_ / 2), 0)
+    : forwardFFT_((int)fftSize),
+      window_((size_t)(1 << (int)fftSize), juce::dsp::WindowingFunction<float>::hann),
+      audioFifo_(4096) // Larger buffer to handle jitter
 {
-    // Start timer for continuous updates at 60 FPS
-    startTimerHz(kTargetFPS);
+    // Set target FPS to 60 for smooth visualization
+    setTargetFPS(60);
+    startTimerHz(60);
     
-    // Set default size
-    setSize(200, 80);
+    int numPoints = 1 << (int)fftSize;
+    fftData_.assign(numPoints * 2, 0.0f);
+    scopeData_.assign(numPoints, 0.0f);
+    
+    // Set up visualization buckets (logarithmic)
+    // 64 bands is usually enough for visual analysis
+    logFrequencyData_.assign(64, 0.0f);
+    peakData_.assign(64, 0.0f);
+    peakHoldCounters_.assign(64, 0);
 }
 
-SkiaSpectrumComponent::~SkiaSpectrumComponent()
-{
+SkiaSpectrumComponent::~SkiaSpectrumComponent() {
     stopTimer();
 }
 
-//==============================================================================
-// Timer Callback - Process FFT and trigger repaint
-//==============================================================================
-
-void SkiaSpectrumComponent::timerCallback()
-{
-    // Pop samples from audio FIFO and process FFT
-    processFFT();
-    
-    // Update peak hold values
-    updatePeaks();
-    
-    // Request repaint
-    repaint();
+void SkiaSpectrumComponent::pushSamples(const juce::AudioBuffer<float>& buffer) {
+    audioFifo_.pushStereoAsMono(buffer, buffer.getNumSamples());
 }
 
-//==============================================================================
-// FFT Processing (UI Thread - NOT Audio Thread!)
-//==============================================================================
-
-void SkiaSpectrumComponent::processFFT()
-{
-    // Read available samples from FIFO
-    int numAvailable = audioFifo_.getNumReady();
-    
-    if (numAvailable <= 0) {
-        // No new samples, apply decay to smoothed magnitudes
-        for (size_t i = 0; i < smoothedMagnitudes_.size(); ++i) {
-            smoothedMagnitudes_[i] = smoothedMagnitudes_[i] * decaySpeed_ + kMinDb * (1.0f - decaySpeed_);
-        }
-        return;
-    }
-
-    // Read samples into input buffer (circular write)
-    std::vector<float> tempBuffer(static_cast<size_t>(numAvailable));
-    int numRead = audioFifo_.popSamples(tempBuffer.data(), numAvailable);
-
-    // Copy to input buffer (overwrite oldest samples)
-    for (int i = 0; i < numRead; ++i) {
-        inputBuffer_[static_cast<size_t>(inputWritePos_)] = tempBuffer[static_cast<size_t>(i)];
-        inputWritePos_ = (inputWritePos_ + 1) % fftSize_;
-    }
-
-    // Copy input buffer to FFT input (unwrap circular buffer)
-    for (int i = 0; i < fftSize_; ++i) {
-        int readPos = (inputWritePos_ + i) % fftSize_;
-        fftInput_[static_cast<size_t>(i)] = inputBuffer_[static_cast<size_t>(readPos)];
-    }
-
-    // Apply window function
-    window_.multiplyWithWindowingTable(fftInput_.data(), static_cast<size_t>(fftSize_));
-
-    // Zero the imaginary parts
-    for (int i = fftSize_; i < fftSize_ * 2; ++i) {
-        fftInput_[static_cast<size_t>(i)] = 0.0f;
-    }
-
-    // Perform FFT
-    fft_.performFrequencyOnlyForwardTransform(fftInput_.data());
-
-    // Convert to magnitude (dB)
-    const int numBins = fftSize_ / 2;
-    for (int i = 0; i < numBins; ++i) {
-        float magnitude = fftInput_[static_cast<size_t>(i)];
-        
-        // Convert to dB with safety check
-        float db = (magnitude > 1e-10f) 
-            ? juce::Decibels::gainToDecibels(magnitude) 
-            : kMinDb;
-        
-        // Clamp to valid range
-        db = juce::jlimit(kMinDb, kMaxDb, db);
-        
-        magnitudes_[static_cast<size_t>(i)] = db;
-
-        // Smooth the display values (attack fast, decay slow)
-        float current = smoothedMagnitudes_[static_cast<size_t>(i)];
-        if (db > current) {
-            // Fast attack
-            smoothedMagnitudes_[static_cast<size_t>(i)] = db;
-        } else {
-            // Slow decay
-            smoothedMagnitudes_[static_cast<size_t>(i)] = current * decaySpeed_ + db * (1.0f - decaySpeed_);
-        }
-    }
-}
-
-void SkiaSpectrumComponent::updatePeaks()
-{
-    if (!peakHoldEnabled_) return;
-
-    const int numBins = fftSize_ / 2;
-    const int holdFrames = (peakHoldTimeMs_ * kTargetFPS) / 1000;
-
-    for (int i = 0; i < numBins; ++i) {
-        float current = smoothedMagnitudes_[static_cast<size_t>(i)];
-        
-        if (current >= peakMagnitudes_[static_cast<size_t>(i)]) {
-            // New peak
-            peakMagnitudes_[static_cast<size_t>(i)] = current;
-            peakHoldCounters_[static_cast<size_t>(i)] = holdFrames;
-        } else if (peakHoldCounters_[static_cast<size_t>(i)] > 0) {
-            // Hold peak
-            peakHoldCounters_[static_cast<size_t>(i)]--;
-        } else {
-            // Decay peak
-            peakMagnitudes_[static_cast<size_t>(i)] *= 0.95f;
-            if (peakMagnitudes_[static_cast<size_t>(i)] < kMinDb) {
-                peakMagnitudes_[static_cast<size_t>(i)] = kMinDb;
+void SkiaSpectrumComponent::timerCallback() {
+    // Process audio data if enough samples available
+    if (audioFifo_.getNumReady() >= (int)scopeData_.size()) {
+        processFFT();
+        updateVisualData();
+        markDirty(); // Request repaint
+    } else {
+        // Fallback decay if no audio
+        bool changed = false;
+        for (auto& val : logFrequencyData_) {
+            if (val > 0.001f) {
+                val *= decaySpeed_;
+                changed = true;
             }
         }
-    }
-}
-
-//==============================================================================
-// Frequency Mapping
-//==============================================================================
-
-float SkiaSpectrumComponent::frequencyToX(float frequency) const
-{
-    // Logarithmic frequency mapping
-    float logMin = std::log10(minFrequency_);
-    float logMax = std::log10(maxFrequency_);
-    float logFreq = std::log10(std::max(frequency, minFrequency_));
-    
-    float normalized = (logFreq - logMin) / (logMax - logMin);
-    return normalized * static_cast<float>(getWidth());
-}
-
-float SkiaSpectrumComponent::binToFrequency(int bin) const
-{
-    return static_cast<float>(bin) * static_cast<float>(sampleRate_) / static_cast<float>(fftSize_);
-}
-
-//==============================================================================
-// Skia Drawing
-//==============================================================================
-
-void SkiaSpectrumComponent::drawSkia(SkCanvas* canvas)
-{
-    if (!canvas) return;
-
-    // Draw background
-    drawBackground(canvas);
-
-    // Draw spectrum based on display mode
-    switch (displayMode_) {
-        case DisplayMode::Bars:
-            drawBars(canvas);
-            break;
-        case DisplayMode::Curve:
-            drawCurve(canvas, false);
-            break;
-        case DisplayMode::FilledCurve:
-            drawCurve(canvas, true);
-            break;
-    }
-
-    // Draw peak hold indicators
-    if (peakHoldEnabled_) {
-        drawPeaks(canvas);
-    }
-}
-
-void SkiaSpectrumComponent::drawBackground(SkCanvas* canvas)
-{
-    SkPaint paint;
-    paint.setColor(backgroundColor_);
-    paint.setAntiAlias(true);
-    
-    auto bounds = getLocalBounds();
-    SkRect rect = SkRect::MakeXYWH(0, 0, 
-        static_cast<float>(bounds.getWidth()), 
-        static_cast<float>(bounds.getHeight()));
-    
-    canvas->drawRoundRect(rect, 4.0f, 4.0f, paint);
-}
-
-void SkiaSpectrumComponent::drawBars(SkCanvas* canvas)
-{
-    const int numBins = fftSize_ / 2;
-    const float width = static_cast<float>(getWidth());
-    const float height = static_cast<float>(getHeight());
-    
-    const int numBars = 32; // Number of frequency bands to display
-    const float barWidth = width / static_cast<float>(numBars) - 2.0f;
-
-    SkPaint paint;
-    paint.setAntiAlias(true);
-
-    for (int bar = 0; bar < numBars; ++bar) {
-        // Calculate frequency range for this bar (logarithmic)
-        float t0 = static_cast<float>(bar) / static_cast<float>(numBars);
-        float t1 = static_cast<float>(bar + 1) / static_cast<float>(numBars);
-        
-        float freq0 = minFrequency_ * std::pow(maxFrequency_ / minFrequency_, t0);
-        float freq1 = minFrequency_ * std::pow(maxFrequency_ / minFrequency_, t1);
-        
-        int bin0 = static_cast<int>(freq0 * static_cast<float>(fftSize_) / static_cast<float>(sampleRate_));
-        int bin1 = static_cast<int>(freq1 * static_cast<float>(fftSize_) / static_cast<float>(sampleRate_));
-        
-        bin0 = juce::jlimit(0, numBins - 1, bin0);
-        bin1 = juce::jlimit(bin0 + 1, numBins, bin1);
-
-        // Average magnitude for this bar
-        float avgMag = kMinDb;
-        for (int b = bin0; b < bin1; ++b) {
-            avgMag = std::max(avgMag, smoothedMagnitudes_[static_cast<size_t>(b)]);
+        if (changed) {
+            updateVisualData(); // Process peaks
+            markDirty();
         }
-
-        // Normalize to 0-1
-        float normalized = (avgMag - kMinDb) / (kMaxDb - kMinDb);
-        normalized = juce::jlimit(0.0f, 1.0f, normalized);
-
-        float barHeight = normalized * height;
-        float x = static_cast<float>(bar) * (barWidth + 2.0f) + 1.0f;
-        float y = height - barHeight;
-
-        // Color based on level
-        SkColor color;
-        if (normalized > 0.8f) {
-            color = gradientColorHigh_;
-        } else if (normalized > 0.4f) {
-            color = gradientColorMid_;
-        } else {
-            color = gradientColorLow_;
-        }
-
-        paint.setColor(color);
-        SkRect barRect = SkRect::MakeXYWH(x, y, barWidth, barHeight);
-        canvas->drawRoundRect(barRect, 2.0f, 2.0f, paint);
     }
 }
 
-void SkiaSpectrumComponent::drawCurve(SkCanvas* canvas, bool filled)
-{
-    const int numBins = fftSize_ / 2;
-    const float width = static_cast<float>(getWidth());
-    const float height = static_cast<float>(getHeight());
+void SkiaSpectrumComponent::processFFT() {
+    // Pull from FIFO
+    audioFifo_.pop(scopeData_);
+    
+    // Apply windowing
+    window_.multiplyWithWindowingTable(scopeData_.data(), scopeData_.size());
+    
+    // Prepare for FFT (copy to complex buffer)
+    std::fill(fftData_.begin(), fftData_.end(), 0.0f);
+    std::copy(scopeData_.begin(), scopeData_.end(), fftData_.begin());
+    
+    // Perform FFT
+    forwardFFT_.performFrequencyOnlyForwardTransform(fftData_.data());
+    
+    // fftData_ now holds magnitude in first half
+}
 
-    SkPath path;
-    bool pathStarted = false;
-
-    // Sample points along the frequency spectrum
-    const int numPoints = 128;
-    std::vector<SkPoint> points;
-    points.reserve(static_cast<size_t>(numPoints));
-
-    for (int i = 0; i < numPoints; ++i) {
-        float t = static_cast<float>(i) / static_cast<float>(numPoints - 1);
+void SkiaSpectrumComponent::updateVisualData() {
+    int fftSize = (int)scopeData_.size();
+    int numBins = fftSize / 2;
+    int numBuckets = (int)logFrequencyData_.size();
+    
+    // Map FFT bins to logarithmic buckets
+    // Simple mapping: 20Hz to 20kHz
+    float minFreq = 20.0f;
+    float maxFreq = 20000.0f;
+    
+    for (int i = 0; i < numBuckets; ++i) {
+        float normX = (float)i / (float)numBuckets;
         
         // Logarithmic frequency
-        float freq = minFrequency_ * std::pow(maxFrequency_ / minFrequency_, t);
-        int bin = static_cast<int>(freq * static_cast<float>(fftSize_) / static_cast<float>(sampleRate_));
-        bin = juce::jlimit(0, numBins - 1, bin);
-
-        float magnitude = smoothedMagnitudes_[static_cast<size_t>(bin)];
-        float normalized = (magnitude - kMinDb) / (kMaxDb - kMinDb);
-        normalized = juce::jlimit(0.0f, 1.0f, normalized);
-
-        float x = t * width;
-        float y = height - (normalized * height);
-
-        points.push_back(SkPoint::Make(x, y));
-    }
-
-    // Build smooth curve path
-    if (!points.empty()) {
-        path.moveTo(points[0]);
+        float freqStart = minFreq * std::pow(maxFreq / minFreq, normX);
+        float freqEnd = minFreq * std::pow(maxFreq / minFreq, (float)(i + 1) / numBuckets);
         
-        for (size_t i = 1; i < points.size(); ++i) {
-            // Use quadratic bezier for smoothness
-            if (i < points.size() - 1) {
-                float midX = (points[i].x() + points[i + 1].x()) / 2.0f;
-                float midY = (points[i].y() + points[i + 1].y()) / 2.0f;
-                path.quadTo(points[i].x(), points[i].y(), midX, midY);
+        // Find corresponding bins
+        int binStart = getIndexForFrequency(freqStart);
+        int binEnd = getIndexForFrequency(freqEnd);
+        
+        // Average or Max magnitude in this range
+        float maxMag = 0.0f;
+        int count = 0;
+        
+        for (int bin = binStart; bin <= binEnd && bin < numBins; ++bin) {
+            float mag = fftData_[bin];
+            if (mag > maxMag) maxMag = mag;
+            count++;
+        }
+        
+        // Normalize magnitude (semi-logarithmic amplitude)
+        // FFT output depends on window size.
+        // Approx scaling for visual range.
+        float rawLevel = maxMag / (float)fftSize; 
+        float db = juce::Decibels::gainToDecibels(rawLevel + 0.00001f);
+        float normLevel = juce::jmap(db, -100.0f, 0.0f, 0.0f, 1.0f);
+        normLevel = juce::jlimit(0.0f, 1.0f, normLevel);
+        
+        // Smooth transitions
+        float current = logFrequencyData_[i];
+        if (normLevel > current) {
+            logFrequencyData_[i] = normLevel; // Attack instant
+        } else {
+            logFrequencyData_[i] = current * decaySpeed_; // Decay
+        }
+        
+        // Peak hold
+        if (logFrequencyData_[i] > peakData_[i]) {
+            peakData_[i] = logFrequencyData_[i];
+            peakHoldCounters_[i] = peakHoldTime_;
+        } else {
+            if (peakHoldCounters_[i] > 0) {
+                peakHoldCounters_[i]--;
             } else {
-                path.lineTo(points[i]);
+                peakData_[i] *= 0.98f; // Slow decay
             }
         }
     }
-
-    if (filled) {
-        // Close path for fill
-        SkPath fillPath = path;
-        fillPath.lineTo(width, height);
-        fillPath.lineTo(0, height);
-        fillPath.close();
-
-        // Create gradient
-        SkPoint gradientPoints[2] = {
-            SkPoint::Make(width / 2.0f, 0),
-            SkPoint::Make(width / 2.0f, height)
-        };
-        SkColor gradientColors[3] = {
-            gradientColorHigh_,
-            gradientColorMid_,
-            gradientColorLow_
-        };
-        float gradientPositions[3] = { 0.0f, 0.5f, 1.0f };
-
-        SkPaint fillPaint;
-        fillPaint.setAntiAlias(true);
-        fillPaint.setStyle(SkPaint::kFill_Style);
-        fillPaint.setShader(SkGradientShader::MakeLinear(
-            gradientPoints,
-            gradientColors,
-            gradientPositions,
-            3,
-            SkTileMode::kClamp
-        ));
-        fillPaint.setAlphaf(0.6f);
-
-        canvas->drawPath(fillPath, fillPaint);
-    }
-
-    // Draw stroke
-    SkPaint strokePaint;
-    strokePaint.setAntiAlias(true);
-    strokePaint.setStyle(SkPaint::kStroke_Style);
-    strokePaint.setColor(lineColor_);
-    strokePaint.setStrokeWidth(lineWidth_);
-    strokePaint.setStrokeCap(SkPaint::kRound_Cap);
-    strokePaint.setStrokeJoin(SkPaint::kRound_Join);
-
-    canvas->drawPath(path, strokePaint);
 }
 
-void SkiaSpectrumComponent::drawPeaks(SkCanvas* canvas)
-{
-    const int numBins = fftSize_ / 2;
-    const float width = static_cast<float>(getWidth());
-    const float height = static_cast<float>(getHeight());
+int SkiaSpectrumComponent::getIndexForFrequency(float freq) const {
+    // bin = freq * size / sampleRate
+    return (int)(freq * (float)scopeData_.size() / sampleRate_);
+}
 
-    SkPaint paint;
-    paint.setAntiAlias(true);
-    paint.setColor(SkColorSetA(design::colors::TEXT_PRIMARY, 200));
-    paint.setStrokeWidth(1.5f);
-    paint.setStyle(SkPaint::kStroke_Style);
-
-    SkPath peakPath;
-    bool started = false;
-
-    const int numPoints = 64;
-    for (int i = 0; i < numPoints; ++i) {
-        float t = static_cast<float>(i) / static_cast<float>(numPoints - 1);
-        float freq = minFrequency_ * std::pow(maxFrequency_ / minFrequency_, t);
-        int bin = static_cast<int>(freq * static_cast<float>(fftSize_) / static_cast<float>(sampleRate_));
-        bin = juce::jlimit(0, numBins - 1, bin);
-
-        float magnitude = peakMagnitudes_[static_cast<size_t>(bin)];
-        float normalized = (magnitude - kMinDb) / (kMaxDb - kMinDb);
-        normalized = juce::jlimit(0.0f, 1.0f, normalized);
-
-        float x = t * width;
-        float y = height - (normalized * height);
-
-        if (!started) {
-            peakPath.moveTo(x, y);
-            started = true;
-        } else {
-            peakPath.lineTo(x, y);
+void SkiaSpectrumComponent::drawSkia(SkCanvas* canvas) {
+    auto bounds = getLocalBounds().toFloat();
+    SkRect rect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(), bounds.getHeight());
+    
+    int numBuckets = (int)logFrequencyData_.size();
+    float binWidth = rect.width() / (float)numBuckets;
+    
+    if (displayMode_ == DisplayMode::Bars) {
+        SkPaint paint;
+        paint.setColor(colorTop_);
+        paint.setAntiAlias(false); // Sharp bars
+        
+        for (int i = 0; i < numBuckets; ++i) {
+            float height = logFrequencyData_[i] * rect.height();
+            if (height < 1.0f) height = 1.0f; // Minimum visibility
+            
+            SkRect bar = SkRect::MakeXYWH(
+                rect.x() + i * binWidth,
+                rect.bottom() - height,
+                binWidth - 1.0f, // 1px gap
+                height
+            );
+            canvas->drawRect(bar, paint);
+        }
+    } 
+    else if (displayMode_ == DisplayMode::FilledCurve) {
+        SkPath path;
+        path.moveTo(rect.x(), rect.bottom());
+        
+        for (int i = 0; i < numBuckets; ++i) {
+            float x = rect.x() + i * binWidth + (binWidth * 0.5f);
+            float height = logFrequencyData_[i] * rect.height();
+            float y = rect.bottom() - height;
+            
+            // Simple line to point
+            path.lineTo(x, y);
+        }
+        
+        path.lineTo(rect.right(), rect.bottom());
+        path.close();
+        
+        // Gradient fill
+        SkPoint pts[2] = { {rect.centerX(), rect.top()}, {rect.centerX(), rect.bottom()} };
+        SkColor colors[2] = { colorTop_, colorBottom_ };
+        auto shader = SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp);
+        
+        SkPaint paint;
+        paint.setShader(shader);
+        paint.setAntiAlias(true);
+        canvas->drawPath(path, paint);
+        
+        // Stroke on top
+        SkPaint stroke;
+        stroke.setColor(colorTop_);
+        stroke.setStyle(SkPaint::kStroke_Style);
+        stroke.setStrokeWidth(1.5f);
+        stroke.setAntiAlias(true);
+        
+        // Rebuild path for stroke (no close/bottom)
+        SkPath strokePath;
+        strokePath.moveTo(rect.x(), rect.bottom()); // Start left bottom? or first point?
+        
+        // Improved: Curve smoothing could be added here later (Catmull-Rom)
+        for (int i = 0; i < numBuckets; ++i) {
+            float x = rect.x() + i * binWidth + (binWidth * 0.5f);
+            float height = logFrequencyData_[i] * rect.height();
+            float y = rect.bottom() - height;
+            if (i==0) strokePath.moveTo(x, y);
+            else strokePath.lineTo(x, y);
+        }
+        canvas->drawPath(strokePath, stroke);
+    }
+    
+    // Draw Peak Hold
+    SkPaint peakPaint;
+    peakPaint.setColor(SkColorSetARGB(180, 255, 255, 255));
+    peakPaint.setAntiAlias(true);
+    
+    if (displayMode_ == DisplayMode::Bars) {
+        for (int i = 0; i < numBuckets; ++i) {
+            float height = peakData_[i] * rect.height();
+            SkRect bar = SkRect::MakeXYWH(
+                rect.x() + i * binWidth,
+                rect.bottom() - height,
+                binWidth - 1.0f,
+                2.0f // Thick line
+            );
+            canvas->drawRect(bar, peakPaint);
         }
     }
+}
 
-    canvas->drawPath(peakPath, paint);
+void SkiaSpectrumComponent::setGradientColors(SkColor top, SkColor bottom) {
+    colorTop_ = top;
+    colorBottom_ = bottom;
+    markDirty();
+}
+
+void SkiaSpectrumComponent::setDecaySpeed(float speed) {
+    decaySpeed_ = juce::jlimit(0.6f, 0.99f, speed);
+}
+
+void SkiaSpectrumComponent::resized() {
+    // Rebuild cache if needed
 }
 
 } // namespace zenith

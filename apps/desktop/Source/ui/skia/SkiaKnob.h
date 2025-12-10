@@ -231,6 +231,9 @@ public:
     
     void drawSkia(SkCanvas* canvas) override;
     
+    // AI Vision Hook
+    std::vector<AIElementInfo> getInspectableElements() override;
+    
     /**
      * Capture current knob state for thread-safe rendering.
      * Called from Message Thread, result used by Render Thread.

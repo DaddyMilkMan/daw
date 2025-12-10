@@ -35,15 +35,13 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 #include <memory>
+#include <set>
 #include <vector>
 
-#ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
-
-#endif
 
 //==============================================================================
 /**
@@ -324,6 +322,9 @@ public:
   void handleMidiNoteOn(int pitch, int velocity);
   void handleMidiNoteOff(int pitch);
 
+  /** Update playhead position from engine (call periodically) */
+  void updatePlayheadPosition(double beats);
+
   //==========================================================================
   // Note Probability
   //==========================================================================
@@ -352,17 +353,64 @@ public:
   void setExpressionLaneVisible(ExpressionType type, bool visible);
   bool getExpressionLaneVisible(ExpressionType type) const;
 
-  /** Set expression value for a note at a specific time */
+  /** Expression automation point for a note */
+  struct ExpressionPoint {
+    double timeOffset;    // Offset from note start (0.0 = note start)
+    float value;          // 0.0 to 1.0
+    float tension = 0.0f; // Bezier curve tension (-1.0 to 1.0, 0 = linear)
+  };
+
+  /** Set expression automation points for a note */
   void setNoteExpression(const juce::String &noteId, ExpressionType type,
-                         double timeOffset, float value);
+                         const std::vector<ExpressionPoint> &points);
 
   /** Get expression automation points for a note */
-  struct ExpressionPoint {
-    double timeOffset; // Offset from note start (0.0 = note start)
-    float value;       // 0.0 to 1.0
-  };
   std::vector<ExpressionPoint> getNoteExpression(const juce::String &noteId,
                                                  ExpressionType type) const;
+
+  //==========================================================================
+  // MIDI CC Lanes (Standard MIDI Control Change)
+  //==========================================================================
+
+  /** MIDI CC point (time, value) */
+  struct CCPoint {
+    double timeBeats;
+    int value;       // 0-127
+    juce::String id; // Unique ID for undo/redo
+  };
+
+  /** Enable/disable MIDI CC lane display */
+  void setCCLaneVisible(int ccNumber, bool visible);
+  bool getCCLaneVisible(int ccNumber) const;
+
+  /** Add or update CC point */
+  void setCCPoint(int ccNumber, double timeBeats, int value);
+
+  /** Remove CC point */
+  void removeCCPoint(int ccNumber, const juce::String &pointId);
+
+  /** Get all CC points for a CC number in time range */
+  std::vector<CCPoint> getCCPoints(int ccNumber, double startBeats,
+                                   double endBeats) const;
+
+  /** Get all CC points for a CC number */
+  std::vector<CCPoint> getAllCCPoints(int ccNumber) const;
+
+  /** Common CC numbers as constants */
+  static constexpr int CC_MODULATION = 1;
+  static constexpr int CC_VOLUME = 7;
+  static constexpr int CC_PAN = 10;
+  static constexpr int CC_EXPRESSION = 11;
+  static constexpr int CC_SUSTAIN = 64;
+  static constexpr int CC_PORTAMENTO = 65;
+  static constexpr int CC_SOSTENUTO = 66;
+  static constexpr int CC_SOFT_PEDAL = 67;
+  static constexpr int CC_FILTER_RESONANCE = 71;
+  static constexpr int CC_RELEASE = 72;
+  static constexpr int CC_ATTACK = 73;
+  static constexpr int CC_CUTOFF = 74;
+  static constexpr int CC_REVERB = 91;
+  static constexpr int CC_CHORUS = 93;
 
   //==========================================================================
   // Step Sequencer Mode
@@ -613,7 +661,10 @@ private:
     ResizeLeft,
     ResizeRight,
     VelocityEdit,
-    MarqueeSelect
+    MarqueeSelect,
+    CCEditPoint,      // Editing an existing CC point
+    CCNewPoint,       // Creating and dragging a new CC point
+    ExpressionTension // Editing expression curve tension
   };
 
   enum class CursorType {
@@ -635,6 +686,11 @@ private:
     double lengthBeats;
     int velocity;
     bool muted;
+    // New properties for advanced MIDI features
+    float probability = 1.0f;
+    juce::String condition;
+    juce::String recurrence;
+    int articulationId = 0;
   };
 
   std::vector<ClipboardNote> clipboard;
@@ -670,6 +726,91 @@ private:
   void updateNoteRectangles();
 
   //==========================================================================
+  // Spatial Indexing (Performance Optimization)
+  //==========================================================================
+
+  /** Spatial hash grid for fast note lookups */
+  struct SpatialGrid {
+    static constexpr int GRID_CELLS_X = 64; // Time divisions
+    static constexpr int GRID_CELLS_Y = 16; // Pitch divisions (128 pitches / 8)
+
+    std::vector<NoteRect *> cells[GRID_CELLS_Y][GRID_CELLS_X];
+
+    // Helper to avoid duplicates in queries
+    mutable std::set<NoteRect *> queryCache;
+
+    void clear() {
+      for (int y = 0; y < GRID_CELLS_Y; ++y) {
+        for (int x = 0; x < GRID_CELLS_X; ++x) {
+          cells[y][x].clear();
+        }
+      }
+    }
+
+    void addNote(NoteRect *note, double clipLengthBeats) {
+      if (!note)
+        return;
+
+      // Calculate grid cell bounds
+      int minX =
+          static_cast<int>((note->startBeats / clipLengthBeats) * GRID_CELLS_X);
+      int maxX = static_cast<int>(
+          ((note->startBeats + note->lengthBeats) / clipLengthBeats) *
+          GRID_CELLS_X);
+      int y = (note->pitch / 8); // 128 pitches / 8 = 16 cells
+
+      minX = juce::jlimit(0, GRID_CELLS_X - 1, minX);
+      maxX = juce::jlimit(0, GRID_CELLS_X - 1, maxX);
+      y = juce::jlimit(0, GRID_CELLS_Y - 1, y);
+
+      // Add note to all cells it overlaps
+      for (int x = minX; x <= maxX; ++x) {
+        cells[y][x].push_back(note);
+      }
+    }
+
+    std::vector<NoteRect *> query(double startBeats, double endBeats,
+                                  int minPitch, int maxPitch,
+                                  double clipLengthBeats) const {
+      std::vector<NoteRect *> results;
+      queryCache.clear(); // Clear cache for this query
+
+      int minX =
+          static_cast<int>((startBeats / clipLengthBeats) * GRID_CELLS_X);
+      int maxX = static_cast<int>((endBeats / clipLengthBeats) * GRID_CELLS_X);
+      int minY = minPitch / 8;
+      int maxY = maxPitch / 8;
+
+      minX = juce::jlimit(0, GRID_CELLS_X - 1, minX);
+      maxX = juce::jlimit(0, GRID_CELLS_X - 1, maxX);
+      minY = juce::jlimit(0, GRID_CELLS_Y - 1, minY);
+      maxY = juce::jlimit(0, GRID_CELLS_Y - 1, maxY);
+
+      for (int y = minY; y <= maxY; ++y) {
+        for (int x = minX; x <= maxX; ++x) {
+          for (NoteRect *note : cells[y][x]) {
+            if (queryCache.find(note) == queryCache.end()) {
+              // Check if note actually overlaps query region
+              if (note && note->startBeats < endBeats &&
+                  (note->startBeats + note->lengthBeats) > startBeats &&
+                  note->pitch >= minPitch && note->pitch <= maxPitch) {
+                results.push_back(note);
+                queryCache.insert(note);
+              }
+            }
+          }
+        }
+      }
+
+      return results;
+    }
+  };
+
+  SpatialGrid spatialGrid;
+  bool spatialGridDirty = true;
+  void rebuildSpatialGrid();
+
+  //==========================================================================
   // Coordinate Conversion
   //==========================================================================
 
@@ -688,8 +829,19 @@ private:
 
   NoteRect *findNoteAtPosition(float x, float y);
   NoteRect *findNoteInVelocityLane(float x, float y);
+  const NoteRect *findNoteInVelocityLane(float x, float y) const;
   DragMode detectNoteHitRegion(const NoteRect &note, float x, float y) const;
   CursorType getCursorForPosition(float x, float y) const;
+
+  // New CC Lane Interaction Helpers
+  bool findCCLaneAtPosition(float x, float y, int &ccNumber,
+                            juce::Rectangle<float> &laneRect) const;
+  // Const version for querying (cursor detection)
+  const CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
+                                       juce::Rectangle<float> &laneRect) const;
+  // Non-const version for modification (mouse down)
+  CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
+                                 juce::Rectangle<float> &laneRect);
 
   //==========================================================================
   // Editing Operations (with batched undo)
@@ -733,6 +885,10 @@ private:
   void updateMarqueeSelect(const juce::MouseEvent &e);
   void finishMarqueeSelect();
 
+  void startEditingExpressionTension(const juce::MouseEvent &e);
+  void updateExpressionTension(const juce::MouseEvent &e);
+  void finishExpressionTension();
+
   //==========================================================================
   // Zoom & Scroll
   //==========================================================================
@@ -752,6 +908,7 @@ private:
   // Skia Drawing Helpers
   void drawPianoKeys(SkCanvas *canvas, const SkRect &area);
   void drawGrid(SkCanvas *canvas, const SkRect &area);
+  void drawPlayhead(SkCanvas *canvas, const SkRect &area);
   void drawNotes(SkCanvas *canvas, const SkRect &area);
   void drawVelocityLane(SkCanvas *canvas, const SkRect &area);
   void drawChordName(SkCanvas *canvas);
@@ -759,13 +916,6 @@ private:
   // Modern UI Drawing
   void drawModernToolbar(SkCanvas *canvas, const SkRect &fullRect);
   void drawExpressionLanes(SkCanvas *canvas, const SkRect &area);
-
-  // JUCE Fallback (if needed, but we're moving to Skia)
-  void drawPianoKeys(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawGrid(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawNotes(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawVelocityLane(juce::Graphics &g, const juce::Rectangle<int> &area);
-  void drawChordName(juce::Graphics &g);
 
   //==========================================================================
   // ValueTree::Listener
@@ -802,13 +952,18 @@ private:
   // Layout
   static constexpr int PIANO_WIDTH = 60;
   static constexpr int RULER_HEIGHT = 30;
-  int velocityLaneHeight = 120;
+  int velocityLaneHeight = 160; // Increased from 120 for better precision
+                                // (~1.26px per velocity value)
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
+  CCPoint *activeCCPoint = nullptr; // New: Currently dragged CC point
+  int activeCCNumber = -1;          // New: CC number of the activeCCPoint
+  juce::Rectangle<float>
+      currentCCLaneBounds; // New: Bounds of the active CC lane during drag
 
   juce::Point<float> dragStartPos;
   juce::Rectangle<float> marqueeRect;
@@ -879,18 +1034,33 @@ private:
   // MPE Expression State
   //==========================================================================
 
-  struct NoteExpressionData {
-    std::vector<ExpressionPoint> pitchBend;
-    std::vector<ExpressionPoint> pressure;
-    std::vector<ExpressionPoint> slide;
-    std::vector<ExpressionPoint> expression;
-  };
+  // Map-based NoteExpressionData for dynamic ExpressionType lookup
+  using NoteExpressionData =
+      std::map<ExpressionType, std::vector<ExpressionPoint>>;
 
   std::map<juce::String, NoteExpressionData>
       noteExpressions; // noteId -> expression data
   bool expressionLaneVisible[4] = {false, false, false,
                                    false}; // One per ExpressionType
   int expressionLaneHeight = 60;           // Height of each expression lane
+
+  //==========================================================================
+  // MIDI CC State
+  //==========================================================================
+
+  struct CCLane {
+    int ccNumber;
+    bool visible = false;
+    std::vector<CCPoint> points;
+    juce::String name; // Display name (e.g., "Modulation", "Volume")
+  };
+
+  std::map<int, CCLane> ccLanes; // ccNumber -> lane data
+  int ccLaneHeight = 50;         // Height of each CC lane
+  std::set<int> visibleCCLanes;  // Quick lookup for visible CC lanes
+
+  void updateCCLaneNames();
+  juce::String getCCLaneName(int ccNumber) const;
 
   //==========================================================================
   // Step Sequencer State
@@ -979,6 +1149,12 @@ private:
   //==========================================================================
 
   std::map<juce::String, ScriptCallback> scriptCallbacks;
+
+  //==========================================================================
+  // Timer Callback
+  //==========================================================================
+
+  void timerCallback() override;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
