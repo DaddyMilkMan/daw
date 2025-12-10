@@ -32,7 +32,6 @@
 #include <unordered_map>
 #include <vector>
 
-
 // Forward declarations
 namespace zenith {
 class Instrument;
@@ -227,6 +226,9 @@ public:
   void addAutomationLane(const juce::String &paramId,
                          std::shared_ptr<AutomationLane> lane);
   void clearAutomationLanes();
+
+  // RT-Safe Parameter Modulation
+  void applyModulation(int pluginIndex, int paramIndex, float value);
 
 private:
   //==============================================================================

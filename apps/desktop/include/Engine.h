@@ -45,6 +45,7 @@
 #include <vector>
 
 #include "../Source/dsp/Dither.h"
+#include "../Source/dsp/EnvelopeFollower.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
 
@@ -800,6 +801,16 @@ private:
   // Routing Graph (Source of Truth for connections and processing order)
   RoutingGraph routingGraph_;
 
+  // Modulation System
+  std::unordered_map<std::string,
+                     std::shared_ptr<zenith::dsp::EnvelopeFollower>>
+      envelopeFollowers_;
+  std::unordered_map<std::string, float>
+      globalModulationBus_; // ID -> current value (0.0 - 1.0)
+
+  // Helper to ensure followers exist for active sources
+  void updateEnvelopeFollowers();
+
 public:
   RoutingGraph &getRoutingGraph() { return routingGraph_; }
   const RoutingGraph &getRoutingGraph() const { return routingGraph_; }
@@ -809,10 +820,36 @@ private:
   // Audio thread reads this snapshot without locking (wait-free iteration)
   // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
   // lifetime (safety)
+  // Render Graph Structures
+  struct MixOp {
+    int sourceBufferIndex = -1;
+    bool isSourceAux = false;
+    float gain = 1.0f;
+    bool isFeedback = false;
+  };
+
+  struct ModulationInput {
+    std::shared_ptr<zenith::dsp::EnvelopeFollower> sourceFollower;
+    int targetPluginIndex = -1;
+    int targetParamIndex = -1;
+  };
+
+  struct RenderNode {
+    Track *track = nullptr;
+    AuxBus *bus = nullptr;
+    int outputBufferIndex = -1;
+    std::vector<MixOp> inputs;
+    std::vector<ModulationInput> modulationInputs; // Pre-bound inputs
+    std::shared_ptr<zenith::dsp::EnvelopeFollower>
+        follower; // Modulation Source
+    float masterGain = 1.0f;
+  };
+
   struct TrackSnapshot {
     std::vector<zenith::Track *>
         tracks; // Raw pointers for fast, lock-free iteration
     std::vector<zenith::AuxBus *> auxBuses; // Raw pointers for buses
+    std::vector<RenderNode> sequence;       // Topological render sequence
 
     std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
     std::vector<std::shared_ptr<zenith::AuxBus>>
@@ -821,7 +858,9 @@ private:
     TrackSnapshot() = default;
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses,
+        const std::vector<RenderNode> &renderSequence = {})
+        : sequence(renderSequence) {
       tracks.reserve(ownedTracks.size());
       lifecycle.reserve(ownedTracks.size());
       for (const auto &track : ownedTracks) {
@@ -844,6 +883,12 @@ private:
   std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
   std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
   std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
+
+  // Persistent Envelope Followers (ID -> Follower)
+  // These are kept here to maintain capacitor state across snapshot updates
+  std::unordered_map<std::string,
+                     std::shared_ptr<zenith::dsp::EnvelopeFollower>>
+      persistentFollowers_;
 
   void updateTrackSnapshot();
 
@@ -919,7 +964,8 @@ private:
   // Phase 2 Refactor: Lock-free Command Queue
   static constexpr int kCommandBufferSize = 1024;
   juce::AbstractFifo commandFifo_{kCommandBufferSize};
-  std::vector<zenith::EngineEvent> commandBuffer_{kCommandBufferSize};
+  std::vector<zenith::EngineEvent> commandBuffer_ =
+      std::vector<zenith::EngineEvent>(kCommandBufferSize);
 
   // Phase 2A: MIDI recording state (per-track) - LOCK-FREE USING FIFO
   struct MidiRecordEvent {
@@ -931,7 +977,8 @@ private:
   // Lock-free FIFO for MIDI recording events
   static constexpr int kMidiRecordFifoSize = 4096;
   juce::AbstractFifo midiRecordFifo_{kMidiRecordFifoSize};
-  std::vector<MidiRecordEvent> midiRecordBuffer_{kMidiRecordFifoSize};
+  std::vector<MidiRecordEvent> midiRecordBuffer_ =
+      std::vector<MidiRecordEvent>(kMidiRecordFifoSize);
 
   // Baked recordings (message thread only, after stopRecording)
   struct MidiRecordingBuffer {

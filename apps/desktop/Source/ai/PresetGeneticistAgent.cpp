@@ -20,6 +20,18 @@ namespace zenith {
 namespace ai {
 
 //==============================================================================
+// Configuration Constants
+//==============================================================================
+namespace {
+constexpr int kFFTSize = 1024;
+constexpr int kRenderBlockSize = 512;
+constexpr float kNoteOffTimeFraction = 0.8f; // 80% of duration
+constexpr float kBlendProbability = 0.2f;
+constexpr float kClippingThreshold = 0.999f;
+constexpr size_t kMaxHistorySize = 50;
+} // namespace
+
+//==============================================================================
 // Static parameter data for ZenithPolySynth
 //==============================================================================
 
@@ -778,7 +790,7 @@ std::map<juce::String, float> PresetGeneticistAgent::crossoverParameters(
   // Group parameters logically and crossover by group
 
   // Define parameter groups
-  std::vector<std::vector<juce::String>> groups = {
+  static const std::vector<std::vector<juce::String>> groups = {
       // Oscillator 1 group
       {"osc1_wave", "osc1_detune", "osc1_mix"},
       // Oscillator 2 group

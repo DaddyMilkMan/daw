@@ -23,6 +23,20 @@
 #include "../ui/PluginEditorWindow.h"
 
 //==============================================================================
+namespace {
+constexpr int kDefaultInputChannels = 2;
+constexpr int kDefaultOutputChannels = 2;
+constexpr int kDefaultTestTrackCount = 8;
+constexpr int kSessionDebuggerIntervalMs = 500;
+constexpr int kAudioThreadShutdownTimeoutMs = 1000;
+constexpr int kFileWriteBufferSize = 32768; // 32KB
+constexpr int kAutomationUpdateRateHz = 60;
+constexpr int kMaxStereoChannels = 2;
+constexpr int kMinMonoChannels = 1;
+constexpr int kAudioDepth = 24;
+} // namespace
+
+//==============================================================================
 namespace zenith {
 
 Engine::Engine() {
@@ -78,7 +92,8 @@ Engine::~Engine() {
   // Phase 2D: Cleanup audio recording infrastructure
   // Stop writer thread
   if (audioWriterThread_ != nullptr) {
-    audioWriterThread_->stopThread(1000); // Wait up to 1 second
+    audioWriterThread_->stopThread(
+        kAudioThreadShutdownTimeoutMs); // Wait up to 1 second
     audioWriterThread_.reset();
   }
 
@@ -249,7 +264,8 @@ bool Engine::initialize() {
   DBG("Engine: Initializing...");
 
   // Initialize audio device manager
-  auto error = deviceManager.initialiseWithDefaultDevices(2, 2); // 2 in, 2 out
+  auto error = deviceManager.initialiseWithDefaultDevices(
+      kDefaultInputChannels, kDefaultOutputChannels); // 2 in, 2 out
 
   if (error.isNotEmpty()) {
     DBG("Engine: Failed to initialize audio device: " + error);
@@ -281,12 +297,13 @@ bool Engine::initialize() {
   // -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
 #if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
   DBG("Engine: Seeding debug tracks (ZENITH_ENGINE_SEED_DEBUG_TRACKS enabled)");
-  addTestTracks(8);
+  addTestTracks(kDefaultTestTrackCount);
 #endif
 
   // Start Session Debugger monitoring (AI Technical Integrity Agent)
   if (sessionDebugger_) {
-    sessionDebugger_->startMonitoring(500); // Analyze every 500ms
+    sessionDebugger_->startMonitoring(
+        kSessionDebuggerIntervalMs); // Analyze every 500ms
     DBG("Engine: SessionDebugger monitoring started");
   }
 
@@ -499,7 +516,8 @@ void Engine::record() {
     // For now: use mono (1 channel) or stereo (2 channels) based on device
     // capability Clamp to min(2, deviceInputChannels) to avoid exceeding device
     // capabilities
-    const int numChannels = juce::jmin(2, juce::jmax(1, deviceInputChannels));
+    const int numChannels = juce::jmin(
+        kMaxStereoChannels, juce::jmax(kMinMonoChannels, deviceInputChannels));
 
     // Create WAV writer
     juce::WavAudioFormat wavFormat;
@@ -515,9 +533,9 @@ void Engine::record() {
     std::unique_ptr<juce::AudioFormatWriter> writer(
         wavFormat.createWriterFor(fileStream.release(), sampleRate,
                                   static_cast<unsigned int>(numChannels),
-                                  24, // 24-bit depth
-                                  {}, // Default metadata
-                                  0   // Default quality
+                                  kAudioDepth, // 24-bit depth
+                                  {},          // Default metadata
+                                  0            // Default quality
                                   ));
 
     if (writer == nullptr) {
@@ -530,7 +548,7 @@ void Engine::record() {
     auto threadedWriter =
         std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
             writer.release(), *audioWriterThread_,
-            32768 // 32KB FIFO buffer
+            kFileWriteBufferSize // 32KB FIFO buffer
         );
 
     // Create session
@@ -972,25 +990,163 @@ void Engine::removeTrack(int index) {
   }
 }
 
-void Engine::updateTrackSnapshot() {
-  // Create new snapshot
-  // ROAST FIX: Include Aux Buses in snapshot
-  auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
+// Helper to ensure followers exist for active sources
+void Engine::updateEnvelopeFollowers() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-  // Atomic swap (release semantics for the store)
-  // The audio thread will see the new pointer immediately
+  // Identify all Modulation Sources
+  std::unordered_set<std::string> neededSources;
+
+  // Iterate all nodes to find modulation sources
+  // (We use getProcessingOrder to get all active nodes)
+  const auto &nodes = routingGraph_.getProcessingOrder();
+  for (const auto &sourceId : nodes) {
+    const auto connections = routingGraph_.getConnectionsFrom(sourceId);
+    for (const auto &conn : connections) {
+      if (conn.type == RoutingGraph::Connection::Type::Modulation) {
+        neededSources.insert(sourceId.toStdString());
+        break; // One modulation output is enough to need a follower
+      }
+    }
+  }
+
+  // Remove unused followers
+  for (auto it = envelopeFollowers_.begin(); it != envelopeFollowers_.end();) {
+    if (neededSources.find(it->first) == neededSources.end()) {
+      it = envelopeFollowers_.erase(it);
+    } else {
+      ++it;
+    }
+  }
+
+  // Create missing followers
+  for (const auto &sourceId : neededSources) {
+    if (envelopeFollowers_.find(sourceId) == envelopeFollowers_.end()) {
+      envelopeFollowers_[sourceId] =
+          std::make_shared<zenith::dsp::EnvelopeFollower>();
+    }
+  }
+}
+
+void Engine::updateTrackSnapshot() {
+  // ==============================================================================
+  // Phase 2: Topological Execution Plan Compilation (Message Thread)
+  // ==============================================================================
+
+  // 0. Update Envelope Followers (Message Thread)
+  updateEnvelopeFollowers();
+
+  // 1. Build Resource Maps (ID -> Index/Pointer)
+  std::unordered_map<std::string, int> trackMap;
+  std::unordered_map<std::string, int> auxMap;
+  std::unordered_map<std::string, zenith::Track *> trackPtrs;
+  std::unordered_map<std::string, zenith::AuxBus *> auxPtrs;
+
+  for (size_t i = 0; i < tracks_.size(); ++i) {
+    auto id = tracks_[i]->getTrackId().toStdString();
+    trackMap[id] = static_cast<int>(i);
+    trackPtrs[id] = tracks_[i].get();
+  }
+
+  for (size_t i = 0; i < auxBuses_.size(); ++i) {
+    auto id = auxBuses_[i]->getId().toStdString();
+    auxMap[id] = static_cast<int>(i);
+    auxPtrs[id] = auxBuses_[i].get();
+  }
+
+  // 2. Get Topological Sort from RoutingGraph
+  const auto &processingOrder = routingGraph_.getProcessingOrder();
+
+  // 3. Compile Render Sequence
+  std::vector<RenderNode> sequence;
+  sequence.reserve(processingOrder.size());
+
+  for (const auto &nodeId : processingOrder) {
+    const auto *nodeInfo = routingGraph_.getNode(nodeId);
+    if (!nodeInfo)
+      continue;
+
+    RenderNode renderNode;
+    bool isValidNode = false;
+
+    std::string nodeIdStd = nodeId.toStdString();
+
+    if (nodeInfo->type == RoutingGraph::NodeType::Track) {
+      auto it = trackMap.find(nodeIdStd);
+      if (it != trackMap.end()) {
+        renderNode.track = trackPtrs[nodeIdStd];
+        renderNode.outputBufferIndex = it->second;
+        isValidNode = true;
+      }
+    } else if (nodeInfo->type == RoutingGraph::NodeType::Bus) {
+      auto it = auxMap.find(nodeIdStd);
+      if (it != auxMap.end()) {
+        renderNode.bus = auxPtrs[nodeIdStd];
+        renderNode.outputBufferIndex = it->second;
+        isValidNode = true;
+      }
+    }
+
+    if (!isValidNode)
+      continue;
+
+    // Attach Envelope Follower (Modulation Source)
+    if (envelopeFollowers_.count(nodeIdStd)) {
+      renderNode.follower = envelopeFollowers_[nodeIdStd];
+    }
+
+    // Resolve Inputs (Summing Optimization)
+    auto connections = routingGraph_.getConnectionsTo(nodeId);
+    for (const auto &conn : connections) {
+      if (conn.type == RoutingGraph::Connection::Type::Modulation)
+        continue;
+
+      MixOp op;
+      op.gain = conn.gain;
+      op.isFeedback = conn.isFeedback;
+
+      auto trackSrc = trackMap.find(conn.sourceId.toStdString());
+      if (trackSrc != trackMap.end()) {
+        op.sourceBufferIndex = trackSrc->second;
+        op.isSourceAux = false;
+        renderNode.inputs.push_back(op);
+        continue;
+      }
+
+      auto auxSrc = auxMap.find(conn.sourceId.toStdString());
+      if (auxSrc != auxMap.end()) {
+        op.sourceBufferIndex = auxSrc->second;
+        op.isSourceAux = true;
+        renderNode.inputs.push_back(op);
+        continue;
+      }
+    }
+
+    // Check Output (Master Routing)
+    auto outConnections = routingGraph_.getConnectionsFrom(nodeId);
+    for (const auto &conn : outConnections) {
+      // Only consider Audio connections for Master summing
+      if (conn.type == RoutingGraph::Connection::Type::Audio) {
+        const auto *destNode = routingGraph_.getNode(conn.destId);
+        // Verify destination is Master
+        if (destNode && destNode->type == RoutingGraph::NodeType::Master) {
+          renderNode.masterGain = conn.gain;
+        }
+      }
+    }
+
+    sequence.push_back(renderNode);
+  }
+
+  // Create new snapshot with the compiled plan
+  auto newSnapshot =
+      std::make_shared<TrackSnapshot>(tracks_, auxBuses_, sequence);
+
   activeSnapshot_.store(newSnapshot.get());
 
-  // Manage lifetime of old snapshots
-  // We keep the previous snapshot alive in snapshotTrash_
-  // because the audio thread might still be reading it.
   snapshotTrash_.push_back(currentSnapshotHolder_);
-
-  // Update current holder to the new snapshot
   currentSnapshotHolder_ = newSnapshot;
 
-  // Garbage collection: Keep last 5 snapshots
-  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
   if (snapshotTrash_.size() > 5) {
     snapshotTrash_.erase(snapshotTrash_.begin());
   }
@@ -1139,8 +1295,9 @@ void Engine::audioDeviceIOCallbackWithContext(
 
         // Part 2: Process samples from loop start
         if (samplesAfterLoop > 0) {
-          // RT-SAFE FIX: Use stack-allocated array instead of heap allocation
-          // Maximum 32 channels should cover any reasonable audio setup
+          // RT-SAFE FIX: Use stack-allocated array instead of heap
+          // allocation Maximum 32 channels should cover any reasonable
+          // audio setup
           constexpr int kMaxChannels = 32;
           jassert(numOutputChannels <= kMaxChannels);
 
@@ -1242,13 +1399,13 @@ void Engine::processEvents() noexcept {
       // But we need to access the tracks safely.
       // Since we are in processAudio, we are safe to modify RT parameters
       // IF the track objects support it.
-      // Zenith tracks generally use atomic parameters or critical sections
-      // internally for parameters.
+      // Zenith tracks generally use atomic parameters or critical
+      // sections internally for parameters.
 
       if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
         // Get thread-safe snapshot (we are in audio thread, so we read
-        // snapshot) But wait, we need to apply this to the track. The track
-        // pointer in snapshot is valid. Finding the track:
+        // snapshot) But wait, we need to apply this to the track. The
+        // track pointer in snapshot is valid. Finding the track:
         if (snapshot && e.trackIndex >= 0 &&
             e.trackIndex < (int)snapshot->tracks.size()) {
           auto *track = snapshot->tracks[e.trackIndex];
@@ -1359,8 +1516,8 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
   // ⚠️ AUDIO THREAD - REAL-TIME SAFE!
   //
   // CRITICAL WARNING: Accessing 'tracks_' (std::vector) here is NOT
-  // thread-safe! If the message thread adds/removes tracks while this runs, the
-  // vector may reallocate, causing a segfault.
+  // thread-safe! If the message thread adds/removes tracks while this
+  // runs, the vector may reallocate, causing a segfault.
   //
   // Phase 11: Process all tracks and mix them down to master output
 
@@ -1403,11 +1560,12 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
   juce::MidiBuffer localMidi;
   midiFifo_.drainTo(localMidi, numSamples);
 
-  // Fix: Correct argument order (numSamples, position) and pass local MIDI
+  // Fix: Correct argument order (numSamples, position) and pass local
+  // MIDI
   renderAudioGraph(outputBuffer, numSamples, position, &localMidi);
 
-  // Fallback: If no tracks or all tracks are silent, optionally enable test
-  // tone (Only if explicitly enabled via enableTestTone_)
+  // Fallback: If no tracks or all tracks are silent, optionally enable
+  // test tone (Only if explicitly enabled via enableTestTone_)
   bool testToneEnabled = enableTestTone_.load();
 
   if (testToneEnabled && tracks_.empty()) {
@@ -1565,7 +1723,8 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels) {
   // Resize trackBuffers_ to match the number of tracks
   trackBuffers_.resize(tracks_.size());
 
-  // Allocate each track buffer with the specified block size and channel count
+  // Allocate each track buffer with the specified block size and channel
+  // count
   for (size_t i = 0; i < trackBuffers_.size(); ++i) {
     trackBuffers_[i].setSize(numChannels, blockSize, false, true, false);
     trackBuffers_[i].clear();
@@ -1586,137 +1745,115 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
                               const juce::MidiBuffer *incomingMidi) {
   juce::ignoreUnused(playheadPosition);
 
-  // Clear output buffer
+  // 1. Clear Headers / Output
   outputBuffer.clear();
 
-  // Clear Aux Buffers (Tier 1 Feature)
+  // Clear all internal buffers (accumulators)
+  for (auto &buf : trackBuffers_) {
+    buf.clear();
+  }
   for (auto &buf : auxBusBuffers_) {
     buf.clear();
   }
 
-  // Create vector of pointers to aux buffers for Tracks
-  // Note: We do this on the stack every block. Optimization: Pre-allocate this
-  // vector?
-  std::vector<juce::AudioBuffer<float> *> auxBufferPtrs;
-  auxBufferPtrs.reserve(auxBusBuffers_.size());
-  for (auto &buf : auxBusBuffers_) {
-    auxBufferPtrs.push_back(&buf);
-  }
-
   // Get thread-safe snapshot (Lock-free load)
   auto *snapshot = activeSnapshot_.load();
-
   if (!snapshot)
     return;
 
-  // Get processing order from Routing Graph
-  const auto processingOrder = routingGraph_.getProcessingOrder();
+  // 2. Iterate Topological Render Sequence
+  for (const auto &node : snapshot->sequence) {
 
-  // Validate buffer sizes to prevent the bug described in the issue
-  // Skip any track whose preallocated buffer is smaller than the requested
-  // block Iterate using the Topological Sort order
-  for (const auto &nodeId : processingOrder) {
-    // 1. Try to find a Track
-    zenith::Track *track = nullptr;
-    size_t trackIdx = 0;
-
-    // Linear search (O(N))
-    for (size_t i = 0; i < snapshot->tracks.size(); ++i) {
-      if (snapshot->tracks[i]->getTrackId() == nodeId) {
-        track = snapshot->tracks[i];
-        trackIdx = i;
-        break;
+    // Determine Output Buffer
+    juce::AudioBuffer<float> *destBuffer = nullptr;
+    if (node.track) {
+      if (node.outputBufferIndex >= 0 &&
+          node.outputBufferIndex < (int)trackBuffers_.size()) {
+        destBuffer = &trackBuffers_[node.outputBufferIndex];
+      }
+    } else if (node.bus) {
+      if (node.outputBufferIndex >= 0 &&
+          node.outputBufferIndex < (int)auxBusBuffers_.size()) {
+        destBuffer = &auxBusBuffers_[node.outputBufferIndex];
       }
     }
 
-    if (track) {
-      // Check if we have a buffer for this track
-      if (trackIdx >= trackBuffers_.size())
+    if (!destBuffer)
+      continue;
+
+    // 3. Sum Inputs (Matrix Mixing)
+    for (const auto &input : node.inputs) {
+      if (input.isFeedback)
         continue;
 
-      auto &trackBuffer = trackBuffers_[trackIdx];
-
-      // CRITICAL: Real-time safety check
-      if (trackBuffer.getNumSamples() < numSamples) {
-#if JUCE_DEBUG
-        static bool hasLogged = false;
-        if (!hasLogged) {
-          DBG("CRITICAL ERROR: Track buffer too small");
-          hasLogged = true;
+      juce::AudioBuffer<float> *srcBuffer = nullptr;
+      if (!input.isSourceAux) {
+        if (input.sourceBufferIndex >= 0 &&
+            input.sourceBufferIndex < (int)trackBuffers_.size()) {
+          srcBuffer = &trackBuffers_[input.sourceBufferIndex];
         }
-#endif
-        continue;
+      } else {
+        if (input.sourceBufferIndex >= 0 &&
+            input.sourceBufferIndex < (int)auxBusBuffers_.size()) {
+          srcBuffer = &auxBusBuffers_[input.sourceBufferIndex];
+        }
       }
 
-      trackBuffer.clear();
-      juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
-
-      const juce::MidiBuffer *trackMidiInput = nullptr;
-      if (incomingMidi != nullptr && !incomingMidi->isEmpty() &&
-          track->getType() == zenith::Track::Type::Instrument &&
-          track->isArmed()) {
-        trackMidiInput = incomingMidi;
-      }
-
-      track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
-                               auxBufferPtrs, tempoMap_.get());
-
-      for (int channel = 0; channel < juce::jmin(outputBuffer.getNumChannels(),
-                                                 trackBuffer.getNumChannels());
-           ++channel) {
-        outputBuffer.addFrom(channel, 0, trackBuffer.getReadPointer(channel),
-                             numSamples);
-      }
-      continue;
-    }
-
-    // 2. Try to find an Aux Bus
-    zenith::AuxBus *bus = nullptr;
-    size_t busIdx = 0;
-
-    for (size_t i = 0; i < snapshot->auxBuses.size(); ++i) {
-      if (snapshot->auxBuses[i]->getId() == nodeId) {
-        bus = snapshot->auxBuses[i];
-        busIdx = i;
-        break;
+      if (srcBuffer) {
+        for (int ch = 0; ch < destBuffer->getNumChannels(); ++ch) {
+          int srcCh = ch % srcBuffer->getNumChannels();
+          destBuffer->addFrom(ch, 0, *srcBuffer, srcCh, 0, numSamples,
+                              input.gain);
+        }
       }
     }
 
-    if (bus) {
-      if (busIdx < auxBusBuffers_.size()) {
-        auto &busBuffer = auxBusBuffers_[busIdx];
+    // 4. Process Node (Generation + Effects)
+    juce::AudioSourceChannelInfo bufferInfo(destBuffer, 0, numSamples);
 
-        // Process the bus (Apply effects)
-        juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
-        bus->getNextAudioBlock(auxInfo);
+    if (node.track) {
+      // Compatibility: Pass empty aux buffers list as we handle summing
+      // here
+      std::vector<juce::AudioBuffer<float> *> compatibilityAux;
 
-        // Mix to Master Output
-        for (int channel = 0;
-             channel < juce::jmin(outputBuffer.getNumChannels(),
-                                  busBuffer.getNumChannels());
-             ++channel) {
-          outputBuffer.addFrom(channel, 0, busBuffer, channel, 0, numSamples);
+      // Pass tempo map if available
+      const zenith::TempoMap *tMap = tempoMap_.get();
+
+      node.track->getNextAudioBlock(bufferInfo, playheadPosition, incomingMidi,
+                                    compatibilityAux, tMap);
+
+      // 5. Output to Master Device (Implicit Routing)
+      if (node.track->getType() == zenith::Track::Type::Master) {
+        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+          int srcCh = ch % destBuffer->getNumChannels();
+          outputBuffer.addFrom(ch, 0, *destBuffer, srcCh, 0, numSamples);
         }
       }
-      continue;
+    } else if (node.bus) {
+      node.bus->getNextAudioBlock(bufferInfo);
+
+      // AuxBuses usually route to Master unless routed elsewhere
+      // For MVP Topological Engine, we can adopt simple rule:
+      // If the AuxBus has NO outputs in the graph, it goes to master?
+      // Or just assume AuxBuses always go to master?
+      // Zenith AuxBus definition usually implies return to master mix.
+      // Let's mix to master for safety unless we have explicit graph
+      // indicating otherwise. But strict topological means we should
+      // respect graph. If user didn't connect AuxOut to Master, it should
+      // be silent. However, for this task, we want "Universal Signal
+      // Flow". Implicit Master routing for Master Track is clear. For
+      // others, let's leave it to explicit routing. IF the existing
+      // AuxBus implementation sums to master internally, we might double
+      // sum. AuxBus::AudioSource::getNextAudioBlock just processes
+      // buffer. It doesn't write to master. So silence if not routed.
     }
   }
 
-  // Apply master bus effects
-  // Note: We access masterPlugins_ without a lock here for RT safety.
-  // Modifications to the plugin chain should ensure thread safety (e.g. suspend
-  // processing).
+  // Apply master bus effects on the final outputBuffer
   if (!masterPlugins_.empty()) {
-    juce::MidiBuffer midi; // Master bus usually doesn't handle MIDI, but
-                           // plugins might expect it
-
+    juce::MidiBuffer midi;
     for (auto &plugin : masterPlugins_) {
-      if (plugin != nullptr) {
-        // Prepare plugin if needed (should be done in prepareToPlay)
-        // Process audio
-        if (plugin->isSuspended())
-          continue;
-
+      if (plugin != nullptr && !plugin->isSuspended()) {
         plugin->processBlock(outputBuffer, midi);
       }
     }
@@ -1780,10 +1917,10 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   DBG("Engine: Using offline block size of " + juce::String(offlineBlockSize) +
       " samples");
 
-  // CRITICAL: Prepare buffers for offline rendering BEFORE calling renderBlock
-  // This fixes the bug where trackBuffers_ would be sized for the audio device
-  // buffer (typically 512/1024) and all tracks would be skipped when rendering
-  // 4096-sample blocks
+  // CRITICAL: Prepare buffers for offline rendering BEFORE calling
+  // renderBlock This fixes the bug where trackBuffers_ would be sized for
+  // the audio device buffer (typically 512/1024) and all tracks would be
+  // skipped when rendering 4096-sample blocks
   prepareBuffersForOfflineRender(offlineBlockSize, numChannels);
 
   // Create WAV file writer
@@ -1814,10 +1951,10 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
                                     totalSamples - samplesRendered));
 
     // Render this block
-    // The renderAudioGraph() method will skip any track whose buffer is too
-    // small But since we called prepareBuffersForOfflineRender() with
-    // offlineBlockSize, all track buffers are >= offlineBlockSize, so no tracks
-    // will be skipped
+    // The renderAudioGraph() method will skip any track whose buffer is
+    // too small But since we called prepareBuffersForOfflineRender() with
+    // offlineBlockSize, all track buffers are >= offlineBlockSize, so no
+    // tracks will be skipped
     renderAudioGraph(renderBuffer, samplesToRender, samplesRendered);
 
     // Write to file
@@ -1884,7 +2021,8 @@ void Engine::captureAudioInput(const float *const *inputChannelData,
     }
 
     // Determine which input channel(s) to use for this session
-    // If mono, use inputChannel. If stereo, use inputChannel and inputChannel+1
+    // If mono, use inputChannel. If stereo, use inputChannel and
+    // inputChannel+1
 
     // For mono recording: write single channel
     if (session.numChannels == 1) {
@@ -1910,8 +2048,8 @@ void Engine::captureAudioInput(const float *const *inputChannelData,
 
       // If right channel missing but left exists, maybe duplicate left?
       // For now, let's just use what we have, passing nullptr for missing
-      // channels (writer handles it?) Actually ThreadedWriter::write expects
-      // valid pointers.
+      // channels (writer handles it?) Actually ThreadedWriter::write
+      // expects valid pointers.
 
       if (leftData && rightData) {
         const float *channelData[2] = {leftData, rightData};
@@ -2019,10 +2157,12 @@ void Engine::bakeMidiRecordingsIntoClips(bool quantize) {
   DBG("Engine: Baking MIDI recordings into clips (quantize=" +
       juce::String(quantize ? "true" : "false") + ")");
 
-  // First, drain all events from the lock-free FIFO into recording buffers
+  // First, drain all events from the lock-free FIFO into recording
+  // buffers
   drainMidiRecordFifo();
 
-  // Get project tempo for quantization (default to 120 BPM if no project state)
+  // Get project tempo for quantization (default to 120 BPM if no project
+  // state)
   const double tempo =
       (projectState_ != nullptr) ? projectState_->getTempo() : 120.0;
 
@@ -2155,9 +2295,10 @@ void Engine::prepareRecordingForTrack(int trackIndex) {
     auto activeInputChannels = device->getActiveInputChannels();
     int numChannels =
         activeInputChannels.countNumberOfSetBits(); // Total inputs
-    // Note: We might want per-track channel count, but for now use total inputs
-    // or stereo default ThreadedWriter needs to know how many channels it
-    // accepts. processAudioRecording writes 2 channels max usually.
+    // Note: We might want per-track channel count, but for now use total
+    // inputs or stereo default ThreadedWriter needs to know how many
+    // channels it accepts. processAudioRecording writes 2 channels max
+    // usually.
     numChannels =
         2; // Force stereo for now to match processAudioRecording logic
 
@@ -2179,9 +2320,8 @@ void Engine::prepareRecordingForTrack(int trackIndex) {
 
     // Generate filename
     juce::String trackName =
-        "Track_" +
-        juce::String(
-            trackIndex); // Fallback name since we can't access tracks_ safely
+        "Track_" + juce::String(trackIndex); // Fallback name since we can't
+                                             // access tracks_ safely
     juce::String timestamp =
         juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
     juce::String filename = trackName + "_" + timestamp + ".wav";
@@ -2588,7 +2728,8 @@ void Engine::updateSoloState() {
   for (const auto &track : tracks_) {
     if (track) {
       if (anySolo) {
-        // If any track is soloed, mute this track unless it is also soloed
+        // If any track is soloed, mute this track unless it is also
+        // soloed
         track->setSilencedBySolo(!track->isSolo());
       } else {
         // No solo active, unmute everyone (from solo perspective)

@@ -301,6 +301,12 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
     juce::PopupMenu m;
     m.addItem("Show Debug Logs", [] {
       // Debug logs action
+      DBG("Show Debug Logs clicked");
+    });
+
+    m.showMenuAsync(juce::PopupMenu::Options());
+  }
+}
 
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
   activeDragComponent = nullptr;
@@ -503,15 +509,9 @@ MainWindow::MainWindow(const juce::String &name)
 MainWindow::~MainWindow() {
   // Clear menu bar first
   // Clear menu bar first
-  setMenuBar(nullptr);
-  // menuBar.reset(); (Already removed from header)
-
   // Shutdown audio engine before destroying components
   if (engine)
     engine->shutdown();
-
-  // Clear content
-  clearContentComponent();
 
   DBG("MainWindow destroyed");
 }

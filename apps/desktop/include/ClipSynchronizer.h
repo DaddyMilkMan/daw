@@ -32,7 +32,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 
-
 //==============================================================================
 namespace zenith {
 
@@ -46,17 +45,16 @@ namespace zenith {
  * ProjectState
  * - Keeps clip positions, lengths, and properties synchronized
  */
-namespace zenith {
 
 class ClipSynchronizer : public juce::Timer {
 public:
-    //==========================================================================
-    /**
-     * @brief Constructor
-     * @param projectState Reference to project state (must outlive this object)
-     * @param engine Reference to audio engine (must outlive this object)
-     */
-    ClipSynchronizer(ProjectState& projectState, Engine& engine);
+  //==========================================================================
+  /**
+   * @brief Constructor
+   * @param projectState Reference to project state (must outlive this object)
+   * @param engine Reference to audio engine (must outlive this object)
+   */
+  ClipSynchronizer(ProjectState &projectState, Engine &engine);
 
   /**
    * @brief Destructor
@@ -128,8 +126,8 @@ private:
   // Member Variables
   //==========================================================================
 
-    ProjectState& projectState;
-    Engine& engine;
+  ProjectState &projectState;
+  Engine &engine;
 
   // Track clip counts to detect new clips
   std::map<int, int> engineClipCounts;

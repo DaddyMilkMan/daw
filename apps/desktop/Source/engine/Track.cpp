@@ -23,7 +23,6 @@
 #include "PluginHost.h"
 #include <algorithm>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -164,11 +163,24 @@ void Track::getNextAudioBlock(
     const juce::MidiBuffer *incomingMidi,
     const std::vector<juce::AudioBuffer<float> *> &auxBuffers,
     const TempoMap *tempoMap) {
-  // Clear the buffer first
-  bufferToFill.clearActiveBufferRegion();
+  // Clear the buffer first - REMOVED for Universal Graph summing
+  // bufferToFill.clearActiveBufferRegion();
 
   // If track is disabled, return silence
   if (!enabled.load()) {
+    // If disabled, we should probably clear the buffer ensuring silence?
+    // Or just pass through inputs?
+    // Standard DAW: Disabled track passes nothing (mute).
+    // If we want Mute to be strictly "Silence Output", we should clear.
+    // If we want Bypass, we pass input.
+    // "Enabled" usually means "On". If Off, it produces nothing.
+    // But if we clear here, we kill graph inputs.
+    // Logic: If disabled, we do not process clips/plugins.
+    // But if inputs entered, should they pass?
+    // Assuming "Enabled" = "Active". If inactive, maybe it acts as a dead node.
+    // Let's clear for safety if disabled, assuming disabled tracks shouldn't
+    // output anything.
+    bufferToFill.clearActiveBufferRegion();
     midiBuffer_.clear();
     return;
   }
@@ -599,6 +611,23 @@ void Track::clearAutomationLanes() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   automationLanesOwned_.clear();
   updateAutomationSnapshot();
+}
+
+void Track::applyModulation(int pluginIndex, int paramIndex, float value) {
+  // RT-safe: Atomic snapshot load
+  const PluginSnapshot *snapshot =
+      activePluginSnapshot_.load(std::memory_order_acquire);
+
+  if (snapshot && pluginIndex >= 0 &&
+      pluginIndex < (int)snapshot->plugins.size()) {
+    auto &plugin = snapshot->plugins[pluginIndex];
+    if (plugin) {
+      auto params = plugin->getParameters();
+      if (paramIndex >= 0 && paramIndex < (int)params.size()) {
+        params[paramIndex]->setValueNotifyingHost(value);
+      }
+    }
+  }
 }
 
 //==============================================================================

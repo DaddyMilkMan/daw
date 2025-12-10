@@ -27,6 +27,7 @@
 #include <functional>
 #include <map>
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace zenith {
@@ -88,15 +89,22 @@ public:
     juce::String type; // "knob", "fader", "button"
     juce::String parameterId;
     float currentValue;
+    SkColor color = SK_ColorWHITE;
   };
 
   explicit SkiaComponent();
   ~SkiaComponent() override;
 
-  virtual void drawSkia(SkCanvas *canvas) = 0;
+  // Primary Immediate Mode Rendering Hook
+  virtual void onPaint(SkCanvas *canvas);
+
+  // Legacy/Adapter for SkiaRenderer.
+  // Defaults to calling onPaint(canvas) to support Immediate Mode.
+  virtual void drawSkia(SkCanvas *canvas);
 
   // AI Vision Hook
   virtual std::vector<AIElementInfo> getInspectableElements() { return {}; }
+  std::string getUIStateDescription();
 
 #ifdef DEBUG
   virtual void drawDebug(SkCanvas *canvas);
