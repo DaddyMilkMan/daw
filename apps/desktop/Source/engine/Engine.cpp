@@ -961,11 +961,35 @@ void Engine::updateTrackSnapshot() {
       node.follower = envelopeFollowers_[idStr];
     }
 
-    // 3. Resolve Inputs
+    // 3. Resolve Inputs (Audio & Modulation)
     auto connections = routingGraph_.getConnectionsTo(nodeId);
     for (const auto &conn : connections) {
-      if (conn.type == RoutingGraph::Connection::Type::Modulation)
+      if (conn.type == RoutingGraph::Connection::Type::Modulation) {
+        // Handle Modulation
+        ModulationInput modInput;
+        modInput.targetPluginIndex = conn.targetPluginIndex;
+        modInput.targetParamIndex = conn.targetParamIndex;
+
+        // Parse Source ID
+        // Convention: "sys:lfo:X", "sys:macro:X", or TrackID
+        juce::String srcId = conn.sourceId;
+
+        if (srcId.startsWith("sys:lfo:")) {
+          modInput.source.type = ModulationSourceType::GlobalLFO;
+          modInput.source.index = srcId.substring(8).getIntValue();
+        } else if (srcId.startsWith("sys:macro:")) {
+          modInput.source.type = ModulationSourceType::Macro;
+          modInput.source.index = srcId.substring(10).getIntValue();
+        } else {
+          // Assume Track Envelope
+          modInput.source.type = ModulationSourceType::AudioEnvelope;
+          modInput.source.trackId = srcId;
+        }
+
+        modInput.source.amount = conn.gain; // Use gain as modulation amount
+        node.modulationInputs.push_back(modInput);
         continue;
+      }
 
       MixOp op;
       op.gain = conn.gain;

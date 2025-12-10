@@ -14,6 +14,9 @@
 #include "../../include/ui/ClipComponent.h"
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../ui/skia/SkiaComponent.h"
+#include "PresetGeneticistAgent.h"
+#include "SampleHunterAgent.h"
+#include "SessionDebuggerAgent.h"
 #include <algorithm>
 #include <typeinfo>
 
@@ -1111,40 +1114,42 @@ void UXDirectorAgent::observe(const UIEvent &event) {
   // Update last activity time
   lastUserActivityTime_ = juce::Time::currentTimeMillis();
 
+  // Track history with thread safety
   {
     juce::ScopedLock sl(historyLock_);
 
-    // Coalesce repeated events
+    // Coalesce repeated events (no duplicate, just increment)
+    bool coalesced = false;
     if (!actionHistory_.empty()) {
       auto &last = actionHistory_.back();
       if (last.type == event.type && last.targetId == event.targetId) {
         last.repeatCount++;
         last.timestamp = event.timestamp;
-        // Don't add duplicate, just update
-        goto afterAdd;
+        coalesced = true;
       }
     }
 
-    // Add to rolling history
-    actionHistory_.push_back(event);
+    // Add new event only if not coalesced
+    if (!coalesced) {
+      actionHistory_.push_back(event);
 
-    // Trim to max size
-    while (static_cast<int>(actionHistory_.size()) >
-           proactiveConfig_.maxHistorySize) {
-      actionHistory_.pop_front();
+      // Trim to max size
+      while (static_cast<int>(actionHistory_.size()) >
+             proactiveConfig_.maxHistorySize) {
+        actionHistory_.pop_front();
+      }
     }
-  }
-afterAdd:
 
-  // Track plugin opens per track for struggling detection
-  if (event.type == UIEventType::PluginOpened) {
-    juce::String key = event.targetId + "_" + event.additionalInfo;
-    pluginOpenCounts_[key]++;
-  }
+    // Track plugin opens per track for struggling detection
+    if (event.type == UIEventType::PluginOpened) {
+      juce::String key = event.targetId + "_" + event.additionalInfo;
+      pluginOpenCounts_[key]++;
+    }
 
-  // Track selection
-  if (event.type == UIEventType::TrackSelected) {
-    lastSelectedTrackId_ = event.targetId;
+    // Track selection (moved inside lock for safety)
+    if (event.type == UIEventType::TrackSelected) {
+      lastSelectedTrackId_ = event.targetId;
+    }
   }
 
   // Analyze intent after each observation
@@ -1164,19 +1169,30 @@ afterAdd:
 //==============================================================================
 
 void UXDirectorAgent::inferIntent() {
-  juce::ScopedLock sl(historyLock_);
+  IntentAnalysisSnapshot snapshot;
 
-  if (actionHistory_.empty()) {
-    currentIntent_ = UserIntent();
-    return;
+  // CRITICAL SECTION: Minimal lock holding time
+  // Take a snapshot of the state needed for analysis
+  {
+    juce::ScopedLock sl(historyLock_);
+
+    if (actionHistory_.empty()) {
+      currentIntent_ = UserIntent();
+      return;
+    }
+
+    snapshot.history = actionHistory_;
+    snapshot.pluginCounts = pluginOpenCounts_;
+    snapshot.selectedTrackId = lastSelectedTrackId_;
   }
+  // END CRITICAL SECTION: Expensive analysis happens below without blocking UI
 
   juce::int64 now = juce::Time::currentTimeMillis();
   UserIntent bestIntent;
   bestIntent.confidence = 0.0f;
 
   // Heuristic 1: User opened same plugin type 3+ times on same track
-  for (const auto &[key, count] : pluginOpenCounts_) {
+  for (const auto &[key, count] : snapshot.pluginCounts) {
     if (count >= proactiveConfig_.pluginOpenThreshold) {
       // Check if this is an EQ-type plugin
       if (key.containsIgnoreCase("eq") || key.containsIgnoreCase("equalizer")) {
@@ -1195,21 +1211,22 @@ void UXDirectorAgent::inferIntent() {
   }
 
   // Heuristic 2: User is idle on empty track for threshold time
-  juce::int64 idleTime = now - lastUserActivityTime_;
+  juce::int64 idleTime = now - lastUserActivityTime_.load();
   if (idleTime > proactiveConfig_.idleThresholdMs &&
-      lastSelectedTrackId_.isNotEmpty()) {
+      snapshot.selectedTrackId.isNotEmpty()) {
     // Check if track is empty (has no clips)
     const auto &tracks = engine_.tracks();
     for (const auto &track : tracks) {
-      if (track->getTrackId() == lastSelectedTrackId_ &&
+      if (track->getTrackId() == snapshot.selectedTrackId &&
           track->getNumClips() == 0) {
         UserIntent intent;
         intent.type = UserIntentType::WaitingForInspiration;
         intent.confidence =
-            juce::jmin(1.0f, static_cast<float>(idleTime) / 30000.0f);
+            juce::jmin(1.0f, static_cast<float>(idleTime) /
+                                 proactiveConfig_.maxConfidenceIdleTime);
         intent.description =
             "Looking for inspiration? Let me suggest some sounds.";
-        intent.targetTrackId = lastSelectedTrackId_;
+        intent.targetTrackId = snapshot.selectedTrackId;
 
         if (intent.confidence > bestIntent.confidence) {
           bestIntent = intent;
@@ -1222,7 +1239,7 @@ void UXDirectorAgent::inferIntent() {
   // Heuristic 3: Record pressed but no MIDI input detected
   bool recordPressed = false;
   bool midiReceived = false;
-  for (const auto &event : actionHistory_) {
+  for (const auto &event : snapshot.history) {
     if (event.type == UIEventType::RecordStarted)
       recordPressed = true;
     if (event.type == UIEventType::MIDIInputReceived)
@@ -1233,7 +1250,7 @@ void UXDirectorAgent::inferIntent() {
     // Check if recording is still active
     if (engine_.isRecording()) {
       juce::int64 recordTime = 0;
-      for (auto it = actionHistory_.rbegin(); it != actionHistory_.rend();
+      for (auto it = snapshot.history.rbegin(); it != snapshot.history.rend();
            ++it) {
         if (it->type == UIEventType::RecordStarted) {
           recordTime = now - it->timestamp;
@@ -1241,11 +1258,12 @@ void UXDirectorAgent::inferIntent() {
         }
       }
 
-      if (recordTime > 5000) { // 5 seconds of recording with no MIDI
+      if (recordTime > proactiveConfig_.recordNoInputTimeoutMs) {
         UserIntent intent;
         intent.type = UserIntentType::InputRoutingIssue;
         intent.confidence =
-            juce::jmin(1.0f, static_cast<float>(recordTime) / 10000.0f);
+            juce::jmin(1.0f, static_cast<float>(recordTime) /
+                                 proactiveConfig_.maxConfidenceRecordTime);
         intent.description =
             "Recording but no MIDI input detected. Check your input routing?";
 
@@ -1261,7 +1279,7 @@ void UXDirectorAgent::inferIntent() {
     // Check for clipping or very low levels
     for (const auto &track : engine_.tracks()) {
       float peak = track->getPeakLevel();
-      if (peak > 0.95f) {
+      if (peak > proactiveConfig_.clippingThreshold) {
         UserIntent intent;
         intent.type = UserIntentType::GainStagingIssue;
         intent.confidence = 0.9f;
@@ -1427,28 +1445,77 @@ void UXDirectorAgent::dismissSuggestion() {
   DBG("UXDirectorAgent: User dismissed suggestion: " + dismissed.title);
 }
 
+//==============================================================================
+// Autonomous Interface Controller - Helpers
+//==============================================================================
+
+juce::String UXDirectorAgent::generateSmartQuery(Track *track) const {
+  if (track == nullptr) {
+    if (sampleHunter_ != nullptr)
+      return sampleHunter_->getDetectedGenre().primaryGenre;
+    return "samples";
+  }
+
+  juce::String query = track->getName();
+
+  // Heuristic: If track name is generic "Audio 1", try to guess from genre
+  // or use the detected instrument type if available in metadata
+  if (query.containsIgnoreCase("Audio") || query.containsIgnoreCase("Track") ||
+      query.containsIgnoreCase("Inst")) {
+    if (sampleHunter_ != nullptr) {
+      return sampleHunter_->getDetectedGenre().primaryGenre;
+    }
+  }
+
+  return query;
+}
+
 void UXDirectorAgent::executeSuggestionAction(const Suggestion &suggestion) {
+  // Ensure we're on the message thread for UI/Agent interactions
+  if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    juce::MessageManager::getInstance()->callAsync(
+        [this, suggestion]() { executeSuggestionAction(suggestion); });
+    return;
+  }
+
+  // Find target track (common lookup)
+  Track *targetTrack = nullptr;
+  int targetTrackIndex = -1;
+  const auto &tracks = engine_.tracks();
+
+  if (suggestion.targetTrackId.isNotEmpty()) {
+    for (size_t i = 0; i < tracks.size(); ++i) {
+      if (tracks[i]->getTrackId() == suggestion.targetTrackId) {
+        targetTrack = tracks[i].get();
+        targetTrackIndex = static_cast<int>(i);
+        break;
+      }
+    }
+  }
+
   switch (suggestion.type) {
   case SuggestionType::SessionDebuggerAnalysis:
     if (sessionDebugger_ != nullptr) {
-      // Find track index from ID
-      const auto &tracks = engine_.tracks();
-      for (size_t i = 0; i < tracks.size(); ++i) {
-        if (tracks[i]->getTrackId() == suggestion.targetTrackId) {
-          // SessionDebugger analyzes all tracks, but we could focus on one
-          sessionDebugger_->runAnalysis();
-          break;
-        }
+      // Run full analysis
+      sessionDebugger_->runAnalysis();
+
+      // If specific track targeted, ensure it's not locked
+      if (targetTrackIndex >= 0) {
+        sessionDebugger_->setTrackDebuggingLocked(targetTrackIndex, false);
       }
+
+      DBG("UXDirectorAgent: SessionDebugger analysis triggered.");
     }
     break;
 
   case SuggestionType::SampleHunterSuggestion:
     if (sampleHunter_ != nullptr) {
-      // Start a sample hunt based on context
-      // For now, just trigger a generic search
-      DBG("UXDirectorAgent: Would dispatch to SampleHunter for track: " +
-          suggestion.targetTrackId);
+      // Use smart query generation
+      juce::String query = generateSmartQuery(targetTrack);
+
+      // Trigger the hunt
+      sampleHunter_->hunt(query);
+      DBG("UXDirectorAgent: SampleHunter triggered with query: " + query);
     }
     break;
 
@@ -1456,12 +1523,23 @@ void UXDirectorAgent::executeSuggestionAction(const Suggestion &suggestion) {
     if (sessionDebugger_ != nullptr) {
       // Apply automatic gain fixes
       sessionDebugger_->applyAutomaticFixes();
+      DBG("UXDirectorAgent: SessionDebugger auto-fixes applied.");
     }
     break;
 
   case SuggestionType::InputRoutingHelp:
-    // Could open input routing dialog
-    DBG("UXDirectorAgent: Would open input routing helper");
+    // Future Integration: Open Settings -> Audio -> Input Routing
+    // requires a standardized CommandManager or SettingsWindow API.
+    DBG("UXDirectorAgent: Input routing help requested. (Settings Window "
+        "trigger pending)");
+    break;
+
+  case SuggestionType::PresetGeneticistSuggestion:
+    if (presetGeneticist_ != nullptr) {
+      // Start evolution for inspiration
+      presetGeneticist_->startEvolution(10); // Run 10 generations
+      DBG("UXDirectorAgent: PresetGeneticist triggered.");
+    }
     break;
 
   default:
@@ -1518,7 +1596,7 @@ void UXDirectorAgent::loadPreferences() {
   if (auto *root = parsed.getDynamicObject()) {
     if (auto *dismissals = root->getProperty("dismissals").getDynamicObject()) {
       for (const auto &prop : dismissals->getProperties()) {
-        int type = prop.name.getIntValue();
+        int type = prop.name.toString().getIntValue();
         int count = static_cast<int>(prop.value);
         suggestionDismissals_[type] = count;
       }

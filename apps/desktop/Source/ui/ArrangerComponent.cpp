@@ -754,7 +754,30 @@ void ArrangerComponent::handleClipRightClick(const juce::MouseEvent &e,
           return;
 
         if (result == 1) {
-          // Rename logic (TODO)
+          // Rename clip via AlertWindow
+          auto *aw = new juce::AlertWindow("Rename Clip", "Enter new name:",
+                                           juce::AlertWindow::QuestionIcon);
+          aw->addTextEditor("name", clip->clipId, "Name:");
+          aw->addButton("OK", 1, juce::KeyPress(juce::KeyPress::returnKey));
+          aw->addButton("Cancel", 0, juce::KeyPress(juce::KeyPress::escapeKey));
+          aw->enterModalState(
+              true, juce::ModalCallbackFunction::create([this, clip](int r) {
+                if (r == 1) {
+                  auto *alertWin = dynamic_cast<juce::AlertWindow *>(
+                      juce::Component::getCurrentlyModalComponent());
+                  if (alertWin) {
+                    juce::String newName =
+                        alertWin->getTextEditorContents("name");
+                    if (newName.isNotEmpty()) {
+                      projectState.setClipProperty(
+                          clip->trackId, clip->clipId,
+                          zenith::ProjectState::PROP_NAME, newName,
+                          "Rename clip");
+                    }
+                  }
+                }
+              }),
+              true);
         } else if (result == 2) {
           // Delete
           projectState.deleteClip(clip->trackId, clip->clipId, "Delete clip");

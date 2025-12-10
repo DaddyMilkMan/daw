@@ -303,6 +303,12 @@ struct ProactiveConfig {
   int pluginOpenThreshold = 3;         // N opens of same plugin = struggling
   float minConfidenceThreshold = 0.6f; // Min confidence to show suggestion
   bool respectDismissals = true;       // Learn from user dismissals
+
+  // Additional thresholds for heuristics
+  int recordNoInputTimeoutMs = 5000; // 5s of no MIDI during record = issue
+  float clippingThreshold = 0.95f;   // Peak level above this = clipping
+  float maxConfidenceRecordTime = 10000.0f; // Record time for max confidence
+  float maxConfidenceIdleTime = 30000.0f;   // Idle time for max confidence
 };
 
 //==============================================================================
@@ -753,6 +759,9 @@ private:
   juce::ListenerList<SuggestionListener> suggestionListeners_;
 
   // AI agent references (non-owning pointers)
+  // These agents are owned by the Engine or ProjectState and share the same
+  // lifecycle as the UXDirector. It is guaranteed that UXDirector is destroyed
+  // before or at the same time as these agents during Engine teardown.
   SessionDebuggerAgent *sessionDebugger_ = nullptr;
   SampleHunterAgent *sampleHunter_ = nullptr;
   PresetGeneticistAgent *presetGeneticist_ = nullptr;
@@ -761,7 +770,7 @@ private:
   std::unordered_map<juce::String, int>
       pluginOpenCounts_; // trackId_pluginType -> count
   juce::String lastSelectedTrackId_;
-  juce::int64 lastUserActivityTime_ = 0;
+  std::atomic<juce::int64> lastUserActivityTime_{0};
 
   //==========================================================================
   // Proactive Assistance Methods
@@ -801,6 +810,19 @@ private:
    * @brief Load learned preferences from file
    */
   void loadPreferences();
+
+  /**
+   * @brief Helper to generate a smart search query from a track
+   */
+  juce::String generateSmartQuery(Track *track) const;
+
+  // Analysis snapshot struct to minimize lock time
+  struct IntentAnalysisSnapshot {
+    std::deque<UIEvent> history;
+    std::unordered_map<juce::String, int> pluginCounts;
+    juce::String selectedTrackId;
+    juce::int64 lastSelectedTime;
+  };
 
   //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UXDirectorAgent)
