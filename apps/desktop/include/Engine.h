@@ -1,4 +1,3 @@
-
 /**
  * @file Engine.h
  * @brief Core audio engine for Zenith DAW

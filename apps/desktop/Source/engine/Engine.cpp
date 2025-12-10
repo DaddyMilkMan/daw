@@ -992,6 +992,7 @@ void Engine::removeTrack(int index) {
   }
 }
 
+<<<<<<< HEAD
 // Helper to ensure followers exist for active sources
 void Engine::updateEnvelopeFollowers() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -1038,66 +1039,61 @@ void Engine::updateTrackSnapshot() {
   // 0. Update Envelope Followers (Message Thread)
   updateEnvelopeFollowers();
 
-  // 1. Build Resource Maps (ID -> Index/Pointer)
-  std::unordered_map<std::string, int> trackMap;
-  std::unordered_map<std::string, int> auxMap;
-  std::unordered_map<std::string, zenith::Track *> trackPtrs;
-  std::unordered_map<std::string, zenith::AuxBus *> auxPtrs;
+  // 1. Get Processing Order from RoutingGraph (Kahn's Algorithm result)
+  // This ensures we process nodes in dependency order (inputs before outputs)
+  auto processingOrder = routingGraph_.getProcessingOrder();
 
-  for (size_t i = 0; i < tracks_.size(); ++i) {
-    auto id = tracks_[i]->getTrackId().toStdString();
-    trackMap[id] = static_cast<int>(i);
-    trackPtrs[id] = tracks_[i].get();
-  }
-
-  for (size_t i = 0; i < auxBuses_.size(); ++i) {
-    auto id = auxBuses_[i]->getId().toStdString();
-    auxMap[id] = static_cast<int>(i);
-    auxPtrs[id] = auxBuses_[i].get();
-  }
-
-  // 2. Get Topological Sort from RoutingGraph
-  const auto &processingOrder = routingGraph_.getProcessingOrder();
-
-  // 3. Compile Render Sequence
   std::vector<RenderNode> sequence;
   sequence.reserve(processingOrder.size());
 
-  for (const auto &nodeId : processingOrder) {
-    const auto *nodeInfo = routingGraph_.getNode(nodeId);
-    if (!nodeInfo)
-      continue;
+  // Helper maps for ID -> Index lookups
+  std::unordered_map<std::string, int> trackIdToIndex;
+  std::unordered_map<std::string, int> auxIdToIndex;
+  std::unordered_map<std::string, zenith::Track *> trackPtrs;
+  std::unordered_map<std::string, zenith::AuxBus *> auxPtrs;
 
-    RenderNode renderNode;
+  // Build lookups
+  for (size_t i = 0; i < tracks_.size(); ++i) {
+    if (tracks_[i]) {
+      auto id = tracks_[i]->getId().toStdString();
+      trackIdToIndex[id] = static_cast<int>(i);
+      trackPtrs[id] = tracks_[i].get();
+    }
+  }
+  for (size_t i = 0; i < auxBuses_.size(); ++i) {
+    if (auxBuses_[i]) {
+      auto id = auxBuses_[i]->getId().toStdString();
+      auxIdToIndex[id] = static_cast<int>(i);
+      auxPtrs[id] = auxBuses_[i].get();
+    }
+  }
+
+  // 2. Build Render Nodes
+  for (const auto &nodeId : processingOrder) {
+    RenderNode node;
+    std::string idStr = nodeId.toStdString();
     bool isValidNode = false;
 
-    std::string nodeIdStd = nodeId.toStdString();
-
-    if (nodeInfo->type == RoutingGraph::NodeType::Track) {
-      auto it = trackMap.find(nodeIdStd);
-      if (it != trackMap.end()) {
-        renderNode.track = trackPtrs[nodeIdStd];
-        renderNode.outputBufferIndex = it->second;
-        isValidNode = true;
-      }
-    } else if (nodeInfo->type == RoutingGraph::NodeType::Bus) {
-      auto it = auxMap.find(nodeIdStd);
-      if (it != auxMap.end()) {
-        renderNode.bus = auxPtrs[nodeIdStd];
-        renderNode.outputBufferIndex = it->second;
-        isValidNode = true;
-      }
+    // Determine type (Track or Aux)
+    if (trackIdToIndex.count(idStr)) {
+      node.outputBufferIndex = trackIdToIndex[idStr];
+      node.track = trackPtrs[idStr];
+      isValidNode = true;
+    } else if (auxIdToIndex.count(idStr)) {
+      node.outputBufferIndex = auxIdToIndex[idStr];
+      node.bus = auxPtrs[idStr];
+      isValidNode = true;
     }
 
     if (!isValidNode)
-      continue;
+      continue; // Unknown node (maybe removed?)
 
     // Attach Envelope Follower (Modulation Source)
-    if (envelopeFollowers_.count(nodeIdStd)) {
-      renderNode.follower = envelopeFollowers_[nodeIdStd];
+    if (envelopeFollowers_.count(idStr)) {
+      node.follower = envelopeFollowers_[idStr];
     }
 
-    // Resolve Inputs (Summing Optimization)
+    // 3. Resolve Inputs
     auto connections = routingGraph_.getConnectionsTo(nodeId);
     for (const auto &conn : connections) {
       if (conn.type == RoutingGraph::Connection::Type::Modulation)
@@ -1106,21 +1102,19 @@ void Engine::updateTrackSnapshot() {
       MixOp op;
       op.gain = conn.gain;
       op.isFeedback = conn.isFeedback;
+      std::string srcId = conn.sourceId.toStdString();
 
-      auto trackSrc = trackMap.find(conn.sourceId.toStdString());
-      if (trackSrc != trackMap.end()) {
-        op.sourceBufferIndex = trackSrc->second;
+      // Check if input is Track
+      if (trackIdToIndex.count(srcId)) {
+        op.sourceBufferIndex = trackIdToIndex[srcId];
         op.isSourceAux = false;
-        renderNode.inputs.push_back(op);
-        continue;
+        node.inputs.push_back(op);
       }
-
-      auto auxSrc = auxMap.find(conn.sourceId.toStdString());
-      if (auxSrc != auxMap.end()) {
-        op.sourceBufferIndex = auxSrc->second;
+      // Check if input is Aux
+      else if (auxIdToIndex.count(srcId)) {
+        op.sourceBufferIndex = auxIdToIndex[srcId];
         op.isSourceAux = true;
-        renderNode.inputs.push_back(op);
-        continue;
+        node.inputs.push_back(op);
       }
     }
 
@@ -1132,23 +1126,32 @@ void Engine::updateTrackSnapshot() {
         const auto *destNode = routingGraph_.getNode(conn.destId);
         // Verify destination is Master
         if (destNode && destNode->type == RoutingGraph::NodeType::Master) {
-          renderNode.masterGain = conn.gain;
+          node.masterGain = conn.gain;
         }
       }
     }
 
-    sequence.push_back(renderNode);
+    sequence.push_back(node);
   }
 
-  // Create new snapshot with the compiled plan
+  // Create new snapshot with sequence
   auto newSnapshot =
       std::make_shared<TrackSnapshot>(tracks_, auxBuses_, sequence);
 
+  // Atomic swap (release semantics for the store)
+  // The audio thread will see the new pointer immediately
   activeSnapshot_.store(newSnapshot.get());
 
+  // Manage lifetime of old snapshots
+  // We keep the previous snapshot alive in snapshotTrash_
+  // because the audio thread might still be reading it.
   snapshotTrash_.push_back(currentSnapshotHolder_);
+
+  // Update current holder to the new snapshot
   currentSnapshotHolder_ = newSnapshot;
 
+  // Garbage collection: Keep last 5 snapshots
+  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
   if (snapshotTrash_.size() > 5) {
     snapshotTrash_.erase(snapshotTrash_.begin());
   }
