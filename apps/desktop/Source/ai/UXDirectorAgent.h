@@ -729,6 +729,80 @@ private:
   static constexpr int minAnalysisIntervalMs_ = 100;
 
   //==========================================================================
+  // Autonomous Interface Controller State
+  //==========================================================================
+
+  // Proactive assistance configuration
+  ProactiveConfig proactiveConfig_;
+
+  // Rolling action history (observation layer)
+  std::deque<UIEvent> actionHistory_;
+  juce::CriticalSection historyLock_;
+
+  // Current inferred intent
+  UserIntent currentIntent_;
+
+  // Current active suggestion
+  Suggestion currentSuggestion_;
+  juce::int64 lastSuggestionTime_ = 0;
+
+  // Dismissal tracking for learning (type -> dismissal count)
+  std::unordered_map<int, int> suggestionDismissals_;
+
+  // Suggestion listeners
+  juce::ListenerList<SuggestionListener> suggestionListeners_;
+
+  // AI agent references (non-owning pointers)
+  SessionDebuggerAgent *sessionDebugger_ = nullptr;
+  SampleHunterAgent *sampleHunter_ = nullptr;
+  PresetGeneticistAgent *presetGeneticist_ = nullptr;
+
+  // Track-specific counters for heuristics
+  std::unordered_map<juce::String, int>
+      pluginOpenCounts_; // trackId_pluginType -> count
+  juce::String lastSelectedTrackId_;
+  juce::int64 lastUserActivityTime_ = 0;
+
+  //==========================================================================
+  // Proactive Assistance Methods
+  //==========================================================================
+
+  /**
+   * @brief Analyze action history to infer user intent
+   */
+  void inferIntent();
+
+  /**
+   * @brief Create and offer a suggestion based on current intent
+   */
+  void dispatchSuggestion();
+
+  /**
+   * @brief Check if we can show a suggestion (respecting cooldown)
+   */
+  bool canShowSuggestion() const;
+
+  /**
+   * @brief Get adjusted probability for a suggestion type (learning)
+   */
+  float getSuggestionProbability(SuggestionType type) const;
+
+  /**
+   * @brief Execute the action associated with a suggestion
+   */
+  void executeSuggestionAction(const Suggestion &suggestion);
+
+  /**
+   * @brief Save learned preferences to file
+   */
+  void savePreferences();
+
+  /**
+   * @brief Load learned preferences from file
+   */
+  void loadPreferences();
+
+  //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(UXDirectorAgent)
 };
 
