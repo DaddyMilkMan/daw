@@ -18,7 +18,6 @@
 #include "../ZenithTheme.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 namespace zenith {
 
 class Engine;
@@ -147,8 +146,18 @@ private:
   juce::StringArray sourceLabels_;
   juce::StringArray destLabels_;
 
+  // Mapping helpers
+  juce::StringArray sourceIds_;
+  struct DestMapping {
+    juce::String nodeId;
+    int pluginIndex;
+    int paramIndex;
+  };
+  std::vector<DestMapping> destMappings_;
+
   // Matrix cells
   juce::OwnedArray<ModulationMatrixCell> cells_;
+  juce::OwnedArray<juce::Label> labels_;
 
   // Layout constants
   static constexpr int kCellWidth = 60;

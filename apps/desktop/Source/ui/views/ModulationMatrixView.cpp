@@ -73,8 +73,10 @@ void ModulationMatrixView::resized() {
 }
 
 void ModulationMatrixView::timerCallback() {
-  // Update cell visuals based on current modulation values
-  // This provides live feedback of modulation activity
+  // TODO: Update visualization of active modulation values
+  // For now, we just repaint active cells slightly brighter?
+  // In a real implementation, we'd query the Engine for current modulation
+  // values.
   repaint();
 }
 
@@ -88,10 +90,12 @@ void ModulationMatrixView::refreshMatrix() {
 
 void ModulationMatrixView::buildSourceLabels() {
   sourceLabels_.clear();
+  sourceIds_.clear();
 
   // Global LFOs
-  for (int i = 0; i < Engine::getNumGlobalLFOs(); ++i) {
+  for (int i = 0; i < zenith::kNumGlobalLFOs; ++i) {
     sourceLabels_.add("LFO " + juce::String(i + 1));
+    sourceIds_.add("sys:lfo:" + juce::String(i));
   }
 
   // Macros
@@ -101,6 +105,7 @@ void ModulationMatrixView::buildSourceLabels() {
     } else {
       sourceLabels_.add("Macro " + juce::String(i + 1));
     }
+    sourceIds_.add("sys:macro:" + juce::String(i));
   }
 
   // Track Envelopes (if engine available)
@@ -109,6 +114,8 @@ void ModulationMatrixView::buildSourceLabels() {
     for (size_t i = 0; i < tracks.size(); ++i) {
       if (tracks[i]) {
         sourceLabels_.add(tracks[i]->getName() + " Env");
+        // Use Track ID for AudioEnvelope source
+        sourceIds_.add(tracks[i]->getTrackId());
       }
     }
   }
@@ -116,10 +123,7 @@ void ModulationMatrixView::buildSourceLabels() {
 
 void ModulationMatrixView::buildDestLabels() {
   destLabels_.clear();
-
-  // Common destinations
-  destLabels_.add("Master Vol");
-  destLabels_.add("Master Pan");
+  destMappings_.clear();
 
   // Per-track destinations (if engine available)
   if (engine_) {
@@ -127,15 +131,28 @@ void ModulationMatrixView::buildDestLabels() {
     for (size_t i = 0; i < tracks.size() && i < 8; ++i) { // Limit for UI sanity
       if (tracks[i]) {
         juce::String prefix = tracks[i]->getName();
-        destLabels_.add(prefix + " Vol");
-        destLabels_.add(prefix + " Pan");
+        juce::String trackId = tracks[i]->getTrackId();
 
-        // Add first plugin's first 4 params
-        auto *plugin = tracks[i]->getPlugin(0);
-        if (plugin) {
-          auto params = plugin->getParameters();
-          for (int p = 0; p < juce::jmin(4, (int)params.size()); ++p) {
-            destLabels_.add(prefix + " P" + juce::String(p + 1));
+        // Iterate ALL plugins on the track
+        int numPlugins = tracks[i]->getNumPlugins();
+        for (int pl = 0; pl < numPlugins; ++pl) {
+          auto *plugin = tracks[i]->getPlugin(pl);
+          if (plugin) {
+            auto params = plugin->getParameters();
+            for (int p = 0; p < params.size(); ++p) {
+              auto *param = params[p];
+              if (!param)
+                continue;
+
+              juce::String paramName = param->getName(32);
+              if (paramName.isEmpty())
+                paramName = "P" + juce::String(p + 1);
+
+              // Label: "TrackName FX1 ParamName"
+              destLabels_.add(prefix + " FX" + juce::String(pl + 1) + " " +
+                              paramName);
+              destMappings_.push_back({trackId, pl, p});
+            }
           }
         }
       }
@@ -144,12 +161,14 @@ void ModulationMatrixView::buildDestLabels() {
 }
 
 void ModulationMatrixView::createCells() {
+  // Clear managed components
   cells_.clear();
+  labels_.clear();
 
   if (!matrixContent_)
     return;
 
-  // Remove old children
+  // Remove all children from content component
   matrixContent_->removeAllChildren();
 
   int numRows = sourceLabels_.size();
@@ -164,6 +183,7 @@ void ModulationMatrixView::createCells() {
     label->setBounds(5, kHeaderHeight + row * kCellHeight, kLabelWidth - 10,
                      kCellHeight);
     matrixContent_->addAndMakeVisible(label);
+    labels_.add(label); // Manage memory
   }
 
   // Create destination labels (column headers) - rotated
@@ -181,6 +201,7 @@ void ModulationMatrixView::createCells() {
         -0.5f, static_cast<float>(x + kCellWidth / 2),
         static_cast<float>(kHeaderHeight / 2)));
     matrixContent_->addAndMakeVisible(label);
+    labels_.add(label); // Manage memory
   }
 
   // Create matrix cells
@@ -192,16 +213,35 @@ void ModulationMatrixView::createCells() {
       int y = kHeaderHeight + row * kCellHeight;
       cell->setBounds(x, y, kCellWidth - 2, kCellHeight - 2);
 
-      // Capture row/col for callback
-      int sourceIndex = row;
-      int destIndex = col;
+      // Capture IDs
+      juce::String srcId = sourceIds_[row];
+      DestMapping dest = destMappings_[static_cast<size_t>(col)];
 
-      cell->onAmountChanged = [this, sourceIndex, destIndex](float amount) {
-        // TODO: Update modulation routing in Engine
-        // This would call engine_->getRoutingGraph().connectModulation(...)
-        // or update an existing modulation connection
-        DBG("Modulation: Source " << sourceIndex << " -> Dest " << destIndex
-                                  << " = " << amount);
+      // Initial state check (read from RoutingGraph)
+      float initialAmount = 0.0f;
+      if (engine_) {
+        auto connections =
+            engine_->getRoutingGraph().getConnectionsTo(dest.nodeId);
+        for (const auto &conn : connections) {
+          // Check if this connection matches our cell (Source -> Dest Param)
+          if (conn.type == RoutingGraph::Connection::Type::Modulation &&
+              conn.sourceId == srcId &&
+              conn.targetPluginIndex == dest.pluginIndex &&
+              conn.targetParamIndex == dest.paramIndex) {
+            initialAmount = conn.gain;
+            break;
+          }
+        }
+      }
+      cell->setAmount(initialAmount);
+
+      cell->onAmountChanged = [this, srcId, dest](float amount) {
+        if (engine_) {
+          // Update RoutingGraph
+          // Note: connectModulation is thread-safe (uses lock)
+          engine_->getRoutingGraph().connectModulation(
+              srcId, dest.nodeId, dest.pluginIndex, dest.paramIndex, amount);
+        }
       };
 
       cells_.add(cell);

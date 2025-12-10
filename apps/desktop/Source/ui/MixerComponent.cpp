@@ -3,11 +3,12 @@
  * @brief Mixer component implementation
  */
 
-#include "../../include/ui/MixerComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
-#include "../../include/Engine.h"
-#include "../../include/ui/MixerChannelComponent.h"
-#include "../engine/Track.h"
+#include "ui/MixerComponent.h"
+#include "Engine.h"
+#include "engine/Track.h"
+#include "ui/MixerChannelComponent.h"
+#include "ui/skia/ZenithDesignSystem.h"
+
 
 // Check for Skia availability
 #ifdef ZENITH_USE_SKIA

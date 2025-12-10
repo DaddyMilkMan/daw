@@ -8,6 +8,8 @@
     Macro Control for user-driven modulation.
     Simple float value (0.0-1.0) with optional smoothing.
 
+    RT-SAFETY: All audio thread operations are lock-free.
+
   ==============================================================================
 */
 
@@ -23,16 +25,23 @@ namespace zenith {
 class MacroControl {
 public:
   MacroControl() = default;
-  explicit MacroControl(const juce::String &name) : name_(name) {}
+  explicit MacroControl(const juce::String &name) { setName(name); }
 
   //==========================================================================
   // Configuration (Message Thread)
   //==========================================================================
 
-  void setName(const juce::String &name) { name_ = name; }
-  const juce::String &getName() const { return name_; }
+  void setName(const juce::String &name) {
+    juce::ScopedLock lock(nameLock_);
+    name_ = name;
+  }
 
-  // Set the target value (user input)
+  juce::String getName() const {
+    juce::ScopedLock lock(nameLock_);
+    return name_;
+  }
+
+  // Set the target value (user input) - can be called from any thread
   void setValue(float value) {
     targetValue_.store(juce::jlimit(0.0f, 1.0f, value));
   }
@@ -40,18 +49,22 @@ public:
   float getTargetValue() const { return targetValue_.load(); }
 
   // Smoothing time in milliseconds
-  void setSmoothingTime(float ms) { smoothingTimeMs_.store(ms); }
+  void setSmoothingTime(float ms) {
+    smoothingTimeMs_.store(juce::jmax(0.0f, ms));
+    updateSmoothingCoefficient();
+  }
   float getSmoothingTime() const { return smoothingTimeMs_.load(); }
 
   // Default value (for reset)
   void setDefaultValue(float value) {
-    defaultValue_ = juce::jlimit(0.0f, 1.0f, value);
+    defaultValue_.store(juce::jlimit(0.0f, 1.0f, value));
   }
-  float getDefaultValue() const { return defaultValue_; }
+  float getDefaultValue() const { return defaultValue_.load(); }
 
   void reset() {
-    targetValue_.store(defaultValue_);
-    currentValue_.store(defaultValue_);
+    float def = defaultValue_.load();
+    targetValue_.store(def);
+    currentValue_.store(def);
   }
 
   //==========================================================================
@@ -59,19 +72,24 @@ public:
   //==========================================================================
 
   void setSampleRate(double sampleRate) {
-    sampleRate_ = sampleRate;
+    sampleRate_.store(sampleRate);
     updateSmoothingCoefficient();
   }
 
-  // Process one block, smoothing towards target
+  // Process one block, smoothing towards target - O(1) complexity
   float process(int numSamples) {
     float target = targetValue_.load();
     float current = currentValue_.load();
-    float smoothing = smoothingCoef_.load();
+    float coef = smoothingCoef_.load();
 
-    // One-pole smoothing
-    for (int i = 0; i < numSamples; ++i) {
-      current += (target - current) * smoothing;
+    // O(1) exponential smoothing: current = target + (current - target) *
+    // coef^n Where coef = 1 - smoothingCoef (per-sample decay)
+    if (numSamples > 0 && coef < 1.0f) {
+      float decay = std::pow(1.0f - coef, static_cast<float>(numSamples));
+      current = target + (current - target) * decay;
+    } else if (coef >= 1.0f) {
+      // Instant (no smoothing)
+      current = target;
     }
 
     currentValue_.store(current);
@@ -91,15 +109,18 @@ public:
 
 private:
   void updateSmoothingCoefficient() {
-    if (sampleRate_ <= 0.0)
+    double sr = sampleRate_.load();
+    if (sr <= 0.0) {
+      smoothingCoef_.store(1.0f);
       return;
+    }
 
     float timeMs = smoothingTimeMs_.load();
     if (timeMs <= 0.0f) {
       smoothingCoef_.store(1.0f); // Instant
     } else {
       // Time constant for one-pole filter
-      float timeSamples = static_cast<float>(timeMs * 0.001 * sampleRate_);
+      float timeSamples = static_cast<float>(timeMs * 0.001 * sr);
       smoothingCoef_.store(1.0f - std::exp(-1.0f / timeSamples));
     }
   }
@@ -108,9 +129,11 @@ private:
   // State
   //==========================================================================
 
+  mutable juce::CriticalSection nameLock_; // Only for name string
   juce::String name_{"Macro"};
-  double sampleRate_ = 48000.0;
-  float defaultValue_ = 0.5f;
+
+  std::atomic<double> sampleRate_{48000.0};
+  std::atomic<float> defaultValue_{0.5f};
 
   // Atomic parameters
   std::atomic<float> targetValue_{0.5f};
@@ -119,7 +142,9 @@ private:
   std::atomic<float> smoothingCoef_{0.1f};
 };
 
+//==============================================================================
 // Convenience struct for managing multiple macros
+//==============================================================================
 struct MacroBank {
   static constexpr int kNumMacros = 8;
 
@@ -127,7 +152,7 @@ struct MacroBank {
 
   MacroBank() {
     for (int i = 0; i < kNumMacros; ++i) {
-      macros[i].setName("Macro " + juce::String(i + 1));
+      macros[static_cast<size_t>(i)].setName("Macro " + juce::String(i + 1));
     }
   }
 

@@ -7,32 +7,26 @@
 #include "../../Source/engine/Track.h"
 #include "../../Source/ui/skia/SkiaTheme.h" // For SkiaTheme
 
-#include <core/SkCanvas.h>
-#include <core/SkRRect.h>
+#include <skia/include/core/SkCanvas.h>
+#include <skia/include/core/SkRRect.h>
 
 //==============================================================================
 namespace zenith {
 
 MixerChannelComponent::MixerChannelComponent(Track *track)
-    : track_(track)
-#ifdef ZENITH_USE_SKIA
-      ,
-      faderSlider_("Vol"), panKnob_("Pan"), muteButton_("M"), soloButton_("S")
-#endif
-{
+    : track_(track), faderSlider_("Vol"), panKnob_("Pan"), muteButton_("M"),
+      soloButton_("S") {
   jassert(track_ != nullptr);
   track_->addChangeListener(this);
 
   // Initialize UI from track
+  // Initialize UI from track
   updateFromTrack();
+  updateNameCache(); // Initialize cache
 
   // Track name label
-  nameLabel_.setText(track_->getName(), juce::dontSendNotification);
-  nameLabel_.setJustificationType(juce::Justification::centred);
-  nameLabel_.setFont(juce::FontOptions(14.0f, juce::Font::bold));
-  addAndMakeVisible(nameLabel_);
+  // Track name is drawn in drawSkia
 
-#ifdef ZENITH_USE_SKIA
   // GPU-accelerated volume fader with spring physics
   faderSlider_.setOrientation(zenith::SkiaSlider::Orientation::Vertical);
   faderSlider_.setStyle(zenith::SkiaSlider::Style::Fader);
@@ -60,35 +54,6 @@ MixerChannelComponent::MixerChannelComponent(Track *track)
   soloButton_.setToggleState(track_->isSolo());
   soloButton_.onClick = [this]() { onSoloClicked(); };
   addAndMakeVisible(soloButton_);
-#else
-  // Fallback: Traditional JUCE custom components
-  faderSlider_.setRange(0.0f, 1.0f, 0.7f); // Min, Max, Default
-  faderSlider_.setValue(track_->getVolume(), false);
-  faderSlider_.setLabel("Vol");
-  faderSlider_.setSuffix("dB");
-  faderSlider_.onValueChange = [this](float value) { onFaderChanged(); };
-  addAndMakeVisible(faderSlider_);
-
-  panKnob_.setRange(-1.0f, 1.0f, 0.0f); // Min, Max, Default (center)
-  panKnob_.setValue(track_->getPan(), false);
-  panKnob_.setLabel("Pan");
-  panKnob_.onValueChange = [this](float value) { onPanChanged(); };
-  addAndMakeVisible(panKnob_);
-
-  muteButton_.setButtonText("M");
-  muteButton_.setToggleable(true);
-  muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-  muteButton_.setToggleState(track_->isMuted(), false);
-  muteButton_.onClick = [this]() { onMuteClicked(); };
-  addAndMakeVisible(muteButton_);
-
-  soloButton_.setButtonText("S");
-  soloButton_.setToggleable(true);
-  soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-  soloButton_.setToggleState(track_->isSolo(), false);
-  soloButton_.onClick = [this]() { onSoloClicked(); };
-  addAndMakeVisible(soloButton_);
-#endif
 
   // Level meter
   addAndMakeVisible(meter_);
@@ -155,15 +120,34 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   borderRect.inset(0.5f, 0.5f);
   canvas->drawRRect(borderRect, borderPaint);
 
+  // Draw Track Name
+  if (track_ != nullptr) {
+    // Draw Cached Track Name (Critique #2: Zero allocations in paint)
+    SkFont font; // Font is light, but ideally cached too. Skia handles font
+                 // cache well.
+    font.setSize(design::dimensions::MIXER_TRACK_HEADER_TEXT_SIZE);
+    font.setEdging(SkFont::Edging::kAntiAlias);
+
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setAntiAlias(true);
+
+    canvas->drawSimpleText(cachedName_.c_str(), cachedName_.length(),
+                           SkTextEncoding::kUTF8, cachedNameX_, cachedNameY_,
+                           font, textPaint);
+  }
+
   // Children are drawn by SkiaComponent::drawChildren
   drawChildren(canvas);
 }
 
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds().reduced(8);
+  updateNameCache(); // Re-calculate text position on resize
 
   // Track name at top
-  nameLabel_.setBounds(bounds.removeFromTop(30));
+  // Track name is drawn directly, just reserve space
+  bounds.removeFromTop(30);
   bounds.removeFromTop(4); // Spacing
 
   // Mute/Solo buttons at bottom
@@ -212,29 +196,42 @@ void MixerChannelComponent::updateFromTrack() {
   // Update pan knob
   panKnob_.setValue(track_->getPan());
 
-#ifdef ZENITH_USE_SKIA
   // Skia buttons: toggle state provides visual feedback
   muteButton_.setToggleState(track_->isMuted());
   soloButton_.setToggleState(track_->isSolo());
-#else
-  // JUCE buttons: toggle state + style changes
-  muteButton_.setToggleState(track_->isMuted(), false);
-  if (track_->isMuted())
-    muteButton_.setButtonStyle(zenith::ZenithButton::Danger);
-  else
-    muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-
-  soloButton_.setToggleState(track_->isSolo(), false);
-  if (track_->isSolo())
-    soloButton_.setButtonStyle(zenith::ZenithButton::Warning);
-  else
-    soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-#endif
 
   // Update name
-  nameLabel_.setText(track_->getName(), juce::dontSendNotification);
+  // Update name cache
+  updateNameCache(); // Recalculate text content/width if name changed
 
   updatingControls_ = false;
+}
+
+void MixerChannelComponent::updateNameCache() {
+  if (track_ == nullptr)
+    return;
+
+  // Convert string once
+  cachedName_ = track_->getName().toStdString();
+
+  // Calculate layout once
+  auto bounds = getLocalBounds().toFloat(); // JUCE float rect
+  // Convert to Skia Layout
+  SkRect skBounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                     bounds.getWidth(), bounds.getHeight());
+
+  SkFont font;
+  font.setSize(design::dimensions::MIXER_TRACK_HEADER_TEXT_SIZE);
+
+  SkRect textBounds;
+  font.measureText(cachedName_.c_str(), cachedName_.length(),
+                   SkTextEncoding::kUTF8, &textBounds);
+
+  cachedNameWidth_ = textBounds.width();
+  cachedNameX_ = skBounds.centerX() - (cachedNameWidth_ / 2.0f);
+  // Use Design Token for Padding (Critique #3 Fix)
+  cachedNameY_ =
+      skBounds.top() + design::dimensions::MIXER_TRACK_HEADER_PADDING_TOP;
 }
 
 //==============================================================================
@@ -263,14 +260,6 @@ void MixerChannelComponent::onMuteClicked() {
   // Toggle mute (thread-safe via atomic)
   bool newMuted = muteButton_.getToggleState();
   track_->setMuted(newMuted);
-
-#ifndef ZENITH_USE_SKIA
-  // Update button style (JUCE buttons only)
-  if (newMuted)
-    muteButton_.setButtonStyle(zenith::ZenithButton::Danger);
-  else
-    muteButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-#endif
 }
 
 void MixerChannelComponent::onSoloClicked() {
@@ -280,14 +269,6 @@ void MixerChannelComponent::onSoloClicked() {
   // Toggle solo (thread-safe via atomic)
   bool newSolo = soloButton_.getToggleState();
   track_->setSolo(newSolo);
-
-#ifndef ZENITH_USE_SKIA
-  // Update button style (JUCE buttons only)
-  if (newSolo)
-    soloButton_.setButtonStyle(zenith::ZenithButton::Warning);
-  else
-    soloButton_.setButtonStyle(zenith::ZenithButton::Secondary);
-#endif
 }
 
 //==============================================================================

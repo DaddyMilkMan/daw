@@ -13,12 +13,13 @@
 */
 
 #pragma once
-#include <include/core/SkColor.h>
-#include <include/core/SkFont.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
+#include <skia/include/core/SkColor.h>
+#include <skia/include/core/SkFont.h>
 #include <vector>
+
 
 namespace zenith {
 namespace design {
@@ -226,6 +227,13 @@ constexpr float RADIUS_SM = 2.0f;      // Was 4.0f
 constexpr float RADIUS_MD = 4.0f;      // Was 8.0f
 constexpr float RADIUS_LG = 8.0f;      // Was 12.0f
 constexpr float RADIUS_FULL = 9999.0f; // Fully rounded
+
+// Mixer Specifics (Critique #3: No Magic Numbers)
+constexpr float MIXER_TRACK_HIGHLIGHT_HEIGHT_RATIO = 0.2f;
+constexpr float MIXER_TRACK_HEADER_PADDING_TOP = 20.0f;
+constexpr float MIXER_TRACK_HEADER_TEXT_SIZE = 14.0f;
+constexpr float MIXER_TRACK_SPACING_SMALL = 4.0f;
+constexpr float MIXER_TRACK_ROUNDING = 6.0f;
 } // namespace dimensions
 
 // ============================================================================

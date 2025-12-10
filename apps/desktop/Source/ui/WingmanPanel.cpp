@@ -12,13 +12,37 @@
 
 #include "WingmanPanel.h"
 #include "../SimpleLogger.h"
-#include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
 
-namespace zenith {
+//==============================================================================
+namespace {
+namespace WingmanStrings {
+// Speakers
+const juce::String kSpeakerWingman = "Wingman";
+const juce::String kSpeakerSystem = "System";
+const juce::String kSpeakerYou = "You";
+
+// Status Messages
+const juce::String kStatusSearching = "Searching samples...";
+const juce::String kStatusDownloading = "Downloading...";
+const juce::String kStatusReady = "Ready";
+const juce::String kStatusError = "Error";
+const juce::String kStatusProcessing = "Processing...";
+
+// Chat Messages
+const juce::String kMsgSearchFailed = "❌ Search failed. Please try again.";
+const juce::String kMsgSampleHunterUnavailable =
+    "❌ Sample Hunter unavailable.";
+const juce::String kMsgNoResults =
+    "⚠️ No search results available. Use 'find <query>' first.";
+const juce::String kMsgSpecifyNumber =
+    "⚠️ Please specify a number: 'import 1', 'import 2', etc.";
+} // namespace WingmanStrings
+} // namespace
 
 //==============================================================================
+namespace zenith {
 WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
                            Engine &engine)
     : commandAPI(api), aiBridgeClient(client), engine_(engine) {
@@ -270,15 +294,16 @@ void WingmanPanel::sendCommand() {
       lastSearchQuery_ = sampleQuery;
       lastSearchResults_.clear();
 
-      appendToConversation("Wingman", "🔍 Searching Freesound for \"" +
-                                          sampleQuery + "\"...");
-      setStatus("Searching samples...", juce::Colour(0xffffff00));
+      appendToConversation(WingmanStrings::kSpeakerWingman,
+                           "🔍 Searching Freesound for \"" + sampleQuery +
+                               "\"...");
+      setStatus(WingmanStrings::kStatusSearching, juce::Colour(0xffffff00));
 
       sampleHunter->hunt(sampleQuery);
       return; // Don't send to Grok
     } else {
       appendToConversation(
-          "Wingman",
+          WingmanStrings::kSpeakerWingman,
           "Sample Hunter is not available. Please check engine configuration.");
       return;
     }
@@ -288,14 +313,14 @@ void WingmanPanel::sendCommand() {
   // Phase 3: Standard Grok processing
   //==========================================================================
   if (!isGrokReady()) {
-    appendToConversation("System",
+    appendToConversation(WingmanStrings::kSpeakerSystem,
                          "Grok API key not configured. Click ⚙ to set it up.");
     return;
   }
 
   // Set processing state
   isProcessing = true;
-  setStatus("Processing...", juce::Colour(0xffffff00));
+  setStatus(WingmanStrings::kStatusProcessing, juce::Colour(0xffffff00));
   sendButton->setEnabled(false);
 
   // Send to Grok
@@ -304,8 +329,8 @@ void WingmanPanel::sendCommand() {
       [this](juce::String response) {
         // Success
         juce::MessageManager::callAsync([this, response]() {
-          appendToConversation("Wingman", response);
-          setStatus("Ready", juce::Colour(0xff00ff00));
+          appendToConversation(WingmanStrings::kSpeakerWingman, response);
+          setStatus(WingmanStrings::kStatusReady, juce::Colour(0xff00ff00));
           isProcessing = false;
           sendButton->setEnabled(true);
         });
@@ -368,45 +393,125 @@ void WingmanPanel::showSettings() {
 // Sample Hunter Logic
 //==============================================================================
 
+juce::String WingmanPanel::cleanQueryFiller(const juce::String &rawQuery) {
+  // Strip common filler words from natural language queries
+  // "me a punchy snare" -> "punchy snare"
+  // "for some 808 kicks" -> "808 kicks"
+  juce::String query = rawQuery;
+
+  // Filler prefixes to strip (order matters - longer first)
+  // Optimization: Static const to avoid reallocation
+  static const char *const fillers[] = {
+      "me a ",   "me some ", "me an ", "for a ", "for some ",
+      "for an ", "for ",     "some ",  "a ",     "an "};
+
+  juce::String lower = query.toLowerCase();
+  for (const auto *filler : fillers) {
+    if (lower.startsWith(filler)) {
+      query = query.substring(juce::String(filler).length());
+      break; // Only strip one prefix
+    }
+  }
+
+  // Also strip trailing "sample", "samples", "sound", "sounds"
+  lower = query.toLowerCase();
+  static const char *const suffixes[] = {" samples", " sample", " sounds",
+                                         " sound"};
+  for (const auto *suffix : suffixes) {
+    if (lower.endsWith(suffix)) {
+      query = query.dropLastCharacters(juce::String(suffix).length());
+      break;
+    }
+  }
+
+  return query.trim();
+}
+
 bool WingmanPanel::detectSampleSearchIntent(const juce::String &message,
                                             juce::String &outQuery) {
   juce::String lower = message.toLowerCase();
 
-  if (lower.startsWith("find ") || lower.startsWith("search ") ||
-      lower.startsWith("get ") || lower.startsWith("hunt ")) {
+  // Pattern matching with extraction points
+  // Format: {prefix, extraction_start_offset}
+  struct Pattern {
+    const char *prefix;
+    int offset;
+  };
+  const Pattern patterns[] = {
+      {"find me ", 8},      {"find ", 5},          {"search for ", 11},
+      {"search ", 7},       {"get me ", 7},        {"get ", 4},
+      {"hunt for ", 9},     {"hunt ", 5},          {"i need a ", 9},
+      {"i need ", 7},       {"can you find ", 13}, {"give me ", 8},
+      {"looking for ", 12}, {"look for ", 9}};
 
-    int spacePos = message.indexOf(" ");
-    if (spacePos > 0) {
-      outQuery = message.substring(spacePos + 1).trim();
+  for (const auto &p : patterns) {
+    if (lower.startsWith(p.prefix)) {
+      juce::String rawQuery = message.substring(p.offset).trim();
+      outQuery = cleanQueryFiller(rawQuery);
       return outQuery.isNotEmpty();
     }
   }
+
   return false;
 }
 
 bool WingmanPanel::handleImportCommand(const juce::String &message) {
-  if (!isSampleSearchActive_ || lastSearchResults_.empty())
-    return false;
-
   juce::String lower = message.toLowerCase();
-  if (lower.startsWith("import ") || lower.startsWith("load ") ||
-      lower.startsWith("use ")) {
-    int spacePos = message.indexOf(" ");
-    if (spacePos > 0) {
-      int index = message.substring(spacePos + 1).getIntValue();
-      if (index >= 1 && index <= static_cast<int>(lastSearchResults_.size())) {
-        if (auto *hunter = engine_.getSampleHunterAgent()) {
-          hunter->downloadResult(index - 1); // 0-based
-          appendToConversation("Wingman", "Downloading '" +
-                                              lastSearchResults_[index - 1].title +
-                                              "'...");
-          setStatus("Downloading...", juce::Colour(0xffffff00));
-          return true;
-        }
-      }
-    }
+
+  // Check if this looks like an import command
+  if (!lower.startsWith("import ") && !lower.startsWith("load ") &&
+      !lower.startsWith("use ")) {
+    return false;
   }
-  return false;
+
+  // Check if we have results to import from
+  if (!isSampleSearchActive_ || lastSearchResults_.empty()) {
+    appendToConversation(WingmanStrings::kSpeakerWingman,
+                         WingmanStrings::kMsgNoResults);
+    return true; // Handled (with error)
+  }
+
+  int spacePos = message.indexOf(" ");
+  if (spacePos <= 0) {
+    appendToConversation(WingmanStrings::kSpeakerWingman,
+                         WingmanStrings::kMsgSpecifyNumber);
+    return true;
+  }
+
+  juce::String indexStr = message.substring(spacePos + 1).trim();
+  int index = indexStr.getIntValue();
+
+  // Check for non-numeric input (getIntValue returns 0 for non-numbers)
+  if (index == 0 && !indexStr.startsWith("0")) {
+    appendToConversation(WingmanStrings::kSpeakerWingman,
+                         "⚠️ Invalid input '" + indexStr +
+                             "'. Please use a number (1-" +
+                             juce::String(lastSearchResults_.size()) + ").");
+    return true;
+  }
+
+  // Check bounds
+  if (index < 1 || index > static_cast<int>(lastSearchResults_.size())) {
+    appendToConversation(WingmanStrings::kSpeakerWingman,
+                         "⚠️ Invalid selection '" + juce::String(index) +
+                             "'. Choose 1-" +
+                             juce::String(lastSearchResults_.size()) + ").");
+    return true;
+  }
+
+  // Valid index - proceed with download
+  if (auto *hunter = engine_.getSampleHunterAgent()) {
+    hunter->downloadResult(index - 1); // 0-based
+    appendToConversation(WingmanStrings::kSpeakerWingman,
+                         "⬇️ Downloading '" +
+                             lastSearchResults_[index - 1].title + "'...");
+    setStatus(WingmanStrings::kStatusDownloading, juce::Colour(0xffffff00));
+    return true;
+  }
+
+  appendToConversation(WingmanStrings::kSpeakerWingman,
+                       WingmanStrings::kMsgSampleHunterUnavailable);
+  return true;
 }
 
 void WingmanPanel::displaySearchResults(
@@ -427,61 +532,95 @@ void WingmanPanel::displaySearchResults(
   appendToConversation("Wingman", list);
 }
 
-void WingmanPanel::importSampleToTrack(const ai::FoundSample &sample) {
-  if (auto *hunter = engine_.getSampleHunterAgent()) {
-    for (size_t i = 0; i < lastSearchResults_.size(); ++i) {
-      if (lastSearchResults_[i].id == sample.id) {
-        hunter->downloadResult(static_cast<int>(i));
-        return;
-      }
-    }
-  }
-}
-
 //==============================================================================
 // SampleHunterAgent::Listener
 //==============================================================================
 
 void WingmanPanel::sampleDownloaded(const ai::FoundSample &sample) {
-  juce::MessageManager::callAsync([this, sample]() {
-    appendToConversation("Wingman",
-                         "Downloaded '" + sample.title + "'. Importing...");
+  // Safe async callback using Component::SafePointer
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+
+  juce::MessageManager::callAsync([safeThis, sample]() {
+    if (safeThis) {
+      safeThis->appendToConversation(WingmanStrings::kSpeakerWingman,
+                                     "✅ Downloaded '" + sample.title +
+                                         "'. Analyzing...");
+    }
   });
 }
 
 void WingmanPanel::sampleAnalyzed(const ai::FoundSample &sample) {
-  // Optional analysis feedback
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+
+  juce::MessageManager::callAsync([safeThis, sample]() {
+    if (safeThis) {
+      juce::String details = "📊 Analysis: ";
+      if (sample.detectedBpm > 0)
+        details += juce::String(sample.detectedBpm, 1) + " BPM, ";
+      if (sample.detectedKey.isNotEmpty())
+        details += "Key: " + sample.detectedKey;
+
+      if (sample.detectedBpm > 0 || sample.detectedKey.isNotEmpty()) {
+        safeThis->appendToConversation(WingmanStrings::kSpeakerWingman,
+                                       details);
+      }
+    }
+  });
 }
 
 void WingmanPanel::sampleImported(const juce::File &file) {
-  juce::MessageManager::callAsync([this, file]() {
-    engine_.createTrack(file.getFileNameWithoutExtension(), "audio");
-    appendToConversation("Wingman",
-                         "Created track for '" + file.getFileName() + "'.");
-    setStatus("Ready", juce::Colour(0xff00ff00));
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+
+  juce::MessageManager::callAsync([safeThis, file]() {
+    if (safeThis) {
+      safeThis->engine_.createTrack(file.getFileNameWithoutExtension(),
+                                    "audio");
+      safeThis->appendToConversation(WingmanStrings::kSpeakerWingman,
+                                     "🎉 Created track for '" +
+                                         file.getFileName() + "'.");
+      safeThis->setStatus(WingmanStrings::kStatusReady,
+                          juce::Colour(0xff00ff00));
+    }
   });
 }
 
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
-  juce::MessageManager::callAsync(
-      [this, status]() { setStatus(status, juce::Colour(0xffffff00)); });
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+
+  juce::MessageManager::callAsync([safeThis, status, progress]() {
+    if (safeThis) {
+      // Progress 0.0 - 1.0 (convert to %)
+      juce::String pStr =
+          (progress > 0) ? " (" + juce::String(int(progress * 100)) + "%)" : "";
+      safeThis->setStatus(status + pStr, juce::Colour(0xffffff00));
+    }
+  });
 }
 
 void WingmanPanel::huntingComplete(const ai::HuntingStats &stats,
                                    bool success) {
-  juce::MessageManager::callAsync([this, stats, success]() {
+  juce::Component::SafePointer<WingmanPanel> safeThis(this);
+
+  juce::MessageManager::callAsync([safeThis, stats, success]() {
+    if (!safeThis)
+      return;
+
     if (success) {
-      if (auto *hunter = engine_.getSampleHunterAgent()) {
-        lastSearchResults_ = hunter->getFoundSamples();
-        displaySearchResults(lastSearchResults_);
+      if (auto *hunter = safeThis->engine_.getSampleHunterAgent()) {
+        safeThis->lastSearchResults_ = hunter->getFoundSamples();
+        safeThis->displaySearchResults(safeThis->lastSearchResults_);
       }
-      setStatus("Ready", juce::Colour(0xff00ff00));
+      safeThis->setStatus(WingmanStrings::kStatusReady,
+                          juce::Colour(0xff00ff00));
     } else {
-      appendToConversation("Wingman", "Search failed.");
-      setStatus("Error", juce::Colour(0xffff0000));
+      safeThis->appendToConversation(WingmanStrings::kSpeakerWingman,
+                                     WingmanStrings::kMsgSearchFailed);
+      safeThis->setStatus(WingmanStrings::kStatusError,
+                          juce::Colour(0xffff0000));
     }
-    isSampleSearchActive_ = !lastSearchResults_.empty();
+    // Update active state
+    safeThis->isSampleSearchActive_ = !safeThis->lastSearchResults_.empty();
   });
 }
 

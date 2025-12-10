@@ -284,28 +284,8 @@ void CommandAPI::registerCommand(const juce::String &commandName,
 CommandAPI::~CommandAPI() {}
 
 //==============================================================================
-juce::var CommandAPI::executeCommand(const juce::var &request) {
-  // Validate request structure
-  if (!request.isObject())
-    return createErrorResponse("Invalid request: must be JSON object");
-
-  if (!request.hasProperty("command"))
-    return createErrorResponse("Missing 'command' field");
-
-  juce::String commandStr = request["command"].toString();
-  juce::var params =
-      request.hasProperty("params") ? request["params"] : juce::var();
-
-  DBG("CommandAPI: Executing command: " + commandStr);
-
-  // Map Lookup
-  auto it = commandMap.find(commandStr.toStdString());
-  if (it == commandMap.end()) {
-    return createErrorResponse("Unknown command: " + commandStr);
-  }
-
-  CommandID id = it->second;
-
+// True Command Pattern Implementation
+juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
   switch (id) {
   case CommandID::ListTracks:
     return trackCommands->listTracks(params);
@@ -435,7 +415,6 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
   case CommandID::GetInstrumentParameterSchema:
     return getInstrumentParameterSchema(params);
 
-  // Quick Wins: Mixer Control
   case CommandID::SetTrackSend:
     return trackCommands->setTrackSend(params);
   case CommandID::SetTrackEQ:
@@ -443,9 +422,54 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
   case CommandID::SetTrackCompressor:
     return trackCommands->setTrackCompressor(params);
 
+  case CommandID::CreateAuxBus:
+    return createAuxBus(params);
+  case CommandID::RemoveAuxBus:
+    return removeAuxBus(params);
+  case CommandID::SetAuxBusVolume:
+    return setAuxBusVolume(params);
+  case CommandID::SetAuxBusPan:
+    return setAuxBusPan(params);
+  case CommandID::SetAuxBusMute:
+    return setAuxBusMute(params);
+  case CommandID::GetAuxBuses:
+    return getAuxBuses(params);
+
+  case CommandID::GetUIState:
+    return getUIState(params);
+
   default:
-    return createErrorResponse("Command ID not implemented: " + commandStr);
+    return createErrorResponse("Command ID not implemented");
   }
+}
+
+juce::var CommandAPI::executeCommand(const juce::var &request) {
+  // Validate request structure
+  if (!request.isObject())
+    return createErrorResponse("Invalid request: must be JSON object");
+
+  if (!request.hasProperty("command"))
+    return createErrorResponse("Missing 'command' field");
+
+  juce::String commandStr = request["command"].toString();
+  juce::var params =
+      request.hasProperty("params") ? request["params"] : juce::var();
+
+  DBG("CommandAPI: Executing command: " + commandStr);
+
+  // Map Lookup
+  auto it = commandMap.find(commandStr.toStdString());
+  if (it == commandMap.end()) {
+    // Check fallback handlers (deprecated but supported for plugins that didn't
+    // migrate)
+    auto handlerIt = commandHandlers.find(commandStr);
+    if (handlerIt != commandHandlers.end()) {
+      return handlerIt->second(params);
+    }
+    return createErrorResponse("Unknown command: " + commandStr);
+  }
+
+  return executeCommand(it->second, params);
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {

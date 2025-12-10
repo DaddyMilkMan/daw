@@ -7,7 +7,6 @@
 #include "../../Source/dsp/ONNXStemSeparator.h"
 #include "../../Source/utils/StemSeparationJob.h"
 
-#ifdef ZENITH_USE_SKIA
 #include "skia/ZenithDesignSystem.h"
 #include <skia/include/core/SkCanvas.h>
 #include <skia/include/core/SkColor.h>
@@ -19,8 +18,6 @@
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkTypeface.h>
 #include <skia/include/effects/SkGradientShader.h>
-
-#endif
 
 #include "../../Source/engine/AudioFilePool.h"
 #include "../browser/BrowserDragSource.h"
@@ -769,10 +766,14 @@ void ArrangerComponent::handleClipRightClick(const juce::MouseEvent &e,
                     juce::String newName =
                         alertWin->getTextEditorContents("name");
                     if (newName.isNotEmpty()) {
-                      projectState.setClipProperty(
-                          clip->trackId, clip->clipId,
-                          zenith::ProjectState::PROP_NAME, newName,
-                          "Rename clip");
+                      // Directly modify the clip ValueTree
+                      auto [track, clipNode] =
+                          projectState.findClip(clip->clipId);
+                      if (clipNode.isValid()) {
+                        clipNode.setProperty(zenith::ProjectState::PROP_NAME,
+                                             newName,
+                                             &projectState.getUndoManager());
+                      }
                     }
                   }
                 }
@@ -1640,7 +1641,6 @@ juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
          juce::String(tick).paddedLeft('0', 2);
 }
 
-#ifdef ZENITH_USE_SKIA
 //==============================================================================
 // Clip Content Drawing - Waveform
 //==============================================================================
@@ -1775,6 +1775,5 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
     }
   }
 }
-#endif
 
 } // namespace zenith

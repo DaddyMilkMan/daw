@@ -11,16 +11,17 @@
 
 #pragma once
 
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
-#include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkPath.h>
-#include <core/SkRRect.h>
-#include <core/SkRect.h>
-#include <core/SkShader.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <skia/include/core/SkCanvas.h>
+#include <skia/include/core/SkColor.h>
+#include <skia/include/core/SkFont.h>
+#include <skia/include/core/SkMaskFilter.h>
+#include <skia/include/core/SkPaint.h>
+#include <skia/include/core/SkPath.h>
+#include <skia/include/core/SkRRect.h>
+#include <skia/include/core/SkRect.h>
+#include <skia/include/core/SkShader.h>
+
 
 #include "SkiaAccessibility.h"
 #include "ZenithDesignSystem.h"

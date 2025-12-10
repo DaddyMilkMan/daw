@@ -15,13 +15,11 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #include "../../Source/ui/skia/SkiaButton.h"
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../../Source/ui/skia/SkiaKnob.h"
 #include "../../Source/ui/skia/SkiaSlider.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
-
 
 namespace zenith {
 class Track;
@@ -51,7 +49,7 @@ private:
 
   zenith::Track *track_;
 
-  juce::Label nameLabel_;
+  // juce::Label nameLabel_; // Removed in favor of Skia drawing
 
   zenith::SkiaSlider faderSlider_;
   zenith::SkiaKnob panKnob_;
@@ -75,6 +73,13 @@ private:
 
   LevelMeter meter_;
   bool updatingControls_ = false;
+
+  // Cached Layout (Critique #2: Allocations in Paint Loop)
+  std::string cachedName_;
+  float cachedNameWidth_ = 0.0f;
+  float cachedNameX_ = 0.0f;
+  float cachedNameY_ = 0.0f;
+  void updateNameCache(); // Helper
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };

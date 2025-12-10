@@ -7,8 +7,9 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include <core/SkCanvas.h>
 #include <juce_core/juce_core.h>
+#include <skia/include/core/SkCanvas.h>
+#include <skia/include/core/SkRect.h>
 #include <unordered_map>
 #include <vector>
 
@@ -208,15 +209,12 @@ private:
   int dropTargetTrackIndex_ = -1;
   double dropTargetBeats_ = 0.0;
 
-  //==========================================================================
   // Clip Content Rendering Helpers (Skia)
   //==========================================================================
-#ifdef ZENITH_USE_SKIA
   void drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
                         const SkRect &clipRect);
   void drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip,
                          const SkRect &clipRect);
-#endif
 
   // Bar.Beat.Tick formatting
   juce::String formatBarBeatTick(double beats) const;

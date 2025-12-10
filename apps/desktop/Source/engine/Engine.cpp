@@ -975,14 +975,14 @@ void Engine::updateTrackSnapshot() {
         juce::String srcId = conn.sourceId;
 
         if (srcId.startsWith("sys:lfo:")) {
-          modInput.source.type = ModulationSourceType::GlobalLFO;
+          modInput.source.type = ModulationRoutingSourceType::GlobalLFO;
           modInput.source.index = srcId.substring(8).getIntValue();
         } else if (srcId.startsWith("sys:macro:")) {
-          modInput.source.type = ModulationSourceType::Macro;
+          modInput.source.type = ModulationRoutingSourceType::Macro;
           modInput.source.index = srcId.substring(10).getIntValue();
         } else {
           // Assume Track Envelope
-          modInput.source.type = ModulationSourceType::AudioEnvelope;
+          modInput.source.type = ModulationRoutingSourceType::AudioEnvelope;
           modInput.source.trackId = srcId;
         }
 
@@ -1699,8 +1699,8 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
     // 2a. Apply Modulation Inputs (Block-Rate Modulation)
     for (const auto &mod : node.modulationInputs) {
       if (node.track) {
-        float value = mod.source.getValue(&globalLFOs_, &macroBank_,
-                                          &persistentFollowers_);
+        float value =
+            mod.source.getValue(&globalLFOs_, &macroBank_, &envelopeFollowers_);
         node.track->applyModulation(mod.targetPluginIndex, mod.targetParamIndex,
                                     value);
       }
@@ -2584,6 +2584,14 @@ float Engine::getAuxBusPeakLevel(int auxIndex) const {
   if (auxIndex >= 0 && auxIndex < static_cast<int>(auxBuses_.size()))
     return auxBuses_[auxIndex]->getPeakLevel();
   return 0.0f;
+}
+
+ai::SampleHunterAgent *Engine::getSampleHunterAgent() {
+  return sampleHunter_.get();
+}
+
+const ai::SampleHunterAgent *Engine::getSampleHunterAgent() const {
+  return sampleHunter_.get();
 }
 
 } // namespace zenith

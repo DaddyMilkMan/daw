@@ -119,12 +119,14 @@ private:
   void updateModeFromSelector();
   void showSettings();
 
-  // Sample Hunter methods
-  bool detectSampleSearchIntent(const juce::String &message,
-                                juce::String &outQuery);
+  // Sample Hunter methods (Stateless logic)
+  static bool detectSampleSearchIntent(const juce::String &message,
+                                       juce::String &outQuery);
+  static juce::String cleanQueryFiller(const juce::String &rawQuery);
+
+  // Sample Hunter methods (Stateful)
   bool handleImportCommand(const juce::String &message);
   void displaySearchResults(const std::vector<ai::FoundSample> &results);
-  void importSampleToTrack(const ai::FoundSample &sample);
 
   //==========================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WingmanPanel)

@@ -215,14 +215,15 @@ void PresetGeneticistAgent::setTargetAudio(
   targetFeatures_.preset.name = "Target"; // Dummy
   analyzeAudio(targetAudioBuffer_, targetFeatures_);
 
-  DBG("Target Analyzed. Centroid: " << targetFeatures_.spectralCentroid
-      << ", Richness: " << targetFeatures_.harmonicRichness
-      << ", RMS: " << targetFeatures_.rmsDb);
+  DBG("Target Analyzed. Centroid: " +
+      juce::String(targetFeatures_.spectralCentroid) +
+      ", Richness: " + juce::String(targetFeatures_.harmonicRichness) +
+      ", RMS: " + juce::String(targetFeatures_.rmsDb));
 
-      {
-        std::lock_guard<std::mutex> lock(spectrumMutex_);
-        targetSpectrum_ = targetFeatures_.spectrum;
-      }
+  {
+    std::lock_guard<std::mutex> lock(spectrumMutex_);
+    targetSpectrum_ = targetFeatures_.spectrum;
+  }
 }
 
 std::vector<float> PresetGeneticistAgent::getCurrentBestSpectrum() const {
@@ -657,8 +658,14 @@ Individual PresetGeneticistAgent::crossover(const Individual &parent1,
 }
 
 void PresetGeneticistAgent::mutate(Individual &individual) {
-  // Use the safe, smart mutation logic from PresetGenerator
-  PresetGenerator::mutatePreset(individual.preset, config_.mutationStrength);
+  // Manual mutation to avoid type mismatch
+  for (auto &param : individual.preset.parameters) {
+    if (randomFloat() < 0.5f) { // Mutate 50% of params
+      float delta =
+          randomFloat(-config_.mutationStrength, config_.mutationStrength);
+      param.second = juce::jlimit(0.0f, 1.0f, param.second + delta);
+    }
+  }
 
   // Mark as needing re-evaluation
   individual.evaluated = false;
