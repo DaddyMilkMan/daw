@@ -809,10 +809,36 @@ private:
   // Audio thread reads this snapshot without locking (wait-free iteration)
   // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
   // lifetime (safety)
+
+  // Render Graph Structures
+  struct MixOp {
+    int sourceBufferIndex = -1;
+    bool isSourceAux = false;
+    float gain = 1.0f;
+    bool isFeedback = false;
+  };
+
+  struct ModulationInput {
+    // Placeholder for modulation (will be expanded in universal modulation task)
+    int targetPluginIndex = -1;
+    int targetParamIndex = -1;
+    float amount = 0.0f;
+  };
+
+  struct RenderNode {
+    Track *track = nullptr;
+    AuxBus *bus = nullptr;
+    int outputBufferIndex = -1;
+    std::vector<MixOp> inputs;
+    std::vector<ModulationInput> modulationInputs; // Pre-bound inputs
+    float masterGain = 1.0f;
+  };
+
   struct TrackSnapshot {
     std::vector<zenith::Track *>
         tracks; // Raw pointers for fast, lock-free iteration
     std::vector<zenith::AuxBus *> auxBuses; // Raw pointers for buses
+    std::vector<RenderNode> sequence;       // Topological render sequence
 
     std::vector<std::shared_ptr<zenith::Track>> lifecycle; // Keeps tracks alive
     std::vector<std::shared_ptr<zenith::AuxBus>>
@@ -821,7 +847,9 @@ private:
     TrackSnapshot() = default;
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses,
+        const std::vector<RenderNode> &renderSequence = {})
+        : sequence(renderSequence) {
       tracks.reserve(ownedTracks.size());
       lifecycle.reserve(ownedTracks.size());
       for (const auto &track : ownedTracks) {

@@ -973,9 +973,72 @@ void Engine::removeTrack(int index) {
 }
 
 void Engine::updateTrackSnapshot() {
-  // Create new snapshot
-  // ROAST FIX: Include Aux Buses in snapshot
-  auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
+  // 1. Get Processing Order from RoutingGraph (Kahn's Algorithm result)
+  // This ensures we process nodes in dependency order (inputs before outputs)
+  auto processingOrder = routingGraph_.getProcessingOrder();
+
+  std::vector<RenderNode> sequence;
+  sequence.reserve(processingOrder.size());
+
+  // Helper maps for ID -> Index lookups
+  std::unordered_map<std::string, int> trackIdToIndex;
+  std::unordered_map<std::string, int> auxIdToIndex;
+
+  // Build lookups
+  for (size_t i = 0; i < tracks_.size(); ++i) {
+    if (tracks_[i]) {
+      trackIdToIndex[tracks_[i]->getId().toStdString()] = static_cast<int>(i);
+    }
+  }
+  for (size_t i = 0; i < auxBuses_.size(); ++i) {
+    if (auxBuses_[i]) {
+      auxIdToIndex[auxBuses_[i]->getId().toStdString()] = static_cast<int>(i);
+    }
+  }
+
+  // 2. Build Render Nodes
+  for (const auto &nodeId : processingOrder) {
+    RenderNode node;
+    std::string idStr = nodeId.toStdString();
+
+    // Determine type (Track or Aux)
+    if (trackIdToIndex.count(idStr)) {
+      node.outputBufferIndex = trackIdToIndex[idStr];
+      node.track = tracks_[node.outputBufferIndex].get();
+    } else if (auxIdToIndex.count(idStr)) {
+      node.outputBufferIndex = auxIdToIndex[idStr];
+      node.bus = auxBuses_[node.outputBufferIndex].get();
+    } else {
+      continue; // Unknown node (maybe removed?)
+    }
+
+    // 3. Resolve Inputs
+    auto connections = routingGraph_.getConnectionsTo(nodeId);
+    for (const auto &conn : connections) {
+      MixOp op;
+      op.gain = conn.gain;
+      std::string srcId = conn.sourceId.toStdString();
+
+      // Check if input is Track
+      if (trackIdToIndex.count(srcId)) {
+        op.sourceBufferIndex = trackIdToIndex[srcId];
+        op.isSourceAux = false;
+        node.inputs.push_back(op);
+      }
+      // Check if input is Aux
+      else if (auxIdToIndex.count(srcId)) {
+        op.sourceBufferIndex = auxIdToIndex[srcId];
+        op.isSourceAux = true;
+        node.inputs.push_back(op);
+      }
+    }
+
+    sequence.push_back(node);
+  }
+
+  // Create new snapshot with sequence
+  auto newSnapshot =
+      std::make_shared<TrackSnapshot>(tracks_, auxBuses_, sequence);
 
   // Atomic swap (release semantics for the store)
   // The audio thread will see the new pointer immediately
