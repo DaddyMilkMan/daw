@@ -237,6 +237,59 @@ void RoutingGraph::removeNode(const juce::String &nodeId) {
   updateSnapshot();
 }
 
+bool RoutingGraph::connect(const juce::String &sourceId,
+                           const juce::String &destId, float gain) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  const juce::ScopedLock sl(writeLock_);
+
+  // Validate nodes
+  if (nodes_.find(sourceId.toStdString()) == nodes_.end() ||
+      nodes_.find(destId.toStdString()) == nodes_.end()) {
+    return false;
+  }
+
+  // Check if connection already exists
+  for (const auto &c : connections_) {
+    if (c.sourceId == sourceId && c.destId == destId &&
+        c.type == Connection::Type::Audio) {
+      return true; // Already connected
+    }
+  }
+
+  Connection c;
+  c.type = Connection::Type::Audio;
+  c.sourceId = sourceId;
+  c.destId = destId;
+  c.gain = gain;
+  connections_.push_back(c);
+
+  updateSnapshot();
+  return true;
+}
+
+bool RoutingGraph::disconnect(const juce::String &sourceId,
+                              const juce::String &destId) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  const juce::ScopedLock sl(writeLock_);
+
+  auto it = std::remove_if(connections_.begin(), connections_.end(),
+                           [&](const Connection &c) {
+                             return c.sourceId == sourceId &&
+                                    c.destId == destId &&
+                                    c.type == Connection::Type::Audio;
+                           });
+
+  if (it != connections_.end()) {
+    connections_.erase(it, connections_.end());
+    updateSnapshot();
+    return true;
+  }
+
+  return false;
+}
+
 bool RoutingGraph::connectModulation(const juce::String &sourceId,
                                      const juce::String &destId,
                                      int pluginIndex, int paramIndex,
