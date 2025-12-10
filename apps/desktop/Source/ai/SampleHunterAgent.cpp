@@ -49,13 +49,22 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Load Freesound API key from secure storage (NEVER hardcode!)
+<<<<<<< HEAD
   SecureKeyStore::retrieveKey("freesound_api_key", freesoundConfig_.apiKey);
+=======
+  freesoundConfig_.apiKey =
+      SecureKeyStore::getInstance().getKey("freesound_api_key");
+>>>>>>> origin/master
 
   if (freesoundConfig_.apiKey.isEmpty()) {
     DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
         "SecureKeyStore!");
     DBG("SampleHunterAgent: Set key via "
+<<<<<<< HEAD
         "SecureKeyStore::storeKey(\"freesound_api_key\", "
+=======
+        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
+>>>>>>> origin/master
         "\"YOUR_KEY\")");
   }
 
@@ -261,9 +270,19 @@ void SampleHunterAgent::run() {
           pendingAnalysisNotifications.clear();
           pendingImportNotifications.clear();
         }
+<<<<<<< HEAD
       } else {
         stats_.downloadsFailed++;
       }
+=======
+              [this, f]() {
+          listeners_.call(&Listener::sampleImported, f); });
+      }
+    }
+    else {
+      stats_.downloadsFailed++;
+    }
+>>>>>>> origin/master
 
     processedCount++;
     float p = static_cast<float>(processedCount) /
