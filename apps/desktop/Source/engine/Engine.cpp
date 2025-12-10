@@ -992,7 +992,6 @@ void Engine::removeTrack(int index) {
   }
 }
 
-<<<<<<< HEAD
 // Helper to ensure followers exist for active sources
 void Engine::updateEnvelopeFollowers() {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -1055,7 +1054,7 @@ void Engine::updateTrackSnapshot() {
   // Build lookups
   for (size_t i = 0; i < tracks_.size(); ++i) {
     if (tracks_[i]) {
-      auto id = tracks_[i]->getId().toStdString();
+      auto id = tracks_[i]->getTrackId().toStdString();
       trackIdToIndex[id] = static_cast<int>(i);
       trackPtrs[id] = tracks_[i].get();
     }
