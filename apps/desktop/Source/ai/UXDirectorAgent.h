@@ -191,6 +191,122 @@ struct DataBinding {
 
 //==============================================================================
 /**
+    User interface event types for behavior observation
+*/
+enum class UIEventType {
+  TrackSelected,
+  PluginOpened,
+  PluginClosed,
+  PlaybackStarted,
+  PlaybackStopped,
+  RecordStarted,
+  RecordStopped,
+  MIDIInputReceived,
+  TrackCreated,
+  TrackDeleted,
+  ClipMoved,
+  ClipCreated,
+  Undo,
+  Redo,
+  Idle,
+  ParameterChanged,
+  FileImported,
+  FileExported
+};
+
+/**
+    Represents a user interface event for behavioral tracking
+*/
+struct UIEvent {
+  UIEventType type = UIEventType::Idle;
+  juce::String targetId;       // Track ID, plugin ID, etc.
+  juce::String targetName;     // Human-readable name
+  juce::String additionalInfo; // Extra context
+  juce::int64 timestamp = 0;   // Time of event (ms since epoch)
+  int repeatCount = 1;         // How many times this exact event occurred
+
+  UIEvent() : timestamp(juce::Time::currentTimeMillis()) {}
+  UIEvent(UIEventType t, const juce::String &id = "",
+          const juce::String &name = "")
+      : type(t), targetId(id), targetName(name),
+        timestamp(juce::Time::currentTimeMillis()) {}
+};
+
+/**
+    Inferred user intent types
+*/
+enum class UserIntentType {
+  None,
+  StrugglingWithEQ,      // Opened EQ multiple times on same track
+  StrugglingWithMixing,  // Constant volume/pan adjustments
+  WaitingForInspiration, // Idle on empty track
+  InputRoutingIssue,     // Record pressed but no input
+  LookingForSound,       // Browsing presets/samples
+  LoopingSection,        // Repeatedly playing same section
+  GainStagingIssue,      // Clipping or very low levels
+  FrequencyClash,        // Multiple tracks fighting for same frequencies
+  ArrangementBlock       // Stuck on arrangement
+};
+
+/**
+    Represents an inferred user intent with confidence
+*/
+struct UserIntent {
+  UserIntentType type = UserIntentType::None;
+  float confidence = 0.0f;    // 0.0 - 1.0
+  juce::String description;   // Human-readable explanation
+  juce::String targetTrackId; // Which track this applies to (if any)
+  juce::int64 detectedAt = 0;
+
+  UserIntent() : detectedAt(juce::Time::currentTimeMillis()) {}
+};
+
+/**
+    Suggestion types that can be offered to the user
+*/
+enum class SuggestionType {
+  None,
+  SessionDebuggerAnalysis,    // Offer frequency analysis
+  SampleHunterSuggestion,     // Offer sample suggestions
+  PresetGeneticistSuggestion, // Offer preset evolution
+  InputRoutingHelp,           // Offer input routing diagnostic
+  GainStagingFix,             // Offer automatic gain correction
+  QuickTip                    // General workflow tip
+};
+
+/**
+    A proactive suggestion for the user
+*/
+struct Suggestion {
+  SuggestionType type = SuggestionType::None;
+  juce::String title;         // e.g., "💡 Tip: Your bass seems muddy"
+  juce::String description;   // Longer explanation
+  juce::String primaryAction; // e.g., "Auto-Fix"
+  juce::String dismissAction; // e.g., "Dismiss"
+  juce::String targetTrackId; // Which track this suggestion is for
+  float priority = 0.5f;      // 0.0-1.0, higher = more important
+  bool wasDismissed = false;
+  bool wasAccepted = false;
+  juce::int64 shownAt = 0;
+
+  Suggestion() : shownAt(juce::Time::currentTimeMillis()) {}
+};
+
+/**
+    Configuration for the proactive assistance system
+*/
+struct ProactiveConfig {
+  bool enabled = true;                 // Master switch
+  int suggestionCooldownMs = 30000;    // Min 30s between suggestions
+  int idleThresholdMs = 10000;         // 10s of idle = trigger
+  int maxHistorySize = 50;             // Rolling action history size
+  int pluginOpenThreshold = 3;         // N opens of same plugin = struggling
+  float minConfidenceThreshold = 0.6f; // Min confidence to show suggestion
+  bool respectDismissals = true;       // Learn from user dismissals
+};
+
+//==============================================================================
+/**
     UX Director Agent
 
     Monitors and maintains UI integrity. Runs analysis to find issues and
@@ -393,6 +509,97 @@ public:
     float dataFreshness = 100.0f;     // % showing current data
   };
   HealthBreakdown getHealthBreakdown() const;
+
+  //==========================================================================
+  // Autonomous Interface Controller (Proactive Assistance)
+  //==========================================================================
+
+  /**
+   * @brief Observe a user interface event
+   * Called by UI components to report user actions for behavioral analysis.
+   * @param event The event that occurred
+   */
+  void observe(const UIEvent &event);
+
+  /**
+   * @brief Get the action history for debugging/analysis
+   * @return Rolling history of recent user actions
+   */
+  const std::deque<UIEvent> &getActionHistory() const { return actionHistory_; }
+
+  /**
+   * @brief Get the current inferred user intent
+   * @return The most recently inferred intent with confidence
+   */
+  UserIntent getCurrentIntent() const { return currentIntent_; }
+
+  /**
+   * @brief Get the current active suggestion (if any)
+   * @return The suggestion currently being shown to the user
+   */
+  Suggestion getCurrentSuggestion() const { return currentSuggestion_; }
+
+  /**
+   * @brief Check if there's an active suggestion
+   */
+  bool hasPendingSuggestion() const {
+    return currentSuggestion_.type != SuggestionType::None;
+  }
+
+  /**
+   * @brief User accepted the current suggestion
+   * Triggers the associated action and records positive feedback.
+   */
+  void acceptSuggestion();
+
+  /**
+   * @brief User dismissed the current suggestion
+   * Records negative feedback to reduce future suggestions of this type.
+   */
+  void dismissSuggestion();
+
+  /**
+   * @brief Get proactive assistance configuration
+   */
+  ProactiveConfig &getProactiveConfig() { return proactiveConfig_; }
+  const ProactiveConfig &getProactiveConfig() const { return proactiveConfig_; }
+
+  /**
+   * @brief Set proactive assistance configuration
+   */
+  void setProactiveConfig(const ProactiveConfig &config) {
+    proactiveConfig_ = config;
+  }
+
+  /**
+   * @brief Register AI agents for dispatch
+   * The UX Director can dispatch work to these agents when it infers user
+   * intent.
+   */
+  void setSessionDebugger(SessionDebuggerAgent *agent) {
+    sessionDebugger_ = agent;
+  }
+  void setSampleHunter(SampleHunterAgent *agent) { sampleHunter_ = agent; }
+  void setPresetGeneticist(PresetGeneticistAgent *agent) {
+    presetGeneticist_ = agent;
+  }
+
+  /**
+   * @brief Listener interface for suggestion notifications
+   */
+  class SuggestionListener {
+  public:
+    virtual ~SuggestionListener() = default;
+    virtual void suggestionAvailable(const Suggestion &suggestion) = 0;
+    virtual void suggestionDismissed() = 0;
+  };
+
+  void addSuggestionListener(SuggestionListener *listener) {
+    suggestionListeners_.add(listener);
+  }
+  void removeSuggestionListener(SuggestionListener *listener) {
+    suggestionListeners_.remove(listener);
+  }
 
   //==========================================================================
   // ChangeListener (for Track changes)

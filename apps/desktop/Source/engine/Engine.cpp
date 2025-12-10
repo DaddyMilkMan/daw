@@ -12,8 +12,8 @@
 #include <unordered_set> // For updateEnvelopeFollowers
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
-#include "../ai/SessionDebuggerAgent.h"
 #include "../ai/SampleHunterAgent.h"
+#include "../ai/SessionDebuggerAgent.h"
 #include "../engine/AudioFilePool.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
@@ -62,6 +62,10 @@ Engine::Engine() {
   // Initialize Session Debugger Agent (AI Technical Integrity)
   sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
   DBG("Engine: SessionDebuggerAgent initialized");
+
+  // Initialize Sample Hunter Agent (AI Asset Acquisition)
+  sampleHunter_ = std::make_unique<ai::SampleHunterAgent>(*this);
+  DBG("Engine: SampleHunterAgent initialized");
 
   // Initialize Audio Recorder
   // Writer thread is started in AudioRecorder constructor
@@ -451,7 +455,8 @@ void Engine::record() {
   }
 
   // Delegate to AudioRecorder
-  audioRecorder_.startRecording(tracks_, deviceManager, recordStartSamples, recordingsDir);
+  audioRecorder_.startRecording(tracks_, deviceManager, recordStartSamples,
+                                recordingsDir);
 
   DBG("Engine: Recording started at sample " +
       juce::String(recordStartSamples));
@@ -479,7 +484,7 @@ void Engine::stopRecording() {
   // Phase 2D: Process audio recordings
   // ==========================================================================
   auto results = audioRecorder_.stopRecording();
-  
+
   juce::MessageManager::callAsync([this, results]() {
     // Double-check we're not shutting down
     if (isShuttingDown_.load()) {
@@ -495,8 +500,7 @@ void Engine::stopRecording() {
       if (result.trackIndex >= 0 &&
           result.trackIndex < static_cast<int>(tracks_.size())) {
         auto &track = tracks_[result.trackIndex];
-        bakeAudioRecordingIntoTrack(*track, result.file,
-                                    result.startSample,
+        bakeAudioRecordingIntoTrack(*track, result.file, result.startSample,
                                     result.sampleRate);
       }
     }
@@ -1240,7 +1244,8 @@ void Engine::audioDeviceIOCallbackWithContext(
   // Phase 2D: Process recording (can record even when not playing, but
   // typically we start playback)
   if (recording) {
-    // Cast away constness for legacy compatibility if needed, but AudioRecorder should handle it
+    // Cast away constness for legacy compatibility if needed, but AudioRecorder
+    // should handle it
     audioRecorder_.processBlock(inputChannelData, numInputChannels, numSamples);
   }
 }
@@ -1637,6 +1642,15 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
   auto *snapshot = activeSnapshot_.load();
   if (!snapshot)
     return;
+
+  // 1b. Process Global LFOs (tempo from project state)
+  double tempo = projectState_ ? projectState_->getTempo() : 120.0;
+  for (int i = 0; i < kNumGlobalLFOs; ++i) {
+    globalLFOs_[static_cast<size_t>(i)].process(numSamples, tempo);
+  }
+
+  // 1c. Process Macro smoothing
+  macroBank_.process(numSamples);
 
   // 2. Iterate Topological Render Sequence
   for (const auto &node : snapshot->sequence) {
@@ -2102,8 +2116,6 @@ juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
 }
 
 // prepareRecordingForTrack removed - managed by AudioRecorder
-
-
 
 void Engine::registerFormats() {
   formatManager.registerBasicFormats();
