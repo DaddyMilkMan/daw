@@ -262,44 +262,58 @@ void SampleHunterAgent::run() {
           pendingAnalysisNotifications.clear();
           pendingImportNotifications.clear();
         }
-              [this, f]() {
-          listeners_.call(&Listener::sampleImported, f); });
+      } else {
+        stats_.downloadsFailed++;
       }
+
+      processedCount++;
+      float p =
+          static_cast<float>(processedCount) /
+          static_cast<float>(std::max(static_cast<size_t>(1), totalToProcess));
+      updateProgress(downloadStartProgress +
+                     (downloadEndProgress - downloadStartProgress) * p);
+
+      if (processedCount >= static_cast<size_t>(config_.maxTotalDownloads))
+        break;
+
+      wait(config_.delayBetweenDownloadsMs);
     }
-    else {
-      stats_.downloadsFailed++;
+
+    // Flush remaining batch notifications
+    if (!pendingDownloadNotifications.empty()) {
+      auto downloadBatch = pendingDownloadNotifications;
+      auto analysisBatch = pendingAnalysisNotifications;
+      auto importBatch = pendingImportNotifications;
+
+      juce::MessageManager::callAsync(
+          [this, downloadBatch, analysisBatch, importBatch]() {
+            for (const auto &s : downloadBatch)
+              listeners_.call(&Listener::sampleDownloaded, s);
+            for (const auto &s : analysisBatch)
+              listeners_.call(&Listener::sampleAnalyzed, s);
+            for (const auto &f : importBatch)
+              listeners_.call(&Listener::sampleImported, f);
+          });
     }
 
-    processedCount++;
-    float p = static_cast<float>(processedCount) /
-              (float)std::max((size_t)1, totalToProcess);
-    updateProgress(downloadStartProgress +
-                   (downloadEndProgress - downloadStartProgress) * p);
+    // Complete
+    stats_.endTime = juce::Time::getCurrentTime();
+    updateProgress(1.0f);
+    setStatus("Sample hunt complete!");
 
-    if (processedCount >= (size_t)config_.maxTotalDownloads)
-      break;
-
-    wait(config_.delayBetweenDownloadsMs);
+    juce::MessageManager::callAsync([this]() {
+      listeners_.call(&Listener::huntingComplete, stats_, true);
+      sendChangeMessage();
+    });
+  } catch (const std::exception &e) {
+    DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
+    setStatus("Error: " + juce::String(e.what()));
+    juce::MessageManager::callAsync([this]() {
+      listeners_.call(&Listener::huntingComplete, stats_, false);
+    });
   }
 
-  // Complete
-  stats_.endTime = juce::Time::getCurrentTime();
-  updateProgress(1.0f);
-  setStatus("Sample hunt complete!");
-
-  juce::MessageManager::callAsync([this]() {
-    listeners_.call(&Listener::huntingComplete, stats_, true);
-    sendChangeMessage();
-  });
-}
-catch (const std::exception &e) {
-  DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
-  setStatus("Error: " + juce::String(e.what()));
-  juce::MessageManager::callAsync(
-      [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
-}
-
-isHunting_.store(false);
+  isHunting_.store(false);
 }
 
 //==============================================================================

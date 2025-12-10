@@ -7,8 +7,9 @@
 #include "../../include/TrackAutomationSynchronizer.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
-#include <algorithm> // For std::remove_if
-#include <array>     // For RT-safe stack allocation in audio callback
+#include <algorithm>     // For std::remove_if
+#include <array>         // For RT-safe stack allocation in audio callback
+#include <unordered_set> // For updateEnvelopeFollowers
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/SessionDebuggerAgent.h"
@@ -1743,8 +1744,6 @@ void Engine::prepareBuffersForOfflineRender(int blockSize, int numChannels) {
 void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
                               int numSamples, juce::int64 playheadPosition,
                               const juce::MidiBuffer *incomingMidi) {
-  juce::ignoreUnused(playheadPosition);
-
   // 1. Clear Headers / Output
   outputBuffer.clear();
 
@@ -1780,6 +1779,15 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
 
     if (!destBuffer)
       continue;
+
+    // 2a. Apply Modulation Inputs (Block-Rate Modulation)
+    for (const auto &mod : node.modulationInputs) {
+      if (mod.sourceFollower && node.track) {
+        float value = mod.sourceFollower->getCurrentValue();
+        node.track->applyModulation(mod.targetPluginIndex, mod.targetParamIndex,
+                                    value);
+      }
+    }
 
     // 3. Sum Inputs (Matrix Mixing)
     for (const auto &input : node.inputs) {
@@ -1822,8 +1830,21 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
       node.track->getNextAudioBlock(bufferInfo, playheadPosition, incomingMidi,
                                     compatibilityAux, tMap);
 
-      // 5. Output to Master Device (Implicit Routing)
-      if (node.track->getType() == zenith::Track::Type::Master) {
+      // 4b. Update Envelope Follower (Modulation Source)
+      if (node.follower) {
+        const float *input = destBuffer->getReadPointer(0);
+        node.follower->process(input, numSamples);
+      }
+
+      // 5. Output to Master Device (Graph Routing)
+      if (node.masterGain > 0.0f) {
+        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+          int srcCh = ch % destBuffer->getNumChannels();
+          outputBuffer.addFrom(ch, 0, *destBuffer, srcCh, 0, numSamples,
+                               node.masterGain);
+        }
+      } else if (node.track->getType() == zenith::Track::Type::Master) {
+        // Fallback for Master track type
         for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
           int srcCh = ch % destBuffer->getNumChannels();
           outputBuffer.addFrom(ch, 0, *destBuffer, srcCh, 0, numSamples);
@@ -1832,20 +1853,20 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
     } else if (node.bus) {
       node.bus->getNextAudioBlock(bufferInfo);
 
-      // AuxBuses usually route to Master unless routed elsewhere
-      // For MVP Topological Engine, we can adopt simple rule:
-      // If the AuxBus has NO outputs in the graph, it goes to master?
-      // Or just assume AuxBuses always go to master?
-      // Zenith AuxBus definition usually implies return to master mix.
-      // Let's mix to master for safety unless we have explicit graph
-      // indicating otherwise. But strict topological means we should
-      // respect graph. If user didn't connect AuxOut to Master, it should
-      // be silent. However, for this task, we want "Universal Signal
-      // Flow". Implicit Master routing for Master Track is clear. For
-      // others, let's leave it to explicit routing. IF the existing
-      // AuxBus implementation sums to master internally, we might double
-      // sum. AuxBus::AudioSource::getNextAudioBlock just processes
-      // buffer. It doesn't write to master. So silence if not routed.
+      // 4b. Update Envelope Follower for Bus (if any)
+      if (node.follower) {
+        const float *input = destBuffer->getReadPointer(0);
+        node.follower->process(input, numSamples);
+      }
+
+      // 5. Output to Master (if routed)
+      if (node.masterGain > 0.0f) {
+        for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+          int srcCh = ch % destBuffer->getNumChannels();
+          outputBuffer.addFrom(ch, 0, *destBuffer, srcCh, 0, numSamples,
+                               node.masterGain);
+        }
+      }
     }
   }
 

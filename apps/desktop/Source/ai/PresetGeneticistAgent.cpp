@@ -829,7 +829,7 @@ std::map<juce::String, float> PresetGeneticistAgent::crossoverParameters(
       float val2 = (it2 != p2.end()) ? it2->second : 0.5f;
 
       // Sometimes do blending instead of pure inheritance
-      if (randomFloat() < 0.2f) {
+      if (randomFloat() < kBlendProbability) {
         // Blend 50/50
         child[paramId] = (val1 + val2) * 0.5f;
       } else {
@@ -857,7 +857,7 @@ PresetGeneticistAgent::renderPreset(const Preset &preset) {
   // Calculate buffer size for the render duration
   int numSamples = static_cast<int>(config_.renderSampleRate *
                                     config_.renderDurationSeconds);
-  const int blockSize = 512;
+  const int blockSize = kRenderBlockSize;
 
   // Create output buffer
   juce::AudioBuffer<float> outputBuffer(2, numSamples);
@@ -886,7 +886,7 @@ PresetGeneticistAgent::renderPreset(const Preset &preset) {
       0);
 
   // Note off at 80% of duration (leave tail for release)
-  int noteOffSample = static_cast<int>(numSamples * 0.8);
+  int noteOffSample = static_cast<int>(numSamples * kNoteOffTimeFraction);
   midiBuffer.addEvent(juce::MidiMessage::noteOff(1, midiNote), noteOffSample);
 
   // Render in blocks
@@ -948,7 +948,7 @@ void PresetGeneticistAgent::analyzeAudio(const juce::AudioBuffer<float> &buffer,
 
 std::vector<float>
 PresetGeneticistAgent::computeSpectrum(const juce::AudioBuffer<float> &buffer) {
-  const int fftSize = 1024;
+  const int fftSize = kFFTSize;
   const int numSamples = buffer.getNumSamples();
   std::vector<float> spectrum(static_cast<size_t>(fftSize / 2),
                               0.0f); // Magnitude only
@@ -1017,7 +1017,7 @@ float PresetGeneticistAgent::calculateSpectralCentroid(
   if (spectrum.empty())
     return 0.0f;
 
-  const int fftSize = 1024; // Implicit from generate
+  const int fftSize = kFFTSize; // Implicit from generate
   float weightedSum = 0.0f;
   float totalMag = 0.0f;
   float binWidth = sampleRate / static_cast<float>(fftSize);
@@ -1046,7 +1046,7 @@ bool PresetGeneticistAgent::isClipping(const juce::AudioBuffer<float> &buffer) {
   for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
     const float *data = buffer.getReadPointer(ch);
     for (int i = 0; i < buffer.getNumSamples(); ++i) {
-      if (std::abs(data[i]) >= 0.999f) {
+      if (std::abs(data[i]) >= kClippingThreshold) {
         return true;
       }
     }
