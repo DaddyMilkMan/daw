@@ -828,12 +828,9 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                               int numSamples) {
-  // Delegate to mixer channel
-  juce::AudioSourceChannelInfo info(
-      const_cast<juce::AudioBuffer<float> *>(&buffer), 0, numSamples);
-  // Note: MixerChannel calculates levels during process, but if we need
-  // external update: mixerChannel.updateMeters(info); // Assuming this method
-  // exists or similar logic
+  juce::ignoreUnused(buffer, numSamples);
+  // Metering is handled internally by MixerChannel::getNextAudioBlock()
+  // This method is a no-op stub for interface compatibility
 }
 
 //==============================================================================

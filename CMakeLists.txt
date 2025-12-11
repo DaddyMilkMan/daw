@@ -140,29 +140,10 @@ target_include_directories(ZenithDAW PUBLIC
 
 target_link_libraries(ZenithDAW PRIVATE
     juce::juce_core
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-    juce::juce_gui_extra
-    juce::juce_audio_basics
-    juce::juce_audio_devices
-    juce::juce_audio_formats
-    juce::juce_audio_processors
-    juce::juce_audio_utils
-    juce::juce_dsp
-    juce::juce_opengl
-    # juce::juce_network # If separate module, but StreamingSocket is in core
-)
-
-
-# Link JUCE modules
-target_link_libraries(ZenithDAW PRIVATE
-    juce::juce_core
     juce::juce_cryptography
-    juce::juce_data_structures
     juce::juce_events
     juce::juce_graphics
+    juce::juce_data_structures
     juce::juce_gui_basics
     juce::juce_gui_extra
     juce::juce_audio_basics

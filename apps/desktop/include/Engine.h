@@ -742,6 +742,12 @@ private:
    */
   void prepareBuffersForOfflineRender(int blockSize, int numChannels);
 
+  /**
+   * @brief Auto-detect project duration based on clips
+   * @return Duration in seconds
+   */
+  double autoDetectProjectDuration() const;
+
   //==========================================================================
   // Plugin Management
   //==========================================================================
@@ -762,11 +768,7 @@ private:
 
   void registerFormats();
 
-  /**
-   * @brief Auto-detect project duration based on clips
-   * @return Duration in seconds
-   */
-  double autoDetectProjectDuration() const;
+
 
   // Helper to apply normalization gain to a buffer
   void applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
