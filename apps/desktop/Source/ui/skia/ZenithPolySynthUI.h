@@ -23,7 +23,6 @@
 #include "ZenithUIComponents.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -108,6 +107,10 @@ private:
   void loadNextPreset();
   void loadPrevPreset();
   void refreshPresetList();
+
+  // Initialization
+  void buildUI();
+  void syncProcessorToUI();
 
   // ========================================================================
   // RENDER TREE (PHASE 1: Thread Safety)

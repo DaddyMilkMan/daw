@@ -32,19 +32,18 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <map>
 
-
 //==============================================================================
 namespace zenith {
 
 class ClipSynchronizer : public juce::Timer, public juce::ValueTree::Listener {
 public:
-    //==========================================================================
-    /**
-     * @brief Constructor
-     * @param projectState Reference to project state (must outlive this object)
-     * @param engine Reference to audio engine (must outlive this object)
-     */
-    ClipSynchronizer(ProjectState& projectState, Engine& engine);
+  //==========================================================================
+  /**
+   * @brief Constructor
+   * @param projectState Reference to project state (must outlive this object)
+   * @param engine Reference to audio engine (must outlive this object)
+   */
+  ClipSynchronizer(ProjectState &projectState, Engine &engine);
 
   /**
    * @brief Destructor
@@ -81,10 +80,10 @@ public:
 
   void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
                                 const juce::Identifier &property) override;
-  
-  void valueTreeParentChanged(juce::ValueTree &) override {}
-  void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override {}
-  void valueTreeRedirected(juce::ValueTree &) override {}
+
+  void valueTreeParentChanged(juce::ValueTree &) override;
+  void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override;
+  void valueTreeRedirected(juce::ValueTree &) override;
 
   //==========================================================================
   /**
