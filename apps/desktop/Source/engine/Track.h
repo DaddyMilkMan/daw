@@ -131,6 +131,26 @@ public:
   // Freeze state (for CPU optimization)
   void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
   bool isFrozen() const { return frozen.load(); }
+  
+  /**
+   * @brief Set the freeze file for this track
+   * @param file The pre-rendered audio file
+   * @note Message thread only
+   */
+  void setFreezeFile(const juce::File& file);
+  
+  /**
+   * @brief Get the freeze file for this track
+   * @return The freeze file, or invalid file if not frozen
+   */
+  const juce::File& getFreezeFile() const { return freezeFile_; }
+  
+  /**
+   * @brief Get the audio reader for the freeze file
+   * @return Reader instance, or nullptr if not available
+   * @note Audio thread safe - reader is pre-created
+   */
+  juce::AudioFormatReader* getFreezeReader() const { return freezeReader_.get(); }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
@@ -252,6 +272,11 @@ private:
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
   std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
+
+  // Freeze file storage (for CPU optimization)
+  juce::File freezeFile_;
+  std::unique_ptr<juce::AudioFormatReader> freezeReader_;
+  juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing
   std::atomic<int> inputChannelIndex{0};

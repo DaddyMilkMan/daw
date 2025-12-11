@@ -26,11 +26,13 @@ void ClipSynchronizer::start(int updateRateHz) {
   if (updateRateHz <= 0)
     updateRateHz = 30;
 
+  projectState.getState().addListener(this);
   startTimer(1000 / updateRateHz);
   DBG("ClipSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
 
 void ClipSynchronizer::stop() {
+  projectState.getState().removeListener(this);
   stopTimer();
   DBG("ClipSynchronizer: Stopped");
 }

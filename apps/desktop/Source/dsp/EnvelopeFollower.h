@@ -68,7 +68,7 @@ private:
     releaseCoef_ = std::exp(-1000.0f / (releaseMs_ * sampleRate_));
   }
 
-  double sampleRate_ = 0.0;
+  double sampleRate_ = 48000.0;
   float attackMs_ = 10.0f;
   float releaseMs_ = 100.0f;
 

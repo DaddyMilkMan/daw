@@ -337,6 +337,9 @@ private:
   // Duplicate detection
   std::unordered_set<juce::String> downloadedHashes_;
 
+  // API Key availability - set during construction
+  bool apiKeyAvailable_ = false;
+
   // Services
   std::unique_ptr<AudioAnalysisService> analysisService_;
   std::unique_ptr<GrokAPIClient> grokClient_;

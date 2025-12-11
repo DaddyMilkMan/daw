@@ -203,7 +203,7 @@ private:
   // State (All Atomic for Thread Safety)
   //==========================================================================
 
-  std::atomic<float> sampleRate_{0.0f};
+  std::atomic<float> sampleRate_{48000.0f};
   std::atomic<float> phase_{0.0f};
   std::atomic<float> lastRandomValue_{0.0f};
   std::atomic<uint32_t> rngState_{0x12345678}; // RT-safe RNG state
