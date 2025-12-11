@@ -15,8 +15,13 @@
 #include <skia/include/core/SkRRect.h>
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkTypeface.h>
+#include <skia/include/core/SkMaskFilter.h>       // Added
+#include <skia/include/core/SkBlurTypes.h>        // Added
+#include <skia/include/effects/SkDashPathEffect.h> // Added
 #include "skia/ZenithDesignSystem.h"
 #include <skia/include/effects/SkGradientShader.h>
+#include "skia/GlassmorphicPanel.h" // Added
+#include "skia/NeonGlow.h"          // Added
 #endif
 
 #include "../../Source/engine/AudioFilePool.h"
@@ -779,12 +784,11 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors::TEXT_PRIMARY);
 
-    SkFont nameFont = typography::getSkFont(typography::FONT_MD); // Helper needed or manual setup
-    // Manual setup since helper might not be linked yet
-    SkFont font;
-    font.setSize(typography::FONT_MD);
-    font.setSubpixel(true);
-    font.setEdging(SkFont::Edging::kAntiAlias);
+    // Manual font setup - typography::getSkFont helper not available
+    SkFont nameFont;
+    nameFont.setSize(typography::FONT_MD);
+    nameFont.setSubpixel(true);
+    nameFont.setEdging(SkFont::Edging::kAntiAlias);
 
     SkFont smallFont;
     smallFont.setSize(typography::FONT_XS);
@@ -889,7 +893,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
   selectedClipPaint.setStrokeWidth(2.0f);
   selectedClipPaint.setColor(colors::CYAN);
   // Outer glow for selection
-  selectedClipPaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 3.0f));
+  selectedClipPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
 
   SkFont clipTextFont;
   clipTextFont.setSize(typography::FONT_SM);
@@ -991,7 +995,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
       
       marqueePaint.setColor(colors::CYAN);
       marqueePaint.setStyle(SkPaint::kStroke_Style);
-      marqueePaint.setDashPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
+      marqueePaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
       canvas->drawRect(mRect, marqueePaint);
   }
 
@@ -1030,30 +1034,26 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
             (float)clipView.bounds.getX(), (float)clipView.bounds.getY(),
             (float)clipView.bounds.getWidth(), (float)clipView.bounds.getHeight());
 
-        // Rounded corners
-        SkRRect roundedClip;
-        roundedClip.setRectXY(clipRect, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
-
-        SkPaint clipFill;
-        SkPaint clipBorder;
-        clipFill.setAntiAlias(true);
-        clipBorder.setAntiAlias(true);
-        clipBorder.setStyle(SkPaint::kStroke_Style);
-
+        // Determine base color based on clip type
+        SkColor clipColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
+        
+        // Use GlassmorphicPanel for render
+        // Logic:
+        // - If Selected: Use ActiveGlow style with the clip color
+        // - If Normal: Use Floating style with clip color as accent (or just Floating and we tint it manually? 
+        //   Actually GlassmorphicPanel::drawWithAccent is perfect)
+        
         if (clipView.isSelected) {
-            // Selected: Cyan Tint + Cyan Border
-            clipFill.setColor(withAlpha(colors::CYAN, 0.2f));
-            clipBorder.setColor(colors::BORDER_FOCUS);
-            clipBorder.setStrokeWidth(2.0f);
+            GlassmorphicPanel::drawWithAccent(canvas, clipRect, clipColor, GlassmorphicPanel::Style::ActiveGlow);
         } else {
-            // Normal: Light BG + Strong Border
-            clipFill.setColor(colors::BG_LIGHT);
-            clipBorder.setColor(colors::BORDER_STRONG);
-            clipBorder.setStrokeWidth(1.0f);
+            // For unselected clips, use a subtle accent
+             // We can use drawWithAccent but with a lighter/different style or just standard draw and overlay color
+             // Let's use Floating style but we want the color tint.
+             // GlassmorphicPanel currently supports specific styles.
+             // Let's manually tint if needed or rely on the helper.
+             // Helper drawWithAccent: "Uses the accent color for borders and subtle glow/tint"
+             GlassmorphicPanel::drawWithAccent(canvas, clipRect, clipColor, GlassmorphicPanel::Style::Floating);
         }
-
-        canvas->drawRRect(roundedClip, clipFill);
-        canvas->drawRRect(roundedClip, clipBorder);
 
         // Clip Name
         if (clipRect.width() > 20.0f) {
@@ -1065,12 +1065,19 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
                 font.setSize(typography::FONT_SM);
                 font.setEdging(SkFont::Edging::kAntiAlias);
                 
-                SkPaint textPaint;
                 // High contrast text inside clips
-                textPaint.setColor(clipView.isSelected ? colors::CYAN : colors::TEXT_SECONDARY);
+                // Use NeonGlow for text if selected? No, simpler is better for labels inside clips usually.
+                SkPaint textPaint;
+                textPaint.setColor(clipView.isSelected ? colors::TEXT_PRIMARY : colors::TEXT_SECONDARY);
                 textPaint.setAntiAlias(true);
                 
-                // Add padding
+                // Text shadow for readability
+                SkPaint shadowPaint;
+                shadowPaint.setColor(SkColorSetARGB(128, 0,0,0));
+                shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+                canvas->drawString(name.toRawUTF8(), clipRect.fLeft + spacing::XS,
+                                   clipRect.fTop + typography::FONT_SM + spacing::XS + 1, font, shadowPaint);
+
                 canvas->drawString(name.toRawUTF8(), clipRect.fLeft + spacing::XS,
                                    clipRect.fTop + typography::FONT_SM + spacing::XS, font, textPaint);
             }

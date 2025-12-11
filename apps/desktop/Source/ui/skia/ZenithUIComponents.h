@@ -904,7 +904,7 @@ private:
     Real-time Visualizer (Oscilloscope/Spectrum)
     Now supports stereo display with left (cyan) and right (magenta) channels.
 */
-class ZenithVisualizer : public SkiaComponent {
+class ZenithVisualizer : public SkiaComponent, public juce::Timer {
 public:
   explicit ZenithVisualizer(ZenithPolySynthProcessor &p) : processor_(p) {
     juce::Timer::startTimerHz(60);

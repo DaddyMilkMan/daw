@@ -172,7 +172,7 @@ public:
   /**
    * @brief Check if playing
    */
-  bool isPlaying() const { return transportController_ ? transportController_->isPlaying() : false; }
+  bool isPlaying() const;
 
   /**
    * @brief Start recording
@@ -191,7 +191,7 @@ public:
   /**
    * @brief Check if recording
    */
-  bool isRecording() const { return recordingManager_ ? recordingManager_->isRecording() : false; }
+  bool isRecording() const;
 
   /**
    * @brief Toggle recording on/off
@@ -218,12 +218,12 @@ public:
   /**
    * @brief Get current playback position in samples
    */
-  juce::int64 getPlayheadSamples() const { return transportController_ ? transportController_->getPlayheadSamples() : 0; }
+  juce::int64 getPlayheadSamples() const;
 
   /**
    * @brief Get current playback position in samples (legacy accessor)
    */
-  juce::int64 getPlaybackPosition() const { return transportController_ ? transportController_->getPlayheadSamples() : 0; }
+  juce::int64 getPlaybackPosition() const;
 
   /**
    * @brief Get current playback position in beats
@@ -741,6 +741,12 @@ private:
    * @note Must be called before renderBlock() during offline export
    */
   void prepareBuffersForOfflineRender(int blockSize, int numChannels);
+
+  /**
+   * @brief Auto-detect project duration based on clips
+   * @return Duration in seconds
+   */
+  double autoDetectProjectDuration() const;
 
   //==========================================================================
   // Plugin Management

@@ -1779,7 +1779,13 @@ double Engine::autoDetectProjectDuration() const {
 // Lock-Free MIDI Recording Drain (message thread)
 //==============================================================================
 
+bool Engine::isPlaying() const {
+  return transportController_ ? transportController_->isPlaying() : false;
+}
 
+bool Engine::isRecording() const {
+  return recordingManager_ ? recordingManager_->isRecording() : false;
+}
 
 juce::int64 Engine::getPlayheadSamples() const {
   return transportController_ ? transportController_->getPlayheadSamples() : 0;
