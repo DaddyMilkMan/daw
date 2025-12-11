@@ -40,19 +40,19 @@ public:
       std::atomic<bool> writerFinished{false};
 
       std::thread reader([&]() {
-        while (true) {
+        while (!writerFinished.load()) {
           juce::MidiBuffer buffer;
           fifo.drainTo(buffer, 512);
           receivedCount += buffer.getNumEvents();
-
-          if (writerFinished && receivedCount >= sentCount) {
-            // Writer is done and we caught up
-            break;
-          }
-
-          // Active spin with yield - standard for lock-free testing
-          // Avoids OS scheduler sleep granularity issues (15ms+)
           std::this_thread::yield();
+        }
+        // Drain any remaining messages after writer has finished
+        while (true) {
+            juce::MidiBuffer buffer;
+            fifo.drainTo(buffer, 512);
+            int numEvents = buffer.getNumEvents();
+            if (numEvents == 0) break;
+            receivedCount += numEvents;
         }
       });
 

@@ -16,7 +16,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
-
 namespace zenith {
 
 /**
@@ -33,6 +32,7 @@ public:
   void setDrive(float drive) { drive_ = drive; }
   void reset();
   float getResonance() const { return resonanceSmoothed_.getTargetValue(); }
+  void setModel(int model) { model_ = model; } // 0=SVF, 1=Ladder
 
   /**
    * @brief Process one sample
@@ -40,9 +40,6 @@ public:
    * @return Filtered sample
    */
   float processSample(float input);
-
-private:
-  void setModel(int model) { model_ = model; } // 0=SVF, 1=Ladder
 
 private:
   FilterType type_ = FilterType::Lowpass;
@@ -56,7 +53,7 @@ private:
 
   // SVF State
   float ic1eq_ = 0.0f, ic2eq_ = 0.0f;
-  
+
   // Ladder State (Huovilainen / Stilson)
   double l_z1 = 0, l_z2 = 0, l_z3 = 0, l_z4 = 0;
 
