@@ -1090,17 +1090,13 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
      // 5. Clip Name Label (Shadowed)
      SkPaint textShadow;
      textShadow.setColor(SkColorSetARGB(128, 0, 0, 0));
-     canvas->drawString(clipViews.getReference(0).clipId.toStdString().c_str(), // Placeholder name actually
+     canvas->drawString(clipView.clipId.toStdString().c_str(),
                         r.left() + 6.0f, r.top() + 14.0f, clipTextFont, textShadow);
      
      SkPaint textFill;
      textFill.setColor(colors::TEXT_PRIMARY);
-     // Note: We don't have the Name string in ClipView struct in previous read, 
-     // assuming we might need to fetch it or used cached. 
-     // For now, drawing "Clip" or using loop info if available.
-     // The previous code didn't store name in ClipView, just ID. 
-     // We will just draw "Clip" or similar to be safe, or ID.
-     canvas->drawString("Clip", r.left() + 5.0f, r.top() + 13.0f, clipTextFont, textFill);
+     // Use the clip ID for the visible text as well for consistency
+     canvas->drawString(clipView.clipId.toStdString().c_str(), r.left() + 5.0f, r.top() + 13.0f, clipTextFont, textFill);
   }
   canvas->restore();
 
