@@ -123,6 +123,8 @@ public:
   static const juce::String SubOscOctave;
   static const juce::String VelocityCurve;
   
+
+
   // Flagship Features
   static const juce::String Osc2Sync;    // Sync Osc 2 to Osc 1
   static const juce::String Osc2FM;      // FM Amount (Osc 1 -> Osc 2)

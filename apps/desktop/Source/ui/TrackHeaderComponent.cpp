@@ -14,6 +14,8 @@
 #include <core/SkPath.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+#include "skia/GlassmorphicPanel.h" // Added
+#include "skia/NeonGlow.h"          // Added
 
 namespace zenith {
 
@@ -85,63 +87,50 @@ TrackHeaderComponent::~TrackHeaderComponent()
 void TrackHeaderComponent::drawSkia(SkCanvas* canvas)
 {
     auto bounds = getLocalBounds();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+    // 1. Background (Subtle)
+    // Use Flat style + slight custom touch for track headers to keep them efficient
     using namespace zenith;
-    auto& theme = SkiaTheme::getInstance();
-    auto colors = theme.getColors();
-
-    float width = (float)bounds.getWidth();
-    float height = (float)bounds.getHeight();
-
-    // Background - flat for modern look
-    SkPaint bgPaint;
-    bgPaint.setColor(colors.bg2);
-    bgPaint.setAntiAlias(true);
-
-    SkRRect bgRRect = SkRRect::MakeRectXY(SkRect::MakeWH(width, height), 4.0f, 4.0f);
-    canvas->drawRRect(bgRRect, bgPaint);
+    GlassmorphicPanel::draw(canvas, skBounds, GlassmorphicPanel::Style::Flat);
 
     // Delicate hover glow
-    if (isHovered_)
-    {
-        SkPaint hoverPaint;
-        hoverPaint.setColor(SkColorSetARGB(13, 255, 255, 255));  // Slightly stronger (5% alpha)
-        hoverPaint.setAntiAlias(true);
-        canvas->drawRRect(bgRRect, hoverPaint);
+    if (isHovered_) {
+        GlassmorphicPanel::draw(canvas, skBounds, GlassmorphicPanel::Style::Subtle);
     }
 
-    // Color stripe (left edge, 8px wide) - flat for clarity
-    SkRect stripeRect = SkRect::MakeXYWH(0, 0, 8.0f, height);
-
+    // 2. Color Stripe (Left Edge)
+    SkRect stripeRect = SkRect::MakeXYWH(0, 0, 8.0f, skBounds.height());
+    
+    // Draw stripe with glow if active
+    SkColor stripeColor = SkColorSetARGB(trackColour_.getAlpha(), trackColour_.getRed(),
+                                         trackColour_.getGreen(), trackColour_.getBlue());
+    
     SkPaint stripePaint;
-    stripePaint.setColor(SkColorSetARGB(trackColour_.getAlpha(), trackColour_.getRed(),
-                                         trackColour_.getGreen(), trackColour_.getBlue()));
+    stripePaint.setColor(stripeColor);
     stripePaint.setAntiAlias(true);
-
-    // Rounded stripe (left side only)
+    
+    // Rounded left side
     SkRRect stripeRRect = SkRRect::MakeRectXY(stripeRect, 4.0f, 4.0f);
     canvas->drawRRect(stripeRRect, stripePaint);
+    
+    // Subtle glow on stripe
+    if (isSoloed_ || isArmed_) {
+         NeonGlow::drawGlow(canvas, stripeRect, stripeColor, NeonGlow::Intensity::Subtle);
+    }
 
-    // Subtle bottom border
-    SkPaint borderPaint;
-    borderPaint.setColor(SkColorSetARGB(128, 58, 58, 60));  // #3A3A3C.withAlpha(0.5)
-    borderPaint.setStrokeWidth(0.5f);
-    borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setAntiAlias(true);
-    canvas->drawLine(2.0f, height - 0.5f, width - 2.0f, height - 0.5f, borderPaint);
+    // 3. Bottom Border
+    GlassmorphicPanel::drawDivider(canvas, 0, skBounds.bottom() - 1.0f, skBounds.width());
 
-    // Name editor focus glow
+    // 4. Name Editor Focus Glow
     if (nameFocusAnim_ > 0.01f)
     {
         auto nameBounds = nameLabel_.getBounds().toFloat().expanded(2.0f);
-        SkPaint focusPaint;
-        focusPaint.setColor(SkColorSetARGB((int)(nameFocusAnim_ * 0.3f * 255), 10, 132, 255));  // #0A84FF
-        focusPaint.setStrokeWidth(2.0f);
-        focusPaint.setStyle(SkPaint::kStroke_Style);
-        focusPaint.setAntiAlias(true);
-        SkRRect focusRRect = SkRRect::MakeRectXY(
-            SkRect::MakeXYWH(nameBounds.getX(), nameBounds.getY(), nameBounds.getWidth(), nameBounds.getHeight()),
-            4.0f, 4.0f);
-        canvas->drawRRect(focusRRect, focusPaint);
+        SkRect focusRect = SkRect::MakeXYWH(nameBounds.getX(), nameBounds.getY(), 
+                                            nameBounds.getWidth(), nameBounds.getHeight());
+        
+        NeonGlow::drawGlowOutline(canvas, focusRect, design::colors::BLUE, 
+                                  NeonGlow::Intensity::Medium, 4.0f);
     }
 }
 

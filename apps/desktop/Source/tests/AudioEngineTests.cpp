@@ -15,7 +15,6 @@
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 
-
 namespace zenith {
 namespace tests {
 
@@ -313,8 +312,18 @@ public:
     beginTest("Plugin instantiation");
     {
       auto plugin = std::make_unique<MockPlugin>();
-      expect(plugin != nullptr);
+      expect(plugin.get() != nullptr);
       expectEquals(plugin->getName(), juce::String("Mock Plugin"));
     }
   }
 };
+
+// Static test registration instances
+static TrackProcessingTests trackProcessingTests;
+static ClipPlaybackTests clipPlaybackTests;
+static MIDIRoutingTests midiRoutingTests;
+static MixerChannelTests mixerChannelTests;
+static PluginHostingTests pluginHostingTests;
+
+} // namespace tests
+} // namespace zenith
