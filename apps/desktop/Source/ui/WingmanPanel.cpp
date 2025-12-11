@@ -16,7 +16,6 @@
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
 
-
 namespace zenith {
 
 //==============================================================================
@@ -315,6 +314,53 @@ void WingmanPanel::showSettings() {
   options.resizable = true;
 
   options.launchAsync();
+}
+
+//==============================================================================
+// SampleHunterAgent::Listener interface
+//==============================================================================
+
+void WingmanPanel::sampleDownloaded(const zenith::ai::FoundSample &sample) {
+  juce::MessageManager::callAsync([this, sample]() {
+    appendToConversation("Wingman", "Downloaded sample: " +
+                                        sample.localFile.getFileName());
+  });
+}
+
+void WingmanPanel::sampleAnalyzed(const zenith::ai::FoundSample &sample) {
+  juce::MessageManager::callAsync([this, sample]() {
+    // Optional: Show analysis details
+  });
+}
+
+void WingmanPanel::sampleImported(const juce::File &file) {
+  juce::MessageManager::callAsync([this, file]() {
+    appendToConversation("Wingman",
+                         "Imported sample to project: " + file.getFileName());
+  });
+}
+
+void WingmanPanel::huntingProgressChanged(float progress,
+                                          const juce::String &status) {
+  juce::MessageManager::callAsync([this, progress, status]() {
+    setStatus(status, juce::Colour(0xff00aaff));
+  });
+}
+
+void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
+                                   bool success) {
+  juce::MessageManager::callAsync([this, stats, success]() {
+    if (success) {
+      appendToConversation("Wingman", "Sample hunting complete! Found " +
+                                          juce::String(stats.samplesFound) +
+                                          " samples.");
+      setStatus("Ready", juce::Colour(0xff00ff00));
+    } else {
+      appendToConversation("Wingman",
+                           "Sample hunting failed or was cancelled.");
+      setStatus("Failed", juce::Colour(0xffff0000));
+    }
+  });
 }
 
 } // namespace zenith

@@ -59,6 +59,17 @@ public:
   void changeProgramName(int, const juce::String &) override {}
   void getStateInformation(juce::MemoryBlock &) override {}
   void setStateInformation(const void *, int) override {}
+
+  //==============================================================================
+  // AudioPluginInstance pure virtual override
+  void fillInPluginDescription(juce::PluginDescription &desc) const override {
+    desc.name = getName();
+    desc.pluginFormatName = "Stub";
+    desc.category = "Test";
+    desc.manufacturerName = "Zenith Tests";
+    desc.version = "1.0";
+    desc.uniqueId = 0;
+  }
 };
 
 } // namespace tests

@@ -13,7 +13,9 @@
 #include "../engine/PluginHost.h"
 #include "../instruments/InstrumentRegistry.h"
 #include "skia/BrowserPanel.h"
+#include "skia/GlassmorphicPanel.h"
 #include "skia/SkiaMainWindowIntegration.h"
+#include "skia/ZenithDesignSystem.h"
 #include "skia/views/SessionViewComponent.h"
 
 // Browser model included in header
@@ -89,8 +91,10 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
 }
 
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
-  // Background
-  canvas->clear(SkColorSetRGB(30, 30, 30));
+  // Background - Use design system gradient
+  auto bounds = getLocalBounds().toFloat();
+  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+  GlassmorphicPanel::fillBackground(canvas, skBounds);
 
   // Recursively draw children (Arranger, Browser, Session, etc.)
   drawChildren(canvas);

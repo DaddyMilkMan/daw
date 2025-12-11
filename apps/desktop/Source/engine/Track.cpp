@@ -23,7 +23,6 @@
 #include "PluginHost.h"
 #include <algorithm>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -357,27 +356,28 @@ void Track::setEnabled(bool shouldBeEnabled) {
 // Freeze file management
 //==============================================================================
 
-void Track::setFreezeFile(const juce::File& file) {
+void Track::setFreezeFile(const juce::File &file) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
+
   freezeFile_ = file;
   freezeReader_.reset();
-  
+
   if (file.existsAsFile()) {
     // Register basic formats if not already done
     if (freezeFormatManager_.getNumKnownFormats() == 0) {
       freezeFormatManager_.registerBasicFormats();
     }
-    
+
     // Create reader for the freeze file
     freezeReader_.reset(freezeFormatManager_.createReaderFor(file));
-    
+
     if (freezeReader_ == nullptr) {
-      DBG("Track::setFreezeFile: Failed to create reader for " + file.getFullPathName());
+      DBG("Track::setFreezeFile: Failed to create reader for " +
+          file.getFullPathName());
       freezeFile_ = juce::File();
     } else {
-      DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() + 
+      DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() +
           " (" + juce::String(freezeReader_->lengthInSamples) + " samples)");
     }
   }
@@ -808,6 +808,29 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
       plugin->processBlock(pluginView, midi);
     }
   }
+}
+
+// Helper: Apply gain (volume) and pan
+void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
+  float gain = mixerChannel.getVolume();
+  float pan = mixerChannel.getPan();
+
+  if (buffer.getNumChannels() == 1) {
+    buffer.applyGain(0, 0, numSamples, gain);
+  } else if (buffer.getNumChannels() == 2) {
+    float gainL = gain * ((pan <= 0.0f) ? 1.0f : (1.0f - pan));
+    float gainR = gain * ((pan >= 0.0f) ? 1.0f : (1.0f + pan));
+
+    buffer.applyGain(0, 0, numSamples, gainL);
+    buffer.applyGain(1, 0, numSamples, gainR);
+  }
+}
+
+void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
+                              int numSamples) {
+  juce::ignoreUnused(buffer, numSamples);
+  // Metering is handled internally by MixerChannel::getNextAudioBlock()
+  // This method is a no-op stub for interface compatibility
 }
 
 //==============================================================================
