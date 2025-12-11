@@ -201,6 +201,9 @@ private:
 
   juce::Rectangle<float> marqueeRect;
 
+    void drawClips(SkCanvas* canvas);
+    void drawTracks(SkCanvas* canvas);
+
   // Drop zone state (for browser drag-and-drop)
   bool isDropTargetActive_ = false;
   int dropTargetTrackIndex_ = -1;

@@ -1,5 +1,10 @@
 # Clangd Configuration for Zenith DAW
 # This file configures clangd to find JUCE, Skia, and project headers
+#
+# NOTE: Paths below are configured for the default development setup (c:\zenith\).
+# If your workspace is in a different location, update the paths accordingly.
+# For multi-developer environments, consider using compile_commands.json from CMake
+# which will be auto-detected by clangd if present.
 
 # Note: clangd uses this file when compile_commands.json is not available
 # or to override/supplement its settings

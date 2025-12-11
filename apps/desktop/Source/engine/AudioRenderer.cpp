@@ -120,10 +120,39 @@ void AudioRenderer::renderAudioGraph(
         }
 
         if (track != nullptr) {
-            // Skip frozen tracks - they just play back their freeze file
+            // Handle frozen tracks - play back their freeze file instead of processing
             if (track->isFrozen()) {
-                // TODO: Play back freeze file instead
-                continue;
+                const juce::File& freezeFile = track->getFreezeFile();
+                if (freezeFile.existsAsFile() && trackIdx < trackBuffers_.size()) {
+                    auto& trackBuffer = trackBuffers_[trackIdx];
+                    trackBuffer.clear();
+                    
+                    // Read from the freeze file at the current playhead position
+                    auto* freezeReader = track->getFreezeReader();
+                    if (freezeReader != nullptr) {
+                        // Calculate read position in freeze file
+                        const juce::int64 readPos = playheadPosition;
+                        const int samplesToRead = juce::jmin(numSamples, 
+                            static_cast<int>(freezeReader->lengthInSamples - readPos));
+                        
+                        if (samplesToRead > 0 && readPos >= 0 && 
+                            readPos < freezeReader->lengthInSamples) {
+                            freezeReader->read(&trackBuffer, 0, samplesToRead, readPos, true, true);
+                        }
+                    }
+                    
+                    // Apply track volume/pan (frozen tracks still allow fader/pan)
+                    track->applyGainAndPan(trackBuffer, numSamples);
+                    
+                    // Mix frozen track to output
+                    for (int channel = 0; channel < juce::jmin(outputBuffer.getNumChannels(),
+                                                               trackBuffer.getNumChannels());
+                         ++channel) {
+                        outputBuffer.addFrom(channel, 0, trackBuffer.getReadPointer(channel),
+                                             numSamples);
+                    }
+                }
+                continue; // Skip normal processing for frozen tracks
             }
 
             if (trackIdx >= trackBuffers_.size())
@@ -244,7 +273,9 @@ void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float>& buffer,
     const int maxLatency = maxTrackLatency_.load();
     const int delayNeeded = maxLatency - trackLatency;
 
-    if (delayNeeded <= 0 || delayNeeded >= constants::kMaxPDCLatencySamples) {
+    // No delay needed if track already has max latency, or delay exceeds buffer capacity
+    // Note: Use > (not >=) because delay buffer can handle up to kMaxPDCLatencySamples-1
+    if (delayNeeded <= 0 || delayNeeded > constants::kMaxPDCLatencySamples - 1) {
         return;
     }
 

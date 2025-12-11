@@ -70,7 +70,7 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
         osc1_.randomizePhase();
         osc2_.randomizePhase();
         osc3_.randomizePhase();
-        osc3_.randomizePhase();
+
         subOsc_.randomizePhase();
         if (lfo1Retr_) lfo1Phase_ = 0.0;
         if (lfo2Retr_) lfo2Phase_ = 0.0;

@@ -25,13 +25,13 @@
 #include "../ui/skia/SkiaComponent.h"
 #include "../ui/skia/SkiaMainWindowIntegration.h"
 #include "../ui/skia/ZenithDesignSystem.h"
-#include <skia/include/core/SkFont.h>
-#include <skia/include/core/SkImage.h>
-#include <skia/include/core/SkImageInfo.h>
-#include <skia/include/core/SkPixmap.h>
-#include <skia/include/core/SkSamplingOptions.h>
-#include <skia/include/core/SkSurface.h>
-#include <skia/include/core/SkTextBlob.h>
+#include <core/SkFont.h>
+#include <core/SkImage.h>
+#include <core/SkImageInfo.h>
+#include <core/SkPixmap.h>
+#include <core/SkSamplingOptions.h>
+#include <core/SkSurface.h>
+#include <core/SkTextBlob.h>
 
 using namespace zenith;
 

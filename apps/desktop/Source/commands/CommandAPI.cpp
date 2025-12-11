@@ -2079,4 +2079,32 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
   return createSuccessResponse(juce::var(resultObj));
 }
 
+juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
+    // Find the command string for this ID (reverse lookup or switch)
+    // For efficiency, we should probably have a map ID -> Handler
+    // But since we register by string, let's reverse lookup or assume the caller knows what they are doing.
+    
+    // Better approach: Since we have commandHandlers map which is string -> handler,
+    // we need ID -> handler.
+    // Let's iterate commandMap to find the string for this ID.
+    // This is slow O(N), but safe for now.
+    
+    juce::String commandName;
+    for (const auto& pair : commandMap) {
+        if (pair.second == id) {
+            commandName = pair.first;
+            break;
+        }
+    }
+    
+    if (commandName.isNotEmpty()) {
+        auto it = commandHandlers.find(commandName);
+        if (it != commandHandlers.end()) {
+            return it->second(params);
+        }
+    }
+    
+    return createErrorResponse("Unknown command ID");
+}
+
 } // namespace zenith

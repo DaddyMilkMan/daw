@@ -354,6 +354,36 @@ void Track::setEnabled(bool shouldBeEnabled) {
 }
 
 //==============================================================================
+// Freeze file management
+//==============================================================================
+
+void Track::setFreezeFile(const juce::File& file) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  freezeFile_ = file;
+  freezeReader_.reset();
+  
+  if (file.existsAsFile()) {
+    // Register basic formats if not already done
+    if (freezeFormatManager_.getNumKnownFormats() == 0) {
+      freezeFormatManager_.registerBasicFormats();
+    }
+    
+    // Create reader for the freeze file
+    freezeReader_.reset(freezeFormatManager_.createReaderFor(file));
+    
+    if (freezeReader_ == nullptr) {
+      DBG("Track::setFreezeFile: Failed to create reader for " + file.getFullPathName());
+      freezeFile_ = juce::File();
+    } else {
+      DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() + 
+          " (" + juce::String(freezeReader_->lengthInSamples) + " samples)");
+    }
+  }
+}
+
+//==============================================================================
 // Plugin chain management (Phase 3: VST3 hosting MVP)
 //==============================================================================
 
@@ -891,5 +921,10 @@ void Track::generateMidiForBlock(const juce::ValueTree &trackState,
     }
   }
 }
+
+//==============================================================================
+void Track::setSoloed(bool shouldBeSoloed) { soloed_.store(shouldBeSoloed); }
+
+bool Track::isSoloed() const { return soloed_.load(); }
 
 } // namespace zenith

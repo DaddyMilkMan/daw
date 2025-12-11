@@ -15,6 +15,7 @@
 #pragma once
 #include <include/core/SkColor.h>
 #include <include/core/SkFont.h>
+#include <core/SkBlurTypes.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_graphics/juce_graphics.h>
@@ -181,8 +182,15 @@ constexpr float SECTION_GAP = LG;
 // ============================================================================
 
 namespace typography {
+// Placeholder for missing getSkFont function
+inline SkFont getSkFont(float size) {
+  SkFont font;
+  font.setSize(size);
+  return font;
+}
 // Font Sizes
 constexpr float FONT_XS = 10.0f;  // Labels, hints
+
 constexpr float FONT_SM = 12.0f;  // Secondary text
 constexpr float FONT_MD = 14.0f;  // Body text
 constexpr float FONT_LG = 16.0f;  // Headings
@@ -282,6 +290,9 @@ constexpr int FPS_TARGET = 60;
 constexpr int FPS_HIGH = 120;
 constexpr float FRAME_TIME_60FPS = 16.67f; // milliseconds
 constexpr float FRAME_TIME_120FPS = 8.33f; // milliseconds
+
+
+
 } // namespace animation
 
 // ============================================================================

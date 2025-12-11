@@ -52,6 +52,7 @@ public:
   //==========================================================================
   juce::String executeCommand(const juce::String &commandJson);
   juce::var executeCommand(const juce::var &request); // Added overload used in cpp
+  juce::var executeCommand(CommandID id, const juce::var &params); // Overload for internal use
   
   juce::String executeCommandString(const juce::String& jsonRequest);
   juce::var executeBatch(const juce::Array<juce::var>& commands, const juce::String& batchName);

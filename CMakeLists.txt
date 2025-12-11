@@ -21,6 +21,13 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type (Debug, Release, RelWithDebInfo, MinSizeRel)" FORCE)
 endif()
 
+if(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /FS /bigobj" CACHE STRING "Flags used by the CXX compiler during all build types." FORCE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /FS /bigobj" CACHE STRING "Flags used by the C compiler during all build types." FORCE)
+endif()
+
+
+
 
 
 # 4. Options
@@ -55,6 +62,7 @@ set(ZENITH_SOURCES
 
 # Test sources (optional, can be disabled)
 set(ZENITH_TEST_SOURCES
+    apps/desktop/Source/tests/TestMain.cpp
     apps/desktop/Source/tests/AudioEngineTests.cpp
     apps/desktop/Source/tests/ProjectStateTests.cpp
     apps/desktop/Source/tests/EngineTests.cpp
@@ -62,6 +70,30 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/AITests.cpp
     apps/desktop/Source/tests/UITests.cpp
     apps/desktop/Source/ui/skia/ZenithLayout.cpp
+    
+    # Engine sources required for linking
+    apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/ProjectState.cpp
+    apps/desktop/Source/engine/Track.cpp
+    apps/desktop/Source/engine/Clip.cpp
+    apps/desktop/Source/engine/MixerChannel.cpp
+    apps/desktop/Source/engine/AudioFilePool.cpp
+    apps/desktop/Source/engine/PluginHost.cpp
+    apps/desktop/Source/engine/AuxBus.cpp
+    apps/desktop/Source/engine/ZenithLogger.cpp
+    apps/desktop/Source/engine/TrackPluginState.cpp
+    apps/desktop/Source/engine/AudioRecorder.cpp
+    apps/desktop/Source/engine/RoutingGraph.cpp
+    apps/desktop/Source/engine/ClipSynchronizer.cpp
+    apps/desktop/Source/engine/TrackStateSynchronizer.cpp
+    apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMapSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMap.cpp
+    apps/desktop/Source/engine/TrackFreeze.cpp
+    apps/desktop/Source/engine/AudioRenderer.cpp
+    apps/desktop/Source/engine/RecordingManager.cpp
+    apps/desktop/Source/engine/TransportController.cpp
+    apps/desktop/Source/ui/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -74,6 +106,8 @@ juce_add_gui_app(ZenithDAW
     VERSION ${PROJECT_VERSION}
     BUNDLE_ID com.zenithaudio.daw
 )
+
+
 
 # Generate JuceHeader.h for compatibility
 juce_generate_juce_header(ZenithDAW)
@@ -96,12 +130,31 @@ add_subdirectory(apps/desktop/Source/ai)
 
 
 # Include directories
-target_include_directories(ZenithDAW PRIVATE
+target_include_directories(ZenithDAW PUBLIC
     apps/desktop/include
+    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     apps/desktop/Source
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
 )
+
+target_link_libraries(ZenithDAW PRIVATE
+    juce::juce_core
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_opengl
+    # juce::juce_network # If separate module, but StreamingSocket is in core
+)
+
 
 # Link JUCE modules
 target_link_libraries(ZenithDAW PRIVATE
@@ -256,14 +309,30 @@ if(BUILD_TESTS)
         PRODUCT_NAME "Zenith DAW Tests"
     )
     
+    # Generate JuceHeader.h for test target (fixes C1083: Cannot open include file: 'JuceHeader.h')
+    juce_generate_juce_header(ZenithDAWTests)
+    
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
-    target_include_directories(ZenithDAWTests PRIVATE apps/desktop/Source apps/desktop/include)
+    target_include_directories(ZenithDAWTests PRIVATE 
+        apps/desktop/Source 
+        apps/desktop/include
+        ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
+    )
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
         juce::juce_data_structures
         juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
+        juce::juce_audio_processors  # Required for TestUtils.h StubAudioPlugin
+        juce::juce_audio_utils
+        juce::juce_dsp
         juce::juce_graphics
         juce::juce_gui_basics
+    )
+    target_compile_definitions(ZenithDAWTests PRIVATE
+        JUCE_WEB_BROWSER=0
+        JUCE_USE_CURL=0
     )
 endif()
 

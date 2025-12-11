@@ -768,6 +768,8 @@ private:
 
   void registerFormats();
 
+
+
   // Helper to apply normalization gain to a buffer
   void applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
                           float targetDb);
