@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file Engine.cpp
  * @brief Audio engine implementation
  */
@@ -47,6 +47,8 @@ Engine::Engine() {
 
   // Phase 3: Initialize plugin host and editor window manager
   pluginHost_ = std::make_unique<zenith::PluginHost>();
+  pluginHost_->loadFromDisk();  // Load cached plugins, check for crash recovery
+  DBG("Engine: PluginHost initialized with " + juce::String(pluginHost_->getKnownPlugins().getNumTypes()) + " cached plugins");
   pluginEditorWindowManager_ =
       std::make_unique<zenith::PluginEditorWindowManager>();
 
@@ -435,186 +437,12 @@ void Engine::stopRecording() {
   recordingManager_->stopRecording(tracks_);
 }
 
-/* DEPRECATED BLOCK START
-void Engine::record_OLD() {
-  DBG("Engine: Record");
-
-  // Start playback if not already playing
-  if (!isPlaying_.load()) {
-    play();
-  }
-
-  // Get current sample rate and start position
-  const double sampleRate = currentSampleRate.load();
-  const juce::int64 recordStartSamples = playheadSamples_.load();
-
-  // ==========================================================================
-  // Phase 2C: Setup MIDI recording
-  // ==========================================================================
-  {
-    const juce::ScopedLock sl(midiRecordingLock_);
-    midiRecording_.recordingStartSamples = recordStartSamples;
-
-    // Resize recording buffers to match track count
-    midiRecording_.trackRecordings.resize(tracks_.size());
-
-    // Clear all track recordings
-    for (auto &trackRecording : midiRecording_.trackRecordings) {
-      trackRecording.clear();
-    }
-  }
-
-  // ==========================================================================
-  // Phase 2D: Setup Audio recording
-  // ==========================================================================
-
-  // Create recordings directory
-  juce::File recordingsDir;
-
-  if (projectState_ != nullptr &&
-      projectState_->getProjectFile().existsAsFile()) {
-    // Use "Audio Files" directory next to project file
-    recordingsDir =
-        projectState_->getProjectFile().getSiblingFile("Audio Files");
-  } else {
-    // Fallback to Documents/ZenithDAW/Recordings
-    recordingsDir =
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-            .getChildFile("ZenithDAW/Recordings");
-  }
-
-  if (!recordingsDir.exists()) {
-    recordingsDir.createDirectory();
-  }
-
-  // Create recording sessions for all armed audio tracks
-  audioRecordingSessions_.clear();
-
-  for (size_t i = 0; i < tracks_.size(); ++i) {
-    auto &track = tracks_[i];
-
-    // Skip if not armed or not an audio track
-    if (!track->isArmed() || track->getType() != zenith::Track::Type::Audio)
-      continue;
-
-    DBG("Engine: Creating recording session for track " + juce::String(i) +
-        " (" + track->getName() + ")");
-
-    // ROAST FIX #4: Check for pre-prepared session
-    bool foundPrepped = false;
-    AudioRecordingSession sessionToUse;
-    {
-      const juce::ScopedLock sl(preppedSessionsLock_);
-      auto it = std::find_if(
-          preppedSessions_.begin(), preppedSessions_.end(),
-          [i](const auto &s) { return s.trackIndex == static_cast<int>(i); });
-
-      if (it != preppedSessions_.end()) {
-        sessionToUse = std::move(*it);
-        preppedSessions_.erase(it);
-        foundPrepped = true;
-      }
-    }
-
-    if (foundPrepped) {
-      // Update start time and use prepped session
-      sessionToUse.recordingStartSamples = recordStartSamples;
-      audioRecordingSessions_.push_back(std::move(sessionToUse));
-      DBG("Engine: Used pre-prepared recording session for track " +
-          juce::String(i));
-      continue;
-    }
-
-    // Fallback: Create synchronously (BLOCKING I/O)
-    DBG("Engine: Creating recording session synchronously (fallback)");
-
-    // Create unique filename with timestamp
-    juce::String timestamp =
-        juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    juce::String filename =
-        track->getName().replaceCharacter(' ', '_') + "_" + timestamp + ".wav";
-    juce::File recordFile = recordingsDir.getChildFile(filename);
-
-    // CODEX P1 FIX: Respect actual input channel count instead of hardcoding
-    // Get the number of active input channels from the device
-    auto *device = deviceManager.getCurrentAudioDevice();
-    const int deviceInputChannels =
-        device ? device->getActiveInputChannels().countNumberOfSetBits() : 1;
-
-    // For now: use mono (1 channel) or stereo (2 channels) based on device
-    // capability Clamp to min(2, deviceInputChannels) to avoid exceeding device
-    // capabilities
-    const int numChannels = juce::jmin(2, juce::jmax(1, deviceInputChannels));
-
-    // Create WAV writer
-    juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::FileOutputStream> fileStream(
-        new juce::FileOutputStream(recordFile));
-
-    if (!fileStream->openedOk()) {
-      DBG("Engine: Failed to create output stream for " +
-          recordFile.getFullPathName());
-      continue;
-    }
-
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(fileStream.release(), sampleRate,
-                                  static_cast<unsigned int>(numChannels),
-                                  24, // 24-bit depth
-                                  {}, // Default metadata
-                                  0   // Default quality
-                                  ));
-
-    if (writer == nullptr) {
-      DBG("Engine: Failed to create audio writer for " +
-          recordFile.getFullPathName());
-      continue;
-    }
-
-    // Wrap in ThreadedWriter for RT-safe writing
-    auto threadedWriter =
-        std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
-            writer.release(), *audioWriterThread_,
-            constants::kAudioWriterFifoSize
-        );
-
-    // Create session
-    AudioRecordingSession session;
-    session.writer = std::move(threadedWriter);
-    session.file = recordFile;
-    session.numChannels = numChannels;
-    session.sampleRate = sampleRate;
-    session.recordingStartSamples = recordStartSamples;
-    session.trackIndex = static_cast<int>(i);
-    // ROAST FIX #9: Capture input channel from track
-    session.inputChannelIndex = tracks_[i]->getInputChannel();
-
-    audioRecordingSessions_.push_back(std::move(session));
-
-    DBG("Engine: Recording to " + recordFile.getFullPathName());
-  }
-
-  // ==========================================================================
-  // CODEX FIX P1: Enable recording flag AFTER sessions are set up
-  // This prevents the audio thread from accessing sessions before they're ready
-void Engine::startRecording() {
-  if (recordingManager_ && transportController_) {
-    recordingManager_->startRecording(transportController_->getPlayheadSamples(), tracks_);
-  }
-}
-
-void Engine::stopRecording() {
-  if (recordingManager_) {
-     recordingManager_->stopRecording(tracks_);
-  }
-}
-
 void Engine::toggleRecording() {
   if (recordingManager_) {
     if (recordingManager_->isRecording()) {
       stopRecording();
     } else {
-      startRecording();
+      record();
     }
   }
 }
@@ -862,13 +690,13 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
   return 0.0f;
 }
 
-float Engine::getMasterLevel() const { return masterLevel_.load(); }
+float Engine::getMasterLevel() const { return audioRenderer_ ? audioRenderer_->getMasterLevel() : 0.0f; }
 
-float Engine::getMasterPeakLevel() const { return masterPeakLevel_.load(); }
+float Engine::getMasterPeakLevel() const { return audioRenderer_ ? audioRenderer_->getMasterPeakLevel() : 0.0f; }
 
 void Engine::resetPeakMeters() {
   // Reset master peak
-  masterPeakLevel_.store(0.0f);
+  if (audioRenderer_) audioRenderer_->resetPeakMeters();
 
   // Reset all track peaks (message thread only)
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -1435,11 +1263,7 @@ void Engine::enableMidiInput() {
     DBG("Engine: No MIDI inputs could be opened");
   }
 
-  // Initialize MIDI recording buffers for all tracks
-  {
-    const juce::ScopedLock sl(midiRecordingLock_);
-    midiRecording_.trackRecordings.resize(tracks_.size());
-  }
+
 }
 
 void Engine::disableMidiInput() {
@@ -1473,34 +1297,7 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
   // Add message to FIFO (lock-free)
   midiFifo_.push(message);
 
-  // LOCK-FREE MIDI RECORDING:
-  // Instead of using a mutex, we use a lock-free FIFO to buffer recording
-  // events. The message thread will drain this FIFO in stopRecording().
-  if (isRecording_.load()) {
-    // Get current playhead position
-    const juce::int64 playhead = playheadSamples_.load();
 
-    // Find all armed MIDI/Instrument tracks and queue recording events
-    auto *snapshot = activeSnapshot_.load();
-    if (snapshot != nullptr) {
-      for (size_t i = 0; i < snapshot->tracks.size(); ++i) {
-        auto *track = snapshot->tracks[i];
-        if (track != nullptr && track->isArmed() &&
-            (track->getType() == zenith::Track::Type::MIDI ||
-             track->getType() == zenith::Track::Type::Instrument)) {
-          // Queue event to lock-free FIFO
-          int start1, size1, start2, size2;
-          midiRecordFifo_.prepareToWrite(1, start1, size1, start2, size2);
-
-          if (size1 > 0) {
-            midiRecordBuffer_[start1] =
-                MidiRecordEvent{message, static_cast<int>(i), playhead};
-            midiRecordFifo_.finishedWrite(1);
-          }
-        }
-      }
-    }
-  }
 }
 
 //==============================================================================
@@ -1593,12 +1390,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
 // Phase 2D: Audio Recording (AUDIO THREAD)
 //==============================================================================
 
-void Engine::captureAudioInput(const float *const *inputChannelData,
-                               int numInputChannels, int numSamples) noexcept {
-  if (recordingManager_) {
-      recordingManager_->captureAudio(inputChannelData, numInputChannels, numSamples, tracks_);
-  }
-}
+
 
 juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
   return pluginHost_->getFormatManager();
@@ -1781,13 +1573,7 @@ double Engine::autoDetectProjectDuration() const {
 
 
 
-juce::int64 Engine::getPlayheadSamples() const {
-  return transportController_ ? transportController_->getPlayheadSamples() : 0;
-}
-
-juce::int64 Engine::getPlaybackPosition() const {
-  return transportController_ ? transportController_->getPlayheadSamples() : 0;
-}
+// getPlayheadSamples() and getPlaybackPosition() are now inline in Engine.h
 
 bool Engine::isLooping() const {
   return transportController_ ? transportController_->isLooping() : false;
