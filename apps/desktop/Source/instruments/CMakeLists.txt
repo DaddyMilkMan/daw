@@ -8,8 +8,6 @@ target_sources(ZenithDAW PRIVATE
     ZenithEffects.cpp
     ZenithPolySynthVoice.cpp
     ZenithPolySynth.cpp
-
-
     ZenithPolySynthEditor.cpp
     ZenithPresetManager.cpp
     ZenithSampler.cpp
