@@ -28,11 +28,8 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-<<<<<<< HEAD
 
 #include "EngineConstants.h"
-=======
->>>>>>> origin/master
 
 namespace zenith {
 
@@ -55,24 +52,14 @@ public:
   void prepare(double sampleRate, int maxBlockSize) {
     sampleRate_ = sampleRate;
 
-<<<<<<< HEAD
     // Lookahead buffer (5ms - use constant)
     lookaheadSamples_ = static_cast<int>(sampleRate * constants::kCompLookaheadMs / 1000.0);
-=======
-    // Lookahead buffer (5ms)
-    lookaheadSamples_ = static_cast<int>(sampleRate * 0.005);
->>>>>>> origin/master
     lookaheadBuffer_.setSize(2, lookaheadSamples_ + maxBlockSize);
     lookaheadBuffer_.clear();
     lookaheadWritePos_ = 0;
 
-<<<<<<< HEAD
     // RMS buffer (10ms window - use constant)
     rmsWindowSamples_ = static_cast<int>(sampleRate * constants::kCompRmsWindowMs / 1000.0);
-=======
-    // RMS buffer (10ms window)
-    rmsWindowSamples_ = static_cast<int>(sampleRate * 0.010);
->>>>>>> origin/master
     rmsBuffer_.resize(rmsWindowSamples_, 0.0f);
     rmsWritePos_ = 0;
     rmsSum_ = 0.0f;
@@ -219,7 +206,6 @@ public:
   }
 
 private:
-<<<<<<< HEAD
   double sampleRate_ = constants::kDefaultSampleRate;
 
   // Parameters (initialized from EngineConstants)
@@ -227,15 +213,6 @@ private:
   float ratio_ = constants::kDefaultCompRatio;
   float attackMs_ = constants::kDefaultCompAttackMs;
   float releaseMs_ = constants::kDefaultCompReleaseMs;
-=======
-  double sampleRate_ = 44100.0;
-
-  // Parameters
-  float threshold_ = -10.0f;
-  float ratio_ = 4.0f;
-  float attackMs_ = 10.0f;
-  float releaseMs_ = 100.0f;
->>>>>>> origin/master
   float makeup_ = 0.0f;
   float knee_ = 6.0f; // Soft knee width in dB
   float autoMakeup_ = 0.0f;
