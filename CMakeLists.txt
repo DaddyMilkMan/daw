@@ -93,6 +93,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
+    apps/desktop/Source/ui/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -131,10 +132,29 @@ add_subdirectory(apps/desktop/Source/ai)
 # Include directories
 target_include_directories(ZenithDAW PUBLIC
     apps/desktop/include
+    ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     apps/desktop/Source
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
 )
+
+target_link_libraries(ZenithDAW PRIVATE
+    juce::juce_core
+    juce::juce_events
+    juce::juce_graphics
+    juce::juce_data_structures
+    juce::juce_gui_basics
+    juce::juce_gui_extra
+    juce::juce_audio_basics
+    juce::juce_audio_devices
+    juce::juce_audio_formats
+    juce::juce_audio_processors
+    juce::juce_audio_utils
+    juce::juce_dsp
+    juce::juce_opengl
+    # juce::juce_network # If separate module, but StreamingSocket is in core
+)
+
 
 # Link JUCE modules
 target_link_libraries(ZenithDAW PRIVATE
@@ -302,7 +322,11 @@ if(BUILD_TESTS)
         juce::juce_core
         juce::juce_data_structures
         juce::juce_audio_basics
+        juce::juce_audio_devices
+        juce::juce_audio_formats
         juce::juce_audio_processors  # Required for TestUtils.h StubAudioPlugin
+        juce::juce_audio_utils
+        juce::juce_dsp
         juce::juce_graphics
         juce::juce_gui_basics
     )
