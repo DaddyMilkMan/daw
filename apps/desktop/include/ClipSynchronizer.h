@@ -69,6 +69,24 @@ public:
   bool isRunning() const { return isTimerRunning(); }
 
   //==========================================================================
+  // ValueTree::Listener overrides
+  //==========================================================================
+
+  void valueTreeChildAdded(juce::ValueTree &parentTree,
+                           juce::ValueTree &childWhichHasBeenAdded) override;
+
+  void valueTreeChildRemoved(juce::ValueTree &parentTree,
+                             juce::ValueTree &childWhichHasBeenRemoved,
+                             int indexFromWhichChildWasRemoved) override;
+
+  void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
+                                const juce::Identifier &property) override;
+  
+  void valueTreeParentChanged(juce::ValueTree &) override {}
+  void valueTreeChildOrderChanged(juce::ValueTree &, int, int) override {}
+  void valueTreeRedirected(juce::ValueTree &) override {}
+
+  //==========================================================================
   /**
    * @brief Create clip in both Engine and ProjectState
    * @param trackId ProjectState track ID
