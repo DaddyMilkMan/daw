@@ -13,9 +13,11 @@
 #pragma once
 
 #include "ZenithPolySynthDefs.h"
-#include <juce_core/juce_core.h>
 #include <array>
 #include <cmath>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
+
 
 namespace zenith {
 
@@ -40,23 +42,27 @@ public:
    * @return Sample value in range [-1, 1]
    */
   float getNextSample(float frequency, float shape = 0.5f);
-  
+
   /**
    * @brief Update supersaw frequency ratios after detune change
    * Must be called after setDetune() to update cached ratios.
    */
+  void updateSupersawRatios();
+
   // Flagship Features
   void setSync(bool enabled) { syncEnabled_ = enabled; }
-  void resetPhase() { phase_ = 0.0; } 
+  void resetPhase() { phase_ = 0.0; }
   double getPhase() const { return phase_; }
-  void reducePhase(double amount) { phase_ -= amount; } // For adjusting phase after sync reset
+  void reducePhase(double amount) {
+    phase_ -= amount;
+  } // For adjusting phase after sync reset
 
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
   double phase_ = 0.0;
   double sampleRate_ = 44100.0;
   float detuneCents_ = 0.0f;
-  
+
   // Flagship State
   bool syncEnabled_ = false;
 
@@ -71,21 +77,25 @@ private:
   // Supersaw state
   std::array<double, 7> supersawPhases_ = {0.0};
   std::array<float, 7> supersawDetunes_ = {0.0f};
-  std::array<float, 7> supersawRatios_ = {1.0f}; // Precalculated frequency multipliers
+  std::array<float, 7> supersawRatios_ = {
+      1.0f}; // Precalculated frequency multipliers
   bool supersawInit_ = false;
+
+  // Random number generator for noise and phase randomization
+  juce::Random random_;
 
   // PolyBLEP anti-aliasing helper
   // t: current phase (0..1)
   // dt: phase increment per sample
   inline float poly_blep(float t, float dt) {
-      if (t < dt) {
-          t /= dt;
-          return t + t - t * t - 1.0f;
-      } else if (t > 1.0f - dt) {
-          t = (t - 1.0f) / dt;
-          return t * t + t + t + 1.0f;
-      }
-      return 0.0f;
+    if (t < dt) {
+      t /= dt;
+      return t + t - t * t - 1.0f;
+    } else if (t > 1.0f - dt) {
+      t = (t - 1.0f) / dt;
+      return t * t + t + t + 1.0f;
+    }
+    return 0.0f;
   }
 };
 
