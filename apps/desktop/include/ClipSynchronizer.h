@@ -131,23 +131,6 @@ private:
   double samplesToBeats(int64_t samples, double tempo, double sampleRate) const;
 
   //==========================================================================
-  // ValueTree::Listener Callbacks
-  //==========================================================================
-
-  void valueTreeChildAdded(juce::ValueTree &parentTree,
-                           juce::ValueTree &childWhichHasBeenAdded) override;
-
-  void valueTreeChildRemoved(juce::ValueTree &parentTree,
-                             juce::ValueTree &childWhichHasBeenRemoved,
-                             int indexFromWhichChildWasRemoved) override;
-
-  void valueTreePropertyChanged(juce::ValueTree &treeWhosePropertyHasChanged,
-                                const juce::Identifier &property) override;
-  void valueTreeChildOrderChanged(juce::ValueTree&, int, int) override {}
-  void valueTreeParentChanged(juce::ValueTree&) override {}
-  void valueTreeRedirected(juce::ValueTree&) override {}
-
-  //==========================================================================
   // Member Variables
   //==========================================================================
 

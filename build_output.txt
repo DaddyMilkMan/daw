@@ -1,0 +1,251 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  Main.cpp
+  Engine.cpp
+  ProjectState.cpp
+  Track.cpp
+  Clip.cpp
+  MixerChannel.cpp
+  AudioFilePool.cpp
+  PluginHost.cpp
+  AuxBus.cpp
+  ZenithLogger.cpp
+C:\zenith\daw\apps\desktop\Source\Main.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackPluginState.cpp
+C:\zenith\daw\apps\desktop\Source\engine\Engine.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ProjectState.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\Track.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\Clip.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\AudioFilePool.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\PluginHost.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\AuxBus.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\ZenithLogger.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\engine\TrackPluginState.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AudioRecorder.cpp
+C:\zenith\daw\apps\desktop\Source\engine\AudioRecorder.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  RoutingGraph.cpp
+C:\zenith\daw\apps\desktop\Source\engine\RoutingGraph.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ClipSynchronizer.cpp
+C:\zenith\daw\apps\desktop\Source\engine\ClipSynchronizer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackStateSynchronizer.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TrackStateSynchronizer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackAutomationSynchronizer.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TrackAutomationSynchronizer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TempoMapSynchronizer.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TempoMapSynchronizer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TempoMap.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TempoMap.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackFreeze.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TrackFreeze.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AudioRenderer.cpp
+C:\zenith\daw\apps\desktop\Source\engine\AudioRenderer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  RecordingManager.cpp
+C:\zenith\daw\apps\desktop\Source\engine\RecordingManager.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TransportController.cpp
+C:\zenith\daw\apps\desktop\Source\engine\TransportController.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MainWindow.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MainWindow.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MainLayoutComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MainLayoutComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SampleEditorComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\SampleEditorComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ArrangerComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\ArrangerComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MixerComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MixerComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PianoRollComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AutomationLaneComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\AutomationLaneComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MarkerLaneComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MarkerLaneComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TempoLaneComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\TempoLaneComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PluginBrowserComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PluginBrowserComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ClipComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\ClipComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MixerView.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MixerView.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MixerChannelComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\MixerChannelComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackHeaderComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\TrackHeaderComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TimelineRuler.cpp
+C:\zenith\daw\apps\desktop\Source\ui\TimelineRuler.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PluginEditorWindow.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PluginEditorWindow.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PresetBrowserComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PresetBrowserComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  InstrumentBrowserPanel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\InstrumentBrowserPanel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  WingmanPanel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\WingmanPanel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AudioFeedback.cpp
+C:\zenith\daw\apps\desktop\Source\ui\AudioFeedback.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithLookAndFeel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\ZenithLookAndFeel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithTheme.cpp
+C:\zenith\daw\apps\desktop\Source\ui\ZenithTheme.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  BottomBar.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  BrowserPanel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\BrowserPanel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  DebugConsoleComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  RightSidePanel.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaButton.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaButton.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaKnob.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaKnob.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaMainWindowIntegration.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaMainWindowIntegration.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaSlider.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSlider.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TransportBar.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithDesignSystem.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithLayout.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithLayout.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithPolySynthUI.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithPolySynthUI.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaRenderer.cpp
+C:\zenith\daw\apps\desktop\Source\rendering\SkiaRenderer.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ExportDialog.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\ExportDialog.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Instrument.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\Instrument.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  InstrumentRegistry.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  RegisterBuiltInInstruments.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\RegisterBuiltInInstruments.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PresetGenerator.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\PresetGenerator.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithOscillator.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithOscillator.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithFilter.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithFilter.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithEffects.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithEffects.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithPolySynthVoice.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynthVoice.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithPolySynth.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynth.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithPolySynthEditor.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPolySynthEditor.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithPresetManager.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithPresetManager.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithSampler.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ZenithSampler.cpp
+  ZenithSamplerEditor.cpp
+C:\zenith\daw\apps\desktop\Source\instruments\ZenithSamplerEditor.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AIBridgeClient.cpp
+C:\zenith\daw\apps\desktop\Source\network\AIBridgeClient.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  MockAIProvider.cpp
+C:\zenith\daw\apps\desktop\Source\network\MockAIProvider.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  GrokAPIClient.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokAPIClient.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  GrokDAWController.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokDAWController.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  GrokUtils.cpp
+C:\zenith\daw\apps\desktop\Source\network\GrokUtils.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SecureKeyStore.cpp
+C:\zenith\daw\apps\desktop\Source\network\SecureKeyStore.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AudioAnalysisService.cpp
+C:\zenith\daw\apps\desktop\Source\network\AudioAnalysisService.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  AITools.cpp
+C:\zenith\daw\apps\desktop\Source\network\AITools.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  AIPrompts.cpp
+C:\zenith\daw\apps\desktop\Source\network\AIPrompts.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  CollaborationManager.cpp
+C:\zenith\daw\apps\desktop\Source\network\CollaborationManager.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  CommandAPI.cpp
+C:\zenith\daw\apps\desktop\Source\commands\CommandAPI.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SessionGraph.cpp
+C:\zenith\daw\apps\desktop\Source\commands\SessionGraph.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TrackCommands.cpp
+C:\zenith\daw\apps\desktop\Source\commands\TrackCommands.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ClipCommands.cpp
+C:\zenith\daw\apps\desktop\Source\commands\ClipCommands.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  TransportCommands.cpp
+C:\zenith\daw\apps\desktop\Source\commands\TransportCommands.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  DSPStemSeparator.cpp
+C:\zenith\daw\apps\desktop\Source\dsp\DSPStemSeparator.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  DSPVoiceChanger.cpp
+C:\zenith\daw\apps\desktop\Source\dsp\DSPVoiceChanger.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ONNXStemSeparator.cpp
+C:\zenith\daw\apps\desktop\Source\dsp\ONNXStemSeparator.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  BrowserModel.cpp
+C:\zenith\daw\apps\desktop\Source\browser\BrowserModel.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  BrowserScanner.cpp
+C:\zenith\daw\apps\desktop\Source\browser\BrowserScanner.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  BrowserPreviewEngine.cpp
+C:\zenith\daw\apps\desktop\Source\browser\BrowserPreviewEngine.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SessionDebuggerAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ai\SessionDebuggerAgent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  ProjectRefactorerAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ai\ProjectRefactorerAgent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  UXDirectorAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ai\UXDirectorAgent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SampleHunterAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ai\SampleHunterAgent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PresetGeneticistAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ai\PresetGeneticistAgent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  SkiaSpectrumComponent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\SkiaSpectrumComponent.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  PianoKeyboardViewSkia.cpp
+C:\zenith\daw\apps\desktop\Source\ui\skia\views\PianoKeyboardViewSkia.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...
+  Compiling...
+  juce_core.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\juce_core.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_core_CompilationTime.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_core\juce_core_CompilationTime.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_cryptography.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_cryptography\juce_cryptography.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_data_structures.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_data_structures\juce_data_structures.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_events.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_events\juce_events.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_graphics.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_graphics\juce_graphics.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_graphics_Harfbuzz.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_graphics\juce_graphics_Harfbuzz.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_gui_basics.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_gui_basics\juce_gui_basics.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_gui_extra.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_gui_extra\juce_gui_extra.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_basics.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_basics\juce_audio_basics.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_devices.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_devices\juce_audio_devices.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_formats.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_formats\juce_audio_formats.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_processors.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_processors_ara.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors_ara.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_processors_lv2_libs.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_processors\juce_audio_processors_lv2_libs.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_audio_utils.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_audio_utils\juce_audio_utils.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_dsp.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_dsp\juce_dsp.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  juce_opengl.cpp
+C:\zenith\daw\build\_deps\juce-src\modules\juce_opengl\juce_opengl.cpp(1,1): error C1041: cannot open program database 'C:\zenith\daw\build\ZenithDAW.dir\Debug\vc143.pdb'; if multiple CL.EXE write to the same .PDB file, please use /FS [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  Generating Code...

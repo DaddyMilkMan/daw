@@ -42,7 +42,7 @@ public:
             std::thread reader([&]() {
                 while (true) {
                     juce::MidiBuffer buffer;
-                    fifo.drainTo(buffer, 0, 512);
+                    fifo.drainTo(buffer, 512);
                     receivedCount += buffer.getNumEvents();
                     
                     if (writerFinished && receivedCount >= sentCount) {

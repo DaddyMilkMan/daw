@@ -33,6 +33,8 @@ public:
   ZenithPolySynthProcessor();
   ~ZenithPolySynthProcessor() override;
 
+  juce::AbstractFifo& getVisualizerFifo() { return visualizerFifo_; }
+
   // AudioProcessor overrides
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
   void releaseResources() override;
@@ -120,10 +122,6 @@ public:
   static const juce::String PitchBendRange;
   static const juce::String SubOscOctave;
   static const juce::String VelocityCurve;
-  
-  // Unison Params
-  static const juce::String UnisonVoices;
-  static const juce::String UnisonDetune;
   
   // Flagship Features
   static const juce::String Osc2Sync;    // Sync Osc 2 to Osc 1

@@ -30,6 +30,8 @@ namespace zenith {
 class RoutingGraph
 {
 public:
+    friend class AudioRenderer; // Allow AudioRenderer to access snapshots
+
     //==============================================================================
     enum class NodeType
     {

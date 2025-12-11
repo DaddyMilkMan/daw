@@ -9,23 +9,25 @@
         {
             "name": "default",
             "displayName": "Default Config",
-            "description": "Default build using Ninja",
+            "description": "Default build using Ninja with vcpkg",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         },
         {
             "name": "windows-msvc",
             "displayName": "Windows MSVC",
-            "description": "Visual Studio 2022",
+            "description": "Visual Studio 2022 with vcpkg",
             "generator": "Visual Studio 17 2022",
             "binaryDir": "${sourceDir}/build",
             "cacheVariables": {
                 "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
-                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
             }
         }
     ],

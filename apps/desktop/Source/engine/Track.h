@@ -56,6 +56,12 @@ class PluginHost;
 */
 class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
+    friend class AudioRenderer; // Allow AudioRenderer to access private members
+
+    void setSoloed(bool shouldBeSoloed);
+    bool isSoloed() const;
+public:
+public:
   //==============================================================================
   enum class Type {
     Audio,
@@ -428,6 +434,8 @@ private:
   juce::CriticalSection
       activeNotesLock; // Protects activeNotes vector for thread safety
   juce::int64 lastProcessedSample = 0;
+
+  std::atomic<bool> soloed_{false};
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Track)

@@ -163,8 +163,8 @@ void DSPStemSeparator::process(const juce::dsp::AudioBlock<const float>& inputBl
             std::vector<float> midHigh(static_cast<size_t>(numSamples));
             std::copy(mid.begin(), mid.end(), midHigh.begin());
             float* midHighPtr = &midHigh[0];
-            float* channels[] = { midHighPtr };
-            juce::dsp::AudioBlock<float> midHighBlock(channels, 1, static_cast<size_t>(numSamples));
+            float* channelsHigh[] = { midHighPtr };
+            juce::dsp::AudioBlock<float> midHighBlock(channelsHigh, 1, static_cast<size_t>(numSamples));
             juce::dsp::ProcessContextReplacing<float> midHighContext(midHighBlock);
             highPassFilter_.process(midHighContext);
             

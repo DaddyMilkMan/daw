@@ -49,14 +49,16 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Load Freesound API key from secure storage (NEVER hardcode!)
-  freesoundConfig_.apiKey =
-      SecureKeyStore::getInstance().getKey("freesound_api_key");
+  juce::String apiKey;
+  if (SecureKeyStore::retrieveKey("freesound_api_key", apiKey)) {
+      freesoundConfig_.apiKey = apiKey;
+  }
 
   if (freesoundConfig_.apiKey.isEmpty()) {
     DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
         "SecureKeyStore!");
     DBG("SampleHunterAgent: Set key via "
-        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
+        "SecureKeyStore::storeKey(\"freesound_api_key\", "
         "\"YOUR_KEY\")");
     // Agent will gracefully fail API calls without a key
     apiKeyAvailable_ = false;

@@ -47,7 +47,7 @@ Engine::Engine() {
 
   // Phase 3: Initialize plugin host and editor window manager
   pluginHost_ = std::make_unique<zenith::PluginHost>();
-  pluginHost_->loadFromDisk();  // Load cached plugins, check for crash recovery
+      pluginHost_->scanDefaultLocations();  // Load cached plugins, check for crash recovery
   DBG("Engine: PluginHost initialized with " + juce::String(pluginHost_->getKnownPlugins().getNumTypes()) + " cached plugins");
   pluginEditorWindowManager_ =
       std::make_unique<zenith::PluginEditorWindowManager>();
@@ -367,12 +367,16 @@ void Engine::play() {
 void Engine::stop() {
   DBG("Engine: Stop");
 
+  // Refactor 2025-12-09: Use TransportController
+  if (transportController_) {
+    transportController_->stop();
+  }
+
   // Phase 2C: If recording, bake recordings into clips first
-  if (recordingManager_->isRecording()) {
+  if (isRecording()) {
     stopRecording();
   }
 
-  transportController_->stop();
   enableTestTone_.store(false);
 
   // Phase 13: Stop automation synchronizer
@@ -380,6 +384,22 @@ void Engine::stop() {
     automationSynchronizer->stop();
     DBG("Engine: Stopped automation synchronizer");
   }
+}
+
+bool Engine::isPlaying() const {
+  return transportController_ ? transportController_->isPlaying() : false;
+}
+
+bool Engine::isRecording() const {
+  return recordingManager_ ? recordingManager_->isRecording() : false;
+}
+
+juce::int64 Engine::getPlayheadSamples() const {
+  return transportController_ ? transportController_->getPlayheadSamples() : 0;
+}
+
+juce::int64 Engine::getPlaybackPosition() const {
+  return transportController_ ? transportController_->getPlayheadSamples() : 0;
 }
 
 double Engine::getPlaybackPositionBeats() const {

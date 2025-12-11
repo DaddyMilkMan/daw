@@ -27,9 +27,9 @@
 #include "skia/SkiaComponent.h"
 #include "../engine/AudioFilePool.h"
 
-#include <skia/include/core/SkCanvas.h>
-#include <skia/include/core/SkPath.h>
-#include <skia/include/core/SkPaint.h>
+#include <core/SkCanvas.h>
+#include <core/SkPath.h>
+#include <core/SkPaint.h>
 
 #include <vector>
 #include <atomic>

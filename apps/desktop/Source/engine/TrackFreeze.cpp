@@ -12,6 +12,7 @@
 
 #include "TrackFreeze.h"
 #include "Track.h"
+#include "Clip.h"
 #include "Engine.h"
 #include "EngineConstants.h"
 
@@ -181,7 +182,7 @@ void TrackFreezeManager::restorePluginStates(Track& track, const juce::ValueTree
         }
         
         // Re-enable plugin
-        plugin->setBypass(false);
+        plugin->suspendProcessing(false);
     }
 }
 
@@ -315,7 +316,7 @@ void FreezeRenderThread::run() {
         for (int i = 0; i < track.getNumPlugins(); ++i) {
             auto* plugin = track.getPlugin(i);
             if (plugin != nullptr) {
-                plugin->setBypass(true);
+                plugin->suspendProcessing(true);
             }
         }
         

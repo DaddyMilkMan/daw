@@ -922,4 +922,9 @@ void Track::generateMidiForBlock(const juce::ValueTree &trackState,
   }
 }
 
+//==============================================================================
+void Track::setSoloed(bool shouldBeSoloed) { soloed_.store(shouldBeSoloed); }
+
+bool Track::isSoloed() const { return soloed_.load(); }
+
 } // namespace zenith
