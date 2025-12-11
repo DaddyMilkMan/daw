@@ -59,13 +59,7 @@ public:
     osc3_.setWaveform(waveform);
   }
 
-  void setOsc1Detune(float cents) { osc1_.setDetune(cents); }
-  void setOsc2Detune(float cents) { osc2_.setDetune(cents); }
-  void setOsc3Detune(float cents) { osc3_.setDetune(cents); }
 
-  void setOsc1Mix(float mix) { osc1Mix_ = mix; }
-  void setOsc2Mix(float mix) { osc2Mix_ = mix; }
-  void setOsc3Mix(float mix) { osc3Mix_ = mix; }
 
   void setUnisonVoices(int voices) {
     unisonVoices_ = juce::jlimit(1, 7, voices);
