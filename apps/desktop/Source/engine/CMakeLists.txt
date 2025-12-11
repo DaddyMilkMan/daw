@@ -9,12 +9,13 @@ target_sources(ZenithDAW PRIVATE
     AuxBus.cpp
     ZenithLogger.cpp
     TrackPluginState.cpp
+    AudioRecorder.cpp
+    RoutingGraph.cpp
     ClipSynchronizer.cpp
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
     TempoMap.cpp
-    RoutingGraph.cpp
     TrackFreeze.cpp
     AudioRenderer.cpp
     RecordingManager.cpp

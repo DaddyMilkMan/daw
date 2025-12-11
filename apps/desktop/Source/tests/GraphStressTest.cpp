@@ -26,6 +26,9 @@ public:
   void testInfiniteLoop() {
     beginTest("The Infinite Loop (Cycle Detection)");
 
+    // Suppress expected warning
+    zenith::ZenithLogger::getInstance().setLogToConsole(false);
+
     zenith::RoutingGraph graph;
 
     // Create Nodes
@@ -45,6 +48,9 @@ public:
     // Create Cycle: A -> B -> A
     graph.connect("Track-A", "Track-B");
     graph.connect("Track-B", "Track-A");
+
+    // Restore logging
+    zenith::ZenithLogger::getInstance().setLogToConsole(true);
 
     // Assertions
     auto order = graph.getProcessingOrder();
