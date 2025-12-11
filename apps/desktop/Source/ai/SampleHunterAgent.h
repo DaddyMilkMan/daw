@@ -334,8 +334,17 @@ private:
   std::vector<FoundSample> foundSamples_;
   std::queue<size_t> downloadQueue_;
 
+  // Batch notifications
+  std::vector<FoundSample> pendingDownloadNotifications;
+  std::vector<FoundSample> pendingAnalysisNotifications;
+  std::vector<FoundSample> pendingImportNotifications;
+
+
   // Duplicate detection
   std::unordered_set<juce::String> downloadedHashes_;
+
+  // API Key availability - set during construction
+  bool apiKeyAvailable_ = false;
 
   // Services
   std::unique_ptr<AudioAnalysisService> analysisService_;

@@ -49,10 +49,10 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Load Freesound API key from secure storage (NEVER hardcode!)
-  freesoundConfig_.apiKey =
-      SecureKeyStore::getInstance().getKey("freesound_api_key");
+  SecureKeyStore::retrieveKey("freesound_api_key", freesoundConfig_.apiKey);
+  apiKeyAvailable_ = freesoundConfig_.apiKey.isNotEmpty();
 
-  if (freesoundConfig_.apiKey.isEmpty()) {
+  if (!apiKeyAvailable_) {
     DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
         "SecureKeyStore!");
     DBG("SampleHunterAgent: Set key via "
@@ -223,9 +223,11 @@ void SampleHunterAgent::run() {
 
     // Batching: Collect samples to notify UI in batches
     constexpr size_t UI_BATCH_SIZE = 10;
-    std::vector<FoundSample> pendingDownloadNotifications;
-    std::vector<FoundSample> pendingAnalysisNotifications;
-    std::vector<juce::File> pendingImportNotifications;
+    
+    // Clear any stale notifications
+    pendingDownloadNotifications.clear();
+    pendingAnalysisNotifications.clear();
+    pendingImportNotifications.clear();
 
     while (!downloadQueue_.empty() && !threadShouldExit()) {
       size_t index = downloadQueue_.front();
@@ -252,7 +254,7 @@ void SampleHunterAgent::run() {
         // Import
         if (importToPool(sample)) {
           stats_.samplesImported++;
-          pendingImportNotifications.push_back(sample.localFile);
+          pendingImportNotifications.push_back(sample);
         }
 
         // Batch UI update: Notify every UI_BATCH_SIZE downloads
@@ -267,8 +269,9 @@ void SampleHunterAgent::run() {
                   listeners_.call(&Listener::sampleDownloaded, s);
                 for (const auto &s : analysisBatch)
                   listeners_.call(&Listener::sampleAnalyzed, s);
-                for (const auto &f : importBatch)
-                  listeners_.call(&Listener::sampleImported, f);
+                // Listeners expect juce::File for sampleImported
+                for (const auto &s : importBatch)
+                  listeners_.call(&Listener::sampleImported, s.localFile);
               });
 
           pendingDownloadNotifications.clear();
@@ -335,8 +338,10 @@ std::vector<FoundSample>
 SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
   std::vector<FoundSample> results;
 
-  if (freesoundConfig_.apiKey.isEmpty()) {
-    DBG("SampleHunterAgent: No API Key provided for Freesound!");
+  if (!apiKeyAvailable_) {
+    DBG("SampleHunterAgent: No API Key available, skipping search.");
+    // In a real scenario, we might fail here or try to fetch a public RSS if
+    // available. For this implementation, we assume a key is needed or we warn.
     return results;
   }
 
@@ -416,6 +421,11 @@ SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
 bool SampleHunterAgent::downloadSample(FoundSample &sample) {
   if (sample.downloadUrl.isEmpty())
     return false;
+
+  if (!apiKeyAvailable_) {
+    DBG("SampleHunterAgent: Cannot download - API key missing.");
+    return false;
+  }
 
   stats_.downloadsAttempted++;
 
