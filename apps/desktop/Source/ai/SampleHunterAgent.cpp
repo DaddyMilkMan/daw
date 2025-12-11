@@ -49,14 +49,19 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   grokClient_ = std::make_unique<GrokAPIClient>();
 
   // Load Freesound API key from secure storage (NEVER hardcode!)
-  SecureKeyStore::retrieveKey("freesound_api_key", freesoundConfig_.apiKey);
+  freesoundConfig_.apiKey =
+      SecureKeyStore::getInstance().getKey("freesound_api_key");
 
   if (freesoundConfig_.apiKey.isEmpty()) {
     DBG("SampleHunterAgent: WARNING - No Freesound API key found in "
         "SecureKeyStore!");
     DBG("SampleHunterAgent: Set key via "
-        "SecureKeyStore::storeKey(\"freesound_api_key\", "
+        "SecureKeyStore::getInstance().setKey(\"freesound_api_key\", "
         "\"YOUR_KEY\")");
+    // Agent will gracefully fail API calls without a key
+    apiKeyAvailable_ = false;
+  } else {
+    apiKeyAvailable_ = true;
   }
 
   DBG("SampleHunterAgent: Initialized");
@@ -69,6 +74,15 @@ SampleHunterAgent::~SampleHunterAgent() { stopHunting(); }
 //==============================================================================
 
 void SampleHunterAgent::startHunting(const HuntingConfig &config) {
+  // Fail gracefully if no API key is available
+  if (!apiKeyAvailable_) {
+    DBG("SampleHunterAgent: Cannot start hunting - no Freesound API key configured!");
+    juce::MessageManager::callAsync([this]() {
+      listeners_.call(&Listener::huntingComplete, stats_, false);
+    });
+    return;
+  }
+
   stopHunting();
 
   config_ = config;
@@ -265,36 +279,52 @@ void SampleHunterAgent::run() {
         stats_.downloadsFailed++;
       }
 
-    processedCount++;
-    float p = static_cast<float>(processedCount) /
-              (float)std::max((size_t)1, totalToProcess);
-    updateProgress(downloadStartProgress +
-                   (downloadEndProgress - downloadStartProgress) * p);
+      processedCount++;
+      float p = static_cast<float>(processedCount) /
+                (float)std::max((size_t)1, totalToProcess);
+      updateProgress(downloadStartProgress +
+                     (downloadEndProgress - downloadStartProgress) * p);
 
-    if (processedCount >= (size_t)config_.maxTotalDownloads)
-      break;
+      if (processedCount >= (size_t)config_.maxTotalDownloads)
+        break;
 
-    wait(config_.delayBetweenDownloadsMs);
+      wait(config_.delayBetweenDownloadsMs);
+    }
+
+    // Flush remaining batch notifications
+    if (!pendingDownloadNotifications.empty()) {
+      auto downloadBatch = pendingDownloadNotifications;
+      auto analysisBatch = pendingAnalysisNotifications;
+      auto importBatch = pendingImportNotifications;
+
+      juce::MessageManager::callAsync(
+          [this, downloadBatch, analysisBatch, importBatch]() {
+            for (const auto &s : downloadBatch)
+              listeners_.call(&Listener::sampleDownloaded, s);
+            for (const auto &s : analysisBatch)
+              listeners_.call(&Listener::sampleAnalyzed, s);
+            for (const auto &f : importBatch)
+              listeners_.call(&Listener::sampleImported, f);
+          });
+    }
+
+    // Complete
+    stats_.endTime = juce::Time::getCurrentTime();
+    updateProgress(1.0f);
+    setStatus("Sample hunt complete!");
+
+    juce::MessageManager::callAsync([this]() {
+      listeners_.call(&Listener::huntingComplete, stats_, true);
+      sendChangeMessage();
+    });
+  } catch (const std::exception &e) {
+    DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
+    setStatus("Error: " + juce::String(e.what()));
+    juce::MessageManager::callAsync(
+        [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
   }
 
-  // Complete
-  stats_.endTime = juce::Time::getCurrentTime();
-  updateProgress(1.0f);
-  setStatus("Sample hunt complete!");
-
-  juce::MessageManager::callAsync([this]() {
-    listeners_.call(&Listener::huntingComplete, stats_, true);
-    sendChangeMessage();
-  });
-}
-catch (const std::exception &e) {
-  DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
-  setStatus("Error: " + juce::String(e.what()));
-  juce::MessageManager::callAsync(
-      [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
-}
-
-isHunting_.store(false);
+  isHunting_.store(false);
 }
 
 //==============================================================================
@@ -307,8 +337,6 @@ SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
 
   if (freesoundConfig_.apiKey.isEmpty()) {
     DBG("SampleHunterAgent: No API Key provided for Freesound!");
-    // In a real scenario, we might fail here or try to fetch a public RSS if
-    // available. For this implementation, we assume a key is needed or we warn.
     return results;
   }
 
@@ -321,9 +349,6 @@ SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
                                      "duration,filesize,samplerate,bitdepth")
             .withParameter("page_size", "20")
             .withParameter("token", freesoundConfig_.apiKey);
-
-  // Filter for high quality / duration if needed
-  // url = url.withParameter("filter", "duration:[0.5 TO 30]");
 
   DBG("SampleHunterAgent: Requesting " + url.toString(true));
 
@@ -419,9 +444,6 @@ bool SampleHunterAgent::downloadSample(FoundSample &sample) {
     return false;
   }
 
-  // We can't easily get Content-Length from a generic InputStream,
-  // so we'll enforce size limits during download instead.
-
   juce::FileOutputStream output(targetFile);
   if (!output.openedOk())
     return false;
@@ -452,7 +474,10 @@ bool SampleHunterAgent::downloadSample(FoundSample &sample) {
     // Safety check: Total size limit enforcement (Zip bomb protection)
     if (totalRead > config_.maxFileSizeMb * 1024 * 1024) {
       DBG("SampleHunterAgent: Download exceeded size limit, aborting.");
-      return false; // File will be incomplete/deleted
+      output.flush();
+      // SECURITY: Delete the incomplete/potentially malicious file
+      targetFile.deleteFile();
+      return false;
     }
 
     // Speed Monitoring
@@ -465,7 +490,8 @@ bool SampleHunterAgent::downloadSample(FoundSample &sample) {
         DBG("SampleHunterAgent: Download too slow (" + juce::String(speed) +
             " B/s), aborting.");
         output.flush();
-        // In a real app we might delete the file or retry
+        // Delete incomplete file on slow download abort
+        targetFile.deleteFile();
         return false;
       }
 
@@ -556,13 +582,11 @@ void SampleHunterAgent::updateProgress(float p) {
 }
 
 // Phase 1 Logic (Context Analysis)
-// Copied from previous implementation but simplified/cleaned
 void SampleHunterAgent::analyzeProjectContext() {
   auto *ps = engine_.getProjectState();
   double bpm = ps ? ps->getTempo() : 120.0;
   genreContext_.estimatedBpm = bpm;
   genreContext_.primaryGenre = detectGenreFromTempo(bpm);
-  // ... populating instructions same as before ...
 }
 
 juce::String SampleHunterAgent::detectGenreFromTempo(double tempo) {
@@ -596,9 +620,7 @@ void SampleHunterAgent::refineGenreWithAI() {
       prompt, GrokMode::Fast, {}, "You are a music style expert.",
       [&](const juce::String &response) {
         // Parse simple response "Subgenre: ... Keywords: ..."
-        // For now, naive parsing
         if (response.isNotEmpty()) {
-          // This is a placeholder for real NLP parsing logic
           DBG("AI Genre Refinement: " + response);
         }
         done.store(true);
