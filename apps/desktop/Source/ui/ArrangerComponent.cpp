@@ -1038,20 +1038,10 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
         SkColor clipColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
         
         // Use GlassmorphicPanel for render
-        // Logic:
-        // - If Selected: Use ActiveGlow style with the clip color
-        // - If Normal: Use Floating style with clip color as accent (or just Floating and we tint it manually? 
-        //   Actually GlassmorphicPanel::drawWithAccent is perfect)
-        
         if (clipView.isSelected) {
             GlassmorphicPanel::drawWithAccent(canvas, clipRect, clipColor, GlassmorphicPanel::Style::ActiveGlow);
         } else {
-            // For unselected clips, use a subtle accent
-             // We can use drawWithAccent but with a lighter/different style or just standard draw and overlay color
-             // Let's use Floating style but we want the color tint.
-             // GlassmorphicPanel currently supports specific styles.
-             // Let's manually tint if needed or rely on the helper.
-             // Helper drawWithAccent: "Uses the accent color for borders and subtle glow/tint"
+            // For unselected clips, use a subtle accent with the Floating style.
              GlassmorphicPanel::drawWithAccent(canvas, clipRect, clipColor, GlassmorphicPanel::Style::Floating);
         }
 
@@ -1066,7 +1056,6 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
                 font.setEdging(SkFont::Edging::kAntiAlias);
                 
                 // High contrast text inside clips
-                // Use NeonGlow for text if selected? No, simpler is better for labels inside clips usually.
                 SkPaint textPaint;
                 textPaint.setColor(clipView.isSelected ? colors::TEXT_PRIMARY : colors::TEXT_SECONDARY);
                 textPaint.setAntiAlias(true);

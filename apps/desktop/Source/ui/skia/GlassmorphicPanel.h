@@ -128,7 +128,6 @@ public:
             bgPaint.setAntiAlias(true);
             
             SkColor bgTop, bgBottom;
-            uint8_t alpha = 255;
             
             switch (opts.style) {
                 case Style::Flat:
@@ -138,7 +137,6 @@ public:
                 case Style::Subtle:
                     bgTop = withAlpha(colors::BG_DARK, 0.8f);
                     bgBottom = withAlpha(colors::BG_DARKER, 0.8f);
-                    alpha = 204; // 80%
                     break;
                 case Style::Elevated:
                     bgTop = colors::BG_DARK;
