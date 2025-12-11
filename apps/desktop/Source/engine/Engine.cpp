@@ -1294,10 +1294,32 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
   }
 #endif
 
-  // Add message to FIFO (lock-free)
+  // Add message to FIFO for playback (lock-free)
   midiFifo_.push(message);
 
-
+  // MIDI Recording: Capture MIDI for ALL armed MIDI/Instrument tracks
+  // This enables multi-track MIDI recording from a single source
+  if (recordingManager_ && recordingManager_->isRecording()) {
+    juce::int64 currentPosition = transportController_ ? 
+        transportController_->getPlayheadSamples() : 0;
+    
+    // Route to ALL armed MIDI/Instrument tracks for multi-track recording
+    // Use snapshot for RT-safe access to tracks
+    auto* snapshot = activeSnapshot_.load();
+    if (snapshot) {
+      for (size_t i = 0; i < snapshot->tracks.size(); ++i) {
+        auto* track = snapshot->tracks[i];
+        if (track && track->isArmed()) {
+          if (track->getType() == Track::Type::MIDI ||
+              track->getType() == Track::Type::Instrument) {
+            // Capture MIDI for this track (RT-safe, uses lock-free FIFO)
+            recordingManager_->captureMidi(message, currentPosition, 
+                                           static_cast<int>(i));
+          }
+        }
+      }
+    }
+  }
 }
 
 //==============================================================================
