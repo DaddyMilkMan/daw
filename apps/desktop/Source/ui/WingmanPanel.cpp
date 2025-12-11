@@ -16,7 +16,6 @@
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
 
-
 namespace zenith {
 
 //==============================================================================
@@ -315,6 +314,40 @@ void WingmanPanel::showSettings() {
   options.resizable = true;
 
   options.launchAsync();
+}
+
+//==============================================================================
+// SampleHunterAgent::Listener
+//==============================================================================
+
+void WingmanPanel::sampleDownloaded(
+    const struct zenith::ai::FoundSample &sample) {
+  juce::ignoreUnused(sample);
+  appendToConversation("Wingman", "Downloaded: " + sample.getSafeFilename());
+}
+
+void WingmanPanel::sampleAnalyzed(
+    const struct zenith::ai::FoundSample &sample) {
+  juce::ignoreUnused(sample);
+}
+
+void WingmanPanel::sampleImported(const juce::File &file) {
+  appendToConversation("Wingman", "Imported: " + file.getFileName());
+}
+
+void WingmanPanel::huntingProgressChanged(float progress,
+                                          const juce::String &status) {
+  setStatus(status, juce::Colour(0xff00aaff));
+}
+
+void WingmanPanel::huntingComplete(const struct zenith::ai::HuntingStats &stats,
+                                   bool success) {
+  juce::ignoreUnused(stats);
+  if (success) {
+    statusLabel->setText("Hunting Complete", juce::dontSendNotification);
+  } else {
+    statusLabel->setText("Hunting Failed", juce::dontSendNotification);
+  }
 }
 
 } // namespace zenith

@@ -10,10 +10,9 @@
 namespace zenith {
 
 //==============================================================================
-ClipSynchronizer::ClipSynchronizer(ProjectState& ps, Engine& eng)
-    : projectState(ps), engine(eng)
-{
-    DBG("ClipSynchronizer: Constructor");
+ClipSynchronizer::ClipSynchronizer(ProjectState &ps, Engine &eng)
+    : projectState(ps), engine(eng) {
+  DBG("ClipSynchronizer: Constructor");
 }
 
 ClipSynchronizer::~ClipSynchronizer() {
@@ -189,24 +188,30 @@ void ClipSynchronizer::syncEngineToProjectState() {
             clipNode.setProperty(zenith::ProjectState::PROP_LENGTH, lengthBeats,
                                  &projectState.getUndoManager());
 
-            // DBG("ClipSynchronizer: Updated clip " + clipName + " in track " + trackId);
+            // DBG("ClipSynchronizer: Updated clip " + clipName + " in track " +
+            // trackId);
           }
           break;
         }
       }
 
-      // If clip not found in zenith::ProjectState, it was just recorded - add it
+      // If clip not found in zenith::ProjectState, it was just recorded - add
+      // it
       if (!foundInProjectState) {
         // This would typically only happen for newly recorded clips
         juce::ValueTree newClip(zenith::ProjectState::ID_CLIP);
 
-        juce::String newClipId = "clip_" + juce::Uuid().toString().substring(0, 8);
-        
+        juce::String newClipId =
+            "clip_" + juce::Uuid().toString().substring(0, 8);
+
         // Use engine name if it has one, otherwise ID
-        if (clipName.isEmpty()) clipName = newClipId;
-        
-        newClip.setProperty(zenith::ProjectState::PROP_ID, juce::var(newClipId), nullptr);
-        newClip.setProperty(zenith::ProjectState::PROP_NAME, juce::var(clipName), nullptr);
+        if (clipName.isEmpty())
+          clipName = newClipId;
+
+        newClip.setProperty(zenith::ProjectState::PROP_ID, juce::var(newClipId),
+                            nullptr);
+        newClip.setProperty(zenith::ProjectState::PROP_NAME,
+                            juce::var(clipName), nullptr);
         newClip.setProperty(
             zenith::ProjectState::PROP_TYPE,
             juce::var(engineClip->getType() == zenith::Track::Clip::Type::MIDI
@@ -218,11 +223,15 @@ void ClipSynchronizer::syncEngineToProjectState() {
         double tempo = projectState.getTempo();
         double sampleRate = engine.getSampleRate();
 
-        double startBeats = samplesToBeats(engineClip->getStartPosition(), tempo, sampleRate);
-        double lengthBeats = samplesToBeats(engineClip->getLength(), tempo, sampleRate);
+        double startBeats =
+            samplesToBeats(engineClip->getStartPosition(), tempo, sampleRate);
+        double lengthBeats =
+            samplesToBeats(engineClip->getLength(), tempo, sampleRate);
 
-        newClip.setProperty(zenith::ProjectState::PROP_START, startBeats, nullptr);
-        newClip.setProperty(zenith::ProjectState::PROP_LENGTH, lengthBeats, nullptr);
+        newClip.setProperty(zenith::ProjectState::PROP_START, startBeats,
+                            nullptr);
+        newClip.setProperty(zenith::ProjectState::PROP_LENGTH, lengthBeats,
+                            nullptr);
 
         clipsNode.appendChild(newClip, &projectState.getUndoManager());
 
@@ -246,6 +255,24 @@ double ClipSynchronizer::samplesToBeats(int64_t samples, double tempo,
   // samples / sampleRate / (60 / tempo) = beats
   double seconds = static_cast<double>(samples) / sampleRate;
   return seconds / (60.0 / tempo);
+}
+
+void ClipSynchronizer::valueTreeChildAdded(
+    juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) {
+  juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
+}
+
+void ClipSynchronizer::valueTreeChildRemoved(
+    juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenRemoved,
+    int indexFromWhichChildWasRemoved) {
+  juce::ignoreUnused(parentTree, childWhichHasBeenRemoved,
+                     indexFromWhichChildWasRemoved);
+}
+
+void ClipSynchronizer::valueTreePropertyChanged(
+    juce::ValueTree &treeWhosePropertyHasChanged,
+    const juce::Identifier &property) {
+  juce::ignoreUnused(treeWhosePropertyHasChanged, property);
 }
 
 } // namespace zenith

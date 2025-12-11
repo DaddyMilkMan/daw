@@ -23,7 +23,6 @@
 #include "ZenithUIComponents.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -55,10 +54,13 @@ public:
 
 protected:
   // Skia draw callback
-  void drawSkiaContent(SkCanvas *canvas);
+  void drawSkiaContent(SkCanvas *canvas, int width, int height);
 
   // Timer callback for frame capture (Message Thread)
   void timerCallback() override;
+
+  void buildUI();
+  void syncProcessorToUI();
 
 private:
   ZenithPolySynthProcessor &processor;
