@@ -1,6 +1,6 @@
 # Zenith DAW - Documentation Index
 
-**Last Updated:** 2025-11-28 23:54 PST
+**Last Updated:** 2025-12-11 PST
 
 ---
 

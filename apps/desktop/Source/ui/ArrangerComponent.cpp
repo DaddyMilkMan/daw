@@ -171,8 +171,6 @@ void ArrangerComponent::valueTreeChildRemoved(juce::ValueTree &parent,
   repaint();
 }
 
-#endif
-
 void ArrangerComponent::valueTreeChildOrderChanged(juce::ValueTree &parent,
                                                    int oldIndex, int newIndex) {
   juce::ignoreUnused(parent, oldIndex, newIndex);
@@ -1168,29 +1166,12 @@ bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
 
   return false;
 }
-#endif
 
 //==============================================================================
 // DragAndDropTarget Interface
 //==============================================================================
 
-bool ArrangerComponent::isInterestedInDragSource(
-    const juce::DragAndDropTarget::SourceDetails &details) {
-  // Check if this is a browser drag
-  juce::String description = details.description.toString();
-
-  if (zenith::BrowserDragSource::isBrowserDrag(description)) {
-    auto type = zenith::BrowserDragSource::getTypeFromDescription(description);
-
-    // Accept audio files, MIDI files, instruments, and plugins
-    return type == zenith::BrowserItemType::AudioFile ||
-           type == zenith::BrowserItemType::MidiFile ||
-           type == zenith::BrowserItemType::Instrument ||
-           type == zenith::BrowserItemType::Plugin;
-  }
-
-  return false;
-}
+// Duplicate isInterestedInDragSource removed
 
 void ArrangerComponent::itemDragEnter(
     const juce::DragAndDropTarget::SourceDetails &details) {

@@ -22,6 +22,7 @@ All older prototypes have been **removed from the active codebase**:
 - **src/audio/** (early C++ engine prototype)
 - **src/juce-engine/** (placeholder skeleton)
 - **src/qt-qml/** (Qt6/QML UI experiment)
+- **src/renderer/** (Electron/React prototype)
 
 These are available in git history prior to commit `[Cleanup] Remove legacy projects` if needed for reference.
 
