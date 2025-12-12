@@ -796,15 +796,11 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors::TEXT_PRIMARY);
 
-    // Manual font setup - typography::getSkFont helper not available
-    SkFont nameFont;
-    nameFont.setSize(typography::FONT_MD);
-    nameFont.setSubpixel(true);
-    nameFont.setEdging(SkFont::Edging::kAntiAlias);
-
-    SkFont smallFont;
-    smallFont.setSize(typography::FONT_XS);
-    smallFont.setSubpixel(true);
+    // Use design system fonts for consistent typography
+    SkFont nameFont =
+        typography::getSkFont(typography::FONT_MD, FontWeight::Medium);
+    SkFont smallFont =
+        typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
 
     for (int i = firstVisibleTrackIndex; i < trackCount; ++i) {
       float y = trackIndexToY(i);
@@ -1640,5 +1636,20 @@ juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
   return juce::String(bar) + "." + juce::String(beat) + "." +
          juce::String(tick).paddedLeft('0', 2);
 }
+
+//==============================================================================
+// DragAndDropTarget - isInterestedInDragSource
+//==============================================================================
+bool ArrangerComponent::isInterestedInDragSource(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  // Accept drops from browser panel (audio/MIDI files, instruments, plugins)
+  juce::String description = details.description.toString();
+  return description.startsWith("BROWSER:");
+}
+
+//==============================================================================
+// Timer callback - Updates playhead position from Engine
+//==============================================================================
+void ArrangerComponent::timerCallback() { updatePlayheadFromEngine(); }
 
 } // namespace zenith

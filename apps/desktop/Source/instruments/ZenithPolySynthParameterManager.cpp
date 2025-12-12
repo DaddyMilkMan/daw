@@ -14,7 +14,6 @@
 #include "ZenithEffects.h"
 #include "ZenithPolySynthVoice.h"
 
-
 namespace zenith {
 
 //==============================================================================
@@ -520,7 +519,7 @@ void ZenithPolySynthParameterManager::applyToVoice(ZenithPolySynthVoice &voice,
   voice.setOsc2Sync(p.osc2Sync);
   voice.setOsc2FM(p.osc2FM);
   voice.setRingMod(p.ringMod);
-  voice.setFilterModel(p.filterModel);
+  voice.setFilterModel(static_cast<FilterModelType>(p.filterModel));
 
   // Filter
   voice.setFilterType(static_cast<zenith::FilterType>(p.filterType));

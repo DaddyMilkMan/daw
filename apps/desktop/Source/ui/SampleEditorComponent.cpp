@@ -1840,8 +1840,7 @@ void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
   textPaint.setColor(isEnabled ? SK_ColorWHITE
                                : SkColorSetA(SK_ColorWHITE, 100));
 
-  SkFont font;
-  font.setSize(16.0f);
+  SkFont font = design::getSkFont(16.0f, design::FontWeight::Regular);
 
   float textWidth = font.measureText(icon, strlen(icon), SkTextEncoding::kUTF8);
   float x = bounds.centerX() - textWidth / 2.0f;

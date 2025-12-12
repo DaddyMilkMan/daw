@@ -937,5 +937,34 @@ void Track::setSoloed(bool shouldBeSoloed) { soloed_.store(shouldBeSoloed); }
 bool Track::isSoloed() const { return soloed_.load(); }
 
 //==============================================================================
+//==============================================================================
+// Apply gain and pan to buffer (used for frozen track playback)
+void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
+  // Get current values
+  const float volume = mixerChannel.getVolume();
+  const float pan = mixerChannel.getPan();
+
+  // Apply mute
+  if (mixerChannel.isMuted() || mixerChannel.isSilencedBySolo()) {
+    buffer.clear();
+    return;
+  }
+
+  // Apply gain
+  buffer.applyGain(0, numSamples, volume);
+
+  // Apply pan (constant-power panning)
+  if (buffer.getNumChannels() >= 2 && std::abs(pan) > 0.001f) {
+    // Pan law: -3dB at center
+    float panRadians = pan * juce::MathConstants<float>::halfPi * 0.5f;
+    float leftGain =
+        std::cos(panRadians + juce::MathConstants<float>::pi * 0.25f);
+    float rightGain =
+        std::sin(panRadians + juce::MathConstants<float>::pi * 0.25f);
+
+    buffer.applyGain(0, 0, numSamples, leftGain);
+    buffer.applyGain(1, 0, numSamples, rightGain);
+  }
+}
 
 } // namespace zenith

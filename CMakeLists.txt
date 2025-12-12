@@ -340,4 +340,14 @@ foreach(LIB ${LIBS})
         get_target_property(LIB_OPTS ${LIB} INTERFACE_COMPILE_OPTIONS)
         message(STATUS "${LIB} INTERFACE_COMPILE_OPTIONS: ${LIB_OPTS}")
     endif()
+
 endforeach()
+
+# Copy Resources (Fonts) to Output Directory
+add_custom_command(TARGET ZenithDAW POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/apps/desktop/Resources/fonts
+    $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
+    COMMENT "Copying Fonts to Output Directory"
+)
+

@@ -5,269 +5,408 @@
     Created: 2025-12-11
     Author:  Zenith DAW Team
 
-    Glassmorphism rendering utilities for Zenith DAW's "Neon Noir" design.
-    
+    REAL Glassmorphism rendering utilities for Zenith DAW's "Neon Noir" design.
+
+    This is NOT fake transparency - it uses BackdropBlur to actually blur
+    the content BEHIND panels for authentic glass effects.
+
     Usage:
-      GlassmorphicPanel::draw(canvas, bounds, GlassmorphicPanel::Style::Elevated);
-      GlassmorphicPanel::drawWithAccent(canvas, bounds, design::colors::CYAN);
+      GlassmorphicPanel::draw(canvas, bounds,
+  GlassmorphicPanel::Style::Elevated); GlassmorphicPanel::drawWithAccent(canvas,
+  bounds, design::colors::CYAN);
 
   ==============================================================================
 */
 
 #pragma once
 
+#include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
+#include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
-#include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
 #include <effects/SkGradientShader.h>
+
 
 namespace zenith {
 
 /**
- * @brief Glassmorphism panel rendering utilities
- * 
+ * @brief Glassmorphism panel rendering utilities with REAL backdrop blur
+ *
  * Provides consistent glass-effect panels throughout the UI with:
- * - Semi-transparent backgrounds with blur
+ * - REAL backdrop blur (not fake transparency!)
  * - Top edge highlights
  * - Subtle drop shadows
  * - Optional accent color glows
+ *
+ * The blur effect captures and blurs whatever was drawn on the canvas
+ * BEFORE this panel, creating authentic glassmorphism.
  */
 class GlassmorphicPanel {
 public:
-    enum class Style {
-        Flat,       // Minimal: solid dark background
-        Subtle,     // Light glass effect (for nested panels)
-        Elevated,   // Standard glass with shadow (main panels)
-        Floating,   // Strong glass with pronounced shadow (dialogs/popups)
-        ActiveGlow  // Glass with neon glow border (focused/active elements)
+  enum class Style {
+    Flat,     // Minimal: solid dark background (no blur for performance)
+    Subtle,   // Light glass effect (8px blur, for nested panels)
+    Elevated, // Standard glass with shadow (16px blur, main panels)
+    Floating, // Strong glass with pronounced shadow (24px blur, dialogs/popups)
+    ActiveGlow // Glass with neon glow border (16px blur, focused/active
+               // elements)
+  };
+
+  struct Options {
+    Style style = Style::Elevated;
+    float cornerRadius = design::dimensions::RADIUS_LG;
+    SkColor accentColor = 0x00000000; // No accent by default
+    float glowIntensity = 1.0f;       // Multiplier for glow effects
+    bool drawTopHighlight = true;
+    bool drawShadow = true;
+    bool useBackdropBlur = true; // NEW: Enable real blur (can disable for perf)
+  };
+
+  /**
+   * @brief Get blur radius for a given style
+   */
+  static float getBlurRadiusForStyle(Style style) {
+    switch (style) {
+    case Style::Flat:
+      return 0.0f;
+    case Style::Subtle:
+      return 8.0f;
+    case Style::Elevated:
+      return 16.0f;
+    case Style::Floating:
+      return 24.0f;
+    case Style::ActiveGlow:
+      return 16.0f;
+    }
+    return 16.0f;
+  }
+
+  /**
+   * @brief Get tint color for a given style
+   */
+  static SkColor getTintColorForStyle(Style style) {
+    using namespace design;
+    switch (style) {
+    case Style::Flat:
+      return colors::BG_DARKEST;
+    case Style::Subtle:
+      return colors::BG_DARK;
+    case Style::Elevated:
+      return colors::BG_DARK;
+    case Style::Floating:
+      return colors::BG_MEDIUM;
+    case Style::ActiveGlow:
+      return colors::BG_DARK;
+    }
+    return colors::BG_DARK;
+  }
+
+  /**
+   * @brief Get tint opacity for a given style
+   */
+  static float getTintOpacityForStyle(Style style) {
+    switch (style) {
+    case Style::Flat:
+      return 1.0f; // Solid
+    case Style::Subtle:
+      return 0.75f; // More transparent
+    case Style::Elevated:
+      return 0.80f; // Standard
+    case Style::Floating:
+      return 0.70f; // More translucent
+    case Style::ActiveGlow:
+      return 0.75f; // Slightly more visible
+    }
+    return 0.80f;
+  }
+
+  /**
+   * @brief Draw a glassmorphic panel
+   * @param canvas The Skia canvas
+   * @param bounds The panel bounds as SkRect
+   * @param style The panel style
+   */
+  static void draw(SkCanvas *canvas, const SkRect &bounds,
+                   Style style = Style::Elevated) {
+    Options opts;
+    opts.style = style;
+    drawWithOptions(canvas, bounds, opts);
+  }
+
+  /**
+   * @brief Draw a glassmorphic panel with accent color glow
+   */
+  static void drawWithAccent(SkCanvas *canvas, const SkRect &bounds,
+                             SkColor accentColor,
+                             Style style = Style::ActiveGlow) {
+    Options opts;
+    opts.style = style;
+    opts.accentColor = accentColor;
+    drawWithOptions(canvas, bounds, opts);
+  }
+
+  /**
+   * @brief Draw a glassmorphic panel with full options control
+   *
+   * This is the main rendering function. It:
+   * 1. Draws a drop shadow (optional)
+   * 2. Applies REAL backdrop blur to content behind (or solid fallback)
+   * 3. Draws top edge highlights
+   * 4. Draws border
+   * 5. Draws accent glow (optional)
+   */
+  static void drawWithOptions(SkCanvas *canvas, const SkRect &bounds,
+                              const Options &opts) {
+    using namespace design;
+
+    float radius = opts.cornerRadius;
+    SkRRect rrect = SkRRect::MakeRectXY(bounds, radius, radius);
+    float globalGlow = Settings::getGlowIntensity() * opts.glowIntensity;
+
+    // 1. Drop Shadow (under the panel)
+    if (opts.drawShadow && opts.style != Style::Flat) {
+      drawDropShadow(canvas, rrect, opts.style);
+    }
+
+    // 2. Background: REAL backdrop blur OR solid fallback
+    float blurRadius = getBlurRadiusForStyle(opts.style);
+    SkColor tintColor = getTintColorForStyle(opts.style);
+    float tintOpacity = getTintOpacityForStyle(opts.style);
+
+    if (opts.useBackdropBlur && blurRadius > 0.0f &&
+        BackdropBlurConfig::isBlurEnabled()) {
+      // REAL GLASSMORPHISM - blur the content behind!
+      BackdropBlur::drawBlurredPanel(
+          canvas, bounds, radius, blurRadius, tintColor, tintOpacity,
+          false // We draw our own highlight below for more control
+      );
+    } else {
+      // Fallback to solid gradient (flat mode or performance reasons)
+      drawSolidBackground(canvas, rrect, opts.style);
+    }
+
+    // 3. Top Edge Highlight (glass effect)
+    if (opts.drawTopHighlight && opts.style != Style::Flat) {
+      drawTopHighlight(canvas, rrect, bounds);
+    }
+
+    // 4. Border
+    drawBorder(canvas, rrect, opts);
+
+    // 5. Accent Glow (for ActiveGlow style or explicit accent)
+    if (opts.accentColor != 0x00000000 && globalGlow > 0.01f) {
+      drawAccentGlow(canvas, rrect, opts.accentColor, globalGlow);
+    }
+  }
+
+  /**
+   * @brief Draw a horizontal divider line with subtle glow
+   */
+  static void drawDivider(SkCanvas *canvas, float x1, float y, float x2) {
+    using namespace design;
+
+    SkPaint dividerPaint;
+    dividerPaint.setAntiAlias(true);
+    dividerPaint.setStrokeWidth(1.0f);
+    dividerPaint.setColor(colors::BORDER_SUBTLE);
+    canvas->drawLine(x1, y, x2, y, dividerPaint);
+
+    // Subtle highlight below
+    SkPaint highlightPaint;
+    highlightPaint.setAntiAlias(true);
+    highlightPaint.setStrokeWidth(1.0f);
+    highlightPaint.setColor(SkColorSetARGB(10, 255, 255, 255));
+    canvas->drawLine(x1, y + 1.0f, x2, y + 1.0f, highlightPaint);
+  }
+
+  /**
+   * @brief Fill entire canvas with the darkest background gradient
+   *
+   * This is the base layer that glass panels blur.
+   */
+  static void fillBackground(SkCanvas *canvas, const SkRect &bounds) {
+    using namespace design;
+
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+
+    // Radial vignette-style gradient: slightly lighter in center
+    SkPoint gradPoints[2] = {
+        {bounds.centerX(), bounds.centerY() * 0.4f}, // Near top-center
+        {bounds.centerX(), bounds.bottom()}};
+    SkColor gradColors[3] = {
+        colors::BG_DARKER,  // Slightly lighter at top
+        colors::BG_DARKEST, // Dark in middle
+        0xFF08080C          // Even darker at bottom (vignette)
     };
+    SkScalar positions[3] = {0.0f, 0.5f, 1.0f};
 
-    struct Options {
-        Style style = Style::Elevated;
-        float cornerRadius = design::dimensions::RADIUS_LG;
-        SkColor accentColor = 0x00000000;  // No accent by default
-        float glowIntensity = 1.0f;        // Multiplier for glow effects
-        bool drawTopHighlight = true;
-        bool drawShadow = true;
-    };
+    bgPaint.setShader(SkGradientShader::MakeLinear(
+        gradPoints, gradColors, positions, 3, SkTileMode::kClamp));
 
-    /**
-     * @brief Draw a glassmorphic panel
-     * @param canvas The Skia canvas
-     * @param bounds The panel bounds as SkRect
-     * @param style The panel style
-     */
-    static void draw(SkCanvas* canvas, const SkRect& bounds, Style style = Style::Elevated) {
-        Options opts;
-        opts.style = style;
-        drawWithOptions(canvas, bounds, opts);
-    }
-
-    /**
-     * @brief Draw a glassmorphic panel with accent color glow
-     */
-    static void drawWithAccent(SkCanvas* canvas, const SkRect& bounds, 
-                               SkColor accentColor, Style style = Style::ActiveGlow) {
-        Options opts;
-        opts.style = style;
-        opts.accentColor = accentColor;
-        drawWithOptions(canvas, bounds, opts);
-    }
-
-    /**
-     * @brief Draw a glassmorphic panel with full options control
-     */
-    static void drawWithOptions(SkCanvas* canvas, const SkRect& bounds, const Options& opts) {
-        using namespace design;
-        
-        float radius = opts.cornerRadius;
-        SkRRect rrect = SkRRect::MakeRectXY(bounds, radius, radius);
-        float globalGlow = Settings::getGlowIntensity() * opts.glowIntensity;
-
-        // 1. Drop Shadow (under the panel)
-        if (opts.drawShadow && opts.style != Style::Flat) {
-            SkPaint shadowPaint;
-            shadowPaint.setAntiAlias(true);
-            shadowPaint.setColor(colors::GLASS_SHADOW);
-            
-            float blurAmount = 0.0f;
-            float offset = 0.0f;
-            
-            switch (opts.style) {
-                case Style::Subtle:
-                    blurAmount = effects::SHADOW_OFFSET_SM;
-                    offset = 1.0f;
-                    break;
-                case Style::Elevated:
-                    blurAmount = effects::SHADOW_OFFSET_MD;
-                    offset = 2.0f;
-                    break;
-                case Style::Floating:
-                case Style::ActiveGlow:
-                    blurAmount = effects::SHADOW_OFFSET_LG;
-                    offset = 4.0f;
-                    break;
-                default:
-                    break;
-            }
-            
-            if (blurAmount > 0) {
-                shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurAmount));
-                SkRRect shadowRRect = rrect;
-                shadowRRect.offset(0, offset);
-                canvas->drawRRect(shadowRRect, shadowPaint);
-            }
-        }
-
-        // 2. Background Fill (gradient from dark to darker)
-        {
-            SkPaint bgPaint;
-            bgPaint.setAntiAlias(true);
-            
-            SkColor bgTop, bgBottom;
-            
-            switch (opts.style) {
-                case Style::Flat:
-                    bgTop = colors::BG_DARKEST;
-                    bgBottom = colors::BG_DARKEST;
-                    break;
-                case Style::Subtle:
-                    bgTop = withAlpha(colors::BG_DARK, 0.8f);
-                    bgBottom = withAlpha(colors::BG_DARKER, 0.8f);
-                    break;
-                case Style::Elevated:
-                    bgTop = colors::BG_DARK;
-                    bgBottom = colors::BG_DARKER;
-                    break;
-                case Style::Floating:
-                    bgTop = colors::BG_MEDIUM;
-                    bgBottom = colors::BG_DARK;
-                    break;
-                case Style::ActiveGlow:
-                    bgTop = colors::BG_DARK;
-                    bgBottom = colors::BG_DARKEST;
-                    break;
-            }
-            
-            SkPoint gradPoints[2] = {
-                {bounds.centerX(), bounds.top()},
-                {bounds.centerX(), bounds.bottom()}
-            };
-            SkColor gradColors[2] = {bgTop, bgBottom};
-            
-            bgPaint.setShader(SkGradientShader::MakeLinear(
-                gradPoints, gradColors, nullptr, 2, SkTileMode::kClamp));
-            canvas->drawRRect(rrect, bgPaint);
-        }
-
-        // 3. Top Edge Highlight (glass effect)
-        if (opts.drawTopHighlight && opts.style != Style::Flat) {
-            SkPaint highlightPaint;
-            highlightPaint.setAntiAlias(true);
-            highlightPaint.setStyle(SkPaint::kStroke_Style);
-            highlightPaint.setStrokeWidth(1.0f);
-            
-            // Gradient from visible white at top to transparent
-            SkPoint hlPoints[2] = {
-                {bounds.left(), bounds.top()},
-                {bounds.left(), bounds.top() + bounds.height() * 0.3f}
-            };
-            SkColor hlColors[2] = {
-                colors::GLASS_HIGHLIGHT,  // ~10% white
-                0x00FFFFFF                // Transparent
-            };
-            highlightPaint.setShader(SkGradientShader::MakeLinear(
-                hlPoints, hlColors, nullptr, 2, SkTileMode::kClamp));
-            
-            SkRRect hlRRect = rrect;
-            hlRRect.inset(0.5f, 0.5f);
-            canvas->drawRRect(hlRRect, highlightPaint);
-        }
-
-        // 4. Border
-        {
-            SkPaint borderPaint;
-            borderPaint.setAntiAlias(true);
-            borderPaint.setStyle(SkPaint::kStroke_Style);
-            borderPaint.setStrokeWidth(1.0f);
-            
-            if (opts.style == Style::ActiveGlow && opts.accentColor != 0x00000000) {
-                borderPaint.setColor(withAlpha(opts.accentColor, 0.6f));
-            } else {
-                borderPaint.setColor(colors::BORDER_DEFAULT);
-            }
-            
-            SkRRect borderRRect = rrect;
-            borderRRect.inset(0.5f, 0.5f);
-            canvas->drawRRect(borderRRect, borderPaint);
-        }
-
-        // 5. Accent Glow (for ActiveGlow style or explicit accent)
-        if (opts.accentColor != 0x00000000 && globalGlow > 0.01f) {
-            SkPaint glowPaint;
-            glowPaint.setAntiAlias(true);
-            glowPaint.setStyle(SkPaint::kStroke_Style);
-            glowPaint.setStrokeWidth(2.0f);
-            glowPaint.setColor(withAlpha(opts.accentColor, 0.4f * globalGlow));
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-                kNormal_SkBlurStyle, effects::GLOW_MEDIUM * globalGlow));
-            
-            canvas->drawRRect(rrect, glowPaint);
-        }
-    }
-
-    /**
-     * @brief Draw a horizontal divider line with subtle glow
-     */
-    static void drawDivider(SkCanvas* canvas, float x1, float y, float x2) {
-        using namespace design;
-        
-        SkPaint dividerPaint;
-        dividerPaint.setAntiAlias(true);
-        dividerPaint.setStrokeWidth(1.0f);
-        dividerPaint.setColor(colors::BORDER_SUBTLE);
-        canvas->drawLine(x1, y, x2, y, dividerPaint);
-        
-        // Subtle highlight below
-        SkPaint highlightPaint;
-        highlightPaint.setAntiAlias(true);
-        highlightPaint.setStrokeWidth(1.0f);
-        highlightPaint.setColor(SkColorSetARGB(10, 255, 255, 255));
-        canvas->drawLine(x1, y + 1.0f, x2, y + 1.0f, highlightPaint);
-    }
-
-    /**
-     * @brief Fill entire canvas with the darkest background gradient
-     */
-    static void fillBackground(SkCanvas* canvas, const SkRect& bounds) {
-        using namespace design;
-        
-        SkPaint bgPaint;
-        bgPaint.setAntiAlias(true);
-        
-        // Radial vignette-style gradient: slightly lighter in center
-        SkPoint gradPoints[2] = {
-            {bounds.centerX(), bounds.centerY() * 0.4f},  // Near top-center
-            {bounds.centerX(), bounds.bottom()}
-        };
-        SkColor gradColors[3] = {
-            colors::BG_DARKER,   // Slightly lighter at top
-            colors::BG_DARKEST,  // Dark in middle
-            0xFF08080C           // Even darker at bottom (vignette)
-        };
-        SkScalar positions[3] = {0.0f, 0.5f, 1.0f};
-        
-        bgPaint.setShader(SkGradientShader::MakeLinear(
-            gradPoints, gradColors, positions, 3, SkTileMode::kClamp));
-        
-        canvas->drawRect(bounds, bgPaint);
-    }
+    canvas->drawRect(bounds, bgPaint);
+  }
 
 private:
-    GlassmorphicPanel() = delete;  // Static-only class
+  GlassmorphicPanel() = delete; // Static-only class
+
+  /**
+   * @brief Draw drop shadow under the panel
+   */
+  static void drawDropShadow(SkCanvas *canvas, const SkRRect &rrect,
+                             Style style) {
+    using namespace design;
+
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setColor(colors::GLASS_SHADOW);
+
+    float blurAmount = 0.0f;
+    float offset = 0.0f;
+
+    switch (style) {
+    case Style::Subtle:
+      blurAmount = effects::SHADOW_OFFSET_SM;
+      offset = 1.0f;
+      break;
+    case Style::Elevated:
+      blurAmount = effects::SHADOW_OFFSET_MD;
+      offset = 2.0f;
+      break;
+    case Style::Floating:
+    case Style::ActiveGlow:
+      blurAmount = effects::SHADOW_OFFSET_LG;
+      offset = 4.0f;
+      break;
+    default:
+      break;
+    }
+
+    if (blurAmount > 0) {
+      shadowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurAmount));
+      SkRRect shadowRRect = rrect;
+      shadowRRect.offset(0, offset);
+      canvas->drawRRect(shadowRRect, shadowPaint);
+    }
+  }
+
+  /**
+   * @brief Draw solid gradient background (fallback when blur is disabled)
+   */
+  static void drawSolidBackground(SkCanvas *canvas, const SkRRect &rrect,
+                                  Style style) {
+    using namespace design;
+
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+
+    SkColor bgTop, bgBottom;
+
+    switch (style) {
+    case Style::Flat:
+      bgTop = colors::BG_DARKEST;
+      bgBottom = colors::BG_DARKEST;
+      break;
+    case Style::Subtle:
+      bgTop = withAlpha(colors::BG_DARK, 0.8f);
+      bgBottom = withAlpha(colors::BG_DARKER, 0.8f);
+      break;
+    case Style::Elevated:
+      bgTop = colors::BG_DARK;
+      bgBottom = colors::BG_DARKER;
+      break;
+    case Style::Floating:
+      bgTop = colors::BG_MEDIUM;
+      bgBottom = colors::BG_DARK;
+      break;
+    case Style::ActiveGlow:
+      bgTop = colors::BG_DARK;
+      bgBottom = colors::BG_DARKEST;
+      break;
+    }
+
+    SkRect bounds = rrect.getBounds();
+    SkPoint gradPoints[2] = {{bounds.centerX(), bounds.top()},
+                             {bounds.centerX(), bounds.bottom()}};
+    SkColor gradColors[2] = {bgTop, bgBottom};
+
+    bgPaint.setShader(SkGradientShader::MakeLinear(
+        gradPoints, gradColors, nullptr, 2, SkTileMode::kClamp));
+    canvas->drawRRect(rrect, bgPaint);
+  }
+
+  /**
+   * @brief Draw top edge glass highlight
+   */
+  static void drawTopHighlight(SkCanvas *canvas, const SkRRect &rrect,
+                               const SkRect &bounds) {
+    using namespace design;
+
+    SkPaint highlightPaint;
+    highlightPaint.setAntiAlias(true);
+    highlightPaint.setStyle(SkPaint::kStroke_Style);
+    highlightPaint.setStrokeWidth(1.0f);
+
+    // Gradient from visible white at top to transparent
+    SkPoint hlPoints[2] = {
+        {bounds.left(), bounds.top()},
+        {bounds.left(), bounds.top() + bounds.height() * 0.3f}};
+    SkColor hlColors[2] = {
+        colors::GLASS_HIGHLIGHT, // ~10% white
+        0x00FFFFFF               // Transparent
+    };
+    highlightPaint.setShader(SkGradientShader::MakeLinear(
+        hlPoints, hlColors, nullptr, 2, SkTileMode::kClamp));
+
+    SkRRect hlRRect = rrect;
+    hlRRect.inset(0.5f, 0.5f);
+    canvas->drawRRect(hlRRect, highlightPaint);
+  }
+
+  /**
+   * @brief Draw panel border
+   */
+  static void drawBorder(SkCanvas *canvas, const SkRRect &rrect,
+                         const Options &opts) {
+    using namespace design;
+
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+
+    if (opts.style == Style::ActiveGlow && opts.accentColor != 0x00000000) {
+      borderPaint.setColor(withAlpha(opts.accentColor, 0.6f));
+    } else {
+      borderPaint.setColor(colors::BORDER_DEFAULT);
+    }
+
+    SkRRect borderRRect = rrect;
+    borderRRect.inset(0.5f, 0.5f);
+    canvas->drawRRect(borderRRect, borderPaint);
+  }
+
+  /**
+   * @brief Draw accent glow effect
+   */
+  static void drawAccentGlow(SkCanvas *canvas, const SkRRect &rrect,
+                             SkColor accentColor, float globalGlow) {
+    using namespace design;
+
+    SkPaint glowPaint;
+    glowPaint.setAntiAlias(true);
+    glowPaint.setStyle(SkPaint::kStroke_Style);
+    glowPaint.setStrokeWidth(2.0f);
+    glowPaint.setColor(withAlpha(accentColor, 0.4f * globalGlow));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(
+        kNormal_SkBlurStyle, effects::GLOW_MEDIUM * globalGlow));
+
+    canvas->drawRRect(rrect, glowPaint);
+  }
 };
 
 } // namespace zenith
