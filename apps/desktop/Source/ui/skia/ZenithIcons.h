@@ -23,7 +23,6 @@
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 
-
 namespace zenith {
 namespace icons {
 
@@ -478,6 +477,264 @@ inline SkPath Freeze() {
   path.moveTo(cx - 2.0f, cy - 6.0f);
   path.lineTo(cx, cy - 8.0f);
   path.lineTo(cx + 2.0f, cy - 6.0f);
+  return path;
+}
+
+// ============================================================================
+// EDIT ICONS (Undo, Redo, Copy, Paste, Cut, Delete)
+// ============================================================================
+
+/** Undo - counterclockwise arrow */
+inline SkPath Undo() {
+  SkPath path;
+  // Arrow arc
+  path.moveTo(7.0f, 11.0f);
+  path.lineTo(4.0f, 8.0f);
+  path.lineTo(7.0f, 5.0f);
+  // Curved arrow body
+  path.moveTo(4.0f, 8.0f);
+  path.lineTo(12.0f, 8.0f);
+  path.cubicTo(17.0f, 8.0f, 20.0f, 11.0f, 20.0f, 15.0f);
+  path.cubicTo(20.0f, 19.0f, 17.0f, 20.0f, 12.0f, 20.0f);
+  path.lineTo(8.0f, 20.0f);
+  return path;
+}
+
+/** Redo - clockwise arrow */
+inline SkPath Redo() {
+  SkPath path;
+  // Arrow head
+  path.moveTo(17.0f, 11.0f);
+  path.lineTo(20.0f, 8.0f);
+  path.lineTo(17.0f, 5.0f);
+  // Curved arrow body
+  path.moveTo(20.0f, 8.0f);
+  path.lineTo(12.0f, 8.0f);
+  path.cubicTo(7.0f, 8.0f, 4.0f, 11.0f, 4.0f, 15.0f);
+  path.cubicTo(4.0f, 19.0f, 7.0f, 20.0f, 12.0f, 20.0f);
+  path.lineTo(16.0f, 20.0f);
+  return path;
+}
+
+/** Copy - two overlapping documents */
+inline SkPath Copy() {
+  SkPath path;
+  // Back document
+  path.addRect(SkRect::MakeLTRB(8.0f, 4.0f, 18.0f, 16.0f));
+  // Front document
+  path.addRect(SkRect::MakeLTRB(6.0f, 8.0f, 16.0f, 20.0f));
+  return path;
+}
+
+/** Paste - clipboard with document */
+inline SkPath Paste() {
+  SkPath path;
+  // Clipboard outline
+  path.moveTo(6.0f, 6.0f);
+  path.lineTo(6.0f, 20.0f);
+  path.lineTo(18.0f, 20.0f);
+  path.lineTo(18.0f, 6.0f);
+  path.close();
+  // Clipboard clip
+  path.moveTo(9.0f, 4.0f);
+  path.lineTo(9.0f, 6.0f);
+  path.lineTo(15.0f, 6.0f);
+  path.lineTo(15.0f, 4.0f);
+  path.lineTo(16.0f, 4.0f);
+  path.lineTo(16.0f, 7.0f);
+  path.lineTo(8.0f, 7.0f);
+  path.lineTo(8.0f, 4.0f);
+  path.close();
+  return path;
+}
+
+/** Cut - scissors */
+inline SkPath Cut() {
+  SkPath path;
+  // Two circles (finger holes)
+  path.addCircle(7.0f, 17.0f, 3.0f);
+  path.addCircle(17.0f, 17.0f, 3.0f);
+  // Blades crossing
+  path.moveTo(7.0f, 14.0f);
+  path.lineTo(17.0f, 6.0f);
+  path.moveTo(17.0f, 14.0f);
+  path.lineTo(7.0f, 6.0f);
+  return path;
+}
+
+/** Delete/Trash - trash can */
+inline SkPath Delete() {
+  SkPath path;
+  // Trash can body
+  path.moveTo(6.0f, 8.0f);
+  path.lineTo(7.0f, 20.0f);
+  path.lineTo(17.0f, 20.0f);
+  path.lineTo(18.0f, 8.0f);
+  path.close();
+  // Lid
+  path.moveTo(5.0f, 8.0f);
+  path.lineTo(19.0f, 8.0f);
+  // Handle
+  path.moveTo(9.0f, 5.0f);
+  path.lineTo(9.0f, 8.0f);
+  path.moveTo(15.0f, 5.0f);
+  path.lineTo(15.0f, 8.0f);
+  path.moveTo(9.0f, 5.0f);
+  path.lineTo(15.0f, 5.0f);
+  return path;
+}
+
+/** Save - floppy disk */
+inline SkPath Save() {
+  SkPath path;
+  // Disk body
+  path.moveTo(5.0f, 4.0f);
+  path.lineTo(19.0f, 4.0f);
+  path.lineTo(19.0f, 20.0f);
+  path.lineTo(5.0f, 20.0f);
+  path.close();
+  // Label area
+  path.addRect(SkRect::MakeLTRB(8.0f, 4.0f, 16.0f, 10.0f));
+  // Write slot
+  path.addRect(SkRect::MakeLTRB(8.0f, 14.0f, 16.0f, 18.0f));
+  return path;
+}
+
+/** Edit/Pencil - pencil */
+inline SkPath Edit() {
+  SkPath path;
+  // Pencil body (angled rectangle)
+  path.moveTo(16.0f, 4.0f);
+  path.lineTo(20.0f, 8.0f);
+  path.lineTo(8.0f, 20.0f);
+  path.lineTo(4.0f, 20.0f);
+  path.lineTo(4.0f, 16.0f);
+  path.close();
+  // Tip line
+  path.moveTo(14.0f, 6.0f);
+  path.lineTo(18.0f, 10.0f);
+  return path;
+}
+
+/** ZoomIn - magnifier with plus */
+inline SkPath ZoomIn() {
+  SkPath path;
+  // Circle
+  path.addCircle(10.0f, 10.0f, 6.0f);
+  // Handle
+  path.moveTo(14.5f, 14.5f);
+  path.lineTo(20.0f, 20.0f);
+  // Plus
+  path.moveTo(10.0f, 7.0f);
+  path.lineTo(10.0f, 13.0f);
+  path.moveTo(7.0f, 10.0f);
+  path.lineTo(13.0f, 10.0f);
+  return path;
+}
+
+/** ZoomOut - magnifier with minus */
+inline SkPath ZoomOut() {
+  SkPath path;
+  // Circle
+  path.addCircle(10.0f, 10.0f, 6.0f);
+  // Handle
+  path.moveTo(14.5f, 14.5f);
+  path.lineTo(20.0f, 20.0f);
+  // Minus
+  path.moveTo(7.0f, 10.0f);
+  path.lineTo(13.0f, 10.0f);
+  return path;
+}
+
+/** Download - arrow pointing down into tray */
+inline SkPath Download() {
+  SkPath path;
+  // Arrow down
+  path.moveTo(12.0f, 4.0f);
+  path.lineTo(12.0f, 14.0f);
+  path.moveTo(8.0f, 10.0f);
+  path.lineTo(12.0f, 14.0f);
+  path.lineTo(16.0f, 10.0f);
+  // Tray
+  path.moveTo(4.0f, 17.0f);
+  path.lineTo(4.0f, 20.0f);
+  path.lineTo(20.0f, 20.0f);
+  path.lineTo(20.0f, 17.0f);
+  return path;
+}
+
+/** Upload - arrow pointing up from tray */
+inline SkPath Upload() {
+  SkPath path;
+  // Arrow up
+  path.moveTo(12.0f, 14.0f);
+  path.lineTo(12.0f, 4.0f);
+  path.moveTo(8.0f, 8.0f);
+  path.lineTo(12.0f, 4.0f);
+  path.lineTo(16.0f, 8.0f);
+  // Tray
+  path.moveTo(4.0f, 17.0f);
+  path.lineTo(4.0f, 20.0f);
+  path.lineTo(20.0f, 20.0f);
+  path.lineTo(20.0f, 17.0f);
+  return path;
+}
+
+/** Lock - padlock closed */
+inline SkPath Lock() {
+  SkPath path;
+  // Lock body
+  path.addRoundRect(SkRect::MakeLTRB(6.0f, 11.0f, 18.0f, 20.0f), 2.0f, 2.0f);
+  // Shackle
+  path.moveTo(8.0f, 11.0f);
+  path.lineTo(8.0f, 8.0f);
+  path.cubicTo(8.0f, 5.0f, 10.0f, 4.0f, 12.0f, 4.0f);
+  path.cubicTo(14.0f, 4.0f, 16.0f, 5.0f, 16.0f, 8.0f);
+  path.lineTo(16.0f, 11.0f);
+  return path;
+}
+
+/** Unlock - padlock open */
+inline SkPath Unlock() {
+  SkPath path;
+  // Lock body
+  path.addRoundRect(SkRect::MakeLTRB(6.0f, 11.0f, 18.0f, 20.0f), 2.0f, 2.0f);
+  // Open shackle
+  path.moveTo(8.0f, 11.0f);
+  path.lineTo(8.0f, 8.0f);
+  path.cubicTo(8.0f, 5.0f, 10.0f, 4.0f, 12.0f, 4.0f);
+  path.cubicTo(14.0f, 4.0f, 16.0f, 5.0f, 16.0f, 8.0f);
+  return path;
+}
+
+/** Visible/Eye - eye icon */
+inline SkPath Eye() {
+  SkPath path;
+  // Eye shape
+  path.moveTo(4.0f, 12.0f);
+  path.cubicTo(4.0f, 12.0f, 8.0f, 6.0f, 12.0f, 6.0f);
+  path.cubicTo(16.0f, 6.0f, 20.0f, 12.0f, 20.0f, 12.0f);
+  path.cubicTo(20.0f, 12.0f, 16.0f, 18.0f, 12.0f, 18.0f);
+  path.cubicTo(8.0f, 18.0f, 4.0f, 12.0f, 4.0f, 12.0f);
+  path.close();
+  // Pupil
+  path.addCircle(12.0f, 12.0f, 3.0f);
+  return path;
+}
+
+/** Hidden/EyeOff - eye with slash */
+inline SkPath EyeOff() {
+  SkPath path;
+  // Eye shape
+  path.moveTo(4.0f, 12.0f);
+  path.cubicTo(4.0f, 12.0f, 8.0f, 6.0f, 12.0f, 6.0f);
+  path.cubicTo(16.0f, 6.0f, 20.0f, 12.0f, 20.0f, 12.0f);
+  path.cubicTo(20.0f, 12.0f, 16.0f, 18.0f, 12.0f, 18.0f);
+  path.cubicTo(8.0f, 18.0f, 4.0f, 12.0f, 4.0f, 12.0f);
+  path.close();
+  // Slash
+  path.moveTo(4.0f, 4.0f);
+  path.lineTo(20.0f, 20.0f);
   return path;
 }
 

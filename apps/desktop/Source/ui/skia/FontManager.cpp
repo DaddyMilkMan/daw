@@ -15,7 +15,6 @@
 #include <include/core/SkData.h>
 #include <include/core/SkStream.h>
 
-
 // Platform-specific font manager includes
 #ifdef _WIN32
 #include <include/ports/SkTypeface_win.h>
@@ -106,8 +105,26 @@ void FontManager::initialize() {
                               FontWeight::Regular);
   bool monoMedium = loadFont("JetBrainsMono-Medium.ttf", FontFamily::Mono,
                              FontWeight::Medium);
+  // Try SemiBold first, fallback to Medium if not present
+  bool monoSemiBold = loadFont("JetBrainsMono-SemiBold.ttf", FontFamily::Mono,
+                               FontWeight::SemiBold);
   bool monoBold =
       loadFont("JetBrainsMono-Bold.ttf", FontFamily::Mono, FontWeight::Bold);
+
+  // Create synthetic weight fallbacks for missing fonts
+  // This ensures getFont() always returns a usable typeface
+  int monoIdx = static_cast<int>(FontFamily::Mono);
+
+  // If SemiBold missing, use Medium as fallback
+  if (!monoSemiBold && monoMedium) {
+    typefaces_[monoIdx][2] = typefaces_[monoIdx][1]; // SemiBold = Medium
+    DBG("[FontManager] Using Medium as SemiBold fallback for Mono");
+  }
+  // If SemiBold still missing but Bold exists, use Bold
+  if (!typefaces_[monoIdx][2] && monoBold) {
+    typefaces_[monoIdx][2] = typefaces_[monoIdx][3]; // SemiBold = Bold
+    DBG("[FontManager] Using Bold as SemiBold fallback for Mono");
+  }
 
   // Display family shares typefaces with UI family
   // (Could load InterDisplay variants in the future for optical sizing)
