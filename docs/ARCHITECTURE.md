@@ -221,8 +221,8 @@ InstrumentRegistry
 - **CPU Usage**: Multi-threaded track processing (future)
 
 ### UI Rendering
-- **Skia**: GPU-accelerated, 60 FPS target
-- **JUCE Fallback**: Software rendering, 30 FPS acceptable
+- **Skia**: GPU-accelerated (Metal on macOS, Direct3D 12 on Windows, Vulkan on Linux), 60 FPS target
+- **JUCE Fallback**: Software rendering (OpenGL legacy support available)
 - **Dirty Regions**: Only repaint changed areas
 
 ### Memory Usage
