@@ -1,19 +1,34 @@
 if(ZENITH_ENABLE_SKIA)
     target_sources(ZenithDAW PRIVATE
+        # Core UI
         BottomBar.cpp
         BrowserPanel.cpp
         DebugConsoleComponent.cpp
         RightSidePanel.cpp
-        SkiaButton.cpp
         SkiaComponent.cpp
-        SkiaKnob.cpp
         SkiaMainWindowIntegration.cpp
-        SkiaSlider.cpp
         TransportBar.cpp
         ZenithDesignSystem.cpp
         ZenithLayout.cpp
         ZenithPolySynthUI.cpp
-        ../../rendering/SkiaRenderer.cpp
         ExportDialog.cpp
+        ../../rendering/SkiaRenderer.cpp
+        
+        # Legacy Skia widgets (to be deprecated)
+        SkiaButton.cpp
+        SkiaKnob.cpp
+        SkiaSlider.cpp
+        
+        # New Zenith widget system
+        widgets/ZenithControl.cpp
+        widgets/ZenithKnob.cpp
+        widgets/ZenithSlider.cpp
+        widgets/ZenithButton.cpp
+        widgets/ZenithDropdown.cpp
+        widgets/ZenithToggle.cpp
+        widgets/ZenithTextInput.cpp
+        widgets/ZenithModMatrix.cpp
+        widgets/ZenithTooltipOverlay.cpp
+        widgets/ZenithVisualizer.cpp
     )
 endif()
