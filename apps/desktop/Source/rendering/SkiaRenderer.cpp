@@ -33,6 +33,7 @@
 #include <gpu/ganesh/d3d/GrD3DBackendContext.h>
 #include <wrl/client.h>
 
+
 using Microsoft::WRL::ComPtr;
 #endif
 
@@ -343,58 +344,58 @@ bool SkiaRenderer::createVulkanContext() {
 #endif
 
 #if JUCE_WINDOWS
-bool SkiaRenderer::createD3DContext()
-{
-    DBG("SkiaRenderer: Creating D3D12 context...");
+bool SkiaRenderer::createD3DContext() {
+  DBG("SkiaRenderer: Creating D3D12 context...");
 
-    // 1. Enable Debug Layer (Debug builds only)
+  // 1. Enable Debug Layer (Debug builds only)
 #if JUCE_DEBUG
-    ComPtr<ID3D12Debug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-        debugController->EnableDebugLayer();
-    }
+  ComPtr<ID3D12Debug> debugController;
+  if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+    debugController->EnableDebugLayer();
+  }
 #endif
 
-    // 2. Create Factory
-    ComPtr<IDXGIFactory4> factory;
-    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) {
-        DBG("SkiaRenderer: Failed to create DXGI factory");
-        return false;
-    }
-
-    // 3. Create Device
-    ComPtr<ID3D12Device> device;
-    if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) {
-        DBG("SkiaRenderer: Failed to create D3D12 device");
-        return false;
-    }
-
-    // 4. Create Command Queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    
-    ComPtr<ID3D12CommandQueue> queue;
-    if (FAILED(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&queue)))) {
-        DBG("SkiaRenderer: Failed to create command queue");
-        return false;
-    }
-
-    // 5. Create Skia Context
-    GrD3DBackendContext backendContext;
-    backendContext.fAdapter = nullptr; // Skia will query if needed
-    backendContext.fDevice = device;
-    backendContext.fQueue = queue;
-    
-    grContext_ = GrDirectContext::MakeDirect3D(backendContext);
-    
-    if (grContext_) {
-        DBG("SkiaRenderer: D3D12 context created successfully");
-        return true;
-    }
-    
-    DBG("SkiaRenderer: Failed to create GrDirectContext from D3D12 device");
+  // 2. Create Factory
+  ComPtr<IDXGIFactory4> factory;
+  if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) {
+    DBG("SkiaRenderer: Failed to create DXGI factory");
     return false;
+  }
+
+  // 3. Create Device
+  ComPtr<ID3D12Device> device;
+  if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0,
+                               IID_PPV_ARGS(&device)))) {
+    DBG("SkiaRenderer: Failed to create D3D12 device");
+    return false;
+  }
+
+  // 4. Create Command Queue
+  D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+  queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+  queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+
+  ComPtr<ID3D12CommandQueue> queue;
+  if (FAILED(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&queue)))) {
+    DBG("SkiaRenderer: Failed to create command queue");
+    return false;
+  }
+
+  // 5. Create Skia Context
+  GrD3DBackendContext backendContext;
+  backendContext.fAdapter = nullptr; // Skia will query if needed
+  backendContext.fDevice = device;
+  backendContext.fQueue = queue;
+
+  grContext_ = GrDirectContext::MakeDirect3D(backendContext);
+
+  if (grContext_) {
+    DBG("SkiaRenderer: D3D12 context created successfully");
+    return true;
+  }
+
+  DBG("SkiaRenderer: Failed to create GrDirectContext from D3D12 device");
+  return false;
 }
 #endif
 
