@@ -245,9 +245,7 @@ public:
   //==========================================================================
 
   const HuntingStats &getStats() const { return stats_; }
-  const std::vector<FoundSample> &getFoundSamples() const {
-    return foundSamples_;
-  }
+  std::vector<FoundSample> getFoundSamples() const;
   std::vector<juce::File> getImportedFiles() const;
   const GenreContext &getDetectedGenre() const { return genreContext_; }
 
@@ -327,6 +325,7 @@ private:
   std::atomic<bool> isHunting_{false};
   std::atomic<float> progress_{0.0f};
   juce::CriticalSection statusLock_;
+  juce::CriticalSection samplesLock_; // Protects foundSamples_
   juce::String currentStatus_;
 
   // Queues
