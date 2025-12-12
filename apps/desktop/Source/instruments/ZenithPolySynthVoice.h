@@ -132,7 +132,6 @@ public:
     lfo2SyncRate_ = rate;
     lfo2Retr_ = retr;
   }
-
   // Flagship Setters (public for ZenithPolySynth access)
   void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
   void setOsc2FM(float amount) { osc2FM_ = amount; }

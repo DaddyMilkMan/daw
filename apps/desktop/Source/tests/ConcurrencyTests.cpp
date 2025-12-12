@@ -1,9 +1,8 @@
-#include "../../include/EngineEvent.h"
 #include <atomic>
+#include <thread>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include <thread>
-
+#include "../../include/EngineEvent.h"
 
 namespace zenith {
 namespace tests {
@@ -40,19 +39,20 @@ public:
       std::atomic<bool> writerFinished{false};
 
       std::thread reader([&]() {
-        while (!writerFinished.load()) {
+        while (true) {
           juce::MidiBuffer buffer;
           fifo.drainTo(buffer, 512);
           receivedCount += buffer.getNumEvents();
+
+          if (writerFinished.load(std::memory_order_acquire) &&
+              buffer.getNumEvents() == 0) {
+            // Writer is done and the queue is empty, so we can exit.
+            break;
+          }
+
+          // Active spin with yield - standard for lock-free testing
+          // Avoids OS scheduler sleep granularity issues (15ms+)
           std::this_thread::yield();
-        }
-        // Drain any remaining messages after writer has finished
-        while (true) {
-            juce::MidiBuffer buffer;
-            fifo.drainTo(buffer, 512);
-            int numEvents = buffer.getNumEvents();
-            if (numEvents == 0) break;
-            receivedCount += numEvents;
         }
       });
 
