@@ -818,8 +818,9 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
   if (buffer.getNumChannels() == 1) {
     buffer.applyGain(0, 0, numSamples, gain);
   } else if (buffer.getNumChannels() == 2) {
-    float gainL = gain * ((pan <= 0.0f) ? 1.0f : (1.0f - pan));
-    float gainR = gain * ((pan >= 0.0f) ? 1.0f : (1.0f + pan));
+    float panPosition = (pan + 1.0f) * 0.5f; // normalize pan from [-1, 1] to [0, 1]
+    float gainL = gain * (1.0f - panPosition);
+    float gainR = gain * panPosition;
 
     buffer.applyGain(0, 0, numSamples, gainL);
     buffer.applyGain(1, 0, numSamples, gainR);
@@ -828,9 +829,11 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                               int numSamples) {
+  // Delegate to mixer channel
   juce::ignoreUnused(buffer, numSamples);
-  // Metering is handled internally by MixerChannel::getNextAudioBlock()
-  // This method is a no-op stub for interface compatibility
+  // Note: MixerChannel calculates levels during process, but if we need
+  // external update: mixerChannel.updateMeters(info); // Assuming this method
+  // exists or similar logic
 }
 
 //==============================================================================
