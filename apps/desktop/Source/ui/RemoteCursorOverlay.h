@@ -8,6 +8,7 @@
 #pragma once
 #include "../network/CollaborationManager.h"
 #include "skia/SkiaComponent.h"
+#include "skia/ZenithDesignSystem.h"
 #include <JuceHeader.h>
 #include <map>
 #include <string>
@@ -124,8 +125,8 @@ public:
       canvas->drawPath(cursorPath, paint);
 
       // --- 2. Name Bubble ---
-      SkFont font;
-      font.setSize(12.0f);
+      SkFont font =
+          zenith::design::getSkFont(12.0f, zenith::design::FontWeight::Bold);
       std::string nameStr = user.name.toStdString();
       float textWidth = font.measureText(nameStr.c_str(), nameStr.length(),
                                          SkTextEncoding::kUTF8);

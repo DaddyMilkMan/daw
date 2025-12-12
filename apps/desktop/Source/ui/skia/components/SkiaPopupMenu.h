@@ -12,10 +12,9 @@
 
 #pragma once
 
-#include "SkiaButton.h"
+#include "../SkiaButton.h"
 #include "SkiaComponent.h"
 #include <juce_core/juce_core.h>
-
 
 namespace zenith {
 

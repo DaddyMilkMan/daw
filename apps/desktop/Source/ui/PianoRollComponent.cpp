@@ -7,16 +7,16 @@
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
 #include <algorithm>
 #include <cmath>
-#include <limits>
 #include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
-#include <core/SkRRect.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
-#include <effects/SkGradientShader.h>
+#include <core/SkPaint.h>
+#include <core/SkRRect.h>
+#include <core/SkRect.h>
 #include <effects/SkDashPathEffect.h>
+#include <effects/SkGradientShader.h>
+#include <limits>
 
 using namespace zenith;
 
@@ -895,277 +895,297 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress &key) {
     quantizeSelected(gridBeats, 1.0f, 0.0f);
     return true;
   }
-  
+
   // ... (keep simplified, delegates handle complex stuff if needed)
-  
+
   return false;
 }
 
-void PianoRollComponent::resized() {
-    updateNoteRectangles();
-}
+void PianoRollComponent::resized() { updateNoteRectangles(); }
 
-void PianoRollComponent::quantizeSelected(double grid, float strength, float swing) {
-    if (grid <= 0.0) return;
+void PianoRollComponent::quantizeSelected(double grid, float strength,
+                                          float swing) {
+  if (grid <= 0.0)
+    return;
 
-    // Start undo transaction
-    projectState.getUndoManager().beginNewTransaction("Quantize");
+  // Start undo transaction
+  projectState.getUndoManager().beginNewTransaction("Quantize");
 
-    bool anyChanged = false;
+  bool anyChanged = false;
 
-    for (auto& note : noteRects) {
-        if (!note.selected) continue;
+  for (auto &note : noteRects) {
+    if (!note.selected)
+      continue;
 
-        double originalStart = note.startBeats;
-        
-        // Simple quantization
-        double quantizedStart = std::round(originalStart / grid) * grid;
+    double originalStart = note.startBeats;
 
-        // Apply strength (0.0 to 1.0)
-        double newStart = originalStart + (quantizedStart - originalStart) * strength;
+    // Simple quantization
+    double quantizedStart = std::round(originalStart / grid) * grid;
 
-        // Note: Swing logic omitted for brevity
+    // Apply strength (0.0 to 1.0)
+    double newStart =
+        originalStart + (quantizedStart - originalStart) * strength;
 
-        if (std::abs(newStart - originalStart) > 0.0001) {
-            projectState.moveMidiNote(currentClip.clipId, note.id, newStart, note.pitch, "");
-            anyChanged = true;
-        }
+    // Note: Swing logic omitted for brevity
+
+    if (std::abs(newStart - originalStart) > 0.0001) {
+      projectState.moveMidiNote(currentClip.clipId, note.id, newStart,
+                                note.pitch, "");
+      anyChanged = true;
     }
-    
-    if (anyChanged)
-        repaint();
+  }
+
+  if (anyChanged)
+    repaint();
 }
 
-void PianoRollComponent::drawSkia(SkCanvas* canvas) {
-    if (!canvas) return;
-    using namespace zenith::design;
+void PianoRollComponent::drawSkia(SkCanvas *canvas) {
+  if (!canvas)
+    return;
+  using namespace zenith::design;
 
-    // Background (Deep Slate)
-    canvas->clear(colors::BG_DARKEST);
+  // Background (Deep Slate)
+  canvas->clear(colors::BG_DARKEST);
 
-    SkPaint paint;
-    paint.setAntiAlias(true);
+  SkPaint paint;
+  paint.setAntiAlias(true);
 
-    auto localBounds = getLocalBounds();
-    float width = (float)localBounds.getWidth();
-    float height = (float)localBounds.getHeight();
-    float notesHeight = height - RULER_HEIGHT - velocityLaneHeight;
+  auto localBounds = getLocalBounds();
+  float width = (float)localBounds.getWidth();
+  float height = (float)localBounds.getHeight();
+  float notesHeight = height - RULER_HEIGHT - velocityLaneHeight;
 
-    // 1. Piano Keys Area Background
-    SkRect pianoRect = SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
-    paint.setColor(colors::BG_DARKER);
-    canvas->drawRect(pianoRect, paint);
+  // 1. Piano Keys Area Background
+  SkRect pianoRect =
+      SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
+  paint.setColor(colors::BG_DARKER);
+  canvas->drawRect(pianoRect, paint);
 
-    // 2. Grid Lines (Vertical) - Added for "Real" feel
-    canvas->save();
-    SkRect noteAreaRect = SkRect::MakeXYWH(PIANO_WIDTH, RULER_HEIGHT, width - PIANO_WIDTH, notesHeight);
-    canvas->clipRect(noteAreaRect);
-    
+  // 2. Grid Lines (Vertical) - Added for "Real" feel
+  canvas->save();
+  SkRect noteAreaRect = SkRect::MakeXYWH(PIANO_WIDTH, RULER_HEIGHT,
+                                         width - PIANO_WIDTH, notesHeight);
+  canvas->clipRect(noteAreaRect);
+
+  paint.setColor(colors::BORDER_SUBTLE);
+  paint.setStrokeWidth(1.0f);
+  // Draw vertical lines for beats
+  // We iterate visible beat range
+  double startBeat = std::floor(pixelsToBeats(PIANO_WIDTH));
+  double endBeat = pixelsToBeats(width);
+
+  // Optimization: Don't draw too many lines if zoomed out
+  double beatStep = (pixelsPerBeat < 15.0) ? 4.0 : 1.0;
+
+  for (double b = startBeat; b <= endBeat; b += beatStep) {
+    float x = PIANO_WIDTH + beatsToPixels(b);
+    if (x >= PIANO_WIDTH) {
+      canvas->drawLine(x, RULER_HEIGHT, x, RULER_HEIGHT + notesHeight, paint);
+    }
+  }
+  canvas->restore();
+
+  // 3. Draw Keys and Horizontal Grid Lines
+  int topPitch = pixelsToPitch(RULER_HEIGHT);
+  int bottomPitch = pixelsToPitch(RULER_HEIGHT + notesHeight);
+
+  topPitch = juce::jlimit(0, 127, topPitch);
+  bottomPitch = juce::jlimit(0, 127, bottomPitch);
+
+  for (int p = bottomPitch; p <= topPitch; ++p) {
+    float y = pitchToPixels(p) + RULER_HEIGHT;
+    float h = pixelsPerPitch;
+
+    if (y < RULER_HEIGHT - h || y >= RULER_HEIGHT + notesHeight)
+      continue;
+
+    int noteInOctave = p % 12;
+    bool black = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 ||
+                  noteInOctave == 8 || noteInOctave == 10);
+
+    // Draw Key
+    SkRect keyRect = SkRect::MakeXYWH(0, y, PIANO_WIDTH, h);
+    paint.setStyle(SkPaint::kFill_Style);
+    if (black) {
+      // Slick dark key
+      paint.setColor(colors::BG_DARKEST);
+      canvas->drawRect(keyRect, paint);
+    } else {
+      // Slick white key (actually light grey)
+      paint.setColor(colors::TEXT_SECONDARY); // #A1A1AA
+      canvas->drawRect(keyRect, paint);
+
+      // Shadow for depth
+      SkPaint shadow;
+      shadow.setColor(SkColorSetARGB(50, 0, 0, 0));
+      canvas->drawRect(SkRect::MakeXYWH(0, y + h - 1, PIANO_WIDTH, 1), shadow);
+    }
+
+    // Key Label (C notes only)
+    if (noteInOctave == 0 && pixelsPerPitch > 12.0f) {
+      SkPaint textPaint;
+      textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
+      textPaint.setAntiAlias(true);
+      SkFont font = getMonoFont(
+          juce::jmin(12.0f, (float)(pixelsPerPitch * 0.8f)), FontWeight::Bold);
+
+      juce::String label = "C" + juce::String(p / 12 - 2); // MIDI C3 = 60
+      canvas->drawString(label.toStdString().c_str(), PIANO_WIDTH - 25.0f,
+                         y + h * 0.7f, font, textPaint);
+    }
+
+    // Horizontal Grid Line
     paint.setColor(colors::BORDER_SUBTLE);
     paint.setStrokeWidth(1.0f);
-    // Draw vertical lines for beats
-    // We iterate visible beat range
-    double startBeat = std::floor(pixelsToBeats(PIANO_WIDTH));
-    double endBeat = pixelsToBeats(width);
-    
-    // Optimization: Don't draw too many lines if zoomed out
-    double beatStep = (pixelsPerBeat < 15.0) ? 4.0 : 1.0;
+    canvas->drawLine(PIANO_WIDTH, y + h, width, y + h, paint);
+  }
 
-    for (double b = startBeat; b <= endBeat; b += beatStep) {
-        float x = PIANO_WIDTH + beatsToPixels(b);
-        if (x >= PIANO_WIDTH) {
-            canvas->drawLine(x, RULER_HEIGHT, x, RULER_HEIGHT + notesHeight, paint);
-        }
+  // 4. Notes
+  canvas->save();
+  canvas->clipRect(noteAreaRect);
+
+  SkPaint selectedGlowPaint;
+  selectedGlowPaint.setColor(colors::NEON_GREEN);
+  selectedGlowPaint.setMaskFilter(
+      SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, 4.0f));
+
+  for (const auto &note : noteRects) {
+    // Culling
+    if (note.bounds.getY() > height || note.bounds.getBottom() < 0)
+      continue;
+    if (note.bounds.getX() > width || note.bounds.getRight() < PIANO_WIDTH)
+      continue;
+
+    SkRect r =
+        SkRect::MakeXYWH(note.bounds.getX(), note.bounds.getY(),
+                         note.bounds.getWidth(), note.bounds.getHeight());
+
+    // Inner Rect for pseudo-3D
+    SkRect inner = r.makeInset(1.0f, 1.0f);
+    SkRRect rr = SkRRect::MakeRectXY(inner, 2.0f, 2.0f);
+
+    if (note.selected) {
+      // Glow
+      SkRect outsetRect = rr.rect().makeOutset(2.0f, 2.0f);
+      canvas->drawRect(outsetRect, selectedGlowPaint);
+      paint.setColor(colors::NEON_GREEN);
+    } else {
+      // Standard Note Color (Magenta/Cyan gradient logic or just flat for now)
+      paint.setColor(colors::MAGENTA);
     }
-    canvas->restore();
 
-    // 3. Draw Keys and Horizontal Grid Lines
-    int topPitch = pixelsToPitch(RULER_HEIGHT);
-    int bottomPitch = pixelsToPitch(RULER_HEIGHT + notesHeight);
-    
-    topPitch = juce::jlimit(0, 127, topPitch);
-    bottomPitch = juce::jlimit(0, 127, bottomPitch);
+    // Gradient for note
+    SkPoint pts[2] = {{r.left(), r.top()}, {r.left(), r.bottom()}};
+    SkColor nColors[2] = {lighten(paint.getColor(), 0.1f),
+                          darken(paint.getColor(), 0.1f)};
+    paint.setShader(SkGradientShader::MakeLinear(pts, nColors, nullptr, 2,
+                                                 SkTileMode::kClamp));
 
-    for (int p = bottomPitch; p <= topPitch; ++p) {
-        float y = pitchToPixels(p) + RULER_HEIGHT;
-        float h = pixelsPerPitch;
-        
-        if (y < RULER_HEIGHT - h || y >= RULER_HEIGHT + notesHeight) continue;
+    canvas->drawRRect(rr, paint);
+    paint.setShader(nullptr);
 
-        int noteInOctave = p % 12;
-        bool black = (noteInOctave == 1 || noteInOctave == 3 || noteInOctave == 6 || noteInOctave == 8 || noteInOctave == 10);
+    // Border
+    SkPaint border;
+    border.setStyle(SkPaint::kStroke_Style);
+    border.setColor(SkColorSetARGB(100, 0, 0, 0));
+    border.setAntiAlias(true);
+    canvas->drawRRect(rr, border);
 
-        // Draw Key
-        SkRect keyRect = SkRect::MakeXYWH(0, y, PIANO_WIDTH, h);
-        paint.setStyle(SkPaint::kFill_Style);
-        if (black) {
-             // Slick dark key
-             paint.setColor(colors::BG_DARKEST); 
-             canvas->drawRect(keyRect, paint);
-        } else {
-             // Slick white key (actually light grey)
-             paint.setColor(colors::TEXT_SECONDARY); // #A1A1AA
-             canvas->drawRect(keyRect, paint);
-             
-             // Shadow for depth
-             SkPaint shadow;
-             shadow.setColor(SkColorSetARGB(50, 0, 0, 0));
-             canvas->drawRect(SkRect::MakeXYWH(0, y + h - 1, PIANO_WIDTH, 1), shadow);
-        }
-        
-        // Key Label (C notes only)
-        if (noteInOctave == 0 && pixelsPerPitch > 12.0f) {
-            SkPaint textPaint;
-            textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
-            textPaint.setAntiAlias(true);
-            SkFont font;
-            font.setSize(juce::jmin((float)12.0f, (float)(pixelsPerPitch * 0.8f)));
-            font.setSubpixel(true);
-            
-            juce::String label = "C" + juce::String(p / 12 - 2); // MIDI C3 = 60
-            canvas->drawString(label.toStdString().c_str(), PIANO_WIDTH - 25.0f, y + h * 0.7f, font, textPaint);
-        }
+    // Velocity Bar at bottom (visual flair)
+    // (Optional, maybe too cluttered)
+  }
+  canvas->restore();
 
-        // Horizontal Grid Line
-        paint.setColor(colors::BORDER_SUBTLE);
-        paint.setStrokeWidth(1.0f);
-        canvas->drawLine(PIANO_WIDTH, y + h, width, y + h, paint);
-    }
-    
-    // 4. Notes
-    canvas->save();
-    canvas->clipRect(noteAreaRect);
+  // 5. Velocity Lane Background
+  SkRect velocityRect =
+      SkRect::MakeXYWH(PIANO_WIDTH, RULER_HEIGHT + notesHeight,
+                       width - PIANO_WIDTH, velocityLaneHeight);
+  paint.setColor(colors::BG_DARK);
+  paint.setStyle(SkPaint::kFill_Style);
+  canvas->drawRect(velocityRect, paint);
 
-    SkPaint selectedGlowPaint;
-    selectedGlowPaint.setColor(colors::NEON_GREEN);
-    selectedGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, 4.0f));
+  // Velocity Bars
+  canvas->save();
+  canvas->clipRect(velocityRect);
+  // Draw velocity bars... (omitted for brevity in this specific pass, but
+  // standard implementation implies them) Let's at least draw a separator
+  paint.setColor(colors::BORDER_DEFAULT);
+  canvas->drawLine(0, RULER_HEIGHT + notesHeight, width,
+                   RULER_HEIGHT + notesHeight, paint);
+  canvas->restore();
 
-    for (const auto& note : noteRects) {
-        // Culling
-        if (note.bounds.getY() > height || note.bounds.getBottom() < 0) continue;
-        if (note.bounds.getX() > width || note.bounds.getRight() < PIANO_WIDTH) continue;
-
-        SkRect r = SkRect::MakeXYWH(note.bounds.getX(), note.bounds.getY(), note.bounds.getWidth(), note.bounds.getHeight());
-        
-        // Inner Rect for pseudo-3D
-        SkRect inner = r.makeInset(1.0f, 1.0f);
-        SkRRect rr = SkRRect::MakeRectXY(inner, 2.0f, 2.0f);
-
-        if (note.selected) {
-            // Glow
-            SkRect outsetRect = rr.rect().makeOutset(2.0f, 2.0f);
-            canvas->drawRect(outsetRect, selectedGlowPaint);
-            paint.setColor(colors::NEON_GREEN);
-        } else {
-            // Standard Note Color (Magenta/Cyan gradient logic or just flat for now)
-            paint.setColor(colors::MAGENTA);
-        }
-
-        // Gradient for note
-        SkPoint pts[2] = {{r.left(), r.top()}, {r.left(), r.bottom()}};
-        SkColor nColors[2] = { lighten(paint.getColor(), 0.1f), darken(paint.getColor(), 0.1f) };
-        paint.setShader(SkGradientShader::MakeLinear(pts, nColors, nullptr, 2, SkTileMode::kClamp));
-        
-        canvas->drawRRect(rr, paint);
-        paint.setShader(nullptr);
-        
-        // Border
-        SkPaint border;
-        border.setStyle(SkPaint::kStroke_Style);
-        border.setColor(SkColorSetARGB(100, 0, 0, 0));
-        border.setAntiAlias(true);
-        canvas->drawRRect(rr, border);
-        
-        // Velocity Bar at bottom (visual flair)
-        // (Optional, maybe too cluttered)
-    }
-    canvas->restore();
-    
-    // 5. Velocity Lane Background
-    SkRect velocityRect = SkRect::MakeXYWH(PIANO_WIDTH, RULER_HEIGHT + notesHeight, width - PIANO_WIDTH, velocityLaneHeight);
-    paint.setColor(colors::BG_DARK);
+  // 6. Marquee
+  if (!marqueeRect.isEmpty()) {
+    SkRect m =
+        SkRect::MakeXYWH(marqueeRect.getX(), marqueeRect.getY(),
+                         marqueeRect.getWidth(), marqueeRect.getHeight());
+    paint.setColor(withAlpha(colors::CYAN, 0.2f));
     paint.setStyle(SkPaint::kFill_Style);
-    canvas->drawRect(velocityRect, paint);
-    
-    // Velocity Bars
-    canvas->save();
-    canvas->clipRect(velocityRect);
-    // Draw velocity bars... (omitted for brevity in this specific pass, but standard implementation implies them)
-    // Let's at least draw a separator
-    paint.setColor(colors::BORDER_DEFAULT);
-    canvas->drawLine(0, RULER_HEIGHT + notesHeight, width, RULER_HEIGHT + notesHeight, paint);
-    canvas->restore();
+    canvas->drawRect(m, paint);
 
-    // 6. Marquee
-    if (!marqueeRect.isEmpty()) {
-        SkRect m = SkRect::MakeXYWH(marqueeRect.getX(), marqueeRect.getY(), marqueeRect.getWidth(), marqueeRect.getHeight());
-        paint.setColor(withAlpha(colors::CYAN, 0.2f));
-        paint.setStyle(SkPaint::kFill_Style);
-        canvas->drawRect(m, paint);
-        
-        paint.setStyle(SkPaint::kStroke_Style);
-        paint.setColor(colors::CYAN);
-        SkScalar intervals[] = {4, 4};
-        // TODO: SkDashPathEffect::Make - resolve argument mismatch after Skia upgrade.
-        // paint.setPathEffect(SkDashPathEffect::Make((const SkScalar*)intervals, 2, 0.0f));
-        canvas->drawRect(m, paint);
-    }
+    paint.setStyle(SkPaint::kStroke_Style);
+    paint.setColor(colors::CYAN);
+    SkScalar intervals[] = {4, 4};
+    // TODO: SkDashPathEffect::Make - resolve argument mismatch after Skia
+    // upgrade. paint.setPathEffect(SkDashPathEffect::Make((const
+    // SkScalar*)intervals, 2, 0.0f));
+    canvas->drawRect(m, paint);
+  }
 }
 
 void PianoRollComponent::smartDuplicate() {
-    copySelectedNotes();
-    if (clipboard.empty()) return;
+  copySelectedNotes();
+  if (clipboard.empty())
+    return;
 
-    double start = std::numeric_limits<double>::max();
-    double end = std::numeric_limits<double>::lowest();
-    bool hasSelection = false;
-    
-    for (const auto& note : noteRects) {
-        if (note.selected) {
-            hasSelection = true;
-            start = std::min(start, note.startBeats);
-            end = std::max(end, note.startBeats + note.lengthBeats);
-        }
+  double start = std::numeric_limits<double>::max();
+  double end = std::numeric_limits<double>::lowest();
+  bool hasSelection = false;
+
+  for (const auto &note : noteRects) {
+    if (note.selected) {
+      hasSelection = true;
+      start = std::min(start, note.startBeats);
+      end = std::max(end, note.startBeats + note.lengthBeats);
     }
-    
-    if (!hasSelection) return;
+  }
 
-    double length = end - start;
-    if (length < 0.001) length = gridBeats;
+  if (!hasSelection)
+    return;
 
-    projectState.getUndoManager().beginNewTransaction("Smart Duplicate");
-    clearSelection();
-    
-    for (const auto& clipNote : clipboard) {
-        zenith::ProjectState::MidiNoteSpec note;
-        note.pitch = clipNote.pitch;
-        note.startBeats = start + length + clipNote.startBeats;
-        note.lengthBeats = clipNote.lengthBeats;
-        note.velocity = clipNote.velocity;
-        note.muted = clipNote.muted;
-        
-        projectState.addMidiNote(currentClip.clipId, note, "");
-    }
+  double length = end - start;
+  if (length < 0.001)
+    length = gridBeats;
+
+  projectState.getUndoManager().beginNewTransaction("Smart Duplicate");
+  clearSelection();
+
+  for (const auto &clipNote : clipboard) {
+    zenith::ProjectState::MidiNoteSpec note;
+    note.pitch = clipNote.pitch;
+    note.startBeats = start + length + clipNote.startBeats;
+    note.lengthBeats = clipNote.lengthBeats;
+    note.velocity = clipNote.velocity;
+    note.muted = clipNote.muted;
+
+    projectState.addMidiNote(currentClip.clipId, note, "");
+  }
 }
 
-void PianoRollComponent::timerCallback() {
-    SkiaComponent::timerCallback();
-}
+void PianoRollComponent::timerCallback() { SkiaComponent::timerCallback(); }
 
 void PianoRollComponent::handleSprayPaint(float x, float y) {
-    createNoteAtPosition(x, y);
+  createNoteAtPosition(x, y);
 }
 
 void PianoRollComponent::detectNoteCollisions() {}
 
 void PianoRollComponent::updateVisiblePitches() {
-    visiblePitches.clear();
-    for (int i=0; i<128; ++i) visiblePitches.push_back(i);
+  visiblePitches.clear();
+  for (int i = 0; i < 128; ++i)
+    visiblePitches.push_back(i);
 }
 
 int PianoRollComponent::mapPitchToRow(int pitch) const { return pitch; }
 
 int PianoRollComponent::mapRowToPitch(int row) const { return row; }
-
-
-

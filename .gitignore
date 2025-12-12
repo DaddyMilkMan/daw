@@ -7,6 +7,10 @@
 /lib/
 cmake-build-*/
 .cache/
+**/CMakeFiles/
+**/cmake_install.cmake
+*.vcxproj.filters
+build_output*.txt
 
 # 2. OS Junk
 .DS_Store

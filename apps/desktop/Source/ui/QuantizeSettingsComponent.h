@@ -61,8 +61,8 @@ public:
                           borderPaint);
 
     // Title
-    SkFont titleFont;
-    titleFont.setSize(typography::FONT_LG);
+    SkFont titleFont =
+        design::getSkFont(typography::FONT_LG, design::FontWeight::Bold);
     SkPaint titlePaint;
     titlePaint.setColor(colors::CYAN);
     titlePaint.setAntiAlias(true);
@@ -165,8 +165,7 @@ private:
   // Drawing helpers
   void drawLabel(SkCanvas *canvas, const char *text, float x, float y) {
     using namespace zenith::design;
-    SkFont font;
-    font.setSize(typography::FONT_SM);
+    SkFont font = design::getSkFont(typography::FONT_SM);
     SkPaint paint;
     paint.setColor(colors::TEXT_SECONDARY);
     paint.setAntiAlias(true);
@@ -205,8 +204,7 @@ private:
                        thumbPaint);
 
     // Value text
-    SkFont font;
-    font.setSize(typography::FONT_XS);
+    SkFont font = design::getMonoFont(typography::FONT_XS);
     SkPaint textPaint;
     textPaint.setColor(colors::TEXT_SECONDARY);
     textPaint.setAntiAlias(true);
@@ -238,8 +236,7 @@ private:
                           borderPaint);
 
     // Text
-    SkFont font;
-    font.setSize(typography::FONT_XS);
+    SkFont font = design::getSkFont(typography::FONT_XS);
     SkPaint textPaint;
     textPaint.setColor(active ? colors::BG_DARKEST : colors::TEXT_PRIMARY);
     textPaint.setAntiAlias(true);
@@ -271,8 +268,7 @@ private:
                           borderPaint);
 
     // Text
-    SkFont font;
-    font.setSize(typography::FONT_SM);
+    SkFont font = design::getSkFont(typography::FONT_SM);
     SkPaint textPaint;
     textPaint.setColor(colors::TEXT_PRIMARY);
     textPaint.setAntiAlias(true);
@@ -320,8 +316,7 @@ private:
                           dimensions::RADIUS_SM, borderPaint);
 
     // Items
-    SkFont font;
-    font.setSize(typography::FONT_SM);
+    SkFont font = design::getSkFont(typography::FONT_SM);
 
     for (size_t i = 0; i < gridOptions.size(); ++i) {
       float y = bounds.getY() + i * itemHeight;
@@ -362,8 +357,8 @@ private:
                           bgPaint);
 
     // Text
-    SkFont font;
-    font.setSize(typography::FONT_MD);
+    SkFont font =
+        design::getSkFont(typography::FONT_MD, design::FontWeight::Bold);
     SkPaint textPaint;
     textPaint.setColor(colors::BG_DARKEST);
     textPaint.setAntiAlias(true);

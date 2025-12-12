@@ -22,84 +22,147 @@ namespace zenith {
 //==============================================================================
 // Parameter IDs
 //==============================================================================
-const juce::String ZenithPolySynthProcessor::Osc1Wave = "osc1_wave";
-const juce::String ZenithPolySynthProcessor::Osc1Detune = "osc1_detune";
-const juce::String ZenithPolySynthProcessor::Osc1Mix = "osc1_mix";
-const juce::String ZenithPolySynthProcessor::Osc1Shape = "osc1_shape";
+const juce::String &ZenithPolySynthProcessor::Osc1Wave =
+    ZenithPolySynthParameterManager::Osc1Wave;
+const juce::String &ZenithPolySynthProcessor::Osc1Detune =
+    ZenithPolySynthParameterManager::Osc1Detune;
+const juce::String &ZenithPolySynthProcessor::Osc1Mix =
+    ZenithPolySynthParameterManager::Osc1Mix;
+const juce::String &ZenithPolySynthProcessor::Osc1Shape =
+    ZenithPolySynthParameterManager::Osc1Shape;
 
-const juce::String ZenithPolySynthProcessor::Osc2Wave = "osc2_wave";
-const juce::String ZenithPolySynthProcessor::Osc2Detune = "osc2_detune";
-const juce::String ZenithPolySynthProcessor::Osc2Mix = "osc2_mix";
-const juce::String ZenithPolySynthProcessor::Osc2Shape = "osc2_shape";
+const juce::String &ZenithPolySynthProcessor::Osc2Wave =
+    ZenithPolySynthParameterManager::Osc2Wave;
+const juce::String &ZenithPolySynthProcessor::Osc2Detune =
+    ZenithPolySynthParameterManager::Osc2Detune;
+const juce::String &ZenithPolySynthProcessor::Osc2Mix =
+    ZenithPolySynthParameterManager::Osc2Mix;
+const juce::String &ZenithPolySynthProcessor::Osc2Shape =
+    ZenithPolySynthParameterManager::Osc2Shape;
 
-const juce::String ZenithPolySynthProcessor::Osc3Wave = "osc3_wave";
-const juce::String ZenithPolySynthProcessor::Osc3Detune = "osc3_detune";
-const juce::String ZenithPolySynthProcessor::Osc3Mix = "osc3_mix";
-const juce::String ZenithPolySynthProcessor::Osc3Shape = "osc3_shape";
+const juce::String &ZenithPolySynthProcessor::Osc3Wave =
+    ZenithPolySynthParameterManager::Osc3Wave;
+const juce::String &ZenithPolySynthProcessor::Osc3Detune =
+    ZenithPolySynthParameterManager::Osc3Detune;
+const juce::String &ZenithPolySynthProcessor::Osc3Mix =
+    ZenithPolySynthParameterManager::Osc3Mix;
+const juce::String &ZenithPolySynthProcessor::Osc3Shape =
+    ZenithPolySynthParameterManager::Osc3Shape;
 
-const juce::String ZenithPolySynthProcessor::NoiseLevel = "noise_level";
-const juce::String ZenithPolySynthProcessor::SubOscLevel = "sub_level";
-const juce::String ZenithPolySynthProcessor::SubOscOctave = "sub_octave";
-const juce::String ZenithPolySynthProcessor::FilterEnvAmount = "filter_env";
+const juce::String &ZenithPolySynthProcessor::NoiseLevel =
+    ZenithPolySynthParameterManager::NoiseLevel;
+const juce::String &ZenithPolySynthProcessor::SubOscLevel =
+    ZenithPolySynthParameterManager::SubOscLevel;
+const juce::String &ZenithPolySynthProcessor::SubOscOctave =
+    ZenithPolySynthParameterManager::SubOscOctave;
+const juce::String &ZenithPolySynthProcessor::FilterEnvAmount =
+    ZenithPolySynthParameterManager::FilterEnvAmount;
 
-const juce::String ZenithPolySynthProcessor::UnisonVoices = "unison_voices";
-const juce::String ZenithPolySynthProcessor::UnisonDetune = "unison_detune";
+const juce::String &ZenithPolySynthProcessor::UnisonVoices =
+    ZenithPolySynthParameterManager::UnisonVoices;
+const juce::String &ZenithPolySynthProcessor::UnisonDetune =
+    ZenithPolySynthParameterManager::UnisonDetune;
 
-const juce::String ZenithPolySynthProcessor::FilterTypeParam = "filter_type";
-const juce::String ZenithPolySynthProcessor::FilterCutoff = "cutoff";
-const juce::String ZenithPolySynthProcessor::FilterResonance = "resonance";
-const juce::String ZenithPolySynthProcessor::FilterDrive = "drive";
-const juce::String ZenithPolySynthProcessor::FilterKeyTrackParam = "keytrack";
-const juce::String ZenithPolySynthProcessor::FilterModel = "filter_model";
+const juce::String &ZenithPolySynthProcessor::FilterType =
+    ZenithPolySynthParameterManager::FilterType;
+const juce::String &ZenithPolySynthProcessor::FilterCutoff =
+    ZenithPolySynthParameterManager::FilterCutoff;
+const juce::String &ZenithPolySynthProcessor::FilterResonance =
+    ZenithPolySynthParameterManager::FilterResonance;
+const juce::String &ZenithPolySynthProcessor::FilterDrive =
+    ZenithPolySynthParameterManager::FilterDrive;
+const juce::String &ZenithPolySynthProcessor::FilterKeyTrack =
+    ZenithPolySynthParameterManager::FilterKeyTrack;
+const juce::String &ZenithPolySynthProcessor::FilterModel =
+    ZenithPolySynthParameterManager::FilterModel;
 
-const juce::String ZenithPolySynthProcessor::AmpAttack = "amp_attack";
-const juce::String ZenithPolySynthProcessor::AmpDecay = "amp_decay";
-const juce::String ZenithPolySynthProcessor::AmpSustain = "amp_sustain";
-const juce::String ZenithPolySynthProcessor::AmpRelease = "amp_release";
+const juce::String &ZenithPolySynthProcessor::AmpAttack =
+    ZenithPolySynthParameterManager::AmpAttack;
+const juce::String &ZenithPolySynthProcessor::AmpDecay =
+    ZenithPolySynthParameterManager::AmpDecay;
+const juce::String &ZenithPolySynthProcessor::AmpSustain =
+    ZenithPolySynthParameterManager::AmpSustain;
+const juce::String &ZenithPolySynthProcessor::AmpRelease =
+    ZenithPolySynthParameterManager::AmpRelease;
 
-const juce::String ZenithPolySynthProcessor::ModAttack = "mod_attack";
-const juce::String ZenithPolySynthProcessor::ModDecay = "mod_decay";
-const juce::String ZenithPolySynthProcessor::ModSustain = "mod_sustain";
-const juce::String ZenithPolySynthProcessor::ModRelease = "mod_release";
+const juce::String &ZenithPolySynthProcessor::ModAttack =
+    ZenithPolySynthParameterManager::ModAttack;
+const juce::String &ZenithPolySynthProcessor::ModDecay =
+    ZenithPolySynthParameterManager::ModDecay;
+const juce::String &ZenithPolySynthProcessor::ModSustain =
+    ZenithPolySynthParameterManager::ModSustain;
+const juce::String &ZenithPolySynthProcessor::ModRelease =
+    ZenithPolySynthParameterManager::ModRelease;
 
-const juce::String ZenithPolySynthProcessor::LFO1Rate = "lfo1_rate";
-const juce::String ZenithPolySynthProcessor::LFO1Amount = "lfo1_amount";
-const juce::String ZenithPolySynthProcessor::LFO1Target = "lfo1_target";
-const juce::String ZenithPolySynthProcessor::LFO1Waveform = "lfo1_waveform";
-const juce::String ZenithPolySynthProcessor::LFO1Sync = "lfo1_sync";
-const juce::String ZenithPolySynthProcessor::LFO1SyncRate = "lfo1_rate_sync";
-const juce::String ZenithPolySynthProcessor::LFO1Retr = "lfo1_retr";
+const juce::String &ZenithPolySynthProcessor::LFO1Rate =
+    ZenithPolySynthParameterManager::LFO1Rate;
+const juce::String &ZenithPolySynthProcessor::LFO1Amount =
+    ZenithPolySynthParameterManager::LFO1Amount;
+const juce::String &ZenithPolySynthProcessor::LFO1Target =
+    ZenithPolySynthParameterManager::LFO1Target;
+const juce::String &ZenithPolySynthProcessor::LFO1Waveform =
+    ZenithPolySynthParameterManager::LFO1Waveform;
+const juce::String &ZenithPolySynthProcessor::LFO1Sync =
+    ZenithPolySynthParameterManager::LFO1Sync;
+const juce::String &ZenithPolySynthProcessor::LFO1SyncRate =
+    ZenithPolySynthParameterManager::LFO1SyncRate;
+const juce::String &ZenithPolySynthProcessor::LFO1Retr =
+    ZenithPolySynthParameterManager::LFO1Retr;
 
-const juce::String ZenithPolySynthProcessor::LFO2Rate = "lfo2_rate";
-const juce::String ZenithPolySynthProcessor::LFO2Amount = "lfo2_amount";
-const juce::String ZenithPolySynthProcessor::LFO2Target = "lfo2_target";
-const juce::String ZenithPolySynthProcessor::LFO2Waveform = "lfo2_waveform";
-const juce::String ZenithPolySynthProcessor::LFO2Sync = "lfo2_sync";
-const juce::String ZenithPolySynthProcessor::LFO2SyncRate = "lfo2_rate_sync";
-const juce::String ZenithPolySynthProcessor::LFO2Retr = "lfo2_retr";
+const juce::String &ZenithPolySynthProcessor::LFO2Rate =
+    ZenithPolySynthParameterManager::LFO2Rate;
+const juce::String &ZenithPolySynthProcessor::LFO2Amount =
+    ZenithPolySynthParameterManager::LFO2Amount;
+const juce::String &ZenithPolySynthProcessor::LFO2Target =
+    ZenithPolySynthParameterManager::LFO2Target;
+const juce::String &ZenithPolySynthProcessor::LFO2Waveform =
+    ZenithPolySynthParameterManager::LFO2Waveform;
+const juce::String &ZenithPolySynthProcessor::LFO2Sync =
+    ZenithPolySynthParameterManager::LFO2Sync;
+const juce::String &ZenithPolySynthProcessor::LFO2SyncRate =
+    ZenithPolySynthParameterManager::LFO2SyncRate;
+const juce::String &ZenithPolySynthProcessor::LFO2Retr =
+    ZenithPolySynthParameterManager::LFO2Retr;
 
-const juce::String ZenithPolySynthProcessor::GlideTime = "glide_time";
-const juce::String ZenithPolySynthProcessor::MonoMode = "mono_mode";
-const juce::String ZenithPolySynthProcessor::MasterGain = "master_gain";
-const juce::String ZenithPolySynthProcessor::PitchBendRange =
-    "pitch_bend_range";
-const juce::String ZenithPolySynthProcessor::VelocityCurve = "velocity_curve";
+const juce::String &ZenithPolySynthProcessor::GlideTime =
+    ZenithPolySynthParameterManager::GlideTime;
+const juce::String &ZenithPolySynthProcessor::MonoMode =
+    ZenithPolySynthParameterManager::MonoMode;
+const juce::String &ZenithPolySynthProcessor::MasterGain =
+    ZenithPolySynthParameterManager::MasterGain;
+const juce::String &ZenithPolySynthProcessor::PitchBendRange =
+    ZenithPolySynthParameterManager::PitchBendRange;
+const juce::String &ZenithPolySynthProcessor::VelocityCurve =
+    ZenithPolySynthParameterManager::VelocityCurve;
 
-const juce::String ZenithPolySynthProcessor::MaxVoices = "max_voices";
-const juce::String ZenithPolySynthProcessor::QualitySetting = "quality";
+const juce::String &ZenithPolySynthProcessor::MaxVoices =
+    ZenithPolySynthParameterManager::MaxVoices;
+const juce::String &ZenithPolySynthProcessor::QualitySetting =
+    ZenithPolySynthParameterManager::QualitySetting;
 
-const juce::String ZenithPolySynthProcessor::Osc2Sync = "osc2_sync";
-const juce::String ZenithPolySynthProcessor::Osc2FM = "osc2_fm";
-const juce::String ZenithPolySynthProcessor::RingMod = "ring_mod";
+const juce::String &ZenithPolySynthProcessor::Osc2Sync =
+    ZenithPolySynthParameterManager::Osc2Sync;
+const juce::String &ZenithPolySynthProcessor::Osc2FM =
+    ZenithPolySynthParameterManager::Osc2FM;
+const juce::String &ZenithPolySynthProcessor::RingMod =
+    ZenithPolySynthParameterManager::RingMod;
 
-const juce::String ZenithPolySynthProcessor::DistortionAmount = "dist_amount";
-const juce::String ZenithPolySynthProcessor::ChorusAmount = "chorus_amount";
-const juce::String ZenithPolySynthProcessor::ReverbAmount = "reverb_amount";
-const juce::String ZenithPolySynthProcessor::DelayTime = "delay_time";
-const juce::String ZenithPolySynthProcessor::DelayFeedback = "delay_feedback";
-const juce::String ZenithPolySynthProcessor::DelayMix = "delay_mix";
-const juce::String ZenithPolySynthProcessor::DelaySync = "delay_sync";
-const juce::String ZenithPolySynthProcessor::DelaySyncRate = "delay_sync_rate";
+const juce::String &ZenithPolySynthProcessor::DistortionAmount =
+    ZenithPolySynthParameterManager::DistortionAmount;
+const juce::String &ZenithPolySynthProcessor::ChorusAmount =
+    ZenithPolySynthParameterManager::ChorusAmount;
+const juce::String &ZenithPolySynthProcessor::ReverbAmount =
+    ZenithPolySynthParameterManager::ReverbAmount;
+const juce::String &ZenithPolySynthProcessor::DelayTime =
+    ZenithPolySynthParameterManager::DelayTime;
+const juce::String &ZenithPolySynthProcessor::DelayFeedback =
+    ZenithPolySynthParameterManager::DelayFeedback;
+const juce::String &ZenithPolySynthProcessor::DelayMix =
+    ZenithPolySynthParameterManager::DelayMix;
+const juce::String &ZenithPolySynthProcessor::DelaySync =
+    ZenithPolySynthParameterManager::DelaySync;
+const juce::String &ZenithPolySynthProcessor::DelaySyncRate =
+    ZenithPolySynthParameterManager::DelaySyncRate;
 
 //==============================================================================
 // ZenithPolySynthProcessor
@@ -108,7 +171,9 @@ const juce::String ZenithPolySynthProcessor::DelaySyncRate = "delay_sync_rate";
 ZenithPolySynthProcessor::ZenithPolySynthProcessor()
     : AudioProcessor(BusesProperties().withOutput(
           "Output", juce::AudioChannelSet::stereo(), true)),
-      parameters_(*this, nullptr, "PARAMS", createParameterLayout()) {
+      parameters_(*this, nullptr, "PARAMS",
+                  ZenithPolySynthParameterManager::createParameterLayout()),
+      paramManager_(parameters_) {
   for (int i = 0; i < currentMaxVoices_; ++i) {
     synthesiser_.addVoice(new ZenithPolySynthVoice());
   }

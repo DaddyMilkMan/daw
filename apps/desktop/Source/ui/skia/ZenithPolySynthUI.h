@@ -86,10 +86,8 @@ private:
 
   // Complex Components (kept as JUCE components for now)
   std::unique_ptr<ZenithVisualizer> visualizer_;
-  std::unique_ptr<ZenithModMatrix> modMatrix_;
-  std::unique_ptr<ZenithPresetBar>
-      presetBar_; // Preset bar has internal buttons, keep as component or
-                  // refactor later
+  // std::unique_ptr<ZenithModMatrix> modMatrix_;
+  // std::unique_ptr<ZenithPresetBar> presetBar_;
 
   // Internal helpers
   void renderComponentRecursively(juce::Component *comp, SkCanvas *canvas);

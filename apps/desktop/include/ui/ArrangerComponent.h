@@ -112,47 +112,47 @@ private:
   Engine &engine_;
   zenith::ProjectState &projectState;
 
-    //==========================================================================
-    // Waveform Cache Entry (pre-computed peak data for fast rendering)
-    //==========================================================================
-    struct WaveformCache {
-        juce::String audioFilePath;
-        std::vector<float> minPeaks;  // Downsampled min peaks
-        std::vector<float> maxPeaks;  // Downsampled max peaks
-        int samplesPerPixel = 512;    // Resolution
-        bool isValid = false;
-    };
+  //==========================================================================
+  // Waveform Cache Entry (pre-computed peak data for fast rendering)
+  //==========================================================================
+  struct WaveformCache {
+    juce::String audioFilePath;
+    std::vector<float> minPeaks; // Downsampled min peaks
+    std::vector<float> maxPeaks; // Downsampled max peaks
+    int samplesPerPixel = 512;   // Resolution
+    bool isValid = false;
+  };
 
-    //==========================================================================
-    // MIDI Note Blob (for clip thumbnail rendering)
-    //==========================================================================
-    struct MidiNoteBlob {
-        int pitch;
-        double startBeats;
-        double lengthBeats;
-    };
+  //==========================================================================
+  // MIDI Note Blob (for clip thumbnail rendering)
+  //==========================================================================
+  struct MidiNoteBlob {
+    int pitch;
+    double startBeats;
+    double lengthBeats;
+  };
 
-    struct ClipView {
-        juce::String clipId;
-        juce::String trackId;
-        double startBeats;
-        double lengthBeats;
-        bool isMidi;
-        bool isSelected;
-        juce::Rectangle<float> bounds;
+  struct ClipView {
+    juce::String clipId;
+    juce::String trackId;
+    double startBeats;
+    double lengthBeats;
+    bool isMidi;
+    bool isSelected;
+    juce::Rectangle<float> bounds;
 
-        // Cached content for rendering
-        juce::String audioFilePath;         // For audio clips
-        std::vector<MidiNoteBlob> noteBlobs; // For MIDI clips
+    // Cached content for rendering
+    juce::String audioFilePath;          // For audio clips
+    std::vector<MidiNoteBlob> noteBlobs; // For MIDI clips
 
-        bool isInLeftResizeZone(juce::Point<float> p) const {
-            return p.x >= bounds.getX() && p.x <= bounds.getX() + 5.0f;
-        }
+    bool isInLeftResizeZone(juce::Point<float> p) const {
+      return p.x >= bounds.getX() && p.x <= bounds.getX() + 5.0f;
+    }
 
-        bool isInRightResizeZone(juce::Point<float> p) const {
-            return p.x >= bounds.getRight() - 5.0f && p.x <= bounds.getRight();
-        }
-    };
+    bool isInRightResizeZone(juce::Point<float> p) const {
+      return p.x >= bounds.getRight() - 5.0f && p.x <= bounds.getRight();
+    }
+  };
 
   bool keyPressed(const juce::KeyPress &key) override;
 
@@ -201,57 +201,60 @@ private:
 
   juce::Rectangle<float> marqueeRect;
 
-    void drawClips(SkCanvas* canvas);
-    void drawTracks(SkCanvas* canvas);
+  void drawClips(SkCanvas *canvas);
+  void drawTracks(SkCanvas *canvas);
 
   // Drop zone state (for browser drag-and-drop)
   bool isDropTargetActive_ = false;
   int dropTargetTrackIndex_ = -1;
   double dropTargetBeats_ = 0.0;
 
-    //==========================================================================
-    // Clip Content Rendering Helpers (Skia)
-    //==========================================================================
+  //==========================================================================
+  // Clip Content Rendering Helpers (Skia)
+  //==========================================================================
 #ifdef ZENITH_USE_SKIA
-    void drawClipWaveform(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect);
-    void drawClipMidiBlobs(SkCanvas* canvas, const ClipView& clip, const SkRect& clipRect);
+  void drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
+                        const SkRect &clipRect);
+  void drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip,
+                         const SkRect &clipRect);
 #endif
 
-    // Bar.Beat.Tick formatting
-    juce::String formatBarBeatTick(double beats) const;
-    int getBeatsPerBar() const;
+  // Bar.Beat.Tick formatting
+  juce::String formatBarBeatTick(double beats) const;
+  int getBeatsPerBar() const;
 
-    // Waveform cache (file path -> cached peaks)
-    std::unordered_map<juce::String, WaveformCache> waveformCache_;
-    void buildWaveformCache(const juce::String& audioFilePath);
-    const WaveformCache* getWaveformCache(const juce::String& audioFilePath) const;
+  // Waveform cache (file path -> cached peaks)
+  std::unordered_map<juce::String, WaveformCache> waveformCache_;
+  void buildWaveformCache(const juce::String &audioFilePath);
+  const WaveformCache *
+  getWaveformCache(const juce::String &audioFilePath) const;
 
-    // Methods
-    void rebuildClipViews();
-    void recomputeClipBounds();
-    ClipView *findClipView(const juce::String &clipId);
-    ClipView *findClipAtPoint(juce::Point<float> point);
+  // Methods
+  void rebuildClipViews();
+  void recomputeClipBounds();
+  ClipView *findClipView(const juce::String &clipId);
+  ClipView *findClipAtPoint(juce::Point<float> point);
 
-    float beatsToX(double beats) const;
-    double xToBeats(float x) const;
-    float trackIndexToY(int trackIndex) const;
-    int yToTrackIndex(float y) const;
-    double snapToGrid(double beats) const;
+  float beatsToX(double beats) const;
+  double xToBeats(float x) const;
+  float trackIndexToY(int trackIndex) const;
+  int yToTrackIndex(float y) const;
+  double snapToGrid(double beats) const;
 
-    void clearSelection();
-    void selectClip(const juce::String &clipId, bool addToSelection);
-    void selectClipsInRect(juce::Rectangle<float> rect);
-    bool isClipSelected(const juce::String &clipId) const;
+  void clearSelection();
+  void selectClip(const juce::String &clipId, bool addToSelection);
+  void selectClipsInRect(juce::Rectangle<float> rect);
+  bool isClipSelected(const juce::String &clipId) const;
 
-    void createClipAtPoint(juce::Point<float> point);
-    void deleteSelectedClips();
-    void duplicateSelectedClips();
+  void createClipAtPoint(juce::Point<float> point);
+  void deleteSelectedClips();
+  void duplicateSelectedClips();
 
-    // Utility
-    void updatePlayheadFromEngine();
-    double samplesToBeats(juce::int64 samples) const;
+  // Utility
+  void updatePlayheadFromEngine();
+  double samplesToBeats(juce::int64 samples) const;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
 
 } // namespace zenith

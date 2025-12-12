@@ -21,6 +21,7 @@ namespace zenith::design {
 float Settings::glowIntensity = 1.0f;
 float Settings::uiScale = 1.0f;
 Settings::Theme Settings::currentTheme = Settings::Theme::NeonNoir;
+Settings::BlurQuality Settings::blurQuality = Settings::BlurQuality::Medium;
 
 // ============================================================================
 // THEME MANAGER IMPLEMENTATION

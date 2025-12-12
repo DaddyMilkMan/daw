@@ -6,6 +6,7 @@
 #include "SkiaRenderer.h"
 
 // Skia headers
+#define SK_DIRECT3D 1
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
@@ -35,8 +36,6 @@
 
 using Microsoft::WRL::ComPtr;
 #endif
-
-// NOTE: D3D12 backend was removed - use OpenGL on Windows for now
 
 // OpenGL backend (always available as fallback)
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
@@ -105,8 +104,6 @@ void SkiaRenderer::shutdown() {
   surface_.reset();
   grContext_.reset();
 
-  // D3D12 cleanup removed - using OpenGL on Windows
-
   initialized_ = false;
 }
 
@@ -154,7 +151,7 @@ void SkiaRenderer::resize(int width, int height) {
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
-  return Backend::OpenGL; // D3D12 backend disabled, using OpenGL
+  return Backend::OpenGL; // Fallback to OpenGL until D3D header issues resolved
 #elif JUCE_MAC
   return Backend::Metal;
 #elif JUCE_LINUX
@@ -201,7 +198,11 @@ bool SkiaRenderer::createGpuContext() {
     return createVulkanContext();
 #endif
   case Backend::Direct3D:
-    // D3D12 disabled - fall through to OpenGL
+#if JUCE_WINDOWS
+    return createD3DContext();
+#else
+    return false;
+#endif
   case Backend::OpenGL: {
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface)
@@ -248,8 +249,6 @@ void SkiaRenderer::updateStats() {
 //==============================================================================
 // Platform Implementations
 //==============================================================================
-
-// NOTE: D3D12 createD3DContext() removed - using OpenGL on Windows
 
 #if JUCE_MAC && defined(SK_METAL)
 bool SkiaRenderer::createMetalContext() {
@@ -346,8 +345,8 @@ bool SkiaRenderer::createVulkanContext() {
 
 #if JUCE_WINDOWS
 bool SkiaRenderer::createD3DContext() {
-  // D3D12 temporarily disabled due to Skia integration issues.
-  // Falls back to OpenGL.
+  DBG("SkiaRenderer: D3D12 context creation disabled due to valid header "
+      "issues.");
   return false;
 }
 #endif
