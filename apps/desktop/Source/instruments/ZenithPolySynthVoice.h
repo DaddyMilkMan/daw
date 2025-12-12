@@ -137,7 +137,7 @@ public:
   void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
   void setOsc2FM(float amount) { osc2FM_ = amount; }
   void setRingMod(float amount) { ringMod_ = amount; }
-  void setFilterModel(int model) { filterModel_ = model; } // 0=SVF, 1=Ladder
+  void setFilterModel(FilterModelType model) { filterModel_ = static_cast<int>(model); }
 
   // Oscillator shape setters (public for ZenithPolySynth access)
   void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }

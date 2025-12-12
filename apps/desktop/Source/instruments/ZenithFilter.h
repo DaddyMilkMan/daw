@@ -32,7 +32,7 @@ public:
   void setDrive(float drive) { drive_ = drive; }
   void reset();
   float getResonance() const { return resonanceSmoothed_.getTargetValue(); }
-  void setModel(int model) { model_ = model; } // 0=SVF, 1=Ladder
+  void setModel(FilterModelType model) { model_ = static_cast<int>(model); }
 
   /**
    * @brief Process one sample

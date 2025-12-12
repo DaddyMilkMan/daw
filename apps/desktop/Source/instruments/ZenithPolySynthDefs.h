@@ -41,6 +41,14 @@ enum class OscillatorWaveform {
 enum class FilterType { Lowpass = 0, Bandpass, Highpass, NumTypes };
 
 /**
+    Filter model types
+*/
+enum class FilterModelType {
+    SVF = 0,
+    Ladder
+};
+
+/**
     Quality preset for CPU optimization
 */
 enum class QualityPreset {
