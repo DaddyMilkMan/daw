@@ -30,8 +30,9 @@
 #elif JUCE_WINDOWS
 #include <d3d12.h>
 #include <dxgi1_4.h>
-#include <gpu/ganesh/d3d/GrD3DBackendContext.h>
 #include <wrl/client.h>
+#include <gpu/ganesh/d3d/GrD3DBackendContext.h>
+
 
 using Microsoft::WRL::ComPtr;
 #endif
@@ -399,3 +400,4 @@ bool SkiaRenderer::createD3DContext() {
 #endif
 
 } // namespace zenith
+
