@@ -93,10 +93,13 @@ void SampleHunterAgent::startHunting(const HuntingConfig &config) {
   stats_ = HuntingStats();
   stats_.startTime = juce::Time::getCurrentTime();
 
-  foundSamples_.clear();
-  searchQueue_.clear();
-  downloadQueue_ = std::queue<size_t>();
-  downloadedHashes_.clear();
+  {
+      juce::ScopedLock lock(samplesLock_);
+      foundSamples_.clear();
+      searchQueue_.clear();
+      downloadQueue_ = std::queue<size_t>();
+      downloadedHashes_.clear();
+  }
   progress_.store(0.0f);
   setStatus("Starting hunt...");
 
@@ -115,7 +118,13 @@ juce::String SampleHunterAgent::getStatusMessage() const {
   return currentStatus_;
 }
 
+std::vector<FoundSample> SampleHunterAgent::getFoundSamples() const {
+  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(samplesLock_));
+  return foundSamples_;
+}
+
 std::vector<juce::File> SampleHunterAgent::getImportedFiles() const {
+  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(samplesLock_));
   std::vector<juce::File> imported;
   for (const auto &sample : foundSamples_) {
     if (sample.localFile.exists()) {
@@ -191,10 +200,13 @@ void SampleHunterAgent::run() {
 
       auto results = executeFreesoundSearch(query);
 
-      for (const auto &sample : results) {
-        foundSamples_.push_back(sample);
-        downloadQueue_.push(foundSamples_.size() - 1);
-        stats_.samplesFound++;
+      {
+          juce::ScopedLock lock(samplesLock_);
+          for (const auto &sample : results) {
+            foundSamples_.push_back(sample);
+            downloadQueue_.push(foundSamples_.size() - 1);
+            stats_.samplesFound++;
+          }
       }
 
       // Rate limiting
@@ -233,28 +245,38 @@ void SampleHunterAgent::run() {
       size_t index = downloadQueue_.front();
       downloadQueue_.pop();
 
-      FoundSample &sample = foundSamples_[index];
+      FoundSample localSample;
+      {
+          juce::ScopedLock lock(samplesLock_);
+          localSample = foundSamples_[index];
+      }
 
-      setStatus("Downloading: " + sample.title);
+      setStatus("Downloading: " + localSample.title);
 
-      if (downloadSample(sample)) {
+      if (downloadSample(localSample)) {
         stats_.downloadsSucceeded++;
-        stats_.totalBytesDownloaded += sample.fileSize;
+        stats_.totalBytesDownloaded += localSample.fileSize;
 
         // Queue for batch notification
-        pendingDownloadNotifications.push_back(sample);
+        pendingDownloadNotifications.push_back(localSample);
 
         // Analyze
-        setStatus("Analyzing: " + sample.title);
-        analyzeSample(sample);
+        setStatus("Analyzing: " + localSample.title);
+        analyzeSample(localSample);
         stats_.samplesAnalyzed++;
 
-        pendingAnalysisNotifications.push_back(sample);
+        pendingAnalysisNotifications.push_back(localSample);
 
         // Import
-        if (importToPool(sample)) {
+        if (importToPool(localSample)) {
           stats_.samplesImported++;
-          pendingImportNotifications.push_back(sample.localFile);
+          pendingImportNotifications.push_back(localSample.localFile);
+        }
+        
+        // Update shared state
+        {
+            juce::ScopedLock lock(samplesLock_);
+            foundSamples_[index] = localSample;
         }
 
         // Batch UI update: Notify every UI_BATCH_SIZE downloads
