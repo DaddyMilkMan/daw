@@ -11,6 +11,7 @@ if(ZENITH_ENABLE_SKIA)
         SkiaSlider.cpp
         TransportBar.cpp
         ZenithDesignSystem.cpp
+        FontManager.cpp
         ZenithLayout.cpp
         ZenithPolySynthUI.cpp
         ../../rendering/SkiaRenderer.cpp
