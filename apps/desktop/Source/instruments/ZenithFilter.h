@@ -32,6 +32,7 @@ public:
   void setDrive(float drive) { drive_ = drive; }
   void reset();
   float getResonance() const { return resonanceSmoothed_.getTargetValue(); }
+  void setModel(FilterModelType model) { model_ = static_cast<int>(model); }
 
   /**
    * @brief Process one sample
@@ -39,8 +40,6 @@ public:
    * @return Filtered sample
    */
   float processSample(float input);
-
-  void setModel(int model) { model_ = model; } // 0=SVF, 1=Ladder
 
 private:
   FilterType type_ = FilterType::Lowpass;

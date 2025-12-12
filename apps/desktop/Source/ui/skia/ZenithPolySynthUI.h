@@ -54,7 +54,7 @@ public:
 
 protected:
   // Skia draw callback
-  void drawSkiaContent(SkCanvas *canvas, int width, int height);
+  void drawSkiaContent(SkCanvas *canvas);
 
   // Timer callback for frame capture (Message Thread)
   void timerCallback() override;
@@ -110,6 +110,10 @@ private:
   void loadNextPreset();
   void loadPrevPreset();
   void refreshPresetList();
+
+  // Initialization
+  void buildUI();
+  void syncProcessorToUI();
 
   // ========================================================================
   // RENDER TREE (PHASE 1: Thread Safety)

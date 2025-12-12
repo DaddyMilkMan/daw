@@ -43,7 +43,7 @@ const juce::String ZenithPolySynthProcessor::FilterEnvAmount = "filter_env_amt";
 const juce::String ZenithPolySynthProcessor::UnisonVoices = "unison_voices";
 const juce::String ZenithPolySynthProcessor::UnisonDetune = "unison_detune";
 
-const juce::String ZenithPolySynthProcessor::FilterType = "filter_type";
+const juce::String ZenithPolySynthProcessor::FilterTypeParam = "filter_type";
 const juce::String ZenithPolySynthProcessor::FilterCutoff = "filter_cutoff";
 const juce::String ZenithPolySynthProcessor::FilterResonance = "filter_res";
 const juce::String ZenithPolySynthProcessor::FilterDrive = "filter_drive";
@@ -75,7 +75,8 @@ const juce::String ZenithPolySynthProcessor::MasterGain = "master_gain";
 const juce::String ZenithPolySynthProcessor::MaxVoices = "max_voices";
 const juce::String ZenithPolySynthProcessor::QualitySetting = "quality";
 
-const juce::String ZenithPolySynthProcessor::FilterKeyTrack = "filter_keytrack";
+const juce::String ZenithPolySynthProcessor::FilterKeyTrackParam =
+    "filter_keytrack";
 const juce::String ZenithPolySynthProcessor::PitchBendRange =
     "pitch_bend_range";
 const juce::String ZenithPolySynthProcessor::SubOscOctave = "sub_osc_octave";
@@ -263,7 +264,11 @@ ZenithPolySynthProcessor::createParameterLayout() {
 
   // Filter
   params.push_back(std::make_unique<juce::AudioParameterChoice>(
+<<<<<<< HEAD
       FilterType, "Filter Type",
+=======
+      FilterTypeParam, "Filter Type",
+>>>>>>> master
       juce::StringArray{"LowPass", "BandPass", "HighPass"}, 0));
   params.push_back(std::make_unique<juce::AudioParameterFloat>(
       FilterCutoff, "Filter Cutoff",
@@ -275,7 +280,11 @@ ZenithPolySynthProcessor::createParameterLayout() {
   params.push_back(std::make_unique<juce::AudioParameterFloat>(
       FilterEnvAmount, "Filter Env Amount", 0.0f, 1.0f, 0.5f));
   params.push_back(std::make_unique<juce::AudioParameterChoice>(
+<<<<<<< HEAD
       FilterKeyTrack, "Filter Key Track",
+=======
+      FilterKeyTrackParam, "Filter Key Track",
+>>>>>>> master
       juce::StringArray{"Off", "50%", "100%"}, 0));
 
   // Envelopes
@@ -419,8 +428,13 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
   int filterModel =
       static_cast<int>(parameters_.getRawParameterValue(FilterModel)->load());
 
+<<<<<<< HEAD
   int filterType =
       static_cast<int>(parameters_.getRawParameterValue(FilterType)->load());
+=======
+  int filterType = static_cast<int>(
+      parameters_.getRawParameterValue(FilterTypeParam)->load());
+>>>>>>> master
   float filterCutoff = parameters_.getRawParameterValue(FilterCutoff)->load();
   float filterResonance =
       parameters_.getRawParameterValue(FilterResonance)->load();
@@ -428,7 +442,11 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
   float filterEnvAmount =
       parameters_.getRawParameterValue(FilterEnvAmount)->load();
   int filterKeyTrack = static_cast<int>(
+<<<<<<< HEAD
       parameters_.getRawParameterValue(FilterKeyTrack)->load());
+=======
+      parameters_.getRawParameterValue(FilterKeyTrackParam)->load());
+>>>>>>> master
 
   float ampAttack = parameters_.getRawParameterValue(AmpAttack)->load();
   float ampDecay = parameters_.getRawParameterValue(AmpDecay)->load();
@@ -518,13 +536,21 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
       voice->setRingMod(ringMod);
       voice->setFilterModel(filterModel);
 
+<<<<<<< HEAD
       voice->setFilterType(static_cast<zenith::FilterType>(filterType));
+=======
+      voice->setFilterType(static_cast<FilterType>(filterType));
+>>>>>>> master
       voice->setFilterCutoff(filterCutoff);
       voice->setFilterResonance(filterResonance);
       voice->setFilterDrive(filterDrive);
       voice->setFilterEnvAmount(filterEnvAmount);
+<<<<<<< HEAD
       voice->setFilterKeyTrack(
           static_cast<zenith::FilterKeyTrack>(filterKeyTrack));
+=======
+      voice->setFilterKeyTrack(static_cast<FilterKeyTrack>(filterKeyTrack));
+>>>>>>> master
 
       voice->setAmpEnvelope(ampAttack, ampDecay, ampSustain, ampRelease);
       voice->setModEnvelope(modAttack, modDecay, modSustain, modRelease);

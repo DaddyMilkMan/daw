@@ -14,13 +14,14 @@
 #pragma once
 
 #include "Instrument.h"
-#include "ZenithPolySynthDefs.h"
 #include "ZenithEffects.h"
+#include "ZenithPolySynthDefs.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
+
 
 namespace zenith {
 
@@ -33,7 +34,7 @@ public:
   ZenithPolySynthProcessor();
   ~ZenithPolySynthProcessor() override;
 
-  juce::AbstractFifo& getVisualizerFifo() { return visualizerFifo_; }
+  juce::AbstractFifo &getVisualizerFifo() { return visualizerFifo_; }
 
   // AudioProcessor overrides
   void prepareToPlay(double sampleRate, int samplesPerBlock) override;
@@ -85,7 +86,7 @@ public:
   static const juce::String UnisonVoices;
   static const juce::String UnisonDetune;
 
-  static const juce::String FilterType;
+  static const juce::String FilterTypeParam;
   static const juce::String FilterCutoff;
   static const juce::String FilterResonance;
   static const juce::String FilterDrive;
@@ -116,24 +117,25 @@ public:
 
   static const juce::String MaxVoices;
   static const juce::String QualitySetting;
-  
+
   // New Parameters - Phase 1 Fixes
-  static const juce::String FilterKeyTrack;
+  static const juce::String FilterKeyTrackParam;
   static const juce::String PitchBendRange;
   static const juce::String SubOscOctave;
   static const juce::String VelocityCurve;
-  
+
+
   // Flagship Features
   static const juce::String Osc2Sync;    // Sync Osc 2 to Osc 1
   static const juce::String Osc2FM;      // FM Amount (Osc 1 -> Osc 2)
   static const juce::String RingMod;     // Ring Mod Amount/Mix
   static const juce::String FilterModel; // SVF vs Ladder
-  
+
   // Effects Parameters
   static const juce::String DistortionAmount;
   static const juce::String ChorusAmount;
   static const juce::String ReverbAmount;
-  
+
   // Delay
   static const juce::String DelayTime;
   static const juce::String DelayFeedback;
@@ -150,13 +152,15 @@ public:
   static const juce::String LFO2Retr;
 
   // Modulation Matrix Access
-  float getModulationMatrix(ModulationSource src, ModulationDestination dst) const;
-  void setModulationMatrix(ModulationSource src, ModulationDestination dst, float amount);
+  float getModulationMatrix(ModulationSource src,
+                            ModulationDestination dst) const;
+  void setModulationMatrix(ModulationSource src, ModulationDestination dst,
+                           float amount);
 
   // Visualizer Access
-  int readFromVisualizer(float* buffer, int numSamples);
-  void pushToVisualizer(const float* buffer, int numSamples);
-  
+  int readFromVisualizer(float *buffer, int numSamples);
+  void pushToVisualizer(const float *buffer, int numSamples);
+
   // Shape / Pulse Width / Wavetable Position
   static const juce::String Osc1Shape;
   static const juce::String Osc2Shape;
@@ -171,16 +175,16 @@ private:
   juce::Synthesiser synthesiser_;
   double currentBpm_ = 120.0;
   juce::AudioProcessorValueTreeState parameters_;
-  
+
   // Global Effects Chain
   ZenithEffects effects_;
 
   // Modulation Matrix Storage (Global for UI, applied to voices)
-  std::array<ModulationSlot, 64> globalModMatrix_; 
+  std::array<ModulationSlot, 64> globalModMatrix_;
 
   // Visualizer Buffer
-  juce::AbstractFifo visualizerFifo_{ 4096 };
-  std::vector<float> visualizerBuffer_{ 4096 };
+  juce::AbstractFifo visualizerFifo_{4096};
+  std::vector<float> visualizerBuffer_{4096};
 
   // Internal state
   int currentMaxVoices_ = 16;

@@ -810,6 +810,32 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
   }
 }
 
+// Helper: Apply gain (volume) and pan
+void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
+  float gain = mixerChannel.getVolume();
+  float pan = mixerChannel.getPan();
+
+  if (buffer.getNumChannels() == 1) {
+    buffer.applyGain(0, 0, numSamples, gain);
+  } else if (buffer.getNumChannels() == 2) {
+    float panPosition = (pan + 1.0f) * 0.5f; // normalize pan from [-1, 1] to [0, 1]
+    float gainL = gain * (1.0f - panPosition);
+    float gainR = gain * panPosition;
+
+    buffer.applyGain(0, 0, numSamples, gainL);
+    buffer.applyGain(1, 0, numSamples, gainR);
+  }
+}
+
+void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
+                              int numSamples) {
+  // Delegate to mixer channel
+  juce::ignoreUnused(buffer, numSamples);
+  // Note: MixerChannel calculates levels during process, but if we need
+  // external update: mixerChannel.updateMeters(info); // Assuming this method
+  // exists or similar logic
+}
+
 //==============================================================================
 // MIDI Scheduling
 //==============================================================================

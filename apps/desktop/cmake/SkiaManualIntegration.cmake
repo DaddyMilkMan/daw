@@ -1,18 +1,55 @@
 # ============================================================================
-# Skia Integration (Audited)
+# Skia Integration (Audited - Build Optimized)
 # ============================================================================
 # Manual integration strategy for Zenith DAW.
-# Scans vcpkg standard paths for Skia headers and libraries.
+# Uses CMake's standard path discovery to find Skia from vcpkg.
+#
+# Configuration:
+#   - SKIA_ROOT: Override via -DSKIA_ROOT=/path/to/skia
+#   - Falls back to VCPKG_INSTALLED_DIR or CMAKE_PREFIX_PATH
 # ============================================================================
 
 message(STATUS "============================================")
 message(STATUS "Configuring Skia Integration (Audited)")
 message(STATUS "============================================")
 
-set(SKIA_ROOT "C:/vcpkg/installed/x64-windows")
+# ==============================================================================
+# Auto-detect SKIA_ROOT from vcpkg or allow override
+# ==============================================================================
+if(NOT DEFINED SKIA_ROOT)
+    if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+        set(SKIA_ROOT "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}")
+        message(STATUS "  SKIA_ROOT: From VCPKG_INSTALLED_DIR")
+    elseif(DEFINED ENV{VCPKG_ROOT})
+        if(WIN32)
+            set(_triplet "x64-windows")
+        elseif(APPLE)
+            set(_triplet "x64-osx")
+        else()
+            set(_triplet "x64-linux")
+        endif()
+        set(SKIA_ROOT "$ENV{VCPKG_ROOT}/installed/${_triplet}")
+        message(STATUS "  SKIA_ROOT: From VCPKG_ROOT environment variable")
+    elseif(CMAKE_PREFIX_PATH)
+        list(GET CMAKE_PREFIX_PATH 0 SKIA_ROOT)
+        message(STATUS "  SKIA_ROOT: From CMAKE_PREFIX_PATH")
+    else()
+        # Platform-specific fallbacks
+        if(WIN32)
+            set(SKIA_ROOT "C:/vcpkg/installed/x64-windows")
+        elseif(APPLE)
+            set(SKIA_ROOT "/usr/local/opt/skia")
+        else()
+            set(SKIA_ROOT "/usr/local")
+        endif()
+        message(STATUS "  SKIA_ROOT: Using platform default fallback")
+    endif()
+endif()
+
 set(SKIA_INCLUDE_DIR "${SKIA_ROOT}/include/skia")
 set(SKIA_LIB_DIR "${SKIA_ROOT}/lib")
 set(SKIA_BIN_DIR "${SKIA_ROOT}/bin")
+message(STATUS "  SKIA_ROOT: ${SKIA_ROOT}")
 
 # Check for headers
 if(EXISTS "${SKIA_INCLUDE_DIR}/core/SkCanvas.h")

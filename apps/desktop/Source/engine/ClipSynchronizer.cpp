@@ -257,9 +257,19 @@ double ClipSynchronizer::samplesToBeats(int64_t samples, double tempo,
   return seconds / (60.0 / tempo);
 }
 
+//==============================================================================
+// juce::ValueTree::Listener overrides
+void ClipSynchronizer::valueTreePropertyChanged(
+    juce::ValueTree &treeWhosePropertyHasChanged,
+    const juce::Identifier &property) {
+  juce::ignoreUnused(treeWhosePropertyHasChanged, property);
+  // TODO: Implement UI -> Engine sync for property changes
+}
+
 void ClipSynchronizer::valueTreeChildAdded(
     juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) {
   juce::ignoreUnused(parentTree, childWhichHasBeenAdded);
+  // TODO: Implement UI -> Engine sync for added clips
 }
 
 void ClipSynchronizer::valueTreeChildRemoved(
@@ -267,12 +277,7 @@ void ClipSynchronizer::valueTreeChildRemoved(
     int indexFromWhichChildWasRemoved) {
   juce::ignoreUnused(parentTree, childWhichHasBeenRemoved,
                      indexFromWhichChildWasRemoved);
-}
-
-void ClipSynchronizer::valueTreePropertyChanged(
-    juce::ValueTree &treeWhosePropertyHasChanged,
-    const juce::Identifier &property) {
-  juce::ignoreUnused(treeWhosePropertyHasChanged, property);
+  // TODO: Implement UI -> Engine sync for removed clips
 }
 
 } // namespace zenith

@@ -15,7 +15,9 @@
 #include "ZenithPolySynthDefs.h"
 #include <array>
 #include <cmath>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
+
 
 namespace zenith {
 
@@ -41,6 +43,12 @@ public:
    */
   float getNextSample(float frequency, float shape = 0.5f);
 
+  /**
+   * @brief Update supersaw frequency ratios after detune change
+   * Must be called after setDetune() to update cached ratios.
+   */
+  void updateSupersawRatios();
+
   // Flagship Features
   void setSync(bool enabled) { syncEnabled_ = enabled; }
   void resetPhase() { phase_ = 0.0; }
@@ -48,9 +56,6 @@ public:
   void reducePhase(double amount) {
     phase_ -= amount;
   } // For adjusting phase after sync reset
-
-  // Update supersaw frequency ratios after detune change
-  void updateSupersawRatios();
 
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;

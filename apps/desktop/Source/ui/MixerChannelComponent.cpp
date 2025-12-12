@@ -7,6 +7,8 @@
 #include "../../Source/engine/Track.h"
 #include "../../Source/ui/skia/SkiaTheme.h" // For SkiaTheme
 #include "../../Source/ui/skia/ZenithDesignSystem.h" // For ThemeManager
+#include "../../Source/ui/skia/GlassmorphicPanel.h" // Added
+#include "../../Source/ui/skia/NeonGlow.h"          // Added
 
 #include <core/SkCanvas.h>
 #include <core/SkRRect.h>
@@ -132,48 +134,16 @@ void MixerChannelComponent::changeListenerCallback(
 //==============================================================================
 void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith::design;
+  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  // Background with subtle gradient
-  SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
-                             {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {colors::BG_DARK,
-                             colors::BG_DARKER};
-  auto bgGradient = SkGradientShader::MakeLinear(
-      bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
-
-  SkPaint bgPaint;
-  bgPaint.setShader(bgGradient);
-  bgPaint.setAntiAlias(true);
-
-  SkRRect rrect = SkRRect::MakeRectXY(
-      SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
-                       bounds.getHeight()),
-      dimensions::RADIUS_MD, dimensions::RADIUS_MD);
-  canvas->drawRRect(rrect, bgPaint);
-
-  // Inner highlight at top (subtle glass)
-  SkRect highlightBounds =
-      SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
-                       bounds.getHeight() * 0.2f);
-  SkPaint highlightPaint;
-  highlightPaint.setColor(colors::GLASS_HIGHLIGHT); 
-  SkRRect highlightRRect = SkRRect::MakeRectXY(highlightBounds, dimensions::RADIUS_MD, dimensions::RADIUS_MD);
-  canvas->drawRRect(highlightRRect, highlightPaint);
-
-  // Subtle border
-  SkPaint borderPaint;
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(colors::BORDER_SUBTLE); 
-  borderPaint.setAntiAlias(true);
-  SkRRect borderRect = rrect;
-  borderRect.inset(0.5f, 0.5f);
-  canvas->drawRRect(borderRect, borderPaint);
+  // Background (Glassmorphic)
+  zenith::GlassmorphicPanel::draw(canvas, skBounds, zenith::GlassmorphicPanel::Style::Elevated);
 
   // Children are drawn by SkiaComponent::drawChildren
   drawChildren(canvas);
 }
+
+
 
 
 void MixerChannelComponent::resized() {
@@ -357,125 +327,56 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
 
 void MixerChannelComponent::LevelMeter::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
-  using namespace zenith::design;
+  SkRect rect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                  bounds.getWidth(), bounds.getHeight());
 
-  // Background with gradient (darker at top, lighter at bottom)
-  SkPoint bgGradPoints[2] = {{bounds.getCentreX(), bounds.getY()},
-                             {bounds.getCentreX(), bounds.getBottom()}};
-  SkColor bgGradColors[2] = {colors::BG_DARK,
-                             colors::BG_DARKER};
-  auto bgGradient = SkGradientShader::MakeLinear(
-      bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
+  // Background (Subtle Glass)
+  zenith::GlassmorphicPanel::draw(canvas, rect, zenith::GlassmorphicPanel::Style::Subtle);
 
-  SkPaint bgPaint;
-  bgPaint.setShader(bgGradient);
-  bgPaint.setAntiAlias(true);
-
-  SkRRect rrect = SkRRect::MakeRectXY(
-      SkRect::MakeXYWH(bounds.getX(), bounds.getY(), bounds.getWidth(),
-                       bounds.getHeight()),
-      dimensions::RADIUS_SM, dimensions::RADIUS_SM);
-  canvas->drawRRect(rrect, bgPaint);
-
-  // Inner shadow at top
-  bgPaint.setShader(nullptr);
-  bgPaint.setColor(SkColorSetARGB(255, 0, 0, 0)); // Black
-  bgPaint.setMaskFilter(SkMaskFilter::MakeBlur((SkBlurStyle)0, 2.0f));
-  SkRRect shadowRRect = rrect;
-  shadowRRect.inset(1.0f, 1.0f);
-  canvas->drawRRect(shadowRRect.makeOffset(0, 1), bgPaint);
-  bgPaint.setMaskFilter(nullptr);
-
-  // Level bar (using smoothed animated level)
+  // Level bar
   if (currentLevel_ > 0.001f) {
     float levelDb = juce::Decibels::gainToDecibels(currentLevel_);
-
-    // Map -60dB to 0dB -> 0.0 to 1.0
     float normalizedLevel = juce::jmap(levelDb, -60.0f, 0.0f, 0.0f, 1.0f);
     normalizedLevel = juce::jlimit(0.0f, 1.0f, normalizedLevel);
 
-    float barHeight = bounds.getHeight() * normalizedLevel;
-    auto meterBounds =
-        bounds.withTop(bounds.getBottom() - barHeight).reduced(2.0f);
+    if (normalizedLevel > 0.01f) {
+        float barHeight = bounds.getHeight() * normalizedLevel;
+        auto meterRect = SkRect::MakeXYWH(bounds.getX(), bounds.getBottom() - barHeight, 
+                                          bounds.getWidth(), barHeight);
+        meterRect.inset(2.0f, 2.0f);
 
-    // Beautiful gradient based on level
-    SkColor topColor, bottomColor;
-    if (normalizedLevel > 0.9f) {
-      // Clipping warning - red gradient
-      topColor = colors::RED;
-      bottomColor = colors::RED;
-    } else if (normalizedLevel > 0.7f) {
-      // Hot - orange/yellow gradient
-      topColor = colors::AMBER;
-      bottomColor = colors::AMBER;
-    } else if (normalizedLevel > 0.4f) {
-      // Moderate - green/yellow gradient
-      topColor = colors::NEON_GREEN;
-      bottomColor = colors::NEON_GREEN;
-    } else {
-      // Normal - blue/green gradient
-      topColor = colors::BLUE;
-      bottomColor = colors::BLUE;
+        // Gradient based on level
+        SkColor topColor = zenith::design::colors::NEON_GREEN;
+        if (normalizedLevel > 0.9f) topColor = zenith::design::colors::RED;
+        else if (normalizedLevel > 0.7f) topColor = zenith::design::colors::AMBER;
+        else if (normalizedLevel > 0.4f) topColor = zenith::design::colors::BLUE; // Blue -> Greenish
+
+        SkPoint pts[2] = {{meterRect.centerX(), meterRect.bottom()}, {meterRect.centerX(), meterRect.top()}};
+        SkColor colors[2] = {zenith::design::colors::NEON_GREEN, topColor};
+        
+        SkPaint paint;
+        paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
+        paint.setAntiAlias(true);
+        canvas->drawRoundRect(meterRect, 2.0f, 2.0f, paint);
+
+        // Peak Glow utilizing helper
+        zenith::NeonGlow::drawVUMeterGlow(canvas, rect, normalizedLevel, true);
     }
-
-    // Apply gradient to meter bar
-    SkPoint meterGradPoints[2] = {
-        {meterBounds.getCentreX(), meterBounds.getY()},
-        {meterBounds.getCentreX(), meterBounds.getBottom()}};
-    SkColor meterGradColors[2] = {topColor, bottomColor};
-    auto meterGradient = SkGradientShader::MakeLinear(
-        meterGradPoints, meterGradColors, nullptr, 2, SkTileMode::kClamp);
-
-    SkPaint meterPaint;
-    meterPaint.setShader(meterGradient);
-    meterPaint.setAntiAlias(true);
-    canvas->drawRoundRect(
-        SkRect::MakeXYWH(meterBounds.getX(), meterBounds.getY(),
-                         meterBounds.getWidth(), meterBounds.getHeight()),
-        2.0f, 2.0f, meterPaint);
-
-    // Highlight at top of bar for 3D effect
-    meterPaint.setShader(nullptr);
-    meterPaint.setColor(SkColorSetARGB(51, 255, 255, 255)); // 20% white
-    canvas->drawRRect(
-        SkRRect::MakeRectXY(SkRect::MakeXYWH(meterBounds.getX(),
-                                             meterBounds.getY(),
-                                             meterBounds.getWidth(),
-                                             meterBounds.getHeight() * 0.3f),
-                            2.0f, 2.0f),
-        meterPaint);
   }
 
-  // Peak indicator (thin line at peak level)
+  // Peak indicator
   if (peakLevel_ > 0.001f) {
     float peakDb = juce::Decibels::gainToDecibels(peakLevel_);
     float normalizedPeak = juce::jmap(peakDb, -60.0f, 0.0f, 0.0f, 1.0f);
     normalizedPeak = juce::jlimit(0.0f, 1.0f, normalizedPeak);
-
+    
+    // Draw simple line for peak
     float peakY = bounds.getBottom() - (bounds.getHeight() * normalizedPeak);
-    auto peakBounds = SkRect::MakeXYWH(bounds.getX() + 2.0f, peakY - 1.0f,
-                                       bounds.getWidth() - 4.0f, 2.0f);
-
-    // Peak color (red if clipping, otherwise white)
-    SkColor peakColor = normalizedPeak > 0.95f
-                            ? colors::RED // Red for clipping
-                            : SK_ColorWHITE;      // White for normal
-
     SkPaint peakPaint;
-    peakPaint.setColor(peakColor);
+    peakPaint.setColor(normalizedPeak > 0.95f ? zenith::design::colors::RED : SK_ColorWHITE);
     peakPaint.setAntiAlias(true);
-    canvas->drawRoundRect(peakBounds, 1.0f, 1.0f, peakPaint);
+    canvas->drawRect(SkRect::MakeXYWH(bounds.getX(), peakY, bounds.getWidth(), 1.0f), peakPaint);
   }
-
-  // Subtle border
-  SkPaint borderPaint;
-  borderPaint.setColor(colors::BORDER_SUBTLE);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setAntiAlias(true);
-  SkRRect borderRect = rrect;
-  borderRect.inset(0.5f, 0.5f);
-  canvas->drawRRect(borderRect, borderPaint);
 }
 
 void MixerChannelComponent::LevelMeter::setLevel(float level) {

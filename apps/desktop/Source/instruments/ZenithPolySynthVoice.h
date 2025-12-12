@@ -17,6 +17,7 @@
 #include "ZenithPolySynthDefs.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 
+
 namespace zenith {
 
 // Forward declaration of Sound
@@ -116,15 +117,6 @@ public:
   void setOsc2Detune(float d) { osc2Detune_ = d; }
   void setOsc3Detune(float d) { osc3Detune_ = d; }
 
-  // Flagship Setters (public API)
-  void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
-  void setOsc2FM(float amount) { osc2FM_ = amount; }
-  void setRingMod(float amount) { ringMod_ = amount; }
-  void setFilterModel(int model) { filterModel_ = model; } // 0=SVF, 1=Ladder
-  void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }
-  void setOsc2Shape(float shape) { osc2Shape_.setTargetValue(shape); }
-  void setOsc3Shape(float shape) { osc3Shape_.setTargetValue(shape); }
-
   // Store previous frequency for glide
   void storePreviousFrequency() { previousFrequency_ = currentFrequency_; }
 
@@ -140,6 +132,17 @@ public:
     lfo2SyncRate_ = rate;
     lfo2Retr_ = retr;
   }
+
+  // Flagship Setters (public for ZenithPolySynth access)
+  void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
+  void setOsc2FM(float amount) { osc2FM_ = amount; }
+  void setRingMod(float amount) { ringMod_ = amount; }
+  void setFilterModel(FilterModelType model) { filterModel_ = static_cast<int>(model); }
+
+  // Oscillator shape setters (public for ZenithPolySynth access)
+  void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }
+  void setOsc2Shape(float shape) { osc2Shape_.setTargetValue(shape); }
+  void setOsc3Shape(float shape) { osc3Shape_.setTargetValue(shape); }
 
   //==========================================================================
   // Modulation Matrix Control

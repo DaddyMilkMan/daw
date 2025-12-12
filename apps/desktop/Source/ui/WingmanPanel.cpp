@@ -317,37 +317,51 @@ void WingmanPanel::showSettings() {
 }
 
 //==============================================================================
-// SampleHunterAgent::Listener
+//==============================================================================
+// SampleHunterAgent::Listener interface
 //==============================================================================
 
-void WingmanPanel::sampleDownloaded(
-    const struct zenith::ai::FoundSample &sample) {
-  juce::ignoreUnused(sample);
-  appendToConversation("Wingman", "Downloaded: " + sample.getSafeFilename());
+void WingmanPanel::sampleDownloaded(const zenith::ai::FoundSample &sample) {
+  juce::MessageManager::callAsync([this, sample]() {
+    appendToConversation("Wingman", "Downloaded sample: " +
+                                        sample.localFile.getFileName());
+  });
 }
 
-void WingmanPanel::sampleAnalyzed(
-    const struct zenith::ai::FoundSample &sample) {
-  juce::ignoreUnused(sample);
+void WingmanPanel::sampleAnalyzed(const zenith::ai::FoundSample &sample) {
+  juce::MessageManager::callAsync([this, sample]() {
+    // Optional: Show analysis details
+  });
 }
 
 void WingmanPanel::sampleImported(const juce::File &file) {
-  appendToConversation("Wingman", "Imported: " + file.getFileName());
+  juce::MessageManager::callAsync([this, file]() {
+    appendToConversation("Wingman",
+                         "Imported sample to project: " + file.getFileName());
+  });
 }
 
 void WingmanPanel::huntingProgressChanged(float progress,
                                           const juce::String &status) {
-  setStatus(status, juce::Colour(0xff00aaff));
+  juce::MessageManager::callAsync([this, progress, status]() {
+    setStatus(status, juce::Colour(0xff00aaff));
+  });
 }
 
-void WingmanPanel::huntingComplete(const struct zenith::ai::HuntingStats &stats,
+void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
                                    bool success) {
-  juce::ignoreUnused(stats);
-  if (success) {
-    statusLabel->setText("Hunting Complete", juce::dontSendNotification);
-  } else {
-    statusLabel->setText("Hunting Failed", juce::dontSendNotification);
-  }
+  juce::MessageManager::callAsync([this, stats, success]() {
+    if (success) {
+      appendToConversation("Wingman", "Sample hunting complete! Found " +
+                                          juce::String(stats.samplesFound) +
+                                          " samples.");
+      setStatus("Ready", juce::Colour(0xff00ff00));
+    } else {
+      appendToConversation("Wingman",
+                           "Sample hunting failed or was cancelled.");
+      setStatus("Failed", juce::Colour(0xffff0000));
+    }
+  });
 }
 
 } // namespace zenith

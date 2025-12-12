@@ -6,14 +6,9 @@ project(ZenithDAW
     LANGUAGES CXX C
 )
 
-# 2. Build Performance: ccache
-# find_program(CCACHE_PROGRAM ccache)
-# if(CCACHE_PROGRAM)
-#     message(STATUS "Using ccache: ${CCACHE_PROGRAM}")
-#     set(CMAKE_CXX_COMPILER_LAUNCHER "${CCACHE_PROGRAM}")
-# else()
-#     message(STATUS "ccache not found. Install it for faster builds.")
-# endif()
+# 2. Build Performance Optimizations
+# Early-stage optimizations that must be set before target creation
+include(apps/desktop/cmake/BuildOptimizations.cmake)
 
 # 3. Default Build Type
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -140,29 +135,10 @@ target_include_directories(ZenithDAW PUBLIC
 
 target_link_libraries(ZenithDAW PRIVATE
     juce::juce_core
-    juce::juce_events
-    juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-    juce::juce_gui_extra
-    juce::juce_audio_basics
-    juce::juce_audio_devices
-    juce::juce_audio_formats
-    juce::juce_audio_processors
-    juce::juce_audio_utils
-    juce::juce_dsp
-    juce::juce_opengl
-    # juce::juce_network # If separate module, but StreamingSocket is in core
-)
-
-
-# Link JUCE modules
-target_link_libraries(ZenithDAW PRIVATE
-    juce::juce_core
     juce::juce_cryptography
-    juce::juce_data_structures
     juce::juce_events
     juce::juce_graphics
+    juce::juce_data_structures
     juce::juce_gui_basics
     juce::juce_gui_extra
     juce::juce_audio_basics
@@ -198,6 +174,15 @@ if(ZENITH_ENABLE_SKIA)
 else()
     message(STATUS "Zenith DAW: Skia rendering DISABLED")
 endif()
+
+# ==============================================================================
+# Build Optimization Integration
+# ==============================================================================
+# Apply build optimizations (parallel compile, incremental link, etc.)
+enable_zenith_build_optimizations(ZenithDAW)
+
+# Precompiled Headers - dramatically reduces incremental build times
+include(apps/desktop/cmake/PrecompiledHeaders.cmake)
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE

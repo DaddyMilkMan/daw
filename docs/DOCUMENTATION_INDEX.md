@@ -92,7 +92,7 @@
 - [planning/vision/PERFECT_DAW_ANALYSIS.md](planning/vision/PERFECT_DAW_ANALYSIS.md)
 
 #### Technical Guides
-- [docs/QT_QML_JUCE_ARCHITECTURE.md](docs/QT_QML_JUCE_ARCHITECTURE.md) - Architecture overview
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Architecture overview (JUCE + Skia)
 - [docs/WINDOWS_AUDIO_APIS_GUIDE.md](docs/WINDOWS_AUDIO_APIS_GUIDE.md) - Windows audio
 - [docs/DEVELOPER_WORKFLOW.md](docs/DEVELOPER_WORKFLOW.md) - Development workflow
 - [docs/INSTALL_WINDOWS.md](docs/INSTALL_WINDOWS.md) - Windows installation
@@ -102,7 +102,6 @@
 - [docs/tech-briefs/02-web-embedding-decision.md](docs/tech-briefs/02-web-embedding-decision.md)
 - [docs/tech-briefs/03-vst3-au-hosting-guide.md](docs/tech-briefs/03-vst3-au-hosting-guide.md)
 - [docs/tech-briefs/04-audio-driver-latency-guide.md](docs/tech-briefs/04-audio-driver-latency-guide.md)
-- [docs/tech-briefs/05-qt-qml-performance-analysis.md](docs/tech-briefs/05-qt-qml-performance-analysis.md)
 - [docs/tech-briefs/06-audio-thread-safety-policy.md](docs/tech-briefs/06-audio-thread-safety-policy.md)
 - [docs/tech-briefs/07-packaging-licensing-checklist.md](docs/tech-briefs/07-packaging-licensing-checklist.md)
 
@@ -160,7 +159,7 @@ All documents reviewed by documentation team (Dave, Fred, Sarah) on **2025-11-28
 → Run `BUILD_WITH_SKIA.bat` or see [PROJECT_STATUS.md](PROJECT_STATUS.md) build section
 
 **...understand the architecture**
-→ Read [docs/QT_QML_JUCE_ARCHITECTURE.md](docs/QT_QML_JUCE_ARCHITECTURE.md)
+→ Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
 
 **...see git branch history**
 → Read [docs/BRANCH_STATUS.md](docs/BRANCH_STATUS.md)
