@@ -42,3 +42,5 @@ msbuild_*.log
 *.tmp
 *.backup
 *.orig
+
+debug_log.txt

@@ -1,9 +1,8 @@
-#include "../../include/EngineEvent.h"
 #include <atomic>
+#include <thread>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include <thread>
-
+#include "../../include/EngineEvent.h"
 
 namespace zenith {
 namespace tests {
@@ -45,8 +44,9 @@ public:
           fifo.drainTo(buffer, 512);
           receivedCount += buffer.getNumEvents();
 
-          if (writerFinished && receivedCount >= sentCount) {
-            // Writer is done and we caught up
+          if (writerFinished.load(std::memory_order_acquire) &&
+              buffer.getNumEvents() == 0) {
+            // Writer is done and the queue is empty, so we can exit.
             break;
           }
 
