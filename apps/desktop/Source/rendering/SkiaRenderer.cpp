@@ -33,7 +33,6 @@
 #include <gpu/ganesh/d3d/GrD3DBackendContext.h>
 #include <wrl/client.h>
 
-
 using Microsoft::WRL::ComPtr;
 #endif
 
