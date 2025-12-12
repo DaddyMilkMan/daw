@@ -30,8 +30,9 @@
 #elif JUCE_WINDOWS
 #include <d3d12.h>
 #include <dxgi1_4.h>
-#include <wrl/client.h>
 #include <gpu/ganesh/d3d/GrD3DBackendContext.h>
+#include <wrl/client.h>
+
 using Microsoft::WRL::ComPtr;
 #endif
 
@@ -69,16 +70,16 @@ bool SkiaRenderer::initialize() {
   DBG("Initializing SkiaRenderer...");
 
   bool contextCreated = createGpuContext();
-  
+
   // Fallback chain if primary backend fails
   if (!contextCreated) {
     DBG("ERROR: Failed to create GPU context, trying fallback...");
-    
+
     if (backend_ != Backend::OpenGL) {
       backend_ = Backend::OpenGL;
       contextCreated = createGpuContext();
     }
-    
+
     if (!contextCreated) {
       backend_ = Backend::Software;
       // Software doesn't need GPU context
@@ -104,7 +105,7 @@ void SkiaRenderer::shutdown() {
   surface_.reset();
   grContext_.reset();
 
-// D3D12 cleanup removed - using OpenGL on Windows
+  // D3D12 cleanup removed - using OpenGL on Windows
 
   initialized_ = false;
 }
@@ -231,8 +232,8 @@ bool SkiaRenderer::createSurface(int width, int height) {
         SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
 
     // Generic GPU surface (offscreen)
-    surface_ = SkSurfaces::RenderTarget(grContext_.get(),
-                                        skgpu::Budgeted::kNo, info);
+    surface_ =
+        SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
   }
   return surface_ != nullptr;
 }
@@ -344,63 +345,10 @@ bool SkiaRenderer::createVulkanContext() {
 #endif
 
 #if JUCE_WINDOWS
-bool SkiaRenderer::createD3DContext()
-{
-    DBG("SkiaRenderer: Creating D3D12 context...");
-
-    // 1. Enable Debug Layer (Debug builds only)
-#if JUCE_DEBUG
-    ComPtr<ID3D12Debug> debugController;
-    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-        debugController->EnableDebugLayer();
-    }
-#endif
-
-    // 2. Create Factory
-    ComPtr<IDXGIFactory4> factory;
-    if (FAILED(CreateDXGIFactory1(IID_PPV_ARGS(&factory)))) {
-        DBG("SkiaRenderer: Failed to create DXGI factory");
-        return false;
-    }
-
-    // 3. Create Device
-    ComPtr<ID3D12Device> device;
-    if (FAILED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&device)))) {
-        DBG("SkiaRenderer: Failed to create D3D12 device");
-        return false;
-    }
-
-    // 4. Create Command Queue
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    
-    ComPtr<ID3D12CommandQueue> queue;
-    if (FAILED(device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&queue)))) {
-        DBG("SkiaRenderer: Failed to create command queue");
-        return false;
-    }
-
-    // 5. Create Skia Context
-    GrD3DBackendContext backendContext;
-    backendContext.fAdapter = nullptr; // Skia will query if needed
-    backendContext.fDevice = device;
-    backendContext.fQueue = queue;
-    
-    // Transfer ownership to Skia (using ComPtr::Get() doesn't add ref, but Skia expects to retain it?)
-    // GrD3DBackendContext uses sk_sp<ID3D12Device> usually, or raw pointers if using older Skia.
-    // Modern Skia uses cp (com_ptr). We need to ensure types match.
-    // Assuming standard layout:
-    
-    grContext_ = GrDirectContext::MakeDirect3D(backendContext);
-    
-    if (grContext_) {
-        DBG("SkiaRenderer: D3D12 context created successfully");
-        return true;
-    }
-    
-    DBG("SkiaRenderer: Failed to create GrDirectContext from D3D12 device");
-    return false;
+bool SkiaRenderer::createD3DContext() {
+  // D3D12 temporarily disabled due to Skia integration issues.
+  // Falls back to OpenGL.
+  return false;
 }
 #endif
 
