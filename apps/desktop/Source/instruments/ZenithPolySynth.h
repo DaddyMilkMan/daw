@@ -3,10 +3,11 @@
 
     ZenithPolySynth.h
     Created: 2025-11-18
-    Refactored: 2025-12-06
+    Refactored: 2025-12-11
     Author:  Zenith DAW
 
     Header for ZenithPolySynth - multi-oscillator subtractive synthesizer.
+    REFACTORED: Uses ZenithPolySynthParameterManager.
 
   ==============================================================================
 */
@@ -16,12 +17,12 @@
 #include "Instrument.h"
 #include "ZenithEffects.h"
 #include "ZenithPolySynthDefs.h"
+#include "ZenithPolySynthParameterManager.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
-
 
 namespace zenith {
 
@@ -69,87 +70,90 @@ public:
   // Parameter layout
   juce::AudioProcessorValueTreeState &getParameters() { return parameters_; }
 
-  // Parameter IDs
-  static const juce::String Osc1Wave;
-  static const juce::String Osc1Detune;
-  static const juce::String Osc1Mix;
-  static const juce::String Osc2Wave;
-  static const juce::String Osc2Detune;
-  static const juce::String Osc2Mix;
-  static const juce::String Osc3Wave;
-  static const juce::String Osc3Detune;
-  static const juce::String Osc3Mix;
-  static const juce::String NoiseLevel;
-  static const juce::String SubOscLevel;
-  static const juce::String FilterEnvAmount;
+  // Accessor for the manager
+  ZenithPolySynthParameterManager &getParameterManager() {
+    return paramManager_;
+  }
 
-  static const juce::String UnisonVoices;
-  static const juce::String UnisonDetune;
+  // Parameter ID Aliases (for backward compatibility)
+  static const juce::String &Osc1Wave;
+  static const juce::String &Osc1Detune;
+  static const juce::String &Osc1Mix;
+  static const juce::String &Osc1Shape;
+  static const juce::String &Osc2Wave;
+  static const juce::String &Osc2Detune;
+  static const juce::String &Osc2Mix;
+  static const juce::String &Osc2Shape;
+  static const juce::String &Osc3Wave;
+  static const juce::String &Osc3Detune;
+  static const juce::String &Osc3Mix;
+  static const juce::String &Osc3Shape;
 
-  static const juce::String FilterTypeParam;
-  static const juce::String FilterCutoff;
-  static const juce::String FilterResonance;
-  static const juce::String FilterDrive;
+  static const juce::String &NoiseLevel;
+  static const juce::String &SubOscLevel;
+  static const juce::String &SubOscOctave;
+  static const juce::String &FilterEnvAmount;
 
-  static const juce::String AmpAttack;
-  static const juce::String AmpDecay;
-  static const juce::String AmpSustain;
-  static const juce::String AmpRelease;
+  static const juce::String &UnisonVoices;
+  static const juce::String &UnisonDetune;
 
-  static const juce::String ModAttack;
-  static const juce::String ModDecay;
-  static const juce::String ModSustain;
-  static const juce::String ModRelease;
+  static const juce::String
+      &FilterType; // Renamed from FilterTypeParam to match manager
+  static const juce::String &FilterCutoff;
+  static const juce::String &FilterResonance;
+  static const juce::String &FilterDrive;
+  static const juce::String &FilterKeyTrack; // Renamed from FilterKeyTrackParam
+  static const juce::String &FilterModel;
 
-  static const juce::String LFO1Rate;
-  static const juce::String LFO1Amount;
-  static const juce::String LFO1Target;
-  static const juce::String LFO1Waveform;
+  static const juce::String &AmpAttack;
+  static const juce::String &AmpDecay;
+  static const juce::String &AmpSustain;
+  static const juce::String &AmpRelease;
 
-  static const juce::String LFO2Rate;
-  static const juce::String LFO2Amount;
-  static const juce::String LFO2Target;
-  static const juce::String LFO2Waveform;
+  static const juce::String &ModAttack;
+  static const juce::String &ModDecay;
+  static const juce::String &ModSustain;
+  static const juce::String &ModRelease;
 
-  static const juce::String GlideTime;
-  static const juce::String MonoMode;
-  static const juce::String MasterGain;
+  static const juce::String &LFO1Rate;
+  static const juce::String &LFO1Amount;
+  static const juce::String &LFO1Target;
+  static const juce::String &LFO1Waveform;
+  static const juce::String &LFO1Sync;
+  static const juce::String &LFO1SyncRate;
+  static const juce::String &LFO1Retr;
 
-  static const juce::String MaxVoices;
-  static const juce::String QualitySetting;
+  static const juce::String &LFO2Rate;
+  static const juce::String &LFO2Amount;
+  static const juce::String &LFO2Target;
+  static const juce::String &LFO2Waveform;
+  static const juce::String &LFO2Sync;
+  static const juce::String &LFO2SyncRate;
+  static const juce::String &LFO2Retr;
 
-  // New Parameters - Phase 1 Fixes
-  static const juce::String FilterKeyTrackParam;
-  static const juce::String PitchBendRange;
-  static const juce::String SubOscOctave;
-  static const juce::String VelocityCurve;
+  static const juce::String &GlideTime;
+  static const juce::String &MonoMode;
+  static const juce::String &MasterGain;
+  static const juce::String &PitchBendRange;
+  static const juce::String &VelocityCurve;
 
+  static const juce::String &MaxVoices;
+  static const juce::String &QualitySetting;
 
   // Flagship Features
-  static const juce::String Osc2Sync;    // Sync Osc 2 to Osc 1
-  static const juce::String Osc2FM;      // FM Amount (Osc 1 -> Osc 2)
-  static const juce::String RingMod;     // Ring Mod Amount/Mix
-  static const juce::String FilterModel; // SVF vs Ladder
+  static const juce::String &Osc2Sync;
+  static const juce::String &Osc2FM;
+  static const juce::String &RingMod;
 
   // Effects Parameters
-  static const juce::String DistortionAmount;
-  static const juce::String ChorusAmount;
-  static const juce::String ReverbAmount;
-
-  // Delay
-  static const juce::String DelayTime;
-  static const juce::String DelayFeedback;
-  static const juce::String DelayMix;
-  static const juce::String DelaySync;
-  static const juce::String DelaySyncRate;
-
-  // LFO Sync
-  static const juce::String LFO1Sync;     // Bool
-  static const juce::String LFO1SyncRate; // Choice
-  static const juce::String LFO1Retr;     // Bool
-  static const juce::String LFO2Sync;
-  static const juce::String LFO2SyncRate;
-  static const juce::String LFO2Retr;
+  static const juce::String &DistortionAmount;
+  static const juce::String &ChorusAmount;
+  static const juce::String &ReverbAmount;
+  static const juce::String &DelayTime;
+  static const juce::String &DelayFeedback;
+  static const juce::String &DelayMix;
+  static const juce::String &DelaySync;
+  static const juce::String &DelaySyncRate;
 
   // Modulation Matrix Access
   float getModulationMatrix(ModulationSource src,
@@ -161,11 +165,6 @@ public:
   int readFromVisualizer(float *buffer, int numSamples);
   void pushToVisualizer(const float *buffer, int numSamples);
 
-  // Shape / Pulse Width / Wavetable Position
-  static const juce::String Osc1Shape;
-  static const juce::String Osc2Shape;
-  static const juce::String Osc3Shape;
-
   // Global Effects Access
   void setDistortion(float amount) { effects_.setDistortion(amount); }
   void setChorus(float amount) { effects_.setChorus(amount); }
@@ -175,6 +174,9 @@ private:
   juce::Synthesiser synthesiser_;
   double currentBpm_ = 120.0;
   juce::AudioProcessorValueTreeState parameters_;
+
+  // The new parameter manager
+  ZenithPolySynthParameterManager paramManager_;
 
   // Global Effects Chain
   ZenithEffects effects_;
@@ -191,7 +193,6 @@ private:
   int maxActiveVoices_ = 0;
   double maxBlockProcessingTime_ = 0.0;
 
-  juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
   void updateVoiceParameters();
   void updateVoiceCount();
 };

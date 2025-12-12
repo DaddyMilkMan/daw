@@ -810,23 +810,6 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
   }
 }
 
-// Helper: Apply gain (volume) and pan
-void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-  float gain = mixerChannel.getVolume();
-  float pan = mixerChannel.getPan();
-
-  if (buffer.getNumChannels() == 1) {
-    buffer.applyGain(0, 0, numSamples, gain);
-  } else if (buffer.getNumChannels() == 2) {
-    float panPosition = (pan + 1.0f) * 0.5f; // normalize pan from [-1, 1] to [0, 1]
-    float gainL = gain * (1.0f - panPosition);
-    float gainR = gain * panPosition;
-
-    buffer.applyGain(0, 0, numSamples, gainL);
-    buffer.applyGain(1, 0, numSamples, gainR);
-  }
-}
-
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                               int numSamples) {
   // Delegate to mixer channel
@@ -954,24 +937,5 @@ void Track::setSoloed(bool shouldBeSoloed) { soloed_.store(shouldBeSoloed); }
 bool Track::isSoloed() const { return soloed_.load(); }
 
 //==============================================================================
-void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-  float volume = mixerChannel.getVolume();
-  float pan = mixerChannel.getPan(); // -1.0 to 1.0
-
-  if (volume != 1.0f)
-    buffer.applyGain(0, numSamples, volume);
-
-  if (buffer.getNumChannels() == 2 && pan != 0.0f) {
-    float p = std::clamp(pan, -1.0f, 1.0f);
-    // Constant power pan law
-    // At center (0.0): sin(pi/4) = cos(pi/4) = 0.707 (-3dB)
-    float angle = (p + 1.0f) * juce::MathConstants<float>::pi * 0.25f;
-    float leftGain = std::cos(angle);
-    float rightGain = std::sin(angle);
-
-    buffer.applyGain(0, 0, numSamples, leftGain);
-    buffer.applyGain(1, 0, numSamples, rightGain);
-  }
-}
 
 } // namespace zenith
