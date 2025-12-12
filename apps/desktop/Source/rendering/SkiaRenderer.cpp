@@ -30,12 +30,11 @@
 #elif JUCE_WINDOWS
 #include <d3d12.h>
 #include <dxgi1_4.h>
-#include <wrl/client.h>
 #include <gpu/ganesh/d3d/GrD3DBackendContext.h>
+#include <wrl/client.h>
+
 using Microsoft::WRL::ComPtr;
 #endif
-
-// NOTE: D3D12 backend was removed - use OpenGL on Windows for now
 
 // OpenGL backend (always available as fallback)
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
@@ -69,16 +68,16 @@ bool SkiaRenderer::initialize() {
   DBG("Initializing SkiaRenderer...");
 
   bool contextCreated = createGpuContext();
-  
+
   // Fallback chain if primary backend fails
   if (!contextCreated) {
     DBG("ERROR: Failed to create GPU context, trying fallback...");
-    
+
     if (backend_ != Backend::OpenGL) {
       backend_ = Backend::OpenGL;
       contextCreated = createGpuContext();
     }
-    
+
     if (!contextCreated) {
       backend_ = Backend::Software;
       // Software doesn't need GPU context
@@ -103,8 +102,6 @@ void SkiaRenderer::shutdown() {
 
   surface_.reset();
   grContext_.reset();
-
-// D3D12 cleanup removed - using OpenGL on Windows
 
   initialized_ = false;
 }
@@ -153,7 +150,7 @@ void SkiaRenderer::resize(int width, int height) {
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
-  return Backend::OpenGL; // D3D12 backend disabled, using OpenGL
+  return Backend::Direct3D; // Prefer D3D12 on Windows now
 #elif JUCE_MAC
   return Backend::Metal;
 #elif JUCE_LINUX
@@ -200,7 +197,11 @@ bool SkiaRenderer::createGpuContext() {
     return createVulkanContext();
 #endif
   case Backend::Direct3D:
-    // D3D12 disabled - fall through to OpenGL
+#if JUCE_WINDOWS
+    return createD3DContext();
+#else
+    return false;
+#endif
   case Backend::OpenGL: {
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface)
@@ -231,8 +232,8 @@ bool SkiaRenderer::createSurface(int width, int height) {
         SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
 
     // Generic GPU surface (offscreen)
-    surface_ = SkSurfaces::RenderTarget(grContext_.get(),
-                                        skgpu::Budgeted::kNo, info);
+    surface_ =
+        SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
   }
   return surface_ != nullptr;
 }
@@ -247,8 +248,6 @@ void SkiaRenderer::updateStats() {
 //==============================================================================
 // Platform Implementations
 //==============================================================================
-
-// NOTE: D3D12 createD3DContext() removed - using OpenGL on Windows
 
 #if JUCE_MAC && defined(SK_METAL)
 bool SkiaRenderer::createMetalContext() {
@@ -386,11 +385,6 @@ bool SkiaRenderer::createD3DContext()
     backendContext.fAdapter = nullptr; // Skia will query if needed
     backendContext.fDevice = device;
     backendContext.fQueue = queue;
-    
-    // Transfer ownership to Skia (using ComPtr::Get() doesn't add ref, but Skia expects to retain it?)
-    // GrD3DBackendContext uses sk_sp<ID3D12Device> usually, or raw pointers if using older Skia.
-    // Modern Skia uses cp (com_ptr). We need to ensure types match.
-    // Assuming standard layout:
     
     grContext_ = GrDirectContext::MakeDirect3D(backendContext);
     
