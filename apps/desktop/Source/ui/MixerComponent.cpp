@@ -239,24 +239,26 @@ void MixerComponent::resized() {
 //==============================================================================
 
 void MixerComponent::selectChannel(const juce::String &trackId) {
-  if (selectedTrackId_ == trackId)
-    return;
-
-  selectedTrackId_ = trackId;
-  updateSelection();
-
-  if (onSelectionChanged) {
-    onSelectionChanged(trackId);
+  // Update Project State
+  auto &state = projectState_.getState();
+  if (state[ProjectState::PROP_SELECTED_TRACK_ID].toString() != trackId) {
+    state.setProperty(ProjectState::PROP_SELECTED_TRACK_ID, trackId,
+                      &projectState_.getUndoManager());
   }
+
+  // Local update will happen via listener callback
 }
 
 void MixerComponent::updateSelection() {
+  // Read from Project State
+  auto selectedId =
+      projectState_.getState()[ProjectState::PROP_SELECTED_TRACK_ID].toString();
+
   // Update selection state on all channels
   for (int i = 0; i < trackContainer_->getChannelCount(); ++i) {
     auto *channel = trackContainer_->getChannel(i);
     if (channel && channel->getTrack()) {
-      channel->setSelected(channel->getTrack()->getTrackId() ==
-                           selectedTrackId_);
+      channel->setSelected(channel->getTrack()->getTrackId() == selectedId);
     }
   }
 
@@ -314,6 +316,14 @@ Track *MixerComponent::findTrackById(const juce::String &trackId) {
 
 void MixerComponent::valueTreePropertyChanged(
     juce::ValueTree &tree, const juce::Identifier &property) {
+
+  if (tree.hasType(ProjectState::ID_PROJECT) &&
+      property == ProjectState::PROP_SELECTED_TRACK_ID) {
+    updateSelection();
+    repaint();
+    return;
+  }
+
   // Property changes are handled by individual MixerChannelComponents
   // via their Track listeners. No action needed here.
   juce::ignoreUnused(tree, property);

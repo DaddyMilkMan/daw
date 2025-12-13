@@ -26,7 +26,6 @@
 #include "SampleEditorComponent.h"
 #include "SessionViewComponent.h"
 
-
 class Engine; // Forward declaration
 
 namespace zenith {
@@ -71,6 +70,7 @@ private:
   // Cached pointers for fast access
   ViewSwitcher *viewSwitcher_ = nullptr;
   SampleEditorComponent *sampleEditor_ = nullptr;
+  ResizablePanelContainer *centerContainer_ = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

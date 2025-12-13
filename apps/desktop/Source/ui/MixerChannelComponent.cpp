@@ -270,8 +270,8 @@ void MixerChannelComponent::resized() {
 
   // Send indicators (above buttons)
   float sendHeight = kSendIndicatorHeight;
-  auto sendArea =
-      bounds.removeFromBottom(static_cast<int>(sendHeight * kNumSends + 8));
+  auto sendArea = bounds.removeFromBottom(
+      static_cast<int>(sendHeight * zenith::constants::kNumSends + 8));
   sendArea.removeFromBottom(4);
 
   for (auto &send : sendIndicators_) {

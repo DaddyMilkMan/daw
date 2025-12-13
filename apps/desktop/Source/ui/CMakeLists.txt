@@ -5,6 +5,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ArrangerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PianoRollComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DrumPadComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/AutomationLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MarkerLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/TempoLaneComponent.cpp
@@ -21,6 +22,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithTheme.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ZenithHubComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
     ${CMAKE_CURRENT_SOURCE_DIR}/LayoutManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ResizablePanelContainer.cpp

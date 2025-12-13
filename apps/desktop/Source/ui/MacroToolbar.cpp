@@ -1,4 +1,7 @@
 #include "../../include/ui/MacroToolbar.h"
+#include <algorithm>
+#include <cmath>
+
 #include "../../include/ui/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
@@ -189,9 +192,95 @@ void MacroToolbar::healSplits() {
   if (clipIds.size() < 2)
     return;
 
+  // 1. Gather Data
+  struct ClipData {
+    juce::String id;
+    juce::String trackId;
+    double start;
+    double length;
+    juce::String source;
+    bool isAudio;
+  };
+
+  std::vector<ClipData> clips;
+  for (const auto &id : clipIds) {
+    auto result = projectState_.findClip(id);
+    auto track = result.first;
+    auto clip = result.second;
+
+    if (track.isValid() && clip.isValid()) {
+      ClipData cd;
+      cd.id = id;
+      cd.trackId = track[ProjectState::PROP_ID];
+      cd.start = static_cast<double>(clip[ProjectState::PROP_START_BEATS]);
+      cd.length = static_cast<double>(clip[ProjectState::PROP_LENGTH_BEATS]);
+      if (clip.hasProperty(ProjectState::PROP_AUDIO_FILE))
+        cd.source = clip[ProjectState::PROP_AUDIO_FILE].toString();
+
+      // Basic type check
+      cd.isAudio = clip.hasProperty(ProjectState::PROP_AUDIO_FILE);
+      clips.push_back(cd);
+    }
+  }
+
+  if (clips.size() < 2)
+    return;
+
+  // 2. Sort by Track then Start Time
+  std::sort(clips.begin(), clips.end(),
+            [](const ClipData &a, const ClipData &b) {
+              if (a.trackId != b.trackId)
+                return a.trackId < b.trackId;
+              return a.start < b.start;
+            });
+
   projectState_.getUndoManager().beginNewTransaction("Macro: Heal Splits");
-  DBG("MacroToolbar: Heal Splits triggered for " << clipIds.size() << " clips");
-  // Implementation placeholder logic
+
+  // 3. Iterate and Merge (Optimized: O(N) single pass)
+  size_t i = 0;
+  while (i < clips.size()) {
+    size_t groupEnd = i + 1;
+    double totalLength = clips[i].length;
+    double currentEnd = clips[i].start + clips[i].length;
+
+    // Look ahead for mergeable clips
+    while (groupEnd < clips.size()) {
+      const auto &prev = clips[groupEnd - 1];
+      const auto &curr = clips[groupEnd];
+
+      // Check all criteria
+      bool sameTrack = (curr.trackId == prev.trackId);
+      bool bothAudio = (prev.isAudio && curr.isAudio);
+      bool sameSource = bothAudio && (prev.source == curr.source);
+      bool adjacent = std::abs(currentEnd - curr.start) < 0.001;
+
+      if (sameTrack && bothAudio && sameSource && adjacent) {
+        totalLength += curr.length;
+        currentEnd += curr.length;
+        groupEnd++;
+      } else {
+        break;
+      }
+    }
+
+    // Apply merge if group > 1
+    if (groupEnd > i + 1) {
+      auto &first = clips[i];
+
+      // Resize first clip
+      projectState_.resizeClip(first.trackId, first.id, totalLength);
+
+      // Delete others
+      for (size_t k = i + 1; k < groupEnd; ++k) {
+        projectState_.deleteClip(clips[k].trackId, clips[k].id, "Heal Splits");
+      }
+      DBG("MacroToolbar: Healed " << first.id << " with "
+                                  << (groupEnd - (i + 1)) << " clips");
+    }
+
+    // Advance to next unprocessed clip
+    i = groupEnd;
+  }
 }
 
 void MacroToolbar::instantFreeze() {

@@ -109,10 +109,13 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
   auto &theme = ::zenith::SkiaTheme::getInstance();
   auto &colors = theme.getColors();
-  auto &typo = theme.getTypography();
 
   float fWidth = (float)bounds.getWidth();
   float fHeight = (float)bounds.getHeight();
+
+  // Early exit for zero-size clips (edge case safety)
+  if (fWidth <= 0 || fHeight <= 0)
+    return;
 
   // 1. Calculate Smart Corners
   NeighborhoodState neighbors = getNeighborhoodState();
@@ -168,11 +171,19 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   if (loopBeats <= 0)
     loopBeats = totalBeats;
 
+  // Guard against zero-length clips
+  if (totalBeats <= 0)
+    totalBeats = 1.0; // Minimum 1 beat to prevent division issues
+
   float loopWidthPx = (float)(loopBeats * pixelsPerBeat);
   int numLoops = (int)std::ceil(totalBeats / loopBeats);
 
+  // Performance safety: Cap max loop iterations to prevent runaway rendering
+  numLoops = std::min(numLoops, 100);
+
   // Constants
   const float headerHeight = 24.0f;
+  const float contentAreaTop = headerHeight;
 
   for (int i = 0; i < numLoops; ++i) {
     float xOffset = i * loopWidthPx;
@@ -226,30 +237,51 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   headerPaint.setColor(headerColor);
   canvas->drawRect(headerRect, headerPaint);
 
-  // Header Name
+  // Header Name (A+ Typography)
   if (fWidth > 20) {
-    SkFont font = design::typography::getSkFont(
-        12.0f, design::FontWeight::Bold); // Slightly larger for header
+    SkFont font =
+        design::typography::getSkFont(12.0f, design::FontWeight::Bold);
 
     juce::String clipName = clip[ProjectState::PROP_NAME].toString();
     if (clipName.isEmpty())
       clipName = "Clip";
 
+    // Text Paint
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    textPaint.setColor(SK_ColorWHITE); // Always white on saturated header
+    textPaint.setColor(SK_ColorWHITE);
+
+    // Text Shadow for contrast
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setColor(SkColorSetA(SK_ColorBLACK, 128));
 
     float textX = 8.0f;
-    float textY = headerHeight / 2.0f + 4.0f; // Vertically center approx
+    float textY = headerHeight / 2.0f + 5.0f; // Adjusted vertical center
 
     // Simple text clipping
     canvas->save();
     canvas->clipRect(headerRect);
+
+    // Draw Shadow
+    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
+                           SkTextEncoding::kUTF8, textX + 1.0f, textY + 1.0f,
+                           font, shadowPaint);
+
+    // Draw Text
     canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
                            SkTextEncoding::kUTF8, textX, textY, font,
                            textPaint);
     canvas->restore();
   }
+
+  // 6. Content Area (Waveform/MIDI Blobs)
+  // The content area starts below the header and extends to the clip bottom.
+  // Actual waveform/MIDI rendering is handled by
+  // ArrangerComponent::drawClipWaveform() and drawClipMidiBlobs() which have
+  // access to the audio file cache. This component just provides the clip
+  // structure/chrome. Content area bounds: SkRect::MakeXYWH(0, contentAreaTop,
+  // fWidth, fHeight - contentAreaTop)
 
   canvas->restore(); // Restore Clipping (Ends Smart Rounded Corner Mask)
 

@@ -47,10 +47,14 @@
 namespace zenith {
 
 // Constants
+// Constants
 static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float SECTION_HEIGHT = 24.0f;
 static constexpr float RULER_HEIGHT = 30.0f;
 static constexpr float TRACK_HEIGHT =
     80.0f; // Taller tracks for better visibility
+static constexpr float TOP_MARGIN =
+    SECTION_HEIGHT + RULER_HEIGHT; // Offset for tracks
 static constexpr float SCROLLBAR_HEIGHT = 14.0f;
 
 //==============================================================================
@@ -74,6 +78,10 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // Initialize Macro Toolbar
   macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
   addChildComponent(macroToolbar.get());
+
+  // Initialize MiniMap
+  addAndMakeVisible(&miniMap);
+  miniMap.setAlwaysOnTop(true);
 
   macroToolbar->getSelectedClipIds = [this]() { return selectedClipIds; };
   macroToolbar->getSelectedTrackId = [this]() {
@@ -235,6 +243,11 @@ void ArrangerComponent::rebuildClipViews() {
 }
 
 void ArrangerComponent::recomputeClipBounds() {
+  // Update section track view state
+  if (sectionTrack) {
+    sectionTrack->setVisibleRange(viewStartBeats, pixelsPerBeat);
+  }
+
   for (auto &clipView : clipViews) {
     // Find track index for this clip
     int trackIndex = 0;
@@ -291,15 +304,15 @@ double ArrangerComponent::xToBeats(float x) const {
 }
 
 float ArrangerComponent::trackIndexToY(int trackIndex) const {
-  return RULER_HEIGHT + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT;
+  return TOP_MARGIN + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT;
 }
 
 int ArrangerComponent::yToTrackIndex(float y) const {
-  if (y < RULER_HEIGHT)
+  if (y < TOP_MARGIN)
     return -1;
 
   return firstVisibleTrackIndex +
-         static_cast<int>((y - RULER_HEIGHT) / TRACK_HEIGHT);
+         static_cast<int>((y - TOP_MARGIN) / TRACK_HEIGHT);
 }
 
 double ArrangerComponent::snapToGrid(double beats) const {
@@ -626,6 +639,18 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     int deltaTrackIndex =
         yToTrackIndex(e.position.y) - yToTrackIndex(dragStartPoint.y);
 
+    // OPTIMIZATION: Early exit if visual delta is negligible
+    // This prevents expensive ripple recalculations on every single pixel of
+    // mouse jitter
+
+    // Only recalc if moved more than micro-amount or track changed
+    if (std::abs(deltaBeats - lastDragDeltaBeats_) < 0.001 &&
+        deltaTrackIndex == lastDragDeltaTrack_) {
+      return;
+    }
+    lastDragDeltaBeats_ = deltaBeats;
+    lastDragDeltaTrack_ = deltaTrackIndex;
+
     // Reset Insertion Guide
     insertionGuideX = -1.0f;
     double minNewStartForGuide = 10000000.0; // Large value
@@ -949,9 +974,9 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   gridPaint.setStrokeWidth(1.0f);
   gridPaint.setAntiAlias(true);
   // Dotted line effect - using SkSpan for modern Skia API
-  SkScalar intervals[] = {2.0f, 4.0f};
-  gridPaint.setPathEffect(
-      SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f));
+  static const SkScalar intervals[] = {2.0f, 4.0f};
+  static const auto dashEffect = SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
+  gridPaint.setPathEffect(dashEffect);
 
   double startBeat = std::floor(viewStartBeats);
   double endBeat = viewStartBeats + ((width - HEADER_WIDTH) / pixelsPerBeat);
@@ -969,14 +994,49 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
   // Draw grid only within the timeline area
   canvas->save();
-  canvas->clipRect(
-      SkRect::MakeXYWH(HEADER_WIDTH, 0, width - HEADER_WIDTH, height));
+  // Clip to area below sections and ruler? Or just below sections?
+  // Grid usually goes through ruler? Or starts below?
+  // Original code: canvas->drawLine(x, 0, x, height, gridPaint);
+  // We should start below sections (SECTION_HEIGHT).
+  canvas->clipRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT,
+                                    width - HEADER_WIDTH,
+                                    height - SECTION_HEIGHT));
 
   for (double beat = startBeat; beat <= endBeat; beat += beatStep) {
     float x = beatsToX(beat);
-    canvas->drawLine(x, 0, x, height, gridPaint);
+    canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
   }
   canvas->restore();
+
+  // Highlighting for Section Hover/Drag
+  if (sectionTrack) {
+    const auto *section = sectionTrack->getHoveredSection();
+    if (!section)
+      section = sectionTrack->getDraggingSection();
+
+    if (section) {
+      float sx = beatsToX(section->startBeats);
+      float sl = (float)(section->lengthBeats * pixelsPerBeat);
+
+      if (sl > 0) {
+        SkPaint highlightPaint;
+        // Parse section color or use accent
+        juce::Colour c = juce::Colour::fromString(section->color);
+        SkColor sc = SkColorSetARGB(40, c.getRed(), c.getGreen(),
+                                    c.getBlue()); // Transparent
+
+        highlightPaint.setColor(sc);
+        highlightPaint.setStyle(SkPaint::kFill_Style);
+
+        // Draw highlight strip (below ruler or full height?)
+        // "highlight the background of the arrangement view for that time
+        // range"
+        canvas->drawRect(
+            SkRect::MakeXYWH(sx, SECTION_HEIGHT, sl, height - SECTION_HEIGHT),
+            highlightPaint);
+      }
+    }
+  }
 
   // ============================================================================
   // 3. TRACKS RENDER LOOP
@@ -1658,7 +1718,8 @@ juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
 }
 
 #ifdef ZENITH_USE_SKIA
-void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip,
+void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
+                                          const ClipView &clip,
                                           const SkRect &clipRect) {
   using namespace zenith::design;
   SkPaint notePaint;
@@ -1666,12 +1727,15 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip
   notePaint.setAntiAlias(true);
 
   for (const auto &blob : clip.noteBlobs) {
-    if (clip.lengthBeats <= 0.001) continue;
-    
-    float nx = clipRect.left() + (blob.startBeats / clip.lengthBeats) * clipRect.width();
+    if (clip.lengthBeats <= 0.001)
+      continue;
+
+    float nx = clipRect.left() +
+               (blob.startBeats / clip.lengthBeats) * clipRect.width();
     float nw = (blob.lengthBeats / clip.lengthBeats) * clipRect.width();
-    float ny = clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
-    
+    float ny =
+        clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
+
     SkRect noteRect = SkRect::MakeXYWH(nx, ny, std::max(2.0f, nw), 2.0f);
     canvas->drawRect(noteRect, notePaint);
   }
@@ -1680,13 +1744,14 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip
 void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
                                          const SkRect &clipRect) {
   using namespace zenith::design;
-  
-  auto* cache = getWaveformCache(clip.audioFilePath);
+
+  auto *cache = getWaveformCache(clip.audioFilePath);
   if (!cache || !cache->isValid || cache->minPeaks.empty()) {
     SkPaint linePaint;
     linePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f));
     linePaint.setStrokeWidth(1.0f);
-    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(), clipRect.centerY(), linePaint);
+    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(),
+                     clipRect.centerY(), linePaint);
     return;
   }
 
@@ -1698,22 +1763,22 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 
   SkPath path;
   float midY = clipRect.centerY();
-  float heightScale = clipRect.height() * 0.4f; 
-  
+  float heightScale = clipRect.height() * 0.4f;
+
   size_t numPeaks = cache->minPeaks.size();
   float stepX = clipRect.width() / static_cast<float>(numPeaks);
-  
+
   path.moveTo(clipRect.left(), midY);
-  
+
   for (size_t i = 0; i < numPeaks; ++i) {
     float x = clipRect.left() + i * stepX;
     float top = midY - (cache->maxPeaks[i] * heightScale);
     float bottom = midY - (cache->minPeaks[i] * heightScale);
-    
+
     path.moveTo(x, top);
     path.lineTo(x, bottom);
   }
-  
+
   canvas->drawPath(path, wavePaint);
 }
 #endif

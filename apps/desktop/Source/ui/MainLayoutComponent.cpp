@@ -147,6 +147,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
 
   // 4. Create Center Container (Vertical: Views | Sample Editor)
   auto centerContainer = std::make_unique<ResizablePanelContainer>();
+  centerContainer_ = centerContainer.get(); // Cache pointer
   centerContainer->setSplitDirection(
       ResizablePanelContainer::SplitDirection::Vertical);
 
@@ -246,11 +247,8 @@ void MainLayoutComponent::toggleBrowser() {
 }
 
 void MainLayoutComponent::toggleSampleEditor() {
-  // Find sample editor in center container
-  auto *center = dynamic_cast<ResizablePanelContainer *>(
-      panelContainer_->getPanel("center_container")->getContent());
-  if (center) {
-    if (auto *wrapper = center->getPanel("sample_editor")) {
+  if (centerContainer_) {
+    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
       wrapper->toggleCollapse(true);
     }
   }
@@ -270,13 +268,9 @@ bool MainLayoutComponent::isBrowserVisible() const {
 }
 
 bool MainLayoutComponent::isSampleEditorVisible() const {
-  if (panelContainer_) {
-    auto *center = dynamic_cast<ResizablePanelContainer *>(
-        panelContainer_->getPanel("center_container")->getContent());
-    if (center) {
-      if (auto *wrapper = center->getPanel("sample_editor")) {
-        return !wrapper->isCollapsed();
-      }
+  if (centerContainer_) {
+    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
+      return !wrapper->isCollapsed();
     }
   }
   return false;

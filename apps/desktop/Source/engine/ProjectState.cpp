@@ -4,10 +4,11 @@
  */
 
 #include "ProjectState.h"
-#include "TrackStateManager.h"
-#include "ClipStateManager.h"
 #include "AutomationStateManager.h"
+#include "ClipStateManager.h"
 #include "ProjectFileIO.h"
+#include "TrackStateManager.h"
+
 
 #include <functional>
 
@@ -110,6 +111,8 @@ const juce::Identifier ProjectState::PROP_INPUT_CHANNEL("inputChannel");
 const juce::Identifier ProjectState::PROP_MANUALLY_COLORED("manuallyColored");
 const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 
+const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
+
 //==============================================================================
 ProjectState::ProjectState() {
   DBG("ProjectState: Constructor");
@@ -119,12 +122,13 @@ ProjectState::ProjectState() {
   automationStateManager = std::make_unique<AutomationStateManager>(*this);
   projectFileIO = std::make_unique<ProjectFileIO>(*this);
 
-  createDefaultState(); // newProject calls this via IO, but we need state initialized before listeners?
+  createDefaultState(); // newProject calls this via IO, but we need state
+                        // initialized before listeners?
   // newProject logic is now in ProjectFileIO.
   // We should call newProject() on the IO manager.
   // But newProject() in ProjectState calls createDefaultState().
   // Let's delegate.
-  
+
   newProject();
   state.addListener(this);
 }
@@ -155,24 +159,24 @@ void ProjectState::rebuildTrackMap() {
 
 void ProjectState::newProject() {
   if (projectFileIO)
-      projectFileIO->newProject();
+    projectFileIO->newProject();
 }
 
 bool ProjectState::loadFromFile(const juce::File &file) {
   if (projectFileIO)
-      return projectFileIO->loadFromFile(file);
+    return projectFileIO->loadFromFile(file);
   return false;
 }
 
 bool ProjectState::saveToFile(const juce::File &file) {
   if (projectFileIO)
-      return projectFileIO->saveToFile(file);
+    return projectFileIO->saveToFile(file);
   return false;
 }
 
 juce::File ProjectState::saveCrashDump() {
   if (projectFileIO)
-      return projectFileIO->saveCrashDump();
+    return projectFileIO->saveCrashDump();
   return juce::File();
 }
 
@@ -237,30 +241,30 @@ void ProjectState::setTimeSignature(int numerator, int denominator) {
 juce::String ProjectState::addTrack(const juce::String &name,
                                     const juce::String &type) {
   if (trackStateManager)
-      return trackStateManager->addTrack(name, type);
+    return trackStateManager->addTrack(name, type);
   return {};
 }
 
 void ProjectState::removeTrack(const juce::String &trackId) {
   if (trackStateManager)
-      trackStateManager->removeTrack(trackId);
+    trackStateManager->removeTrack(trackId);
 }
 
 int ProjectState::getNumTracks() const {
   if (trackStateManager)
-      return trackStateManager->getNumTracks();
+    return trackStateManager->getNumTracks();
   return 0;
 }
 
 juce::ValueTree ProjectState::getTrack(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->getTrack(trackId);
+    return trackStateManager->getTrack(trackId);
   return {};
 }
 
 juce::ValueTree ProjectState::getTrackByIndex(int index) {
   if (trackStateManager)
-      return trackStateManager->getTrackByIndex(index);
+    return trackStateManager->getTrackByIndex(index);
   return {};
 }
 
@@ -270,43 +274,43 @@ juce::ValueTree ProjectState::getTrackByIndex(int index) {
 
 float ProjectState::getTrackVolume(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->getTrackVolume(trackId);
+    return trackStateManager->getTrackVolume(trackId);
   return 1.0f;
 }
 
 float ProjectState::getTrackPan(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->getTrackPan(trackId);
+    return trackStateManager->getTrackPan(trackId);
   return 0.0f;
 }
 
 bool ProjectState::isTrackMuted(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->isTrackMuted(trackId);
+    return trackStateManager->isTrackMuted(trackId);
   return false;
 }
 
 bool ProjectState::isTrackSolo(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->isTrackSolo(trackId);
+    return trackStateManager->isTrackSolo(trackId);
   return false;
 }
 
 bool ProjectState::isTrackArmed(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->isTrackArmed(trackId);
+    return trackStateManager->isTrackArmed(trackId);
   return false;
 }
 
 juce::String ProjectState::getTrackName(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->getTrackName(trackId);
+    return trackStateManager->getTrackName(trackId);
   return {};
 }
 
 juce::String ProjectState::getTrackType(const juce::String &trackId) const {
   if (trackStateManager)
-      return trackStateManager->getTrackType(trackId);
+    return trackStateManager->getTrackType(trackId);
   return {};
 }
 
@@ -318,7 +322,8 @@ juce::String ProjectState::addClip(const juce::String &trackId,
                                    double startBeats, double lengthBeats,
                                    const juce::String &actionName) {
   if (clipStateManager)
-      return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats, false, "Clip", actionName);
+    return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats,
+                                             false, "Clip", actionName);
   return {};
 }
 
@@ -328,7 +333,8 @@ juce::String ProjectState::createEmptyClip(const juce::String &trackId,
                                            const juce::String &name,
                                            const juce::String &actionName) {
   if (clipStateManager)
-      return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats, isMidi, name, actionName);
+    return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats,
+                                             isMidi, name, actionName);
   return {};
 }
 
@@ -336,7 +342,7 @@ bool ProjectState::removeClip(const juce::String &trackId,
                               const juce::String &clipId,
                               const juce::String &actionName) {
   if (clipStateManager)
-      return clipStateManager->removeClip(trackId, clipId, actionName);
+    return clipStateManager->removeClip(trackId, clipId, actionName);
   return false;
 }
 
@@ -345,14 +351,16 @@ void ProjectState::moveClip(const juce::String &clipId,
                             double newStartBeats,
                             const juce::String &actionName) {
   if (clipStateManager)
-      clipStateManager->moveClipToTrack(clipId, newTrackId, newStartBeats, actionName);
+    clipStateManager->moveClipToTrack(clipId, newTrackId, newStartBeats,
+                                      actionName);
 }
 
 void ProjectState::setClipRange(const juce::String &clipId,
                                 double newStartBeats, double newLengthBeats,
                                 const juce::String &actionName) {
   if (clipStateManager)
-      clipStateManager->setClipRange(clipId, newStartBeats, newLengthBeats, actionName);
+    clipStateManager->setClipRange(clipId, newStartBeats, newLengthBeats,
+                                   actionName);
 }
 
 void ProjectState::resizeClip(const juce::String &trackId,
@@ -360,13 +368,15 @@ void ProjectState::resizeClip(const juce::String &trackId,
                               juce::int64 newLengthSamples,
                               const juce::String &actionName) {
   if (clipStateManager)
-      clipStateManager->resizeClip(trackId, clipId, (double)newLengthSamples, actionName); // Cast to double as manager uses double
+    clipStateManager->resizeClip(
+        trackId, clipId, (double)newLengthSamples,
+        actionName); // Cast to double as manager uses double
 }
 
 void ProjectState::deleteClip(const juce::String &clipId,
                               const juce::String &actionName) {
   if (clipStateManager)
-      clipStateManager->deleteClip(clipId, actionName);
+    clipStateManager->deleteClip(clipId, actionName);
 }
 
 // Retained setClipAudioFile and getClipAudioFile for now or delegate
@@ -376,28 +386,29 @@ bool ProjectState::setClipAudioFile(const juce::String &trackId,
                                     const juce::String &actionName) {
   // Delegate to manager - note relative path logic is lost for now
   if (clipStateManager)
-      return clipStateManager->setClipAudioFile(trackId, clipId, audioFile, actionName);
+    return clipStateManager->setClipAudioFile(trackId, clipId, audioFile,
+                                              actionName);
   return false;
 }
 
 juce::String ProjectState::getClipAudioFile(const juce::String &trackId,
                                             const juce::String &clipId) const {
   if (clipStateManager)
-      return clipStateManager->getClipAudioFile(trackId, clipId);
+    return clipStateManager->getClipAudioFile(trackId, clipId);
   return {};
 }
 
 juce::ValueTree ProjectState::getClip(const juce::String &trackId,
                                       const juce::String &clipId) const {
   if (clipStateManager)
-      return clipStateManager->getClip(trackId, clipId);
+    return clipStateManager->getClip(trackId, clipId);
   return {};
 }
 
 std::pair<juce::ValueTree, juce::ValueTree>
 ProjectState::findClip(const juce::String &clipId) const {
   if (clipStateManager)
-      return clipStateManager->findClip(clipId);
+    return clipStateManager->findClip(clipId);
   return {{}, {}};
 }
 
@@ -409,7 +420,8 @@ juce::ValueTree
 ProjectState::getOrCreateAutomationEnvelope(const juce::String &trackId,
                                             const juce::String &paramId) {
   if (automationStateManager)
-      return automationStateManager->getOrCreateAutomationEnvelope(trackId, paramId);
+    return automationStateManager->getOrCreateAutomationEnvelope(trackId,
+                                                                 paramId);
   return {};
 }
 
@@ -417,14 +429,14 @@ juce::ValueTree
 ProjectState::getAutomationEnvelope(const juce::String &trackId,
                                     const juce::String &paramId) const {
   if (automationStateManager)
-      return automationStateManager->getAutomationEnvelope(trackId, paramId);
+    return automationStateManager->getAutomationEnvelope(trackId, paramId);
   return {};
 }
 
 bool ProjectState::hasAutomation(const juce::String &trackId,
                                  const juce::String &paramId) const {
   if (automationStateManager)
-      return automationStateManager->hasAutomation(trackId, paramId);
+    return automationStateManager->hasAutomation(trackId, paramId);
   return false;
 }
 
@@ -434,7 +446,8 @@ juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
                                               float tension, int curveType,
                                               const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->addAutomationPoint(trackId, paramId, timeBeats, value, tension, curveType, actionName);
+    return automationStateManager->addAutomationPoint(
+        trackId, paramId, timeBeats, value, tension, curveType, actionName);
   return {};
 }
 
@@ -453,7 +466,8 @@ bool ProjectState::moveAutomationPoint(const juce::String &trackId,
                                        double newTimeBeats, double newValue,
                                        const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->moveAutomationPoint(trackId, paramId, pointId, newTimeBeats, newValue, actionName);
+    return automationStateManager->moveAutomationPoint(
+        trackId, paramId, pointId, newTimeBeats, newValue, actionName);
   return false;
 }
 
@@ -462,7 +476,8 @@ bool ProjectState::deleteAutomationPoint(const juce::String &trackId,
                                          const juce::String &pointId,
                                          const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->deleteAutomationPoint(trackId, paramId, pointId, actionName);
+    return automationStateManager->deleteAutomationPoint(trackId, paramId,
+                                                         pointId, actionName);
   return false;
 }
 
@@ -470,7 +485,8 @@ bool ProjectState::clearAutomation(const juce::String &trackId,
                                    const juce::String &paramId,
                                    const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->clearAutomation(trackId, paramId, actionName);
+    return automationStateManager->clearAutomation(trackId, paramId,
+                                                   actionName);
   return false;
 }
 
@@ -480,7 +496,8 @@ bool ProjectState::setAutomationTension(const juce::String &trackId,
                                         float tension,
                                         const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->setAutomationTension(trackId, paramId, pointId, tension, actionName);
+    return automationStateManager->setAutomationTension(
+        trackId, paramId, pointId, tension, actionName);
   return false;
 }
 
@@ -490,7 +507,8 @@ bool ProjectState::setAutomationCurveType(const juce::String &trackId,
                                           int curveType,
                                           const juce::String &actionName) {
   if (automationStateManager)
-      return automationStateManager->setAutomationCurveType(trackId, paramId, pointId, curveType, actionName);
+    return automationStateManager->setAutomationCurveType(
+        trackId, paramId, pointId, curveType, actionName);
   return false;
 }
 
@@ -781,8 +799,9 @@ void ProjectState::createDefaultState() {
 
 juce::String ProjectState::generateUniqueId(const juce::String &prefix) {
   int id = idCounter.fetch_add(1);
-  // Persist the next ID so we don't have to scan on load (O(1) lookup vs O(N) scan)
-  // We don't use undoManager here to avoid polluting the undo stack with ID increments
+  // Persist the next ID so we don't have to scan on load (O(1) lookup vs O(N)
+  // scan) We don't use undoManager here to avoid polluting the undo stack with
+  // ID increments
   state.setProperty(PROP_NEXT_ID, id + 1, nullptr);
   return prefix + "_" + juce::String(id);
 }
@@ -924,7 +943,8 @@ juce::String ProjectState::addClip(const juce::String &trackId,
                                    double startBeats, double lengthBeats,
                                    int laneIndex) {
   if (clipStateManager)
-      return clipStateManager->addClip(trackId, clipType, startBeats, lengthBeats, laneIndex);
+    return clipStateManager->addClip(trackId, clipType, startBeats, lengthBeats,
+                                     laneIndex);
   return {};
 }
 
@@ -932,20 +952,20 @@ void ProjectState::deleteClip(const juce::String &trackId,
                               const juce::String &clipId,
                               const juce::String &actionName) {
   if (clipStateManager)
-      clipStateManager->removeClip(trackId, clipId, actionName);
+    clipStateManager->removeClip(trackId, clipId, actionName);
 }
 
 bool ProjectState::removeClip(const juce::String &trackId,
                               const juce::String &clipId) {
   if (clipStateManager)
-      return clipStateManager->removeClip(trackId, clipId);
+    return clipStateManager->removeClip(trackId, clipId);
   return false;
 }
 
 bool ProjectState::moveClip(const juce::String &trackId,
                             const juce::String &clipId, double newStartBeats) {
   if (clipStateManager)
-      return clipStateManager->moveClip(trackId, clipId, newStartBeats);
+    return clipStateManager->moveClip(trackId, clipId, newStartBeats);
   return false;
 }
 
@@ -953,7 +973,7 @@ bool ProjectState::resizeClip(const juce::String &trackId,
                               const juce::String &clipId,
                               double newLengthBeats) {
   if (clipStateManager)
-      return clipStateManager->resizeClip(trackId, clipId, newLengthBeats);
+    return clipStateManager->resizeClip(trackId, clipId, newLengthBeats);
   return false;
 }
 
@@ -1264,31 +1284,31 @@ void ProjectState::setTrackVolume(const juce::String &trackId,
                                   float volumeLinear,
                                   const juce::String &actionName) {
   if (trackStateManager)
-      trackStateManager->setTrackVolume(trackId, volumeLinear, actionName);
+    trackStateManager->setTrackVolume(trackId, volumeLinear, actionName);
 }
 
 void ProjectState::setTrackPan(const juce::String &trackId, float pan,
                                const juce::String &actionName) {
   if (trackStateManager)
-      trackStateManager->setTrackPan(trackId, pan, actionName);
+    trackStateManager->setTrackPan(trackId, pan, actionName);
 }
 
 void ProjectState::setTrackMute(const juce::String &trackId, bool muted,
                                 const juce::String &actionName) {
   if (trackStateManager)
-      trackStateManager->setTrackMute(trackId, muted, actionName);
+    trackStateManager->setTrackMute(trackId, muted, actionName);
 }
 
 void ProjectState::setTrackSolo(const juce::String &trackId, bool soloed,
                                 const juce::String &actionName) {
   if (trackStateManager)
-      trackStateManager->setTrackSolo(trackId, soloed, actionName);
+    trackStateManager->setTrackSolo(trackId, soloed, actionName);
 }
 
 void ProjectState::setTrackArmed(const juce::String &trackId, bool armed,
                                  const juce::String &actionName) {
   if (trackStateManager)
-      trackStateManager->setTrackArmed(trackId, armed, actionName);
+    trackStateManager->setTrackArmed(trackId, armed, actionName);
 }
 
 //==============================================================================
@@ -1336,7 +1356,6 @@ juce::String ProjectState::createClip(const juce::String &trackId,
 
   return clipId;
 }
-
 
 void ProjectState::moveClip(const juce::String &trackId,
                             const juce::String &clipId,

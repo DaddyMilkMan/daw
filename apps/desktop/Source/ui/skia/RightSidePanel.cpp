@@ -10,6 +10,7 @@
 
 #include "RightSidePanel.h"
 #include "../../SimpleLogger.h"
+#include "../views/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -34,6 +35,11 @@ RightSidePanel::RightSidePanel(CommandAPI &api, AIBridgeClient &client,
   logToFile("RightSidePanel: WingmanPanel created. Adding child...");
   addChildComponent(wingmanPanel_.get());
   wingmanPanel_->setVisible(true);
+
+  // Initialize SpectraAnalyzer
+  spectraAnalyzer_ = std::make_unique<SpectraAnalyzerComponent>(engine);
+  addChildComponent(spectraAnalyzer_.get());
+  spectraAnalyzer_->setVisible(true);
 
   logToFile("RightSidePanel: Starting timer...");
   startTimerHz(60); // Animation timer
@@ -63,38 +69,7 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
   // Left border glow
   canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
 
-  // Master Meter (Visualist Request: Peak vs RMS)
-  float meterX = skBounds.width() - 40.0f;
-  float meterY = 20.0f; // Moved up since header is gone
-  float meterW = 20.0f;
-  float meterH = skBounds.height() - 40.0f;
-
-  // Background
-  canvas->drawRect(SkRect::MakeXYWH(meterX, meterY, meterW, meterH),
-                   meterBgPaint_);
-
-  // Simulated Levels
-  float peakLevel =
-      (std::sin(animationPhase_) * 0.5f + 0.5f) * 0.8f + 0.1f; // 0.1 to 0.9
-  float rmsLevel = peakLevel * 0.7f; // RMS is usually lower
-
-  // Peak Bar (Fast, Green/Red)
-  float peakH = meterH * peakLevel;
-  meterPeakPaint_.setColor(peakLevel > 0.8f ? SkColorSetRGB(255, 50, 50)
-                                            : SkColorSetRGB(0, 255, 100));
-  canvas->drawRect(
-      SkRect::MakeXYWH(meterX, meterY + meterH - peakH, meterW, peakH),
-      meterPeakPaint_);
-
-  // RMS Bar (Slow, Solid White line inside)
-  float rmsH = meterH * rmsLevel;
-  canvas->drawRect(SkRect::MakeXYWH(meterX + 5.0f, meterY + meterH - rmsH,
-                                    meterW - 10.0f, rmsH),
-                   meterRmsPaint_);
-
-  // Label
-  canvas->drawString("RMS", meterX, meterY + meterH + 15.0f, labelFont_,
-                     subTextPaint_);
+  // Note: Old meter code removed. Visualizer handles it now.
 }
 
 void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
@@ -145,11 +120,15 @@ void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
 
 void RightSidePanel::resized() {
   auto bounds = getLocalBounds();
-  // Reserve 50px on the right for the meter (drawn in Skia background)
-  // Reduce slightly for margin
+
+  // Spectra at Top (150px)
+  if (spectraAnalyzer_) {
+    spectraAnalyzer_->setBounds(bounds.removeFromTop(150).reduced(5));
+  }
+
+  // Wingman takes the rest
   if (wingmanPanel_) {
-    wingmanPanel_->setBounds(
-        bounds.removeFromLeft(bounds.getWidth() - 50).reduced(10));
+    wingmanPanel_->setBounds(bounds.reduced(5));
   }
 }
 

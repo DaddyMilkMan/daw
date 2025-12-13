@@ -129,6 +129,9 @@ public:
   static const juce::Identifier
       PROP_INPUT_CHANNEL; // Input channel index for recording
 
+  static const juce::Identifier
+      PROP_SELECTED_TRACK_ID; // Currently selected track ID
+
   //==========================================================================
   ProjectState();
   ~ProjectState();
@@ -512,7 +515,6 @@ private:
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
 
-  
   std::unique_ptr<TrackStateManager> trackStateManager;
   std::unique_ptr<ClipStateManager> clipStateManager;
   std::unique_ptr<AutomationStateManager> automationStateManager;

@@ -136,7 +136,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Bottom: Piano Keyboard + Mixer Strip
   DBG("→ Creating BottomBar...");
   logToFile("→ Creating BottomBar...");
-  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState);
+  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
+                                                  projectState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
 
   // Connect Session Debugger
@@ -299,15 +300,14 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] {
-      DBG("Debug logs requested");
-    });
-    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr), nullptr);
+    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr),
+                    nullptr);
   }
 }
 
 void MainComponent::mouseDrag(const juce::MouseEvent &e) {
-    juce::ignoreUnused(e);
+  juce::ignoreUnused(e);
 }
 
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
