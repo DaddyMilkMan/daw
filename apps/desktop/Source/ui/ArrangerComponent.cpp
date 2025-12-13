@@ -1017,6 +1017,7 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
         SkPaint highlightPaint;
         // Parse section color or use accent
         juce::Colour c = juce::Colour::fromString(section->color);
+        if (c.isTransparent()) c = juce::Colours::cyan; // Fallback
         SkColor sc = SkColorSetARGB(40, c.getRed(), c.getGreen(),
                                     c.getBlue()); // Transparent
 
