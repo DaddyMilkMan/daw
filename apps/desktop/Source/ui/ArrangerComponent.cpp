@@ -1396,8 +1396,6 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 
   // Calculate visible range of peaks based on clip position
   float clipWidth = clipRect.width();
-  float clipHeight = clipRect.height();
-  float centerY = clipRect.centerY();
 
   // Inset for visual padding
   SkRect contentRect = clipRect;
@@ -1408,11 +1406,6 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
   int totalPeaks = static_cast<int>(cache->maxPeaks.size());
   if (totalPeaks == 0)
     return;
-
-  // Determine how many peaks to show based on clip width
-  // We want roughly 1 peak per 2-4 pixels for good visual detail
-  float pixelsPerPeak =
-      std::max(1.0f, clipWidth / static_cast<float>(totalPeaks));
 
   // Build the waveform path - top half (max peaks) going left to right,
   // then bottom half (min peaks) going right to left to form a closed shape
