@@ -22,6 +22,9 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ZenithTheme.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/LayoutManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ResizablePanelContainer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SessionViewComponent.cpp
 )
 
 add_subdirectory(skia)

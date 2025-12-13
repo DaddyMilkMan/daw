@@ -12,152 +12,300 @@
 #include "../../include/Engine.h"
 #include "../engine/PluginHost.h"
 #include "../instruments/InstrumentRegistry.h"
+#include "SessionViewComponent.h"
 #include "skia/BrowserPanel.h"
 #include "skia/GlassmorphicPanel.h"
 #include "skia/SkiaMainWindowIntegration.h"
 #include "skia/ZenithDesignSystem.h"
-#include "skia/views/SessionViewComponent.h"
-
-// Browser model included in header
 
 namespace zenith {
 
+// Helper class to switch between Arranger and Session views while keeping them
+// alive
+class ViewSwitcher : public juce::Component {
+public:
+  ViewSwitcher() { setOpaque(false); }
+
+  void addView(std::unique_ptr<juce::Component> view) {
+    views_.push_back(std::move(view));
+    addChildComponent(views_.back().get());
+    if (views_.size() == 1) {
+      activeIndex_ = 0;
+      views_[0]->setVisible(true);
+    }
+  }
+
+  void setActiveView(int index) {
+    if (index < 0 || index >= static_cast<int>(views_.size()))
+      return;
+    activeIndex_ = index;
+    resized();
+  }
+
+  int getActiveViewIndex() const { return activeIndex_; }
+
+  void resized() override {
+    auto bounds = getLocalBounds();
+    for (size_t i = 0; i < views_.size(); ++i) {
+      if (static_cast<int>(i) == activeIndex_) {
+        views_[i]->setBounds(bounds);
+        views_[i]->setVisible(true);
+      } else {
+        views_[i]->setVisible(false);
+      }
+    }
+  }
+
+  Component *getView(int index) {
+    if (index >= 0 && index < static_cast<int>(views_.size()))
+      return views_[static_cast<size_t>(index)].get();
+    return nullptr;
+  }
+
+private:
+  std::vector<std::unique_ptr<juce::Component>> views_;
+  int activeIndex_ = -1;
+};
+
+//==============================================================================
+// MainLayoutComponent
+//==============================================================================
+
 MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
     : engine_(engine), projectState_(state) {
-  // Create Arranger
-  arrangerComponent_ =
-      std::make_unique<ArrangerComponent>(engine_, projectState_);
-  addAndMakeVisible(arrangerComponent_.get());
 
-  // Create Session View
-  sessionViewComponent_ = std::make_unique<SessionViewComponent>(projectState_);
-  addAndMakeVisible(sessionViewComponent_.get());
-  sessionViewComponent_->setVisible(false); // Default to Arranger
-
-  // Create Browser Model (requires InstrumentRegistry and PluginHost)
+  // 1. Initialize Browser Model
   browserModel_ = std::make_unique<BrowserModel>(
       engine_.getInstrumentRegistry(), engine_.getPluginHost());
 
-  // Create Browser (Skia-based)
-  browserPanel_ = std::make_unique<BrowserPanel>(*browserModel_);
+  auto &layoutMgr = layout::LayoutManager::getInstance();
 
-  // Setup callback for browser item double-click
-  browserPanel_->onItemDoubleClicked =
-      [this](std::shared_ptr<BrowserItem> item) {
-        if (item && !item->isDirectory) {
-          DBG("MainLayout: Browser item activated: " + item->name);
-        }
-      };
+  // Register Factories for Layout Persistence
+  layoutMgr.registerPanelType(
+      "browser", "Browser", [this]() -> std::unique_ptr<juce::Component> {
+        auto browser = std::make_unique<BrowserPanel>(*browserModel_);
+        browser->onItemDoubleClicked =
+            [this](std::shared_ptr<BrowserItem> item) {
+              if (item && !item->isDirectory) {
+                DBG("MainLayout: Browser item activated: " + item->name);
+              }
+            };
+        return std::unique_ptr<juce::Component>(browser.release());
+      });
 
-  addAndMakeVisible(browserPanel_.get());
-
-  // Create Sample Editor
-  sampleEditorComponent_ =
-      std::make_unique<SampleEditorComponent>(engine_, projectState_);
-  addAndMakeVisible(sampleEditorComponent_.get());
-  sampleEditorComponent_->setVisible(false);
-
-  // Connect Arranger callbacks
-  arrangerComponent_->onClipDoubleClicked = [this](const juce::String &trackId,
-                                                   const juce::String &clipId) {
-    // Check clip type
-    auto track = projectState_.getTrack(trackId);
-    if (track.isValid()) {
-      auto clips = track.getChildWithName("CLIPS");
-      auto clip = clips.getChildWithProperty("id", clipId);
-      if (clip.isValid()) {
-        juce::String type = clip.getProperty("type").toString();
-        if (type == "audio") {
-          // Open Sample Editor
-          if (sampleEditorComponent_) {
-            sampleEditorComponent_->setClipToEdit(trackId, clipId);
-            if (!sampleEditorVisible_) {
-              toggleSampleEditor();
-            }
+  layoutMgr.registerPanelType(
+      "main_views", "Main View", [this]() -> std::unique_ptr<juce::Component> {
+        auto switcher = std::make_unique<ViewSwitcher>();
+        // Add Arranger
+        auto arranger =
+            std::make_unique<ArrangerComponent>(engine_, projectState_);
+        arranger->onClipDoubleClicked = [this](const juce::String &trackId,
+                                               const juce::String &clipId) {
+          if (auto *editor = getSampleEditor()) {
+            editor->setClipToEdit(trackId, clipId);
+            toggleSampleEditor();
           }
-        }
-        // Note: MIDI clips would open Piano Roll here
-      }
+        };
+        switcher->addView(std::move(arranger));
+        // Add Session
+        switcher->addView(
+            std::make_unique<SessionViewComponent>(engine_, projectState_));
+        return std::unique_ptr<juce::Component>(switcher.release());
+      });
+
+  layoutMgr.registerPanelType("sample_editor", "Sample Editor",
+                              [this]() -> std::unique_ptr<juce::Component> {
+                                return std::make_unique<SampleEditorComponent>(
+                                    engine_, projectState_);
+                              });
+
+  // 2. Create Root Container (Horizontal: Browser | Center)
+  panelContainer_ = std::make_unique<ResizablePanelContainer>();
+  panelContainer_->setSplitDirection(
+      ResizablePanelContainer::SplitDirection::Horizontal);
+  addAndMakeVisible(panelContainer_.get());
+
+  // 3. Create Browser Panel (using factory or manual)
+  // We use factory logic to be consistent, or just manual
+  auto browser = std::make_unique<BrowserPanel>(*browserModel_);
+  browser->onItemDoubleClicked = [this](std::shared_ptr<BrowserItem> item) {
+    if (item && !item->isDirectory) {
+      DBG("MainLayout: Browser item activated: " + item->name);
     }
   };
 
-  // Ensure visibility
-  arrangerComponent_->setVisible(true);
-  browserPanel_->setVisible(browserVisible_);
+  layout::PanelConfig browserCfg;
+  browserCfg.id = "browser";
+  browserCfg.type = "browser"; // Important for save/load
+  browserCfg.name = "Browser";
+  browserCfg.initialSize = 300;
+  browserCfg.minSize = 200;
+  browserCfg.flex = 0; // Fixed size
+  browserCfg.isCollapsible = true;
 
-  // Remote Cursor Overlay (Last so it's on top)
+  panelContainer_->addPanel(std::move(browser), browserCfg);
+
+  // 4. Create Center Container (Vertical: Views | Sample Editor)
+  auto centerContainer = std::make_unique<ResizablePanelContainer>();
+  centerContainer->setSplitDirection(
+      ResizablePanelContainer::SplitDirection::Vertical);
+
+  // 4a. Views Panel (Switcher)
+  auto switcher = std::make_unique<ViewSwitcher>();
+
+  auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
+  arranger->onClipDoubleClicked = [this](const juce::String &trackId,
+                                         const juce::String &clipId) {
+    if (auto *editor = getSampleEditor()) {
+      editor->setClipToEdit(trackId, clipId);
+      toggleSampleEditor();
+    }
+  };
+  switcher->addView(std::move(arranger));
+  switcher->addView(
+      std::make_unique<SessionViewComponent>(engine_, projectState_));
+
+  layout::PanelConfig viewsCfg;
+  viewsCfg.id = "main_views";
+  viewsCfg.type = "main_views"; // Important
+  viewsCfg.name = "Main View";
+  viewsCfg.flex = 1.0f;
+  viewsCfg.minSize = 300;
+
+  centerContainer->addPanel(std::move(switcher), viewsCfg);
+
+  // 4b. Sample Editor
+  auto sampleEditor =
+      std::make_unique<SampleEditorComponent>(engine_, projectState_);
+
+  layout::PanelConfig editorCfg;
+  editorCfg.id = "sample_editor";
+  editorCfg.type = "sample_editor"; // Important
+  editorCfg.name = "Sample Editor";
+  editorCfg.initialSize = 250;
+  editorCfg.minSize = 150;
+  editorCfg.flex = 0; // Fixed height
+  editorCfg.isCollapsible = true;
+  editorCfg.isCollapsed = true;
+
+  centerContainer->addPanel(std::move(sampleEditor), editorCfg);
+
+  // Add Center Container
+  layout::PanelConfig centerCfg;
+  centerCfg.id = "center_container";
+  centerCfg.type =
+      "container"; // We don't have a factory for this generic container,
+                   // but ResizablePanelContainer handles recursion?
+                   // Actually, LayoutManager doesn't handle nested containers
+                   // automatically yet. We'll need to improve LayoutManager for
+                   // nested containers later.
+  centerCfg.name = "Center";
+  centerCfg.flex = 1.0f;
+  centerCfg.minSize = 400;
+
+  panelContainer_->addPanel(std::move(centerContainer), centerCfg);
+
+  // 5. Cursor Overlay
   cursorOverlay_ = std::make_unique<RemoteCursorOverlay>();
   addAndMakeVisible(cursorOverlay_.get());
 }
 
+MainLayoutComponent::~MainLayoutComponent() = default;
+
 void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
-  // Background - Use design system gradient
+  // Background
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   GlassmorphicPanel::fillBackground(canvas, skBounds);
-
-  // Recursively draw children (Arranger, Browser, Session, etc.)
-  drawChildren(canvas);
 }
 
 void MainLayoutComponent::resized() {
-  auto area = getLocalBounds();
-
-  // 1. Browser Panel (Left)
-  if (browserVisible_ && browserPanel_) {
-    auto browserArea = area.removeFromLeft(browserWidth_);
-    browserPanel_->setBounds(browserArea);
-    browserPanel_->setVisible(true);
-  } else if (browserPanel_) {
-    browserPanel_->setVisible(false);
+  auto bounds = getLocalBounds();
+  if (panelContainer_) {
+    panelContainer_->setBounds(bounds);
   }
-
-  // 2. Sample Editor (Bottom)
-  if (sampleEditorVisible_ && sampleEditorComponent_) {
-    auto editorArea = area.removeFromBottom(sampleEditorHeight_);
-    sampleEditorComponent_->setBounds(editorArea);
-    sampleEditorComponent_->setVisible(true);
-  } else if (sampleEditorComponent_) {
-    sampleEditorComponent_->setVisible(false);
-  }
-
-  // 2. Center Area (Session or Arranger)
-  if (showSessionView_) {
-    if (sessionViewComponent_) {
-      sessionViewComponent_->setBounds(area);
-      sessionViewComponent_->setVisible(true);
-    }
-    if (arrangerComponent_)
-      arrangerComponent_->setVisible(false);
-  } else {
-    if (arrangerComponent_) {
-      arrangerComponent_->setBounds(area);
-      arrangerComponent_->setVisible(true);
-    }
-    if (sessionViewComponent_)
-      sessionViewComponent_->setVisible(false);
-  }
-
   if (cursorOverlay_) {
-    cursorOverlay_->setBounds(
-        area.getUnion(getLocalBounds())); // Cover entire component
+    cursorOverlay_->setBounds(bounds);
     cursorOverlay_->toFront(false);
   }
 }
 
 void MainLayoutComponent::toggleView() {
-  showSessionView_ = !showSessionView_;
-  resized();
+  // Find the switcher
+  auto *center = dynamic_cast<ResizablePanelContainer *>(
+      panelContainer_->getPanel("center_container")->getContent());
+  if (center) {
+    auto *switcher = dynamic_cast<ViewSwitcher *>(
+        center->getPanel("main_views")->getContent());
+    if (switcher) {
+      int current = switcher->getActiveViewIndex();
+      switcher->setActiveView(current == 0 ? 1 : 0);
+    }
+  }
 }
 
 void MainLayoutComponent::toggleBrowser() {
-  browserVisible_ = !browserVisible_;
-  resized();
+  if (auto *wrapper = panelContainer_->getPanel("browser")) {
+    wrapper->toggleCollapse(true);
+  }
 }
 
 void MainLayoutComponent::toggleSampleEditor() {
-  sampleEditorVisible_ = !sampleEditorVisible_;
-  resized();
+  // Find sample editor in center container
+  auto *center = dynamic_cast<ResizablePanelContainer *>(
+      panelContainer_->getPanel("center_container")->getContent());
+  if (center) {
+    if (auto *wrapper = center->getPanel("sample_editor")) {
+      wrapper->toggleCollapse(true);
+    }
+  }
+}
+
+bool MainLayoutComponent::isSessionView() const {
+  if (panelContainer_) {
+    auto *center = dynamic_cast<ResizablePanelContainer *>(
+        panelContainer_->getPanel("center_container")->getContent());
+    if (center) {
+      auto *switcher = dynamic_cast<ViewSwitcher *>(
+          center->getPanel("main_views")->getContent());
+      if (switcher)
+        return switcher->getActiveViewIndex() == 1;
+    }
+  }
+  return false;
+}
+
+bool MainLayoutComponent::isBrowserVisible() const {
+  if (auto *wrapper = panelContainer_->getPanel("browser")) {
+    return !wrapper->isCollapsed();
+  }
+  return false;
+}
+
+bool MainLayoutComponent::isSampleEditorVisible() const {
+  if (panelContainer_) {
+    auto *center = dynamic_cast<ResizablePanelContainer *>(
+        panelContainer_->getPanel("center_container")->getContent());
+    if (center) {
+      if (auto *wrapper = center->getPanel("sample_editor")) {
+        return !wrapper->isCollapsed();
+      }
+    }
+  }
+  return false;
+}
+
+SampleEditorComponent *MainLayoutComponent::getSampleEditor() {
+  if (panelContainer_) {
+    auto *center = dynamic_cast<ResizablePanelContainer *>(
+        panelContainer_->getPanel("center_container")->getContent());
+    if (center) {
+      if (auto *wrapper = center->getPanel("sample_editor")) {
+        return dynamic_cast<SampleEditorComponent *>(wrapper->getContent());
+      }
+    }
+  }
+  return nullptr;
 }
 
 } // namespace zenith

@@ -13,16 +13,18 @@
 
 #pragma once
 
+#include "LayoutManager.h"
+#include "ResizablePanelContainer.h"
+
+// ... (keep existing includes if needed, or rely on factories)
 #include "../../Source/ui/skia/BrowserPanel.h"
 #include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../Source/ui/skia/views/SessionViewComponent.h"
 #include "../../include/ProjectState.h"
 #include "../../include/ui/ArrangerComponent.h"
-
-
 #include "../browser/BrowserModel.h"
 #include "RemoteCursorOverlay.h"
 #include "SampleEditorComponent.h"
+#include "SessionViewComponent.h"
 
 
 class Engine; // Forward declaration
@@ -30,58 +32,39 @@ class Engine; // Forward declaration
 namespace zenith {
 
 /**
- * @brief Main layout component managing Browser, Session, and Arranger views
- *
- * Layout structure:
- * [Browser (collapsible)] [Session/Arranger (toggleable)]
+ * @brief Main layout component managing flexible panes via
+ * ResizablePanelContainer
  */
 class MainLayoutComponent : public SkiaComponent {
 public:
   explicit MainLayoutComponent(Engine &engine, ProjectState &state);
-  ~MainLayoutComponent() override = default;
+  ~MainLayoutComponent() override;
 
   void resized() override;
-
-  // Skia rendering
   void drawSkia(SkCanvas *canvas) override;
 
-  // View management
-  void toggleView();    // Toggle between Session and Arranger
-  void toggleBrowser(); // Show/hide browser panel
+  // View management (Mapped to Layout Presets)
+  void
+  toggleView(); // Switch between Production (Arranger) and Mixing (Session)
+  void toggleBrowser();      // Toggle Browser panel visibility
+  void toggleSampleEditor(); // Toggle Sample Editor panel visibility
 
-  bool isSessionView() const { return showSessionView_; }
-  bool isBrowserVisible() const { return browserVisible_; }
+  bool isSessionView() const;
+  bool isBrowserVisible() const;
+  bool isSampleEditorVisible() const;
+
+  // Accessors (finding panels dynamically)
+  SampleEditorComponent *getSampleEditor();
 
 private:
   Engine &engine_;
   ProjectState &projectState_;
 
-  // View state
-  bool showSessionView_ = false; // false = Arranger, true = Session
-  bool browserVisible_ = true;
-
-  // Layout constants
-  static constexpr int browserWidth_ = 300;
-  static constexpr int minCenterWidth_ = 400;
-
-  // Components
-  std::unique_ptr<ArrangerComponent> arrangerComponent_;
-  std::unique_ptr<SessionViewComponent> sessionViewComponent_;
-  std::unique_ptr<BrowserPanel> browserPanel_;
-  std::unique_ptr<BrowserModel> browserModel_;
-  std::unique_ptr<SampleEditorComponent> sampleEditorComponent_;
+  std::unique_ptr<ResizablePanelContainer> panelContainer_;
   std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
 
-public:
-  void toggleSampleEditor();
-  bool isSampleEditorVisible() const { return sampleEditorVisible_; }
-  SampleEditorComponent *getSampleEditor() {
-    return sampleEditorComponent_.get();
-  }
-
-private:
-  bool sampleEditorVisible_ = false;
-  static constexpr int sampleEditorHeight_ = 250;
+  // Persistent models (shared across panel re-creation)
+  std::unique_ptr<BrowserModel> browserModel_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };
