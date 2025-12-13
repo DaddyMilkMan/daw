@@ -50,7 +50,6 @@ namespace zenith {
 struct BackdropBlurConfig {
   // Performance metrics
   static inline int blurCallsThisFrame = 0;
-  static inline float lastBlurTimeMs = 0.0f;
 
   // Quality multipliers based on design::Settings::BlurQuality
   static float getRadiusMultiplier() {
@@ -71,8 +70,7 @@ struct BackdropBlurConfig {
   // Should we skip blur entirely?
   static bool isBlurEnabled() {
     return design::Settings::getBlurQuality() !=
-               design::Settings::BlurQuality::Off &&
-           design::Settings::getGlowIntensity() > 0.01f;
+           design::Settings::BlurQuality::Off;
   }
 
   // Reset frame stats
@@ -216,8 +214,8 @@ public:
    * @param tintOpacity Overlay opacity
    */
   static void beginBlur(SkCanvas *canvas, const SkRect &bounds,
-                        float blurRadius, SkColor tintColor,
-                        float tintOpacity) {
+                        float blurRadius, SkColor tintColor, float tintOpacity,
+                        float cornerRadius = 0.0f) {
     jassert(canvas != nullptr);
 
     // Store state for endBlur
@@ -242,8 +240,15 @@ public:
 
     BackdropBlurConfig::blurCallsThisFrame++;
 
+    // Prepare RRect
+    SkRRect rrect;
+    if (cornerRadius > 0)
+      rrect = SkRRect::MakeRectXY(bounds, cornerRadius, cornerRadius);
+    else
+      rrect = SkRRect::MakeRect(bounds);
+
     canvas->save();
-    canvas->clipRect(bounds, true);
+    canvas->clipRRect(rrect, true);
 
     // Create blur filter
     sk_sp<SkImageFilter> blurFilter = SkImageFilters::Blur(
@@ -265,7 +270,11 @@ public:
     overlayPaint.setAntiAlias(true);
     overlayPaint.setColor(
         SkColorSetA(tintColor, static_cast<U8CPU>(tintOpacity * 255)));
-    canvas->drawRect(bounds, overlayPaint);
+
+    if (cornerRadius > 0)
+      canvas->drawRRect(rrect, overlayPaint);
+    else
+      canvas->drawRect(bounds, overlayPaint);
 
     // User can now draw custom content...
   }
@@ -311,23 +320,6 @@ public:
   /**
    * @brief Get recommended blur radius for different panel styles
    */
-  static float getBlurRadiusForStyle(int elevation) {
-    // Higher elevation = more blur
-    switch (elevation) {
-    case 0:
-      return 0.0f; // Flat - no blur
-    case 1:
-      return 8.0f; // Subtle
-    case 2:
-      return 16.0f; // Elevated (default)
-    case 3:
-      return 24.0f; // Floating
-    case 4:
-      return 32.0f; // Modal
-    default:
-      return 16.0f;
-    }
-  }
 
 private:
   /**
@@ -388,9 +380,11 @@ private:
 class ScopedBackdropBlur {
 public:
   ScopedBackdropBlur(SkCanvas *canvas, const SkRect &bounds, float blurRadius,
-                     SkColor tintColor = 0xFF1C1C24, float tintOpacity = 0.7f)
+                     SkColor tintColor = 0xFF1C1C24, float tintOpacity = 0.7f,
+                     float cornerRadius = 0.0f)
       : canvas_(canvas) {
-    BackdropBlur::beginBlur(canvas, bounds, blurRadius, tintColor, tintOpacity);
+    BackdropBlur::beginBlur(canvas, bounds, blurRadius, tintColor, tintOpacity,
+                            cornerRadius);
   }
 
   ~ScopedBackdropBlur() { BackdropBlur::endBlur(canvas_); }
