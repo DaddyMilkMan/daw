@@ -642,16 +642,14 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     // OPTIMIZATION: Early exit if visual delta is negligible
     // This prevents expensive ripple recalculations on every single pixel of
     // mouse jitter
-    static double lastDeltaBeats = -99999.0;
-    static int lastDeltaTrack = -99999;
 
     // Only recalc if moved more than micro-amount or track changed
-    if (std::abs(deltaBeats - lastDeltaBeats) < 0.001 &&
-        deltaTrackIndex == lastDeltaTrack) {
+    if (std::abs(deltaBeats - lastDragDeltaBeats_) < 0.001 &&
+        deltaTrackIndex == lastDragDeltaTrack_) {
       return;
     }
-    lastDeltaBeats = deltaBeats;
-    lastDeltaTrack = deltaTrackIndex;
+    lastDragDeltaBeats_ = deltaBeats;
+    lastDragDeltaTrack_ = deltaTrackIndex;
 
     // Reset Insertion Guide
     insertionGuideX = -1.0f;

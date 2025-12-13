@@ -208,6 +208,10 @@ private:
 
   juce::Rectangle<float> marqueeRect;
 
+  // Drag optimization state
+  double lastDragDeltaBeats_ = -99999.0;
+  int lastDragDeltaTrack_ = -99999;
+
   void drawClips(SkCanvas *canvas);
   void drawTracks(SkCanvas *canvas);
 
