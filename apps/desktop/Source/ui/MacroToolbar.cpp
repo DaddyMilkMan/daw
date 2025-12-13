@@ -237,7 +237,6 @@ void MacroToolbar::healSplits() {
   projectState_.getUndoManager().beginNewTransaction("Macro: Heal Splits");
 
   // 3. Iterate and Merge
-  bool changed = false;
   for (size_t i = 0; i < clips.size() - 1;) {
     auto &a = clips[i];
     auto &b = clips[i + 1];
@@ -270,7 +269,6 @@ void MacroToolbar::healSplits() {
         // Remove 'b' from our processing list and stay at 'i' to compare 'a'
         // with new neighbor
         clips.erase(clips.begin() + i + 1);
-        changed = true;
         DBG("MacroToolbar: Healed " << a.id << " and " << b.id);
       } else {
         i++;

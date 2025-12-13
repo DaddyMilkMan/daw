@@ -179,7 +179,8 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   int numLoops = (int)std::ceil(totalBeats / loopBeats);
 
   // Performance safety: Cap max loop iterations to prevent runaway rendering
-  numLoops = std::min(numLoops, 100);
+  static constexpr int kMaxClipLoopIterations = 100;
+  numLoops = std::min(numLoops, kMaxClipLoopIterations);
 
   // Constants
   const float headerHeight = 24.0f;
@@ -285,7 +286,7 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
 
   canvas->restore(); // Restore Clipping (Ends Smart Rounded Corner Mask)
 
-  // 6. Draw Borders (Selection or Outline)
+  // 7. Draw Borders (Selection or Outline)
   if (isSelected) {
     SkPaint selectionPaint;
     selectionPaint.setAntiAlias(true);
