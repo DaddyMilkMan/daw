@@ -9,22 +9,14 @@
 */
 
 #include "DeviceChainComponent.h"
-#include "../../include/Engine.h" // For Track access via ProjectState/Engine if needed?
+#include "../../../include/Engine.h"
 #include "ZenithDesignSystem.h"
 
-// Ideally ProjectState should give us ValueTree, but we need Track* object for
-// Plugin access (which is not yet fully in ValueTree) So we might need to find
-// the Track object from the Engine. But DeviceChainComponent only has
-// ProjectState. We might need to pass Engine to DeviceChainComponent as well,
-// or find the track via a global lookup. For now, I'll rely on a helper to find
-// the track or pass Engine.
-
-// Wait, BottomBar doesn't have Engine. MainWindow has Engine.
-// I should pass Engine to DeviceChainComponent.
-
 #include <core/SkCanvas.h>
+#include <core/SkColor.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
+
 
 namespace zenith {
 
@@ -67,8 +59,11 @@ public:
     // Header
     SkPaint headerPaint;
     headerPaint.setColor(SkColorSetARGB(255, 200, 200, 200));
-    SkFont font =
-        design::typography::getSkFont(12.0f, design::FontWeight::Bold);
+
+    // Use SkFont explicitly constructed since design system might be complex
+    SkFont font;
+    font.setSize(12.0f);
+    font.setSubpixel(true);
 
     juce::String name = plugin_ ? plugin_->getName() : "Empty Device";
     canvas->drawString(name.toStdString().c_str(), 10, 20, font, headerPaint);
@@ -100,8 +95,8 @@ private:
 // DeviceChainComponent Implementation
 //==============================================================================
 
-DeviceChainComponent::DeviceChainComponent(ProjectState &state)
-    : projectState_(state) {
+DeviceChainComponent::DeviceChainComponent(Engine &engine, ProjectState &state)
+    : engine_(engine), projectState_(state) {
   projectState_.getState().addListener(this);
 
   contentContainer_ = std::make_unique<juce::Component>();
@@ -129,7 +124,11 @@ void DeviceChainComponent::drawSkia(SkCanvas *canvas) {
   if (!currentTrack_) {
     SkPaint textPaint;
     textPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
-    SkFont font = design::typography::getSkFont(16.0f);
+
+    SkFont font;
+    font.setSize(16.0f);
+    font.setSubpixel(true);
+
     canvas->drawString("No Track Selected", bounds.getWidth() / 2 - 60,
                        bounds.getHeight() / 2, font, textPaint);
   }
@@ -156,19 +155,15 @@ void DeviceChainComponent::updateTrackFromSelection() {
   juce::String trackId =
       projectState_.getState()[ProjectState::PROP_SELECTED_TRACK_ID].toString();
 
-  // We need to resolve Track object from ID.
-  // Since we don't have Engine reference here yet, we can't easily get the
-  // Track*.
-  // FIXME: We need to pass Engine to DeviceChainComponent or have a global
-  // registry. For now, I will use a placeholder if I can't find it, or assume I
-  // need to fix the constructor.
+  Track *foundTrack = nullptr;
+  for (const auto &t : engine_.tracks()) {
+    if (t->getTrackId() == trackId) {
+      foundTrack = t.get();
+      break;
+    }
+  }
 
-  // BUT! I can use ProjectState to find the track ValueTree, but not the Track
-  // C++ object. The Track object is needed for AudioPluginInstance. So I MUST
-  // modify the constructor to take Engine& or rely on something else.
-
-  // I will go ahead and assume I can modify the constructor in header again to
-  // take Engine.
+  setTrack(foundTrack);
 }
 
 void DeviceChainComponent::setTrack(Track *track) {
@@ -186,19 +181,7 @@ void DeviceChainComponent::rebuildSlots() {
   if (!currentTrack_)
     return;
 
-  // Add dummy slots for now since we haven't implemented plugin list fully on
-  // Track yet Track.h has getNumPlugins() but no getPlugin() returning Instance
-  // yet? Wait, check Track.h again. Step 13 showed: void addPlugin(...)
-  // juce::AudioPluginInstance *getPlugin(int index) const; (Line 194)
-  // So it exists!
-
   int numPlugins = currentTrack_->getNumPlugins();
-
-  // If no plugins, show a dummy "Add Device" slot
-  if (numPlugins == 0) {
-    // Just for visual "wow" factor, add a fake EQ and Compressor slot if empty
-    // Or actually, add a "Flux Mini" device.
-  }
 
   for (int i = 0; i < numPlugins; ++i) {
     auto *plugin = currentTrack_->getPlugin(i);
@@ -221,12 +204,7 @@ void DeviceChainComponent::rebuildSlots() {
 void DeviceChainComponent::valueTreePropertyChanged(
     juce::ValueTree &tree, const juce::Identifier &property) {
   if (property == ProjectState::PROP_SELECTED_TRACK_ID) {
-    // Selection changed!
-    // We need to trigger update.
-    // But we need the Engine to resolve track ID to Track*.
-    // I will dispatch this on message thread or use a callback from BottomBar.
-    // Actually, better: BottomBar owns this. BottomBar can listen too.
-    // But the prompt asked for DeviceChainComponent to do the work.
+    updateTrackFromSelection();
   }
 }
 

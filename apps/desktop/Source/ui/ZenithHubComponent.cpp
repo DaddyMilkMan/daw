@@ -32,31 +32,21 @@ ZenithHubComponent::~ZenithHubComponent() { stopTimer(); }
 void ZenithHubComponent::createMockData() {
   // Mock Recent Projects
   recentProjects_ = {
-      {"Cyberpunk City",
-       "2 hours ago",
-       "Electronic",
-       colors::NEON_CYAN,
-       {},
-       false},
+      {"Cyberpunk City", "2 hours ago", "Electronic", colors::CYAN, {}, false},
       {"Orchestral Suite No. 1",
        "Yesterday",
        "Cinematic",
-       colors::NEON_PURPLE,
+       colors::VIOLET,
        {},
        false},
       {"Late Night Jazz", "3 days ago", "Jazz", colors::NEON_PINK, {}, false},
       {"Techno Bunker", "1 week ago", "Techno", colors::NEON_GREEN, {}, false},
-      {"Ambient Dreams",
-       "2 weeks ago",
-       "Ambient",
-       colors::NEON_BLUE,
-       {},
-       false},
-      {"Rock Anthem", "1 month ago", "Rock", colors::ACCENT_ORANGE, {}, false}};
+      {"Ambient Dreams", "2 weeks ago", "Ambient", colors::BLUE, {}, false},
+      {"Rock Anthem", "1 month ago", "Rock", colors::AMBER, {}, false}};
 
   // Mock Templates
-  templates_ = {{"Electronic", "🎹", colors::NEON_CYAN, {}, false},
-                {"Orchestral", "🎻", colors::NEON_PURPLE, {}, false},
+  templates_ = {{"Electronic", "🎹", colors::CYAN, {}, false},
+                {"Orchestral", "🎻", colors::VIOLET, {}, false},
                 {"Recording", "🎤", colors::NEON_PINK, {}, false}};
 }
 
@@ -224,15 +214,14 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
     float x, y, r;
     SkColor c;
   };
-  Blob blobs[] = {{0.2f * bounds.getWidth() + sin(t * 0.5f) * 100,
-                   0.3f * bounds.getHeight() + cos(t * 0.3f) * 100, 400.0f,
-                   colors::NEON_PURPLE},
-                  {0.8f * bounds.getWidth() - cos(t * 0.4f) * 100,
-                   0.7f * bounds.getHeight() + sin(t * 0.6f) * 100, 500.0f,
-                   colors::NEON_CYAN},
-                  {0.5f * bounds.getWidth() + sin(t * 0.7f) * 50,
-                   0.5f * bounds.getHeight() + cos(t * 0.8f) * 50, 300.0f,
-                   colors::NEON_PINK}};
+  Blob blobs[] = {
+      {0.2f * bounds.getWidth() + sin(t * 0.5f) * 100,
+       0.3f * bounds.getHeight() + cos(t * 0.3f) * 100, 400.0f, colors::VIOLET},
+      {0.8f * bounds.getWidth() - cos(t * 0.4f) * 100,
+       0.7f * bounds.getHeight() + sin(t * 0.6f) * 100, 500.0f, colors::CYAN},
+      {0.5f * bounds.getWidth() + sin(t * 0.7f) * 50,
+       0.5f * bounds.getHeight() + cos(t * 0.8f) * 50, 300.0f,
+       colors::NEON_PINK}};
 
   SkPaint blobPaint;
   blobPaint.setAntiAlias(true);
@@ -361,14 +350,14 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 8.0f, 8.0f);
 
   SkPaint bgPaint;
-  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::NEON_BLUE, 0.15f)
+  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BLUE, 0.15f)
                                      : withAlpha(colors::BG_LIGHT, 0.05f));
   bgPaint.setAntiAlias(true);
   canvas->drawRRect(rrect, bgPaint);
 
   // Avatar
   SkPaint avatarPaint;
-  avatarPaint.setColor(colors::ACCENT_GOLD);
+  avatarPaint.setColor(colors::AMBER);
   canvas->drawCircle(profileBounds_.fLeft + 40, profileBounds_.centerY(), 25,
                      avatarPaint);
 

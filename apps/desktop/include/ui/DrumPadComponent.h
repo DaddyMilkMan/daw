@@ -7,7 +7,6 @@
 #include <map>
 #include <vector>
 
-
 //==============================================================================
 /**
  * @class DrumPadComponent
@@ -97,6 +96,7 @@ private:
 
   // Animation
   void updateAnimations();
+  void timerCallback() override;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(DrumPadComponent)
 };

@@ -266,15 +266,16 @@ void MacroToolbar::healSplits() {
     // Apply merge if group > 1
     if (groupEnd > i + 1) {
       auto &first = clips[i];
-      
+
       // Resize first clip
       projectState_.resizeClip(first.trackId, first.id, totalLength);
-      
+
       // Delete others
       for (size_t k = i + 1; k < groupEnd; ++k) {
-        projectState_.deleteClip(clips[k].trackId, clips[k].id);
+        projectState_.deleteClip(clips[k].trackId, clips[k].id, "Heal Splits");
       }
-      DBG("MacroToolbar: Healed " << first.id << " with " << (groupEnd - (i + 1)) << " clips");
+      DBG("MacroToolbar: Healed " << first.id << " with "
+                                  << (groupEnd - (i + 1)) << " clips");
     }
 
     // Advance to next unprocessed clip

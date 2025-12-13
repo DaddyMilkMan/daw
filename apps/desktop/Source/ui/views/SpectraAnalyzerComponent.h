@@ -17,10 +17,9 @@
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
-#include <core/SkGradientShader.h>
+
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkShader.h>
@@ -29,28 +28,34 @@
 #endif
 
 #include "../../dsp/StereoAudioFifo.h"
+#include "../skia/SkiaComponent.h"
 
 namespace zenith {
 
 class Engine;
 
-class SpectraAnalyzerComponent : public juce::Component, public juce::Timer {
+class SpectraAnalyzerComponent : public SkiaComponent {
 public:
   enum class AnalysisMode { Spectrum, Scope, StereoField };
 
   explicit SpectraAnalyzerComponent(Engine &engine);
   ~SpectraAnalyzerComponent() override;
 
-  void paint(juce::Graphics &g) override;
-  void resized() override;
+  // SkiaComponent overrides
+  void drawSkia(SkCanvas *canvas) override;
   void timerCallback() override;
+  void resized() override;
+
+  // AI Vision Hook
+  std::vector<AIElementInfo> getInspectableElements() override {
+    // Report interactive elements for AI
+    // (Currently just buttons, which are standard components, but we could
+    // report graph areas)
+    return {};
+  }
 
   void setMode(AnalysisMode mode);
   AnalysisMode getMode() const { return currentMode_; }
-
-#ifdef ZENITH_USE_SKIA
-  void drawSkia(SkCanvas *canvas);
-#endif
 
 private:
   Engine &engine_;

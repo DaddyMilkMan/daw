@@ -33,7 +33,6 @@
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
 
-
 namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
@@ -41,6 +40,7 @@ class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
+class ZenithHubComponent;
 } // namespace zenith
 
 //==============================================================================
@@ -142,7 +142,13 @@ private:
   // Phase 1: Audio import
   //==========================================================================
 
+  // Phase 1: Audio import
+  //==========================================================================
+
   void handleImportAudio();
+
+  // Zenith Hub (Start Screen)
+  std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

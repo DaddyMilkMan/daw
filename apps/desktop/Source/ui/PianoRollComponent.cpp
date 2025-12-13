@@ -1521,7 +1521,7 @@ void PianoRollComponent::drawModernToolbar(SkCanvas *canvas) {
   const char *toolNames[] = {"Select", "Draw", "Erase", "Slice"};
   Tool tools[] = {Tool::Select, Tool::Draw, Tool::Erase, Tool::Slice};
 
-  SkFont font = getMonoFont(11.0f, FontWeight::Bold);
+  static const SkFont font = getMonoFont(11.0f, FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setAntiAlias(true);
 

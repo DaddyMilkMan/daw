@@ -17,12 +17,11 @@
 
 #pragma once
 
-#include "../../include/ProjectState.h"
-#include "../engine/Track.h"
+#include "../../../include/ProjectState.h"
+#include "../../engine/Track.h"
 #include "SkiaComponent.h"
 #include "SkiaKnob.h"
 #include <vector>
-
 
 class Engine; // Forward declaration
 
