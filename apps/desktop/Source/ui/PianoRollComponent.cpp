@@ -179,17 +179,35 @@ void PianoRollComponent::updateNoteRectangles() {
 //==============================================================================
 
 int PianoRollComponent::pixelsToPitch(float y) const {
-  float adjustedY = y - (RULER_HEIGHT + TOOLBAR_HEIGHT);
+  // Coordinate system:
+  // 0 -> Top of component
+  // TOOLBAR_HEIGHT -> Top of Ruler
+  // TOOLBAR_HEIGHT + RULER_HEIGHT -> Top of Note Grid (High Pitch)
+  //
+  // We want to map y relative to the note grid top-left
+  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT; // 70.0f
+  float adjustedY = y - contentTop;
+
+  // With 0 scroll, y=contentTop should map to the highest visible pitch
+  // (usually 127) pixelsPerPitch determines the height of one semitone.
+  // scrollOffsetY shifts the view. positive scrollOffsetY means we've scrolled
+  // down (viewing lower pitches)
+
+  // row 0 is the top-most row in the grid.
   int row = static_cast<int>((adjustedY + scrollOffsetY) / pixelsPerPitch);
 
   if (foldMode) {
     if (visiblePitches.empty())
       return 60;
     int maxRow = (int)visiblePitches.size() - 1;
+    // visual row 0 corresponds to the highest pitch index in visiblePitches
+    // (sorted ascending usually) Actually visiblePitches usually 0..127. If we
+    // want high pitch at top: row 0 -> index N-1
     int resultRow = maxRow - row;
     resultRow = juce::jlimit(0, maxRow, resultRow);
     return visiblePitches[resultRow];
   } else {
+    // Standard mode: 127 at top (row 0), 0 at bottom.
     int pitch = 127 - row;
     return juce::jlimit(0, 127, pitch);
   }
@@ -423,20 +441,8 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
     float noteGridHeight = bounds.getHeight() - contentTop - velocityLaneHeight;
     if (y < contentTop + noteGridHeight) {
       // Calculate pitch accounting for toolbar offset
-      // In drawSkia: y = pitchToPixels(p) + RULER_HEIGHT + TOOLBAR_HEIGHT;
-      // adjustableY = y - (RULER_HEIGHT + TOOLBAR_HEIGHT)
-      // pitchToPixels uses offset/scale.
-      // Let's use `pixelsToPitch` but we need to verify its implementation.
-      // pixelsToPitch: float adjustedY = y - RULER_HEIGHT;
-      // We should update pixelsToPitch to use contentTop or manually adjust
-      // here. Or better: update pixelsToPitch implementation itself! But for
-      // now, let's just pass `y - TOOLBAR_HEIGHT` if pixelsToPitch expects y
-      // relative to RULER_HEIGHT? No, checking pixelsToPitch:
-      // adjustedY = y - RULER_HEIGHT.
-      // If we are at TOOLBAR_HEIGHT + RULER_HEIGHT (70), adjustedY = 40.
-      // But we want 0. So we need to feed it y - TOOLBAR_HEIGHT.
-      // Actually, cleaner is to update pixelsToPitch/beatsToPixels logic if
-      // possible. I'll adjust the input here:
+      // pixelsToPitch handles the offset (TOOLBAR_HEIGHT + RULER_HEIGHT)
+      // internaly.
       int pitch = pixelsToPitch(y);
       playPianoKey(pitch, 100);
     }
@@ -506,7 +512,8 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (currentTool == Tool::Draw) {
     // Create note on click (if empty space)
     if (!note) {
-      createNoteAtPosition(x, y); // Need to verify this handles Y offset
+      // Verified: pixelsToPitch handles the TOOLBAR+RULER offset correctly now.
+      createNoteAtPosition(x, y);
     } else {
       // If clicking existing note in Draw more, maybe move it? or do nothing?
       // Usually draw tool allows moving existing notes too.
