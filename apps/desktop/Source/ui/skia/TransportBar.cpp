@@ -129,46 +129,6 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
 }
 
-void TransportBar::drawButton(SkCanvas *canvas,
-                              const juce::Rectangle<int> &bounds,
-                              const char *label, bool isActive,
-                              uint32_t color) {
-  SkRect rect =
-      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
-                       (float)bounds.getWidth(), (float)bounds.getHeight());
-
-  if (isActive) {
-    // Active State: Glass panel with accent glow
-    GlassmorphicPanel::drawWithAccent(canvas, rect, color,
-                                      GlassmorphicPanel::Style::ActiveGlow);
-  } else {
-    // Inactive State: Subtle glass panel
-    GlassmorphicPanel::draw(canvas, rect, GlassmorphicPanel::Style::Subtle);
-  }
-
-  // Label
-  SkFont font = design::getSkFont(22.0f, design::FontWeight::Medium);
-
-  // Center Text logic
-  float textWidth =
-      font.measureText(label, strlen(label), SkTextEncoding::kUTF8);
-  float textX = rect.centerX() - textWidth / 2.0f;
-  // Approximation for vertical centering
-  float textY = rect.centerY() + 8.0f;
-
-  if (isActive) {
-    // Glowing text for active state
-    NeonGlow::drawTextGlow(canvas, label, textX, textY, font, SK_ColorWHITE,
-                           NeonGlow::Intensity::Strong);
-  } else {
-    // Normal text for inactive
-    SkPaint paint;
-    paint.setColor(design::colors::TEXT_SECONDARY);
-    paint.setAntiAlias(true);
-    canvas->drawString(label, textX, textY, font, paint);
-  }
-}
-
 void TransportBar::drawTransportButton(SkCanvas *canvas,
                                        const juce::Rectangle<int> &bounds,
                                        const SkPath &iconPath, bool isActive,
@@ -193,10 +153,10 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
   icons::IconStyle style;
   style.color = isActive ? SK_ColorWHITE : design::colors::TEXT_SECONDARY;
   style.filled = isActive; // Filled when active
-  style.strokeWidth = 2.0f;
+  style.strokeWidth = icons::STROKE_REGULAR;
 
   if (isActive) {
-    style.glowRadius = 6.0f;
+    style.glowRadius = design::effects::GLOW_STRONG;
     style.glowColor = color;
   }
 

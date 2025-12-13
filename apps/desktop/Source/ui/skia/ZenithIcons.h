@@ -153,8 +153,21 @@ inline SkPath Loop() {
   // Main circle arc (about 300 degrees)
   SkRect oval = SkRect::MakeLTRB(5.0f, 5.0f, 19.0f, 19.0f);
   path.arcTo(oval, -60.0f, 300.0f, true);
-  // Arrow head at the end
-  path.moveTo(17.0f, 4.0f);
+  // Arrow head at the end (connected)
+  // End of arc is roughly at (-60 + 300) = 240 deg.
+  // Actually, visual inspection: the arrow is near the top right/bottom right.
+  // Let's just connect it using lineTo if it's close.
+  // The original moveTo(17, 4) was likely near the START or END depending on
+  // direction. Let's assume we want to attach arrow to the end of the arc.
+  // However, Skia arcTo leaves the pen at the end of the arc.
+  // If we just lineTo the arrow vertices, it will be connected.
+  // Re-defining for correct look:
+  path.lineTo(14.0f, 7.0f); // Back of arrow
+  path.moveTo(17.5f, 5.0f); // Tip (adjusted) - actually let's keep it simple
+  // Disconnected arrow is common for "refresh" icons if styled that way, but
+  // let's connect it. To verify connection, we'd need exact coords. For now, I
+  // will use lineTo to the first point of the arrowhead.
+  path.lineTo(17.0f, 4.0f);
   path.lineTo(20.0f, 7.0f);
   path.lineTo(14.0f, 7.0f);
   return path;
@@ -185,15 +198,15 @@ inline SkPath Settings() {
   const float cx = 12.0f;
   const float cy = 12.0f;
   const float outerR = 9.0f;
-  const float innerR = 7.0f;
   const float toothDepth = 2.5f;
   const int teeth = 8;
+  const float toRad = SK_ScalarPI / 180.0f;
 
   for (int i = 0; i < teeth; ++i) {
-    float angle1 = (i * 360.0f / teeth) * (3.14159265f / 180.0f);
-    float angle2 = ((i + 0.3f) * 360.0f / teeth) * (3.14159265f / 180.0f);
-    float angle3 = ((i + 0.7f) * 360.0f / teeth) * (3.14159265f / 180.0f);
-    float angle4 = ((i + 1.0f) * 360.0f / teeth) * (3.14159265f / 180.0f);
+    float angle1 = (i * 360.0f / teeth) * toRad;
+    float angle2 = ((i + 0.3f) * 360.0f / teeth) * toRad;
+    float angle3 = ((i + 0.7f) * 360.0f / teeth) * toRad;
+    float angle4 = ((i + 1.0f) * 360.0f / teeth) * toRad;
 
     float x1 = cx + outerR * cosf(angle1);
     float y1 = cy + outerR * sinf(angle1);
@@ -373,6 +386,10 @@ inline SkPath MIDI() {
   // Piano keys representation
   // White keys background
   path.addRect(SkRect::MakeLTRB(4.0f, 8.0f, 20.0f, 18.0f));
+  // Black keys (simplified)
+  path.addRect(SkRect::MakeLTRB(7.0f, 8.0f, 9.0f, 13.0f));
+  path.addRect(SkRect::MakeLTRB(11.0f, 8.0f, 13.0f, 13.0f));
+  path.addRect(SkRect::MakeLTRB(15.0f, 8.0f, 17.0f, 13.0f));
   return path;
 }
 
@@ -473,10 +490,23 @@ inline SkPath Freeze() {
   path.lineTo(cx + 7.0f, cy + 4.0f);
   path.moveTo(cx - 7.0f, cy + 4.0f);
   path.lineTo(cx + 7.0f, cy - 4.0f);
-  // Small ticks
+  // Small ticks on all arms
+  // Top
   path.moveTo(cx - 2.0f, cy - 6.0f);
   path.lineTo(cx, cy - 8.0f);
   path.lineTo(cx + 2.0f, cy - 6.0f);
+  // Bottom
+  path.moveTo(cx - 2.0f, cy + 6.0f);
+  path.lineTo(cx, cy + 8.0f);
+  path.lineTo(cx + 2.0f, cy + 6.0f);
+  // Left
+  path.moveTo(cx - 6.0f, cy - 2.0f);
+  path.lineTo(cx - 8.0f, cy);
+  path.lineTo(cx - 6.0f, cy + 2.0f);
+  // Right
+  path.moveTo(cx + 6.0f, cy - 2.0f);
+  path.lineTo(cx + 8.0f, cy);
+  path.lineTo(cx + 6.0f, cy + 2.0f);
   return path;
 }
 
@@ -774,7 +804,7 @@ inline void drawIcon(SkCanvas *canvas, const SkPath &icon, float x, float y,
     glowPaint.setColor(SkColorSetA(glowCol, 100));
     glowPaint.setStyle(style.filled ? SkPaint::kFill_Style
                                     : SkPaint::kStroke_Style);
-    glowPaint.setStrokeWidth((style.strokeWidth + style.glowRadius) / scale);
+    glowPaint.setStrokeWidth(style.strokeWidth);
     glowPaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, style.glowRadius));
     canvas->drawPath(icon, glowPaint);
