@@ -62,10 +62,6 @@ void ZenithSlider::mouseDrag(const juce::MouseEvent &e) {
   float newValue = range_.start + newNorm * (range_.end - range_.start);
 
   setValue(newValue, true);
-
-  if (onValueChange) {
-    onValueChange();
-  }
 }
 
 void ZenithSlider::drawSkia(SkCanvas *canvas) {

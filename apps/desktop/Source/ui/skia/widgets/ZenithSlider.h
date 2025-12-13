@@ -86,7 +86,6 @@ public:
   }
 
   // ----- Callbacks -----
-  std::function<void()> onValueChange; // Legacy compatibility
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
@@ -102,8 +101,7 @@ private:
   void drawValueTooltip(SkCanvas *canvas, float handlePos);
 
   float getHandlePosition() const;
-  float positionToValue(float pos) const;
-  float valueToPosition(float value) const;
+
 #endif
 
   // Settings
