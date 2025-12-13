@@ -974,9 +974,9 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   gridPaint.setStrokeWidth(1.0f);
   gridPaint.setAntiAlias(true);
   // Dotted line effect - using SkSpan for modern Skia API
-  SkScalar intervals[] = {2.0f, 4.0f};
-  gridPaint.setPathEffect(
-      SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f));
+  static const SkScalar intervals[] = {2.0f, 4.0f};
+  static const auto dashEffect = SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
+  gridPaint.setPathEffect(dashEffect);
 
   double startBeat = std::floor(viewStartBeats);
   double endBeat = viewStartBeats + ((width - HEADER_WIDTH) / pixelsPerBeat);

@@ -273,8 +273,8 @@ void MacroToolbar::healSplits() {
       // Delete others
       for (size_t k = i + 1; k < groupEnd; ++k) {
         projectState_.deleteClip(clips[k].trackId, clips[k].id);
-        DBG("MacroToolbar: Healed " << first.id << " with " << clips[k].id);
       }
+      DBG("MacroToolbar: Healed " << first.id << " with " << (groupEnd - (i + 1)) << " clips");
     }
 
     // Advance to next unprocessed clip
