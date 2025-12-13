@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ArrangerComponent.cpp
  * @brief Timeline/Arranger view implementation
  */
@@ -19,6 +19,7 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <core/SkRect.h>
+#include <core/SkSpan.h> // For SkSpan used by SkDashPathEffect
 #include <core/SkTypeface.h>
 #include <effects/SkDashPathEffect.h> // For SkDashPathEffect::Make
 #include <effects/SkGradientShader.h>
@@ -90,6 +91,10 @@ ArrangerComponent::~ArrangerComponent() {
   projectState.getState().removeListener(this);
   DBG("ArrangerComponent: Destroyed");
 }
+
+//==============================================================================
+// ValueTree::Listener interface
+//==============================================================================
 
 void ArrangerComponent::valueTreePropertyChanged(
     juce::ValueTree &tree, const juce::Identifier &property) {
@@ -1255,7 +1260,11 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 //==============================================================================
 
 bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
-  if (key.isKeyCode(juce::KeyPress::backspaceKey)) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  // Delete / Backspace
+  if (key.isKeyCode(juce::KeyPress::deleteKey) ||
+      key.isKeyCode(juce::KeyPress::backspaceKey)) {
     deleteSelectedClips();
     return true;
   }
@@ -1305,7 +1314,23 @@ bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
 // DragAndDropTarget Interface
 //==============================================================================
 
-// Duplicate isInterestedInDragSource removed
+bool ArrangerComponent::isInterestedInDragSource(
+    const juce::DragAndDropTarget::SourceDetails &details) {
+  // Check if this is a browser drag
+  juce::String description = details.description.toString();
+
+  if (zenith::BrowserDragSource::isBrowserDrag(description)) {
+    auto type = zenith::BrowserDragSource::getTypeFromDescription(description);
+
+    // Accept audio files, MIDI files, instruments, and plugins
+    return type == zenith::BrowserItemType::AudioFile ||
+           type == zenith::BrowserItemType::MidiFile ||
+           type == zenith::BrowserItemType::Instrument ||
+           type == zenith::BrowserItemType::Plugin;
+  }
+
+  return false;
+}
 
 void ArrangerComponent::itemDragEnter(
     const juce::DragAndDropTarget::SourceDetails &details) {
@@ -1452,7 +1477,7 @@ void ArrangerComponent::itemDropped(
 // Timer callback - Updates playhead position from Engine
 //==============================================================================
 
-// Old timerCallback removed (Duplicate)
+void ArrangerComponent::timerCallback() { updatePlayheadFromEngine(); }
 
 void ArrangerComponent::updatePlayheadFromEngine() {
   // Get current playhead position from engine
@@ -1607,237 +1632,6 @@ ArrangerComponent::getWaveformCache(const juce::String &audioFilePath) const {
   return nullptr;
 }
 
-#ifdef ZENITH_USE_SKIA
-//==============================================================================
-// Clip Content Rendering - Waveform (Real Peak Data)
-//==============================================================================
-void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
-                                         const SkRect &clipRect) {
-  using namespace zenith::design;
-
-  const WaveformCache *cache = getWaveformCache(clip.audioFilePath);
-  if (!cache || cache->minPeaks.empty() || cache->maxPeaks.empty()) {
-    // No cache available - draw placeholder line
-    SkPaint linePaint;
-    linePaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.3f));
-    linePaint.setStrokeWidth(1.0f);
-    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(),
-                     clipRect.centerY(), linePaint);
-    return;
-  }
-
-  // Calculate visible range of peaks based on clip position
-  float clipWidth = clipRect.width();
-
-  // Inset for visual padding
-  SkRect contentRect = clipRect;
-  contentRect.inset(2.0f, 4.0f);
-  float contentHeight = contentRect.height();
-  float contentCenterY = contentRect.centerY();
-
-  int totalPeaks = static_cast<int>(cache->maxPeaks.size());
-  if (totalPeaks == 0)
-    return;
-
-  // Build the waveform path - top half (max peaks) going left to right,
-  // then bottom half (min peaks) going right to left to form a closed shape
-  SkPath waveformPath;
-  bool pathStarted = false;
-
-  // First pass: Draw upper contour (max peaks)
-  for (int i = 0; i < totalPeaks; ++i) {
-    float x = contentRect.left() +
-              (static_cast<float>(i) / totalPeaks) * contentRect.width();
-    if (x > contentRect.right())
-      break;
-
-    float maxPeak = cache->maxPeaks[i];
-    // Clamp to reasonable range
-    maxPeak = std::clamp(maxPeak, -1.0f, 1.0f);
-
-    // Map peak value to y coordinate (positive peaks go up from center)
-    float y = contentCenterY - (maxPeak * contentHeight * 0.45f);
-
-    if (!pathStarted) {
-      waveformPath.moveTo(x, y);
-      pathStarted = true;
-    } else {
-      waveformPath.lineTo(x, y);
-    }
-  }
-
-  // Second pass: Draw lower contour (min peaks) going backwards
-  for (int i = totalPeaks - 1; i >= 0; --i) {
-    float x = contentRect.left() +
-              (static_cast<float>(i) / totalPeaks) * contentRect.width();
-    if (x < contentRect.left())
-      continue;
-
-    float minPeak = cache->minPeaks[i];
-    minPeak = std::clamp(minPeak, -1.0f, 1.0f);
-
-    float y = contentCenterY - (minPeak * contentHeight * 0.45f);
-    waveformPath.lineTo(x, y);
-  }
-
-  waveformPath.close();
-
-  // Determine colors based on selection state
-  SkColor waveColor = clip.isSelected ? colors::CYAN : colors::NEON_GREEN;
-
-  // Draw filled waveform with gradient
-  SkPaint fillPaint;
-  fillPaint.setAntiAlias(true);
-  fillPaint.setStyle(SkPaint::kFill_Style);
-
-  // Create a vertical gradient from center outward
-  SkPoint gradientPoints[2] = {{contentRect.centerX(), contentCenterY},
-                               {contentRect.centerX(), contentRect.top()}};
-  SkColor gradientColors[2] = {
-      withAlpha(waveColor, 0.7f), // More opaque at center
-      withAlpha(waveColor, 0.2f)  // Fade out towards edges
-  };
-
-  fillPaint.setShader(SkGradientShader::MakeLinear(
-      gradientPoints, gradientColors, nullptr, 2, SkTileMode::kMirror));
-
-  canvas->drawPath(waveformPath, fillPaint);
-
-  // Draw stroke outline for crisp edges
-  SkPaint strokePaint;
-  strokePaint.setAntiAlias(true);
-  strokePaint.setStyle(SkPaint::kStroke_Style);
-  strokePaint.setStrokeWidth(0.5f);
-  strokePaint.setColor(withAlpha(waveColor, 0.9f));
-
-  canvas->drawPath(waveformPath, strokePaint);
-
-  // Draw center line
-  SkPaint centerLinePaint;
-  centerLinePaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.2f));
-  centerLinePaint.setStrokeWidth(0.5f);
-  canvas->drawLine(contentRect.left(), contentCenterY, contentRect.right(),
-                   contentCenterY, centerLinePaint);
-}
-
-//==============================================================================
-// Clip Content Rendering - MIDI Notes (Piano Roll Blob)
-//==============================================================================
-void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
-                                          const ClipView &clip,
-                                          const SkRect &clipRect) {
-  using namespace zenith::design;
-
-  if (clip.noteBlobs.empty()) {
-    // No notes - draw empty indicator
-    SkPaint emptyPaint;
-    emptyPaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.2f));
-    emptyPaint.setStrokeWidth(1.0f);
-
-    SkScalar dashIntervals[] = {4.0f, 4.0f};
-    emptyPaint.setPathEffect(
-        SkDashPathEffect::Make(SkSpan<const SkScalar>(dashIntervals, 2), 0.0f));
-
-    canvas->drawLine(clipRect.left() + 4.0f, clipRect.centerY(),
-                     clipRect.right() - 4.0f, clipRect.centerY(), emptyPaint);
-    return;
-  }
-
-  // Inset for visual padding
-  SkRect contentRect = clipRect;
-  contentRect.inset(3.0f, 6.0f);
-
-  // Find the pitch range for proper vertical scaling
-  int lowestPitch = 127;
-  int highestPitch = 0;
-  for (const auto &blob : clip.noteBlobs) {
-    lowestPitch = std::min(lowestPitch, blob.pitch);
-    highestPitch = std::max(highestPitch, blob.pitch);
-  }
-
-  // Ensure we have at least a small range
-  if (highestPitch <= lowestPitch) {
-    lowestPitch = std::max(0, lowestPitch - 6);
-    highestPitch = std::min(127, highestPitch + 6);
-  }
-
-  int pitchRange = highestPitch - lowestPitch + 1;
-
-  // Calculate note height - limit to max 6px for visual clarity
-  float contentHeight = contentRect.height();
-  float noteHeight = std::min(contentHeight / pitchRange, 6.0f);
-  noteHeight = std::max(noteHeight, 2.0f); // Minimum 2px
-
-  // Determine colors based on selection state
-  SkColor noteColor = clip.isSelected ? colors::CYAN : colors::VIOLET;
-
-  SkPaint notePaint;
-  notePaint.setAntiAlias(true);
-  notePaint.setStyle(SkPaint::kFill_Style);
-
-  SkPaint noteOutlinePaint;
-  noteOutlinePaint.setAntiAlias(true);
-  noteOutlinePaint.setStyle(SkPaint::kStroke_Style);
-  noteOutlinePaint.setStrokeWidth(0.5f);
-
-  for (const auto &blob : clip.noteBlobs) {
-    // Calculate horizontal position relative to clip
-    float noteStartRatio =
-        static_cast<float>(blob.startBeats / clip.lengthBeats);
-    float noteLengthRatio =
-        static_cast<float>(blob.lengthBeats / clip.lengthBeats);
-
-    float x = contentRect.left() + noteStartRatio * contentRect.width();
-    float w = noteLengthRatio * contentRect.width();
-
-    // Ensure minimum width of 2 pixels for visibility
-    w = std::max(w, 2.0f);
-
-    // Calculate vertical position (higher pitch = higher on screen = lower Y
-    // value)
-    float pitchRatio =
-        static_cast<float>(blob.pitch - lowestPitch) / pitchRange;
-    float y = contentRect.bottom() - (pitchRatio * contentHeight) - noteHeight;
-
-    // Clamp to content bounds
-    if (x + w < contentRect.left() || x > contentRect.right())
-      continue;
-    x = std::max(x, contentRect.left());
-    float right = std::min(x + w, contentRect.right());
-    w = right - x;
-
-    if (y + noteHeight < contentRect.top() || y > contentRect.bottom())
-      continue;
-
-    // Create note rectangle with rounded corners
-    SkRect noteRect = SkRect::MakeXYWH(x, y, w, noteHeight);
-    SkRRect noteRRect = SkRRect::MakeRectXY(noteRect, 1.5f, 1.5f);
-
-    // Velocity affects opacity (velocity 0-127 maps to alpha 100-255)
-    // Since MidiNoteBlob doesn't have velocity, use full opacity
-    // In a real implementation, you'd pass velocity in the struct
-    uint8_t alpha = 200; // Default high opacity
-
-    // Subtle gradient per note for depth
-    SkPoint noteGradientPts[2] = {{x, y}, {x, y + noteHeight}};
-    SkColor noteGradientColors[2] = {
-        withAlpha(lighten(noteColor, 0.15f), alpha),
-        withAlpha(noteColor, alpha)};
-
-    notePaint.setShader(SkGradientShader::MakeLinear(
-        noteGradientPts, noteGradientColors, nullptr, 2, SkTileMode::kClamp));
-
-    canvas->drawRRect(noteRRect, notePaint);
-
-    // Subtle outline for definition
-    noteOutlinePaint.setColor(withAlpha(lighten(noteColor, 0.3f), 180));
-    canvas->drawRRect(noteRRect, noteOutlinePaint);
-  }
-
-  notePaint.setShader(nullptr); // Reset
-}
-#endif
-
 //==============================================================================
 // Bar.Beat.Tick Formatting
 //==============================================================================
@@ -1858,23 +1652,70 @@ juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
   // Tick is the fractional part (0-99 for display)
   double fractional = beats - static_cast<double>(totalBeats);
   int tick = static_cast<int>(fractional * 100.0);
+
   return juce::String(bar) + "." + juce::String(beat) + "." +
          juce::String(tick).paddedLeft('0', 2);
 }
 
-//==============================================================================
-// DragAndDropTarget - isInterestedInDragSource
-//==============================================================================
-bool ArrangerComponent::isInterestedInDragSource(
-    const juce::DragAndDropTarget::SourceDetails &details) {
-  // Accept drops from browser panel (audio/MIDI files, instruments, plugins)
-  juce::String description = details.description.toString();
-  return description.startsWith("BROWSER:");
+#ifdef ZENITH_USE_SKIA
+void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip,
+                                          const SkRect &clipRect) {
+  using namespace zenith::design;
+  SkPaint notePaint;
+  notePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.8f));
+  notePaint.setAntiAlias(true);
+
+  for (const auto &blob : clip.noteBlobs) {
+    if (clip.lengthBeats <= 0.001) continue;
+    
+    float nx = clipRect.left() + (blob.startBeats / clip.lengthBeats) * clipRect.width();
+    float nw = (blob.lengthBeats / clip.lengthBeats) * clipRect.width();
+    float ny = clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
+    
+    SkRect noteRect = SkRect::MakeXYWH(nx, ny, std::max(2.0f, nw), 2.0f);
+    canvas->drawRect(noteRect, notePaint);
+  }
 }
 
-//==============================================================================
-// Timer callback - Updates playhead position from Engine
-//==============================================================================
-void ArrangerComponent::timerCallback() { updatePlayheadFromEngine(); }
+void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
+                                         const SkRect &clipRect) {
+  using namespace zenith::design;
+  
+  auto* cache = getWaveformCache(clip.audioFilePath);
+  if (!cache || !cache->isValid || cache->minPeaks.empty()) {
+    SkPaint linePaint;
+    linePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f));
+    linePaint.setStrokeWidth(1.0f);
+    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(), clipRect.centerY(), linePaint);
+    return;
+  }
+
+  SkPaint wavePaint;
+  wavePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.8f));
+  wavePaint.setStyle(SkPaint::kStroke_Style);
+  wavePaint.setStrokeWidth(1.0f);
+  wavePaint.setAntiAlias(true);
+
+  SkPath path;
+  float midY = clipRect.centerY();
+  float heightScale = clipRect.height() * 0.4f; 
+  
+  size_t numPeaks = cache->minPeaks.size();
+  float stepX = clipRect.width() / static_cast<float>(numPeaks);
+  
+  path.moveTo(clipRect.left(), midY);
+  
+  for (size_t i = 0; i < numPeaks; ++i) {
+    float x = clipRect.left() + i * stepX;
+    float top = midY - (cache->maxPeaks[i] * heightScale);
+    float bottom = midY - (cache->minPeaks[i] * heightScale);
+    
+    path.moveTo(x, top);
+    path.lineTo(x, bottom);
+  }
+  
+  canvas->drawPath(path, wavePaint);
+}
+#endif
 
 } // namespace zenith

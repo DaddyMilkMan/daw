@@ -18,7 +18,7 @@
 #include "MixerChannel.h"
 #include "EngineConstants.h"
 #include "../dsp/SIMDHelpers.h"
-#include "../ui/skia/AudioFifo.h"
+#include "../dsp/AudioFifo.h"
 
 namespace zenith {
 

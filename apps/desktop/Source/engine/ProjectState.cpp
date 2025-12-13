@@ -4,6 +4,10 @@
  */
 
 #include "ProjectState.h"
+#include "TrackStateManager.h"
+#include "ClipStateManager.h"
+#include "AutomationStateManager.h"
+#include "ProjectFileIO.h"
 
 #include <functional>
 
@@ -109,6 +113,18 @@ const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 //==============================================================================
 ProjectState::ProjectState() {
   DBG("ProjectState: Constructor");
+
+  trackStateManager = std::make_unique<TrackStateManager>(*this);
+  clipStateManager = std::make_unique<ClipStateManager>(*this);
+  automationStateManager = std::make_unique<AutomationStateManager>(*this);
+  projectFileIO = std::make_unique<ProjectFileIO>(*this);
+
+  createDefaultState(); // newProject calls this via IO, but we need state initialized before listeners?
+  // newProject logic is now in ProjectFileIO.
+  // We should call newProject() on the IO manager.
+  // But newProject() in ProjectState calls createDefaultState().
+  // Let's delegate.
+  
   newProject();
   state.addListener(this);
 }
@@ -138,110 +154,25 @@ void ProjectState::rebuildTrackMap() {
 }
 
 void ProjectState::newProject() {
-  DBG("ProjectState: Creating new project");
-
-  // Clear undo history
-  undoManager.clearUndoHistory();
-
-  // Create default state
-  createDefaultState();
-
-  // Reset cache
-  trackIdMap_.clear();
-
-  // Reset ID counter for a fresh project
-  idCounter.store(0);
-
-  projectFile = juce::File(); // Clear project file
-  isDirty = false;
-
-  DBG("ProjectState: New project created");
+  if (projectFileIO)
+      projectFileIO->newProject();
 }
 
 bool ProjectState::loadFromFile(const juce::File &file) {
-  DBG("ProjectState: Loading from " + file.getFullPathName());
-
-  if (!file.existsAsFile()) {
-    DBG("ProjectState: File does not exist");
-    return false;
-  }
-
-  // Parse XML
-  auto xml = juce::parseXML(file);
-
-  if (xml == nullptr) {
-    DBG("ProjectState: Failed to parse XML");
-    return false;
-  }
-
-  // Create ValueTree from XML
-  auto newState = juce::ValueTree::fromXml(*xml);
-
-  if (!newState.isValid() || newState.getType() != ID_PROJECT) {
-    DBG("ProjectState: Invalid project file");
-    return false;
-  }
-
-  // Replace current state
-  state.removeListener(this);
-  state = newState;
-  state.addListener(this);
-
-  // Ensure future IDs do not clash with those loaded from disk
-  rebuildIdCounter();
-
-  // Rebuild O(1) lookup map
-  rebuildTrackMap();
-
-  // Clear undo history (fresh start)
-  undoManager.clearUndoHistory();
-
-  projectFile = file; // Update project file
-  DBG("ProjectState: Loaded successfully");
-  isDirty = false;
-  return true;
+  if (projectFileIO)
+      return projectFileIO->loadFromFile(file);
+  return false;
 }
 
 bool ProjectState::saveToFile(const juce::File &file) {
-  DBG("ProjectState: Saving to " + file.getFullPathName());
-
-  // Convert ValueTree to XML
-  auto xml = state.createXml();
-
-  if (xml == nullptr) {
-    DBG("ProjectState: Failed to create XML");
-    return false;
-  }
-
-  // Save to file
-  if (!xml->writeTo(file)) {
-    DBG("ProjectState: Failed to write file");
-    return false;
-  }
-
-  DBG("ProjectState: Saved successfully");
-  projectFile = file; // Update project file
-  isDirty = false;
-  return true;
+  if (projectFileIO)
+      return projectFileIO->saveToFile(file);
+  return false;
 }
 
 juce::File ProjectState::saveCrashDump() {
-  auto documentsDir =
-      juce::File::getSpecialLocation(juce::File::userDocumentsDirectory);
-  auto crashDir =
-      documentsDir.getChildFile("ZenithDAW").getChildFile("CrashDumps");
-
-  if (!crashDir.exists())
-    crashDir.createDirectory();
-
-  auto timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-  auto dumpFile = crashDir.getChildFile("crash_recovery_" + timestamp + ".zth");
-
-  DBG("ProjectState: Saving crash dump to " + dumpFile.getFullPathName());
-
-  if (saveToFile(dumpFile))
-    return dumpFile;
-
+  if (projectFileIO)
+      return projectFileIO->saveCrashDump();
   return juce::File();
 }
 
@@ -305,76 +236,32 @@ void ProjectState::setTimeSignature(int numerator, int denominator) {
 
 juce::String ProjectState::addTrack(const juce::String &name,
                                     const juce::String &type) {
-  auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-  if (!tracksNode.isValid()) {
-    // Create TRACKS node if it doesn't exist
-    tracksNode = juce::ValueTree(ID_TRACKS);
-    state.appendChild(tracksNode, &undoManager);
-  }
-
-  // Generate unique ID
-  auto trackId = generateUniqueId("track");
-
-  // Create track
-  juce::ValueTree track(ID_TRACK);
-  track.setProperty(PROP_ID, trackId, nullptr);
-  track.setProperty(PROP_NAME, name, nullptr);
-  track.setProperty(PROP_TYPE, type, nullptr);
-  track.setProperty(PROP_VOLUME, 0.8, nullptr);
-  track.setProperty(PROP_PAN, 0.0, nullptr);
-  track.setProperty(PROP_MUTE, false, nullptr);
-  track.setProperty(PROP_SOLO, false, nullptr);
-  track.setProperty(PROP_ARMED, false, nullptr);
-
-  // Assign random color
-  auto randomColor = juce::Colour::fromHSV(
-      juce::Random::getSystemRandom().nextFloat(), 0.7f, 0.9f, 1.0f);
-  track.setProperty(PROP_COLOR, randomColor.toString(), nullptr);
-
-  // Create empty CLIPS node
-  track.appendChild(juce::ValueTree(ID_CLIPS), nullptr);
-
-  // Add to project
-  tracksNode.appendChild(track, &undoManager);
-
-  DBG("ProjectState: Added track '" + name + "' with ID " + trackId);
-
-  return trackId;
+  if (trackStateManager)
+      return trackStateManager->addTrack(name, type);
+  return {};
 }
 
 void ProjectState::removeTrack(const juce::String &trackId) {
-  auto track = findTrackInternal(trackId);
-
-  if (track.isValid()) {
-    auto tracksNode = state.getChildWithName(ID_TRACKS);
-    tracksNode.removeChild(track, &undoManager);
-
-    DBG("ProjectState: Removed track " + trackId);
-  }
+  if (trackStateManager)
+      trackStateManager->removeTrack(trackId);
 }
 
 int ProjectState::getNumTracks() const {
-  auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-  if (tracksNode.isValid())
-    return tracksNode.getNumChildren();
-
+  if (trackStateManager)
+      return trackStateManager->getNumTracks();
   return 0;
 }
 
 juce::ValueTree ProjectState::getTrack(const juce::String &trackId) const {
-  return findTrackInternal(trackId);
+  if (trackStateManager)
+      return trackStateManager->getTrack(trackId);
+  return {};
 }
 
 juce::ValueTree ProjectState::getTrackByIndex(int index) {
-  auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-  if (!tracksNode.isValid() || index < 0 ||
-      index >= tracksNode.getNumChildren())
-    return {};
-
-  return tracksNode.getChild(index);
+  if (trackStateManager)
+      return trackStateManager->getTrackByIndex(index);
+  return {};
 }
 
 //==============================================================================
@@ -382,66 +269,45 @@ juce::ValueTree ProjectState::getTrackByIndex(int index) {
 //==============================================================================
 
 float ProjectState::getTrackVolume(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return 1.0f;
-
-  return track[PROP_VOLUME];
+  if (trackStateManager)
+      return trackStateManager->getTrackVolume(trackId);
+  return 1.0f;
 }
 
 float ProjectState::getTrackPan(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return 0.0f;
-
-  return track[PROP_PAN];
+  if (trackStateManager)
+      return trackStateManager->getTrackPan(trackId);
+  return 0.0f;
 }
 
 bool ProjectState::isTrackMuted(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return false;
-
-  return track[PROP_MUTE];
+  if (trackStateManager)
+      return trackStateManager->isTrackMuted(trackId);
+  return false;
 }
 
 bool ProjectState::isTrackSolo(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return false;
-
-  return track[PROP_SOLO];
+  if (trackStateManager)
+      return trackStateManager->isTrackSolo(trackId);
+  return false;
 }
 
 bool ProjectState::isTrackArmed(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return false;
-
-  return track[PROP_ARMED];
+  if (trackStateManager)
+      return trackStateManager->isTrackArmed(trackId);
+  return false;
 }
 
 juce::String ProjectState::getTrackName(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return {};
-
-  return track[PROP_NAME].toString();
+  if (trackStateManager)
+      return trackStateManager->getTrackName(trackId);
+  return {};
 }
 
 juce::String ProjectState::getTrackType(const juce::String &trackId) const {
-  auto track = findTrack(trackId);
-
-  if (!track.isValid())
-    return {};
-
-  return track[PROP_TYPE].toString();
+  if (trackStateManager)
+      return trackStateManager->getTrackType(trackId);
+  return {};
 }
 
 //==============================================================================
@@ -451,34 +317,9 @@ juce::String ProjectState::getTrackType(const juce::String &trackId) const {
 juce::String ProjectState::addClip(const juce::String &trackId,
                                    double startBeats, double lengthBeats,
                                    const juce::String &actionName) {
-  auto track = findTrackInternal(trackId);
-  if (!track.isValid()) {
-    DBG("ProjectState: Track not found: " + trackId);
-    return {};
-  }
-
-  // Get or create CLIPS node
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid()) {
-    clipsNode = juce::ValueTree(ID_CLIPS);
-    track.appendChild(clipsNode, &undoManager);
-  }
-
-  // Generate unique clip ID
-  auto clipId = generateUniqueId("clip");
-
-  // Create clip
-  juce::ValueTree clip(ID_CLIP);
-  clip.setProperty(PROP_ID, clipId, nullptr);
-  clip.setProperty(PROP_START, startBeats, nullptr);
-  clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
-  clip.setProperty(PROP_TYPE, "audio", nullptr);
-
-  // Add to track
-  clipsNode.appendChild(clip, &undoManager);
-
-  DBG("ProjectState: Added clip " + clipId + " to track " + trackId);
-  return clipId;
+  if (clipStateManager)
+      return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats, false, "Clip", actionName);
+  return {};
 }
 
 juce::String ProjectState::createEmptyClip(const juce::String &trackId,
@@ -486,62 +327,16 @@ juce::String ProjectState::createEmptyClip(const juce::String &trackId,
                                            double lengthBeats, bool isMidi,
                                            const juce::String &name,
                                            const juce::String &actionName) {
-  auto track = findTrackInternal(trackId);
-
-  if (!track.isValid()) {
-    DBG("ProjectState: Cannot create clip - track not found: " + trackId);
-    return {};
-  }
-
-  // Get or create CLIPS node
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid()) {
-    clipsNode = juce::ValueTree(ID_CLIPS);
-    track.appendChild(clipsNode, nullptr);
-  }
-
-  // Generate unique clip ID
-  auto clipId = generateUniqueId("clip");
-
-  // Create clip ValueTree
-  juce::ValueTree clip(ID_CLIP);
-  clip.setProperty(PROP_ID, clipId, nullptr);
-  clip.setProperty(PROP_NAME, name.isEmpty() ? "Clip" : name, nullptr);
-  clip.setProperty(PROP_TYPE, isMidi ? "midi" : "audio", nullptr);
-  clip.setProperty(PROP_START, startBeats, nullptr);
-  clip.setProperty(PROP_LENGTH, lengthBeats, nullptr);
-
-  // Add to track's clips with undo
-  undoManager.beginNewTransaction(actionName);
-  clipsNode.appendChild(clip, &undoManager);
-
-  DBG("ProjectState: Created clip '" + name + "' with ID " + clipId +
-      " on track " + trackId);
-
-  return clipId;
+  if (clipStateManager)
+      return clipStateManager->createEmptyClip(trackId, startBeats, lengthBeats, isMidi, name, actionName);
+  return {};
 }
 
 bool ProjectState::removeClip(const juce::String &trackId,
                               const juce::String &clipId,
                               const juce::String &actionName) {
-  auto track = findTrackInternal(trackId);
-  if (!track.isValid())
-    return false;
-
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid())
-    return false;
-
-  // Find and remove clip
-  for (int i = 0; i < clipsNode.getNumChildren(); ++i) {
-    auto clip = clipsNode.getChild(i);
-    if (clip[PROP_ID].toString() == clipId) {
-      clipsNode.removeChild(i, &undoManager);
-      DBG("ProjectState: Removed clip " + clipId);
-      return true;
-    }
-  }
-
+  if (clipStateManager)
+      return clipStateManager->removeClip(trackId, clipId, actionName);
   return false;
 }
 
@@ -549,195 +344,60 @@ void ProjectState::moveClip(const juce::String &clipId,
                             const juce::String &newTrackId,
                             double newStartBeats,
                             const juce::String &actionName) {
-  auto [oldTrack, clip] = findClip(clipId);
-
-  if (!clip.isValid()) {
-    DBG("ProjectState: Cannot move clip - clip not found: " + clipId);
-    return;
-  }
-
-  undoManager.beginNewTransaction(actionName);
-
-  // Update start position
-  clip.setProperty(PROP_START, newStartBeats, &undoManager);
-
-  // Check if moving to a different track
-  auto oldTrackId = oldTrack[PROP_ID].toString();
-  if (newTrackId != oldTrackId) {
-    auto newTrack = findTrackInternal(newTrackId);
-    if (!newTrack.isValid()) {
-      DBG("ProjectState: Cannot move clip - target track not found: " +
-          newTrackId);
-      return;
-    }
-
-    // Get or create CLIPS node on new track
-    auto newClipsNode = newTrack.getChildWithName(ID_CLIPS);
-    if (!newClipsNode.isValid()) {
-      newClipsNode = juce::ValueTree(ID_CLIPS);
-      newTrack.appendChild(newClipsNode, &undoManager);
-    }
-
-    // Move clip to new track
-    auto oldClipsNode = oldTrack.getChildWithName(ID_CLIPS);
-    auto clipCopy = clip.createCopy();
-    oldClipsNode.removeChild(clip, &undoManager);
-    newClipsNode.appendChild(clipCopy, &undoManager);
-
-    DBG("ProjectState: Moved clip " + clipId + " from track " + oldTrackId +
-        " to " + newTrackId);
-  } else {
-    DBG("ProjectState: Moved clip " + clipId + " to " +
-        juce::String(newStartBeats) + " beats");
-  }
+  if (clipStateManager)
+      clipStateManager->moveClipToTrack(clipId, newTrackId, newStartBeats, actionName);
 }
 
 void ProjectState::setClipRange(const juce::String &clipId,
                                 double newStartBeats, double newLengthBeats,
                                 const juce::String &actionName) {
-  auto [track, clip] = findClip(clipId);
-
-  if (!clip.isValid()) {
-    DBG("ProjectState: Cannot resize clip - clip not found: " + clipId);
-    return;
-  }
-
-  // Enforce minimum length
-  newLengthBeats = juce::jmax(0.25, newLengthBeats);
-
-  undoManager.beginNewTransaction(actionName);
-  clip.setProperty(PROP_START, newStartBeats, &undoManager);
-  clip.setProperty(PROP_LENGTH, newLengthBeats, &undoManager);
-
-  DBG("ProjectState: Resized clip " + clipId + " to start=" +
-      juce::String(newStartBeats) + " length=" + juce::String(newLengthBeats));
+  if (clipStateManager)
+      clipStateManager->setClipRange(clipId, newStartBeats, newLengthBeats, actionName);
 }
 
 void ProjectState::resizeClip(const juce::String &trackId,
                               const juce::String &clipId,
                               juce::int64 newLengthSamples,
                               const juce::String &actionName) {
-  auto [track, clip] = findClip(clipId);
-
-  if (!clip.isValid()) {
-    DBG("ProjectState: Cannot resize clip - clip not found: " + clipId);
-    return;
-  }
-
-  // Enforce minimum length
-  newLengthSamples = juce::jmax((juce::int64)1, newLengthSamples);
-
-  undoManager.beginNewTransaction(actionName);
-  clip.setProperty(PROP_LENGTH, newLengthSamples,
-                   &undoManager); // Note: PROP_LENGTH can store beats or
-                                  // samples depending on clip type/phase.
-  // For Phase 11, we assume samples for audio clips.
-
-  DBG("ProjectState: Resized clip " + clipId +
-      " to length=" + juce::String(newLengthSamples));
+  if (clipStateManager)
+      clipStateManager->resizeClip(trackId, clipId, (double)newLengthSamples, actionName); // Cast to double as manager uses double
 }
 
 void ProjectState::deleteClip(const juce::String &clipId,
                               const juce::String &actionName) {
-  auto [track, clip] = findClip(clipId);
-
-  if (!clip.isValid()) {
-    DBG("ProjectState: Cannot delete clip - clip not found: " + clipId);
-    return;
-  }
-
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (clipsNode.isValid()) {
-    undoManager.beginNewTransaction(actionName);
-    clipsNode.removeChild(clip, &undoManager);
-
-    DBG("ProjectState: Deleted clip " + clipId);
-  }
+  if (clipStateManager)
+      clipStateManager->deleteClip(clipId, actionName);
 }
 
+// Retained setClipAudioFile and getClipAudioFile for now or delegate
 bool ProjectState::setClipAudioFile(const juce::String &trackId,
                                     const juce::String &clipId,
                                     const juce::File &audioFile,
                                     const juce::String &actionName) {
-  auto clip = getClip(trackId, clipId);
-  if (!clip.isValid()) {
-    DBG("ProjectState: Clip not found: " + trackId + "/" + clipId);
-    return false;
-  }
-
-  // Store path - make relative to project file if project has been saved
-  juce::String pathToStore;
-  if (projectFile.exists()) {
-    // Make path relative to project file directory
-    juce::File projectDir = projectFile.getParentDirectory();
-    juce::String relativePath = audioFile.getRelativePathFrom(projectDir);
-    // Only use relative path if it doesn't go up too many levels
-    if (!relativePath.startsWith("..\\..\\..") &&
-        !relativePath.startsWith("../../..")) {
-      pathToStore = relativePath;
-    } else {
-      pathToStore = audioFile.getFullPathName();
-    }
-  } else {
-    // No project file yet - store absolute path
-    pathToStore = audioFile.getFullPathName();
-  }
-
-  clip.setProperty(PROP_AUDIO_FILE, pathToStore, &undoManager);
-
-  DBG("ProjectState: Set audio file for clip " + clipId + ": " +
-      audioFile.getFileName());
-  return true;
+  // Delegate to manager - note relative path logic is lost for now
+  if (clipStateManager)
+      return clipStateManager->setClipAudioFile(trackId, clipId, audioFile, actionName);
+  return false;
 }
 
 juce::String ProjectState::getClipAudioFile(const juce::String &trackId,
                                             const juce::String &clipId) const {
-  auto clip = getClip(trackId, clipId);
-  if (!clip.isValid())
-    return {};
-
-  return clip[PROP_AUDIO_FILE].toString();
+  if (clipStateManager)
+      return clipStateManager->getClipAudioFile(trackId, clipId);
+  return {};
 }
 
 juce::ValueTree ProjectState::getClip(const juce::String &trackId,
                                       const juce::String &clipId) const {
-  auto track = findTrackInternal(trackId);
-  if (!track.isValid())
-    return {};
-
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid())
-    return {};
-
-  // Find clip
-  for (const auto &clip : clipsNode) {
-    if (clip[PROP_ID].toString() == clipId)
-      return clip;
-  }
-
+  if (clipStateManager)
+      return clipStateManager->getClip(trackId, clipId);
   return {};
 }
 
 std::pair<juce::ValueTree, juce::ValueTree>
 ProjectState::findClip(const juce::String &clipId) const {
-  auto tracksNode = state.getChildWithName(ID_TRACKS);
-
-  if (!tracksNode.isValid())
-    return {{}, {}};
-
-  // Search through all tracks
-  for (const auto &track : tracksNode) {
-    auto clipsNode = track.getChildWithName(ID_CLIPS);
-    if (!clipsNode.isValid())
-      continue;
-
-    // Search clips in this track
-    for (const auto &clip : clipsNode) {
-      if (clip[PROP_ID].toString() == clipId)
-        return {track, clip};
-    }
-  }
-
+  if (clipStateManager)
+      return clipStateManager->findClip(clipId);
   return {{}, {}};
 }
 
@@ -748,68 +408,24 @@ ProjectState::findClip(const juce::String &clipId) const {
 juce::ValueTree
 ProjectState::getOrCreateAutomationEnvelope(const juce::String &trackId,
                                             const juce::String &paramId) {
-  auto track = findTrack(trackId);
-  if (!track.isValid()) {
-    DBG("ProjectState: Track not found: " + trackId);
-    return {};
-  }
-
-  // Get or create AUTOMATION node
-  auto automationNode = track.getChildWithName(ID_AUTOMATION);
-  if (!automationNode.isValid()) {
-    automationNode = juce::ValueTree(ID_AUTOMATION);
-    track.appendChild(automationNode, &undoManager);
-  }
-
-  // Find existing envelope for this parameter
-  for (const auto &envelope : automationNode) {
-    if (envelope.getType() == ID_ENVELOPE &&
-        envelope[PROP_PARAM_ID].toString() == paramId)
-      return envelope;
-  }
-
-  // Create new envelope
-  juce::ValueTree envelope(ID_ENVELOPE);
-  envelope.setProperty(PROP_PARAM_ID, paramId, nullptr);
-
-  // Create POINTS container
-  envelope.appendChild(juce::ValueTree(ID_POINTS), nullptr);
-
-  automationNode.appendChild(envelope, &undoManager);
-
-  DBG("ProjectState: Created automation envelope for " + trackId + ":" +
-      paramId);
-  return envelope;
+  if (automationStateManager)
+      return automationStateManager->getOrCreateAutomationEnvelope(trackId, paramId);
+  return {};
 }
 
 juce::ValueTree
 ProjectState::getAutomationEnvelope(const juce::String &trackId,
                                     const juce::String &paramId) const {
-  auto track = findTrack(trackId);
-  if (!track.isValid())
-    return {};
-
-  auto automationNode = track.getChildWithName(ID_AUTOMATION);
-  if (!automationNode.isValid())
-    return {};
-
-  for (const auto &envelope : automationNode) {
-    if (envelope.getType() == ID_ENVELOPE &&
-        envelope[PROP_PARAM_ID].toString() == paramId)
-      return envelope;
-  }
-
+  if (automationStateManager)
+      return automationStateManager->getAutomationEnvelope(trackId, paramId);
   return {};
 }
 
 bool ProjectState::hasAutomation(const juce::String &trackId,
                                  const juce::String &paramId) const {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto pointsNode = envelope.getChildWithName(ID_POINTS);
-  return pointsNode.isValid() && pointsNode.getNumChildren() > 0;
+  if (automationStateManager)
+      return automationStateManager->hasAutomation(trackId, paramId);
+  return false;
 }
 
 juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
@@ -817,54 +433,16 @@ juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
                                               double timeBeats, double value,
                                               float tension, int curveType,
                                               const juce::String &actionName) {
-  auto envelope = getOrCreateAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid()) {
-    DBG("ProjectState: Failed to get/create envelope");
-    return {};
-  }
-
-  auto pointsNode = envelope.getChildWithName(ID_POINTS);
-  if (!pointsNode.isValid()) {
-    DBG("ProjectState: POINTS node not found");
-    return {};
-  }
-
-  // Generate unique ID for the point
-  auto pointId = generateUniqueId("point");
-
-  // Create point
-  juce::ValueTree point(ID_POINT);
-  point.setProperty(PROP_ID, pointId, nullptr);
-  point.setProperty(PROP_TIME_BEATS, timeBeats, nullptr);
-  point.setProperty(PROP_VALUE, value, nullptr);
-  point.setProperty(PROP_TENSION, tension, nullptr);
-  point.setProperty(PROP_CURVE_TYPE, curveType, nullptr);
-
-  // Begin undo transaction
-  undoManager.beginNewTransaction(actionName);
-
-  // Add point to envelope (sorted by time)
-  int insertIndex = 0;
-  for (int i = 0; i < pointsNode.getNumChildren(); ++i) {
-    auto existingPoint = pointsNode.getChild(i);
-    double existingTime = existingPoint[PROP_TIME_BEATS];
-    if (existingTime > timeBeats)
-      break;
-    insertIndex = i + 1;
-  }
-
-  pointsNode.addChild(point, insertIndex, &undoManager);
-
-  DBG("ProjectState: Added automation point " + pointId + " at " +
-      juce::String(timeBeats) + " beats");
-  return pointId;
+  if (automationStateManager)
+      return automationStateManager->addAutomationPoint(trackId, paramId, timeBeats, value, tension, curveType, actionName);
+  return {};
 }
 
 juce::String ProjectState::addAutomationPoint(const juce::String &trackId,
                                               const juce::String &paramId,
                                               double timeBeats, double value,
                                               const juce::String &actionName) {
-  // Delegate to 7-arg version with defaults
+  // Delegate to 7-arg version
   return addAutomationPoint(trackId, paramId, timeBeats, value, 0.0f, 0,
                             actionName);
 }
@@ -874,85 +452,26 @@ bool ProjectState::moveAutomationPoint(const juce::String &trackId,
                                        const juce::String &pointId,
                                        double newTimeBeats, double newValue,
                                        const juce::String &actionName) {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto point = findAutomationPoint(envelope, pointId);
-  if (!point.isValid())
-    return false;
-
-  undoManager.beginNewTransaction(actionName);
-  point.setProperty(PROP_TIME_BEATS, newTimeBeats, &undoManager);
-  point.setProperty(PROP_VALUE, newValue, &undoManager);
-
-  // Re-sort points by time if necessary
-  auto pointsNode = envelope.getChildWithName(ID_POINTS);
-  if (pointsNode.isValid()) {
-    // Remove and re-insert to maintain sorted order
-    int currentIndex = pointsNode.indexOf(point);
-    int newIndex = 0;
-
-    for (int i = 0; i < pointsNode.getNumChildren(); ++i) {
-      if (i == currentIndex)
-        continue;
-      auto otherPoint = pointsNode.getChild(i);
-      double otherTime = otherPoint[PROP_TIME_BEATS];
-      if (otherTime > newTimeBeats)
-        break;
-      newIndex++;
-    }
-
-    if (newIndex != currentIndex) {
-      pointsNode.removeChild(point, &undoManager);
-      pointsNode.addChild(point, newIndex, &undoManager);
-    }
-  }
-
-  DBG("ProjectState: Moved automation point " + pointId);
-  return true;
+  if (automationStateManager)
+      return automationStateManager->moveAutomationPoint(trackId, paramId, pointId, newTimeBeats, newValue, actionName);
+  return false;
 }
 
 bool ProjectState::deleteAutomationPoint(const juce::String &trackId,
                                          const juce::String &paramId,
                                          const juce::String &pointId,
                                          const juce::String &actionName) {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto pointsNode = envelope.getChildWithName(ID_POINTS);
-  if (!pointsNode.isValid())
-    return false;
-
-  auto point = findAutomationPoint(envelope, pointId);
-  if (!point.isValid())
-    return false;
-
-  undoManager.beginNewTransaction(actionName);
-  pointsNode.removeChild(point, &undoManager);
-
-  DBG("ProjectState: Deleted automation point " + pointId);
-  return true;
+  if (automationStateManager)
+      return automationStateManager->deleteAutomationPoint(trackId, paramId, pointId, actionName);
+  return false;
 }
 
 bool ProjectState::clearAutomation(const juce::String &trackId,
                                    const juce::String &paramId,
                                    const juce::String &actionName) {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto pointsNode = envelope.getChildWithName(ID_POINTS);
-  if (!pointsNode.isValid())
-    return false;
-
-  undoManager.beginNewTransaction(actionName);
-  pointsNode.removeAllChildren(&undoManager);
-
-  DBG("ProjectState: Cleared all automation points for " + trackId + " / " +
-      paramId);
-  return true;
+  if (automationStateManager)
+      return automationStateManager->clearAutomation(trackId, paramId, actionName);
+  return false;
 }
 
 bool ProjectState::setAutomationTension(const juce::String &trackId,
@@ -960,18 +479,9 @@ bool ProjectState::setAutomationTension(const juce::String &trackId,
                                         const juce::String &pointId,
                                         float tension,
                                         const juce::String &actionName) {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto point = findAutomationPoint(envelope, pointId);
-  if (!point.isValid())
-    return false;
-
-  undoManager.beginNewTransaction(actionName);
-  point.setProperty(PROP_TENSION, tension, &undoManager);
-
-  return true;
+  if (automationStateManager)
+      return automationStateManager->setAutomationTension(trackId, paramId, pointId, tension, actionName);
+  return false;
 }
 
 bool ProjectState::setAutomationCurveType(const juce::String &trackId,
@@ -979,18 +489,9 @@ bool ProjectState::setAutomationCurveType(const juce::String &trackId,
                                           const juce::String &pointId,
                                           int curveType,
                                           const juce::String &actionName) {
-  auto envelope = getAutomationEnvelope(trackId, paramId);
-  if (!envelope.isValid())
-    return false;
-
-  auto point = findAutomationPoint(envelope, pointId);
-  if (!point.isValid())
-    return false;
-
-  undoManager.beginNewTransaction(actionName);
-  point.setProperty(PROP_CURVE_TYPE, curveType, &undoManager);
-
-  return true;
+  if (automationStateManager)
+      return automationStateManager->setAutomationCurveType(trackId, paramId, pointId, curveType, actionName);
+  return false;
 }
 
 //==============================================================================
@@ -1280,9 +781,8 @@ void ProjectState::createDefaultState() {
 
 juce::String ProjectState::generateUniqueId(const juce::String &prefix) {
   int id = idCounter.fetch_add(1);
-  // ROAST FIX #8: Persist the next ID so we don't have to scan on load
-  // We don't use undoManager here to avoid polluting the undo stack with ID
-  // increments
+  // Persist the next ID so we don't have to scan on load (O(1) lookup vs O(N) scan)
+  // We don't use undoManager here to avoid polluting the undo stack with ID increments
   state.setProperty(PROP_NEXT_ID, id + 1, nullptr);
   return prefix + "_" + juce::String(id);
 }
@@ -1328,7 +828,7 @@ ProjectState::findAutomationPoint(const juce::ValueTree &envelope,
 }
 
 void ProjectState::rebuildIdCounter() {
-  // ROAST FIX #8: Check if we have a stored nextId to avoid O(N) scan
+  // Check if we have a stored nextId to avoid O(N) tree scan on load
   if (state.hasProperty(PROP_NEXT_ID)) {
     idCounter.store(static_cast<int>(state[PROP_NEXT_ID]));
     return;
@@ -1423,168 +923,38 @@ juce::String ProjectState::addClip(const juce::String &trackId,
                                    const juce::String &clipType,
                                    double startBeats, double lengthBeats,
                                    int laneIndex) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  if (clipStateManager)
+      return clipStateManager->addClip(trackId, clipType, startBeats, lengthBeats, laneIndex);
+  return {};
+}
 
-  // Validate parameters
-  if (lengthBeats <= 0.0) {
-    DBG("ProjectState: Invalid clip length: " + juce::String(lengthBeats));
-    return {};
-  }
-
-  if (startBeats < 0.0)
-    startBeats = 0.0;
-
-  if (clipType != "audio" && clipType != "midi") {
-    DBG("ProjectState: Invalid clip type: " + clipType);
-    return {};
-  }
-
-  auto track = findTrack(trackId);
-  if (!track.isValid()) {
-    DBG("ProjectState: Track not found: " + trackId);
-    return {};
-  }
-
-  // Get or create CLIPS node
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid()) {
-    clipsNode = juce::ValueTree(ID_CLIPS);
-    track.appendChild(clipsNode, &undoManager);
-    DBG("ProjectState: Created CLIPS node for track " + trackId);
-  }
-
-  // Generate unique clip ID
-  auto clipId = generateUniqueId("clip");
-
-  // Create clip ValueTree
-  juce::ValueTree clip(ID_CLIP);
-  clip.setProperty(PROP_ID, clipId, nullptr);
-  clip.setProperty(PROP_TYPE, clipType, nullptr);
-  clip.setProperty(PROP_START_BEATS, startBeats, nullptr);
-  clip.setProperty(PROP_LENGTH_BEATS, lengthBeats, nullptr);
-  clip.setProperty(PROP_LANE_INDEX, laneIndex, nullptr);
-
-  // For MIDI clips, create empty NOTES node
-  if (clipType == "midi") {
-    clip.appendChild(juce::ValueTree(ID_NOTES), nullptr);
-  }
-
-  // Insert in sorted order by startBeats
-  int insertIndex = 0;
-  for (int i = 0; i < clipsNode.getNumChildren(); ++i) {
-    auto existingClip = clipsNode.getChild(i);
-    double existingStart = existingClip[PROP_START_BEATS];
-    if (startBeats >= existingStart)
-      insertIndex = i + 1;
-    else
-      break;
-  }
-
-  clipsNode.addChild(clip, insertIndex, &undoManager);
-
-  DBG("ProjectState: Added " + clipType + " clip " + clipId + " at " +
-      juce::String(startBeats) + " beats");
-  return clipId;
+void ProjectState::deleteClip(const juce::String &trackId,
+                              const juce::String &clipId,
+                              const juce::String &actionName) {
+  if (clipStateManager)
+      clipStateManager->removeClip(trackId, clipId, actionName);
 }
 
 bool ProjectState::removeClip(const juce::String &trackId,
                               const juce::String &clipId) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  auto track = findTrack(trackId);
-  if (!track.isValid())
-    return false;
-
-  auto clipsNode = track.getChildWithName(ID_CLIPS);
-  if (!clipsNode.isValid())
-    return false;
-
-  for (int i = 0; i < clipsNode.getNumChildren(); ++i) {
-    auto clip = clipsNode.getChild(i);
-    if (clip.hasType(ID_CLIP) && clip[PROP_ID].toString() == clipId) {
-      clipsNode.removeChild(i, &undoManager);
-      DBG("ProjectState: Removed clip " + clipId);
-      return true;
-    }
-  }
-
+  if (clipStateManager)
+      return clipStateManager->removeClip(trackId, clipId);
   return false;
 }
 
 bool ProjectState::moveClip(const juce::String &trackId,
                             const juce::String &clipId, double newStartBeats) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  if (newStartBeats < 0.0)
-    newStartBeats = 0.0;
-
-  auto clip = findClip(trackId, clipId);
-  if (!clip.isValid())
-    return false;
-
-  double oldStart = clip[PROP_START_BEATS];
-
-  // Update start position
-  clip.setProperty(PROP_START_BEATS, newStartBeats, &undoManager);
-
-  // If position changed, re-sort
-  if (newStartBeats != oldStart) {
-    auto track = findTrack(trackId);
-    auto clipsNode = track.getChildWithName(ID_CLIPS);
-
-    // Find current index
-    int currentIndex = -1;
-    for (int i = 0; i < clipsNode.getNumChildren(); ++i) {
-      if (clipsNode.getChild(i)[PROP_ID].toString() == clipId) {
-        currentIndex = i;
-        break;
-      }
-    }
-
-    if (currentIndex >= 0) {
-      // Remove from current position
-      clipsNode.removeChild(currentIndex, &undoManager);
-
-      // Find new sorted position
-      int insertIndex = 0;
-      for (int i = 0; i < clipsNode.getNumChildren(); ++i) {
-        auto existingClip = clipsNode.getChild(i);
-        double existingStart = existingClip[PROP_START_BEATS];
-        if (newStartBeats >= existingStart)
-          insertIndex = i + 1;
-        else
-          break;
-      }
-
-      // Re-insert at new position
-      clipsNode.addChild(clip, insertIndex, &undoManager);
-    }
-  }
-
-  DBG("ProjectState: Moved clip " + clipId + " to " +
-      juce::String(newStartBeats) + " beats");
-  return true;
+  if (clipStateManager)
+      return clipStateManager->moveClip(trackId, clipId, newStartBeats);
+  return false;
 }
 
 bool ProjectState::resizeClip(const juce::String &trackId,
                               const juce::String &clipId,
                               double newLengthBeats) {
-  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-
-  if (newLengthBeats <= 0.0) {
-    DBG("ProjectState: Invalid clip length: " + juce::String(newLengthBeats));
-    return false;
-  }
-
-  auto clip = findClip(trackId, clipId);
-  if (!clip.isValid())
-    return false;
-
-  clip.setProperty(PROP_LENGTH_BEATS, newLengthBeats, &undoManager);
-
-  DBG("ProjectState: Resized clip " + clipId + " to " +
-      juce::String(newLengthBeats) + " beats");
-  return true;
+  if (clipStateManager)
+      return clipStateManager->resizeClip(trackId, clipId, newLengthBeats);
+  return false;
 }
 
 //==============================================================================
@@ -1893,61 +1263,32 @@ void ProjectState::renameTrack(const juce::String &trackId,
 void ProjectState::setTrackVolume(const juce::String &trackId,
                                   float volumeLinear,
                                   const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto track = findTrack(trackId);
-  if (track.isValid()) {
-    track.setProperty(PROP_VOLUME, volumeLinear, &undoManager);
-    DBG("ProjectState: Set track " + trackId + " volume to " +
-        juce::String(volumeLinear));
-  }
+  if (trackStateManager)
+      trackStateManager->setTrackVolume(trackId, volumeLinear, actionName);
 }
 
 void ProjectState::setTrackPan(const juce::String &trackId, float pan,
                                const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto track = findTrack(trackId);
-  if (track.isValid()) {
-    track.setProperty(PROP_PAN, pan, &undoManager);
-    DBG("ProjectState: Set track " + trackId + " pan to " + juce::String(pan));
-  }
+  if (trackStateManager)
+      trackStateManager->setTrackPan(trackId, pan, actionName);
 }
 
 void ProjectState::setTrackMute(const juce::String &trackId, bool muted,
                                 const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto track = findTrack(trackId);
-  if (track.isValid()) {
-    track.setProperty(PROP_MUTE, muted, &undoManager);
-    DBG("ProjectState: Set track " + trackId + " mute to " +
-        (muted ? "true" : "false"));
-  }
+  if (trackStateManager)
+      trackStateManager->setTrackMute(trackId, muted, actionName);
 }
 
 void ProjectState::setTrackSolo(const juce::String &trackId, bool soloed,
                                 const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto track = findTrack(trackId);
-  if (track.isValid()) {
-    track.setProperty(PROP_SOLO, soloed, &undoManager);
-    DBG("ProjectState: Set track " + trackId + " solo to " +
-        (soloed ? "true" : "false"));
-  }
+  if (trackStateManager)
+      trackStateManager->setTrackSolo(trackId, soloed, actionName);
 }
 
 void ProjectState::setTrackArmed(const juce::String &trackId, bool armed,
                                  const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto track = findTrack(trackId);
-  if (track.isValid()) {
-    track.setProperty(PROP_ARMED, armed, &undoManager);
-    DBG("ProjectState: Set track " + trackId + " armed to " +
-        (armed ? "true" : "false"));
-  }
+  if (trackStateManager)
+      trackStateManager->setTrackArmed(trackId, armed, actionName);
 }
 
 //==============================================================================
@@ -1996,19 +1337,6 @@ juce::String ProjectState::createClip(const juce::String &trackId,
   return clipId;
 }
 
-void ProjectState::deleteClip(const juce::String &trackId,
-                              const juce::String &clipId,
-                              const juce::String &actionName) {
-  undoManager.beginNewTransaction(actionName);
-
-  auto clip = getClip(trackId, clipId);
-  if (clip.isValid()) {
-    auto clipsNode = clip.getParent();
-    clipsNode.removeChild(clip, &undoManager);
-
-    DBG("ProjectState: Deleted clip " + clipId + " from track " + trackId);
-  }
-}
 
 void ProjectState::moveClip(const juce::String &trackId,
                             const juce::String &clipId,

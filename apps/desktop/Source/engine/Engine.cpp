@@ -80,7 +80,7 @@ Engine::Engine() {
 Engine::~Engine() {
   DBG("Engine: Destructor");
 
-  // CODEX FIX P2: Set shutdown flag to prevent async callbacks
+  // Set shutdown flag to prevent async callbacks during destruction
   isShuttingDown_.store(true);
 
   // Phase 2A: Disable MIDI input
@@ -539,7 +539,7 @@ void Engine::addTestTracks(int count) {
 
   for (int i = 0; i < count; ++i) {
     // Create track with default name and type
-    // ROAST FIX #1: Use make_shared instead of make_unique
+    // Use shared_ptr to allow track references to outlive snapshot updates
     auto track = std::make_shared<zenith::Track>(
         "Track " + juce::String(tracks_.size() + 1),
         zenith::Track::Type::Audio);
@@ -618,10 +618,6 @@ const zenith::TempoMap &Engine::getTempoMap() const noexcept {
 }
 
 //==============================================================================
-// Flecs ECS Integration
-//==============================================================================
-
-//==============================================================================
 // Phase 11: Mixer Control (MESSAGE THREAD ONLY)
 //==============================================================================
 
@@ -672,7 +668,7 @@ void Engine::setTrackArmed(int trackIndex, bool armed) {
   if (trackIndex >= 0 && trackIndex < static_cast<int>(tracks_.size())) {
     tracks_[trackIndex]->setArmed(armed);
 
-    // ROAST FIX #4: Prepare recording asynchronously when armed
+    // Prepare recording asynchronously when armed for latency-free recording start
     if (armed && recordingManager_) {
         // Determine directory
          juce::File recordingsDir;
@@ -741,7 +737,7 @@ juce::String Engine::createTrack(const juce::String &name,
     DBG("Engine: Creating track without ProjectState (fallback)");
 
     // Fallback: Create track directly in Engine
-    // ROAST FIX #1: Use make_shared instead of make_unique
+    // Use shared_ptr to allow track references to outlive snapshot updates
     zenith::Track::Type trackType = (type == "midi")
                                         ? zenith::Track::Type::MIDI
                                         : zenith::Track::Type::Audio;
@@ -757,7 +753,7 @@ juce::String Engine::createTrack(const juce::String &name,
   }
 }
 
-// ROAST FIX #1: Accept shared_ptr instead of unique_ptr
+// Accept shared_ptr for RT-safe snapshot sharing across threads
 void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   jassert(track != nullptr);
@@ -793,7 +789,7 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   updateSoloState();
 
   // Update snapshot for audio thread
-  // ROAST FIX #1: Snapshot now holds shared_ptr, extending track lifetime
+  // Snapshot holds shared_ptr, extending track lifetime across thread boundaries
   updateTrackSnapshot();
 }
 
@@ -825,8 +821,9 @@ void Engine::removeTrack(int index) {
 
 void Engine::updateTrackSnapshot() {
   // Create new snapshot
-  // ROAST FIX: Include Aux Buses in snapshot
+  // Include Aux Buses in snapshot for consistent audio thread access
   auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
+
 
   // Atomic swap (release semantics for the store)
   // The audio thread will see the new pointer immediately
