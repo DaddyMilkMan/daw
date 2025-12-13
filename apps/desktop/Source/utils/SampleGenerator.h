@@ -13,7 +13,7 @@ public:
 
 private:
   static void createWavFile(const juce::File &file, float freq,
-                            float durationSecs);
+                            float durationSecs, bool isNoise = false);
 };
 
 } // namespace zenith

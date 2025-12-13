@@ -189,7 +189,16 @@ private:
     // DEV ENVIRONMENT FALLBACK:
     // If default directory doesn't exist or has no content, try the repo path
     if (!defaultDir.exists()) {
-      juce::File repoDir("C:/zenith/daw/Content");
+      // Traverse up from apps/desktop/Source/instruments/ContentPaths.h to root
+      juce::File sourceFile(__FILE__);
+      juce::File repoDir = sourceFile
+                               .getParentDirectory() // instruments
+                               .getParentDirectory() // Source
+                               .getParentDirectory() // desktop
+                               .getParentDirectory() // apps
+                               .getParentDirectory() // daw
+                               .getChildFile("Content");
+
       if (repoDir.exists()) {
         DBG("ContentPaths: Using repo content directory: " +
             repoDir.getFullPathName());

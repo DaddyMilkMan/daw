@@ -19,7 +19,6 @@
 #include "ZenithPolySynthVoice.h"
 #include <juce_core/juce_core.h>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -436,22 +435,27 @@ void ZenithPolySynth::registerPresets() {
           float val = static_cast<float>(static_cast<double>(prop.value));
 
           // Mapping logic from simplified JSON to internal parameters
+
+          static const std::map<juce::String, juce::String> paramMap = {
+              {"filter_cutoff", ZenithPolySynthParameterManager::FilterCutoff},
+              {"filter_resonance",
+               ZenithPolySynthParameterManager::FilterResonance},
+              {"attack", ZenithPolySynthParameterManager::AmpAttack},
+              {"decay", ZenithPolySynthParameterManager::AmpDecay},
+              {"sustain", ZenithPolySynthParameterManager::AmpSustain},
+              {"release", ZenithPolySynthParameterManager::AmpRelease}};
+
           if (key == "osc_type") {
             // Map 0, 1, 2, ... into normalized range for 7 choices
             // 0 -> 0/6, 1 -> 1/6, etc.
-            values[ZenithPolySynthParameterManager::Osc1Wave] = val / 6.0f;
-          } else if (key == "filter_cutoff") {
-            values[ZenithPolySynthParameterManager::FilterCutoff] = val;
-          } else if (key == "filter_resonance") {
-            values[ZenithPolySynthParameterManager::FilterResonance] = val;
-          } else if (key == "attack") {
-            values[ZenithPolySynthParameterManager::AmpAttack] = val;
-          } else if (key == "decay") {
-            values[ZenithPolySynthParameterManager::AmpDecay] = val;
-          } else if (key == "sustain") {
-            values[ZenithPolySynthParameterManager::AmpSustain] = val;
-          } else if (key == "release") {
-            values[ZenithPolySynthParameterManager::AmpRelease] = val;
+            constexpr float numOscWaveforms = 7.0f;
+            values[ZenithPolySynthParameterManager::Osc1Wave] =
+                val / (numOscWaveforms - 1.0f);
+          } else {
+            auto it = paramMap.find(key);
+            if (it != paramMap.end()) {
+              values[it->second] = val;
+            }
           }
         }
       }

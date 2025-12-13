@@ -114,14 +114,14 @@ void SampleGenerator::generateMissingSamples() {
           duration = 2.0f;
         }
 
-        createWavFile(file, freq, duration);
+        createWavFile(file, freq, duration, isNoise);
       }
     }
   }
 }
 
 void SampleGenerator::createWavFile(const juce::File &file, float freq,
-                                    float durationSecs) {
+                                    float durationSecs, bool isNoise) {
   juce::WavAudioFormat wavFormat;
   std::unique_ptr<juce::FileOutputStream> outStream(file.createOutputStream());
   if (!outStream)
@@ -146,7 +146,7 @@ void SampleGenerator::createWavFile(const juce::File &file, float freq,
       env = env * env; // Exponential-ish
 
       float sample = 0.0f;
-      if (freq > 2000.0f) { // High freq noise-like
+      if (isNoise || freq > 2000.0f) { // High freq noise-like or explicit noise
         sample =
             (juce::Random::getSystemRandom().nextFloat() * 2.0f - 1.0f) * env;
       } else {
