@@ -51,6 +51,8 @@ const juce::Identifier ProjectState::ID_TEMPO_MAP("TEMPO_MAP");
 const juce::Identifier ProjectState::ID_TEMPO_POINT("TEMPO_POINT");
 const juce::Identifier ProjectState::ID_MARKERS("MARKERS");
 const juce::Identifier ProjectState::ID_MARKER("MARKER");
+const juce::Identifier ProjectState::ID_SECTIONS("SECTIONS");
+const juce::Identifier ProjectState::ID_SECTION("SECTION");
 
 const juce::Identifier ProjectState::PROP_NAME("name");
 const juce::Identifier ProjectState::PROP_TEMPO("tempo");
@@ -72,6 +74,7 @@ const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
 const juce::Identifier ProjectState::PROP_OFFSET("offset");
 const juce::Identifier ProjectState::PROP_AUDIO_FILE("audioFile");
+const juce::Identifier ProjectState::PROP_LOOP_LENGTH("loopLength");
 
 // Beat-based clip properties
 const juce::Identifier ProjectState::PROP_START_BEATS("startBeats");
@@ -2294,6 +2297,329 @@ void ProjectState::setTrackColor(const juce::String &trackId,
     track.setProperty(PROP_COLOR, color.toString(), &undoManager);
     if (manuallySet) {
       track.setProperty(PROP_MANUALLY_COLORED, true, &undoManager);
+    }
+  }
+}
+
+//==============================================================================
+// Arranger Sections
+//==============================================================================
+
+juce::String ProjectState::addSection(double startBeats, double lengthBeats,
+                                      const juce::String &name,
+                                      const juce::String &color,
+                                      const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid()) {
+    sectionsNode = juce::ValueTree(ID_SECTIONS);
+    state.appendChild(sectionsNode, &undoManager);
+  }
+
+  auto sectionId = generateUniqueId("section");
+  juce::ValueTree section(ID_SECTION);
+  section.setProperty(PROP_ID, sectionId, nullptr);
+  section.setProperty(PROP_START, startBeats, nullptr);
+  section.setProperty(PROP_LENGTH, lengthBeats, nullptr);
+  section.setProperty(PROP_NAME, name, nullptr);
+  section.setProperty(PROP_COLOR, color, nullptr);
+
+  undoManager.beginNewTransaction(actionName);
+  sectionsNode.appendChild(section, &undoManager);
+
+  DBG("ProjectState: Added section " + sectionId + " '" + name + "'");
+  return sectionId;
+}
+
+bool ProjectState::deleteSection(const juce::String &sectionId,
+                                 const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return false;
+
+  for (int i = 0; i < sectionsNode.getNumChildren(); ++i) {
+    auto section = sectionsNode.getChild(i);
+    if (section[PROP_ID].toString() == sectionId) {
+      undoManager.beginNewTransaction(actionName);
+      sectionsNode.removeChild(i, &undoManager);
+      DBG("ProjectState: Deleted section " + sectionId);
+      return true;
+    }
+  }
+  return false;
+}
+
+void ProjectState::moveSection(const juce::String &sectionId,
+                               double newStartBeats,
+                               const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return;
+
+  for (auto section : sectionsNode) {
+    if (section[PROP_ID].toString() == sectionId) {
+      undoManager.beginNewTransaction(actionName);
+      section.setProperty(PROP_START, newStartBeats, &undoManager);
+      return;
+    }
+  }
+}
+
+void ProjectState::resizeSection(const juce::String &sectionId,
+                                 double newLengthBeats,
+                                 const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return;
+
+  for (auto section : sectionsNode) {
+    if (section[PROP_ID].toString() == sectionId) {
+      undoManager.beginNewTransaction(actionName);
+      section.setProperty(PROP_LENGTH, juce::jmax(0.25, newLengthBeats),
+                          &undoManager);
+      return;
+    }
+  }
+}
+
+void ProjectState::renameSection(const juce::String &sectionId,
+                                 const juce::String &newName,
+                                 const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return;
+
+  for (auto section : sectionsNode) {
+    if (section[PROP_ID].toString() == sectionId) {
+      undoManager.beginNewTransaction(actionName);
+      section.setProperty(PROP_NAME, newName, &undoManager);
+      return;
+    }
+  }
+}
+
+void ProjectState::setSectionColor(const juce::String &sectionId,
+                                   const juce::String &newColor,
+                                   const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return;
+
+  for (auto section : sectionsNode) {
+    if (section[PROP_ID].toString() == sectionId) {
+      undoManager.beginNewTransaction(actionName);
+      section.setProperty(PROP_COLOR, newColor, &undoManager);
+      return;
+    }
+  }
+}
+
+juce::ValueTree ProjectState::getSections() const {
+  return state.getChildWithName(ID_SECTIONS);
+}
+
+void ProjectState::moveSectionContent(const juce::String &sectionId,
+                                      double newStartBeats,
+                                      const juce::String &actionName) {
+  auto sectionsNode = state.getChildWithName(ID_SECTIONS);
+  if (!sectionsNode.isValid())
+    return;
+
+  juce::ValueTree section;
+  for (auto s : sectionsNode) {
+    if (s[PROP_ID].toString() == sectionId) {
+      section = s;
+      break;
+    }
+  }
+
+  if (!section.isValid())
+    return;
+
+  double oldStart = section[PROP_START];
+  double length = section[PROP_LENGTH];
+  double oldEnd = oldStart + length;
+  double delta = newStartBeats - oldStart;
+
+  if (std::abs(delta) < 0.001)
+    return;
+
+  undoManager.beginNewTransaction(actionName);
+
+  // 1. Move the section itself
+  section.setProperty(PROP_START, newStartBeats, &undoManager);
+
+  // 2. Identify and Slice Clips across ALL tracks
+  auto tracksNode = state.getChildWithName(ID_TRACKS);
+  if (!tracksNode.isValid())
+    return;
+
+  // Helper to convert samples to beats (primitive approximation if needed)
+  auto sampleRate = state[PROP_SAMPLE_RATE];
+  if (double(sampleRate) <= 0.0)
+    sampleRate = 44100.0;
+  double tempo = getTempo();
+  if (tempo <= 0.0)
+    tempo = 120.0;
+
+  auto toBeats = [&](const juce::var &val) -> double {
+    if (val.isDouble())
+      return (double)val;
+    if (val.isInt64())
+      return (double)((juce::int64)val) / (double)sampleRate * (tempo / 60.0);
+    return 0.0;
+  };
+
+  // Pass 1: Split at Start and End
+  for (int t = 0; t < tracksNode.getNumChildren(); ++t) {
+    auto track = tracksNode.getChild(t);
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+      continue;
+
+    // Iterate clips to find overlaps
+    // We restart loop if splits occur to deal with iterator invalidation safety
+    bool splitsOccurred = true;
+    while (splitsOccurred) {
+      splitsOccurred = false;
+      for (int c = 0; c < clipsNode.getNumChildren(); ++c) {
+        auto clip = clipsNode.getChild(c);
+        double cStart = toBeats(clip[PROP_START]);
+        double len = toBeats(clip[PROP_LENGTH]);
+        if (clip[PROP_LENGTH].isInt64())
+          len = (double)((juce::int64)clip[PROP_LENGTH]) / (double)sampleRate *
+                (tempo / 60.0);
+        double cEnd = cStart + len;
+
+        // Tolerance
+        double tolerance = 0.001;
+
+        // Check strict overlap with oldStart (Start within clip body)
+        if (cStart < oldStart - tolerance && cEnd > oldStart + tolerance) {
+          // Split at oldStart
+          double newLen1 = oldStart - cStart;
+
+          // We need to know if we are updating beats or samples
+          if (clip[PROP_LENGTH].isInt64()) {
+            // Samples mode
+            // Convert newLen1 to samples
+            juce::int64 samples1 =
+                (juce::int64)(newLen1 * (60.0 / tempo) * (double)sampleRate);
+            clip.setProperty(PROP_LENGTH, samples1, &undoManager);
+
+            // Remainder
+            double newLen2 = len - newLen1;
+            juce::int64 samples2 =
+                (juce::int64)(newLen2 * (60.0 / tempo) * (double)sampleRate);
+
+            juce::ValueTree newClip = clip.createCopy();
+            newClip.setProperty(PROP_ID, generateUniqueId("clip"), nullptr);
+            // New start in samples
+            juce::int64 startSamples =
+                (juce::int64)(oldStart * (60.0 / tempo) * (double)sampleRate);
+            newClip.setProperty(PROP_START, startSamples, nullptr);
+            newClip.setProperty(PROP_LENGTH, samples2, nullptr);
+
+            if (clip.hasProperty(PROP_OFFSET)) {
+              juce::int64 offset = clip[PROP_OFFSET];
+              newClip.setProperty(PROP_OFFSET, offset + samples1, nullptr);
+            }
+            clipsNode.appendChild(newClip, &undoManager);
+          } else {
+            // Beats mode
+            clip.setProperty(PROP_LENGTH, newLen1, &undoManager);
+
+            double newLen2 = len - newLen1;
+            juce::ValueTree newClip = clip.createCopy();
+            newClip.setProperty(PROP_ID, generateUniqueId("clip"), nullptr);
+            newClip.setProperty(PROP_START, oldStart, nullptr);
+            newClip.setProperty(PROP_LENGTH, newLen2, nullptr);
+
+            if (clip.hasProperty(PROP_OFFSET)) {
+              double offset = clip[PROP_OFFSET];
+              newClip.setProperty(PROP_OFFSET, offset + newLen1, nullptr);
+            }
+            clipsNode.appendChild(newClip, &undoManager);
+          }
+
+          splitsOccurred = true;
+          break;
+        }
+
+        // Check strict overlap with oldEnd
+        if (cStart < oldEnd - tolerance && cEnd > oldEnd + tolerance) {
+          // Split at oldEnd
+          double newLen1 = oldEnd - cStart;
+
+          if (clip[PROP_LENGTH].isInt64()) {
+            juce::int64 samples1 =
+                (juce::int64)(newLen1 * (60.0 / tempo) * (double)sampleRate);
+            clip.setProperty(PROP_LENGTH, samples1, &undoManager);
+
+            double newLen2 = len - newLen1;
+            juce::int64 samples2 =
+                (juce::int64)(newLen2 * (60.0 / tempo) * (double)sampleRate);
+
+            juce::ValueTree newClip = clip.createCopy();
+            newClip.setProperty(PROP_ID, generateUniqueId("clip"), nullptr);
+            juce::int64 startSamples =
+                (juce::int64)(oldEnd * (60.0 / tempo) * (double)sampleRate);
+            newClip.setProperty(PROP_START, startSamples, nullptr);
+            newClip.setProperty(PROP_LENGTH, samples2, nullptr);
+
+            if (clip.hasProperty(PROP_OFFSET)) {
+              juce::int64 offset = clip[PROP_OFFSET];
+              newClip.setProperty(PROP_OFFSET, offset + samples1, nullptr);
+            }
+            clipsNode.appendChild(newClip, &undoManager);
+          } else {
+            clip.setProperty(PROP_LENGTH, newLen1, &undoManager);
+
+            double newLen2 = len - newLen1;
+            juce::ValueTree newClip = clip.createCopy();
+            newClip.setProperty(PROP_ID, generateUniqueId("clip"), nullptr);
+            newClip.setProperty(PROP_START, oldEnd, nullptr);
+            newClip.setProperty(PROP_LENGTH, newLen2, nullptr);
+
+            if (clip.hasProperty(PROP_OFFSET)) {
+              double offset = clip[PROP_OFFSET];
+              newClip.setProperty(PROP_OFFSET, offset + newLen1, nullptr);
+            }
+            clipsNode.appendChild(newClip, &undoManager);
+          }
+
+          splitsOccurred = true;
+          break;
+        }
+      }
+    }
+  }
+
+  // Pass 2: Move clips fully within [oldStart, oldEnd]
+  for (int t = 0; t < tracksNode.getNumChildren(); ++t) {
+    auto track = tracksNode.getChild(t);
+    auto clipsNode = track.getChildWithName(ID_CLIPS);
+    if (!clipsNode.isValid())
+      continue;
+
+    for (int c = 0; c < clipsNode.getNumChildren(); ++c) {
+      auto clip = clipsNode.getChild(c);
+      double cStart = toBeats(clip[PROP_START]);
+      double cLen = toBeats(clip[PROP_LENGTH]);
+      if (clip[PROP_LENGTH].isInt64())
+        cLen = (double)((juce::int64)clip[PROP_LENGTH]) / (double)sampleRate *
+               (tempo / 60.0);
+      double cEnd = cStart + cLen;
+
+      if (cStart >= oldStart - 0.001 && cEnd <= oldEnd + 0.001) {
+        if (clip[PROP_START].isInt64()) {
+          juce::int64 newStartSamples =
+              (juce::int64)((cStart + delta) * (60.0 / tempo) *
+                            double(sampleRate));
+          clip.setProperty(PROP_START, newStartSamples, &undoManager);
+        } else {
+          clip.setProperty(PROP_START, cStart + delta, &undoManager);
+        }
+      }
     }
   }
 }

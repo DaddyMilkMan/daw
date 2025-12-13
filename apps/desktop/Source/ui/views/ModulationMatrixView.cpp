@@ -284,12 +284,10 @@ void ModulationMatrixView::drawConnection(SkCanvas *canvas,
   float particleT = std::fmod(time_ * 0.5f, 1.0f); // 0 to 1 loop
   SkPoint pos;
   SkVector tan;
-  if (path.measure(
-          false)) { // Simple check, real implementation needs SkPathMeasure
-    // particle logic would go here using SkPathMeasure
-    // For now, just a center bubble to show activity
-    SkPath::Iter iter(path, false);
-    // Simplified: Draw dot at center of bezier for A+ "Animated" proof
+  if (!path.isEmpty()) {
+    // Draw particle along the bezier path
+    // Note: For full implementation, use SkPathMeasure for accurate path
+    // metrics
     SkPoint points[4];
     path.getPoints(points, 4);
 

@@ -70,6 +70,18 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // feedback)
   startTimerHz(30);
 
+  // Initialize Macro Toolbar
+  macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
+  addChildComponent(macroToolbar.get());
+
+  macroToolbar->getSelectedClipIds = [this]() { return selectedClipIds; };
+  macroToolbar->getSelectedTrackId = [this]() {
+    if (selectedClipIds.isEmpty())
+      return juce::String();
+    auto *view = findClipView(selectedClipIds[0]);
+    return view ? view->trackId : juce::String();
+  };
+
   DBG("ArrangerComponent: Created");
 }
 
@@ -173,6 +185,48 @@ void ArrangerComponent::rebuildClipViews() {
   }
 
   recomputeClipBounds();
+
+  // Update MiniMap Data
+  std::vector<MiniMapComponent::MiniMapClip> mapClips;
+  double maxBeat = 1.0;
+  int maxTrack = 1;
+
+  for (const auto &view : clipViews) {
+    MiniMapComponent::MiniMapClip mc;
+    mc.startBeats = view.startBeats;
+    mc.lengthBeats = view.lengthBeats;
+    // We need track index for Y pos
+    // We can find it by iterating tracks or storing it in ClipView
+    // (optimization for later) For now, re-find it (performance warning, but
+    // fast enough for small projects)
+    int tIdx = 0;
+    auto tracks = projectState.getState().getChildWithName(
+        zenith::ProjectState::ID_TRACKS);
+    for (const auto &t : tracks) {
+      if (t[zenith::ProjectState::PROP_ID].toString() == view.trackId)
+        break;
+      tIdx++;
+    }
+    mc.trackIndex = tIdx;
+    mc.isMidi = view.isMidi;
+    mc.isSelected = view.isSelected;
+
+    mapClips.push_back(mc);
+
+    if (view.startBeats + view.lengthBeats > maxBeat)
+      maxBeat = view.startBeats + view.lengthBeats;
+    if (tIdx + 1 > maxTrack)
+      maxTrack = tIdx + 1;
+  }
+
+  // Update MiniMap
+  miniMap.setArrangementData(maxBeat + 8.0 /* padding */, maxTrack, mapClips);
+
+  // Also update visible range immediately
+  double visibleBeats = (getWidth() - HEADER_WIDTH) / pixelsPerBeat;
+  int visibleTracks = (int)(getHeight() - RULER_HEIGHT) / (int)TRACK_HEIGHT;
+  miniMap.setVisibleRange(viewStartBeats, visibleBeats, firstVisibleTrackIndex,
+                          visibleTracks);
 }
 
 void ArrangerComponent::recomputeClipBounds() {
@@ -400,7 +454,31 @@ void ArrangerComponent::duplicateSelectedClips() {
 // Component interface - Painting (Pure Skia - All rendering in drawSkia())
 //==============================================================================
 
-void ArrangerComponent::resized() { recomputeClipBounds(); }
+void ArrangerComponent::resized() {
+  recomputeClipBounds();
+
+  // Position MiniMap at the top right, fixed height
+  // It acts as a global navigation bar
+  int mapHeight = 60;
+  int mapWidth = 300; // Fixed width or proportional? Prompt implies reduction
+                      // of entire arrangement.
+  // If it replaces scrollbars, maybe it spans the width?
+  // "MiniMapComponent to replace the scrollbars" often implies a strip.
+  // Let's make it a strip at the top, spanning relative to arrangement length?
+  // Usually mini-maps are fixed width or fill available width.
+  // I will make it fixed width at top right for now, essentially a "Navigator".
+
+  miniMap.setBounds(getWidth() - mapWidth - 10, 5, mapWidth, mapHeight);
+
+  if (macroToolbar) {
+    // Center horizontally, float near top (offset by Ruler + padding)
+    float w = 420.0f;
+    float h = 60.0f;
+    float x = (getWidth() - w) * 0.5f;
+    float y = RULER_HEIGHT + 20.0f;
+    macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
+  }
+}
 
 //==============================================================================
 // Component interface - Mouse handling
@@ -432,6 +510,22 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
     } else {
       // Move mode
       currentDragMode = DragMode::MoveClips;
+
+      // Determine Edit Mode based on modifiers
+      if (e.mods.isAltDown() && e.mods.isShiftDown()) {
+        currentEditMode = EditMode::Insert;
+      } else if (e.mods.isAltDown()) {
+        currentEditMode = EditMode::Ripple;
+      } else {
+        currentEditMode = EditMode::Overwrite;
+      }
+
+      // Populate initial starts for robust Ripple/Insert calculations
+      initialClipStarts.clear();
+      for (const auto &view : clipViews) {
+        initialClipStarts[view.clipId] = view.startBeats;
+      }
+
       bool isCtrlOrCmd = e.mods.isCommandDown();
 
       if (!clip->isSelected) {
@@ -527,32 +621,89 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     int deltaTrackIndex =
         yToTrackIndex(e.position.y) - yToTrackIndex(dragStartPoint.y);
 
-    // Update clip view positions for visual feedback
-    for (const auto &dragState : clipDragStates) {
-      if (auto *view = findClipView(dragState.clipId)) {
-        double newStart = dragState.originalStartBeats + deltaBeats;
-        int newTrackIndex = dragState.originalTrackIndex + deltaTrackIndex;
+    // Reset Insertion Guide
+    insertionGuideX = -1.0f;
+    double minNewStartForGuide = 10000000.0; // Large value
 
-        // Clamp
-        newStart = juce::jmax(0.0, newStart);
-        newTrackIndex = juce::jmax(0, newTrackIndex);
+    // 1. Find earliest original start of SELECTED clips on each track
+    // This defines the "Wavefront" of the ripple
+    std::map<juce::String, double> trackEarliestSelectedStart;
 
-        // Update visual position
-        view->startBeats = newStart;
+    // Also track which clips are selected for fast lookup
+    std::map<juce::String, bool> isClipSelectedMap;
 
-        // Update track (if changed)
-        auto tracksNode = projectState.getState().getChildWithName(
-            zenith::ProjectState::ID_TRACKS);
-        if (tracksNode.isValid() &&
-            newTrackIndex < tracksNode.getNumChildren()) {
-          auto newTrack = tracksNode.getChild(newTrackIndex);
-          view->trackId = newTrack[zenith::ProjectState::PROP_ID].toString();
+    for (const auto &clipId : selectedClipIds) {
+      if (auto *view = findClipView(clipId)) {
+        isClipSelectedMap[clipId] = true;
+        double start = initialClipStarts[clipId];
+        if (trackEarliestSelectedStart.find(view->trackId) ==
+            trackEarliestSelectedStart.end()) {
+          trackEarliestSelectedStart[view->trackId] = start;
+        } else {
+          trackEarliestSelectedStart[view->trackId] =
+              std::min(trackEarliestSelectedStart[view->trackId], start);
         }
       }
     }
 
+    // 2. Update Clip Positions
+    for (auto &view : clipViews) {
+      if (isClipSelectedMap[view.clipId]) {
+        // --- Selected Clip: Follow Mouse ---
+        double initial = initialClipStarts[view.clipId];
+        double newStart = initial + deltaBeats;
+        newStart = juce::jmax(0.0, newStart);
+        view.startBeats = newStart;
+
+        minNewStartForGuide = std::min(minNewStartForGuide, newStart);
+
+        // Update Track ID (only for selected clips)
+        // Find original track index from drag states
+        for (const auto &ds : clipDragStates) {
+          if (ds.clipId == view.clipId) {
+            int newTrackIndex = ds.originalTrackIndex + deltaTrackIndex;
+            newTrackIndex = juce::jmax(0, newTrackIndex);
+
+            auto tracksNode = projectState.getState().getChildWithName(
+                zenith::ProjectState::ID_TRACKS);
+            if (tracksNode.isValid() &&
+                newTrackIndex < tracksNode.getNumChildren()) {
+              auto newTrack = tracksNode.getChild(newTrackIndex);
+              view.trackId = newTrack[zenith::ProjectState::PROP_ID].toString();
+            }
+            break;
+          }
+        }
+      } else if (currentEditMode == EditMode::Ripple ||
+                 currentEditMode == EditMode::Insert) {
+        // --- Unselected Clip: Apply Ripple/Insert ---
+        // Check if this clip belongs to a track affected by the drag
+        auto trackIt = trackEarliestSelectedStart.find(view.trackId);
+        if (trackIt != trackEarliestSelectedStart.end()) {
+          double earliestSel = trackIt->second;
+          double initial = initialClipStarts[view.clipId];
+
+          // If this clip starts AT or AFTER the ripple wavefront
+          if (initial >= earliestSel) {
+            // Apply delta
+            double newStart = initial + deltaBeats;
+            newStart = juce::jmax(0.0, newStart);
+            view.startBeats = newStart;
+          }
+        }
+      }
+    }
+
+    // 3. Set Insertion Guide Visibility
+    if ((currentEditMode == EditMode::Ripple ||
+         currentEditMode == EditMode::Insert) &&
+        minNewStartForGuide < 10000000.0) {
+      insertionGuideX = beatsToX(minNewStartForGuide);
+    } // Overwrite mode doesn't show guide
+
     recomputeClipBounds();
     repaint();
+
   } else if (currentDragMode == DragMode::ResizeClipLeft) {
     if (auto *view = findClipView(resizingClipId)) {
       double newStart = xToBeats(e.position.x);
@@ -596,22 +747,43 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent &e) {
 
   if (currentDragMode == DragMode::MoveClips) {
     // Commit move to ProjectState
-    if (!clipDragStates.isEmpty()) {
+    if (!selectedClipIds.isEmpty()) {
       projectState.getUndoManager().beginNewTransaction("Move clips");
 
-      for (const auto &dragState : clipDragStates) {
-        if (auto *view = findClipView(dragState.clipId)) {
-          double snappedStart = snapToGrid(view->startBeats);
-          projectState.moveClip(dragState.clipId, view->trackId, snappedStart,
-                                "Move clips");
+      // Iterate over ALL clips to see which ones moved (handles Ripple/Insert
+      // automatically)
+      for (const auto &view : clipViews) {
+        // Check if this clip started somewhere else
+        auto it = initialClipStarts.find(view.clipId);
+        if (it != initialClipStarts.end()) {
+          double initialStart = it->second;
+          double currentStart = view.startBeats;
+
+          // Also check if track changed
+          auto [track, clip] = projectState.findClip(view.clipId);
+          if (clip.isValid()) {
+            juce::String currentTrackIdInState =
+                track[zenith::ProjectState::PROP_ID].toString();
+
+            double snappedStart = snapToGrid(currentStart);
+
+            // If moved significantly or track changed
+            if (std::abs(snappedStart - snapToGrid(initialStart)) > 0.001 ||
+                view.trackId != currentTrackIdInState) {
+              projectState.moveClip(view.clipId, view.trackId, snappedStart,
+                                    "Move clips");
+            }
+          }
         }
       }
 
-      DBG("ArrangerComponent: Committed move for " +
-          juce::String(clipDragStates.size()) + " clips");
+      DBG("ArrangerComponent: Committed move for clips (EditMode: " +
+          juce::String((int)currentEditMode) + ")");
     }
 
     clipDragStates.clear();
+    initialClipStarts.clear();
+    insertionGuideX = -1.0f; // Clear guide
   } else if (currentDragMode == DragMode::ResizeClipLeft ||
              currentDragMode == DragMode::ResizeClipRight) {
     // Commit resize to ProjectState
@@ -638,6 +810,10 @@ void ArrangerComponent::mouseUp(const juce::MouseEvent &e) {
 void ArrangerComponent::mouseMove(const juce::MouseEvent &e) {
   // Update cursor based on hover position
   auto *clip = findClipAtPoint(e.position);
+
+  if (macroToolbar) {
+    macroToolbar->checkProximity(e.position);
+  }
 
   if (clip != nullptr) {
     if (clip->isInLeftResizeZone(e.position) ||
@@ -708,6 +884,14 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
     recomputeClipBounds();
+    recomputeClipBounds();
+
+    // Update MiniMap
+    double visibleBeats = (double)(getWidth() - HEADER_WIDTH) / pixelsPerBeat;
+    int visibleTracks = (int)((getHeight() - RULER_HEIGHT) / TRACK_HEIGHT);
+    miniMap.setVisibleRange(viewStartBeats, visibleBeats,
+                            firstVisibleTrackIndex, visibleTracks);
+
     repaint();
   } else if (isShift) {
     // Scroll horizontal
@@ -715,6 +899,14 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
     recomputeClipBounds();
+    recomputeClipBounds();
+
+    // Update MiniMap
+    double visibleBeats = (double)(getWidth() - HEADER_WIDTH) / pixelsPerBeat;
+    int visibleTracks = (int)((getHeight() - RULER_HEIGHT) / TRACK_HEIGHT);
+    miniMap.setVisibleRange(viewStartBeats, visibleBeats,
+                            firstVisibleTrackIndex, visibleTracks);
+
     repaint();
   } else {
     // Scroll vertical
@@ -1017,6 +1209,46 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   // Actually, let's just draw a "Playhead" at the start for visual confirmation
   // that the render pipeline is working.
   // Real implementation would read transport position.
+
+  // ============================================================================
+  // 7. INSERTION GUIDE (Ripple/Insert Mode)
+  // ============================================================================
+  if (currentDragMode == DragMode::MoveClips && insertionGuideX >= 0.0f &&
+      (currentEditMode == EditMode::Ripple ||
+       currentEditMode == EditMode::Insert)) {
+
+    SkPaint guidePaint;
+    // Neon Pink for Ripple, Neon Green for Insert
+    guidePaint.setColor(currentEditMode == EditMode::Ripple
+                            ? colors::NEON_PINK
+                            : colors::NEON_GREEN);
+    guidePaint.setStrokeWidth(2.0f);
+    guidePaint.setAntiAlias(true);
+
+    // Neon Glow
+    guidePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    canvas->drawLine(insertionGuideX, RULER_HEIGHT, insertionGuideX, height,
+                     guidePaint);
+
+    // Core bright line
+    guidePaint.setMaskFilter(nullptr);
+    guidePaint.setColor(SK_ColorWHITE);
+    guidePaint.setStrokeWidth(1.0f);
+    canvas->drawLine(insertionGuideX, RULER_HEIGHT, insertionGuideX, height,
+                     guidePaint);
+
+    // Mode Label
+    SkFont labelFont =
+        typography::getSkFont(typography::FONT_SM, FontWeight::Bold);
+    SkPaint labelPaint;
+    labelPaint.setColor(SK_ColorWHITE);
+    labelPaint.setAntiAlias(true);
+
+    juce::String label =
+        (currentEditMode == EditMode::Ripple) ? "RIPPLE" : "INSERT";
+    canvas->drawString(label.toStdString().c_str(), insertionGuideX + 5.0f,
+                       RULER_HEIGHT + 20.0f, labelFont, labelPaint);
+  }
 }
 #endif
 

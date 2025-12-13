@@ -18,7 +18,6 @@
 #include "../../Source/ui/skia/SkiaTheme.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
 
-
 #include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
@@ -32,7 +31,6 @@ namespace zenith {
 
 namespace {
 constexpr int kNumInsertSlots = 8;
-constexpr int kNumSends = 4;
 constexpr float kInsertSlotHeight = 16.0f;
 constexpr float kSendIndicatorHeight = 20.0f;
 constexpr float kChannelStripWidth = 100.0f;
@@ -126,7 +124,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   }
 
   // Create send indicators
-  for (int i = 0; i < kNumSends; ++i) {
+  for (int i = 0; i < zenith::constants::kNumSends; ++i) {
     auto send = std::make_unique<SendIndicator>(i);
     addAndMakeVisible(send.get());
     sendIndicators_.push_back(std::move(send));

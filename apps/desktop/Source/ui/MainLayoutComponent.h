@@ -31,6 +31,8 @@ class Engine; // Forward declaration
 
 namespace zenith {
 
+class ViewSwitcher;
+
 /**
  * @brief Main layout component managing flexible panes via
  * ResizablePanelContainer
@@ -65,6 +67,10 @@ private:
 
   // Persistent models (shared across panel re-creation)
   std::unique_ptr<BrowserModel> browserModel_;
+
+  // Cached pointers for fast access
+  ViewSwitcher *viewSwitcher_ = nullptr;
+  SampleEditorComponent *sampleEditor_ = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

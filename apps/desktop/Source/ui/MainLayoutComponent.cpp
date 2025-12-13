@@ -152,6 +152,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
 
   // 4a. Views Panel (Switcher)
   auto switcher = std::make_unique<ViewSwitcher>();
+  viewSwitcher_ = switcher.get();
 
   auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
@@ -177,6 +178,7 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   // 4b. Sample Editor
   auto sampleEditor =
       std::make_unique<SampleEditorComponent>(engine_, projectState_);
+  sampleEditor_ = sampleEditor.get();
 
   layout::PanelConfig editorCfg;
   editorCfg.id = "sample_editor";
@@ -231,16 +233,9 @@ void MainLayoutComponent::resized() {
 }
 
 void MainLayoutComponent::toggleView() {
-  // Find the switcher
-  auto *center = dynamic_cast<ResizablePanelContainer *>(
-      panelContainer_->getPanel("center_container")->getContent());
-  if (center) {
-    auto *switcher = dynamic_cast<ViewSwitcher *>(
-        center->getPanel("main_views")->getContent());
-    if (switcher) {
-      int current = switcher->getActiveViewIndex();
-      switcher->setActiveView(current == 0 ? 1 : 0);
-    }
+  if (viewSwitcher_) {
+    int current = viewSwitcher_->getActiveViewIndex();
+    viewSwitcher_->setActiveView(current == 0 ? 1 : 0);
   }
 }
 
@@ -262,16 +257,8 @@ void MainLayoutComponent::toggleSampleEditor() {
 }
 
 bool MainLayoutComponent::isSessionView() const {
-  if (panelContainer_) {
-    auto *center = dynamic_cast<ResizablePanelContainer *>(
-        panelContainer_->getPanel("center_container")->getContent());
-    if (center) {
-      auto *switcher = dynamic_cast<ViewSwitcher *>(
-          center->getPanel("main_views")->getContent());
-      if (switcher)
-        return switcher->getActiveViewIndex() == 1;
-    }
-  }
+  if (viewSwitcher_)
+    return viewSwitcher_->getActiveViewIndex() == 1;
   return false;
 }
 
@@ -296,16 +283,7 @@ bool MainLayoutComponent::isSampleEditorVisible() const {
 }
 
 SampleEditorComponent *MainLayoutComponent::getSampleEditor() {
-  if (panelContainer_) {
-    auto *center = dynamic_cast<ResizablePanelContainer *>(
-        panelContainer_->getPanel("center_container")->getContent());
-    if (center) {
-      if (auto *wrapper = center->getPanel("sample_editor")) {
-        return dynamic_cast<SampleEditorComponent *>(wrapper->getContent());
-      }
-    }
-  }
-  return nullptr;
+  return sampleEditor_;
 }
 
 } // namespace zenith

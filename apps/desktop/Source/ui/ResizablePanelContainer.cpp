@@ -241,6 +241,7 @@ void PanelWrapper::setCollapsed(bool collapsed, bool animate) {
   }
 
   if (animate) {
+    animationStartTime_ = juce::Time::getMillisecondCounter();
     animationProgress_ = 0.0f;
     startTimer(16); // ~60fps animation
   } else {
@@ -257,17 +258,19 @@ void PanelWrapper::toggleCollapse(bool animate) {
 }
 
 void PanelWrapper::timerCallback() {
-  const float animationSpeed = 0.15f; // Spring-like
-  animationProgress_ += animationSpeed;
+  // Time-based animation for consistent duration regardless of frame rate
+  juce::uint32 elapsed =
+      juce::Time::getMillisecondCounter() - animationStartTime_;
+  animationProgress_ =
+      std::min(1.0f, static_cast<float>(elapsed) / animationDurationMs);
 
   if (animationProgress_ >= 1.0f) {
     animationProgress_ = 1.0f;
     currentSize_ = targetSize_;
     stopTimer();
   } else {
-    // Smooth easing
-    float eased =
-        1.0f - std::pow(1.0f - animationProgress_, 3.0f); // Ease out cubic
+    // Smooth easing (ease out cubic)
+    float eased = 1.0f - std::pow(1.0f - animationProgress_, 3.0f);
     float startSize =
         isCollapsed_ ? preCollapseSize_ : static_cast<float>(collapsedHeight);
     currentSize_ = startSize + (targetSize_ - startSize) * eased;

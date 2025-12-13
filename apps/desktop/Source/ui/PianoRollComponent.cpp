@@ -1239,10 +1239,11 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     if (note.bounds.getX() > width || note.bounds.getRight() < PIANO_WIDTH)
       continue;
 
-    // Adjust note Y for toolbar
-    SkRect r = SkRect::MakeXYWH(
-        note.bounds.getX(), note.bounds.getY() + TOOLBAR_HEIGHT,
-        note.bounds.getWidth(), note.bounds.getHeight());
+    // Note bounds already include TOOLBAR_HEIGHT offset from
+    // updateNoteRectangles()
+    SkRect r =
+        SkRect::MakeXYWH(note.bounds.getX(), note.bounds.getY(),
+                         note.bounds.getWidth(), note.bounds.getHeight());
 
     SkRect inner = r.makeInset(1.0f, 1.0f);
     SkRRect rr = SkRRect::MakeRectXY(inner, 2.0f, 2.0f);

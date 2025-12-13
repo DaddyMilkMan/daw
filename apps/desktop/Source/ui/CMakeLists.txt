@@ -25,6 +25,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/LayoutManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ResizablePanelContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SessionViewComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MacroToolbar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MiniMapComponent.cpp
 )
 
 add_subdirectory(skia)

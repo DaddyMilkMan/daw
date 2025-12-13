@@ -123,8 +123,11 @@ private:
   float targetSize_ = 0.0f;
   float preCollapseSize_ = 0.0f;
   float animationProgress_ = 1.0f;
+  juce::uint32 animationStartTime_ = 0; // For time-based animation
 
   static constexpr int collapsedHeight = PanelHeader::headerHeight;
+  static constexpr float animationDurationMs =
+      200.0f; // Animation duration in ms
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PanelWrapper)
 };
