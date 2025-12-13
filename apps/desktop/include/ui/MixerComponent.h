@@ -40,12 +40,11 @@ public:
   ~MixerComponent() override;
 
   //==========================================================================
-  // Component interface
+  // Component interface (Pure Skia - no JUCE paint override)
   //==========================================================================
 
-  void paint(juce::Graphics &g) override; // JUCE fallback
   void resized() override;
-  void drawSkia(SkCanvas *canvas) override; // Skia rendering
+  void drawSkia(SkCanvas *canvas) override;
 
   //==========================================================================
   // ValueTree::Listener interface

@@ -36,13 +36,8 @@ MixerComponent::~MixerComponent() {
 }
 
 //==============================================================================
-// Component interface
+// Component interface (Pure Skia - no JUCE paint fallback)
 //==============================================================================
-
-void MixerComponent::paint(juce::Graphics &g) {
-  // Basic background for JUCE fallback
-  g.fillAll(juce::Colour(0xff1e1e1e));
-}
 
 void MixerComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();

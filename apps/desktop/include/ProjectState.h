@@ -42,8 +42,17 @@ namespace zenith {
  * @brief Manages all project state using ValueTree
  */
 
+class TrackStateManager;
+class ClipStateManager;
+class AutomationStateManager;
+class ProjectFileIO;
+
 class ProjectState : public juce::ValueTree::Listener {
   friend class ArrangerComponent;
+  friend class TrackStateManager;
+  friend class ClipStateManager;
+  friend class AutomationStateManager;
+  friend class ProjectFileIO;
 
 public:
   //==========================================================================
@@ -466,6 +475,12 @@ private:
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
+
+  
+  std::unique_ptr<TrackStateManager> trackStateManager;
+  std::unique_ptr<ClipStateManager> clipStateManager;
+  std::unique_ptr<AutomationStateManager> automationStateManager;
+  std::unique_ptr<ProjectFileIO> projectFileIO;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectState)
 };

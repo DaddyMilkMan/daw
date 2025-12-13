@@ -111,7 +111,7 @@ void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
     }
   }
 
-  // ROAST FIX #2: Prepare all plugins (message thread only, no lock needed)
+  // Prepare all plugins on message thread for RT-safe audio processing
   for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
       plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
@@ -139,7 +139,7 @@ void Track::releaseResources() {
     }
   }
 
-  // ROAST FIX #2: Release all plugins (message thread only, no lock needed)
+  // Release all plugins on message thread for orderly shutdown
   for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
       plugin->releaseResources();
@@ -408,7 +408,7 @@ void Track::updatePluginSnapshot() {
   }
 }
 
-// ROAST FIX #2: Add plugin using shared_ptr and snapshot pattern
+// Add plugin using shared_ptr and snapshot pattern for RT-safe chain iteration
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -434,7 +434,7 @@ void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   sendChangeMessage();
 }
 
-// ROAST FIX #2: Use snapshot pattern instead of lock
+// Use snapshot pattern for lock-free audio thread access
 void Track::removePlugin(int pluginIndex) {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -454,7 +454,7 @@ void Track::removePlugin(int pluginIndex) {
   }
 }
 
-// ROAST FIX #2: Use snapshot pattern instead of lock
+// Use snapshot pattern for lock-free audio thread access
 void Track::clearPlugins() {
   // THREAD SAFETY: Message thread only
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
@@ -473,12 +473,12 @@ void Track::clearPlugins() {
   sendChangeMessage();
 }
 
-// ROAST FIX #2: Read from ownership vector (message thread only)
+// Read from ownership vector (message thread only, safe without locks)
 int Track::getNumPlugins() const {
   return static_cast<int>(pluginsOwned_.size());
 }
 
-// ROAST FIX #2: Read from ownership vector (message thread only)
+// Read from ownership vector (message thread only, safe without locks)
 juce::AudioPluginInstance *Track::getPlugin(int index) const {
   if (index >= 0 && index < static_cast<int>(pluginsOwned_.size()))
     return pluginsOwned_[index].get();
@@ -646,7 +646,7 @@ juce::ValueTree Track::getState() const {
   state.setProperty("armed", armed.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
 
-  // ROAST FIX #2: Save plugin states (message thread only, no lock needed)
+  // Save plugin states (message thread only, no lock needed)
   juce::ValueTree pluginsState("Plugins");
   for (auto &plugin : pluginsOwned_) {
     if (plugin != nullptr) {
@@ -780,7 +780,7 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
   // Instrument tracks: MIDI in → first plugin (synth) → audio → remaining
   // plugins → audio out
 
-  // ROAST FIX #2: Iterate over snapshot (shared_ptr keeps plugins alive)
+  // Iterate over snapshot (shared_ptr keeps plugins alive during processing)
   for (const auto &plugin : snapshot->plugins) {
     if (plugin != nullptr) {
       // CODEX FEEDBACK APPLIED: Use max(inputs, outputs) for channel sizing
