@@ -1,4 +1,7 @@
 #include "../../include/ui/MacroToolbar.h"
+#include <algorithm>
+#include <cmath>
+
 #include "../../include/ui/ArrangerComponent.h" // For context if needed
 
 // Skia Includes
@@ -189,9 +192,94 @@ void MacroToolbar::healSplits() {
   if (clipIds.size() < 2)
     return;
 
+  // 1. Gather Data
+  struct ClipData {
+    juce::String id;
+    juce::String trackId;
+    double start;
+    double length;
+    juce::String source;
+    bool isAudio;
+  };
+
+  std::vector<ClipData> clips;
+  for (const auto &id : clipIds) {
+    auto result = projectState_.findClip(id);
+    auto track = result.first;
+    auto clip = result.second;
+
+    if (track.isValid() && clip.isValid()) {
+      ClipData cd;
+      cd.id = id;
+      cd.trackId = track[ProjectState::PROP_ID];
+      cd.start = static_cast<double>(clip[ProjectState::PROP_START]);
+      cd.length = static_cast<double>(clip[ProjectState::PROP_LENGTH]);
+      if (clip.hasProperty(ProjectState::PROP_AUDIO_FILE))
+        cd.source = clip[ProjectState::PROP_AUDIO_FILE].toString();
+
+      // Basic type check
+      cd.isAudio = clip.hasProperty(ProjectState::PROP_AUDIO_FILE);
+      clips.push_back(cd);
+    }
+  }
+
+  if (clips.size() < 2)
+    return;
+
+  // 2. Sort by Track then Start Time
+  std::sort(clips.begin(), clips.end(),
+            [](const ClipData &a, const ClipData &b) {
+              if (a.trackId != b.trackId)
+                return a.trackId < b.trackId;
+              return a.start < b.start;
+            });
+
   projectState_.getUndoManager().beginNewTransaction("Macro: Heal Splits");
-  DBG("MacroToolbar: Heal Splits triggered for " << clipIds.size() << " clips");
-  // Implementation placeholder logic
+
+  // 3. Iterate and Merge
+  bool changed = false;
+  for (size_t i = 0; i < clips.size() - 1;) {
+    auto &a = clips[i];
+    auto &b = clips[i + 1];
+
+    // Must be same track
+    if (a.trackId != b.trackId) {
+      i++;
+      continue;
+    }
+
+    // Audio Healing Logic
+    if (a.isAudio && b.isAudio) {
+      // Must have same source file
+      if (a.source != b.source) {
+        i++;
+        continue;
+      }
+      // Must be strictly adjacent (A end == B start)
+      double aEnd = a.start + a.length;
+      if (std::abs(aEnd - b.start) < 0.001) {
+        // Perform Merge: Extend A to cover B
+        double newLength = (b.start + b.length) - a.start;
+
+        projectState_.resizeClip(a.trackId, a.id, newLength);
+        projectState_.deleteClip(b.trackId, b.id);
+
+        // Update local 'a' state to reflect merge for next iteration
+        a.length = newLength;
+
+        // Remove 'b' from our processing list and stay at 'i' to compare 'a'
+        // with new neighbor
+        clips.erase(clips.begin() + i + 1);
+        changed = true;
+        DBG("MacroToolbar: Healed " << a.id << " and " << b.id);
+      } else {
+        i++;
+      }
+    } else {
+      // Skip non-audio for now
+      i++;
+    }
+  }
 }
 
 void MacroToolbar::instantFreeze() {

@@ -47,10 +47,14 @@
 namespace zenith {
 
 // Constants
+// Constants
 static constexpr float HEADER_WIDTH = 220.0f;
+static constexpr float SECTION_HEIGHT = 24.0f;
 static constexpr float RULER_HEIGHT = 30.0f;
 static constexpr float TRACK_HEIGHT =
     80.0f; // Taller tracks for better visibility
+static constexpr float TOP_MARGIN =
+    SECTION_HEIGHT + RULER_HEIGHT; // Offset for tracks
 static constexpr float SCROLLBAR_HEIGHT = 14.0f;
 
 //==============================================================================
@@ -239,6 +243,11 @@ void ArrangerComponent::rebuildClipViews() {
 }
 
 void ArrangerComponent::recomputeClipBounds() {
+  // Update section track view state
+  if (sectionTrack) {
+    sectionTrack->setVisibleRange(viewStartBeats, pixelsPerBeat);
+  }
+
   for (auto &clipView : clipViews) {
     // Find track index for this clip
     int trackIndex = 0;
@@ -295,15 +304,15 @@ double ArrangerComponent::xToBeats(float x) const {
 }
 
 float ArrangerComponent::trackIndexToY(int trackIndex) const {
-  return RULER_HEIGHT + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT;
+  return TOP_MARGIN + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT;
 }
 
 int ArrangerComponent::yToTrackIndex(float y) const {
-  if (y < RULER_HEIGHT)
+  if (y < TOP_MARGIN)
     return -1;
 
   return firstVisibleTrackIndex +
-         static_cast<int>((y - RULER_HEIGHT) / TRACK_HEIGHT);
+         static_cast<int>((y - TOP_MARGIN) / TRACK_HEIGHT);
 }
 
 double ArrangerComponent::snapToGrid(double beats) const {
@@ -629,6 +638,20 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     double deltaBeats = xToBeats(e.position.x) - xToBeats(dragStartPoint.x);
     int deltaTrackIndex =
         yToTrackIndex(e.position.y) - yToTrackIndex(dragStartPoint.y);
+
+    // OPTIMIZATION: Early exit if visual delta is negligible
+    // This prevents expensive ripple recalculations on every single pixel of
+    // mouse jitter
+    static double lastDeltaBeats = -99999.0;
+    static int lastDeltaTrack = -99999;
+
+    // Only recalc if moved more than micro-amount or track changed
+    if (std::abs(deltaBeats - lastDeltaBeats) < 0.001 &&
+        deltaTrackIndex == lastDeltaTrack) {
+      return;
+    }
+    lastDeltaBeats = deltaBeats;
+    lastDeltaTrack = deltaTrackIndex;
 
     // Reset Insertion Guide
     insertionGuideX = -1.0f;
@@ -973,14 +996,49 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
   // Draw grid only within the timeline area
   canvas->save();
-  canvas->clipRect(
-      SkRect::MakeXYWH(HEADER_WIDTH, 0, width - HEADER_WIDTH, height));
+  // Clip to area below sections and ruler? Or just below sections?
+  // Grid usually goes through ruler? Or starts below?
+  // Original code: canvas->drawLine(x, 0, x, height, gridPaint);
+  // We should start below sections (SECTION_HEIGHT).
+  canvas->clipRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT,
+                                    width - HEADER_WIDTH,
+                                    height - SECTION_HEIGHT));
 
   for (double beat = startBeat; beat <= endBeat; beat += beatStep) {
     float x = beatsToX(beat);
-    canvas->drawLine(x, 0, x, height, gridPaint);
+    canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
   }
   canvas->restore();
+
+  // Highlighting for Section Hover/Drag
+  if (sectionTrack) {
+    const auto *section = sectionTrack->getHoveredSection();
+    if (!section)
+      section = sectionTrack->getDraggingSection();
+
+    if (section) {
+      float sx = beatsToX(section->startBeats);
+      float sl = (float)(section->lengthBeats * pixelsPerBeat);
+
+      if (sl > 0) {
+        SkPaint highlightPaint;
+        // Parse section color or use accent
+        juce::Colour c = juce::Colour::fromString(section->color);
+        SkColor sc = SkColorSetARGB(40, c.getRed(), c.getGreen(),
+                                    c.getBlue()); // Transparent
+
+        highlightPaint.setColor(sc);
+        highlightPaint.setStyle(SkPaint::kFill_Style);
+
+        // Draw highlight strip (below ruler or full height?)
+        // "highlight the background of the arrangement view for that time
+        // range"
+        canvas->drawRect(
+            SkRect::MakeXYWH(sx, SECTION_HEIGHT, sl, height - SECTION_HEIGHT),
+            highlightPaint);
+      }
+    }
+  }
 
   // ============================================================================
   // 3. TRACKS RENDER LOOP

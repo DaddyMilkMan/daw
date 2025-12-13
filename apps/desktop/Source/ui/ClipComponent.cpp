@@ -237,25 +237,38 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   headerPaint.setColor(headerColor);
   canvas->drawRect(headerRect, headerPaint);
 
-  // Header Name
+  // Header Name (A+ Typography)
   if (fWidth > 20) {
-    SkFont font = design::typography::getSkFont(
-        12.0f, design::FontWeight::Bold); // Slightly larger for header
+    SkFont font =
+        design::typography::getSkFont(12.0f, design::FontWeight::Bold);
 
     juce::String clipName = clip[ProjectState::PROP_NAME].toString();
     if (clipName.isEmpty())
       clipName = "Clip";
 
+    // Text Paint
     SkPaint textPaint;
     textPaint.setAntiAlias(true);
-    textPaint.setColor(SK_ColorWHITE); // Always white on saturated header
+    textPaint.setColor(SK_ColorWHITE);
+
+    // Text Shadow for contrast
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setColor(SkColorSetA(SK_ColorBLACK, 128));
 
     float textX = 8.0f;
-    float textY = headerHeight / 2.0f + 4.0f; // Vertically center approx
+    float textY = headerHeight / 2.0f + 5.0f; // Adjusted vertical center
 
     // Simple text clipping
     canvas->save();
     canvas->clipRect(headerRect);
+
+    // Draw Shadow
+    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
+                           SkTextEncoding::kUTF8, textX + 1.0f, textY + 1.0f,
+                           font, shadowPaint);
+
+    // Draw Text
     canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
                            SkTextEncoding::kUTF8, textX, textY, font,
                            textPaint);
