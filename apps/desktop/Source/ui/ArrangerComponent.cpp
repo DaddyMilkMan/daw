@@ -47,7 +47,6 @@
 namespace zenith {
 
 // Constants
-// Constants
 static constexpr float HEADER_WIDTH = 220.0f;
 static constexpr float SECTION_HEIGHT = 24.0f;
 static constexpr float RULER_HEIGHT = 30.0f;
@@ -642,16 +641,14 @@ void ArrangerComponent::mouseDrag(const juce::MouseEvent &e) {
     // OPTIMIZATION: Early exit if visual delta is negligible
     // This prevents expensive ripple recalculations on every single pixel of
     // mouse jitter
-    static double lastDeltaBeats = -99999.0;
-    static int lastDeltaTrack = -99999;
 
     // Only recalc if moved more than micro-amount or track changed
-    if (std::abs(deltaBeats - lastDeltaBeats) < 0.001 &&
-        deltaTrackIndex == lastDeltaTrack) {
+    if (std::abs(deltaBeats - lastDragDeltaBeats_) < 0.001 &&
+        deltaTrackIndex == lastDragDeltaTrack_) {
       return;
     }
-    lastDeltaBeats = deltaBeats;
-    lastDeltaTrack = deltaTrackIndex;
+    lastDragDeltaBeats_ = deltaBeats;
+    lastDragDeltaTrack_ = deltaTrackIndex;
 
     // Reset Insertion Guide
     insertionGuideX = -1.0f;
@@ -996,10 +993,6 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
   // Draw grid only within the timeline area
   canvas->save();
-  // Clip to area below sections and ruler? Or just below sections?
-  // Grid usually goes through ruler? Or starts below?
-  // Original code: canvas->drawLine(x, 0, x, height, gridPaint);
-  // We should start below sections (SECTION_HEIGHT).
   canvas->clipRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT,
                                     width - HEADER_WIDTH,
                                     height - SECTION_HEIGHT));
