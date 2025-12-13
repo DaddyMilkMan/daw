@@ -18,7 +18,6 @@
 #include "skia/ZenithDesignSystem.h"
 #include <functional>
 
-
 namespace zenith {
 
 class ZenithHubComponent : public SkiaComponent {
@@ -75,11 +74,16 @@ private:
   SkRect profileBounds_;
   bool isProfileHovered_ = false;
 
+  // New Project Button
+  SkRect newProjectButtonBounds_;
+  bool isNewProjectHovered_ = false;
+
   // Helpers
   void drawBackground(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
+  void drawNewProjectButton(SkCanvas *canvas);
 
   void createMockData();
   void updateLayout();
