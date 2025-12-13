@@ -9,6 +9,7 @@ if(ZENITH_ENABLE_SKIA)
         SkiaMainWindowIntegration.cpp
         TransportBar.cpp
         ZenithDesignSystem.cpp
+        FontManager.cpp
         ZenithLayout.cpp
         FontManager.cpp
         ZenithPolySynthUI.cpp

@@ -23,6 +23,21 @@
 namespace zenith {
 namespace design {
 
+// Helper to map weight for indexing
+static int getWeightIndex(FontWeight weight) {
+  switch (weight) {
+  case FontWeight::Regular:
+    return 0;
+  case FontWeight::Medium:
+    return 1;
+  case FontWeight::SemiBold:
+    return 2;
+  case FontWeight::Bold:
+    return 3;
+  }
+  jassertfalse;
+  return 0;
+}
 // ============================================================================
 // SINGLETON ACCESS
 // ============================================================================
@@ -71,13 +86,8 @@ void FontManager::initialize() {
     fontDir_ = appDir.getChildFile("Resources/fonts");
   }
   if (!fontDir_.isDirectory()) {
-    // Check relative to working directory
     fontDir_ = juce::File::getCurrentWorkingDirectory().getChildFile(
         "apps/desktop/Resources/fonts");
-  }
-  if (!fontDir_.isDirectory()) {
-    // Final fallback - absolute path for development
-    fontDir_ = juce::File("C:/zenith/daw/apps/desktop/Resources/fonts");
   }
 
   if (!fontDir_.isDirectory()) {
@@ -181,21 +191,7 @@ bool FontManager::loadFont(const juce::String &filename, FontFamily family,
 
   // Store in cache
   int familyIdx = static_cast<int>(family);
-  int weightIdx = 0;
-  switch (weight) {
-  case FontWeight::Regular:
-    weightIdx = 0;
-    break;
-  case FontWeight::Medium:
-    weightIdx = 1;
-    break;
-  case FontWeight::SemiBold:
-    weightIdx = 2;
-    break;
-  case FontWeight::Bold:
-    weightIdx = 3;
-    break;
-  }
+  int weightIdx = getWeightIndex(weight);
 
   typefaces_[familyIdx][weightIdx] = std::move(typeface);
 
@@ -216,21 +212,7 @@ sk_sp<SkTypeface> FontManager::getTypeface(FontFamily family,
     familyIdx = static_cast<int>(FontFamily::UI);
   }
 
-  int weightIdx = 0;
-  switch (weight) {
-  case FontWeight::Regular:
-    weightIdx = 0;
-    break;
-  case FontWeight::Medium:
-    weightIdx = 1;
-    break;
-  case FontWeight::SemiBold:
-    weightIdx = 2;
-    break;
-  case FontWeight::Bold:
-    weightIdx = 3;
-    break;
-  }
+  int weightIdx = getWeightIndex(weight);
 
   if (familyIdx >= 0 && familyIdx < kNumFamilies && weightIdx >= 0 &&
       weightIdx < kNumWeights) {
