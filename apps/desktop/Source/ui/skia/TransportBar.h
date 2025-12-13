@@ -95,8 +95,11 @@ private:
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
 
+<<<<<<< HEAD
   void drawButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                   const char *label, bool isActive, uint32_t color);
+=======
+>>>>>>> feature/ui-icon-system
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,
                            uint32_t color);
@@ -105,7 +108,10 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 
+<<<<<<< HEAD
 private:
+=======
+>>>>>>> feature/ui-icon-system
   // Cached resources for 60FPS rendering
   SkPaint bgPaint_;
   SkPaint borderPaint_;
