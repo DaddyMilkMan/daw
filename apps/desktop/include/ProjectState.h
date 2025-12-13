@@ -75,6 +75,8 @@ public:
   static const juce::Identifier ID_TEMPO_POINT; // Individual tempo change
   static const juce::Identifier ID_MARKERS;     // Container for markers
   static const juce::Identifier ID_MARKER;      // Individual marker
+  static const juce::Identifier ID_SECTIONS; // Container for arranger sections
+  static const juce::Identifier ID_SECTION;  // Individual arranger section
 
   static const juce::Identifier PROP_NAME;
   static const juce::Identifier PROP_TEMPO;
@@ -94,6 +96,7 @@ public:
   static const juce::Identifier PROP_LENGTH;
   static const juce::Identifier PROP_OFFSET;
   static const juce::Identifier PROP_AUDIO_FILE;
+  static const juce::Identifier PROP_LOOP_LENGTH;
   static const juce::Identifier PROP_LANE_INDEX;
   static const juce::Identifier PROP_MANUALLY_COLORED;
   static const juce::Identifier PROP_IS_QUARANTINE;
@@ -413,6 +416,39 @@ public:
   void renameMarker(const juce::String &markerId, const juce::String &newName,
                     const juce::String &actionName);
   juce::ValueTree getMarkers() const;
+
+  //==========================================================================
+  // Arranger Sections (Structure)
+  //==========================================================================
+
+  juce::String addSection(double startBeats, double lengthBeats,
+                          const juce::String &name, const juce::String &color,
+                          const juce::String &actionName);
+  bool deleteSection(const juce::String &sectionId,
+                     const juce::String &actionName);
+  void moveSection(const juce::String &sectionId, double newStartBeats,
+                   const juce::String &actionName);
+  void resizeSection(const juce::String &sectionId, double newLengthBeats,
+                     const juce::String &actionName);
+  void renameSection(const juce::String &sectionId, const juce::String &newName,
+                     const juce::String &actionName);
+  void setSectionColor(const juce::String &sectionId,
+                       const juce::String &newColor,
+                       const juce::String &actionName);
+
+  /**
+   * @brief Slices all clips at section boundaries and moves the section +
+   * content
+   *
+   * This is a complex operation that:
+   * 1. Slices all clips on all tracks at the section's current start and end
+   * 2. Moves all clips fully within the section to the new position
+   * 3. Moves the section itself
+   */
+  void moveSectionContent(const juce::String &sectionId, double newStartBeats,
+                          const juce::String &actionName);
+
+  juce::ValueTree getSections() const;
 
   //==========================================================================
   // Undo/Redo

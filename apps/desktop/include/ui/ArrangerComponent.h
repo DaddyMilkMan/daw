@@ -3,13 +3,17 @@
 #include "../../Source/ui/skia/SkiaComponent.h"
 #include "../Engine.h"
 #include "../ProjectState.h"
+#include "MiniMapComponent.h"
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #include <core/SkCanvas.h>
+#include <map>
 #include <unordered_map>
 #include <vector>
+
+#include "MacroToolbar.h"
 
 // Forward declaration for browser drag
 namespace zenith {
@@ -159,6 +163,9 @@ private:
   juce::Array<ClipView> clipViews;
   juce::StringArray selectedClipIds;
 
+  // MiniMap
+  MiniMapComponent miniMap;
+
   // View state
   double pixelsPerBeat = 50.0;
   double viewStartBeats = 0.0;
@@ -209,6 +216,21 @@ private:
   int dropTargetTrackIndex_ = -1;
   double dropTargetBeats_ = 0.0;
 
+  // Edit Mode state
+  enum class EditMode {
+    Overwrite, // Default: Move clips freely, overlapping if needed
+    Insert,    // Push content to the right to make room (Splicing)
+    Ripple     // Push subsequent content by the exact same delta (Ripple Edit)
+  };
+  EditMode currentEditMode = EditMode::Overwrite;
+
+  // Visuals for Insert/Ripple
+  float insertionGuideX = -1.0f;
+
+  // Store initial positions of ALL clips during drag for robust Ripple/Insert
+  // logic
+  std::map<juce::String, double> initialClipStarts;
+
   //==========================================================================
   // Clip Content Rendering Helpers (Skia)
   //==========================================================================
@@ -253,6 +275,8 @@ private:
   // Utility
   void updatePlayheadFromEngine();
   double samplesToBeats(juce::int64 samples) const;
+
+  std::unique_ptr<MacroToolbar> macroToolbar;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };

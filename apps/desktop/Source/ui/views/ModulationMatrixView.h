@@ -5,8 +5,7 @@
     Created: 2025-12-09
     Author:  Zenith DAW
 
-    Universal Modulation Matrix UI Component.
-    Displays a grid of Sources (rows) and Destinations (columns).
+    A+ Grade Implementation: Node-based Modulation Graph specific definitions.
 
   ==============================================================================
 */
@@ -15,7 +14,7 @@
 
 #include "../../dsp/GlobalLFO.h"
 #include "../../engine/MacroControl.h"
-#include "../ZenithTheme.h"
+#include "../skia/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
@@ -24,154 +23,71 @@ class Engine;
 
 //==============================================================================
 /**
- * @brief A single cell in the modulation matrix
+ * @brief Node-based Modulation Matrix Visualization
  *
- * Clicking sets/clears modulation, dragging adjusts amount
+ * Uses Skia to render a node graph where:
+ * - Left side: Source Nodes (LFOs, Macros)
+ * - Right side: Destination Nodes (Parameters)
+ * - Connections: Animated Bezier curves with particle flow
  */
-class ModulationMatrixCell : public juce::Component {
-public:
-  ModulationMatrixCell() { setRepaintsOnMouseActivity(true); }
-
-  void setAmount(float newAmount) {
-    amount_ = juce::jlimit(-1.0f, 1.0f, newAmount);
-    repaint();
-  }
-
-  float getAmount() const { return amount_; }
-
-  bool isActive() const { return std::abs(amount_) > 0.001f; }
-
-  void paint(juce::Graphics &g) override {
-    auto bounds = getLocalBounds().toFloat().reduced(1.0f);
-
-    // Background
-    if (isMouseOver())
-      g.setColour(juce::Colour(0xff3a3a3a));
-    else
-      g.setColour(juce::Colour(0xff2a2a2a));
-    g.fillRoundedRectangle(bounds, 4.0f);
-
-    // Active indicator
-    if (isActive()) {
-      // Draw modulation amount bar
-      float normalizedAmount = (amount_ + 1.0f) * 0.5f; // 0-1 range
-      float barWidth = bounds.getWidth() * std::abs(amount_);
-
-      if (amount_ > 0) {
-        g.setColour(juce::Colour(0xff00cc88)); // Green for positive
-      } else {
-        g.setColour(juce::Colour(0xffcc4488)); // Pink for negative
-      }
-
-      float centerX = bounds.getCentreX();
-      if (amount_ > 0) {
-        g.fillRoundedRectangle(centerX, bounds.getY() + 2, barWidth * 0.5f,
-                               bounds.getHeight() - 4, 2.0f);
-      } else {
-        g.fillRoundedRectangle(centerX - barWidth * 0.5f, bounds.getY() + 2,
-                               barWidth * 0.5f, bounds.getHeight() - 4, 2.0f);
-      }
-
-      // Amount text
-      g.setColour(juce::Colours::white);
-      g.setFont(10.0f);
-      g.drawText(juce::String(static_cast<int>(amount_ * 100)) + "%", bounds,
-                 juce::Justification::centred);
-    }
-
-    // Border
-    g.setColour(juce::Colour(0xff444444));
-    g.drawRoundedRectangle(bounds, 4.0f, 1.0f);
-  }
-
-  void mouseDown(const juce::MouseEvent &e) override {
-    if (e.mods.isRightButtonDown()) {
-      // Clear modulation
-      setAmount(0.0f);
-      if (onAmountChanged)
-        onAmountChanged(amount_);
-    } else {
-      // Toggle or prepare for drag
-      dragStartY_ = e.y;
-      dragStartAmount_ = amount_;
-
-      if (!isActive()) {
-        setAmount(1.0f); // Default to 100%
-        if (onAmountChanged)
-          onAmountChanged(amount_);
-      }
-    }
-  }
-
-  void mouseDrag(const juce::MouseEvent &e) override {
-    float deltaY = (dragStartY_ - e.y) * 0.01f; // Invert Y for natural feel
-    setAmount(dragStartAmount_ + deltaY);
-    if (onAmountChanged)
-      onAmountChanged(amount_);
-  }
-
-  std::function<void(float)> onAmountChanged;
-
-private:
-  float amount_ = 0.0f;
-  float dragStartY_ = 0;
-  float dragStartAmount_ = 0;
-};
-
-//==============================================================================
-/**
- * @brief The Universal Modulation Matrix View
- *
- * Rows: Modulation Sources (LFOs, Macros, Track Envelopes)
- * Columns: Modulation Destinations (Plugin Parameters)
- */
-class ModulationMatrixView : public juce::Component, public juce::Timer {
+class ModulationMatrixView : public SkiaComponent {
 public:
   ModulationMatrixView();
   ~ModulationMatrixView() override;
 
   void setEngine(Engine *engine);
 
-  void paint(juce::Graphics &g) override;
-  void resized() override;
+  // Skia Rendering Override
+  void drawSkia(SkCanvas *canvas) override;
+
+  // Interactions
+  void mouseDown(const juce::MouseEvent &e) override;
+  void mouseDrag(const juce::MouseEvent &e) override;
+  void mouseUp(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
+
   void timerCallback() override;
 
-  // Refresh the matrix when routing changes
-  void refreshMatrix();
+  // Refresh graph from Engine state
+  void refreshNodes();
 
 private:
   Engine *engine_ = nullptr;
+  double time_ = 0.0;
 
-  // Source/Destination labels
-  juce::StringArray sourceLabels_;
-  juce::StringArray destLabels_;
+  enum class NodeType { Source, Destination };
 
-  // Mapping helpers
-  juce::StringArray sourceIds_;
-  struct DestMapping {
-    juce::String nodeId;
-    int pluginIndex;
-    int paramIndex;
+  struct Node {
+    juce::String id;
+    juce::String name;
+    NodeType type;
+    SkColor color;
+    juce::Rectangle<float> bounds;
+    juce::Point<float> portLocation;
+    bool isHovered = false;
   };
-  std::vector<DestMapping> destMappings_;
 
-  // Matrix cells
-  juce::OwnedArray<ModulationMatrixCell> cells_;
-  juce::OwnedArray<juce::Label> labels_;
+  struct Connection {
+    juce::String sourceId;
+    juce::String destId;
+    float amount = 1.0f;
+  };
 
-  // Layout constants
-  static constexpr int kCellWidth = 60;
-  static constexpr int kCellHeight = 24;
-  static constexpr int kLabelWidth = 120;
-  static constexpr int kHeaderHeight = 80;
+  std::vector<Node> sourceNodes_;
+  std::vector<Node> destNodes_;
+  std::vector<Connection> connections_;
 
-  // Scroll viewport
-  std::unique_ptr<juce::Viewport> viewport_;
-  std::unique_ptr<juce::Component> matrixContent_;
+  // Drag State
+  bool isDragging_ = false;
+  juce::Point<float> dragStartPos_;
+  juce::Point<float> dragEndPos_;
+  juce::String dragSourceId_;
 
-  void buildSourceLabels();
-  void buildDestLabels();
-  void createCells();
+  void layoutNodes();
+  void drawNode(SkCanvas *canvas, const Node &node);
+  void drawConnection(SkCanvas *canvas, const Connection &conn);
+
+  Node *findNode(const juce::String &id);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ModulationMatrixView)
 };

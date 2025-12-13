@@ -9,13 +9,13 @@
 
 #pragma once
 
+#include "../Source/ui/SessionViewComponent.h"
 #include "../Source/ui/skia/BottomBar.h"
 #include "../Source/ui/skia/BrowserPanel.h"
 #include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButton.h"
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/skia/views/SessionViewComponent.h"
 #include "../Source/ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
@@ -32,6 +32,7 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+
 
 namespace zenith {
 class InstrumentBrowserPanel;

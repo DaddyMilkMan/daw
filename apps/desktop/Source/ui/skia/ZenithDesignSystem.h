@@ -36,6 +36,7 @@ inline SkColor CYAN =
     0xFF00F0FF; // Electric Blue/Cyan (Slightly warmer than pure Cyan)
 inline SkColor MAGENTA = 0xFFFF00D4;    // Hot Pink/Magenta
 inline SkColor NEON_GREEN = 0xFF00FF9D; // Spring Green (Modern Mint)
+inline SkColor NEON_PINK = 0xFFFF1493;  // Deep Pink (For Ripple Edit Mode)
 inline SkColor VIOLET = 0xFF7000FF;     // Deep Violet
 
 // Semantic/Status Colors
