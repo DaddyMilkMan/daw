@@ -277,13 +277,13 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     // Text
     SkFont titleFont(Typeface::font(Typeface::Weight::Medium), 16.0f);
     textPaint.setColor(colors::TEXT_PRIMARY);
-    canvas->drawString(proj.name, imageRect.right() + 15, proj.bounds.fTop + 30,
-                       titleFont, textPaint);
+    canvas->drawString(proj.name.toStdString().c_str(), imageRect.right() + 15,
+                       proj.bounds.fTop + 30, titleFont, textPaint);
 
-    SkFont subFont(Typeface::font(Typeface::Weight::Regular), 14.0f);
+    SkFont subFont = design::getSkFont(14.0f, design::FontWeight::Regular);
     textPaint.setColor(colors::TEXT_SECONDARY);
-    canvas->drawString(proj.date, imageRect.right() + 15, proj.bounds.fTop + 55,
-                       subFont, textPaint);
+    canvas->drawString(proj.date.toStdString().c_str(), imageRect.right() + 15,
+                       proj.bounds.fTop + 55, subFont, textPaint);
 
     // Genre Badge
     SkPaint badgePaint;
@@ -295,7 +295,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
-  SkFont headerFont(Typeface::font(Typeface::Weight::Bold), 20.0f);
+  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
@@ -323,8 +323,8 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 
     // Text
     textPaint.setColor(colors::TEXT_PRIMARY);
-    SkFont nameFont(Typeface::font(Typeface::Weight::Medium), 16.0f);
-    canvas->drawString(tmpl.name, tmpl.bounds.fLeft + 60,
+    SkFont nameFont = design::getSkFont(16.0f, design::FontWeight::Medium);
+    canvas->drawString(tmpl.name.toStdString().c_str(), tmpl.bounds.fLeft + 60,
                        tmpl.bounds.centerY() + 6, nameFont, textPaint);
 
     if (tmpl.isHovered) {
@@ -338,7 +338,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
-  SkFont headerFont(Typeface::font(Typeface::Weight::Bold), 20.0f);
+  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
@@ -362,12 +362,12 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
                      avatarPaint);
 
   textPaint.setColor(colors::TEXT_PRIMARY);
-  SkFont nameFont(Typeface::font(Typeface::Weight::Medium), 16.0f);
+  SkFont nameFont = design::getSkFont(16.0f, design::FontWeight::Medium);
   canvas->drawString("SoundDesigner99", profileBounds_.fLeft + 80,
                      profileBounds_.centerY() + -5, nameFont, textPaint);
 
   textPaint.setColor(colors::NEON_GREEN);
-  SkFont statusFont(Typeface::font(Typeface::Weight::Regular), 12.0f);
+  SkFont statusFont = design::getSkFont(12.0f, design::FontWeight::Regular);
   canvas->drawString("● Online", profileBounds_.fLeft + 80,
                      profileBounds_.centerY() + 15, statusFont, textPaint);
 }

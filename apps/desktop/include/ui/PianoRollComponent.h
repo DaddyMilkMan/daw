@@ -1183,126 +1183,119 @@ private:
 
 //==============================================================================
 /**
+ * @class MidiEditorContainer
+ * @brief Container that switches between Piano Roll and Drum Pad views
+ */
+class MidiEditorContainer : public juce::Component {
+public:
+  MidiEditorContainer(zenith::ProjectState &state) : projectState(state) {
+    pianoRoll = std::make_unique<PianoRollComponent>(state);
+    addAndMakeVisible(pianoRoll.get());
+
+    drumPad = std::make_unique<DrumPadComponent>(state);
+    addChildComponent(drumPad.get()); // Hidden by default
+
+    // Toggle Button
+    toggleButton.setButtonText("Switch to Drum View");
+    toggleButton.onClick = [this] { toggleView(); };
+    addAndMakeVisible(toggleButton);
+  }
+
+  void setClipContext(const MidiClipContext &context) {
+    pianoRoll->setClipContext(context);
+    drumPad->setClipContext(context.clipId);
+
+    // Auto-detect mode based on track name? For now manual.
+    if (context.trackId.containsIgnoreCase("drum")) {
+      if (activeView == View::PianoRoll)
+        toggleView();
+    }
+  }
+
+  void resized() override {
+    auto area = getLocalBounds();
+    auto topBar = area.removeFromTop(30);
+
+    toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
+
+    if (activeView == View::PianoRoll) {
+      pianoRoll->setBounds(area);
+    } else {
+      drumPad->setBounds(area);
+    }
+  }
+
+  void toggleView() {
+    if (activeView == View::PianoRoll) {
+      activeView = View::DrumPad;
+      pianoRoll->setVisible(false);
+      drumPad->setVisible(true);
+      toggleButton.setButtonText("Switch to Piano Roll");
+    } else {
+      activeView = View::PianoRoll;
+      pianoRoll->setVisible(true);
+      drumPad->setVisible(false);
+      toggleButton.setButtonText("Switch to Drum View");
+    }
+    resized();
+  }
+
+private:
+  zenith::ProjectState &projectState;
+  std::unique_ptr<PianoRollComponent> pianoRoll;
+  std::unique_ptr<DrumPadComponent> drumPad;
+  juce::TextButton toggleButton;
+
+  enum class View { PianoRoll, DrumPad };
+  View activeView = View::PianoRoll;
+};
+
+//==============================================================================
+/**
  * @class PianoRollWindow
- * @brief Standalone window wrapper for PianoRollComponent
+ * @brief Standalone window wrapper for PianoRollComponent (and Drum Pad)
  */
 class PianoRollWindow : public juce::DocumentWindow {
 public:
-  //==============================================================================
-  /**
-   * @class MidiEditorContainer
-   * @brief Container that switches between Piano Roll and Drum Pad views
-   */
-  class MidiEditorContainer : public juce::Component {
-  public:
-    MidiEditorContainer(zenith::ProjectState &state) : projectState(state) {
-      pianoRoll = std::make_unique<PianoRollComponent>(state);
-      addAndMakeVisible(pianoRoll.get());
+  PianoRollWindow(zenith::ProjectState &state, const juce::String &trackId,
+                  const juce::String &clipId)
+      : DocumentWindow(
+            "MIDI Editor",
+            juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
+                juce::ResizableWindow::backgroundColourId),
+            DocumentWindow::allButtons) {
+    setUsingNativeTitleBar(true);
 
-      drumPad = std::make_unique<DrumPadComponent>(state);
-      addChildComponent(drumPad.get()); // Hidden by default
+    auto *content = new MidiEditorContainer(state);
+    setContentOwned(content, true);
 
-      // Toggle Button
-      toggleButton.setButtonText("Switch to Drum View");
-      toggleButton.onClick = [this] { toggleView(); };
-      addAndMakeVisible(toggleButton);
+    // Setup clip context
+    MidiClipContext context;
+    context.clipId = clipId;
+    context.trackId = trackId;
+
+    // Find clip info from state
+    auto [track, clip] = state.findClip(clipId);
+    if (clip.isValid()) {
+      context.clipName =
+          clip.getProperty(zenith::ProjectState::PROP_NAME).toString();
+      context.clipStartBeats =
+          clip.getProperty(zenith::ProjectState::PROP_START);
+      context.clipLengthBeats =
+          clip.getProperty(zenith::ProjectState::PROP_LENGTH);
     }
 
-    void setClipContext(const MidiClipContext &context) {
-      pianoRoll->setClipContext(context);
-      drumPad->setClipContext(context.clipId);
+    content->setClipContext(context);
 
-      // Auto-detect mode based on track name? For now manual.
-      if (context.trackId.containsIgnoreCase("drum")) {
-        if (activeView == View::PianoRoll)
-          toggleView();
-      }
-    }
+    setResizable(true, true);
+    centreWithSize(1000, 600);
+    setVisible(true);
+  }
 
-    void resized() override {
-      auto area = getLocalBounds();
-      auto topBar = area.removeFromTop(30);
+  ~PianoRollWindow() override = default;
 
-      toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
+  void closeButtonPressed() override { delete this; }
 
-      if (activeView == View::PianoRoll) {
-        pianoRoll->setBounds(area);
-      } else {
-        drumPad->setBounds(area);
-      }
-    }
-
-    void toggleView() {
-      if (activeView == View::PianoRoll) {
-        activeView = View::DrumPad;
-        pianoRoll->setVisible(false);
-        drumPad->setVisible(true);
-        toggleButton.setButtonText("Switch to Piano Roll");
-      } else {
-        activeView = View::PianoRoll;
-        pianoRoll->setVisible(true);
-        drumPad->setVisible(false);
-        toggleButton.setButtonText("Switch to Drum View");
-      }
-      resized();
-    }
-
-  private:
-    zenith::ProjectState &projectState;
-    std::unique_ptr<PianoRollComponent> pianoRoll;
-    std::unique_ptr<DrumPadComponent> drumPad;
-    juce::TextButton toggleButton;
-
-    enum class View { PianoRoll, DrumPad };
-    View activeView = View::PianoRoll;
-  };
-
-  //==============================================================================
-  /**
-   * @class PianoRollWindow
-   * @brief Standalone window wrapper for PianoRollComponent (and Drum Pad)
-   */
-  class PianoRollWindow : public juce::DocumentWindow {
-  public:
-    PianoRollWindow(zenith::ProjectState &state, const juce::String &trackId,
-                    const juce::String &clipId)
-        : DocumentWindow(
-              "MIDI Editor",
-              juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
-                  juce::ResizableWindow::backgroundColourId),
-              DocumentWindow::allButtons) {
-      setUsingNativeTitleBar(true);
-
-      auto *content = new MidiEditorContainer(state);
-      setContentOwned(content, true);
-
-      // Setup clip context
-      MidiClipContext context;
-      context.clipId = clipId;
-      context.trackId = trackId;
-
-      // Find clip info from state
-      auto [track, clip] = state.findClip(clipId);
-      if (clip.isValid()) {
-        context.clipName =
-            clip.getProperty(zenith::ProjectState::PROP_NAME).toString();
-        context.clipStartBeats =
-            clip.getProperty(zenith::ProjectState::PROP_START);
-        context.clipLengthBeats =
-            clip.getProperty(zenith::ProjectState::PROP_LENGTH);
-      }
-
-      content->setClipContext(context);
-
-      setResizable(true, true);
-      centreWithSize(1000, 600);
-      setVisible(true);
-    }
-
-    ~PianoRollWindow() override = default;
-
-    void closeButtonPressed() override { delete this; }
-
-  private:
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
-  };
+private:
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
+};
