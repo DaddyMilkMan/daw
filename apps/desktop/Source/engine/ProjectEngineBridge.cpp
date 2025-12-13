@@ -449,16 +449,63 @@ double ProjectEngineBridge::sampleEnvelope(const juce::ValueTree& envelope, doub
     if (!prevPoint.isValid() && !nextPoint.isValid())
         return -1.0;
 
-    // Linear interpolation between points
+    // Get interpolation parameters
     double prevTime = prevPoint[ProjectState::PROP_TIME_BEATS];
     double prevValue = prevPoint[ProjectState::PROP_VALUE];
     double nextTime = nextPoint[ProjectState::PROP_TIME_BEATS];
     double nextValue = nextPoint[ProjectState::PROP_VALUE];
 
+    // Normalized position between points
     double t = (timeBeats - prevTime) / (nextTime - prevTime);
     t = juce::jlimit(0.0, 1.0, t);
 
-    return prevValue + t * (nextValue - prevValue);
+    // Get curve type and tension from the previous point (curve applies forward)
+    juce::String curveType = prevPoint.getProperty(ProjectState::PROP_CURVE_TYPE, "linear").toString();
+    double tension = prevPoint.getProperty(ProjectState::PROP_TENSION, 0.5);
+    tension = juce::jlimit(0.0, 1.0, tension);
+
+    // Apply curve transformation based on type
+    double curvedT = t;
+
+    if (curveType == "exponential")
+    {
+        // Exponential curve: fast start, slow end (or vice versa based on tension)
+        // tension < 0.5 = convex (fast start), tension > 0.5 = concave (slow start)
+        double exponent = 1.0 + (tension - 0.5) * 4.0;  // Range: -1 to 3
+        if (exponent > 0.01)
+            curvedT = std::pow(t, exponent);
+        else
+            curvedT = t;
+    }
+    else if (curveType == "logarithmic")
+    {
+        // Logarithmic curve: slow start, fast end
+        // Inverse of exponential
+        double exponent = 1.0 + (0.5 - tension) * 4.0;
+        if (exponent > 0.01)
+            curvedT = std::pow(t, 1.0 / exponent);
+        else
+            curvedT = t;
+    }
+    else if (curveType == "smooth" || curveType == "scurve")
+    {
+        // S-curve (smooth step) - ease in and ease out
+        // Hermite interpolation with adjustable sharpness based on tension
+        double sharpness = 1.0 + tension * 2.0;  // Range: 1 to 3
+        curvedT = t * t * (3.0 - 2.0 * t);  // Basic smoothstep
+        
+        // Apply tension to make the S more or less pronounced
+        curvedT = t + (curvedT - t) * sharpness;
+        curvedT = juce::jlimit(0.0, 1.0, curvedT);
+    }
+    else if (curveType == "step" || curveType == "hold")
+    {
+        // Step/Hold: no interpolation, hold previous value until next point
+        curvedT = 0.0;
+    }
+    // else: "linear" (default) - curvedT remains equal to t
+
+    return prevValue + curvedT * (nextValue - prevValue);
 }
 
 void ProjectEngineBridge::processPendingChanges()

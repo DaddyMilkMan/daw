@@ -18,6 +18,7 @@
 #include <core/SkRRect.h>
 #include <core/SkRect.h>
 #include <core/SkTypeface.h>
+#include <core/SkSpan.h>  // For SkSpan used by SkDashPathEffect
 #include <effects/SkDashPathEffect.h> // For SkDashPathEffect::Make
 #include <effects/SkGradientShader.h>
 #include "skia/GlassmorphicPanel.h"
@@ -1159,8 +1160,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   gridPaint.setAntiAlias(true);
   
   SkScalar intervals[] = {2.0f, 4.0f};
-  // Fix: Providing 3 arguments for SkDashPathEffect::Make (intervals, count, phase)
-  // gridPaint.setPathEffect(SkDashPathEffect::Make((const SkScalar*)intervals, 2, 0.0f));
+  // Use SkSpan-based API for dashed grid lines
+  gridPaint.setPathEffect(SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f));
 
   double startBeat = std::floor(viewStartBeats);
   double endBeat = viewStartBeats + ((width - HEADER_WIDTH) / pixelsPerBeat);
@@ -1198,8 +1199,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
     marqueePaint.setColor(colors::CYAN);
     marqueePaint.setStyle(SkPaint::kStroke_Style);
     SkScalar dashIntervals[] = {4, 4};
-    // Fix: Providing 3 arguments for SkDashPathEffect::Make
-    // marqueePaint.setPathEffect(SkDashPathEffect::Make((const SkScalar*)dashIntervals, 2, 0.0f));
+    // Use SkSpan-based API for dashed marquee border
+    marqueePaint.setPathEffect(SkDashPathEffect::Make(SkSpan<const SkScalar>(dashIntervals, 2), 0.0f));
     canvas->drawRect(mRect, marqueePaint);
   }
 

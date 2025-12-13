@@ -22,7 +22,23 @@ ProjectFileIO::ProjectFileIO(ProjectState& projectState)
 
 void ProjectFileIO::newProject()
 {
+    DBG("ProjectFileIO: Creating new project");
+
+    // Clear undo history first
+    projectState_.getUndoManager().clearUndoHistory();
+
+    // Create default state
     projectState_.createDefaultState();
+
+    // Reset cache and ID counter
+    projectState_.trackIdMap_.clear();
+    projectState_.idCounter.store(0);
+
+    // Reset project file and dirty flag
+    projectState_.projectFile = juce::File();
+    projectState_.isDirty = false;
+
+    DBG("ProjectFileIO: New project created");
 }
 
 bool ProjectFileIO::loadFromFile(const juce::File& file)
