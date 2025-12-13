@@ -109,6 +109,7 @@ private:
 #endif
 
   juce::String text_;
+  double value_ = 0.0;
   juce::String label_;
   juce::String suffix_;
   juce::String prefix_;

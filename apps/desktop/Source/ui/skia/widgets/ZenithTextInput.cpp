@@ -47,6 +47,7 @@ void ZenithTextInput::setText(const juce::String &text, bool sendNotification) {
 
 void ZenithTextInput::setValue(double value, bool sendNotification) {
   value = juce::jlimit(minValue_, maxValue_, value);
+  value_ = value;
   setText(formatValue(value), false);
 
   if (sendNotification && onValueChanged) {
@@ -54,7 +55,11 @@ void ZenithTextInput::setValue(double value, bool sendNotification) {
   }
 }
 
-double ZenithTextInput::getValue() const { return text_.getDoubleValue(); }
+double ZenithTextInput::getValue() const {
+  if (inputType_ != InputType::Text)
+    return value_;
+  return text_.getDoubleValue();
+}
 
 void ZenithTextInput::resized() {
   if (editor_) {
@@ -181,14 +186,7 @@ void ZenithTextInput::validateAndApply(const juce::String &newText) {
 
   if (inputType_ != InputType::Text) {
     double value = newText.getDoubleValue();
-    value = juce::jlimit(minValue_, maxValue_, value);
-    validatedText = formatValue(value);
-
-    setText(validatedText, true);
-
-    if (onValueChanged) {
-      onValueChanged(value);
-    }
+    setValue(value, true);
   } else {
     setText(validatedText, true);
   }

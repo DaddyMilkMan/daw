@@ -133,7 +133,6 @@ private:
   void drawIcon(SkCanvas *canvas, const SkRect &iconRect);
   void drawText(SkCanvas *canvas, const SkRect &textRect);
 
-  void updateTextBlob();
   void calculateLayout();
 #endif
 

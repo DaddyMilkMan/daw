@@ -230,7 +230,7 @@ void ZenithControl::modifierKeysChanged(const juce::ModifierKeys &modifiers) {
     isFineMode_ = newFineMode;
     // Update drag start position to prevent jumps
     dragStartValue_ = getValue();
-    // Note: This requires storing current mouse position
+    dragStartPos_ = getMouseXYRelative().toFloat();
   }
 }
 
