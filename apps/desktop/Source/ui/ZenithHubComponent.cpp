@@ -10,6 +10,7 @@
 
 #include "ZenithHubComponent.h"
 #include "skia/ZenithIcons.h"
+#include <array>
 
 namespace zenith {
 
@@ -385,20 +386,20 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   SkPaint btnPaint;
   btnPaint.setAntiAlias(true);
 
-  SkPoint pts[2] = {
-      {newProjectButtonBounds_.fLeft, newProjectButtonBounds_.fTop},
-      {newProjectButtonBounds_.fRight, newProjectButtonBounds_.fBottom}};
+  const std::array<SkPoint, 2> pts = {
+      SkPoint::Make(newProjectButtonBounds_.fLeft,
+                    newProjectButtonBounds_.fTop),
+      SkPoint::Make(newProjectButtonBounds_.fRight,
+                    newProjectButtonBounds_.fBottom)};
 
-  SkColor cAs[] = {colors::CYAN, colors::VIOLET};
-
-  if (isNewProjectHovered_) {
-    // Brighter/Shifted gradient on hover
-    cAs[0] = colors::NEON_CYAN;
-    cAs[1] = colors::MAGENTA;
-  }
+  auto gradientColors =
+      isNewProjectHovered_
+          ? std::array<SkColor, 2>{colors::NEON_CYAN, colors::MAGENTA}
+          : std::array<SkColor, 2>{colors::CYAN, colors::VIOLET};
 
   auto shader =
-      SkGradientShader::MakeLinear(pts, cAs, nullptr, 2, SkTileMode::kClamp);
+      SkGradientShader::MakeLinear(pts.data(), gradientColors.data(), nullptr,
+                                   gradientColors.size(), SkTileMode::kClamp);
   btnPaint.setShader(shader);
 
   // Drop Shadow / Glow
@@ -428,13 +429,6 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
       newProjectButtonBounds_.centerY() + (textBounds.height() / 2.0f) - 4.0f;
 
   canvas->drawString(text, tx, ty, btnFont, textPaint);
-
-  // Icon (+)
-  SkPaint iconPaint;
-  iconPaint.setColor(SK_ColorWHITE);
-  iconPaint.setStyle(SkPaint::kStroke_Style);
-  iconPaint.setStrokeWidth(3.0f);
-  iconPaint.setAntiAlias(true);
 
   // Maybe put icon to the left of text?
   // width: 24, height 24
@@ -510,7 +504,7 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   }
 
   if (newProjectButtonBounds_.contains(pt.fX, pt.fY)) {
-    dismiss(); // New Project created
+    dismiss(); // Dismiss the hub to trigger the new project flow.
     return;
   }
 }

@@ -1188,11 +1188,12 @@ private:
  */
 class MidiEditorContainer : public juce::Component {
 public:
-  MidiEditorContainer(zenith::ProjectState &state) : projectState(state) {
+  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
+      : projectState(state), engine_(engine) {
     pianoRoll = std::make_unique<PianoRollComponent>(state);
     addAndMakeVisible(pianoRoll.get());
 
-    drumPad = std::make_unique<DrumPadComponent>(state);
+    drumPad = std::make_unique<DrumPadComponent>(engine, state);
     addChildComponent(drumPad.get()); // Hidden by default
 
     // Toggle Button
@@ -1242,6 +1243,7 @@ public:
 
 private:
   zenith::ProjectState &projectState;
+  zenith::Engine &engine_;
   std::unique_ptr<PianoRollComponent> pianoRoll;
   std::unique_ptr<DrumPadComponent> drumPad;
   juce::TextButton toggleButton;
@@ -1257,8 +1259,8 @@ private:
  */
 class PianoRollWindow : public juce::DocumentWindow {
 public:
-  PianoRollWindow(zenith::ProjectState &state, const juce::String &trackId,
-                  const juce::String &clipId)
+  PianoRollWindow(zenith::ProjectState &state, zenith::Engine &engine,
+                  const juce::String &trackId, const juce::String &clipId)
       : DocumentWindow(
             "MIDI Editor",
             juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
@@ -1266,7 +1268,7 @@ public:
             DocumentWindow::allButtons) {
     setUsingNativeTitleBar(true);
 
-    auto *content = new MidiEditorContainer(state);
+    auto *content = new MidiEditorContainer(state, engine);
     setContentOwned(content, true);
 
     // Setup clip context

@@ -7,6 +7,10 @@
 #include <map>
 #include <vector>
 
+namespace zenith {
+class Engine;
+}
+
 //==============================================================================
 /**
  * @class DrumPadComponent
@@ -39,7 +43,8 @@ public:
   };
 
   //==============================================================================
-  explicit DrumPadComponent(zenith::ProjectState &state);
+  explicit DrumPadComponent(zenith::Engine &engine,
+                            zenith::ProjectState &state);
   ~DrumPadComponent() override;
 
   //==============================================================================
@@ -70,6 +75,7 @@ public:
 
 private:
   //==============================================================================
+  zenith::Engine &engine;
   zenith::ProjectState &projectState;
   juce::String currentClipId;
   juce::ValueTree midiNotesNode;

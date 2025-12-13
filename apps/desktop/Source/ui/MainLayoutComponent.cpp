@@ -22,7 +22,7 @@ namespace zenith {
 
 // Helper class to switch between Arranger and Session views while keeping them
 // alive
-class ViewSwitcher : public juce::Component {
+class ViewSwitcher : public SkiaComponent {
 public:
   ViewSwitcher() { setOpaque(false); }
 
@@ -60,6 +60,14 @@ public:
     if (index >= 0 && index < static_cast<int>(views_.size()))
       return views_[static_cast<size_t>(index)].get();
     return nullptr;
+  }
+
+  void drawSkia(SkCanvas *canvas) override {
+    if (auto *view = getView(activeIndex_)) {
+      if (auto *sc = dynamic_cast<SkiaComponent *>(view)) {
+        sc->drawSkia(canvas);
+      }
+    }
   }
 
 private:
@@ -220,6 +228,10 @@ void MainLayoutComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
   GlassmorphicPanel::fillBackground(canvas, skBounds);
+
+  if (panelContainer_) {
+    panelContainer_->drawSkia(canvas);
+  }
 }
 
 void MainLayoutComponent::resized() {

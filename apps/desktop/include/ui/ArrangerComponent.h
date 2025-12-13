@@ -288,33 +288,4 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };
 
-class ArrangerTrackComponent : public SkiaComponent {
-public:
-  struct Section {
-    double startBeats = 0.0;
-    double lengthBeats = 4.0;
-    juce::String color = "FF00FFFF";
-  };
-
-  ArrangerTrackComponent(ProjectState &state) : projectState(state) {}
-
-  void setVisibleRange(double start, double zoom) {
-    viewStartBeats = start;
-    pixelsPerBeat = zoom;
-    repaint();
-  }
-
-  const Section *getHoveredSection() const { return nullptr; }
-  const Section *getDraggingSection() const { return nullptr; }
-
-  void drawSkia(SkCanvas *canvas) override {
-    // TODO: Implement section rendering
-  }
-
-private:
-  ProjectState &projectState;
-  double viewStartBeats = 0.0;
-  double pixelsPerBeat = 10.0;
-};
-
 } // namespace zenith

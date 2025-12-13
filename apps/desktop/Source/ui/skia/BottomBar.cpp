@@ -48,10 +48,6 @@ BottomBar::BottomBar(juce::MidiKeyboardState &state, Engine &engine,
   mixerComponent_ = std::make_unique<MixerComponent>(engine, projectState);
   addChildComponent(mixerComponent_.get());
 
-  // Default visibility
-  deviceChain_->setVisible(false);
-  mixerComponent_->setVisible(true); // Default to Mixer when keyboard is hidden
-
   // Debug console is created when setDebugger is called
 
   // Default size

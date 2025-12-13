@@ -9,7 +9,7 @@
 */
 
 #include "SpectraAnalyzerComponent.h"
-#include "../../include/Engine.h"
+#include "../../../include/Engine.h"
 #include "../../ui/skia/ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA

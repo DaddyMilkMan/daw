@@ -10,7 +10,6 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 
-
 namespace zenith {
 
 ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps)
@@ -193,6 +192,25 @@ void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
   // Update local model
   section.startBeats = newStartBeats;
   repaint();
+}
+
+void ArrangerTrackComponent::setVisibleRange(double startBeats,
+                                             double endBeats) {
+  juce::ignoreUnused(endBeats);
+  viewStartBeats_ = startBeats;
+  repaint();
+}
+
+const ArrangementSection *ArrangerTrackComponent::getHoveredSection() const {
+  return nullptr;
+}
+
+const ArrangementSection *ArrangerTrackComponent::getDraggingSection() const {
+  if (draggingSectionIndex_ >= 0 &&
+      draggingSectionIndex_ < (int)sections_.size()) {
+    return &sections_[draggingSectionIndex_];
+  }
+  return nullptr;
 }
 
 } // namespace zenith

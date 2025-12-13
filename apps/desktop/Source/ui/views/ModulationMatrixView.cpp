@@ -239,7 +239,7 @@ void ModulationMatrixView::drawNode(SkCanvas *canvas, const Node &node) {
 
   // Reset filter for core dot
   portPaint.setMaskFilter(nullptr);
-  portPaint.setColor(design::colors::WHITE);
+  portPaint.setColor(SK_ColorWHITE);
   canvas->drawCircle(node.portLocation.x, node.portLocation.y, 2.0f, portPaint);
 }
 
@@ -289,7 +289,10 @@ void ModulationMatrixView::drawConnection(SkCanvas *canvas,
     // Note: For full implementation, use SkPathMeasure for accurate path
     // metrics
     SkPoint points[4];
-    path.getPoints(points, 4);
+    points[0] = path.getPoint(0);
+    points[1] = path.getPoint(1);
+    points[2] = path.getPoint(2);
+    points[3] = path.getPoint(3);
 
     // Evaluate cubic bezier manually for t
     float t = particleT;
@@ -306,7 +309,7 @@ void ModulationMatrixView::drawConnection(SkCanvas *canvas,
            3 * u * tt * points[2].fY + ttt * points[3].fY;
 
     SkPaint particlePaint;
-    particlePaint.setColor(SkColorSetA(design::colors::WHITE, 200));
+    particlePaint.setColor(SkColorSetA(SK_ColorWHITE, 200));
     particlePaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
     canvas->drawCircle(p.fX, p.fY, 4.0f, particlePaint);

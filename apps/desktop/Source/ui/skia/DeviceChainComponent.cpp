@@ -96,10 +96,13 @@ private:
 //==============================================================================
 
 DeviceChainComponent::DeviceChainComponent(Engine &engine, ProjectState &state)
-    : engine_(engine), projectState_(state) {
+    : engine_(engine),
+      projectState_(state),
+      viewport_("DeviceChainViewport"), // Initialize viewport_ in the initializer list
+      contentContainer_(std::make_unique<juce::Component>()) // Initialize unique_ptr member
+{
   projectState_.getState().addListener(this);
 
-  contentContainer_ = std::make_unique<juce::Component>();
   viewport_.setViewedComponent(contentContainer_.get(), false);
   viewport_.setScrollBarsShown(false, true); // Horizontal
   addAndMakeVisible(viewport_);
