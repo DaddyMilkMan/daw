@@ -5,8 +5,9 @@
  * This file initializes the JUCE application and creates the main window.
  */
 
-#include <JuceHeader.h>
 #include "../include/MainWindow.h"
+#include "utils/SampleGenerator.h"
+#include <JuceHeader.h>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
@@ -48,6 +49,9 @@ public:
 
     // Log system info
     logSystemInfo();
+
+    // Ensure content validity (Generate missing samples if needed)
+    zenith::SampleGenerator::generateMissingSamples();
 
     // Create main window
     mainWindow = std::make_unique<MainWindow>(getApplicationName());
@@ -110,9 +114,11 @@ private:
     DBG("System Information");
     DBG("========================================");
     DBG("OS: " + juce::SystemStats::getOperatingSystemName());
-    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) + " MHz");
+    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) +
+        " MHz");
     DBG("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
-    DBG("Memory: " + juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
+    DBG("Memory: " +
+        juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
     DBG("========================================");
   }
 

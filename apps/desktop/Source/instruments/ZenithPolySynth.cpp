@@ -15,7 +15,10 @@
 
 #include "ZenithPolySynth.h"
 #include "../ui/skia/ZenithPolySynthUI.h"
+#include "ContentPaths.h"
 #include "ZenithPolySynthVoice.h"
+#include <juce_core/juce_core.h>
+
 
 namespace zenith {
 
@@ -384,6 +387,77 @@ InstrumentMetadata ZenithPolySynth::createMetadata() {
   return meta;
 }
 
-void ZenithPolySynth::registerPresets() {}
+void ZenithPolySynth::registerPresets() {
+  auto contentRoot = ContentPaths::getInstance().getContentRoot();
+  auto presetDir =
+      contentRoot.getChildFile("Presets").getChildFile("ZenithPolySynth");
+
+  if (!presetDir.exists()) {
+    DBG("ZenithPolySynth presets directory not found: "
+        << presetDir.getFullPathName());
+    return;
+  }
+
+  // Find all bank files
+  auto bankFiles =
+      presetDir.findChildFiles(juce::File::findFiles, false, "*_bank.json");
+
+  for (const auto &bankFile : bankFiles) {
+    juce::String jsonString = bankFile.loadFileAsString();
+    auto result = juce::JSON::parse(jsonString);
+
+    if (!result.isObject())
+      continue;
+
+    auto *bankObj = result.getDynamicObject();
+    if (!bankObj)
+      continue;
+
+    auto presetsVar = bankObj->getProperty("presets");
+    if (!presetsVar.isArray())
+      continue;
+
+    auto *presetsArray = presetsVar.getArray();
+    for (const auto &presetVar : *presetsArray) {
+      if (!presetVar.isObject())
+        continue;
+      auto *presetObj = presetVar.getDynamicObject();
+
+      juce::String id = presetObj->getProperty("id").toString();
+      juce::String name = presetObj->getProperty("name").toString();
+      auto parametersVar = presetObj->getProperty("parameters");
+
+      std::map<juce::String, float> values;
+
+      if (parametersVar.isObject()) {
+        auto *paramsObj = parametersVar.getDynamicObject();
+        for (auto &prop : paramsObj->getProperties()) {
+          juce::String key = prop.name.toString();
+          float val = static_cast<float>(static_cast<double>(prop.value));
+
+          // Mapping logic from simplified JSON to internal parameters
+          if (key == "osc_type") {
+            // Map 0, 1, 2, ... into normalized range for 7 choices
+            // 0 -> 0/6, 1 -> 1/6, etc.
+            values[ZenithPolySynthParameterManager::Osc1Wave] = val / 6.0f;
+          } else if (key == "filter_cutoff") {
+            values[ZenithPolySynthParameterManager::FilterCutoff] = val;
+          } else if (key == "filter_resonance") {
+            values[ZenithPolySynthParameterManager::FilterResonance] = val;
+          } else if (key == "attack") {
+            values[ZenithPolySynthParameterManager::AmpAttack] = val;
+          } else if (key == "decay") {
+            values[ZenithPolySynthParameterManager::AmpDecay] = val;
+          } else if (key == "sustain") {
+            values[ZenithPolySynthParameterManager::AmpSustain] = val;
+          } else if (key == "release") {
+            values[ZenithPolySynthParameterManager::AmpRelease] = val;
+          }
+        }
+      }
+      registerPreset(id, name, values);
+    }
+  }
+}
 
 } // namespace zenith

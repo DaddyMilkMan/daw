@@ -59,6 +59,7 @@ endif()
 # Source files
 set(ZENITH_SOURCES
     apps/desktop/Source/Main.cpp
+    apps/desktop/Source/utils/SampleGenerator.cpp
 )
 
 # Test sources (optional, can be disabled)
@@ -137,6 +138,7 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
 )
 
 target_link_libraries(ZenithDAW PRIVATE
@@ -308,6 +310,7 @@ if(BUILD_TESTS)
         apps/desktop/Source 
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
@@ -325,6 +328,12 @@ if(BUILD_TESTS)
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
     )
+
+    if(ZENITH_ENABLE_SKIA)
+        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
+        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+    endif()
 endif()
 
 # Installation
