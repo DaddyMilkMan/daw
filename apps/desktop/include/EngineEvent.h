@@ -13,6 +13,8 @@
 #pragma once
 #include <juce_audio_basics/juce_audio_basics.h> // For MidiMessage, MidiBuffer, AbstractFifo
 #include <juce_core/juce_core.h>
+#include <vector>
+
 
 
 namespace zenith {
@@ -76,7 +78,7 @@ public:
 
   // Helper to drain all messages into a MidiBuffer with offsets
   void drainTo(juce::MidiBuffer &destination, int numSamples) {
-    juce::MidiMessage msg;
+    juce::ignoreUnused(numSamples);
     int start1, size1, start2, size2;
     fifo.prepareToRead(fifo.getNumReady(), start1, size1, start2, size2);
 

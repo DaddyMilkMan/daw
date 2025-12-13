@@ -59,6 +59,9 @@ protected:
   // Timer callback for frame capture (Message Thread)
   void timerCallback() override;
 
+  void buildUI();
+  void syncProcessorToUI();
+
 private:
   ZenithPolySynthProcessor &processor;
   ZenithLookAndFeel zenithLookAndFeel_;
@@ -83,10 +86,8 @@ private:
 
   // Complex Components (kept as JUCE components for now)
   std::unique_ptr<ZenithVisualizer> visualizer_;
-  std::unique_ptr<ZenithModMatrix> modMatrix_;
-  std::unique_ptr<ZenithPresetBar>
-      presetBar_; // Preset bar has internal buttons, keep as component or
-                  // refactor later
+  // std::unique_ptr<ZenithModMatrix> modMatrix_;
+  // std::unique_ptr<ZenithPresetBar> presetBar_;
 
   // Internal helpers
   void renderComponentRecursively(juce::Component *comp, SkCanvas *canvas);
@@ -109,8 +110,6 @@ private:
   void refreshPresetList();
 
   // Initialization
-  void buildUI();
-  void syncProcessorToUI();
 
   // ========================================================================
   // RENDER TREE (PHASE 1: Thread Safety)

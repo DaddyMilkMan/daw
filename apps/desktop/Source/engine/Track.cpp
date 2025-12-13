@@ -810,27 +810,13 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
   }
 }
 
-// Helper: Apply gain (volume) and pan
-void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-  float gain = mixerChannel.getVolume();
-  float pan = mixerChannel.getPan();
-
-  if (buffer.getNumChannels() == 1) {
-    buffer.applyGain(0, 0, numSamples, gain);
-  } else if (buffer.getNumChannels() == 2) {
-    float gainL = gain * ((pan <= 0.0f) ? 1.0f : (1.0f - pan));
-    float gainR = gain * ((pan >= 0.0f) ? 1.0f : (1.0f + pan));
-
-    buffer.applyGain(0, 0, numSamples, gainL);
-    buffer.applyGain(1, 0, numSamples, gainR);
-  }
-}
-
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                               int numSamples) {
+  // Delegate to mixer channel
   juce::ignoreUnused(buffer, numSamples);
-  // Metering is handled internally by MixerChannel::getNextAudioBlock()
-  // This method is a no-op stub for interface compatibility
+  // Note: MixerChannel calculates levels during process, but if we need
+  // external update: mixerChannel.updateMeters(info); // Assuming this method
+  // exists or similar logic
 }
 
 //==============================================================================
@@ -949,5 +935,36 @@ void Track::generateMidiForBlock(const juce::ValueTree &trackState,
 void Track::setSoloed(bool shouldBeSoloed) { soloed_.store(shouldBeSoloed); }
 
 bool Track::isSoloed() const { return soloed_.load(); }
+
+//==============================================================================
+//==============================================================================
+// Apply gain and pan to buffer (used for frozen track playback)
+void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
+  // Get current values
+  const float volume = mixerChannel.getVolume();
+  const float pan = mixerChannel.getPan();
+
+  // Apply mute
+  if (mixerChannel.isMuted() || mixerChannel.isSilencedBySolo()) {
+    buffer.clear();
+    return;
+  }
+
+  // Apply gain
+  buffer.applyGain(0, numSamples, volume);
+
+  // Apply pan (constant-power panning)
+  if (buffer.getNumChannels() >= 2 && std::abs(pan) > 0.001f) {
+    // Pan law: -3dB at center
+    float panRadians = pan * juce::MathConstants<float>::halfPi * 0.5f;
+    float leftGain =
+        std::cos(panRadians + juce::MathConstants<float>::pi * 0.25f);
+    float rightGain =
+        std::sin(panRadians + juce::MathConstants<float>::pi * 0.25f);
+
+    buffer.applyGain(0, 0, numSamples, leftGain);
+    buffer.applyGain(1, 0, numSamples, rightGain);
+  }
+}
 
 } // namespace zenith

@@ -25,7 +25,6 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>
 #include <include/core/SkColor.h>
@@ -153,6 +152,8 @@ private:
                 float size);
   void drawButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                   const juce::String &icon, bool active, bool hovered);
+  void drawIconButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
+                      const SkPath &iconPath, bool active);
   void drawFilterTab(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                      const juce::String &label, bool active);
 

@@ -132,12 +132,11 @@ public:
     lfo2SyncRate_ = rate;
     lfo2Retr_ = retr;
   }
-
   // Flagship Setters (public for ZenithPolySynth access)
   void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
   void setOsc2FM(float amount) { osc2FM_ = amount; }
   void setRingMod(float amount) { ringMod_ = amount; }
-  void setFilterModel(int model) { filterModel_ = model; } // 0=SVF, 1=Ladder
+  void setFilterModel(FilterModelType model) { filterModel_ = static_cast<int>(model); }
 
   // Oscillator shape setters (public for ZenithPolySynth access)
   void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }
@@ -185,13 +184,14 @@ private:
   int unisonVoices_ = 1;
   float unisonDetune_ = 0.0f;
 
-  float filterCutoff_ = 1000.0f;
-  float filter2Cutoff_ = 1000.0f;
-  bool filterSerial_ = true;
-
+  // Per-oscillator detune in cents
   float osc1Detune_ = 0.0f;
   float osc2Detune_ = 0.0f;
   float osc3Detune_ = 0.0f;
+
+  float filterCutoff_ = 1000.0f;
+  float filter2Cutoff_ = 1000.0f;
+  bool filterSerial_ = true;
 
   juce::ADSR::Parameters ampEnvParams_;
   juce::ADSR::Parameters modEnvParams_;

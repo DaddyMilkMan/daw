@@ -1,48 +1,63 @@
-# 🎵 Zenith DAW
+# Zenith DAW
 
-> *Professional Digital Audio Workstation built with JUCE and modern C++*
+> Early-stage Digital Audio Workstation prototype built with JUCE and modern C++
 
-[![Build Status](https://img.shields.io/badge/build-passing-success)]()
-[![License](https://img.shields.io/badge/license-Proprietary-blue)]()
-[![Platform](https://img.shields.io/badge/platform-Windows-blue)]()
+**Version:** 0.1.0 - Alpha (Not Production Ready)  
+**Status:** Active Development  
+**Platform:** Windows 10/11 (x64)
 
 ---
 
-## 🚀 Quick Start
+## ⚠️ Project Status
+
+This is an **early prototype** in active development. Core features are still being implemented and stabilized. Expect bugs, incomplete features, and breaking changes.
+
+**What works:**
+- Basic audio playback engine
+- MIDI input and piano roll editing
+- VST3 plugin loading
+- Simple synth and sampler instruments
+
+**What doesn't work yet:**
+- Reliable multi-track recording
+- Project save/load (unstable)
+- Plugin automation
+- Export/rendering pipeline
+- Most "AI features" (experimental only)
+
+---
+
+## 🚀 Building from Source
 
 ### Prerequisites
-- **Visual Studio 2022** (with C++ Desktop Development)
-- **CMake 3.20+**
-- **vcpkg** (for Skia dependencies)
-- **Windows 10/11** (x64)
+- Visual Studio 2022 with C++ Desktop Development
+- CMake 3.25+
+- vcpkg (for Skia dependencies)
+- Windows 10/11 x64
 
-### Build & Run
+### Build Steps
+
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/zenith-daw.git
-cd zenith-daw
+# 1. Install vcpkg if you haven't
+git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
+cd C:\vcpkg
+.\bootstrap-vcpkg.bat
 
-# Build (Release with Skia)
-build.bat
+# 2. Install Skia
+.\vcpkg install skia:x64-windows
 
-# Or build without Skia
-build.bat --no-skia
+# 3. Clone and build
+git clone [your-repo-url] C:\zenith
+cd C:\zenith\daw
 
-# Run
-run.bat
+# 4. Build (creates build directory)
+.\build.bat
+
+# 5. Run
+.\run.bat
 ```
 
-### Development Build
-```bash
-# Debug build
-build.bat --debug
-
-# Quick rebuild (after code changes)
-rebuild.bat
-
-# Clean build
-build.bat --clean
-```
+**Build issues?** Check `docs/INSTALL_WINDOWS.md` for troubleshooting.
 
 ---
 
@@ -50,172 +65,103 @@ build.bat --clean
 
 ```
 zenith-daw/
-├── apps/
-│   └── desktop/              # Desktop application
-│       ├── Source/
-│       │   ├── engine/       # Audio engine, tracks, clips
-│       │   ├── ui/           # User interface components
-│       │   ├── instruments/  # Built-in instruments (synths, samplers)
-│       │   ├── dsp/          # DSP processors (stem separation, etc.)
-│       │   ├── network/      # AI integration (Grok API)
-│       │   ├── commands/     # Command API for AI assistant
-│       │   └── rendering/    # Skia rendering system
-│       ├── Resources/        # Audio samples, presets, icons
-│       └── include/          # Public headers
-├── Content/                  # User content (presets, examples)
-├── docs/                     # Documentation
-├── scripts/                  # Build and utility scripts
-└── CMakeLists.txt            # Build configuration
+├── apps/desktop/
+│   ├── Source/
+│   │   ├── engine/        # Audio engine (tracks, clips, mixer)
+│   │   ├── ui/            # UI components
+│   │   ├── instruments/   # Built-in synth/sampler
+│   │   └── network/       # Experimental AI integration
+│   └── Resources/         # Audio samples and assets
+├── docs/                  # Technical documentation
+├── planning/              # Design docs and roadmaps
+└── CMakeLists.txt
 ```
 
 ---
 
-## 🎨 Features
+## 🎯 Current Development Focus
 
-### ✅ **Implemented**
-- **Audio Engine**: Multi-track recording and playback
-- **MIDI Support**: Piano roll editor with quantization
-- **Built-in Instruments**:
-  - ZenithPolySynth (subtractive synthesizer)
-  - ZenithSampler (multi-sample playback)
-- **Effects**: Mixer with EQ, compression, reverb
-- **Automation**: Lane-based parameter automation
-- **Plugin Hosting**: VST3 plugin support
-- **Modern UI**: Skia-based rendering with dark theme
-- **AI Assistant**: "Wingman" powered by Grok API
+**Phase 1: Core Stability** (Current)
+- Fix build system reliability
+- Stabilize audio engine threading
+- Implement proper error handling
+- Clean up debug logging
 
-### 🚧 **In Development**
-- Additional oscillators (Osc 2/3)
-- Offline export/rendering pipeline
-- Advanced stem separation
-- Session view (clip launcher)
+**Phase 2: Essential Features** (Next)
+- Project save/load (robust)
+- Multi-track recording
+- Audio export
+- Plugin state management
 
----
+**Phase 3: Polish** (Future)
+- UI refinements
+- Performance optimization
+- Documentation
+- Test coverage
 
-##⚙️ Architecture
-
-### Audio Engine
-- **Sample Rate**: 44.1kHz / 48kHz
-- **Buffer Size**: 128-2048 samples (configurable)
-- **Bit Depth**: 32-bit float processing
-- **Latency**: <10ms (ASIO/WASAPI)
-
-### UI Framework
-- **Renderer**: Skia (hardware-accelerated) + JUCE fallback
-- **Theme**: Centralized `ZenithTheme` system
-- **Layout**: Responsive component-based design
-
-### Plugin Architecture
-- **Format**: VST3 (via JUCE)
-- **Scanning**: Automatic on startup
-- **State**: Full preset save/recall
+See `planning/roadmaps/` for detailed plans.
 
 ---
 
 ## 🛠️ Development
 
-### Building from Source
-
-#### 1. Install Dependencies
-```powershell
-# Install vcpkg
-git clone https://github.com/Microsoft/vcpkg.git C:\vcpkg
-cd C:\vcpkg
-.\bootstrap-vcpkg.bat
-
-# Install Skia
-.\vcpkg install skia:x64-windows
-```
-
-#### 2. Configure CMake
-```bash
-cd zenith-core
-mkdir build && cd build
-cmake .. -G "Visual Studio 17 2022" -A x64 ^
-    -DZENITH_USE_SKIA=ON ^
-    -DCMAKE_PREFIX_PATH="C:/vcpkg/installed/x64-windows"
-```
-
-#### 3. Build
-```bash
-cmake --build . --config Release --parallel
-```
-
 ### Code Style
-- **Standard**: C++17
-- **Naming**: 
-  - Classes: `PascalCase`
-  - Functions: `camelCase`
-  - Members: `camelCase_` (trailing underscore)
-  - Constants: `UPPER_CASE`
-- **Formatting**: 2-space indents, 100-char line limit
+- **C++ Standard:** C++17
+- **Naming:** PascalCase (classes), camelCase (functions), camelCase_ (members)
+- **Formatting:** 2-space indents, 100-char lines
 
-### Contributing
-See `docs/DEVELOPER_WORKFLOW.md` for detailed contribution guidelines.
+### Key Dependencies
+- **JUCE 8.0.0** - Audio framework
+- **Skia** - Hardware-accelerated rendering
+- **vcpkg** - Package management
+
+### Debugging
+```bash
+# Debug build
+.\build.bat --debug
+
+# View logs
+tail -f debug_log.txt
+```
 
 ---
 
 ## 📚 Documentation
 
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and component interaction
-- **[Build Guide](docs/INSTALL_WINDOWS.md)** - Detailed build instructions
-- **[API Documentation](docs/INSTRUMENT_COMMAND_API.md)** - Command system reference
-- **[Audio Guide](docs/WINDOWS_AUDIO_APIS_GUIDE.md)** - Audio driver setup
+- **[Build Guide](docs/INSTALL_WINDOWS.md)** - Detailed setup instructions
+- **[Architecture](docs/ARCHITECTURE.md)** - System design overview
+- **[Planning Docs](planning/README.md)** - Vision and roadmaps
 
 ---
 
-## 🤖 AI Integration
+## 🤖 AI Integration (Experimental)
 
-Zenith DAW features "**Wingman**" - an AI assistant powered by Grok:
-- Natural language commands
-- Preset generation
-- Mix suggestions
-- Stem separation
-- Voice feedback
+Some experimental AI features are in development:
+- Voice command interface (via Grok API)
+- Preset suggestion system
 
-Configure API key in `Settings → AI Integration`
-
----
-
-## 📦 Binary Releases
-
-Pre-built binaries coming soon. For now, build from source.
-
----
-
-## 🐛 Known Issues
-
-- Skia rendering may require driver updates on older GPUs
-- ASIO driver required for low-latency on Windows
-- Some VST3 plugins may not scan correctly (report via Issues)
+**Note:** These features are unstable and require API keys. Not recommended for testing yet.
 
 ---
 
 ## 📄 License
 
-**Proprietary** - All rights reserved.  
-For licensing inquiries, contact: [your-email@example.com]
+Proprietary - Personal/Educational use only.  
+Commercial use prohibited without license.
 
 ---
 
-## 🙏 Acknowledgments
+## 🙏 Credits
 
-- **JUCE Framework** - https://juce.com
-- **Skia Graphics** - https://skia.org
-- **Grok AI** - https://x.ai
-- **vcpkg** - https://github.com/microsoft/vcpkg
-
----
-
-## 📧 Contact
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/zenith-daw/issues)
-- **Email**: support@zenith-daw.com
-- **Discord**: [Join Community](https://discord.gg/zenith-daw)
+Built with:
+- [JUCE Framework](https://juce.com)
+- [Skia Graphics Engine](https://skia.org)
+- [vcpkg Package Manager](https://github.com/microsoft/vcpkg)
 
 ---
 
-<div align="center">
-  <strong>Made with ❤️ by the Zenith Team</strong><br>
-  Polished by <em>Operation Polish Dream Team</em>
-</div>
+## 📝 Notes
+
+This is a learning project exploring DAW architecture and audio programming. It's not intended to compete with commercial DAWs.
+
+**Questions?** Open an issue or check the docs folder.

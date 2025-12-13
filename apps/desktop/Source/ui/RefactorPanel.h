@@ -21,7 +21,6 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -67,9 +66,7 @@ public:
     headerPaint.setAntiAlias(true);
     headerPaint.setColor(colors::CYAN);
 
-    SkFont headerFont;
-    headerFont.setSize(18.0f);
-    headerFont.setEdging(SkFont::Edging::kAntiAlias);
+    SkFont headerFont = design::getDisplayFont(18.0f);
 
     canvas->drawSimpleText("Project Refactoring Plan", 24,
                            SkTextEncoding::kUTF8, 20.0f, 35.0f, headerFont,
@@ -87,9 +84,7 @@ public:
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors::TEXT_SECONDARY);
 
-    SkFont bodyFont;
-    bodyFont.setSize(13.0f);
-    bodyFont.setEdging(SkFont::Edging::kAntiAlias);
+    SkFont bodyFont = design::getSkFont(13.0f);
 
     float y = 75.0f;
     float lineHeight = 22.0f;
@@ -279,9 +274,7 @@ public:
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors::TEXT_PRIMARY);
 
-    SkFont font;
-    font.setSize(12.0f);
-    font.setEdging(SkFont::Edging::kAntiAlias);
+    SkFont font = design::getSkFont(12.0f, design::FontWeight::Bold);
 
     juce::String label = isAnalyzing_ ? "Analyzing..." : "Refactor";
     canvas->drawSimpleText(label.toRawUTF8(), label.length(),

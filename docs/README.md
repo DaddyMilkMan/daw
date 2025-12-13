@@ -104,24 +104,6 @@ All documents include **official documentation links**, **community best practic
 
 ---
 
-### 🖼️ 05. Qt/QML Performance Analysis
-**File:** [`tech-briefs/05-qt-qml-performance-analysis.md`](tech-briefs/05-qt-qml-performance-analysis.md)
-
-**Purpose:** Reality check on Qt Quick/QML for DAW development
-
-**Topics:**
-- What QML does well (modern UI aesthetics, GPU-accelerated scene graph)
-- Where QML struggles (audio engine integration, event system latency, plugin GUI hosting)
-- JUCE vs Qt/QML comparison table
-- Why JUCE is renowned for audio
-- Risk matrix
-
-**Deliverables:**
-- Concise decision brief explaining when QML is acceptable vs when JUCE is preferred
-- Risk matrix comparing Qt/QML and JUCE
-
-**Key Takeaway:** Use **JUCE for the entire native UI**. Qt/QML adds no value for DAW development and creates integration headaches.
-
 ---
 
 ### 🔒 06. Audio Thread Safety Policy
@@ -238,13 +220,12 @@ cmake --build .
 
 **For Product Managers:**
 1. Document 07: Packaging & Licensing Checklist (understand costs and legal requirements)
-2. Document 05: Qt/QML Performance Analysis (understand why JUCE was chosen)
-3. Document 02: Web Embedding Decision (understand Wingman AI architecture)
+2. Document 02: Web Embedding Decision (understand Wingman AI architecture)
 
 **For UI Designers:**
 1. Document 01: JUCE Framework Guide (understand UI constraints)
-2. Document 05: Qt/QML Performance Analysis (understand why not using QML)
-3. Document 02: Web Embedding Decision (understand web tech is isolated to AI panel)
+2. Document 02: Web Embedding Decision (understand web tech is isolated to AI panel)
+3. ARCHITECTURE.md (understand JUCE + Skia rendering approach)
 
 ---
 

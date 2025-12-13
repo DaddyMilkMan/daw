@@ -183,7 +183,7 @@ void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
   }
 
   // Draw visualizer with translation
-  if (visualizer_ != nullptr && visualizer_->isVisible()) {
+  if (visualizer_ && visualizer_->isVisible()) {
     canvas->save();
     canvas->translate((SkScalar)visualizer_->getX(),
                       (SkScalar)visualizer_->getY());

@@ -24,169 +24,154 @@
 
 using namespace zenith;
 
-ClipComponent::ClipComponent(juce::ValueTree clipNode)
-    : clip(clipNode)
-{
-    setMouseCursor(juce::MouseCursor::PointingHandCursor);
-    startTimerHz(60);  // 60 Hz for smooth animations
+ClipComponent::ClipComponent(juce::ValueTree clipNode) : clip(clipNode) {
+  setMouseCursor(juce::MouseCursor::PointingHandCursor);
+  startTimerHz(60); // 60 Hz for smooth animations
 }
 
-ClipComponent::~ClipComponent()
-{
-    stopTimer();
+ClipComponent::~ClipComponent() { stopTimer(); }
+
+juce::String ClipComponent::getClipId() const {
+  return clip[ProjectState::PROP_ID].toString();
 }
 
-juce::String ClipComponent::getClipId() const
-{
-    return clip[ProjectState::PROP_ID].toString();
+double ClipComponent::getStartBeats() const {
+  return clip[ProjectState::PROP_START_BEATS];
 }
 
-double ClipComponent::getStartBeats() const
-{
-    return clip[ProjectState::PROP_START_BEATS];
+double ClipComponent::getLengthBeats() const {
+  return clip[ProjectState::PROP_LENGTH_BEATS];
 }
 
-double ClipComponent::getLengthBeats() const
-{
-    return clip[ProjectState::PROP_LENGTH_BEATS];
+void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition,
+                                 int height) {
+  int x = static_cast<int>(getStartBeats() * pixelsPerBeat);
+  int width = static_cast<int>(getLengthBeats() * pixelsPerBeat);
+  setBounds(x, yPosition, width, height);
 }
 
-void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition, int height)
-{
-    int x = static_cast<int>(getStartBeats() * pixelsPerBeat);
-    int width = static_cast<int>(getLengthBeats() * pixelsPerBeat);
-    setBounds(x, yPosition, width, height);
+void ClipComponent::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds();
+  auto &theme = ::zenith::SkiaTheme::getInstance();
+  auto &colors = theme.getColors();
+  auto &typo = theme.getTypography();
+
+  // POLISH: Flat track-colored fills (no gradients)
+  juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
+
+  // Map clip type to theme colors
+  SkColor clipColor;
+  if (clipType == "midi") {
+    clipColor = colors.waveformMidi; // Green for MIDI
+  } else {
+    clipColor = colors.waveformAudio; // Blue for audio
+  }
+
+  // Create muted version of color for fill (reduce alpha for subtlety)
+  SkColor fillColor = SkColorSetARGB(
+      180, // Muted alpha
+      SkColorGetR(clipColor), SkColorGetG(clipColor), SkColorGetB(clipColor));
+
+  // POLISH: Rounded rect at 4px (8px grid)
+  SkRect clipRect =
+      SkRect::MakeXYWH(0, 0, bounds.getWidth(), bounds.getHeight());
+  SkRRect clipRRect = SkRRect::MakeRectXY(clipRect, 4.0f, 4.0f);
+
+  // Fill background
+  SkPaint fillPaint;
+  fillPaint.setAntiAlias(true);
+  fillPaint.setColor(fillColor);
+  canvas->drawRRect(clipRRect, fillPaint);
+
+  // POLISH: Simple 1-2px border for selection (no pulse animation)
+  if (isSelected) {
+    SkPaint selectionPaint;
+    selectionPaint.setAntiAlias(true);
+    selectionPaint.setColor(clipColor);
+    selectionPaint.setStyle(SkPaint::kStroke_Style);
+    selectionPaint.setStrokeWidth(2.0f);
+    canvas->drawRRect(clipRRect, selectionPaint);
+  } else {
+    // Subtle border
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setColor(colors.borderSubtle);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    canvas->drawRRect(clipRRect, borderPaint);
+  }
+
+  // POLISH: Clip name using Typography.body
+  if (bounds.getWidth() > 20) {
+    SkFont font = design::typography::getSkFont(
+        typo.body.size, typo.body.bold ? design::FontWeight::Bold
+                                       : design::FontWeight::Regular);
+
+    juce::String clipName = getClipId();
+
+    // POLISH: Ensure text legibility on clip color
+    // Use textStrong for good contrast on muted backgrounds
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(colors.textStrong);
+
+    float textX = 8.0f; // 8px padding
+    float textY = bounds.getHeight() / 2.0f + typo.body.size / 2.0f;
+    canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(),
+                           SkTextEncoding::kUTF8, textX, textY, font,
+                           textPaint);
+  }
 }
 
-void ClipComponent::drawSkia(SkCanvas* canvas)
-{
-    auto bounds = getLocalBounds();
-    auto& theme = ::zenith::SkiaTheme::getInstance();
-    auto& colors = theme.getColors();
-    auto& typo = theme.getTypography();
+void ClipComponent::mouseEnter(const juce::MouseEvent &event) {
+  juce::ignoreUnused(event);
+  isHovered = true;
+  repaint();
+}
 
-    // POLISH: Flat track-colored fills (no gradients)
-    juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
+void ClipComponent::mouseExit(const juce::MouseEvent &event) {
+  juce::ignoreUnused(event);
+  isHovered = false;
+  repaint();
+}
 
-    // Map clip type to theme colors
-    SkColor clipColor;
-    if (clipType == "midi") {
-        clipColor = colors.waveformMidi;  // Green for MIDI
-    } else {
-        clipColor = colors.waveformAudio;  // Blue for audio
+void ClipComponent::mouseDown(const juce::MouseEvent &event) {
+  dragStartPos = event.getPosition();
+  dragStartBeats = getStartBeats();
+
+  // Toggle selection on click (Ctrl/Cmd for multi-select)
+  if (!event.mods.isCommandDown()) {
+    isSelected = !isSelected;
+  }
+
+  repaint();
+}
+
+void ClipComponent::mouseDrag(const juce::MouseEvent &event) {
+  // Simple drag visualization (actual state changes would go through
+  // ProjectState)
+  auto delta = event.getPosition() - dragStartPos;
+  setTopLeftPosition(getX() + delta.x, getY());
+}
+
+void ClipComponent::timerCallback() {
+  // Smooth animation updates
+  const float animationSpeed = 0.1f;
+
+  // Hover animation (smooth ease in/out)
+  float targetHover = isHovered ? 1.0f : 0.0f;
+  hoverAnimation += (targetHover - hoverAnimation) * animationSpeed;
+
+  // Selection pulse animation
+  if (isSelected) {
+    selectionPulse += 0.02f;
+    if (selectionPulse > 1.0f) {
+      selectionPulse -= 1.0f;
     }
+  }
 
-    // Create muted version of color for fill (reduce alpha for subtlety)
-    SkColor fillColor = SkColorSetARGB(
-        180,  // Muted alpha
-        SkColorGetR(clipColor),
-        SkColorGetG(clipColor),
-        SkColorGetB(clipColor)
-    );
-
-    // POLISH: Rounded rect at 4px (8px grid)
-    SkRect clipRect = SkRect::MakeXYWH(0, 0, bounds.getWidth(), bounds.getHeight());
-    SkRRect clipRRect = SkRRect::MakeRectXY(clipRect, 4.0f, 4.0f);
-
-    // Fill background
-    SkPaint fillPaint;
-    fillPaint.setAntiAlias(true);
-    fillPaint.setColor(fillColor);
-    canvas->drawRRect(clipRRect, fillPaint);
-
-    // POLISH: Simple 1-2px border for selection (no pulse animation)
-    if (isSelected) {
-        SkPaint selectionPaint;
-        selectionPaint.setAntiAlias(true);
-        selectionPaint.setColor(clipColor);
-        selectionPaint.setStyle(SkPaint::kStroke_Style);
-        selectionPaint.setStrokeWidth(2.0f);
-        canvas->drawRRect(clipRRect, selectionPaint);
-    } else {
-        // Subtle border
-        SkPaint borderPaint;
-        borderPaint.setAntiAlias(true);
-        borderPaint.setColor(colors.borderSubtle);
-        borderPaint.setStyle(SkPaint::kStroke_Style);
-        borderPaint.setStrokeWidth(1.0f);
-        canvas->drawRRect(clipRRect, borderPaint);
-    }
-
-    // POLISH: Clip name using Typography.body
-    if (bounds.getWidth() > 20) {
-        SkFont font;
-        font.setSize(typo.body.size);
-        if (typo.body.bold) font.setEmbolden(true);
-        font.setEdging(SkFont::Edging::kAntiAlias);
-
-        juce::String clipName = getClipId();
-
-        // POLISH: Ensure text legibility on clip color
-        // Use textStrong for good contrast on muted backgrounds
-        SkPaint textPaint;
-        textPaint.setAntiAlias(true);
-        textPaint.setColor(colors.textStrong);
-
-        float textX = 8.0f;  // 8px padding
-        float textY = bounds.getHeight() / 2.0f + typo.body.size / 2.0f;
-        canvas->drawSimpleText(clipName.toRawUTF8(), clipName.length(), SkTextEncoding::kUTF8, textX, textY, font, textPaint);
-    }
-}
-
-void ClipComponent::mouseEnter(const juce::MouseEvent& event)
-{
-    juce::ignoreUnused(event);
-    isHovered = true;
+  // Repaint only if animation is active
+  if (std::abs(hoverAnimation - targetHover) > 0.01f || isSelected) {
     repaint();
+  }
 }
-
-void ClipComponent::mouseExit(const juce::MouseEvent& event)
-{
-    juce::ignoreUnused(event);
-    isHovered = false;
-    repaint();
-}
-
-void ClipComponent::mouseDown(const juce::MouseEvent& event)
-{
-    dragStartPos = event.getPosition();
-    dragStartBeats = getStartBeats();
-
-    // Toggle selection on click (Ctrl/Cmd for multi-select)
-    if (!event.mods.isCommandDown()) {
-        isSelected = !isSelected;
-    }
-
-    repaint();
-}
-
-void ClipComponent::mouseDrag(const juce::MouseEvent& event)
-{
-    // Simple drag visualization (actual state changes would go through ProjectState)
-    auto delta = event.getPosition() - dragStartPos;
-    setTopLeftPosition(getX() + delta.x, getY());
-}
-
-void ClipComponent::timerCallback()
-{
-    // Smooth animation updates
-    const float animationSpeed = 0.1f;
-
-    // Hover animation (smooth ease in/out)
-    float targetHover = isHovered ? 1.0f : 0.0f;
-    hoverAnimation += (targetHover - hoverAnimation) * animationSpeed;
-
-    // Selection pulse animation
-    if (isSelected) {
-        selectionPulse += 0.02f;
-        if (selectionPulse > 1.0f) {
-            selectionPulse -= 1.0f;
-        }
-    }
-
-    // Repaint only if animation is active
-    if (std::abs(hoverAnimation - targetHover) > 0.01f || isSelected) {
-        repaint();
-    }
-}
-

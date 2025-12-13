@@ -7,6 +7,10 @@
 /lib/
 cmake-build-*/
 .cache/
+**/CMakeFiles/
+**/cmake_install.cmake
+*.vcxproj.filters
+build_output*.txt
 
 # 2. OS Junk
 .DS_Store
@@ -35,6 +39,7 @@ build_verbose.txt
 cmake_error*.log
 msbuild_*.log
 *.log
+debug_log.txt
 
 # 7. Backup Files
 *.bak
@@ -54,6 +59,3 @@ __pycache__/
 /*.png
 /*.jpg
 /*.gif
-
-# 10. Build output files
-build_output*.txt

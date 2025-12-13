@@ -6,6 +6,7 @@
 #include "SkiaRenderer.h"
 
 // Skia headers
+#define SK_DIRECT3D 1
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkSurface.h>
@@ -27,9 +28,14 @@
 #include <gpu/ganesh/vk/GrVkBackendContext.h>
 #include <gpu/ganesh/vk/GrVkTypes.h>
 #include <vulkan/vulkan.h>
-#endif
+#elif JUCE_WINDOWS
+#include <d3d12.h>
+#include <dxgi1_4.h>
+#include <gpu/ganesh/d3d/GrD3DBackendContext.h>
+#include <wrl/client.h>
 
-// NOTE: D3D12 backend was removed - use OpenGL on Windows for now
+using Microsoft::WRL::ComPtr;
+#endif
 
 // OpenGL backend (always available as fallback)
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
@@ -63,16 +69,16 @@ bool SkiaRenderer::initialize() {
   DBG("Initializing SkiaRenderer...");
 
   bool contextCreated = createGpuContext();
-  
+
   // Fallback chain if primary backend fails
   if (!contextCreated) {
     DBG("ERROR: Failed to create GPU context, trying fallback...");
-    
+
     if (backend_ != Backend::OpenGL) {
       backend_ = Backend::OpenGL;
       contextCreated = createGpuContext();
     }
-    
+
     if (!contextCreated) {
       backend_ = Backend::Software;
       // Software doesn't need GPU context
@@ -97,8 +103,6 @@ void SkiaRenderer::shutdown() {
 
   surface_.reset();
   grContext_.reset();
-
-// D3D12 cleanup removed - using OpenGL on Windows
 
   initialized_ = false;
 }
@@ -147,7 +151,7 @@ void SkiaRenderer::resize(int width, int height) {
 
 SkiaRenderer::Backend SkiaRenderer::detectBestBackend() const {
 #if JUCE_WINDOWS
-  return Backend::OpenGL; // D3D12 backend disabled, using OpenGL
+  return Backend::OpenGL; // Fallback to OpenGL until D3D header issues resolved
 #elif JUCE_MAC
   return Backend::Metal;
 #elif JUCE_LINUX
@@ -194,7 +198,11 @@ bool SkiaRenderer::createGpuContext() {
     return createVulkanContext();
 #endif
   case Backend::Direct3D:
-    // D3D12 disabled - fall through to OpenGL
+#if JUCE_WINDOWS
+    return createD3DContext();
+#else
+    return false;
+#endif
   case Backend::OpenGL: {
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface)
@@ -225,8 +233,8 @@ bool SkiaRenderer::createSurface(int width, int height) {
         SkImageInfo::MakeN32Premul(width, height, SkColorSpace::MakeSRGB());
 
     // Generic GPU surface (offscreen)
-    surface_ = SkSurfaces::RenderTarget(grContext_.get(),
-                                        skgpu::Budgeted::kNo, info);
+    surface_ =
+        SkSurfaces::RenderTarget(grContext_.get(), skgpu::Budgeted::kNo, info);
   }
   return surface_ != nullptr;
 }
@@ -241,8 +249,6 @@ void SkiaRenderer::updateStats() {
 //==============================================================================
 // Platform Implementations
 //==============================================================================
-
-// NOTE: D3D12 createD3DContext() removed - using OpenGL on Windows
 
 #if JUCE_MAC && defined(SK_METAL)
 bool SkiaRenderer::createMetalContext() {
@@ -338,12 +344,10 @@ bool SkiaRenderer::createVulkanContext() {
 #endif
 
 #if JUCE_WINDOWS
-bool SkiaRenderer::createD3DContext()
-{
-    // D3D12 backend disabled/removed - verify SkiaRenderer.h doesn't declare it if not needed, 
-    // but for now providing stub to satisfy linker
-    DBG("SkiaRenderer: D3D12 context creation disabled");
-    return false;
+bool SkiaRenderer::createD3DContext() {
+  DBG("SkiaRenderer: D3D12 context creation disabled due to valid header "
+      "issues.");
+  return false;
 }
 #endif
 
