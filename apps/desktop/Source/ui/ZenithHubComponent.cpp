@@ -172,7 +172,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
   // Header
   {
-    SkFont titleFont(Typeface::font(Typeface::Weight::Bold), 42.0f);
+    SkFont titleFont = design::getSkFont(42.0f, design::FontWeight::Bold);
     SkPaint paint;
     paint.setColor(colors::TEXT_PRIMARY);
     paint.setAntiAlias(true);
@@ -183,7 +183,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawString("Zenith Hub", titleBounds.fLeft, titleBounds.bottom(),
                        titleFont, paint);
 
-    SkFont subFont(Typeface::font(Typeface::Weight::Regular), 16.0f);
+    SkFont subFont = design::getSkFont(16.0f, design::FontWeight::Regular);
     paint.setColor(colors::TEXT_SECONDARY);
     canvas->drawString("Welcome back, User", titleBounds.fLeft + 240,
                        titleBounds.bottom(), subFont, paint);
@@ -240,7 +240,7 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
-  SkFont headerFont(Typeface::font(Typeface::Weight::Bold), 20.0f);
+  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
@@ -275,7 +275,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     canvas->drawRect(imageRect, imgPaint);
 
     // Text
-    SkFont titleFont(Typeface::font(Typeface::Weight::Medium), 16.0f);
+    SkFont titleFont = design::getSkFont(16.0f, design::FontWeight::Medium);
     textPaint.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(proj.name.toStdString().c_str(), imageRect.right() + 15,
                        proj.bounds.fTop + 30, titleFont, textPaint);

@@ -24,12 +24,12 @@
 
 #endif
 
+#include "../../../include/Engine.h"
+#include "DeviceChainComponent.h"
+
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
-
-#include "../../../include/Engine.h"
-#include "DeviceChainComponent.h"
 
 BottomBar::BottomBar(juce::MidiKeyboardState &state, Engine &engine,
                      ProjectState &projectState)

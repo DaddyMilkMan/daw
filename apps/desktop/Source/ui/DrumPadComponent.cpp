@@ -157,7 +157,7 @@ void DrumPadComponent::updatePadLayout() {
 
 void DrumPadComponent::drawSkia(SkCanvas *canvas) {
   // Draw Background
-  canvas->clear(design::colors::background::PANEL_DARK);
+  canvas->clear(design::colors::BG_DARK);
 
   SkPaint paint;
   paint.setAntiAlias(true);
@@ -169,7 +169,7 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
                          pad.padBounds.getWidth(), pad.padBounds.getHeight());
 
     // Dynamic color based on flash
-    SkColor baseColor = design::ToSkColor(pad.color);
+    SkColor baseColor = pad.color.getARGB();
     if (pad.flashLevel > 0.0f) {
       // Interpolate towards white
       SkColor flashColor = SK_ColorWHITE;
@@ -233,7 +233,7 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
 
       paint.setStyle(SkPaint::kFill_Style);
       if (isActive) {
-        paint.setColor(design::ToSkColor(pad.color));
+        paint.setColor(pad.color.getARGB());
       } else {
         // Dim step
         paint.setColor(SkColorSetA(SK_ColorWHITE, 30));
@@ -289,6 +289,7 @@ void DrumPadComponent::hitPad(int index, float velocity) {
   repaint();
 
   // Trigger Audio
+#if 0
   if (projectState.getTransportController()) // hypothetical accessor
   {
     // Or directly preview note
@@ -296,6 +297,7 @@ void DrumPadComponent::hitPad(int index, float velocity) {
     // We probably need a preview delegate.
     // For now, let's just log or assume callback.
   }
+#endif
 
   // If recording, add note...
 }
