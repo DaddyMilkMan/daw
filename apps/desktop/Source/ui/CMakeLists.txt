@@ -3,6 +3,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/MainLayoutComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SampleEditorComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ArrangerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ArrangerTrackComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MixerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PianoRollComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/DrumPadComponent.cpp
