@@ -234,6 +234,7 @@ inline SkFont getDisplayFont(float size, FontWeight weight = FontWeight::Bold) {
  * Legacy compatibility wrapper - prefer getSkFont(size, weight) instead.
  * This overload is provided for backward compatibility with existing code.
  */
+[[deprecated("Use getSkFont(size, weight) instead.")]]
 inline SkFont getSkFontWithSize(float size) {
   return zenith::design::typography::getSkFont(size, FontWeight::Regular);
 }
