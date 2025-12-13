@@ -75,6 +75,10 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
   addChildComponent(macroToolbar.get());
 
+  // Initialize MiniMap
+  addAndMakeVisible(&miniMap);
+  miniMap.setAlwaysOnTop(true);
+
   macroToolbar->getSelectedClipIds = [this]() { return selectedClipIds; };
   macroToolbar->getSelectedTrackId = [this]() {
     if (selectedClipIds.isEmpty())
@@ -1658,7 +1662,8 @@ juce::String ArrangerComponent::formatBarBeatTick(double beats) const {
 }
 
 #ifdef ZENITH_USE_SKIA
-void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip,
+void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
+                                          const ClipView &clip,
                                           const SkRect &clipRect) {
   using namespace zenith::design;
   SkPaint notePaint;
@@ -1666,12 +1671,15 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip
   notePaint.setAntiAlias(true);
 
   for (const auto &blob : clip.noteBlobs) {
-    if (clip.lengthBeats <= 0.001) continue;
-    
-    float nx = clipRect.left() + (blob.startBeats / clip.lengthBeats) * clipRect.width();
+    if (clip.lengthBeats <= 0.001)
+      continue;
+
+    float nx = clipRect.left() +
+               (blob.startBeats / clip.lengthBeats) * clipRect.width();
     float nw = (blob.lengthBeats / clip.lengthBeats) * clipRect.width();
-    float ny = clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
-    
+    float ny =
+        clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
+
     SkRect noteRect = SkRect::MakeXYWH(nx, ny, std::max(2.0f, nw), 2.0f);
     canvas->drawRect(noteRect, notePaint);
   }
@@ -1680,13 +1688,14 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas, const ClipView &clip
 void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
                                          const SkRect &clipRect) {
   using namespace zenith::design;
-  
-  auto* cache = getWaveformCache(clip.audioFilePath);
+
+  auto *cache = getWaveformCache(clip.audioFilePath);
   if (!cache || !cache->isValid || cache->minPeaks.empty()) {
     SkPaint linePaint;
     linePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f));
     linePaint.setStrokeWidth(1.0f);
-    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(), clipRect.centerY(), linePaint);
+    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(),
+                     clipRect.centerY(), linePaint);
     return;
   }
 
@@ -1698,22 +1707,22 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 
   SkPath path;
   float midY = clipRect.centerY();
-  float heightScale = clipRect.height() * 0.4f; 
-  
+  float heightScale = clipRect.height() * 0.4f;
+
   size_t numPeaks = cache->minPeaks.size();
   float stepX = clipRect.width() / static_cast<float>(numPeaks);
-  
+
   path.moveTo(clipRect.left(), midY);
-  
+
   for (size_t i = 0; i < numPeaks; ++i) {
     float x = clipRect.left() + i * stepX;
     float top = midY - (cache->maxPeaks[i] * heightScale);
     float bottom = midY - (cache->minPeaks[i] * heightScale);
-    
+
     path.moveTo(x, top);
     path.lineTo(x, bottom);
   }
-  
+
   canvas->drawPath(path, wavePaint);
 }
 #endif

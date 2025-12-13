@@ -38,14 +38,20 @@ option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 # Always enable Skia (Phase 2 decision)
 # add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
 
-# JUCE Setup
-include(FetchContent)
-FetchContent_Declare(
-    JUCE
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.0
-)
-FetchContent_MakeAvailable(JUCE)
+# JUCE Setup - prefer local directory if available
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
+    message(STATUS "Using local JUCE from external/JUCE")
+    add_subdirectory(external/JUCE)
+else()
+    message(STATUS "Fetching JUCE from GitHub...")
+    include(FetchContent)
+    FetchContent_Declare(
+        JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 8.0.0
+    )
+    FetchContent_MakeAvailable(JUCE)
+endif()
 
 # Find Skia (from vcpkg)
 # find_package(unofficial-skia CONFIG REQUIRED) - Using Manual Integration
