@@ -34,9 +34,14 @@ void ZenithVisualizer::updateAudioData() {
   int read = processor_.readFromVisualizer(audioBuffer_.data(), needed);
 
   if (read > 0) {
-    // Simple ring buffer or just overwrite for now
-    // Copy to display buffer with smoothing or trigger logic if desired
-    std::copy(audioBuffer_.begin(), audioBuffer_.end(), displayBuffer_.begin());
+    // Copy valid samples
+    std::copy(audioBuffer_.begin(), audioBuffer_.begin() + read,
+              displayBuffer_.begin());
+
+    // Zero the rest to avoid artifacts
+    if (static_cast<size_t>(read) < displayBuffer_.size()) {
+      std::fill(displayBuffer_.begin() + read, displayBuffer_.end(), 0.0f);
+    }
   }
 }
 
