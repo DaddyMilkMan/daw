@@ -144,10 +144,6 @@ void ZenithEffects::process(float &left, float &right) {
     }
 }
 
-void ZenithEffects::setDelay(float delaySeconds, float feedback, float mix) {
-    delayTime_ = delaySeconds; 
-    delayFeedback_ = feedback; 
-    delayMix_ = mix;
-}
+
 
 } // namespace zenith

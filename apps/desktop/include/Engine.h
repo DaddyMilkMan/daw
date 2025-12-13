@@ -460,7 +460,7 @@ public:
   void setTrackMute(int trackIndex, bool muted);
   void setTrackSolo(int trackIndex, bool solo);
   void setTrackArmed(int trackIndex, bool armed);
-  void setTrackInputChannel(int trackIndex, int channelIndex); // ROAST FIX #9
+  void setTrackInputChannel(int trackIndex, int channelIndex); // Configures audio input routing
 
   //==========================================================================
   // Metering (MESSAGE THREAD SAFE)
@@ -794,8 +794,7 @@ private:
   std::atomic<bool> enableTestTone_{false};
 
   // Track container (message thread for modification)
-  // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot
-  // sharing
+  // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
   // Routing Graph (Source of Truth for connections and processing order)
@@ -808,8 +807,7 @@ public:
 private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
-  // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
-  // lifetime (safety)
+  // Use raw pointers for iteration speed, shared_ptr for lifetime management
   struct TrackSnapshot {
     std::vector<zenith::Track *>
         tracks; // Raw pointers for fast, lock-free iteration

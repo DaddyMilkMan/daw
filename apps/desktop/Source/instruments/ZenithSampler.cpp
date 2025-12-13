@@ -70,53 +70,53 @@ ZenithSamplerProcessor::createParameterLayout() {
 
   // Amp Envelope
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "attack", "Attack",
+      juce::ParameterID("attack", 1), "Attack",
       juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.01f, "s"));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "decay", "Decay",
+      juce::ParameterID("decay", 1), "Decay",
       juce::NormalisableRange<float>(0.001f, 5.0f, 0.001f, 0.3f), 0.1f, "s"));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "sustain", "Sustain", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
+      juce::ParameterID("sustain", 1), "Sustain", juce::NormalisableRange<float>(0.0f, 1.0f), 0.7f));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "release", "Release",
+      juce::ParameterID("release", 1), "Release",
       juce::NormalisableRange<float>(0.001f, 10.0f, 0.001f, 0.3f), 0.3f, "s"));
 
   // Filter
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "filterCutoff", "Filter Cutoff",
+      juce::ParameterID("filterCutoff", 1), "Filter Cutoff",
       juce::NormalisableRange<float>(0.0f, 1.0f), 1.0f));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "filterResonance", "Filter Resonance",
+      juce::ParameterID("filterResonance", 1), "Filter Resonance",
       juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
   // Sample controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "sampleStartOffset", "Sample Start",
+      juce::ParameterID("sampleStartOffset", 1), "Sample Start",
       juce::NormalisableRange<float>(0.0f, 1.0f), 0.0f));
 
   // Pitch controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "pitchFine", "Fine Tune",
+      juce::ParameterID("pitchFine", 1), "Fine Tune",
       juce::NormalisableRange<float>(-100.0f, 100.0f, 1.0f), 0.0f, "cents"));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "pitchSemitones", "Pitch",
+      juce::ParameterID("pitchSemitones", 1), "Pitch",
       juce::NormalisableRange<float>(-24.0f, 24.0f, 1.0f), 0.0f, "semitones"));
 
   // Global controls
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "globalPan", "Pan", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
+      juce::ParameterID("globalPan", 1), "Pan", juce::NormalisableRange<float>(0.0f, 1.0f), 0.5f));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "globalGain", "Gain", juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
+      juce::ParameterID("globalGain", 1), "Gain", juce::NormalisableRange<float>(0.0f, 2.0f, 0.01f),
       0.8f));
 
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      "character", "Character", juce::NormalisableRange<float>(0.0f, 1.0f),
+      juce::ParameterID("character", 1), "Character", juce::NormalisableRange<float>(0.0f, 1.0f),
       0.5f));
 
   return layout;

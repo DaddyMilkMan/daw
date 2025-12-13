@@ -42,3 +42,18 @@ msbuild_*.log
 *.tmp
 *.backup
 *.orig
+
+# 8. Python Artifacts
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# 9. Images in root (stray artifacts)
+/*.png
+/*.jpg
+/*.gif
+
+# 10. Build output files
+build_output*.txt
