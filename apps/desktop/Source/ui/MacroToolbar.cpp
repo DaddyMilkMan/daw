@@ -236,49 +236,50 @@ void MacroToolbar::healSplits() {
 
   projectState_.getUndoManager().beginNewTransaction("Macro: Heal Splits");
 
-  // 3. Iterate and Merge
-  bool changed = false;
-  for (size_t i = 0; i < clips.size() - 1;) {
-    auto &a = clips[i];
-    auto &b = clips[i + 1];
+  // 3. Iterate and Merge (Optimized: O(N) single pass)
+  // Identify contiguous groups of mergeable clips first
+  size_t i = 0;
+  while (i < clips.size()) {
+    size_t groupEnd = i + 1;
+    double totalLength = clips[i].length;
+    double currentEnd = clips[i].start + clips[i].length;
 
-    // Must be same track
-    if (a.trackId != b.trackId) {
-      i++;
-      continue;
-    }
+    // Look ahead for mergeable clips
+    while (groupEnd < clips.size()) {
+      const auto &prev = clips[groupEnd - 1];
+      const auto &curr = clips[groupEnd];
 
-    // Audio Healing Logic
-    if (a.isAudio && b.isAudio) {
-      // Must have same source file
-      if (a.source != b.source) {
-        i++;
-        continue;
-      }
-      // Must be strictly adjacent (A end == B start)
-      double aEnd = a.start + a.length;
-      if (std::abs(aEnd - b.start) < 0.001) {
-        // Perform Merge: Extend A to cover B
-        double newLength = (b.start + b.length) - a.start;
+      // Check all criteria
+      bool sameTrack = (curr.trackId == prev.trackId);
+      bool bothAudio = (prev.isAudio && curr.isAudio);
+      bool sameSource = bothAudio && (prev.source == curr.source);
+      bool adjacent = std::abs(currentEnd - curr.start) < 0.001;
 
-        projectState_.resizeClip(a.trackId, a.id, newLength);
-        projectState_.deleteClip(b.trackId, b.id);
-
-        // Update local 'a' state to reflect merge for next iteration
-        a.length = newLength;
-
-        // Remove 'b' from our processing list and stay at 'i' to compare 'a'
-        // with new neighbor
-        clips.erase(clips.begin() + i + 1);
-        changed = true;
-        DBG("MacroToolbar: Healed " << a.id << " and " << b.id);
+      if (sameTrack && bothAudio && sameSource && adjacent) {
+        totalLength += curr.length;
+        currentEnd += curr.length;
+        groupEnd++;
       } else {
-        i++;
+        break;
       }
-    } else {
-      // Skip non-audio for now
-      i++;
     }
+
+    // Apply merge if group > 1
+    if (groupEnd > i + 1) {
+      auto &first = clips[i];
+      
+      // Resize first clip
+      projectState_.resizeClip(first.trackId, first.id, totalLength);
+      
+      // Delete others
+      for (size_t k = i + 1; k < groupEnd; ++k) {
+        projectState_.deleteClip(clips[k].trackId, clips[k].id);
+        DBG("MacroToolbar: Healed " << first.id << " with " << clips[k].id);
+      }
+    }
+
+    // Advance to next unprocessed clip
+    i = groupEnd;
   }
 }
 
