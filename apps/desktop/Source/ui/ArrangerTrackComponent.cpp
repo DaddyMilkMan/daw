@@ -171,27 +171,21 @@ void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
       projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
 
   for (auto track : tracksNode) {
-    auto clipListId = ProjectState::ID_CLIPS; // or whatever the child ID is
-    auto clipsNode = track.getChildWithName(
-        clipListId); // In real engine this structure varies
+    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+    if (!clipsNode.isValid()) {
+      continue;
+    }
 
-    // Iterate clips (mock loop for structure)
-    for (int i = 0; i < track.getNumChildren(); ++i) {
-      auto child = track.getChild(i);
-      if (child.hasType(ProjectState::ID_CLIPS)) {
-        for (auto clip : child) {
-          double clipStart = clip[ProjectState::PROP_START_BEATS];
-          double clipLen = clip[ProjectState::PROP_LENGTH_BEATS];
+    for (auto clip : clipsNode) {
+      double clipStart = clip[ProjectState::PROP_START_BEATS];
 
-          // check if clip starts INSIDE the section
-          if (clipStart >= originalStart && clipStart < sectionEnd) {
-            double newClipStart = clipStart + delta;
+      // check if clip starts INSIDE the section
+      if (clipStart >= originalStart && clipStart < sectionEnd) {
+        double newClipStart = clipStart + delta;
 
-            // Apply move
-            clip.setProperty(ProjectState::PROP_START_BEATS, newClipStart,
-                             &projectState.getUndoManager());
-          }
-        }
+        // Apply move
+        clip.setProperty(ProjectState::PROP_START_BEATS, newClipStart,
+                         &projectState.getUndoManager());
       }
     }
   }
