@@ -30,6 +30,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/SessionViewComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MacroToolbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MiniMapComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views/SpectraAnalyzerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/views/ModulationMatrixView.cpp
 )
 
 add_subdirectory(skia)

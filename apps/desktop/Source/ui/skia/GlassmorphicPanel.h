@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "../../Settings.h"
 #include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBlurTypes.h>
@@ -28,7 +29,6 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-
 
 namespace zenith {
 
@@ -164,7 +164,8 @@ public:
 
     float radius = opts.cornerRadius;
     SkRRect rrect = SkRRect::MakeRectXY(bounds, radius, radius);
-    float globalGlow = Settings::getGlowIntensity() * opts.glowIntensity;
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity() *
+                       opts.glowIntensity;
 
     // 1. Drop Shadow (under the panel)
     if (opts.drawShadow && opts.style != Style::Flat) {

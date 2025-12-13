@@ -103,6 +103,14 @@ void SkiaKnob::setSnapToValue(bool enabled, float snapValue, float tolerance) {
   snapTolerance_ = tolerance;
 }
 
+void SkiaKnob::setLabelPosition(LabelPosition pos) {
+  if (labelPosition_ != pos) {
+    labelPosition_ = pos;
+    markDirty();
+  }
+}
+
+
 // ============================================================================
 // INTERACTION
 // ============================================================================

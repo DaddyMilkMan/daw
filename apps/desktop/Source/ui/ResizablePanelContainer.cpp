@@ -195,8 +195,24 @@ void PanelWrapper::drawSkia(SkCanvas *canvas) {
     canvas->restore();
   }
 
-  // Draw content (delegated to JUCE for non-Skia content)
-  // Skia-based content would use drawChildren pattern
+  // Draw content
+  if (content_ && content_->isVisible()) {
+    if (auto *sc = dynamic_cast<SkiaComponent *>(content_)) {
+      canvas->save();
+      // Translate to the content's position relative to this wrapper
+      auto contentBounds = content_->getBounds();
+      canvas->translate(static_cast<float>(contentBounds.getX()),
+                        static_cast<float>(contentBounds.getY()));
+
+      // Clip to content bounds to prevent bleeding
+      canvas->clipRect(
+          SkRect::MakeWH(static_cast<float>(contentBounds.getWidth()),
+                         static_cast<float>(contentBounds.getHeight())));
+
+      sc->drawSkia(canvas);
+      canvas->restore();
+    }
+  }
 }
 
 void PanelWrapper::resized() {

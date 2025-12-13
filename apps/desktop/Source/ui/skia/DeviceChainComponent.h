@@ -18,6 +18,7 @@
 #pragma once
 
 #include "../../../include/ProjectState.h"
+#include "../../../include/Engine.h" // Corrected include path
 #include "../../engine/Track.h"
 #include "SkiaComponent.h"
 #include "SkiaKnob.h"

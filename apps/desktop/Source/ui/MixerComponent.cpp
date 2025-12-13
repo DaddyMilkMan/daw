@@ -16,6 +16,8 @@
 #include "../../include/Engine.h"
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../engine/Track.h"
+#include <JuceHeader.h>
+
 
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
@@ -186,8 +188,40 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
                        labelPaint);
   }
 
-  // 5. Children are drawn automatically by JUCE/Skia
-  // (Viewport and master channel are JUCE components, drawn separately)
+  // 5. Draw Children Manually (Since SkiaComponent doesn't map paint() to
+  // drawSkia())
+
+  // Draw Viewport Content (Tracks)
+  {
+    canvas->save();
+
+    // Clip to viewport bounds
+    auto viewportBounds = trackViewport_.getBounds();
+    SkRect viewportRect =
+        SkRect::MakeXYWH(viewportBounds.getX(), viewportBounds.getY(),
+                         viewportBounds.getWidth(), viewportBounds.getHeight());
+    canvas->clipRect(viewportRect);
+
+    // Translate to viewport position + scroll offset
+    // The viewed component (trackContainer) is positioned by the Viewport
+    // relative to itself. We need to match that position.
+    auto containerPos =
+        trackContainer_->getPosition(); // This includes negative scroll offset
+    canvas->translate(viewportBounds.getX() + containerPos.getX(),
+                      viewportBounds.getY() + containerPos.getY());
+
+    trackContainer_->drawSkia(canvas);
+
+    canvas->restore();
+  }
+
+  // Draw Master Channel
+  if (masterChannel_ && masterChannel_->isVisible()) {
+    canvas->save();
+    canvas->translate(masterChannel_->getX(), masterChannel_->getY());
+    masterChannel_->drawSkia(canvas);
+    canvas->restore();
+  }
 
   // 6. Empty state message
   if (trackContainer_->getChannelCount() == 0) {

@@ -10,6 +10,7 @@
 
 #include "ZenithHubComponent.h"
 #include "skia/ZenithIcons.h"
+#include <array>
 
 namespace zenith {
 
@@ -84,10 +85,15 @@ void ZenithHubComponent::updateLayout() {
   accountArea_ =
       SkRect::MakeXYWH(sidebarX, cardY + padding + 60.0f, colTwoW, accountH);
 
+  // New Project Button (Prominent Neon Button)
+  float buttonH = 80.0f;
+  newProjectButtonBounds_ = SkRect::MakeXYWH(
+      sidebarX, accountArea_.bottom() + padding, colTwoW, buttonH);
+
   // Templates (Bottom Right)
   templatesArea_ = SkRect::MakeXYWH(
-      sidebarX, accountArea_.bottom() + padding, colTwoW,
-      recentArea_.bottom() - (accountArea_.bottom() + padding));
+      sidebarX, newProjectButtonBounds_.bottom() + padding, colTwoW,
+      recentArea_.bottom() - (newProjectButtonBounds_.bottom() + padding));
 
   // Update Recent Project Cards Layout (Grid)
   float gridW = recentArea_.width();
@@ -191,6 +197,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
   drawRecentProjects(canvas);
   drawAccount(canvas);
+  drawNewProjectButton(canvas);
   drawTemplates(canvas);
 
   canvas->restore();
@@ -300,7 +307,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
-  canvas->drawString("Start New", templatesArea_.fLeft,
+  canvas->drawString("Quick Start", templatesArea_.fLeft,
                      templatesArea_.fTop - 15, headerFont,
                      textPaint); // Adjusted y
 
@@ -372,6 +379,62 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
                      profileBounds_.centerY() + 15, statusFont, textPaint);
 }
 
+void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
+  SkRRect rrect = SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f);
+
+  // Neon Gradient Background
+  SkPaint btnPaint;
+  btnPaint.setAntiAlias(true);
+
+  const std::array<SkPoint, 2> pts = {
+      SkPoint::Make(newProjectButtonBounds_.fLeft,
+                    newProjectButtonBounds_.fTop),
+      SkPoint::Make(newProjectButtonBounds_.fRight,
+                    newProjectButtonBounds_.fBottom)};
+
+  auto gradientColors =
+      isNewProjectHovered_
+          ? std::array<SkColor, 2>{colors::NEON_CYAN, colors::MAGENTA}
+          : std::array<SkColor, 2>{colors::CYAN, colors::VIOLET};
+
+  auto shader =
+      SkGradientShader::MakeLinear(pts.data(), gradientColors.data(), nullptr,
+                                   gradientColors.size(), SkTileMode::kClamp);
+  btnPaint.setShader(shader);
+
+  // Drop Shadow / Glow
+  if (isNewProjectHovered_) {
+    btnPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
+    // Draw glow pass
+    canvas->drawRRect(rrect, btnPaint);
+    btnPaint.setMaskFilter(nullptr); // Reset for main body
+  }
+
+  canvas->drawRRect(rrect, btnPaint);
+
+  // Text
+  SkFont btnFont = design::getSkFont(24.0f, design::FontWeight::Bold);
+  SkPaint textPaint;
+  textPaint.setColor(SK_ColorWHITE); // Start white
+  textPaint.setAntiAlias(true);
+
+  // Center text
+  SkString text("New Project");
+  SkRect textBounds;
+  btnFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8,
+                      &textBounds);
+
+  float tx = newProjectButtonBounds_.centerX() - (textBounds.width() / 2.0f);
+  float ty =
+      newProjectButtonBounds_.centerY() + (textBounds.height() / 2.0f) - 4.0f;
+
+  canvas->drawString(text, tx, ty, btnFont, textPaint);
+
+  // Maybe put icon to the left of text?
+  // width: 24, height 24
+  // For now simple text is clear enough or I can add a plus sign.
+}
+
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
   bool needsUpdate = false;
@@ -398,6 +461,13 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   bool ph = profileBounds_.contains(pt.fX, pt.fY);
   if (ph != isProfileHovered_) {
     isProfileHovered_ = ph;
+    needsUpdate = true;
+  }
+
+  // Check New Project Button
+  bool nph = newProjectButtonBounds_.contains(pt.fX, pt.fY);
+  if (nph != isNewProjectHovered_) {
+    isNewProjectHovered_ = nph;
     needsUpdate = true;
   }
 
@@ -431,6 +501,11 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (profileBounds_.contains(pt.fX, pt.fY)) {
     // Open profile settings?
+  }
+
+  if (newProjectButtonBounds_.contains(pt.fX, pt.fY)) {
+    dismiss(); // Dismiss the hub to trigger the new project flow.
+    return;
   }
 }
 

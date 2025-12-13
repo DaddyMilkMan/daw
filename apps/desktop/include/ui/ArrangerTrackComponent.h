@@ -32,9 +32,14 @@ public:
 
   // Set the view parameters for rendering
   void setViewContext(double pixelsPerBeat, double viewStartBeats);
+  void setVisibleRange(double startBeats, double endBeats);
 
   // Command to re-order sections (The "Magic" of this feature)
   void moveSection(int index, double newStartBeats);
+
+  // State Access
+  const ArrangementSection *getHoveredSection() const;
+  const ArrangementSection *getDraggingSection() const;
 
 private:
   ProjectState &projectState;

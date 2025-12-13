@@ -19,7 +19,10 @@
 namespace zenith {
 class Engine;
 class ProjectState;
+class ProjectState;
 class DeviceChainComponent;
+class MixerComponent;
+#include "../../../include/ui/MixerComponent.h"
 
 // Forward declarations
 namespace ai {
@@ -54,6 +57,7 @@ private:
   std::unique_ptr<PianoKeyboardViewSkia> pianoKeyboard_;
   std::unique_ptr<DebugConsoleComponent> debugConsole_;
   std::unique_ptr<DeviceChainComponent> deviceChain_;
+  std::unique_ptr<MixerComponent> mixerComponent_;
 
   bool keyboardVisible_ = false;
   bool deviceChainVisible_ = true;  // Show device chain by default

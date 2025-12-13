@@ -1,16 +1,20 @@
 #include "../../include/ui/DrumPadComponent.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "../../include/Engine.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
 #include <utils/SkShadowUtils.h>
 
 using namespace zenith;
 
 //==============================================================================
-DrumPadComponent::DrumPadComponent(zenith::ProjectState &state)
-    : projectState(state) {
+//==============================================================================
+DrumPadComponent::DrumPadComponent(zenith::Engine &eng,
+                                   zenith::ProjectState &state)
+    : projectState(state), engine(eng) {
   pads.resize(kNumPads);
   for (int i = 0; i < kNumPads; ++i) {
     pads[i].noteNumber = baseNote + i;
@@ -20,13 +24,13 @@ DrumPadComponent::DrumPadComponent(zenith::ProjectState &state)
 
     // Cycle colors for visual distinctness
     if (i % 4 == 0)
-      pads[i].color = design::colors::NEON_PINK; // Kicks/Bases
+      pads[i].color = juce::Colour(design::colors::NEON_PINK); // Kicks/Bases
     else if (i % 4 == 1)
-      pads[i].color = design::colors::NEON_CYAN; // Snares/Claps
+      pads[i].color = juce::Colour(design::colors::NEON_CYAN); // Snares/Claps
     else if (i % 4 == 2)
-      pads[i].color = design::colors::NEON_YELLOW; // Hats
+      pads[i].color = juce::Colour(design::colors::NEON_YELLOW); // Hats
     else
-      pads[i].color = design::colors::NEON_PURPLE; // Percs
+      pads[i].color = juce::Colour(design::colors::NEON_PURPLE); // Percs
   }
 
   startTimerHz(60); // Animation loop at 60fps
@@ -229,10 +233,17 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
           SkRect::MakeXYWH(sb.getX(), sb.getY(), sb.getWidth(), sb.getHeight());
 
       bool isActive = pad.steps[s];
-      bool isCurrentBeat = false; // TODO: Hook up playhead position
+
+      // Calculate current beat from engine playhead
+      double currentBeat = engine.getPlaybackPositionBeats();
+      // Assuming 16 steps = 4 beats (1 bar), 1 step = 0.25 beats
+      int currentStep = static_cast<int>(currentBeat * 4.0) % 16;
+      bool isCurrentBeat = (s == currentStep) && engine.isPlaying();
 
       paint.setStyle(SkPaint::kFill_Style);
-      if (isActive) {
+      if (isCurrentBeat) {
+        paint.setColor(SK_ColorWHITE);
+      } else if (isActive) {
         paint.setColor(pad.color.getARGB());
       } else {
         // Dim step
@@ -241,7 +252,7 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
 
       if (s % 4 == 0) {
         // Emphasize downbeats visually
-        if (!isActive)
+        if (!isActive && !isCurrentBeat)
           paint.setColor(SkColorSetA(SK_ColorWHITE, 50));
       }
 
@@ -259,7 +270,6 @@ void DrumPadComponent::mouseDown(const juce::MouseEvent &e) {
   int padIndex = getPadIndexAt(x, y);
   if (padIndex >= 0) {
     hitPad(padIndex, 1.0f);
-    // TODO: Start dragging/pressure?
     return;
   }
 
@@ -288,18 +298,16 @@ void DrumPadComponent::hitPad(int index, float velocity) {
   pads[index].flashLevel = 1.0f;
   repaint();
 
-  // Trigger Audio
-#if 0
-  if (projectState.getTransportController()) // hypothetical accessor
-  {
-    // Or directly preview note
-    // PianoRollComponent preview delegates to somewhere.
-    // We probably need a preview delegate.
-    // For now, let's just log or assume callback.
-  }
-#endif
+  // Trigger Audio - Placeholder for future implementation
+  // Currently Engine does not expose direct note injection from UI.
+  // This will be connected when MIDI routing via EngineEvent is supported.
+  DBG("DrumPad hit: " + juce::String(index) +
+      " Velocity: " + juce::String(velocity));
 
-  // If recording, add note...
+  // If we were recording, we would add the note to ProjectState here.
+  if (engine.isRecording() && currentClipId.isNotEmpty()) {
+    // TODO: Implement real-time recording logic
+  }
 }
 
 void DrumPadComponent::toggleStep(int padIndex, int stepIndex) {

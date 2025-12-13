@@ -14,6 +14,7 @@
 */
 
 #include "BrowserPanel.h"
+#include "ZenithDesignSystem.h"
 #include "ZenithIcons.h"
 #include <cmath>
 
@@ -1565,7 +1566,7 @@ BrowserPanel::createDragImage(const std::shared_ptr<BrowserItem> &item) {
     if (listWaveformCache_.find(item->id) != listWaveformCache_.end()) {
       const auto &cache = listWaveformCache_.at(item->id);
       if (!cache.peaks.empty()) {
-        g.setColour(juce::Colour::fromFloatRGBA(0.0f, 1.0f, 1.0f, 0.2f));
+        g.setColour(juce::Colour::fromFloatRGBA(0.0f, 1.0f, 1.0f, 0.4f));
         juce::Path p;
 
         float midY = h * 0.5f;
