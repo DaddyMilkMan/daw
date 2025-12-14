@@ -1,5 +1,5 @@
-﻿---
+---
 trigger: always_on
 ---
 
-Make sure every piece of code is done properly, with no stubs or shortcuts.
+makesure every piece of code is done properly no stubs no shortcuts 

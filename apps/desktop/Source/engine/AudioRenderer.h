@@ -155,15 +155,6 @@ public:
      */
     int getMasterLatency() const;
 
-    /**
-     * @brief Update master latency calculation
-     * @param masterPlugins Reference to master plugins
-     * @param limiterLatency Latency from the master limiter
-     */
-    void updateMasterLatency(
-        const std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
-        int limiterLatency);
-
 private:
     //==========================================================================
     // Internal Methods
@@ -212,9 +203,6 @@ private:
     // Metering (atomic for lock-free GUI access)
     std::atomic<float> masterLevel_{0.0f};
     std::atomic<float> masterPeakLevel_{0.0f};
-
-    // Master latency cache
-    std::atomic<int> masterLatency_{0};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };

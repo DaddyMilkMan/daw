@@ -56,9 +56,6 @@ SampleEditorComponent::SampleEditorComponent(Engine &engine,
 }
 
 SampleEditorComponent::~SampleEditorComponent() {
-  if (isRecording_) {
-    engine_.getRecordingManager().removeAudioInputListener(this);
-  }
   stopTimer();
   projectState_.getState().removeListener(this);
 }
@@ -77,73 +74,6 @@ void SampleEditorComponent::timerCallback() {
     }
     repaint();
   }
-
-  if (isRecording_) {
-    // Drain FIFO to record buffer
-    int numReady = incomingFifo_.getNumReady();
-    if (numReady > 0) {
-      int start1, size1, start2, size2;
-      incomingFifo_.prepareToRead(numReady, start1, size1, start2, size2);
-
-      if (recordBuffer_) {
-        // Check if resize needed
-        int currentSize = recordBuffer_->getNumSamples();
-        int newTotal = recordWritePos_ + numReady;
-
-        if (newTotal > currentSize) {
-          // Grow buffer (double size or at least enough)
-          int newSize = juce::jmax(newTotal, currentSize * 2);
-          recordBuffer_->setSize(2, newSize, true, true, true);
-        }
-
-        // Copy from FIFO circular buffer
-        for (int ch = 0; ch < 2; ++ch) {
-          if (size1 > 0)
-            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch,
-                                    start1, size1);
-          if (size2 > 0)
-            recordBuffer_->copyFrom(ch, recordWritePos_ + size1,
-                                    incomingBuffer_, ch, start2, size2);
-        }
-
-        recordWritePos_ += numReady;
-      }
-
-      incomingFifo_.finishedRead(size1 + size2);
-      repaint();
-    }
-  }
-}
-
-void SampleEditorComponent::onAudioInput(const float *const *inputData,
-                                         int numInputChannels, int numSamples) {
-  if (!isRecording_)
-    return;
-
-  // Real-time safe write to FIFO
-  int start1, size1, start2, size2;
-  incomingFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
-
-  if (size1 > 0) {
-    for (int ch = 0; ch < juce::jmin(2, numInputChannels); ++ch) {
-      incomingBuffer_.copyFrom(ch, start1, inputData[ch], size1);
-    }
-    // Mono to Stereo
-    if (numInputChannels == 1) {
-      incomingBuffer_.copyFrom(1, start1, inputData[0], size1);
-    }
-  }
-
-  if (size2 > 0) {
-    for (int ch = 0; ch < juce::jmin(2, numInputChannels); ++ch) {
-      incomingBuffer_.copyFrom(ch, start2, inputData[ch] + size1, size2);
-    }
-    if (numInputChannels == 1) {
-      incomingBuffer_.copyFrom(1, start2, inputData[0] + size1, size2);
-    }
-  }
-
-  incomingFifo_.finishedWrite(size1 + size2);
 }
 
 //==============================================================================
@@ -1921,88 +1851,12 @@ void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
 
 // Recording
 void SampleEditorComponent::startRecording() {
-  if (isRecording_)
-    return;
-
-  // Initialize recording state
-  incomingFifo_.reset();
-  incomingBuffer_.setSize(2, fifoSize_); // Ensure buffer is ready
-
-  // Allocate record buffer (start with 1 minute at current sample rate)
-  // We can resize later in timerCallback
-  int initialSamples = static_cast<int>(engine_.getSampleRate()) * 60;
-  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(2, initialSamples);
-  recordBuffer_->clear();
-  recordWritePos_ = 0;
-
-  // Hook into Engine input
-  engine_.getRecordingManager().addAudioInputListener(this);
-
   isRecording_ = true;
   repaint();
+  // TODO: Hook into Engine input
 }
-
 void SampleEditorComponent::stopRecording() {
-  if (!isRecording_)
-    return;
-
-  // Stop capturing
-  engine_.getRecordingManager().removeAudioInputListener(this);
   isRecording_ = false;
-
-  // Flush remaining samples from FIFO
-  timerCallback();
-
-  // Finalize recording by saving to file and loading it
-  if (recordBuffer_ && recordWritePos_ > 0) {
-    // Ensure recordings directory exists
-    juce::File recordingsDir =
-        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
-            .getChildFile("ZenithDAW/Recordings");
-    if (!recordingsDir.exists())
-      recordingsDir.createDirectory();
-
-    // Generate unique filename
-    juce::String filename =
-        "Sample_" + juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S") +
-        ".wav";
-    juce::File targetFile = recordingsDir.getChildFile(filename);
-
-    // Save buffer to file
-    juce::WavAudioFormat format;
-    double sampleRate = engine_.getSampleRate();
-    if (sampleRate <= 0)
-      sampleRate = 44100.0;
-
-    std::unique_ptr<juce::AudioFormatWriter> writer(format.createWriterFor(
-        new juce::FileOutputStream(targetFile), sampleRate, 2, 24, {}, 0));
-
-    if (writer) {
-      writer->writeFromAudioSampleBuffer(*recordBuffer_, 0, recordWritePos_);
-      writer.reset(); // Close file
-
-      // Load the file into the editor
-      audioHandle_ = engine_.getAudioFilePool().loadFile(targetFile);
-
-      // Clear editBuffer_ (we are now editing the recorded file)
-      editBuffer_.reset();
-      hasUnsavedChanges_ = false;
-
-      // Set selection
-      setSelection(0.0, samplesToTime(recordWritePos_));
-      fitToWindow();
-
-      DBG("Saved recording to " + targetFile.getFullPathName());
-    } else {
-      DBG("Failed to write recording file");
-    }
-  } else {
-    DBG("Recording finished: No samples recorded");
-  }
-
-  // Cleanup
-  recordBuffer_.reset();
-  incomingFifo_.reset();
   repaint();
 }
 

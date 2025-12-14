@@ -228,6 +228,9 @@ constexpr int kMaxOversamplingFactor = 4;
 // Timing Constants
 //==============================================================================
 
+/// Default video frame rate
+constexpr double kDefaultFrameRate = 30.0;
+
 /// Automation update rate in Hz
 constexpr int kAutomationUpdateRateHz = 60;
 

@@ -379,24 +379,9 @@ int AudioRenderer::getTrackLatency(int trackIndex) const {
 }
 
 int AudioRenderer::getMasterLatency() const {
-  // Sum latency from all master plugins
-  // Note: The master limiter has effectively zero latency since it's a simple lookahead limiter
-  // We rely on the cached value that's updated during processing
-  return masterLatency_.load();
-}
-
-void AudioRenderer::updateMasterLatency(
-    const std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
-    int limiterLatency) {
-  int totalLatency = limiterLatency;
-  
-  for (const auto &plugin : masterPlugins) {
-    if (plugin != nullptr) {
-      totalLatency += plugin->getLatencySamples();
-    }
-  }
-  
-  masterLatency_.store(totalLatency);
+  // Currently master latency is just the limiter latency plus any master plugins
+  // For now, simpler implementation:
+  return 0; // TODO: Sum master plugin latency
 }
 
 } // namespace zenith

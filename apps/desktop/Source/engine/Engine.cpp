@@ -1028,7 +1028,7 @@ void Engine::audioDeviceIOCallbackWithContext(
     }
   }
 
-  if (recordingManager_ && (recordingManager_->isRecording() || recordingManager_->hasActiveListeners())) {
+  if (recordingManager_ && recordingManager_->isRecording()) {
     recordingManager_->captureAudio(inputChannelData, numInputChannels,
                                     numSamples, snapshot->lifecycle);
   }
