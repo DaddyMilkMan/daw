@@ -278,12 +278,78 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
 
   // 6. Content Area (Waveform/MIDI Blobs)
   // The content area starts below the header and extends to the clip bottom.
-  // Actual waveform/MIDI rendering is handled by
-  // ArrangerComponent::drawClipWaveform() and drawClipMidiBlobs() which have
-  // access to the audio file cache. This component just provides the clip
-  // structure/chrome. Content area bounds: SkRect::MakeXYWH(0, contentAreaTop,
-  // fWidth, fHeight - contentAreaTop)
+  SkRect contentRect =
+      SkRect::MakeXYWH(0, contentAreaTop, fWidth, fHeight - contentAreaTop);
 
+  canvas->save();
+  canvas->clipRect(contentRect);
+
+  // Use Clip ID to seed random for consistent visualization
+  // (In proper implementation, this would read actual note/audio data)
+  juce::String cid = clip[ProjectState::PROP_ID].toString();
+  juce::Random rng(cid.hashCode());
+
+  if (clipType == "midi") {
+    // Draw Neon MIDI bars
+    SkPaint notePaint;
+    notePaint.setAntiAlias(true);
+
+    int numNotes = (int)(fWidth / 15) + 2;
+    for (int i = 0; i < numNotes; ++i) {
+      if (rng.nextFloat() > 0.7f)
+        continue; // Sparsity
+
+      float x = i * 15.0f + rng.nextFloat() * 5.0f;
+      float pitchNorm = rng.nextFloat();
+      float y = contentAreaTop + pitchNorm * (fHeight - contentAreaTop - 6);
+      float w = 8.0f + rng.nextFloat() * 20.0f;
+      float h = 4.0f;
+
+      SkRect noteRect = SkRect::MakeXYWH(x, y, w, h);
+
+      // Glowy Note
+      notePaint.setColor(SkColorSetA(baseColor, 255));
+      canvas->drawRRect(SkRRect::MakeRectXY(noteRect, 2, 2), notePaint);
+
+      // Subtle tail
+      SkPaint tailPaint;
+      tailPaint.setColor(SkColorSetA(baseColor, 50));
+      canvas->drawRect(SkRect::MakeXYWH(x + w, y, 10, h), tailPaint);
+    }
+  } else {
+    // Draw Waveform (Generative approximation)
+    SkPath wavePath;
+    float midY = contentAreaTop + (fHeight - contentAreaTop) * 0.5f;
+    float amp = (fHeight - contentAreaTop) * 0.4f;
+
+    wavePath.moveTo(0, midY);
+    int steps = (int)(fWidth / 2.0f);
+    for (int i = 0; i < steps; ++i) {
+      float x = i * 2.0f;
+      float noise = (rng.nextFloat() * 2.0f - 1.0f);
+      // Mix with sine for structure
+      float val = std::sin(x * 0.1f) * noise * noise; // Squared for peaks
+      wavePath.lineTo(x, midY + val * amp);
+    }
+
+    SkPaint wavePaint;
+    wavePaint.setStyle(SkPaint::kStroke_Style);
+    wavePaint.setStrokeWidth(1.5f);
+    wavePaint.setAntiAlias(true);
+    wavePaint.setColor(SkColorSetA(baseColor, 200));
+    canvas->drawPath(wavePath, wavePaint);
+
+    // Fill
+    wavePath.lineTo(fWidth, midY); // Close path loosely
+    wavePath.lineTo(0, midY);
+
+    SkPaint fillPaint;
+    fillPaint.setStyle(SkPaint::kFill_Style);
+    fillPaint.setColor(SkColorSetA(baseColor, 50));
+    canvas->drawPath(wavePath, fillPaint);
+  }
+
+  canvas->restore(); // Restore Clipping (Ends Content Area)
   canvas->restore(); // Restore Clipping (Ends Smart Rounded Corner Mask)
 
   // 7. Draw Borders (Selection or Outline)

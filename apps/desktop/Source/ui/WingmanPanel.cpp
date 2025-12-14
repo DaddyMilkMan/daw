@@ -15,6 +15,7 @@
 #include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
+#include "ZenithTheme.h" // For Colors and Typography
 
 namespace zenith {
 
@@ -36,12 +37,12 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   conversationDisplay->setCaretVisible(false);
   conversationDisplay->setPopupMenuEnabled(true);
   conversationDisplay->setColour(juce::TextEditor::backgroundColourId,
-                                 ZenithLookAndFeel::Colors::panel);
+                                 ZenithTheme::Colors::bg_02);
   conversationDisplay->setColour(juce::TextEditor::textColourId,
-                                 ZenithLookAndFeel::Colors::textPrimary);
+                                 ZenithTheme::Colors::text_primary);
   conversationDisplay->setColour(juce::TextEditor::outlineColourId,
-                                 ZenithLookAndFeel::Colors::border);
-  conversationDisplay->setFont(ZenithLookAndFeel::getFontMedium());
+                                 ZenithTheme::Colors::border_default);
+  conversationDisplay->setFont(ZenithTheme::Typography::getBodyFont());
   addAndMakeVisible(conversationDisplay.get());
 
   // Welcome message
@@ -57,14 +58,14 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   inputField->setReturnKeyStartsNewLine(false);
   inputField->setPopupMenuEnabled(true);
   inputField->setColour(juce::TextEditor::backgroundColourId,
-                        ZenithLookAndFeel::Colors::backgroundPanel);
+                        ZenithTheme::Colors::bg_02);
   inputField->setColour(juce::TextEditor::textColourId,
-                        ZenithLookAndFeel::Colors::textPrimary);
+                        ZenithTheme::Colors::text_primary);
   inputField->setColour(juce::TextEditor::outlineColourId,
-                        ZenithLookAndFeel::Colors::accent);
-  inputField->setFont(ZenithLookAndFeel::getFontMedium());
+                        ZenithTheme::Colors::accent_primary);
+  inputField->setFont(ZenithTheme::Typography::getBodyFont());
   inputField->setTextToShowWhenEmpty("Ask Wingman anything...",
-                                     ZenithLookAndFeel::Colors::textSecondary);
+                                     ZenithTheme::Colors::text_secondary);
   inputField->addListener(this);
   addAndMakeVisible(inputField.get());
 
@@ -73,9 +74,9 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   sendButton = std::make_unique<juce::TextButton>("Send");
   sendButton->setButtonText("Send");
   sendButton->setColour(juce::TextButton::buttonColourId,
-                        ZenithLookAndFeel::Colors::accent);
+                        ZenithTheme::Colors::accent_primary);
   sendButton->setColour(juce::TextButton::textColourOffId,
-                        ZenithLookAndFeel::Colors::textPrimary);
+                        ZenithTheme::Colors::text_primary);
   sendButton->addListener(this);
   addAndMakeVisible(sendButton.get());
 
@@ -83,8 +84,8 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   // Mode Selector
   modeLabel = std::make_unique<juce::Label>("ModeLabel", "Mode:");
   modeLabel->setColour(juce::Label::textColourId,
-                       ZenithLookAndFeel::Colors::textPrimary);
-  modeLabel->setFont(ZenithLookAndFeel::getFontMedium());
+                       ZenithTheme::Colors::text_primary);
+  modeLabel->setFont(ZenithTheme::Typography::getBodyFont());
   addAndMakeVisible(modeLabel.get());
 
   modeSelector = std::make_unique<juce::ComboBox>("Mode");
@@ -92,11 +93,11 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   modeSelector->addItem("🧠 Thinking (Deep analysis)", 2);
   modeSelector->setSelectedId(1); // Default to Fast
   modeSelector->setColour(juce::ComboBox::backgroundColourId,
-                          ZenithLookAndFeel::Colors::backgroundPanel);
+                          ZenithTheme::Colors::bg_02);
   modeSelector->setColour(juce::ComboBox::textColourId,
-                          ZenithLookAndFeel::Colors::textPrimary);
+                          ZenithTheme::Colors::text_primary);
   modeSelector->setColour(juce::ComboBox::outlineColourId,
-                          ZenithLookAndFeel::Colors::accent);
+                          ZenithTheme::Colors::accent_primary);
   modeSelector->onChange = [this]() { updateModeFromSelector(); };
   addAndMakeVisible(modeSelector.get());
 
@@ -105,7 +106,7 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   statusLabel = std::make_unique<juce::Label>("Status", "Ready");
   statusLabel->setColour(juce::Label::textColourId,
                          juce::Colours::green); // Keep green for status
-  statusLabel->setFont(ZenithLookAndFeel::getFontSmall());
+  statusLabel->setFont(ZenithTheme::Typography::getSmallFont());
   statusLabel->setJustificationType(juce::Justification::centredLeft);
   addAndMakeVisible(statusLabel.get());
 
@@ -114,9 +115,9 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   clearButton = std::make_unique<juce::TextButton>("Clear");
   clearButton->setButtonText("Clear");
   clearButton->setColour(juce::TextButton::buttonColourId,
-                         ZenithLookAndFeel::Colors::panel);
+                         ZenithTheme::Colors::bg_02);
   clearButton->setColour(juce::TextButton::textColourOffId,
-                         ZenithLookAndFeel::Colors::textSecondary);
+                         ZenithTheme::Colors::text_secondary);
   clearButton->addListener(this);
   addAndMakeVisible(clearButton.get());
 
@@ -125,9 +126,9 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   settingsButton = std::make_unique<juce::TextButton>("Settings");
   settingsButton->setButtonText("⚙");
   settingsButton->setColour(juce::TextButton::buttonColourId,
-                            ZenithLookAndFeel::Colors::panel);
+                            ZenithTheme::Colors::bg_02);
   settingsButton->setColour(juce::TextButton::textColourOffId,
-                            ZenithLookAndFeel::Colors::textSecondary);
+                            ZenithTheme::Colors::text_secondary);
   settingsButton->addListener(this);
   addAndMakeVisible(settingsButton.get());
 
@@ -142,15 +143,15 @@ WingmanPanel::~WingmanPanel() { inputField->removeListener(this); }
 //==============================================================================
 void WingmanPanel::paint(juce::Graphics &g) {
   // Background
-  g.fillAll(ZenithLookAndFeel::Colors::background);
+  g.fillAll(ZenithTheme::Colors::bg_01);
 
   // Header
-  g.setColour(ZenithLookAndFeel::Colors::panel);
+  g.setColour(ZenithTheme::Colors::bg_02);
   g.fillRect(0, 0, getWidth(), 40);
 
   // Title
-  g.setColour(ZenithLookAndFeel::Colors::accent);
-  g.setFont(ZenithLookAndFeel::getFontLarge().boldened());
+  g.setColour(ZenithTheme::Colors::accent_primary);
+  g.setFont(ZenithTheme::Typography::getLargeFont().boldened());
   g.drawText("Wingman AI Assistant", 10, 0, getWidth() - 20, 40,
              juce::Justification::centredLeft);
 }
@@ -308,7 +309,7 @@ void WingmanPanel::showSettings() {
   options.content.setOwned(new SettingsComponent(engine_));
   options.content->setSize(600, 500);
   options.dialogTitle = "Zenith DAW Settings";
-  options.dialogBackgroundColour = ZenithLookAndFeel::Colors::background;
+  options.dialogBackgroundColour = ZenithTheme::Colors::bg_01;
   options.escapeKeyTriggersCloseButton = true;
   options.useNativeTitleBar = true;
   options.resizable = true;

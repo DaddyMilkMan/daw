@@ -17,10 +17,12 @@
 #include "SkiaComponent.h"
 #include "views/PianoKeyboardViewSkia.h"
 #include <JuceHeader.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
 
 namespace zenith {
 class Engine;
-class ProjectState;
 class ProjectState;
 class DeviceChainComponent;
 class MixerComponent;

@@ -5,10 +5,13 @@
 
 #include "../../include/ui/ArrangerTrackComponent.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
+#include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
+#include <effects/SkGradientShader.h>
 
 namespace zenith {
 
@@ -40,19 +43,32 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
 
   auto bounds = getLocalBounds();
 
-  // Background
-  canvas->clear(SkColorSetARGB(255, 30, 30, 30));
+  // Premium Background - subtle gradient
+  {
+    SkPoint bgPts[2] = {{0, 0}, {0, (float)bounds.getHeight()}};
+    SkColor bgColors[2] = {SkColorSetRGB(28, 28, 35),
+                           SkColorSetRGB(22, 22, 28)};
+    SkPaint bgPaint;
+    bgPaint.setShader(SkGradientShader::MakeLinear(bgPts, bgColors, nullptr, 2,
+                                                   SkTileMode::kClamp));
+    canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
+                     bgPaint);
+  }
 
-  // Draw Sections
-  SkPaint paint;
-  paint.setAntiAlias(true);
+  // Bottom border
+  SkPaint borderPaint;
+  borderPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+  borderPaint.setStrokeWidth(1.0f);
+  canvas->drawLine(0, bounds.getHeight() - 0.5f, bounds.getWidth(),
+                   bounds.getHeight() - 0.5f, borderPaint);
 
-  SkFont font = typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
-  SkPaint textPaint;
-  textPaint.setColor(SK_ColorWHITE);
-  textPaint.setAntiAlias(true);
+  // Draw Sections as glassmorphic pills
+  SkFont font =
+      typography::getSkFont(typography::FONT_XS, FontWeight::SemiBold);
 
-  for (const auto &section : sections_) {
+  for (size_t idx = 0; idx < sections_.size(); ++idx) {
+    const auto &section = sections_[idx];
+
     // Calculate X position
     double relStart = section.startBeats - viewStartBeats_;
     float x = static_cast<float>(relStart * pixelsPerBeat_);
@@ -62,35 +78,133 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
     if (x + w < 0 || x > bounds.getWidth())
       continue;
 
-    SkRect rect = SkRect::MakeXYWH(
-        x, 2.0f, w, static_cast<float>(bounds.getHeight()) - 4.0f);
-    SkRRect rrect;
-    rrect.setRectXY(rect, 4.0f, 4.0f);
+    // Make pills slightly inset from top/bottom
+    float padding = 3.0f;
+    SkRect rect =
+        SkRect::MakeXYWH(x + 2, padding, w - 4,
+                         static_cast<float>(bounds.getHeight()) - padding * 2);
 
-    // Fill
-    // Convert JUCE color to SkColor
+    if (rect.width() < 8)
+      continue; // Too small to render
+
+    SkRRect rrect = SkRRect::MakeRectXY(rect, 6.0f, 6.0f);
+
+    // Get section color
     SkColor c =
-        SkColorSetARGB(section.color.getAlpha(), section.color.getRed(),
-                       section.color.getGreen(), section.color.getBlue());
-    paint.setColor(SkColorSetA(c, 180)); // Semi-transparent
-    canvas->drawRRect(rrect, paint);
+        SkColorSetARGB(255, section.color.getRed(), section.color.getGreen(),
+                       section.color.getBlue());
 
-    // Border
-    paint.setColor(c);
-    paint.setStyle(SkPaint::kStroke_Style);
-    paint.setStrokeWidth(1.0f);
-    canvas->drawRRect(rrect, paint);
-    paint.setStyle(SkPaint::kFill_Style); // Reset
+    bool isDragging = (draggingSectionIndex_ == static_cast<int>(idx));
 
-    // Label
-    if (w > 20) {
+    // ========================================
+    // 1. DROP SHADOW
+    // ========================================
+    {
+      SkPaint shadowPaint;
+      shadowPaint.setAntiAlias(true);
+      shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
+      shadowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
+      SkRect shadowRect = rect;
+      shadowRect.offset(0, 1);
+      canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 6.0f, 6.0f),
+                        shadowPaint);
+    }
+
+    // ========================================
+    // 2. GLASSMORPHIC FILL
+    // ========================================
+    {
+      SkPaint fillPaint;
+      fillPaint.setAntiAlias(true);
+
+      SkPoint pts[2] = {{rect.left(), rect.top()},
+                        {rect.left(), rect.bottom()}};
+      SkColor gradColors[3] = {
+          withAlpha(lighten(c, 0.2f), isDragging ? 0.9f : 0.7f),
+          withAlpha(c, isDragging ? 0.7f : 0.5f),
+          withAlpha(darken(c, 0.2f), isDragging ? 0.6f : 0.4f)};
+      float positions[3] = {0.0f, 0.4f, 1.0f};
+
+      fillPaint.setShader(SkGradientShader::MakeLinear(
+          pts, gradColors, positions, 3, SkTileMode::kClamp));
+      canvas->drawRRect(rrect, fillPaint);
+    }
+
+    // ========================================
+    // 3. GLOW (if dragging or active)
+    // ========================================
+    if (isDragging) {
+      SkPaint glowPaint;
+      glowPaint.setAntiAlias(true);
+      glowPaint.setStyle(SkPaint::kStroke_Style);
+      glowPaint.setStrokeWidth(3.0f);
+      glowPaint.setColor(withAlpha(c, 0.6f));
+      glowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+      canvas->drawRRect(rrect, glowPaint);
+    }
+
+    // ========================================
+    // 4. BORDER
+    // ========================================
+    {
+      SkPaint borderPaint;
+      borderPaint.setAntiAlias(true);
+      borderPaint.setStyle(SkPaint::kStroke_Style);
+      borderPaint.setStrokeWidth(1.0f);
+
+      SkPoint borderPts[2] = {{rect.left(), rect.top()},
+                              {rect.left(), rect.bottom()}};
+      SkColor borderColors[2] = {withAlpha(lighten(c, 0.3f), 0.8f),
+                                 withAlpha(c, 0.4f)};
+      borderPaint.setShader(SkGradientShader::MakeLinear(
+          borderPts, borderColors, nullptr, 2, SkTileMode::kClamp));
+      canvas->drawRRect(rrect, borderPaint);
+    }
+
+    // ========================================
+    // 5. TOP RIM HIGHLIGHT
+    // ========================================
+    {
+      SkPaint rimPaint;
+      rimPaint.setAntiAlias(true);
+      rimPaint.setStyle(SkPaint::kStroke_Style);
+      rimPaint.setStrokeWidth(1.0f);
+
+      SkPoint rimPts[2] = {{rect.left(), rect.top()},
+                           {rect.left() + rect.width() * 0.5f, rect.top() + 6}};
+      SkColor rimColors[2] = {SkColorSetARGB(100, 255, 255, 255),
+                              SkColorSetARGB(0, 255, 255, 255)};
+      rimPaint.setShader(SkGradientShader::MakeLinear(
+          rimPts, rimColors, nullptr, 2, SkTileMode::kClamp));
+
+      SkRRect innerRR = rrect;
+      innerRR.inset(0.5f, 0.5f);
+      canvas->drawRRect(innerRR, rimPaint);
+    }
+
+    // ========================================
+    // 6. LABEL with pill background
+    // ========================================
+    if (w > 30) {
       juce::String label = section.name;
-      canvas->save();
-      canvas->clipRRect(rrect, true);
+
+      // Text shadow
+      SkPaint shadowPaint;
+      shadowPaint.setAntiAlias(true);
+      shadowPaint.setColor(SkColorSetARGB(120, 0, 0, 0));
       canvas->drawSimpleText(label.toRawUTF8(), label.length(),
-                             SkTextEncoding::kUTF8, x + 5.0f,
+                             SkTextEncoding::kUTF8, x + 9,
+                             rect.centerY() + 4.5f, font, shadowPaint);
+
+      // Main text
+      SkPaint textPaint;
+      textPaint.setColor(SK_ColorWHITE);
+      textPaint.setAntiAlias(true);
+      canvas->drawSimpleText(label.toRawUTF8(), label.length(),
+                             SkTextEncoding::kUTF8, x + 8,
                              rect.centerY() + 4.0f, font, textPaint);
-      canvas->restore();
     }
   }
 }

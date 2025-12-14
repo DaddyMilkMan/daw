@@ -1,13 +1,6 @@
 /**
  * @file MixerComponent.cpp
- * @brief Full-featured Mixer component implementation
- *
- * Implements a professional-grade mixer view with:
- * - Horizontal scrolling for many tracks
- * - Master channel strip
- * - GPU-accelerated Skia rendering
- * - Glassmorphic panel design
- * - Selection glow on active channel
+ * @brief Main mixer interface with horizontal scrolling and master strip
  */
 
 #include "../../include/ui/MixerComponent.h"
@@ -17,7 +10,6 @@
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../engine/Track.h"
 #include <JuceHeader.h>
-
 
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
@@ -146,7 +138,7 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
   // 3. Draw divider between tracks and master
   if (masterChannel_) {
     float dividerX =
-        bounds.getWidth() - masterStripWidth - dividerWidth - sideMargin;
+        bounds.getWidth() - (masterStripWidth + dividerWidth + sideMargin * 2);
 
     // Gradient divider line
     SkPoint dividerPts[2] = {
@@ -188,40 +180,8 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
                        labelPaint);
   }
 
-  // 5. Draw Children Manually (Since SkiaComponent doesn't map paint() to
-  // drawSkia())
-
-  // Draw Viewport Content (Tracks)
-  {
-    canvas->save();
-
-    // Clip to viewport bounds
-    auto viewportBounds = trackViewport_.getBounds();
-    SkRect viewportRect =
-        SkRect::MakeXYWH(viewportBounds.getX(), viewportBounds.getY(),
-                         viewportBounds.getWidth(), viewportBounds.getHeight());
-    canvas->clipRect(viewportRect);
-
-    // Translate to viewport position + scroll offset
-    // The viewed component (trackContainer) is positioned by the Viewport
-    // relative to itself. We need to match that position.
-    auto containerPos =
-        trackContainer_->getPosition(); // This includes negative scroll offset
-    canvas->translate(viewportBounds.getX() + containerPos.getX(),
-                      viewportBounds.getY() + containerPos.getY());
-
-    trackContainer_->drawSkia(canvas);
-
-    canvas->restore();
-  }
-
-  // Draw Master Channel
-  if (masterChannel_ && masterChannel_->isVisible()) {
-    canvas->save();
-    canvas->translate(masterChannel_->getX(), masterChannel_->getY());
-    masterChannel_->drawSkia(canvas);
-    canvas->restore();
-  }
+  // 5. Children are drawn automatically by JUCE/Skia
+  // (Viewport and master channel are JUCE components, drawn separately)
 
   // 6. Empty state message
   if (trackContainer_->getChannelCount() == 0) {
@@ -246,7 +206,9 @@ void MixerComponent::resized() {
   if (masterChannel_) {
     masterArea = masterStripWidth + dividerWidth + sideMargin * 2;
     auto masterBounds = bounds.removeFromRight(masterArea);
-    masterChannel_->setBounds(masterBounds.reduced(sideMargin, topMargin));
+    masterChannel_->setBounds(masterBounds.getX() + sideMargin + dividerWidth,
+                              masterBounds.getY() + topMargin, masterStripWidth,
+                              masterBounds.getHeight() - 2 * topMargin);
   }
 
   // Viewport takes remaining space
@@ -273,26 +235,24 @@ void MixerComponent::resized() {
 //==============================================================================
 
 void MixerComponent::selectChannel(const juce::String &trackId) {
-  // Update Project State
-  auto &state = projectState_.getState();
-  if (state[ProjectState::PROP_SELECTED_TRACK_ID].toString() != trackId) {
-    state.setProperty(ProjectState::PROP_SELECTED_TRACK_ID, trackId,
-                      &projectState_.getUndoManager());
-  }
+  if (selectedTrackId_ == trackId)
+    return;
 
-  // Local update will happen via listener callback
+  selectedTrackId_ = trackId;
+  updateSelection();
+
+  if (onSelectionChanged) {
+    onSelectionChanged(trackId);
+  }
 }
 
 void MixerComponent::updateSelection() {
-  // Read from Project State
-  auto selectedId =
-      projectState_.getState()[ProjectState::PROP_SELECTED_TRACK_ID].toString();
-
   // Update selection state on all channels
   for (int i = 0; i < trackContainer_->getChannelCount(); ++i) {
     auto *channel = trackContainer_->getChannel(i);
     if (channel && channel->getTrack()) {
-      channel->setSelected(channel->getTrack()->getTrackId() == selectedId);
+      channel->setSelected(channel->getTrack()->getTrackId() ==
+                           selectedTrackId_);
     }
   }
 
@@ -350,14 +310,6 @@ Track *MixerComponent::findTrackById(const juce::String &trackId) {
 
 void MixerComponent::valueTreePropertyChanged(
     juce::ValueTree &tree, const juce::Identifier &property) {
-
-  if (tree.hasType(ProjectState::ID_PROJECT) &&
-      property == ProjectState::PROP_SELECTED_TRACK_ID) {
-    updateSelection();
-    repaint();
-    return;
-  }
-
   // Property changes are handled by individual MixerChannelComponents
   // via their Track listeners. No action needed here.
   juce::ignoreUnused(tree, property);

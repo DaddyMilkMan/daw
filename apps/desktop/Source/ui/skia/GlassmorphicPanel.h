@@ -30,6 +30,7 @@
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+#include <random>
 
 namespace zenith {
 
@@ -364,13 +365,17 @@ private:
       SkBitmap bitmap;
       bitmap.allocN32Pixels(w, h); // Allocate pixel memory
 
+      // Use modern random generator
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distrib(0, 255);
+
       // Fill with random noise
       for (int y = 0; y < h; ++y) {
         // Get row pointer for speed
         uint32_t *row = bitmap.getAddr32(0, y);
         for (int x = 0; x < w; ++x) {
-          // Simple random grayscale noise
-          uint8_t val = (uint8_t)(rand() % 256);
+          uint8_t val = (uint8_t)distrib(gen);
           // Pack into ARGB (native format), make it fully opaque initially
           row[x] = SkColorSetARGB(255, val, val, val);
         }

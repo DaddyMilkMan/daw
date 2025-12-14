@@ -141,6 +141,8 @@ private:
   struct ClipView {
     juce::String clipId;
     juce::String trackId;
+    int trackIndex =
+        0; // Cached track index for O(1) lookups (avoids O(N²) searches)
     double startBeats;
     double lengthBeats;
     bool isMidi;

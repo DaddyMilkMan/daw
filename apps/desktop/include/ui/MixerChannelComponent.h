@@ -234,9 +234,6 @@ private:
   // State
   bool updatingControls_{false};
 
-  // Animation
-  float selectionGlowAlpha_{0.0f};
-
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MixerChannelComponent)
 };
 
