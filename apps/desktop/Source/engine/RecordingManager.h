@@ -90,6 +90,12 @@ public:
    */
   void prepare(double sampleRate);
 
+  /**
+   * @brief Pre-prepare recording resources for a track when it gets armed.
+   */
+  void prepareRecordingForTrack(const Track &track, int trackIndex,
+                                const juce::File &recordingsDir);
+
   //==========================================================================
   // Recording Control
   //==========================================================================

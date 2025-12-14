@@ -55,11 +55,8 @@ message(STATUS "  SKIA_ROOT: ${SKIA_ROOT}")
 if(EXISTS "${SKIA_INCLUDE_DIR}/core/SkCanvas.h")
     message(STATUS "  Strategy: Manual Search (unofficial-skia not found)")
     message(STATUS "  Skia headers: ${SKIA_INCLUDE_DIR}")
-    target_include_directories(ZenithDAW PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-    
-    if(TARGET ZenithDAWTests)
-        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-    endif()
+    target_include_directories(ZenithDAW_lib PUBLIC ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
+
 else()
     message(FATAL_ERROR "Skia headers not found at ${SKIA_INCLUDE_DIR}")
 endif()
@@ -68,7 +65,7 @@ endif()
 find_library(SKIA_LIBRARY NAMES skia skia.dll PATHS ${SKIA_LIB_DIR} NO_DEFAULT_PATH)
 if(SKIA_LIBRARY)
     message(STATUS "  Skia library: ${SKIA_LIBRARY}")
-    target_link_libraries(ZenithDAW PRIVATE ${SKIA_LIBRARY})
+    target_link_libraries(ZenithDAW_lib PUBLIC ${SKIA_LIBRARY})
     message(STATUS "  Skia graphics library: LINKED (Manual)")
 else()
     message(FATAL_ERROR "Skia library not found in ${SKIA_LIB_DIR}")
@@ -84,11 +81,18 @@ foreach(DLL ${SKIA_DLLS})
         "${DLL}"
         "$<TARGET_FILE_DIR:ZenithDAW>/${DLL_NAME}"
     )
+    if(TARGET ZenithDAWTests)
+        add_custom_command(TARGET ZenithDAWTests POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            "${DLL}"
+            "$<TARGET_FILE_DIR:ZenithDAWTests>/${DLL_NAME}"
+        )
+    endif()
 endforeach()
 
 # Add Skia UI source files
 message(STATUS "  Enabling Skia UI Components...")
-target_sources(ZenithDAW PRIVATE
+target_sources(ZenithDAW_lib PRIVATE
     apps/desktop/Source/ui/skia/SkiaComponent.cpp
     apps/desktop/Source/ui/skia/SkiaButton.cpp
     apps/desktop/Source/ui/skia/SkiaKnob.cpp
@@ -105,11 +109,12 @@ target_sources(ZenithDAW PRIVATE
     apps/desktop/Source/ui/skia/ZenithUIComponents.h
 )
 
-target_include_directories(ZenithDAW PRIVATE
+target_include_directories(ZenithDAW_lib PUBLIC
     apps/desktop/Source/ui/skia
 )
 
-target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)
+target_compile_definitions(ZenithDAW_lib PUBLIC ZENITH_USE_SKIA=1)
 
 message(STATUS "  Skia UI components: ENABLED")
 message(STATUS "============================================")
+

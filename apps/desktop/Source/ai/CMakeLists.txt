@@ -1,5 +1,5 @@
 # AI Agents module
-target_sources(ZenithDAW PRIVATE
+target_sources(ZenithDAW_lib PRIVATE
     AIMasteringAgent.h
     SessionDebuggerAgent.h
     SessionDebuggerAgent.cpp
@@ -12,3 +12,5 @@ target_sources(ZenithDAW PRIVATE
     PresetGeneticistAgent.h
     PresetGeneticistAgent.cpp
 )
+
+
