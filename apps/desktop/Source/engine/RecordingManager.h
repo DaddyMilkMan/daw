@@ -29,7 +29,6 @@
 #include <memory>
 #include <vector>
 
-
 #include "EngineConstants.h"
 
 namespace zenith {
@@ -96,14 +95,11 @@ public:
   //==========================================================================
 
   /**
-   * @brief Prepare recording for a specific track (async)
-   * @param track Track to prepare
-   * @param trackIndex Track index
+   * @brief Set the directory for storing recordings
    * @param recordDir Directory for recordings
    * @note MESSAGE THREAD ONLY
    */
-  void prepareRecordingForTrack(Track &track, int trackIndex,
-                                const juce::File &recordDir);
+  void setRecordingDirectory(const juce::File &recordDir);
 
   /**
    * @brief Start recording on all armed tracks

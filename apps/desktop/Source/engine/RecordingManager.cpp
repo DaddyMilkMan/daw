@@ -15,7 +15,6 @@
 #include "AudioRecorder.h"
 #include "Track.h"
 
-
 namespace zenith {
 
 //==============================================================================
@@ -48,8 +47,7 @@ void RecordingManager::prepare(double sampleRate) {
 }
 
 //==============================================================================
-void RecordingManager::prepareRecordingForTrack(Track &track, int trackIndex,
-                                                const juce::File &recordDir) {
+void RecordingManager::setRecordingDirectory(const juce::File &recordDir) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   // Store recording directory for later use
@@ -58,11 +56,8 @@ void RecordingManager::prepareRecordingForTrack(Track &track, int trackIndex,
     recordingDirectory_.createDirectory();
   }
 
-  // Audio preparation is now handled in startRecording via AudioRecorder
-  // This method is kept for API compatibility and directory setup
-
-  DBG("RecordingManager: Prepared recording directory for track " +
-      juce::String(trackIndex) + ": " + recordDir.getFullPathName());
+  DBG("RecordingManager: Recording directory set to: " +
+      recordDir.getFullPathName());
 }
 
 //==============================================================================

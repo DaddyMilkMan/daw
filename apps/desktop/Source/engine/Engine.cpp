@@ -468,19 +468,8 @@ void Engine::record() {
     recordingsDir.createDirectory();
   }
 
-  // Set up recording for armed tracks
-  for (size_t i = 0; i < tracks_.size(); ++i) {
-    if (!tracks_[i]->isArmed())
-      continue;
-
-    // Only process Audio/Instrument tracks for audio recording
-    if (tracks_[i]->getType() == Track::Type::Audio ||
-        tracks_[i]->getType() == Track::Type::Instrument) {
-
-      recordingManager_->prepareRecordingForTrack(
-          *tracks_[i], static_cast<int>(i), recordingsDir);
-    }
-  }
+  // Set recording directory
+  recordingManager_->setRecordingDirectory(recordingsDir);
 
   // Start recording on managed sessions
   recordingManager_->startRecording(transportController_->getPlayheadSamples(),

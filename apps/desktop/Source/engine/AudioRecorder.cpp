@@ -159,9 +159,9 @@ AudioRecorder::AudioRecorder() {
 }
 
 AudioRecorder::~AudioRecorder() {
-  if (isRecording_.load()) {
-    stopRecording();
-  }
+  // Owner is responsible for stopping recording on message thread before
+  // destruction. We cannot safely call stopRecording (which asserts message
+  // thread) here.
 
   if (writerThread_) {
     writerThread_->removeTimeSliceClient(this);

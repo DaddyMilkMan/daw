@@ -689,12 +689,6 @@ bool MainWindow::loadProject(const juce::File &file) {
     // listeners
   }
 
-  // Add to recent projects
-  if (recentProjectManager_) {
-    recentProjectManager_->addProject(file, projectState->getProjectName());
-    recentProjectManager_->save();
-  }
-
   DBG("MainWindow: Project loaded successfully");
   return true;
 }
