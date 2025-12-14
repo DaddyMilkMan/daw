@@ -17,11 +17,12 @@
 #pragma once
 
 #include "../engine/RecentProjectManager.h"
+#include "skia/AuroraBackground.h"
 #include "skia/GlassmorphicPanel.h"
 #include "skia/SkiaComponent.h"
 #include "skia/ZenithDesignSystem.h"
 #include <functional>
-
+#include <memory>
 
 namespace zenith {
 
@@ -60,6 +61,7 @@ public:
   void mouseMove(const juce::MouseEvent &e) override;
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
 
   // Animation hook
   void timerCallback() override;
@@ -85,6 +87,24 @@ private:
   AnimatedValue alpha_;
   float animationTime_ = 0.0f;
 
+  // Parallax / 3D Tilt
+  struct Spring {
+    float current = 0.0f;
+    float target = 0.0f;
+    float velocity = 0.0f;
+    float stiffness = 0.1f;
+    float damping = 0.82f;
+
+    void update() {
+      float force = (target - current) * stiffness;
+      velocity += force;
+      velocity *= damping;
+      current += velocity;
+    }
+  };
+  Spring tiltX_;
+  Spring tiltY_;
+
   // Layout
   SkRect mainCardBounds_;
   SkRect recentArea_;
@@ -99,6 +119,8 @@ private:
     SkColor accent;
     SkRect bounds;
     bool isHovered = false;
+    std::vector<float> waveform;
+    Spring scaleSpring{1.0f, 1.0f}; // Start at 1.0
   };
   std::vector<RecentProject> recentProjects_;
 
@@ -108,6 +130,7 @@ private:
     SkColor color;
     SkRect bounds;
     bool isHovered = false;
+    Spring scaleSpring{1.0f, 1.0f};
   };
   std::vector<TemplateItem> templates_;
 
@@ -118,6 +141,15 @@ private:
   // New Project Button
   SkRect newProjectButtonBounds_;
   bool isNewProjectHovered_ = false;
+  float buttonGradientAngle_ = 0.0f;
+
+  struct Ripple {
+    float x, y;
+    float radius = 0.0f;
+    float opacity = 1.0f;
+    bool active = true;
+  };
+  std::vector<Ripple> buttonRipples_;
 
   // Helpers
   void drawBackground(SkCanvas *canvas);
@@ -133,6 +165,9 @@ private:
   static SkColor getAccentColorForGenre(const juce::String &genre);
 
   void updateLayout();
+
+  // Aurora living background
+  std::unique_ptr<AuroraBackground> auroraBackground_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

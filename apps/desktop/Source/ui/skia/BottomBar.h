@@ -19,12 +19,13 @@
 #include <JuceHeader.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
-
+#include <core/SkRect.h>
 
 namespace zenith {
 class Engine;
 class ProjectState;
 class DeviceChainComponent;
+class MixerComponent;
 
 // Forward declarations
 namespace ai {
