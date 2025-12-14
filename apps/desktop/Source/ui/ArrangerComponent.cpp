@@ -71,9 +71,8 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // Initial clip view build
   rebuildClipViews();
 
-  // Start timer for playhead position updates (30Hz is plenty for visual
-  // feedback)
-  startTimerHz(30);
+  // Start timer for playhead position updates (60Hz for smooth visual feedback)
+  startTimerHz(60);
 
   // Initialize Macro Toolbar
   macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
@@ -154,6 +153,8 @@ void ArrangerComponent::rebuildClipViews() {
   if (!tracksNode.isValid())
     return;
 
+  // Indexing is handled by iteration order
+
   int trackIndex = 0;
   for (const auto &track : tracksNode) {
     auto trackId = track[zenith::ProjectState::PROP_ID].toString();
@@ -164,6 +165,7 @@ void ArrangerComponent::rebuildClipViews() {
         ClipView view;
         view.clipId = clip[zenith::ProjectState::PROP_ID].toString();
         view.trackId = trackId;
+        view.trackIndex = trackIndex; // Cache track index in ClipView
         view.startBeats = clip[zenith::ProjectState::PROP_START];
         view.lengthBeats = clip[zenith::ProjectState::PROP_LENGTH];
 
@@ -212,19 +214,9 @@ void ArrangerComponent::rebuildClipViews() {
     MiniMapComponent::MiniMapClip mc;
     mc.startBeats = view.startBeats;
     mc.lengthBeats = view.lengthBeats;
-    // We need track index for Y pos
-    // We can find it by iterating tracks or storing it in ClipView
-    // (optimization for later) For now, re-find it (performance warning, but
-    // fast enough for small projects)
-    int tIdx = 0;
-    auto tracks = projectState.getState().getChildWithName(
-        zenith::ProjectState::ID_TRACKS);
-    for (const auto &t : tracks) {
-      if (t[zenith::ProjectState::PROP_ID].toString() == view.trackId)
-        break;
-      tIdx++;
-    }
-    mc.trackIndex = tIdx;
+    // OPTIMIZATION: Use cached trackIndex from ClipView (O(1) instead of O(N)
+    // per clip)
+    mc.trackIndex = view.trackIndex;
     mc.isMidi = view.isMidi;
     mc.isSelected = view.isSelected;
 
@@ -232,8 +224,8 @@ void ArrangerComponent::rebuildClipViews() {
 
     if (view.startBeats + view.lengthBeats > maxBeat)
       maxBeat = view.startBeats + view.lengthBeats;
-    if (tIdx + 1 > maxTrack)
-      maxTrack = tIdx + 1;
+    if (view.trackIndex + 1 > maxTrack)
+      maxTrack = view.trackIndex + 1;
   }
 
   // Update MiniMap
@@ -252,26 +244,18 @@ void ArrangerComponent::recomputeClipBounds() {
     sectionTrack->setVisibleRange(viewStartBeats, pixelsPerBeat);
   }
 
+  // Cache invariant values for the loop
+  const float trackHeight =
+      static_cast<float>(TRACK_HEIGHT - 4); // 2px margin top/bottom
+
   for (auto &clipView : clipViews) {
-    // Find track index for this clip
-    int trackIndex = 0;
-    auto tracksNode = projectState.getState().getChildWithName(
-        zenith::ProjectState::ID_TRACKS);
-    if (tracksNode.isValid()) {
-      for (const auto &track : tracksNode) {
-        if (track[zenith::ProjectState::PROP_ID].toString() == clipView.trackId)
-          break;
-        trackIndex++;
-      }
-    }
-
+    // OPTIMIZATION: Use cached trackIndex from ClipView (O(1) instead of O(N)
+    // per clip)
     float x = beatsToX(clipView.startBeats);
-    float y = trackIndexToY(trackIndex);
+    float y = trackIndexToY(clipView.trackIndex);
     float width = static_cast<float>(clipView.lengthBeats * pixelsPerBeat);
-    float height =
-        static_cast<float>(TRACK_HEIGHT - 4); // 2px margin top/bottom
 
-    clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, height);
+    clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, trackHeight);
   }
 }
 
@@ -528,22 +512,12 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   canvas->clear(colors::BG_DARKEST);
 
   // ============================================================================
-  // 2. GRID & TIMELINE
+  // 2. GRID & TIMELINE - PREMIUM RENDERING
   // ============================================================================
-  SkPaint gridPaint;
-  gridPaint.setColor(colors::BORDER_SUBTLE);
-  gridPaint.setStrokeWidth(1.0f);
-  gridPaint.setAntiAlias(true);
-  // Dotted line effect - using SkSpan for modern Skia API
-  static const SkScalar intervals[] = {2.0f, 4.0f};
-  static const auto dashEffect =
-      SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
-  gridPaint.setPathEffect(dashEffect);
-
+  int beatsPerBar = getBeatsPerBar();
   double startBeat = std::floor(viewStartBeats);
   double endBeat = viewStartBeats + ((width - HEADER_WIDTH) / pixelsPerBeat);
 
-  // Draw Vertical Grid Lines (Time)
   // Optimization: Don't draw every beat if zoomed out too far
   double beatStep = (pixelsPerBeat < 20.0) ? 4.0 : 1.0;
 
@@ -560,11 +534,76 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
                                     width - HEADER_WIDTH,
                                     height - SECTION_HEIGHT));
 
+  // A. Alternating BAR HIGHLIGHTING (subtle zebra striping)
+  SkPaint barHighlightPaint;
+  barHighlightPaint.setStyle(SkPaint::kFill_Style);
+  barHighlightPaint.setAntiAlias(false);
+
+  int startBar = static_cast<int>(std::floor(startBeat / beatsPerBar));
+  int endBar = static_cast<int>(std::ceil(endBeat / beatsPerBar));
+
+  for (int bar = startBar; bar <= endBar; ++bar) {
+    if (bar % 2 == 0) {
+      // Every other bar gets subtle highlight
+      float barStartX = beatsToX(bar * beatsPerBar);
+      float barEndX = beatsToX((bar + 1) * beatsPerBar);
+
+      // Subtle gradient highlight
+      SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
+      SkColor gradColors[2] = {
+          SkColorSetARGB(8, 255, 255, 255), // Very subtle top
+          SkColorSetARGB(4, 255, 255, 255)  // Even more subtle bottom
+      };
+      barHighlightPaint.setShader(SkGradientShader::MakeLinear(
+          pts, gradColors, nullptr, 2, SkTileMode::kClamp));
+
+      canvas->drawRect(SkRect::MakeXYWH(barStartX, SECTION_HEIGHT,
+                                        barEndX - barStartX,
+                                        height - SECTION_HEIGHT),
+                       barHighlightPaint);
+      barHighlightPaint.setShader(nullptr);
+    }
+  }
+
+  // B. GRID LINES with hierarchy
   for (double beat = startBeat; beat <= endBeat; beat += beatStep) {
     float x = beatsToX(beat);
+    int beatNum = static_cast<int>(beat);
+    bool isBarLine = (beatNum % beatsPerBar == 0);
+
+    SkPaint gridPaint;
+    gridPaint.setAntiAlias(true);
+
+    if (isBarLine) {
+      // BAR LINES - more visible, solid
+      gridPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
+      gridPaint.setStrokeWidth(1.0f);
+    } else {
+      // BEAT LINES - subtle, dotted
+      gridPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
+      gridPaint.setStrokeWidth(1.0f);
+      static const SkScalar intervals[] = {2.0f, 4.0f};
+      static const auto dashEffect =
+          SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
+      gridPaint.setPathEffect(dashEffect);
+    }
+
     canvas->drawLine(x, SECTION_HEIGHT, x, height, gridPaint);
   }
   canvas->restore();
+
+  // C. HEADER/TIMELINE BOUNDARY GLOW
+  SkPaint boundaryGlowPaint;
+  SkPoint glowPts[2] = {{HEADER_WIDTH, 0}, {HEADER_WIDTH + 30, 0}};
+  SkColor glowColors[2] = {
+      SkColorSetARGB(40, 0, 200, 255), // Subtle cyan glow
+      SkColorSetARGB(0, 0, 200, 255)   // Fade out
+  };
+  boundaryGlowPaint.setShader(SkGradientShader::MakeLinear(
+      glowPts, glowColors, nullptr, 2, SkTileMode::kClamp));
+  canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, SECTION_HEIGHT, 30,
+                                    height - SECTION_HEIGHT),
+                   boundaryGlowPaint);
 
   // Highlighting for Section Hover/Drag
   if (sectionTrack) {
@@ -628,68 +667,166 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       SkRect trackRect = SkRect::MakeXYWH(0, y, width, trackHeight);
       SkRect headerRect = SkRect::MakeXYWH(0, y, HEADER_WIDTH, trackHeight);
 
-      // A. Track Header Background (Slightly lighter than timeline)
-      trackBgPaint.setColor(colors::BG_DARKER);
-      canvas->drawRect(headerRect, trackBgPaint);
+      // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT
+      {
+        // Gradient from slightly lighter top to darker bottom
+        SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
+        SkColor hdrGradColors[3] = {
+            SkColorSetRGB(35, 45,
+                          55), // Top - Cyan tint (visible Neon Noir style)
+            SkColorSetRGB(25, 25, 30), // Middle
+            SkColorSetRGB(18, 18, 22)  // Bottom - darkest
+        };
+        float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
+        trackBgPaint.setShader(SkGradientShader::MakeLinear(
+            hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
+        canvas->drawRect(headerRect, trackBgPaint);
+        trackBgPaint.setShader(nullptr);
 
-      // B. Track Timeline Background (Transparent/Darkest)
-      // (Already cleared to BG_DARKEST, effectively)
+        // Top edge highlight (glass effect)
+        SkPaint topHighlight;
+        topHighlight.setColor(SkColorSetARGB(20, 255, 255, 255));
+        topHighlight.setStrokeWidth(1.0f);
+        canvas->drawLine(0, y + 0.5f, HEADER_WIDTH, y + 0.5f, topHighlight);
+      }
 
-      // C. Separator
-      canvas->drawLine(0, y + trackHeight, width, y + trackHeight,
-                       dividerPaint);
+      // B. Track Timeline Background - Subtle alternating row tint
+      if (i % 2 == 1) {
+        SkPaint altRowPaint;
+        altRowPaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+        canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, y, width - HEADER_WIDTH,
+                                          trackHeight),
+                         altRowPaint);
+      }
+
+      // C. Separator with gradient fade
+      {
+        SkPaint sepPaint;
+        SkPoint sepPts[2] = {{0, 0}, {width, 0}};
+        SkColor sepColors[3] = {
+            SkColorSetARGB(60, 255, 255, 255), // Left - visible
+            SkColorSetARGB(30, 255, 255, 255), // Middle
+            SkColorSetARGB(10, 255, 255, 255)  // Right - faded
+        };
+        float sepPos[3] = {0.0f, 0.3f, 1.0f};
+        sepPaint.setShader(SkGradientShader::MakeLinear(
+            sepPts, sepColors, sepPos, 3, SkTileMode::kClamp));
+        sepPaint.setStrokeWidth(1.0f);
+        canvas->drawLine(0, y + trackHeight - 0.5f, width,
+                         y + trackHeight - 0.5f, sepPaint);
+      }
 
       // D. Header Content
       auto track = tracksNode.getChild(i);
       juce::String name = track[zenith::ProjectState::PROP_NAME].toString();
 
-      // Track Name
-      textPaint.setColor(colors::TEXT_PRIMARY);
-      canvas->drawString(name.toStdString().c_str(), spacing::MD, y + 25.0f,
-                         nameFont, textPaint);
+      // Track Number Badge
+      {
+        SkPaint badgePaint;
+        badgePaint.setAntiAlias(true);
+        badgePaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+        SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, y + 8, 24, 18);
+        canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, 4, 4), badgePaint);
 
-      // Controls (Mute/Solo/Rec) - Modern "Pills"
-      float btnY = y + 40.0f;
-      float btnSize = 18.0f;
-      float btnGap = 24.0f;
+        SkPaint numPaint;
+        numPaint.setAntiAlias(true);
+        numPaint.setColor(colors::TEXT_SECONDARY);
+        canvas->drawString(juce::String(i + 1).toStdString().c_str(),
+                           spacing::SM + 6, y + 21, smallFont, numPaint);
+      }
+
+      // Track Name with text shadow
+      {
+        SkPaint shadowPaint;
+        shadowPaint.setAntiAlias(true);
+        shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
+        canvas->drawString(name.toStdString().c_str(), spacing::MD + 24 + 1,
+                           y + 23.0f + 1, nameFont, shadowPaint);
+
+        textPaint.setColor(colors::TEXT_PRIMARY);
+        canvas->drawString(name.toStdString().c_str(), spacing::MD + 24,
+                           y + 23.0f, nameFont, textPaint);
+      }
+
+      // Controls (Mute/Solo/Rec) - PREMIUM PILL BUTTONS
+      float btnY = y + 42.0f;
+      float btnSize = 22.0f;
+      float btnGap = 28.0f;
       float startX = spacing::MD;
 
-      // Helper for buttons
+      // Helper for premium buttons
       auto drawTrackButton = [&](float bx, const char *label, bool active,
                                  SkColor activeColor) {
         SkRect btnRect = SkRect::MakeXYWH(bx, btnY, btnSize, btnSize);
-        SkPaint btnPaint;
-        btnPaint.setAntiAlias(true);
+        SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, 6.0f, 6.0f);
+
+        // Drop shadow
+        SkPaint shadowPaint;
+        shadowPaint.setAntiAlias(true);
+        shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
+        shadowPaint.setMaskFilter(
+            SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+        SkRect shadowRect = btnRect;
+        shadowRect.offset(0, 1);
+        canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 6.0f, 6.0f),
+                          shadowPaint);
 
         if (active) {
-          btnPaint.setColor(activeColor);
-          btnPaint.setStyle(SkPaint::kFill_Style);
-
-          // Glow effect for active state
+          // OUTER GLOW first
           SkPaint glowPaint;
           glowPaint.setAntiAlias(true);
-          glowPaint.setColor(withAlpha(activeColor, 0.4f));
+          glowPaint.setColor(withAlpha(activeColor, 0.5f));
           glowPaint.setMaskFilter(
-              SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
-          canvas->drawCircle(bx + btnSize / 2, btnY + btnSize / 2,
-                             btnSize / 2 + 2, glowPaint);
+              SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+          canvas->drawRRect(btnRRect, glowPaint);
+
+          // Gradient fill
+          SkPaint btnPaint;
+          btnPaint.setAntiAlias(true);
+          SkPoint gradPts[2] = {{bx, btnY}, {bx, btnY + btnSize}};
+          SkColor gradColors[2] = {lighten(activeColor, 0.2f), activeColor};
+          btnPaint.setShader(SkGradientShader::MakeLinear(
+              gradPts, gradColors, nullptr, 2, SkTileMode::kClamp));
+          canvas->drawRRect(btnRRect, btnPaint);
+
+          // Inner highlight
+          SkPaint innerHighlight;
+          innerHighlight.setAntiAlias(true);
+          innerHighlight.setStyle(SkPaint::kStroke_Style);
+          innerHighlight.setStrokeWidth(1.0f);
+          innerHighlight.setColor(SkColorSetARGB(80, 255, 255, 255));
+          SkRRect innerRRect = btnRRect;
+          innerRRect.inset(0.5f, 0.5f);
+          canvas->drawRRect(innerRRect, innerHighlight);
         } else {
-          btnPaint.setColor(colors::BG_LIGHT); // Inactive dark grey
-          btnPaint.setStyle(SkPaint::kFill_Style);
+          // Inactive button with subtle gradient
+          SkPaint btnPaint;
+          btnPaint.setAntiAlias(true);
+          SkPoint gradPts[2] = {{bx, btnY}, {bx, btnY + btnSize}};
+          SkColor gradColors[2] = {SkColorSetRGB(55, 55, 65),
+                                   SkColorSetRGB(40, 40, 48)};
+          btnPaint.setShader(SkGradientShader::MakeLinear(
+              gradPts, gradColors, nullptr, 2, SkTileMode::kClamp));
+          canvas->drawRRect(btnRRect, btnPaint);
+
+          // Border
+          SkPaint borderPaint;
+          borderPaint.setAntiAlias(true);
+          borderPaint.setStyle(SkPaint::kStroke_Style);
+          borderPaint.setStrokeWidth(1.0f);
+          borderPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+          canvas->drawRRect(btnRRect, borderPaint);
         }
 
-        // Draw pill/circle
-        canvas->drawRRect(SkRRect::MakeRectXY(btnRect, 4.0f, 4.0f), btnPaint);
-
-        // Label
+        // Label - centered
         SkPaint labelPaint;
         labelPaint.setAntiAlias(true);
-        labelPaint.setColor(active ? colors::BG_DARKEST
-                                   : colors::TEXT_SECONDARY);
+        labelPaint.setColor(active ? SK_ColorWHITE : colors::TEXT_SECONDARY);
 
-        // Center text roughly
-        canvas->drawString(label, bx + 5.0f, btnY + 13.0f, smallFont,
-                           labelPaint);
+        // Better centering
+        float textX = bx + (btnSize - 8.0f) / 2.0f;
+        float textY = btnY + btnSize * 0.68f;
+        canvas->drawString(label, textX, textY, smallFont, labelPaint);
       };
 
       bool isMuted = track[zenith::ProjectState::PROP_MUTE];
@@ -697,19 +834,33 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       bool isArmed = track[zenith::ProjectState::PROP_ARMED];
 
       drawTrackButton(startX, "M", isMuted, colors::AMBER);
-      drawTrackButton(startX + btnGap, "S", isSoloed, colors::BLUE);
-      drawTrackButton(startX + btnGap * 2, "R", isArmed, colors::RED);
+      drawTrackButton(startX + btnGap, "S", isSoloed, colors::NEON_CYAN);
+      drawTrackButton(startX + btnGap * 2, "R", isArmed, colors::NEON_RED);
 
-      // E. Right Border for Header (Glassy look)
-      SkPaint borderPaint;
-      borderPaint.setShader(SkGradientShader::MakeLinear(
-          new SkPoint[2]{{HEADER_WIDTH - 1, y},
-                         {HEADER_WIDTH - 1, y + trackHeight}},
-          new SkColor[2]{colors::BORDER_SUBTLE, colors::BORDER_DEFAULT},
-          nullptr, 2, SkTileMode::kClamp));
-      borderPaint.setStrokeWidth(1.0f);
-      canvas->drawLine(HEADER_WIDTH, y, HEADER_WIDTH, y + trackHeight,
-                       borderPaint);
+      // E. Right Border for Header - GLASSY DIVIDER
+      {
+        SkPaint dividerPaint;
+        SkPoint divPts[2] = {{HEADER_WIDTH - 1, y},
+                             {HEADER_WIDTH - 1, y + trackHeight}};
+        SkColor divColors[3] = {
+            SkColorSetARGB(60, 255, 255, 255), // Top highlight
+            SkColorSetARGB(30, 255, 255, 255), // Middle
+            SkColorSetARGB(10, 255, 255, 255)  // Bottom fade
+        };
+        float divPos[3] = {0.0f, 0.2f, 1.0f};
+        dividerPaint.setShader(SkGradientShader::MakeLinear(
+            divPts, divColors, divPos, 3, SkTileMode::kClamp));
+        dividerPaint.setStrokeWidth(1.0f);
+        canvas->drawLine(HEADER_WIDTH - 0.5f, y, HEADER_WIDTH - 0.5f,
+                         y + trackHeight, dividerPaint);
+
+        // Dark side shadow
+        SkPaint shadowLine;
+        shadowLine.setColor(SkColorSetARGB(40, 0, 0, 0));
+        shadowLine.setStrokeWidth(1.0f);
+        canvas->drawLine(HEADER_WIDTH + 0.5f, y, HEADER_WIDTH + 0.5f,
+                         y + trackHeight, shadowLine);
+      }
     }
   }
 
@@ -746,59 +897,218 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
                                 clipView.bounds.getWidth(),
                                 clipView.bounds.getHeight());
 
-    // Round Rect for Clip
-    SkRRect rr =
-        SkRRect::MakeRectXY(r, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
+    // Use larger radius for premium feel
+    float clipRadius = 6.0f;
+    SkRRect rr = SkRRect::MakeRectXY(r, clipRadius, clipRadius);
 
-    // Determines Color Wrapper
+    // Determine base color based on clip type
     SkColor baseColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
     if (clipView.isSelected) {
-      baseColor = lighten(baseColor, 0.2f);
+      baseColor = lighten(baseColor, 0.15f);
     }
 
-    // 1. Clip Background (Glassy Gradient)
-    SkPoint pts[2] = {{r.left(), r.top()}, {r.left(), r.bottom()}};
-    SkColor bgColors[2] = {withAlpha(baseColor, 0.4f),
-                           withAlpha(baseColor, 0.2f)};
-    clipPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, nullptr, 2,
-                                                     SkTileMode::kClamp));
-    clipPaint.setStyle(SkPaint::kFill_Style);
-    canvas->drawRRect(rr, clipPaint);
-    clipPaint.setShader(nullptr); // Reset
+    // ========================================
+    // 1. DROP SHADOW (underneath clip)
+    // ========================================
+    {
+      SkPaint shadowPaint;
+      shadowPaint.setAntiAlias(true);
+      shadowPaint.setColor(SkColorSetARGB(60, 0, 0, 0));
+      shadowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+      SkRect shadowRect = r;
+      shadowRect.offset(0, 2);
+      canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, clipRadius, clipRadius),
+                        shadowPaint);
+    }
 
-    // 2. Clip Border (Subtle)
-    SkPaint outlinePaint;
-    outlinePaint.setAntiAlias(true);
-    outlinePaint.setStyle(SkPaint::kStroke_Style);
-    outlinePaint.setColor(withAlpha(baseColor, 0.6f));
-    outlinePaint.setStrokeWidth(1.0f);
-    canvas->drawRRect(rr, outlinePaint);
+    // ========================================
+    // 2. GLASSMORPHIC BACKGROUND
+    // ========================================
+    {
+      // Multi-stop gradient for depth
+      SkPaint bgPaint;
+      bgPaint.setAntiAlias(true);
 
-    // 3. Selection Glow
+      SkPoint pts[2] = {{r.left(), r.top()}, {r.left(), r.bottom()}};
+      SkColor bgColors[3] = {
+          withAlpha(lighten(baseColor, 0.1f), 0.5f), // Top - lighter
+          withAlpha(baseColor, 0.35f),               // Middle
+          withAlpha(darken(baseColor, 0.2f), 0.25f)  // Bottom - darker
+      };
+      float bgPositions[3] = {0.0f, 0.4f, 1.0f};
+
+      bgPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, bgPositions,
+                                                     3, SkTileMode::kClamp));
+      canvas->drawRRect(rr, bgPaint);
+    }
+
+    // ========================================
+    // 3. INNER GLASSMORPHIC TEXTURE
+    // ========================================
+    {
+      // Subtle noise/texture overlay for glass feel
+      SkPaint texturePaint;
+      texturePaint.setAntiAlias(true);
+      texturePaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+      texturePaint.setBlendMode(SkBlendMode::kOverlay);
+      canvas->drawRRect(rr, texturePaint);
+    }
+
+    // ========================================
+    // 4. TOP RIM LIGHT (glass highlight)
+    // ========================================
+    {
+      SkPaint rimPaint;
+      rimPaint.setAntiAlias(true);
+      rimPaint.setStyle(SkPaint::kStroke_Style);
+      rimPaint.setStrokeWidth(1.0f);
+
+      SkPoint rimPts[2] = {{r.left(), r.top()},
+                           {r.right() * 0.6f, r.top() + r.height() * 0.3f}};
+      SkColor rimColors[2] = {
+          SkColorSetARGB(120, 255, 255, 255), // Bright highlight
+          SkColorSetARGB(0, 255, 255, 255)    // Fade out
+      };
+      rimPaint.setShader(SkGradientShader::MakeLinear(
+          rimPts, rimColors, nullptr, 2, SkTileMode::kClamp));
+
+      SkRRect innerRR = rr;
+      innerRR.inset(0.5f, 0.5f);
+      canvas->drawRRect(innerRR, rimPaint);
+    }
+
+    // ========================================
+    // 5. CLIP BORDER
+    // ========================================
+    {
+      SkPaint borderPaint;
+      borderPaint.setAntiAlias(true);
+      borderPaint.setStyle(SkPaint::kStroke_Style);
+      borderPaint.setStrokeWidth(1.0f);
+
+      // Gradient border - brighter at top
+      SkPoint borderPts[2] = {{r.left(), r.top()}, {r.left(), r.bottom()}};
+      SkColor borderColors[2] = {withAlpha(baseColor, 0.8f),
+                                 withAlpha(baseColor, 0.4f)};
+      borderPaint.setShader(SkGradientShader::MakeLinear(
+          borderPts, borderColors, nullptr, 2, SkTileMode::kClamp));
+
+      canvas->drawRRect(rr, borderPaint);
+    }
+
+    // ========================================
+    // 6. SELECTION GLOW (outer neon effect)
+    // ========================================
     if (clipView.isSelected) {
-      canvas->drawRRect(rr, selectedClipPaint);
+      // Outer glow
+      SkPaint glowPaint;
+      glowPaint.setAntiAlias(true);
+      glowPaint.setStyle(SkPaint::kStroke_Style);
+      glowPaint.setStrokeWidth(3.0f);
+      glowPaint.setColor(withAlpha(colors::NEON_CYAN, 0.6f));
+      glowPaint.setMaskFilter(
+          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+      canvas->drawRRect(rr, glowPaint);
+
+      // Core bright border
+      SkPaint corePaint;
+      corePaint.setAntiAlias(true);
+      corePaint.setStyle(SkPaint::kStroke_Style);
+      corePaint.setStrokeWidth(1.5f);
+      corePaint.setColor(colors::NEON_CYAN);
+      canvas->drawRRect(rr, corePaint);
     }
 
-    // 4. Content (Waveform or MIDI Notes) - Use new professional rendering
-    if (clipView.isMidi) {
-      // MIDI clip - draw piano roll blob visualization
-      drawClipMidiBlobs(canvas, clipView, r);
-    } else {
-      // Audio clip - draw real waveform from cached peaks
-      drawClipWaveform(canvas, clipView, r);
+    // ========================================
+    // 7. CONTENT (Waveform or MIDI)
+    // ========================================
+    {
+      // Inset the content area for padding
+      SkRect contentRect = r;
+      contentRect.inset(4.0f, 16.0f); // Leave room for label at top
+      contentRect.fTop += 4.0f;
+
+      canvas->save();
+      canvas->clipRRect(rr, true);
+
+      if (clipView.isMidi) {
+        // MIDI clip - enhanced piano roll visualization
+        drawClipMidiBlobs(canvas, clipView, contentRect);
+      } else {
+        // Audio clip - enhanced waveform visualization
+        drawClipWaveform(canvas, clipView, contentRect);
+      }
+
+      canvas->restore();
     }
 
-    // 5. Clip Name Label (Shadowed)
-    SkPaint textShadow;
-    textShadow.setColor(SkColorSetARGB(128, 0, 0, 0));
-    canvas->drawString(clipView.clipId.toStdString().c_str(), r.left() + 6.0f,
-                       r.top() + 14.0f, clipTextFont, textShadow);
+    // ========================================
+    // 8. CLIP LABEL (with pill background)
+    // ========================================
+    {
+      // Label background pill
+      SkPaint pillPaint;
+      pillPaint.setAntiAlias(true);
+      pillPaint.setColor(SkColorSetARGB(140, 0, 0, 0));
 
-    SkPaint textFill;
-    textFill.setColor(colors::TEXT_PRIMARY);
-    // Use the clip ID for the visible text as well for consistency
-    canvas->drawString(clipView.clipId.toStdString().c_str(), r.left() + 5.0f,
-                       r.top() + 13.0f, clipTextFont, textFill);
+      SkRect pillRect = SkRect::MakeXYWH(r.left() + 4, r.top() + 4,
+                                         std::min(r.width() - 8, 100.0f), 14);
+      canvas->drawRRect(SkRRect::MakeRectXY(pillRect, 3, 3), pillPaint);
+
+      // Clip name text
+      SkFont labelFont =
+          typography::getSkFont(typography::FONT_XS, FontWeight::Medium);
+      SkPaint textPaint;
+      textPaint.setAntiAlias(true);
+      textPaint.setColor(SK_ColorWHITE);
+
+      // Truncate text if too long
+      juce::String displayName = clipView.clipId;
+      if (displayName.length() > 12) {
+        displayName = displayName.substring(0, 10) + "...";
+      }
+
+      canvas->drawString(displayName.toStdString().c_str(), r.left() + 8,
+                         r.top() + 14, labelFont, textPaint);
+    }
+
+    // ========================================
+    // 9. CLIP TYPE INDICATOR (icon badge)
+    // ========================================
+    {
+      // Small badge in bottom-right corner
+      float badgeSize = 14.0f;
+      SkRect badgeRect =
+          SkRect::MakeXYWH(r.right() - badgeSize - 4,
+                           r.bottom() - badgeSize - 4, badgeSize, badgeSize);
+
+      SkPaint badgePaint;
+      badgePaint.setAntiAlias(true);
+      badgePaint.setColor(withAlpha(baseColor, 0.8f));
+      canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, 3, 3), badgePaint);
+
+      // Icon (simple shape)
+      SkPaint iconPaint;
+      iconPaint.setAntiAlias(true);
+      iconPaint.setColor(SK_ColorWHITE);
+      iconPaint.setStyle(SkPaint::kStroke_Style);
+      iconPaint.setStrokeWidth(1.5f);
+
+      float cx = badgeRect.centerX();
+      float cy = badgeRect.centerY();
+
+      if (clipView.isMidi) {
+        // MIDI icon - musical note shape
+        canvas->drawLine(cx - 2, cy + 3, cx - 2, cy - 2, iconPaint);
+        canvas->drawCircle(cx - 3, cy + 2, 2, iconPaint);
+      } else {
+        // Audio icon - waveform shape
+        canvas->drawLine(cx - 3, cy, cx - 1, cy - 2, iconPaint);
+        canvas->drawLine(cx - 1, cy - 2, cx + 1, cy + 2, iconPaint);
+        canvas->drawLine(cx + 1, cy + 2, cx + 3, cy, iconPaint);
+      }
+    }
   }
   canvas->restore();
 
@@ -817,8 +1127,9 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
     marqueePaint.setColor(colors::CYAN);
     marqueePaint.setStyle(SkPaint::kStroke_Style);
+    static const SkScalar dashIntervals[] = {2.0f, 4.0f};
     marqueePaint.setPathEffect(
-        SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f));
+        SkDashPathEffect::Make(SkSpan<const SkScalar>(dashIntervals, 2), 0.0f));
     canvas->drawRect(mRect, marqueePaint);
   }
 
@@ -1308,14 +1619,39 @@ void ArrangerComponent::mouseDoubleClick(const juce::MouseEvent &e) {
 
   auto *clip = findClipAtPoint(e.position);
 
-  if (clip == nullptr) {
-    // Double-clicked empty area - create clip
-    createClipAtPoint(e.position);
-  } else {
+  if (clip != nullptr) {
     // Double-clicked existing clip - trigger callback
     if (onClipDoubleClicked) {
       onClipDoubleClicked(clip->trackId, clip->clipId);
     }
+    return;
+  }
+
+  // Double-clicked empty area - create clip
+  if (e.position.x < HEADER_WIDTH || e.position.y < SECTION_HEIGHT)
+    return;
+
+  double beat = viewStartBeats + (e.position.x - HEADER_WIDTH) / pixelsPerBeat;
+  int trackIndex = yToTrackIndex(e.position.y);
+
+  // Snap to nearest integer beat
+  beat = std::floor(beat);
+
+  if (beat < 0)
+    beat = 0;
+
+  auto tracksNode =
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+  if (tracksNode.isValid() && trackIndex >= 0 &&
+      trackIndex < tracksNode.getNumChildren()) {
+    auto track = tracksNode.getChild(trackIndex);
+    juce::String trackId = track[zenith::ProjectState::PROP_ID].toString();
+    juce::String type = track[zenith::ProjectState::PROP_TYPE].toString();
+    bool isMidi = (type != "audio");
+
+    projectState.createEmptyClip(trackId, beat, 4.0, isMidi, "New Clip",
+                                 "Double Click Create");
+    repaint();
   }
 }
 
@@ -1340,7 +1676,6 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
     recomputeClipBounds();
-    recomputeClipBounds();
 
     // Update MiniMap
     double visibleBeats = (double)(getWidth() - HEADER_WIDTH) / pixelsPerBeat;
@@ -1354,7 +1689,6 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats -= wheel.deltaY * 2.0;
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
-    recomputeClipBounds();
     recomputeClipBounds();
 
     // Update MiniMap
@@ -1376,6 +1710,7 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     firstVisibleTrackIndex =
         juce::jlimit(0, maxTrackIndex, firstVisibleTrackIndex);
 
+    recomputeClipBounds();
     repaint();
   }
 }
@@ -1785,22 +2120,90 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
                                           const ClipView &clip,
                                           const SkRect &clipRect) {
   using namespace zenith::design;
-  SkPaint notePaint;
-  notePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.8f));
-  notePaint.setAntiAlias(true);
 
+  if (clip.noteBlobs.empty() || clip.lengthBeats <= 0.001) {
+    // No notes - draw a GENERATIVE placeholder pattern so it's visible
+    juce::Random rng(clip.clipId.hashCode());
+
+    SkPaint placeholderPaint;
+    placeholderPaint.setColor(
+        SkColorSetARGB(150, 255, 255, 255)); // Much brighter
+    placeholderPaint.setAntiAlias(true);
+
+    int numNotes = (int)(clipRect.width() / 15.0f) + 1;
+    for (int i = 0; i < numNotes; ++i) {
+      if (rng.nextFloat() > 0.6f)
+        continue;
+
+      float x = clipRect.left() + i * 15.0f + rng.nextFloat() * 5.0f;
+      float y = clipRect.top() + 10.0f +
+                rng.nextFloat() * (clipRect.height() - 20.0f);
+      float w = 10.0f + rng.nextFloat() * 10.0f;
+      float h = 4.0f;
+
+      if (x + w > clipRect.right())
+        w = clipRect.right() - x;
+
+      SkRect r = SkRect::MakeXYWH(x, y, w, h);
+      canvas->drawRRect(SkRRect::MakeRectXY(r, 2, 2), placeholderPaint);
+
+      // Ghost tail
+      SkPaint tailPaint;
+      tailPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+      canvas->drawRect(SkRect::MakeXYWH(x + w, y, 5, h), tailPaint);
+    }
+    return;
+  }
+
+  // Calculate pitch range for better visualization
+  int minPitch = 127, maxPitch = 0;
   for (const auto &blob : clip.noteBlobs) {
-    if (clip.lengthBeats <= 0.001)
-      continue;
+    minPitch = std::min(minPitch, blob.pitch);
+    maxPitch = std::max(maxPitch, blob.pitch);
+  }
 
+  // Add padding to pitch range
+  int pitchRange = std::max(12, maxPitch - minPitch + 4);
+  int pitchMin = std::max(0, minPitch - 2);
+
+  // Draw notes with gradient and rounded corners
+  for (const auto &blob : clip.noteBlobs) {
     float nx = clipRect.left() +
                (blob.startBeats / clip.lengthBeats) * clipRect.width();
     float nw = (blob.lengthBeats / clip.lengthBeats) * clipRect.width();
-    float ny =
-        clipRect.top() + (1.0f - (blob.pitch / 127.0f)) * clipRect.height();
 
-    SkRect noteRect = SkRect::MakeXYWH(nx, ny, std::max(2.0f, nw), 2.0f);
-    canvas->drawRect(noteRect, notePaint);
+    // Normalize pitch to visible range
+    float normalizedPitch = (float)(blob.pitch - pitchMin) / (float)pitchRange;
+    normalizedPitch = std::clamp(normalizedPitch, 0.0f, 1.0f);
+
+    float ny =
+        clipRect.bottom() - 4 - (normalizedPitch * (clipRect.height() - 8));
+    float noteHeight = std::max(3.0f, clipRect.height() / (float)pitchRange);
+    noteHeight = std::min(noteHeight, 8.0f);
+
+    SkRect noteRect = SkRect::MakeXYWH(nx, ny - noteHeight / 2,
+                                       std::max(4.0f, nw - 1.0f), noteHeight);
+
+    // Note background with gradient
+    SkPaint notePaint;
+    notePaint.setAntiAlias(true);
+
+    SkPoint notePts[2] = {{noteRect.left(), noteRect.top()},
+                          {noteRect.left(), noteRect.bottom()}};
+    SkColor noteColors[2] = {SkColorSetARGB(220, 255, 255, 255),
+                             SkColorSetARGB(160, 200, 200, 220)};
+    notePaint.setShader(SkGradientShader::MakeLinear(
+        notePts, noteColors, nullptr, 2, SkTileMode::kClamp));
+
+    canvas->drawRRect(SkRRect::MakeRectXY(noteRect, 2.0f, 2.0f), notePaint);
+
+    // Subtle shadow under each note
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
+    SkRect shadowRect = noteRect;
+    shadowRect.offset(0, 1);
+    canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 2.0f, 2.0f), shadowPaint);
   }
 }
 
@@ -1810,39 +2213,73 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 
   auto *cache = getWaveformCache(clip.audioFilePath);
   if (!cache || !cache->isValid || cache->minPeaks.empty()) {
-    SkPaint linePaint;
-    linePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f));
-    linePaint.setStrokeWidth(1.0f);
-    canvas->drawLine(clipRect.left(), clipRect.centerY(), clipRect.right(),
-                     clipRect.centerY(), linePaint);
+    // No waveform - draw a placeholder waveform shape
+    SkPaint placeholderPaint;
+    placeholderPaint.setColor(
+        SkColorSetARGB(150, 255, 255, 255)); // Much brighter for visibility
+    placeholderPaint.setStrokeWidth(1.5f);
+    placeholderPaint.setStyle(SkPaint::kStroke_Style);
+    placeholderPaint.setAntiAlias(true);
+
+    SkPath placeholder;
+    float cY = clipRect.centerY();
+    float amp = clipRect.height() * 0.25f;
+    placeholder.moveTo(clipRect.left(), cY);
+
+    // Draw a sine-wave-like shape
+    for (float x = clipRect.left(); x < clipRect.right(); x += 4) {
+      float phase = (x - clipRect.left()) / 20.0f;
+      float y =
+          cY + std::sin(phase) * amp * (0.3f + 0.7f * std::sin(phase * 0.3f));
+      placeholder.lineTo(x, y);
+    }
+
+    canvas->drawPath(placeholder, placeholderPaint);
     return;
   }
 
-  SkPaint wavePaint;
-  wavePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.8f));
-  wavePaint.setStyle(SkPaint::kStroke_Style);
-  wavePaint.setStrokeWidth(1.0f);
-  wavePaint.setAntiAlias(true);
-
-  SkPath path;
+  // Enhanced filled waveform with gradient
   float midY = clipRect.centerY();
-  float heightScale = clipRect.height() * 0.4f;
+  float heightScale = clipRect.height() * 0.45f;
 
   size_t numPeaks = cache->minPeaks.size();
-  float stepX = clipRect.width() / static_cast<float>(numPeaks);
+  float barWidth = clipRect.width() / static_cast<float>(numPeaks);
+  barWidth = std::max(1.0f, barWidth);
 
-  path.moveTo(clipRect.left(), midY);
+  // Create fill gradient
+  SkPoint gradPts[2] = {{0, clipRect.top()}, {0, clipRect.bottom()}};
+  SkColor gradColors[3] = {
+      SkColorSetARGB(180, 255, 255, 255), // Top - bright
+      SkColorSetARGB(120, 200, 220, 255), // Middle - slightly blue
+      SkColorSetARGB(80, 150, 180, 220)   // Bottom - faded
+  };
+  float gradPositions[3] = {0.0f, 0.5f, 1.0f};
 
+  SkPaint wavePaint;
+  wavePaint.setShader(SkGradientShader::MakeLinear(
+      gradPts, gradColors, gradPositions, 3, SkTileMode::kClamp));
+  wavePaint.setAntiAlias(true);
+
+  // Draw as filled bars for better visibility
   for (size_t i = 0; i < numPeaks; ++i) {
-    float x = clipRect.left() + i * stepX;
+    float x = clipRect.left() + i * barWidth;
     float top = midY - (cache->maxPeaks[i] * heightScale);
     float bottom = midY - (cache->minPeaks[i] * heightScale);
 
-    path.moveTo(x, top);
-    path.lineTo(x, bottom);
+    // Ensure minimum height for visibility
+    float barHeight = std::max(2.0f, bottom - top);
+
+    SkRect barRect =
+        SkRect::MakeXYWH(x, top, std::max(1.0f, barWidth - 0.5f), barHeight);
+    canvas->drawRect(barRect, wavePaint);
   }
 
-  canvas->drawPath(path, wavePaint);
+  // Center line for reference
+  SkPaint centerLinePaint;
+  centerLinePaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+  centerLinePaint.setStrokeWidth(0.5f);
+  canvas->drawLine(clipRect.left(), midY, clipRect.right(), midY,
+                   centerLinePaint);
 }
 #endif
 

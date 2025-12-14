@@ -23,6 +23,7 @@ target_sources(ZenithDAW PRIVATE
     ClipStateManager.cpp
     AutomationStateManager.cpp
     ProjectFileIO.cpp
+    RecentProjectManager.cpp
     
     # Deprecated synchronizers (kept for backward compatibility, will be removed)
     # TODO: Remove these after ProjectEngineBridge is fully integrated

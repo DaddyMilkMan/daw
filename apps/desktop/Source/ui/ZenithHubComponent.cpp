@@ -5,6 +5,11 @@
     Created: 2025-12-13
     Author:  Zenith DAW Team
 
+    Pinocchio Protocol Implementation:
+    - Removed createMockData() completely
+    - Uses RecentProjectManager for persistent project data
+    - Implements actual project loading via callbacks
+
   ==============================================================================
 */
 
@@ -16,10 +21,25 @@ namespace zenith {
 
 using namespace design;
 
-ZenithHubComponent::ZenithHubComponent(std::function<void()> onDismiss)
-    : onDismiss_(std::move(onDismiss)) {
+ZenithHubComponent::ZenithHubComponent(
+    RecentProjectManager &recentProjectManager,
+    LoadProjectCallback onLoadProject, NewProjectCallback onNewProject,
+    std::function<void()> onDismiss)
+    : recentProjectManager_(recentProjectManager),
+      onLoadProject_(std::move(onLoadProject)),
+      onNewProject_(std::move(onNewProject)), onDismiss_(std::move(onDismiss)) {
   setWantsKeyboardFocus(true);
-  createMockData();
+
+  // Register as listener for project list changes
+  recentProjectManager_.addListener(this);
+
+  // Load real project data from manager
+  loadFromManager();
+
+  // Initialize templates (these are static)
+  templates_ = {{"Electronic", "🎹", colors::CYAN, {}, false},
+                {"Orchestral", "🎻", colors::VIOLET, {}, false},
+                {"Recording", "🎤", colors::NEON_PINK, {}, false}};
 
   // Start fade-in
   alpha_.setTarget(0.0f, 0); // Start invisible
@@ -28,27 +48,74 @@ ZenithHubComponent::ZenithHubComponent(std::function<void()> onDismiss)
   startTimerHz(60);
 }
 
-ZenithHubComponent::~ZenithHubComponent() { stopTimer(); }
+ZenithHubComponent::~ZenithHubComponent() {
+  stopTimer();
+  recentProjectManager_.removeListener(this);
+}
 
-void ZenithHubComponent::createMockData() {
-  // Mock Recent Projects
-  recentProjects_ = {
-      {"Cyberpunk City", "2 hours ago", "Electronic", colors::CYAN, {}, false},
-      {"Orchestral Suite No. 1",
-       "Yesterday",
-       "Cinematic",
-       colors::VIOLET,
-       {},
-       false},
-      {"Late Night Jazz", "3 days ago", "Jazz", colors::NEON_PINK, {}, false},
-      {"Techno Bunker", "1 week ago", "Techno", colors::NEON_GREEN, {}, false},
-      {"Ambient Dreams", "2 weeks ago", "Ambient", colors::BLUE, {}, false},
-      {"Rock Anthem", "1 month ago", "Rock", colors::AMBER, {}, false}};
+void ZenithHubComponent::loadFromManager() {
+  recentProjects_.clear();
 
-  // Mock Templates
-  templates_ = {{"Electronic", "🎹", colors::CYAN, {}, false},
-                {"Orchestral", "🎻", colors::VIOLET, {}, false},
-                {"Recording", "🎤", colors::NEON_PINK, {}, false}};
+  auto projects = recentProjectManager_.getRecentProjects(true);
+
+  for (const auto &entry : projects) {
+    RecentProject proj;
+    proj.name = entry.name;
+    proj.date = entry.getRelativeTimeString();
+    proj.genre = entry.genre;
+    proj.path = entry.path;
+    proj.accent = getAccentColorForGenre(entry.genre);
+    proj.isHovered = false;
+    // bounds will be set in updateLayout()
+
+    recentProjects_.push_back(proj);
+
+    // Only show first 6 projects in the grid
+    if (recentProjects_.size() >= 6)
+      break;
+  }
+
+  DBG("ZenithHubComponent: Loaded " + juce::String(recentProjects_.size()) +
+      " recent projects from manager");
+
+  // Trigger layout update if visible
+  if (isVisible()) {
+    updateLayout();
+    repaint();
+  }
+}
+
+SkColor ZenithHubComponent::getAccentColorForGenre(const juce::String &genre) {
+  // Map genre strings to accent colors
+  juce::String g = genre.toLowerCase();
+
+  if (g.contains("electronic") || g.contains("edm") || g.contains("synth")) {
+    return colors::CYAN;
+  } else if (g.contains("orchestral") || g.contains("cinematic") ||
+             g.contains("score")) {
+    return colors::VIOLET;
+  } else if (g.contains("jazz") || g.contains("swing")) {
+    return colors::NEON_PINK;
+  } else if (g.contains("techno") || g.contains("house") ||
+             g.contains("dance")) {
+    return colors::NEON_GREEN;
+  } else if (g.contains("ambient") || g.contains("chill")) {
+    return colors::BLUE;
+  } else if (g.contains("rock") || g.contains("metal")) {
+    return colors::AMBER;
+  } else if (g.contains("hip") || g.contains("rap") || g.contains("trap")) {
+    return colors::MAGENTA;
+  } else {
+    // Default accent color
+    return colors::CYAN;
+  }
+}
+
+void ZenithHubComponent::refreshProjects() { loadFromManager(); }
+
+void ZenithHubComponent::recentProjectsChanged() {
+  // Called when RecentProjectManager updates
+  juce::MessageManager::callAsync([this]() { loadFromManager(); });
 }
 
 void ZenithHubComponent::resized() { updateLayout(); }
@@ -135,10 +202,7 @@ void ZenithHubComponent::timerCallback() {
     repaint();
   }
 
-  // Animate glowing background or other elements if needed
-  // repaint(); // Continuous repaint for background animation?
-  // Let's only repaint if interactively needed or nice subtle background is
-  // requested. prompt asked for "animated background".
+  // Animate glowing background
   repaint();
 }
 
@@ -149,15 +213,8 @@ void ZenithHubComponent::show() {
 
 void ZenithHubComponent::dismiss() {
   alpha_.setTarget(0.0f, 400, AnimatedValue::EasingCurve::EaseIn);
-  // When alpha reaches 0, we should really hide the component, but we'll handle
-  // that in draw or logic. For now, let the owner handle destruction or hiding
-  // if they monitor alpha, but simplified: we trigger callback immediately or
-  // after delay.
 
   if (onDismiss_) {
-    // Delay callback slightly to allow fade out?
-    // Or just let MainWindow handle it.
-    // We can use a lambda in timer if we wanted to be fancy.
     onDismiss_();
   }
 }
@@ -204,7 +261,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
-  // Animated Mesh Gradient Logic (Simplified)
+  // Animated Mesh Gradient Logic
   auto bounds = getLocalBounds().toFloat();
   SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
@@ -240,10 +297,6 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 100.0f));
     canvas->drawCircle(b.x, b.y, b.r, blobPaint);
   }
-
-  // Vignette
-  // (Optional, GlassmorphicPanel might have fileBackground helper but we want
-  // custom here)
 }
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
@@ -254,6 +307,18 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 
   canvas->drawString("Recent Projects", recentArea_.fLeft,
                      recentArea_.fTop - 15, headerFont, textPaint);
+
+  // If no projects, show a helpful message
+  if (recentProjects_.empty()) {
+    SkFont emptyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
+    textPaint.setColor(colors::TEXT_SECONDARY);
+    canvas->drawString("No recent projects yet.", recentArea_.fLeft + 20,
+                       recentArea_.fTop + 40, emptyFont, textPaint);
+    canvas->drawString("Click 'New Project' to get started!",
+                       recentArea_.fLeft + 20, recentArea_.fTop + 65, emptyFont,
+                       textPaint);
+    return;
+  }
 
   for (const auto &proj : recentProjects_) {
     // Card Background
@@ -274,7 +339,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
       canvas->drawRRect(rrect, borderPaint);
     }
 
-    // Mock Image / Icon
+    // Mock Image / Icon (accent colored rectangle)
     SkRect imageRect =
         SkRect::MakeXYWH(proj.bounds.fLeft + 10, proj.bounds.fTop + 10, 80, 80);
     SkPaint imgPaint;
@@ -293,11 +358,21 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
                        proj.bounds.fTop + 55, subFont, textPaint);
 
     // Genre Badge
-    SkPaint badgePaint;
-    badgePaint.setColor(withAlpha(proj.accent, 0.1f));
-    SkRect badgeRect =
-        SkRect::MakeXYWH(imageRect.right() + 15, proj.bounds.fTop + 65, 80, 20);
-    // canvas->drawRoundRect(badgeRect, 4, 4, badgePaint); // optional
+    if (proj.genre.isNotEmpty()) {
+      SkPaint badgePaint;
+      badgePaint.setColor(withAlpha(proj.accent, 0.3f));
+      SkRect badgeRect = SkRect::MakeXYWH(imageRect.right() + 15,
+                                          proj.bounds.fTop + 65, 80, 20);
+      SkRRect badgeRRect = SkRRect::MakeRectXY(badgeRect, 4.0f, 4.0f);
+      canvas->drawRRect(badgeRRect, badgePaint);
+
+      SkFont badgeFont = design::getSkFont(11.0f, design::FontWeight::Medium);
+      SkPaint badgeText;
+      badgeText.setColor(colors::TEXT_PRIMARY);
+      badgeText.setAntiAlias(true);
+      canvas->drawString(proj.genre.toStdString().c_str(), badgeRect.fLeft + 6,
+                         badgeRect.centerY() + 4, badgeFont, badgeText);
+    }
   }
 }
 
@@ -308,8 +383,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Quick Start", templatesArea_.fLeft,
-                     templatesArea_.fTop - 15, headerFont,
-                     textPaint); // Adjusted y
+                     templatesArea_.fTop - 15, headerFont, textPaint);
 
   for (const auto &tmpl : templates_) {
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 8.0f, 8.0f);
@@ -320,9 +394,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
-    // Icon
-    // In a real app we'd render the unicode or icon path
-    // For now, just a colored circle
+    // Icon (colored circle)
     SkPaint iconPaint;
     iconPaint.setColor(tmpl.color);
     canvas->drawCircle(tmpl.bounds.fLeft + 30, tmpl.bounds.centerY(), 15,
@@ -415,7 +487,7 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   // Text
   SkFont btnFont = design::getSkFont(24.0f, design::FontWeight::Bold);
   SkPaint textPaint;
-  textPaint.setColor(SK_ColorWHITE); // Start white
+  textPaint.setColor(SK_ColorWHITE);
   textPaint.setAntiAlias(true);
 
   // Center text
@@ -429,10 +501,6 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
       newProjectButtonBounds_.centerY() + (textBounds.height() / 2.0f) - 4.0f;
 
   canvas->drawString(text, tx, ty, btnFont, textPaint);
-
-  // Maybe put icon to the left of text?
-  // width: 24, height 24
-  // For now simple text is clear enough or I can add a plus sign.
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
@@ -481,34 +549,65 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   // Click outside card?
   if (!mainCardBounds_.contains(pt.fX, pt.fY)) {
     // Maybe nothing, forcing user to pick something?
-    // Or drag window.
+    return;
   }
 
-  // Click items
-  for (auto &proj : recentProjects_) {
+  // Click on recent project - ACTUALLY LOAD IT
+  for (const auto &proj : recentProjects_) {
     if (proj.bounds.contains(pt.fX, pt.fY)) {
-      dismiss(); // Load project
+      DBG("ZenithHubComponent: Loading project: " +
+          proj.path.getFullPathName());
+
+      if (onLoadProject_ && proj.path.existsAsFile()) {
+        onLoadProject_(proj.path);
+      } else if (!proj.path.existsAsFile()) {
+        DBG("ZenithHubComponent: Project file no longer exists: " +
+            proj.path.getFullPathName());
+        // Optionally remove from recent list
+        // recentProjectManager_.removeProject(proj.path);
+        // loadFromManager();
+      }
+
+      dismiss();
       return;
     }
   }
 
-  for (auto &tmpl : templates_) {
+  // Click on template - create new project from template
+  for (const auto &tmpl : templates_) {
     if (tmpl.bounds.contains(pt.fX, pt.fY)) {
-      dismiss(); // Load template
+      DBG("ZenithHubComponent: Creating project from template: " + tmpl.name);
+
+      // For now, templates just create a new project
+      // In the future, this could load a template file
+      if (onNewProject_) {
+        onNewProject_();
+      }
+
+      dismiss();
       return;
     }
   }
 
   if (profileBounds_.contains(pt.fX, pt.fY)) {
-    // Open profile settings?
+    // Open profile settings (future feature)
+    DBG("ZenithHubComponent: Profile clicked");
   }
 
   if (newProjectButtonBounds_.contains(pt.fX, pt.fY)) {
-    dismiss(); // Dismiss the hub to trigger the new project flow.
+    DBG("ZenithHubComponent: New Project clicked");
+
+    if (onNewProject_) {
+      onNewProject_();
+    }
+
+    dismiss();
     return;
   }
 }
 
-void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {}
+void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+}
 
 } // namespace zenith
