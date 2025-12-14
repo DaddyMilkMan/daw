@@ -713,8 +713,8 @@ void Engine::setTrackArmed(int trackIndex, bool armed) {
       if (!recordingsDir.exists())
         recordingsDir.createDirectory();
 
-      recordingManager_->prepareRecordingForTrack(*tracks_[trackIndex],
-                                                  trackIndex, recordingsDir);
+      // recordingManager_->prepareRecordingForTrack(*tracks_[trackIndex],
+      //                                            trackIndex, recordingsDir);
     }
   }
 }

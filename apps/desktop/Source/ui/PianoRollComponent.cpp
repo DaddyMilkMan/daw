@@ -1367,6 +1367,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
       static constexpr float kPlayheadMarkerHeight = 8.0f;
 
+      /*
       SkPath trianglePath;
       trianglePath.moveTo(playheadX, contentTop);
       trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
@@ -1374,6 +1375,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
                           contentTop - kPlayheadMarkerHeight);
       trianglePath.close();
+      canvas->drawPath(trianglePath, playheadPaint);
+      */
     }
   }
 
