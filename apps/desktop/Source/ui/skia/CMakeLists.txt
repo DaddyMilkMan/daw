@@ -2,10 +2,10 @@ if(ZENITH_ENABLE_SKIA)
     target_sources(ZenithDAW PRIVATE
         # Core UI
         AuroraBackground.cpp
-        BottomBar.cpp
+        ../common/BottomBar.cpp
         ../browser/BrowserPanel.cpp
         DebugConsoleComponent.cpp
-        RightSidePanel.cpp
+        ../common/RightSidePanel.cpp
         SkiaComponent.cpp
         SkiaMainWindowIntegration.cpp
         ../transport/TransportBar.cpp
@@ -13,8 +13,8 @@ if(ZENITH_ENABLE_SKIA)
         ../design-system/FontManager.cpp
         ../design-system/ZenithLayout.cpp
 
-        ZenithPolySynthUI.cpp
-        ExportDialog.cpp
+        ../instruments/ZenithPolySynthUI.cpp
+        ../dialogs/ExportDialog.cpp
         DeviceChainComponent.cpp
         ../../rendering/SkiaRenderer.cpp
         

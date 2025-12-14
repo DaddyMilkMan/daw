@@ -1,6 +1,6 @@
 target_sources(ZenithDAW PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/MainWindow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/MainLayoutComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/MainWindow.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/MainLayoutComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SampleEditorComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
@@ -19,16 +19,16 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/PresetBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/browser/InstrumentBrowserPanel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/WingmanPanel.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/AudioFeedback.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/WingmanPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLookAndFeel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithTheme.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ZenithHubComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/ZenithHubComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/RefactorPanel.h
     ${CMAKE_CURRENT_SOURCE_DIR}/LayoutManager.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ResizablePanelContainer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/ResizablePanelContainer.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/session/SessionViewComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/MacroToolbar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/MacroToolbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MiniMapComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/views/SpectraAnalyzerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
