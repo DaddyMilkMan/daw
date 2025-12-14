@@ -1,67 +1,176 @@
 /**
  * @file ZenithTheme.cpp
- * @brief Implementation of centralized theme system
- * @author Marcus "The Craftsman" Rodriguez - Operation Polish
+ * @brief Implementation of modern theme system
+ * @author Fixed by Claude - December 2025
  */
 
 #include "ZenithTheme.h"
+#include <cmath>
 
 namespace zenith {
 
 //==============================================================================
-// Color Palette Definitions
+// Modern Color Palette Definitions
 //==============================================================================
 
-const juce::Colour ZenithTheme::Colors::background         = juce::Colour(0xff121212);
-const juce::Colour ZenithTheme::Colors::backgroundPanel    = juce::Colour(0xff1e1e1e);
-const juce::Colour ZenithTheme::Colors::backgroundElevated = juce::Colour(0xff2a2a2a);
+// Background layers
+const juce::Colour ZenithTheme::Colors::bg_00 = juce::Colour(0xff0a0a0a);
+const juce::Colour ZenithTheme::Colors::bg_01 = juce::Colour(0xff121212);
+const juce::Colour ZenithTheme::Colors::bg_02 = juce::Colour(0xff1a1a1a);
+const juce::Colour ZenithTheme::Colors::bg_03 = juce::Colour(0xff242424);
+const juce::Colour ZenithTheme::Colors::bg_04 = juce::Colour(0xff2e2e2e);
 
-const juce::Colour ZenithTheme::Colors::border             = juce::Colour(0xff333333);
-const juce::Colour ZenithTheme::Colors::borderSubtle       = juce::Colour(0xff444444);
+// Borders with proper opacity
+const juce::Colour ZenithTheme::Colors::border_subtle =
+    juce::Colour(0xffffffff).withAlpha(0.06f);
+const juce::Colour ZenithTheme::Colors::border_default =
+    juce::Colour(0xffffffff).withAlpha(0.12f);
+const juce::Colour ZenithTheme::Colors::border_strong =
+    juce::Colour(0xffffffff).withAlpha(0.20f);
+const juce::Colour ZenithTheme::Colors::border_focus = juce::Colour(0xff3b82f6);
 
-const juce::Colour ZenithTheme::Colors::textPrimary        = juce::Colour(0xffffffff);
-const juce::Colour ZenithTheme::Colors::textSecondary      = juce::Colour(0xffb0b0b0);
-const juce::Colour ZenithTheme::Colors::textMuted          = juce::Colour(0xff808080);
+// Text hierarchy
+const juce::Colour ZenithTheme::Colors::text_primary =
+    juce::Colour(0xffffffff).withAlpha(0.95f);
+const juce::Colour ZenithTheme::Colors::text_secondary =
+    juce::Colour(0xffffffff).withAlpha(0.60f);
+const juce::Colour ZenithTheme::Colors::text_tertiary =
+    juce::Colour(0xffffffff).withAlpha(0.35f);
+const juce::Colour ZenithTheme::Colors::text_inverse =
+    juce::Colour(0xff000000).withAlpha(0.90f);
 
-const juce::Colour ZenithTheme::Colors::accent             = juce::Colour(0xff00d4aa);
-const juce::Colour ZenithTheme::Colors::accentHover        = juce::Colour(0xff00ffcc);
-const juce::Colour ZenithTheme::Colors::accentPressed      = juce::Colour(0xff00a088);
+// Professional blue accent (not garish cyan)
+const juce::Colour ZenithTheme::Colors::accent_primary =
+    juce::Colour(0xff3b82f6);
+const juce::Colour ZenithTheme::Colors::accent_hover = juce::Colour(0xff60a5fa);
+const juce::Colour ZenithTheme::Colors::accent_pressed =
+    juce::Colour(0xff2563eb);
+const juce::Colour ZenithTheme::Colors::accent_subtle =
+    juce::Colour(0xff3b82f6).withAlpha(0.10f);
 
-const juce::Colour ZenithTheme::Colors::success            = juce::Colour(0xff4ade80);
-const juce::Colour ZenithTheme::Colors::warning            = juce::Colour(0xfffbbf24);
-const juce::Colour ZenithTheme::Colors::error              = juce::Colour(0xfff87171);
-const juce::Colour ZenithTheme::Colors::info               = juce::Colour(0xff60a5fa);
+// Semantic colors
+const juce::Colour ZenithTheme::Colors::success = juce::Colour(0xff10b981);
+const juce::Colour ZenithTheme::Colors::warning = juce::Colour(0xfff59e0b);
+const juce::Colour ZenithTheme::Colors::error = juce::Colour(0xffef4444);
+const juce::Colour ZenithTheme::Colors::info = juce::Colour(0xff06b6d4);
 
-const juce::Colour ZenithTheme::Colors::waveform           = juce::Colour(0xff4a9eff);
-const juce::Colour ZenithTheme::Colors::midiNote           = juce::Colour(0xffff9944);
-const juce::Colour ZenithTheme::Colors::automation         = juce::Colour(0xffa855f7);
+// Audio-specific colors
+const juce::Colour ZenithTheme::Colors::waveform_audio =
+    juce::Colour(0xff3b82f6);
+const juce::Colour ZenithTheme::Colors::waveform_midi =
+    juce::Colour(0xff8b5cf6);
+const juce::Colour ZenithTheme::Colors::automation = juce::Colour(0xffec4899);
+const juce::Colour ZenithTheme::Colors::playhead = juce::Colour(0xfff97316);
+
+// Track color generation using golden ratio for even distribution
+juce::Colour ZenithTheme::Colors::getTrackColor(int index, float saturation,
+                                                float brightness) {
+  // Golden ratio (1.618...) provides optimal color distribution
+  float goldenRatio = 0.618033988749895f;
+  float hue = std::fmod(index * goldenRatio, 1.0f);
+
+  return juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
+}
+
+juce::Colour ZenithTheme::Colors::withAlpha(const juce::Colour &color,
+                                            float alpha) {
+  return color.withAlpha(juce::jlimit(0.0f, 1.0f, alpha));
+}
+
+juce::Colour ZenithTheme::Colors::lighten(const juce::Colour &color,
+                                          float amount) {
+  return color.brighter(amount);
+}
+
+juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color,
+                                         float amount) {
+  return color.darker(amount);
+}
 
 //==============================================================================
-// Typography Helpers
+// Typography System
 //==============================================================================
 
-juce::Font ZenithTheme::Typography::getTinyFont() {
-    return juce::FontOptions(tiny);
+juce::Font ZenithTheme::Typography::getFont(float size, Weight weight) {
+  auto fontName = juce::Font::getDefaultSansSerifFontName();
+
+  switch (weight) {
+  case Weight::Regular:
+    return juce::Font(fontName, size, juce::Font::plain);
+  case Weight::Medium:
+    return juce::Font(fontName, size, juce::Font::plain)
+        .withExtraKerningFactor(0.05f);
+  case Weight::Bold:
+    return juce::Font(fontName, size, juce::Font::bold);
+  default:
+    return juce::Font(fontName, size, juce::Font::plain);
+  }
 }
 
-juce::Font ZenithTheme::Typography::getSmallFont() {
-    return juce::FontOptions(small);
+juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) {
+  return getFont(tiny, weight);
 }
 
-juce::Font ZenithTheme::Typography::getBodyFont() {
-    return juce::FontOptions(body);
+juce::Font ZenithTheme::Typography::getSmallFont(Weight weight) {
+  return getFont(sm, weight);
 }
 
-juce::Font ZenithTheme::Typography::getHeadingFont() {
-    return juce::FontOptions(heading, juce::Font::bold);
+juce::Font ZenithTheme::Typography::getBodyFont(Weight weight) {
+  return getFont(body, weight);
 }
 
-juce::Font ZenithTheme::Typography::getLargeFont() {
-    return juce::FontOptions(large, juce::Font::bold);
+juce::Font ZenithTheme::Typography::getHeadingFont(Weight weight) {
+  return getFont(heading, weight);
 }
 
-juce::Font ZenithTheme::Typography::getDisplayFont() {
-    return juce::FontOptions(display, juce::Font::bold);
+juce::Font ZenithTheme::Typography::getLargeFont(Weight weight) {
+  return getFont(large, weight);
+}
+
+juce::Font ZenithTheme::Typography::getDisplayFont(Weight weight) {
+  return getFont(display, weight);
+}
+
+//==============================================================================
+// Shadow System Implementation
+//==============================================================================
+
+void ZenithTheme::Shadows::drawShadow(juce::Graphics &g,
+                                      juce::Rectangle<float> bounds,
+                                      float elevation, float radius) {
+  // Multi-layer shadows for realistic depth
+  int layers = static_cast<int>(elevation * 20.0f) + 1;
+
+  for (int i = 0; i < layers; ++i) {
+    float layerAlpha = elevation * 0.5f / (i + 1);
+    float layerOffset = (i + 1) * 2.0f;
+    float layerBlur = (i + 1) * 3.0f;
+
+    auto shadowBounds = bounds.translated(0, layerOffset).expanded(layerBlur);
+
+    g.setColour(juce::Colours::black.withAlpha(layerAlpha));
+
+    if (radius > 0.0f) {
+      g.fillRoundedRectangle(shadowBounds, radius);
+    } else {
+      g.fillRect(shadowBounds);
+    }
+  }
+}
+
+void ZenithTheme::Shadows::drawInnerShadow(juce::Graphics &g,
+                                           juce::Rectangle<float> bounds,
+                                           float radius) {
+  // Inner shadow for recessed appearance
+  g.setGradientFill(juce::ColourGradient(
+      juce::Colours::black.withAlpha(0.3f), bounds.getTopLeft(),
+      juce::Colours::transparentBlack, bounds.getBottomRight(), false));
+
+  if (radius > 0.0f) {
+    g.fillRoundedRectangle(bounds.reduced(1.0f), radius);
+  } else {
+    g.fillRect(bounds.reduced(1.0f));
+  }
 }
 
 //==============================================================================
@@ -71,14 +180,13 @@ juce::Font ZenithTheme::Typography::getDisplayFont() {
 ZenithTheme::Mode ZenithTheme::currentMode_ = ZenithTheme::Mode::Standard;
 
 void ZenithTheme::setMode(Mode mode) {
-    currentMode_ = mode;
-    
-    // Apply mode-specific adjustments
-    // (In future, this could modify color values dynamically)
+  currentMode_ = mode;
+
+  // Future: Dynamically adjust colors based on mode
+  // For OLED mode, pure blacks
+  // For HighContrast mode, increased contrast ratios
 }
 
-ZenithTheme::Mode ZenithTheme::getMode() {
-    return currentMode_;
-}
+ZenithTheme::Mode ZenithTheme::getMode() { return currentMode_; }
 
 } // namespace zenith

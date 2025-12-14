@@ -12,17 +12,19 @@
 
 #pragma once
 
+#include "../../../include/ui/MixerComponent.h"
+#include "../../engine/EngineConstants.h"
 #include "SkiaComponent.h"
 #include "views/PianoKeyboardViewSkia.h"
 #include <JuceHeader.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+
 
 namespace zenith {
 class Engine;
 class ProjectState;
-class ProjectState;
 class DeviceChainComponent;
-class MixerComponent;
-#include "../../../include/ui/MixerComponent.h"
 
 // Forward declarations
 namespace ai {
