@@ -22,6 +22,7 @@
 using namespace zenith;
 
 constexpr float RULER_HEIGHT = 30.0f;
+constexpr float TOOLBAR_HEIGHT = 40.0f;
 constexpr float PIANO_WIDTH = 80.0f;
 
 //==============================================================================
@@ -153,8 +154,8 @@ void PianoRollComponent::refreshNotesFromProjectState() {
 }
 
 void PianoRollComponent::updateNoteRectangles() {
-  auto bounds = getLocalBounds();
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
+  float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
+  // noteGridHeight is cached
 
   for (auto &note : noteRects) {
     float x = PIANO_WIDTH + beatsToPixels(note.startBeats);
@@ -223,8 +224,9 @@ double PianoRollComponent::snapToGrid(double beats) const {
 
 int PianoRollComponent::pixelsToVelocity(float y) const {
   auto bounds = getLocalBounds();
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-  float yInLane = y - (RULER_HEIGHT + noteGridHeight);
+  // noteGridHeight is cached
+
+  float yInLane = y - (TOOLBAR_HEIGHT + RULER_HEIGHT + noteGridHeight);
   float normalizedY = yInLane / velocityLaneHeight;
   int velocity = static_cast<int>((1.0f - normalizedY) * 127.0f);
   return juce::jlimit(1, 127, velocity);
@@ -251,8 +253,9 @@ PianoRollComponent::NoteRect *PianoRollComponent::findNoteAtPosition(float x,
 PianoRollComponent::NoteRect *
 PianoRollComponent::findNoteInVelocityLane(float x, float y) {
   auto bounds = getLocalBounds();
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-  float velocityLaneTop = RULER_HEIGHT + noteGridHeight;
+  float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
+  // noteGridHeight is cached
+  float velocityLaneTop = contentTop + noteGridHeight;
 
   if (y < velocityLaneTop || y > velocityLaneTop + velocityLaneHeight)
     return nullptr;
@@ -281,9 +284,16 @@ PianoRollComponent::getCursorForPosition(float x, float y) const {
   if (x < PIANO_WIDTH || y < RULER_HEIGHT)
     return CursorType::Normal;
 
+  // Tool-aware cursor logic
+  if (currentTool == Tool::Draw || currentTool == Tool::Erase ||
+      currentTool == Tool::Slice) {
+    return CursorType::Crosshair;
+  }
+
   auto bounds = getLocalBounds();
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-  if (y >= RULER_HEIGHT + noteGridHeight)
+  float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
+  // noteGridHeight is cached
+  if (y >= contentTop + noteGridHeight)
     return CursorType::Crosshair;
 
   for (const auto &note : noteRects) {
@@ -342,7 +352,8 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   float y = static_cast<float>(e.y);
 
   auto bounds = getLocalBounds();
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
+  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
+  // noteGridHeight is cached
 
   // Track hovered piano key
   int newHoveredKey = -1;
@@ -389,11 +400,30 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
-  // Piano keyboard area - play notes on click
-  if (x < PIANO_WIDTH && y >= RULER_HEIGHT) {
-    float noteGridHeight =
-        bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-    if (y < RULER_HEIGHT + noteGridHeight) {
+  // 1. Check Toolbar Clicks
+  if (y < TOOLBAR_HEIGHT) {
+    float btnX = 10.0f;
+    float btnSize = 30.0f;
+    float btnMargin = 5.0f;
+    float btnY = (TOOLBAR_HEIGHT - btnSize) / 2.0f;
+
+    Tool tools[] = {Tool::Select, Tool::Draw, Tool::Erase, Tool::Slice};
+    for (int i = 0; i < 4; ++i) {
+      if (x >= btnX && x < btnX + 60.0f && y >= btnY && y < btnY + btnSize) {
+        setCurrentTool(tools[i]);
+        return;
+      }
+      btnX += 60.0f + btnMargin;
+    }
+    return;
+  }
+
+  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
+
+  // 2. Check Piano Key Clicks
+  if (x < PIANO_WIDTH && y >= contentTop) {
+    // noteGridHeight is cached
+    if (y < contentTop + noteGridHeight) {
       int pitch = pixelsToPitch(y);
       pitch = juce::jlimit(0, 127, pitch);
       playPianoKey(pitch, 100);
@@ -405,8 +435,8 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (y < RULER_HEIGHT)
     return;
 
-  float noteGridHeight = bounds.getHeight() - RULER_HEIGHT - velocityLaneHeight;
-  float velocityLaneTop = RULER_HEIGHT + noteGridHeight;
+  // noteGridHeight is cached
+  float velocityLaneTop = contentTop + noteGridHeight;
 
   // Velocity lane interaction
   if (y >= velocityLaneTop) {
@@ -473,32 +503,39 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   case Tool::Slice:
     if (note) {
       // Slice note at cursor position
+      // Robust Implementation
+      juce::String noteId = note->id;
+      juce::String clipId = currentClip.clipId;
+      double originalStart = note->startBeats;
+      double originalLength = note->lengthBeats;
+      int notePitch = note->pitch;
+      int noteVelocity = note->velocity;
+      bool noteMuted = note->muted;
+
       double sliceBeat = pixelsToBeats(x - PIANO_WIDTH);
       if (snapEnabled)
         sliceBeat = snapToGrid(sliceBeat);
 
       // Only slice if position is within note bounds
-      if (sliceBeat > note->startBeats &&
-          sliceBeat < note->startBeats + note->lengthBeats) {
-        double leftLength = sliceBeat - note->startBeats;
-        double rightLength = note->lengthBeats - leftLength;
+      if (sliceBeat > originalStart &&
+          sliceBeat < originalStart + originalLength) {
+        double leftLength = sliceBeat - originalStart;
+        double rightLength = originalLength - leftLength;
 
         // Create right part first
         zenith::ProjectState::MidiNoteSpec rightNote;
-        rightNote.pitch = note->pitch;
+        rightNote.pitch = notePitch;
         rightNote.startBeats = sliceBeat;
         rightNote.lengthBeats = rightLength;
-        rightNote.velocity = note->velocity;
-        rightNote.muted = note->muted;
+        rightNote.velocity = noteVelocity;
+        rightNote.muted = noteMuted;
 
         projectState.getUndoManager().beginNewTransaction("Slice MIDI note");
 
-        // Update original note length
-        projectState.setMidiNoteLength(currentClip.clipId, note->id, leftLength,
-                                       "");
-
-        // Add the new right part
-        projectState.addMidiNote(currentClip.clipId, rightNote, "");
+        // Shorten original
+        projectState.setMidiNoteLength(clipId, noteId, leftLength, "");
+        // Add new
+        projectState.addMidiNote(clipId, rightNote, "");
       }
     }
     break;
@@ -997,7 +1034,12 @@ bool PianoRollComponent::keyPressed(const juce::KeyPress &key) {
   return false;
 }
 
-void PianoRollComponent::resized() { updateNoteRectangles(); }
+void PianoRollComponent::resized() {
+  auto bounds = getLocalBounds();
+  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
+  noteGridHeight = bounds.getHeight() - contentTop - velocityLaneHeight;
+  updateNoteRectangles();
+}
 
 void PianoRollComponent::quantizeSelected(double grid, float strength,
                                           float swing) {
@@ -1100,6 +1142,13 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
                   noteInOctave == 8 || noteInOctave == 10);
 
     // Draw Key
+    static constexpr float kKeyLabelMinZoom = 12.0f;
+    static constexpr float kKeyLabelDetailZoom = 18.0f;
+    static constexpr float kKeyLabelSmallFontZoom = 11.0f;
+    static constexpr float kKeyLabelTinyFontZoom = 9.0f;
+    static constexpr float kKeyLabelOffset = -24.0f;
+    static constexpr float kKeyLabelDetailOffset = -18.0f;
+
     SkRect keyRect = SkRect::MakeXYWH(0, y, PIANO_WIDTH, h);
     paint.setStyle(SkPaint::kFill_Style);
 
@@ -1134,8 +1183,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       canvas->drawRect(SkRect::MakeXYWH(0, y + h - 1, PIANO_WIDTH, 1), shadow);
     }
 
-    // Key Label - show note name for all keys when zoomed in enough
-    if (pixelsPerPitch > 12.0f) {
+    // Key Label
+    if (pixelsPerPitch > kKeyLabelMinZoom) {
       static const char *noteNames[] = {"C",  "C#", "D",  "D#", "E",  "F",
                                         "F#", "G",  "G#", "A",  "A#", "B"};
       SkPaint textPaint;
@@ -1144,21 +1193,21 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       if (noteInOctave == 0) {
         // C notes get octave number
         textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
-        SkFont font =
-            getMonoFont(juce::jmin(11.0f, (float)(pixelsPerPitch * 0.7f)),
-                        FontWeight::Bold);
-        juce::String label = "C" + juce::String(p / 12 - 2); // MIDI C3 = 60
-        canvas->drawString(label.toStdString().c_str(), PIANO_WIDTH - 24.0f,
-                           y + h * 0.7f, font, textPaint);
-      } else if (pixelsPerPitch > 18.0f) {
-        // Show all note names when very zoomed in
-        textPaint.setColor(black ? colors::TEXT_TERTIARY
-                                 : colors::TEXT_TERTIARY);
-        SkFont font =
-            getMonoFont(juce::jmin(9.0f, (float)(pixelsPerPitch * 0.5f)),
-                        FontWeight::Regular);
-        canvas->drawString(noteNames[noteInOctave], PIANO_WIDTH - 18.0f,
-                           y + h * 0.7f, font, textPaint);
+        SkFont font = getMonoFont(
+            juce::jmin(kKeyLabelSmallFontZoom, (float)(pixelsPerPitch * 0.7f)),
+            FontWeight::Bold);
+        juce::String label = "C" + juce::String(p / 12 - 2);
+        canvas->drawString(label.toStdString().c_str(),
+                           PIANO_WIDTH + kKeyLabelOffset, y + h * 0.7f, font,
+                           textPaint);
+      } else if (pixelsPerPitch > kKeyLabelDetailZoom) {
+        textPaint.setColor(colors::TEXT_TERTIARY);
+        SkFont font = getMonoFont(
+            juce::jmin(kKeyLabelTinyFontZoom, (float)(pixelsPerPitch * 0.5f)),
+            FontWeight::Regular);
+        canvas->drawString(noteNames[noteInOctave],
+                           PIANO_WIDTH + kKeyLabelDetailOffset, y + h * 0.7f,
+                           font, textPaint);
       }
     }
 
@@ -1314,26 +1363,17 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       canvas->drawLine(playheadX, RULER_HEIGHT, playheadX, height,
                        playheadPaint);
 
-      // Playhead glow
-      SkPaint glowPaint;
-      glowPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f));
-      glowPaint.setStrokeWidth(6.0f);
-      glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal_SkBlurStyle, 3.0f));
-      canvas->drawLine(playheadX, RULER_HEIGHT, playheadX, height, glowPaint);
+      // Triangle marker in ruler/toolbar area
+      static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
+      static constexpr float kPlayheadMarkerHeight = 8.0f;
 
-      // Triangle marker at top
       SkPath trianglePath;
-      trianglePath.moveTo(playheadX, RULER_HEIGHT);
-      trianglePath.lineTo(playheadX - 5, RULER_HEIGHT - 8);
-      trianglePath.lineTo(playheadX + 5, RULER_HEIGHT - 8);
+      trianglePath.moveTo(playheadX, contentTop);
+      trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
+      trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
       trianglePath.close();
-
-      SkPaint trianglePaint;
-      trianglePaint.setColor(colors::TEXT_PRIMARY);
-      trianglePaint.setStyle(SkPaint::kFill_Style);
-      trianglePaint.setAntiAlias(true);
-      canvas->drawPath(trianglePath, trianglePaint);
     }
   }
 

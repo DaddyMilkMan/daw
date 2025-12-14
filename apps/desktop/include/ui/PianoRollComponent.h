@@ -975,6 +975,7 @@ private:
   static constexpr int RULER_HEIGHT = 30;
   int velocityLaneHeight = 160; // Increased from 120 for better precision
                                 // (~1.26px per velocity value)
+  float noteGridHeight = 0.0f;  // Cached note grid height
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
