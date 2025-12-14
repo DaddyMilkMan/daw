@@ -161,7 +161,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaLabel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaListBox.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaPopupMenu.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaProgressBar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaTextEditor.cpp
 )
 
 # -----------------------------------------------------------------------------

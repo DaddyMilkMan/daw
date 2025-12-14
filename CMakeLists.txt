@@ -131,11 +131,25 @@ add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
 
 
-# Include directories
+# Include directories (updated for new domain-based structure)
 target_include_directories(ZenithDAW PUBLIC
-    apps/desktop/include
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     apps/desktop/Source
+    apps/desktop/Source/engine
+    apps/desktop/Source/ui
+    apps/desktop/Source/ui/framework
+    apps/desktop/Source/ui/design-system
+    apps/desktop/Source/ui/arranger
+    apps/desktop/Source/ui/mixer
+    apps/desktop/Source/ui/piano-roll
+    apps/desktop/Source/ui/browser
+    apps/desktop/Source/ui/transport
+    apps/desktop/Source/ui/common
+    apps/desktop/Source/ui/widgets
+    apps/desktop/Source/ui/session
+    apps/desktop/Source/ui/instruments
+    apps/desktop/Source/ui/dialogs
+    apps/desktop/Source/ui/sample-editor
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
     "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
