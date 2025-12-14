@@ -2,8 +2,8 @@
   ==============================================================================
 
     ZenithHubComponent.cpp
-    Created: 2025-12-13
-    Author:  Zenith DAW Team
+    Fixed by Claude - December 2025
+    Professional welcome screen with proper design system
 
     Pinocchio Protocol Implementation:
     - Removed createMockData() completely
@@ -42,8 +42,8 @@ ZenithHubComponent::ZenithHubComponent(
                 {"Recording", "🎤", colors::NEON_PINK, {}, false}};
 
   // Start fade-in
-  alpha_.setTarget(0.0f, 0); // Start invisible
-  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut); // Fade in
+  alpha_.setTarget(0.0f, 0);
+  alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
 
   startTimerHz(60);
 }
@@ -125,9 +125,9 @@ void ZenithHubComponent::updateLayout() {
   float w = bounds.getWidth();
   float h = bounds.getHeight();
 
-  // Main Glass Card in Center
-  float cardW = std::min(1000.0f, w * 0.9f);
-  float cardH = std::min(700.0f, h * 0.85f);
+  // Main Glass Card in Center (slightly larger)
+  float cardW = std::min(1100.0f, w * 0.9f);
+  float cardH = std::min(750.0f, h * 0.85f);
 
   float cardX = (w - cardW) * 0.5f;
   float cardY = (h - cardH) * 0.5f;
@@ -135,29 +135,29 @@ void ZenithHubComponent::updateLayout() {
   mainCardBounds_ = SkRect::MakeXYWH(cardX, cardY, cardW, cardH);
 
   // Internal Layout
-  float padding = 32.0f;
-  float colOneW = (cardW - (padding * 3)) * 0.66f; // 2/3rds for Recent
-  float colTwoW = (cardW - (padding * 3)) * 0.34f; // 1/3rd for Sidebar
+  float padding = 40.0f;
+  float colOneW = (cardW - (padding * 3)) * 0.63f;
+  float colTwoW = (cardW - (padding * 3)) * 0.37f;
 
   // Recent Projects Area
   recentArea_ = SkRect::MakeXYWH(cardX + padding,
-                                 cardY + padding + 60.0f, // Header space
-                                 colOneW, cardH - (padding * 2) - 60.0f);
+                                 cardY + padding + 80.0f, // More header space
+                                 colOneW, cardH - (padding * 2) - 80.0f);
 
-  // Sidebar (Account + Templates)
+  // Sidebar
   float sidebarX = cardX + padding + colOneW + padding;
 
   // Account (Top Right)
-  float accountH = 150.0f;
+  float accountH = 160.0f;
   accountArea_ =
-      SkRect::MakeXYWH(sidebarX, cardY + padding + 60.0f, colTwoW, accountH);
+      SkRect::MakeXYWH(sidebarX, cardY + padding + 80.0f, colTwoW, accountH);
 
-  // New Project Button (Prominent Neon Button)
-  float buttonH = 80.0f;
+  // New Project Button (Solid, professional)
+  float buttonH = 60.0f;
   newProjectButtonBounds_ = SkRect::MakeXYWH(
       sidebarX, accountArea_.bottom() + padding, colTwoW, buttonH);
 
-  // Templates (Bottom Right)
+  // Templates
   templatesArea_ = SkRect::MakeXYWH(
       sidebarX, newProjectButtonBounds_.bottom() + padding, colTwoW,
       recentArea_.bottom() - (newProjectButtonBounds_.bottom() + padding));
@@ -165,8 +165,8 @@ void ZenithHubComponent::updateLayout() {
   // Update Recent Project Cards Layout (Grid)
   float gridW = recentArea_.width();
   float cardGap = 16.0f;
-  float pCardW = (gridW - cardGap) / 2.0f; // 2 columns
-  float pCardH = 100.0f;
+  float pCardW = (gridW - cardGap) / 2.0f;
+  float pCardH = 110.0f;
 
   for (size_t i = 0; i < recentProjects_.size(); ++i) {
     int row = (int)i / 2;
@@ -178,31 +178,30 @@ void ZenithHubComponent::updateLayout() {
     recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
   }
 
-  // Update Template Cards Layout (List)
-  float tCardH = 80.0f;
+  // Update Template Cards (Larger with icons)
+  float tCardH = 90.0f;
   for (size_t i = 0; i < templates_.size(); ++i) {
     float tx = templatesArea_.fLeft;
-    float ty = templatesArea_.fTop + 40.0f +
-               (i * (tCardH + cardGap)); // +40 for header
+    float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
     templates_[i].bounds =
         SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
   }
 
   // Profile Button
   profileBounds_ =
-      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 40.0f,
-                       accountArea_.width(), 80.0f);
+      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+                       accountArea_.width(), 90.0f);
 }
 
 void ZenithHubComponent::timerCallback() {
-  animationTime_ += 0.016f; // ~60fps
+  animationTime_ += 0.016f;
   alpha_.update(16.0f);
 
   if (alpha_.isAnimating()) {
     repaint();
   }
 
-  // Animate glowing background
+  // Subtle background animation
   repaint();
 }
 
@@ -224,32 +223,43 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   if (opacity <= 0.001f)
     return;
 
-  // Save layer for global opacity
   canvas->saveLayerAlpha(nullptr, (U8CPU)(opacity * 255));
 
   drawBackground(canvas);
 
-  // Main Glass Card
+  // Main Glass Card with stronger shadow
+  SkPaint shadowPaint;
+  shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
+  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 30.0f));
+  shadowPaint.setAntiAlias(true);
+
+  SkRRect shadowRRect =
+      SkRRect::MakeRectXY(mainCardBounds_.makeOutset(5.0f, 5.0f), 16.0f, 16.0f);
+  canvas->drawRRect(shadowRRect, shadowPaint);
+
   GlassmorphicPanel::draw(canvas, mainCardBounds_,
                           GlassmorphicPanel::Style::Floating);
 
-  // Header
+  // Header with proper hierarchy
   {
-    SkFont titleFont = design::getSkFont(42.0f, design::FontWeight::Bold);
-    SkPaint paint;
-    paint.setColor(colors::TEXT_PRIMARY);
-    paint.setAntiAlias(true);
+    SkFont titleFont = design::getSkFont(48.0f, design::FontWeight::Bold);
+    SkPaint titlePaint;
+    titlePaint.setColor(colors::TEXT_PRIMARY);
+    titlePaint.setAntiAlias(true);
 
-    SkRect titleBounds =
-        SkRect::MakeXYWH(mainCardBounds_.fLeft + 32, mainCardBounds_.fTop + 32,
-                         mainCardBounds_.width(), 50);
-    canvas->drawString("Zenith Hub", titleBounds.fLeft, titleBounds.bottom(),
-                       titleFont, paint);
+    float headerX = mainCardBounds_.fLeft + 40;
+    float headerY = mainCardBounds_.fTop + 60;
 
-    SkFont subFont = design::getSkFont(16.0f, design::FontWeight::Regular);
-    paint.setColor(colors::TEXT_SECONDARY);
-    canvas->drawString("Welcome back, User", titleBounds.fLeft + 240,
-                       titleBounds.bottom(), subFont, paint);
+    canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
+
+    // Subtitle with proper sizing
+    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
+    SkPaint subPaint;
+    subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+    subPaint.setAntiAlias(true);
+
+    canvas->drawString("Welcome back, User", headerX, headerY + 32, subFont,
+                       subPaint);
   }
 
   drawRecentProjects(canvas);
@@ -261,236 +271,253 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
-  // Animated Mesh Gradient Logic
   auto bounds = getLocalBounds().toFloat();
   SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
 
-  SkPaint bgPaint;
+  // FIXED: Subtle radial gradient instead of loud animated blobs
+  SkPoint center =
+      SkPoint::Make(bounds.getWidth() * 0.5f, bounds.getHeight() * 0.5f);
 
-  // Base dark background
-  bgPaint.setColor(colors::BG_DARKEST);
+  SkColor gradientColors[] = {
+      colors::BG_DARKEST,
+      SkColorSetARGB(255, 8, 8, 12) // Slightly lighter at edges
+  };
+
+  SkScalar positions[] = {0.0f, 1.0f};
+
+  SkPaint bgPaint;
+  bgPaint.setShader(SkGradientShader::MakeRadial(
+      center, bounds.getWidth() * 0.8f, gradientColors, positions, 2,
+      SkTileMode::kClamp));
+
   canvas->drawRect(rect, bgPaint);
 
-  // Moving blobs
-  float t = animationTime_;
+  // FIXED: Very subtle moving accent (not overwhelming)
+  float t = animationTime_ * 0.3f;
+  SkPaint accentPaint;
+  accentPaint.setAntiAlias(true);
+  accentPaint.setBlendMode(SkBlendMode::kScreen);
 
-  struct Blob {
-    float x, y, r;
-    SkColor c;
-  };
-  Blob blobs[] = {
-      {0.2f * bounds.getWidth() + sin(t * 0.5f) * 100,
-       0.3f * bounds.getHeight() + cos(t * 0.3f) * 100, 400.0f, colors::VIOLET},
-      {0.8f * bounds.getWidth() - cos(t * 0.4f) * 100,
-       0.7f * bounds.getHeight() + sin(t * 0.6f) * 100, 500.0f, colors::CYAN},
-      {0.5f * bounds.getWidth() + sin(t * 0.7f) * 50,
-       0.5f * bounds.getHeight() + cos(t * 0.8f) * 50, 300.0f,
-       colors::NEON_PINK}};
+  // Single subtle blob
+  float blobX = bounds.getWidth() * 0.7f + std::sin(t) * 80;
+  float blobY = bounds.getHeight() * 0.3f + std::cos(t * 0.7f) * 60;
 
-  SkPaint blobPaint;
-  blobPaint.setAntiAlias(true);
-  blobPaint.setBlendMode(SkBlendMode::kScreen); // Blend nicely
-
-  for (const auto &b : blobs) {
-    blobPaint.setColor(withAlpha(b.c, 0.15f));
-    blobPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 100.0f));
-    canvas->drawCircle(b.x, b.y, b.r, blobPaint);
-  }
+  accentPaint.setColor(withAlpha(colors::BLUE, 0.06f));
+  accentPaint.setMaskFilter(
+      SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 120.0f));
+  canvas->drawCircle(blobX, blobY, 350.0f, accentPaint);
 }
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
+  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Recent Projects", recentArea_.fLeft,
-                     recentArea_.fTop - 15, headerFont, textPaint);
+                     recentArea_.fTop - 20, headerFont, textPaint);
 
-  // If no projects, show a helpful message
+  // Empty state check
   if (recentProjects_.empty()) {
     SkFont emptyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
-    textPaint.setColor(colors::TEXT_SECONDARY);
-    canvas->drawString("No recent projects yet.", recentArea_.fLeft + 20,
-                       recentArea_.fTop + 40, emptyFont, textPaint);
-    canvas->drawString("Click 'New Project' to get started!",
-                       recentArea_.fLeft + 20, recentArea_.fTop + 65, emptyFont,
-                       textPaint);
+    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
+
+    canvas->drawString("No recent projects yet.", recentArea_.fLeft,
+                       recentArea_.fTop + 30, emptyFont, textPaint);
+
+    SkFont hintFont = design::getSkFont(14.0f, design::FontWeight::Regular);
+    canvas->drawString("Click 'New Project' to get started!", recentArea_.fLeft,
+                       recentArea_.fTop + 55, hintFont, textPaint);
     return;
   }
 
   for (const auto &proj : recentProjects_) {
-    // Card Background
-    SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 8.0f, 8.0f);
+    SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 12.0f, 12.0f);
 
+    // Card background with better depth
     SkPaint cardPaint;
-    cardPaint.setColor(proj.isHovered ? withAlpha(colors::BG_LIGHT, 0.2f)
-                                      : withAlpha(colors::BG_LIGHT, 0.05f));
+    cardPaint.setColor(proj.isHovered ? withAlpha(colors::BG_LIGHT, 0.15f)
+                                      : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
-    if (proj.isHovered) {
-      // Glow border
-      SkPaint borderPaint;
-      borderPaint.setStyle(SkPaint::kStroke_Style);
-      borderPaint.setStrokeWidth(1.0f);
-      borderPaint.setColor(withAlpha(proj.accent, 0.6f));
-      canvas->drawRRect(rrect, borderPaint);
-    }
+    // Border
+    SkPaint borderPaint;
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setColor(proj.isHovered
+                             ? withAlpha(proj.accent, 0.4f)
+                             : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+    borderPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, borderPaint);
 
-    // Mock Image / Icon (accent colored rectangle)
-    SkRect imageRect =
-        SkRect::MakeXYWH(proj.bounds.fLeft + 10, proj.bounds.fTop + 10, 80, 80);
-    SkPaint imgPaint;
-    imgPaint.setColor(withAlpha(proj.accent, 0.2f));
-    canvas->drawRect(imageRect, imgPaint);
+    // Thumbnail with accent color
+    SkRect thumbRect =
+        SkRect::MakeXYWH(proj.bounds.fLeft + 12, proj.bounds.fTop + 12, 86, 86);
+    SkRRect thumbRRect = SkRRect::MakeRectXY(thumbRect, 8.0f, 8.0f);
 
-    // Text
-    SkFont titleFont = design::getSkFont(16.0f, design::FontWeight::Medium);
+    SkPaint thumbPaint;
+    thumbPaint.setColor(withAlpha(proj.accent, 0.25f));
+    thumbPaint.setAntiAlias(true);
+    canvas->drawRRect(thumbRRect, thumbPaint);
+
+    // Text content
+    float textX = thumbRect.right() + 16;
+
+    SkFont titleFont = design::getSkFont(16.0f, design::FontWeight::Bold);
     textPaint.setColor(colors::TEXT_PRIMARY);
-    canvas->drawString(proj.name.toStdString().c_str(), imageRect.right() + 15,
-                       proj.bounds.fTop + 30, titleFont, textPaint);
+    canvas->drawString(proj.name.toStdString().c_str(), textX,
+                       proj.bounds.fTop + 35, titleFont, textPaint);
 
-    SkFont subFont = design::getSkFont(14.0f, design::FontWeight::Regular);
-    textPaint.setColor(colors::TEXT_SECONDARY);
-    canvas->drawString(proj.date.toStdString().c_str(), imageRect.right() + 15,
-                       proj.bounds.fTop + 55, subFont, textPaint);
+    SkFont dateFont = design::getSkFont(13.0f, design::FontWeight::Regular);
+    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
+    canvas->drawString(proj.date.toStdString().c_str(), textX,
+                       proj.bounds.fTop + 60, dateFont, textPaint);
 
-    // Genre Badge
-    if (proj.genre.isNotEmpty()) {
-      SkPaint badgePaint;
-      badgePaint.setColor(withAlpha(proj.accent, 0.3f));
-      SkRect badgeRect = SkRect::MakeXYWH(imageRect.right() + 15,
-                                          proj.bounds.fTop + 65, 80, 20);
-      SkRRect badgeRRect = SkRRect::MakeRectXY(badgeRect, 4.0f, 4.0f);
-      canvas->drawRRect(badgeRRect, badgePaint);
-
-      SkFont badgeFont = design::getSkFont(11.0f, design::FontWeight::Medium);
-      SkPaint badgeText;
-      badgeText.setColor(colors::TEXT_PRIMARY);
-      badgeText.setAntiAlias(true);
-      canvas->drawString(proj.genre.toStdString().c_str(), badgeRect.fLeft + 6,
-                         badgeRect.centerY() + 4, badgeFont, badgeText);
-    }
+    // Genre badge
+    SkFont genreFont = design::getSkFont(12.0f, design::FontWeight::Medium);
+    textPaint.setColor(proj.accent);
+    canvas->drawString(proj.genre.toStdString().c_str(), textX,
+                       proj.bounds.fTop + 82, genreFont, textPaint);
   }
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
+  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Quick Start", templatesArea_.fLeft,
-                     templatesArea_.fTop - 15, headerFont, textPaint);
+                     templatesArea_.fTop - 20, headerFont, textPaint);
 
   for (const auto &tmpl : templates_) {
-    SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 8.0f, 8.0f);
+    SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
 
+    // Card background
     SkPaint cardPaint;
-    cardPaint.setColor(tmpl.isHovered ? withAlpha(tmpl.color, 0.2f)
-                                      : withAlpha(colors::BG_LIGHT, 0.05f));
+    cardPaint.setColor(tmpl.isHovered ? withAlpha(tmpl.color, 0.15f)
+                                      : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
-    // Icon (colored circle)
+    // Border
+    SkPaint borderPaint;
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setColor(tmpl.isHovered
+                             ? withAlpha(tmpl.color, 0.6f)
+                             : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+    borderPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, borderPaint);
+
+    // FIXED: Larger icon with proper background
+    float iconSize = 48.0f;
+    SkRect iconBounds = SkRect::MakeXYWH(
+        tmpl.bounds.fLeft + 20, tmpl.bounds.centerY() - iconSize * 0.5f,
+        iconSize, iconSize);
+
+    SkPaint iconBgPaint;
+    iconBgPaint.setColor(withAlpha(tmpl.color, 0.2f));
+    iconBgPaint.setAntiAlias(true);
+    canvas->drawRoundRect(iconBounds, 8.0f, 8.0f, iconBgPaint);
+
+    // Icon color
     SkPaint iconPaint;
     iconPaint.setColor(tmpl.color);
-    canvas->drawCircle(tmpl.bounds.fLeft + 30, tmpl.bounds.centerY(), 15,
+    iconPaint.setAntiAlias(true);
+    canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
                        iconPaint);
 
     // Text
+    SkFont nameFont = design::getSkFont(18.0f, design::FontWeight::Bold);
     textPaint.setColor(colors::TEXT_PRIMARY);
-    SkFont nameFont = design::getSkFont(16.0f, design::FontWeight::Medium);
-    canvas->drawString(tmpl.name.toStdString().c_str(), tmpl.bounds.fLeft + 60,
+    canvas->drawString(tmpl.name.toStdString().c_str(), iconBounds.right() + 16,
                        tmpl.bounds.centerY() + 6, nameFont, textPaint);
-
-    if (tmpl.isHovered) {
-      SkPaint borderPaint;
-      borderPaint.setStyle(SkPaint::kStroke_Style);
-      borderPaint.setStrokeWidth(1.0f);
-      borderPaint.setColor(withAlpha(tmpl.color, 0.8f));
-      canvas->drawRRect(rrect, borderPaint);
-    }
   }
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(20.0f, design::FontWeight::Bold);
+  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Collaborations", accountArea_.fLeft,
-                     accountArea_.fTop - 15, headerFont, textPaint);
+                     accountArea_.fTop - 20, headerFont, textPaint);
 
-  // Profile Box
-  SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 8.0f, 8.0f);
+  // Profile card
+  SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
 
   SkPaint bgPaint;
-  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BLUE, 0.15f)
-                                     : withAlpha(colors::BG_LIGHT, 0.05f));
+  bgPaint.setColor(isProfileHovered_ ? withAlpha(colors::BG_LIGHT, 0.15f)
+                                     : withAlpha(colors::BG_LIGHT, 0.08f));
   bgPaint.setAntiAlias(true);
   canvas->drawRRect(rrect, bgPaint);
 
-  // Avatar
+  // Border
+  SkPaint borderPaint;
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setStrokeWidth(1.0f);
+  borderPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.06f));
+  borderPaint.setAntiAlias(true);
+  canvas->drawRRect(rrect, borderPaint);
+
+  // Avatar (larger)
+  float avatarSize = 48.0f;
   SkPaint avatarPaint;
   avatarPaint.setColor(colors::AMBER);
-  canvas->drawCircle(profileBounds_.fLeft + 40, profileBounds_.centerY(), 25,
-                     avatarPaint);
+  avatarPaint.setAntiAlias(true);
+  canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f,
+                     profileBounds_.centerY(), avatarSize * 0.5f, avatarPaint);
 
+  // Name
   textPaint.setColor(colors::TEXT_PRIMARY);
-  SkFont nameFont = design::getSkFont(16.0f, design::FontWeight::Medium);
-  canvas->drawString("SoundDesigner99", profileBounds_.fLeft + 80,
-                     profileBounds_.centerY() + -5, nameFont, textPaint);
+  SkFont nameFont = design::getSkFont(17.0f, design::FontWeight::Bold);
+  canvas->drawString("SoundDesigner99", profileBounds_.fLeft + 90,
+                     profileBounds_.centerY() - 6, nameFont, textPaint);
 
-  textPaint.setColor(colors::NEON_GREEN);
-  SkFont statusFont = design::getSkFont(12.0f, design::FontWeight::Regular);
-  canvas->drawString("● Online", profileBounds_.fLeft + 80,
-                     profileBounds_.centerY() + 15, statusFont, textPaint);
+  // FIXED: Proper semantic color for online status
+  SkFont statusFont = design::getSkFont(14.0f, design::FontWeight::Regular);
+  SkPaint statusPaint;
+  statusPaint.setColor(
+      SkColorSetARGB(255, 16, 185, 129)); // colors::success equivalent
+  statusPaint.setAntiAlias(true);
+  canvas->drawString("● Online", profileBounds_.fLeft + 90,
+                     profileBounds_.centerY() + 18, statusFont, statusPaint);
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f);
 
-  // Neon Gradient Background
+  // FIXED: Solid professional blue with proper states
+  SkColor buttonColor =
+      isNewProjectHovered_
+          ? SkColorSetARGB(255, 96, 165, 250)  // Hover: lighter blue
+          : SkColorSetARGB(255, 59, 130, 246); // Default: professional blue
+
   SkPaint btnPaint;
+  btnPaint.setColor(buttonColor);
   btnPaint.setAntiAlias(true);
 
-  const std::array<SkPoint, 2> pts = {
-      SkPoint::Make(newProjectButtonBounds_.fLeft,
-                    newProjectButtonBounds_.fTop),
-      SkPoint::Make(newProjectButtonBounds_.fRight,
-                    newProjectButtonBounds_.fBottom)};
-
-  auto gradientColors =
-      isNewProjectHovered_
-          ? std::array<SkColor, 2>{colors::NEON_CYAN, colors::MAGENTA}
-          : std::array<SkColor, 2>{colors::CYAN, colors::VIOLET};
-
-  auto shader =
-      SkGradientShader::MakeLinear(pts.data(), gradientColors.data(), nullptr,
-                                   gradientColors.size(), SkTileMode::kClamp);
-  btnPaint.setShader(shader);
-
-  // Drop Shadow / Glow
+  // Shadow on hover
   if (isNewProjectHovered_) {
-    btnPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
-    // Draw glow pass
-    canvas->drawRRect(rrect, btnPaint);
-    btnPaint.setMaskFilter(nullptr); // Reset for main body
+    SkPaint shadowPaint;
+    shadowPaint.setColor(withAlpha(buttonColor, 0.4f));
+    shadowPaint.setMaskFilter(
+        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
+    shadowPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect.makeOutset(2.0f, 2.0f), shadowPaint);
   }
 
   canvas->drawRRect(rrect, btnPaint);
 
   // Text
-  SkFont btnFont = design::getSkFont(24.0f, design::FontWeight::Bold);
+  SkFont btnFont = design::getSkFont(20.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(SK_ColorWHITE);
   textPaint.setAntiAlias(true);
 
-  // Center text
   SkString text("New Project");
   SkRect textBounds;
   btnFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8,
@@ -507,7 +534,6 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
   bool needsUpdate = false;
 
-  // Check Recent Projects
   for (auto &proj : recentProjects_) {
     bool h = proj.bounds.contains(pt.fX, pt.fY);
     if (h != proj.isHovered) {
@@ -516,7 +542,6 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     }
   }
 
-  // Check Templates
   for (auto &tmpl : templates_) {
     bool h = tmpl.bounds.contains(pt.fX, pt.fY);
     if (h != tmpl.isHovered) {
@@ -525,14 +550,12 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     }
   }
 
-  // Check Profile
   bool ph = profileBounds_.contains(pt.fX, pt.fY);
   if (ph != isProfileHovered_) {
     isProfileHovered_ = ph;
     needsUpdate = true;
   }
 
-  // Check New Project Button
   bool nph = newProjectButtonBounds_.contains(pt.fX, pt.fY);
   if (nph != isNewProjectHovered_) {
     isNewProjectHovered_ = nph;
