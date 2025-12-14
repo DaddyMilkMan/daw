@@ -71,7 +71,10 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/ConcurrencyTests.cpp
     apps/desktop/Source/tests/AITests.cpp
     apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
     apps/desktop/Source/ui/skia/ZenithLayout.cpp
+    apps/desktop/Source/ui/ResizablePanelContainer.cpp
+    apps/desktop/Source/ui/LayoutManager.cpp
     
     # Engine sources required for linking
     apps/desktop/Source/engine/Engine.cpp

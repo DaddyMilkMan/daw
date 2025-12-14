@@ -144,6 +144,14 @@ juce::Rectangle<float> PanelHeader::getCollapseButtonBounds() const {
   return juce::Rectangle<float>(4.0f, 4.0f, 20.0f, 20.0f);
 }
 
+std::unique_ptr<juce::AccessibilityHandler>
+PanelHeader::createAccessibilityHandler() {
+  // Role: Group with the panel's title for screen reader identification
+  setTitle(title_);
+  return std::make_unique<juce::AccessibilityHandler>(
+      *this, juce::AccessibilityRole::group);
+}
+
 //==============================================================================
 // PanelWrapper Implementation
 //==============================================================================
@@ -404,6 +412,15 @@ void PanelDivider::setPositionConstraints(float minRatio, float maxRatio) {
       juce::jlimit(minPositionRatio_, maxPositionRatio_, positionRatio_);
 }
 
+std::unique_ptr<juce::AccessibilityHandler>
+PanelDivider::createAccessibilityHandler() {
+  // Role: Splitter (using unspecified since JUCE lacks splitter role)
+  setHelpText("Drag to resize");
+  setDescription(isHorizontal_ ? "Horizontal splitter" : "Vertical splitter");
+  return std::make_unique<juce::AccessibilityHandler>(
+      *this, juce::AccessibilityRole::unspecified);
+}
+
 //==============================================================================
 // TabGroup Implementation
 //==============================================================================
@@ -636,6 +653,15 @@ int TabGroup::getTabIndexAtPosition(const juce::Point<int> &pos) const {
 
 void TabGroup::animateTabSwitch() {
   // Future: Add tab switch animation
+}
+
+std::unique_ptr<juce::AccessibilityHandler>
+TabGroup::createAccessibilityHandler() {
+  // Role: List (closest to TabList in JUCE's accessibility roles)
+  setTitle("Tab List");
+  setDescription("Panel tab group");
+  return std::make_unique<juce::AccessibilityHandler>(
+      *this, juce::AccessibilityRole::list);
 }
 
 //==============================================================================

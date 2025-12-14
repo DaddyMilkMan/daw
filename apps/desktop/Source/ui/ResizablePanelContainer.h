@@ -58,6 +58,10 @@ public:
 
   static constexpr int headerHeight = 28;
 
+  // Accessibility
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
+
 private:
   juce::String title_;
   bool isCollapsible_ = true;
@@ -165,6 +169,10 @@ public:
 
   static constexpr int dividerSize = 6;
 
+  // Accessibility
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
+
 private:
   bool isHorizontal_;
   bool isDragging_ = false;
@@ -214,6 +222,10 @@ public:
       onTabDraggedOut;
 
   static constexpr int tabBarHeight = 32;
+
+  // Accessibility
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
 
 private:
   struct TabInfo {
