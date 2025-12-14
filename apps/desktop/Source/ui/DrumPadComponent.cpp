@@ -315,25 +315,17 @@ void DrumPadComponent::hitPad(int index, float velocity) {
     double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_LENGTH));
     double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_OFFSET)); // Start offset
 
-    // Calculate relative position within clip
-    // Assuming clipStart is absolute timeline position
+    // Calculate relative position with loop wrapping
+    // 7d74af0 logic adapted to current context
     double relativeStart = position - clipStart + clipOffset;
-
-    // Handle loop wrapping (if engine is looping)
-    // For now, valid notes must be within clip bounds [0, length)
-    // If wrapping is needed, the engine usually handles playback position moving back.
-    // However, for recording, we might want to wrap 'relativeStart' into [0, loopLength) if clip is looping?
-    // Assuming clip loops if it is a pattern.
-    // Simplify: just record at current relative time.
     
-    // Note: If relativeStart is negative or > length, it's outside the clip.
-    // But for drum pads (pattern), we often want to wrap into the loop.
-    if (relativeStart < 0) relativeStart = 0; // Clamp start?
-    
-    // Simple modulo for looping patterns (common in drum machines)
+    // For a drum pad component, recording should always wrap within the clip's
+    // length, regardless of the global transport's loop state.
     if (clipLength > 0.0) {
-        relativeStart = std::fmod(relativeStart, clipLength);
-        if (relativeStart < 0) relativeStart += clipLength;
+      relativeStart = std::fmod(relativeStart, clipLength);
+      if (relativeStart < 0.0) {
+        relativeStart += clipLength;
+      }
     }
 
     zenith::ProjectState::MidiNoteSpec note;
@@ -457,3 +449,4 @@ void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
 }
+
