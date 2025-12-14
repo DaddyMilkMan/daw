@@ -3,15 +3,15 @@ if(ZENITH_ENABLE_SKIA)
         # Core UI
         AuroraBackground.cpp
         BottomBar.cpp
-        BrowserPanel.cpp
+        ../browser/BrowserPanel.cpp
         DebugConsoleComponent.cpp
         RightSidePanel.cpp
         SkiaComponent.cpp
         SkiaMainWindowIntegration.cpp
-        TransportBar.cpp
-        ZenithDesignSystem.cpp
-        FontManager.cpp
-        ZenithLayout.cpp
+        ../transport/TransportBar.cpp
+        ../design-system/ZenithDesignSystem.cpp
+        ../design-system/FontManager.cpp
+        ../design-system/ZenithLayout.cpp
 
         ZenithPolySynthUI.cpp
         ExportDialog.cpp
