@@ -584,12 +584,21 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
     if (isBarLine) {
       // BAR LINES - more visible, solid
+<<<<<<< HEAD:apps/desktop/Source/ui/arranger/ArrangerComponent.cpp
       gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
       gridPaint.setStrokeWidth(kBarLineWidth);
     } else {
       // BEAT LINES - subtle, dotted
       gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
       gridPaint.setStrokeWidth(kBeatLineWidth);
+=======
+      gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBarLineWidth);
+    } else {
+      // BEAT LINES - subtle, dotted
+      gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBeatLineWidth);
+>>>>>>> d1a94b7 (feat(ui): improve grid visibility with stronger lines and contrast):apps/desktop/Source/ui/ArrangerComponent.cpp
       static const SkScalar intervals[] = {2.0f, 4.0f};
       static const auto dashEffect =
           SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
