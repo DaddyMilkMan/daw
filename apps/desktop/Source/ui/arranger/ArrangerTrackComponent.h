@@ -1,82 +1,60 @@
-/*
-  ==============================================================================
-
-    ArrangerTrackComponent.h
-    Created: 2025-12-12
-    Author:  Zenith AI
-
-  ==============================================================================
-*/
+/**
+ * @file ArrangerTrackComponent.h
+ * @brief Component for managing song sections (Verse, Chorus, etc.)
+ */
 
 #pragma once
 
-#include "../../include/ProjectState.h"
-#include "skia/SkiaComponent.h"
+#include "../../Source/ui/skia/SkiaComponent.h"
+#include "../ProjectState.h"
 #include <juce_gui_basics/juce_gui_basics.h>
-
 
 namespace zenith {
 
-class ArrangerComponent; // Forward declaraton
+struct ArrangementSection {
+  juce::String name;
+  double startBeats;
+  double lengthBeats;
+  juce::Colour color;
+};
 
-class ArrangerTrackComponent : public SkiaComponent,
-                               public juce::ValueTree::Listener {
+class ArrangerTrackComponent : public SkiaComponent {
 public:
-  ArrangerTrackComponent(ProjectState &state, ArrangerComponent &arranger);
+  ArrangerTrackComponent(ProjectState &ps);
   ~ArrangerTrackComponent() override;
 
   void drawSkia(SkCanvas *canvas) override;
 
-  void mouseMove(const juce::MouseEvent &e) override;
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
-  void mouseExit(const juce::MouseEvent &e) override;
   void mouseDoubleClick(const juce::MouseEvent &e) override;
 
-  // ValueTree::Listener
-  void valueTreePropertyChanged(juce::ValueTree &tree,
-                                const juce::Identifier &property) override;
-  void valueTreeChildAdded(juce::ValueTree &parent,
-                           juce::ValueTree &child) override;
-  void valueTreeChildRemoved(juce::ValueTree &parent, juce::ValueTree &child,
-                             int index) override;
-  void valueTreeChildOrderChanged(juce::ValueTree &parent, int oldIndex,
-                                  int newIndex) override;
+  // Set the view parameters for rendering
+  void setViewContext(double pixelsPerBeat, double viewStartBeats);
+  void setVisibleRange(double startBeats, double endBeats);
 
-  // Render State
-  void setVisibleRange(double startBeats, double pixelsPerBeat);
+  // Command to re-order sections (The "Magic" of this feature)
+  void moveSection(int index, double newStartBeats);
 
-  // Interaction State
-  struct SectionView {
-    juce::String id;
-    juce::String name;
-    juce::String color; // Hex string
-    double startBeats;
-    double lengthBeats;
-    juce::Rectangle<float> bounds;
-  };
-
-  const SectionView *getHoveredSection() const { return hoveredSection_; }
-  const SectionView *getDraggingSection() const { return draggingSection_; }
+  // State Access
+  const ArrangementSection *getHoveredSection() const;
+  const ArrangementSection *getDraggingSection() const;
 
 private:
-  ProjectState &projectState_;
-  ArrangerComponent &arranger_;
+  ProjectState &projectState;
+  std::vector<ArrangementSection> sections_; // Cache
 
-  juce::Array<SectionView> sections_;
-  double viewStartBeats_ = 0.0;
+  // View State
   double pixelsPerBeat_ = 50.0;
+  double viewStartBeats_ = 0.0;
 
-  const SectionView *hoveredSection_ = nullptr;
-  const SectionView *draggingSection_ = nullptr;
-
-  bool isDragging_ = false;
+  // Interaction
+  int draggingSectionIndex_ = -1;
   double dragStartBeats_ = 0.0;
-  double sectionOriginalStart_ = 0.0;
+  double initialSectionStart_ = 0.0;
 
-  void rebuildSections();
-  const SectionView *findSectionAt(juce::Point<float> pos) const;
+  void rebuildSections(); // Pull from ProjectState
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerTrackComponent)
 };
