@@ -953,7 +953,7 @@ void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
   }
 }
 
-std::vector<SkiaComponent::AIElementInfo>
+std::vector<zenith::SkiaComponent::AIElementInfo>
 ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
   // TODO: Expose nodes and connections for AI access
