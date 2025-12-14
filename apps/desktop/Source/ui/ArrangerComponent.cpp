@@ -71,9 +71,8 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
   // Initial clip view build
   rebuildClipViews();
 
-  // Start timer for playhead position updates (30Hz is plenty for visual
-  // feedback)
-  startTimerHz(30);
+  // Start timer for playhead position updates (60Hz for smooth visual feedback)
+  startTimerHz(60);
 
   // Initialize Macro Toolbar
   macroToolbar = std::make_unique<MacroToolbar>(engine_, projectState);
@@ -154,6 +153,8 @@ void ArrangerComponent::rebuildClipViews() {
   if (!tracksNode.isValid())
     return;
 
+  // Indexing is handled by iteration order
+
   int trackIndex = 0;
   for (const auto &track : tracksNode) {
     auto trackId = track[zenith::ProjectState::PROP_ID].toString();
@@ -164,6 +165,7 @@ void ArrangerComponent::rebuildClipViews() {
         ClipView view;
         view.clipId = clip[zenith::ProjectState::PROP_ID].toString();
         view.trackId = trackId;
+        view.trackIndex = trackIndex; // Cache track index in ClipView
         view.startBeats = clip[zenith::ProjectState::PROP_START];
         view.lengthBeats = clip[zenith::ProjectState::PROP_LENGTH];
 
@@ -212,19 +214,9 @@ void ArrangerComponent::rebuildClipViews() {
     MiniMapComponent::MiniMapClip mc;
     mc.startBeats = view.startBeats;
     mc.lengthBeats = view.lengthBeats;
-    // We need track index for Y pos
-    // We can find it by iterating tracks or storing it in ClipView
-    // (optimization for later) For now, re-find it (performance warning, but
-    // fast enough for small projects)
-    int tIdx = 0;
-    auto tracks = projectState.getState().getChildWithName(
-        zenith::ProjectState::ID_TRACKS);
-    for (const auto &t : tracks) {
-      if (t[zenith::ProjectState::PROP_ID].toString() == view.trackId)
-        break;
-      tIdx++;
-    }
-    mc.trackIndex = tIdx;
+    // OPTIMIZATION: Use cached trackIndex from ClipView (O(1) instead of O(N)
+    // per clip)
+    mc.trackIndex = view.trackIndex;
     mc.isMidi = view.isMidi;
     mc.isSelected = view.isSelected;
 
@@ -232,8 +224,8 @@ void ArrangerComponent::rebuildClipViews() {
 
     if (view.startBeats + view.lengthBeats > maxBeat)
       maxBeat = view.startBeats + view.lengthBeats;
-    if (tIdx + 1 > maxTrack)
-      maxTrack = tIdx + 1;
+    if (view.trackIndex + 1 > maxTrack)
+      maxTrack = view.trackIndex + 1;
   }
 
   // Update MiniMap
@@ -252,26 +244,18 @@ void ArrangerComponent::recomputeClipBounds() {
     sectionTrack->setVisibleRange(viewStartBeats, pixelsPerBeat);
   }
 
+  // Cache invariant values for the loop
+  const float trackHeight =
+      static_cast<float>(TRACK_HEIGHT - 4); // 2px margin top/bottom
+
   for (auto &clipView : clipViews) {
-    // Find track index for this clip
-    int trackIndex = 0;
-    auto tracksNode = projectState.getState().getChildWithName(
-        zenith::ProjectState::ID_TRACKS);
-    if (tracksNode.isValid()) {
-      for (const auto &track : tracksNode) {
-        if (track[zenith::ProjectState::PROP_ID].toString() == clipView.trackId)
-          break;
-        trackIndex++;
-      }
-    }
-
+    // OPTIMIZATION: Use cached trackIndex from ClipView (O(1) instead of O(N)
+    // per clip)
     float x = beatsToX(clipView.startBeats);
-    float y = trackIndexToY(trackIndex);
+    float y = trackIndexToY(clipView.trackIndex);
     float width = static_cast<float>(clipView.lengthBeats * pixelsPerBeat);
-    float height =
-        static_cast<float>(TRACK_HEIGHT - 4); // 2px margin top/bottom
 
-    clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, height);
+    clipView.bounds = juce::Rectangle<float>(x, y + 2.0f, width, trackHeight);
   }
 }
 
@@ -688,8 +672,9 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
         // Gradient from slightly lighter top to darker bottom
         SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
         SkColor hdrGradColors[3] = {
-            SkColorSetRGB(28, 28, 35), // Top - subtle highlight
-            SkColorSetRGB(22, 22, 28), // Middle
+            SkColorSetRGB(35, 45,
+                          55), // Top - Cyan tint (visible Neon Noir style)
+            SkColorSetRGB(25, 25, 30), // Middle
             SkColorSetRGB(18, 18, 22)  // Bottom - darkest
         };
         float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
@@ -1634,14 +1619,39 @@ void ArrangerComponent::mouseDoubleClick(const juce::MouseEvent &e) {
 
   auto *clip = findClipAtPoint(e.position);
 
-  if (clip == nullptr) {
-    // Double-clicked empty area - create clip
-    createClipAtPoint(e.position);
-  } else {
+  if (clip != nullptr) {
     // Double-clicked existing clip - trigger callback
     if (onClipDoubleClicked) {
       onClipDoubleClicked(clip->trackId, clip->clipId);
     }
+    return;
+  }
+
+  // Double-clicked empty area - create clip
+  if (e.position.x < HEADER_WIDTH || e.position.y < SECTION_HEIGHT)
+    return;
+
+  double beat = viewStartBeats + (e.position.x - HEADER_WIDTH) / pixelsPerBeat;
+  int trackIndex = yToTrackIndex(e.position.y);
+
+  // Snap to nearest integer beat
+  beat = std::floor(beat);
+
+  if (beat < 0)
+    beat = 0;
+
+  auto tracksNode =
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+  if (tracksNode.isValid() && trackIndex >= 0 &&
+      trackIndex < tracksNode.getNumChildren()) {
+    auto track = tracksNode.getChild(trackIndex);
+    juce::String trackId = track[zenith::ProjectState::PROP_ID].toString();
+    juce::String type = track[zenith::ProjectState::PROP_TYPE].toString();
+    bool isMidi = (type != "audio");
+
+    projectState.createEmptyClip(trackId, beat, 4.0, isMidi, "New Clip",
+                                 "Double Click Create");
+    repaint();
   }
 }
 
@@ -1666,7 +1676,6 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
     recomputeClipBounds();
-    recomputeClipBounds();
 
     // Update MiniMap
     double visibleBeats = (double)(getWidth() - HEADER_WIDTH) / pixelsPerBeat;
@@ -1680,7 +1689,6 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     viewStartBeats -= wheel.deltaY * 2.0;
     viewStartBeats = juce::jmax(0.0, viewStartBeats);
 
-    recomputeClipBounds();
     recomputeClipBounds();
 
     // Update MiniMap
@@ -1702,6 +1710,7 @@ void ArrangerComponent::mouseWheelMove(const juce::MouseEvent &e,
     firstVisibleTrackIndex =
         juce::jlimit(0, maxTrackIndex, firstVisibleTrackIndex);
 
+    recomputeClipBounds();
     repaint();
   }
 }
@@ -2113,16 +2122,36 @@ void ArrangerComponent::drawClipMidiBlobs(SkCanvas *canvas,
   using namespace zenith::design;
 
   if (clip.noteBlobs.empty() || clip.lengthBeats <= 0.001) {
-    // No notes - draw a subtle placeholder
+    // No notes - draw a GENERATIVE placeholder pattern so it's visible
+    juce::Random rng(clip.clipId.hashCode());
+
     SkPaint placeholderPaint;
-    placeholderPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
-    placeholderPaint.setStrokeWidth(1.0f);
-    placeholderPaint.setStyle(SkPaint::kStroke_Style);
-    float cX = clipRect.centerX();
-    float cY = clipRect.centerY();
-    // Draw a music note icon
-    canvas->drawLine(cX, cY - 8, cX, cY + 4, placeholderPaint);
-    canvas->drawCircle(cX - 3, cY + 4, 3, placeholderPaint);
+    placeholderPaint.setColor(
+        SkColorSetARGB(150, 255, 255, 255)); // Much brighter
+    placeholderPaint.setAntiAlias(true);
+
+    int numNotes = (int)(clipRect.width() / 15.0f) + 1;
+    for (int i = 0; i < numNotes; ++i) {
+      if (rng.nextFloat() > 0.6f)
+        continue;
+
+      float x = clipRect.left() + i * 15.0f + rng.nextFloat() * 5.0f;
+      float y = clipRect.top() + 10.0f +
+                rng.nextFloat() * (clipRect.height() - 20.0f);
+      float w = 10.0f + rng.nextFloat() * 10.0f;
+      float h = 4.0f;
+
+      if (x + w > clipRect.right())
+        w = clipRect.right() - x;
+
+      SkRect r = SkRect::MakeXYWH(x, y, w, h);
+      canvas->drawRRect(SkRRect::MakeRectXY(r, 2, 2), placeholderPaint);
+
+      // Ghost tail
+      SkPaint tailPaint;
+      tailPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+      canvas->drawRect(SkRect::MakeXYWH(x + w, y, 5, h), tailPaint);
+    }
     return;
   }
 
@@ -2186,7 +2215,8 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
   if (!cache || !cache->isValid || cache->minPeaks.empty()) {
     // No waveform - draw a placeholder waveform shape
     SkPaint placeholderPaint;
-    placeholderPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+    placeholderPaint.setColor(
+        SkColorSetARGB(150, 255, 255, 255)); // Much brighter for visibility
     placeholderPaint.setStrokeWidth(1.5f);
     placeholderPaint.setStyle(SkPaint::kStroke_Style);
     placeholderPaint.setAntiAlias(true);

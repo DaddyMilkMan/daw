@@ -5,374 +5,417 @@
     Created: 2025-12-09
     Author:  Zenith DAW
 
-    Recording manager implementation.
+    Recording manager implementation with clip creation.
 
   ==============================================================================
 */
 
 #include "RecordingManager.h"
+#include "../../include/ProjectState.h"
+#include "AudioRecorder.h"
 #include "Track.h"
-#include "ProjectState.h"
+
 
 namespace zenith {
 
 //==============================================================================
 RecordingManager::RecordingManager() {
-    midiFifoData_.resize(constants::kMidiRecordFifoSize);
-    
-    writerThread_ = std::make_unique<juce::TimeSliceThread>("Audio Writer Thread");
-    writerThread_->startThread(juce::Thread::Priority::normal);
+  // Initialize MIDI fifo buffer
+  midiFifoData_.resize(constants::kMidiRecordFifoSize);
+
+  // Create audio recorder
+  audioRecorder_ = std::make_unique<AudioRecorder>();
 }
 
 RecordingManager::~RecordingManager() {
-    if (isRecording_.load()) {
-        // Force stop - don't finalize properly
-        isRecording_.store(false);
-        audioSessions_.clear();
-        midiSessions_.clear();
-    }
+  if (isRecording_.load()) {
+    // Force stop - don't finalize properly
+    isRecording_.store(false);
+    midiSessions_.clear();
+  }
+
+  // AudioRecorder destructor will handle cleanup
+  audioRecorder_.reset();
 }
 
 //==============================================================================
 void RecordingManager::prepare(double sampleRate) {
-    sampleRate_ = sampleRate;
+  sampleRate_ = sampleRate;
+
+  if (audioRecorder_) {
+    audioRecorder_->prepare(sampleRate);
+  }
 }
 
 //==============================================================================
-void RecordingManager::prepareRecordingForTrack(Track& track, int trackIndex,
-                                                const juce::File& recordDir) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+void RecordingManager::prepareRecordingForTrack(Track &track, int trackIndex,
+                                                const juce::File &recordDir) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    if (writerThread_ == nullptr) {
-        DBG("RecordingManager: No writer thread set");
-        return;
-    }
+  // Store recording directory for later use
+  recordingDirectory_ = recordDir;
+  if (!recordingDirectory_.exists()) {
+    recordingDirectory_.createDirectory();
+  }
 
-    recordingDirectory_ = recordDir;
-    if (!recordingDirectory_.exists()) {
-        recordingDirectory_.createDirectory();
-    }
+  // Audio preparation is now handled in startRecording via AudioRecorder
+  // This method is kept for API compatibility and directory setup
 
-    // Determine input channels
-    int numChannels = 2; // Default stereo
-    if (track.getInputChannel() >= 0) {
-        numChannels = 1; // Mono if specific channel selected
-    }
-
-    // Create recording file
-    juce::File recordFile = createRecordingFile(
-        recordingDirectory_, track.getName(), ".wav");
-
-    // Create file stream
-    auto fileStream = std::make_unique<juce::FileOutputStream>(recordFile);
-    if (!fileStream->openedOk()) {
-        DBG("RecordingManager: Failed to create file: " + recordFile.getFullPathName());
-        return;
-    }
-
-    // Create audio writer
-    juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::AudioFormatWriter> writer(
-        wavFormat.createWriterFor(fileStream.release(), sampleRate_,
-                                  static_cast<unsigned int>(numChannels),
-                                  constants::kRecordingBitDepth, {}, 0));
-
-    if (writer == nullptr) {
-        DBG("RecordingManager: Failed to create audio writer");
-        return;
-    }
-
-    // Wrap in ThreadedWriter for RT-safe writing
-    auto threadedWriter = std::make_unique<juce::AudioFormatWriter::ThreadedWriter>(
-        writer.release(), *writerThread_, constants::kAudioWriterFifoSize);
-
-    // Create session
-    AudioRecordingSession session;
-    session.writer = std::move(threadedWriter);
-    session.file = recordFile;
-    session.numChannels = numChannels;
-    session.sampleRate = sampleRate_;
-    session.trackIndex = trackIndex;
-    session.isActive = false;
-
-    // Add to prepped sessions
-    {
-        const juce::ScopedLock sl(sessionLock_);
-        
-        // Remove old prep for this track
-        preppedSessions_.erase(
-            std::remove_if(preppedSessions_.begin(), preppedSessions_.end(),
-                           [trackIndex](const auto& s) {
-                               return s.trackIndex == trackIndex;
-                           }),
-            preppedSessions_.end());
-
-        preppedSessions_.push_back(std::move(session));
-    }
-
-    DBG("RecordingManager: Prepared recording for track " + juce::String(trackIndex));
+  DBG("RecordingManager: Prepared recording directory for track " +
+      juce::String(trackIndex) + ": " + recordDir.getFullPathName());
 }
 
 //==============================================================================
-void RecordingManager::startRecording(juce::int64 startPosition,
-                                      const std::vector<std::shared_ptr<Track>>& tracks) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+void RecordingManager::startRecording(
+    juce::int64 startPosition,
+    const std::vector<std::shared_ptr<Track>> &tracks) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    if (isRecording_.load()) {
-        DBG("RecordingManager: Already recording");
-        return;
-    }
+  if (isRecording_.load()) {
+    DBG("RecordingManager: Already recording");
+    return;
+  }
 
-    {
-        const juce::ScopedLock sl(sessionLock_);
+  // Store start position for clip creation
+  recordingStartPosition_ = startPosition;
 
-        // Move prepped sessions to active
-        for (auto& session : preppedSessions_) {
-            session.startSamplePosition = startPosition;
-            session.samplesRecorded = 0;
-            session.isActive = true;
-            audioSessions_.push_back(std::move(session));
+  // Ensure we have a valid device manager
+  if (deviceManager_ == nullptr) {
+    DBG("RecordingManager: No device manager set, cannot start recording");
+    return;
+  }
+
+  // Ensure recording directory exists
+  if (!recordingDirectory_.exists()) {
+    recordingDirectory_ =
+        juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+            .getChildFile("ZenithDAW/Recordings");
+    recordingDirectory_.createDirectory();
+  }
+
+  // Start audio recording via AudioRecorder
+  if (audioRecorder_) {
+    audioRecorder_->startRecording(tracks, *deviceManager_, startPosition,
+                                   recordingDirectory_);
+  }
+
+  // Create MIDI sessions for armed MIDI/Instrument tracks
+  {
+    const juce::ScopedLock sl(sessionLock_);
+    midiSessions_.clear();
+
+    for (size_t i = 0; i < tracks.size(); ++i) {
+      auto &track = tracks[i];
+      if (track && track->isArmed()) {
+        if (track->getType() == Track::Type::MIDI ||
+            track->getType() == Track::Type::Instrument) {
+          MidiRecordingSession midiSession;
+          midiSession.trackId = track->getTrackId();
+          midiSession.trackIndex = static_cast<int>(i);
+          midiSession.startSamplePosition = startPosition;
+          midiSession.isActive = true;
+          midiSession.sequence.clear();
+          midiSessions_.push_back(std::move(midiSession));
+
+          DBG("RecordingManager: Created MIDI session for track " +
+              juce::String(i) + " (" + track->getName() + ")");
         }
-        preppedSessions_.clear();
-
-        // Create MIDI sessions for armed MIDI/Instrument tracks
-        for (size_t i = 0; i < tracks.size(); ++i) {
-            auto& track = tracks[i];
-            if (track && track->isArmed()) {
-                if (track->getType() == Track::Type::MIDI ||
-                    track->getType() == Track::Type::Instrument) {
-                    MidiRecordingSession midiSession;
-                    midiSession.trackIndex = static_cast<int>(i);
-                    midiSession.startSamplePosition = startPosition;
-                    midiSession.isActive = true;
-                    midiSessions_.push_back(std::move(midiSession));
-                }
-            }
-        }
+      }
     }
+  }
 
-    isRecording_.store(true);
-    DBG("RecordingManager: Started recording");
+  isRecording_.store(true);
+  DBG("RecordingManager: Recording started at sample " +
+      juce::String(startPosition));
 }
 
 //==============================================================================
-void RecordingManager::stopRecording(const std::vector<std::shared_ptr<Track>>& tracks) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+void RecordingManager::stopRecording(
+    const std::vector<std::shared_ptr<Track>> &tracks) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    if (!isRecording_.load()) {
-        return;
-    }
+  if (!isRecording_.load()) {
+    return;
+  }
 
-    isRecording_.store(false);
+  // Stop accepting new input
+  isRecording_.store(false);
 
-    // Drain MIDI fifo first
-    drainMidiFifo();
+  // Drain MIDI fifo first
+  drainMidiFifo();
 
-    // Finalize recordings
-    finalizeRecordings(tracks);
+  // Finalize recordings and create clips
+  finalizeRecordings(tracks);
 
-    {
-        const juce::ScopedLock sl(sessionLock_);
-        audioSessions_.clear();
-        midiSessions_.clear();
-    }
+  // Clear MIDI sessions
+  {
+    const juce::ScopedLock sl(sessionLock_);
+    midiSessions_.clear();
+  }
 
-    DBG("RecordingManager: Stopped recording");
+  DBG("RecordingManager: Recording stopped");
 }
 
 //==============================================================================
-void RecordingManager::captureAudio(const float* const* inputData,
-                                    int numInputChannels,
-                                    int numSamples,
-                                    const std::vector<std::shared_ptr<Track>>& tracks) {
-    if (!isRecording_.load() || inputData == nullptr) {
-        return;
-    }
-
-    // Lock-free read of sessions (safe because we only modify on message thread)
-    for (auto& session : audioSessions_) {
-        if (!session.isActive || session.writer == nullptr) {
-            continue;
-        }
-
-        int trackIndex = session.trackIndex;
-        if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
-            continue;
-        }
-
-        auto& track = tracks[trackIndex];
-        if (!track || !track->isArmed()) {
-            continue;
-        }
-
-        // Get input channel routing
-        int inputChannel = track->getInputChannel();
-        
-        // Build input buffer
-        const float* channels[2] = {nullptr, nullptr};
-        
-        if (inputChannel >= 0 && inputChannel < numInputChannels) {
-            // Mono from specific channel
-            channels[0] = inputData[inputChannel];
-            channels[1] = inputData[inputChannel];
-        } else {
-            // Stereo
-            if (numInputChannels >= 2) {
-                channels[0] = inputData[0];
-                channels[1] = inputData[1];
-            } else if (numInputChannels >= 1) {
-                channels[0] = inputData[0];
-                channels[1] = inputData[0];
-            }
-        }
-
-        if (channels[0] != nullptr) {
-            session.writer->write(channels, numSamples);
-            session.samplesRecorded += numSamples;
-        }
-    }
+void RecordingManager::captureAudio(
+    const float *const *inputData, int numInputChannels, int numSamples,
+    const std::vector<std::shared_ptr<Track>> &tracks) {
+  // Delegate to AudioRecorder (RT-safe)
+  if (audioRecorder_ && isRecording_.load()) {
+    audioRecorder_->write(inputData, numInputChannels, numSamples, tracks);
+  }
 }
 
 //==============================================================================
-void RecordingManager::captureMidi(const juce::MidiMessage& message,
-                                   juce::int64 samplePosition,
-                                   int trackIndex) {
-    if (!isRecording_.load()) {
-        return;
-    }
+void RecordingManager::captureMidi(const juce::MidiMessage &message,
+                                   juce::int64 samplePosition, int trackIndex) {
+  if (!isRecording_.load()) {
+    return;
+  }
 
-    // Lock-free write to fifo
-    int start1, size1, start2, size2;
-    midiFifoIndex_.prepareToWrite(1, start1, size1, start2, size2);
+  // Lock-free write to fifo (RT-safe)
+  int start1, size1, start2, size2;
+  midiFifoIndex_.prepareToWrite(1, start1, size1, start2, size2);
 
-    if (size1 > 0) {
-        midiFifoData_[start1] = {message, samplePosition, trackIndex};
-        midiFifoIndex_.finishedWrite(1);
-    }
-    // If fifo is full, drop the message (RT-safe behavior)
+  if (size1 > 0) {
+    midiFifoData_[start1] = {message, samplePosition, trackIndex};
+    midiFifoIndex_.finishedWrite(1);
+  }
+  // If fifo is full, drop the message (RT-safe behavior)
 }
 
 //==============================================================================
 void RecordingManager::drainMidiFifo() {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
-    int start1, size1, start2, size2;
-    midiFifoIndex_.prepareToRead(midiFifoIndex_.getNumReady(), start1, size1, start2, size2);
+  int start1, size1, start2, size2;
+  const int numReady = midiFifoIndex_.getNumReady();
+  midiFifoIndex_.prepareToRead(numReady, start1, size1, start2, size2);
 
-    // Process first block
-    for (int i = 0; i < size1; ++i) {
-        const auto& entry = midiFifoData_[start1 + i];
-        
-        // Find matching session
-        for (auto& session : midiSessions_) {
-            if (session.trackIndex == entry.trackIndex && session.isActive) {
-                double timeSeconds = static_cast<double>(
-                    entry.samplePosition - session.startSamplePosition) / sampleRate_;
-                session.sequence.addEvent(entry.message, timeSeconds);
-                break;
-            }
+  // Process first block
+  for (int i = 0; i < size1; ++i) {
+    const auto &entry = midiFifoData_[start1 + i];
+
+    // Find matching session
+    const juce::ScopedLock sl(sessionLock_);
+    for (auto &session : midiSessions_) {
+      if (session.trackIndex == entry.trackIndex && session.isActive) {
+        // Calculate time relative to recording start
+        double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                 session.startSamplePosition) /
+                             sampleRate_;
+
+        // Only add positive time events
+        if (timeSeconds >= 0.0) {
+          session.sequence.addEvent(entry.message, timeSeconds);
         }
+        break;
+      }
     }
+  }
 
-    // Process second block (wrap-around)
-    for (int i = 0; i < size2; ++i) {
-        const auto& entry = midiFifoData_[start2 + i];
-        
-        for (auto& session : midiSessions_) {
-            if (session.trackIndex == entry.trackIndex && session.isActive) {
-                double timeSeconds = static_cast<double>(
-                    entry.samplePosition - session.startSamplePosition) / sampleRate_;
-                session.sequence.addEvent(entry.message, timeSeconds);
-                break;
-            }
+  // Process second block (wrap-around)
+  for (int i = 0; i < size2; ++i) {
+    const auto &entry = midiFifoData_[start2 + i];
+
+    const juce::ScopedLock sl(sessionLock_);
+    for (auto &session : midiSessions_) {
+      if (session.trackIndex == entry.trackIndex && session.isActive) {
+        double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                 session.startSamplePosition) /
+                             sampleRate_;
+        if (timeSeconds >= 0.0) {
+          session.sequence.addEvent(entry.message, timeSeconds);
         }
+        break;
+      }
     }
+  }
 
-    midiFifoIndex_.finishedRead(size1 + size2);
+  midiFifoIndex_.finishedRead(size1 + size2);
 }
 
 //==============================================================================
 void RecordingManager::finalizeRecordings(
-    const std::vector<std::shared_ptr<Track>>& tracks) {
-    
-    if (projectState_ == nullptr) {
-        DBG("RecordingManager: No project state, cannot create clips");
-        return;
+    const std::vector<std::shared_ptr<Track>> &tracks) {
+
+  if (projectState_ == nullptr) {
+    DBG("RecordingManager: No project state, cannot create clips");
+    return;
+  }
+
+  // Finalize audio recordings and create clips
+  if (audioRecorder_) {
+    auto audioResults = audioRecorder_->stopRecording();
+
+    for (const auto &result : audioResults) {
+      juce::String trackId = result.trackId;
+
+      // Fallback to index if ID missing (legacy safety)
+      if (trackId.isEmpty() && result.trackIndex >= 0 &&
+          result.trackIndex < static_cast<int>(tracks.size()) &&
+          tracks[result.trackIndex]) {
+        trackId = tracks[result.trackIndex]->getTrackId();
+      }
+
+      if (trackId.isNotEmpty() && result.samplesRecorded > 0) {
+        createAudioClip(result.file, trackId, result.startSamplePosition,
+                        result.samplesRecorded, result.sampleRate);
+      }
     }
+  }
 
-    // Finalize audio recordings
-    for (auto& session : audioSessions_) {
-        if (!session.isActive || session.samplesRecorded == 0) {
-            continue;
-        }
+  // Finalize MIDI recordings
+  {
+    const juce::ScopedLock sl(sessionLock_);
 
-        // Flush writer
-        session.writer.reset();
+    for (auto &session : midiSessions_) {
+      if (!session.isActive || session.sequence.getNumEvents() == 0) {
+        continue;
+      }
 
-        // Create clip in project state
-        if (session.trackIndex >= 0 && 
-            session.trackIndex < static_cast<int>(tracks.size())) {
-            
-            auto& track = tracks[session.trackIndex];
-            if (track) {
-                // Create clip via ProjectState
-                juce::ValueTree clipState(ProjectState::ID_CLIP);
-                clipState.setProperty(ProjectState::PROP_AUDIO_FILE, session.file.getFullPathName(), &projectState_->getUndoManager());
-                                clipState.setProperty(ProjectState::PROP_START,
-                                                      static_cast<juce::int64>(session.startSamplePosition),
-                                                      &projectState_->getUndoManager());                clipState.setProperty(ProjectState::PROP_LENGTH, 
-                                      static_cast<juce::int64>(session.samplesRecorded), 
-                                      nullptr);
-                clipState.setProperty(ProjectState::PROP_NAME,
-                                      session.file.getFileNameWithoutExtension(), nullptr);
+      // Sort events by time
+      session.sequence.sort();
 
-                // Add to track in project state
-                auto trackState = projectState_->getTrack(track->getTrackId());
-                if (trackState.isValid()) {
-                    auto clipsNode = trackState.getChildWithName(ProjectState::ID_CLIPS);
-                    if (clipsNode.isValid()) {
-                        clipsNode.appendChild(clipState, &projectState_->getUndoManager());
-                    }
-                }
+      // Match note on/off pairs
+      session.sequence.updateMatchedPairs();
 
-                DBG("RecordingManager: Created audio clip for track " + 
-                    juce::String(session.trackIndex));
-            }
-        }
+      createMidiClip(session.sequence, session.trackId,
+                     session.startSamplePosition, sampleRate_);
+
+      DBG("RecordingManager: Created MIDI clip with " +
+          juce::String(session.sequence.getNumEvents()) + " events for track " +
+          session.trackId);
     }
-
-    // Finalize MIDI recordings
-    for (auto& session : midiSessions_) {
-        if (!session.isActive || session.sequence.getNumEvents() == 0) {
-            continue;
-        }
-
-        // MIDI clip creation - store notes in project state
-        if (session.trackIndex >= 0 && 
-            session.trackIndex < static_cast<int>(tracks.size())) {
-            
-            auto& track = tracks[session.trackIndex];
-            if (track) {
-                // TODO: Create MIDI clip from sequence
-                DBG("RecordingManager: Created MIDI clip with " + 
-                    juce::String(session.sequence.getNumEvents()) + " events");
-            }
-        }
-    }
+  }
 }
 
 //==============================================================================
-juce::File RecordingManager::createRecordingFile(const juce::File& dir,
-                                                  const juce::String& trackName,
-                                                  const juce::String& extension) {
-    juce::String safeName = trackName.replaceCharacter(' ', '_')
-                                      .replaceCharacter('/', '_')
-                                      .replaceCharacter('\\', '_');
-    
-    juce::String timestamp = juce::Time::getCurrentTime().formatted("%Y%m%d_%H%M%S");
-    juce::String filename = safeName + "_" + timestamp + extension;
-    
-    return dir.getChildFile(filename);
+void RecordingManager::createAudioClip(const juce::File &audioFile,
+                                       const juce::String &trackId,
+                                       juce::int64 startSamplePosition,
+                                       juce::int64 lengthSamples,
+                                       double sampleRate) {
+  if (projectState_ == nullptr || trackId.isEmpty()) {
+    return;
+  }
+
+  // Convert samples to beats for ProjectState
+  // Using simple formula: beats = samples / (sampleRate * 60 / tempo)
+  const double tempo = projectState_->getTempo();
+  const double samplesPerBeat = sampleRate * 60.0 / tempo;
+
+  const double startBeats =
+      static_cast<double>(startSamplePosition) / samplesPerBeat;
+  const double lengthBeats =
+      static_cast<double>(lengthSamples) / samplesPerBeat;
+
+  // Create clip via ProjectState API
+  juce::String clipName = audioFile.getFileNameWithoutExtension();
+  juce::String clipId = projectState_->createClip(
+      trackId, "audio",
+      static_cast<juce::int64>(startBeats *
+                               samplesPerBeat), // Convert back for internal use
+      static_cast<juce::int64>(lengthBeats * samplesPerBeat), clipName,
+      "Record audio");
+
+  if (clipId.isEmpty()) {
+    DBG("RecordingManager: Failed to create clip via ProjectState");
+    return;
+  }
+
+  // Set the audio file path on the clip
+  if (!projectState_->setClipAudioFile(trackId, clipId, audioFile,
+                                       "Set recording file")) {
+    DBG("RecordingManager: Failed to set audio file on clip");
+  }
+
+  DBG("RecordingManager: Created audio clip '" + clipName + "' at beat " +
+      juce::String(startBeats, 2) + " with length " +
+      juce::String(lengthBeats, 2) + " beats");
+}
+
+//==============================================================================
+void RecordingManager::createMidiClip(const juce::MidiMessageSequence &sequence,
+                                      const juce::String &trackId,
+                                      juce::int64 startSamplePosition,
+                                      double sampleRate) {
+  if (projectState_ == nullptr || trackId.isEmpty()) {
+    return;
+  }
+
+  // Calculate clip length from MIDI events
+  double endTimeSeconds = 0.0;
+  for (int i = 0; i < sequence.getNumEvents(); ++i) {
+    const auto *event = sequence.getEventPointer(i);
+    if (event) {
+      double eventEnd = event->message.getTimeStamp();
+      if (event->noteOffObject) {
+        eventEnd = event->noteOffObject->message.getTimeStamp();
+      }
+      endTimeSeconds = std::max(endTimeSeconds, eventEnd);
+    }
+  }
+
+  // Add small padding at end (1 beat worth)
+  const double tempo = projectState_->getTempo();
+  const double samplesPerBeat = sampleRate * 60.0 / tempo;
+  const double paddingSeconds = 60.0 / tempo; // 1 beat
+  endTimeSeconds += paddingSeconds;
+
+  const juce::int64 lengthSamples =
+      static_cast<juce::int64>(endTimeSeconds * sampleRate);
+
+  // Convert to beats
+  const double startBeats =
+      static_cast<double>(startSamplePosition) / samplesPerBeat;
+  const double lengthBeats =
+      static_cast<double>(lengthSamples) / samplesPerBeat;
+
+  // Create MIDI clip
+  juce::String clipName =
+      "MIDI Recording " + juce::Time::getCurrentTime().formatted("%H:%M:%S");
+
+  juce::String clipId = projectState_->createClip(
+      trackId, "midi", static_cast<juce::int64>(startBeats * samplesPerBeat),
+      static_cast<juce::int64>(lengthBeats * samplesPerBeat), clipName,
+      "Record MIDI");
+
+  if (clipId.isEmpty()) {
+    DBG("RecordingManager: Failed to create MIDI clip");
+    return;
+  }
+
+  // Add MIDI notes to the clip
+  std::vector<ProjectState::MidiNoteSpec> notes;
+  notes.reserve(static_cast<size_t>(sequence.getNumEvents() /
+                                    2)); // Approximate note count
+
+  for (int i = 0; i < sequence.getNumEvents(); ++i) {
+    const auto *event = sequence.getEventPointer(i);
+    if (event && event->message.isNoteOn() && event->noteOffObject) {
+      ProjectState::MidiNoteSpec note;
+
+      // Convert time from seconds to beats (relative to clip start)
+      note.startBeats = event->message.getTimeStamp() * tempo / 60.0;
+      const double endBeats =
+          event->noteOffObject->message.getTimeStamp() * tempo / 60.0;
+      note.lengthBeats = endBeats - note.startBeats;
+
+      note.pitch = event->message.getNoteNumber();
+      note.velocity = event->message.getVelocity();
+      note.muted = false;
+      note.probability = 1.0f;
+
+      notes.push_back(note);
+    }
+  }
+
+  if (!notes.empty()) {
+    projectState_->addNotes(clipId, notes, "Add recorded notes");
+    DBG("RecordingManager: Added " + juce::String(notes.size()) +
+        " notes to MIDI clip");
+  }
 }
 
 } // namespace zenith

@@ -35,17 +35,17 @@ namespace zenith {
 Engine::Engine() {
   DBG("Engine: Constructor");
 
-  // Refactor 2025-12-09: Initialize Modular Components
+  // Initialize Modular Components
   audioRenderer_ = std::make_unique<AudioRenderer>();
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
   DBG("Engine: Modular components initialized");
 
-  // Phase 1.2: Initialize audio file pool
+  // Initialize audio file pool for sample caching
   audioFilePool_ = std::make_unique<zenith::AudioFilePool>();
   DBG("Engine: AudioFilePool created");
 
-  // Phase 3: Initialize plugin host and editor window manager
+  // Initialize plugin host and editor window manager
   pluginHost_ = std::make_unique<zenith::PluginHost>();
   pluginHost_
       ->scanDefaultLocations(); // Load cached plugins, check for crash recovery
@@ -55,7 +55,7 @@ Engine::Engine() {
   pluginEditorWindowManager_ =
       std::make_unique<zenith::PluginEditorWindowManager>();
 
-  // Level 4: Initialize Instrument Registry
+  // Initialize Instrument Registry (built-in synths, samplers, etc.)
   instrumentRegistry_ = std::make_unique<zenith::InstrumentRegistry>();
   zenith::registerBuiltInInstruments(
       *instrumentRegistry_); // Register factories
@@ -65,20 +65,30 @@ Engine::Engine() {
   sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
   DBG("Engine: SessionDebuggerAgent initialized");
 
-  // Initialize Analysis FIFO (Visualizers)
+  // Initialize Analysis FIFO (for visualizers like spectrum analyzer)
   analysisFifo_ = std::make_unique<zenith::StereoAudioFifo>(16384);
   DBG("Engine: Analysis FIFO initialized");
 
-  // Phase 15: Initialize tempo map
+  // Initialize tempo map for beat/time conversions
   tempoMap_ = std::make_unique<zenith::TempoMap>();
   DBG("Engine: TempoMap initialized");
 
-  // Wire up transport
+  // Wire up transport controller to tempo map
   transportController_->setTempoMap(tempoMap_.get());
 
   // Initialize TrackFreezeManager for CPU optimization
   freezeManager_ = std::make_unique<TrackFreezeManager>();
   DBG("Engine: TrackFreezeManager initialized");
+
+  // Register Master Bus node in RoutingGraph
+  // This is the final destination for all audio before output
+  RoutingGraph::Node masterNode;
+  masterNode.id = "master";
+  masterNode.name = "Master";
+  masterNode.type = RoutingGraph::NodeType::Master;
+  masterNode.channelCount = 2;
+  routingGraph_.addNode(masterNode);
+  DBG("Engine: Master bus registered in RoutingGraph");
 
   // Initialize track snapshot
   updateTrackSnapshot();
@@ -90,7 +100,7 @@ Engine::~Engine() {
   // Set shutdown flag to prevent async callbacks during destruction
   isShuttingDown_.store(true);
 
-  // Phase 2A: Disable MIDI input
+  // Disable MIDI input before shutdown
   disableMidiInput();
 
   shutdown();
@@ -122,6 +132,12 @@ void Engine::setProjectState(ProjectState *state) {
   }
 
   projectState_ = state;
+
+  // Wire up recording manager with project state
+  if (recordingManager_) {
+    recordingManager_->setProjectState(projectState_);
+    DBG("Engine: RecordingManager wired to ProjectState");
+  }
 
   // Create new automation synchronizer if we have a project state
   if (projectState_ != nullptr) {
@@ -249,12 +265,15 @@ void Engine::syncWithProjectState() {
     // Add track to engine
     tracks_.push_back(std::move(track));
 
-    // Register with RoutingGraph
+    // Register with RoutingGraph and connect to master bus
     RoutingGraph::Node node;
     node.id = tracks_.back()->getTrackId();
     node.name = tracks_.back()->getName();
     node.type = RoutingGraph::NodeType::Track;
     routingGraph_.addNode(node);
+
+    // Automatically route track to master bus
+    routingGraph_.connect(tracks_.back()->getTrackId(), "master", 1.0f);
   }
 
   DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
@@ -292,10 +311,17 @@ bool Engine::initialize() {
   // Add this engine as the audio callback
   deviceManager.addAudioCallback(this);
 
-  // Phase 2A: Enable MIDI input
+  // Wire up recording manager with device manager for input channel info
+  if (recordingManager_) {
+    recordingManager_->setDeviceManager(&deviceManager);
+    recordingManager_->prepare(setup.sampleRate);
+    DBG("Engine: RecordingManager wired to DeviceManager");
+  }
+
+  // Enable MIDI input devices
   enableMidiInput();
 
-  // C3: Optional debug seed (disabled by default; enable with
+  // Optional debug seed (disabled by default; enable with
   // -DZENITH_ENGINE_SEED_DEBUG_TRACKS=ON)
 #if defined(JUCE_DEBUG) && defined(ZENITH_ENGINE_SEED_DEBUG_TRACKS)
   DBG("Engine: Seeding debug tracks (ZENITH_ENGINE_SEED_DEBUG_TRACKS enabled)");
@@ -349,7 +375,7 @@ void Engine::shutdown() {
 void Engine::play() {
   DBG("Engine: Play");
 
-  // Phase 1.3: Use new playhead system
+  // Handle loop region - reset to loop start if past loop end
   // If playhead is at or past loop end, reset to loop start or 0
   const juce::int64 loopEnd = transportController_->getLoopEndSamples();
   const juce::int64 loopStart = transportController_->getLoopStartSamples();
@@ -364,7 +390,7 @@ void Engine::play() {
 
   transportController_->play();
 
-  // Phase 13: Start automation synchronizer
+  // Start automation synchronizer for parameter recording/playback
   if (automationSynchronizer) {
     automationSynchronizer->start(60); // 60 Hz update rate
     DBG("Engine: Started automation synchronizer");
@@ -374,19 +400,18 @@ void Engine::play() {
 void Engine::stop() {
   DBG("Engine: Stop");
 
-  // Refactor 2025-12-09: Use TransportController
   if (transportController_) {
     transportController_->stop();
   }
 
-  // Phase 2C: If recording, bake recordings into clips first
+  // Stop recording and bake recordings into clips
   if (isRecording()) {
     stopRecording();
   }
 
   enableTestTone_.store(false);
 
-  // Phase 13: Stop automation synchronizer
+  // Stop automation synchronizer
   if (automationSynchronizer) {
     automationSynchronizer->stop();
     DBG("Engine: Stopped automation synchronizer");
@@ -417,7 +442,7 @@ double Engine::getPlaybackPositionBeats() const {
 }
 
 //==============================================================================
-// Phase 2C/2D: MIDI and Audio Recording
+// MIDI and Audio Recording
 //==============================================================================
 
 void Engine::record() {
@@ -479,7 +504,7 @@ void Engine::toggleRecording() {
 }
 
 //==============================================================================
-// Phase 1.3: Transport Position & Looping
+// Transport Position & Looping
 //==============================================================================
 
 void Engine::setPlayheadSamples(juce::int64 position) {
@@ -527,7 +552,7 @@ double Engine::getCpuUsage() const {
 }
 
 //==============================================================================
-// C3: Minimal Engine Surface (compile-only, no audio wiring)
+// Track Management
 //==============================================================================
 
 int Engine::getNumTracks() const noexcept {
@@ -555,19 +580,22 @@ void Engine::addTestTracks(int count) {
         "Track " + juce::String(tracks_.size() + 1),
         zenith::Track::Type::Audio);
 
-    // Phase 11: Prepare track for audio processing if engine is already running
+    // Prepare track for audio processing if engine is already running
     if (currentSampleRate.load() > 0) {
       track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
     }
 
     tracks_.push_back(track); // No std::move needed for shared_ptr
 
-    // Register with RoutingGraph
+    // Register track with RoutingGraph and connect to master bus
     RoutingGraph::Node node;
     node.id = track->getTrackId();
     node.name = track->getName();
     node.type = RoutingGraph::NodeType::Track;
     routingGraph_.addNode(node);
+
+    // Automatically route track to master bus
+    routingGraph_.connect(track->getTrackId(), "master", 1.0f);
   }
 
   DBG("Engine: Total tracks: " + juce::String(tracks_.size()));
@@ -584,7 +612,7 @@ void Engine::addTestTracks(int count) {
 }
 
 //==============================================================================
-// Phase 1.2: Audio File Pool
+// Audio File Pool
 //==============================================================================
 
 zenith::AudioFilePool &Engine::getAudioFilePool() {
@@ -593,7 +621,7 @@ zenith::AudioFilePool &Engine::getAudioFilePool() {
 }
 
 //==============================================================================
-// Plugin Hosting (Phase 3: VST3 hosting MVP)
+// Plugin Hosting
 //==============================================================================
 
 zenith::PluginHost &Engine::getPluginHost() noexcept {
@@ -629,7 +657,7 @@ const zenith::TempoMap &Engine::getTempoMap() const noexcept {
 }
 
 //==============================================================================
-// Phase 11: Mixer Control (MESSAGE THREAD ONLY)
+// Mixer Control (MESSAGE THREAD ONLY)
 //==============================================================================
 
 void Engine::setTrackVolume(int trackIndex, float volume) {
@@ -703,7 +731,7 @@ void Engine::setTrackArmed(int trackIndex, bool armed) {
 }
 
 //==============================================================================
-// Phase 11: Metering (MESSAGE THREAD SAFE)
+// Metering (MESSAGE THREAD SAFE)
 //==============================================================================
 
 float Engine::getTrackLevel(int trackIndex) const {
@@ -800,6 +828,13 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
     node.type = RoutingGraph::NodeType::Master;
   }
   routingGraph_.addNode(node);
+
+  // Automatically route regular tracks to master bus
+  // Bus and Master tracks handle their own routing
+  if (track->getType() != Track::Type::Bus &&
+      track->getType() != Track::Type::Master) {
+    routingGraph_.connect(id, "master", 1.0f);
+  }
 
   DBG("Engine: Added track '" + name + "' (ID: " + id + ")");
 
