@@ -261,6 +261,18 @@ void AudioRenderer::renderAudioGraph(
 
   // Update metering
   updateMasterMeters(outputBuffer);
+
+  // Calculate and store master latency
+  int masterLatency = 0;
+  if (masterLimiter.isEnabled()) {
+    masterLatency += masterLimiter.getLatency();
+  }
+  for (const auto& plugin : masterPlugins) {
+    if (plugin) {
+       masterLatency += plugin->getLatencySamples();
+    }
+  }
+  masterLatency_.store(masterLatency);
 }
 
 //==============================================================================
@@ -371,4 +383,18 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
   }
 }
 
+int AudioRenderer::getTrackLatency(int trackIndex) const {
+  if (trackIndex >= 0 && static_cast<size_t>(trackIndex) < trackLatencies_.size()) {
+    return trackLatencies_[trackIndex];
+  }
+  return 0;
+}
+
+int AudioRenderer::getMasterLatency() const {
+  // Currently master latency is just the limiter latency plus any master plugins
+  // For now, simpler implementation:
+  return masterLatency_.load();
+}
+
 } // namespace zenith
+
