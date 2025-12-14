@@ -1,201 +1,675 @@
+/**
+ * @file ZenithLookAndFeel.cpp
+ * @brief Modern LookAndFeel implementation with micro-interactions
+ * @author Fixed by Claude - December 2025
+ */
+
 #include "ZenithLookAndFeel.h"
+#include <cmath>
 
 namespace zenith {
 
+// Type aliases for cleaner access to ZenithTheme nested types
+// Use ThemeColors to avoid conflict with ZenithLookAndFeel::Colors
+using ThemeColors = ZenithTheme::Colors;
+using Typography = ZenithTheme::Typography;
+using Spacing = ZenithTheme::Spacing;
+using Radius = ZenithTheme::Radius;
+using Shadows = ZenithTheme::Shadows;
+
+// Static definitions for ZenithLookAndFeel::Colors (backwards compatibility)
+const juce::Colour &ZenithLookAndFeel::Colors::background = ThemeColors::bg_01;
+const juce::Colour &ZenithLookAndFeel::Colors::backgroundPanel =
+    ThemeColors::bg_02;
+const juce::Colour &ZenithLookAndFeel::Colors::panel = ThemeColors::bg_03;
+const juce::Colour &ZenithLookAndFeel::Colors::textPrimary =
+    ThemeColors::text_primary;
+const juce::Colour &ZenithLookAndFeel::Colors::textSecondary =
+    ThemeColors::text_secondary;
+const juce::Colour &ZenithLookAndFeel::Colors::border =
+    ThemeColors::border_default;
+const juce::Colour &ZenithLookAndFeel::Colors::accent =
+    ThemeColors::accent_primary;
+
+std::unique_ptr<ZenithLookAndFeel> ZenithLookAndFeel::instance_ = nullptr;
+
 ZenithLookAndFeel::ZenithLookAndFeel() {
-    // Global
-    setColour(juce::ResizableWindow::backgroundColourId, Colors::background);
-    setColour(juce::TooltipWindow::backgroundColourId, Colors::panel);
-    setColour(juce::TooltipWindow::textColourId, Colors::textPrimary);
-    setColour(juce::TooltipWindow::outlineColourId, Colors::border);
+  // Window backgrounds
+  setColour(juce::ResizableWindow::backgroundColourId, ThemeColors::bg_01);
 
-    // Text Button
-    setColour(juce::TextButton::buttonColourId, Colors::panel);
-    setColour(juce::TextButton::buttonOnColourId, Colors::accent.withAlpha(0.3f));
-    setColour(juce::TextButton::textColourOffId, Colors::textPrimary);
-    setColour(juce::TextButton::textColourOnId, Colors::accent);
+  // Text colors
+  setColour(juce::Label::textColourId, ThemeColors::text_primary);
+  setColour(juce::Label::textWhenEditingColourId, ThemeColors::text_primary);
 
-    // ComboBox
-    setColour(juce::ComboBox::backgroundColourId, Colors::backgroundPanel);
-    setColour(juce::ComboBox::outlineColourId, Colors::border);
-    setColour(juce::ComboBox::arrowColourId, Colors::textSecondary);
-    setColour(juce::ComboBox::focusedOutlineColourId, Colors::accent);
+  // Button colors
+  setColour(juce::TextButton::buttonColourId, ThemeColors::bg_03);
+  setColour(juce::TextButton::buttonOnColourId, ThemeColors::accent_primary);
+  setColour(juce::TextButton::textColourOffId, ThemeColors::text_primary);
+  setColour(juce::TextButton::textColourOnId, ThemeColors::text_inverse);
 
-    // Slider
-    setColour(juce::Slider::thumbColourId, Colors::textPrimary);
-    setColour(juce::Slider::trackColourId, Colors::backgroundPanel);
-    setColour(juce::Slider::backgroundColourId, Colors::background);
-    setColour(juce::Slider::rotarySliderFillColourId, Colors::accent);
-    setColour(juce::Slider::rotarySliderOutlineColourId, Colors::border);
+  // ComboBox colors
+  setColour(juce::ComboBox::backgroundColourId, ThemeColors::bg_02);
+  setColour(juce::ComboBox::outlineColourId, ThemeColors::border_default);
+  setColour(juce::ComboBox::textColourId, ThemeColors::text_primary);
+  setColour(juce::ComboBox::arrowColourId, ThemeColors::text_secondary);
+  setColour(juce::ComboBox::focusedOutlineColourId, ThemeColors::accent_primary);
 
-    // Label
-    setColour(juce::Label::textColourId, Colors::textPrimary);
-    
-    // TabbedComponent
-    setColour(juce::TabbedComponent::backgroundColourId, Colors::background);
-    setColour(juce::TabbedComponent::outlineColourId, Colors::border);
-    
-    // AlertWindow
-    setColour(juce::AlertWindow::backgroundColourId, Colors::panel);
-    setColour(juce::AlertWindow::textColourId, Colors::textPrimary);
-    setColour(juce::AlertWindow::outlineColourId, Colors::accent);
+  // Slider colors
+  setColour(juce::Slider::thumbColourId, ThemeColors::text_primary);
+  setColour(juce::Slider::trackColourId, ThemeColors::accent_primary);
+  setColour(juce::Slider::backgroundColourId, ThemeColors::bg_02);
+  setColour(juce::Slider::rotarySliderFillColourId, ThemeColors::accent_primary);
+  setColour(juce::Slider::rotarySliderOutlineColourId, ThemeColors::border_default);
+
+  // TextEditor colors
+  setColour(juce::TextEditor::backgroundColourId, ThemeColors::bg_02);
+  setColour(juce::TextEditor::textColourId, ThemeColors::text_primary);
+  setColour(juce::TextEditor::outlineColourId, ThemeColors::border_default);
+  setColour(juce::TextEditor::focusedOutlineColourId, ThemeColors::accent_primary);
+  setColour(juce::TextEditor::highlightColourId, ThemeColors::accent_subtle);
+
+  // ScrollBar colors
+  setColour(juce::ScrollBar::thumbColourId, ThemeColors::text_tertiary);
+  setColour(juce::ScrollBar::backgroundColourId, ThemeColors::bg_01);
+
+  // Tooltip colors
+  setColour(juce::TooltipWindow::backgroundColourId, ThemeColors::bg_04);
+  setColour(juce::TooltipWindow::textColourId, ThemeColors::text_primary);
+  setColour(juce::TooltipWindow::outlineColourId, ThemeColors::border_strong);
+
+  // PopupMenu colors
+  setColour(juce::PopupMenu::backgroundColourId, ThemeColors::bg_03);
+  setColour(juce::PopupMenu::textColourId, ThemeColors::text_primary);
+  setColour(juce::PopupMenu::highlightedBackgroundColourId,
+            ThemeColors::accent_subtle);
+  setColour(juce::PopupMenu::highlightedTextColourId, ThemeColors::accent_primary);
 }
 
-// Static Color Definitions
-juce::Colour ZenithLookAndFeel::Colors::background = juce::Colour(0xff121212);
-juce::Colour ZenithLookAndFeel::Colors::panel = juce::Colour(0xff1e1e1e);
-juce::Colour ZenithLookAndFeel::Colors::backgroundPanel = juce::Colour(0xff181818);
-juce::Colour ZenithLookAndFeel::Colors::border = juce::Colour(0xff333333);
-juce::Colour ZenithLookAndFeel::Colors::textPrimary = juce::Colours::white;
-juce::Colour ZenithLookAndFeel::Colors::textSecondary = juce::Colours::lightgrey;
-juce::Colour ZenithLookAndFeel::Colors::accent = juce::Colour(0xff00ffff); // Cyan
-juce::Colour ZenithLookAndFeel::Colors::accentGlow = juce::Colour(0xff00ffff).withAlpha(0.6f);
-
-void ZenithLookAndFeel::Colors::setOledMode(bool enabled) {
-    if (enabled) {
-        background = juce::Colours::black;
-        panel = juce::Colour(0xff050505);
-        backgroundPanel = juce::Colours::black;
-        border = juce::Colour(0xff202020);
-    } else {
-        // Reset
-        background = juce::Colour(0xff121212);
-        panel = juce::Colour(0xff1e1e1e);
-        backgroundPanel = juce::Colour(0xff181818);
-        border = juce::Colour(0xff333333);
-    }
+ZenithLookAndFeel &ZenithLookAndFeel::getInstance() {
+  if (!instance_) {
+    instance_ = std::make_unique<ZenithLookAndFeel>();
+  }
+  return *instance_;
 }
 
 //==============================================================================
-// Component Drawing Overrides
+// Button Rendering with Hover/Press States
 //==============================================================================
 
-void ZenithLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int width, int height,
-                                         float sliderPos, const float rotaryStartAngle,
-                                         const float rotaryEndAngle, juce::Slider& slider) {
-    auto radius = (float)juce::jmin(width / 2, height / 2) - 4.0f;
-    auto centreX = (float)x + (float)width * 0.5f;
-    auto centreY = (float)y + (float)height * 0.5f;
-    auto rx = centreX - radius;
-    auto ry = centreY - radius;
-    auto rw = radius * 2.0f;
-    auto angle = rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
+void ZenithLookAndFeel::drawButtonBackground(
+    juce::Graphics &g, juce::Button &button,
+    const juce::Colour &backgroundColour, bool isHighlighted, bool isDown) {
 
-    // 1. Background Track (Dark Ring)
-    g.setColour(Colors::backgroundPanel);
-    g.fillEllipse(rx, ry, rw, rw);
-    g.setColour(Colors::border);
-    g.drawEllipse(rx, ry, rw, rw, 2.0f);
+  auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
+  auto cornerSize = Radius::sm;
 
-    // 2. Value Arc (Neon)
-    juce::Path p;
-    p.addArc(rx + 2, ry + 2, rw - 4, rw - 4, rotaryStartAngle, angle, true);
-    
-    g.setColour(Colors::accent);
-    g.strokePath(p, juce::PathStrokeType(3.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+  // Determine button state color
+  juce::Colour buttonColor = ThemeColors::bg_03;
 
-    // 3. Indicator Dot
-    auto pointerLength = radius * 0.7f;
-    juce::Point<float> thumbPos(centreX + pointerLength * std::cos(angle),
-                                centreY + pointerLength * std::sin(angle));
-    
-    g.setColour(juce::Colours::white);
-    g.fillEllipse(thumbPos.x - 3, thumbPos.y - 3, 6, 6);
+  if (button.getToggleState()) {
+    buttonColor = ThemeColors::accent_primary;
+  }
+
+  if (isDown) {
+    buttonColor =
+        button.getToggleState() ? ThemeColors::accent_pressed : ThemeColors::bg_04;
+  } else if (isHighlighted) {
+    buttonColor =
+        button.getToggleState() ? ThemeColors::accent_hover : ThemeColors::bg_04;
+  }
+
+  // Draw shadow for elevation (skip if pressed)
+  if (!isDown && button.isEnabled()) {
+    Shadows::drawShadow(g, bounds, Shadows::elevation_1, cornerSize);
+  }
+
+  // Draw button background
+  g.setColour(buttonColor);
+  g.fillRoundedRectangle(bounds, cornerSize);
+
+  // Draw border
+  if (!button.getToggleState()) {
+    g.setColour(ThemeColors::border_default);
+    g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
+  }
+
+  // Draw focus ring if focused
+  if (button.hasKeyboardFocus(true)) {
+    drawFocusRing(g, bounds, cornerSize);
+  }
 }
 
-void ZenithLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int width, int height,
-                                         float sliderPos, float minSliderPos, float maxSliderPos,
-                                         const juce::Slider::SliderStyle style, juce::Slider& slider) {
-    juce::ignoreUnused(minSliderPos, maxSliderPos, slider);
-    
-    auto trackWidth = 4.0f;
-    juce::Point<float> startPoint((float)x + (float)width * 0.5f, (float)y + (float)height);
-    juce::Point<float> endPoint((float)x + (float)width * 0.5f, (float)y);
-    
-    if (style == juce::Slider::LinearHorizontal) {
-        startPoint = juce::Point<float>((float)x, (float)y + (float)height * 0.5f);
-        endPoint = juce::Point<float>((float)x + (float)width, (float)y + (float)height * 0.5f);
-    }
+void ZenithLookAndFeel::drawButtonText(juce::Graphics &g,
+                                       juce::TextButton &button,
+                                       bool isHighlighted, bool isDown) {
 
-    // Track
-    g.setColour(Colors::backgroundPanel);
-    g.fillRoundedRectangle(juce::Rectangle<float>(startPoint, endPoint).expanded(2), 2.0f);
+  auto font = Typography::getBodyFont(Typography::Weight::Medium);
+  g.setFont(font);
 
-    // Fill (Neon)
-    g.setColour(Colors::accent);
-    if (style == juce::Slider::LinearVertical) {
-        g.drawLine(startPoint.x, startPoint.y, startPoint.x, sliderPos, trackWidth);
-    } else {
-        g.drawLine(startPoint.x, startPoint.y, sliderPos, startPoint.y, trackWidth);
-    }
+  // Text color based on button state
+  juce::Colour textColor =
+      button.getToggleState() ? ThemeColors::text_inverse : ThemeColors::text_primary;
 
-    // Thumb (Handle)
-    auto thumbWidth = (style == juce::Slider::LinearVertical) ? 20.0f : 10.0f;
-    auto thumbHeight = (style == juce::Slider::LinearVertical) ? 10.0f : 20.0f;
-    
-    g.setColour(Colors::textPrimary);
-    if (style == juce::Slider::LinearVertical) {
-        g.fillRoundedRectangle(startPoint.x - thumbWidth * 0.5f, sliderPos - thumbHeight * 0.5f, thumbWidth, thumbHeight, 2.0f);
-    } else {
-        g.fillRoundedRectangle(sliderPos - thumbWidth * 0.5f, startPoint.y - thumbHeight * 0.5f, thumbWidth, thumbHeight, 2.0f);
-    }
+  if (!button.isEnabled()) {
+    textColor = ThemeColors::text_tertiary;
+  }
+
+  g.setColour(textColor);
+
+  auto textBounds = button.getLocalBounds();
+  g.drawText(button.getButtonText(), textBounds, juce::Justification::centred,
+             true);
 }
 
-void ZenithLookAndFeel::drawButtonBackground(juce::Graphics& g, juce::Button& button,
-                                             const juce::Colour& backgroundColour,
-                                             bool shouldDrawButtonAsHighlighted,
-                                             bool shouldDrawButtonAsDown) {
-    auto bounds = button.getLocalBounds().toFloat().reduced(1.0f);
-    auto cornerSize = 4.0f;
+//==============================================================================
+// Modern Rotary Slider (Knob)
+//==============================================================================
 
-    auto baseColour = backgroundColour;
-    if (shouldDrawButtonAsDown) baseColour = baseColour.darker(0.2f);
-    else if (shouldDrawButtonAsHighlighted) baseColour = baseColour.brighter(0.1f);
+void ZenithLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
+                                         int width, int height, float sliderPos,
+                                         const float rotaryStartAngle,
+                                         const float rotaryEndAngle,
+                                         juce::Slider &slider) {
 
-    // Fill
-    g.setColour(baseColour);
-    g.fillRoundedRectangle(bounds, cornerSize);
+  auto bounds = juce::Rectangle<int>(x, y, width, height).toFloat();
+  auto radius = juce::jmin(bounds.getWidth(), bounds.getHeight()) / 2.0f - 4.0f;
+  auto centreX = bounds.getCentreX();
+  auto centreY = bounds.getCentreY();
+  auto angle =
+      rotaryStartAngle + sliderPos * (rotaryEndAngle - rotaryStartAngle);
 
-    // Glow/Border
-    if (button.hasKeyboardFocus(true) || shouldDrawButtonAsHighlighted) {
-        g.setColour(Colors::accent.withAlpha(0.5f));
-        g.drawRoundedRectangle(bounds, cornerSize, 2.0f);
-    } else {
-        g.setColour(Colors::border);
-        g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
-    }
+  // Draw shadow
+  auto knobBounds = juce::Rectangle<float>(centreX - radius, centreY - radius,
+                                           radius * 2.0f, radius * 2.0f);
+  Shadows::drawShadow(g, knobBounds, Shadows::elevation_2, 9999.0f);
+
+  // Draw background ring
+  g.setColour(ThemeColors::bg_03);
+  g.fillEllipse(knobBounds);
+
+  // Draw track outline
+  g.setColour(ThemeColors::border_default);
+  g.drawEllipse(knobBounds.reduced(2.0f), 2.0f);
+
+  // Draw value arc
+  juce::Path valueArc;
+  auto arcRadius = radius - 6.0f;
+  valueArc.addCentredArc(centreX, centreY, arcRadius, arcRadius, 0.0f,
+                         rotaryStartAngle, angle, true);
+
+  juce::PathStrokeType strokeType(4.0f, juce::PathStrokeType::curved,
+                                  juce::PathStrokeType::rounded);
+
+  // Gradient for value arc
+  juce::ColourGradient gradient(ThemeColors::accent_primary, centreX,
+                                centreY - arcRadius, ThemeColors::accent_hover,
+                                centreX, centreY + arcRadius, false);
+  g.setGradientFill(gradient);
+  g.strokePath(valueArc, strokeType);
+
+  // Draw indicator line
+  auto indicatorLength = radius * 0.6f;
+  juce::Point<float> indicatorStart(centreX, centreY - 8.0f);
+  juce::Point<float> indicatorEnd(centreX, centreY - indicatorLength);
+
+  juce::AffineTransform rotation =
+      juce::AffineTransform::rotation(angle, centreX, centreY);
+
+  indicatorStart = indicatorStart.transformedBy(rotation);
+  indicatorEnd = indicatorEnd.transformedBy(rotation);
+
+  g.setColour(ThemeColors::text_primary);
+  g.drawLine(indicatorStart.x, indicatorStart.y, indicatorEnd.x, indicatorEnd.y,
+             3.0f);
+
+  // Draw center dot
+  auto dotRadius = 4.0f;
+  g.fillEllipse(centreX - dotRadius, centreY - dotRadius, dotRadius * 2.0f,
+                dotRadius * 2.0f);
 }
 
-void ZenithLookAndFeel::drawComboBox(juce::Graphics& g, int width, int height, bool isButtonDown,
-                                     int buttonX, int buttonY, int buttonW, int buttonH,
-                                     juce::ComboBox& box) {
-    auto cornerSize = 4.0f;
-    juce::Rectangle<int> boxBounds(0, 0, width, height);
+//==============================================================================
+// Modern Linear Slider (Fader)
+//==============================================================================
 
-    g.setColour(box.findColour(juce::ComboBox::backgroundColourId));
-    g.fillRoundedRectangle(boxBounds.toFloat(), cornerSize);
+void ZenithLookAndFeel::drawLinearSlider(juce::Graphics &g, int x, int y,
+                                         int width, int height, float sliderPos,
+                                         float minSliderPos, float maxSliderPos,
+                                         const juce::Slider::SliderStyle style,
+                                         juce::Slider &slider) {
 
-    g.setColour(box.findColour(juce::ComboBox::outlineColourId));
-    g.drawRoundedRectangle(boxBounds.toFloat().reduced(0.5f, 0.5f), cornerSize, 1.0f);
+  auto isVertical = (style == juce::Slider::LinearVertical);
+  auto trackWidth = isVertical ? 4.0f : 4.0f;
 
-    // Arrow
+  // Calculate track bounds
+  juce::Rectangle<float> trackBounds;
+  if (isVertical) {
+    trackBounds = juce::Rectangle<float>(x + width * 0.5f - trackWidth * 0.5f,
+                                         (float)y, trackWidth, (float)height);
+  } else {
+    trackBounds =
+        juce::Rectangle<float>((float)x, y + height * 0.5f - trackWidth * 0.5f,
+                               (float)width, trackWidth);
+  }
+
+  // Draw track background
+  g.setColour(ThemeColors::bg_03);
+  g.fillRoundedRectangle(trackBounds, trackWidth * 0.5f);
+
+  // Draw filled portion
+  juce::Rectangle<float> filledTrack;
+  if (isVertical) {
+    filledTrack = juce::Rectangle<float>(trackBounds.getX(), sliderPos,
+                                         trackBounds.getWidth(),
+                                         trackBounds.getBottom() - sliderPos);
+  } else {
+    filledTrack = juce::Rectangle<float>(trackBounds.getX(), trackBounds.getY(),
+                                         sliderPos - trackBounds.getX(),
+                                         trackBounds.getHeight());
+  }
+
+  g.setColour(ThemeColors::accent_primary);
+  g.fillRoundedRectangle(filledTrack, trackWidth * 0.5f);
+
+  // Draw thumb
+  auto thumbSize = isVertical ? 12.0f : 12.0f;
+  juce::Rectangle<float> thumbBounds;
+
+  if (isVertical) {
+    thumbBounds = juce::Rectangle<float>(x + width * 0.5f - thumbSize * 0.5f,
+                                         sliderPos - thumbSize * 0.5f,
+                                         thumbSize, thumbSize);
+  } else {
+    thumbBounds = juce::Rectangle<float>(sliderPos - thumbSize * 0.5f,
+                                         y + height * 0.5f - thumbSize * 0.5f,
+                                         thumbSize, thumbSize);
+  }
+
+  // Thumb shadow
+  Shadows::drawShadow(g, thumbBounds, Shadows::elevation_2, thumbSize * 0.5f);
+
+  // Thumb background
+  g.setColour(ThemeColors::text_primary);
+  g.fillEllipse(thumbBounds);
+
+  // Thumb border
+  g.setColour(ThemeColors::accent_primary);
+  g.drawEllipse(thumbBounds.reduced(1.0f), 2.0f);
+}
+
+//==============================================================================
+// ComboBox Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
+                                     bool isButtonDown, int buttonX,
+                                     int buttonY, int buttonW, int buttonH,
+                                     juce::ComboBox &box) {
+
+  auto bounds =
+      juce::Rectangle<int>(0, 0, width, height).toFloat().reduced(1.0f);
+  auto cornerSize = Radius::sm;
+
+  // Background
+  g.setColour(ThemeColors::bg_02);
+  g.fillRoundedRectangle(bounds, cornerSize);
+
+  // Border
+  auto borderColor = box.hasKeyboardFocus(true) ? ThemeColors::accent_primary
+                                                : ThemeColors::border_default;
+  g.setColour(borderColor);
+  g.drawRoundedRectangle(bounds, cornerSize, 1.5f);
+
+  // Arrow
+  auto arrowZone =
+      juce::Rectangle<float>(buttonX, buttonY, buttonW, buttonH).toFloat();
+  juce::Path arrow;
+  arrow.addTriangle(
+      arrowZone.getCentreX() - 4.0f, arrowZone.getCentreY() - 2.0f,
+      arrowZone.getCentreX() + 4.0f, arrowZone.getCentreY() - 2.0f,
+      arrowZone.getCentreX(), arrowZone.getCentreY() + 3.0f);
+
+  g.setColour(ThemeColors::text_secondary);
+  g.fillPath(arrow);
+}
+
+//==============================================================================
+// Popup Menu Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawPopupMenuBackground(juce::Graphics &g, int width,
+                                                int height) {
+
+  auto bounds = juce::Rectangle<float>(0, 0, (float)width, (float)height);
+
+  // Shadow
+  Shadows::drawShadow(g, bounds, Shadows::elevation_3, Radius::md);
+
+  // Background
+  g.setColour(ThemeColors::bg_03);
+  g.fillRoundedRectangle(bounds, Radius::md);
+
+  // Border
+  g.setColour(ThemeColors::border_strong);
+  g.drawRoundedRectangle(bounds.reduced(0.5f), Radius::md, 1.0f);
+}
+
+void ZenithLookAndFeel::drawPopupMenuItem(
+    juce::Graphics &g, const juce::Rectangle<int> &area, bool isSeparator,
+    bool isActive, bool isHighlighted, bool isTicked, bool hasSubMenu,
+    const juce::String &text, const juce::String &shortcutKeyText,
+    const juce::Drawable *icon, const juce::Colour *textColour) {
+
+  if (isSeparator) {
+    auto separatorBounds = area.reduced(Spacing::md, 0).toFloat();
+    separatorBounds =
+        separatorBounds.withHeight(1.0f).withY(area.getCentreY() - 0.5f);
+    g.setColour(ThemeColors::border_subtle);
+    g.fillRect(separatorBounds);
+    return;
+  }
+
+  auto textBounds = area.reduced(Spacing::md, 0);
+
+  // Highlight background
+  if (isHighlighted && isActive) {
+    g.setColour(ThemeColors::accent_subtle);
+    g.fillRoundedRectangle(area.toFloat().reduced(4.0f, 2.0f), Radius::sm);
+  }
+
+  // Text
+  auto textColor =
+      isActive ? (isHighlighted ? ThemeColors::accent_primary : ThemeColors::text_primary)
+               : ThemeColors::text_tertiary;
+  g.setColour(textColor);
+  g.setFont(Typography::getBodyFont());
+
+  auto textArea = textBounds;
+  if (isTicked) {
+    textArea = textArea.withTrimmedLeft(20);
+  }
+
+  g.drawFittedText(text, textArea, juce::Justification::centredLeft, 1);
+
+  // Shortcut text
+  if (shortcutKeyText.isNotEmpty()) {
+    g.setColour(ThemeColors::text_secondary);
+    g.setFont(Typography::getSmallFont());
+    g.drawFittedText(shortcutKeyText, textBounds,
+                     juce::Justification::centredRight, 1);
+  }
+
+  // Tick mark
+  if (isTicked) {
+    auto tickBounds = textBounds.removeFromLeft(20).toFloat();
+    juce::Path tick;
+    tick.addLineSegment(juce::Line<float>(tickBounds.getCentreX() - 4.0f,
+                                          tickBounds.getCentreY(),
+                                          tickBounds.getCentreX() - 1.0f,
+                                          tickBounds.getCentreY() + 3.0f),
+                        2.0f);
+    tick.addLineSegment(juce::Line<float>(tickBounds.getCentreX() - 1.0f,
+                                          tickBounds.getCentreY() + 3.0f,
+                                          tickBounds.getCentreX() + 4.0f,
+                                          tickBounds.getCentreY() - 3.0f),
+                        2.0f);
+    g.setColour(ThemeColors::accent_primary);
+    g.fillPath(tick);
+  }
+
+  // Submenu arrow
+  if (hasSubMenu) {
+    auto arrowBounds = textBounds.removeFromRight(20).toFloat();
     juce::Path arrow;
-    arrow.addTriangle(width * 0.85f, height * 0.4f,
-                      width * 0.9f, height * 0.6f,
-                      width * 0.95f, height * 0.4f);
-    g.setColour(box.findColour(juce::ComboBox::arrowColourId));
+    arrow.addTriangle(
+        arrowBounds.getCentreX() - 2.0f, arrowBounds.getCentreY() - 4.0f,
+        arrowBounds.getCentreX() - 2.0f, arrowBounds.getCentreY() + 4.0f,
+        arrowBounds.getCentreX() + 3.0f, arrowBounds.getCentreY());
+    g.setColour(ThemeColors::text_secondary);
     g.fillPath(arrow);
+  }
 }
 
-void ZenithLookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int width, int height) {
-    g.fillAll(Colors::panel);
-    g.setColour(Colors::border);
-    g.drawRect(0, 0, width, height);
+//==============================================================================
+// ScrollBar Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawScrollbar(juce::Graphics &g,
+                                      juce::ScrollBar &scrollbar, int x, int y,
+                                      int width, int height,
+                                      bool isScrollbarVertical,
+                                      int thumbStartPosition, int thumbSize,
+                                      bool isMouseOver, bool isMouseDown) {
+
+  // Track background (subtle)
+  g.setColour(ThemeColors::bg_01);
+  g.fillRect(x, y, width, height);
+
+  // Thumb
+  juce::Rectangle<int> thumbBounds;
+  if (isScrollbarVertical) {
+    thumbBounds =
+        juce::Rectangle<int>(x + 2, thumbStartPosition, width - 4, thumbSize);
+  } else {
+    thumbBounds =
+        juce::Rectangle<int>(thumbStartPosition, y + 2, thumbSize, height - 4);
+  }
+
+  auto thumbColor = isMouseDown
+                        ? ThemeColors::text_secondary
+                        : (isMouseOver ? ThemeColors::text_tertiary.brighter(0.2f)
+                                       : ThemeColors::text_tertiary);
+
+  g.setColour(thumbColor);
+  g.fillRoundedRectangle(thumbBounds.toFloat(), 4.0f);
 }
 
-ZenithLookAndFeel& ZenithLookAndFeel::getInstance() {
-    static ZenithLookAndFeel instance;
-    return instance;
+//==============================================================================
+// Label Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawLabel(juce::Graphics &g, juce::Label &label) {
+
+  g.fillAll(label.findColour(juce::Label::backgroundColourId));
+
+  if (!label.isBeingEdited()) {
+    auto alpha = label.isEnabled() ? 1.0f : 0.5f;
+    auto font = Typography::getBodyFont();
+
+    g.setColour(
+        label.findColour(juce::Label::textColourId).withMultipliedAlpha(alpha));
+    g.setFont(font);
+
+    auto textBounds = label.getLocalBounds().reduced(2);
+    g.drawFittedText(
+        label.getText(), textBounds, label.getJustificationType(),
+        juce::jmax(1, (int)((float)textBounds.getHeight() / font.getHeight())),
+        label.getMinimumHorizontalScale());
+
+    g.setColour(label.findColour(juce::Label::outlineColourId)
+                    .withMultipliedAlpha(alpha));
+    g.drawRect(label.getLocalBounds());
+  }
+}
+
+//==============================================================================
+// TextEditor Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::fillTextEditorBackground(juce::Graphics &g, int width,
+                                                 int height,
+                                                 juce::TextEditor &textEditor) {
+
+  g.setColour(ThemeColors::bg_02);
+  g.fillRoundedRectangle(0, 0, (float)width, (float)height, Radius::sm);
+}
+
+void ZenithLookAndFeel::drawTextEditorOutline(juce::Graphics &g, int width,
+                                              int height,
+                                              juce::TextEditor &textEditor) {
+
+  auto bounds = juce::Rectangle<float>(0, 0, (float)width, (float)height);
+  auto borderColor = textEditor.hasKeyboardFocus(true) ? ThemeColors::accent_primary
+                                                       : ThemeColors::border_default;
+
+  g.setColour(borderColor);
+  g.drawRoundedRectangle(bounds.reduced(0.5f), Radius::sm, 1.5f);
+}
+
+//==============================================================================
+// ToggleButton Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawToggleButton(juce::Graphics &g,
+                                         juce::ToggleButton &button,
+                                         bool isHighlighted, bool isDown) {
+
+  auto bounds = button.getLocalBounds().toFloat();
+  auto toggleSize = 20.0f;
+  auto toggleBounds = bounds.removeFromLeft(toggleSize + Spacing::sm)
+                          .withSizeKeepingCentre(toggleSize, toggleSize);
+
+  // Toggle background
+  auto bgColor =
+      button.getToggleState() ? ThemeColors::accent_primary : ThemeColors::bg_03;
+  if (isHighlighted) {
+    bgColor = bgColor.brighter(0.1f);
+  }
+
+  g.setColour(bgColor);
+  g.fillRoundedRectangle(toggleBounds, Radius::sm);
+
+  // Border
+  g.setColour(button.getToggleState() ? ThemeColors::accent_primary
+                                      : ThemeColors::border_default);
+  g.drawRoundedRectangle(toggleBounds, Radius::sm, 1.5f);
+
+  // Checkmark
+  if (button.getToggleState()) {
+    juce::Path tick;
+    tick.addLineSegment(juce::Line<float>(toggleBounds.getCentreX() - 4.0f,
+                                          toggleBounds.getCentreY(),
+                                          toggleBounds.getCentreX() - 1.0f,
+                                          toggleBounds.getCentreY() + 3.0f),
+                        2.0f);
+    tick.addLineSegment(juce::Line<float>(toggleBounds.getCentreX() - 1.0f,
+                                          toggleBounds.getCentreY() + 3.0f,
+                                          toggleBounds.getCentreX() + 5.0f,
+                                          toggleBounds.getCentreY() - 4.0f),
+                        2.0f);
+    g.setColour(ThemeColors::text_inverse);
+    g.fillPath(tick);
+  }
+
+  // Label text
+  g.setColour(button.isEnabled() ? ThemeColors::text_primary
+                                 : ThemeColors::text_tertiary);
+  g.setFont(Typography::getBodyFont());
+  g.drawFittedText(button.getButtonText(), bounds.toNearestInt(),
+                   juce::Justification::centredLeft, 1);
+}
+
+//==============================================================================
+// TabBar Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawTabButton(juce::TabBarButton &button,
+                                      juce::Graphics &g, bool isMouseOver,
+                                      bool isMouseDown) {
+
+  auto bounds = button.getActiveArea().toFloat();
+  auto isActive = button.isFrontTab();
+
+  // Background
+  if (isActive) {
+    g.setColour(ThemeColors::bg_03);
+    g.fillRect(bounds);
+
+    // Active indicator line
+    auto indicatorBounds = bounds.removeFromBottom(2.0f);
+    g.setColour(ThemeColors::accent_primary);
+    g.fillRect(indicatorBounds);
+  } else if (isMouseOver) {
+    g.setColour(ThemeColors::bg_02);
+    g.fillRect(bounds);
+  }
+
+  // Text
+  auto textColor = isActive ? ThemeColors::text_primary : ThemeColors::text_secondary;
+  g.setColour(textColor);
+  g.setFont(Typography::getBodyFont(isActive ? Typography::Weight::Medium
+                                             : Typography::Weight::Regular));
+  g.drawText(button.getButtonText(), bounds.reduced(Spacing::md, 0),
+             juce::Justification::centred, true);
+}
+
+//==============================================================================
+// Tooltip Rendering
+//==============================================================================
+
+void ZenithLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
+                                    int width, int height) {
+
+  auto bounds = juce::Rectangle<float>(0, 0, (float)width, (float)height);
+
+  // Shadow
+  Shadows::drawShadow(g, bounds, Shadows::elevation_3, Radius::sm);
+
+  // Background
+  g.setColour(ThemeColors::bg_04);
+  g.fillRoundedRectangle(bounds, Radius::sm);
+
+  // Border
+  g.setColour(ThemeColors::border_strong);
+  g.drawRoundedRectangle(bounds.reduced(0.5f), Radius::sm, 1.0f);
+
+  // Text
+  g.setColour(ThemeColors::text_primary);
+  g.setFont(Typography::getSmallFont());
+  g.drawFittedText(text, bounds.reduced(Spacing::sm).toNearestInt(),
+                   juce::Justification::centred, 2);
+}
+
+//==============================================================================
+// Utility Methods
+//==============================================================================
+
+void ZenithLookAndFeel::drawCard(juce::Graphics &g,
+                                 juce::Rectangle<float> bounds,
+                                 float cornerRadius, float elevation) {
+
+  // Shadow
+  Shadows::drawShadow(g, bounds, elevation, cornerRadius);
+
+  // Background
+  g.setColour(ThemeColors::bg_02);
+  g.fillRoundedRectangle(bounds, cornerRadius);
+
+  // Border
+  g.setColour(ThemeColors::border_default);
+  g.drawRoundedRectangle(bounds, cornerRadius, 1.0f);
+}
+
+void ZenithLookAndFeel::drawFocusRing(juce::Graphics &g,
+                                      juce::Rectangle<float> bounds,
+                                      float cornerRadius) {
+
+  g.setColour(ThemeColors::accent_primary.withAlpha(0.3f));
+  g.drawRoundedRectangle(bounds.expanded(2.0f), cornerRadius + 2.0f, 2.0f);
+}
+
+void ZenithLookAndFeel::drawSeparator(juce::Graphics &g,
+                                      juce::Rectangle<float> bounds,
+                                      bool vertical) {
+
+  g.setColour(ThemeColors::border_subtle);
+  if (vertical) {
+    auto line = bounds.withWidth(1.0f).withX(bounds.getCentreX() - 0.5f);
+    g.fillRect(line);
+  } else {
+    auto line = bounds.withHeight(1.0f).withY(bounds.getCentreY() - 0.5f);
+    g.fillRect(line);
+  }
 }
 
 } // namespace zenith
