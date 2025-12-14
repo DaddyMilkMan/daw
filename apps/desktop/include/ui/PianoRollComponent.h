@@ -136,19 +136,6 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
-  //==========================================================================
-  // Tool System
-  //==========================================================================
-
-  enum class Tool { Select, Draw, Erase, Slice };
-
-  void setCurrentTool(Tool tool);
-  Tool getCurrentTool() const { return currentTool; }
-
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
-
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
