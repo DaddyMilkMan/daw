@@ -840,7 +840,7 @@ void ModulationMatrixView::mouseUp(const juce::MouseEvent &e) {
   if (isDraggingConnection_) {
     if (auto *dest = hitTestDest(pos)) {
       createConnection(dragSourceId_, dest->id);
-      refreshMatrix(); // Rebuild paths
+      updateConnectionPaths();
     }
     isDraggingConnection_ = false;
     repaint();
