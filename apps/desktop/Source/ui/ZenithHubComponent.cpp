@@ -20,7 +20,6 @@
 #include <map>
 #include <random>
 
-
 namespace zenith {
 
 using namespace design;
@@ -75,6 +74,23 @@ ZenithHubComponent::ZenithHubComponent(
 ZenithHubComponent::~ZenithHubComponent() {
   stopTimer();
   recentProjectManager_.removeListener(this);
+}
+
+void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
+  SkiaComponent::mouseExit(e);
+
+  // Reset hover states
+  isNewProjectHovered_ = false;
+  for (auto &p : recentProjects_)
+    p.isHovered = false;
+  for (auto &t : templates_)
+    t.isHovered = false;
+
+  repaint();
+}
+
+bool ZenithHubComponent::hitTest(int x, int y) {
+  return mainCardBounds_.contains((float)x, (float)y);
 }
 
 void ZenithHubComponent::loadFromManager() {
@@ -239,10 +255,6 @@ void ZenithHubComponent::timerCallback() {
   animationTime_ += 0.016f;
   alpha_.update(16.0f);
 
-  if (auroraBackground_) {
-    auroraBackground_->update(0.016f);
-  }
-
   if (alpha_.isAnimating()) {
     repaint();
   }
@@ -304,8 +316,44 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
     subPaint.setAntiAlias(true);
 
-    canvas->drawString("Welcome back, User", headerX, headerY + 32, subFont,
-                       subPaint);
+    SkString greeting(greetingText_.toRawUTF8());
+    SkRect bounds;
+    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
+    
+    float subX = headerX;
+    float subY = headerY + 32;
+    
+    // Store bounds for interaction
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
+    
+    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    
+    // Draw Pencil Icon
+    greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
+    
+    SkPaint iconPaint;
+    iconPaint.setColor(isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f));
+    iconPaint.setAntiAlias(true);
+    iconPaint.setStyle(SkPaint::kStroke_Style);
+    iconPaint.setStrokeWidth(1.5f);
+    
+    SkPath pencil;
+    float iconX = greetingEditIconBounds_.fLeft;
+    float iconY = greetingEditIconBounds_.fTop;
+    
+    // Simple pencil shape
+    pencil.moveTo(iconX + 2, iconY + 12);
+    pencil.lineTo(iconX + 12, iconY + 2);
+    pencil.lineTo(iconX + 14, iconY + 4);
+    pencil.lineTo(iconX + 4, iconY + 14);
+    pencil.close();
+    // Tip
+    pencil.moveTo(iconX + 2, iconY + 12);
+    pencil.lineTo(iconX + 4, iconY + 14);
+    pencil.lineTo(iconX + 1, iconY + 15);
+    pencil.close();
+    
+    canvas->drawPath(pencil, iconPaint);
   }
 
   drawRecentProjects(canvas);
@@ -318,7 +366,9 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   if (auroraBackground_) {
-    auroraBackground_->draw(canvas, getLocalBounds().toFloat());
+    auto bounds = getLocalBounds().toFloat();
+    SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+    auroraBackground_->draw(canvas, rect, animationTime_);
     return;
   }
 
@@ -575,7 +625,9 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
     shadowPaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
     shadowPaint.setAntiAlias(true);
-    canvas->drawRRect(rrect.makeOutset(2.0f, 2.0f), shadowPaint);
+    SkRRect outset = rrect;
+    outset.outset(4.0f, 4.0f);
+    canvas->drawRRect(outset, shadowPaint);
   }
 
   canvas->drawRRect(rrect, btnPaint);
@@ -628,6 +680,12 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   if (nph != isNewProjectHovered_) {
     isNewProjectHovered_ = nph;
     needsUpdate = true;
+  }
+
+  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  if (gh != isGreetingHovered_) {
+      isGreetingHovered_ = gh;
+      needsUpdate = true;
   }
 
   if (needsUpdate)
@@ -684,10 +742,53 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
     dismiss();
     return;
   }
+
+  // Greeting Edit
+  if (greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+      showGreetingEditor();
+      return;
+  }
 }
 
 void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+}
+
+void ZenithHubComponent::showGreetingEditor() {
+  if (greetingEditor_) return;
+
+  greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
+  greetingEditor_->setText(greetingText_);
+  greetingEditor_->setSelectAllWhenFocused(true);
+  greetingEditor_->setJustification(juce::Justification::left);
+  // Use a standard JUCE font that matches size approx
+  greetingEditor_->setFont(juce::Font(18.0f)); 
+  
+  // Calculate bounds (convert from SkRect to JUCE Rectangle)
+  // Ensure we are in local coordinate space
+  juce::Rectangle<int> bounds(
+      (int)greetingTextBounds_.left(), (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
+      (int)(greetingTextBounds_.width() + 60), 24);
+      
+  greetingEditor_->setBounds(bounds);
+  
+  // Callbacks
+  greetingEditor_->onReturnKey = [this]() {
+    greetingText_ = greetingEditor_->getText();
+    greetingEditor_.reset();
+    repaint();
+  };
+  
+  greetingEditor_->onEscapeKey = [this]() {
+    greetingEditor_.reset();
+  };
+  
+  greetingEditor_->onFocusLost = [this]() {
+    greetingEditor_.reset();
+  };
+
+  addAndMakeVisible(greetingEditor_.get());
+  greetingEditor_->grabKeyboardFocus();
 }
 
 } // namespace zenith

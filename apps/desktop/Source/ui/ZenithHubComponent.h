@@ -63,6 +63,9 @@ public:
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
 
+  // New: Restrict hits to card only
+  bool hitTest(int x, int y) override;
+
   // Animation hook
   void timerCallback() override;
 
@@ -142,6 +145,15 @@ private:
   SkRect newProjectButtonBounds_;
   bool isNewProjectHovered_ = false;
   float buttonGradientAngle_ = 0.0f;
+
+  // Greeting Customization
+  juce::String greetingText_ = "Welcome back, User";
+  SkRect greetingTextBounds_;
+  SkRect greetingEditIconBounds_;
+  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  bool isGreetingHovered_ = false;
+
+  void showGreetingEditor();
 
   struct Ripple {
     float x, y;
