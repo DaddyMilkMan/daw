@@ -16,6 +16,10 @@
 #include "../views/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
 #include <JuceHeader.h>
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
 
 namespace zenith {
 
@@ -41,21 +45,21 @@ private:
   std::unique_ptr<SpectraAnalyzerComponent> spectraAnalyzer_;
 
   // Cached resources for 60FPS rendering
-  SkPaint bgPaint_;
-  SkPaint borderPaint_;
-  SkPaint meterBgPaint_;
-  SkPaint meterPeakPaint_;
-  SkPaint meterRmsPaint_;
-  SkPaint textPaint_;
-  SkPaint subTextPaint_;
-  SkFont headerFont_;
-  SkFont bodyFont_;
-  SkFont labelFont_;
-  SkRect cachedBounds_;
+  ::SkPaint bgPaint_;
+  ::SkPaint borderPaint_;
+  ::SkPaint meterBgPaint_;
+  ::SkPaint meterPeakPaint_;
+  ::SkPaint meterRmsPaint_;
+  ::SkPaint textPaint_;
+  ::SkPaint subTextPaint_;
+  ::SkFont headerFont_;
+  ::SkFont bodyFont_;
+  ::SkFont labelFont_;
+  ::SkRect cachedBounds_;
 
   float animationPhase_ = 0.0f;
 
-  void updateCachedPaints(const SkRect &bounds);
+  void updateCachedPaints(const ::SkRect &bounds);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightSidePanel)
 };

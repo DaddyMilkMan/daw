@@ -17,6 +17,7 @@
 #include "SkiaComponent.h"
 #include "views/PianoKeyboardViewSkia.h"
 #include <JuceHeader.h>
+#include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
@@ -70,16 +71,16 @@ private:
 
 private:
   // Cached resources for 60FPS rendering
-  SkPaint bgPaint_;
-  SkPaint borderPaint_;
-  SkPaint channelBgPaint_;
-  SkPaint meterTrackPaint_;
-  SkPaint meterFillPaint_;
-  SkPaint textPaint_;
-  SkFont font_;
-  SkRect cachedBounds_;
+  ::SkPaint bgPaint_;
+  ::SkPaint borderPaint_;
+  ::SkPaint channelBgPaint_;
+  ::SkPaint meterTrackPaint_;
+  ::SkPaint meterFillPaint_;
+  ::SkPaint textPaint_;
+  ::SkFont font_;
+  ::SkRect cachedBounds_;
 
-  void updateCachedPaints(const SkRect &bounds);
+  void updateCachedPaints(const ::SkRect &bounds);
 };
 
 #endif // ZENITH_USE_SKIA
