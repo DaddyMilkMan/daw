@@ -132,6 +132,8 @@ void PanelHeader::mouseExit(const juce::MouseEvent &e) {
 
 void PanelHeader::setTitle(const juce::String &title) {
   title_ = title;
+  // Keep accessibility title in sync with display title
+  juce::Component::setTitle(title);
   repaint();
 }
 
@@ -425,9 +427,18 @@ PanelDivider::createAccessibilityHandler() {
 // TabGroup Implementation
 //==============================================================================
 
-TabGroup::TabGroup() { setSize(100, tabBarHeight + 100); }
+TabGroup::TabGroup(const juce::String &accessibilityTitle)
+    : accessibilityTitle_(accessibilityTitle) {
+  setSize(100, tabBarHeight + 100);
+}
 
 TabGroup::~TabGroup() = default;
+
+void TabGroup::setAccessibilityTitle(const juce::String &title) {
+  accessibilityTitle_ = title;
+  // Update accessibility info if handler already exists
+  juce::Component::setTitle(title);
+}
 
 void TabGroup::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
@@ -658,7 +669,8 @@ void TabGroup::animateTabSwitch() {
 std::unique_ptr<juce::AccessibilityHandler>
 TabGroup::createAccessibilityHandler() {
   // Role: List (closest to TabList in JUCE's accessibility roles)
-  setTitle("Tab List");
+  // Use configurable title to distinguish multiple TabGroup instances
+  setTitle(accessibilityTitle_);
   setDescription("Panel tab group");
   return std::make_unique<juce::AccessibilityHandler>(
       *this, juce::AccessibilityRole::list);

@@ -108,7 +108,7 @@ private:
 
       if (vHandler != nullptr) {
         expectEquals(
-            hHandler->getHelp(), juce::String("Drag to resize"),
+            vHandler->getHelp(), juce::String("Drag to resize"),
             "Vertical PanelDivider must also have help text 'Drag to resize'");
       }
     }
