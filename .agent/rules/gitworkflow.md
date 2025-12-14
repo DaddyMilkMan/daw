@@ -1,5 +1,4 @@
----
 trigger: always_on
 ---
 
-make sure you make a branch for your own work and commit to that branch after works done make sure to sync with orgin to (remote)
+Make sure you create a branch for your own work and commit to that branch. After the work is done, make sure to sync with the origin (remote).

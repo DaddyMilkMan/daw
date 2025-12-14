@@ -320,27 +320,11 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
       // Calculate relative position with loop wrapping
       double relativeBeats = currentBeats - clipStart;
-      
-      // Handle loop wrapping
-      if (engine.isLooping()) {
-          // If engine is looping, we might need to map global time to loop cycle
-          // But here, we are recording into a CLIP which effectively loops its content
-          // So we map the linear playback time into the clip's modulo time
-          
-          // Helper to wrap into [0, length)
-          relativeBeats = std::fmod(relativeBeats, clipLength);
-          if (relativeBeats < 0.0)
-            relativeBeats += clipLength;
-      } else {
-          // If not looping, we might still want to wrap if it's a pattern clip context?
-          // Usually Drum Clips are patterns. Let's assume pattern behavior (wrap)
-          // or just standard timeline recording.
-          
-          // Given this is "DrumPadComponent" with a sequencer view (1 bar), 
-          // we treat it as a loop recorder.
-           relativeBeats = std::fmod(relativeBeats, clipLength);
-           if (relativeBeats < 0.0)
-             relativeBeats += clipLength;
+      // For a drum pad component, recording should always wrap within the clip's
+      // length, regardless of the global transport's loop state.
+      relativeBeats = std::fmod(relativeBeats, clipLength);
+      if (relativeBeats < 0.0) {
+        relativeBeats += clipLength;
       }
 
       // Quantization (optional/default to raw)
@@ -469,3 +453,4 @@ void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
 }
+
