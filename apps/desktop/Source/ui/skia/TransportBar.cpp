@@ -53,6 +53,8 @@ void TransportBar::resized() {
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
   updateCachedPaints(skBounds);
   cachedBounds_ = skBounds;
+
+  // updateAccessibility();
 }
 
 void TransportBar::drawSkia(SkCanvas *canvas) {
@@ -237,6 +239,68 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
       onSettingsClicked();
   }
 }
+
+// ==============================================================================
+// Accessibility Implementation
+// ==============================================================================
+
+/*
+class TransportBar::AccessibilityAgent : public juce::Component {
+public:
+  AccessibilityAgent(const juce::String &name, juce::AccessibilityRole role,
+                     const std::function<void()> &action,
+                     const juce::String &helpText = "")
+      : name_(name), role_(role), action_(action), help_(helpText) {
+    // Transparent but interactive
+    setOpaque(false);
+    setInterceptsMouseClicks(true, false);
+    setWantsKeyboardFocus(true);
+  }
+
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override {
+    auto handler = std::make_unique<juce::AccessibilityHandler>(*this, role_);
+
+    if (action_) {
+      // handler->addAction is not valid
+    }
+    return handler;
+  }
+
+  // getTitle/getHelpText not virtual on Component
+  // juce::String getTitle() const override { return name_; }
+  // juce::String getHelpText() const override { return help_; }
+
+  void mouseUp(const juce::MouseEvent &) override {
+    if (action_)
+      action_();
+  }
+
+  // No painting needed (invisible hotspot)
+  void paint(juce::Graphics &) override {}
+
+private:
+  juce::String name_;
+  juce::AccessibilityRole role_;
+  std::function<void()> action_;
+  juce::String help_;
+};
+*/
+
+/*
+void TransportBar::updateAccessibility() {
+  // Disabled for now to fix build
+}
+*/
+
+std::unique_ptr<juce::AccessibilityHandler>
+TransportBar::createAccessibilityHandler() {
+  // Return a group handler so it exposes children (the agents)
+  // return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
+  return nullptr;
+}
+
+TransportBar::~TransportBar() = default;
 
 } // namespace zenith
 
