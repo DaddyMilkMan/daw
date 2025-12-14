@@ -4,21 +4,21 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/SampleEditorComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/MixerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/PianoRollComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/DrumPadComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/session/DrumPadComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/AutomationLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MarkerLaneComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TempoLaneComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/PluginBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/PluginBrowserComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ClipComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/MixerView.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/MixerChannelComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerChannelComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TrackHeaderComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TimelineRuler.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PluginEditorWindow.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/PresetBrowserComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/InstrumentBrowserPanel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/PresetBrowserComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/browser/InstrumentBrowserPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/WingmanPanel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/design-system/ZenithLookAndFeel.cpp
@@ -27,11 +27,11 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/RefactorPanel.h
     ${CMAKE_CURRENT_SOURCE_DIR}/LayoutManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ResizablePanelContainer.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/SessionViewComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/session/SessionViewComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MacroToolbar.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/MiniMapComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/views/SpectraAnalyzerComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/views/ModulationMatrixView.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
 )
 
 add_subdirectory(skia)
