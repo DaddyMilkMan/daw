@@ -18,6 +18,9 @@
 #include "../../ai/SessionDebuggerAgent.h"
 #include "SkiaComponent.h"
 #include <JuceHeader.h>
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
 
 namespace zenith {
 
@@ -83,17 +86,17 @@ private:
   juce::Time lastFixTime_;
 
   // Cached paints
-  SkPaint bgPaint_;
-  SkPaint borderPaint_;
-  SkPaint healthGoodPaint_;
-  SkPaint healthWarningPaint_;
-  SkPaint healthCriticalPaint_;
-  SkPaint textPaint_;
-  SkPaint iconPaint_;
-  SkPaint notificationPaint_;
-  SkFont font_;
-  SkFont boldFont_;
-  SkFont smallFont_;
+  ::SkPaint bgPaint_;
+  ::SkPaint borderPaint_;
+  ::SkPaint healthGoodPaint_;
+  ::SkPaint healthWarningPaint_;
+  ::SkPaint healthCriticalPaint_;
+  ::SkPaint textPaint_;
+  ::SkPaint iconPaint_;
+  ::SkPaint notificationPaint_;
+  ::SkFont font_;
+  ::SkFont boldFont_;
+  ::SkFont smallFont_;
 
   // Layout constants
   static constexpr float kCollapsedHeight = 32.0f;
