@@ -1,6 +1,7 @@
 if(ZENITH_ENABLE_SKIA)
     target_sources(ZenithDAW PRIVATE
         # Core UI
+        AuroraBackground.cpp
         BottomBar.cpp
         BrowserPanel.cpp
         DebugConsoleComponent.cpp
