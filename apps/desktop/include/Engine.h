@@ -32,6 +32,7 @@
 #pragma once
 
 #include <atomic>
+#include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -41,12 +42,12 @@
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <functional>
 #include <memory>
 #include <vector>
 
 #include "../Source/dsp/Dither.h"
 #include "../Source/dsp/MasterLimiter.h"
+#include "../Source/dsp/StereoAudioFifo.h"
 #include "../Source/engine/EngineConstants.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
@@ -358,6 +359,18 @@ public:
   }
 
   //==========================================================================
+  // Analysis (Visualizers)
+  //==========================================================================
+
+  /**
+   * @brief Get the analysis FIFO for visualizers
+   * @return Pointer to the stereo audio FIFO
+   */
+  zenith::StereoAudioFifo *getAnalysisFifo() const {
+    return analysisFifo_.get();
+  }
+
+  //==========================================================================
   // Track Management
   //==========================================================================
 
@@ -460,7 +473,8 @@ public:
   void setTrackMute(int trackIndex, bool muted);
   void setTrackSolo(int trackIndex, bool solo);
   void setTrackArmed(int trackIndex, bool armed);
-  void setTrackInputChannel(int trackIndex, int channelIndex); // ROAST FIX #9
+  void setTrackInputChannel(int trackIndex,
+                            int channelIndex); // Configures audio input routing
 
   //==========================================================================
   // Metering (MESSAGE THREAD SAFE)
@@ -546,8 +560,9 @@ public:
    * @return true if freeze started successfully
    * @note MESSAGE THREAD ONLY - rendering is async
    */
-  bool freezeTrack(int trackIndex, 
-                   std::function<void(float, const juce::String&)> progress = nullptr);
+  bool freezeTrack(
+      int trackIndex,
+      std::function<void(float, const juce::String &)> progress = nullptr);
 
   /**
    * @brief Unfreeze a track, restoring original plugins
@@ -768,8 +783,6 @@ private:
 
   void registerFormats();
 
-
-
   // Helper to apply normalization gain to a buffer
   void applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
                           float targetDb);
@@ -794,8 +807,7 @@ private:
   std::atomic<bool> enableTestTone_{false};
 
   // Track container (message thread for modification)
-  // ROAST FIX #1: Use shared_ptr instead of unique_ptr to enable safe snapshot
-  // sharing
+  // Use shared_ptr instead of unique_ptr to enable RT-safe snapshot sharing
   std::vector<std::shared_ptr<zenith::Track>> tracks_;
 
   // Routing Graph (Source of Truth for connections and processing order)
@@ -808,8 +820,7 @@ public:
 private:
   // Thread-safe Track Snapshot (RCU-style)
   // Audio thread reads this snapshot without locking (wait-free iteration)
-  // ROAST FIX #1: Use raw pointers for iteration (speed), shared_ptr for
-  // lifetime (safety)
+  // Use raw pointers for iteration speed, shared_ptr for lifetime management
   struct TrackSnapshot {
     std::vector<zenith::Track *>
         tracks; // Raw pointers for fast, lock-free iteration
@@ -861,21 +872,25 @@ private:
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
 
+  // Analysis FIFO (Stereo)
+  std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;
+
   // Project state reference
   ProjectState *projectState_ = nullptr;
 
   // Automation synchronizer
   std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
-  
+
   //==========================================================================
   // Modular Engine Components (Refactor 2025-12-09)
   //==========================================================================
-  
+
   std::unique_ptr<AudioRenderer> audioRenderer_;
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
-  std::unique_ptr<zenith::TempoMap> tempoMap_; // Kept for now, shared with controllers
-  
+  std::unique_ptr<zenith::TempoMap>
+      tempoMap_; // Kept for now, shared with controllers
+
   // Aux buses (Managed by Engine, rendered by AudioRenderer)
   std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
 

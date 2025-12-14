@@ -17,6 +17,7 @@
 #include "MenuBar.h"
 #include "SettingsComponent.h"
 #include "WingmanPanel.h"
+#include "ZenithHubComponent.h"
 #include "ZenithLookAndFeel.h" // For colors
 
 #include "../ai/SessionDebuggerAgent.h"
@@ -136,7 +137,8 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Bottom: Piano Keyboard + Mixer Strip
   DBG("→ Creating BottomBar...");
   logToFile("→ Creating BottomBar...");
-  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState);
+  bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
+                                                  projectState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
 
   // Connect Session Debugger
@@ -172,6 +174,19 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
     options.resizable = true;
     options.launchAsync();
   };
+
+  // Create Zenith Hub
+  hubComponent = std::make_unique<zenith::ZenithHubComponent>([this]() {
+    // When dismissed by user
+    if (hubComponent) {
+      // It handles its own fade out but we can ensure it is hidden or removed
+      // from input For now, let's just ensure it goes away. The component fades
+      // alpha then calls this.
+      hubComponent->setVisible(false);
+    }
+  });
+  addAndMakeVisible(hubComponent.get());
+  hubComponent->show();
 
   // Start animation timer (SkiaMainWindowIntegration handles this)
   DBG("✓ Animation timer managed by SkiaMainWindowIntegration");
@@ -276,6 +291,9 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
   // 5. Wingman Panel (if hosted directly, but currently inside RightSidePanel)
   // If it were direct: drawChild(wingmanPanelPtr_.get(),
   // wingmanPanelPtr_.get());
+
+  // 6. Zenith Hub (Topmost Overlay)
+  drawChild(hubComponent.get(), hubComponent.get());
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
@@ -290,6 +308,9 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
       activeDragComponent = bottomBar.get();
     else if (mainLayout && mainLayout->getBounds().contains(e.getPosition()))
       activeDragComponent = mainLayout.get();
+    else if (hubComponent && hubComponent->isVisible() &&
+             hubComponent->getBounds().contains(e.getPosition()))
+      activeDragComponent = hubComponent.get();
 
     if (activeDragComponent) {
       dragStartBounds = activeDragComponent->getBounds();
@@ -299,15 +320,14 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] {
-      DBG("Debug logs requested");
-    });
-    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr), nullptr);
+    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
+    m.showMenuAsync(juce::PopupMenu::Options().withTargetComponent(nullptr),
+                    nullptr);
   }
 }
 
 void MainComponent::mouseDrag(const juce::MouseEvent &e) {
-    juce::ignoreUnused(e);
+  juce::ignoreUnused(e);
 }
 
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
@@ -362,6 +382,11 @@ void MainComponent::resized() {
   } else {
     DBG("  ✗ MainLayoutComponent is NULL!");
   }
+
+  // Overlay: Zenith Hub
+  if (hubComponent) {
+    hubComponent->setBounds(getLocalBounds());
+  }
 }
 
 //==============================================================================
@@ -376,7 +401,7 @@ void MainComponent::openPianoRoll(const juce::String &trackId,
   // Note: Window deletes itself when closed (see
   // PianoRollEditor::closeButtonPressed)
   // NOLINTNEXTLINE(cppcoreguidelines-owning-memory)
-  new PianoRollWindow(projectState, trackId, clipId);
+  new PianoRollWindow(projectState, engine, trackId, clipId);
 }
 
 //==============================================================================

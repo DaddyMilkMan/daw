@@ -46,7 +46,8 @@ constexpr int kMaxBufferSize = 8192;
 /// Lower values = faster response, higher values = smoother display
 constexpr float kMeterSmoothingFactor = 0.3f;
 
-/// Decay rate for peak meters (per block) - approximately 20dB/second at 44.1kHz
+/// Decay rate for peak meters (per block) - approximately 20dB/second
+/// at 44.1kHz
 constexpr float kPeakMeterDecay = 0.995f;
 
 /// Meter update rate in Hz (for UI refresh)
@@ -266,52 +267,66 @@ constexpr int kFreezeBlockSize = 4096;
 constexpr int kFreezeBitDepth = 32;
 
 //==============================================================================
+// Modulation Constants
+//==============================================================================
+
+/// Number of Global LFOs available
+constexpr int kNumGlobalLFOs = 8;
+
+//==============================================================================
 // Utility Functions (constexpr)
 //==============================================================================
 
 /// Constexpr natural exponential approximation using Taylor series
 /// Accurate to ~0.01% for |x| < 2
 constexpr float constexprExp(float x) noexcept {
-    // Taylor series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4! + x⁵/5! + ...
-    // Using 8 terms for good accuracy
-    const float x2 = x * x;
-    const float x3 = x2 * x;
-    const float x4 = x3 * x;
-    const float x5 = x4 * x;
-    const float x6 = x5 * x;
-    const float x7 = x6 * x;
-    
-    return 1.0f + x + x2/2.0f + x3/6.0f + x4/24.0f + x5/120.0f + x6/720.0f + x7/5040.0f;
+  // Taylor series: e^x = 1 + x + x²/2! + x³/3! + x⁴/4! + x⁵/5! + ...
+  // Using 8 terms for good accuracy
+  const float x2 = x * x;
+  const float x3 = x2 * x;
+  const float x4 = x3 * x;
+  const float x5 = x4 * x;
+  const float x6 = x5 * x;
+  const float x7 = x6 * x;
+
+  return 1.0f + x + x2 / 2.0f + x3 / 6.0f + x4 / 24.0f + x5 / 120.0f +
+         x6 / 720.0f + x7 / 5040.0f;
 }
 
 /// Convert decibels to linear gain (constexpr version)
 /// Uses: gain = 10^(db/20) = e^(db * ln(10) / 20)
 constexpr float dbToGain(float db) noexcept {
-    if (db <= kSilenceThresholdDb) return 0.0f;
-    if (db == 0.0f) return 1.0f;
-    
-    // ln(10) / 20 ≈ 0.115129254649702
-    constexpr float kDbToLinearCoeff = 0.115129254649702f;
-    const float exponent = db * kDbToLinearCoeff;
-    
-    // For large values, clamp to avoid overflow
-    if (exponent > 10.0f) return 22026.5f; // e^10
-    if (exponent < -10.0f) return 0.0f;
-    
-    // Use range reduction for better accuracy: e^x = e^(n + f) = e^n * e^f
-    // where n is integer and f is fractional part in [-0.5, 0.5]
-    // This approximation is good enough for audio gain calculations
-    return constexprExp(exponent);
+  if (db <= kSilenceThresholdDb)
+    return 0.0f;
+  if (db == 0.0f)
+    return 1.0f;
+
+  // ln(10) / 20 ≈ 0.115129254649702
+  constexpr float kDbToLinearCoeff = 0.115129254649702f;
+  const float exponent = db * kDbToLinearCoeff;
+
+  // For large values, clamp to avoid overflow
+  if (exponent > 10.0f)
+    return 22026.5f; // e^10
+  if (exponent < -10.0f)
+    return 0.0f;
+
+  // Use range reduction for better accuracy: e^x = e^(n + f) = e^n * e^f
+  // where n is integer and f is fractional part in [-0.5, 0.5]
+  // This approximation is good enough for audio gain calculations
+  return constexprExp(exponent);
 }
 
 /// Convert samples to milliseconds
 constexpr double samplesToMs(int64_t samples, double sampleRate) noexcept {
-    return (sampleRate > 0.0) ? (static_cast<double>(samples) / sampleRate * 1000.0) : 0.0;
+  return (sampleRate > 0.0)
+             ? (static_cast<double>(samples) / sampleRate * 1000.0)
+             : 0.0;
 }
 
 /// Convert milliseconds to samples
 constexpr int64_t msToSamples(double ms, double sampleRate) noexcept {
-    return static_cast<int64_t>(ms * sampleRate / 1000.0);
+  return static_cast<int64_t>(ms * sampleRate / 1000.0);
 }
 
 } // namespace constants

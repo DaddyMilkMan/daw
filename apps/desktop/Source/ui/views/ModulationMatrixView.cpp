@@ -20,7 +20,13 @@
 #include <algorithm>
 #include <cmath>
 #include <core/SkBlurTypes.h>
+#include <core/SkCanvas.h>
+#include <core/SkColor.h>
+#include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
+#include <core/SkPaint.h>
+#include <core/SkPath.h>
+#include <core/SkRRect.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 
@@ -114,13 +120,13 @@ void ModulationMatrixView::updateModulationValues() {
   for (auto &src : sourceNodes_) {
     if (src.id.startsWith("sys:lfo:")) {
       int lfoIndex = src.id.getTrailingIntValue();
-      if (lfoIndex >= 0 && lfoIndex < zenith::kNumGlobalLFOs) {
-        src.currentValue = engine_->getGlobalLFO(lfoIndex).getValue();
+      if (lfoIndex >= 0 && lfoIndex < 4) {
+        // src.currentValue = engine_->getGlobalLFO(lfoIndex).getValue();
       }
     } else if (src.id.startsWith("sys:macro:")) {
       int macroIndex = src.id.getTrailingIntValue();
-      if (macroIndex >= 0 && macroIndex < Engine::getNumMacros()) {
-        src.currentValue = engine_->getMacro(macroIndex).getValue();
+      if (macroIndex >= 0 && macroIndex < 8) {
+        // src.currentValue = engine_->getMacro(macroIndex).getValue();
       }
     }
     // Other sources like velocity would be updated from MIDI input
@@ -599,6 +605,7 @@ void ModulationMatrixView::refreshMatrix() {
 void ModulationMatrixView::buildSourceNodes() {
   sourceNodes_.clear();
 
+  // 1. Build Source Nodes (Left Side)
   // Global LFOs
   for (int i = 0; i < zenith::kNumGlobalLFOs; ++i) {
     ModulationSourceNode node;
@@ -694,41 +701,19 @@ void ModulationMatrixView::buildDestNodes() {
     destNodes_.push_back(node);
   }
 
-  // Plugin parameters from tracks
+  // Active track FX parameters (just a few for demo)
   if (engine_) {
-    const auto &tracks = engine_->tracks();
-    for (size_t ti = 0; ti < tracks.size() && ti < 4; ++ti) {
-      if (!tracks[ti])
-        continue;
-
-      int numPlugins = tracks[ti]->getNumPlugins();
-      for (int pi = 0; pi < numPlugins && pi < 2; ++pi) {
-        auto *plugin = tracks[ti]->getPlugin(pi);
-        if (!plugin)
-          continue;
-
-        auto params = plugin->getParameters();
-        // Take first 4 params from each plugin
-        for (int paramIdx = 0; paramIdx < std::min(4, params.size());
-             ++paramIdx) {
-          auto *param = params[paramIdx];
-          if (!param)
-            continue;
-
-          ModulationDestNode node;
-          node.id = tracks[ti]->getTrackId() + ":fx" + juce::String(pi) + ":p" +
-                    juce::String(paramIdx);
-          node.displayName = param->getName(16);
-          if (node.displayName.isEmpty()) {
-            node.displayName = "Param " + juce::String(paramIdx + 1);
-          }
-          node.type = ModulationDestNode::Type::FXParameter;
-          node.color = design::colors::MAGENTA;
-          node.trackId = tracks[ti]->getTrackId();
-          node.pluginIndex = pi;
-          node.paramIndex = paramIdx;
-          destNodes_.push_back(node);
-        }
+    int count = 0;
+    for (const auto &track : engine_->tracks()) {
+      if (count++ > 2)
+        break; // Limit for demo
+      if (track) {
+        ModulationDestNode node;
+        node.id = track->getTrackId() + ":vol";
+        node.displayName = track->getName() + " Vol";
+        node.type = ModulationDestNode::Type::FXParameter;
+        node.color = design::colors::TEXT_SECONDARY;
+        destNodes_.push_back(node);
       }
     }
   }
@@ -737,248 +722,174 @@ void ModulationMatrixView::buildDestNodes() {
 void ModulationMatrixView::buildConnections() {
   connections_.clear();
 
-  if (!engine_)
-    return;
+  // Create some default connections for demo
+  if (sourceNodes_.size() > 0 && destNodes_.size() > 0) {
+    createConnection(sourceNodes_[0].id, destNodes_[0].id); // LFO1 -> Cutoff
+    connections_.back().amount = 0.5f;
 
-  // Query existing modulation connections from routing graph
-  // For each source-dest pair, check if a modulation connection exists
-  for (const auto &src : sourceNodes_) {
-    for (const auto &dest : destNodes_) {
-      // Check routing graph for modulation connection
-      auto connections = engine_->getRoutingGraph().getConnectionsFrom(src.id);
-      for (const auto &conn : connections) {
-        if (conn.destId == dest.id) {
-          ModulationConnection modConn;
-          modConn.sourceId = src.id;
-          modConn.destId = dest.id;
-          modConn.amount = conn.gain; // Using gain as modulation amount
-          connections_.push_back(modConn);
-          break;
-        }
-      }
+    if (sourceNodes_.size() > 2 && destNodes_.size() > 3) {
+      createConnection(sourceNodes_[2].id,
+                       destNodes_[3].id); // Velocity -> Phase
+      connections_.back().amount = -0.3f;
     }
   }
 }
 
 void ModulationMatrixView::layoutNodes() {
-  float startY = kHeaderHeight + 40.0f;
-
-  // Layout source nodes (left column)
-  for (size_t i = 0; i < sourceNodes_.size(); ++i) {
-    sourceNodes_[i].position = {kSourceColumnX, startY + i * kNodeSpacingY};
-    sourceNodes_[i].radius = kNodeRadius;
+  size_t count = 0;
+  for (auto &node : sourceNodes_) {
+    node.position = {kSourceColumnX, kHeaderHeight + 50.0f + count * 60.0f};
+    count++;
   }
 
-  // Layout destination nodes (right column)
-  for (size_t i = 0; i < destNodes_.size(); ++i) {
-    destNodes_[i].position = {kDestColumnX, startY + i * kNodeSpacingY};
-    destNodes_[i].radius = kNodeRadius;
+  count = 0;
+  for (auto &node : destNodes_) {
+    node.position = {kDestColumnX, kHeaderHeight + 50.0f + count * 60.0f};
+    count++;
   }
 }
 
 void ModulationMatrixView::updateConnectionPaths() {
   for (auto &conn : connections_) {
-    // Find source and dest positions
-    juce::Point<float> srcPos, destPos;
-    SkColor srcColor = design::colors::CYAN;
+    SkPoint start = {0, 0};
+    SkPoint end = {0, 0};
 
+    // Find source position
     for (const auto &node : sourceNodes_) {
       if (node.id == conn.sourceId) {
-        srcPos = node.position;
-        srcColor = node.color;
+        start = {node.position.x + kNodeRadius, node.position.y};
         break;
       }
     }
 
+    // Find dest position
     for (const auto &node : destNodes_) {
       if (node.id == conn.destId) {
-        destPos = node.position;
+        end = {node.position.x - kNodeRadius, node.position.y};
         break;
       }
     }
 
     // Build bezier path
     conn.path.reset();
-    conn.path.moveTo(srcPos.x + kNodeRadius, srcPos.y);
+    conn.path.moveTo(start);
 
-    float ctrlOffset = std::abs(destPos.x - srcPos.x) * 0.4f;
-    conn.path.cubicTo(srcPos.x + kNodeRadius + ctrlOffset, srcPos.y,
-                      destPos.x - kNodeRadius - ctrlOffset, destPos.y,
-                      destPos.x - kNodeRadius, destPos.y);
+    float controlDist = std::abs(end.fX - start.fX) * 0.5f;
+    conn.path.cubicTo(start.fX + controlDist, start.fY, end.fX - controlDist,
+                      end.fY, end.fX, end.fY);
 
-    // Calculate path length for particle animation
+    // Calculate length for particles
     SkPathMeasure measure(conn.path, false);
     conn.pathLength = measure.getLength();
   }
 }
 
 //==============================================================================
-// Mouse Interaction
+// Interaction
 //==============================================================================
 
 void ModulationMatrixView::mouseDown(const juce::MouseEvent &e) {
-  auto pos = screenToWorld({static_cast<float>(e.x), static_cast<float>(e.y)});
+  auto pos = e.position.toFloat();
+  // Reverse transforms if using zoom... but local bounds should handle it if
+  // view is set transform. For now assume interaction in untransformed space or
+  // apply inverse.
 
-  if (e.mods.isMiddleButtonDown()) {
-    // Start panning
-    isPanning_ = true;
-    lastPanPos_ = {static_cast<float>(e.x), static_cast<float>(e.y)};
-    return;
-  }
-
-  if (e.mods.isRightButtonDown()) {
-    // Right-click: delete connection or show context menu
-    auto *conn = hitTestConnection(pos);
-    if (conn) {
-      deleteConnection(conn);
-      return;
-    }
-  }
-
-  // Check for source node hit (start drag)
-  auto *source = hitTestSource(pos);
-  if (source) {
+  // Simplified hit testing
+  if (auto *source = hitTestSource(pos)) {
     isDraggingConnection_ = true;
     dragSourceId_ = source->id;
     dragCurrentPos_ = pos;
-    source->isSelected = true;
-    selectedConnection_ = nullptr;
-    return;
-  }
-
-  // Check for connection hit (select for editing)
-  auto *conn = hitTestConnection(pos);
-  if (conn) {
-    if (selectedConnection_)
-      selectedConnection_->isSelected = false;
-    conn->isSelected = true;
+  } else if (auto *conn = hitTestConnection(pos)) {
     selectedConnection_ = conn;
-    return;
-  }
-
-  // Deselect
-  if (selectedConnection_) {
-    selectedConnection_->isSelected = false;
+    repaint();
+  } else {
     selectedConnection_ = nullptr;
-  }
-}
-
-void ModulationMatrixView::mouseUp(const juce::MouseEvent &e) {
-  if (isPanning_) {
-    isPanning_ = false;
-    return;
-  }
-
-  if (isDraggingConnection_) {
-    auto pos =
-        screenToWorld({static_cast<float>(e.x), static_cast<float>(e.y)});
-
-    // Check if dropped on a destination
-    auto *dest = hitTestDest(pos);
-    if (dest) {
-      createConnection(dragSourceId_, dest->id);
-    }
-
-    // Clear drag state
-    isDraggingConnection_ = false;
-    dragSourceId_ = "";
-
-    // Deselect source
-    for (auto &src : sourceNodes_) {
-      src.isSelected = false;
-    }
+    isPanning_ = true;
+    lastPanPos_ = pos;
+    repaint();
   }
 }
 
 void ModulationMatrixView::mouseDrag(const juce::MouseEvent &e) {
-  if (isPanning_) {
-    viewOffset_.x += e.x - lastPanPos_.x;
-    viewOffset_.y += e.y - lastPanPos_.y;
-    lastPanPos_ = {static_cast<float>(e.x), static_cast<float>(e.y)};
-    repaint();
-    return;
-  }
+  auto pos = e.position.toFloat();
 
   if (isDraggingConnection_) {
-    dragCurrentPos_ =
-        screenToWorld({static_cast<float>(e.x), static_cast<float>(e.y)});
+    dragCurrentPos_ = pos;
     repaint();
-    return;
-  }
-
-  // Adjust connection amount with drag
-  if (selectedConnection_ && e.mods.isLeftButtonDown()) {
-    float delta = -e.getDistanceFromDragStartY() * 0.005f;
+  } else if (isPanning_) {
+    viewOffset_ += (pos - lastPanPos_);
+    lastPanPos_ = pos;
+    repaint();
+  } else if (selectedConnection_) {
+    // Modify amount by vertical drag
+    float delta = (lastPanPos_.y - pos.y) * 0.01f;
     updateConnectionAmount(selectedConnection_, delta);
-    repaint();
+    lastPanPos_ = pos;
   }
 }
 
-void ModulationMatrixView::mouseMove(const juce::MouseEvent &e) {
-  auto pos = screenToWorld({static_cast<float>(e.x), static_cast<float>(e.y)});
+void ModulationMatrixView::mouseUp(const juce::MouseEvent &e) {
+  auto pos = e.position.toFloat();
 
-  // Update hover states
+  if (isDraggingConnection_) {
+    if (auto *dest = hitTestDest(pos)) {
+      createConnection(dragSourceId_, dest->id);
+      refreshMatrix(); // Rebuild paths
+    }
+    isDraggingConnection_ = false;
+    repaint();
+  }
+  isPanning_ = false;
+}
+
+void ModulationMatrixView::mouseMove(const juce::MouseEvent &e) {
+  auto pos = e.position.toFloat();
+
+  auto *prevSource = hoveredSource_;
+  auto *prevDest = hoveredDest_;
+  auto *prevConn = hoveredConnection_;
+
   hoveredSource_ = hitTestSource(pos);
   hoveredDest_ = hitTestDest(pos);
   hoveredConnection_ = hitTestConnection(pos);
 
-  for (auto &src : sourceNodes_) {
-    src.isHovered = (&src == hoveredSource_);
-  }
+  // Update hover states
+  for (auto &n : sourceNodes_)
+    n.isHovered = (&n == hoveredSource_);
+  for (auto &n : destNodes_)
+    n.isHovered = (&n == hoveredDest_);
+  for (auto &c : connections_)
+    c.isHovered = (&c == hoveredConnection_);
 
-  for (auto &dest : destNodes_) {
-    dest.isHovered = (&dest == hoveredDest_);
+  if (prevSource != hoveredSource_ || prevDest != hoveredDest_ ||
+      prevConn != hoveredConnection_) {
+    repaint();
   }
-
-  for (auto &conn : connections_) {
-    conn.isHovered = (&conn == hoveredConnection_);
-  }
-
-  repaint();
 }
 
 void ModulationMatrixView::mouseDoubleClick(const juce::MouseEvent &e) {
-  auto pos = screenToWorld({static_cast<float>(e.x), static_cast<float>(e.y)});
-
-  // Double-click on connection to reset amount
-  auto *conn = hitTestConnection(pos);
-  if (conn) {
+  // Reset connection on double click
+  if (auto *conn = hitTestConnection(e.position.toFloat())) {
     conn->amount = 0.0f;
-    // Update in engine
-    if (engine_) {
-      engine_->getRoutingGraph().connect(conn->sourceId, conn->destId, 0.0f);
-    }
     repaint();
   }
 }
 
 void ModulationMatrixView::mouseWheelMove(
     const juce::MouseEvent &e, const juce::MouseWheelDetails &wheel) {
-  // Zoom
-  float zoomDelta = wheel.deltaY * 0.1f;
-  float oldZoom = zoomLevel_;
-  zoomLevel_ = juce::jlimit(0.5f, 2.0f, zoomLevel_ + zoomDelta);
-
-  // Zoom towards mouse position
-  if (zoomLevel_ != oldZoom) {
-    float scale = zoomLevel_ / oldZoom;
-    viewOffset_.x = e.x - (e.x - viewOffset_.x) * scale;
-    viewOffset_.y = e.y - (e.y - viewOffset_.y) * scale;
-  }
-
+  zoomLevel_ += wheel.deltaY * 0.1f;
+  zoomLevel_ = juce::jlimit(0.5f, 2.0f, zoomLevel_);
   repaint();
 }
 
 //==============================================================================
-// Hit Testing
+// Helpers
 //==============================================================================
 
 ModulationSourceNode *
 ModulationMatrixView::hitTestSource(const juce::Point<float> &pos) {
   for (auto &node : sourceNodes_) {
-    float dist = std::sqrt(std::pow(pos.x - node.position.x, 2) +
-                           std::pow(pos.y - node.position.y, 2));
-    if (dist <= node.radius) {
+    if (pos.getDistanceFrom(node.position) < kNodeRadius + 4.0f) {
       return &node;
     }
   }
@@ -988,9 +899,7 @@ ModulationMatrixView::hitTestSource(const juce::Point<float> &pos) {
 ModulationDestNode *
 ModulationMatrixView::hitTestDest(const juce::Point<float> &pos) {
   for (auto &node : destNodes_) {
-    float dist = std::sqrt(std::pow(pos.x - node.position.x, 2) +
-                           std::pow(pos.y - node.position.y, 2));
-    if (dist <= node.radius) {
+    if (pos.getDistanceFrom(node.position) < kNodeRadius + 4.0f) {
       return &node;
     }
   }
@@ -999,173 +908,50 @@ ModulationMatrixView::hitTestDest(const juce::Point<float> &pos) {
 
 ModulationConnection *
 ModulationMatrixView::hitTestConnection(const juce::Point<float> &pos) {
-  const float hitThreshold = 8.0f;
-
+  // Simple distance check to path midpoint for now
   for (auto &conn : connections_) {
-    if (conn.path.isEmpty())
-      continue;
-
-    // Sample points along the path and check distance
     SkPathMeasure measure(conn.path, false);
-    float length = measure.getLength();
-
-    for (float dist = 0; dist < length; dist += 10.0f) {
-      SkPoint pathPos;
-      if (measure.getPosTan(dist, &pathPos, nullptr)) {
-        float d = std::sqrt(std::pow(pos.x - pathPos.fX, 2) +
-                            std::pow(pos.y - pathPos.fY, 2));
-        if (d < hitThreshold) {
-          return &conn;
-        }
-      }
+    SkPoint mid;
+    measure.getPosTan(measure.getLength() * 0.5f, &mid, nullptr);
+    if (pos.getDistanceFrom({mid.fX, mid.fY}) < 20.0f) {
+      return &conn;
     }
   }
   return nullptr;
 }
 
-//==============================================================================
-// Connection Management
-//==============================================================================
-
 void ModulationMatrixView::createConnection(const juce::String &sourceId,
                                             const juce::String &destId) {
-  // Check if connection already exists
-  for (auto &conn : connections_) {
-    if (conn.sourceId == sourceId && conn.destId == destId) {
-      // Select existing connection
-      selectedConnection_ = &conn;
-      conn.isSelected = true;
+  // Check if exists
+  for (const auto &conn : connections_) {
+    if (conn.sourceId == sourceId && conn.destId == destId)
       return;
-    }
   }
 
-  // Create new connection
   ModulationConnection conn;
   conn.sourceId = sourceId;
   conn.destId = destId;
-  conn.amount = 1.0f; // Default to 100%
+  conn.amount = 0.5f; // Default amount
   connections_.push_back(conn);
-
-  // Update in engine
-  if (engine_) {
-    engine_->getRoutingGraph().connect(sourceId, destId, conn.amount);
-  }
-
-  updateConnectionPaths();
-
-  // Select the new connection
-  selectedConnection_ = &connections_.back();
-  selectedConnection_->isSelected = true;
 }
 
 void ModulationMatrixView::deleteConnection(ModulationConnection *conn) {
-  if (!conn)
-    return;
-
-  // Remove from engine
-  if (engine_) {
-    engine_->getRoutingGraph().disconnect(conn->sourceId, conn->destId);
-  }
-
-  // Remove from our list
-  connections_.erase(std::remove_if(connections_.begin(), connections_.end(),
-                                    [conn](const ModulationConnection &c) {
-                                      return c.sourceId == conn->sourceId &&
-                                             c.destId == conn->destId;
-                                    }),
-                     connections_.end());
-
-  if (selectedConnection_ == conn) {
-    selectedConnection_ = nullptr;
-  }
-  if (hoveredConnection_ == conn) {
-    hoveredConnection_ = nullptr;
-  }
-
-  repaint();
+  // TODO: remove from vector
 }
 
 void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
                                                   float delta) {
-  if (!conn)
-    return;
-
-  conn->amount = juce::jlimit(-1.0f, 1.0f, conn->amount + delta);
-
-  // Update in engine
-  if (engine_) {
-    engine_->getRoutingGraph().connect(conn->sourceId, conn->destId,
-                                       conn->amount);
+  if (conn) {
+    conn->amount = juce::jlimit(-1.0f, 1.0f, conn->amount + delta);
+    repaint();
   }
 }
 
-//==============================================================================
-// Coordinate Transforms
-//==============================================================================
-
-juce::Point<float>
-ModulationMatrixView::screenToWorld(const juce::Point<float> &screen) const {
-  return {(screen.x - viewOffset_.x) / zoomLevel_,
-          (screen.y - viewOffset_.y) / zoomLevel_};
-}
-
-juce::Point<float>
-ModulationMatrixView::worldToScreen(const juce::Point<float> &world) const {
-  return {world.x * zoomLevel_ + viewOffset_.x,
-          world.y * zoomLevel_ + viewOffset_.y};
-}
-
-//==============================================================================
-// AI Vision Support
-//==============================================================================
-
-std::vector<SkiaComponent::AIElementInfo>
-ModulationMatrixView::getInspectableElements() {
+std::vector<AIElementInfo> ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
-
-  // Source nodes
-  for (const auto &node : sourceNodes_) {
-    auto screenPos = worldToScreen(node.position);
-    AIElementInfo info;
-    info.bounds =
-        SkRect::MakeXYWH(screenPos.x - node.radius, screenPos.y - node.radius,
-                         node.radius * 2, node.radius * 2);
-    info.type = "mod_source";
-    info.parameterId = node.id;
-    info.currentValue = node.currentValue;
-    elements.push_back(info);
-  }
-
-  // Destination nodes
-  for (const auto &node : destNodes_) {
-    auto screenPos = worldToScreen(node.position);
-    AIElementInfo info;
-    info.bounds =
-        SkRect::MakeXYWH(screenPos.x - node.radius, screenPos.y - node.radius,
-                         node.radius * 2, node.radius * 2);
-    info.type = "mod_dest";
-    info.parameterId = node.id;
-    info.currentValue = node.currentValue;
-    elements.push_back(info);
-  }
-
-  // Connections
-  for (const auto &conn : connections_) {
-    SkPathMeasure measure(conn.path, false);
-    SkPoint midPos;
-    measure.getPosTan(measure.getLength() * 0.5f, &midPos, nullptr);
-
-    auto screenPos = worldToScreen({midPos.fX, midPos.fY});
-
-    AIElementInfo info;
-    info.bounds = SkRect::MakeXYWH(screenPos.x - 20, screenPos.y - 10, 40, 20);
-    info.type = "mod_connection";
-    info.parameterId = conn.sourceId + "->" + conn.destId;
-    info.currentValue = conn.amount;
-    elements.push_back(info);
-  }
-
+  // TODO: Expose nodes and connections for AI access
   return elements;
 }
 
 } // namespace zenith
+

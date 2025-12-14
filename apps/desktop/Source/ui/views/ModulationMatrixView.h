@@ -24,11 +24,10 @@
 #include "../ZenithTheme.h"
 #include "../skia/SkiaComponent.h"
 #include "../skia/ZenithDesignSystem.h"
+#include <JuceHeader.h>
 #include <core/SkPath.h>
 #include <core/SkPathMeasure.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <random>
-
 
 namespace zenith {
 
@@ -189,6 +188,7 @@ public:
 
 private:
   Engine *engine_ = nullptr;
+  double time_ = 0.0;
 
   // Source and Destination Nodes
   std::vector<ModulationSourceNode> sourceNodes_;

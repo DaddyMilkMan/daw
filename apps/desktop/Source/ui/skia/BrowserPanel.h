@@ -163,6 +163,26 @@ private:
 
   // Drag handling
   void startItemDrag(int itemIndex);
+  juce::Image createDragImage(
+      const std::shared_ptr<BrowserItem> &item); // Helper for ghost drag
+
+  // Rich Media Helpers
+  void drawTags(SkCanvas *canvas, const std::vector<juce::String> &tags,
+                float rightBound, float centerY);
+  void onWaveformLoaded(const juce::String &path,
+                        const std::vector<float> &peaks);
+
+  // Background Waveform Loading
+  class WaveformLoader;
+  std::unique_ptr<WaveformLoader> waveformLoader_;
+
+  // Cache for list item waveforms (path -> compressed peaks)
+  // Empty vector means "loading" or "failed/empty" if it stays empty
+  struct CachedWaveform {
+    std::vector<float> peaks;
+    bool isRangeOne = false; // Normalized -1..1
+  };
+  std::map<juce::String, CachedWaveform> listWaveformCache_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserPanel)
 };

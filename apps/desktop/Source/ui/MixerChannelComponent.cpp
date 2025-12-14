@@ -17,6 +17,7 @@
 #include "../../Source/ui/skia/NeonGlow.h"
 #include "../../Source/ui/skia/SkiaTheme.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include <JuceHeader.h>
 
 
 #include <core/SkCanvas.h>
@@ -32,7 +33,6 @@ namespace zenith {
 
 namespace {
 constexpr int kNumInsertSlots = 8;
-constexpr int kNumSends = 4;
 constexpr float kInsertSlotHeight = 16.0f;
 constexpr float kSendIndicatorHeight = 20.0f;
 constexpr float kChannelStripWidth = 100.0f;
@@ -126,7 +126,7 @@ MixerChannelComponent::MixerChannelComponent(Track *track, bool isMaster)
   }
 
   // Create send indicators
-  for (int i = 0; i < kNumSends; ++i) {
+  for (int i = 0; i < zenith::constants::kNumSends; ++i) {
     auto send = std::make_unique<SendIndicator>(i);
     addAndMakeVisible(send.get());
     sendIndicators_.push_back(std::move(send));
@@ -238,7 +238,7 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 
 void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds().reduced(8);
-  float stripWidth = static_cast<float>(bounds.getWidth());
+  // Removed unused stripWidth
 
   // Top section: Track name
   int topHeight = isMaster_ ? 40 : 34;
@@ -272,8 +272,8 @@ void MixerChannelComponent::resized() {
 
   // Send indicators (above buttons)
   float sendHeight = kSendIndicatorHeight;
-  auto sendArea =
-      bounds.removeFromBottom(static_cast<int>(sendHeight * kNumSends + 8));
+  auto sendArea = bounds.removeFromBottom(
+      static_cast<int>(sendHeight * zenith::constants::kNumSends + 8));
   sendArea.removeFromBottom(4);
 
   for (auto &send : sendIndicators_) {
@@ -645,9 +645,11 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
 
   if (isOccupied_) {
     textPaint.setColor(colors::TEXT_PRIMARY);
-    // Truncate plugin name if needed
-    juce::String displayName = pluginName_.substring(0, 12);
-    if (pluginName_.length() > 12)
+    // Truncate plugin name if needed (Fixed buffer overflow risk by using
+    // constexpr bound)
+    constexpr int kMaxPluginNameLength = 12;
+    juce::String displayName = pluginName_.substring(0, kMaxPluginNameLength);
+    if (pluginName_.length() > kMaxPluginNameLength)
       displayName += "...";
     canvas->drawString(displayName.toRawUTF8(), 4, skBounds.centerY() + 3, font,
                        textPaint);

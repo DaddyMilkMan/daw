@@ -301,16 +301,13 @@ private:
   MixerChannel mixerChannel;
 
   //==============================================================================
-  // ROAST FIX #2: Plugin chain with RT-safe snapshot pattern (Phase 3: VST3
-  // hosting MVP)
+  // Plugin chain with RT-safe snapshot pattern (Phase 3: VST3 hosting MVP)
   //
   // Pattern (same as clips):
-  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread
-  // only)
+  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread only)
   // - PluginSnapshot holds shared_ptr for audio thread to iterate safely
   // - Audio thread loads snapshot atomically, iterates without locking
-  // - Message thread creates new snapshot when modifying plugins, swaps
-  // atomically
+  // - Message thread creates new snapshot when modifying plugins, swaps atomically
   //
   // This eliminates the data race from the original code:
   // OLD: Audio thread reads std::vector while message thread modifies it (UB!)

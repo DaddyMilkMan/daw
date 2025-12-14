@@ -20,7 +20,7 @@
 #include <juce_dsp/juce_dsp.h>
 #include <vector>
 #include <atomic>
-#include "AudioFifo.h"
+#include "../../dsp/AudioFifo.h"
 
 namespace zenith {
 

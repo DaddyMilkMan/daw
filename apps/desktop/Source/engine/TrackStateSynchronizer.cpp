@@ -115,7 +115,7 @@ void TrackStateSynchronizer::syncAll()
         syncTrackProperty(track, ProjectState::PROP_MUTE);
         syncTrackProperty(track, ProjectState::PROP_SOLO);
         syncTrackProperty(track, ProjectState::PROP_ARMED);
-        syncTrackProperty(track, ProjectState::PROP_INPUT_CHANNEL); // ROAST FIX #9
+        syncTrackProperty(track, ProjectState::PROP_INPUT_CHANNEL); // Sync audio input routing
     }
 
     DBG("TrackStateSynchronizer: Sync complete");
@@ -164,7 +164,7 @@ void TrackStateSynchronizer::valueTreeChildAdded(
         track->setPan(child[zenith::ProjectState::PROP_PAN]);
         track->setMuted(child[zenith::ProjectState::PROP_MUTE]);
         track->setSolo(child[zenith::ProjectState::PROP_SOLO]);
-        track->setInputChannel(child[zenith::ProjectState::PROP_INPUT_CHANNEL]); // ROAST FIX #9
+        track->setInputChannel(child[zenith::ProjectState::PROP_INPUT_CHANNEL]); // Set audio input routing
         
         // Add to Engine
         engine.addTrack(std::move(track));

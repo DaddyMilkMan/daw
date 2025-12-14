@@ -38,14 +38,20 @@ option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 # Always enable Skia (Phase 2 decision)
 # add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
 
-# JUCE Setup
-include(FetchContent)
-FetchContent_Declare(
-    JUCE
-    GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
-    GIT_TAG 8.0.0
-)
-FetchContent_MakeAvailable(JUCE)
+# JUCE Setup - prefer local directory if available
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
+    message(STATUS "Using local JUCE from external/JUCE")
+    add_subdirectory(external/JUCE)
+else()
+    message(STATUS "Fetching JUCE from GitHub...")
+    include(FetchContent)
+    FetchContent_Declare(
+        JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG 8.0.0
+    )
+    FetchContent_MakeAvailable(JUCE)
+endif()
 
 # Find Skia (from vcpkg)
 # find_package(unofficial-skia CONFIG REQUIRED) - Using Manual Integration
@@ -53,6 +59,7 @@ FetchContent_MakeAvailable(JUCE)
 # Source files
 set(ZENITH_SOURCES
     apps/desktop/Source/Main.cpp
+    apps/desktop/Source/utils/SampleGenerator.cpp
 )
 
 # Test sources (optional, can be disabled)
@@ -131,6 +138,7 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
 )
 
 target_link_libraries(ZenithDAW PRIVATE
@@ -302,6 +310,7 @@ if(BUILD_TESTS)
         apps/desktop/Source 
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
+        "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
@@ -319,6 +328,12 @@ if(BUILD_TESTS)
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
     )
+
+    if(ZENITH_ENABLE_SKIA)
+        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
+        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
+        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+    endif()
 endif()
 
 # Installation

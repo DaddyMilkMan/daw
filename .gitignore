@@ -39,6 +39,7 @@ build_verbose.txt
 cmake_error*.log
 msbuild_*.log
 *.log
+debug_log.txt
 
 # 7. Backup Files
 *.bak
@@ -47,4 +48,14 @@ msbuild_*.log
 *.backup
 *.orig
 
-debug_log.txt
+# 8. Python Artifacts
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+
+# 9. Images in root (stray artifacts)
+/*.png
+/*.jpg
+/*.gif

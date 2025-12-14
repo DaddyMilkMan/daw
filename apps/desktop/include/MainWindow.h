@@ -9,13 +9,13 @@
 
 #pragma once
 
+#include "../Source/ui/SessionViewComponent.h"
 #include "../Source/ui/skia/BottomBar.h"
 #include "../Source/ui/skia/BrowserPanel.h"
 #include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButton.h"
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/skia/views/SessionViewComponent.h"
 #include "../Source/ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
@@ -40,6 +40,7 @@ class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
+class ZenithHubComponent;
 } // namespace zenith
 
 //==============================================================================
@@ -141,7 +142,13 @@ private:
   // Phase 1: Audio import
   //==========================================================================
 
+  // Phase 1: Audio import
+  //==========================================================================
+
   void handleImportAudio();
+
+  // Zenith Hub (Start Screen)
+  std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };

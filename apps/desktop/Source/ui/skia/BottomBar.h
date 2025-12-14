@@ -12,12 +12,17 @@
 
 #pragma once
 
-#include "views/PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
+#include "views/PianoKeyboardViewSkia.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
+class Engine;
+class ProjectState;
+class ProjectState;
+class DeviceChainComponent;
+class MixerComponent;
+#include "../../../include/ui/MixerComponent.h"
 
 // Forward declarations
 namespace ai {
@@ -29,7 +34,8 @@ class DebugConsoleComponent;
 
 class BottomBar : public SkiaComponent {
 public:
-  explicit BottomBar(juce::MidiKeyboardState &state);
+  BottomBar(juce::MidiKeyboardState &state, Engine &engine,
+            ProjectState &projectState);
   ~BottomBar() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -37,6 +43,9 @@ public:
 
   void setKeyboardVisible(bool visible);
   bool isKeyboardVisible() const { return keyboardVisible_; }
+
+  void setDeviceChainVisible(bool visible);
+  bool isDeviceChainVisible() const { return deviceChainVisible_; }
 
   // Debug Console integration
   void setDebugger(ai::SessionDebuggerAgent *debugger);
@@ -47,8 +56,11 @@ private:
   juce::MidiKeyboardState &midiState_;
   std::unique_ptr<PianoKeyboardViewSkia> pianoKeyboard_;
   std::unique_ptr<DebugConsoleComponent> debugConsole_;
+  std::unique_ptr<DeviceChainComponent> deviceChain_;
+  std::unique_ptr<MixerComponent> mixerComponent_;
 
   bool keyboardVisible_ = false;
+  bool deviceChainVisible_ = true;  // Show device chain by default
   bool debugConsoleVisible_ = true; // Show by default
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BottomBar)

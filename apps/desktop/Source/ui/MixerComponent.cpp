@@ -1,13 +1,6 @@
 /**
  * @file MixerComponent.cpp
- * @brief Full-featured Mixer component implementation
- *
- * Implements a professional-grade mixer view with:
- * - Horizontal scrolling for many tracks
- * - Master channel strip
- * - GPU-accelerated Skia rendering
- * - Glassmorphic panel design
- * - Selection glow on active channel
+ * @brief Main mixer interface with horizontal scrolling and master strip
  */
 
 #include "../../include/ui/MixerComponent.h"
@@ -16,6 +9,8 @@
 #include "../../include/Engine.h"
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../engine/Track.h"
+#include <JuceHeader.h>
+
 
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
@@ -124,11 +119,6 @@ MixerComponent::~MixerComponent() {
 //==============================================================================
 // Rendering
 //==============================================================================
-
-void MixerComponent::paint(juce::Graphics &g) {
-  // Basic background for JUCE fallback
-  g.fillAll(juce::Colour(0xff1e1e1e));
-}
 
 void MixerComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
