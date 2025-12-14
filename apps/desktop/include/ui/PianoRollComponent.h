@@ -160,6 +160,27 @@ public:
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
   void applyVelocityCurve(VelocityCurve curve, float amount = 1.0f);
 
+  //==========================================================================
+  // Tool System
+  //==========================================================================
+
+  /** Available editing tools */
+  enum class Tool {
+    Select, // Selection and manipulation of existing notes
+    Draw,   // Create notes on click
+    Erase,  // Delete notes on click
+    Slice   // Split notes at cursor position
+  };
+
+  /** Set current editing tool */
+  void setCurrentTool(Tool tool);
+  Tool getCurrentTool() const { return currentTool; }
+
+  /** Piano key interaction */
+  void playPianoKey(int pitch, int velocity = 100);
+  void stopPianoKey(int pitch);
+  int getHoveredPianoKey() const { return hoveredPianoKey; }
+
   /** Duplicate selected notes with smart offset */
   void smartDuplicate();
 
@@ -972,6 +993,7 @@ private:
   static constexpr int RULER_HEIGHT = 30;
   int velocityLaneHeight = 160; // Increased from 120 for better precision
                                 // (~1.26px per velocity value)
+  float noteGridHeight = 0.0f;  // Cached note grid height
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
@@ -1000,6 +1022,11 @@ private:
 
   // Cursor state
   CursorType currentCursorType = CursorType::Normal;
+
+  // Tool state
+  Tool currentTool = Tool::Select;
+  int hoveredPianoKey = -1; // -1 = no key hovered
+  int playingPianoKey = -1; // -1 = no key being played
 
   //==========================================================================
   // Ghost Notes State
