@@ -769,6 +769,115 @@ inline SkPath EyeOff() {
 }
 
 // ============================================================================
+// HUB ICONS
+// ============================================================================
+
+/** Project - Folder with a project indicator */
+inline SkPath Project() {
+  SkPath path;
+  // Robust folder shape
+  path.moveTo(4.0f, 6.0f);
+  path.cubicTo(4.0f, 5.0f, 5.0f, 4.0f, 6.0f, 4.0f);
+  path.lineTo(9.0f, 4.0f);  // Tab start
+  path.lineTo(11.0f, 6.0f); // Tab slope
+  path.lineTo(20.0f, 6.0f); // Top right
+  path.lineTo(20.0f, 18.0f);
+  path.cubicTo(20.0f, 19.0f, 19.0f, 20.0f, 18.0f, 20.0f);
+  path.lineTo(4.0f, 20.0f);
+  path.close();
+
+  // Project star symbol inside
+  path.moveTo(12.0f, 11.0f);
+  path.lineTo(13.0f, 14.0f);
+  path.lineTo(16.0f, 14.0f);
+  path.lineTo(13.5f, 16.0f);
+  path.lineTo(14.5f, 19.0f);
+  path.lineTo(12.0f, 17.0f);
+  path.lineTo(9.5f, 19.0f);
+  path.lineTo(10.5f, 16.0f);
+  path.lineTo(8.0f, 14.0f);
+  path.lineTo(11.0f, 14.0f);
+  path.close();
+  return path;
+}
+
+/** Template - Layout document */
+inline SkPath Template() {
+  SkPath path;
+  // Document outline
+  path.addRoundRect(SkRect::MakeLTRB(5.0f, 4.0f, 19.0f, 20.0f), 2.0f, 2.0f);
+  // Header section
+  path.moveTo(5.0f, 9.0f);
+  path.lineTo(19.0f, 9.0f);
+  // Sidebar/Column split
+  path.moveTo(10.0f, 9.0f);
+  path.lineTo(10.0f, 20.0f);
+  return path;
+}
+
+/** Cloud */
+inline SkPath Cloud() {
+  SkPath path;
+  // Flat bottom
+  path.moveTo(6.0f, 19.0f);
+  path.lineTo(18.0f, 19.0f);
+  // Curves
+  path.cubicTo(20.0f, 19.0f, 21.0f, 17.0f, 21.0f, 15.0f); // Right bottom
+  path.cubicTo(21.0f, 12.0f, 19.0f, 11.0f, 18.0f, 11.5f); // Right top
+  path.cubicTo(17.5f, 8.0f, 13.5f, 7.0f, 12.0f, 9.0f);    // Top main
+  path.cubicTo(9.0f, 7.5f, 5.0f, 9.0f, 5.0f, 13.0f);      // Left bubble
+  path.cubicTo(3.0f, 13.0f, 3.0f, 19.0f, 6.0f, 19.0f);    // Left bottom
+  path.close();
+  return path;
+}
+
+/** Synth - Keyboard representation */
+inline SkPath Synth() {
+  SkPath path;
+  // Outer frame
+  path.addRect(SkRect::MakeLTRB(2.0f, 7.0f, 22.0f, 17.0f));
+  // White keys separators
+  path.moveTo(7.0f, 7.0f);
+  path.lineTo(7.0f, 17.0f);
+  path.moveTo(12.0f, 7.0f);
+  path.lineTo(12.0f, 17.0f);
+  path.moveTo(17.0f, 7.0f);
+  path.lineTo(17.0f, 17.0f);
+  // Black keys (filled rects usually, but we are stroking)
+  // Let's draw small rects at top
+  path.addRect(SkRect::MakeLTRB(5.5f, 7.0f, 8.5f, 12.0f));
+  path.addRect(
+      SkRect::MakeLTRB(10.5f, 7.0f, 13.5f, 12.0f)); // Gap? Usually 2-3 pattern.
+  // Let's do a simple pattern: C# D# - F# G# A#
+  // Just generic:
+  path.addRect(SkRect::MakeLTRB(15.5f, 7.0f, 18.5f, 12.0f));
+  return path;
+}
+
+/** MusicNote - Beamed note (explicit definition) */
+inline SkPath MusicNote() {
+  SkPath path;
+  // Note heads
+  path.addCircle(8.0f, 17.0f, 3.0f);
+  path.addCircle(18.0f, 16.0f, 3.0f);
+  // Stems
+  path.moveTo(10.5f, 17.0f);
+  path.lineTo(10.5f, 7.0f);
+  path.lineTo(20.5f, 6.0f);
+  path.lineTo(20.5f, 16.0f);
+  // Beam
+  path.moveTo(10.5f, 10.0f);
+  path.lineTo(20.5f, 9.0f);
+  return path;
+}
+
+/** Microphone alias (with strict signature) */
+inline SkPath Microphone() { return Arm(); }
+
+/** Waveform alias */
+inline SkPath Waveform() { return Audio(); }
+
+// ============================================================================
 // DRAWING HELPERS
 // ============================================================================
 

@@ -9,9 +9,9 @@
 */
 
 #include "BottomBar.h"
+#include "../../../include/ui/MixerComponent.h"
 #include "../../ai/SessionDebuggerAgent.h"
 #include "DebugConsoleComponent.h"
-
 
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
 
@@ -25,15 +25,28 @@
 
 #endif
 
+#include "../../../include/Engine.h"
+#include "DeviceChainComponent.h"
+
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-BottomBar::BottomBar(juce::MidiKeyboardState &state) : midiState_(state) {
+BottomBar::BottomBar(juce::MidiKeyboardState &state, Engine &engine,
+                     ProjectState &projectState)
+    : midiState_(state) {
   // Create Piano Keyboard
   pianoKeyboard_ = std::make_unique<PianoKeyboardViewSkia>(
       midiState_, juce::MidiKeyboardComponent::horizontalKeyboard);
   addChildComponent(pianoKeyboard_.get());
+
+  // Create Device Chain
+  deviceChain_ = std::make_unique<DeviceChainComponent>(engine, projectState);
+  addChildComponent(deviceChain_.get());
+
+  // Create Mixer Component
+  mixerComponent_ = std::make_unique<MixerComponent>(engine, projectState);
+  addChildComponent(mixerComponent_.get());
 
   // Debug console is created when setDebugger is called
 
@@ -41,7 +54,13 @@ BottomBar::BottomBar(juce::MidiKeyboardState &state) : midiState_(state) {
   setSize(800, 150);
 }
 
-BottomBar::~BottomBar() = default;
+BottomBar::~BottomBar() {
+  // Destructor implementation needed because of unique_ptr to incomplete types
+  pianoKeyboard_.reset();
+  debugConsole_.reset();
+  deviceChain_.reset();
+  mixerComponent_.reset();
+}
 
 void BottomBar::setDebugger(ai::SessionDebuggerAgent *debugger) {
   if (debugger) {
@@ -62,6 +81,15 @@ void BottomBar::setDebugConsoleVisible(bool visible) {
   repaint();
 }
 
+void BottomBar::setDeviceChainVisible(bool visible) {
+  deviceChainVisible_ = visible;
+  if (deviceChain_)
+    deviceChain_->setVisible(visible);
+  if (mixerComponent_)
+    mixerComponent_->setVisible(!visible && !keyboardVisible_);
+  resized();
+}
+
 void BottomBar::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds().toFloat();
   SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
@@ -78,50 +106,37 @@ void BottomBar::drawSkia(SkCanvas *canvas) {
   // Top border glow
   canvas->drawLine(0.0f, 0.0f, skBounds.width(), 0.0f, borderPaint_);
 
-  // If keyboard is hidden, show mixer strip
+  // If keyboard is hidden, show mixer strip OR device chain
   if (!keyboardVisible_) {
-    // Calculate available width (accounting for debug console if visible)
-    float availableWidth = skBounds.width();
-    if (debugConsoleVisible_ && debugConsole_) {
-      availableWidth -= (debugConsole_->getWidth() + 20.0f);
-    }
 
-    // Draw 8 channel strips
-    int numChannels = 8;
-    float stripWidth = availableWidth / numChannels;
+    // If we have a real device chain component visible, don't draw the fake one
+    if (deviceChainVisible_ && deviceChain_) {
+      // Do nothing here, child component draws itself
+    } else if (mixerComponent_ && mixerComponent_->isVisible()) {
+      // Draw Mixer Component manually if needed
+      // Since MixerComponent is a child, usually it doesn't need manual
+      // drawSkia call if the parent implementation called drawChildren().
+      // SkiaComponent::drawSkia() does NOT automatically call drawChildren().
+      // However, usually we rely on JUCE's paint() to trigger child repaints.
+      // BUT for Skia, we want a single canvas pass.
 
-    for (int i = 0; i < numChannels; ++i) {
-      float x = i * stripWidth;
+      // We will manually invoke drawSkia on the mixer component to ensure it
+      // renders on THIS canvas.
 
-      // Channel background
-      SkRect channelRect =
-          SkRect::MakeXYWH(x + 4, 10, stripWidth - 8, skBounds.height() - 20);
-      canvas->drawRoundRect(channelRect, 4.0f, 4.0f, channelBgPaint_);
+      canvas->save();
+      // Translate to mixer position
+      auto mixerBounds = mixerComponent_->getBounds();
+      // Editor scale factor might be needed but getLocalBounds usually suffices
+      // for internal translation
+      canvas->translate(mixerBounds.getX(), mixerBounds.getY());
 
-      // Volume meter (placeholder - would connect to actual channels)
-      float meterHeight = channelRect.height() - 40;
-      float meterLevel = 0.3f + (i * 0.05f); // Demo levels
+      // Clip is important
+      canvas->clipRect(
+          SkRect::MakeWH(mixerBounds.getWidth(), mixerBounds.getHeight()));
 
-      // Meter track
-      SkRect meterTrack = SkRect::MakeXYWH(
-          channelRect.centerX() - 8, channelRect.y() + 25, 16, meterHeight);
-      canvas->drawRoundRect(meterTrack, 2.0f, 2.0f, meterTrackPaint_);
+      mixerComponent_->drawSkia(canvas);
 
-      // Meter fill (green to red gradient)
-      float fillHeight = meterHeight * meterLevel;
-      SkRect meterFill = SkRect::MakeXYWH(
-          meterTrack.left(), meterTrack.bottom() - fillHeight, 16, fillHeight);
-
-      SkColor meterColor = meterLevel > 0.8f
-                               ? 0xFFFF3232
-                               : (meterLevel > 0.6f ? 0xFFFFC800 : 0xFF00FF64);
-      meterFillPaint_.setColor(meterColor);
-      canvas->drawRoundRect(meterFill, 2.0f, 2.0f, meterFillPaint_);
-
-      // Channel label
-      juce::String label = juce::String(i + 1);
-      canvas->drawString(label.toStdString().c_str(), channelRect.centerX() - 4,
-                         channelRect.y() + 15, font_, textPaint_);
+      canvas->restore();
     }
   }
 }
@@ -174,17 +189,40 @@ void BottomBar::resized() {
     // Piano takes full height if visible
     if (keyboardVisible_) {
       pianoKeyboard_->setBounds(area);
+      if (deviceChain_)
+        deviceChain_->setVisible(false);
+    } else {
+      // Keyboard hidden
+      pianoKeyboard_->setVisible(false);
+
+      // Setup Device Chain area
+      auto linkArea = area;
+
+      // Position debug console in the bottom-right corner
+      if (debugConsole_ && debugConsoleVisible_) {
+        int consoleWidth = 320;
+        int consoleHeight = debugConsole_->isExpanded() ? 120 : 32;
+
+        debugConsole_->setBounds(area.getRight() - consoleWidth - 10,
+                                 area.getCentreY() - consoleHeight / 2,
+                                 consoleWidth, consoleHeight);
+
+        // Should device chain avoid console?
+        linkArea.removeFromRight(consoleWidth + 20);
+      }
+
+      if (deviceChain_ && deviceChainVisible_) {
+        deviceChain_->setVisible(true);
+        deviceChain_->setBounds(linkArea);
+        if (mixerComponent_)
+          mixerComponent_->setVisible(false);
+      } else if (mixerComponent_) {
+        mixerComponent_->setVisible(true);
+        mixerComponent_->setBounds(linkArea);
+        if (deviceChain_)
+          deviceChain_->setVisible(false);
+      }
     }
-  }
-
-  // Position debug console in the bottom-right corner
-  if (debugConsole_ && debugConsoleVisible_) {
-    int consoleWidth = 320;
-    int consoleHeight = debugConsole_->isExpanded() ? 120 : 32;
-
-    debugConsole_->setBounds(area.getRight() - consoleWidth - 10,
-                             area.getCentreY() - consoleHeight / 2,
-                             consoleWidth, consoleHeight);
   }
 }
 
@@ -193,6 +231,8 @@ void BottomBar::setKeyboardVisible(bool visible) {
   if (pianoKeyboard_) {
     pianoKeyboard_->setVisible(visible);
   }
+  // Trigger resized to update mixer visibility
+  resized();
   repaint();
 }
 

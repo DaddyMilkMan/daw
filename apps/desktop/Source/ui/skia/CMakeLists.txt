@@ -1,6 +1,7 @@
 if(ZENITH_ENABLE_SKIA)
     target_sources(ZenithDAW PRIVATE
         # Core UI
+        AuroraBackground.cpp
         BottomBar.cpp
         BrowserPanel.cpp
         DebugConsoleComponent.cpp
@@ -11,9 +12,10 @@ if(ZENITH_ENABLE_SKIA)
         ZenithDesignSystem.cpp
         FontManager.cpp
         ZenithLayout.cpp
-        FontManager.cpp
+
         ZenithPolySynthUI.cpp
         ExportDialog.cpp
+        DeviceChainComponent.cpp
         ../../rendering/SkiaRenderer.cpp
         
         # Legacy Skia widgets (to be deprecated)

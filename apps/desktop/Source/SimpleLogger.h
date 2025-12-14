@@ -3,6 +3,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <juce_core/juce_core.h>
 
 #if JUCE_WINDOWS
 #ifndef NOMINMAX
@@ -21,10 +22,20 @@ inline void showDebugConsole() {
 #endif
 }
 
+inline juce::File getDebugLogFile() {
+  // Use portable path: Documents/ZenithDAW/debug_log.txt
+  return juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+      .getChildFile("ZenithDAW")
+      .getChildFile("debug_log.txt");
+}
+
 inline void logToFile(const std::string &msg) {
-  // File logging
+  // File logging - using portable path
+  auto logFile = getDebugLogFile();
+  logFile.getParentDirectory().createDirectory();
+  
   std::ofstream outfile;
-  outfile.open("C:\\zenith\\daw\\debug_log.txt", std::ios_base::app);
+  outfile.open(logFile.getFullPathName().toStdString(), std::ios_base::app);
   outfile << msg << std::endl;
 
   // Console logging

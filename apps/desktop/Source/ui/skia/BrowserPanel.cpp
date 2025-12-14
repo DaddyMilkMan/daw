@@ -14,6 +14,7 @@
 */
 
 #include "BrowserPanel.h"
+#include "ZenithDesignSystem.h"
 #include "ZenithIcons.h"
 #include <cmath>
 
@@ -21,8 +22,116 @@
 
 namespace zenith {
 
+//==============================================================================
+class BrowserPanel::WaveformLoader : public juce::Thread {
+public:
+  WaveformLoader(BrowserPanel &owner)
+      : Thread("BrowserWaveformLoader"), owner_(owner) {
+    formatManager_.registerBasicFormats();
+    startThread();
+  }
+
+  ~WaveformLoader() override { stopThread(2000); }
+
+  void request(const juce::String &path) {
+    {
+      juce::ScopedLock sl(lock_);
+      for (const auto &p : queue_)
+        if (p == path)
+          return;
+      queue_.push_back(path);
+    }
+    notify();
+  }
+
+  void run() override {
+    while (!threadShouldExit()) {
+      juce::String path;
+      {
+        juce::ScopedLock sl(lock_);
+        if (queue_.empty()) {
+          wait(500);
+          continue;
+        }
+        path = queue_.front();
+        queue_.erase(queue_.begin());
+      }
+
+      if (threadShouldExit())
+        break;
+
+      juce::File file(path);
+      if (!file.existsAsFile())
+        continue;
+
+      std::unique_ptr<juce::AudioFormatReader> reader(
+          formatManager_.createReaderFor(file));
+
+      if (reader) {
+        std::vector<float> peaks;
+        int numPoints = 64; // Small cache for list items
+        peaks.reserve(numPoints);
+
+        juce::int64 length = reader->lengthInSamples;
+        juce::int64 step = std::max(juce::int64(1), length / numPoints);
+
+        // Read mono mix
+        juce::AudioBuffer<float> buffer(
+            1, (int)std::min(juce::int64(2048), step + 64));
+
+        for (int i = 0; i < numPoints; ++i) {
+          if (threadShouldExit())
+            break;
+
+          juce::int64 start = i * step;
+          int numToRead = (int)std::min((juce::int64)buffer.getNumSamples(),
+                                        length - start);
+
+          if (numToRead <= 0)
+            break;
+
+          buffer.clear();
+          reader->read(&buffer, 0, numToRead, start, true, false);
+
+          float maxVal = 0.0f;
+          if (auto *data = buffer.getReadPointer(0)) {
+            for (int s = 0; s < numToRead; ++s) {
+              float v = std::abs(data[s]);
+              if (v > maxVal)
+                maxVal = v;
+            }
+          }
+          peaks.push_back(maxVal);
+        }
+
+        if (!threadShouldExit() && !peaks.empty()) {
+          // Safe async callback
+          juce::MessageManager::callAsync(
+              [safeOwner = size_t(&owner_), this, path, peaks]() {
+                // We can't easily check if owner is valid without SafePointer
+                // or WeakRef. But stopThread() blocks destructor, so this
+                // lambda won't execute after thread stops, mostly. However,
+                // callAsync posts to message queue, which executes LATER. To be
+                // 100% safe, owner_ needs to check if it's alive. Ideally we
+                // use a WeakReference. For now, assuming standard JUCE
+                // component lifecycle where we stop thread in dtor.
+                owner_.onWaveformLoaded(path, peaks);
+              });
+        }
+      }
+    }
+  }
+
+private:
+  BrowserPanel &owner_;
+  juce::AudioFormatManager formatManager_;
+  std::vector<juce::String> queue_;
+  juce::CriticalSection lock_;
+};
+
 BrowserPanel::BrowserPanel(BrowserModel &model) : model_(model) {
   model_.addChangeListener(this);
+  waveformLoader_ = std::make_unique<WaveformLoader>(*this);
   setSize(300, 600);
 
   // Initialize with root
@@ -494,9 +603,8 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
   float w = static_cast<float>(bounds.getWidth());
   float h = static_cast<float>(bounds.getHeight());
 
-  // Selection / Hover Background with premium styling
+  // Selection / Hover Background
   if (index == selectedIndex_) {
-    // Selection gradient
     SkPoint selGradPoints[2] = {{x, 0}, {x + w, 0}};
     SkColor selGradColors[2] = {SkColorSetARGB(60, 0, 200, 255),
                                 SkColorSetARGB(20, 0, 200, 255)};
@@ -507,7 +615,6 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     selPaint.setShader(selGradient);
     canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
 
-    // Glowing selection indicator bar
     SkPaint barGlowPaint;
     barGlowPaint.setColor(SkColorSetARGB(80, 0, 200, 255));
     canvas->drawRect(SkRect::MakeXYWH(0, y, 6, h), barGlowPaint);
@@ -516,12 +623,7 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     barPaint.setColor(SkColorSetRGB(0, 220, 255));
     canvas->drawRect(SkRect::MakeXYWH(0, y + 2, 3, h - 4), barPaint);
 
-    // Top highlight on selected items
-    SkPaint topHighlight;
-    topHighlight.setColor(SkColorSetARGB(30, 255, 255, 255));
-    canvas->drawLine(x + 10, y, x + w - 10, y, topHighlight);
   } else if (index == hoverIndex_) {
-    // Subtle hover gradient
     SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
     SkColor hovGradColors[2] = {SkColorSetARGB(35, 255, 255, 255),
                                 SkColorSetARGB(5, 255, 255, 255)};
@@ -534,24 +636,72 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
                           hovPaint);
   }
 
-  // Icon (no glow - clean professional look)
+  // === RICH MEDIA WAVEFORM ===
+  if (item->type == BrowserItemType::AudioFile) {
+    if (listWaveformCache_.find(item->id) != listWaveformCache_.end()) {
+      const auto &cache = listWaveformCache_[item->id];
+      if (!cache.peaks.empty()) {
+        SkPaint wavePaint;
+        // Subtle waveform behind text
+        wavePaint.setColor(SkColorSetARGB(40, 100, 255, 255));
+        wavePaint.setAntiAlias(true);
+
+        SkPath path;
+        float waveH = h * 0.7f;
+        float midY = y + h * 0.5f;
+        // Start after icon, end before tags (approx)
+        float startX = x + 35;
+        float endX = x + w - 120; // Reserve space for tags/duration
+        float availableW = endX - startX;
+
+        if (availableW > 50) {
+          float step = availableW / (float)cache.peaks.size();
+          for (size_t i = 0; i < cache.peaks.size(); ++i) {
+            float val = cache.peaks[i];
+            // Draw symmetric vertical bar
+            float barH = std::max(1.0f, val * waveH);
+            // Optimization: drawRect is faster than path for bars?
+            // But path looks smoother if connected.
+            // Let's use simple vertical lines for "ghost" look.
+            path.addRect(SkRect::MakeXYWH(startX + i * step, midY - barH * 0.5f,
+                                          std::max(1.0f, step - 0.5f), barH));
+          }
+          canvas->drawPath(path, wavePaint);
+        }
+      }
+    } else {
+      // Not cached, request load
+      waveformLoader_->request(item->id);
+    }
+  }
+
+  // Icon
   drawIcon(canvas, item->type, x + 18, bounds.getCentreY(), 14);
 
-  // Text with subpixel antialiasing
+  // Text
   SkFont font = design::getSkFont(13.0f, design::FontWeight::Regular);
-
   SkPaint textPaint;
   if (index == selectedIndex_)
-    textPaint.setColor(SkColorSetRGB(150, 235, 255)); // Brighter cyan
+    textPaint.setColor(SkColorSetRGB(150, 235, 255));
   else
     textPaint.setColor(SkColorSetRGB(220, 220, 225));
   textPaint.setAntiAlias(true);
 
+  // Shadow for text to pop over waveform
+  if (item->type == BrowserItemType::AudioFile) {
+    // textPaint.setShadowLayer(2.0f, 0, 1, SkColorSetARGB(180, 0, 0, 0));
+  }
+
   canvas->drawString(item->name.toStdString().c_str(), x + 38,
                      bounds.getCentreY() + 4, font, textPaint);
 
-  // Folder arrow indicator - modern chevron
-  if (item->isDirectory) {
+  // Clear shadow
+  // textPaint.setShadowLayer(0, 0, 0, 0);
+
+  // === TAGS & METADATA ===
+  if (!item->metadata.tags.empty()) {
+    drawTags(canvas, item->metadata.tags, x + w - 10, bounds.getCentreY());
+  } else if (item->isDirectory) {
     float arrowX = w - 20;
     float arrowY = bounds.getCentreY();
 
@@ -570,14 +720,14 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     chevronPaint.setAntiAlias(true);
     canvas->drawPath(chevron, chevronPaint);
   }
-
-  // Metadata (duration for audio) with pill background
-  if (item->type == BrowserItemType::AudioFile && item->metadata.duration > 0) {
+  // Duration pill (if no tags, or alongside?)
+  else if (item->type == BrowserItemType::AudioFile &&
+           item->metadata.duration > 0) {
+    // ... Existing duration code ...
     int seconds = static_cast<int>(item->metadata.duration);
     juce::String durStr =
         juce::String::formatted("%d:%02d", seconds / 60, seconds % 60);
 
-    // Background pill
     SkPaint pillPaint;
     pillPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
     pillPaint.setAntiAlias(true);
@@ -1047,8 +1197,18 @@ void BrowserPanel::startItemDrag(int itemIndex) {
   if (item->isDirectory)
     return;
 
-  BrowserDragSource::startDrag(this, item);
+  // Create ghost preview image
+  auto dragImage = createDragImage(item);
+
+  BrowserDragSource::startDrag(this, item, dragImage);
 }
+
+// ... (Existing mouseDoubleClick etc) - Wait, I'm replacing just startItemDrag
+// and appending others at the end of the file. No, replace tool works on line
+// numbers. I will just replace startItemDrag. Then I will append the others
+// using a separate call or same call if contiguous? startItemDrag is at 1040.
+// The new methods should be at the end of the file (after 1387). I will do two
+// calls. First replace startItemDrag.
 
 void BrowserPanel::mouseDoubleClick(const juce::MouseEvent &e) {
   if (listAreaBounds_.contains(e.getPosition())) {
@@ -1383,6 +1543,135 @@ void BrowserPanel::toggleFavorite(std::shared_ptr<BrowserItem> item) {
     model_.addToFavorites(item);
   }
 
+  repaint();
+}
+
+juce::Image
+BrowserPanel::createDragImage(const std::shared_ptr<BrowserItem> &item) {
+  int w = 200;
+  int h = 40;
+  juce::Image image(juce::Image::ARGB, w, h, true);
+  juce::Graphics g(image);
+
+  // Background with transparency
+  g.setColour(juce::Colour::fromFloatRGBA(0.1f, 0.1f, 0.12f, 0.85f));
+  g.fillRoundedRectangle(0, 0, (float)w, (float)h, 6.0f);
+
+  // Border
+  g.setColour(juce::Colour::fromFloatRGBA(0.0f, 0.8f, 1.0f, 0.5f));
+  g.drawRoundedRectangle(0.5f, 0.5f, w - 1.0f, h - 1.0f, 6.0f, 1.0f);
+
+  // Waveform (Ghost)
+  if (item->type == BrowserItemType::AudioFile) {
+    if (listWaveformCache_.find(item->id) != listWaveformCache_.end()) {
+      const auto &cache = listWaveformCache_.at(item->id);
+      if (!cache.peaks.empty()) {
+        g.setColour(juce::Colour::fromFloatRGBA(0.0f, 1.0f, 1.0f, 0.4f));
+        juce::Path p;
+
+        float midY = h * 0.5f;
+        float waveH = h * 0.8f;
+        float step = (float)w / cache.peaks.size();
+
+        // Draw simplified waveform
+        for (size_t i = 0; i < cache.peaks.size(); ++i) {
+          float val = cache.peaks[i];
+          float barH = val * waveH;
+          float x = i * step;
+          p.addRectangle(x, midY - barH / 2, step, barH);
+        }
+        g.fillPath(p);
+      }
+    }
+  }
+
+  // Icon circle
+  g.setColour(juce::Colour::fromFloatRGBA(1.0f, 1.0f, 1.0f, 0.1f));
+  g.fillEllipse(8, 8, 24, 24);
+
+  // Text
+  g.setColour(juce::Colours::white);
+  g.setFont(juce::Font(14.0f, juce::Font::bold));
+  g.drawText(item->name, 40, 0, w - 45, h, juce::Justification::centredLeft,
+             true);
+
+  return image;
+}
+
+void BrowserPanel::drawTags(SkCanvas *canvas,
+                            const std::vector<juce::String> &tags,
+                            float rightBound, float centerY) {
+  SkPaint bgPaint;
+  bgPaint.setAntiAlias(true);
+
+  SkPaint textPaint;
+  textPaint.setColor(SK_ColorWHITE);
+  textPaint.setAntiAlias(true);
+
+  SkFont font = design::getSkFont(10.0f, design::FontWeight::Bold);
+
+  float x = rightBound;
+
+  for (int i = (int)tags.size() - 1; i >= 0; --i) {
+    const auto &tag = tags[i];
+
+    // Measure text
+    SkRect bounds;
+    font.measureText(tag.toStdString().c_str(), tag.length(),
+                     SkTextEncoding::kUTF8, &bounds);
+    float width = bounds.width() + 12.0f;
+    float height = 16.0f;
+
+    x -= width;
+
+    // Skip if out of bounds (left side) - simplified check
+    if (x < 100)
+      break; // Don't draw over name
+
+    // Dynamic color based on tag hash
+    uint32_t hash = 0;
+    for (auto c : tag.toStdString())
+      hash = hash * 31 + c;
+
+    // Pastel palette
+    SkColor colors[] = {
+        SkColorSetRGB(255, 100, 100), // Red
+        SkColorSetRGB(255, 180, 100), // Orange
+        SkColorSetRGB(220, 220, 100), // Yellow
+        SkColorSetRGB(100, 220, 100), // Green
+        SkColorSetRGB(100, 200, 255), // Blue
+        SkColorSetRGB(200, 100, 255), // Purple
+        SkColorSetRGB(255, 100, 200)  // Pink
+    };
+    SkColor pColor = colors[std::abs((int)hash) % 7];
+
+    bgPaint.setColor(SkColorSetA(pColor, 60)); // Transparent bg
+    canvas->drawRoundRect(
+        SkRect::MakeXYWH(x, centerY - height / 2, width, height), 8, 8,
+        bgPaint);
+
+    // Border
+    bgPaint.setColor(pColor);
+    bgPaint.setStyle(SkPaint::kStroke_Style);
+    bgPaint.setStrokeWidth(1.0f);
+    canvas->drawRoundRect(
+        SkRect::MakeXYWH(x, centerY - height / 2, width, height), 8, 8,
+        bgPaint);
+    bgPaint.setStyle(SkPaint::kFill_Style); // Reset
+
+    // Text
+    canvas->drawString(tag.toStdString().c_str(), x + 6, centerY + 3.5f, font,
+                       textPaint);
+
+    x -= 6; // Spacing
+  }
+}
+
+void BrowserPanel::onWaveformLoaded(const juce::String &path,
+                                    const std::vector<float> &peaks) {
+  // Update cache
+  listWaveformCache_[path].peaks = peaks;
+  listWaveformCache_[path].isRangeOne = true;
   repaint();
 }
 

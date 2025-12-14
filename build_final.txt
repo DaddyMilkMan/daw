@@ -1,0 +1,20 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAW_rc_lib.dir\Debug\ZenithDAW_rc_lib.lib
+  Main.cpp
+  MainWindow.cpp
+  MainLayoutComponent.cpp
+  MixerComponent.cpp
+  PianoRollComponent.cpp
+  MixerView.cpp
+  MixerChannelComponent.cpp
+  UXDirectorAgent.cpp
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1548,31): error C2039: 'ACCENT_PRIMARY': is not a member of 'zenith::design::colors' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/PianoRollComponent.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\ZenithDesignSystem.h(33,11):
+      see declaration of 'zenith::design::colors'
+  
+C:\zenith\daw\apps\desktop\Source\ui\PianoRollComponent.cpp(1548,31): error C2065: 'ACCENT_PRIMARY': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/PianoRollComponent.cpp')
+  

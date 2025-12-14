@@ -9,13 +9,14 @@
 
 #pragma once
 
+#include "../Source/engine/RecentProjectManager.h"
+#include "../Source/ui/SessionViewComponent.h"
 #include "../Source/ui/skia/BottomBar.h"
 #include "../Source/ui/skia/BrowserPanel.h"
 #include "../Source/ui/skia/RightSidePanel.h"
 #include "../Source/ui/skia/SkiaButton.h"
 #include "../Source/ui/skia/SkiaMainWindowIntegration.h"
 #include "../Source/ui/skia/TransportBar.h"
-#include "../Source/ui/skia/views/SessionViewComponent.h"
 #include "../Source/ui/skia/views/PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
@@ -40,6 +41,7 @@ class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
+class ZenithHubComponent;
 } // namespace zenith
 
 //==============================================================================
@@ -65,8 +67,15 @@ class MainComponent : public zenith::SkiaMainWindowIntegration,
                       public juce::KeyListener {
 public:
   //==========================================================================
+  // Callback type for project loading
+  using LoadProjectCallback = std::function<void(const juce::File &)>;
+  using NewProjectCallback = std::function<void()>;
+
   MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
-                zenith::AIBridgeClient &aiClient, zenith::ProjectState &state);
+                zenith::AIBridgeClient &aiClient, zenith::ProjectState &state,
+                zenith::RecentProjectManager &recentProjects,
+                LoadProjectCallback onLoadProject,
+                NewProjectCallback onNewProject);
   ~MainComponent() override;
 
   //==========================================================================
@@ -112,6 +121,9 @@ private:
 
   zenith::Engine &engine;
   zenith::ProjectState &projectState;
+  zenith::RecentProjectManager &recentProjectManager_;
+  LoadProjectCallback onLoadProject_;
+  NewProjectCallback onNewProject_;
 
   // ============================================================================
   // Modern DAW Layout Panels
@@ -141,7 +153,13 @@ private:
   // Phase 1: Audio import
   //==========================================================================
 
+  // Phase 1: Audio import
+  //==========================================================================
+
   void handleImportAudio();
+
+  // Zenith Hub (Start Screen)
+  std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -192,6 +210,25 @@ public:
    */
   void saveProjectAs();
 
+  /**
+   * @brief Load a project from file
+   * @param file The project file to load
+   * @return true if successful
+   */
+  bool loadProject(const juce::File &file);
+
+  /**
+   * @brief Open a project file dialog and load selected project
+   */
+  void openProject();
+
+  /**
+   * @brief Get the recent project manager
+   */
+  zenith::RecentProjectManager &getRecentProjectManager() {
+    return *recentProjectManager_;
+  }
+
   //==========================================================================
   // Member variables
   //==========================================================================
@@ -219,6 +256,9 @@ public:
 
   // Integration: Clip synchronizer
   std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
+
+  // Recent Project Manager (Pinocchio Protocol)
+  std::unique_ptr<zenith::RecentProjectManager> recentProjectManager_;
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;

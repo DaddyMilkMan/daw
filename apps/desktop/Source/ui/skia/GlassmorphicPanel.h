@@ -20,15 +20,17 @@
 
 #pragma once
 
+#include "../../Settings.h"
 #include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
+#include <core/SkBitmap.h>
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-
+#include <random>
 
 namespace zenith {
 
@@ -164,7 +166,8 @@ public:
 
     float radius = opts.cornerRadius;
     SkRRect rrect = SkRRect::MakeRectXY(bounds, radius, radius);
-    float globalGlow = Settings::getGlowIntensity() * opts.glowIntensity;
+    float globalGlow = ::zenith::Settings::getInstance().getGlowIntensity() *
+                       opts.glowIntensity;
 
     // 1. Drop Shadow (under the panel)
     if (opts.drawShadow && opts.style != Style::Flat) {
@@ -176,8 +179,10 @@ public:
     SkColor tintColor = getTintColorForStyle(opts.style);
     float tintOpacity = getTintOpacityForStyle(opts.style);
 
-    if (opts.useBackdropBlur && blurRadius > 0.0f &&
-        BackdropBlurConfig::isBlurEnabled()) {
+    bool isBlurEnabled = opts.useBackdropBlur && blurRadius > 0.0f &&
+                         BackdropBlurConfig::isBlurEnabled();
+
+    if (isBlurEnabled) {
       // REAL GLASSMORPHISM - blur the content behind!
       BackdropBlur::drawBlurredPanel(
           canvas, bounds, radius, blurRadius, tintColor, tintOpacity,
@@ -188,9 +193,18 @@ public:
       drawSolidBackground(canvas, rrect, opts.style);
     }
 
-    // 3. Top Edge Highlight (glass effect)
+    // NEW: Noise Texture (Subtle tactility)
+    // Only draw noise if looking for premium feel (not Flat)
+    if (opts.style != Style::Flat) {
+      drawNoiseTexture(canvas, rrect, 0.03f); // 3% opacity
+    }
+
+    // 3. Top Edge Highlight (glass effect) -> Refactored to Rim Light
+    // We keep the old highlight for backward compatibility or layer it
     if (opts.drawTopHighlight && opts.style != Style::Flat) {
-      drawTopHighlight(canvas, rrect, bounds);
+      // drawTopHighlight(canvas, rrect, bounds); // Replaced/augmented by Rim
+      // Light
+      drawRimLight(canvas, rrect, bounds);
     }
 
     // 4. Border
@@ -340,12 +354,101 @@ private:
   }
 
   /**
-   * @brief Draw top edge glass highlight
+   * @brief Draw subtle noise texture for tactility
+   */
+  static void drawNoiseTexture(SkCanvas *canvas, const SkRRect &rrect,
+                               float opacity) {
+    // Generate static noise texture (once)
+    static sk_sp<SkShader> noiseShader = []() {
+      const int w = 128;
+      const int h = 128; // Power of 2
+      SkBitmap bitmap;
+      bitmap.allocN32Pixels(w, h); // Allocate pixel memory
+
+      // Use modern random generator
+      std::random_device rd;
+      std::mt19937 gen(rd());
+      std::uniform_int_distribution<> distrib(0, 255);
+
+      // Fill with random noise
+      for (int y = 0; y < h; ++y) {
+        // Get row pointer for speed
+        uint32_t *row = bitmap.getAddr32(0, y);
+        for (int x = 0; x < w; ++x) {
+          uint8_t val = (uint8_t)distrib(gen);
+          // Pack into ARGB (native format), make it fully opaque initially
+          row[x] = SkColorSetARGB(255, val, val, val);
+        }
+      }
+      bitmap.setImmutable();
+
+      // Create shader with Repeat mode (updated API)
+      SkSamplingOptions sampling(SkFilterMode::kNearest);
+      SkMatrix localMatrix = SkMatrix::I();
+      return bitmap.makeShader(SkTileMode::kRepeat, SkTileMode::kRepeat,
+                               sampling, localMatrix);
+    }();
+
+    SkPaint noisePaint;
+    noisePaint.setAntiAlias(true);
+    noisePaint.setBlendMode(SkBlendMode::kOverlay);
+    noisePaint.setAlphaf(opacity);
+
+    if (noiseShader) {
+      noisePaint.setShader(noiseShader);
+      canvas->drawRRect(rrect, noisePaint);
+    }
+  }
+
+  /**
+   * @brief Draw Rim Light effect (premium bevel)
+   * Replacing the simple top highlight with a directional top-left gradient
+   * stroke
+   */
+  static void drawRimLight(SkCanvas *canvas, const SkRRect &rrect,
+                           const SkRect &bounds) {
+    using namespace design;
+
+    SkPaint rimPaint;
+    rimPaint.setAntiAlias(true);
+    rimPaint.setStyle(SkPaint::kStroke_Style);
+    rimPaint.setStrokeWidth(1.0f); // 1px stroke
+
+    // Gradient from Top-Left (White) to Bottom-Right (Transparent)
+    // This simulates light catching the top-left edge
+    SkPoint pts[2] = {
+        {bounds.left(), bounds.top()},
+        {bounds.right() * 0.5f, bounds.bottom() * 0.5f} // Fade out halfway
+    };
+
+    SkColor colors[2] = {
+        SkColorSetA(SK_ColorWHITE, 180), // ~70% White at corner
+        SkColorSetA(SK_ColorWHITE, 0)    // Transparent
+    };
+
+    rimPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
+                                                    SkTileMode::kClamp));
+
+    // Inset slightly to sit ON the border area
+    SkRRect rimRRect = rrect;
+    rimRRect.inset(0.5f, 0.5f);
+
+    canvas->drawRRect(rimRRect, rimPaint);
+
+    // Optional: Add a subtle secondary reflection at bottom-right for realism?
+    // For now, prompt asked for "generated 1px white gradient stroke on the
+    // top-left edges"
+  }
+
+  /**
+   * @brief Draw top edge glass highlight (Legacy/Supplemental)
    */
   static void drawTopHighlight(SkCanvas *canvas, const SkRRect &rrect,
                                const SkRect &bounds) {
     using namespace design;
 
+    // Kept for code structure but effectively replaced by RimLight logic in
+    // standard path or can be used for extra shine.
     SkPaint highlightPaint;
     highlightPaint.setAntiAlias(true);
     highlightPaint.setStyle(SkPaint::kStroke_Style);
@@ -382,7 +485,8 @@ private:
     if (opts.style == Style::ActiveGlow && opts.accentColor != 0x00000000) {
       borderPaint.setColor(withAlpha(opts.accentColor, 0.6f));
     } else {
-      borderPaint.setColor(colors::BORDER_DEFAULT);
+      // Standard border is very subtle, mostly defined by rim light and shadow
+      borderPaint.setColor(SkColorSetA(colors::BORDER_DEFAULT, 40));
     }
 
     SkRRect borderRRect = rrect;

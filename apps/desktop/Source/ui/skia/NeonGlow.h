@@ -18,6 +18,7 @@
 #pragma once
 
 #include "ZenithDesignSystem.h"
+#include "../../Settings.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -59,7 +60,7 @@ public:
                          float cornerRadius = 0.0f) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         if (globalGlow < 0.01f) return;
         
         float blurRadius = getBlurRadius(intensity) * globalGlow;
@@ -87,7 +88,7 @@ public:
                                 float cornerRadius = 0.0f, float strokeWidth = 2.0f) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         if (globalGlow < 0.01f) return;
         
         float blurRadius = getBlurRadius(intensity) * globalGlow;
@@ -136,7 +137,7 @@ public:
                              Intensity intensity = Intensity::Medium) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         if (globalGlow < 0.01f) {
             // No glow, just draw text
             SkPaint textPaint;
@@ -170,7 +171,7 @@ public:
                                SkColor color, Intensity intensity = Intensity::Strong) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         if (globalGlow < 0.01f) return;
         
         float blurRadius = getBlurRadius(intensity) * globalGlow;
@@ -202,7 +203,7 @@ public:
                                 float animProgress, float cornerRadius = 0.0f) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         if (globalGlow < 0.01f) return;
         
         // Pulse between Subtle and Strong
@@ -238,7 +239,7 @@ public:
         value = juce::jlimit(0.0f, 1.0f, value);
         if (value < 0.001f) return;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         
         // Determine peak color based on level
         SkColor peakColor;
@@ -281,7 +282,7 @@ public:
                                  SkColor color = 0xFFFFFFFF) {
         using namespace design;
         
-        float globalGlow = Settings::getGlowIntensity();
+        float globalGlow = zenith::Settings::getInstance().getGlowIntensity();
         
         // Glow layer
         if (globalGlow > 0.01f) {

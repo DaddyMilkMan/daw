@@ -26,6 +26,7 @@
 #pragma once
 
 #include "../../Source/ui/skia/SkiaComponent.h"
+#include "DrumPadComponent.h"
 #include "ProjectState.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -116,6 +117,7 @@ public:
 
   // Skia Rendering
   void drawSkia(SkCanvas *canvas) override;
+  void drawModernToolbar(SkCanvas *canvas);
 
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
@@ -129,6 +131,19 @@ public:
       const juce::KeyPress &key) override; // from SkiaComponent/Component
 
   juce::MouseCursor getMouseCursor() override; // from SkiaComponent/Component
+
+  //==========================================================================
+  // Public API - Advanced Features
+  //==========================================================================
+
+  //==========================================================================
+  // Tool System
+  //==========================================================================
+
+  enum class Tool { Select, Draw, Erase, Slice };
+
+  void setCurrentTool(Tool tool);
+  Tool getCurrentTool() const { return currentTool; }
 
   //==========================================================================
   // Public API - Advanced Features
@@ -666,6 +681,9 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
+  void playPianoKey(int pitch, int velocity);
+  void stopPianoKey(int pitch);
+
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -979,6 +997,8 @@ private:
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
+  int hoveredPianoKey = -1;
+  int playingPianoKey = -1;
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
@@ -1183,26 +1203,99 @@ private:
 
   void timerCallback() override;
 
+  Tool currentTool = Tool::Select;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
 
 //==============================================================================
 /**
+ * @class MidiEditorContainer
+ * @brief Container that switches between Piano Roll and Drum Pad views
+ */
+class MidiEditorContainer : public juce::Component {
+public:
+  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
+      : projectState(state), engine_(engine) {
+    pianoRoll = std::make_unique<PianoRollComponent>(state);
+    addAndMakeVisible(pianoRoll.get());
+
+    drumPad = std::make_unique<DrumPadComponent>(engine, state);
+    addChildComponent(drumPad.get()); // Hidden by default
+
+    // Toggle Button
+    toggleButton.setButtonText("Switch to Drum View");
+    toggleButton.onClick = [this] { toggleView(); };
+    addAndMakeVisible(toggleButton);
+  }
+
+  void setClipContext(const MidiClipContext &context) {
+    pianoRoll->setClipContext(context);
+    drumPad->setClipContext(context.clipId);
+
+    // Auto-detect mode based on track name? For now manual.
+    if (context.trackId.containsIgnoreCase("drum")) {
+      if (activeView == View::PianoRoll)
+        toggleView();
+    }
+  }
+
+  void resized() override {
+    auto area = getLocalBounds();
+    auto topBar = area.removeFromTop(30);
+
+    toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
+
+    if (activeView == View::PianoRoll) {
+      pianoRoll->setBounds(area);
+    } else {
+      drumPad->setBounds(area);
+    }
+  }
+
+  void toggleView() {
+    if (activeView == View::PianoRoll) {
+      activeView = View::DrumPad;
+      pianoRoll->setVisible(false);
+      drumPad->setVisible(true);
+      toggleButton.setButtonText("Switch to Piano Roll");
+    } else {
+      activeView = View::PianoRoll;
+      pianoRoll->setVisible(true);
+      drumPad->setVisible(false);
+      toggleButton.setButtonText("Switch to Drum View");
+    }
+    resized();
+  }
+
+private:
+  zenith::ProjectState &projectState;
+  zenith::Engine &engine_;
+  std::unique_ptr<PianoRollComponent> pianoRoll;
+  std::unique_ptr<DrumPadComponent> drumPad;
+  juce::TextButton toggleButton;
+
+  enum class View { PianoRoll, DrumPad };
+  View activeView = View::PianoRoll;
+};
+
+//==============================================================================
+/**
  * @class PianoRollWindow
- * @brief Standalone window wrapper for PianoRollComponent
+ * @brief Standalone window wrapper for PianoRollComponent (and Drum Pad)
  */
 class PianoRollWindow : public juce::DocumentWindow {
 public:
-  PianoRollWindow(zenith::ProjectState &state, const juce::String &trackId,
-                  const juce::String &clipId)
+  PianoRollWindow(zenith::ProjectState &state, zenith::Engine &engine,
+                  const juce::String &trackId, const juce::String &clipId)
       : DocumentWindow(
-            "Piano Roll",
+            "MIDI Editor",
             juce::Desktop::getInstance().getDefaultLookAndFeel().findColour(
                 juce::ResizableWindow::backgroundColourId),
             DocumentWindow::allButtons) {
     setUsingNativeTitleBar(true);
 
-    auto *content = new PianoRollComponent(state);
+    auto *content = new MidiEditorContainer(state, engine);
     setContentOwned(content, true);
 
     // Setup clip context

@@ -1,6 +1,9 @@
 #include "ONNXStemSeparator.h"
 #include "DSPStemSeparator.h"
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
+#include <juce_dsp/juce_dsp.h>
+
 
 // ONNX Runtime headers (conditional compilation)
 // When ONNX Runtime is linked, define ZENITH_USE_ONNX_RUNTIME in CMake
