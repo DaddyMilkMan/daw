@@ -263,5 +263,8 @@ public:
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
 
+  // Tooltips
+  juce::SharedResourcePointer<juce::TooltipWindow> tooltipWindow;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

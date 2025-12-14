@@ -30,7 +30,7 @@
 
 namespace zenith {
 
-class ZenithButton : public SkiaComponent {
+class ZenithButton : public SkiaComponent, public juce::TooltipClient {
 public:
   // ----- Button Styles -----
   enum class Style {
@@ -67,6 +67,10 @@ public:
   void setText(const juce::String &text) { setButtonText(text); }
   juce::String getButtonText() const { return text_; }
   juce::String getText() const { return text_; }
+
+  // ----- Tooltip -----
+  void setTooltip(const juce::String &tooltip);
+  juce::String getTooltip() override;
 
   // ----- Style & Size -----
   void setButtonStyle(Style style);
@@ -138,6 +142,7 @@ private:
 
   // Content
   juce::String text_;
+  juce::String tooltip_;
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;

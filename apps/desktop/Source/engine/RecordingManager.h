@@ -36,6 +36,21 @@ namespace zenith {
 // Forward declarations
 class Track;
 class ProjectState;
+class AudioInputListener {
+public:
+  virtual ~AudioInputListener() = default;
+
+  /**
+   * @brief Called when audio input is received
+   * @param inputData Input channel data (array of float*)
+   * @param numInputChannels Number of input channels
+   * @param numSamples Number of samples
+   * @note AUDIO THREAD - Real-time safe!
+   */
+  virtual void onAudioInput(const float *const *inputData, int numInputChannels,
+                            int numSamples) = 0;
+};
+
 class AudioRecorder;
 
 //==============================================================================
@@ -127,6 +142,14 @@ public:
    * @brief Check if recording is active
    */
   bool isRecording() const { return isRecording_.load(); }
+
+  //==========================================================================
+  // Listeners
+  //==========================================================================
+
+  void addAudioInputListener(AudioInputListener *listener);
+  void removeAudioInputListener(AudioInputListener *listener);
+  bool hasActiveListeners() const { return hasListeners_.load(); }
 
   //==========================================================================
   // Audio Capture (RT-Safe)
@@ -223,7 +246,13 @@ private:
   juce::File recordingDirectory_;
 
   // Thread safety for session modification
+  // Thread safety for session modification
   juce::CriticalSection sessionLock_;
+
+  // Listeners
+  juce::CriticalSection listenerLock_;
+  std::vector<AudioInputListener *> listeners_;
+  std::atomic<bool> hasListeners_{false};
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RecordingManager)
 };

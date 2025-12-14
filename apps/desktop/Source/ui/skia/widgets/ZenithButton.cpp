@@ -43,6 +43,12 @@ void ZenithButton::setButtonText(const juce::String &text) {
   }
 }
 
+void ZenithButton::setTooltip(const juce::String &tooltip) {
+  tooltip_ = tooltip;
+}
+
+juce::String ZenithButton::getTooltip() { return tooltip_; }
+
 void ZenithButton::setButtonStyle(Style style) {
   if (style_ != style) {
     style_ = style;

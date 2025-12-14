@@ -169,6 +169,30 @@ void RecordingManager::captureAudio(
   if (audioRecorder_ && isRecording_.load()) {
     audioRecorder_->write(inputData, numInputChannels, numSamples, tracks);
   }
+
+  // Notify listeners (RT-safe attempt)
+  if (listenerLock_.tryEnter()) {
+    for (auto *listener : listeners_) {
+      if (listener) {
+        listener->onAudioInput(inputData, numInputChannels, numSamples);
+      }
+    }
+    listenerLock_.exit();
+  }
+}
+
+//==============================================================================
+void RecordingManager::addAudioInputListener(AudioInputListener *listener) {
+  const juce::ScopedLock sl(listenerLock_);
+  listeners_.push_back(listener);
+  hasListeners_.store(true);
+}
+
+void RecordingManager::removeAudioInputListener(AudioInputListener *listener) {
+  const juce::ScopedLock sl(listenerLock_);
+  listeners_.erase(std::remove(listeners_.begin(), listeners_.end(), listener),
+                   listeners_.end());
+  hasListeners_.store(!listeners_.empty());
 }
 
 //==============================================================================

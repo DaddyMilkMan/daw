@@ -102,6 +102,14 @@ public:
   juce::AudioPluginFormatManager &getPluginFormatManager();
 
   /**
+   * @brief Get the recording manager
+   */
+  RecordingManager &getRecordingManager() { return *recordingManager_; }
+  const RecordingManager &getRecordingManager() const {
+    return *recordingManager_;
+  }
+
+  /**
    * @brief Get the audio device manager
    */
   juce::AudioDeviceManager &getDeviceManager() { return deviceManager; }
