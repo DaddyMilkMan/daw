@@ -145,7 +145,10 @@ struct ModulationConnection {
   }
 
   float getThickness() const {
-    return 2.0f + std::abs(amount) * 4.0f; // 2-6px based on depth
+    constexpr float kMinThickness = 2.0f;
+    constexpr float kThicknessMultiplier = 4.0f;
+    return kMinThickness +
+           std::abs(amount) * kThicknessMultiplier; // 2-6px based on depth
   }
 };
 

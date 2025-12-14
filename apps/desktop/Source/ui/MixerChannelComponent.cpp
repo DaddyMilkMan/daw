@@ -19,7 +19,6 @@
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
 #include <JuceHeader.h>
 
-
 #include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
@@ -37,6 +36,10 @@ constexpr float kInsertSlotHeight = 16.0f;
 constexpr float kSendIndicatorHeight = 20.0f;
 constexpr float kChannelStripWidth = 100.0f;
 constexpr float kMasterStripWidth = 140.0f;
+constexpr int kTopHeightMaster = 40;
+constexpr int kTopHeightNormal = 34;
+constexpr int kSpectrumHeight = 50;
+constexpr int kMaxPluginNameLength = 12;
 } // namespace
 
 //==============================================================================
@@ -237,17 +240,15 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 }
 
 void MixerChannelComponent::resized() {
-  auto bounds = getLocalBounds().reduced(8);
-  // Removed unused stripWidth
-
   // Top section: Track name
-  int topHeight = isMaster_ ? 40 : 34;
+  int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
   bounds.removeFromTop(4);
 
   // Spectrum Analyzer
   if (spectrumAnalyzer_) {
-    spectrumAnalyzer_->setBounds(bounds.removeFromTop(50).reduced(2));
+    spectrumAnalyzer_->setBounds(
+        bounds.removeFromTop(kSpectrumHeight).reduced(2));
     bounds.removeFromTop(4);
   }
 
@@ -645,9 +646,7 @@ void MixerChannelComponent::InsertSlotIndicator::drawSkia(SkCanvas *canvas) {
 
   if (isOccupied_) {
     textPaint.setColor(colors::TEXT_PRIMARY);
-    // Truncate plugin name if needed (Fixed buffer overflow risk by using
-    // constexpr bound)
-    constexpr int kMaxPluginNameLength = 12;
+    // Truncate plugin name if needed
     juce::String displayName = pluginName_.substring(0, kMaxPluginNameLength);
     if (pluginName_.length() > kMaxPluginNameLength)
       displayName += "...";

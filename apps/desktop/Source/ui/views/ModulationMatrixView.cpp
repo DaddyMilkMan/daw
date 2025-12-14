@@ -478,13 +478,12 @@ void ModulationMatrixView::drawBipolarIndicator(
 
   auto font = design::typography::getMonoFont(10.0f, FontWeight::Medium);
 
-  char amountStr[16];
-  snprintf(amountStr, sizeof(amountStr), "%+.0f%%", conn.amount * 100.0f);
+  juce::String amountStr = juce::String(conn.amount * 100.0f, 0) + "%";
 
-  float textWidth =
-      font.measureText(amountStr, strlen(amountStr), SkTextEncoding::kUTF8);
-  canvas->drawString(amountStr, midPos.fX - textWidth / 2, midPos.fY + 4, font,
-                     textPaint);
+  float textWidth = font.measureText(amountStr.toRawUTF8(), amountStr.length(),
+                                     SkTextEncoding::kUTF8);
+  canvas->drawString(amountStr.toRawUTF8(), midPos.fX - textWidth / 2,
+                     midPos.fY + 4, font, textPaint);
 }
 
 void ModulationMatrixView::drawDragPreview(SkCanvas *canvas) {
@@ -574,12 +573,11 @@ void ModulationMatrixView::drawAmountEditor(SkCanvas *canvas) {
   textPaint.setColor(design::colors::TEXT_PRIMARY);
   auto valueFont = design::typography::getMonoFont(18.0f, FontWeight::Bold);
 
-  char valueStr[16];
-  snprintf(valueStr, sizeof(valueStr), "%+.0f%%",
-           selectedConnection_->amount * 100.0f);
-  float valueWidth =
-      valueFont.measureText(valueStr, strlen(valueStr), SkTextEncoding::kUTF8);
-  canvas->drawString(valueStr, panelRect.centerX() - valueWidth / 2,
+  juce::String valueStr =
+      juce::String(selectedConnection_->amount * 100.0f, 0) + "%";
+  float valueWidth = valueFont.measureText(
+      valueStr.toRawUTF8(), valueStr.length(), SkTextEncoding::kUTF8);
+  canvas->drawString(valueStr.toRawUTF8(), panelRect.centerX() - valueWidth / 2,
                      panelRect.fTop + 40, valueFont, textPaint);
 
   // Hint
@@ -606,8 +604,14 @@ void ModulationMatrixView::buildSourceNodes() {
   sourceNodes_.clear();
 
   // 1. Build Source Nodes (Left Side)
+  constexpr int kNumLFOs = 4;
+  constexpr int kNumMacros = 8;
+  constexpr int kTrackLimit = 4;
+  constexpr int kPluginLimit = 2;
+  constexpr int kParamLimit = 4;
+
   // Global LFOs
-  for (int i = 0; i < zenith::kNumGlobalLFOs; ++i) {
+  for (int i = 0; i < kNumLFOs; ++i) {
     ModulationSourceNode node;
     node.id = "sys:lfo:" + juce::String(i);
     node.displayName = "LFO " + juce::String(i + 1);
@@ -617,7 +621,7 @@ void ModulationMatrixView::buildSourceNodes() {
   }
 
   // Macros
-  for (int i = 0; i < Engine::getNumMacros(); ++i) {
+  for (int i = 0; i < kNumMacros; ++i) {
     ModulationSourceNode node;
     node.id = "sys:macro:" + juce::String(i);
     if (engine_) {
@@ -655,7 +659,7 @@ void ModulationMatrixView::buildSourceNodes() {
   // Track envelopes (if engine available)
   if (engine_) {
     const auto &tracks = engine_->tracks();
-    for (size_t i = 0; i < tracks.size() && i < 4; ++i) {
+    for (size_t i = 0; i < tracks.size() && i < kTrackLimit; ++i) {
       if (tracks[i]) {
         ModulationSourceNode node;
         node.id = tracks[i]->getTrackId() + ":env";
@@ -954,4 +958,3 @@ std::vector<AIElementInfo> ModulationMatrixView::getInspectableElements() {
 }
 
 } // namespace zenith
-

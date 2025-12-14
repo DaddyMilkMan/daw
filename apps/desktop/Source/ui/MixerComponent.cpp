@@ -11,7 +11,6 @@
 #include "../engine/Track.h"
 #include <JuceHeader.h>
 
-
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -139,7 +138,7 @@ void MixerComponent::drawSkia(SkCanvas *canvas) {
   // 3. Draw divider between tracks and master
   if (masterChannel_) {
     float dividerX =
-        bounds.getWidth() - masterStripWidth - dividerWidth - sideMargin;
+        bounds.getWidth() - (masterStripWidth + dividerWidth + sideMargin * 2);
 
     // Gradient divider line
     SkPoint dividerPts[2] = {
@@ -207,7 +206,9 @@ void MixerComponent::resized() {
   if (masterChannel_) {
     masterArea = masterStripWidth + dividerWidth + sideMargin * 2;
     auto masterBounds = bounds.removeFromRight(masterArea);
-    masterChannel_->setBounds(masterBounds.reduced(sideMargin, topMargin));
+    masterChannel_->setBounds(masterBounds.getX() + sideMargin + dividerWidth,
+                              masterBounds.getY() + topMargin, masterStripWidth,
+                              masterBounds.getHeight() - 2 * topMargin);
   }
 
   // Viewport takes remaining space
