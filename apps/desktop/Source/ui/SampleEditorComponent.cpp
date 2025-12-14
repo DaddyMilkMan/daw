@@ -63,6 +63,7 @@ SampleEditorComponent::~SampleEditorComponent() {
   projectState_.getState().removeListener(this);
 }
 
+void SampleEditorComponent::timerCallback() {
   if (isPlaying_) {
     // Update playhead from engine
     playheadPosition_ += 1.0 / 30.0; // Approximate
@@ -1927,9 +1928,9 @@ void SampleEditorComponent::startRecording() {
   incomingFifo_.reset();
   incomingBuffer_.setSize(2, fifoSize_); // Ensure buffer is ready
 
-  // Allocate record buffer (start with 1 minute @ 44.1k)
+  // Allocate record buffer (start with 1 minute at current sample rate)
   // We can resize later in timerCallback
-  int initialSamples = 44100 * 60;
+  int initialSamples = static_cast<int>(engine_.getSampleRate()) * 60;
   recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(2, initialSamples);
   recordBuffer_->clear();
   recordWritePos_ = 0;

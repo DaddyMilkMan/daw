@@ -1,5 +1,5 @@
----
+﻿---
 trigger: always_on
 ---
 
-if a files too big split it into multiple diffrent ones
+If a file is too big, split it into multiple different ones.

@@ -1,5 +1,5 @@
----
+﻿---
 trigger: always_on
 ---
 
-test everything too dont assume and verify 
+Test everything too, don't assume and verify.
