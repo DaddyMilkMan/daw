@@ -31,44 +31,19 @@ AuroraBackground::~AuroraBackground() {}
 
 #ifdef ZENITH_USE_SKIA
 void AuroraBackground::initShaders() {
-  // SKSL Shader for "Smoky" displacement
-  // We use a noise shader to distort the coordinates used to sample the
-  // gradient shader.
-  const char *sksl = R"(
-        uniform shader content; // The mesh gradient blobs
-        uniform shader noise;   // Perlin turbulence
-        uniform float time;
-        uniform float2 resolution;
-
-        half4 main(float2 coord) {
-            // Slow moving noise coordinates
-            float2 noiseCoord = coord * 0.0008; 
-            noiseCoord.x += time * 0.02;
-            noiseCoord.y -= time * 0.01;
-
-            // Sample noise (r, g channels)
-            half4 n = noise.eval(noiseCoord);
-            
-            // Displacement strength
-            float strength = 150.0;
-            
-            // Distort the coordinate
-            // We use the noise to offset the lookup into the content
-            float2 distorted = coord + (float2(n.r, n.g) - 0.5) * strength;
-            
-            // Sample the content (mesh gradient) with distorted coords
-            return content.eval(distorted);
-        }
-    )";
-
-  auto [effect, error] = SkRuntimeEffect::MakeForShader(SkString(sksl));
-  if (effect) {
-    noiseEffect_ = effect;
-    hasRuntimeEffect_ = true;
-  } else {
-    // If shader compilation fails, we'll fallback to simple blending
-    hasRuntimeEffect_ = false;
-  }
+  // NOTE: Advanced SKSL noise distortion was planned but not implemented.
+  // SkPerlinNoiseShader is not available in this Skia build configuration.
+  // The current implementation uses layered radial gradients with vignette,
+  // which provides a beautiful "aurora" effect without runtime shaders.
+  //
+  // If you want to enable SKSL distortion in the future:
+  // 1. Ensure SkRuntimeEffect is available in your Skia build
+  // 2. Create a noise shader (e.g., via SkShaders::Fractal or
+  // SkPerlinNoiseShader)
+  // 3. Compose the noise with the mesh gradient using SkShaders::Blend
+  //
+  // For now, hasRuntimeEffect_ stays false and we use the direct mesh approach.
+  hasRuntimeEffect_ = false;
 }
 
 void AuroraBackground::draw(SkCanvas *canvas, const SkRect &bounds,

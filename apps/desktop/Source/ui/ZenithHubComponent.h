@@ -33,6 +33,7 @@ public:
   void mouseMove(const juce::MouseEvent &e) override;
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
 
   // Animation hook
   void timerCallback() override;

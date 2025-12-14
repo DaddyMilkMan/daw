@@ -1,0 +1,1082 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
+  Main.cpp
+  MainWindow.cpp
+  BottomBar.cpp
+C:\vcpkg\installed\x64-windows\include\skia\effects\SkGradientShader.h(303,66): error C2027: use of undefined type 'zenith::SkTileMode' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkImage.h(40,12):
+      see declaration of 'zenith::SkTileMode'
+  
+C:\vcpkg\installed\x64-windows\include\skia\effects\SkGradientShader.h(303,66): error C2065: 'kClamp': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\effects\SkGradientShader.h(354,89): error C2027: use of undefined type 'zenith::SkTileMode' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkImage.h(40,12):
+      see declaration of 'zenith::SkTileMode'
+  
+C:\vcpkg\installed\x64-windows\include\skia\effects\SkGradientShader.h(354,89): error C2065: 'kClamp': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(70,11): error C2079: 'zenith::BottomBar::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(71,11): error C2079: 'zenith::BottomBar::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(72,11): error C2079: 'zenith::BottomBar::channelBgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(73,11): error C2079: 'zenith::BottomBar::meterTrackPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(74,11): error C2079: 'zenith::BottomBar::meterFillPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(75,11): error C2079: 'zenith::BottomBar::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(70,11): error C2079: 'zenith::BottomBar::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(71,11): error C2079: 'zenith::BottomBar::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(72,11): error C2079: 'zenith::BottomBar::channelBgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(73,11): error C2079: 'zenith::BottomBar::meterTrackPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(74,11): error C2079: 'zenith::BottomBar::meterFillPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(75,11): error C2079: 'zenith::BottomBar::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(209,24): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(209,24): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(209,35): error C2065: 'kDefaultSampleRate': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(212,22): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(212,22): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(212,33): error C2065: 'kDefaultCompThresholdDb': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(213,18): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(213,18): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(213,29): error C2065: 'kDefaultCompRatio': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(214,21): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(214,21): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(214,32): error C2065: 'kDefaultCompAttackMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(215,22): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(215,22): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(215,33): error C2065: 'kDefaultCompReleaseMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(56,55): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(56,66): error C2065: 'kCompLookaheadMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(62,55): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(62,66): error C2065: 'kCompRmsWindowMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(70,11): error C2079: 'zenith::BottomBar::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(71,11): error C2079: 'zenith::BottomBar::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(72,11): error C2079: 'zenith::BottomBar::channelBgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(73,11): error C2079: 'zenith::BottomBar::meterTrackPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(74,11): error C2079: 'zenith::BottomBar::meterFillPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(75,11): error C2079: 'zenith::BottomBar::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(454,37): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(454,48): error C2065: 'kNumEQBands': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(454,48): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(454,48):
+      a non-constant (sub-)expression was encountered
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(455,18): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(455,18):
+      failure was caused by a read of an uninitialized symbol
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(455,18):
+      see usage of 'numEQBands'
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(456,30): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(456,30):
+      failure was caused by a read of an uninitialized symbol
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(456,30):
+      see usage of 'numEQBands'
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(457,30): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(457,30):
+      failure was caused by a read of an uninitialized symbol
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(457,30):
+      see usage of 'numEQBands'
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(482,35): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(482,46): error C2065: 'kNumSends': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(482,46): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(482,46):
+      a non-constant (sub-)expression was encountered
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(483,33): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(483,33):
+      failure was caused by a read of an uninitialized symbol
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(483,33):
+      see usage of 'numSends'
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(484,34): error C2131: expression did not evaluate to a constant [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(484,34):
+      failure was caused by a read of an uninitialized symbol
+      C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(484,34):
+      see usage of 'numSends'
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(359,26): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(359,26): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(359,37): error C2065: 'kDefaultEQQ': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(359,25): error C2280: 'std::atomic<float>::atomic(const std::atomic<float> &)': attempting to reference a deleted function [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      see declaration of 'std::atomic<float>::atomic'
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      'std::atomic<float>::atomic(const std::atomic<float> &)': function was explicitly deleted
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(474,36): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(474,36): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(474,47): error C2065: 'kDefaultCompThresholdDb': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(474,35): error C2280: 'std::atomic<float>::atomic(const std::atomic<float> &)': attempting to reference a deleted function [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      see declaration of 'std::atomic<float>::atomic'
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      'std::atomic<float>::atomic(const std::atomic<float> &)': function was explicitly deleted
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(475,32): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(475,32): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(475,43): error C2065: 'kDefaultCompRatio': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(475,31): error C2280: 'std::atomic<float>::atomic(const std::atomic<float> &)': attempting to reference a deleted function [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      see declaration of 'std::atomic<float>::atomic'
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      'std::atomic<float>::atomic(const std::atomic<float> &)': function was explicitly deleted
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(476,33): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(476,33): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(476,44): error C2065: 'kDefaultCompAttackMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(476,32): error C2280: 'std::atomic<float>::atomic(const std::atomic<float> &)': attempting to reference a deleted function [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      see declaration of 'std::atomic<float>::atomic'
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      'std::atomic<float>::atomic(const std::atomic<float> &)': function was explicitly deleted
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(477,34): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(477,34): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(477,45): error C2065: 'kDefaultCompReleaseMs': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(477,33): error C2280: 'std::atomic<float>::atomic(const std::atomic<float> &)': attempting to reference a deleted function [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      see declaration of 'std::atomic<float>::atomic'
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\atomic(2151,5):
+      'std::atomic<float>::atomic(const std::atomic<float> &)': function was explicitly deleted
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(503,30): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(503,30): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(503,41): error C2065: 'kDefaultSampleRate': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(504,26): error C3861: 'constants': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(504,26): error C2653: 'constants': is not a class or namespace name [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\engine\MixerChannel.h(504,37): error C2065: 'kDefaultBufferSize': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27): error C2039: 'TrackCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27): error C2275: 'zenith::TrackCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,8): error C2923: 'std::unique_ptr': 'zenith::TrackCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(18,11):
+      see declaration of 'zenith::TrackCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,42): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27): error C2039: 'ClipCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27): error C2275: 'zenith::ClipCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,8): error C2923: 'std::unique_ptr': 'zenith::ClipCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(19,11):
+      see declaration of 'zenith::ClipCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,41): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27): error C2039: 'TransportCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27): error C2275: 'zenith::TransportCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,8): error C2923: 'std::unique_ptr': 'zenith::TransportCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(20,11):
+      see declaration of 'zenith::TransportCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,46): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27): error C2039: 'TrackCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27): error C2275: 'zenith::TrackCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,8): error C2923: 'std::unique_ptr': 'zenith::TrackCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(18,11):
+      see declaration of 'zenith::TrackCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(126,42): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27): error C2039: 'ClipCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27): error C2275: 'zenith::ClipCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,8): error C2923: 'std::unique_ptr': 'zenith::ClipCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(19,11):
+      see declaration of 'zenith::ClipCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(127,41): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27): error C2039: 'TransportCommands': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27): error C2275: 'zenith::TransportCommands': expected an expression instead of a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,27):
+      prefix the qualified-id with 'typename' to indicate a type
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,8): error C2923: 'std::unique_ptr': 'zenith::TransportCommands' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\CommandAPI.h(20,11):
+      see declaration of 'zenith::TransportCommands'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,8): error C2976: 'std::unique_ptr': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\include\CommandAPI.h(128,46): error C2955: 'std::unique_ptr': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(44,11): error C2079: 'zenith::RightSidePanel::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(45,11): error C2079: 'zenith::RightSidePanel::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(46,11): error C2079: 'zenith::RightSidePanel::meterBgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(47,11): error C2079: 'zenith::RightSidePanel::meterPeakPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(48,11): error C2079: 'zenith::RightSidePanel::meterRmsPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(49,11): error C2079: 'zenith::RightSidePanel::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(50,11): error C2079: 'zenith::RightSidePanel::subTextPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(488,38): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(488,38): error C2061: syntax error: identifier 'AsyncReadResult' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,78): error C2065: 'AsyncReadResult': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,72): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,78): error C2146: syntax error: missing '>' before identifier 'AsyncReadResult' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(501,35): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(501,35): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(502,35): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(502,35): error C2061: syntax error: identifier 'RescaleMode' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(539,36): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(577,42): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(591,43): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(86,11): error C2079: 'zenith::DebugConsoleComponent::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(87,11): error C2079: 'zenith::DebugConsoleComponent::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(88,11): error C2079: 'zenith::DebugConsoleComponent::healthGoodPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(89,11): error C2079: 'zenith::DebugConsoleComponent::healthWarningPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(90,11): error C2079: 'zenith::DebugConsoleComponent::healthCriticalPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(91,11): error C2079: 'zenith::DebugConsoleComponent::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(92,11): error C2079: 'zenith::DebugConsoleComponent::iconPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DebugConsoleComponent.h(93,11): error C2079: 'zenith::DebugConsoleComponent::notificationPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\DeviceChainComponent.h(59,11): error C2079: 'zenith::DeviceChainComponent::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(44,11): error C2079: 'zenith::RightSidePanel::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(45,11): error C2079: 'zenith::RightSidePanel::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(46,11): error C2079: 'zenith::RightSidePanel::meterBgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(47,11): error C2079: 'zenith::RightSidePanel::meterPeakPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(48,11): error C2079: 'zenith::RightSidePanel::meterRmsPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(49,11): error C2079: 'zenith::RightSidePanel::textPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\RightSidePanel.h(50,11): error C2079: 'zenith::RightSidePanel::subTextPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(49,3): error C2665: 'juce::Component::addChildComponent': no overloaded function could convert all the argument types [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\external\JUCE\modules\juce_gui_basics\components\juce_Component.h(735,10):
+      could be 'void juce::Component::addChildComponent(juce::Component &,int)'
+          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(49,3):
+          'void juce::Component::addChildComponent(juce::Component &,int)': cannot convert argument 1 from 'zenith::MixerComponent *' to 'juce::Component &'
+      C:\zenith\daw\external\JUCE\modules\juce_gui_basics\components\juce_Component.h(717,10):
+      or       'void juce::Component::addChildComponent(juce::Component *,int)'
+          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(49,3):
+          'void juce::Component::addChildComponent(juce::Component *,int)': cannot convert argument 1 from 'zenith::MixerComponent *' to 'juce::Component *'
+              C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(49,40):
+              Types pointed to are unrelated; conversion requires reinterpret_cast, C-style cast or parenthesized function-style cast
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(49,3):
+      while trying to match the argument list '(zenith::MixerComponent *)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(89,5): error C2027: use of undefined type 'zenith::MixerComponent' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(24,7):
+      see declaration of 'zenith::MixerComponent'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(89,22): error C2039: 'setVisible': is not a member of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(488,38): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(488,38): error C2061: syntax error: identifier 'AsyncReadResult' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,78): error C2065: 'AsyncReadResult': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,72): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(496,78): error C2146: syntax error: missing '>' before identifier 'AsyncReadResult' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(501,35): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(501,35): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(502,35): error C2027: use of undefined type 'SkImage' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(64,7):
+      see declaration of 'SkImage'
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(502,35): error C2061: syntax error: identifier 'RescaleMode' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(539,36): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(577,42): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\vcpkg\installed\x64-windows\include\skia\core\SkSurface.h(591,43): error C2061: syntax error: identifier 'RescaleGamma' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,11): error C2664: 'void SkCanvas::drawRect(const SkRect &,const SkPaint &)': cannot convert argument 2 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,30):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1406,10):
+      see declaration of 'SkCanvas::drawRect'
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(104,11):
+      while trying to match the argument list '(SkRect, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,11): error C2665: 'SkCanvas::drawLine': no overloaded function could convert all the argument types [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1381,10):
+      could be 'void SkCanvas::drawLine(SkScalar,SkScalar,SkScalar,SkScalar,const SkPaint &)'
+          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,11):
+          'void SkCanvas::drawLine(SkScalar,SkScalar,SkScalar,SkScalar,const SkPaint &)': cannot convert argument 5 from '<error type>' to 'const SkPaint &'
+              C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+              Reason: cannot convert from '<error type>' to 'const SkPaint'
+              C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+              'SkPaint::SkPaint': no overloaded function could convert all the argument types
+                  C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+                  could be 'SkPaint::SkPaint(SkPaint &&)'
+                      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                      'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                          Reason: cannot convert from '<error type>' to 'SkPaint'
+                          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                          Conversion requires a second user-defined-conversion operator or constructor
+                  C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+                  or       'SkPaint::SkPaint(const SkPaint &)'
+                      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                      'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                          Reason: cannot convert from '<error type>' to 'const SkPaint'
+                          C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                          Conversion requires a second user-defined-conversion operator or constructor
+                  C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,56):
+                  while trying to match the argument list '(<error type>)'
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(107,11):
+      while trying to match the argument list '(float, float, float, float, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(115,35): error C2027: use of undefined type 'zenith::MixerComponent' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(24,7):
+      see declaration of 'zenith::MixerComponent'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(115,52): error C2039: 'isVisible': is not a member of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(128,26): error C2027: use of undefined type 'zenith::MixerComponent' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.h(24,7):
+      see declaration of 'zenith::MixerComponent'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(128,43): error C2039: 'getBounds': is not a member of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\memory(3347,7):
+      see declaration of 'std::unique_ptr<zenith::MixerComponent,std::default_delete<zenith::MixerComponent>>'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(131,25): error C3536: 'mixerBounds': cannot be used before it is initialized [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(131,15): error C2660: 'SkCanvas::translate': function does not take 1 arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(913,10):
+      see declaration of 'SkCanvas::translate'
+      C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(131,15):
+      while trying to match the argument list '()'
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\BottomBar.cpp(131,15): error C1003: error count exceeds 100; stopping compilation [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/skia/BottomBar.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.h(107,11): error C2079: 'zenith::TransportBar::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.h(108,11): error C2079: 'zenith::TransportBar::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.h(107,11): error C2079: 'zenith::TransportBar::bgPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\skia\TransportBar.h(108,11): error C2079: 'zenith::TransportBar::borderPaint_' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,20): error C2065: 'ZenithButton': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,9): error C2923: 'juce::OwnedArray': 'ZenithButton' is not a valid template type argument for parameter 'ObjectClass' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,20):
+      see declaration of 'ZenithButton'
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,9): error C2976: 'juce::OwnedArray': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\external\JUCE\modules\juce_core\containers\juce_OwnedArray.h(61,7):
+      see declaration of 'juce::OwnedArray'
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,34): error C2955: 'juce::OwnedArray': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\external\JUCE\modules\juce_core\containers\juce_OwnedArray.h(61,7):
+      see declaration of 'juce::OwnedArray'
+  
+C:\zenith\daw\apps\desktop\include\ui\ArrangerComponent.h(119,11): error C2039: 'ProjectState': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/Main.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,20): error C2065: 'ZenithButton': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,9): error C2923: 'juce::OwnedArray': 'ZenithButton' is not a valid template type argument for parameter 'ObjectClass' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,20):
+      see declaration of 'ZenithButton'
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,9): error C2976: 'juce::OwnedArray': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\external\JUCE\modules\juce_core\containers\juce_OwnedArray.h(61,7):
+      see declaration of 'juce::OwnedArray'
+  
+C:\zenith\daw\apps\desktop\include\ui\MacroToolbar.h(48,34): error C2955: 'juce::OwnedArray': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\external\JUCE\modules\juce_core\containers\juce_OwnedArray.h(61,7):
+      see declaration of 'juce::OwnedArray'
+  
+C:\zenith\daw\apps\desktop\include\ui\ArrangerComponent.h(119,11): error C2039: 'ProjectState': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\Source\engine\Clip.h(135,37): error C2039: 'AudioFilePool': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(63,56): error C2061: syntax error: identifier 'InstrumentMetadata' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(75,17): error C2065: 'InstrumentPreset': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(75,10): error C2923: 'std::vector': 'InstrumentPreset' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(75,17):
+      see declaration of 'InstrumentPreset'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(75,10): error C2976: 'std::vector': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(442,7):
+      see declaration of 'std::vector'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(75,35): error C2955: 'std::vector': use of class template requires template argument list [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\vector(442,7):
+      see declaration of 'std::vector'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(76,86): error C2061: syntax error: identifier 'InstrumentPreset' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(77,54): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(77,76): error C2143: syntax error: missing ',' before '&' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(105,28): error C2061: syntax error: identifier 'InstrumentMetadata' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(111,28): error C3646: 'metadata': unknown override specifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(111,9): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(117,51): error C2065: 'InstrumentPreset': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(117,33): error C2923: 'std::map': 'InstrumentPreset' is not a valid template type argument for parameter '_Ty' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(117,51):
+      see declaration of 'InstrumentPreset'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(117,33): error C2976: 'std::map': too few template arguments [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.44.35207\include\map(72,7):
+      see declaration of 'std::map'
+  
+C:\zenith\daw\apps\desktop\Source\instruments\InstrumentRegistry.h(117,33): error C3203: 'map': unspecialized class template can't be used as a template argument for template parameter '_Ty', expected a real type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(81,13): error C2079: 'paint' uses undefined class 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,15): error C2664: 'void SkCanvas::drawPath(const SkPath &,const SkPaint &)': cannot convert argument 2 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,36):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1584,10):
+      see declaration of 'SkCanvas::drawPath'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(113,15):
+      while trying to match the argument list '(SkPath, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(118,31): error C2027: use of undefined type 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkImage.h(32,7):
+      see declaration of 'zenith::SkPaint'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(118,31): error C2065: 'kFill_Style': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,15): error C2664: 'void SkCanvas::drawPath(const SkPath &,const SkPaint &)': cannot convert argument 2 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,36):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1584,10):
+      see declaration of 'SkCanvas::drawPath'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(119,15):
+      while trying to match the argument list '(SkPath, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(123,31): error C2027: use of undefined type 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkImage.h(32,7):
+      see declaration of 'zenith::SkPaint'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(123,31): error C2065: 'kStroke_Style': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,15): error C2664: 'void SkCanvas::drawPath(const SkPath &,const SkPaint &)': cannot convert argument 2 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,36):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1584,10):
+      see declaration of 'SkCanvas::drawPath'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(125,15):
+      while trying to match the argument list '(SkPath, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,19): error C3083: 'design': the symbol to the left of a '::' must be a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,27): error C2039: 'getSkFont': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,52): error C3083: 'design': the symbol to the left of a '::' must be a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,60): error C3083: 'FontWeight': the symbol to the left of a '::' must be a type [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,72): error C2039: 'Bold': is not a member of 'zenith::zenith' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\include\ui\MixerComponent.h(32,11):
+      see declaration of 'zenith::zenith'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,72): error C2065: 'Bold': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(129,27): error C3861: 'getSkFont': identifier not found [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(140,31): error C2027: use of undefined type 'zenith::SkPaint' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkImage.h(32,7):
+      see declaration of 'zenith::SkPaint'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(140,31): error C2065: 'kFill_Style': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,15): error C2664: 'void SkCanvas::drawRoundRect(const SkRect &,SkScalar,SkScalar,const SkPaint &)': cannot convert argument 4 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,55):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1568,10):
+      see declaration of 'SkCanvas::drawRoundRect'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(143,15):
+      while trying to match the argument list '(SkRect, float, float, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,15): error C2664: 'void SkCanvas::drawRoundRect(const SkRect &,SkScalar,SkScalar,const SkPaint &)': cannot convert argument 4 from '<error type>' to 'const SkPaint &' [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+      Reason: cannot convert from '<error type>' to 'const SkPaint'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+      'SkPaint::SkPaint': no overloaded function could convert all the argument types
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+          could be 'SkPaint::SkPaint(SkPaint &&)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+              'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+                  Reason: cannot convert from '<error type>' to 'SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+          or       'SkPaint::SkPaint(const SkPaint &)'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+              'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+                  Reason: cannot convert from '<error type>' to 'const SkPaint'
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+                  Conversion requires a second user-defined-conversion operator or constructor
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,55):
+          while trying to match the argument list '(<error type>)'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1568,10):
+      see declaration of 'SkCanvas::drawRoundRect'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(148,15):
+      while trying to match the argument list '(SkRect, float, float, <error type>)'
+  
+C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,15): error C2665: 'SkCanvas::drawString': no overloaded function could convert all the argument types [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1890,10):
+      could be 'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,15):
+          'void SkCanvas::drawString(const SkString &,SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 1 from 'const _Elem *' to 'const SkString &'
+          with
+          [
+              _Elem=char
+          ]
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,39):
+              Reason: cannot convert from 'const _Elem *' to 'const SkString'
+          with
+          [
+              _Elem=char
+          ]
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,39):
+              Constructor for class 'SkString' is declared 'explicit'
+      C:\vcpkg\installed\x64-windows\include\skia\core\SkCanvas.h(1861,10):
+      or       'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)'
+          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,15):
+          'void SkCanvas::drawString(const char [],SkScalar,SkScalar,const SkFont &,const SkPaint &)': cannot convert argument 5 from '<error type>' to 'const SkPaint &'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+              Reason: cannot convert from '<error type>' to 'const SkPaint'
+              C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+              'SkPaint::SkPaint': no overloaded function could convert all the argument types
+                  C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(94,5):
+                  could be 'SkPaint::SkPaint(SkPaint &&)'
+                      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                      'SkPaint::SkPaint(SkPaint &&)': cannot convert argument 1 from '<error type>' to 'SkPaint &&'
+                          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                          Reason: cannot convert from '<error type>' to 'SkPaint'
+                          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                          Conversion requires a second user-defined-conversion operator or constructor
+                  C:\vcpkg\installed\x64-windows\include\skia\include\core\SkPaint.h(82,5):
+                  or       'SkPaint::SkPaint(const SkPaint &)'
+                      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                      'SkPaint::SkPaint(const SkPaint &)': cannot convert argument 1 from '<error type>' to 'const SkPaint &'
+                          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                          Reason: cannot convert from '<error type>' to 'const SkPaint'
+                          C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                          Conversion requires a second user-defined-conversion operator or constructor
+                  C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(153,26):
+                  while trying to match the argument list '(<error type>)'
+      C:\zenith\daw\apps\desktop\Source\ui\RemoteCursorOverlay.h(152,15):
+      while trying to match the argument list '(const _Elem *, float, float, SkFont, <error type>)'
+          with
+          [
+              _Elem=char
+          ]
+  
+C:\zenith\daw\apps\desktop\Source\ui\SettingsComponent.h(138,19): error C2065: 'SkiaButton': undeclared identifier [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  
+C:\zenith\daw\apps\desktop\Source\ui\SettingsComponent.h(138,19): error C1003: error count exceeds 100; stopping compilation [C:\zenith\daw\build\ZenithDAW.vcxproj]
+  (compiling source file '../apps/desktop/Source/ui/MainWindow.cpp')
+  

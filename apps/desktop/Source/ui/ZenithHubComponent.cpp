@@ -175,10 +175,13 @@ void ZenithHubComponent::timerCallback() {
       needsRepaint = true;
   }
 
-  // Update Button Animation
-  buttonGradientAngle_ += 2.0f; // Continuous rotation
-  if (buttonGradientAngle_ >= 360.0f)
-    buttonGradientAngle_ -= 360.0f;
+  // Update Button Animation (only when hovered to save cycles)
+  if (isNewProjectHovered_) {
+    buttonGradientAngle_ += 2.0f;
+    if (buttonGradientAngle_ >= 360.0f)
+      buttonGradientAngle_ -= 360.0f;
+    needsRepaint = true;
+  }
 
   // Update Ripples
   for (int i = buttonRipples_.size() - 1; i >= 0; --i) {
@@ -293,9 +296,9 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   drawNewProjectButton(canvas);
   drawTemplates(canvas);
 
-  canvas->restore(); // Restore from parallax transform
+  canvas->restore(); // Restore from SkM44 parallax transform (inner save)
 
-  canvas->restore(); // Restore layer
+  canvas->restore(); // Restore from saveLayerAlpha (outer layer)
 }
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
@@ -688,7 +691,6 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
-  bool needsUpdate = false;
 
   // Calculate Parallax Tilt
   float cx = mainCardBounds_.centerX();
@@ -729,17 +731,34 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   bool ph = profileBounds_.contains(pt.fX, pt.fY);
   if (ph != isProfileHovered_) {
     isProfileHovered_ = ph;
-    needsUpdate = true;
   }
 
   // Check New Project Button
   bool nph = newProjectButtonBounds_.contains(pt.fX, pt.fY);
   if (nph != isNewProjectHovered_) {
     isNewProjectHovered_ = nph;
-    needsUpdate = true;
   }
 
-  // The physics update in timerCallback will handle the repaint requests
+  // Note: timerCallback handles repaint via physics updates
+}
+
+void ZenithHubComponent::mouseExit(const juce::MouseEvent &) {
+  // Reset all spring targets when mouse leaves the component
+  tiltX_.target = 0.0f;
+  tiltY_.target = 0.0f;
+
+  for (auto &proj : recentProjects_) {
+    proj.isHovered = false;
+    proj.scaleSpring.target = 1.0f;
+  }
+
+  for (auto &tmpl : templates_) {
+    tmpl.isHovered = false;
+    tmpl.scaleSpring.target = 1.0f;
+  }
+
+  isProfileHovered_ = false;
+  isNewProjectHovered_ = false;
 }
 
 void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
