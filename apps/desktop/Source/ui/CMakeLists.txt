@@ -1,7 +1,7 @@
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MainWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/MainLayoutComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/SampleEditorComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/sample-editor/SampleEditorComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/mixer/MixerComponent.cpp
