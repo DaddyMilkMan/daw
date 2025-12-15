@@ -314,18 +314,11 @@ void DrumPadComponent::hitPad(int index, float velocity) {
     double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
     double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_LENGTH));
     double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET));
-
-<<<<<<< HEAD:apps/desktop/Source/ui/session/DrumPadComponent.cpp
     // Fallback to a default length if clipLength is invalid or unset
     if (clipLength <= 0.001)
         clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
-    // Master logic adapted to current context
-=======
-    // Calculate relative position with loop wrapping
-    // 7d74af0 logic adapted to current context
->>>>>>> 0446e51 (Fix: Address code review feedback (latency, loop logic, internal rules)):apps/desktop/Source/ui/DrumPadComponent.cpp
     double relativeStart = position - clipStart + clipOffset;
     
     // For a drum pad component, recording should always wrap within the clip's
@@ -336,7 +329,6 @@ void DrumPadComponent::hitPad(int index, float velocity) {
         relativeStart += clipLength;
       }
     }
-
     zenith::ProjectState::MidiNoteSpec note;
     note.pitch = pads[index].noteNumber;
     note.startBeats = relativeStart;
