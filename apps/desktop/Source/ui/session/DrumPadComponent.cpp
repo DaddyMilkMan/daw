@@ -306,7 +306,36 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
   // If we were recording, we would add the note to ProjectState here.
   if (engine.isRecording() && currentClipId.isNotEmpty()) {
-    // TODO: Implement real-time recording logic
+    auto [track, clip] = projectState.findClip(currentClipId);
+    if (!clip.isValid())
+        return;
+
+    double position = engine.getPlaybackPositionBeats();
+    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_START));
+    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_LENGTH));
+    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_OFFSET)); // Start offset
+
+    // Calculate relative position with loop wrapping
+    // 7d74af0 logic adapted to current context
+    double relativeStart = position - clipStart + clipOffset;
+    
+    // For a drum pad component, recording should always wrap within the clip's
+    // length, regardless of the global transport's loop state.
+    if (clipLength > 0.0) {
+      relativeStart = std::fmod(relativeStart, clipLength);
+      if (relativeStart < 0.0) {
+        relativeStart += clipLength;
+      }
+    }
+
+    zenith::ProjectState::MidiNoteSpec note;
+    note.pitch = pads[index].noteNumber;
+    note.startBeats = relativeStart;
+    note.lengthBeats = 0.25; // Default short length for hits
+    note.velocity = static_cast<int>(velocity * 127.0f);
+    note.muted = false;
+
+    projectState.addMidiNote(currentClipId, note, "Drum Pad Rec");
   }
 }
 
@@ -420,3 +449,4 @@ void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
 }
+
