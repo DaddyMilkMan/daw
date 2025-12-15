@@ -32,6 +32,9 @@ constexpr int kMaxAudioChannels = 32;
 /// Default sample rate in Hz
 constexpr double kDefaultSampleRate = 44100.0;
 
+/// Default frame rate in fps (for video timeline)
+constexpr double kDefaultFrameRate = 30.0;
+
 /// Default buffer size in samples
 constexpr int kDefaultBufferSize = 512;
 
@@ -227,9 +230,6 @@ constexpr int kMaxOversamplingFactor = 4;
 //==============================================================================
 // Timing Constants
 //==============================================================================
-
-/// Default video frame rate
-constexpr double kDefaultFrameRate = 30.0;
 
 /// Automation update rate in Hz
 constexpr int kAutomationUpdateRateHz = 60;
