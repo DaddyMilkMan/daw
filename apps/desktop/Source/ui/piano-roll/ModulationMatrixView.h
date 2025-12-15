@@ -22,8 +22,8 @@
 #include "../../dsp/GlobalLFO.h"
 #include "../../engine/MacroControl.h"
 #include "ZenithTheme.h"
-#include "../skia/SkiaComponent.h"
-#include "../skia/ZenithDesignSystem.h"
+#include "../framework/SkiaComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <JuceHeader.h>
 #include <core/SkPath.h>
 #include <core/SkPathMeasure.h>

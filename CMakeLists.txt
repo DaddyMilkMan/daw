@@ -31,6 +31,12 @@ option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
+# Auto-enable sanitizers in Debug builds
+if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
+    set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
+endif()
+
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
 # set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -379,4 +385,3 @@ add_custom_command(TARGET ZenithDAW POST_BUILD
     $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
     COMMENT "Copying Fonts to Output Directory"
 )
-

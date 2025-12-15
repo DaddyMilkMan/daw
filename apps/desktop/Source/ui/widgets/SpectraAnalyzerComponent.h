@@ -28,7 +28,7 @@
 #endif
 
 #include "../../dsp/StereoAudioFifo.h"
-#include "../skia/SkiaComponent.h"
+#include "../framework/SkiaComponent.h"
 
 namespace zenith {
 
