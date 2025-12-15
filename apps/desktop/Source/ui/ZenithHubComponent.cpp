@@ -331,29 +331,12 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Draw Pencil Icon
     greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
     
-    SkPaint iconPaint;
-    iconPaint.setColor(isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f));
-    iconPaint.setAntiAlias(true);
-    iconPaint.setStyle(SkPaint::kStroke_Style);
-    iconPaint.setStrokeWidth(1.5f);
+    // Use the icon system for consistency and maintainability
+    icons::IconStyle iconStyle;
+    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.strokeWidth = 1.5f;
     
-    SkPath pencil;
-    float iconX = greetingEditIconBounds_.fLeft;
-    float iconY = greetingEditIconBounds_.fTop;
-    
-    // Simple pencil shape
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 12, iconY + 2);
-    pencil.lineTo(iconX + 14, iconY + 4);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.close();
-    // Tip
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.lineTo(iconX + 1, iconY + 15);
-    pencil.close();
-    
-    canvas->drawPath(pencil, iconPaint);
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, 16.0f, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -766,25 +749,37 @@ void ZenithHubComponent::showGreetingEditor() {
   
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
   // Ensure we are in local coordinate space
+  // Use named constants for better maintainability
+  constexpr int kEditorHeight = 24;
+  constexpr int kEditorWidthPadding = 60;
+  
   juce::Rectangle<int> bounds(
       (int)greetingTextBounds_.left(), (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
-      (int)(greetingTextBounds_.width() + 60), 24);
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
       
   greetingEditor_->setBounds(bounds);
   
-  // Callbacks
+  // Callbacks - use async destruction to prevent crashes from deleting
+  // the TextEditor from within its own callback
   greetingEditor_->onReturnKey = [this]() {
-    greetingText_ = greetingEditor_->getText();
-    greetingEditor_.reset();
-    repaint();
+    auto newText = greetingEditor_->getText();
+    juce::MessageManager::callAsync([this, newText]() {
+      greetingText_ = newText;
+      greetingEditor_.reset();
+      repaint();
+    });
   };
   
   greetingEditor_->onEscapeKey = [this]() {
-    greetingEditor_.reset();
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+    });
   };
   
   greetingEditor_->onFocusLost = [this]() {
-    greetingEditor_.reset();
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+    });
   };
 
   addAndMakeVisible(greetingEditor_.get());
