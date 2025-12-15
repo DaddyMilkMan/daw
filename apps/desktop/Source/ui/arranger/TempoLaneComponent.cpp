@@ -11,7 +11,7 @@
  * - Sync with ProjectState tempo map
  */
 
-#include "../../include/ui/TempoLaneComponent.h"
+#include "TempoLaneComponent.h"
 
 using namespace zenith;
 

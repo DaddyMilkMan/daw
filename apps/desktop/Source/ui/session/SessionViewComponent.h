@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
-#include "skia/SkiaComponent.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "SkiaComponent.h"
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>

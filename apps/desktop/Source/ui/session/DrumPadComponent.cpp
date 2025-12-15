@@ -1,6 +1,6 @@
-#include "../../include/ui/DrumPadComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
-#include "../../include/Engine.h"
+#include "DrumPadComponent.h"
+#include "ZenithDesignSystem.h"
+#include "Engine.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>

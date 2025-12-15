@@ -1,15 +1,15 @@
-﻿/**
+/**
  * @file ArrangerComponent.cpp
  * @brief Timeline/Arranger view implementation
  */
 
-#include "../../include/ui/ArrangerComponent.h"
-#include "../../include/ui/ArrangerTrackComponent.h"
+#include "ArrangerComponent.h"
+#include "ArrangerTrackComponent.h"
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
-#include "skia/GlassmorphicPanel.h"
-#include "skia/NeonGlow.h"
+#include "GlassmorphicPanel.h"
+#include "NeonGlow.h"
 #include <core/SkBlurTypes.h> // For SkBlurStyle enum
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -31,8 +31,8 @@
 #include "../../Source/engine/AudioFilePool.h"
 #include "../browser/BrowserDragSource.h"
 #include "../engine/AudioFilePool.h"
-#include "skia/ZenithDesignSystem.h" // Explicitly include to make typography visible
-#include "skia/ZenithUtils.h"
+#include "ZenithDesignSystem.h" // Explicitly include to make typography visible
+#include "ZenithUtils.h"
 
 // JUCE Includes
 #include <juce_core/juce_core.h>

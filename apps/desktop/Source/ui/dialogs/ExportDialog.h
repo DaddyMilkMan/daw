@@ -16,7 +16,7 @@
 #include "SkiaComponent.h"
 #include "SkiaButton.h"
 #include "ZenithUIComponents.h"
-#include "../../../include/CommandAPI.h"
+#include "CommandAPI.h"
 
 namespace zenith {
 

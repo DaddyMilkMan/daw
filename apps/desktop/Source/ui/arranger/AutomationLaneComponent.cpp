@@ -6,10 +6,10 @@
  * POLISH: Skia rendering with smooth curves, themed colors, and hover tooltips
  */
 
-#include "../../include/ui/AutomationLaneComponent.h"
+#include "AutomationLaneComponent.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "skia/ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>

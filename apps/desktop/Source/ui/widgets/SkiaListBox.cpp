@@ -11,7 +11,7 @@
 */
 
 #include "SkiaListBox.h"
-#include "../ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 

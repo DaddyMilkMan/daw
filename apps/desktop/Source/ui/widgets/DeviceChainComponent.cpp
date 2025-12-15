@@ -9,7 +9,7 @@
 */
 
 #include "DeviceChainComponent.h"
-#include "../../../include/Engine.h"
+#include "Engine.h"
 #include "ZenithDesignSystem.h"
 
 #include <core/SkCanvas.h>

@@ -11,7 +11,7 @@
 */
 
 #include "RecordingManager.h"
-#include "../../include/ProjectState.h"
+#include "ProjectState.h"
 #include "AudioRecorder.h"
 #include "Track.h"
 

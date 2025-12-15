@@ -11,7 +11,7 @@
 */
 
 #include "WingmanPanel.h"
-#include "../SimpleLogger.h"
+#include "SimpleLogger.h"
 #include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"

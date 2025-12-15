@@ -11,7 +11,7 @@
 */
 
 #include "SkiaPopupMenu.h"
-#include "../ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 

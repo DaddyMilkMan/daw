@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../WingmanPanel.h" // Include full header to use unique_ptr
+#include "WingmanPanel.h" // Include full header to use unique_ptr
 #include "../views/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
 #include <JuceHeader.h>

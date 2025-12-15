@@ -3,9 +3,9 @@
  * @brief Mixer view implementation
  */
 
-#include "../../include/ui/MixerView.h"
-#include "../../include/ui/MixerChannelComponent.h"
-#include "../../include/Engine.h"
+#include "MixerView.h"
+#include "MixerChannelComponent.h"
+#include "Engine.h"
 #include "../../Source/engine/Track.h"
 
 using namespace zenith;

@@ -17,10 +17,10 @@
 #include "ResizablePanelContainer.h"
 
 // ... (keep existing includes if needed, or rely on factories)
-#include "../../Source/ui/skia/BrowserPanel.h"
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../include/ProjectState.h"
-#include "../../include/ui/ArrangerComponent.h"
+#include "BrowserPanel.h"
+#include "SkiaComponent.h"
+#include "ProjectState.h"
+#include "ArrangerComponent.h"
 #include "../browser/BrowserModel.h"
 #include "RemoteCursorOverlay.h"
 #include "SampleEditorComponent.h"

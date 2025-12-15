@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "../../Source/ui/skia/SkiaComponent.h"
+#include "SkiaComponent.h"
 #include "DrumPadComponent.h"
 #include "ProjectState.h"
 #include <functional>

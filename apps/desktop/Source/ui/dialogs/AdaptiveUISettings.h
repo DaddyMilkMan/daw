@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include "../SkiaButton.h"
-#include "../SkiaComponent.h"
+#include "SkiaButton.h"
+#include "SkiaComponent.h"
 #include "../components/SkiaComboBox.h"
 #include "../components/SkiaLabel.h"
 

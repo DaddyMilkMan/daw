@@ -8,10 +8,10 @@
 // POLISH: flattened background (removed gradient), unified hover/active using
 // theme
 
-#include "../../include/ui/TrackHeaderComponent.h"
+#include "TrackHeaderComponent.h"
 
-#include "skia/GlassmorphicPanel.h" // Added
-#include "skia/NeonGlow.h"          // Added
+#include "GlassmorphicPanel.h" // Added
+#include "NeonGlow.h"          // Added
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>

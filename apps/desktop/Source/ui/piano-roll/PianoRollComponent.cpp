@@ -3,8 +3,8 @@
  * @brief Professional-grade MIDI Piano Roll Editor Implementation (Core)
  */
 
-#include "../../include/ui/PianoRollComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "PianoRollComponent.h"
+#include "ZenithDesignSystem.h"
 #include <algorithm>
 #include <cmath>
 #include <core/SkCanvas.h>

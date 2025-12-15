@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
-#include "skia/SkiaComponent.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "SkiaComponent.h"
 #include "../engine/AudioFilePool.h"
 
 #include <core/SkCanvas.h>

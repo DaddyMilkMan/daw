@@ -21,8 +21,8 @@
 
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "SkiaComponent.h"
+#include "SkiaTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>

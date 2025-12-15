@@ -15,7 +15,7 @@
 */
 
 #include "ModulationMatrixView.h"
-#include "../../../include/Engine.h"
+#include "Engine.h"
 #include "../../engine/Track.h"
 #include <algorithm>
 #include <cmath>

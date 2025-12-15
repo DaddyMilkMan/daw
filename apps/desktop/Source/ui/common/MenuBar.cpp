@@ -4,7 +4,7 @@
  */
 
 #include "MenuBar.h"
-#include "skia/CollabPanel.h"
+#include "CollabPanel.h"
 
 namespace zenith {
 

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
+#include "Engine.h"
 #include "../ai/SampleHunterAgent.h"
 #include "../network/AIBridgeClient.h"
 #include "../network/GrokDAWController.h"

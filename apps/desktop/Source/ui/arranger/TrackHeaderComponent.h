@@ -23,10 +23,10 @@
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_data_structures/juce_data_structures.h>
-#include "../ProjectState.h"
-#include "../../Source/ui/skia/SkiaButton.h"
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "ProjectState.h"
+#include "SkiaButton.h"
+#include "SkiaComponent.h"
+#include "SkiaTheme.h"
 
 //==============================================================================
 namespace zenith {

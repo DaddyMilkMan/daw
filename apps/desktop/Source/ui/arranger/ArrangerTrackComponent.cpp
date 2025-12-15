@@ -3,8 +3,8 @@
  * @brief Implementation of the 'Arranger Track' for global section editing.
  */
 
-#include "../../include/ui/ArrangerTrackComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "ArrangerTrackComponent.h"
+#include "ZenithDesignSystem.h"
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>

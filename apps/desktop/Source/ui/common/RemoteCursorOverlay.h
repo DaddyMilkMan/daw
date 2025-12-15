@@ -7,8 +7,8 @@
 */
 #pragma once
 #include "../network/CollaborationManager.h"
-#include "skia/SkiaComponent.h"
-#include "skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>

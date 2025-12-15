@@ -17,13 +17,13 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
-#include "../Settings.h"
+#include "Engine.h"
+#include "Settings.h"
 #include "../engine/PluginHost.h"
-#include "skia/SkiaButton.h"
-#include "skia/SkiaComponent.h"
-#include "skia/SkiaSlider.h"
-#include "skia/ZenithDesignSystem.h"
+#include "SkiaButton.h"
+#include "SkiaComponent.h"
+#include "SkiaSlider.h"
+#include "ZenithDesignSystem.h"
 #include <include/core/SkColor.h>
 
 #include <juce_audio_utils/juce_audio_utils.h>

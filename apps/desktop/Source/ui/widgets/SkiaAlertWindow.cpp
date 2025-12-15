@@ -11,7 +11,7 @@
 */
 
 #include "SkiaAlertWindow.h"
-#include "../ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 

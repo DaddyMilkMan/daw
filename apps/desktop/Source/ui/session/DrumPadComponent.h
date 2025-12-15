@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../Source/ui/skia/SkiaComponent.h"
+#include "SkiaComponent.h"
 #include "ProjectState.h"
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>

@@ -12,7 +12,7 @@
 
 #pragma once
 
-#include "../../../include/ui/MixerComponent.h"
+#include "MixerComponent.h"
 #include "../../engine/EngineConstants.h"
 #include "SkiaComponent.h"
 #include "views/PianoKeyboardViewSkia.h"

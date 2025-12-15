@@ -1,8 +1,8 @@
 #pragma once
 
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../Engine.h"
-#include "../ProjectState.h"
+#include "SkiaComponent.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "MiniMapComponent.h"
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>

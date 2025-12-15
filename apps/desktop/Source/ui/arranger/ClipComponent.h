@@ -27,7 +27,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 
-#include "../../Source/ui/skia/SkiaComponent.h"
+#include "SkiaComponent.h"
 
 /**
  * @class ClipComponent

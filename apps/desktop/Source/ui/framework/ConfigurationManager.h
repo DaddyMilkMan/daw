@@ -12,8 +12,18 @@
 
 #pragma once
 
-#include "../ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "SkiaLayout.h"
+#include "ZenithDesignSystem.h"
 #include <juce_core/juce_core.h>
+
+// Forward declarations for UI components
+namespace zenith {
+namespace layout {
+class SkiaListBox;
+class SkiaVerticalLayout;
+} // namespace layout
+} // namespace zenith
 
 namespace zenith {
 namespace config {

@@ -27,12 +27,12 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "../../Source/ui/skia/SkiaButton.h"
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../Source/ui/skia/SkiaKnob.h"
-#include "../../Source/ui/skia/SkiaSlider.h"
-#include "../../Source/ui/skia/SkiaSpectrumComponent.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "SkiaButton.h"
+#include "SkiaComponent.h"
+#include "SkiaKnob.h"
+#include "SkiaSlider.h"
+#include "SkiaSpectrumComponent.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 class Track;

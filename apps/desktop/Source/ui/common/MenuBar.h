@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "../ui/skia/SkiaComponent.h"
-#include "../ui/skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
 
 namespace zenith {

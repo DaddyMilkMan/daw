@@ -1,9 +1,9 @@
 #pragma once
 
-#include "../../Source/ui/skia/SkiaComponent.h"
-#include "../../Source/ui/skia/widgets/ZenithButton.h"
-#include "../Engine.h"
-#include "../ProjectState.h"
+#include "SkiaComponent.h"
+#include "widgets/ZenithButton.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include <functional>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>

@@ -12,8 +12,8 @@
 
 #include "SessionViewComponent.h"
 #include "../engine/Track.h"
-#include "skia/FontManager.h"
-#include "skia/ZenithDesignSystem.h"
+#include "FontManager.h"
+#include "ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>

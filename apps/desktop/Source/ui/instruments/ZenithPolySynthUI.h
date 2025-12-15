@@ -17,7 +17,7 @@
 #include "../../instruments/ZenithPolySynth.h"
 #include "../../instruments/ZenithPresetManager.h"
 #include "../../rendering/SkiaRenderer.h"
-#include "../ZenithLookAndFeel.h"
+#include "ZenithLookAndFeel.h"
 #include "RenderTree.h"
 #include "SkiaMainWindowIntegration.h"
 #include "ZenithUIComponents.h"

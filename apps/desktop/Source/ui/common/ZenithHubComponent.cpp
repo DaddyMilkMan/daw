@@ -14,7 +14,7 @@
 */
 
 #include "ZenithHubComponent.h"
-#include "skia/ZenithIcons.h"
+#include "ZenithIcons.h"
 #include <array>
 #include <cmath>
 #include <map>

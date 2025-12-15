@@ -10,8 +10,8 @@
 */
 
 #pragma once
-#include "skia/SkiaComponent.h"
-#include "skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include "ui/PianoRollComponent.h"
 #include <JuceHeader.h>
 

@@ -9,8 +9,8 @@
 */
 
 #include "SpectraAnalyzerComponent.h"
-#include "../../../include/Engine.h"
-#include "../../ui/skia/ZenithDesignSystem.h"
+#include "Engine.h"
+#include "ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkMaskFilter.h>

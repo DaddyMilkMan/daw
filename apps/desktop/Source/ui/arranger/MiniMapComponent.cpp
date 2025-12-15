@@ -3,8 +3,8 @@
  * @brief Implementation of the arrangement mini-map navigator.
  */
 
-#include "../../include/ui/MiniMapComponent.h"
-#include "skia/ZenithDesignSystem.h"
+#include "MiniMapComponent.h"
+#include "ZenithDesignSystem.h"
 
 // Skia includes (available via SkiaComponent inheritance)
 #include <core/SkBitmap.h> // For fallback rendering

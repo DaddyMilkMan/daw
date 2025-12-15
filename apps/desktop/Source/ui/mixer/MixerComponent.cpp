@@ -3,11 +3,11 @@
  * @brief Main mixer interface with horizontal scrolling and master strip
  */
 
-#include "../../include/ui/MixerComponent.h"
-#include "../../Source/ui/skia/GlassmorphicPanel.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
-#include "../../include/Engine.h"
-#include "../../include/ui/MixerChannelComponent.h"
+#include "MixerComponent.h"
+#include "GlassmorphicPanel.h"
+#include "ZenithDesignSystem.h"
+#include "Engine.h"
+#include "MixerChannelComponent.h"
 #include "../engine/Track.h"
 #include <JuceHeader.h>
 

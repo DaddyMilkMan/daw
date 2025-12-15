@@ -9,7 +9,7 @@
 */
 
 #include "ExportDialog.h"
-#include "../../../include/CommandAPI.h"
+#include "CommandAPI.h"
 #include "ZenithDesignSystem.h"
 
 

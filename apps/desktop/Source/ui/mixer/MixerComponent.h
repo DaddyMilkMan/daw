@@ -16,10 +16,10 @@
 
 #pragma once
 
-#include "../Engine.h"
-#include "../ProjectState.h"
-#include "../Source/ui/skia/SkiaComponent.h"
-#include "../Source/ui/skia/ZenithDesignSystem.h"
+#include "Engine.h"
+#include "ProjectState.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include "MixerChannelComponent.h"
 
 

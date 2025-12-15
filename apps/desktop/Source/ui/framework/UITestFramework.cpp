@@ -11,7 +11,7 @@
 */
 
 #include "UITestFramework.h"
-#include "../ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 #include <algorithm>
 #include <cmath>
 

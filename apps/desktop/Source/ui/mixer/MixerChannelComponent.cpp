@@ -10,13 +10,13 @@
  * - Smooth animations via spring physics
  */
 
-#include "../../include/ui/MixerChannelComponent.h"
+#include "MixerChannelComponent.h"
 #include "../../Source/engine/EngineConstants.h"
 #include "../../Source/engine/Track.h"
-#include "../../Source/ui/skia/GlassmorphicPanel.h"
-#include "../../Source/ui/skia/NeonGlow.h"
-#include "../../Source/ui/skia/SkiaTheme.h"
-#include "../../Source/ui/skia/ZenithDesignSystem.h"
+#include "GlassmorphicPanel.h"
+#include "NeonGlow.h"
+#include "SkiaTheme.h"
+#include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
 
 #include <core/SkCanvas.h>

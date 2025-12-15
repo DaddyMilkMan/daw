@@ -1,12 +1,12 @@
-#include "../../include/ui/MacroToolbar.h"
+#include "MacroToolbar.h"
 #include <algorithm>
 #include <cmath>
 
-#include "../../include/ui/ArrangerComponent.h" // For context if needed
+#include "ArrangerComponent.h" // For context if needed
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
-#include "skia/ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkPaint.h>

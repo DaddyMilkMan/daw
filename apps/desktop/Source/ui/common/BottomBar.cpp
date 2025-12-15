@@ -9,7 +9,7 @@
 */
 
 #include "BottomBar.h"
-#include "../../../include/ui/MixerComponent.h"
+#include "MixerComponent.h"
 #include "../../ai/SessionDebuggerAgent.h"
 #include "DebugConsoleComponent.h"
 
@@ -25,7 +25,7 @@
 
 #endif
 
-#include "../../../include/Engine.h"
+#include "Engine.h"
 #include "DeviceChainComponent.h"
 
 namespace zenith {

@@ -7,10 +7,10 @@
 // POLISH: typography now uses SkiaTheme::Typography (small)
 // POLISH: flattened background (bg2, no gradients)
 
-#include "../../include/ui/TimelineRuler.h"
+#include "TimelineRuler.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "SkiaTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>

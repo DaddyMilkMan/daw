@@ -17,10 +17,10 @@
 #pragma once
 
 #include "../engine/RecentProjectManager.h"
-#include "skia/AuroraBackground.h"
-#include "skia/GlassmorphicPanel.h"
-#include "skia/SkiaComponent.h"
-#include "skia/ZenithDesignSystem.h"
+#include "AuroraBackground.h"
+#include "GlassmorphicPanel.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include <functional>
 #include <memory>
 

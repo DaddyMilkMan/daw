@@ -3,8 +3,8 @@
  * @brief Plugin browser implementation
  */
 
-#include "../../include/ui/PluginBrowserComponent.h"
-#include "../../include/Engine.h"
+#include "PluginBrowserComponent.h"
+#include "Engine.h"
 #include "../engine/Track.h"
 #include "../engine/PluginHost.h"
 

@@ -13,10 +13,10 @@
 // POLISH: typography now uses SkiaTheme::Typography (body)
 // POLISH: flattened visuals (track colors, no gradients)
 
-#include "../../include/ui/ClipComponent.h"
-#include "../../include/ProjectState.h"
+#include "ClipComponent.h"
+#include "ProjectState.h"
 
-#include "../../Source/ui/skia/SkiaTheme.h"
+#include "SkiaTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>

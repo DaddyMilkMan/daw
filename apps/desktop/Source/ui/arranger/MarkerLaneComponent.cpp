@@ -12,7 +12,7 @@
  * - Sync with ProjectState markers
  */
 
-#include "../../include/ui/MarkerLaneComponent.h"
+#include "MarkerLaneComponent.h"
 
 using namespace zenith;
 

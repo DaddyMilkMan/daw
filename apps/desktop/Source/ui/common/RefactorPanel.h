@@ -13,11 +13,11 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "../ai/ProjectRefactorerAgent.h"
-#include "../ui/skia/SkiaComponent.h"
-#include "../ui/skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 

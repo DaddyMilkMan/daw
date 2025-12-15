@@ -18,8 +18,8 @@
 
 #pragma once
 
-#include "../ui/skia/SkiaComponent.h"
-#include "../ui/skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "ZenithDesignSystem.h"
 #include "LayoutManager.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <memory>

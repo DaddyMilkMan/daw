@@ -11,7 +11,7 @@
 */
 
 #include "SkiaLayout.h"
-#include "../ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 namespace layout {

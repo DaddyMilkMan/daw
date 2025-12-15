@@ -9,7 +9,7 @@
 */
 
 #include "ResizablePanelContainer.h"
-#include "../ui/skia/GlassmorphicPanel.h"
+#include "GlassmorphicPanel.h"
 #include <effects/SkGradientShader.h>
 
 namespace zenith {

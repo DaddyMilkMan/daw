@@ -3,12 +3,12 @@
  * @brief Main window implementation
  */
 
-#include "../../include/MainWindow.h"
-#include "../../include/ClipSynchronizer.h"
-#include "../../include/CommandAPI.h"
-#include "../../include/TrackAutomationSynchronizer.h"
-#include "../../include/ui/ArrangerComponent.h"
-#include "../../include/ui/PianoRollComponent.h"
+#include "MainWindow.h"
+#include "ClipSynchronizer.h"
+#include "CommandAPI.h"
+#include "TrackAutomationSynchronizer.h"
+#include "ArrangerComponent.h"
+#include "PianoRollComponent.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "../network/AIBridgeClient.h"
@@ -23,9 +23,9 @@
 #include "../ai/SessionDebuggerAgent.h"
 #include "SimpleLogger.h"
 
-#include "../ui/skia/SkiaComponent.h"
-#include "../ui/skia/SkiaMainWindowIntegration.h"
-#include "../ui/skia/ZenithDesignSystem.h"
+#include "SkiaComponent.h"
+#include "SkiaMainWindowIntegration.h"
+#include "ZenithDesignSystem.h"
 #include <core/SkFont.h>
 #include <core/SkImage.h>
 #include <core/SkImageInfo.h>

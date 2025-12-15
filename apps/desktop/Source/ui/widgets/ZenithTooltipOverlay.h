@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../SkiaComponent.h"
+#include "SkiaComponent.h"
 #include "ZenithControl.h"
 
 #ifdef ZENITH_USE_SKIA

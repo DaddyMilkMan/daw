@@ -1,7 +1,7 @@
 #pragma once
 #include <juce_gui_basics/juce_gui_basics.h>
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "../instruments/InstrumentRegistry.h"
 
 namespace zenith {

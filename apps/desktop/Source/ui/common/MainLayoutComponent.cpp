@@ -9,14 +9,14 @@
 */
 
 #include "MainLayoutComponent.h"
-#include "../../include/Engine.h"
+#include "Engine.h"
 #include "../engine/PluginHost.h"
 #include "../instruments/InstrumentRegistry.h"
 #include "SessionViewComponent.h"
-#include "skia/BrowserPanel.h"
-#include "skia/GlassmorphicPanel.h"
-#include "skia/SkiaMainWindowIntegration.h"
-#include "skia/ZenithDesignSystem.h"
+#include "BrowserPanel.h"
+#include "GlassmorphicPanel.h"
+#include "SkiaMainWindowIntegration.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 

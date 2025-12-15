@@ -6,7 +6,7 @@
 */
 
 #include "SampleEditorComponent.h"
-#include "skia/ZenithDesignSystem.h"
+#include "ZenithDesignSystem.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
