@@ -46,6 +46,10 @@ public:
   }
 
   void run() override {
+    // Pre-allocate buffer outside loop to prevent allocation churn
+    // max size 2048 is sufficient for the sampling strategy used below
+    juce::AudioBuffer<float> buffer(1, 2048);
+
     while (!threadShouldExit()) {
       juce::String path;
       {
@@ -76,15 +80,13 @@ public:
         juce::int64 length = reader->lengthInSamples;
         juce::int64 step = std::max(juce::int64(1), length / numPoints);
 
-        // Read mono mix
-        juce::AudioBuffer<float> buffer(
-            1, (int)std::min(juce::int64(2048), step + 64));
-
         for (int i = 0; i < numPoints; ++i) {
           if (threadShouldExit())
             break;
 
           juce::int64 start = i * step;
+
+          // Use pre-allocated buffer capacity
           int numToRead = (int)std::min((juce::int64)buffer.getNumSamples(),
                                         length - start);
 
@@ -106,18 +108,14 @@ public:
         }
 
         if (!threadShouldExit() && !peaks.empty()) {
-          // Safe async callback
-          juce::MessageManager::callAsync(
-              [safeOwner = size_t(&owner_), this, path, peaks]() {
-                // We can't easily check if owner is valid without SafePointer
-                // or WeakRef. But stopThread() blocks destructor, so this
-                // lambda won't execute after thread stops, mostly. However,
-                // callAsync posts to message queue, which executes LATER. To be
-                // 100% safe, owner_ needs to check if it's alive. Ideally we
-                // use a WeakReference. For now, assuming standard JUCE
-                // component lifecycle where we stop thread in dtor.
-                owner_.onWaveformLoaded(path, peaks);
-              });
+          // Safe async callback using SafePointer
+          juce::Component::SafePointer<BrowserPanel> safeOwner(&owner_);
+
+          juce::MessageManager::callAsync([safeOwner, path, peaks]() {
+            if (safeOwner != nullptr) {
+              safeOwner->onWaveformLoaded(path, peaks);
+            }
+          });
         }
       }
     }
