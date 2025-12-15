@@ -311,9 +311,13 @@ void DrumPadComponent::hitPad(int index, float velocity) {
         return;
 
     double position = engine.getPlaybackPositionBeats();
-    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_START));
-    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_LENGTH));
-    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_OFFSET)); // Start offset
+    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
+    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_LENGTH));
+    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET));
+
+    // Fallback to a default length if clipLength is invalid or unset
+    if (clipLength <= 0.001)
+        clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
     // Master logic adapted to current context
