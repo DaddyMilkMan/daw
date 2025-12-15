@@ -1393,9 +1393,9 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
   drawFilterTab(canvas, filterPluginBounds_, "Plugins",
                 activeFilter == BrowserItemType::Plugin);
 
-  // Bottom border
+  // Bottom border with subtle cyan accent
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetRGB(40, 40, 45));
+  borderPaint.setColor(design::withAlpha(design::colors::CYAN, 0.2f));
   canvas->drawLine(0, y + h - 0.5f, w, y + h - 0.5f, borderPaint);
 }
 
@@ -1408,7 +1408,8 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
     // Active tab with accent color
     tabPaint.setColor(SkColorSetARGB(50, 0, 200, 255));
   } else {
-    tabPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+    // Inactive tab - subtle background using design system
+    tabPaint.setColor(design::colors::GLASS_HIGHLIGHT);
   }
   tabPaint.setAntiAlias(true);
   canvas->drawRoundRect(SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
@@ -1430,8 +1431,8 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
   font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
 
   SkPaint textPaint;
-  textPaint.setColor(active ? SkColorSetRGB(150, 230, 255)
-                            : SkColorSetARGB(150, 255, 255, 255));
+  textPaint.setColor(active ? design::colors::CYAN
+                            : design::withAlpha(design::colors::TEXT_PRIMARY, design::effects::OPACITY_STRONG));
   textPaint.setAntiAlias(true);
 
   // Center text
