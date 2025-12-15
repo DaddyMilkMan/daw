@@ -20,7 +20,6 @@
 #include <map>
 #include <random>
 
-
 namespace zenith {
 
 using namespace design;
@@ -239,9 +238,8 @@ void ZenithHubComponent::timerCallback() {
   animationTime_ += 0.016f;
   alpha_.update(16.0f);
 
-  if (auroraBackground_) {
-    auroraBackground_->update(0.016f);
-  }
+  // Aurora background is updated via time in draw() call
+  // (No separate update() method exists)
 
   if (alpha_.isAnimating()) {
     repaint();
@@ -318,7 +316,9 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   if (auroraBackground_) {
-    auroraBackground_->draw(canvas, getLocalBounds().toFloat());
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+    auroraBackground_->draw(canvas, skBounds, animationTime_);
     return;
   }
 
@@ -575,7 +575,9 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
     shadowPaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
     shadowPaint.setAntiAlias(true);
-    canvas->drawRRect(rrect.makeOutset(2.0f, 2.0f), shadowPaint);
+    SkRRect outsetRRect = rrect;
+    outsetRRect.inset(-2.0f, -2.0f);
+    canvas->drawRRect(outsetRRect, shadowPaint);
   }
 
   canvas->drawRRect(rrect, btnPaint);
@@ -688,6 +690,37 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
 
 void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+}
+
+void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
+  bool needsUpdate = false;
+
+  for (auto &proj : recentProjects_) {
+    if (proj.isHovered) {
+      proj.isHovered = false;
+      needsUpdate = true;
+    }
+  }
+
+  for (auto &tmpl : templates_) {
+    if (tmpl.isHovered) {
+      tmpl.isHovered = false;
+      needsUpdate = true;
+    }
+  }
+
+  if (isProfileHovered_) {
+    isProfileHovered_ = false;
+    needsUpdate = true;
+  }
+
+  if (isNewProjectHovered_) {
+    isNewProjectHovered_ = false;
+    needsUpdate = true;
+  }
+
+  if (needsUpdate)
+    repaint();
 }
 
 } // namespace zenith

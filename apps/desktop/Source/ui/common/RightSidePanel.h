@@ -12,14 +12,15 @@
 
 #pragma once
 
-#include "WingmanPanel.h" // Include full header to use unique_ptr
-#include "../views/SpectraAnalyzerComponent.h"
+#include "../widgets/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
+#include "WingmanPanel.h" // Include full header to use unique_ptr
 #include <JuceHeader.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
+
 
 namespace zenith {
 

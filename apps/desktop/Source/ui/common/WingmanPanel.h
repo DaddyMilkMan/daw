@@ -16,11 +16,11 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "../ai/SampleHunterAgent.h"
-#include "../network/AIBridgeClient.h"
-#include "../network/GrokDAWController.h"
-#include "CommandAPI.h"
+#include "ai/SampleHunterAgent.h"
+#include "commands/CommandAPI.h"
+#include "engine/Engine.h"
+#include "network/AIBridgeClient.h"
+#include "network/GrokDAWController.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {

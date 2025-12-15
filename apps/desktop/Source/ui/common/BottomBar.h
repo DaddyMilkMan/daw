@@ -12,15 +12,16 @@
 
 #pragma once
 
-#include "MixerComponent.h"
 #include "../../engine/EngineConstants.h"
+#include "MixerComponent.h"
+#include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
-#include "views/PianoKeyboardViewSkia.h"
 #include <JuceHeader.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
+
 
 namespace zenith {
 class Engine;

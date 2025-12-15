@@ -35,7 +35,7 @@ int SkiaPopupMenu::addItem(int itemId, const juce::String &text, bool isEnabled,
   item.isTicked = isTicked;
   item.callback = callback;
   item.isSeparator = false;
-  items_.add(item);
+  items_.push_back(std::move(item));
   return itemId;
 }
 
@@ -49,7 +49,7 @@ void SkiaPopupMenu::addSeparator() {
   Item separator;
   separator.isSeparator = true;
   separator.itemId = -1;
-  items_.add(separator);
+  items_.push_back(std::move(separator));
 }
 
 void SkiaPopupMenu::addSubMenu(const juce::String &text,
@@ -63,7 +63,7 @@ void SkiaPopupMenu::addSubMenu(const juce::String &text,
   if (item.subMenu) {
     item.subMenu->parentMenu_ = this;
   }
-  items_.add(std::move(item));
+  items_.push_back(std::move(item));
 }
 
 void SkiaPopupMenu::showAt(juce::Component *component, int x, int y) {

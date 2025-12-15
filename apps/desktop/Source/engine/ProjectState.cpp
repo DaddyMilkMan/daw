@@ -9,7 +9,6 @@
 #include "ProjectFileIO.h"
 #include "TrackStateManager.h"
 
-
 #include <functional>
 
 namespace {
@@ -164,19 +163,21 @@ void ProjectState::newProject() {
 
 bool ProjectState::loadFromFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->loadFromFile(file);
+    return projectFileIO->loadFromFile(file) == FileIOError::Success;
   return false;
 }
 
 bool ProjectState::saveToFile(const juce::File &file) {
   if (projectFileIO)
-    return projectFileIO->saveToFile(file);
+    return projectFileIO->saveToFile(file) == FileIOError::Success;
   return false;
 }
 
 juce::File ProjectState::saveCrashDump() {
-  if (projectFileIO)
-    return projectFileIO->saveCrashDump();
+  if (projectFileIO) {
+    projectFileIO->autoSave();
+    return projectFileIO->getRecoveryFile();
+  }
   return juce::File();
 }
 

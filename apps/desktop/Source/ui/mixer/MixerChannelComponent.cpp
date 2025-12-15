@@ -13,9 +13,9 @@
 #include "MixerChannelComponent.h"
 #include "../../engine/EngineConstants.h"
 #include "../../engine/Track.h"
-#include "../Theme.h"
-#include "../skia/GlassmorphicPanel.h"
-#include "../skia/NeonGlow.h"
+#include "../design-system/ZenithTheme.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include <JuceHeader.h>
 
 #include <core/SkCanvas.h>

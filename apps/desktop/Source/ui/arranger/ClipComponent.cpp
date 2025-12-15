@@ -17,7 +17,8 @@
 #include "../../engine/ProjectState.h"
 #include <JuceHeader.h>
 
-#include "../ZenithTheme.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
@@ -25,6 +26,7 @@
 #include <core/SkRRect.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
+
 
 using namespace zenith;
 
@@ -148,7 +150,7 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   // 2. Setup Colors
   juce::String clipType = clip[ProjectState::PROP_TYPE].toString();
   SkColor baseColor =
-      (clipType == "midi") ? colors.waveformMidi : colors.waveformAudio;
+      (clipType == "midi") ? design::colors::NEON_PURPLE : design::colors::CYAN;
 
   // Header Color (Solid)
   SkColor headerColor = baseColor;
@@ -356,14 +358,15 @@ void ClipComponent::drawSkia(SkCanvas *canvas) {
   if (isSelected) {
     SkPaint selectionPaint;
     selectionPaint.setAntiAlias(true);
-    selectionPaint.setColor(SkColorSetA(colors.primary, 255)); // Bright accent
+    selectionPaint.setColor(
+        SkColorSetA(design::colors::CYAN, 255)); // Bright accent
     selectionPaint.setStyle(SkPaint::kStroke_Style);
     selectionPaint.setStrokeWidth(2.0f);
     canvas->drawRRect(clipRRect, selectionPaint);
   } else {
     SkPaint borderPaint;
     borderPaint.setAntiAlias(true);
-    borderPaint.setColor(SkColorSetA(colors.borderSubtle, 100));
+    borderPaint.setColor(SkColorSetA(design::colors::BORDER_SUBTLE, 100));
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(1.0f);
     canvas->drawRRect(clipRRect, borderPaint);

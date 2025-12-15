@@ -354,7 +354,8 @@ bool ConfigurationManager::saveConfiguration() {
   }
 
   try {
-    juce::String json = juce::JSON::toString(configData_, true);
+    juce::String json =
+        juce::JSON::toString(juce::var(configData_.get()), true);
     return configFile_.replaceWithText(json);
   } catch (const std::exception &e) {
     DBG("Failed to save configuration: " << e.what());
@@ -370,7 +371,8 @@ bool ConfigurationManager::saveConfigurationAs(const juce::File &newFile) {
   }
 
   try {
-    juce::String json = juce::JSON::toString(configData_, true);
+    juce::String json =
+        juce::JSON::toString(juce::var(configData_.get()), true);
     bool success = newFile.replaceWithText(json);
 
     if (success) {

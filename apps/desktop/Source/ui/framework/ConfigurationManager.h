@@ -257,6 +257,12 @@ private:
   juce::StringArray splitKey(const juce::String &key) const;
   juce::DynamicObject::Ptr ensureNestedObject(const juce::String &key);
 
+  juce::var
+  getNestedValueFromObject(const juce::String &key,
+                           const juce::DynamicObject::Ptr &object) const;
+  void setNestedValueInObject(const juce::String &key, const juce::var &value,
+                              const juce::DynamicObject::Ptr &object);
+
   // Data members
   bool initialized_ = false;
   juce::File configFile_;

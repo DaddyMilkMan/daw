@@ -1367,6 +1367,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
       static constexpr float kPlayheadMarkerHeight = 8.0f;
 
+      float contentTop = static_cast<float>(TOOLBAR_HEIGHT + RULER_HEIGHT);
       SkPath trianglePath;
       trianglePath.moveTo(playheadX, contentTop);
       trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
@@ -1505,6 +1506,13 @@ void PianoRollComponent::stopPianoKey(int pitch) {
 //==============================================================================
 // Skia Helpers
 //==============================================================================
+
+juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+  float intensity = velocity / 127.0f;
+  // Using a violet-ish color similar to Zenith design system
+  // Base color: #A020F0 (Violet)
+  return juce::Colour(0xFFA020F0).withAlpha(0.5f + 0.5f * intensity);
+}
 
 SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   juce::Colour c = getColorForVelocity(velocity);

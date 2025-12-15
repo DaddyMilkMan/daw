@@ -232,7 +232,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-        SkFont font = zenith::design::typography::getMonoFont(typo.tiny.size);
+        SkFont font = zenith::design::typography::getMonoFont(10.0f);
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -275,7 +275,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       }
 
       // Draw parameter name
-      SkFont nameFont = zenith::design::typography::getSkFont(typo.body.size);
+      SkFont nameFont = zenith::design::typography::getSkFont(14.0f);
 
       SkPaint namePaint;
       namePaint.setColor(colors::TEXT_TERTIARY);

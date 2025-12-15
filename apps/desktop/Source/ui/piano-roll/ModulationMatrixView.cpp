@@ -15,8 +15,8 @@
 */
 
 #include "ModulationMatrixView.h"
-#include "Engine.h"
 #include "../../engine/Track.h"
+#include "Engine.h"
 #include <algorithm>
 #include <cmath>
 #include <core/SkBlurTypes.h>
@@ -30,7 +30,11 @@
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 
+
 namespace zenith {
+
+// Bring in design namespace types for convenience
+using design::FontWeight;
 
 //==============================================================================
 // Constructor / Destructor

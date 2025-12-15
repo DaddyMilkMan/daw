@@ -4,21 +4,22 @@
  */
 
 #include "MainWindow.h"
-#include "ClipSynchronizer.h"
-#include "CommandAPI.h"
-#include "TrackAutomationSynchronizer.h"
-#include "ArrangerComponent.h"
-#include "PianoRollComponent.h"
+#include "../../commands/CommandAPI.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
 #include "../network/AIBridgeClient.h"
+#include "ArrangerComponent.h"
+#include "ClipSynchronizer.h"
 #include "InstrumentBrowserPanel.h"
 #include "MainLayoutComponent.h"
 #include "MenuBar.h"
+#include "PianoRollComponent.h"
 #include "SettingsComponent.h"
+#include "TrackAutomationSynchronizer.h"
 #include "WingmanPanel.h"
 #include "ZenithHubComponent.h"
 #include "ZenithLookAndFeel.h" // For colors
+
 
 #include "../ai/SessionDebuggerAgent.h"
 #include "SimpleLogger.h"

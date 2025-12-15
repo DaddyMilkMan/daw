@@ -10,15 +10,14 @@
 
 #include "TrackHeaderComponent.h"
 
-#include "../Theme.h"
-#include "../skia/GlassmorphicPanel.h"
-#include "../skia/NeonGlow.h"
+#include "../design-system/ZenithTheme.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
-
 
 namespace zenith {
 
@@ -38,10 +37,9 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState &projectState,
     trackNode_.addListener(this);
 
   // Setup name label (editable) with Apple styling
-  auto &typo = zenith::ZenithTheme::getInstance().getTypography();
   nameLabel_.setEditable(true);
   nameLabel_.setJustificationType(juce::Justification::centredLeft);
-  nameLabel_.setFont(juce::FontOptions(typo.header.size));
+  nameLabel_.setFont(juce::FontOptions(ZenithTheme::Typography::heading));
   nameLabel_.setColour(juce::Label::textColourId,
                        juce::Colours::white.withAlpha(0.95f));
   nameLabel_.setColour(juce::Label::backgroundColourId,

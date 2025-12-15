@@ -137,6 +137,8 @@ private:
   void fireLifecycleEvent(const LifecycleEvent &event);
   void validateStateTransition(ComponentState oldState,
                                ComponentState newState);
+  void reportError(LifecycleAware *component, const juce::String &error);
+  static juce::String getStateName(ComponentState state);
 
   // Data members
   juce::HashMap<LifecycleAware *, ComponentState> componentStates_;

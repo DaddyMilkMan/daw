@@ -145,7 +145,6 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
                                           const juce::Image &current) {
   juce::Image diffImage(juce::Image::ARGB, baseline.getWidth(),
                         baseline.getHeight(), true);
-  juce::Graphics g(diffImage);
 
   // Create a red overlay where pixels differ
   for (int y = 0; y < baseline.getHeight(); ++y) {
@@ -155,10 +154,10 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
 
       if (baselinePixel != currentPixel) {
         // Pixel differs - mark in red
-        g.setPixel(x, y, juce::Colours::red.withAlpha(0.5f));
+        diffImage.setPixelAt(x, y, juce::Colours::red.withAlpha(0.5f));
       } else {
         // Pixel matches - use baseline pixel with reduced opacity
-        g.setPixel(x, y, baselinePixel.withAlpha(0.3f));
+        diffImage.setPixelAt(x, y, baselinePixel.withAlpha(0.3f));
       }
     }
   }

@@ -9,9 +9,8 @@
 */
 
 #include "ExportDialog.h"
-#include "CommandAPI.h"
+#include "../../commands/CommandAPI.h"
 #include "ZenithDesignSystem.h"
-
 
 namespace zenith {
 

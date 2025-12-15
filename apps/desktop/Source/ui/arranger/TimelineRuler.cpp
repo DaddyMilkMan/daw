@@ -149,7 +149,7 @@ void TimelineRuler::drawSkia(SkCanvas *canvas) {
     // POLISH: Simplified tooltip (no heavy shadows)
     SkPaint tooltipBgPaint;
     tooltipBgPaint.setAntiAlias(true);
-    tooltipBgPaint.setColor(colors::BG_PANEL);
+    tooltipBgPaint.setColor(colors::BG_DARK);
     tooltipBgPaint.setAlpha(static_cast<uint8_t>(255 * hoverAnimation));
     canvas->drawRoundRect(tooltipRect, 4.0f, 4.0f, tooltipBgPaint);
 

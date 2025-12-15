@@ -51,20 +51,20 @@ SkiaFileChooser::SkiaFileChooser(const juce::String &dialogTitle,
   addAndMakeVisible(fileNameEditor_.get());
 
   okButton_ = std::make_unique<SkiaButton>();
-  okButton_->setButtonText(mode == Mode::SaveFile ? "Save" : "Open");
-  okButton_->setButtonStyle(SkiaButton::Style::Primary);
+  okButton_->setText(mode == Mode::SaveFile ? "Save" : "Open");
+  okButton_->setStyle(SkiaButton::Style::Primary);
   okButton_->onClick = [this]() { handleOkPressed(); };
   addAndMakeVisible(okButton_.get());
 
   cancelButton_ = std::make_unique<SkiaButton>();
-  cancelButton_->setButtonText("Cancel");
-  cancelButton_->setButtonStyle(SkiaButton::Style::Secondary);
+  cancelButton_->setText("Cancel");
+  cancelButton_->setStyle(SkiaButton::Style::Secondary);
   cancelButton_->onClick = [this]() { handleCancelPressed(); };
   addAndMakeVisible(cancelButton_.get());
 
   upButton_ = std::make_unique<SkiaButton>();
-  upButton_->setButtonText("↑");
-  upButton_->setButtonStyle(SkiaButton::Style::Ghost);
+  upButton_->setText("↑");
+  upButton_->setStyle(SkiaButton::Style::Ghost);
   upButton_->onClick = [this]() { navigateUp(); };
   addAndMakeVisible(upButton_.get());
 
