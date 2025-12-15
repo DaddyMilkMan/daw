@@ -16,7 +16,6 @@ namespace zenith {
 ModernTrackHeader::ModernTrackHeader(int trackIndex)
     : trackIndex_(trackIndex),
       trackColor_(ZenithTheme::Colors::getTrackColor(trackIndex)) {
-  using namespace ZenithTheme;
 
   // Setup name label
   nameLabel_.setText("Track " + juce::String(trackIndex + 1),
