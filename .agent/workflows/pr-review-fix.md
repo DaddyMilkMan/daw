@@ -15,7 +15,7 @@ This workflow is triggered when the user pastes a Gemini Code Assist PR review o
 
 ### 1. Checkout the Feature Branch
 // turbo
-`ash
+```bash
 git fetch origin
 git checkout <branch-name>
 git pull origin <branch-name>
@@ -32,12 +32,12 @@ Read the pasted review carefully. Categorize issues into:
 
 ### 3. Fix Critical Issues
 For each critical issue:
-1. Understand the exact problem (e.g., " CMakeLists.txt was moved to logs/ directory\).
+1. Understand the exact problem (e.g., "CMakeLists.txt was moved to logs/ directory").
 2. Revert the problematic change using git checkout origin/master -- <file> or manual editing.
 3. Verify the fix does not break other parts of the code.
 
 Example for a misplaced CMakeLists.txt:
-`ash
+```bash
 git checkout origin/master -- CMakeLists.txt
 git rm logs/CMakeLists.txt # If it was wrongly moved
 `
@@ -70,31 +70,31 @@ For binary or log file conflicts (e.g., build logs):
 
 ### 6. Verify Build
 // turbo
-`ash
+```bash
 cmake --build build --config Debug 2>&1 | Select-Object -First 50
 `
 Ensure the project compiles successfully before committing.
 
 ### 7. Commit Fixes
 // turbo
-`ash
+```bash
 git add .
-git commit -m \fix review: address Gemini Code Assist feedback\
+git commit -m "fix review: address Gemini Code Assist feedback"
 `
 Use a conventional commit message format. Include a summary of critical and medium fixes in the commit body if needed.
 
 ### 8. Push to Origin
 // turbo
-`ash
+```bash
 git push origin <branch-name>
 `
 This syncs the fixes with the remote repository.
 
 ### 9. Notify User
 Inform the user that the PR is ready for re-review and merging:
-- \The PR branch <branch-name> has been updated with fixes for Gemini Code Assist feedback.\
-- \Merge conflicts have been resolved.\
-- \The branch is now synced with origin. You can merge it on GitHub.\
+- "The PR branch <branch-name> has been updated with fixes for Gemini Code Assist feedback."
+- "Merge conflicts have been resolved."
+- "The branch is now synced with origin. You can merge it on GitHub."
 
 ## Notes
 - If another agent is handling a specific file (as noted by user), skip that file.
