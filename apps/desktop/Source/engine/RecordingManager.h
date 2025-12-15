@@ -23,7 +23,9 @@
 
 #pragma once
 
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_core/juce_core.h>
 #include <atomic>
 #include <map>
 #include <memory>
@@ -89,6 +91,12 @@ public:
    * @param sampleRate Current sample rate
    */
   void prepare(double sampleRate);
+
+  /**
+   * @brief Pre-prepare recording resources for a track when it gets armed.
+   */
+  void prepareRecordingForTrack(const Track &track, int trackIndex,
+                                const juce::File &recordingsDir);
 
   //==========================================================================
   // Recording Control

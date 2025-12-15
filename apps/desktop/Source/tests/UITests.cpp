@@ -10,7 +10,7 @@
   ==============================================================================
 */
 
-#include "../ui/skia/ZenithLayout.h"
+#include "ZenithLayout.h"
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -18,7 +18,7 @@
 // RenderTree.h depends on Skia types (SkRect, SkColor), only include when Skia
 // enabled
 #ifdef ZENITH_USE_SKIA
-#include "../ui/skia/RenderTree.h"
+#include "RenderTree.h"
 #endif
 
 class UITests : public juce::UnitTest {

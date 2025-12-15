@@ -1,4 +1,4 @@
-target_sources(ZenithDAW PRIVATE
+target_sources(ZenithDAW_lib PRIVATE
     AIBridgeClient.cpp
     MockAIProvider.cpp
     GrokAPIClient.cpp
@@ -10,3 +10,4 @@ target_sources(ZenithDAW PRIVATE
     AIPrompts.cpp
     CollaborationManager.cpp
 )
+
