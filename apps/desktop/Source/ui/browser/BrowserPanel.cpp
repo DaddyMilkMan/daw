@@ -312,9 +312,9 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
   SkPoint bgGradPoints[2] = {{0, 0},
                              {0, static_cast<float>(bounds.getHeight())}};
   SkColor bgGradColors[3] = {
-      design::colors::BG_MEDIUM, // Top
-      design::colors::BG_DARK,   // Middle
-      design::colors::BG_DARK    // Bottom
+      design::colors::BG_DARK,    // Top
+      design::colors::BG_DARKEST, // Middle - darkest
+      design::colors::BG_DARKEST  // Bottom
   };
   float bgPositions[3] = {0.0f, 0.4f, 1.0f};
   auto bgGradient = SkGradientShader::MakeLinear(
@@ -617,17 +617,18 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
 
     SkPaint barGlowPaint;
-    barGlowPaint.setColor(SkColorSetA(design::colors::ACCENT_PRIMARY, 80));
+    barGlowPaint.setColor(design::withAlpha(design::colors::CYAN, 0.5f));
+    barGlowPaint.setMaskFilter(
+        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawRect(SkRect::MakeXYWH(0, y, 6, h), barGlowPaint);
 
     SkPaint barPaint;
-    barPaint.setColor(design::colors::ACCENT_PRIMARY);
-    canvas->drawRect(SkRect::MakeXYWH(0, y + 2, 3, h - 4), barPaint);
+    barPaint.setColor(design::colors::CYAN);
 
   } else if (index == hoverIndex_) {
     SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor hovGradColors[2] = {design::colors::GLASS_HIGHLIGHT,
-                                design::withAlpha(design::colors::GLASS_HIGHLIGHT, 5)};
+    SkColor hovGradColors[2] = {design::withAlpha(design::colors::CYAN, 0.15f),
+                                design::withAlpha(design::colors::CYAN, 0.0f)};
     auto hovGradient = SkGradientShader::MakeLinear(
         hovGradPoints, hovGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -1448,9 +1449,11 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
     canvas->drawRoundRect(tabRect.makeInset(0.5f, 0.5f), 4.5f, 4.5f,
                           borderPaint);
   } else {
-    // Inactive tab - subtle background using design system
+    // Inactive tab - subtle background
+    SkPaint tabPaint;
     tabPaint.setColor(design::colors::GLASS_HIGHLIGHT);
-  }
+    tabPaint.setAntiAlias(true);
+    canvas->drawRoundRect(tabRect, 4, 4, tabPaint);
 
   // Active indicator line with glow
   if (active) {
@@ -1475,7 +1478,7 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
 
   SkPaint textPaint;
   textPaint.setColor(active ? design::colors::CYAN
-                            : design::withAlpha(design::colors::TEXT_PRIMARY, design::effects::OPACITY_STRONG));
+                            : design::withAlpha(design::colors::TEXT_PRIMARY, 160.0f / 255.0f));
   textPaint.setAntiAlias(true);
 
   // Center text
