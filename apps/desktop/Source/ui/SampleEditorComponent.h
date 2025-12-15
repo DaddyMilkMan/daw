@@ -23,7 +23,6 @@
 #pragma once
 
 #include "../../include/Engine.h"
-#include "../engine/RecordingManager.h"
 #include "../../include/ProjectState.h"
 #include "skia/SkiaComponent.h"
 #include "../engine/AudioFilePool.h"
@@ -80,7 +79,7 @@ enum class WaveformViewMode {
 //==============================================================================
 class SampleEditorComponent : public SkiaComponent,
                               public juce::ValueTree::Listener,
-                              public AudioInputListener
+                              public juce::AudioIODeviceCallback
 {
 public:
     SampleEditorComponent(Engine& engine, ProjectState& projectState);
@@ -100,13 +99,19 @@ public:
     void mouseWheelMove(const juce::MouseEvent& e, const juce::MouseWheelDetails& wheel) override;
     bool keyPressed(const juce::KeyPress& key) override;
 
-    // Timer for playhead updates
-    // Timer for playhead updates and recording
+    // Timer for playhead updates and recording drain
     void timerCallback() override;
 
-    // AudioInputListener override
-    void onAudioInput(const float *const *inputData, int numInputChannels,
-                      int numSamples) override;
+    //==============================================================================
+    // AudioIODeviceCallback overrides
+    void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
+    void audioDeviceStopped() override;
+    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
+                                          int numInputChannels,
+                                          float* const* outputChannelData,
+                                          int numOutputChannels,
+                                          int numSamples,
+                                          const juce::AudioIODeviceCallbackContext& context) override;
 
     //==============================================================================
     // Editor API
@@ -408,13 +413,12 @@ private:
     bool isRecording_ = false;
     int recordInputChannel_ = 0;
     std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
-    std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
     std::atomic<int> recordWritePos_{0};
 
-    // FIFO for RT-safe recording transfer
-    static constexpr int fifoSize_ = 65536; // ~1.5 sec at 44.1k
-    juce::AbstractFifo incomingFifo_{fifoSize_};
-    juce::AudioBuffer<float> incomingBuffer_;
+    // Thread-safe FIFO for incoming audio
+    static constexpr int kRecordFifoSize = 131072; // ~3 sec at 44.1k
+    juce::AbstractFifo incomingFifo_{kRecordFifoSize};
+    juce::AudioBuffer<float> incomingBuffer_; // Ring buffer for thread exchange
     
     //==============================================================================
     // Undo/Redo
