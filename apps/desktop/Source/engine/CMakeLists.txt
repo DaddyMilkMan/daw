@@ -1,4 +1,4 @@
-target_sources(ZenithDAW PRIVATE
+target_sources(ZenithDAW_lib PRIVATE
     Engine.cpp
     ProjectState.cpp
     Track.cpp
@@ -32,3 +32,5 @@ target_sources(ZenithDAW PRIVATE
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
 )# Touch for rebuild
+
+
