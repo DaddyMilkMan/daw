@@ -43,18 +43,60 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/AccessibilityTests.cpp
 )
 
-# Shared Static Library
-add_library(ZenithDAW_lib STATIC "")
-target_compile_features(ZenithDAW_lib PUBLIC cxx_std_20)
-target_include_directories(ZenithDAW_lib PUBLIC
-    apps/desktop/include
-    apps/desktop/Source
+# Create main executable
+juce_add_gui_app(ZenithDAW
+    PRODUCT_NAME "Zenith DAW"
+    COMPANY_NAME "Zenith Audio"
+    VERSION ${PROJECT_VERSION}
+    BUNDLE_ID com.zenithaudio.daw
+)
+
+
+
+# Generate JuceHeader.h for compatibility
+juce_generate_juce_header(ZenithDAW)
+
+target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
+
+# Skia Integration (must be defined before subdirectories)
+option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
+
+# Modularized Source Groups (Complaint #6 Fix)
+add_subdirectory(apps/desktop/Source/engine)
+add_subdirectory(apps/desktop/Source/ui)
+add_subdirectory(apps/desktop/Source/instruments)
+add_subdirectory(apps/desktop/Source/network)
+add_subdirectory(apps/desktop/Source/commands)
+add_subdirectory(apps/desktop/Source/rendering)
+add_subdirectory(apps/desktop/Source/dsp)
+add_subdirectory(apps/desktop/Source/browser)
+add_subdirectory(apps/desktop/Source/ai)
+
+
+# Include directories (updated for new domain-based structure)
+target_include_directories(ZenithDAW PUBLIC
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
+    apps/desktop/Source
+    apps/desktop/Source/engine
+    apps/desktop/Source/ui
+    apps/desktop/Source/ui/framework
+    apps/desktop/Source/ui/design-system
+    apps/desktop/Source/ui/arranger
+    apps/desktop/Source/ui/mixer
+    apps/desktop/Source/ui/piano-roll
+    apps/desktop/Source/ui/browser
+    apps/desktop/Source/ui/transport
+    apps/desktop/Source/ui/common
+    apps/desktop/Source/ui/widgets
+    apps/desktop/Source/ui/session
+    apps/desktop/Source/ui/instruments
+    apps/desktop/Source/ui/dialogs
+    apps/desktop/Source/ui/sample-editor
     ${CMAKE_PREFIX_PATH}/include
     "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
 )
 
-target_link_libraries(ZenithDAW_lib PUBLIC
+target_link_libraries(ZenithDAW PRIVATE
     juce::juce_core
     juce::juce_cryptography
     juce::juce_events
@@ -71,41 +113,19 @@ target_link_libraries(ZenithDAW_lib PUBLIC
     juce::juce_opengl
 )
 
-# Subdirectories populate ZenithDAW_lib
-add_subdirectory(apps/desktop/Source/engine)
-add_subdirectory(apps/desktop/Source/ui)
-add_subdirectory(apps/desktop/Source/instruments)
-add_subdirectory(apps/desktop/Source/network)
-add_subdirectory(apps/desktop/Source/commands)
-add_subdirectory(apps/desktop/Source/rendering)
-add_subdirectory(apps/desktop/Source/dsp)
-add_subdirectory(apps/desktop/Source/browser)
-add_subdirectory(apps/desktop/Source/ai)
-
 # Platform specific (Public so App and Tests inherit)
 if(WIN32)
-    target_link_libraries(ZenithDAW_lib PUBLIC d3d12 dxgi dcomp uuid)
+    target_link_libraries(ZenithDAW PRIVATE d3d12 dxgi dcomp uuid)
 elseif(APPLE)
-    target_link_libraries(ZenithDAW_lib PUBLIC "-framework Metal" "-framework Foundation" "-framework QuartzCore")
+    target_link_libraries(ZenithDAW PRIVATE "-framework Metal" "-framework Foundation" "-framework QuartzCore")
 elseif(UNIX AND NOT APPLE)
     find_package(Vulkan)
     if(Vulkan_FOUND)
-        target_link_libraries(ZenithDAW_lib PUBLIC Vulkan::Vulkan)
+        target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
     else()
-        target_link_libraries(ZenithDAW_lib PUBLIC vulkan)
+        target_link_libraries(ZenithDAW PRIVATE vulkan)
     endif()
 endif()
-
-# Main App
-juce_add_gui_app(ZenithDAW
-    PRODUCT_NAME "Zenith DAW"
-    COMPANY_NAME "Zenith Audio"
-    VERSION ${PROJECT_VERSION}
-    BUNDLE_ID com.zenithaudio.daw
-)
-juce_generate_juce_header(ZenithDAW)
-target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
-target_link_libraries(ZenithDAW PRIVATE ZenithDAW_lib)
 
 
 
