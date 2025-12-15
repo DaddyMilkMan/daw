@@ -10,7 +10,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
-#include "../../include/Engine.h"
+#include "Engine.h"
 #include "../engine/Track.h"
 
 namespace zenith {
