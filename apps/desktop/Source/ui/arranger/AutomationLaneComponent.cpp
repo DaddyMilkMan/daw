@@ -106,9 +106,7 @@ AutomationLaneComponent::getDefaultVolumeInfo() {
 void AutomationLaneComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
-  auto &theme = zenith::SkiaTheme::getInstance();
-  const auto &colors = theme.getColors();
-  const auto &typo = theme.getTypography();
+  using namespace zenith::design;
 
   // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
   juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
@@ -127,7 +125,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Background with subtle tint
       SkPaint bgPaint;
-      bgPaint.setColor(colors.bg2);
+      bgPaint.setColor(colors::BG_DARKER);
       bgPaint.setAntiAlias(true);
       canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
