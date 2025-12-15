@@ -122,9 +122,17 @@ bool ProjectFileIO::saveToFile(const juce::File& file)
 
     if (xml == nullptr)
     {
-        DBG("ProjectFileIO: Failed to create XML");
+        DBG("ProjectFileIO: Failed to create XML from ValueTree");
         return false;
     }
+
+    // Add metadata
+    auto now = juce::Time::getCurrentTime();
+    xml->setAttribute("appVersion", "0.1.0"); // TODO: Use ProjectInfo::versionString
+    xml->setAttribute("savedAt", now.formatted("%Y-%m-%d %H:%M:%S"));
+    xml->setAttribute("timestamp", static_cast<double>(now.toMilliseconds()));
+    xml->setAttribute("isCrashDump", "0");
+    xml->setAttribute("platform", juce::SystemStats::getOperatingSystemName());
 
     // Save to file
     if (!xml->writeTo(file))
@@ -135,7 +143,6 @@ bool ProjectFileIO::saveToFile(const juce::File& file)
 
     DBG("ProjectFileIO: Saved successfully");
     projectState_.setProjectFile(file);
-    // projectState_.isDirty = false;
     
     return true;
 }

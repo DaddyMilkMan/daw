@@ -32,10 +32,11 @@ option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
 # Auto-enable sanitizers in Debug builds
-if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-    set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-endif()
+# (Disabled to prevent ASAN in Release builds)
+# if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+#     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
+#     set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
+# endif()
 
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
@@ -217,7 +218,7 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    JUCE_DISPLAY_SPLASH_SCREEN=0
+
     JUCE_REPORT_APP_USAGE=0
 )
 

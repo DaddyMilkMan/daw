@@ -346,7 +346,7 @@ public:
         float *samples = buffer.getWritePointer(ch);
         for (int i = 0; i < numSamples; ++i) {
           // Generate a simple sine wave to simulate valid audio output
-          float phase = (float)i / (float)numSamples * 2.0f * 3.14159f;
+          float phase = (float)i / (float)numSamples * 2.0f * juce::MathConstants<float>::pi;
           samples[i] =
               std::sin(phase) * 0.1f; // Low amplitude to avoid clipping
         }

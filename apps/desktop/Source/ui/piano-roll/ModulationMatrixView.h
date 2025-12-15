@@ -21,7 +21,7 @@
 
 #include "../../dsp/GlobalLFO.h"
 #include "../../engine/MacroControl.h"
-#include "ZenithTheme.h"
+
 #include "../framework/SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include <JuceHeader.h>

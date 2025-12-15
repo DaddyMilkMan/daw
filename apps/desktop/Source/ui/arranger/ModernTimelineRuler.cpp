@@ -101,7 +101,7 @@ void ModernTimelineRuler::drawTimeMarkers(juce::Graphics& g) {
     int beatsPerBar = timeSignatureNumerator_;
     
     g.setColour(skToJuce(design::colors::TEXT_SECONDARY));
-    g.setFont(12.0f);
+    g.setFont(design::typography::FONT_SM);
     
     // Draw bar numbers
     for (int beat = std::floor(startBeat); beat <= std::ceil(endBeat); ++beat) {
@@ -162,19 +162,30 @@ void ModernTimelineRuler::drawLoopRegion(juce::Graphics& g) {
 }
 
 void ModernTimelineRuler::mouseDown(const juce::MouseEvent& e) {
-    double clickedBeat = pixelToBeat(e.x);
-    
-    if (onPlayheadMoved) {
-        onPlayheadMoved(clickedBeat);
+    double beat = pixelToBeat(e.x);
+
+    // Check if clicking near playhead (within 8px)
+    int playheadX = beatToPixel(playheadBeat_);
+    if (std::abs(e.x - playheadX) < 8) {
+        isDraggingPlayhead_ = true;
+    } else {
+        // Jump playhead to click position
+        setPlayheadPosition(beat);
+        if (onPlayheadMoved) onPlayheadMoved(beat);
     }
 }
 
 void ModernTimelineRuler::mouseDrag(const juce::MouseEvent& e) {
-    double draggedBeat = pixelToBeat(e.x);
-    
-    if (onPlayheadMoved) {
-        onPlayheadMoved(draggedBeat);
+    if (isDraggingPlayhead_) {
+        double beat = pixelToBeat(e.x);
+        setPlayheadPosition(beat);
+        if (onPlayheadMoved) onPlayheadMoved(beat);
     }
+}
+
+void ModernTimelineRuler::mouseUp(const juce::MouseEvent& e) {
+    juce::ignoreUnused(e);
+    isDraggingPlayhead_ = false;
 }
 
 //==============================================================================
@@ -182,7 +193,7 @@ void ModernTimelineRuler::mouseDrag(const juce::MouseEvent& e) {
 //==============================================================================
 
 void ModernTimelineRuler::setPixelsPerBeat(double ppb) {
-    pixelsPerBeat_ = ppb;
+    pixelsPerBeat_ = juce::jlimit(10.0, 200.0, ppb);
     repaint();
 }
 

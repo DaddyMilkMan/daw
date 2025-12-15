@@ -31,7 +31,7 @@ ModernTrackHeader::ModernTrackHeader(int trackIndex)
                      juce::dontSendNotification);
   nameLabel_.setEditable(true, true);
   nameLabel_.setJustificationType(juce::Justification::centredLeft);
-  nameLabel_.setFont(14.0f);
+  nameLabel_.setFont(design::typography::FONT_MD);
   nameLabel_.setColour(juce::Label::textColourId, skToJuce(design::colors::TEXT_PRIMARY));
   nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
   nameLabel_.setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
@@ -123,20 +123,20 @@ void ModernTrackHeader::resized() {
   bounds.removeFromLeft(4);
 
   // Add padding
-  bounds.reduce(16, 8);
+  bounds.reduce(design::spacing::MD, design::spacing::SM);
 
   // Buttons on the right (24x24 with 4px spacing)
   const int buttonSize = 24;
   auto buttonArea = bounds.removeFromRight(buttonSize * 3 + 4 * 2);
 
   armButton_.setBounds(buttonArea.removeFromRight(buttonSize));
-  buttonArea.removeFromRight(4);
+  buttonArea.removeFromRight(design::spacing::XS);
   soloButton_.setBounds(buttonArea.removeFromRight(buttonSize));
-  buttonArea.removeFromRight(4);
+  buttonArea.removeFromRight(design::spacing::XS);
   muteButton_.setBounds(buttonArea.removeFromRight(buttonSize));
 
   // Add spacing between buttons and name
-  bounds.removeFromRight(16);
+  bounds.removeFromRight(design::spacing::MD);
 
   // Name label gets remaining space
   nameLabel_.setBounds(bounds);
@@ -205,7 +205,7 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
                                                  bool isHighlighted,
                                                  bool isDown) {
   auto bounds = getLocalBounds().toFloat();
-  float cornerSize = 4.0f;
+  float cornerSize = design::dimensions::RADIUS_SM;
 
   // Determine colors based on button type and state
   juce::Colour buttonColor;
@@ -247,7 +247,7 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
 
   // Draw icon/text
   g.setColour(textColor);
-  g.setFont(12.0f);
+  g.setFont(design::typography::FONT_SM);
   g.drawText(getButtonText(), bounds.toNearestInt(),
              juce::Justification::centred, false);
 
