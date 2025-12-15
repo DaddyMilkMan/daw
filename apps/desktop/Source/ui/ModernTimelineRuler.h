@@ -8,7 +8,6 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "ZenithTheme.h"
-#include "../engine/EngineConstants.h"
 
 namespace zenith {
 
@@ -94,8 +93,8 @@ private:
     int timeSignatureDenominator_ = 4;
     double tempo_ = 120.0;
 
-    double sampleRate_ = constants::kDefaultSampleRate;
-    double fps_ = constants::kDefaultFrameRate;
+    double sampleRate_ = 44100.0;
+    double fps_ = 30.0;
     
     bool loopEnabled_ = false;
     double loopStartBeat_ = 0.0;

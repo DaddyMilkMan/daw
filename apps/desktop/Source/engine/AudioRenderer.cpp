@@ -259,9 +259,6 @@ void AudioRenderer::renderAudioGraph(
   // Apply master limiter (final clipping protection)
   masterLimiter.process(outputBuffer);
 
-  // Update master latency
-  updateMasterLatency(masterPlugins, masterLimiter.getLatency());
-
   // Update metering
   updateMasterMeters(outputBuffer);
 }
@@ -375,28 +372,16 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
 }
 
 int AudioRenderer::getTrackLatency(int trackIndex) const {
-  if (trackIndex >= 0 && static_cast<size_t>(trackIndex) < trackLatencies_.size()) {
+  if (trackIndex >= 0 && trackIndex < static_cast<int>(trackLatencies_.size())) {
     return trackLatencies_[trackIndex];
   }
   return 0;
 }
 
 int AudioRenderer::getMasterLatency() const {
-  return masterLatency_.load();
-}
-
-void AudioRenderer::updateMasterLatency(
-    const std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
-    int limiterLatency) {
-  int totalLatency = limiterLatency;
-
-  for (const auto &plugin : masterPlugins) {
-    if (plugin != nullptr) {
-      totalLatency += plugin->getLatencySamples();
-    }
-  }
-
-  masterLatency_.store(totalLatency);
+  // Currently master latency is just the limiter latency plus any master plugins
+  // For now, simpler implementation:
+  return 0; // TODO: Sum master plugin latency
 }
 
 } // namespace zenith

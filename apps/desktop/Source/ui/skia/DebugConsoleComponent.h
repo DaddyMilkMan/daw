@@ -17,7 +17,9 @@
 
 #include "../../ai/SessionDebuggerAgent.h"
 #include "SkiaComponent.h"
-#include <JuceHeader.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_core/juce_core.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
