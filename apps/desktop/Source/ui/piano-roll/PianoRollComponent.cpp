@@ -1368,11 +1368,11 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       static constexpr float kPlayheadMarkerHeight = 8.0f;
 
       SkPath trianglePath;
-      trianglePath.moveTo(playheadX, RULER_HEIGHT);
-      trianglePath.lineTo(SkPoint::Make(playheadX - kPlayheadMarkerHalfWidth,
-                                        RULER_HEIGHT - kPlayheadMarkerHeight));
-      trianglePath.lineTo(SkPoint::Make(playheadX + kPlayheadMarkerHalfWidth,
-                                        RULER_HEIGHT - kPlayheadMarkerHeight));
+      trianglePath.moveTo(playheadX, contentTop);
+      trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
+      trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
+                          contentTop - kPlayheadMarkerHeight);
       trianglePath.close();
     }
   }

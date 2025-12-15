@@ -17,6 +17,7 @@
 #include "ZenithDesignSystem.h"
 #include "ZenithIcons.h"
 #include <cmath>
+#include <core/SkMaskFilter.h>
 
 #ifdef ZENITH_USE_SKIA
 
@@ -311,11 +312,11 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
   SkPoint bgGradPoints[2] = {{0, 0},
                              {0, static_cast<float>(bounds.getHeight())}};
   SkColor bgGradColors[3] = {
-      SkColorSetRGB(22, 22, 28), // Top - slightly cooler
-      SkColorSetRGB(18, 18, 22), // Middle - darkest
-      SkColorSetRGB(20, 20, 25)  // Bottom
+      design::colors::BG_DARK,    // Top
+      design::colors::BG_DARKEST, // Middle - darkest
+      design::colors::BG_DARKEST  // Bottom
   };
-  float bgPositions[3] = {0.0f, 0.5f, 1.0f};
+  float bgPositions[3] = {0.0f, 0.4f, 1.0f};
   auto bgGradient = SkGradientShader::MakeLinear(
       bgGradPoints, bgGradColors, bgPositions, 3, SkTileMode::kClamp);
 
@@ -606,8 +607,8 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
   // Selection / Hover Background
   if (index == selectedIndex_) {
     SkPoint selGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor selGradColors[2] = {SkColorSetARGB(60, 0, 200, 255),
-                                SkColorSetARGB(20, 0, 200, 255)};
+    SkColor selGradColors[2] = {design::withAlpha(design::colors::CYAN, 0.25f),
+                                design::withAlpha(design::colors::CYAN, 0.05f)};
     auto selGradient = SkGradientShader::MakeLinear(
         selGradPoints, selGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -616,17 +617,19 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
 
     SkPaint barGlowPaint;
-    barGlowPaint.setColor(SkColorSetARGB(80, 0, 200, 255));
+    barGlowPaint.setColor(design::withAlpha(design::colors::CYAN, 0.5f));
+    barGlowPaint.setMaskFilter(
+        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawRect(SkRect::MakeXYWH(0, y, 6, h), barGlowPaint);
 
     SkPaint barPaint;
-    barPaint.setColor(SkColorSetRGB(0, 220, 255));
+    barPaint.setColor(design::colors::CYAN);
     canvas->drawRect(SkRect::MakeXYWH(0, y + 2, 3, h - 4), barPaint);
 
   } else if (index == hoverIndex_) {
     SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor hovGradColors[2] = {SkColorSetARGB(35, 255, 255, 255),
-                                SkColorSetARGB(5, 255, 255, 255)};
+    SkColor hovGradColors[2] = {design::withAlpha(design::colors::CYAN, 0.15f),
+                                design::withAlpha(design::colors::CYAN, 0.0f)};
     auto hovGradient = SkGradientShader::MakeLinear(
         hovGradPoints, hovGradColors, nullptr, 2, SkTileMode::kClamp);
 
@@ -1362,10 +1365,22 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
   float w = filterBarBounds_.getWidth();
   float h = filterBarBounds_.getHeight();
 
-  // Background
+  // Premium gradient background (not flat color)
+  SkPoint bgGradPoints[2] = {{0, y}, {0, y + h}};
+  SkColor bgGradColors[2] = {
+      design::colors::BG_DARK,   // Top
+      design::colors::BG_DARKEST // Bottom
+  };
+  auto bgGradient = SkGradientShader::MakeLinear(
+      bgGradPoints, bgGradColors, nullptr, 2, SkTileMode::kClamp);
   SkPaint bgPaint;
-  bgPaint.setColor(SkColorSetRGB(28, 28, 32));
+  bgPaint.setShader(bgGradient);
   canvas->drawRect(SkRect::MakeXYWH(0, y, w, h), bgPaint);
+
+  // Subtle top highlight line for depth
+  SkPaint highlightPaint;
+  highlightPaint.setColor(design::colors::GLASS_HIGHLIGHT);
+  canvas->drawLine(0, y + 0.5f, w, y + 0.5f, highlightPaint);
 
   // Calculate tab widths
   int tabWidth = (getWidth() - 16) / 4;
@@ -1395,43 +1410,77 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
 
   // Bottom border
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetRGB(40, 40, 45));
+  borderPaint.setColor(design::colors::BG_MEDIUM);
   canvas->drawLine(0, y + h - 0.5f, w, y + h - 0.5f, borderPaint);
 }
 
 void BrowserPanel::drawFilterTab(SkCanvas *canvas,
                                  const juce::Rectangle<int> &bounds,
                                  const juce::String &label, bool active) {
-  SkPaint tabPaint;
+  SkRect tabRect = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                    bounds.getWidth(), bounds.getHeight());
 
   if (active) {
-    // Active tab with accent color
-    tabPaint.setColor(SkColorSetARGB(50, 0, 200, 255));
+    // Neon glow behind active tab using design::colors::CYAN
+    SkPaint glowPaint;
+    glowPaint.setColor(design::withAlpha(design::colors::CYAN, 0.4f));
+    glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+    glowPaint.setAntiAlias(true);
+    canvas->drawRoundRect(tabRect, 6, 6, glowPaint);
+
+    // Active tab with gradient fill
+    SkPoint tabGradPoints[2] = {{0, tabRect.fTop}, {0, tabRect.fBottom}};
+    SkColor tabGradColors[2] = {
+        design::withAlpha(design::colors::CYAN, 0.3f), // Top
+        design::withAlpha(design::colors::CYAN, 0.1f)  // Bottom
+    };
+    auto tabGradient = SkGradientShader::MakeLinear(
+        tabGradPoints, tabGradColors, nullptr, 2, SkTileMode::kClamp);
+    SkPaint tabPaint;
+    tabPaint.setShader(tabGradient);
+    tabPaint.setAntiAlias(true);
+    canvas->drawRoundRect(tabRect, 5, 5, tabPaint);
+
+    // Cyan border
+    SkPaint borderPaint;
+    borderPaint.setColor(design::colors::CYAN);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setAntiAlias(true);
+    canvas->drawRoundRect(tabRect.makeInset(0.5f, 0.5f), 4.5f, 4.5f,
+                          borderPaint);
   } else {
-    tabPaint.setColor(SkColorSetARGB(30, 255, 255, 255));
+    // Inactive tab - subtle background
+    SkPaint tabPaint;
+    tabPaint.setColor(design::colors::GLASS_HIGHLIGHT);
+    tabPaint.setAntiAlias(true);
+    canvas->drawRoundRect(tabRect, 4, 4, tabPaint);
   }
-  tabPaint.setAntiAlias(true);
-  canvas->drawRoundRect(SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
-                                         bounds.getWidth(), bounds.getHeight()),
-                        4, 4, tabPaint);
 
-  // Active indicator line
+  // Active indicator line with glow
   if (active) {
-    SkPaint indicatorPaint;
-    indicatorPaint.setColor(SkColorSetRGB(0, 200, 255));
+    // Glow under indicator
+    SkPaint glowLine;
+    glowLine.setColor(design::colors::CYAN);
+    glowLine.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
     canvas->drawRect(SkRect::MakeXYWH(bounds.getX() + 4, bounds.getBottom() - 2,
                                       bounds.getWidth() - 8, 2),
-                     indicatorPaint);
+                     glowLine);
+    // Solid indicator
+    SkPaint indicatorPaint;
+    indicatorPaint.setColor(design::colors::CYAN);
+    canvas->drawRoundRect(SkRect::MakeXYWH(bounds.getX() + 4,
+                                           bounds.getBottom() - 2,
+                                           bounds.getWidth() - 8, 2),
+                          1, 1, indicatorPaint);
   }
 
-  // Text
-  SkFont font;
-  font.setSize(11.0f);
-  font.setEdging(SkFont::Edging::kSubpixelAntiAlias);
+  // Text with better font
+  SkFont font = design::getSkFont(11.0f, design::FontWeight::Medium);
 
   SkPaint textPaint;
-  textPaint.setColor(active ? SkColorSetRGB(150, 230, 255)
-                            : SkColorSetARGB(150, 255, 255, 255));
+  textPaint.setColor(active ? design::colors::CYAN
+                            : design::withAlpha(design::colors::TEXT_PRIMARY, 160.0f / 255.0f));
   textPaint.setAntiAlias(true);
 
   // Center text
