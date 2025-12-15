@@ -311,9 +311,9 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
   SkPoint bgGradPoints[2] = {{0, 0},
                              {0, static_cast<float>(bounds.getHeight())}};
   SkColor bgGradColors[3] = {
-      SkColorSetRGB(22, 22, 28), // Top - slightly cooler
-      SkColorSetRGB(18, 18, 22), // Middle - darkest
-      SkColorSetRGB(20, 20, 25)  // Bottom
+      design::colors::BG_MEDIUM, // Top
+      design::colors::BG_DARK,   // Middle
+      design::colors::BG_DARK    // Bottom
   };
   float bgPositions[3] = {0.0f, 0.5f, 1.0f};
   auto bgGradient = SkGradientShader::MakeLinear(
@@ -616,17 +616,17 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
     canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
 
     SkPaint barGlowPaint;
-    barGlowPaint.setColor(SkColorSetARGB(80, 0, 200, 255));
+    barGlowPaint.setColor(SkColorSetA(design::colors::ACCENT_PRIMARY, 80));
     canvas->drawRect(SkRect::MakeXYWH(0, y, 6, h), barGlowPaint);
 
     SkPaint barPaint;
-    barPaint.setColor(SkColorSetRGB(0, 220, 255));
+    barPaint.setColor(design::colors::ACCENT_PRIMARY);
     canvas->drawRect(SkRect::MakeXYWH(0, y + 2, 3, h - 4), barPaint);
 
   } else if (index == hoverIndex_) {
     SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor hovGradColors[2] = {SkColorSetARGB(35, 255, 255, 255),
-                                SkColorSetARGB(5, 255, 255, 255)};
+    SkColor hovGradColors[2] = {design::colors::GLASS_HIGHLIGHT,
+                                SkColorSetA(design::colors::GLASS_HIGHLIGHT, 5)};
     auto hovGradient = SkGradientShader::MakeLinear(
         hovGradPoints, hovGradColors, nullptr, 2, SkTileMode::kClamp);
 
