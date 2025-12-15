@@ -391,8 +391,6 @@ int AudioRenderer::getTrackLatency(int trackIndex) const {
 }
 
 int AudioRenderer::getMasterLatency() const {
-  // Currently master latency is just the limiter latency plus any master plugins
-  // For now, simpler implementation:
   return masterLatency_.load();
 }
 
