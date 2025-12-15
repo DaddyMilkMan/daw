@@ -1410,7 +1410,7 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
 
   // Bottom border
   SkPaint borderPaint;
-  borderPaint.setColor(design::colors::BG_MEDIUM);
+  borderPaint.setColor(design::withAlpha(design::colors::CYAN, 0.2f));
   canvas->drawLine(0, y + h - 0.5f, w, y + h - 0.5f, borderPaint);
 }
 
