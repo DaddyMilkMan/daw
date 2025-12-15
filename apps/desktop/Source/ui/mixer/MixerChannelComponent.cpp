@@ -11,12 +11,11 @@
  */
 
 #include "MixerChannelComponent.h"
-#include "../../Source/engine/EngineConstants.h"
-#include "../../Source/engine/Track.h"
-#include "GlassmorphicPanel.h"
-#include "NeonGlow.h"
-#include "SkiaTheme.h"
-#include "ZenithDesignSystem.h"
+#include "../../engine/EngineConstants.h"
+#include "../../engine/Track.h"
+#include "../Theme.h"
+#include "../skia/GlassmorphicPanel.h"
+#include "../skia/NeonGlow.h"
 #include <JuceHeader.h>
 
 #include <core/SkCanvas.h>
@@ -241,6 +240,7 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 
 void MixerChannelComponent::resized() {
   // Top section: Track name
+  auto bounds = getLocalBounds();
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
   bounds.removeFromTop(4);

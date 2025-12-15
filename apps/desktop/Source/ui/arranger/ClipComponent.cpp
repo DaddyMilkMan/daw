@@ -10,13 +10,14 @@
  */
 
 // POLISH: spacing normalized to 8px grid (rounded corners 4px)
-// POLISH: typography now uses SkiaTheme::Typography (body)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened visuals (track colors, no gradients)
 
 #include "ClipComponent.h"
-#include "ProjectState.h"
+#include "../../engine/ProjectState.h"
+#include <JuceHeader.h>
 
-#include "SkiaTheme.h"
+#include "../ZenithTheme.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
@@ -107,8 +108,7 @@ void ClipComponent::updateBounds(double pixelsPerBeat, int yPosition,
 
 void ClipComponent::drawSkia(SkCanvas *canvas) {
   auto bounds = getLocalBounds();
-  auto &theme = ::zenith::SkiaTheme::getInstance();
-  auto &colors = theme.getColors();
+  using namespace zenith::design;
 
   float fWidth = (float)bounds.getWidth();
   float fHeight = (float)bounds.getHeight();

@@ -4,7 +4,7 @@
  */
 
 // POLISH: spacing normalized to 8px grid (labels at Typography.small)
-// POLISH: typography now uses SkiaTheme::Typography (small)
+// POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened background (bg2, no gradients)
 
 #pragma once
@@ -19,10 +19,8 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-
 #ifdef ZENITH_USE_SKIA
-#include "SkiaComponent.h"
-#include "SkiaTheme.h"
+#include "../framework/SkiaComponent.h"
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
@@ -84,7 +82,7 @@ public:
   //==========================================================================
 
 #ifdef ZENITH_USE_SKIA
-  void drawSkia(SkCanvas* canvas) override;
+  void drawSkia(SkCanvas *canvas) override;
 #else
   void paint(juce::Graphics &g) override;
 #endif

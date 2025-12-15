@@ -28,9 +28,7 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "SkiaTheme.h"
-#include <include/core/SkCanvas.h>
-
+#include <core/SkCanvas.h>
 #endif
 
 //==============================================================================
