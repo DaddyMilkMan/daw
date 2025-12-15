@@ -61,6 +61,36 @@ SampleEditorComponent::~SampleEditorComponent() {
 }
 
 void SampleEditorComponent::timerCallback() {
+  // Handle Recording
+  if (isRecording_ && incomingFifo_ && recordBuffer_) {
+    int numReady = incomingFifo_->getNumReady();
+    if (numReady > 0) {
+      int start1, size1, start2, size2;
+      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
+
+      const int recChans = incomingBuffer_.getNumChannels();
+      const int destChans = recordBuffer_->getNumChannels();
+      const int numToCopy = std::min(recChans, destChans);
+
+      auto copyChunk = [&](int start, int size) {
+        if (recordWritePos_ + size > recordBuffer_->getNumSamples()) {
+            int newSize = recordBuffer_->getNumSamples() < 44100 ? 44100 * 60 : recordBuffer_->getNumSamples() * 2;
+            recordBuffer_->setSize(destChans, newSize, true, true, true);
+        }
+        for (int ch = 0; ch < numToCopy; ++ch) {
+            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch, start, size);
+        }
+        recordWritePos_ += size;
+      };
+
+      if (size1 > 0) copyChunk(start1, size1);
+      if (size2 > 0) copyChunk(start2, size2);
+
+      incomingFifo_->finishedRead(size1 + size2);
+      repaint();
+    }
+  }
+
   if (isPlaying_) {
     // Update playhead from engine
     playheadPosition_ += 1.0 / 30.0; // Approximate
@@ -1888,93 +1918,57 @@ void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
 
 // Recording
 // Recording
-void SampleEditorComponent::audioDeviceAboutToStart(juce::AudioIODevice* device) {
-  incomingBuffer_.setSize(1, kRecordFifoSize);
-  incomingBuffer_.clear();
-  incomingFifo_.reset();
-}
-
-void SampleEditorComponent::audioDeviceStopped() {
-  incomingBuffer_.setSize(0, 0);
-}
-
-void SampleEditorComponent::audioDeviceIOCallbackWithContext(
-    const float* const* inputChannelData, int numInputChannels,
-    float* const* outputChannelData, int numOutputChannels, int numSamples,
-    const juce::AudioIODeviceCallbackContext& context) {
-
-  if (!isRecording_) return;
-  
-  // Basic mono capture from selected channel
-  if (recordInputChannel_ >= numInputChannels) return;
-  
-  const float* inData = inputChannelData[recordInputChannel_];
-  if (!inData) return;
-
-  int start1, size1, start2, size2;
-  incomingFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
-  
-  if (size1 > 0)
-    incomingBuffer_.copyFrom(0, start1, inData, size1);
-  if (size2 > 0)
-    incomingBuffer_.copyFrom(0, start2, inData + size1, size2);
-    
-  incomingFifo_.finishedWrite(size1 + size2);
-}
-
 void SampleEditorComponent::startRecording() {
   if (isRecording_) return;
+
+  auto* device = engine_.getDeviceManager().getCurrentAudioDevice();
+  if (device) {
+      audioDeviceAboutToStart(device);
+      engine_.getDeviceManager().addAudioCallback(this);
+  }
+
+  // Initialize record buffer (start with 1 minute approx)
+  double sampleRate = device ? device->getCurrentSampleRate() : 44100.0;
+  int initialSamples = (int)(sampleRate * 60.0);
   
-  // Register callback
-  engine_.getDeviceManager().addAudioCallback(this);
-  
-  // Prepare buffer
-  // Standard chunk size roughly one minute? Or dynamic?
-  // Start with reasonable size
-  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(1, 44100 * 60); 
+  int numChans = device ? device->getActiveInputChannels().countNumberOfSetBits() : 2;
+  if (numChans == 0) numChans = 2;
+
+  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChans, initialSamples);
   recordBuffer_->clear();
-  // Note: setSize in timerCallback will handle growth
-  // But we reset size to 0 logically? No, we append.
-  // Actually, let's start with 0 valid samples but reserved capacity if AudioBuffer supported it.
-  // JUCE AudioBuffer setSize changes 'size'.
-  // We will track valid samples with recordWritePos_ and resize manually.
-  // Actually, simpler:
-  recordBuffer_->setSize(1, 4096); 
-  recordBuffer_->clear();
-  recordWritePos_ = 0; // We'll assume recordBuffer_'s numSamples IS the content length?
-  // In timerCallback we use setSize(..., keepExistingContent=true).
-  // So initial size 0 is fine.
-  recordBuffer_->setSize(1, 0);
+  recordWritePos_ = 0;
 
   isRecording_ = true;
-  incomingFifo_.reset();
-  
   repaint();
 }
 
 void SampleEditorComponent::stopRecording() {
   if (!isRecording_) return;
-  
+
   engine_.getDeviceManager().removeAudioCallback(this);
   isRecording_ = false;
   
-  // Final drain
-  timerCallback(); 
-  
-  // Trim buffer to actual size
-  if (recordBuffer_) {
-      recordBuffer_->setSize(1, recordWritePos_, true, true, true);
-  }
-  
-  // Move recorded content to edit buffer
-  if (recordBuffer_ && recordBuffer_->getNumSamples() > 0) {
+  // Trim and finalize
+  if (recordBuffer_ && recordWritePos_ > 0) {
+      recordBuffer_->setSize(recordBuffer_->getNumChannels(), recordWritePos_, true, true, true);
+      
+      // Move to edit buffer
       editBuffer_ = std::move(recordBuffer_);
       hasUnsavedChanges_ = true;
-      DBG("Recording finished: " + juce::String(editBuffer_->getNumSamples()) + " samples");
-  } else {
-      DBG("Recording finished (empty)");
+      
+      // Update UI
+      if (editBuffer_) {
+          selection_ = juce::Range<double>(0.0, samplesToTime(editBuffer_->getNumSamples()));
+          if (audioHandle_) {
+               // Update zoom based on new length? 
+               // For now just fit
+          }
+          fitToWindow();
+          generateWaveformCache();
+      }
   }
-  
+
+
   repaint();
 }
 
@@ -2104,5 +2098,59 @@ void SampleEditorComponent::swapChannels() {}
 void SampleEditorComponent::adjustStereoWidth(float width) {}
 void SampleEditorComponent::extractCenter() {}
 void SampleEditorComponent::extractSides() {}
+
+//==============================================================================
+// Audio Device Callbacks
+void SampleEditorComponent::audioDeviceAboutToStart(juce::AudioIODevice* device)
+{
+    if (!device) return;
+    auto sampleRate = device->getCurrentSampleRate();
+    // auto bufferSize = device->getCurrentBufferSizeSamples(); // Unused but available
+    auto numInputChannels = device->getActiveInputChannels().countNumberOfSetBits();
+    
+    if (numInputChannels <= 0) numInputChannels = 2;
+    
+    // Ring buffer size: 5 seconds
+    int ringBufferSize = (int)(sampleRate * 5.0);
+    incomingBuffer_.setSize(numInputChannels, ringBufferSize);
+    incomingFifo_ = std::make_unique<juce::AbstractFifo>(ringBufferSize);
+}
+
+void SampleEditorComponent::audioDeviceStopped()
+{
+    incomingFifo_.reset();
+    incomingBuffer_.setSize(0, 0);
+}
+
+void SampleEditorComponent::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
+                                                             int numInputChannels,
+                                                             float* const* outputChannelData,
+                                                             int numOutputChannels,
+                                                             int numSamples,
+                                                             const juce::AudioIODeviceCallbackContext& context)
+{
+    if (!isRecording_ || !incomingFifo_) return;
+    
+    int internalChans = incomingBuffer_.getNumChannels();
+    int minChans = std::min(numInputChannels, internalChans);
+    
+    int start1, size1, start2, size2;
+    incomingFifo_->prepareToWrite(numSamples, start1, size1, start2, size2);
+    
+    if (size1 > 0) {
+        for (int ch = 0; ch < minChans; ++ch) {
+            if (inputChannelData[ch])
+                incomingBuffer_.copyFrom(ch, start1, inputChannelData[ch], size1);
+        }
+    }
+    if (size2 > 0) {
+        for (int ch = 0; ch < minChans; ++ch) {
+            if (inputChannelData[ch])
+                incomingBuffer_.copyFrom(ch, start2, inputChannelData[ch] + size1, size2);
+        }
+    }
+    
+    incomingFifo_->finishedWrite(size1 + size2);
+}
 
 } // namespace zenith

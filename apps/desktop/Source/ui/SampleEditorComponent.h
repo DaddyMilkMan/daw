@@ -27,6 +27,7 @@
 #include "skia/SkiaComponent.h"
 #include "../engine/AudioFilePool.h"
 
+
 #include <core/SkCanvas.h>
 #include <core/SkPath.h>
 #include <core/SkPaint.h>
@@ -84,6 +85,17 @@ class SampleEditorComponent : public SkiaComponent,
 public:
     SampleEditorComponent(Engine& engine, ProjectState& projectState);
     ~SampleEditorComponent() override;
+
+    //==============================================================================
+    // AudioIODeviceCallback overrides
+    void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
+    void audioDeviceStopped() override;
+    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
+                                          int numInputChannels,
+                                          float* const* outputChannelData,
+                                          int numOutputChannels,
+                                          int numSamples,
+                                          const juce::AudioIODeviceCallbackContext& context) override;
 
     //==============================================================================
     // SkiaComponent overrides
@@ -419,6 +431,10 @@ private:
     static constexpr int kRecordFifoSize = 131072; // ~3 sec at 44.1k
     juce::AbstractFifo incomingFifo_{kRecordFifoSize};
     juce::AudioBuffer<float> incomingBuffer_; // Ring buffer for thread exchange
+    
+    // Thread-safe recording
+    std::unique_ptr<juce::AbstractFifo> incomingFifo_;
+    juce::AudioBuffer<float> incomingBuffer_;
     
     //==============================================================================
     // Undo/Redo
