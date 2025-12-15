@@ -11,7 +11,7 @@
 */
 
 #include "RecordingManager.h"
-#include "../../include/ProjectState.h"
+#include "ProjectState.h"
 #include "AudioRecorder.h"
 #include "Track.h"
 
@@ -43,6 +43,16 @@ void RecordingManager::prepare(double sampleRate) {
 
   if (audioRecorder_) {
     audioRecorder_->prepare(sampleRate);
+  }
+}
+
+//==============================================================================
+void RecordingManager::prepareRecordingForTrack(
+    const Track &track, int trackIndex, const juce::File &recordingsDir) {
+  // Optimization: Pre-allocate resources or create directory
+  // For now we just ensure the directory exists to avoid glitches during start
+  if (!recordingsDir.exists()) {
+    recordingsDir.createDirectory();
   }
 }
 
