@@ -45,9 +45,8 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
 
   // Use generic font directly if Typeface provider not hooked up yet, or use
   // default
-  sk_sp<SkTypeface> typeface =
-      SkTypeface::MakeFromName("Roboto", SkFontStyle());
-  SkFont font(typeface, 14.0f);
+  #include "ZenithDesignSystem.h"
+  SkFont font = zenith::design::typography::getSkFont(14.0f);
 
   SkPaint hoverPaint;
   hoverPaint.setColor(SkColorSetARGB(40, 255, 255, 255));

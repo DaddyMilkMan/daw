@@ -61,35 +61,7 @@ SampleEditorComponent::~SampleEditorComponent() {
 }
 
 void SampleEditorComponent::timerCallback() {
-  // Handle Recording
-  if (isRecording_ && incomingFifo_ && recordBuffer_) {
-    int numReady = incomingFifo_->getNumReady();
-    if (numReady > 0) {
-      int start1, size1, start2, size2;
-      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
 
-      const int recChans = incomingBuffer_.getNumChannels();
-      const int destChans = recordBuffer_->getNumChannels();
-      const int numToCopy = std::min(recChans, destChans);
-
-      auto copyChunk = [&](int start, int size) {
-        if (recordWritePos_ + size > recordBuffer_->getNumSamples()) {
-            int newSize = recordBuffer_->getNumSamples() < 44100 ? 44100 * 60 : recordBuffer_->getNumSamples() * 2;
-            recordBuffer_->setSize(destChans, newSize, true, true, true);
-        }
-        for (int ch = 0; ch < numToCopy; ++ch) {
-            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch, start, size);
-        }
-        recordWritePos_ += size;
-      };
-
-      if (size1 > 0) copyChunk(start1, size1);
-      if (size2 > 0) copyChunk(start2, size2);
-
-      incomingFifo_->finishedRead(size1 + size2);
-      repaint();
-    }
-  }
 
   if (isPlaying_) {
     // Update playhead from engine
@@ -107,7 +79,7 @@ void SampleEditorComponent::timerCallback() {
 
   if (isRecording_) {
     // Drain FIFO to record buffer
-    int numReady = incomingFifo_.getNumReady();
+    int numReady = incomingFifo_->getNumReady();
     if (numReady > 0) {
       if (!recordBuffer_) {
         // Should have been allocated in startRecording
@@ -116,7 +88,7 @@ void SampleEditorComponent::timerCallback() {
       }
 
       int start1, size1, start2, size2;
-      incomingFifo_.prepareToRead(numReady, start1, size1, start2, size2);
+      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
 
       // Append to recordBuffer_
       int currentCapacity = recordBuffer_->getNumSamples();
@@ -135,7 +107,7 @@ void SampleEditorComponent::timerCallback() {
       if (size2 > 0)
         recordBuffer_->copyFrom(0, recordWritePos_ + size1, incomingBuffer_, 0, start2, size2);
 
-      incomingFifo_.finishedRead(size1 + size2);
+      incomingFifo_->finishedRead(size1 + size2);
       recordWritePos_ += (size1 + size2);
       
       repaint();
