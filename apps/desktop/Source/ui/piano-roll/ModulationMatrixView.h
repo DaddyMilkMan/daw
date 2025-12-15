@@ -24,7 +24,7 @@
 
 #include "../framework/SkiaComponent.h"
 #include "../design-system/ZenithDesignSystem.h"
-#include <JuceHeader.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <core/SkPath.h>
 #include <core/SkPathMeasure.h>
 #include <random>
@@ -187,7 +187,8 @@ public:
   void refreshMatrix();
 
   // AI Vision Support
-  std::vector<SkiaComponent::AIElementInfo> getInspectableElements() override;
+  std::vector<zenith::SkiaComponent::AIElementInfo>
+  getInspectableElements() override;
 
 private:
   Engine *engine_ = nullptr;

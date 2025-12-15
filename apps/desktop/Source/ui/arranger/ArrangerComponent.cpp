@@ -57,6 +57,14 @@ static constexpr float TOP_MARGIN =
     SECTION_HEIGHT + RULER_HEIGHT; // Offset for tracks
 static constexpr float SCROLLBAR_HEIGHT = 14.0f;
 
+// Grid Visibility Constants (Review Feedback #199)
+static constexpr SkAlpha kBarHighlightAlphaTop = 15;
+static constexpr SkAlpha kBarHighlightAlphaBottom = 8;
+static constexpr SkAlpha kBarLineAlpha = 100;
+static constexpr float kBarLineWidth = 1.5f;
+static constexpr SkAlpha kBeatLineAlpha = 50;
+static constexpr float kBeatLineWidth = 1.0f;
+
 //==============================================================================
 
 ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
@@ -551,8 +559,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       // Subtle gradient highlight
       SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
       SkColor gradColors[2] = {
-          SkColorSetARGB(15, 255, 255, 255), // Subtle top
-          SkColorSetARGB(8, 255, 255, 255)   // More subtle bottom
+          SkColorSetARGB(kBarHighlightAlphaTop, 255, 255, 255),    // Subtle top
+          SkColorSetARGB(kBarHighlightAlphaBottom, 255, 255, 255)  // More subtle bottom
       };
       barHighlightPaint.setShader(SkGradientShader::MakeLinear(
           pts, gradColors, nullptr, 2, SkTileMode::kClamp));
@@ -576,12 +584,21 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
     if (isBarLine) {
       // BAR LINES - more visible, solid
-      gridPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
-      gridPaint.setStrokeWidth(1.5f);
+<<<<<<< HEAD:apps/desktop/Source/ui/arranger/ArrangerComponent.cpp
+      gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBarLineWidth);
     } else {
       // BEAT LINES - subtle, dotted
-      gridPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
-      gridPaint.setStrokeWidth(1.0f);
+      gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBeatLineWidth);
+=======
+      gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBarLineWidth);
+    } else {
+      // BEAT LINES - subtle, dotted
+      gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBeatLineWidth);
+>>>>>>> d1a94b7 (feat(ui): improve grid visibility with stronger lines and contrast):apps/desktop/Source/ui/ArrangerComponent.cpp
       static const SkScalar intervals[] = {2.0f, 4.0f};
       static const auto dashEffect =
           SkDashPathEffect::Make(SkSpan<const SkScalar>(intervals, 2), 0.0f);
