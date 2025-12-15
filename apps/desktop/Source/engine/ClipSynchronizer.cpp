@@ -3,7 +3,7 @@
  * @brief ClipSynchronizer implementation (integration stub)
  */
 
-#include "../../include/ClipSynchronizer.h"
+#include "ClipSynchronizer.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
 

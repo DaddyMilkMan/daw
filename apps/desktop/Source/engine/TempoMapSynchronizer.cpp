@@ -3,7 +3,7 @@
  * @brief Tempo map synchronizer implementation
  */
 
-#include "../include/TempoMapSynchronizer.h"
+#include "TempoMapSynchronizer.h"
 
 using namespace zenith;
 
