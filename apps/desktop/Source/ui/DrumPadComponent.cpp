@@ -306,7 +306,44 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
   // If we were recording, we would add the note to ProjectState here.
   if (engine.isRecording() && currentClipId.isNotEmpty()) {
-    // TODO: Implement real-time recording logic
+    auto [track, clip] = projectState.findClip(currentClipId);
+    if (!clip.isValid())
+        return;
+
+    double position = engine.getPlaybackPositionBeats();
+    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_START));
+    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_LENGTH));
+    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_OFFSET)); // Start offset
+
+    // Calculate relative position within clip
+    // Assuming clipStart is absolute timeline position
+    double relativeStart = position - clipStart + clipOffset;
+
+    // Handle loop wrapping (if engine is looping)
+    // For now, valid notes must be within clip bounds [0, length)
+    // If wrapping is needed, the engine usually handles playback position moving back.
+    // However, for recording, we might want to wrap 'relativeStart' into [0, loopLength) if clip is looping?
+    // Assuming clip loops if it is a pattern.
+    // Simplify: just record at current relative time.
+    
+    // Note: If relativeStart is negative or > length, it's outside the clip.
+    // But for drum pads (pattern), we often want to wrap into the loop.
+    if (relativeStart < 0) relativeStart = 0; // Clamp start?
+    
+    // Simple modulo for looping patterns (common in drum machines)
+    if (clipLength > 0.0) {
+        relativeStart = std::fmod(relativeStart, clipLength);
+        if (relativeStart < 0) relativeStart += clipLength;
+    }
+
+    zenith::ProjectState::MidiNoteSpec note;
+    note.pitch = pads[index].noteNumber;
+    note.startBeats = relativeStart;
+    note.lengthBeats = 0.25; // Default short length for hits
+    note.velocity = static_cast<int>(velocity * 127.0f);
+    note.muted = false;
+
+    projectState.addMidiNote(currentClipId, note, "Drum Pad Rec");
   }
 }
 
