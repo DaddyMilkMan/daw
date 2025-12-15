@@ -13,7 +13,9 @@
 #pragma once
 
 #include "SkiaComponent.h"
+#include <map>
 #include <juce_core/juce_core.h>
+#include <map>
 
 namespace zenith {
 namespace lifecycle {
@@ -123,6 +125,9 @@ public:
   // Memory management
   void checkForMemoryLeaks();
   void forceGarbageCollection();
+
+  void reportError(LifecycleAware *component, const juce::String &error);
+  static juce::String getStateName(ComponentState state);
 
 private:
   ComponentLifecycleManager() = default;
@@ -265,7 +270,20 @@ public:
     int totalComponentsCreated = 0;
     int totalComponentsDestroyed = 0;
     int currentComponentCount = 0;
-    juce::HashMap<juce::String, int> componentTypeCounts;
+    std::map<juce::String, int> componentTypeCounts;
+
+
+    MemoryStats() = default;
+    MemoryStats(const MemoryStats &other) {
+      totalComponentsCreated = other.totalComponentsCreated;
+      totalComponentsDestroyed = other.totalComponentsDestroyed;
+      currentComponentCount = other.currentComponentCount;
+
+      juce::HashMap<juce::String, int>::Iterator it(other.componentTypeCounts);
+      while (it.next()) {
+        componentTypeCounts.set(it.getKey(), it.getValue());
+      }
+    }
   };
 
   MemoryStats getMemoryStats() const;

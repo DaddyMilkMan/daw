@@ -99,4 +99,5 @@ private:
 
   // Hole Punching Logic
   void startHolePunching();
+  void reportError(const juce::String& error);
 };

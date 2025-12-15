@@ -263,6 +263,15 @@ public:
    */
   float getBestFitness() const { return stats_.bestFitness; }
 
+
+
+  //==========================================================================
+  // Target Matching (Stubs)
+  //==========================================================================
+  void setTargetAudio(const juce::File& file) {}
+  std::vector<float> getCurrentBestSpectrum() const { return {}; }
+  std::vector<float> getTargetSpectrum() const { return {}; }
+
   //==========================================================================
   // Export
   //==========================================================================
