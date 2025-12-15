@@ -343,6 +343,7 @@ void DrumPadComponent::hitPad(int index, float velocity) {
     note.lengthBeats = 0.25; // Default short length for hits
     note.velocity = static_cast<int>(velocity * 127.0f);
     note.muted = false;
+    note.probability = 1.0f;
 
     projectState.addMidiNote(currentClipId, note, "Drum Pad Rec");
   }
@@ -371,6 +372,7 @@ void DrumPadComponent::toggleStep(int padIndex, int stepIndex) {
     note.lengthBeats = lengthBeat;
     note.velocity = 100;
     note.muted = false;
+    note.probability = 1.0f;
 
     projectState.addMidiNote(currentClipId, note, "Step Seq Add");
   } else {
