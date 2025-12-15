@@ -17,7 +17,7 @@
 #include "ZenithDesignSystem.h"
 #include "ZenithIcons.h"
 #include <cmath>
-#include <include/core/SkMaskFilter.h>
+#include <core/SkMaskFilter.h>
 
 #ifdef ZENITH_USE_SKIA
 
@@ -1408,7 +1408,7 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
   drawFilterTab(canvas, filterPluginBounds_, "Plugins",
                 activeFilter == BrowserItemType::Plugin);
 
-  // Bottom border with subtle cyan accent
+  // Bottom border
   SkPaint borderPaint;
   borderPaint.setColor(design::withAlpha(design::colors::CYAN, 0.2f));
   canvas->drawLine(0, y + h - 0.5f, w, y + h - 0.5f, borderPaint);
