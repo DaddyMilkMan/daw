@@ -1379,7 +1379,7 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
 
   // Subtle top highlight line for depth
   SkPaint highlightPaint;
-  highlightPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
+  highlightPaint.setColor(design::colors::GLASS_HIGHLIGHT);
   canvas->drawLine(0, y + 0.5f, w, y + 0.5f, highlightPaint);
 
   // Calculate tab widths
@@ -1410,7 +1410,7 @@ void BrowserPanel::drawFilterBar(SkCanvas *canvas) {
 
   // Bottom border with subtle cyan accent
   SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetRGB(40, 40, 45));
+  borderPaint.setColor(design::withAlpha(design::colors::CYAN, 0.2f));
   canvas->drawLine(0, y + h - 0.5f, w, y + h - 0.5f, borderPaint);
 }
 
@@ -1452,7 +1452,7 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
   } else {
     // Inactive tab - subtle background
     SkPaint tabPaint;
-    tabPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
+    tabPaint.setColor(design::colors::GLASS_HIGHLIGHT);
     tabPaint.setAntiAlias(true);
     canvas->drawRoundRect(tabRect, 4, 4, tabPaint);
   }
@@ -1480,7 +1480,7 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
 
   SkPaint textPaint;
   textPaint.setColor(active ? design::colors::CYAN
-                            : SkColorSetARGB(160, 255, 255, 255));
+                            : design::withAlpha(design::colors::TEXT_PRIMARY, 160.0f / 255.0f));
   textPaint.setAntiAlias(true);
 
   // Center text

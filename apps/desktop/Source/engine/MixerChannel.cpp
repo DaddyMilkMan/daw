@@ -307,13 +307,13 @@ void MixerChannel::setCompressorRatio(float ratio) {
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
-  compAttack.store(juce::jlimit(0.1f, 100.0f, attackMs));
+  compAttack.store(juce::jlimit(audio::kMinCompAttackMs, audio::kMaxCompAttackMs, attackMs));
   compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
-  compRelease.store(juce::jlimit(10.0f, 1000.0f, releaseMs));
+  compRelease.store(juce::jlimit(audio::kMinCompReleaseMs, audio::kMaxCompReleaseMs, releaseMs));
   compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }
@@ -477,10 +477,10 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
 
   // Compressor
   compressorEnabled.store(state.getProperty("compressorEnabled", false));
-  compThreshold.store(state.getProperty("compThreshold", -10.0f));
-  compRatio.store(state.getProperty("compRatio", 4.0f));
-  compAttack.store(state.getProperty("compAttack", 10.0f));
-  compRelease.store(state.getProperty("compRelease", 100.0f));
+  compThreshold.store(state.getProperty("compThreshold", audio::kDefaultCompThresholdDb));
+  compRatio.store(state.getProperty("compRatio", audio::kDefaultCompRatio));
+  compAttack.store(state.getProperty("compAttack", audio::kDefaultCompAttackMs));
+  compRelease.store(state.getProperty("compRelease", audio::kDefaultCompReleaseMs));
   compMakeup.store(state.getProperty("compMakeup", 0.0f));
   
   // Update ProCompressor with loaded values

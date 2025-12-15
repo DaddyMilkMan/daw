@@ -306,40 +306,36 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
   // If we were recording, we would add the note to ProjectState here.
   if (engine.isRecording() && currentClipId.isNotEmpty()) {
-    // Implement real-time recording logic
     auto [track, clip] = projectState.findClip(currentClipId);
-    if (clip.isValid()) {
-      double currentBeats = engine.getPlaybackPositionBeats();
-      double clipStart = clip[zenith::ProjectState::PROP_START_BEATS];
-      double clipLength = clip[zenith::ProjectState::PROP_LENGTH_BEATS];
+    if (!clip.isValid())
+        return;
 
-      // Default to 4 bars (16 beats) if length is invalid, though usually it's set
-      // Drum pads often imply 1 bar (4 beats) patterns, but we respect clip setting
-      if (clipLength <= 0.001)
-        clipLength = 4.0;
+    double position = engine.getPlaybackPositionBeats();
+    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_START));
+    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_LENGTH));
+    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::ID_OFFSET)); // Start offset
 
-      // Calculate relative position with loop wrapping
-      double relativeBeats = currentBeats - clipStart;
-      // For a drum pad component, recording should always wrap within the clip's
-      // length, regardless of the global transport's loop state.
-      relativeBeats = std::fmod(relativeBeats, clipLength);
-      if (relativeBeats < 0.0) {
-        relativeBeats += clipLength;
+    // Calculate relative position with loop wrapping
+    // Master logic adapted to current context
+    double relativeStart = position - clipStart + clipOffset;
+    
+    // For a drum pad component, recording should always wrap within the clip's
+    // length, regardless of the global transport's loop state.
+    if (clipLength > 0.0) {
+      relativeStart = std::fmod(relativeStart, clipLength);
+      if (relativeStart < 0.0) {
+        relativeStart += clipLength;
       }
-
-      // Quantization (optional/default to raw)
-      // We will perform raw capture but ensure it's positive
-      
-      zenith::ProjectState::MidiNoteSpec note;
-      note.pitch = pads[index].noteNumber;
-      note.startBeats = relativeBeats;
-      note.lengthBeats = 0.25; // default short hit
-      note.velocity = static_cast<int>(velocity * 127.0f);
-      note.muted = false;
-      note.probability = 1.0f;
-
-      projectState.addMidiNote(currentClipId, note, "Real-time Recording");
     }
+
+    zenith::ProjectState::MidiNoteSpec note;
+    note.pitch = pads[index].noteNumber;
+    note.startBeats = relativeStart;
+    note.lengthBeats = 0.25; // Default short length for hits
+    note.velocity = static_cast<int>(velocity * 127.0f);
+    note.muted = false;
+
+    projectState.addMidiNote(currentClipId, note, "Drum Pad Rec");
   }
 }
 
