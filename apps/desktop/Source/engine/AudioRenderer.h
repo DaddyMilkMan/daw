@@ -155,6 +155,15 @@ public:
      */
     int getMasterLatency() const;
 
+    /**
+     * @brief Update cached master latency value
+     * @param masterPlugins List of master plugins
+     * @param limiterLatency Latency of the master limiter
+     */
+    void updateMasterLatency(
+        const std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
+        int limiterLatency);
+
 private:
     //==========================================================================
     // Internal Methods

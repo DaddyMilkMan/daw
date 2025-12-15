@@ -7,6 +7,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../engine/AudioConstants.h"
 #include "ZenithTheme.h"
 
 namespace zenith {
@@ -93,8 +94,8 @@ private:
     int timeSignatureDenominator_ = 4;
     double tempo_ = 120.0;
 
-    double sampleRate_ = 44100.0;
-    double fps_ = 30.0;
+    double sampleRate_ = constants::kDefaultSampleRate;
+    double fps_ = 30.0; // TODO: Add kDefaultFrameRate to constants
     
     bool loopEnabled_ = false;
     double loopStartBeat_ = 0.0;

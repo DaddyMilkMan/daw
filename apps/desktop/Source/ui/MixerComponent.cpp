@@ -9,7 +9,8 @@
 #include "../../include/Engine.h"
 #include "../../include/ui/MixerChannelComponent.h"
 #include "../engine/Track.h"
-#include <JuceHeader.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>

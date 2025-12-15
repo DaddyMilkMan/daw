@@ -9,7 +9,10 @@
 #include "../network/CollaborationManager.h"
 #include "skia/SkiaComponent.h"
 #include "skia/ZenithDesignSystem.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
