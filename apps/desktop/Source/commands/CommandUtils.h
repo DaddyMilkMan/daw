@@ -2,8 +2,8 @@
 #include <juce_core/juce_core.h>
 #include "../engine/Track.h"
 #include "../engine/Clip.h"
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
+#include "Engine.h"
+#include "ProjectState.h"
 
 namespace zenith {
 
