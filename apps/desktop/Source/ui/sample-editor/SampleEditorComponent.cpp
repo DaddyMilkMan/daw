@@ -1928,23 +1928,9 @@ void SampleEditorComponent::startRecording() {
   // Register callback
   engine_.getDeviceManager().addAudioCallback(this);
   
-  // Prepare buffer
-  // Standard chunk size roughly one minute? Or dynamic?
-  // Start with reasonable size
-  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(1, 44100 * 60); 
-  recordBuffer_->clear();
-  // Note: setSize in timerCallback will handle growth
-  // But we reset size to 0 logically? No, we append.
-  // Actually, let's start with 0 valid samples but reserved capacity if AudioBuffer supported it.
-  // JUCE AudioBuffer setSize changes 'size'.
-  // We will track valid samples with recordWritePos_ and resize manually.
-  // Actually, simpler:
-  recordBuffer_->setSize(1, 4096); 
-  recordBuffer_->clear();
-  recordWritePos_ = 0; // We'll assume recordBuffer_'s numSamples IS the content length?
-  // In timerCallback we use setSize(..., keepExistingContent=true).
-  // So initial size 0 is fine.
-  recordBuffer_->setSize(1, 0);
+  // Prepare buffer efficiently
+  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(1, 0); 
+  recordWritePos_ = 0; // The actual content length starts at 0
 
   isRecording_ = true;
   incomingFifo_.reset();
