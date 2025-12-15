@@ -20,7 +20,6 @@
 #include <map>
 #include <random>
 
-
 namespace zenith {
 
 using namespace design;
@@ -240,7 +239,6 @@ void ZenithHubComponent::timerCallback() {
   alpha_.update(16.0f);
 
   if (auroraBackground_) {
-    auroraBackground_->update(0.016f);
   }
 
   if (alpha_.isAnimating()) {
@@ -318,7 +316,10 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   if (auroraBackground_) {
-    auroraBackground_->draw(canvas, getLocalBounds().toFloat());
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                       bounds.getWidth(), bounds.getHeight());
+    auroraBackground_->draw(canvas, skBounds, animationTime_);
     return;
   }
 
@@ -575,7 +576,9 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
     shadowPaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
     shadowPaint.setAntiAlias(true);
-    canvas->drawRRect(rrect.makeOutset(2.0f, 2.0f), shadowPaint);
+    canvas->drawRRect(
+        SkRRect::MakeRectXY(rrect.rect().makeOutset(2.0f, 2.0f), 14.0f, 14.0f),
+        shadowPaint);
   }
 
   canvas->drawRRect(rrect, btnPaint);
@@ -688,6 +691,17 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
 
 void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
+}
+
+void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
+  SkiaComponent::mouseExit(e);
+  for (auto &proj : recentProjects_)
+    proj.isHovered = false;
+  for (auto &tmpl : templates_)
+    tmpl.isHovered = false;
+  isProfileHovered_ = false;
+  isNewProjectHovered_ = false;
+  repaint();
 }
 
 } // namespace zenith

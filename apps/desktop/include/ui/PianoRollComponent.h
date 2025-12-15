@@ -137,13 +137,6 @@ public:
   //==========================================================================
 
   //==========================================================================
-  // Tool System
-  //==========================================================================
-
-  enum class Tool { Select, Draw, Erase, Slice };
-
-  void setCurrentTool(Tool tool);
-  Tool getCurrentTool() const { return currentTool; }
 
   //==========================================================================
   // Public API - Advanced Features
@@ -681,9 +674,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -1022,11 +1012,6 @@ private:
 
   // Cursor state
   CursorType currentCursorType = CursorType::Normal;
-
-  // Tool state
-  Tool currentTool = Tool::Select;
-  int hoveredPianoKey = -1; // -1 = no key hovered
-  int playingPianoKey = -1; // -1 = no key being played
 
   //==========================================================================
   // Ghost Notes State

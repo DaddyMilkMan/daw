@@ -17,12 +17,17 @@
 
 #pragma once
 
-#include "../../../include/ProjectState.h"
 #include "../../../include/Engine.h" // Corrected include path
+#include "../../../include/ProjectState.h"
 #include "../../engine/Track.h"
 #include "SkiaComponent.h"
 #include "SkiaKnob.h"
+#include <JuceHeader.h>
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
 #include <vector>
+
 
 class Engine; // Forward declaration
 
@@ -56,8 +61,8 @@ private:
   Track *currentTrack_ = nullptr;
 
   // UI Resources
-  SkPaint bgPaint_;
-  SkFont labelFont_;
+  ::SkPaint bgPaint_;
+  ::SkFont labelFont_;
 
   juce::Viewport viewport_;
   std::unique_ptr<juce::Component> contentContainer_;

@@ -1,4 +1,4 @@
-target_sources(ZenithDAW PRIVATE
+target_sources(ZenithDAW_lib PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/MainWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/MainLayoutComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SampleEditorComponent.cpp
@@ -35,3 +35,4 @@ target_sources(ZenithDAW PRIVATE
 )
 
 add_subdirectory(skia)
+

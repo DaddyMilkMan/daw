@@ -26,16 +26,11 @@ namespace zenith {
 namespace constants {
 
 //==============================================================================
-// Convenience Aliases
-// These provide alternative names for commonly used constants to improve
-// readability in different contexts.
+// Audio Constants
 //==============================================================================
 
-/// Alias for kDefaultCompAttackMs - shorter form for compressor attack time
-constexpr float kCompAttackMs = kDefaultCompAttackMs;
-
-/// Alias for kDefaultCompReleaseMs - shorter form for compressor release time
-constexpr float kCompReleaseMs = kDefaultCompReleaseMs;
+// Currently effectively a forward to EngineConstants.h
+// Future audio-specific constants can be added here.
 
 } // namespace constants
 } // namespace zenith

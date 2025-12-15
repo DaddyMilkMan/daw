@@ -104,13 +104,13 @@ private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 
   // Cached resources for 60FPS rendering
-  SkPaint bgPaint_;
-  SkPaint borderPaint_;
-  SkFont font_;
-  SkFont smallFont_;
-  SkRect cachedBounds_;
+  ::SkPaint bgPaint_;
+  ::SkPaint borderPaint_;
+  ::SkFont font_;
+  ::SkFont smallFont_;
+  ::SkRect cachedBounds_;
 
-  void updateCachedPaints(const SkRect &bounds);
+  void updateCachedPaints(const ::SkRect &bounds);
 };
 
 #endif // ZENITH_USE_SKIA

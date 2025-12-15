@@ -47,6 +47,16 @@ void RecordingManager::prepare(double sampleRate) {
 }
 
 //==============================================================================
+void RecordingManager::prepareRecordingForTrack(
+    const Track &track, int trackIndex, const juce::File &recordingsDir) {
+  // Optimization: Pre-allocate resources or create directory
+  // For now we just ensure the directory exists to avoid glitches during start
+  if (!recordingsDir.exists()) {
+    recordingsDir.createDirectory();
+  }
+}
+
+//==============================================================================
 void RecordingManager::setRecordingDirectory(const juce::File &recordDir) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
