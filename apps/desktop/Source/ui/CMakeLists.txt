@@ -59,7 +59,6 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent_SkiaHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
 )
 
