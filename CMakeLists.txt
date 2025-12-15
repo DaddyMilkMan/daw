@@ -101,7 +101,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
-    apps/desktop/Source/ui/PluginEditorWindow.cpp
+    apps/desktop/Source/ui/common/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
