@@ -76,6 +76,23 @@ ZenithHubComponent::~ZenithHubComponent() {
   recentProjectManager_.removeListener(this);
 }
 
+void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
+  SkiaComponent::mouseExit(e);
+
+  // Reset hover states
+  isNewProjectHovered_ = false;
+  for (auto &p : recentProjects_)
+    p.isHovered = false;
+  for (auto &t : templates_)
+    t.isHovered = false;
+
+  repaint();
+}
+
+bool ZenithHubComponent::hitTest(int x, int y) {
+  return mainCardBounds_.contains((float)x, (float)y);
+}
+
 void ZenithHubComponent::loadFromManager() {
   recentProjects_.clear();
 
@@ -238,9 +255,6 @@ void ZenithHubComponent::timerCallback() {
   animationTime_ += 0.016f;
   alpha_.update(16.0f);
 
-  if (auroraBackground_) {
-  }
-
   if (alpha_.isAnimating()) {
     repaint();
   }
@@ -302,8 +316,27 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
     subPaint.setAntiAlias(true);
 
-    canvas->drawString("Welcome back, User", headerX, headerY + 32, subFont,
-                       subPaint);
+    SkString greeting(greetingText_.toRawUTF8());
+    SkRect bounds;
+    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
+    
+    float subX = headerX;
+    float subY = headerY + 32;
+    
+    // Store bounds for interaction
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
+    
+    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    
+    // Draw Pencil Icon
+    greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
+    
+    // Use the icon system for consistency and maintainability
+    icons::IconStyle iconStyle;
+    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.strokeWidth = 1.5f;
+    
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, 16.0f, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -576,9 +609,9 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
     shadowPaint.setMaskFilter(
         SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
     shadowPaint.setAntiAlias(true);
-    canvas->drawRRect(
-        SkRRect::MakeRectXY(rrect.rect().makeOutset(2.0f, 2.0f), 14.0f, 14.0f),
-        shadowPaint);
+    SkRRect outset = rrect;
+    outset.outset(4.0f, 4.0f);
+    canvas->drawRRect(outset, shadowPaint);
   }
 
   canvas->drawRRect(rrect, btnPaint);
@@ -631,6 +664,12 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   if (nph != isNewProjectHovered_) {
     isNewProjectHovered_ = nph;
     needsUpdate = true;
+  }
+
+  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  if (gh != isGreetingHovered_) {
+      isGreetingHovered_ = gh;
+      needsUpdate = true;
   }
 
   if (needsUpdate)
@@ -687,21 +726,66 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
     dismiss();
     return;
   }
+
+  // Greeting Edit
+  if (greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+      showGreetingEditor();
+      return;
+  }
 }
 
 void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
 }
 
-void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
-  SkiaComponent::mouseExit(e);
-  for (auto &proj : recentProjects_)
-    proj.isHovered = false;
-  for (auto &tmpl : templates_)
-    tmpl.isHovered = false;
-  isProfileHovered_ = false;
-  isNewProjectHovered_ = false;
-  repaint();
+void ZenithHubComponent::showGreetingEditor() {
+  if (greetingEditor_) return;
+
+  greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
+  greetingEditor_->setText(greetingText_);
+  greetingEditor_->setSelectAllWhenFocused(true);
+  greetingEditor_->setJustification(juce::Justification::left);
+  // Use a standard JUCE font that matches size approx
+  greetingEditor_->setFont(juce::Font(18.0f)); 
+  
+  // Calculate bounds (convert from SkRect to JUCE Rectangle)
+  // Ensure we are in local coordinate space
+  // Use named constants for better maintainability
+  constexpr int kEditorHeight = 24;
+  constexpr int kEditorWidthPadding = 60;
+  
+  juce::Rectangle<int> bounds(
+      (int)greetingTextBounds_.left(), (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+      
+  greetingEditor_->setBounds(bounds);
+  
+  // Callbacks - use async destruction to prevent crashes from deleting
+  // the TextEditor from within its own callback
+  greetingEditor_->onReturnKey = [this]() {
+    auto newText = greetingEditor_->getText();
+    juce::MessageManager::callAsync([this, newText]() {
+      greetingText_ = newText;
+      greetingEditor_.reset();
+      repaint();
+    });
+  };
+  
+  greetingEditor_->onEscapeKey = [this]() {
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+    });
+  };
+  
+  greetingEditor_->onFocusLost = [this]() {
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+    });
+  };
+
+  addAndMakeVisible(greetingEditor_.get());
+  greetingEditor_->grabKeyboardFocus();
+}
 }
 
 } // namespace zenith
