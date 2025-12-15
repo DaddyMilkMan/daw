@@ -32,6 +32,8 @@
 
 namespace zenith {
 
+using design::FontWeight;
+
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
@@ -624,11 +626,11 @@ void ModulationMatrixView::buildSourceNodes() {
   for (int i = 0; i < kNumMacros; ++i) {
     ModulationSourceNode node;
     node.id = "sys:macro:" + juce::String(i);
-    if (engine_) {
-      node.displayName = engine_->getMacro(i).getName();
-    } else {
-      node.displayName = "Macro " + juce::String(i + 1);
-    }
+    // if (engine_) {
+    //   node.displayName = engine_->getMacro(i).getName();
+    // } else {
+    node.displayName = "Macro " + juce::String(i + 1);
+    // }
     node.type = ModulationSourceNode::Type::Macro;
     node.color = design::colors::NEON_GREEN;
     sourceNodes_.push_back(node);
@@ -951,7 +953,8 @@ void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
   }
 }
 
-std::vector<AIElementInfo> ModulationMatrixView::getInspectableElements() {
+std::vector<SkiaComponent::AIElementInfo>
+ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
   // TODO: Expose nodes and connections for AI access
   return elements;

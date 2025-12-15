@@ -141,6 +141,20 @@ public:
      */
     void resetPeakMeters() { masterPeakLevel_.store(0.0f); }
 
+    //==========================================================================
+    // Latency Query
+    //==========================================================================
+
+    /**
+     * @brief Get latency for a specific track in samples
+     */
+    int getTrackLatency(int trackIndex) const;
+
+    /**
+     * @brief Get master bus latency in samples
+     */
+    int getMasterLatency() const;
+
 private:
     //==========================================================================
     // Internal Methods
@@ -189,8 +203,10 @@ private:
     // Metering (atomic for lock-free GUI access)
     std::atomic<float> masterLevel_{0.0f};
     std::atomic<float> masterPeakLevel_{0.0f};
+    std::atomic<int> masterLatency_{0};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };
 
 } // namespace zenith
+
