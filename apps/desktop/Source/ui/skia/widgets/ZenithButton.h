@@ -30,7 +30,8 @@
 
 namespace zenith {
 
-class ZenithButton : public SkiaComponent, public juce::TooltipClient {
+class ZenithButton : public SkiaComponent,
+                     public juce::TooltipClient {
 public:
   // ----- Button Styles -----
   enum class Style {
@@ -67,10 +68,6 @@ public:
   void setText(const juce::String &text) { setButtonText(text); }
   juce::String getButtonText() const { return text_; }
   juce::String getText() const { return text_; }
-
-  // ----- Tooltip -----
-  void setTooltip(const juce::String &tooltip);
-  juce::String getTooltip() override;
 
   // ----- Style & Size -----
   void setButtonStyle(Style style);
@@ -112,6 +109,9 @@ public:
   std::function<void()> onClick;
   std::function<void(bool)> onToggle;
 
+  // ----- TooltipClient -----
+  juce::String getTooltip() override { return juce::Component::getTooltip(); }
+
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 
@@ -142,7 +142,6 @@ private:
 
   // Content
   juce::String text_;
-  juce::String tooltip_;
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;
