@@ -109,12 +109,7 @@ private:
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
 
-  // Accessibility
-  /*
-  class AccessibilityAgent;
-  std::vector<std::unique_ptr<AccessibilityAgent>> accessibilityAgents_;
-  void updateAccessibility();
-  */
+
 
   // Cached resources for 60FPS rendering
   ::SkPaint bgPaint_;
