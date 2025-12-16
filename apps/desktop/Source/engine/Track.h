@@ -32,7 +32,6 @@
 #include <unordered_map>
 #include <vector>
 
-
 // Forward declarations
 namespace zenith {
 class Instrument;
@@ -56,10 +55,11 @@ class PluginHost;
 */
 class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
-    friend class AudioRenderer; // Allow AudioRenderer to access private members
+  friend class AudioRenderer; // Allow AudioRenderer to access private members
 
-    void setSoloed(bool shouldBeSoloed);
-    bool isSoloed() const;
+  void setSoloed(bool shouldBeSoloed);
+  bool isSoloed() const;
+
 public:
 public:
   //==============================================================================
@@ -137,26 +137,28 @@ public:
   // Freeze state (for CPU optimization)
   void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
   bool isFrozen() const { return frozen.load(); }
-  
+
   /**
    * @brief Set the freeze file for this track
    * @param file The pre-rendered audio file
    * @note Message thread only
    */
-  void setFreezeFile(const juce::File& file);
-  
+  void setFreezeFile(const juce::File &file);
+
   /**
    * @brief Get the freeze file for this track
    * @return The freeze file, or invalid file if not frozen
    */
-  const juce::File& getFreezeFile() const { return freezeFile_; }
-  
+  const juce::File &getFreezeFile() const { return freezeFile_; }
+
   /**
    * @brief Get the audio reader for the freeze file
    * @return Reader instance, or nullptr if not available
    * @note Audio thread safe - reader is pre-created
    */
-  juce::AudioFormatReader* getFreezeReader() const { return freezeReader_.get(); }
+  juce::AudioFormatReader *getFreezeReader() const {
+    return freezeReader_.get();
+  }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
@@ -304,10 +306,12 @@ private:
   // Plugin chain with RT-safe snapshot pattern (Phase 3: VST3 hosting MVP)
   //
   // Pattern (same as clips):
-  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread only)
+  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread
+  // only)
   // - PluginSnapshot holds shared_ptr for audio thread to iterate safely
   // - Audio thread loads snapshot atomically, iterates without locking
-  // - Message thread creates new snapshot when modifying plugins, swaps atomically
+  // - Message thread creates new snapshot when modifying plugins, swaps
+  // atomically
   //
   // This eliminates the data race from the original code:
   // OLD: Audio thread reads std::vector while message thread modifies it (UB!)
@@ -427,6 +431,7 @@ private:
     int channel;
     juce::String noteId; // For tracking which ValueTree note this came from
   };
+
   std::vector<ActiveNote> activeNotes;
   juce::CriticalSection
       activeNotesLock; // Protects activeNotes vector for thread safety
