@@ -136,9 +136,6 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
@@ -671,7 +668,8 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-
+  void playPianoKey(int pitch, int velocity);
+  void stopPianoKey(int pitch);
 
   //==========================================================================
   // Internal Note Representation
@@ -986,8 +984,8 @@ private:
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
-  int hoveredPianoKey = -1;
-  int playingPianoKey = -1;
+  int hoveredPianoKey = -1; // -1 = no key hovered
+  int playingPianoKey = -1; // -1 = no key being played
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
@@ -1014,7 +1012,6 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-
 
   //==========================================================================
   // Ghost Notes State
@@ -1190,8 +1187,6 @@ private:
   //==========================================================================
 
   void timerCallback() override;
-
-
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
