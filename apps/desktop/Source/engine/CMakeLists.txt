@@ -32,3 +32,5 @@ target_sources(ZenithDAW PRIVATE
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
 )# Touch for rebuild
+
+

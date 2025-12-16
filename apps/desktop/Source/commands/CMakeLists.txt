@@ -5,3 +5,4 @@ target_sources(ZenithDAW PRIVATE
     ClipCommands.cpp
     TransportCommands.cpp
 )
+
