@@ -4,12 +4,11 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 #include <juce_opengl/juce_opengl.h>
 
 #ifdef ZENITH_USE_SKIA
-extern "C++" {
 #include <core/SkCanvas.h>
 #include <core/SkColorSpace.h>
 #include <core/SkRefCnt.h>
@@ -19,13 +18,12 @@ extern "C++" {
 #include <gpu/ganesh/SkSurfaceGanesh.h>
 #include <gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
-}
+
 #endif
 
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
-
 /**
  * @brief Reusable Skia OpenGL Renderer that manages OpenGL context and Skia
  * Surface.

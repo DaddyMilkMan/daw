@@ -14,7 +14,7 @@
 
 #include "SkiaComponent.h"
 #include <juce_core/juce_core.h>
-#include <map>
+#include <vector>
 
 namespace zenith {
 namespace lifecycle {
@@ -105,6 +105,7 @@ public:
   ComponentState getComponentState(const LifecycleAware *component) const;
   juce::Array<LifecycleAware *>
   getComponentsInState(ComponentState state) const;
+  static juce::String getStateName(ComponentState state);
 
   // Event handling
   using LifecycleCallback = std::function<void(const LifecycleEvent &)>;
@@ -125,8 +126,8 @@ public:
   void checkForMemoryLeaks();
   void forceGarbageCollection();
 
+  // Utility
   void reportError(LifecycleAware *component, const juce::String &error);
-  static juce::String getStateName(ComponentState state);
 
 private:
   ComponentLifecycleManager() = default;
@@ -144,7 +145,7 @@ private:
 
   // Data members
   juce::HashMap<LifecycleAware *, ComponentState> componentStates_;
-  juce::Array<LifecycleCallback> lifecycleListeners_;
+  std::vector<LifecycleCallback> lifecycleListeners_;
   juce::CriticalSection lock_;
   juce::int64 nextComponentId_ = 1;
 
@@ -270,14 +271,6 @@ public:
     int totalComponentsDestroyed = 0;
     int currentComponentCount = 0;
     std::map<juce::String, int> componentTypeCounts;
-
-    MemoryStats() = default;
-    MemoryStats(const MemoryStats &other) {
-      totalComponentsCreated = other.totalComponentsCreated;
-      totalComponentsDestroyed = other.totalComponentsDestroyed;
-      currentComponentCount = other.currentComponentCount;
-      componentTypeCounts = other.componentTypeCounts;
-    }
   };
 
   MemoryStats getMemoryStats() const;

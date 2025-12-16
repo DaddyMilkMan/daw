@@ -26,15 +26,20 @@ SkiaLayoutContainer::~SkiaLayoutContainer() { removeAllChildren(); }
 
 void SkiaLayoutContainer::addChild(SkiaComponent *child,
                                    const LayoutParams &params) {
-  bool exists = false;
+  if (child == nullptr) {
+    return;
+  }
+  
+  // Check if child is already added
+  bool alreadyAdded = false;
   for (const auto &info : children_) {
     if (info.component == child) {
-      exists = true;
+      alreadyAdded = true;
       break;
     }
   }
-
-  if (child && !exists) {
+  
+  if (!alreadyAdded) {
     ChildInfo info;
     info.component = child;
     info.params = params;
@@ -247,6 +252,10 @@ void SkiaHorizontalLayout::addChild(SkiaComponent *child, float flex,
   SkiaLayoutContainer::addChild(child, params);
 }
 
+void SkiaHorizontalLayout::calculateLayout() {
+  SkiaLayoutContainer::calculateLayout();
+}
+
 // ============================================================================
 // SkiaVerticalLayout Implementation
 // ============================================================================
@@ -262,6 +271,10 @@ void SkiaVerticalLayout::addChild(SkiaComponent *child, float flex,
                                   Alignment horizontalAlignment) {
   LayoutParams params(flex, horizontalAlignment);
   SkiaLayoutContainer::addChild(child, params);
+}
+
+void SkiaVerticalLayout::calculateLayout() {
+  SkiaLayoutContainer::calculateLayout();
 }
 
 // ============================================================================

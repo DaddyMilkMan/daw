@@ -10,6 +10,7 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
+#include "SkiaTheme.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>
@@ -107,6 +108,10 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
   using namespace zenith::design;
+  
+  // Get theme colors and typography
+  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
+  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
 
   // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
   juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
@@ -125,7 +130,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Background with subtle tint
       SkPaint bgPaint;
-      bgPaint.setColor(colors::BG_DARKER);
+      bgPaint.setColor(zenith::design::colors::BG_DARKER);
       bgPaint.setAntiAlias(true);
       canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
@@ -174,7 +179,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Draw curve
         SkPaint curvePaint;
-        curvePaint.setColor(colors::CYAN);
+        curvePaint.setColor(colors::VIOLET);
         curvePaint.setStyle(SkPaint::kStroke_Style);
         curvePaint.setStrokeWidth(2.5f);
         curvePaint.setAntiAlias(true);
@@ -183,11 +188,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Draw control points with selection highlighting
       SkColor selectionColor = colors::CYAN;
-<<<<<<< HEAD
-      SkPaint fillPaint;
-      == == == =
->>>>>>> d64fb093d0c57208d5f31003590617604886c47a
-                   for (const auto &handle : pointHandles) {
+      for (const auto &handle : pointHandles) {
         bool isSelected = (handle.pointId == draggedPointId);
         bool isHovered = (handle.pointId == hoveredPointId);
 
@@ -201,19 +202,18 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                             expandedRadius, selBgPaint);
         }
 
-        fillPaint.setColor(colors::CYAN);
+        // Control point fill
+        SkPaint fillPaint;
+        fillPaint.setColor(isSelected  ? colors::VIOLET
+                           : isHovered ? colors::VIOLET
+                                       : colors::VIOLET);
         fillPaint.setAntiAlias(true);
         canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
                           fillPaint);
 
         // Control point border
         SkPaint borderPaint;
-<<<<<<< HEAD
-        borderPaint.setColor(isSelected ? selectionColor
-                                        : colors::TEXT_PRIMARY);
-        == == == = borderPaint.setColor(isSelected ? selectionColor
-                                                   : colors::TEXT_PRIMARY);
->>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
         borderPaint.setAntiAlias(true);
@@ -236,12 +236,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-<<<<<<< HEAD
-        SkFont font = zenith::design::typography::getMonoFont(
-            zenith::design::typography::FONT_XS);
-        == == == = SkFont font = zenith::design::typography::getMonoFont(
-                     zenith::design::typography::FONT_XS);
->>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+        SkFont font = zenith::design::typography::getMonoFont(typography::FONT_XS);
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -284,12 +279,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       }
 
       // Draw parameter name
-<<<<<<< HEAD
-      SkFont nameFont = zenith::design::typography::getSkFont(
-          zenith::design::typography::FONT_MD);
-      == == == = SkFont nameFont = zenith::design::typography::getSkFont(
-                   zenith::design::typography::FONT_MD);
->>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+      SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_MD);
 
       SkPaint namePaint;
       namePaint.setColor(colors::TEXT_SECONDARY);

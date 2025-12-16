@@ -5,7 +5,7 @@
 
 #include "MainWindow.h"
 #include "ClipSynchronizer.h"
-#include "CommandAPI.h"
+#include "../../commands/CommandAPI.h"
 #include "TrackAutomationSynchronizer.h"
 #include "ArrangerComponent.h"
 #include "PianoRollComponent.h"

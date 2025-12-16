@@ -16,8 +16,8 @@
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
 #include <core/SkRRect.h>
+#include <core/SkMaskFilter.h>
 #include <effects/SkGradientShader.h>
-
 #endif
 
 namespace zenith {
