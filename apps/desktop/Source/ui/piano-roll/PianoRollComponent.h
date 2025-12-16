@@ -668,9 +668,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================

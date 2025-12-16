@@ -4,11 +4,12 @@
  */
 
 #include "Engine.h"
-#include "TrackAutomationSynchronizer.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
+#include "TrackAutomationSynchronizer.h"
 #include <algorithm> // For std::remove_if
 #include <array>     // For RT-safe stack allocation in audio callback
+
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/SessionDebuggerAgent.h"

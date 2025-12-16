@@ -290,7 +290,6 @@ PianoRollComponent::getCursorForPosition(float x, float y) const {
     return CursorType::Crosshair;
   }
 
-
   float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
   // noteGridHeight is cached
   if (y >= contentTop + noteGridHeight)
@@ -351,7 +350,6 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
 
-
   float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
   // noteGridHeight is cached
 
@@ -393,7 +391,6 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
 
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
-
 
   if (stepSequencerMode) {
     // Step sequencer mode handled separately
@@ -1202,9 +1199,9 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
                            textPaint);
       } else if (pixelsPerPitch > kKeyLabelDetailZoom) {
         textPaint.setColor(colors::TEXT_TERTIARY);
-        SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelDetailMaxFontSize, (float)(pixelsPerPitch * 0.5f)),
-            FontWeight::Regular);
+        SkFont font = getMonoFont(juce::jmin(kKeyLabelDetailMaxFontSize,
+                                             (float)(pixelsPerPitch * 0.5f)),
+                                  FontWeight::Regular);
         canvas->drawString(noteNames[noteInOctave],
                            PIANO_WIDTH + kKeyLabelDetailOffset, y + h * 0.7f,
                            font, textPaint);
@@ -1376,6 +1373,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
                           contentTop - kPlayheadMarkerHeight);
       trianglePath.close();
+      canvas->drawPath(trianglePath, playheadPaint);
     }
   }
 
@@ -1511,11 +1509,11 @@ void PianoRollComponent::stopPianoKey(int pitch) {
 juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
   // Map velocity (0-127) to a color gradient from blue (soft) to red (loud)
   float normalizedVelocity = juce::jlimit(0.0f, 1.0f, velocity / 127.0f);
-  
+
   // Interpolate from a cool color (low velocity) to a hot color (high velocity)
-  juce::Colour lowVelocity = juce::Colour::fromRGB(100, 150, 255);   // Blue-ish
-  juce::Colour highVelocity = juce::Colour::fromRGB(255, 100, 100);  // Red-ish
-  
+  juce::Colour lowVelocity = juce::Colour::fromRGB(100, 150, 255);  // Blue-ish
+  juce::Colour highVelocity = juce::Colour::fromRGB(255, 100, 100); // Red-ish
+
   return lowVelocity.interpolatedWith(highVelocity, normalizedVelocity);
 }
 
