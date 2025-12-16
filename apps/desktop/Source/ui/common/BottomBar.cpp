@@ -107,36 +107,24 @@ void BottomBar::drawSkia(SkCanvas *canvas) {
   canvas->drawLine(0.0f, 0.0f, skBounds.width(), 0.0f, borderPaint_);
 
   // If keyboard is hidden, show mixer strip OR device chain
-  if (!keyboardVisible_) {
+  // Iterate through all visible children and render them if they are
+  // SkiaComponents
+  for (auto *child : getChildren()) {
+    if (child->isVisible()) {
+      if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
+        canvas->save();
 
-    // If we have a real device chain component visible, don't draw the fake one
-    if (deviceChainVisible_ && deviceChain_) {
-      // Do nothing here, child component draws itself
-    } else if (mixerComponent_ && mixerComponent_->isVisible()) {
-      // Draw Mixer Component manually if needed
-      // Since MixerComponent is a child, usually it doesn't need manual
-      // drawSkia call if the parent implementation called drawChildren().
-      // SkiaComponent::drawSkia() does NOT automatically call drawChildren().
-      // However, usually we rely on JUCE's paint() to trigger child repaints.
-      // BUT for Skia, we want a single canvas pass.
+        // Translate to child position
+        canvas->translate((float)child->getX(), (float)child->getY());
 
-      // We will manually invoke drawSkia on the mixer component to ensure it
-      // renders on THIS canvas.
+        // Clip to child bounds to prevent bleeding
+        canvas->clipRect(SkRect::MakeWH((float)child->getWidth(),
+                                        (float)child->getHeight()));
 
-      canvas->save();
-      // Translate to mixer position
-      auto mixerBounds = mixerComponent_->getBounds();
-      // Editor scale factor might be needed but getLocalBounds usually suffices
-      // for internal translation
-      canvas->translate(mixerBounds.getX(), mixerBounds.getY());
+        skiaChild->drawSkia(canvas);
 
-      // Clip is important
-      canvas->clipRect(
-          SkRect::MakeWH(mixerBounds.getWidth(), mixerBounds.getHeight()));
-
-      mixerComponent_->drawSkia(canvas);
-
-      canvas->restore();
+        canvas->restore();
+      }
     }
   }
 }

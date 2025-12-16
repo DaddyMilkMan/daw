@@ -53,6 +53,7 @@ void TransportBar::resized() {
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
   updateCachedPaints(skBounds);
   cachedBounds_ = skBounds;
+
 }
 
 void TransportBar::drawSkia(SkCanvas *canvas) {
@@ -237,6 +238,14 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
       onSettingsClicked();
   }
 }
+
+std::unique_ptr<juce::AccessibilityHandler>
+TransportBar::createAccessibilityHandler() {
+  // Return a group handler so it exposes children
+  return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
+}
+
+TransportBar::~TransportBar() = default;
 
 } // namespace zenith
 

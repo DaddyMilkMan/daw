@@ -36,11 +36,14 @@ namespace zenith {
 class TransportBar : public SkiaComponent {
 public:
   TransportBar();
-  ~TransportBar() override = default;
+  ~TransportBar() override;
 
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &e) override;
+
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
 
   // State setters
   void setPlaying(bool playing) {
@@ -105,6 +108,8 @@ private:
                  float value, const char *label);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TransportBar)
+
+
 
   // Cached resources for 60FPS rendering
   ::SkPaint bgPaint_;
