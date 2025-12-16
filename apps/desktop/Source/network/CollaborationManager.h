@@ -1,5 +1,7 @@
 #pragma once
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_events/juce_events.h>
+#include <juce_graphics/juce_graphics.h>
 #include <functional>
 #include <vector>
 
@@ -97,4 +99,5 @@ private:
 
   // Hole Punching Logic
   void startHolePunching();
+  void reportError(const juce::String& error);
 };

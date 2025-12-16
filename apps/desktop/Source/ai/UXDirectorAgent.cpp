@@ -11,9 +11,9 @@
 */
 
 #include "UXDirectorAgent.h"
-#include "../../include/ui/ClipComponent.h"
-#include "../../include/ui/MixerChannelComponent.h"
-#include "../ui/skia/SkiaComponent.h"
+#include "ClipComponent.h"
+#include "MixerChannelComponent.h"
+#include "SkiaComponent.h"
 #include <algorithm>
 #include <typeinfo>
 

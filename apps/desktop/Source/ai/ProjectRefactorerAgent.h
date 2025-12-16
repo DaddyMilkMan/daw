@@ -24,8 +24,8 @@
 
 #pragma once
 
-#include "../../include/Engine.h"
-#include "../../include/ProjectState.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "../network/AudioAnalysisService.h"
 #include <functional>
 #include <juce_core/juce_core.h>
