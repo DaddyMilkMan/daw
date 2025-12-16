@@ -231,8 +231,8 @@ void SkiaAlertWindow::layoutComponents() {
     const auto &buttonInfo = buttons_[i];
 
     auto *button = new SkiaButton();
-    button->setButtonText(buttonInfo.text);
-    button->setButtonStyle(buttonInfo.style);
+    button->setText(buttonInfo.text);
+    button->setStyle(buttonInfo.style);
     button->onClick = [this, result = buttonInfo.result]() {
       handleButtonPressed(result);
     };
