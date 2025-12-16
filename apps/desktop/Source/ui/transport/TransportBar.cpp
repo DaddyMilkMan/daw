@@ -22,38 +22,55 @@
 #include <effects/SkGradientShader.h>
 
 #ifdef ZENITH_USE_SKIA
-#include "GlassmorphicPanel.h"
-#include "NeonGlow.h"
-#include "ZenithIcons.h"
+#include "../design-system/ZenithIcons.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include <effects/SkGradientShader.h>
 
 namespace zenith {
 
-TransportBar::TransportBar() { setSize(800, 60); }
+TransportBar::TransportBar() {
+  setSize(800, 60);
+  startTimerHz(60); // Animation loop
+}
 
 void TransportBar::resized() {
+  using namespace design;
   auto area = getLocalBounds();
-  int buttonWidth = 50;
-  int spacing = 10;
 
-  auto leftSection = area.removeFromLeft(250);
-  playButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(spacing);
-  leftSection.removeFromLeft(spacing);
-  stopButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(spacing);
-  leftSection.removeFromLeft(spacing);
+  // Use design tokens
+  int buttonWidth =
+      static_cast<int>(dimensions::BUTTON_HEIGHT_LG + spacing::SM);
+  int buttonSpacing = static_cast<int>(spacing::SM);
+  int buttonPadding = static_cast<int>(spacing::SM);
+
+  auto leftSection = area.removeFromLeft(static_cast<int>(spacing::XXL * 5));
+  playButtonBounds_ =
+      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
+  leftSection.removeFromLeft(buttonSpacing);
+  stopButtonBounds_ =
+      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
+  leftSection.removeFromLeft(buttonSpacing);
   recordButtonBounds_ =
-      leftSection.removeFromLeft(buttonWidth).reduced(spacing);
+      leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
 
   // View Toggle Button (Right side)
-  auto rightSection = area.removeFromRight(120); // Increased width
-  settingsButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
-  viewToggleButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
+  // View Toggle Button (Right side)
+  auto rightSection =
+      area.removeFromRight(static_cast<int>(spacing::XXL * 2.5f));
+  settingsButtonBounds_ =
+      rightSection
+          .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
+          .reduced(buttonPadding);
+  viewToggleButtonBounds_ =
+      rightSection
+          .removeFromRight(static_cast<int>(dimensions::TRANSPORT_BAR_HEIGHT))
+          .reduced(buttonPadding);
 
   // Update cached resources on Message Thread (Safe)
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
   updateCachedPaints(skBounds);
   cachedBounds_ = skBounds;
-
 }
 
 void TransportBar::drawSkia(SkCanvas *canvas) {
@@ -70,19 +87,19 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
 
   // 3. Draw transport buttons using vector icons
   drawTransportButton(canvas, playButtonBounds_, icons::Play(), isPlaying_,
-                      design::colors::NEON_GREEN);
+                      design::colors::NEON_GREEN, playState_);
   drawTransportButton(canvas, stopButtonBounds_, icons::Stop(), !isPlaying_,
-                      design::colors::BLUE);
+                      design::colors::BLUE, stopState_);
   drawTransportButton(canvas, recordButtonBounds_, icons::Record(),
-                      isRecording_, design::colors::RED);
+                      isRecording_, design::colors::RED, recordState_);
 
   // View Toggle - uses ViewToggle icon
   drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
-                      false, design::colors::TEXT_PRIMARY);
+                      false, design::colors::TEXT_PRIMARY, viewToggleState_);
 
   // Settings Button - uses Settings gear icon
   drawTransportButton(canvas, settingsButtonBounds_, icons::Settings(), false,
-                      design::colors::TEXT_PRIMARY);
+                      design::colors::TEXT_PRIMARY, settingsState_);
 
   // 4. Draw Info Text (Tempo & Project)
   SkPaint textPaint; // Stack alloc is cheap
@@ -133,31 +150,66 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
 void TransportBar::drawTransportButton(SkCanvas *canvas,
                                        const juce::Rectangle<int> &bounds,
                                        const SkPath &iconPath, bool isActive,
-                                       uint32_t color) {
+                                       uint32_t color,
+                                       const InteractionState &state) {
   SkRect rect =
       SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
                        (float)bounds.getWidth(), (float)bounds.getHeight());
+
+  // Determine visual state based on hover/pressed/active
+  bool showGlow = isActive || state.hoverAmount > 0.1f;
 
   if (isActive) {
     // Active State: Glass panel with accent glow
     GlassmorphicPanel::drawWithAccent(canvas, rect, color,
                                       GlassmorphicPanel::Style::ActiveGlow);
+  } else if (state.hoverAmount > 0.01f) {
+    // Hover State: Elevated glass, fading in derived from hoverAmount
+    GlassmorphicPanel::Options opts;
+    opts.style = GlassmorphicPanel::Style::Elevated;
+
+    // Animate opacity based on hover amount
+    uint32_t baseColor = design::withAlpha(color, 0.3f);
+    opts.accentColor = SkColorSetA(
+        baseColor,
+        static_cast<U8CPU>(76 * state.hoverAmount)); // 0.3 * 255 = 76
+
+    opts.glowIntensity = 0.5f * state.hoverAmount;
+    GlassmorphicPanel::drawWithOptions(canvas, rect, opts);
   } else {
     // Inactive State: Subtle glass panel
     GlassmorphicPanel::draw(canvas, rect, GlassmorphicPanel::Style::Subtle);
   }
 
+  // Pressed overlay (darken slightly)
+  if (state.pressAmount > 0.01f) {
+    InteractionHelper::drawPressedOverlay(canvas, rect, state.pressAmount,
+                                          design::dimensions::RADIUS_SM);
+  }
+
   // Calculate icon size (about 60% of button height)
   float iconSize = bounds.getHeight() * 0.6f;
 
-  // Set up icon style
+  // Set up icon style with hover brightness boost
   icons::IconStyle style;
-  style.color = isActive ? SK_ColorWHITE : design::colors::TEXT_SECONDARY;
+  SkColor iconColor = isActive ? SK_ColorWHITE : design::colors::TEXT_SECONDARY;
+
+  // Brighten icon on hover
+  if (!isActive && state.hoverAmount > 0.01f) {
+    iconColor = design::interpolateColor(iconColor, SK_ColorWHITE,
+                                         state.hoverAmount * 0.5f);
+  }
+
+  style.color = iconColor;
   style.filled = isActive; // Filled when active
   style.strokeWidth = icons::STROKE_REGULAR;
 
-  if (isActive) {
-    style.glowRadius = design::effects::GLOW_STRONG;
+  if (showGlow) {
+    style.glowRadius =
+        isActive ? design::effects::GLOW_STRONG : design::effects::GLOW_SUBTLE;
+    if (!isActive) {
+      style.glowRadius *= state.hoverAmount; // Fade in glow
+    }
     style.glowColor = color;
   }
 
@@ -221,6 +273,14 @@ void TransportBar::drawMeter(SkCanvas *canvas,
 }
 
 void TransportBar::mouseDown(const juce::MouseEvent &e) {
+  // Set pressed state
+  playState_.isPressed = playButtonBounds_.contains(e.getPosition());
+  stopState_.isPressed = stopButtonBounds_.contains(e.getPosition());
+  recordState_.isPressed = recordButtonBounds_.contains(e.getPosition());
+  viewToggleState_.isPressed =
+      viewToggleButtonBounds_.contains(e.getPosition());
+  settingsState_.isPressed = settingsButtonBounds_.contains(e.getPosition());
+
   if (playButtonBounds_.contains(e.getPosition())) {
     if (onPlayClicked)
       onPlayClicked();
@@ -239,10 +299,51 @@ void TransportBar::mouseDown(const juce::MouseEvent &e) {
   }
 }
 
+void TransportBar::mouseMove(const juce::MouseEvent &e) {
+  playState_.isHovered = playButtonBounds_.contains(e.getPosition());
+  stopState_.isHovered = stopButtonBounds_.contains(e.getPosition());
+  recordState_.isHovered = recordButtonBounds_.contains(e.getPosition());
+  viewToggleState_.isHovered =
+      viewToggleButtonBounds_.contains(e.getPosition());
+  settingsState_.isHovered = settingsButtonBounds_.contains(e.getPosition());
+}
+
+void TransportBar::mouseEnter(const juce::MouseEvent &e) { mouseMove(e); }
+
+void TransportBar::mouseExit(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  // Clear all hover states
+  playState_.isHovered = false;
+  stopState_.isHovered = false;
+  recordState_.isHovered = false;
+  viewToggleState_.isHovered = false;
+  settingsState_.isHovered = false;
+}
+
+void TransportBar::timerCallback() {
+  SkiaComponent::timerCallback(); // Call base for global animations
+
+  float dt = 1.0f / 60.0f;
+  // Update animations
+  playState_.update(dt);
+  stopState_.update(dt);
+  recordState_.update(dt);
+  viewToggleState_.update(dt);
+  settingsState_.update(dt);
+
+  // Check if any need repainting
+  if (playState_.isAnimating() || stopState_.isAnimating() ||
+      recordState_.isAnimating() || viewToggleState_.isAnimating() ||
+      settingsState_.isAnimating()) {
+    repaint();
+  }
+}
+
 std::unique_ptr<juce::AccessibilityHandler>
 TransportBar::createAccessibilityHandler() {
   // Return a group handler so it exposes children
-  return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::group);
+  return std::make_unique<juce::AccessibilityHandler>(
+      *this, juce::AccessibilityRole::group);
 }
 
 TransportBar::~TransportBar() = default;

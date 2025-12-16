@@ -30,7 +30,6 @@
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 
-
 namespace zenith {
 
 using design::FontWeight;
