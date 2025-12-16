@@ -19,18 +19,39 @@ namespace ai {
 */
 class GrokAPIClient {
 public:
-  GrokAPIClient()
-      : apiKey_("xai-"
-                "d0rBVecv1p97pijvIjZHf8vELjxC5SdCSQDw32qhrVsRWjt0bjBtkzsswefx13"
-                "LjG8PZJTZBtupHJ4F6") {
-    DBG("GrokAPIClient initialized with XAI key");
+  GrokAPIClient() {
+    // Security: Load API key from environment variable, not hardcoded
+    apiKey_ = juce::SystemStats::getEnvironmentVariable("GROK_API_KEY", "");
+
+    if (apiKey_.isEmpty()) {
+      DBG("WARNING: GROK_API_KEY environment variable is not set. "
+          "GrokAPIClient will not function until a valid API key is provided.");
+    } else {
+      DBG("GrokAPIClient initialized with API key from environment");
+    }
   }
+
+  /**
+   * Check if API key is configured
+   */
+  bool hasAPIKey() const { return apiKey_.isNotEmpty(); }
+
+  /**
+   * Set API key programmatically (for secure key store integration)
+   */
+  void setAPIKey(const juce::String &apiKey) { apiKey_ = apiKey; }
 
   /**
    * Call Grok 4.1 reasoning model synchronously
    */
   juce::String callGrok(const juce::String &prompt,
                         const juce::String &systemMessage) {
+    if (!hasAPIKey()) {
+      DBG("ERROR: No API key configured. Set GROK_API_KEY environment "
+          "variable.");
+      return "{}";
+    }
+
     DBG("======================================");
     DBG("Calling Grok 4.1 API...");
     DBG("======================================");
@@ -110,8 +131,41 @@ private:
   }
 
   juce::String makeHttpRequest(const juce::String &requestBody) {
-    // TEMPORARY FIX: Stubbed to resolve build errors unrelated to SkiaKnob task
-    return "{}";
+    // Create URL with POST data
+    juce::URL url(apiEndpoint_);
+    url = url.withPOSTData(requestBody);
+
+    // Set up headers for the request
+    juce::StringPairArray headers;
+    headers.set("Content-Type", "application/json");
+    headers.set("Authorization", "Bearer " + apiKey_);
+
+    // Create input stream options
+    // Create input stream options
+    // Use ignoreAllParameters because we're sending raw JSON body via
+    // withPOSTData()
+    juce::URL::InputStreamOptions options(
+        juce::URL::ParameterHandling::ignoreAllParameters);
+    options = options.withExtraHeaders(headers.getHeadersAsString());
+    options = options.withConnectionTimeoutMs(30000); // 30 second timeout
+
+    // Make the HTTP POST request
+    std::unique_ptr<juce::InputStream> stream = url.createInputStream(options);
+
+    if (stream == nullptr) {
+      DBG("ERROR: Failed to create HTTP connection to Grok API");
+      return "{}";
+    }
+
+    // Read the response
+    juce::String response = stream->readEntireStreamAsString();
+
+    if (response.isEmpty()) {
+      DBG("ERROR: Empty response from Grok API stream");
+      return "{}";
+    }
+
+    return response;
   }
 
   juce::String extractContent(const juce::String &responseJson) {
