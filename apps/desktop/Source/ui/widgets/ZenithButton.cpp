@@ -13,11 +13,13 @@
 #include "ZenithButton.h"
 
 #ifdef ZENITH_USE_SKIA
+#include "../design-system/ZenithDesignSystem.h" // Add design system include
 #include <core/SkBlurTypes.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+
 #endif
 
 namespace zenith {
@@ -262,24 +264,25 @@ SkColor ZenithButton::getBackgroundColor() const {
 
   switch (style_) {
   case Style::Primary:
-    base = SkColorSetRGB(0, 100, 200);
+    base = design::colors::CYAN;
     break;
   case Style::Danger:
-    base = SkColorSetRGB(150, 20, 20);
+    base = design::colors::RED;
     break;
   case Style::Warning:
-    base = SkColorSetRGB(150, 120, 0);
+    base = design::colors::AMBER;
     break;
   case Style::Success:
-    base = SkColorSetRGB(20, 150, 50);
+    base = design::colors::GREEN;
     break;
   case Style::Ghost:
-    base = hovered_ ? SkColorSetRGB(40, 40, 50) : SkColorSetRGB(0, 0, 0);
+    base = hovered_ ? design::lighten(design::colors::BG_DARK, 0.1f)
+                    : SK_ColorTRANSPARENT;
     alpha = hovered_ ? 100 : 0;
     break;
   case Style::Secondary:
   default:
-    base = SkColorSetRGB(40, 40, 50);
+    base = design::colors::BG_DARK;
     break;
   }
 
@@ -297,39 +300,39 @@ SkColor ZenithButton::getBackgroundColor() const {
 
 SkColor ZenithButton::getTextColor() const {
   if (!isEnabled()) {
-    return SkColorSetARGB(100, 255, 255, 255);
+    return design::withAlpha(design::colors::TEXT_PRIMARY, 0.4f);
   }
 
   if (pressed_ || (toggleable_ && toggleState_)) {
-    return SK_ColorWHITE;
+    return design::colors::TEXT_PRIMARY;
   }
 
-  return SkColorSetARGB(220, 255, 255, 255);
+  return design::colors::TEXT_PRIMARY;
 }
 
 SkColor ZenithButton::getBorderColor() const {
   if (style_ == Style::Ghost) {
-    return hovered_ ? SkColorSetARGB(150, 255, 255, 255)
-                    : SkColorSetARGB(80, 255, 255, 255);
+    return hovered_ ? design::withAlpha(design::colors::BORDER_DEFAULT, 0.6f)
+                    : design::withAlpha(design::colors::BORDER_DEFAULT, 0.3f);
   }
-  return SkColorSetARGB(50, 255, 255, 255);
+  return design::colors::BORDER_DEFAULT;
 }
 
 SkColor ZenithButton::getGlowColor() const {
   switch (style_) {
   case Style::Primary:
-    return SkColorSetRGB(0, 200, 255);
+    return design::colors::CYAN;
   case Style::Danger:
-    return SkColorSetRGB(255, 50, 50);
+    return design::colors::RED;
   case Style::Warning:
-    return SkColorSetRGB(255, 200, 0);
+    return design::colors::AMBER;
   case Style::Success:
-    return SkColorSetRGB(50, 255, 100);
+    return design::colors::GREEN;
   case Style::Ghost:
-    return SkColorSetRGB(100, 100, 255);
+    return design::colors::VIOLET;
   case Style::Secondary:
   default:
-    return SkColorSetRGB(100, 100, 255);
+    return design::colors::VIOLET;
   }
 }
 
@@ -346,7 +349,7 @@ void ZenithButton::drawGlow(SkCanvas *canvas, const SkRRect &bounds) {
     glowIntensity *= (0.5f + audioLevel_ * 0.5f);
   }
 
-  glowPaint.setColor(SkColorSetA(glowColor, 150));
+  glowPaint.setColor(design::withAlpha(glowColor, 0.6f));
   glowPaint.setMaskFilter(
       SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, glowIntensity));
   canvas->drawRRect(bounds, glowPaint);
@@ -389,8 +392,9 @@ void ZenithButton::drawBorder(SkCanvas *canvas, const SkRRect &bounds) {
 
 void ZenithButton::drawIcon(SkCanvas *canvas, const SkRect &rect) {
   if (iconText_.isNotEmpty()) {
-    SkFont font;
-    font.setSize(getFontSize() + 2.0f);
+    // Use design system font
+    SkFont font =
+        design::getSkFont(getFontSize() + 2.0f, design::FontWeight::Bold);
 
     SkPaint paint;
     paint.setAntiAlias(true);
@@ -428,9 +432,8 @@ void ZenithButton::drawText(SkCanvas *canvas, const SkRect &rect) {
   if (text_.isEmpty())
     return;
 
-  SkFont font;
-  font.setSize(getFontSize());
-  font.setSubpixel(true);
+  // Use design system font
+  SkFont font = design::getSkFont(getFontSize(), design::FontWeight::Medium);
 
   std::string str = text_.toStdString();
   float textWidth =
