@@ -15,11 +15,12 @@ build_output*.txt
 # 1b. Logs Directory
 /logs/
 
-# 1c. Leftover Build Folders
+# 1c. Leftover & Nested Build Folders
 build_fix*/
 build_manual/
 build_skia/
 build_trash/
+modules/*/build/
 
 # 2. OS Junk
 .DS_Store
