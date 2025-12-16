@@ -223,7 +223,7 @@ double PianoRollComponent::snapToGrid(double beats) const {
 }
 
 int PianoRollComponent::pixelsToVelocity(float y) const {
-  auto bounds = getLocalBounds();
+
   // noteGridHeight is cached
 
   float yInLane = y - (TOOLBAR_HEIGHT + RULER_HEIGHT + noteGridHeight);
@@ -252,7 +252,7 @@ PianoRollComponent::NoteRect *PianoRollComponent::findNoteAtPosition(float x,
 
 PianoRollComponent::NoteRect *
 PianoRollComponent::findNoteInVelocityLane(float x, float y) {
-  auto bounds = getLocalBounds();
+
   float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
   // noteGridHeight is cached
   float velocityLaneTop = contentTop + noteGridHeight;
@@ -290,7 +290,7 @@ PianoRollComponent::getCursorForPosition(float x, float y) const {
     return CursorType::Crosshair;
   }
 
-  auto bounds = getLocalBounds();
+
   float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
   // noteGridHeight is cached
   if (y >= contentTop + noteGridHeight)
@@ -351,7 +351,7 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
 
-  auto bounds = getLocalBounds();
+
   float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
   // noteGridHeight is cached
 
@@ -393,7 +393,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
 
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
-  auto bounds = getLocalBounds();
+
 
   if (stepSequencerMode) {
     // Step sequencer mode handled separately
@@ -1144,8 +1144,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     // Draw Key
     static constexpr float kKeyLabelMinZoom = 12.0f;
     static constexpr float kKeyLabelDetailZoom = 18.0f;
-    static constexpr float kKeyLabelSmallFontZoom = 11.0f;
-    static constexpr float kKeyLabelTinyFontZoom = 9.0f;
+    static constexpr float kKeyLabelMaxFontSize = 11.0f;
+    static constexpr float kKeyLabelDetailMaxFontSize = 9.0f;
     static constexpr float kKeyLabelOffset = -24.0f;
     static constexpr float kKeyLabelDetailOffset = -18.0f;
 
@@ -1194,7 +1194,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         // C notes get octave number
         textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
         SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelSmallFontZoom, (float)(pixelsPerPitch * 0.7f)),
+            juce::jmin(kKeyLabelMaxFontSize, (float)(pixelsPerPitch * 0.7f)),
             FontWeight::Bold);
         juce::String label = "C" + juce::String(p / 12 - 2);
         canvas->drawString(label.toStdString().c_str(),
@@ -1203,7 +1203,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       } else if (pixelsPerPitch > kKeyLabelDetailZoom) {
         textPaint.setColor(colors::TEXT_TERTIARY);
         SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelTinyFontZoom, (float)(pixelsPerPitch * 0.5f)),
+            juce::jmin(kKeyLabelDetailMaxFontSize, (float)(pixelsPerPitch * 0.5f)),
             FontWeight::Regular);
         canvas->drawString(noteNames[noteInOctave],
                            PIANO_WIDTH + kKeyLabelDetailOffset, y + h * 0.7f,
@@ -1507,6 +1507,17 @@ void PianoRollComponent::stopPianoKey(int pitch) {
 //==============================================================================
 // Skia Helpers
 //==============================================================================
+
+juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+  // Map velocity (0-127) to a color gradient from blue (soft) to red (loud)
+  float normalizedVelocity = juce::jlimit(0.0f, 1.0f, velocity / 127.0f);
+  
+  // Interpolate from a cool color (low velocity) to a hot color (high velocity)
+  juce::Colour lowVelocity = juce::Colour::fromRGB(100, 150, 255);   // Blue-ish
+  juce::Colour highVelocity = juce::Colour::fromRGB(255, 100, 100);  // Red-ish
+  
+  return lowVelocity.interpolatedWith(highVelocity, normalizedVelocity);
+}
 
 SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   juce::Colour c = getColorForVelocity(velocity);

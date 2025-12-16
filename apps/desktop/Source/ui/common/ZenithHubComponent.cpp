@@ -311,7 +311,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
 
     // Subtitle with proper sizing
-    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
+    SkFont subFont = design::getSkFont(design::typography::FONT_XL, design::FontWeight::Regular);
     SkPaint subPaint;
     subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
     subPaint.setAntiAlias(true);
@@ -746,7 +746,7 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_->setSelectAllWhenFocused(true);
   greetingEditor_->setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
+  greetingEditor_->setFont(juce::Font(design::typography::FONT_XL)); 
   
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
   // Ensure we are in local coordinate space
@@ -762,29 +762,23 @@ void ZenithHubComponent::showGreetingEditor() {
   
   // Callbacks - use async destruction to prevent crashes from deleting
   // the TextEditor from within its own callback
-  greetingEditor_->onReturnKey = [this]() {
-    auto newText = greetingEditor_->getText();
-    juce::MessageManager::callAsync([this, newText]() {
-      greetingText_ = newText;
-      greetingEditor_.reset();
-      repaint();
-    });
-  };
-  
-  greetingEditor_->onEscapeKey = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
-  
-  greetingEditor_->onFocusLost = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
+  greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
+  greetingEditor_->onEscapeKey = [this]() { hideGreetingEditor(false); };
+  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(false); };
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
+}
+
+void ZenithHubComponent::hideGreetingEditor(bool save) {
+  if (!greetingEditor_) return;
+  auto text = greetingEditor_->getText();
+  
+  juce::MessageManager::callAsync([this, save, text]() {
+    if (save) greetingText_ = text;
+    greetingEditor_.reset();
+    repaint();
+  });
 }
 }
 

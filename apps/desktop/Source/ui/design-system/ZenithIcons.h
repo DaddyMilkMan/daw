@@ -105,6 +105,8 @@ inline SkPath FastForward() {
   return path;
 }
 
+
+
 /** Rewind - two left-pointing triangles */
 inline SkPath Rewind() {
   SkPath path;
