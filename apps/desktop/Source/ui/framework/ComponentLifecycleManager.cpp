@@ -257,7 +257,8 @@ ComponentLifecycleManager::getComponentsInState(ComponentState state) const {
   juce::ScopedLock lock(lock_);
 
   juce::Array<LifecycleAware *> result;
-  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(componentStates_);
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
   while (it.next()) {
     if (it.getValue() == state) {
       result.add(const_cast<LifecycleAware *>(it.getKey()));
@@ -302,7 +303,8 @@ void ComponentLifecycleManager::destroyAllComponents() {
 
   // Destroy components in reverse order of registration
   juce::Array<LifecycleAware *> components;
-  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(componentStates_);
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
   while (it.next()) {
     components.add(const_cast<LifecycleAware *>(it.getKey()));
   }
@@ -322,7 +324,8 @@ int ComponentLifecycleManager::getComponentCountInState(
   juce::ScopedLock lock(lock_);
 
   int count = 0;
-  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(componentStates_);
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
   while (it.next()) {
     if (it.getValue() == state) {
       ++count;
@@ -682,7 +685,8 @@ juce::StringArray ComponentFactory::getRegisteredComponentTypes() const {
 
   juce::StringArray types;
   // Cast to non-const to allow iteration
-  auto& creators = const_cast<juce::HashMap<juce::String, ComponentCreator>&>(componentCreators_);
+  auto &creators = const_cast<juce::HashMap<juce::String, ComponentCreator> &>(
+      componentCreators_);
   for (auto it = creators.begin(); it != creators.end(); ++it) {
     types.add(it.getKey());
   }
@@ -718,11 +722,7 @@ void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
 
   // Update type counts
   juce::String typeName = typeid(*component).name();
-  int count = 0;
-  if (stats_.componentTypeCounts.contains(typeName)) {
-      count = stats_.componentTypeCounts[typeName];
-  }
-  stats_.componentTypeCounts.set(typeName, count + 1);
+  stats_.componentTypeCounts[typeName]++;
 }
 
 void MemoryLeakDetector::untrackComponent(const LifecycleComponent *component) {

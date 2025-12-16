@@ -13,9 +13,7 @@
 #pragma once
 
 #include "SkiaComponent.h"
-#include <map>
 #include <juce_core/juce_core.h>
-#include <map>
 
 namespace zenith {
 namespace lifecycle {
@@ -270,19 +268,14 @@ public:
     int totalComponentsCreated = 0;
     int totalComponentsDestroyed = 0;
     int currentComponentCount = 0;
-    juce::HashMap<juce::String, int> componentTypeCounts;
-
+    std::map<juce::String, int> componentTypeCounts;
 
     MemoryStats() = default;
     MemoryStats(const MemoryStats &other) {
       totalComponentsCreated = other.totalComponentsCreated;
       totalComponentsDestroyed = other.totalComponentsDestroyed;
       currentComponentCount = other.currentComponentCount;
-
-      juce::HashMap<juce::String, int>::Iterator it(other.componentTypeCounts);
-      while (it.next()) {
-        componentTypeCounts.set(it.getKey(), it.getValue());
-      }
+      componentTypeCounts = other.componentTypeCounts;
     }
   };
 
