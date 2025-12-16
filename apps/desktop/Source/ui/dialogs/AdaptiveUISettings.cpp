@@ -11,6 +11,7 @@
 */
 
 #include "AdaptiveUISettings.h"
+
 #include "../framework/ConfigurationManager.h"
 
 namespace zenith {
@@ -192,8 +193,12 @@ void AdaptiveUISettings::drawSkia(SkCanvas *canvas) {
   // Draw background
   SkPaint bgPaint;
   bgPaint.setColor(design::colors::BG_DARKER);
+<<<<<<< HEAD
   canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
                    bgPaint);
+  == == == = canvas->drawRect(
+               SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
 
   // Draw border
   SkPaint borderPaint;

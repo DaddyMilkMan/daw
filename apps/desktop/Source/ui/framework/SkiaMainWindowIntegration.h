@@ -8,7 +8,6 @@
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
 
-
 #ifdef ZENITH_USE_SKIA
 extern "C++" {
 #include <core/SkCanvas.h>
@@ -26,6 +25,7 @@ extern "C++" {
 namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
+
 /**
  * @brief Reusable Skia OpenGL Renderer that manages OpenGL context and Skia
  * Surface.
