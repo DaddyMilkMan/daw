@@ -15,6 +15,9 @@
 #include "SkiaButton.h"
 #include "SkiaComponent.h"
 #include <juce_core/juce_core.h>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace zenith {
 
