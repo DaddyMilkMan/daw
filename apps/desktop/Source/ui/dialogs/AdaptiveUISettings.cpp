@@ -11,7 +11,7 @@
 */
 
 #include "AdaptiveUISettings.h"
-#include "../config/ConfigurationManager.h"
+#include "../framework/ConfigurationManager.h"
 
 namespace zenith {
 namespace settings {
@@ -192,14 +192,14 @@ void AdaptiveUISettings::drawSkia(SkCanvas *canvas) {
   // Draw background
   SkPaint bgPaint;
   bgPaint.setColor(design::colors::BG_DARKER);
-  canvas->drawRect(SkRect::MakeWH(bounds.width(), bounds.height()), bgPaint);
+  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()), bgPaint);
 
   // Draw border
   SkPaint borderPaint;
   borderPaint.setColor(design::colors::BORDER_DEFAULT);
   borderPaint.setStyle(SkPaint::kStroke_Style);
   borderPaint.setStrokeWidth(1.0f);
-  canvas->drawRect(SkRect::MakeWH(bounds.width(), bounds.height()),
+  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
                    borderPaint);
 }
 
@@ -259,7 +259,7 @@ void AdaptiveUISettings::saveSettings() {
 
 void AdaptiveUISettings::updateButtonStates() {
   if (enabledButton_) {
-    enabledButton_->setToggleState(adaptiveUIEnabled_, false);
+    enabledButton_->setToggleState(adaptiveUIEnabled_);
     enabledButton_->setText(adaptiveUIEnabled_ ? "ON" : "OFF");
   }
 }

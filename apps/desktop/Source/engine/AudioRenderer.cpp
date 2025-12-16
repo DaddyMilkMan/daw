@@ -371,9 +371,7 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
   }
 }
 
-} // namespace zenith
 
-//==============================================================================
 int AudioRenderer::getTrackLatency(int trackIndex) const {
   if (trackIndex >= 0 && trackIndex < static_cast<int>(trackLatencies_.size())) {
     return trackLatencies_[trackIndex];
@@ -398,3 +396,5 @@ void AudioRenderer::updateMasterLatency(
   
   masterLatency_.store(totalLatency);
 }
+
+} // namespace zenith

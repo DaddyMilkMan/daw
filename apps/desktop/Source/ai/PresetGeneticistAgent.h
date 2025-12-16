@@ -263,6 +263,16 @@ public:
    */
   float getBestFitness() const { return stats_.bestFitness; }
 
+  /**
+   * @brief Get current best spectrum for visualization
+   */
+  std::vector<float> getCurrentBestSpectrum() const { return currentBestSpectrum_; }
+
+  /**
+   * @brief Get target spectrum for visualization
+   */
+  std::vector<float> getTargetSpectrum() const { return targetSpectrum_; }
+
   //==========================================================================
   // Export
   //==========================================================================
@@ -436,6 +446,10 @@ private:
 
   // MIDI buffer for block processing
   juce::MidiBuffer blockMidiBuffer_;
+
+  // Spectrum data for visualization
+  std::vector<float> currentBestSpectrum_;
+  std::vector<float> targetSpectrum_;
   // ======================================================================
 
   // Random number generator

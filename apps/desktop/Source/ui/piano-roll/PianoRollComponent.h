@@ -147,6 +147,7 @@ public:
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
   void applyVelocityCurve(VelocityCurve curve, float amount = 1.0f);
 
+
   //==========================================================================
   // Tool System
   //==========================================================================
@@ -503,7 +504,7 @@ public:
 
   /** Lock notes to a specific scale when moving */
   void setScaleLock(bool enabled);
-  bool getScaleLock() const { return scaleLockEnabled; }
+  bool getScaleLock() const;
 
   /** Set the scale for scale lock (root 0-11, scale type) */
   void setScaleLockKey(int rootNote, ScaleType scale);
@@ -668,8 +669,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
 
   //==========================================================================
   // Internal Note Representation
@@ -736,6 +735,7 @@ private:
   ScaleHighlight scaleHighlight;
   void updateScaleHighlight();
   bool isNoteInScale(int pitch) const;
+
 
   //==========================================================================
   // Chord Detection
@@ -977,6 +977,7 @@ private:
 
   // Layout
   static constexpr int PIANO_WIDTH = 60;
+  static constexpr int TOOLBAR_HEIGHT = 40;
   static constexpr int RULER_HEIGHT = 30;
   int velocityLaneHeight = 160; // Increased from 120 for better precision
                                 // (~1.26px per velocity value)
@@ -1012,8 +1013,7 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-  int hoveredPianoKey = -1; // -1 = no key hovered
-  int playingPianoKey = -1; // -1 = no key being played
+
 
   //==========================================================================
   // Ghost Notes State
@@ -1109,6 +1109,8 @@ private:
   void syncStepSequencerToNotes();
   void syncNotesToStepSequencer();
 
+
+
   //==========================================================================
   // Strumming State
   //==========================================================================
@@ -1131,8 +1133,9 @@ private:
   void applyPattern(const MelodyPattern &pattern, double startBeat,
                     int transposition);
 
+
   //==========================================================================
-  // Scale Lock State
+  // Scale Highlight State
   //==========================================================================
 
   bool scaleLockEnabled = false;
@@ -1141,6 +1144,13 @@ private:
   std::vector<bool> scaleLockNotes; // 12 bools for which notes are in scale
 
   void updateScaleLockNotes();
+
+  //==========================================================================
+  // Chord Detection Helper
+  //==========================================================================
+
+
+
 
   //==========================================================================
   // Fold Mode State (Ableton-style)
@@ -1189,8 +1199,6 @@ private:
   //==========================================================================
 
   void timerCallback() override;
-
-  Tool currentTool = Tool::Select;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };

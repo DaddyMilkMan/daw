@@ -61,7 +61,7 @@ public:
   void mouseMove(const juce::MouseEvent &e) override;
 
 private:
-  juce::Array<Item> items_;
+  std::vector<Item> items_;
   std::unique_ptr<SkiaPopupMenu> activeSubMenu_;
 
   // Appearance

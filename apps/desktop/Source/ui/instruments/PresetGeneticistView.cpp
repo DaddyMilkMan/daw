@@ -9,6 +9,7 @@
 */
 
 #include "PresetGeneticistView.h"
+#include "../design-system/ZenithTheme.h"
 
 namespace zenith {
 namespace ui {
@@ -23,11 +24,11 @@ PresetGeneticistView::PresetGeneticistView(
                               juce::NotificationType::dontSendNotification);
   startButton_.setClickingTogglesState(true);
   startButton_.setColour(juce::TextButton::buttonColourId,
-                         ZenithTheme::Colors::backgroundPanel);
+                         ZenithTheme::Colors::bg_02);
   startButton_.setColour(juce::TextButton::buttonOnColourId,
-                         ZenithTheme::Colors::accent);
+                         ZenithTheme::Colors::accent_primary);
   startButton_.setColour(juce::TextButton::textColourOnId,
-                         ZenithTheme::Colors::background);
+                         ZenithTheme::Colors::bg_01);
 
   startButton_.onClick = [this] {
     if (startButton_.getToggleState()) {
@@ -45,7 +46,7 @@ PresetGeneticistView::PresetGeneticistView(
 
   addAndMakeVisible(loadTargetButton_);
   loadTargetButton_.setColour(juce::TextButton::buttonColourId,
-                              ZenithTheme::Colors::backgroundPanel);
+                              ZenithTheme::Colors::bg_02);
   loadTargetButton_.onClick = [this] {
     fileChooser_ = std::make_unique<juce::FileChooser>(
         "Select Target Sample",
@@ -58,7 +59,9 @@ PresetGeneticistView::PresetGeneticistView(
     fileChooser_->launchAsync(flags, [this](const juce::FileChooser &fc) {
       auto file = fc.getResult();
       if (file.exists()) {
-        agent_.setTargetAudio(file);
+        // TODO: Implement setTargetAudio in PresetGeneticistAgent
+        // agent_.setTargetAudio(file);
+        juce::ignoreUnused(file);
       }
     });
   };
@@ -73,31 +76,31 @@ void PresetGeneticistView::paint(juce::Graphics &g) {
   auto bounds = getLocalBounds().toFloat();
 
   // Background
-  g.fillAll(ZenithTheme::Colors::background);
+  g.fillAll(ZenithTheme::Colors::bg_01);
 
   // Draw Grid / Context for Sci-fi look
-  g.setColour(ZenithTheme::Colors::borderSubtle);
+  g.setColour(ZenithTheme::Colors::border_subtle);
   g.drawRect(bounds, 1.0f);
 
   // Draw Display Area
   auto displayArea = bounds.reduced(10.0f, 40.0f); // Leave room for buttons
   displayArea.removeFromBottom(10);                // Spacing
 
-  g.setColour(ZenithTheme::Colors::backgroundPanel);
+  g.setColour(ZenithTheme::Colors::bg_02);
   g.fillRect(displayArea);
-  g.setColour(ZenithTheme::Colors::border);
+  g.setColour(ZenithTheme::Colors::border_default);
   g.drawRect(displayArea, 1.0f);
 
   // Visualize Target (Ghost)
   if (!targetSpectrumPath_.isEmpty()) {
-    g.setColour(ZenithTheme::Colors::textSecondary.withAlpha(0.3f));
+    g.setColour(ZenithTheme::Colors::text_secondary.withAlpha(0.3f));
     g.strokePath(targetSpectrumPath_, juce::PathStrokeType(2.0f));
 
     // Fill gradient
     juce::ColourGradient grad(
-        ZenithTheme::Colors::textSecondary.withAlpha(0.1f),
+        ZenithTheme::Colors::text_secondary.withAlpha(0.1f),
         displayArea.getBottomLeft(),
-        ZenithTheme::Colors::textSecondary.withAlpha(0.0f),
+        ZenithTheme::Colors::text_secondary.withAlpha(0.0f),
         displayArea.getTopLeft(), false);
     g.setGradientFill(grad);
     g.fillPath(targetSpectrumPath_);
@@ -106,19 +109,19 @@ void PresetGeneticistView::paint(juce::Graphics &g) {
   // Visualize Current (Glowing)
   if (!currentSpectrumPath_.isEmpty()) {
     // Outer Glow (simulated)
-    g.setColour(ZenithTheme::Colors::accent.withAlpha(0.1f));
+    g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.1f));
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(8.0f));
 
-    g.setColour(ZenithTheme::Colors::accent.withAlpha(0.3f));
+    g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.3f));
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(4.0f));
 
     // Main line
-    g.setColour(ZenithTheme::Colors::accent);
+    g.setColour(ZenithTheme::Colors::accent_primary);
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(2.0f));
   }
 
   // Stats Overlay
-  g.setColour(ZenithTheme::Colors::textPrimary);
+  g.setColour(ZenithTheme::Colors::text_primary);
   g.setFont(ZenithTheme::Typography::getSmallFont());
 
   auto stats = agent_.getStats();
