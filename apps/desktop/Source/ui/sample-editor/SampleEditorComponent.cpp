@@ -61,6 +61,8 @@ SampleEditorComponent::~SampleEditorComponent() {
 }
 
 void SampleEditorComponent::timerCallback() {
+
+
   if (isPlaying_) {
     // Update playhead from engine
     playheadPosition_ += 1.0 / 30.0; // Approximate
@@ -77,7 +79,7 @@ void SampleEditorComponent::timerCallback() {
 
   if (isRecording_) {
     // Drain FIFO to record buffer
-    int numReady = incomingFifo_.getNumReady();
+    int numReady = incomingFifo_->getNumReady();
     if (numReady > 0) {
       if (!recordBuffer_) {
         // Should have been allocated in startRecording
@@ -86,7 +88,7 @@ void SampleEditorComponent::timerCallback() {
       }
 
       int start1, size1, start2, size2;
-      incomingFifo_.prepareToRead(numReady, start1, size1, start2, size2);
+      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
 
       // Append to recordBuffer_
       int currentCapacity = recordBuffer_->getNumSamples();
@@ -105,7 +107,7 @@ void SampleEditorComponent::timerCallback() {
       if (size2 > 0)
         recordBuffer_->copyFrom(0, recordWritePos_ + size1, incomingBuffer_, 0, start2, size2);
 
-      incomingFifo_.finishedRead(size1 + size2);
+      incomingFifo_->finishedRead(size1 + size2);
       recordWritePos_ += (size1 + size2);
       
       repaint();
@@ -1888,79 +1890,57 @@ void SampleEditorComponent::drawToolbarButton(SkCanvas *canvas,
 
 // Recording
 // Recording
-void SampleEditorComponent::audioDeviceAboutToStart(juce::AudioIODevice* device) {
-  incomingBuffer_.setSize(1, kRecordFifoSize);
-  incomingBuffer_.clear();
-  incomingFifo_.reset();
-}
-
-void SampleEditorComponent::audioDeviceStopped() {
-  incomingBuffer_.setSize(0, 0);
-}
-
-void SampleEditorComponent::audioDeviceIOCallbackWithContext(
-    const float* const* inputChannelData, int numInputChannels,
-    float* const* outputChannelData, int numOutputChannels, int numSamples,
-    const juce::AudioIODeviceCallbackContext& context) {
-
-  if (!isRecording_) return;
-  
-  // Basic mono capture from selected channel
-  if (recordInputChannel_ >= numInputChannels) return;
-  
-  const float* inData = inputChannelData[recordInputChannel_];
-  if (!inData) return;
-
-  int start1, size1, start2, size2;
-  incomingFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
-  
-  if (size1 > 0)
-    incomingBuffer_.copyFrom(0, start1, inData, size1);
-  if (size2 > 0)
-    incomingBuffer_.copyFrom(0, start2, inData + size1, size2);
-    
-  incomingFifo_.finishedWrite(size1 + size2);
-}
-
 void SampleEditorComponent::startRecording() {
   if (isRecording_) return;
+
+  auto* device = engine_.getDeviceManager().getCurrentAudioDevice();
+  if (device) {
+      audioDeviceAboutToStart(device);
+      engine_.getDeviceManager().addAudioCallback(this);
+  }
+
+  // Initialize record buffer (start with 1 minute approx)
+  double sampleRate = device ? device->getCurrentSampleRate() : 44100.0;
+  int initialSamples = (int)(sampleRate * 60.0);
   
-  // Register callback
-  engine_.getDeviceManager().addAudioCallback(this);
-  
-  // Prepare buffer efficiently
-  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(1, 0); 
-  recordWritePos_ = 0; // The actual content length starts at 0
+  int numChans = device ? device->getActiveInputChannels().countNumberOfSetBits() : 2;
+  if (numChans == 0) numChans = 2;
+
+  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChans, initialSamples);
+  recordBuffer_->clear();
+  recordWritePos_ = 0;
 
   isRecording_ = true;
-  incomingFifo_.reset();
-  
   repaint();
 }
 
 void SampleEditorComponent::stopRecording() {
   if (!isRecording_) return;
-  
+
   engine_.getDeviceManager().removeAudioCallback(this);
   isRecording_ = false;
   
-  // Final drain
-  timerCallback(); 
-  
-  // Trim buffer to actual size
-  if (recordBuffer_) {
-      recordBuffer_->setSize(1, recordWritePos_, true, true, true);
-  }
-  
-  // Move recorded content to edit buffer
-  if (recordBuffer_ && recordBuffer_->getNumSamples() > 0) {
+  // Trim and finalize
+  if (recordBuffer_ && recordWritePos_ > 0) {
+      recordBuffer_->setSize(recordBuffer_->getNumChannels(), recordWritePos_, true, true, true);
+      
+      // Move to edit buffer
       editBuffer_ = std::move(recordBuffer_);
       hasUnsavedChanges_ = true;
-      DBG("Recording finished: " + juce::String(editBuffer_->getNumSamples()) + " samples");
-  } else {
-      DBG("Recording finished (empty)");
+      
+      // Update UI
+      if (editBuffer_) {
+          selection_ = juce::Range<double>(0.0, samplesToTime(editBuffer_->getNumSamples()));
+          if (audioHandle_) {
+               // Update zoom based on new length? 
+               // For now just fit
+          }
+          fitToWindow();
+          generateWaveformCache();
+      }
   }
-  
+
+
   repaint();
 }
 
@@ -2090,5 +2070,59 @@ void SampleEditorComponent::swapChannels() {}
 void SampleEditorComponent::adjustStereoWidth(float width) {}
 void SampleEditorComponent::extractCenter() {}
 void SampleEditorComponent::extractSides() {}
+
+//==============================================================================
+// Audio Device Callbacks
+void SampleEditorComponent::audioDeviceAboutToStart(juce::AudioIODevice* device)
+{
+    if (!device) return;
+    auto sampleRate = device->getCurrentSampleRate();
+    // auto bufferSize = device->getCurrentBufferSizeSamples(); // Unused but available
+    auto numInputChannels = device->getActiveInputChannels().countNumberOfSetBits();
+    
+    if (numInputChannels <= 0) numInputChannels = 2;
+    
+    // Ring buffer size: 5 seconds
+    int ringBufferSize = (int)(sampleRate * 5.0);
+    incomingBuffer_.setSize(numInputChannels, ringBufferSize);
+    incomingFifo_ = std::make_unique<juce::AbstractFifo>(ringBufferSize);
+}
+
+void SampleEditorComponent::audioDeviceStopped()
+{
+    incomingFifo_.reset();
+    incomingBuffer_.setSize(0, 0);
+}
+
+void SampleEditorComponent::audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
+                                                             int numInputChannels,
+                                                             float* const* outputChannelData,
+                                                             int numOutputChannels,
+                                                             int numSamples,
+                                                             const juce::AudioIODeviceCallbackContext& context)
+{
+    if (!isRecording_ || !incomingFifo_) return;
+    
+    int internalChans = incomingBuffer_.getNumChannels();
+    int minChans = std::min(numInputChannels, internalChans);
+    
+    int start1, size1, start2, size2;
+    incomingFifo_->prepareToWrite(numSamples, start1, size1, start2, size2);
+    
+    if (size1 > 0) {
+        for (int ch = 0; ch < minChans; ++ch) {
+            if (inputChannelData[ch])
+                incomingBuffer_.copyFrom(ch, start1, inputChannelData[ch], size1);
+        }
+    }
+    if (size2 > 0) {
+        for (int ch = 0; ch < minChans; ++ch) {
+            if (inputChannelData[ch])
+                incomingBuffer_.copyFrom(ch, start2, inputChannelData[ch] + size1, size2);
+        }
+    }
+    
+    incomingFifo_->finishedWrite(size1 + size2);
+}
 
 } // namespace zenith

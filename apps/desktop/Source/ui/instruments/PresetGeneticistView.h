@@ -14,7 +14,7 @@
 #pragma once
 
 #include "../../ai/PresetGeneticistAgent.h"
-#include "../../ui/ZenithTheme.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 

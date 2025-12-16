@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../../../instruments/ZenithPolySynth.h"
+#include "../../instruments/ZenithPolySynth.h"
 #include "SkiaComponent.h"
 #include <vector>
 

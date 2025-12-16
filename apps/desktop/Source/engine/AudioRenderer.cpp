@@ -261,18 +261,6 @@ void AudioRenderer::renderAudioGraph(
 
   // Update metering
   updateMasterMeters(outputBuffer);
-
-  // Calculate and store master latency
-  int masterLatency = 0;
-  if (masterLimiter.isEnabled()) {
-    masterLatency += masterLimiter.getLatency();
-  }
-  for (const auto& plugin : masterPlugins) {
-    if (plugin) {
-       masterLatency += plugin->getLatencySamples();
-    }
-  }
-  masterLatency_.store(masterLatency);
 }
 
 //==============================================================================
@@ -383,8 +371,9 @@ void AudioRenderer::updateMasterMeters(const juce::AudioBuffer<float> &buffer) {
   }
 }
 
+//==============================================================================
 int AudioRenderer::getTrackLatency(int trackIndex) const {
-  if (trackIndex >= 0 && static_cast<size_t>(trackIndex) < trackLatencies_.size()) {
+  if (trackIndex >= 0 && trackIndex < static_cast<int>(trackLatencies_.size())) {
     return trackLatencies_[trackIndex];
   }
   return 0;
@@ -396,5 +385,18 @@ int AudioRenderer::getMasterLatency() const {
   return masterLatency_.load();
 }
 
-} // namespace zenith
+void AudioRenderer::updateMasterLatency(
+    const std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+    int limiterLatency) {
+  int totalLatency = limiterLatency;
+  
+  for (const auto& plugin : masterPlugins) {
+    if (plugin != nullptr) {
+      totalLatency += plugin->getLatencySamples();
+    }
+  }
+  
+  masterLatency_.store(totalLatency);
+}
 
+} // namespace zenith

@@ -26,9 +26,15 @@ SkiaLayoutContainer::~SkiaLayoutContainer() { removeAllChildren(); }
 
 void SkiaLayoutContainer::addChild(SkiaComponent *child,
                                    const LayoutParams &params) {
-  if (child && !children_.contains([child](const ChildInfo &info) {
-        return info.component == child;
-      })) {
+  bool exists = false;
+  for (const auto &info : children_) {
+    if (info.component == child) {
+      exists = true;
+      break;
+    }
+  }
+
+  if (child && !exists) {
     ChildInfo info;
     info.component = child;
     info.params = params;
@@ -382,8 +388,9 @@ void SkiaGridLayout::calculateLayout() {
 
   // Position grid children
   for (const auto &cell : gridChildren_) {
-    auto cellBounds = getCellBounds(cell.row, cell.column, cell.rowSpan,
-                                    cell.columnSpan, contentBounds);
+    auto cellBounds =
+        getCellBounds(cell.row, cell.column, cell.rowSpan, cell.columnSpan,
+                      contentBounds, rowHeights, columnWidths);
 
     // Apply cell padding
     cellBounds = LayoutUtils::applyPadding(cellBounds, cellPadding_);
@@ -395,7 +402,9 @@ void SkiaGridLayout::calculateLayout() {
 
 juce::Rectangle<float>
 SkiaGridLayout::getCellBounds(int row, int column, int rowSpan, int columnSpan,
-                              const juce::Rectangle<float> &gridBounds) {
+                              const juce::Rectangle<float> &gridBounds,
+                              const juce::Array<float> &rowHeights,
+                              const juce::Array<float> &columnWidths) {
   float x = gridBounds.getX();
   float y = gridBounds.getY();
 
@@ -531,7 +540,7 @@ void SkiaScrollLayout::drawSkia(SkCanvas *canvas) {
 
   canvas->restore();
 }
-void SkiaScrollLayout::resized() { SkiaLayoutContainer::resized(); }
+
 void SkiaScrollLayout::mouseDown(const juce::MouseEvent &e) {
   if (scrollEnabled_ && e.mods.isLeftButtonDown()) {
     dragStartPosition_ = (scrollDirection_ == Direction::Vertical)

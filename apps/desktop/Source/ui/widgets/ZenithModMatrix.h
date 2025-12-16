@@ -13,7 +13,7 @@
 
 #pragma once
 
-#include "../../../instruments/ZenithPolySynth.h"
+#include "../../instruments/ZenithPolySynth.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 

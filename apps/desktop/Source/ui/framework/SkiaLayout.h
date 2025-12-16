@@ -90,6 +90,7 @@ public:
   // Component interface
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
+  void mouseDrag(const juce::MouseEvent &e) override;
 
 protected:
   struct ChildInfo {
@@ -189,9 +190,11 @@ private:
   juce::Array<GridCell> gridChildren_;
 
   void calculateLayout() override;
-  juce::Rectangle<float>
-  getCellBounds(int row, int column, int rowSpan, int columnSpan,
-                const juce::Rectangle<float> &gridBounds);
+  juce::Rectangle<float> getCellBounds(int row, int column, int rowSpan,
+                                       int columnSpan,
+                                       const juce::Rectangle<float> &gridBounds,
+                                       const juce::Array<float> &rowHeights,
+                                       const juce::Array<float> &columnWidths);
 };
 
 // ============================================================================

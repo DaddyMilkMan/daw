@@ -142,6 +142,7 @@ private:
 
   // Content
   juce::String text_;
+  juce::String tooltip_;
   juce::String iconText_;
 #ifdef ZENITH_USE_SKIA
   sk_sp<SkImage> icon_;

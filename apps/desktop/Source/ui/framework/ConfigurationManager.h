@@ -254,8 +254,16 @@ private:
   void loadDefaults();
   juce::var getNestedValue(const juce::String &key) const;
   void setNestedValue(const juce::String &key, const juce::var &value);
+
+  juce::var getNestedValueFromObject(const juce::String &key, const juce::DynamicObject::Ptr &object) const;
+  void setNestedValueInObject(const juce::String &key, const juce::var &value, const juce::DynamicObject::Ptr &object);
+  
+
+
+
   juce::StringArray splitKey(const juce::String &key) const;
   juce::DynamicObject::Ptr ensureNestedObject(const juce::String &key);
+
 
   // Data members
   bool initialized_ = false;

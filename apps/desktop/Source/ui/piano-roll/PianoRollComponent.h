@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "SkiaComponent.h"
+#include "../framework/SkiaComponent.h"
 #include "DrumPadComponent.h"
 #include "ProjectState.h"
 #include <functional>
@@ -671,8 +671,7 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
+
 
   //==========================================================================
   // Internal Note Representation
@@ -1015,8 +1014,7 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-  int hoveredPianoKey = -1; // -1 = no key hovered
-  int playingPianoKey = -1; // -1 = no key being played
+
 
   //==========================================================================
   // Ghost Notes State
@@ -1193,7 +1191,7 @@ private:
 
   void timerCallback() override;
 
-  Tool currentTool = Tool::Select;
+
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };

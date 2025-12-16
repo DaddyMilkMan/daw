@@ -319,6 +319,8 @@ void DrumPadComponent::hitPad(int index, float velocity) {
         clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
+    // Calculate relative position with loop wrapping
+
     double relativeStart = position - clipStart + clipOffset;
     
     // For a drum pad component, recording should always wrap within the clip's

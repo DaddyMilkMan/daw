@@ -1452,6 +1452,7 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
     tabPaint.setColor(design::colors::GLASS_HIGHLIGHT);
     tabPaint.setAntiAlias(true);
     canvas->drawRoundRect(tabRect, 4, 4, tabPaint);
+  }
 
   // Active indicator line with glow
   if (active) {
