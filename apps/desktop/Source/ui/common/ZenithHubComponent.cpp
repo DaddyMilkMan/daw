@@ -780,6 +780,5 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
     repaint();
   });
 }
-}
 
 } // namespace zenith
