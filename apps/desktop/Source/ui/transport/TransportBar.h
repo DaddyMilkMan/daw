@@ -13,11 +13,12 @@
 
 #pragma once
 
+#include "../design-system/InteractionHelper.h"
 #include "SkiaComponent.h"
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_core/juce_core.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -36,11 +37,19 @@ namespace zenith {
 class TransportBar : public SkiaComponent {
 public:
   TransportBar();
-  ~TransportBar() override = default;
+  ~TransportBar() override;
 
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void mouseDown(const juce::MouseEvent &e) override;
+  void mouseMove(const juce::MouseEvent &e) override;
+  void mouseEnter(const juce::MouseEvent &e) override;
+  void mouseExit(const juce::MouseEvent &e) override;
+
+  void timerCallback() override;
+
+  std::unique_ptr<juce::AccessibilityHandler>
+  createAccessibilityHandler() override;
 
   // State setters
   void setPlaying(bool playing) {
@@ -98,9 +107,16 @@ private:
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
 
+  // Interaction states
+  InteractionState playState_;
+  InteractionState stopState_;
+  InteractionState recordState_;
+  InteractionState viewToggleState_;
+  InteractionState settingsState_;
+
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,
-                           uint32_t color);
+                           uint32_t color, const InteractionState &state);
   void drawMeter(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                  float value, const char *label);
 

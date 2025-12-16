@@ -154,6 +154,7 @@ private:
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
+  void hideGreetingEditor(bool save);
 
   struct Ripple {
     float x, y;

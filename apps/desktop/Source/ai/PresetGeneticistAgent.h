@@ -263,6 +263,11 @@ public:
    */
   float getBestFitness() const { return stats_.bestFitness; }
 
+  //==========================================================================
+  // Target Matching
+  //==========================================================================
+  void setTargetAudio(const juce::File& file) {}
+
   /**
    * @brief Get current best spectrum for visualization
    */

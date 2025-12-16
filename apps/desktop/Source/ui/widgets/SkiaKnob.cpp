@@ -14,7 +14,6 @@
 #include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
 
-
 // Debug helper
 static void logKnob(const juce::String &msg) {
   // DBG("SkiaKnob: " + msg);
@@ -37,6 +36,8 @@ SkiaKnob::SkiaKnob(const juce::String &name) {
 
   // Initial history
   valueHistory_.push(value_);
+
+  updateCachedPaints();
   logKnob("Constructor done");
 }
 
@@ -109,7 +110,6 @@ void SkiaKnob::setLabelPosition(LabelPosition pos) {
     markDirty();
   }
 }
-
 
 // ============================================================================
 // INTERACTION
@@ -249,6 +249,34 @@ void SkiaKnob::pasteValue() {
 // RENDERING
 // ============================================================================
 
+void SkiaKnob::resized() { updateCachedPaints(); }
+
+void SkiaKnob::updateCachedPaints() {
+  // Background track
+  trackPaint_.setStyle(SkPaint::kStroke_Style);
+  trackPaint_.setStrokeWidth(2.5f); // Thinner for pro look (was 4.0f)
+  trackPaint_.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
+  trackPaint_.setAntiAlias(true);
+  trackPaint_.setStrokeCap(SkPaint::kRound_Cap);
+
+  // Value Paint
+  valuePaint_.setStyle(SkPaint::kStroke_Style);
+  valuePaint_.setStrokeWidth(2.5f); // Match track width
+  valuePaint_.setAntiAlias(true);
+  valuePaint_.setStrokeCap(SkPaint::kRound_Cap);
+  valuePaint_.setColor(design::colors::CYAN); // Default
+
+  // Text Paint
+  textPaint_.setColor(design::colors::TEXT_SECONDARY);
+
+  // Dot Paint
+  dotPaint_.setColor(SK_ColorWHITE);
+  dotPaint_.setAntiAlias(true);
+
+  // Font
+  font_.setSize(12.0f);
+}
+
 std::vector<SkiaComponent::AIElementInfo> SkiaKnob::getInspectableElements() {
   SkiaComponent::AIElementInfo info;
 
@@ -285,24 +313,9 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
   float endAngle = startAngle + (value_ * rotationRange_);
   juce::ignoreUnused(endAngle); // Used for dot calculation
 
-  // Background track
-  SkPaint trackPaint;
-  trackPaint.setStyle(SkPaint::kStroke_Style);
-  trackPaint.setStrokeWidth(2.5f); // Thinner for pro look (was 4.0f)
-  trackPaint.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
-  trackPaint.setAntiAlias(true);
-  trackPaint.setStrokeCap(SkPaint::kRound_Cap);
-
   SkRect arcRect =
       SkRect::MakeXYWH(cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
-  canvas->drawArc(arcRect, startAngle, rotationRange_, false, trackPaint);
-
-  // Value arc
-  SkPaint valuePaint;
-  valuePaint.setStyle(SkPaint::kStroke_Style);
-  valuePaint.setStrokeWidth(2.5f); // Match track width
-  valuePaint.setAntiAlias(true);
-  valuePaint.setStrokeCap(SkPaint::kRound_Cap);
+  canvas->drawArc(arcRect, startAngle, rotationRange_, false, trackPaint_);
 
   // Color
   SkColor color = design::colors::CYAN;
@@ -312,12 +325,12 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
     color = design::interpolateColor(design::colors::BLUE, design::colors::CYAN,
                                      value_);
   }
-  valuePaint.setColor(color);
+  valuePaint_.setColor(color);
 
   // Glow
   float globalGlow = design::Settings::getGlowIntensity();
   if ((isGlowEnabled() || isHovered()) && globalGlow > 0.01f) {
-    SkPaint glowPaint = valuePaint;
+    SkPaint glowPaint = valuePaint_;
     glowPaint.setStrokeWidth(5.0f); // Reduced from 8.0f
     glowPaint.setColor(
         design::withAlpha(color, 0.4f * getAnimatedValue("glow") * globalGlow));
@@ -332,7 +345,7 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
   }
 
   canvas->drawArc(arcRect, startAngle, value_ * rotationRange_, false,
-                  valuePaint);
+                  valuePaint_);
 
   // Dot indicator
   if (style_ == Style::Dot || style_ == Style::ArcAndDot) {
@@ -340,22 +353,13 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
     float dotX = cx + std::cos(angleRad) * radius;
     float dotY = cy + std::sin(angleRad) * radius;
 
-    SkPaint dotPaint;
-    dotPaint.setColor(SK_ColorWHITE);
-    dotPaint.setAntiAlias(true);
-    canvas->drawCircle(dotX, dotY, 3.0f, dotPaint);
+    canvas->drawCircle(dotX, dotY, 3.0f, dotPaint_);
   }
 
   // Label
   if (labelPosition_ != LabelPosition::None) {
-    SkFont font;
-    font.setSize(12.0f);
-
     juce::String labelText =
         juce::String(displayMin_ + value_ * (displayMax_ - displayMin_), 1);
-
-    SkPaint textPaint;
-    textPaint.setColor(design::colors::TEXT_SECONDARY);
 
     float textY = cy;
     if (labelPosition_ == LabelPosition::Below)
@@ -364,10 +368,10 @@ void SkiaKnob::drawSkia(SkCanvas *canvas) {
       textY -= radius + 15.0f;
 
     // Simple center text (Skia text centering is manual)
-    float width = font.measureText(labelText.toRawUTF8(), labelText.length(),
-                                   SkTextEncoding::kUTF8);
-    canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY, font,
-                       textPaint);
+    float width = font_.measureText(labelText.toRawUTF8(), labelText.length(),
+                                    SkTextEncoding::kUTF8);
+    canvas->drawString(labelText.toRawUTF8(), cx - width / 2.0f, textY, font_,
+                       textPaint_);
   }
 }
 

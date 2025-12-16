@@ -97,6 +97,7 @@ public:
                                           int numSamples,
                                           const juce::AudioIODeviceCallbackContext& context) override;
 
+
     //==============================================================================
     // SkiaComponent overrides
     void drawSkia(SkCanvas* canvas) override;
@@ -113,8 +114,6 @@ public:
 
     // Timer for playhead updates and recording drain
     void timerCallback() override;
-
-
 
     //==============================================================================
     // Editor API
@@ -418,9 +417,12 @@ private:
     std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
     std::atomic<int> recordWritePos_{0};
 
-    // Thread-safe FIFO for incoming audio (dynamically sized in audioDeviceAboutToStart)
+    // Thread-safe FIFO for incoming audio
+
+    
+    // Thread-safe recording
     std::unique_ptr<juce::AbstractFifo> incomingFifo_;
-    juce::AudioBuffer<float> incomingBuffer_; // Ring buffer for thread exchange
+    juce::AudioBuffer<float> incomingBuffer_;
     
     //==============================================================================
     // Undo/Redo

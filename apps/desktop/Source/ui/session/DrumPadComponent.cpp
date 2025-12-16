@@ -313,10 +313,14 @@ void DrumPadComponent::hitPad(int index, float velocity) {
     double position = engine.getPlaybackPositionBeats();
     double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
     double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_LENGTH));
-    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET)); // Start offset
+    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET));
+    // Fallback to a default length if clipLength is invalid or unset
+    if (clipLength <= 0.001)
+        clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
-    // 7d74af0 logic adapted to current context
+    // Calculate relative position with loop wrapping
+
     double relativeStart = position - clipStart + clipOffset;
     
     // For a drum pad component, recording should always wrap within the clip's
@@ -327,13 +331,13 @@ void DrumPadComponent::hitPad(int index, float velocity) {
         relativeStart += clipLength;
       }
     }
-
     zenith::ProjectState::MidiNoteSpec note;
     note.pitch = pads[index].noteNumber;
     note.startBeats = relativeStart;
     note.lengthBeats = 0.25; // Default short length for hits
     note.velocity = static_cast<int>(velocity * 127.0f);
     note.muted = false;
+    note.probability = 1.0f;
 
     projectState.addMidiNote(currentClipId, note, "Drum Pad Rec");
   }
@@ -362,6 +366,7 @@ void DrumPadComponent::toggleStep(int padIndex, int stepIndex) {
     note.lengthBeats = lengthBeat;
     note.velocity = 100;
     note.muted = false;
+    note.probability = 1.0f;
 
     projectState.addMidiNote(currentClipId, note, "Step Seq Add");
   } else {

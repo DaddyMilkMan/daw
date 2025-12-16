@@ -157,6 +157,14 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source/ui/instruments
     apps/desktop/Source/ui/dialogs
     apps/desktop/Source/ui/sample-editor
+    apps/desktop/Source/commands
+    apps/desktop/Source/instruments
+    apps/desktop/Source/network
+    apps/desktop/Source/dsp
+    apps/desktop/Source/rendering
+    apps/desktop/Source/ai
+    apps/desktop/Source/ui/skia
+    apps/desktop/Source/utils
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
     "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"

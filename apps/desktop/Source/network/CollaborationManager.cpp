@@ -304,3 +304,9 @@ void CollaborationManager::startLocalSignalingServer() {
     }
   }
 }
+
+void CollaborationManager::reportError(const juce::String& error) {
+    DBG("Collaboration Error: " + error);
+    currentState = ConnectionState::Error;
+    sendChangeMessage();
+}

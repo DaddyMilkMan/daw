@@ -45,12 +45,14 @@ public:
     ~SkiaButton() override;
     
     void setStyle(Style style);
+    void setButtonStyle(Style style) { setStyle(style); }
     Style getStyle() const { return style_; }
     
     void setSize(Size size);
     Size getSize() const { return size_; }
     
     void setText(const juce::String& text);
+    void setButtonText(const juce::String& text) { setText(text); }
     juce::String getText() const { return text_; }
     
     void setIcon(sk_sp<SkImage> icon);

@@ -223,7 +223,7 @@ double PianoRollComponent::snapToGrid(double beats) const {
 }
 
 int PianoRollComponent::pixelsToVelocity(float y) const {
-  auto bounds = getLocalBounds();
+
   // noteGridHeight is cached
 
   float yInLane = y - (TOOLBAR_HEIGHT + RULER_HEIGHT + noteGridHeight);
@@ -252,7 +252,7 @@ PianoRollComponent::NoteRect *PianoRollComponent::findNoteAtPosition(float x,
 
 PianoRollComponent::NoteRect *
 PianoRollComponent::findNoteInVelocityLane(float x, float y) {
-  auto bounds = getLocalBounds();
+
   float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
   // noteGridHeight is cached
   float velocityLaneTop = contentTop + noteGridHeight;
@@ -290,7 +290,6 @@ PianoRollComponent::getCursorForPosition(float x, float y) const {
     return CursorType::Crosshair;
   }
 
-  auto bounds = getLocalBounds();
   float contentTop = RULER_HEIGHT + TOOLBAR_HEIGHT;
   // noteGridHeight is cached
   if (y >= contentTop + noteGridHeight)
@@ -351,7 +350,6 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
 
-  auto bounds = getLocalBounds();
   float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
   // noteGridHeight is cached
 
@@ -393,7 +391,6 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
 
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
-  auto bounds = getLocalBounds();
 
   if (stepSequencerMode) {
     // Step sequencer mode handled separately
@@ -1259,8 +1256,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     // Draw Key
     static constexpr float kKeyLabelMinZoom = 12.0f;
     static constexpr float kKeyLabelDetailZoom = 18.0f;
-    static constexpr float kKeyLabelSmallFontZoom = 11.0f;
-    static constexpr float kKeyLabelTinyFontZoom = 9.0f;
+    static constexpr float kKeyLabelMaxFontSize = 11.0f;
+    static constexpr float kKeyLabelDetailMaxFontSize = 9.0f;
     static constexpr float kKeyLabelOffset = -24.0f;
     static constexpr float kKeyLabelDetailOffset = -18.0f;
 
@@ -1309,7 +1306,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         // C notes get octave number
         textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
         SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelSmallFontZoom, (float)(pixelsPerPitch * 0.7f)),
+            juce::jmin(kKeyLabelMaxFontSize, (float)(pixelsPerPitch * 0.7f)),
             FontWeight::Bold);
         juce::String label = "C" + juce::String(p / 12 - 2);
         canvas->drawString(label.toStdString().c_str(),
@@ -1317,9 +1314,9 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
                            textPaint);
       } else if (pixelsPerPitch > kKeyLabelDetailZoom) {
         textPaint.setColor(colors::TEXT_TERTIARY);
-        SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelTinyFontZoom, (float)(pixelsPerPitch * 0.5f)),
-            FontWeight::Regular);
+        SkFont font = getMonoFont(juce::jmin(kKeyLabelDetailMaxFontSize,
+                                             (float)(pixelsPerPitch * 0.5f)),
+                                  FontWeight::Regular);
         canvas->drawString(noteNames[noteInOctave],
                            PIANO_WIDTH + kKeyLabelDetailOffset, y + h * 0.7f,
                            font, textPaint);
@@ -1552,6 +1549,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       trianglePath.lineTo(playheadX + kPlayheadMarkerHalfWidth,
                           contentTop - kPlayheadMarkerHeight);
       trianglePath.close();
+      canvas->drawPath(trianglePath, playheadPaint);
     }
   }
 
@@ -1753,6 +1751,24 @@ void PianoRollComponent::stopPianoKey(int pitch) {
 //==============================================================================
 // Skia Helpers
 //==============================================================================
+
+juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+  // Clamp velocity to valid MIDI range
+  velocity = juce::jlimit(0, 127, velocity);
+  
+  // Generate a color gradient from blue (soft) to red (loud)
+  // Low velocity: cooler colors (blue/purple)
+  // High velocity: warmer colors (orange/red)
+  float normalized = velocity / 127.0f;
+  
+  // Use HSL color space for smooth gradient
+  // Hue: 240 (blue) -> 0 (red) as velocity increases
+  float hue = (1.0f - normalized) * 0.66f; // From blue to red
+  float saturation = 0.7f + normalized * 0.3f; // More saturated at high velocity
+  float brightness = 0.6f + normalized * 0.4f; // Brighter at high velocity
+  
+  return juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
+}
 
 SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   juce::Colour c = getColorForVelocity(velocity);
@@ -2038,20 +2054,4 @@ void PianoRollComponent::updateScaleLockNotes() {
   }
 }
 
-juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
-  // Clamp velocity to valid MIDI range
-  velocity = juce::jlimit(0, 127, velocity);
-  
-  // Generate a color gradient from blue (soft) to red (loud)
-  // Low velocity: cooler colors (blue/purple)
-  // High velocity: warmer colors (orange/red)
-  float normalized = velocity / 127.0f;
-  
-  // Use HSL color space for smooth gradient
-  // Hue: 240 (blue) -> 0 (red) as velocity increases
-  float hue = (1.0f - normalized) * 0.66f; // From blue to red
-  float saturation = 0.7f + normalized * 0.3f; // More saturated at high velocity
-  float brightness = 0.6f + normalized * 0.4f; // Brighter at high velocity
-  
-  return juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
-}
+
