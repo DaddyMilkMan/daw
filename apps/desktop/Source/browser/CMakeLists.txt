@@ -1,4 +1,4 @@
-target_sources(ZenithDAW_lib PRIVATE
+target_sources(ZenithDAW PRIVATE
     BrowserModel.cpp
     BrowserScanner.cpp
     BrowserPreviewEngine.cpp

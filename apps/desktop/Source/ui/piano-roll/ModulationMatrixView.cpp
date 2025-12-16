@@ -15,8 +15,8 @@
 */
 
 #include "ModulationMatrixView.h"
-#include "Engine.h"
 #include "../../engine/Track.h"
+#include "Engine.h"
 #include <algorithm>
 #include <cmath>
 #include <core/SkBlurTypes.h>
@@ -170,7 +170,8 @@ void ModulationMatrixView::drawSkia(SkCanvas *canvas) {
   titlePaint.setColor(design::colors::TEXT_PRIMARY);
   titlePaint.setAntiAlias(true);
 
-  auto font = design::typography::getDisplayFont(20.0f, FontWeight::Bold);
+  auto font =
+      design::typography::getDisplayFont(20.0f, design::FontWeight::Bold);
   canvas->drawString("Modulation Matrix", 20, 35, font, titlePaint);
 
   // Draw subtitle
@@ -227,7 +228,8 @@ void ModulationMatrixView::drawSourceNodes(SkCanvas *canvas) {
   SkPaint headerPaint;
   headerPaint.setColor(design::colors::TEXT_SECONDARY);
   headerPaint.setAntiAlias(true);
-  auto headerFont = design::typography::getSkFont(14.0f, FontWeight::SemiBold);
+  auto headerFont =
+      design::typography::getSkFont(14.0f, design::FontWeight::SemiBold);
   canvas->drawString("SOURCES", kSourceColumnX - 25, kHeaderHeight - 10,
                      headerFont, headerPaint);
 
@@ -242,7 +244,8 @@ void ModulationMatrixView::drawDestNodes(SkCanvas *canvas) {
   SkPaint headerPaint;
   headerPaint.setColor(design::colors::TEXT_SECONDARY);
   headerPaint.setAntiAlias(true);
-  auto headerFont = design::typography::getSkFont(14.0f, FontWeight::SemiBold);
+  auto headerFont =
+      design::typography::getSkFont(14.0f, design::FontWeight::SemiBold);
   canvas->drawString("DESTINATIONS", kDestColumnX - 40, kHeaderHeight - 10,
                      headerFont, headerPaint);
 
@@ -320,7 +323,7 @@ void ModulationMatrixView::drawNode(SkCanvas *canvas,
   textPaint.setAntiAlias(true);
   textPaint.setColor(design::colors::TEXT_PRIMARY);
 
-  auto font = design::typography::getSkFont(10.0f, FontWeight::Medium);
+  auto font = design::typography::getSkFont(10.0f, design::FontWeight::Medium);
 
   // Draw label below node
   float labelWidth = font.measureText(label.toRawUTF8(), label.length(),
@@ -478,7 +481,8 @@ void ModulationMatrixView::drawBipolarIndicator(
   textPaint.setAntiAlias(true);
   textPaint.setColor(design::colors::TEXT_PRIMARY);
 
-  auto font = design::typography::getMonoFont(10.0f, FontWeight::Medium);
+  auto font =
+      design::typography::getMonoFont(10.0f, design::FontWeight::Medium);
 
   juce::String amountStr = juce::String(conn.amount * 100.0f, 0) + "%";
 
@@ -573,7 +577,8 @@ void ModulationMatrixView::drawAmountEditor(SkCanvas *canvas) {
 
   // Value display
   textPaint.setColor(design::colors::TEXT_PRIMARY);
-  auto valueFont = design::typography::getMonoFont(18.0f, FontWeight::Bold);
+  auto valueFont =
+      design::typography::getMonoFont(18.0f, design::FontWeight::Bold);
 
   juce::String valueStr =
       juce::String(selectedConnection_->amount * 100.0f, 0) + "%";
@@ -953,7 +958,7 @@ void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
   }
 }
 
-std::vector<SkiaComponent::AIElementInfo>
+std::vector<zenith::SkiaComponent::AIElementInfo>
 ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
   // TODO: Expose nodes and connections for AI access

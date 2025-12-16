@@ -23,11 +23,11 @@ PresetGeneticistView::PresetGeneticistView(
                               juce::NotificationType::dontSendNotification);
   startButton_.setClickingTogglesState(true);
   startButton_.setColour(juce::TextButton::buttonColourId,
-                         ZenithTheme::Colors::backgroundPanel);
+                         juce::Colour((juce::uint32)design::colors::BG_DARKER));
   startButton_.setColour(juce::TextButton::buttonOnColourId,
-                         ZenithTheme::Colors::accent);
+                         juce::Colour((juce::uint32)design::colors::CYAN));
   startButton_.setColour(juce::TextButton::textColourOnId,
-                         ZenithTheme::Colors::background);
+                         juce::Colour((juce::uint32)design::colors::BG_DARK));
 
   startButton_.onClick = [this] {
     if (startButton_.getToggleState()) {
@@ -45,7 +45,7 @@ PresetGeneticistView::PresetGeneticistView(
 
   addAndMakeVisible(loadTargetButton_);
   loadTargetButton_.setColour(juce::TextButton::buttonColourId,
-                              ZenithTheme::Colors::backgroundPanel);
+                              juce::Colour((juce::uint32)design::colors::BG_DARKER));
   loadTargetButton_.onClick = [this] {
     fileChooser_ = std::make_unique<juce::FileChooser>(
         "Select Target Sample",
@@ -73,31 +73,31 @@ void PresetGeneticistView::paint(juce::Graphics &g) {
   auto bounds = getLocalBounds().toFloat();
 
   // Background
-  g.fillAll(ZenithTheme::Colors::background);
+  g.fillAll(juce::Colour((juce::uint32)design::colors::BG_DARK));
 
   // Draw Grid / Context for Sci-fi look
-  g.setColour(ZenithTheme::Colors::borderSubtle);
+  g.setColour(juce::Colour((juce::uint32)design::colors::BORDER_SUBTLE));
   g.drawRect(bounds, 1.0f);
 
   // Draw Display Area
   auto displayArea = bounds.reduced(10.0f, 40.0f); // Leave room for buttons
   displayArea.removeFromBottom(10);                // Spacing
 
-  g.setColour(ZenithTheme::Colors::backgroundPanel);
+  g.setColour(juce::Colour((juce::uint32)design::colors::BG_DARKER));
   g.fillRect(displayArea);
-  g.setColour(ZenithTheme::Colors::border);
+  g.setColour(juce::Colour((juce::uint32)design::colors::BORDER_DEFAULT));
   g.drawRect(displayArea, 1.0f);
 
   // Visualize Target (Ghost)
   if (!targetSpectrumPath_.isEmpty()) {
-    g.setColour(ZenithTheme::Colors::textSecondary.withAlpha(0.3f));
+    g.setColour(juce::Colour((juce::uint32)design::withAlpha(design::colors::TEXT_SECONDARY, 0.3f)));
     g.strokePath(targetSpectrumPath_, juce::PathStrokeType(2.0f));
 
     // Fill gradient
     juce::ColourGradient grad(
-        ZenithTheme::Colors::textSecondary.withAlpha(0.1f),
+        juce::Colour((juce::uint32)design::withAlpha(design::colors::TEXT_SECONDARY, 0.1f)),
         displayArea.getBottomLeft(),
-        ZenithTheme::Colors::textSecondary.withAlpha(0.0f),
+        juce::Colour((juce::uint32)design::withAlpha(design::colors::TEXT_SECONDARY, 0.0f)),
         displayArea.getTopLeft(), false);
     g.setGradientFill(grad);
     g.fillPath(targetSpectrumPath_);
@@ -106,20 +106,20 @@ void PresetGeneticistView::paint(juce::Graphics &g) {
   // Visualize Current (Glowing)
   if (!currentSpectrumPath_.isEmpty()) {
     // Outer Glow (simulated)
-    g.setColour(ZenithTheme::Colors::accent.withAlpha(0.1f));
+    g.setColour(juce::Colour((juce::uint32)design::withAlpha(design::colors::CYAN, 0.1f)));
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(8.0f));
 
-    g.setColour(ZenithTheme::Colors::accent.withAlpha(0.3f));
+    g.setColour(juce::Colour((juce::uint32)design::withAlpha(design::colors::CYAN, 0.3f)));
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(4.0f));
 
     // Main line
-    g.setColour(ZenithTheme::Colors::accent);
+    g.setColour(juce::Colour((juce::uint32)design::colors::CYAN));
     g.strokePath(currentSpectrumPath_, juce::PathStrokeType(2.0f));
   }
 
   // Stats Overlay
-  g.setColour(ZenithTheme::Colors::textPrimary);
-  g.setFont(ZenithTheme::Typography::getSmallFont());
+  g.setColour(juce::Colour((juce::uint32)design::colors::TEXT_PRIMARY));
+  g.setFont(design::typography::getSkFont(design::typography::FONT_SM).getSize()); // Fallback to juce::Font size
 
   auto stats = agent_.getStats();
   juce::String statusText =

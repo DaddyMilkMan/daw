@@ -115,7 +115,7 @@ void CollaborationManager::run() {
                         (int)hello.length());
       }
     } else if (currentState == ConnectionState::Connected) {
-      static int64 lastKeepAlive = 0;
+      static juce::int64 lastKeepAlive = 0;
       auto now = juce::Time::currentTimeMillis();
       if (now - lastKeepAlive > 2000) {
         juce::MemoryBlock msg;
@@ -303,4 +303,10 @@ void CollaborationManager::startLocalSignalingServer() {
       }
     }
   }
+}
+
+void CollaborationManager::reportError(const juce::String& error) {
+    DBG("Collaboration Error: " + error);
+    currentState = ConnectionState::Error;
+    sendChangeMessage();
 }

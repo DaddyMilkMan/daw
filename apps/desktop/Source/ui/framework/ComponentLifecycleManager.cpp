@@ -245,7 +245,11 @@ void ComponentLifecycleManager::destroyComponent(LifecycleAware *component) {
 ComponentState ComponentLifecycleManager::getComponentState(
     const LifecycleAware *component) const {
   juce::ScopedLock lock(lock_);
-  return componentStates_.get(component, ComponentState::Uninitialized);
+  for (auto it = componentStates_.begin(); it != componentStates_.end(); ++it) {
+    if (it.getKey() == component)
+      return it.getValue();
+  }
+  return ComponentState::Uninitialized;
 }
 
 juce::Array<LifecycleAware *>
@@ -253,9 +257,15 @@ ComponentLifecycleManager::getComponentsInState(ComponentState state) const {
   juce::ScopedLock lock(lock_);
 
   juce::Array<LifecycleAware *> result;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
-      result.add(const_cast<LifecycleAware *>(pair.key));
+<<<<<<< HEAD
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  == == == = juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+               componentStates_);
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+  while (it.next()) {
+    if (it.getValue() == state) {
+      result.add(const_cast<LifecycleAware *>(it.getKey()));
     }
   }
   return result;
@@ -270,7 +280,8 @@ void ComponentLifecycleManager::addLifecycleListener(
 void ComponentLifecycleManager::removeLifecycleListener(
     LifecycleCallback callback) {
   juce::ScopedLock lock(lock_);
-  lifecycleListeners_.removeAllInstancesOf(callback);
+  // lifecycleListeners_.removeAllInstancesOf(callback);
+  // TODO: std::function is not comparable. Use a token/ID system for removal.
 }
 
 void ComponentLifecycleManager::suspendAllComponents() {
@@ -296,8 +307,14 @@ void ComponentLifecycleManager::destroyAllComponents() {
 
   // Destroy components in reverse order of registration
   juce::Array<LifecycleAware *> components;
-  for (auto &pair : componentStates_) {
-    components.add(const_cast<LifecycleAware *>(pair.key));
+<<<<<<< HEAD
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  == == == = juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+               componentStates_);
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+  while (it.next()) {
+    components.add(const_cast<LifecycleAware *>(it.getKey()));
   }
 
   for (int i = components.size() - 1; i >= 0; --i) {
@@ -315,8 +332,14 @@ int ComponentLifecycleManager::getComponentCountInState(
   juce::ScopedLock lock(lock_);
 
   int count = 0;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
+<<<<<<< HEAD
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  == == == = juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+               componentStates_);
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+  while (it.next()) {
+    if (it.getValue() == state) {
       ++count;
     }
   }
@@ -673,167 +696,180 @@ juce::StringArray ComponentFactory::getRegisteredComponentTypes() const {
   juce::ScopedLock lock(lock_);
 
   juce::StringArray types;
-  for (auto &pair : componentCreators_) {
-    types.add(pair.key);
-  }
-  return types;
-}
-
-bool ComponentFactory::isComponentTypeRegistered(
-    const juce::String &typeName) const {
-  juce::ScopedLock lock(lock_);
-  return componentCreators_.contains(typeName);
-}
-
-// ============================================================================
-// MemoryLeakDetector Implementation
-// ============================================================================
-
-MemoryLeakDetector &MemoryLeakDetector::getInstance() {
-  static MemoryLeakDetector instance;
-  return instance;
-}
-
-void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
-  if (!component)
-    return;
-
-  juce::ScopedLock lock(lock_);
-
-  juce::String componentId = component->getComponentId();
-  activeComponents_.set(component, componentId);
-
-  stats_.totalComponentsCreated++;
-  stats_.currentComponentCount++;
-
-  // Update type counts
-  juce::String typeName = typeid(*component).name();
-  int currentCount = stats_.componentTypeCounts.get(typeName, 0);
-  stats_.componentTypeCounts.set(typeName, currentCount + 1);
-}
-
-void MemoryLeakDetector::untrackComponent(const LifecycleComponent *component) {
-  if (!component)
-    return;
-
-  juce::ScopedLock lock(lock_);
-
-  if (activeComponents_.contains(component)) {
-    activeComponents_.remove(component);
-    stats_.totalComponentsDestroyed++;
-    stats_.currentComponentCount--;
-  }
-}
-
-void MemoryLeakDetector::checkForLeaks() {
-  juce::ScopedLock lock(lock_);
-
-  if (activeComponents_.size() > 0) {
-    DBG("=== MEMORY LEAK DETECTED ===");
-    DBG("Active components: " << activeComponents_.size());
-
-    for (auto &pair : activeComponents_) {
-      DBG("  - " << pair.value);
+<<<<<<< HEAD
+  for (auto it = componentCreators_.begin(); it != componentCreators_.end();
+       ++it) {
+    == == == =
+                 // Cast to non-const to allow iteration
+        auto &creators =
+            const_cast<juce::HashMap<juce::String, ComponentCreator> &>(
+                componentCreators_);
+    for (auto it = creators.begin(); it != creators.end(); ++it) {
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+      types.add(it.getKey());
     }
-  } else {
-    DBG("No memory leaks detected");
-  }
-}
-
-juce::String MemoryLeakDetector::getLeakReport() const {
-  juce::ScopedLock lock(lock_);
-
-  juce::String report;
-  report << "=== Memory Leak Report ===\n";
-  report << "Active Components: " << activeComponents_.size() << "\n";
-
-  for (auto &pair : activeComponents_) {
-    report << "  - " << pair.value << "\n";
+    return types;
   }
 
-  return report;
-}
-
-MemoryLeakDetector::MemoryStats MemoryLeakDetector::getMemoryStats() const {
-  juce::ScopedLock lock(lock_);
-  return stats_;
-}
-
-// ============================================================================
-// ComponentStatePersistence Implementation
-// ============================================================================
-
-ComponentStatePersistence &ComponentStatePersistence::getInstance() {
-  static ComponentStatePersistence instance;
-  return instance;
-}
-
-void ComponentStatePersistence::saveComponentState(
-    const LifecycleComponent *component, const juce::File &file) {
-  if (!component || !file.hasWriteAccess())
-    return;
-
-  juce::ScopedLock lock(lock_);
-
-  juce::String stateData = serializeComponentState(component);
-
-  if (format_ == Format::JSON) {
-    file.replaceWithText(stateData);
-  } else if (format_ == Format::XML) {
-    // XML implementation would go here
-    file.replaceWithText(stateData);
-  } else if (format_ == Format::Binary) {
-    // Binary implementation would go here
-    file.replaceWithData(stateData.toRawUTF8(), stateData.getNumBytesAsUTF8());
-  }
-}
-
-void ComponentStatePersistence::loadComponentState(
-    LifecycleComponent *component, const juce::File &file) {
-  if (!component || !file.existsAsFile())
-    return;
-
-  juce::ScopedLock lock(lock_);
-
-  juce::String stateData;
-
-  if (format_ == Format::JSON || format_ == Format::XML) {
-    stateData = file.loadFileAsString();
-  } else if (format_ == Format::Binary) {
-    // Binary implementation would go here
-    stateData = file.loadFileAsString();
+  bool ComponentFactory::isComponentTypeRegistered(const juce::String &typeName)
+      const {
+    juce::ScopedLock lock(lock_);
+    return componentCreators_.contains(typeName);
   }
 
-  deserializeComponentState(component, stateData);
-}
+  // ============================================================================
+  // MemoryLeakDetector Implementation
+  // ============================================================================
 
-juce::String ComponentStatePersistence::serializeComponentState(
-    const LifecycleComponent *component) {
-  // Basic JSON serialization
-  juce::DynamicObject::Ptr state = new juce::DynamicObject();
+  MemoryLeakDetector &MemoryLeakDetector::getInstance() {
+    static MemoryLeakDetector instance;
+    return instance;
+  }
 
-  state->setProperty("componentId", component->getComponentId());
-  state->setProperty("componentState", (int)component->getCurrentState());
-  state->setProperty("timestamp", juce::Time::getCurrentTime().toISO8601(true));
+  void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
+    if (!component)
+      return;
 
-  // Component-specific state would be added here
-  // This would be customized in subclasses
+    juce::ScopedLock lock(lock_);
 
-  juce::String json = juce::JSON::toString(state);
-  return json;
-}
+    juce::String componentId = component->getComponentId();
+    activeComponents_.set(component, componentId);
 
-void ComponentStatePersistence::deserializeComponentState(
-    LifecycleComponent *component, const juce::String &data) {
-  auto parsed = juce::JSON::parse(data);
+    stats_.totalComponentsCreated++;
+    stats_.currentComponentCount++;
 
-  if (auto *object = parsed.getDynamicObject()) {
-    // Restore component state
+    // Update type counts
+    juce::String typeName = typeid(*component).name();
+    stats_.componentTypeCounts[typeName]++;
+  }
+
+  void MemoryLeakDetector::untrackComponent(
+      const LifecycleComponent *component) {
+    if (!component)
+      return;
+
+    juce::ScopedLock lock(lock_);
+
+    if (activeComponents_.contains(component)) {
+      activeComponents_.remove(component);
+      stats_.totalComponentsDestroyed++;
+      stats_.currentComponentCount--;
+    }
+  }
+
+  void MemoryLeakDetector::checkForLeaks() {
+    juce::ScopedLock lock(lock_);
+
+    if (activeComponents_.size() > 0) {
+      DBG("=== MEMORY LEAK DETECTED ===");
+      DBG("Active components: " << activeComponents_.size());
+
+      decltype(activeComponents_)::Iterator it(activeComponents_);
+      while (it.next()) {
+        DBG("  - " << it.getValue());
+      }
+    } else {
+      DBG("No memory leaks detected");
+    }
+  }
+
+  juce::String MemoryLeakDetector::getLeakReport() const {
+    juce::ScopedLock lock(lock_);
+
+    juce::String report;
+    report << "=== Memory Leak Report ===\n";
+    report << "Active Components: " << activeComponents_.size() << "\n";
+
+    decltype(activeComponents_)::Iterator it(activeComponents_);
+    while (it.next()) {
+      report << "  - " << it.getValue() << "\n";
+    }
+
+    return report;
+  }
+
+  MemoryLeakDetector::MemoryStats MemoryLeakDetector::getMemoryStats() const {
+    juce::ScopedLock lock(lock_);
+    return stats_;
+  }
+
+  // ============================================================================
+  // ComponentStatePersistence Implementation
+  // ============================================================================
+
+  ComponentStatePersistence &ComponentStatePersistence::getInstance() {
+    static ComponentStatePersistence instance;
+    return instance;
+  }
+
+  void ComponentStatePersistence::saveComponentState(
+      const LifecycleComponent *component, const juce::File &file) {
+    if (!component || !file.hasWriteAccess())
+      return;
+
+    juce::ScopedLock lock(lock_);
+
+    juce::String stateData = serializeComponentState(component);
+
+    if (format_ == Format::JSON) {
+      file.replaceWithText(stateData);
+    } else if (format_ == Format::XML) {
+      // XML implementation would go here
+      file.replaceWithText(stateData);
+    } else if (format_ == Format::Binary) {
+      // Binary implementation would go here
+      file.replaceWithData(stateData.toRawUTF8(),
+                           stateData.getNumBytesAsUTF8());
+    }
+  }
+
+  void ComponentStatePersistence::loadComponentState(
+      LifecycleComponent * component, const juce::File &file) {
+    if (!component || !file.existsAsFile())
+      return;
+
+    juce::ScopedLock lock(lock_);
+
+    juce::String stateData;
+
+    if (format_ == Format::JSON || format_ == Format::XML) {
+      stateData = file.loadFileAsString();
+    } else if (format_ == Format::Binary) {
+      // Binary implementation would go here
+      stateData = file.loadFileAsString();
+    }
+
+    deserializeComponentState(component, stateData);
+  }
+
+  juce::String ComponentStatePersistence::serializeComponentState(
+      const LifecycleComponent *component) {
+    // Basic JSON serialization
+    juce::DynamicObject::Ptr state = new juce::DynamicObject();
+
+    state->setProperty("componentId", component->getComponentId());
+    state->setProperty("componentState", (int)component->getCurrentState());
+    state->setProperty("timestamp",
+                       juce::Time::getCurrentTime().toISO8601(true));
+
+    // Component-specific state would be added here
     // This would be customized in subclasses
 
-    DBG("Component state loaded for: " << component->getComponentId());
+    juce::String json = juce::JSON::toString(juce::var(state.get()));
+    return json;
   }
-}
+
+  void ComponentStatePersistence::deserializeComponentState(
+      LifecycleComponent * component, const juce::String &data) {
+    auto parsed = juce::JSON::parse(data);
+
+    if (auto *object = parsed.getDynamicObject()) {
+      // Restore component state
+      // This would be customized in subclasses
+
+      DBG("Component state loaded for: " << component->getComponentId());
+    }
+  }
 
 } // namespace lifecycle
 } // namespace zenith

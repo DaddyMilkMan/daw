@@ -126,9 +126,6 @@ public:
   // Convenience methods
   void addChild(SkiaComponent *child, float flex = 0.0f,
                 Alignment verticalAlignment = Alignment::Center);
-
-private:
-  void calculateLayout() override;
 };
 
 // ============================================================================
@@ -143,9 +140,6 @@ public:
   // Convenience methods
   void addChild(SkiaComponent *child, float flex = 0.0f,
                 Alignment horizontalAlignment = Alignment::Center);
-
-private:
-  void calculateLayout() override;
 };
 
 // ============================================================================

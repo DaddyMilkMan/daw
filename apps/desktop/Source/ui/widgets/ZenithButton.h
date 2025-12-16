@@ -19,7 +19,7 @@
 
 #pragma once
 
-#include "SkiaComponent.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 #ifdef ZENITH_USE_SKIA
@@ -28,10 +28,17 @@
 #include <core/SkTextBlob.h>
 #endif
 
+// Ensure includes are correct for Skia if definitions are usually
+// "core/SkCanvas.h" etc. But mostly we assume setup is correct.
+#ifdef ZENITH_USE_SKIA
+#include <core/SkCanvas.h>
+#include <core/SkImage.h>
+#include <core/SkTextBlob.h>
+#endif
+
 namespace zenith {
 
-class ZenithButton : public SkiaComponent,
-                     public juce::TooltipClient {
+class ZenithButton : public SkiaComponent, public juce::TooltipClient {
 public:
   // ----- Button Styles -----
   enum class Style {
@@ -111,7 +118,7 @@ public:
 
   // ----- TooltipClient -----
   juce::String getTooltip() override { return tooltip_; }
-  void setTooltip(const juce::String& text) { tooltip_ = text; }
+  void setTooltip(const juce::String &text) { tooltip_ = text; }
 
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;

@@ -307,13 +307,13 @@ void MixerChannel::setCompressorRatio(float ratio) {
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
-  compAttack.store(juce::jlimit(audio::kMinCompAttackMs, audio::kMaxCompAttackMs, attackMs));
+  compAttack.store(juce::jlimit(constants::kMinCompAttackMs, constants::kMaxCompAttackMs, attackMs));
   compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
-  compRelease.store(juce::jlimit(audio::kMinCompReleaseMs, audio::kMaxCompReleaseMs, releaseMs));
+  compRelease.store(juce::jlimit(constants::kMinCompReleaseMs, constants::kMaxCompReleaseMs, releaseMs));
   compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }
@@ -477,10 +477,10 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
 
   // Compressor
   compressorEnabled.store(state.getProperty("compressorEnabled", false));
-  compThreshold.store(state.getProperty("compThreshold", audio::kDefaultCompThresholdDb));
-  compRatio.store(state.getProperty("compRatio", audio::kDefaultCompRatio));
-  compAttack.store(state.getProperty("compAttack", audio::kDefaultCompAttackMs));
-  compRelease.store(state.getProperty("compRelease", audio::kDefaultCompReleaseMs));
+  compThreshold.store(state.getProperty("compThreshold", zenith::constants::kDefaultCompThresholdDb));
+  compRatio.store(state.getProperty("compRatio", zenith::constants::kDefaultCompRatio));
+  compAttack.store(state.getProperty("compAttack", zenith::constants::kDefaultCompAttackMs));
+  compRelease.store(state.getProperty("compRelease", zenith::constants::kDefaultCompReleaseMs));
   compMakeup.store(state.getProperty("compMakeup", 0.0f));
   
   // Update ProCompressor with loaded values

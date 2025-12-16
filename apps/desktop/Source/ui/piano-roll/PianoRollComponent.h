@@ -668,9 +668,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -984,8 +981,8 @@ private:
   float resizeHandleWidth = 8.0f;
 
   // Interaction State
-  int hoveredPianoKey = -1;
-  int playingPianoKey = -1;
+  int hoveredPianoKey = -1; // -1 = no key hovered
+  int playingPianoKey = -1; // -1 = no key being played
   DragMode currentDragMode = DragMode::None;
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
@@ -1012,8 +1009,6 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-  int hoveredPianoKey = -1; // -1 = no key hovered
-  int playingPianoKey = -1; // -1 = no key being played
 
   //==========================================================================
   // Ghost Notes State
@@ -1190,9 +1185,12 @@ private:
 
   void timerCallback() override;
 
-  Tool currentTool = Tool::Select;
+<<<<<<< HEAD
+  == == == =
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
+
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+               JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
 
 //==============================================================================

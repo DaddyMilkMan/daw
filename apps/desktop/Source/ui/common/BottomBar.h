@@ -12,19 +12,25 @@
 
 #pragma once
 
-#include "MixerComponent.h"
 #include "../../engine/EngineConstants.h"
+#include "MixerComponent.h"
+#include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
-#include "views/PianoKeyboardViewSkia.h"
+<<<<<<< HEAD
+=======
+#include "PianoKeyboardViewSkia.h"
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
+extern "C++" {
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
-
+}
 namespace zenith {
 class Engine;
 class ProjectState;

@@ -11,16 +11,19 @@
 */
 
 #include "ZenithSlider.h"
+#include "ui/design-system/ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
 #include <core/SkRRect.h>
+#include <effects/SkGradientShader.h>
+
 #endif
 
 namespace zenith {
 
 ZenithSlider::ZenithSlider() : ZenithControl("") {
-  accentColor_ = SkColorSetRGB(255, 0, 255);
+  accentColor_ = design::colors::MAGENTA;
 }
 
 ZenithSlider::ZenithSlider(const juce::String &name, SkColor color)
@@ -118,7 +121,7 @@ void ZenithSlider::drawTrack(SkCanvas *canvas) {
   SkPaint paint;
   paint.setAntiAlias(true);
   paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(SkColorSetARGB(255, 15, 15, 20)); // Dark background
+  paint.setColor(design::colors::BG_DARKER); // Dark background
 
   SkRect trackRect;
   float cornerRadius = 2.0f;
@@ -144,7 +147,7 @@ void ZenithSlider::drawTrack(SkCanvas *canvas) {
   // Subtle highlight edge
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(1.0f);
-  paint.setColor(SkColorSetARGB(50, 255, 255, 255));
+  paint.setColor(design::colors::BORDER_DEFAULT);
   canvas->drawRRect(trackRRect, paint);
 }
 

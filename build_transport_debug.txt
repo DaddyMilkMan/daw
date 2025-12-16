@@ -1,0 +1,6 @@
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  ZenithDAW_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAW_rc_lib.dir\Release\ZenithDAW_rc_lib.lib
+  ZenithDAW.vcxproj -> C:\zenith\daw\build\ZenithDAW_artefacts\Release\Zenith DAW.exe
+  																													Copying Fonts to Output Directory
