@@ -245,7 +245,11 @@ void ComponentLifecycleManager::destroyComponent(LifecycleAware *component) {
 ComponentState ComponentLifecycleManager::getComponentState(
     const LifecycleAware *component) const {
   juce::ScopedLock lock(lock_);
-  return componentStates_.get(component, ComponentState::Uninitialized);
+  for (auto it = componentStates_.begin(); it != componentStates_.end(); ++it) {
+    if (it.getKey() == component)
+      return it.getValue();
+  }
+  return ComponentState::Uninitialized;
 }
 
 juce::Array<LifecycleAware *>
@@ -253,9 +257,11 @@ ComponentLifecycleManager::getComponentsInState(ComponentState state) const {
   juce::ScopedLock lock(lock_);
 
   juce::Array<LifecycleAware *> result;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
-      result.add(const_cast<LifecycleAware *>(pair.key));
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  while (it.next()) {
+    if (it.getValue() == state) {
+      result.add(const_cast<LifecycleAware *>(it.getKey()));
     }
   }
   return result;
@@ -270,7 +276,8 @@ void ComponentLifecycleManager::addLifecycleListener(
 void ComponentLifecycleManager::removeLifecycleListener(
     LifecycleCallback callback) {
   juce::ScopedLock lock(lock_);
-  lifecycleListeners_.removeAllInstancesOf(callback);
+  // lifecycleListeners_.removeAllInstancesOf(callback);
+  // TODO: std::function is not comparable. Use a token/ID system for removal.
 }
 
 void ComponentLifecycleManager::suspendAllComponents() {
@@ -296,8 +303,10 @@ void ComponentLifecycleManager::destroyAllComponents() {
 
   // Destroy components in reverse order of registration
   juce::Array<LifecycleAware *> components;
-  for (auto &pair : componentStates_) {
-    components.add(const_cast<LifecycleAware *>(pair.key));
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  while (it.next()) {
+    components.add(const_cast<LifecycleAware *>(it.getKey()));
   }
 
   for (int i = components.size() - 1; i >= 0; --i) {
@@ -315,8 +324,10 @@ int ComponentLifecycleManager::getComponentCountInState(
   juce::ScopedLock lock(lock_);
 
   int count = 0;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
+  juce::HashMap<LifecycleAware *, ComponentState>::Iterator it(
+      componentStates_);
+  while (it.next()) {
+    if (it.getValue() == state) {
       ++count;
     }
   }
@@ -673,8 +684,9 @@ juce::StringArray ComponentFactory::getRegisteredComponentTypes() const {
   juce::ScopedLock lock(lock_);
 
   juce::StringArray types;
-  for (auto &pair : componentCreators_) {
-    types.add(pair.key);
+  for (auto it = componentCreators_.begin(); it != componentCreators_.end();
+       ++it) {
+    types.add(it.getKey());
   }
   return types;
 }
@@ -708,8 +720,7 @@ void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
 
   // Update type counts
   juce::String typeName = typeid(*component).name();
-  int currentCount = stats_.componentTypeCounts.get(typeName, 0);
-  stats_.componentTypeCounts.set(typeName, currentCount + 1);
+  stats_.componentTypeCounts[typeName]++;
 }
 
 void MemoryLeakDetector::untrackComponent(const LifecycleComponent *component) {
@@ -732,8 +743,9 @@ void MemoryLeakDetector::checkForLeaks() {
     DBG("=== MEMORY LEAK DETECTED ===");
     DBG("Active components: " << activeComponents_.size());
 
-    for (auto &pair : activeComponents_) {
-      DBG("  - " << pair.value);
+    decltype(activeComponents_)::Iterator it(activeComponents_);
+    while (it.next()) {
+      DBG("  - " << it.getValue());
     }
   } else {
     DBG("No memory leaks detected");
@@ -747,8 +759,9 @@ juce::String MemoryLeakDetector::getLeakReport() const {
   report << "=== Memory Leak Report ===\n";
   report << "Active Components: " << activeComponents_.size() << "\n";
 
-  for (auto &pair : activeComponents_) {
-    report << "  - " << pair.value << "\n";
+  decltype(activeComponents_)::Iterator it(activeComponents_);
+  while (it.next()) {
+    report << "  - " << it.getValue() << "\n";
   }
 
   return report;
@@ -819,7 +832,7 @@ juce::String ComponentStatePersistence::serializeComponentState(
   // Component-specific state would be added here
   // This would be customized in subclasses
 
-  juce::String json = juce::JSON::toString(state);
+  juce::String json = juce::JSON::toString(juce::var(state.get()));
   return json;
 }
 

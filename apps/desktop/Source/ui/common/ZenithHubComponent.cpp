@@ -81,6 +81,8 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
 
   // Reset hover states
   isNewProjectHovered_ = false;
+  isProfileHovered_ = false;
+  isGreetingHovered_ = false;
   for (auto &p : recentProjects_)
     p.isHovered = false;
   for (auto &t : templates_)
@@ -311,49 +313,39 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
 
     // Subtitle with proper sizing
-    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
+    SkFont subFont = design::getSkFont(design::typography::FONT_XL,
+                                       design::FontWeight::Regular);
     SkPaint subPaint;
     subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
     subPaint.setAntiAlias(true);
 
     SkString greeting(greetingText_.toRawUTF8());
     SkRect bounds;
-    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
-    
+    subFont.measureText(greeting.c_str(), greeting.size(),
+                        SkTextEncoding::kUTF8, &bounds);
+
     float subX = headerX;
     float subY = headerY + 32;
-    
+
     // Store bounds for interaction
-    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
-    
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                           bounds.width(), bounds.height() + 4);
+
     canvas->drawString(greeting, subX, subY, subFont, subPaint);
-    
+
     // Draw Pencil Icon
-    greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
-    
-    SkPaint iconPaint;
-    iconPaint.setColor(isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f));
-    iconPaint.setAntiAlias(true);
-    iconPaint.setStyle(SkPaint::kStroke_Style);
-    iconPaint.setStrokeWidth(1.5f);
-    
-    SkPath pencil;
-    float iconX = greetingEditIconBounds_.fLeft;
-    float iconY = greetingEditIconBounds_.fTop;
-    
-    // Simple pencil shape
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 12, iconY + 2);
-    pencil.lineTo(iconX + 14, iconY + 4);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.close();
-    // Tip
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.lineTo(iconX + 1, iconY + 15);
-    pencil.close();
-    
-    canvas->drawPath(pencil, iconPaint);
+    greetingEditIconBounds_ =
+        SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
+
+    // Use the icon system for consistency and maintainability
+    icons::IconStyle iconStyle;
+    iconStyle.color = isGreetingHovered_
+                          ? colors::CYAN
+                          : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.strokeWidth = 1.5f;
+
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
+                            16.0f, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -367,8 +359,9 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
   if (auroraBackground_) {
     auto bounds = getLocalBounds().toFloat();
-    SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-    auroraBackground_->draw(canvas, rect, animationTime_);
+    SkRect skBounds = SkRect::MakeXYWH(bounds.getX(), bounds.getY(),
+                                       bounds.getWidth(), bounds.getHeight());
+    auroraBackground_->draw(canvas, skBounds, animationTime_);
     return;
   }
 
@@ -682,10 +675,11 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     needsUpdate = true;
   }
 
-  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) ||
+            greetingEditIconBounds_.contains(pt.fX, pt.fY);
   if (gh != isGreetingHovered_) {
-      isGreetingHovered_ = gh;
-      needsUpdate = true;
+    isGreetingHovered_ = gh;
+    needsUpdate = true;
   }
 
   if (needsUpdate)
@@ -744,9 +738,10 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Greeting Edit
-  if (greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
-      showGreetingEditor();
-      return;
+  if (greetingTextBounds_.contains(pt.fX, pt.fY) ||
+      greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+    showGreetingEditor();
+    return;
   }
 }
 
@@ -755,51 +750,50 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_) return;
+  if (greetingEditor_)
+    return;
 
   greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
   greetingEditor_->setText(greetingText_);
   greetingEditor_->setSelectAllWhenFocused(true);
   greetingEditor_->setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
-  
-  // Named constants for TextEditor sizing
-  constexpr int kEditorWidthPadding = 60;
-  constexpr int kEditorHeight = 24;
-  
+  greetingEditor_->setFont(juce::Font(design::typography::FONT_XL));
+
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
+  // Ensure we are in local coordinate space
+  // Use named constants for better maintainability
+  constexpr int kEditorHeight = 24;
+  constexpr int kEditorWidthPadding = 60;
+
   juce::Rectangle<int> bounds(
-      (int)greetingTextBounds_.left(), 
-      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
-      kEditorHeight);
-      
+      (int)greetingTextBounds_.left(),
+      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+
   greetingEditor_->setBounds(bounds);
-  
-  // Use async destruction to avoid crashes when destroying from callback
-  greetingEditor_->onReturnKey = [this]() {
-    greetingText_ = greetingEditor_->getText();
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-      repaint();
-    });
-  };
-  
-  greetingEditor_->onEscapeKey = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
-  
-  greetingEditor_->onFocusLost = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
+
+  // Callbacks - use async destruction to prevent crashes from deleting
+  // the TextEditor from within its own callback
+  greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
+  greetingEditor_->onEscapeKey = [this]() { hideGreetingEditor(false); };
+  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(false); };
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
+}
+
+void ZenithHubComponent::hideGreetingEditor(bool save) {
+  if (!greetingEditor_)
+    return;
+  auto text = greetingEditor_->getText();
+
+  juce::MessageManager::callAsync([this, save, text]() {
+    if (save)
+      greetingText_ = text;
+    greetingEditor_.reset();
+    repaint();
+  });
 }
 
 } // namespace zenith

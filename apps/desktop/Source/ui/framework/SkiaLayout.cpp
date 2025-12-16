@@ -26,9 +26,15 @@ SkiaLayoutContainer::~SkiaLayoutContainer() { removeAllChildren(); }
 
 void SkiaLayoutContainer::addChild(SkiaComponent *child,
                                    const LayoutParams &params) {
-  if (child && !children_.contains([child](const ChildInfo &info) {
-        return info.component == child;
-      })) {
+  bool exists = false;
+  for (const auto &info : children_) {
+    if (info.component == child) {
+      exists = true;
+      break;
+    }
+  }
+
+  if (child && !exists) {
     ChildInfo info;
     info.component = child;
     info.params = params;

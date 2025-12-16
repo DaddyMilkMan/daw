@@ -61,35 +61,7 @@ SampleEditorComponent::~SampleEditorComponent() {
 }
 
 void SampleEditorComponent::timerCallback() {
-  // Handle Recording
-  if (isRecording_ && incomingFifo_ && recordBuffer_) {
-    int numReady = incomingFifo_->getNumReady();
-    if (numReady > 0) {
-      int start1, size1, start2, size2;
-      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
 
-      const int recChans = incomingBuffer_.getNumChannels();
-      const int destChans = recordBuffer_->getNumChannels();
-      const int numToCopy = std::min(recChans, destChans);
-
-      auto copyChunk = [&](int start, int size) {
-        if (recordWritePos_ + size > recordBuffer_->getNumSamples()) {
-            int newSize = recordBuffer_->getNumSamples() < 44100 ? 44100 * 60 : recordBuffer_->getNumSamples() * 2;
-            recordBuffer_->setSize(destChans, newSize, true, true, true);
-        }
-        for (int ch = 0; ch < numToCopy; ++ch) {
-            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch, start, size);
-        }
-        recordWritePos_ += size;
-      };
-
-      if (size1 > 0) copyChunk(start1, size1);
-      if (size2 > 0) copyChunk(start2, size2);
-
-      incomingFifo_->finishedRead(size1 + size2);
-      repaint();
-    }
-  }
 
   if (isPlaying_) {
     // Update playhead from engine
@@ -105,7 +77,42 @@ void SampleEditorComponent::timerCallback() {
     repaint();
   }
 
+  if (isRecording_) {
+    // Drain FIFO to record buffer
+    int numReady = incomingFifo_->getNumReady();
+    if (numReady > 0) {
+      if (!recordBuffer_) {
+        // Should have been allocated in startRecording
+        incomingFifo_.reset();
+        return;
+      }
 
+      int start1, size1, start2, size2;
+      incomingFifo_->prepareToRead(numReady, start1, size1, start2, size2);
+
+      // Append to recordBuffer_
+      int currentCapacity = recordBuffer_->getNumSamples();
+      int requiredCapacity = recordWritePos_ + size1 + size2;
+      
+      // Grow buffer if needed (amortized doubling)
+      if (currentCapacity < requiredCapacity) {
+        int newCapacity = std::max(requiredCapacity, currentCapacity * 2);
+        newCapacity = std::max(newCapacity, 4096); // Min size
+        recordBuffer_->setSize(1, newCapacity, true, true, true);
+      }
+      
+      // Copy data from ring buffer
+      if (size1 > 0)
+        recordBuffer_->copyFrom(0, recordWritePos_, incomingBuffer_, 0, start1, size1);
+      if (size2 > 0)
+        recordBuffer_->copyFrom(0, recordWritePos_ + size1, incomingBuffer_, 0, start2, size2);
+
+      incomingFifo_->finishedRead(size1 + size2);
+      recordWritePos_ += (size1 + size2);
+      
+      repaint();
+    }
+  }
 }
 
 //==============================================================================

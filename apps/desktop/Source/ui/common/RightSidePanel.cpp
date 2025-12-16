@@ -10,7 +10,7 @@
 
 #include "RightSidePanel.h"
 #include "../../SimpleLogger.h"
-#include "../views/SpectraAnalyzerComponent.h"
+#include "../ui/widgets/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>

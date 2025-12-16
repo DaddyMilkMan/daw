@@ -23,4 +23,4 @@ The user frequently runs multiple AI agents in parallel on this codebase. This c
 
 ## Build System
 1. **Build Lock**: Only one agent should run cmake --build at a time. If a build is already running, wait for it to complete or ask the user.
-2. **Parallel Safety**: Read operations (iew_file, grep_search) are always safe. Write operations require lock awareness.
+2. **Parallel Safety**: Read operations (view_file, grep_search) are always safe. Write operations require lock awareness.

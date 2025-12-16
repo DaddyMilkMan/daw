@@ -116,8 +116,8 @@ private:
   juce::Image captureComponent(SkiaComponent *component);
   float calculateImageSimilarity(const juce::Image &baseline,
                                  const juce::Image &current);
-  juce::File getScreenshotPath(const juce::String &testName);
-  juce::File getBaselinePath(const juce::String &testName);
+  juce::File getScreenshotPath(const juce::String &testName) const;
+  juce::File getBaselinePath(const juce::String &testName) const;
 
   juce::File baselineDirectory_;
   juce::File screenshotDirectory_;

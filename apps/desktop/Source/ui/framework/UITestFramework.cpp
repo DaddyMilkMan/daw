@@ -155,10 +155,12 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
 
       if (baselinePixel != currentPixel) {
         // Pixel differs - mark in red
-        g.setPixel(x, y, juce::Colours::red.withAlpha(0.5f));
+        g.setColour(juce::Colours::red.withAlpha(0.5f));
+        g.fillRect((float)x, (float)y, 1.0f, 1.0f);
       } else {
         // Pixel matches - use baseline pixel with reduced opacity
-        g.setPixel(x, y, baselinePixel.withAlpha(0.3f));
+        g.setColour(baselinePixel.withAlpha(0.3f));
+        g.fillRect((float)x, (float)y, 1.0f, 1.0f);
       }
     }
   }
