@@ -197,18 +197,15 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                             expandedRadius, selBgPaint);
         }
 
-        // Control point fill
-        SkPaint fillPaint;
-        fillPaint.setColor(isSelected  ? colors::CYAN
-                           : isHovered ? colors::CYAN
-                                       : colors::CYAN);
+        fillPaint.setColor(colors::CYAN);
         fillPaint.setAntiAlias(true);
         canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
                           fillPaint);
 
         // Control point border
         SkPaint borderPaint;
-        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
+        borderPaint.setColor(isSelected ? selectionColor
+                                        : colors::TEXT_PRIMARY);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
         borderPaint.setAntiAlias(true);
@@ -231,7 +228,8 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-        SkFont font = zenith::design::typography::getMonoFont(zenith::design::typography::FONT_XS);
+        SkFont font = zenith::design::typography::getMonoFont(
+            zenith::design::typography::FONT_XS);
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -274,7 +272,8 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       }
 
       // Draw parameter name
-      SkFont nameFont = zenith::design::typography::getSkFont(zenith::design::typography::FONT_MD);
+      SkFont nameFont = zenith::design::typography::getSkFont(
+          zenith::design::typography::FONT_MD);
 
       SkPaint namePaint;
       namePaint.setColor(colors::TEXT_SECONDARY);

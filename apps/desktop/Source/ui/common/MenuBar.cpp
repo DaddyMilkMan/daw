@@ -5,6 +5,7 @@
 
 #include "MenuBar.h"
 #include "CollabPanel.h"
+#include "ZenithDesignSystem.h"
 
 namespace zenith {
 
@@ -45,7 +46,7 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
 
   // Use generic font directly if Typeface provider not hooked up yet, or use
   // default
-  #include "ZenithDesignSystem.h"
+
   SkFont font = zenith::design::typography::getSkFont(14.0f);
 
   SkPaint hoverPaint;
