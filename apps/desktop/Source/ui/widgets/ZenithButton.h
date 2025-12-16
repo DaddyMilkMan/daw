@@ -19,9 +19,17 @@
 
 #pragma once
 
-#include "SkiaComponent.h"
+#include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
+#ifdef ZENITH_USE_SKIA
+#include <core/SkCanvas.h>
+#include <core/SkImage.h>
+#include <core/SkTextBlob.h>
+#endif
+
+// Ensure includes are correct for Skia if definitions are usually
+// "core/SkCanvas.h" etc. But mostly we assume setup is correct.
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkImage.h>

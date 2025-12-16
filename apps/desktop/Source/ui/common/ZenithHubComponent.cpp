@@ -81,6 +81,8 @@ void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
 
   // Reset hover states
   isNewProjectHovered_ = false;
+  isProfileHovered_ = false;
+  isGreetingHovered_ = false;
   for (auto &p : recentProjects_)
     p.isHovered = false;
   for (auto &t : templates_)
@@ -774,8 +776,10 @@ void ZenithHubComponent::showGreetingEditor() {
   // Callbacks - use async destruction to prevent crashes from deleting
   // the TextEditor from within its own callback
   greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
-  greetingEditor_->onEscapeKey = [this]() { hideGreetingEditor(false); };
-  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(false); };
+
+  auto dismissEditor = [this]() { hideGreetingEditor(false); };
+  greetingEditor_->onEscapeKey = dismissEditor;
+  greetingEditor_->onFocusLost = dismissEditor;
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();

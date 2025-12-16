@@ -183,6 +183,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Draw control points with selection highlighting
       SkColor selectionColor = colors::CYAN;
+      SkPaint fillPaint;
       for (const auto &handle : pointHandles) {
         bool isSelected = (handle.pointId == draggedPointId);
         bool isHovered = (handle.pointId == hoveredPointId);
