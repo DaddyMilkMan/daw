@@ -17,6 +17,7 @@
 #include <core/SkBlurTypes.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
+
 #endif
 
 namespace zenith {

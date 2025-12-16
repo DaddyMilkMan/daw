@@ -1185,7 +1185,12 @@ private:
 
   void timerCallback() override;
 
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
+<<<<<<< HEAD
+  == == == =
+
+
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
+               JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
 
 //==============================================================================

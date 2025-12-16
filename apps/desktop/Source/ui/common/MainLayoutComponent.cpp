@@ -9,14 +9,20 @@
 */
 
 #include "MainLayoutComponent.h"
-#include "Engine.h"
-#include "../engine/PluginHost.h"
-#include "../instruments/InstrumentRegistry.h"
-#include "SessionViewComponent.h"
-#include "BrowserPanel.h"
-#include "GlassmorphicPanel.h"
-#include "SkiaMainWindowIntegration.h"
-#include "ZenithDesignSystem.h"
+#include "../../browser/BrowserModel.h"
+#include "../../engine/Engine.h"
+#include "../../engine/PluginHost.h"
+#include "../../instruments/InstrumentRegistry.h"
+#include "../arranger/ArrangerComponent.h"
+#include "../browser/BrowserPanel.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/LayoutManager.h"
+#include "../framework/SkiaMainWindowIntegration.h"
+#include "../sample-editor/SampleEditorComponent.h"
+#include "../session/SessionViewComponent.h"
+#include "RemoteCursorOverlay.h"
+#include "ResizablePanelContainer.h"
 
 namespace zenith {
 

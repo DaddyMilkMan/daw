@@ -16,6 +16,10 @@
 #include "MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
+<<<<<<< HEAD
+=======
+#include "PianoKeyboardViewSkia.h"
+>>>>>>> d64fb093d0c57208d5f31003590617604886c47a
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
