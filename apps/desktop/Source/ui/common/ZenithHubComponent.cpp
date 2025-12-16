@@ -776,10 +776,8 @@ void ZenithHubComponent::showGreetingEditor() {
   // Callbacks - use async destruction to prevent crashes from deleting
   // the TextEditor from within its own callback
   greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
-
-  auto dismissEditor = [this]() { hideGreetingEditor(false); };
-  greetingEditor_->onEscapeKey = dismissEditor;
-  greetingEditor_->onFocusLost = dismissEditor;
+  greetingEditor_->onEscapeKey = [this]() { hideGreetingEditor(false); };
+  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(false); };
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
@@ -796,8 +794,6 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
     greetingEditor_.reset();
     repaint();
   });
-}
-
 }
 
 } // namespace zenith
