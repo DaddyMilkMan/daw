@@ -19,8 +19,19 @@
 #include <core/SkPaint.h>
 #include <core/SkRect.h>
 
-
 namespace zenith {
+
+// ============================================================================
+// Animation Constants
+// ============================================================================
+/// Epsilon threshold for animation comparisons (consistent across all checks)
+constexpr float kAnimationEpsilon = 0.001f;
+
+/// Maximum alpha value for pressed overlay (0-255 range)
+constexpr int kPressedOverlayMaxAlpha = 30;
+
+/// Alpha multiplier for hover/focus overlays (0.0-1.0 range)
+constexpr float kOverlayAlphaMultiplier = 0.8f;
 
 /**
  * @brief Tracks interaction state (hover, pressed) with smooth animations
@@ -58,10 +69,10 @@ struct InteractionState {
   SkColor blendWithState(SkColor base, SkColor hover, SkColor pressed) const {
     SkColor result = base;
 
-    if (hoverAmount > 0.001f) {
+    if (hoverAmount > kAnimationEpsilon) {
       result = design::interpolateColor(result, hover, hoverAmount);
     }
-    if (pressAmount > 0.001f) {
+    if (pressAmount > kAnimationEpsilon) {
       result = design::interpolateColor(result, pressed, pressAmount);
     }
 
@@ -85,9 +96,12 @@ struct InteractionState {
    * Check if any animation is currently active (for optimization)
    */
   bool isAnimating() const {
-    return std::abs(hoverAmount - (isHovered ? 1.0f : 0.0f)) > 0.01f ||
-           std::abs(pressAmount - (isPressed ? 1.0f : 0.0f)) > 0.01f ||
-           std::abs(focusAmount - (isFocused ? 1.0f : 0.0f)) > 0.01f;
+    return std::abs(hoverAmount - (isHovered ? 1.0f : 0.0f)) >
+               kAnimationEpsilon ||
+           std::abs(pressAmount - (isPressed ? 1.0f : 0.0f)) >
+               kAnimationEpsilon ||
+           std::abs(focusAmount - (isFocused ? 1.0f : 0.0f)) >
+               kAnimationEpsilon;
   }
 
 private:
@@ -107,13 +121,13 @@ public:
    */
   static void drawHoverOverlay(SkCanvas *canvas, const SkRect &bounds,
                                float hoverAmount, float cornerRadius = 4.0f) {
-    if (hoverAmount < 0.01f)
+    if (hoverAmount < kAnimationEpsilon)
       return;
 
     SkPaint paint;
     paint.setAntiAlias(true);
-    paint.setColor(
-        design::withAlpha(design::colors::GLASS_HOVER, hoverAmount * 0.8f));
+    paint.setColor(design::withAlpha(design::colors::GLASS_HOVER,
+                                     hoverAmount * kOverlayAlphaMultiplier));
 
     if (cornerRadius > 0) {
       canvas->drawRoundRect(bounds, cornerRadius, cornerRadius, paint);
@@ -127,12 +141,13 @@ public:
    */
   static void drawPressedOverlay(SkCanvas *canvas, const SkRect &bounds,
                                  float pressAmount, float cornerRadius = 4.0f) {
-    if (pressAmount < 0.01f)
+    if (pressAmount < kAnimationEpsilon)
       return;
 
     SkPaint paint;
     paint.setAntiAlias(true);
-    paint.setColor(SkColorSetARGB(static_cast<int>(pressAmount * 30), 0, 0, 0));
+    paint.setColor(SkColorSetARGB(
+        static_cast<int>(pressAmount * kPressedOverlayMaxAlpha), 0, 0, 0));
 
     if (cornerRadius > 0) {
       canvas->drawRoundRect(bounds, cornerRadius, cornerRadius, paint);
@@ -146,15 +161,15 @@ public:
    */
   static void drawFocusRing(SkCanvas *canvas, const SkRect &bounds,
                             float focusAmount, float cornerRadius = 4.0f) {
-    if (focusAmount < 0.01f)
+    if (focusAmount < kAnimationEpsilon)
       return;
 
     SkPaint paint;
     paint.setAntiAlias(true);
     paint.setStyle(SkPaint::kStroke_Style);
     paint.setStrokeWidth(2.0f);
-    paint.setColor(
-        design::withAlpha(design::colors::BORDER_FOCUS, focusAmount * 0.8f));
+    paint.setColor(design::withAlpha(design::colors::BORDER_FOCUS,
+                                     focusAmount * kOverlayAlphaMultiplier));
 
     SkRect focusBounds = bounds;
     focusBounds.outset(2.0f, 2.0f);

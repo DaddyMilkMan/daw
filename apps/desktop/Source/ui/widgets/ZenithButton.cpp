@@ -303,10 +303,6 @@ SkColor ZenithButton::getTextColor() const {
     return design::withAlpha(design::colors::TEXT_PRIMARY, 0.4f);
   }
 
-  if (pressed_ || (toggleable_ && toggleState_)) {
-    return design::colors::TEXT_PRIMARY;
-  }
-
   return design::colors::TEXT_PRIMARY;
 }
 
