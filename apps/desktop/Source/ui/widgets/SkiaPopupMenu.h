@@ -15,6 +15,9 @@
 #include "SkiaButton.h"
 #include "SkiaComponent.h"
 #include <juce_core/juce_core.h>
+#include <memory>
+#include <utility>
+#include <vector>
 
 namespace zenith {
 
@@ -61,7 +64,7 @@ public:
   void mouseMove(const juce::MouseEvent &e) override;
 
 private:
-  juce::Array<Item> items_;
+  std::vector<Item> items_;
   std::unique_ptr<SkiaPopupMenu> activeSubMenu_;
 
   // Appearance

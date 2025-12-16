@@ -11,7 +11,7 @@
 */
 
 #include "ZenithSlider.h"
-#include "../design-system/ZenithDesignSystem.h"
+#include "ui/design-system/ZenithDesignSystem.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkBlurTypes.h>
