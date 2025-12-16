@@ -684,10 +684,8 @@ juce::StringArray ComponentFactory::getRegisteredComponentTypes() const {
   juce::ScopedLock lock(lock_);
 
   juce::StringArray types;
-  // Cast to non-const to allow iteration
-  auto &creators = const_cast<juce::HashMap<juce::String, ComponentCreator> &>(
-      componentCreators_);
-  for (auto it = creators.begin(); it != creators.end(); ++it) {
+  for (auto it = componentCreators_.begin(); it != componentCreators_.end();
+       ++it) {
     types.add(it.getKey());
   }
   return types;
