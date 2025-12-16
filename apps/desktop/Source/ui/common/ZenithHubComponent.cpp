@@ -79,8 +79,10 @@ ZenithHubComponent::~ZenithHubComponent() {
 void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
   SkiaComponent::mouseExit(e);
 
-  // Reset hover states
+  // Reset ALL hover states
   isNewProjectHovered_ = false;
+  isProfileHovered_ = false;
+  isGreetingHovered_ = false;
   for (auto &p : recentProjects_)
     p.isHovered = false;
   for (auto &t : templates_)
@@ -328,32 +330,14 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     
     canvas->drawString(greeting, subX, subY, subFont, subPaint);
     
-    // Draw Pencil Icon
+    // Draw Edit Icon using the icon system
     greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
     
-    SkPaint iconPaint;
-    iconPaint.setColor(isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f));
-    iconPaint.setAntiAlias(true);
-    iconPaint.setStyle(SkPaint::kStroke_Style);
-    iconPaint.setStrokeWidth(1.5f);
+    icons::IconStyle iconStyle;
+    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.strokeWidth = 1.5f;
     
-    SkPath pencil;
-    float iconX = greetingEditIconBounds_.fLeft;
-    float iconY = greetingEditIconBounds_.fTop;
-    
-    // Simple pencil shape
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 12, iconY + 2);
-    pencil.lineTo(iconX + 14, iconY + 4);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.close();
-    // Tip
-    pencil.moveTo(iconX + 2, iconY + 12);
-    pencil.lineTo(iconX + 4, iconY + 14);
-    pencil.lineTo(iconX + 1, iconY + 15);
-    pencil.close();
-    
-    canvas->drawPath(pencil, iconPaint);
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, 16.0f, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -786,17 +770,15 @@ void ZenithHubComponent::showGreetingEditor() {
     });
   };
   
-  greetingEditor_->onEscapeKey = [this]() {
+  // Shared lambda for dismissing the editor without saving
+  auto dismissEditor = [this]() {
     juce::MessageManager::callAsync([this]() {
       greetingEditor_.reset();
     });
   };
-  
-  greetingEditor_->onFocusLost = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
+
+  greetingEditor_->onEscapeKey = dismissEditor;
+  greetingEditor_->onFocusLost = dismissEditor;
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
