@@ -427,15 +427,32 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     }
 
     // Draw icon centered in thumbnail
-    // TODO: Scale icon to fit? Assuming icons are normalized or standard size.
-    // For now assuming icons::... returns a path around 0,0 or 24x24.
-    // Let's just fill a rect with color for now as in original code, or try to
-    // draw path if we knew how to scale it. Original HEAD code had
-    // `canvas->drawRRect` for thumbnail. Let's stick to the color block as the
-    // "Thumbnail". Wait, the review mentioned: "Mock Image / Icon (accent
-    // colored rectangle)" was master. HEAD had "Thumbnail with accent color".
-    // I will stick to the accent color block for safety, but maybe add a small
-    // icon overlay if I can.
+    SkRect pathBounds = iconPath.getBounds();
+    if (!pathBounds.isEmpty()) {
+      float iconSize = 40.0f; // Fits nicely in 86x86
+      float scale =
+          iconSize / std::max(pathBounds.width(), pathBounds.height());
+
+      SkMatrix matrix;
+      matrix.reset();
+      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
+      matrix.postScale(scale, scale);
+      matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
+
+      SkPaint iconPaint;
+      iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+      iconPaint.setAntiAlias(true);
+
+      SkPath scaledPath;
+      iconPath.transform(matrix, &scaledPath);
+      canvas->drawPath(scaledPath, iconPaint);
+    } else {
+        // Fallback for empty path
+        SkPaint iconPaint;
+        iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+        iconPaint.setAntiAlias(true);
+        canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12, iconPaint);
+    }
 
     // Text content
     float textX = thumbRect.right() + 16;
@@ -509,29 +526,32 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     }
 
     // Draw the icon path scaled and centered
-    // Basic scaling logic (assuming 24x24 viewbox for icons)
     SkRect pathBounds = iconPath.getBounds();
-    float scale =
-        (iconSize * 0.5f) / std::max(pathBounds.width(), pathBounds.height());
+    if (!pathBounds.isEmpty()) {
+      float scale =
+          (iconSize * 0.5f) / std::max(pathBounds.width(), pathBounds.height());
 
-    SkMatrix matrix;
-    matrix.setTranslate(iconBounds.centerX() - pathBounds.centerX(),
-                        iconBounds.centerY() - pathBounds.centerY());
-    matrix.preScale(scale, scale, pathBounds.centerX(), pathBounds.centerY());
+      SkMatrix matrix;
+      // Center the path at (0,0) then scale, then translate to destination
+      matrix.reset();
+      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
+      matrix.postScale(scale, scale);
+      matrix.postTranslate(iconBounds.centerX(), iconBounds.centerY());
 
-    SkPaint iconPaint;
-    iconPaint.setColor(tmpl.color);
-    iconPaint.setAntiAlias(true);
+      SkPaint iconPaint;
+      iconPaint.setColor(tmpl.color);
+      iconPaint.setAntiAlias(true);
 
-    // For now drawing circle as fallback/placeholder if path is empty, or
-    // drawPath if we trust it The original code drew a circle.
-    // "canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
-    // iconPaint);" I will stick to the circle for safety unless I'm sure
-    // icons::... are implemented and working. The review asked to use
-    // std::map/enum for logic, not necessarily to implement the path drawing if
-    // it wasn't there.
-    canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
-                       iconPaint);
+      SkPath scaledPath;
+      iconPath.transform(matrix, &scaledPath);
+      canvas->drawPath(scaledPath, iconPaint);
+    } else {
+      SkPaint iconPaint;
+      iconPaint.setColor(tmpl.color);
+      iconPaint.setAntiAlias(true);
+      canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
+                         iconPaint);
+    }
 
     // Text
     SkFont nameFont = design::getSkFont(18.0f, design::FontWeight::Bold);
