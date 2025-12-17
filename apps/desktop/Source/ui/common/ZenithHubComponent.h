@@ -174,7 +174,9 @@ private:
   void drawNewProjectButton(SkCanvas *canvas);
 
   // Agent 5: Text Rendering Helper
-  // Duplicate drawText removed
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
 
   // Agent 5: Selection State
   enum class SelectionSection { None, Recent, Templates };
