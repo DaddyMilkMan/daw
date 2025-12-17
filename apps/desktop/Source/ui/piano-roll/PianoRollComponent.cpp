@@ -383,25 +383,35 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
 
   if (newHoveredKey != hoveredPianoKey) {
     hoveredPianoKey = newHoveredKey;
-    repaint();
+    repaint(0, 0, (int)PIANO_WIDTH, getHeight());
   }
 
   // Update cursor based on position
   auto newCursorType = getCursorForPosition(x, y);
   if (newCursorType != currentCursorType) {
     currentCursorType = newCursorType;
-    repaint();
+    repaint(); // Cursor changes might affect tooltips or global state, keep simple for cursor
   }
 
   // Track hovered note
   auto *newHoveredNote = findNoteAtPosition(x, y);
   if (newHoveredNote != hoveredNote) {
-    if (hoveredNote)
+    juce::Rectangle<float> dirtyRect;
+
+    if (hoveredNote) {
       hoveredNote->isHovered = false;
+      dirtyRect = dirtyRect.getUnion(hoveredNote->bounds);
+    }
     hoveredNote = newHoveredNote;
-    if (hoveredNote)
+    if (hoveredNote) {
       hoveredNote->isHovered = true;
-    repaint();
+      dirtyRect = dirtyRect.getUnion(hoveredNote->bounds);
+    }
+    
+    if (!dirtyRect.isEmpty()) {
+       // Expand slightly for strokes/shadows
+       repaint(dirtyRect.expanded(2.0f).toNearestInt());
+    }
   }
 }
 
@@ -710,6 +720,7 @@ void PianoRollComponent::createNoteAtPosition(float x, float y) {
   double lengthBeats = gridBeats;
 
   zenith::ProjectState::MidiNoteSpec note;
+  note.id = juce::Uuid().toString();
   note.pitch = pitch;
   note.startBeats = startBeats;
   note.lengthBeats = lengthBeats;
@@ -717,6 +728,15 @@ void PianoRollComponent::createNoteAtPosition(float x, float y) {
   note.muted = false;
 
   projectState.addMidiNote(currentClip.clipId, note, "Create MIDI note");
+
+  // Interaction Polish: Immediately select the new note
+  // addMidiNote triggers listeners synchronously, so noteRects should be updated.
+  for (auto& n : noteRects) {
+      if (n.id == note.id) {
+          selectNote(&n, false);
+          break;
+      }
+  }
 }
 
 void PianoRollComponent::deleteSelectedNotes() {

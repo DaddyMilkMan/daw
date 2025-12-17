@@ -729,8 +729,15 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
       needsUpdate = true;
   }
 
-  if (needsUpdate)
-    repaint();
+  bool needsUpdate = false;
+  
+  if (selectedSection_ != Section::None) {
+      selectedSection_ = Section::None;
+      selectedIndex_ = -1;
+      needsUpdate = true;
+  }
+
+  for (auto &proj : recentProjects_) {
 }
 
 void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
@@ -815,8 +822,115 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
       
   greetingEditor_.setBounds(bounds);
   greetingEditor_.setVisible(true);
-  greetingEditor_.selectAll();
-  greetingEditor_.grabKeyboardFocus();
+  addAndMakeVisible(greetingEditor_.get());
+  greetingEditor_->grabKeyboardFocus();
+}
+
+void ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::returnKey) {
+    triggerSelection();
+    return;
+  }
+
+  int dx = 0;
+  int dy = 0;
+  if (key.isKeyCode(juce::KeyPress::upKey)) dy = -1;
+  else if (key.isKeyCode(juce::KeyPress::downKey)) dy = 1;
+  else if (key.isKeyCode(juce::KeyPress::leftKey)) dx = -1;
+  else if (key.isKeyCode(juce::KeyPress::rightKey)) dx = 1;
+
+  if (dx != 0 || dy != 0) {
+    moveSelection(dx, dy);
+  }
+}
+
+void ZenithHubComponent::moveSelection(int dx, int dy) {
+  if (selectedSection_ == Section::None) {
+    selectedSection_ = Section::RecentProjects;
+    selectedIndex_ = 0;
+    repaint();
+    return;
+  }
+
+  if (selectedSection_ == Section::RecentProjects) {
+    int row = selectedIndex_ / 2;
+    int col = selectedIndex_ % 2;
+    
+    if (dx == 1 && col == 1) {
+       // Move to Sidebar
+       selectedSection_ = Section::NewProject; // Default to button
+       selectedIndex_ = -1;
+    } else if (dx == -1 && col == 0) {
+       // Stay
+    } else {
+       // Navigation within grid
+       int newRow = row + dy;
+       int newCol = col + dx;
+       int newIdx = (newRow * 2) + newCol;
+       
+       if (newIdx >= 0 && newIdx < (int)recentProjects_.size()) {
+           selectedIndex_ = newIdx;
+       }
+    }
+  } else if (selectedSection_ == Section::NewProject) {
+      if (dy == 1 && !templates_.empty()) {
+          selectedSection_ = Section::Templates;
+          selectedIndex_ = 0;
+      } else if (dy == -1) {
+          // Account not selectable, stay
+      }
+      
+      if (dx == -1) {
+          selectedSection_ = Section::RecentProjects;
+          selectedIndex_ = std::min((int)recentProjects_.size() - 1, 1);
+      }
+  } else if (selectedSection_ == Section::Templates) {
+      if (dy == -1 && selectedIndex_ == 0) {
+         selectedSection_ = Section::NewProject;
+         selectedIndex_ = -1;
+      } else if (dx == -1) {
+         selectedSection_ = Section::RecentProjects;
+         selectedIndex_ = std::min((int)recentProjects_.size() - 1, 5);
+      } else {
+         int newIdx = selectedIndex_ + dy;
+         if (newIdx >= 0 && newIdx < (int)templates_.size()) {
+             selectedIndex_ = newIdx;
+         }
+      }
+  }
+  repaint();
+}
+
+void ZenithHubComponent::triggerSelection() {
+    if (selectedSection_ == Section::RecentProjects && selectedIndex_ >= 0 && selectedIndex_ < recentProjects_.size()) {
+        if (onLoadProject_) onLoadProject_(recentProjects_[selectedIndex_].path);
+        dismiss();
+    } else if (selectedSection_ == Section::NewProject) {
+        if (onNewProject_) onNewProject_();
+        dismiss();
+    } else if (selectedSection_ == Section::Templates && selectedIndex_ >= 0 && selectedIndex_ < templates_.size()) {
+        if (onNewProject_) onNewProject_();
+        dismiss();
+    }
+}
+
+void ZenithHubComponent::drawText(SkCanvas* canvas, const juce::String& text, const SkRect& bounds, 
+                const SkFont& font, const SkPaint& paint, bool centerVertical) {
+    SkString skText(text.toRawUTF8());
+    SkRect textBounds;
+    font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8, &textBounds);
+    
+    float x = bounds.fLeft;
+    float y = bounds.fTop + textBounds.height(); // Default roughly top aligned
+    
+    if (centerVertical) {
+        y = bounds.centerY() + (textBounds.height() * 0.5f) - textBounds.fBottom;
+    } else {
+        // Find cap height or just use height
+        y = bounds.fBottom;
+    }
+    
+    canvas->drawString(skText, x, y, font, paint);
 }
 
 
