@@ -1121,12 +1121,11 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   // Background (Deep Slate)
   canvas->clear(colors::BG_DARKEST);
 
-  // Background (Deep Slate)
-  canvas->clear(colors::BG_DARKEST);
-
   generalPaint_.setColor(colors::BG_DARKER);
-  generalPaint_.setStyle(SkPaint::kFill_Style); // Reset style just in case
-
+  generalPaint_.setStyle(SkPaint::kFill_Style); 
+  
+  // Alias for legacy code
+  SkPaint& paint = generalPaint_;
 
   auto localBounds = getLocalBounds();
   float width = (float)localBounds.getWidth();
@@ -1134,8 +1133,6 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   float notesHeight = height - RULER_HEIGHT - velocityLaneHeight;
 
   // 1. Piano Keys Area Background
-  SkRect pianoRect =
-      SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
   SkRect pianoRect =
       SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
   canvas->drawRect(pianoRect, generalPaint_);
