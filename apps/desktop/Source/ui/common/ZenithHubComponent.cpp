@@ -340,15 +340,10 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
     canvas->drawString(greeting, subX, subY, subFont_, subPaint_);
 
-    // Agent 5: Use Helper (redundant with drawString above but keeping for
-    // consistency with recovered snippets if needed, actually better to just
-    // use ONE. The Agent 5 snippet REPLACED drawString. I will replace it.)
-
-    /* Replaced by:
+    // Agent 5: Use Helper
     SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
-    bounds.width(), bounds.height()); drawText(canvas, greetingText_,
-    helperBounds, subFont_, subPaint_, false);
-    */
+                                           bounds.width(), bounds.height());
+    drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
@@ -670,6 +665,73 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   canvas->drawString(text, tx, ty, btnFont, textPaint);
 }
 
+// Agent 5: Helper Implementation
+void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
+                                  const SkRect &bounds, const SkFont &font,
+                                  const SkPaint &paint, bool centerVertical) {
+  SkString skText(text.toRawUTF8());
+  SkRect textBounds;
+  font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,
+                   &textBounds);
+
+  float x = bounds.left();
+  float y = bounds.bottom();
+
+  if (centerVertical) {
+    y = bounds.centerY() + (textBounds.height() * 0.5f);
+  }
+
+  canvas->drawString(skText, x, y, font, paint);
+}
+
+bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
+  if (key == juce::KeyPress::returnKey) {
+    triggerSelection();
+    return true;
+  }
+
+  if (key == juce::KeyPress::upKey) {
+    moveSelection(-2); // Primitive grid nav for now
+    return true;
+  }
+  if (key == juce::KeyPress::downKey) {
+    moveSelection(2);
+    return true;
+  }
+  if (key == juce::KeyPress::leftKey) {
+    moveSelection(-1);
+    return true;
+  }
+  if (key == juce::KeyPress::rightKey) {
+    moveSelection(1);
+    return true;
+  }
+
+  return SkiaComponent::keyPressed(key);
+}
+
+void ZenithHubComponent::moveSelection(int delta) {
+  // Simple implementation for Agent 5
+  if (selectedSection_ == SelectionSection::None) {
+    selectedSection_ = SelectionSection::Recent;
+    selectedIndex_ = 0;
+  } else {
+    selectedIndex_ += delta;
+    selectedIndex_ =
+        juce::jlimit(0, (int)recentProjects_.size() - 1, selectedIndex_);
+  }
+  repaint();
+}
+
+void ZenithHubComponent::triggerSelection() {
+  if (selectedSection_ == SelectionSection::Recent && selectedIndex_ >= 0 &&
+      selectedIndex_ < recentProjects_.size()) {
+    if (onLoadProject_) {
+      onLoadProject_(recentProjects_[selectedIndex_].path);
+    }
+  }
+}
+
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
   bool needsUpdate = false;
@@ -820,26 +882,26 @@ void ZenithHubComponent::showGreetingEditor() {
 }
 
 // Agent 5: Keyboard Navigation - Refactored to switch per code review
-// Agent 5: Keyboard Navigation - Refactored to if-else per compiler
-// requirements
+// Agent 5: Keyboard Navigation - Refactored to switch per code review
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
-  const int code = key.getKeyCode();
-
-  if (code == juce::KeyPress::returnKey) {
+  switch (key.getKeyCode()) {
+  case juce::KeyPress::returnKey:
     triggerSelection();
     return true;
-  } else if (code == juce::KeyPress::upKey) {
+  case juce::KeyPress::upKey:
     moveSelection(-2); // Primitive grid nav for now
     return true;
-  } else if (code == juce::KeyPress::downKey) {
+  case juce::KeyPress::downKey:
     moveSelection(2);
     return true;
-  } else if (code == juce::KeyPress::leftKey) {
+  case juce::KeyPress::leftKey:
     moveSelection(-1);
     return true;
-  } else if (code == juce::KeyPress::rightKey) {
+  case juce::KeyPress::rightKey:
     moveSelection(1);
     return true;
+  default:
+    break;
   }
 
   return SkiaComponent::keyPressed(key);

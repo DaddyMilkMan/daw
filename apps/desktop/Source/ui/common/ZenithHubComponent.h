@@ -59,6 +59,8 @@ public:
   void resized() override;
 
   void mouseMove(const juce::MouseEvent &e) override;
+  bool keyPressed(
+      const juce::KeyPress &key) override; // Agent 5: Keyboard Navigation
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
@@ -171,6 +173,18 @@ private:
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
 
+  // Agent 5: Text Rendering Helper
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
+
+  // Agent 5: Selection State
+  enum class SelectionSection { None, Recent, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
+  int selectedIndex_ = -1;
+  void moveSelection(int delta);
+  void triggerSelection();
+
   /** @brief Convert RecentProjectEntry to internal format */
   void loadFromManager();
 
@@ -178,21 +192,6 @@ private:
   static SkColor getAccentColorForGenre(const juce::String &genre);
 
   void updateLayout();
-
-  // Aurora living background
-  // Aurora living background
-  std::unique_ptr<AuroraBackground> auroraBackground_;
-
-  // Keyboard navigation state
-  enum class SelectionSection { None, Recent, New, Templates };
-  SelectionSection selectedSection_ = SelectionSection::None;
-  int selectedIndex_ = -1;
-
-  void moveSelection(int delta);
-  void triggerSelection();
-  void drawText(SkCanvas *canvas, const juce::String &text,
-                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
-                bool centerVertical);
 
   // Cached Fonts & Paints - Optimization for A+ Grade
   SkFont titleFont_;
@@ -208,8 +207,8 @@ private:
 
   SkPaint textPaint_;
   SkPaint subPaint_;
-
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };
 
 } // namespace zenith
+```
