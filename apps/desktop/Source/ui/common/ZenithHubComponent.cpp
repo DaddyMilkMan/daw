@@ -822,24 +822,23 @@ void ZenithHubComponent::showGreetingEditor() {
 // Agent 5: Keyboard Navigation - Refactored to switch per code review
 // Agent 5: Keyboard Navigation - Refactored to switch per code review
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
-  switch (key.getKeyCode()) {
-  case juce::KeyPress::returnKey:
+  int code = key.getKeyCode();
+
+  if (code == juce::KeyPress::returnKey) {
     triggerSelection();
     return true;
-  case juce::KeyPress::upKey:
+  } else if (code == juce::KeyPress::upKey) {
     moveSelection(-2); // Primitive grid nav for now
     return true;
-  case juce::KeyPress::downKey:
+  } else if (code == juce::KeyPress::downKey) {
     moveSelection(2);
     return true;
-  case juce::KeyPress::leftKey:
+  } else if (code == juce::KeyPress::leftKey) {
     moveSelection(-1);
     return true;
-  case juce::KeyPress::rightKey:
+  } else if (code == juce::KeyPress::rightKey) {
     moveSelection(1);
     return true;
-  default:
-    break;
   }
 
   return SkiaComponent::keyPressed(key);
