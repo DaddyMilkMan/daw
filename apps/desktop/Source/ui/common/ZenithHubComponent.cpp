@@ -328,7 +328,28 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Store bounds for interaction
     greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
     
-    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
+
+    // Subtitle with proper sizing
+    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
+    SkPaint subPaint;
+    subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+    subPaint.setAntiAlias(true);
+
+    SkString greeting(greetingText_.toRawUTF8());
+    SkRect bounds;
+    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
+    
+    float subX = headerX;
+    float subY = headerY + 32;
+    
+    // Store bounds for interaction
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
+    
+    // Agent 5: Use Helper
+    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height());
+    drawText(canvas, greetingText_, helperBounds, subFont, subPaint, false);
+
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
@@ -634,6 +655,70 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
       newProjectButtonBounds_.centerY() + (textBounds.height() / 2.0f) - 4.0f;
 
   canvas->drawString(text, tx, ty, btnFont, textPaint);
+}
+
+// Agent 5: Helper Implementation
+void ZenithHubComponent::drawText(SkCanvas* canvas, const juce::String& text, const SkRect& bounds, 
+                                const SkFont& font, const SkPaint& paint, bool centerVertical)
+{
+    SkString skText(text.toRawUTF8());
+    SkRect textBounds;
+    font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8, &textBounds);
+    
+    float x = bounds.left();
+    float y = bounds.bottom();
+    
+    if (centerVertical) {
+        y = bounds.centerY() + (textBounds.height() * 0.5f);
+    }
+    
+    canvas->drawString(skText, x, y, font, paint);
+}
+
+bool ZenithHubComponent::keyPressed(const juce::KeyPress& key) {
+    if (key == juce::KeyPress::returnKey) {
+        triggerSelection();
+        return true;
+    }
+    
+    if (key == juce::KeyPress::upKey) {
+        moveSelection(-2); // Primitive grid nav for now
+        return true;
+    }
+    if (key == juce::KeyPress::downKey) {
+        moveSelection(2);
+        return true;
+    }
+    if (key == juce::KeyPress::leftKey) {
+        moveSelection(-1);
+        return true;
+    }
+    if (key == juce::KeyPress::rightKey) {
+        moveSelection(1);
+        return true;
+    }
+    
+    return SkiaComponent::keyPressed(key);
+}
+
+void ZenithHubComponent::moveSelection(int delta) {
+    // Simple implementation for Agent 5
+    if (selectedSection_ == SelectionSection::None) {
+        selectedSection_ = SelectionSection::Recent;
+        selectedIndex_ = 0;
+    } else {
+        selectedIndex_ += delta;
+        selectedIndex_ = juce::jlimit(0, (int)recentProjects_.size() - 1, selectedIndex_);
+    }
+    repaint();
+}
+
+void ZenithHubComponent::triggerSelection() {
+    if (selectedSection_ == SelectionSection::Recent && selectedIndex_ >= 0 && selectedIndex_ < recentProjects_.size()) {
+        if (onLoadProject_) {
+            onLoadProject_(recentProjects_[selectedIndex_].path);
+        }
+    }
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
