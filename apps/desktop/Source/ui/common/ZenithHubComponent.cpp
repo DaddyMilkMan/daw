@@ -89,21 +89,20 @@ ZenithHubComponent::ZenithHubComponent(
   startTimerHz(60);
 
   // Initialize Greeting Editor as permanent hidden child
-  greetingEditor_ = std::make_unique<juce::TextEditor>();
-  addChildComponent(greetingEditor_.get());
-  greetingEditor_->setVisible(false);
-  greetingEditor_->setMultiLine(false);
-  greetingEditor_->setReturnKeyStartsNewLine(false);
+  addChildComponent(&greetingEditor_);
+  greetingEditor_.setVisible(false);
+  greetingEditor_.setMultiLine(false);
+  greetingEditor_.setReturnKeyStartsNewLine(false);
 
   // Configure callbacks for safe hiding
-  greetingEditor_->onReturnKey = [this]() {
-    greetingText_ = greetingEditor_->getText();
-    greetingEditor_->setVisible(false);
+  greetingEditor_.onReturnKey = [this]() {
+    greetingText_ = greetingEditor_.getText();
+    greetingEditor_.setVisible(false);
     repaint();
   };
 
-  greetingEditor_->onEscapeKey = [this]() { greetingEditor_->setVisible(false); };
-  greetingEditor_->onFocusLost = [this]() { greetingEditor_->setVisible(false); };
+  greetingEditor_.onEscapeKey = [this]() { greetingEditor_.setVisible(false); };
+  greetingEditor_.onFocusLost = [this]() { greetingEditor_.setVisible(false); };
 
 ZenithHubComponent::~ZenithHubComponent() {
   stopTimer();
@@ -254,26 +253,20 @@ void ZenithHubComponent::updateLayout() {
 
       // 2. Layout Sidebar (Account, Button, Templates)
       // Account: Fixed 100px
+      juce::Rectangle<float> accountR = sidebarRect.removeFromTop(100.0f);
+      accountArea_ = SkRect::MakeXYWH(accountR.getX(), accountR.getY(), accountR.getWidth(), accountR.getHeight());
+      
+      sidebarRect.removeFromTop(padding); // Gap
+      
       // Button: Fixed 60px
-      // Templates: Flex 1 (remaining)
-      auto sidebarRows = ZenithLayout::begin()
-          .withFloatBounds(sidebarRect)
-          .withGap(padding) // Matches original vertical logic
-          .addFlexItem(juce::FlexItem().withHeight(100.0f))                                   // Account
-          .addFlexItem(juce::FlexItem().withHeight(60.0f))                                    // New Project Btn
-          .addFlexItem(juce::FlexItem().withFlex(1.0f))                                       // Templates
-          .layout(juce::FlexBox::Direction::column);
-          
-      if (sidebarRows.size() >= 3) {
-          auto a = sidebarRows[0];
-          accountArea_ = SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
-          
-          auto b = sidebarRows[1];
-          newProjectButtonBounds_ = SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
-          
-          auto t = sidebarRows[2];
-          templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
-      }
+      juce::Rectangle<float> btnR = sidebarRect.removeFromTop(60.0f);
+      newProjectButtonBounds_ = SkRect::MakeXYWH(btnR.getX(), btnR.getY(), btnR.getWidth(), btnR.getHeight());
+      
+      sidebarRect.removeFromTop(padding); // Gap
+      
+      // Templates: Remaining
+      juce::Rectangle<float> tmplR = sidebarRect;
+      templatesArea_ = SkRect::MakeXYWH(tmplR.getX(), tmplR.getY(), tmplR.getWidth(), tmplR.getHeight());
   }
   
   // Profile Button (Manual sub-positioning within account area remains ok as it's specific rendering)
@@ -796,13 +789,12 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_->isVisible()) return;
+  if (greetingEditor_.isVisible()) return;
 
-  greetingEditor_->setText(greetingText_);
-  greetingEditor_->setJustification(juce::Justification::left);
+  greetingEditor_.setText(greetingText_);
+  greetingEditor_.setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
- 
+  greetingEditor_.setFont(juce::Font(18.0f)); 
   
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
@@ -815,16 +807,16 @@ void ZenithHubComponent::showGreetingEditor() {
       (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
       kEditorHeight);
       
-  greetingEditor_->setBounds(bounds);
-  greetingEditor_->setVisible(true);
-  greetingEditor_->selectAll();
-  greetingEditor_->grabKeyboardFocus();
+  greetingEditor_.setBounds(bounds);
+  greetingEditor_.setVisible(true);
+  greetingEditor_.selectAll();
+  greetingEditor_.grabKeyboardFocus();
 }
 
-void ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
+bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   if (key == juce::KeyPress::returnKey) {
     triggerSelection();
-    return;
+    return true;
   }
 
   int dx = 0;
@@ -836,7 +828,10 @@ void ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
 
   if (dx != 0 || dy != 0) {
     moveSelection(dx, dy);
+    return true;
   }
+  
+  return false;
 }
 
 void ZenithHubComponent::moveSelection(int dx, int dy) {

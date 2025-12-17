@@ -64,7 +64,7 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
   
   // Keyboard Navigation
-  void keyPressed(const juce::KeyPress& key) override;
+  bool keyPressed(const juce::KeyPress& key) override;
 
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
