@@ -1654,6 +1654,36 @@ void Engine::setPDCEnabled(bool enabled) {
 
 //==============================================================================
 
+//==============================================================================
+// TrackSnapshot Implementation
+//==============================================================================
+
+Engine::TrackSnapshot::TrackSnapshot(
+    const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
+    const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
+  tracks.reserve(ownedTracks.size());
+  lifecycle.reserve(ownedTracks.size());
+  for (const auto &track : ownedTracks) {
+    if (track != nullptr) {
+      tracks.push_back(track.get());
+      lifecycle.push_back(track); // Increment refcount
+      trackMap[track->getTrackId().toStdString()] = track.get();
+    }
+  }
+
+  auxBuses.reserve(ownedBuses.size());
+  lifecycleAux.reserve(ownedBuses.size());
+  for (const auto &bus : ownedBuses) {
+    if (bus != nullptr) {
+      auxBuses.push_back(bus.get());
+      lifecycleAux.push_back(bus);
+      auxBusMap[bus->getId().toStdString()] = bus.get();
+    }
+  }
+}
+
+//==============================================================================
+
 double Engine::autoDetectProjectDuration() const {
   double maxDuration = 0.0;
   const double sampleRate = currentSampleRate.load();

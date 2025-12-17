@@ -847,25 +847,11 @@ private:
     std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
 
     TrackSnapshot() = default;
+    
+    // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
-      tracks.reserve(ownedTracks.size());
-      lifecycle.reserve(ownedTracks.size());
-      for (const auto &track : ownedTracks) {
-        tracks.push_back(track.get());
-        lifecycle.push_back(track); // Increment refcount
-        trackMap[track->getTrackId().toStdString()] = track.get();
-      }
-
-      auxBuses.reserve(ownedBuses.size());
-      lifecycleAux.reserve(ownedBuses.size());
-      for (const auto &bus : ownedBuses) {
-        auxBuses.push_back(bus.get());
-        lifecycleAux.push_back(bus);
-        auxBusMap[bus->getId().toStdString()] = bus.get();
-      }
-    }
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses);
   };
 
   // Lock-free snapshot mechanism

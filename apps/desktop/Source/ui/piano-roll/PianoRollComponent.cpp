@@ -21,6 +21,10 @@
 
 using namespace zenith;
 
+// Magic numbers moved to constants/theme
+static constexpr float NOTE_CORNER_RADIUS = 3.0f;
+static constexpr float SELECTION_STROKE_WIDTH = 2.0f;
+static constexpr float HOVER_STROKE_WIDTH = 2.0f;
 constexpr float RULER_HEIGHT = 30.0f;
 constexpr float TOOLBAR_HEIGHT = 40.0f;
 constexpr float PIANO_WIDTH = 80.0f;
