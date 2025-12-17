@@ -81,14 +81,6 @@ ZenithHubComponent::ZenithHubComponent(
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
-  // Initialize Greeting Editor as permanent hidden child
-  greetingEditor_ = std::make_unique<juce::TextEditor>();
-  addChildComponent(greetingEditor_.get());
-  greetingEditor_->setVisible(false);
-  greetingEditor_->setMultiLine(false);
-  greetingEditor_->setReturnKeyStartsNewLine(false);
-  greetingEditor_->setSelectAllWhenFocused(true);
-
   // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
@@ -340,8 +332,6 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   float headerY = mainCardBounds_.fTop + 60;
 
   // Use drawText helper for title as per code review
-  // We construct a specific bounds for the title or just use the whole card
-  // width relative to headerX
   SkRect titleBounds =
       SkRect::MakeXYWH(headerX, headerY - 50, mainCardBounds_.width() - 80, 60);
   drawText(canvas, "Zenith Hub", titleBounds, titleFont_, textPaint_, false);
@@ -362,17 +352,17 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height() + 4);
 
-  // Agent 5: Use Helper
+  // Use Helper for greeting text
   SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height());
   drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
-  // Use predefined constant instead of magic number per code review feedback
-  constexpr float kGreetingIconSize = 16.0f;
 
-  // Calculate icon bounds
+  // Draw Edit Icon using the icon system
+  // Use named constant for icon size per code review feedback
+  constexpr float kGreetingIconSize = 16.0f;
   greetingEditIconBounds_ =
-      SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize,
-                       kGreetingIconSize);
+      SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14,
+                       kGreetingIconSize, kGreetingIconSize);
 
   icons::IconStyle iconStyle;
   iconStyle.color = isGreetingHovered_
@@ -417,7 +407,6 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
 
-    SkFont bodyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
                        recentArea_.fTop + 30, bodyFont_, emptyStatePaint);
 
@@ -426,21 +415,26 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     return;
   }
 
-  for (const auto &proj : recentProjects_) {
+  for (size_t i = 0; i < recentProjects_.size(); ++i) {
+    const auto &proj = recentProjects_[i];
     SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 12.0f, 12.0f);
 
-    // Card background with better depth
+    // Card background with better depth - include selection state
+    bool isSelected = (selectedSection_ == SelectionSection::Recent && 
+                       (int)i == selectedIndex_);
+    bool active = proj.isHovered || isSelected;
+
     SkPaint cardPaint;
-    cardPaint.setColor(proj.isHovered ? withAlpha(colors::BG_LIGHT, 0.15f)
-                                      : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(colors::BG_LIGHT, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
     // Border
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setColor(proj.isHovered
+    borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
+    borderPaint.setColor(active
                              ? withAlpha(proj.accent, 0.4f)
                              : withAlpha(colors::TEXT_PRIMARY, 0.06f));
     borderPaint.setAntiAlias(true);
@@ -512,31 +506,34 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Quick Start", templatesArea_.fLeft,
-                     templatesArea_.fTop - 20, headerFont, textPaint);
+                     templatesArea_.fTop - 20, headerFont_, textPaint);
 
   for (size_t i = 0; i < templates_.size(); ++i) {
     const auto &tmpl = templates_[i];
 
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
 
-    // Card background
+    // Card background - include selection state
+    bool isSelected = (selectedSection_ == SelectionSection::Templates && 
+                       (int)i == selectedIndex_);
+    bool active = tmpl.isHovered || isSelected;
+
     SkPaint cardPaint;
-    cardPaint.setColor(tmpl.isHovered ? withAlpha(tmpl.color, 0.15f)
-                                      : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(tmpl.color, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
     // Border
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setColor(tmpl.isHovered
+    borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
+    borderPaint.setColor(active
                              ? withAlpha(tmpl.color, 0.6f)
                              : withAlpha(colors::TEXT_PRIMARY, 0.06f));
     borderPaint.setAntiAlias(true);
@@ -554,7 +551,6 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     canvas->drawRoundRect(iconBounds, 8.0f, 8.0f, iconBgPaint);
 
     // Icon (via Map)
-    // Here we can use the map to get the path
     SkPath iconPath = icons::Template(); // fallback
     auto it = kTemplateIconMap.find(tmpl.icon);
     if (it != kTemplateIconMap.end()) {
@@ -562,7 +558,6 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     }
 
     // Draw the icon path scaled and centered
-    // Basic scaling logic (assuming 24x24 viewbox for icons)
     SkRect pathBounds = iconPath.getBounds();
     float scale =
         (iconSize * 0.5f) / std::max(pathBounds.width(), pathBounds.height());
@@ -576,32 +571,24 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     iconPaint.setColor(tmpl.color);
     iconPaint.setAntiAlias(true);
 
-    // For now drawing circle as fallback/placeholder if path is empty, or
-    // drawPath if we trust it The original code drew a circle.
-    // "canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
-    // iconPaint);" I will stick to the circle for safety unless I'm sure
-    // icons::... are implemented and working. The review asked to use
-    // std::map/enum for logic, not necessarily to implement the path drawing
-    // if it wasn't there.
+    // Draw circle as fallback
     canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
                        iconPaint);
 
     // Text
-    SkFont nameFont = design::getSkFont(18.0f, design::FontWeight::Bold);
     textPaint.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(tmpl.name.toStdString().c_str(), iconBounds.right() + 16,
-                       tmpl.bounds.centerY() + 6, nameFont, textPaint);
+                       tmpl.bounds.centerY() + 6, templateFont_, textPaint);
   }
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(colors::TEXT_PRIMARY);
   textPaint.setAntiAlias(true);
 
   canvas->drawString("Collaborations", accountArea_.fLeft,
-                     accountArea_.fTop - 20, headerFont, textPaint);
+                     accountArea_.fTop - 20, headerFont_, textPaint);
 
   // Profile card
   SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
@@ -630,26 +617,28 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
 
   // Name
   textPaint.setColor(colors::TEXT_PRIMARY);
-  SkFont nameFont = design::getSkFont(17.0f, design::FontWeight::Bold);
   canvas->drawString("SoundDesigner99", profileBounds_.fLeft + 90,
-                     profileBounds_.centerY() - 6, nameFont, textPaint);
+                     profileBounds_.centerY() - 6, profileFont_, textPaint);
 
   // FIXED: Proper semantic color for online status
-  SkFont statusFont = design::getSkFont(14.0f, design::FontWeight::Regular);
   SkPaint statusPaint;
   statusPaint.setColor(
       SkColorSetARGB(255, 16, 185, 129)); // colors::success equivalent
   statusPaint.setAntiAlias(true);
   canvas->drawString("● Online", profileBounds_.fLeft + 90,
-                     profileBounds_.centerY() + 18, statusFont, statusPaint);
+                     profileBounds_.centerY() + 18, statusFont_, statusPaint);
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f);
 
+  // Include selection state for New Project button
+  bool isSelected = (selectedSection_ == SelectionSection::New);
+  bool active = isNewProjectHovered_ || isSelected;
+
   // FIXED: Solid professional blue with proper states
   SkColor buttonColor =
-      isNewProjectHovered_
+      active
           ? SkColorSetARGB(255, 96, 165, 250)  // Hover: lighter blue
           : SkColorSetARGB(255, 59, 130, 246); // Default: professional blue
 
@@ -658,7 +647,7 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   btnPaint.setAntiAlias(true);
 
   // Shadow on hover
-  if (isNewProjectHovered_) {
+  if (active) {
     SkPaint shadowPaint;
     shadowPaint.setColor(withAlpha(buttonColor, 0.4f));
     shadowPaint.setMaskFilter(
@@ -672,21 +661,20 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   canvas->drawRRect(rrect, btnPaint);
 
   // Text
-  SkFont btnFont = design::getSkFont(20.0f, design::FontWeight::Bold);
   SkPaint textPaint;
   textPaint.setColor(SK_ColorWHITE);
   textPaint.setAntiAlias(true);
 
   SkString text("New Project");
   SkRect textBounds;
-  btnFont.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8,
+  buttonFont_.measureText(text.c_str(), text.size(), SkTextEncoding::kUTF8,
                       &textBounds);
 
   float tx = newProjectButtonBounds_.centerX() - (textBounds.width() / 2.0f);
   float ty =
       newProjectButtonBounds_.centerY() + (textBounds.height() / 2.0f) - 4.0f;
 
-  canvas->drawString(text, tx, ty, btnFont, textPaint);
+  canvas->drawString(text, tx, ty, buttonFont_, textPaint);
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
@@ -844,8 +832,21 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_->grabKeyboardFocus();
 }
 
-// Agent 5: Keyboard Navigation - Refactored to if-else per compiler
-// requirements
+void ZenithHubComponent::hideGreetingEditor(bool save) {
+  if (!greetingEditor_)
+    return;
+  
+  if (save) {
+    greetingText_ = greetingEditor_->getText();
+  }
+  
+  juce::MessageManager::callAsync([this]() {
+    greetingEditor_.reset();
+    repaint();
+  });
+}
+
+// Keyboard Navigation - Using if-statements (JUCE KeyPress constants not constexpr on MSVC)
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   const int code = key.getKeyCode();
 
@@ -869,6 +870,7 @@ bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
     moveSelection(1);
     return true;
   }
+
   return SkiaComponent::keyPressed(key);
 }
 
@@ -895,6 +897,11 @@ void ZenithHubComponent::triggerSelection() {
     if (onLoadProject_) {
       onLoadProject_(recentProjects_[selectedIndex_].path);
     }
+  } else if (selectedSection_ == SelectionSection::New) {
+    if (onNewProject_) {
+      onNewProject_();
+    }
+    dismiss();
   }
 }
 
