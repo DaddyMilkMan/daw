@@ -75,7 +75,7 @@ ZenithHubComponent::ZenithHubComponent(
 
   textPaint_.setAntiAlias(true);
   textPaint_.setColor(colors::TEXT_PRIMARY);
-  
+
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
@@ -328,26 +328,33 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Subtitle
     SkString greeting(greetingText_.toRawUTF8());
     SkRect bounds;
-    subFont_.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
-    
+    subFont_.measureText(greeting.c_str(), greeting.size(),
+                         SkTextEncoding::kUTF8, &bounds);
+
     float subX = headerX;
     float subY = headerY + 32;
-    
+
     // Store bounds for interaction
-    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
-    
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                           bounds.width(), bounds.height() + 4);
+
     canvas->drawString(greeting, subX, subY, subFont_, subPaint_);
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
-    greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize, kGreetingIconSize);
-    
+    greetingEditIconBounds_ =
+        SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14,
+                         kGreetingIconSize, kGreetingIconSize);
+
     icons::IconStyle iconStyle;
-    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.color = isGreetingHovered_
+                          ? colors::CYAN
+                          : withAlpha(colors::TEXT_SECONDARY, 0.5f);
     // Use predefined constant instead of magic number per code review feedback
     iconStyle.strokeWidth = icons::STROKE_THIN;
-    
-    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, kGreetingIconSize, iconStyle);
+
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
+                            kGreetingIconSize, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -380,11 +387,15 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 
   // Empty state check
   if (recentProjects_.empty()) {
+    SkPaint emptyStatePaint = textPaint_;
+    emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
+
+    SkFont bodyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
-                       recentArea_.fTop + 30, cardTitleFont_, textPaint_);
+                       recentArea_.fTop + 30, bodyFont, emptyStatePaint);
 
     canvas->drawString("Click 'New Project' to get started!", recentArea_.fLeft,
-                       recentArea_.fTop + 55, statusFont_, textPaint_);
+                       recentArea_.fTop + 55, statusFont_, emptyStatePaint);
     return;
   }
 
@@ -427,6 +438,11 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 
     // Draw icon centered in thumbnail
     SkRect pathBounds = iconPath.getBounds();
+
+    SkPaint iconPaint;
+    iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+    iconPaint.setAntiAlias(true);
+
     if (!pathBounds.isEmpty()) {
       float iconSize = 40.0f; // Fits nicely in 86x86
       float scale =
@@ -438,24 +454,18 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
       matrix.postScale(scale, scale);
       matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
 
-      SkPaint iconPaint;
-      iconPaint.setColor(withAlpha(proj.accent, 0.8f));
-      iconPaint.setAntiAlias(true);
-
       SkPath scaledPath;
       iconPath.transform(matrix, &scaledPath);
       canvas->drawPath(scaledPath, iconPaint);
     } else {
-        // Fallback for empty path
-        SkPaint iconPaint;
-        iconPaint.setColor(withAlpha(proj.accent, 0.8f));
-        iconPaint.setAntiAlias(true);
-        canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12, iconPaint);
+      // Fallback for empty path
+      canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12,
+                         iconPaint);
     }
 
     // Text content
     float textX = thumbRect.right() + 16;
-    
+
     SkPaint cardTextPaint = textPaint_;
     cardTextPaint.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(proj.name.toStdString().c_str(), textX,
@@ -467,10 +477,9 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 
     // Genre badge
     if (proj.genre.isNotEmpty()) {
-      SkPaint genrePaint = textPaint_;
-      genrePaint.setColor(proj.accent);
+      cardTextPaint.setColor(proj.accent);
       canvas->drawString(proj.genre.toStdString().c_str(), textX,
-                         proj.bounds.fTop + 82, cardGenreFont_, genrePaint);
+                         proj.bounds.fTop + 82, cardGenreFont_, cardTextPaint);
     }
   }
 }
@@ -683,10 +692,11 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     needsUpdate = true;
   }
 
-  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) ||
+            greetingEditIconBounds_.contains(pt.fX, pt.fY);
   if (gh != isGreetingHovered_) {
-      isGreetingHovered_ = gh;
-      needsUpdate = true;
+    isGreetingHovered_ = gh;
+    needsUpdate = true;
   }
 
   if (needsUpdate)
@@ -745,9 +755,10 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Greeting Edit
-  if (greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
-      showGreetingEditor();
-      return;
+  if (greetingTextBounds_.contains(pt.fX, pt.fY) ||
+      greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+    showGreetingEditor();
+    return;
   }
 }
 
@@ -756,26 +767,26 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_) return;
+  if (greetingEditor_)
+    return;
 
   greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
   greetingEditor_->setText(greetingText_);
   greetingEditor_->setSelectAllWhenFocused(true);
   greetingEditor_->setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
-  
+  greetingEditor_->setFont(juce::Font(18.0f));
+
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
   constexpr int kEditorHeight = 24;
-  
+
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
   juce::Rectangle<int> bounds(
-      (int)greetingTextBounds_.left(), 
-      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
-      kEditorHeight);
-      
+      (int)greetingTextBounds_.left(),
+      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+
   greetingEditor_->setBounds(bounds);
   // Use async destruction to avoid crashes when destroying from callback
   greetingEditor_->onReturnKey = [this]() {
@@ -785,12 +796,10 @@ void ZenithHubComponent::showGreetingEditor() {
       repaint();
     });
   };
-  
+
   // Shared lambda for dismissing the editor without saving
   auto dismissEditor = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
+    juce::MessageManager::callAsync([this]() { greetingEditor_.reset(); });
   };
 
   greetingEditor_->onEscapeKey = dismissEditor;
@@ -798,6 +807,76 @@ void ZenithHubComponent::showGreetingEditor() {
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
+}
+
+// Agent 5: Keyboard Navigation - Refactored to switch per code review
+bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
+  switch (key.getKeyCode()) {
+  case juce::KeyPress::returnKey:
+    triggerSelection();
+    return true;
+  case juce::KeyPress::upKey:
+    moveSelection(-2); // Primitive grid nav for now
+    return true;
+  case juce::KeyPress::downKey:
+    moveSelection(2);
+    return true;
+  case juce::KeyPress::leftKey:
+    moveSelection(-1);
+    return true;
+  case juce::KeyPress::rightKey:
+    moveSelection(1);
+    return true;
+  default:
+    break;
+  }
+
+  return SkiaComponent::keyPressed(key);
+}
+
+// Agent 5: Selection logic - Fixed empty list bug per code review
+void ZenithHubComponent::moveSelection(int delta) {
+  // Fix: Handle empty projects list per code review
+  if (recentProjects_.empty()) {
+    selectedSection_ = SelectionSection::None;
+    selectedIndex_ = -1;
+  } else if (selectedSection_ == SelectionSection::None) {
+    selectedSection_ = SelectionSection::Recent;
+    selectedIndex_ = 0;
+  } else {
+    selectedIndex_ += delta;
+    selectedIndex_ =
+        juce::jlimit(0, (int)recentProjects_.size() - 1, selectedIndex_);
+  }
+  repaint();
+}
+
+void ZenithHubComponent::triggerSelection() {
+  if (selectedSection_ == SelectionSection::Recent && selectedIndex_ >= 0 &&
+      selectedIndex_ < (int)recentProjects_.size()) {
+    if (onLoadProject_) {
+      onLoadProject_(recentProjects_[selectedIndex_].path);
+    }
+  }
+}
+
+// Agent 5: Text Rendering Helper
+void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
+                                  const SkRect &bounds, const SkFont &font,
+                                  const SkPaint &paint, bool centerVertical) {
+  SkString skText(text.toRawUTF8());
+  SkRect textBounds;
+  font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,
+                   &textBounds);
+
+  float x = bounds.left();
+  float y = bounds.bottom();
+
+  if (centerVertical) {
+    y = bounds.centerY() + (textBounds.height() * 0.5f);
+  }
+
+  canvas->drawString(skText, x, y, font, paint);
 }
 
 } // namespace zenith
