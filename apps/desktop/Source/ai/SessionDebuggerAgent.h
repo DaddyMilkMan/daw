@@ -24,9 +24,9 @@
 
 #pragma once
 
-#include "Engine.h"
 #include "../engine/RoutingGraph.h"
 #include "../engine/Track.h"
+#include "Engine.h"
 #include <atomic>
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -38,6 +38,7 @@
 #include <set>
 #include <unordered_set>
 #include <vector>
+
 
 namespace zenith {
 namespace ai {
@@ -539,7 +540,7 @@ private:
 
   // Locked tracks (user manually excluded from debugging)
   std::unordered_set<int> lockedTracks_;
-  juce::CriticalSection lockedTracksLock_;
+  mutable juce::CriticalSection lockedTracksLock_;
 
   // Whitelist for plugins that intentionally clip (Distortion, Bitcrusher,
   // etc.)
