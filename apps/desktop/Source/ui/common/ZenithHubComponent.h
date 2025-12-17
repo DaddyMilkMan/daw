@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <JuceHeader.h>
+
 #include "../../engine/RecentProjectManager.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
@@ -59,6 +61,7 @@ public:
   void resized() override;
 
   void mouseMove(const juce::MouseEvent &e) override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
@@ -66,7 +69,6 @@ public:
 
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
-  bool keyPressed(const juce::KeyPress &key) override;
 
   // Animation hook
   void timerCallback() override;
@@ -76,6 +78,7 @@ public:
 
   void show();
   void dismiss();
+  void refreshProjects();
 
   /**
    * @brief Refresh the recent projects list from the manager

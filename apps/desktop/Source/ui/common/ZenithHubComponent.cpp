@@ -14,6 +14,7 @@
 */
 
 #include "ZenithHubComponent.h"
+#include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
 #include <array>
 #include <cmath>
@@ -79,6 +80,14 @@ ZenithHubComponent::ZenithHubComponent(
 
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+
+  // Initialize Greeting Editor as permanent hidden child
+  greetingEditor_ = std::make_unique<juce::TextEditor>();
+  addChildComponent(greetingEditor_.get());
+  greetingEditor_->setVisible(false);
+  greetingEditor_->setMultiLine(false);
+  greetingEditor_->setReturnKeyStartsNewLine(false);
+  greetingEditor_->setSelectAllWhenFocused(true);
 
   // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
@@ -241,35 +250,40 @@ void ZenithHubComponent::updateLayout() {
       sidebarX, newProjectButtonBounds_.bottom() + padding, colTwoW,
       recentArea_.bottom() - (newProjectButtonBounds_.bottom() + padding));
 
-  // Update Recent Project Cards Layout (Grid)
-  float gridW = recentArea_.width();
-  float cardGap = 16.0f;
-  float pCardW = (gridW - cardGap) / 2.0f;
-  float pCardH = 110.0f;
-
-  for (size_t i = 0; i < recentProjects_.size(); ++i) {
-    int row = (int)i / 2;
-    int col = (int)i % 2;
-
-    float px = recentArea_.fLeft + (col * (pCardW + cardGap));
-    float py = recentArea_.fTop + (row * (pCardH + cardGap));
-
-    recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
-  }
-
-  // Update Template Cards (Larger with icons)
-  float tCardH = 90.0f;
-  for (size_t i = 0; i < templates_.size(); ++i) {
-    float tx = templatesArea_.fLeft;
-    float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
-    templates_[i].bounds =
-        SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
-  }
-
   // Profile Button
   profileBounds_ =
       SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
                        accountArea_.width(), 90.0f);
+
+  // Restore Layout Loops (Grid for Projects)
+  if (!recentArea_.isEmpty()) {
+    float gridW = recentArea_.width();
+    float cardGap = 16.0f;
+    float pCardW = (gridW - cardGap) / 2.0f;
+    float pCardH = 110.0f;
+
+    for (size_t i = 0; i < recentProjects_.size(); ++i) {
+      int row = (int)i / 2;
+      int col = (int)i % 2;
+
+      float px = recentArea_.fLeft + (col * (pCardW + cardGap));
+      float py = recentArea_.fTop + (row * (pCardH + cardGap));
+
+      recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
+    }
+  }
+
+  // Restore Layout Loops (Stack for Templates)
+  if (!templatesArea_.isEmpty()) {
+    float tCardH = 90.0f;
+    float cardGap = 16.0f;
+    for (size_t i = 0; i < templates_.size(); ++i) {
+      float tx = templatesArea_.fLeft;
+      float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
+      templates_[i].bounds =
+          SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
+    }
+  }
 }
 
 void ZenithHubComponent::timerCallback() {
@@ -352,11 +366,18 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height());
   drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
+  // Use predefined constant instead of magic number per code review feedback
+  constexpr float kGreetingIconSize = 16.0f;
+
+  // Calculate icon bounds
+  greetingEditIconBounds_ =
+      SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize,
+                       kGreetingIconSize);
+
   icons::IconStyle iconStyle;
   iconStyle.color = isGreetingHovered_
                         ? colors::CYAN
                         : withAlpha(colors::TEXT_SECONDARY, 0.5f);
-  // Use predefined constant instead of magic number per code review feedback
   iconStyle.strokeWidth = icons::STROKE_THIN;
 
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
@@ -790,6 +811,12 @@ void ZenithHubComponent::showGreetingEditor() {
   constexpr int kEditorHeight = 24;
 
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
+  // Ensure we have valid bounds
+  if (greetingTextBounds_.isEmpty()) {
+    // Fallback if bounds not yet calculated
+    return;
+  }
+
   juce::Rectangle<int> bounds(
       (int)greetingTextBounds_.left(),
       (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
@@ -817,28 +844,30 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_->grabKeyboardFocus();
 }
 
-// Agent 5: Keyboard Navigation - Refactored to switch per code review
+// Agent 5: Keyboard Navigation - Refactored to if-else per compiler
+// requirements
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   const int code = key.getKeyCode();
 
-  switch (code) {
-  case juce::KeyPress::returnKey:
+  if (code == juce::KeyPress::returnKey) {
     triggerSelection();
     return true;
-  case juce::KeyPress::upKey:
-    moveSelection(-2); // Primitive grid nav
+  }
+  if (code == juce::KeyPress::upKey) {
+    moveSelection(-2); // Primitive grid nav for now
     return true;
-  case juce::KeyPress::downKey:
+  }
+  if (code == juce::KeyPress::downKey) {
     moveSelection(2);
     return true;
-  case juce::KeyPress::leftKey:
+  }
+  if (code == juce::KeyPress::leftKey) {
     moveSelection(-1);
     return true;
-  case juce::KeyPress::rightKey:
+  }
+  if (code == juce::KeyPress::rightKey) {
     moveSelection(1);
     return true;
-  default:
-    break;
   }
   return SkiaComponent::keyPressed(key);
 }

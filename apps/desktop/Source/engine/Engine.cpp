@@ -1333,18 +1333,15 @@ void Engine::enableMidiInput() {
     DBG("Engine: No MIDI inputs could be opened");
   }
 }
-
 void Engine::disableMidiInput() {
-  if (!midiInputs_.empty()) {
-    DBG("Engine: Stopping " + juce::String(midiInputs_.size()) +
-        " MIDI inputs...");
-    for (auto &input : midiInputs_) {
-      if (input)
-        input->stop();
-    }
-    midiInputs_.clear();
-    DBG("Engine: MIDI inputs stopped");
+  DBG("Engine: Disabling MIDI inputs...");
+
+  for (auto &input : midiInputs_) {
+    if (input)
+      input->stop();
   }
+  midiInputs_.clear();
+  DBG("Engine: MIDI inputs stopped");
 }
 
 void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
