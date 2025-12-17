@@ -339,6 +339,16 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
                                            bounds.width(), bounds.height() + 4);
 
     canvas->drawString(greeting, subX, subY, subFont_, subPaint_);
+
+    // Agent 5: Use Helper (redundant with drawString above but keeping for
+    // consistency with recovered snippets if needed, actually better to just
+    // use ONE. The Agent 5 snippet REPLACED drawString. I will replace it.)
+
+    /* Replaced by:
+    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
+    bounds.width(), bounds.height()); drawText(canvas, greetingText_,
+    helperBounds, subFont_, subPaint_, false);
+    */
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
@@ -810,25 +820,26 @@ void ZenithHubComponent::showGreetingEditor() {
 }
 
 // Agent 5: Keyboard Navigation - Refactored to switch per code review
+// Agent 5: Keyboard Navigation - Refactored to if-else per compiler
+// requirements
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
-  switch (key.getKeyCode()) {
-  case juce::KeyPress::returnKey:
+  const int code = key.getKeyCode();
+
+  if (code == juce::KeyPress::returnKey) {
     triggerSelection();
     return true;
-  case juce::KeyPress::upKey:
+  } else if (code == juce::KeyPress::upKey) {
     moveSelection(-2); // Primitive grid nav for now
     return true;
-  case juce::KeyPress::downKey:
+  } else if (code == juce::KeyPress::downKey) {
     moveSelection(2);
     return true;
-  case juce::KeyPress::leftKey:
+  } else if (code == juce::KeyPress::leftKey) {
     moveSelection(-1);
     return true;
-  case juce::KeyPress::rightKey:
+  } else if (code == juce::KeyPress::rightKey) {
     moveSelection(1);
     return true;
-  default:
-    break;
   }
 
   return SkiaComponent::keyPressed(key);

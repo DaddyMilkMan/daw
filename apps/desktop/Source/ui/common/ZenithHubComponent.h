@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "../engine/RecentProjectManager.h"
+#include "../../engine/RecentProjectManager.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
@@ -65,6 +65,7 @@ public:
 
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
+  bool keyPressed(const juce::KeyPress &key) override;
 
   // Animation hook
   void timerCallback() override;
@@ -78,7 +79,6 @@ public:
   /**
    * @brief Refresh the recent projects list from the manager
    */
-  void refreshProjects();
 
 private:
   RecentProjectManager &recentProjectManager_;
@@ -180,7 +180,19 @@ private:
   void updateLayout();
 
   // Aurora living background
+  // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+
+  // Keyboard navigation state
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
+  int selectedIndex_ = -1;
+
+  void moveSelection(int delta);
+  void triggerSelection();
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical);
 
   // Cached Fonts & Paints - Optimization for A+ Grade
   SkFont titleFont_;
@@ -193,7 +205,7 @@ private:
   SkFont statusFont_;
   SkFont templateFont_;
   SkFont profileFont_;
-  
+
   SkPaint textPaint_;
   SkPaint subPaint_;
 
