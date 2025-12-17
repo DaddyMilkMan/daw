@@ -130,6 +130,12 @@ public:
   bool keyPressed(
       const juce::KeyPress &key) override; // from SkiaComponent/Component
 
+  // Mouse Helper Methods
+  void handleToolbarClick(const juce::MouseEvent &e, float x, float y);
+  void handlePianoKeyClick(const juce::MouseEvent &e, float x, float y);
+  void handleVelocityLaneClick(const juce::MouseEvent &e, float x, float y);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e, float x, float y);
+
   juce::MouseCursor getMouseCursor() override; // from SkiaComponent/Component
 
   //==========================================================================
@@ -146,7 +152,6 @@ public:
   /** Apply velocity curve to selected notes */
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
   void applyVelocityCurve(VelocityCurve curve, float amount = 1.0f);
-
 
   //==========================================================================
   // Tool System
@@ -669,7 +674,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -735,7 +739,6 @@ private:
   ScaleHighlight scaleHighlight;
   void updateScaleHighlight();
   bool isNoteInScale(int pitch) const;
-
 
   //==========================================================================
   // Chord Detection
@@ -1020,7 +1023,6 @@ private:
   // Tool state
   Tool currentTool = Tool::Select;
 
-
   //==========================================================================
   // Ghost Notes State
   //==========================================================================
@@ -1115,8 +1117,6 @@ private:
   void syncStepSequencerToNotes();
   void syncNotesToStepSequencer();
 
-
-
   //==========================================================================
   // Strumming State
   //==========================================================================
@@ -1139,7 +1139,6 @@ private:
   void applyPattern(const MelodyPattern &pattern, double startBeat,
                     int transposition);
 
-
   //==========================================================================
   // Scale Highlight State
   //==========================================================================
@@ -1154,9 +1153,6 @@ private:
   //==========================================================================
   // Chord Detection Helper
   //==========================================================================
-
-
-
 
   //==========================================================================
   // Fold Mode State (Ableton-style)
