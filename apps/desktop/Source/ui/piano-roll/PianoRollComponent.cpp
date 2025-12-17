@@ -370,25 +370,35 @@ void PianoRollComponent::mouseMove(const juce::MouseEvent &e) {
 
   if (newHoveredKey != hoveredPianoKey) {
     hoveredPianoKey = newHoveredKey;
-    repaint();
+    repaint(0, 0, (int)PIANO_WIDTH, getHeight());
   }
 
   // Update cursor based on position
   auto newCursorType = getCursorForPosition(x, y);
   if (newCursorType != currentCursorType) {
     currentCursorType = newCursorType;
-    repaint();
+    repaint(); // Cursor changes might affect tooltips or global state, keep simple for cursor
   }
 
   // Track hovered note
   auto *newHoveredNote = findNoteAtPosition(x, y);
   if (newHoveredNote != hoveredNote) {
-    if (hoveredNote)
+    juce::Rectangle<float> dirtyRect;
+
+    if (hoveredNote) {
       hoveredNote->isHovered = false;
+      dirtyRect = dirtyRect.getUnion(hoveredNote->bounds);
+    }
     hoveredNote = newHoveredNote;
-    if (hoveredNote)
+    if (hoveredNote) {
       hoveredNote->isHovered = true;
-    repaint();
+      dirtyRect = dirtyRect.getUnion(hoveredNote->bounds);
+    }
+    
+    if (!dirtyRect.isEmpty()) {
+       // Expand slightly for strokes/shadows
+       repaint(dirtyRect.expanded(2.0f).toNearestInt());
+    }
   }
 }
 

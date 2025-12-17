@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "../engine/RecentProjectManager.h"
+#include "../../engine/RecentProjectManager.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
@@ -66,6 +66,7 @@ public:
 
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
+  bool keyPressed(const juce::KeyPress &key) override;
 
   // Animation hook
   void timerCallback() override;
@@ -79,7 +80,6 @@ public:
   /**
    * @brief Refresh the recent projects list from the manager
    */
-  void refreshProjects();
 
 private:
   RecentProjectManager &recentProjectManager_;
@@ -199,6 +199,7 @@ private:
 
   void updateLayout();
 
+  // Aurora living background
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
 

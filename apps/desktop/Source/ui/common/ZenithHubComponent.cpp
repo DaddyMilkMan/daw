@@ -75,9 +75,12 @@ ZenithHubComponent::ZenithHubComponent(
   bodyFont_ = design::getSkFont(16.0f, design::FontWeight::Regular);
 
   textPaint_.setAntiAlias(true);
+  textPaint_.setColor(colors::TEXT_PRIMARY);
 
   subPaint_.setAntiAlias(true);
   subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+
+  // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
   // Start fade-in
@@ -317,50 +320,47 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
                           GlassmorphicPanel::Style::Floating);
 
   // Header with proper hierarchy
-  {
-    textPaint_.setColor(colors::TEXT_PRIMARY);
+  textPaint_.setColor(colors::TEXT_PRIMARY);
 
-    float headerX = mainCardBounds_.fLeft + 40;
-    float headerY = mainCardBounds_.fTop + 60;
+  float headerX = mainCardBounds_.fLeft + 40;
+  float headerY = mainCardBounds_.fTop + 60;
 
-    canvas->drawString("Zenith Hub", headerX, headerY, titleFont_, textPaint_);
+  // Use drawText helper for title as per code review
+  // We construct a specific bounds for the title or just use the whole card
+  // width relative to headerX
+  SkRect titleBounds =
+      SkRect::MakeXYWH(headerX, headerY - 50, mainCardBounds_.width() - 80, 60);
+  drawText(canvas, "Zenith Hub", titleBounds, titleFont_, textPaint_, false);
 
-    // Subtitle with proper sizing
-    subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+  // Subtitle with proper sizing
+  subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
-    SkString greeting(greetingText_.toRawUTF8());
-    SkRect bounds;
-    subFont_.measureText(greeting.c_str(), greeting.size(),
-                         SkTextEncoding::kUTF8, &bounds);
+  // Subtitle
+  SkString greeting(greetingText_.toRawUTF8());
+  SkRect bounds;
+  subFont_.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8,
+                       &bounds);
 
-    float subX = headerX;
-    float subY = headerY + 32;
+  float subX = headerX;
+  float subY = headerY + 32;
 
-    // Store bounds for interaction
-    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
-                                           bounds.width(), bounds.height() + 4);
+  // Store bounds for interaction
+  greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                         bounds.width(), bounds.height() + 4);
 
-    // Agent 5: Use Helper
-    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
-                                           bounds.width(), bounds.height());
-    drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
-    // Draw Edit Icon using the icon system
-    // Use named constant for icon size per code review feedback
-    constexpr float kGreetingIconSize = 16.0f;
-    greetingEditIconBounds_ =
-        SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14,
-                         kGreetingIconSize, kGreetingIconSize);
+  // Agent 5: Use Helper
+  SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                         bounds.width(), bounds.height());
+  drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
+  icons::IconStyle iconStyle;
+  iconStyle.color = isGreetingHovered_
+                        ? colors::CYAN
+                        : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+  // Use predefined constant instead of magic number per code review feedback
+  iconStyle.strokeWidth = icons::STROKE_THIN;
 
-    icons::IconStyle iconStyle;
-    iconStyle.color = isGreetingHovered_
-                          ? colors::CYAN
-                          : withAlpha(colors::TEXT_SECONDARY, 0.5f);
-    // Use predefined constant instead of magic number per code review feedback
-    iconStyle.strokeWidth = icons::STROKE_THIN;
-
-    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
-                            kGreetingIconSize, iconStyle);
-  }
+  icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
+                          kGreetingIconSize, iconStyle);
 
   drawRecentProjects(canvas);
   drawAccount(canvas);
@@ -388,7 +388,6 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
   textPaint_.setColor(colors::TEXT_PRIMARY);
-
   canvas->drawString("Recent Projects", recentArea_.fLeft,
                      recentArea_.fTop - 20, headerFont_, textPaint_);
 
@@ -397,6 +396,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
 
+    SkFont bodyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
                        recentArea_.fTop + 30, bodyFont_, emptyStatePaint);
 
@@ -443,32 +443,49 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     }
 
     // Draw icon centered in thumbnail
-    // TODO: Scale icon to fit? Assuming icons are normalized or standard size.
-    // For now assuming icons::... returns a path around 0,0 or 24x24.
-    // Let's just fill a rect with color for now as in original code, or try to
-    // draw path if we knew how to scale it. Original HEAD code had
-    // `canvas->drawRRect` for thumbnail. Let's stick to the color block as the
-    // "Thumbnail". Wait, the review mentioned: "Mock Image / Icon (accent
-    // colored rectangle)" was master. HEAD had "Thumbnail with accent color".
-    // I will stick to the accent color block for safety, but maybe add a small
-    // icon overlay if I can.
+    SkRect pathBounds = iconPath.getBounds();
+
+    SkPaint iconPaint;
+    iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+    iconPaint.setAntiAlias(true);
+
+    if (!pathBounds.isEmpty()) {
+      float iconSize = 40.0f; // Fits nicely in 86x86
+      float scale =
+          iconSize / std::max(pathBounds.width(), pathBounds.height());
+
+      SkMatrix matrix;
+      matrix.reset();
+      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
+      matrix.postScale(scale, scale);
+      matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
+
+      SkPath scaledPath;
+      iconPath.transform(matrix, &scaledPath);
+      canvas->drawPath(scaledPath, iconPaint);
+    } else {
+      // Fallback for empty path
+      canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12,
+                         iconPaint);
+    }
 
     // Text content
     float textX = thumbRect.right() + 16;
 
-    textPaint_.setColor(colors::TEXT_PRIMARY);
+    SkPaint cardTextPaint = textPaint_;
+    cardTextPaint.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(proj.name.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 35, cardTitleFont_, textPaint_);
+                       proj.bounds.fTop + 35, cardTitleFont_, cardTextPaint);
 
-    textPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
+    cardTextPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
     canvas->drawString(proj.date.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 60, cardDateFont_, textPaint_);
+                       proj.bounds.fTop + 60, cardDateFont_, cardTextPaint);
 
     // Genre badge
     if (proj.genre.isNotEmpty()) {
-      textPaint_.setColor(proj.accent);
+      cardTextPaint.setColor(proj.accent);
       canvas->drawString(proj.genre.toStdString().c_str(), textX,
-                         proj.bounds.fTop + 82, cardGenreFont_, textPaint_);
+                         proj.bounds.fTop + 82, cardGenreFont_, cardTextPaint);
     }
   }
 }
@@ -482,7 +499,9 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
   canvas->drawString("Quick Start", templatesArea_.fLeft,
                      templatesArea_.fTop - 20, headerFont, textPaint);
 
-  for (const auto &tmpl : templates_) {
+  for (size_t i = 0; i < templates_.size(); ++i) {
+    const auto &tmpl = templates_[i];
+
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
 
     // Card background
@@ -541,8 +560,8 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     // "canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
     // iconPaint);" I will stick to the circle for safety unless I'm sure
     // icons::... are implemented and working. The review asked to use
-    // std::map/enum for logic, not necessarily to implement the path drawing if
-    // it wasn't there.
+    // std::map/enum for logic, not necessarily to implement the path drawing
+    // if it wasn't there.
     canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12,
                        iconPaint);
 
@@ -802,27 +821,25 @@ void ZenithHubComponent::showGreetingEditor() {
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   const int code = key.getKeyCode();
 
-  if (code == juce::KeyPress::returnKey) {
+  switch (code) {
+  case juce::KeyPress::returnKey:
     triggerSelection();
     return true;
-  }
-  if (code == juce::KeyPress::upKey) {
-    moveSelection(-2); // Primitive grid nav for now
+  case juce::KeyPress::upKey:
+    moveSelection(-2); // Primitive grid nav
     return true;
-  }
-  if (code == juce::KeyPress::downKey) {
+  case juce::KeyPress::downKey:
     moveSelection(2);
     return true;
-  }
-  if (code == juce::KeyPress::leftKey) {
+  case juce::KeyPress::leftKey:
     moveSelection(-1);
     return true;
-  }
-  if (code == juce::KeyPress::rightKey) {
+  case juce::KeyPress::rightKey:
     moveSelection(1);
     return true;
+  default:
+    break;
   }
-
   return SkiaComponent::keyPressed(key);
 }
 
@@ -862,7 +879,8 @@ void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                    &textBounds);
 
   float x = bounds.left();
-  float y = bounds.bottom();
+  // Align text top to the top of the bounds
+  float y = bounds.fTop - textBounds.fTop;
 
   if (centerVertical) {
     y = bounds.centerY() + (textBounds.height() * 0.5f);
