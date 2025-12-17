@@ -108,6 +108,22 @@ private:
   Spring tiltX_;
   Spring tiltY_;
 
+  // Cached Fonts & Paints - Optimization for A+ Grade
+  SkFont titleFont_;
+  SkFont subFont_;
+  SkFont headerFont_;
+  SkFont cardTitleFont_;
+  SkFont cardDateFont_;
+  SkFont cardGenreFont_;
+  SkFont buttonFont_;
+  SkFont statusFont_;
+  SkFont templateFont_;
+  SkFont profileFont_;
+  SkFont bodyFont_;
+
+  SkPaint textPaint_;
+  SkPaint subPaint_;
+
   // Layout
   SkRect mainCardBounds_;
   SkRect recentArea_;
@@ -170,6 +186,9 @@ private:
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
 
   /** @brief Convert RecentProjectEntry to internal format */
   void loadFromManager();
@@ -181,6 +200,14 @@ private:
 
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+
+  // Keyboard navigation state
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
+  int selectedIndex_ = -1;
+
+  void moveSelection(int delta);
+  void triggerSelection();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

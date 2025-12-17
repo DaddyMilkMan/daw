@@ -61,7 +61,23 @@ ZenithHubComponent::ZenithHubComponent(
                 {"Orchestral", "icon_note", colors::VIOLET, {}, false},
                 {"Recording", "icon_mic", colors::NEON_PINK, {}, false}};
 
-  // Initialize Aurora Background
+  // Initialize Cached Fonts (A+ Enhancement)
+  titleFont_ = design::getSkFont(48.0f, design::FontWeight::Bold);
+  subFont_ = design::getSkFont(18.0f, design::FontWeight::Regular);
+  headerFont_ = design::getSkFont(22.0f, design::FontWeight::Bold);
+  cardTitleFont_ = design::getSkFont(16.0f, design::FontWeight::Bold);
+  cardDateFont_ = design::getSkFont(13.0f, design::FontWeight::Regular);
+  cardGenreFont_ = design::getSkFont(12.0f, design::FontWeight::Medium);
+  buttonFont_ = design::getSkFont(20.0f, design::FontWeight::Bold);
+  statusFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  templateFont_ = design::getSkFont(18.0f, design::FontWeight::Bold);
+  profileFont_ = design::getSkFont(17.0f, design::FontWeight::Bold);
+  bodyFont_ = design::getSkFont(16.0f, design::FontWeight::Regular);
+
+  textPaint_.setAntiAlias(true);
+
+  subPaint_.setAntiAlias(true);
+  subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
   // Start fade-in
@@ -302,44 +318,48 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
   // Header with proper hierarchy
   {
-    SkFont titleFont = design::getSkFont(48.0f, design::FontWeight::Bold);
-    SkPaint titlePaint;
-    titlePaint.setColor(colors::TEXT_PRIMARY);
-    titlePaint.setAntiAlias(true);
+    textPaint_.setColor(colors::TEXT_PRIMARY);
 
     float headerX = mainCardBounds_.fLeft + 40;
     float headerY = mainCardBounds_.fTop + 60;
 
-    canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
+    canvas->drawString("Zenith Hub", headerX, headerY, titleFont_, textPaint_);
 
     // Subtitle with proper sizing
-    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
-    SkPaint subPaint;
-    subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
-    subPaint.setAntiAlias(true);
+    subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
 
     SkString greeting(greetingText_.toRawUTF8());
     SkRect bounds;
-    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
-    
+    subFont_.measureText(greeting.c_str(), greeting.size(),
+                         SkTextEncoding::kUTF8, &bounds);
+
     float subX = headerX;
     float subY = headerY + 32;
-    
+
     // Store bounds for interaction
-    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
-    
-    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                           bounds.width(), bounds.height() + 4);
+
+    // Agent 5: Use Helper
+    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
+                                           bounds.width(), bounds.height());
+    drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
-    greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize, kGreetingIconSize);
-    
+    greetingEditIconBounds_ =
+        SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14,
+                         kGreetingIconSize, kGreetingIconSize);
+
     icons::IconStyle iconStyle;
-    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
+    iconStyle.color = isGreetingHovered_
+                          ? colors::CYAN
+                          : withAlpha(colors::TEXT_SECONDARY, 0.5f);
     // Use predefined constant instead of magic number per code review feedback
     iconStyle.strokeWidth = icons::STROKE_THIN;
-    
-    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, kGreetingIconSize, iconStyle);
+
+    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
+                            kGreetingIconSize, iconStyle);
   }
 
   drawRecentProjects(canvas);
@@ -367,25 +387,21 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
-  SkPaint textPaint;
-  textPaint.setColor(colors::TEXT_PRIMARY);
-  textPaint.setAntiAlias(true);
+  textPaint_.setColor(colors::TEXT_PRIMARY);
 
   canvas->drawString("Recent Projects", recentArea_.fLeft,
-                     recentArea_.fTop - 20, headerFont, textPaint);
+                     recentArea_.fTop - 20, headerFont_, textPaint_);
 
   // Empty state check
   if (recentProjects_.empty()) {
-    SkFont emptyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
-    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
+    SkPaint emptyStatePaint = textPaint_;
+    emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
 
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
-                       recentArea_.fTop + 30, emptyFont, textPaint);
+                       recentArea_.fTop + 30, bodyFont_, emptyStatePaint);
 
-    SkFont hintFont = design::getSkFont(14.0f, design::FontWeight::Regular);
     canvas->drawString("Click 'New Project' to get started!", recentArea_.fLeft,
-                       recentArea_.fTop + 55, hintFont, textPaint);
+                       recentArea_.fTop + 55, statusFont_, emptyStatePaint);
     return;
   }
 
@@ -440,22 +456,19 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     // Text content
     float textX = thumbRect.right() + 16;
 
-    SkFont titleFont = design::getSkFont(16.0f, design::FontWeight::Bold);
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    textPaint_.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(proj.name.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 35, titleFont, textPaint);
+                       proj.bounds.fTop + 35, cardTitleFont_, textPaint_);
 
-    SkFont dateFont = design::getSkFont(13.0f, design::FontWeight::Regular);
-    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
+    textPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
     canvas->drawString(proj.date.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 60, dateFont, textPaint);
+                       proj.bounds.fTop + 60, cardDateFont_, textPaint_);
 
     // Genre badge
     if (proj.genre.isNotEmpty()) {
-      SkFont genreFont = design::getSkFont(12.0f, design::FontWeight::Medium);
-      textPaint.setColor(proj.accent);
+      textPaint_.setColor(proj.accent);
       canvas->drawString(proj.genre.toStdString().c_str(), textX,
-                         proj.bounds.fTop + 82, genreFont, textPaint);
+                         proj.bounds.fTop + 82, cardGenreFont_, textPaint_);
     }
   }
 }
@@ -668,10 +681,11 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
     needsUpdate = true;
   }
 
-  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY);
+  bool gh = greetingTextBounds_.contains(pt.fX, pt.fY) ||
+            greetingEditIconBounds_.contains(pt.fX, pt.fY);
   if (gh != isGreetingHovered_) {
-      isGreetingHovered_ = gh;
-      needsUpdate = true;
+    isGreetingHovered_ = gh;
+    needsUpdate = true;
   }
 
   if (needsUpdate)
@@ -730,9 +744,10 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
   }
 
   // Greeting Edit
-  if (greetingTextBounds_.contains(pt.fX, pt.fY) || greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
-      showGreetingEditor();
-      return;
+  if (greetingTextBounds_.contains(pt.fX, pt.fY) ||
+      greetingEditIconBounds_.contains(pt.fX, pt.fY)) {
+    showGreetingEditor();
+    return;
   }
 }
 
@@ -741,26 +756,26 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_) return;
+  if (greetingEditor_)
+    return;
 
   greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
   greetingEditor_->setText(greetingText_);
   greetingEditor_->setSelectAllWhenFocused(true);
   greetingEditor_->setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
-  
+  greetingEditor_->setFont(juce::Font(18.0f));
+
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
   constexpr int kEditorHeight = 24;
-  
+
   // Calculate bounds (convert from SkRect to JUCE Rectangle)
   juce::Rectangle<int> bounds(
-      (int)greetingTextBounds_.left(), 
-      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2, 
-      (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
-      kEditorHeight);
-      
+      (int)greetingTextBounds_.left(),
+      (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
+      (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
+
   greetingEditor_->setBounds(bounds);
   // Use async destruction to avoid crashes when destroying from callback
   greetingEditor_->onReturnKey = [this]() {
@@ -770,12 +785,10 @@ void ZenithHubComponent::showGreetingEditor() {
       repaint();
     });
   };
-  
+
   // Shared lambda for dismissing the editor without saving
   auto dismissEditor = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
+    juce::MessageManager::callAsync([this]() { greetingEditor_.reset(); });
   };
 
   greetingEditor_->onEscapeKey = dismissEditor;
@@ -783,6 +796,76 @@ void ZenithHubComponent::showGreetingEditor() {
 
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
+}
+
+// Agent 5: Keyboard Navigation - Refactored to switch per code review
+bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
+  switch (key.getKeyCode()) {
+  case juce::KeyPress::returnKey:
+    triggerSelection();
+    return true;
+  case juce::KeyPress::upKey:
+    moveSelection(-2); // Primitive grid nav for now
+    return true;
+  case juce::KeyPress::downKey:
+    moveSelection(2);
+    return true;
+  case juce::KeyPress::leftKey:
+    moveSelection(-1);
+    return true;
+  case juce::KeyPress::rightKey:
+    moveSelection(1);
+    return true;
+  default:
+    break;
+  }
+
+  return SkiaComponent::keyPressed(key);
+}
+
+// Agent 5: Selection logic - Fixed empty list bug per code review
+void ZenithHubComponent::moveSelection(int delta) {
+  // Fix: Handle empty projects list per code review
+  if (recentProjects_.empty()) {
+    selectedSection_ = SelectionSection::None;
+    selectedIndex_ = -1;
+  } else if (selectedSection_ == SelectionSection::None) {
+    selectedSection_ = SelectionSection::Recent;
+    selectedIndex_ = 0;
+  } else {
+    selectedIndex_ += delta;
+    selectedIndex_ =
+        juce::jlimit(0, (int)recentProjects_.size() - 1, selectedIndex_);
+  }
+  repaint();
+}
+
+void ZenithHubComponent::triggerSelection() {
+  if (selectedSection_ == SelectionSection::Recent && selectedIndex_ >= 0 &&
+      selectedIndex_ < (int)recentProjects_.size()) {
+    if (onLoadProject_) {
+      onLoadProject_(recentProjects_[selectedIndex_].path);
+    }
+  }
+}
+
+// Agent 5: Text Rendering Helper
+void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
+                                  const SkRect &bounds, const SkFont &font,
+                                  const SkPaint &paint, bool centerVertical) {
+  SkString skText(text.toRawUTF8());
+  SkRect textBounds;
+  font.measureText(skText.c_str(), skText.size(), SkTextEncoding::kUTF8,
+                   &textBounds);
+
+  float x = bounds.left();
+  float y = bounds.bottom();
+
+  if (centerVertical) {
+    y = bounds.centerY() + (textBounds.height() * 0.5f);
+  }
+
+  canvas->drawString(skText, x, y, font, paint);
 }
 
 } // namespace zenith

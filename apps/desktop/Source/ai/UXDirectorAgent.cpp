@@ -243,7 +243,7 @@ bool UXDirectorAgent::isOrphanComponent(juce::Component *comp) const {
     return false;
 
   // Skip if already bound
-  if (bindings_.count(const_cast<juce::Component *>(comp)) > 0)
+  if (bindings_.count(comp) > 0)
     return false;
 
   // Check if name and ID are both empty
@@ -334,7 +334,7 @@ bool UXDirectorAgent::hasStaleData(juce::Component *comp) const {
     return false;
 
   // Check if component is bound to a track
-  auto it = bindings_.find(const_cast<juce::Component *>(comp));
+  auto it = bindings_.find(comp);
   if (it == bindings_.end())
     return false;
 
