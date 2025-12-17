@@ -92,8 +92,8 @@ public:
         juce::AudioBuffer<float>& outputBuffer,
         int numSamples,
         juce::int64 playheadPosition,
-        const std::vector<std::shared_ptr<Track>>& tracks,
-        const std::vector<std::shared_ptr<AuxBus>>& auxBuses,
+        const std::vector<Track*>& tracks,
+        const std::vector<AuxBus*>& auxBuses,
         const RoutingGraph& routingGraph,
         MasterLimiter& masterLimiter,
         std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
@@ -109,7 +109,7 @@ public:
      * @param tracks Vector of tracks
      * @return Maximum latency in samples
      */
-    int calculatePDC(const std::vector<std::shared_ptr<Track>>& tracks);
+    int calculatePDC(const std::vector<Track*>& tracks);
 
     /**
      * @brief Enable/disable PDC
