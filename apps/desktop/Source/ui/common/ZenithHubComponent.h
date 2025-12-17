@@ -182,6 +182,21 @@ private:
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
 
+  // Cached Fonts & Paints - Optimization for A+ Grade
+  SkFont titleFont_;
+  SkFont subFont_;
+  SkFont headerFont_;
+  SkFont cardTitleFont_;
+  SkFont cardDateFont_;
+  SkFont cardGenreFont_;
+  SkFont buttonFont_;
+  SkFont statusFont_;
+  SkFont templateFont_;
+  SkFont profileFont_;
+  
+  SkPaint textPaint_;
+  SkPaint subPaint_;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };
 

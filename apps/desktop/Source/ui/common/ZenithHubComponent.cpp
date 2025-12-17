@@ -61,6 +61,24 @@ ZenithHubComponent::ZenithHubComponent(
                 {"Orchestral", "icon_note", colors::VIOLET, {}, false},
                 {"Recording", "icon_mic", colors::NEON_PINK, {}, false}};
 
+  // Initialize Cached Fonts (A+ Enhancement)
+  titleFont_ = design::getSkFont(48.0f, design::FontWeight::Bold);
+  subFont_ = design::getSkFont(18.0f, design::FontWeight::Regular);
+  headerFont_ = design::getSkFont(22.0f, design::FontWeight::Bold);
+  cardTitleFont_ = design::getSkFont(16.0f, design::FontWeight::Bold);
+  cardDateFont_ = design::getSkFont(13.0f, design::FontWeight::Regular);
+  cardGenreFont_ = design::getSkFont(12.0f, design::FontWeight::Medium);
+  buttonFont_ = design::getSkFont(20.0f, design::FontWeight::Bold);
+  statusFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  templateFont_ = design::getSkFont(18.0f, design::FontWeight::Bold);
+  profileFont_ = design::getSkFont(17.0f, design::FontWeight::Bold);
+
+  textPaint_.setAntiAlias(true);
+  textPaint_.setColor(colors::TEXT_PRIMARY);
+  
+  subPaint_.setAntiAlias(true);
+  subPaint_.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
+
   // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
@@ -302,25 +320,15 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
   // Header with proper hierarchy
   {
-    SkFont titleFont = design::getSkFont(48.0f, design::FontWeight::Bold);
-    SkPaint titlePaint;
-    titlePaint.setColor(colors::TEXT_PRIMARY);
-    titlePaint.setAntiAlias(true);
-
     float headerX = mainCardBounds_.fLeft + 40;
     float headerY = mainCardBounds_.fTop + 60;
 
-    canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
+    canvas->drawString("Zenith Hub", headerX, headerY, titleFont_, textPaint_);
 
-    // Subtitle with proper sizing
-    SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
-    SkPaint subPaint;
-    subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
-    subPaint.setAntiAlias(true);
-
+    // Subtitle
     SkString greeting(greetingText_.toRawUTF8());
     SkRect bounds;
-    subFont.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
+    subFont_.measureText(greeting.c_str(), greeting.size(), SkTextEncoding::kUTF8, &bounds);
     
     float subX = headerX;
     float subY = headerY + 32;
@@ -328,7 +336,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Store bounds for interaction
     greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
     
-    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    canvas->drawString(greeting, subX, subY, subFont_, subPaint_);
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
@@ -367,25 +375,16 @@ void ZenithHubComponent::drawBackground(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
-  SkFont headerFont = design::getSkFont(22.0f, design::FontWeight::Bold);
-  SkPaint textPaint;
-  textPaint.setColor(colors::TEXT_PRIMARY);
-  textPaint.setAntiAlias(true);
-
   canvas->drawString("Recent Projects", recentArea_.fLeft,
-                     recentArea_.fTop - 20, headerFont, textPaint);
+                     recentArea_.fTop - 20, headerFont_, textPaint_);
 
   // Empty state check
   if (recentProjects_.empty()) {
-    SkFont emptyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
-    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
-
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
-                       recentArea_.fTop + 30, emptyFont, textPaint);
+                       recentArea_.fTop + 30, cardTitleFont_, textPaint_);
 
-    SkFont hintFont = design::getSkFont(14.0f, design::FontWeight::Regular);
     canvas->drawString("Click 'New Project' to get started!", recentArea_.fLeft,
-                       recentArea_.fTop + 55, hintFont, textPaint);
+                       recentArea_.fTop + 55, statusFont_, textPaint_);
     return;
   }
 
@@ -427,35 +426,51 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     }
 
     // Draw icon centered in thumbnail
-    // TODO: Scale icon to fit? Assuming icons are normalized or standard size.
-    // For now assuming icons::... returns a path around 0,0 or 24x24.
-    // Let's just fill a rect with color for now as in original code, or try to
-    // draw path if we knew how to scale it. Original HEAD code had
-    // `canvas->drawRRect` for thumbnail. Let's stick to the color block as the
-    // "Thumbnail". Wait, the review mentioned: "Mock Image / Icon (accent
-    // colored rectangle)" was master. HEAD had "Thumbnail with accent color".
-    // I will stick to the accent color block for safety, but maybe add a small
-    // icon overlay if I can.
+    SkRect pathBounds = iconPath.getBounds();
+    if (!pathBounds.isEmpty()) {
+      float iconSize = 40.0f; // Fits nicely in 86x86
+      float scale =
+          iconSize / std::max(pathBounds.width(), pathBounds.height());
+
+      SkMatrix matrix;
+      matrix.reset();
+      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
+      matrix.postScale(scale, scale);
+      matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
+
+      SkPaint iconPaint;
+      iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+      iconPaint.setAntiAlias(true);
+
+      SkPath scaledPath;
+      iconPath.transform(matrix, &scaledPath);
+      canvas->drawPath(scaledPath, iconPaint);
+    } else {
+        // Fallback for empty path
+        SkPaint iconPaint;
+        iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+        iconPaint.setAntiAlias(true);
+        canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12, iconPaint);
+    }
 
     // Text content
     float textX = thumbRect.right() + 16;
-
-    SkFont titleFont = design::getSkFont(16.0f, design::FontWeight::Bold);
-    textPaint.setColor(colors::TEXT_PRIMARY);
+    
+    SkPaint cardTextPaint = textPaint_;
+    cardTextPaint.setColor(colors::TEXT_PRIMARY);
     canvas->drawString(proj.name.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 35, titleFont, textPaint);
+                       proj.bounds.fTop + 35, cardTitleFont_, cardTextPaint);
 
-    SkFont dateFont = design::getSkFont(13.0f, design::FontWeight::Regular);
-    textPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
+    cardTextPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.55f));
     canvas->drawString(proj.date.toStdString().c_str(), textX,
-                       proj.bounds.fTop + 60, dateFont, textPaint);
+                       proj.bounds.fTop + 60, cardDateFont_, cardTextPaint);
 
     // Genre badge
     if (proj.genre.isNotEmpty()) {
-      SkFont genreFont = design::getSkFont(12.0f, design::FontWeight::Medium);
-      textPaint.setColor(proj.accent);
+      SkPaint genrePaint = textPaint_;
+      genrePaint.setColor(proj.accent);
       canvas->drawString(proj.genre.toStdString().c_str(), textX,
-                         proj.bounds.fTop + 82, genreFont, textPaint);
+                         proj.bounds.fTop + 82, cardGenreFont_, genrePaint);
     }
   }
 }
