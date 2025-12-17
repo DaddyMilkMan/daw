@@ -841,9 +841,12 @@ bool UXDirectorAgent::fixComponentLayout(juce::Component *component) {
 
 void UXDirectorAgent::syncAllNames() {
   for (auto &[comp, binding] : bindings_) {
-    if (binding.linkedTrack != nullptr) {
-      comp->setName(binding.linkedTrack->getName());
-      comp->repaint();
+    if (binding.linkedTrack != nullptr && binding.uiComponent != nullptr) {
+      if (auto *mutableComp =
+              const_cast<juce::Component *>(binding.uiComponent)) {
+        mutableComp->setName(binding.linkedTrack->getName());
+        mutableComp->repaint();
+      }
     }
   }
 }

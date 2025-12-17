@@ -72,6 +72,7 @@ ZenithHubComponent::ZenithHubComponent(
   statusFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
   templateFont_ = design::getSkFont(18.0f, design::FontWeight::Bold);
   profileFont_ = design::getSkFont(17.0f, design::FontWeight::Bold);
+  bodyFont_ = design::getSkFont(16.0f, design::FontWeight::Regular);
 
   textPaint_.setAntiAlias(true);
   textPaint_.setColor(colors::TEXT_PRIMARY);
@@ -339,6 +340,16 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
                                            bounds.width(), bounds.height() + 4);
 
     canvas->drawString(greeting, subX, subY, subFont_, subPaint_);
+
+    // Agent 5: Use Helper (redundant with drawString above but keeping for
+    // consistency with recovered snippets if needed, actually better to just
+    // use ONE. The Agent 5 snippet REPLACED drawString. I will replace it.)
+
+    /* Replaced by:
+    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
+    bounds.width(), bounds.height()); drawText(canvas, greetingText_,
+    helperBounds, subFont_, subPaint_, false);
+    */
     // Draw Edit Icon using the icon system
     // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
@@ -390,9 +401,8 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
 
-    SkFont bodyFont = design::getSkFont(16.0f, design::FontWeight::Regular);
     canvas->drawString("No recent projects yet.", recentArea_.fLeft,
-                       recentArea_.fTop + 30, bodyFont, emptyStatePaint);
+                       recentArea_.fTop + 30, bodyFont_, emptyStatePaint);
 
     canvas->drawString("Click 'New Project' to get started!", recentArea_.fLeft,
                        recentArea_.fTop + 55, statusFont_, emptyStatePaint);
@@ -809,6 +819,7 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_->grabKeyboardFocus();
 }
 
+// Agent 5: Keyboard Navigation - Refactored to switch per code review
 // Agent 5: Keyboard Navigation - Refactored to switch per code review
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   switch (key.getKeyCode()) {

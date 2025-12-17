@@ -28,9 +28,9 @@
 
 #pragma once
 
+#include "../engine/Track.h"
 #include "Engine.h"
 #include "ProjectState.h"
-#include "../engine/Track.h"
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
 #include <atomic>
@@ -338,7 +338,7 @@ public:
   /**
    * @brief Get all current bindings
    */
-  const std::unordered_map<juce::Component *, DataBinding> &
+  const std::unordered_map<const juce::Component *, DataBinding> &
   getBindings() const {
     return bindings_;
   }
@@ -489,7 +489,7 @@ private:
   std::unordered_set<juce::Component *> analyzedComponents_;
 
   // Data bindings
-  std::unordered_map<juce::Component *, DataBinding> bindings_;
+  std::unordered_map<const juce::Component *, DataBinding> bindings_;
 
   // Issues and fixes
   std::vector<UIIssue> issues_;
