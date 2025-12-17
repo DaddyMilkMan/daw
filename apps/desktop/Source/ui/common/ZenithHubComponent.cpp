@@ -71,7 +71,7 @@ ZenithHubComponent::ZenithHubComponent(
   startTimerHz(60);
 
   // Initialize Greeting Editor as permanent hidden child
-  addChildComponent(greetingEditor_);
+  addChildComponent(&greetingEditor_);
   greetingEditor_.setVisible(false);
   greetingEditor_.setMultiLine(false);
   greetingEditor_.setReturnKeyStartsNewLine(false);
@@ -344,10 +344,12 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
     float headerX = mainCardBounds_.fLeft + 40;
     float headerY = mainCardBounds_.fTop + 60;
+    
+    // Header with helper
+    SkRect headerRect = SkRect::MakeXYWH(headerX, headerY - 48.0f, 300.0f, 48.0f);
+    drawText(canvas, "Zenith Hub", headerRect, titleFont, titlePaint, false);
 
-    canvas->drawString("Zenith Hub", headerX, headerY, titleFont, titlePaint);
-
-    // Subtitle with proper sizing
+    // Subtitle
     SkFont subFont = design::getSkFont(18.0f, design::FontWeight::Regular);
     SkPaint subPaint;
     subPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.6f));
@@ -363,15 +365,16 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Store bounds for interaction
     greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height() + 4);
     
-    canvas->drawString(greeting, subX, subY, subFont, subPaint);
+    // Draw using helper with precise baseline alignment
+    SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(), bounds.width(), bounds.height());
+    drawText(canvas, greetingText_, helperBounds, subFont, subPaint, false);
+
     // Draw Edit Icon using the icon system
-    // Use named constant for icon size per code review feedback
     constexpr float kGreetingIconSize = 16.0f;
     greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, kGreetingIconSize, kGreetingIconSize);
     
     icons::IconStyle iconStyle;
-    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
-    // Use predefined constant instead of magic number per code review feedback
+    iconStyle.color = (isGreetingHovered_) ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
     iconStyle.strokeWidth = icons::STROKE_THIN;
     
     icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, kGreetingIconSize, iconStyle);
@@ -428,18 +431,21 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 12.0f, 12.0f);
 
     // Card background with better depth
+    bool isSelected = (selectedSection_ == Section::RecentProjects && (int)i == selectedIndex_);
+    bool active = proj.isHovered || isSelected;
+
     SkPaint cardPaint;
-    cardPaint.setColor(proj.isHovered ? withAlpha(colors::BG_LIGHT, 0.15f)
-                                      : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(colors::BG_LIGHT, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
     // Border
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setColor(proj.isHovered
-                             ? withAlpha(proj.accent, 0.4f)
+    borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
+    borderPaint.setColor(active
+                             ? withAlpha(proj.accent, 0.6f)
                              : withAlpha(colors::TEXT_PRIMARY, 0.06f));
     borderPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, borderPaint);
@@ -525,18 +531,21 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
 
     // Card background
+    bool isSelected = (selectedSection_ == Section::Templates && (int)i == selectedIndex_);
+    bool active = tmpl.isHovered || isSelected;
+
     SkPaint cardPaint;
-    cardPaint.setColor(tmpl.isHovered ? withAlpha(tmpl.color, 0.15f)
-                                      : withAlpha(colors::BG_LIGHT, 0.08f));
+    cardPaint.setColor(active ? withAlpha(tmpl.color, 0.15f)
+                              : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
 
     // Border
     SkPaint borderPaint;
     borderPaint.setStyle(SkPaint::kStroke_Style);
-    borderPaint.setStrokeWidth(1.0f);
-    borderPaint.setColor(tmpl.isHovered
-                             ? withAlpha(tmpl.color, 0.6f)
+    borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
+    borderPaint.setColor(active
+                             ? withAlpha(tmpl.color, 0.8f)
                              : withAlpha(colors::TEXT_PRIMARY, 0.06f));
     borderPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, borderPaint);
@@ -650,8 +659,11 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   SkRRect rrect = SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f);
 
   // FIXED: Solid professional blue with proper states
+  bool isSelected = (selectedSection_ == Section::NewProject);
+  bool active = isNewProjectHovered_ || isSelected;
+
   SkColor buttonColor =
-      isNewProjectHovered_
+      active
           ? SkColorSetARGB(255, 96, 165, 250)  // Hover: lighter blue
           : SkColorSetARGB(255, 59, 130, 246); // Default: professional blue
 
@@ -660,7 +672,7 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   btnPaint.setAntiAlias(true);
 
   // Shadow on hover
-  if (isNewProjectHovered_) {
+  if (active) {
     SkPaint shadowPaint;
     shadowPaint.setColor(withAlpha(buttonColor, 0.4f));
     shadowPaint.setMaskFilter(
@@ -694,6 +706,12 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
   SkPoint pt = {(float)e.x, (float)e.y};
   bool needsUpdate = false;
+
+  if (selectedSection_ != Section::None) {
+      selectedSection_ = Section::None;
+      selectedIndex_ = -1;
+      needsUpdate = true;
+  }
 
   for (auto &proj : recentProjects_) {
     bool h = proj.bounds.contains(pt.fX, pt.fY);
@@ -729,15 +747,8 @@ void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
       needsUpdate = true;
   }
 
-  bool needsUpdate = false;
-  
-  if (selectedSection_ != Section::None) {
-      selectedSection_ = Section::None;
-      selectedIndex_ = -1;
-      needsUpdate = true;
-  }
-
-  for (auto &proj : recentProjects_) {
+  if (needsUpdate)
+    repaint();
 }
 
 void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
@@ -802,6 +813,7 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
 }
 
+void ZenithHubComponent::showGreetingEditor() {
   if (greetingEditor_.isVisible()) return;
 
   greetingEditor_.setText(greetingText_);
