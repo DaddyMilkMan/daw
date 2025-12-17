@@ -150,7 +150,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  juce::TextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
