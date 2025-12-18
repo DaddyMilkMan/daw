@@ -144,12 +144,17 @@ private:
                                ComponentState newState);
 
   // Data members
-  juce::HashMap<LifecycleAware *, ComponentState> componentStates_;
+  struct ComponentEntry {
+    ComponentState state;
+    LifecycleAware *component; // Mutable pointer stored in value
+  };
+
+  juce::HashMap<const LifecycleAware *, ComponentEntry> componentStates_;
   std::vector<LifecycleCallback> lifecycleListeners_;
   juce::CriticalSection lock_;
   juce::int64 nextComponentId_ = 1;
 
-  juce::HashMap<LifecycleAware *, juce::String> componentIds_;
+  juce::HashMap<const LifecycleAware *, juce::String> componentIds_;
   juce::Array<LifecycleEvent> eventHistory_;
   static constexpr int MAX_EVENT_HISTORY = 1000;
 };

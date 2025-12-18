@@ -266,7 +266,10 @@ public:
   //==========================================================================
   // Target Matching
   //==========================================================================
-  void setTargetAudio(const juce::File& file) {}
+  /**
+   * @brief Set the target audio file for evolution to match
+   */
+  void setTargetAudio(const juce::File& file);
 
   /**
    * @brief Get current best spectrum for visualization

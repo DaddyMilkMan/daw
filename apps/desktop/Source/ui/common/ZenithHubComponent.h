@@ -65,6 +65,7 @@ public:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  // Keyboard Navigation
   bool keyPressed(const juce::KeyPress &key) override;
 
   // New: Restrict hits to card only
@@ -170,7 +171,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  juce::TextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -184,15 +185,23 @@ private:
   };
   std::vector<Ripple> buttonRipples_;
 
+  // Keyboard Navigation State
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
+  int selectedIndex_ = -1;
+
+  void moveSelection(int dx, int dy);
+  void triggerSelection();
+
   // Helpers
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
-  void drawText(SkCanvas *canvas, const juce::String &text,
-                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
-                bool centerVertical = true);
 
   /** @brief Convert RecentProjectEntry to internal format */
   void loadFromManager();
@@ -203,16 +212,7 @@ private:
   void updateLayout();
 
   // Aurora living background
-  // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
-
-  // Keyboard navigation state
-  enum class SelectionSection { None, Recent, New, Templates };
-  SelectionSection selectedSection_ = SelectionSection::None;
-  int selectedIndex_ = -1;
-
-  void moveSelection(int delta);
-  void triggerSelection();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

@@ -63,6 +63,7 @@ class Clip;
 class MixerChannel;
 class AudioFilePool;
 class PluginHost;
+class Metronome;
 class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
@@ -200,7 +201,25 @@ public:
    * @brief Toggle recording on/off
    * @note Convenience method for record button
    */
+  /**
+   * @brief Toggle recording on/off
+   * @note Convenience method for record button
+   */
   void toggleRecording();
+
+  /**
+   * @brief Panic - Stop all sound immediately
+   * @note Stops transport, sends All Notes Off to all tracks, and clears buffers.
+   */
+  void panic();
+
+  /**
+   * @brief Set sidechain source for a specific plugin on a track
+   * @param destTrackIndex Index of the track containing the plugin
+   * @param pluginIndex Index of the plugin to receive sidechain
+   * @param sourceTrackIndex Index of the source track
+   */
+  void setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex);
 
   //==========================================================================
   // Real-time Event Queue
@@ -724,6 +743,14 @@ public:
    */
   bool exportProject(const ExportOptions &options);
 
+  //==========================================================================
+  // Metronome
+  //==========================================================================
+
+  void toggleMetronome();
+  bool isMetronomeEnabled() const;
+  void setMetronomeLevel(float level);
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
@@ -785,6 +812,8 @@ private:
    */
   void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
                         juce::int64 playheadPosition,
+                        const std::vector<zenith::Track *> &tracks,
+                        const std::vector<zenith::AuxBus *> &auxBuses,
                         const juce::MidiBuffer *incomingMidi = nullptr);
 
   juce::AudioFormatManager formatManager;
@@ -839,7 +868,14 @@ private:
     std::vector<std::shared_ptr<zenith::AuxBus>>
         lifecycleAux; // Keeps buses alive
 
+    // Fast lookup maps (ID -> Pointer)
+    // Audio thread usage: Read-only access to find tracks by ID from RoutingGraph
+    std::unordered_map<std::string, zenith::Track *> trackMap;
+    std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
+
     TrackSnapshot() = default;
+    
+    // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
         const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses);
@@ -866,6 +902,7 @@ private:
 
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<Metronome> metronome_;
 
   // Analysis FIFO (Stereo)
   std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;
@@ -913,6 +950,9 @@ private:
 
   // ID Counter for Aux Busses
   std::atomic<int> auxBusIdCounter{0};
+
+  // ID Counter for Tracks
+  std::atomic<uint64_t> nextTrackId_{0};
 
   // Flag to prevent use-after-free in async callbacks
   std::atomic<bool> isShuttingDown_{false};

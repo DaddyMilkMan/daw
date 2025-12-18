@@ -88,8 +88,10 @@ namespace zenith {
     struct AIElementInfo {
       SkRect bounds;
       juce::String type; // "knob", "fader", "button"
+      juce::String id;
+      juce::String label;
       juce::String parameterId;
-      float currentValue;
+      float currentValue = 0.0f;
     };
 
     explicit SkiaComponent();
