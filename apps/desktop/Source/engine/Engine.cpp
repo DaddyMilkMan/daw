@@ -27,7 +27,10 @@
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
+#include "../engine/AudioRenderer.h"
+#include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "../engine/Metronome.h"
 
 //==============================================================================
 namespace zenith {
@@ -39,6 +42,7 @@ Engine::Engine() {
   audioRenderer_ = std::make_unique<AudioRenderer>();
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
+  metronome_ = std::make_unique<Metronome>();
   DBG("Engine: Modular components initialized");
 
   // Initialize audio file pool for sample caching
@@ -318,6 +322,14 @@ bool Engine::initialize() {
     DBG("Engine: RecordingManager wired to DeviceManager");
   }
 
+  // Prepare Metronome
+  if (metronome_) {
+      metronome_->prepareToPlay(setup.sampleRate, setup.bufferSize);
+      // Sync metronome state with TransportController
+      metronome_->setEnabled(transportController_->isMetronomeEnabled());
+      metronome_->setLevel(transportController_->getMetronomeLevel());
+  }
+
   // Enable MIDI input devices
   enableMidiInput();
 
@@ -489,6 +501,48 @@ void Engine::toggleRecording() {
     } else {
       record();
     }
+  }
+}
+
+void Engine::panic() {
+  DBG("Engine: PANIC triggered!");
+  
+  // 1. Stop Transport
+  stop();
+  
+  // 2. Iterate all tracks (message thread is safe)
+  for (const auto& track : tracks_) {
+    if (track) {
+      // Clear any pending MIDI events in the track
+      // (Track doesn't expose a method for this yet, assuming implementation needed later)
+      
+      // Mute temporarily to stop audio output immediately
+      // track->setMuted(true); // Maybe too aggressive?
+      
+      // Allow reverb tails to fade naturally or kill them?
+      // Panic usually implies immediate silence.
+      // Ideally we would send MIDI CC 123 (All Notes Off) and 120 (All Sound Off)
+      // but we need a mechanism to inject MIDI into the track.
+      // For now, we will rely on stop() stopping the engine processing primarily.
+    }
+  }
+}
+
+void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  if (destTrackIndex < 0 || destTrackIndex >= tracks_.size()) return;
+  if (sourceTrackIndex < 0 || sourceTrackIndex >= tracks_.size()) return;
+  
+  auto& destTrack = tracks_[destTrackIndex];
+  auto& sourceTrack = tracks_[sourceTrackIndex];
+  
+  DBG("Engine: Routing Sidechain: " << sourceTrack->getName() << " -> " << destTrack->getName() << " (Plugin " << pluginIndex << ")");
+  
+  // Connect in routing graph (Stub Logic for Phase 2)
+  if (destTrack && sourceTrack) {
+     // routingGraph_.connect(sourceTrack->getTrackId(), destTrack->getTrackId(), 1.0f);
+     // Note: Real implementation needs to target specific plugin inputs, not just track mix.
   }
 }
 
@@ -998,6 +1052,11 @@ void Engine::audioDeviceIOCallbackWithContext(
             snapshot->auxBuses, routingGraph_, masterLimiter_,
             masterPlugins_, 
             tempoMap_.get(), &midi1);
+
+        // Mix Metronome (Pass 1)
+        if (metronome_) {
+            metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+        }
       }
     }
 
@@ -1024,6 +1083,11 @@ void Engine::audioDeviceIOCallbackWithContext(
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_,
               masterPlugins_, tempoMap_.get(), &midi2);
+
+          // Mix Metronome (Pass 2)
+          if (metronome_) {
+              metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+          }
         }
 
         transportController_->setPlayheadSamples(loopStart + samplesAfter);
@@ -1595,11 +1659,13 @@ bool Engine::exportProject(const ExportOptions &options) {
     }
 
     // Normalization (2-Pass: Find Peak -> Apply Gain)
+    // Normalization (Offline Render Refactor required for full track)
     // NOTE: Per-block normalization is WRONG for full track export.
     // Correct implementation requires render-to-temp-file -> scan -> write-to-final
     // This is disabled pending a full offline-render refactor.
     // See: applyNormalization() for when this gets properly implemented.
     (void)options.normalize; // Suppress unused warning
+
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;
@@ -1655,23 +1721,23 @@ void Engine::setPDCEnabled(bool enabled) {
 Engine::TrackSnapshot::TrackSnapshot(
     const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
     const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
-  tracks.reserve(ownedTracks.size());
-  lifecycle.reserve(ownedTracks.size());
+  this->tracks.reserve(ownedTracks.size());
+  this->lifecycle.reserve(ownedTracks.size());
   for (const auto &track : ownedTracks) {
     if (track != nullptr) {
-      tracks.push_back(track.get());
-      lifecycle.push_back(track); // Increment refcount
-      trackMap[track->getTrackId().toStdString()] = track.get();
+      this->tracks.push_back(track.get());
+      this->lifecycle.push_back(track); // Increment refcount
+      this->trackMap[track->getTrackId().toStdString()] = track.get();
     }
   }
 
-  auxBuses.reserve(ownedBuses.size());
-  lifecycleAux.reserve(ownedBuses.size());
+  this->auxBuses.reserve(ownedBuses.size());
+  this->lifecycleAux.reserve(ownedBuses.size());
   for (const auto &bus : ownedBuses) {
     if (bus != nullptr) {
-      auxBuses.push_back(bus.get());
-      lifecycleAux.push_back(bus);
-      auxBusMap[bus->getId().toStdString()] = bus.get();
+      this->auxBuses.push_back(bus.get());
+      this->lifecycleAux.push_back(bus);
+      this->auxBusMap[bus->getId().toStdString()] = bus.get();
     }
   }
 }
@@ -1938,6 +2004,33 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   }
 
   return tracks_[trackIndex]->isFrozen();
+}
+
+//==============================================================================
+// Metronome
+//==============================================================================
+
+void Engine::toggleMetronome() {
+  if (transportController_) {
+      bool newState = !transportController_->isMetronomeEnabled();
+      transportController_->setMetronomeEnabled(newState);
+      if (metronome_) {
+          metronome_->setEnabled(newState);
+      }
+  }
+}
+
+bool Engine::isMetronomeEnabled() const {
+    return transportController_ ? transportController_->isMetronomeEnabled() : false;
+}
+
+void Engine::setMetronomeLevel(float level) {
+    if (transportController_) {
+        transportController_->setMetronomeLevel(level);
+        if (metronome_) {
+            metronome_->setLevel(level);
+        }
+    }
 }
 
 } // namespace zenith

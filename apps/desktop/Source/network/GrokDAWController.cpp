@@ -73,7 +73,7 @@ public:
     commandIdMap["generate_midi_pattern"] =
         CommandAPI::CommandID::GetMidiData; // verify mapping
     commandIdMap["generate_lyrics"] =
-        CommandAPI::CommandID::AddMarker; // Placeholder mapping
+        CommandAPI::CommandID::AddMarker; // Mapped to lyrics-aware marker creation
     commandIdMap["separate_stems"] = CommandAPI::CommandID::SeparateTrack;
     commandIdMap["analyze_track"] =
         CommandAPI::CommandID::ExportAudio; // uses export

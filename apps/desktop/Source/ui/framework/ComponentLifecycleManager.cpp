@@ -744,7 +744,7 @@ void MemoryLeakDetector::untrackComponent(const LifecycleComponent *component) {
 void MemoryLeakDetector::checkForLeaks() {
   juce::ScopedLock lock(lock_);
 
-  if (activeComponents_.size() != 0) {
+  if (activeComponents_.size() > 0) {
     DBG("=== MEMORY LEAK DETECTED ===");
     DBG("Active components: " << activeComponents_.size());
 

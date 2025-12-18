@@ -161,6 +161,42 @@ void RecordingManager::stopRecording(
   DBG("RecordingManager: Recording stopped");
 }
 
+void RecordingManager::discardCurrentRecording() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
+  if (!isRecording_.load()) {
+    return;
+  }
+
+  // Stop accepting new input
+  isRecording_.store(false);
+
+  // Stop AudioRecorder and delete generated files
+  if (audioRecorder_) {
+    auto results = audioRecorder_->stopRecording();
+    for (const auto &result : results) {
+      if (result.file.exists()) {
+        result.file.deleteFile();
+        DBG("RecordingManager: Deleted discarded recording file: " + result.file.getFileName());
+      }
+    }
+  }
+
+  // Clear MIDI sessions
+  {
+    const juce::ScopedLock sl(sessionLock_);
+    midiSessions_.clear();
+  }
+
+  // Drain MIDI fifo to clear it (ignore data)
+  int start1, size1, start2, size2;
+  const int numReady = midiFifoIndex_.getNumReady();
+  midiFifoIndex_.prepareToRead(numReady, start1, size1, start2, size2);
+  midiFifoIndex_.finishedRead(size1 + size2);
+
+  DBG("RecordingManager: Recording discarded");
+}
+
 //==============================================================================
 void RecordingManager::captureAudio(
     const float *const *inputData, int numInputChannels, int numSamples,

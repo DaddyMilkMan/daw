@@ -442,6 +442,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
+
   // 2. Check Piano Key Clicks
   if (x < PIANO_WIDTH && y >= contentTop) {
     if (y < contentTop + noteGridHeight) {
@@ -449,6 +450,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
       return;
     }
   }
+
 
   // Ruler area - not interactive for now
   if (y < RULER_HEIGHT)
@@ -460,6 +462,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
     return;
   }
 
+
   // Main note area - behavior depends on current tool
   if (x < PIANO_WIDTH)
     return;
@@ -469,6 +472,7 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
 
 void PianoRollComponent::handleToolbarClick(const juce::MouseEvent &e, float x,
                                             float y) {
+
   float btnX = TOOLBAR_BUTTON_START_X;
   float btnY = (TOOLBAR_HEIGHT - TOOLBAR_BUTTON_HEIGHT) / 2.0f;
 
@@ -483,6 +487,7 @@ void PianoRollComponent::handleToolbarClick(const juce::MouseEvent &e, float x,
   }
 }
 
+
 void PianoRollComponent::handlePianoKeyClick(const juce::MouseEvent &e, float x,
                                              float y) {
   int pitch = pixelsToPitch(y);
@@ -492,6 +497,7 @@ void PianoRollComponent::handlePianoKeyClick(const juce::MouseEvent &e, float x,
 
 void PianoRollComponent::handleVelocityLaneClick(const juce::MouseEvent &e,
                                                  float x, float y) {
+
   auto *note = findNoteInVelocityLane(x, y);
   if (note) {
     startEditingVelocity(note, e);
@@ -500,6 +506,7 @@ void PianoRollComponent::handleVelocityLaneClick(const juce::MouseEvent &e,
 
 void PianoRollComponent::handleNoteMainAreaClick(const juce::MouseEvent &e,
                                                  float x, float y) {
+
   auto *note = findNoteAtPosition(x, y);
 
   switch (currentTool) {
@@ -1202,7 +1209,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
 
     // Draw bar numbers and markers
     // Fonts are now members: rulerBarFont_, rulerBeatFont_
-    
+
     double startBar = std::floor(visibleStartBeat / beatsPerBar) * beatsPerBar;
 
     for (double beat = startBar; beat <= visibleEndBeat; beat += beatSubdiv) {
@@ -1221,6 +1228,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         generalPaint_.setStrokeWidth(1.5f);
         canvas->drawLine(x, 4, x, RULER_HEIGHT - 4, generalPaint_);
         
+
         // Bar number with subtle glow
         textPaint_.setColor(colors::TEXT_PRIMARY);
         juce::String barStr = juce::String(barNum);
@@ -1232,12 +1240,14 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         generalPaint_.setStrokeWidth(1.0f);
         canvas->drawLine(x, RULER_HEIGHT - 12, x, RULER_HEIGHT - 4, generalPaint_);
         
+
         // Beat number (1.2, 1.3, etc)
         if (pixelsPerBeat >= 50.0) {
           textPaint_.setColor(colors::TEXT_TERTIARY);
           int beatInBarNum = static_cast<int>(beatInBar) + 1;
           juce::String label = juce::String(barNum) + "." + juce::String(beatInBarNum);
           canvas->drawString(label.toStdString().c_str(), x + 2, RULER_HEIGHT - 6, rulerBeatFont_, textPaint_);
+
         }
       } else if (pixelsPerBeat >= 80.0) {
         // Subdivision tick - short line
@@ -1265,6 +1275,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       juce::String clipName = currentClip.clipName.isEmpty() ? "MIDI Clip" : currentClip.clipName;
       if (clipName.length() > 18) clipName = clipName.substring(0, 17) + "...";
       canvas->drawString(clipName.toStdString().c_str(), 10, 19, clipNameFont_, textPaint_);
+
     }
   }
 

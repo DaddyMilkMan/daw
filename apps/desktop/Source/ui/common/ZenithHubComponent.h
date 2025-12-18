@@ -61,9 +61,11 @@ public:
   void resized() override;
 
   void mouseMove(const juce::MouseEvent &e) override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  // Keyboard Navigation
   bool keyPressed(const juce::KeyPress &key) override;
 
   // New: Restrict hits to card only
@@ -78,6 +80,10 @@ public:
   void show();
   void dismiss();
   void refreshProjects();
+
+  /**
+   * @brief Refresh the recent projects list from the manager
+   */
 
 private:
   RecentProjectManager &recentProjectManager_;
@@ -120,8 +126,8 @@ private:
   SkFont profileFont_;
   SkFont bodyFont_;
 
-  SkPaint mainTextPaint_;
-  SkPaint subTextPaint_;
+  SkPaint textPaint_;
+  SkPaint subPaint_;
 
   // Layout
   SkRect mainCardBounds_;
@@ -180,8 +186,8 @@ private:
   std::vector<Ripple> buttonRipples_;
 
   // Keyboard Navigation State
-  enum class Section { None, RecentProjects, NewProject, Templates };
-  Section selectedSection_ = Section::None;
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
   int selectedIndex_ = -1;
 
   void moveSelection(int dx, int dy);

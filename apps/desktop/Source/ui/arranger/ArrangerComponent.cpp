@@ -517,7 +517,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   // ============================================================================
   // 1. GLOBAL BACKGROUND (Deep Slate)
   // ============================================================================
-  canvas->clear(colors::BG_DARKEST);
+  // Use drawColor instead of clear to respect dirty rect clipping!
+  canvas->drawColor(colors::BG_DARKEST);
 
   // ============================================================================
   // 2. GRID & TIMELINE - PREMIUM RENDERING
@@ -1956,8 +1957,15 @@ void ArrangerComponent::updatePlayheadFromEngine() {
 
   // Only repaint if position changed significantly (avoid unnecessary
   // repaints)
-  if (std::abs(newPlayheadBeats - playheadBeats_) > 0.01 ||
+  if (std::abs(newPlayheadBeats - playheadBeats_) > 0.0001 ||
       wasPlaying != isPlaying_) {
+      
+    // 1. Invalidate OLD playhead position (Dirty Rect)
+    float oldX = beatsToX(playheadBeats_);
+    // Playhead is ~15px wide with cap, cover full height
+    juce::Rectangle<int> oldRect((int)oldX - 10, 0, 20, getHeight());
+    repaint(oldRect);
+
     playheadBeats_ = newPlayheadBeats;
 
     // Auto-scroll to follow playhead if enabled and playing
@@ -1970,10 +1978,17 @@ void ArrangerComponent::updatePlayheadFromEngine() {
         viewStartBeats = playheadBeats_ - (visibleWidth * 0.2 / pixelsPerBeat);
         viewStartBeats = juce::jmax(0.0, viewStartBeats);
         recomputeClipBounds();
+        
+        // If we scrolled, we MUST repaint everything as the grid/clips moved
+        repaint(); 
+        return; 
       }
     }
 
-    repaint();
+    // 2. Invalidate NEW playhead position
+    float newX = beatsToX(playheadBeats_);
+    juce::Rectangle<int> newRect((int)newX - 10, 0, 20, getHeight());
+    repaint(newRect);
   }
 
   // Update loop state from engine

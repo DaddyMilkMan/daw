@@ -45,7 +45,7 @@ namespace zenith {
     - Transparent limiting for typical program material
     - Lock-free parameter updates
 */
-class MasterLimiter {
+class MasterLimiter final {
 public:
     //==========================================================================
     MasterLimiter() 
