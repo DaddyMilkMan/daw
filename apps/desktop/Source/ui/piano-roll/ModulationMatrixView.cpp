@@ -734,7 +734,7 @@ void ModulationMatrixView::buildConnections() {
   connections_.clear();
 
   // Create some default connections for demo
-  if (sourceNodes_.size() > 0 && destNodes_.size() > 0) {
+  if (!sourceNodes_.empty() && !destNodes_.empty()) {
     createConnection(sourceNodes_[0].id, destNodes_[0].id); // LFO1 -> Cutoff
     connections_.back().amount = 0.5f;
 
