@@ -1266,7 +1266,6 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       if (clipName.length() > 18) clipName = clipName.substring(0, 17) + "...";
       canvas->drawString(clipName.toStdString().c_str(), 10, 19, clipNameFont_, textPaint_);
     }
-    }
   }
 
   // 2. Grid Lines (Vertical) - Added for "Real" feel
