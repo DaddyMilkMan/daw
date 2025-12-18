@@ -311,24 +311,29 @@ void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float> &buffer,
   auto &delayBuffer = pdcDelayBuffers_[trackIndex];
   int &writePos = pdcDelayWritePos_[trackIndex];
 
-  for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-    float *data = buffer.getWritePointer(ch);
+  // Process sample-by-sample to maintain phase alignment across channels
+  for (int i = 0; i < numSamples; ++i) {
+    const int readPos =
+        (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
+        constants::kMaxPDCLatencySamples;
 
-    for (int i = 0; i < numSamples; ++i) {
-      // Read delayed sample
-      int readPos =
-          (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
-          constants::kMaxPDCLatencySamples;
-      float delayed = delayBuffer.getSample(ch, readPos);
-
-      // Write current sample
-      delayBuffer.setSample(ch, writePos, data[i]);
-
-      // Output delayed sample
-      data[i] = delayed;
-
-      writePos = (writePos + 1) % constants::kMaxPDCLatencySamples;
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+      if (ch < delayBuffer.getNumChannels()) {
+        float *trackData = buffer.getWritePointer(ch);
+        
+        // Read the delayed sample from the circular buffer
+        float delayedSample = delayBuffer.getSample(ch, readPos);
+        
+        // Store the incoming sample into the circular buffer
+        delayBuffer.setSample(ch, writePos, trackData[i]);
+        
+        // Replace the current sample with the delayed one
+        trackData[i] = delayedSample;
+      }
     }
+
+    // Increment write position only once per sample (not per channel)
+    writePos = (writePos + 1) % constants::kMaxPDCLatencySamples;
   }
 }
 
