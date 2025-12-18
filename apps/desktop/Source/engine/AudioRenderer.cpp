@@ -326,30 +326,43 @@ void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float> &buffer,
   auto &delayBuffer = pdcDelayBuffers_[trackIndex];
   int &writePos = pdcDelayWritePos_[trackIndex];
 
-  // Process sample-by-sample to maintain phase alignment across channels
-  for (int i = 0; i < numSamples; ++i) {
-    const int readPos =
-        (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
-        constants::kMaxPDCLatencySamples;
+  // Cache channel pointers and counts for real-time performance
+  auto *const *channelData = buffer.getArrayOfWritePointers();
+  const int numBufferChannels = buffer.getNumChannels();
+  const int numDelayBufferChannels = delayBuffer.getNumChannels();
 
-    for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-      if (ch < delayBuffer.getNumChannels()) {
-        float *trackData = buffer.getWritePointer(ch);
-        
-        // Read the delayed sample from the circular buffer
-        float delayedSample = delayBuffer.getSample(ch, readPos);
-        
-        // Store the incoming sample into the circular buffer
-        delayBuffer.setSample(ch, writePos, trackData[i]);
-        
-        // Replace the current sample with the delayed one
-        trackData[i] = delayedSample;
-      }
+  // Calculate initial read position
+  const int initialReadPos =
+      (writePos - delayNeeded + constants::kMaxPDCLatencySamples) %
+      constants::kMaxPDCLatencySamples;
+
+  // Process channel-by-channel for better cache locality
+  // JUCE's AudioBuffer stores each channel's data in a contiguous memory block
+  for (int ch = 0; ch < numBufferChannels && ch < numDelayBufferChannels; ++ch) {
+    float* channelPtr = channelData[ch];
+    float* delayChannelPtr = delayBuffer.getWritePointer(ch);
+    
+    int readPos = initialReadPos;
+    int localWritePos = writePos;
+    
+    for (int i = 0; i < numSamples; ++i) {
+      // Read the delayed sample from the circular buffer
+      const float delayedSample = delayChannelPtr[readPos];
+
+      // Store the incoming sample into the circular buffer
+      delayChannelPtr[localWritePos] = channelPtr[i];
+
+      // Replace the current sample with the delayed one
+      channelPtr[i] = delayedSample;
+      
+      // Advance positions
+      readPos = (readPos + 1) % constants::kMaxPDCLatencySamples;
+      localWritePos = (localWritePos + 1) % constants::kMaxPDCLatencySamples;
     }
-
-    // Increment write position only once per sample (not per channel)
-    writePos = (writePos + 1) % constants::kMaxPDCLatencySamples;
   }
+
+  // Increment write position by numSamples after processing all channels
+  writePos = (writePos + numSamples) % constants::kMaxPDCLatencySamples;
 }
 
 //==============================================================================
