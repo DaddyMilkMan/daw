@@ -82,9 +82,6 @@ void AudioRenderer::reset() {
 void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition,
-void AudioRenderer::renderAudioGraph(
-    juce::AudioBuffer<float> &outputBuffer, int numSamples,
-    juce::int64 playheadPosition,
     std::span<const std::shared_ptr<Track>> tracks,
     std::span<const std::shared_ptr<AuxBus>> auxBuses,
     const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
@@ -123,7 +120,7 @@ void AudioRenderer::renderAudioGraph(
 
     for (size_t i = 0; i < tracks.size(); ++i) {
       if (tracks[i] && tracks[i]->getTrackId() == nodeId) {
-        track = tracks[i].get();
+        track = tracks[i];
         trackIdx = i;
         break;
       }
@@ -234,7 +231,7 @@ void AudioRenderer::renderAudioGraph(
 
     for (size_t i = 0; i < auxBuses.size(); ++i) {
       if (auxBuses[i] && auxBuses[i]->getId() == nodeId) {
-        bus = auxBuses[i].get();
+        bus = auxBuses[i];
         busIdx = i;
         break;
       }
@@ -285,7 +282,7 @@ void AudioRenderer::renderAudioGraph(
 
 //==============================================================================
 int AudioRenderer::calculatePDC(
-    const std::vector<std::shared_ptr<Track>> &tracks) {
+    const std::vector<Track*> &tracks) {
   int maxLatency = 0;
 
   for (size_t i = 0; i < tracks.size() && i < trackLatencies_.size(); ++i) {

@@ -812,6 +812,8 @@ private:
    */
   void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
                         juce::int64 playheadPosition,
+                        const std::vector<zenith::Track *> &tracks,
+                        const std::vector<zenith::AuxBus *> &auxBuses,
                         const juce::MidiBuffer *incomingMidi = nullptr);
 
   juce::AudioFormatManager formatManager;
@@ -866,7 +868,14 @@ private:
     std::vector<std::shared_ptr<zenith::AuxBus>>
         lifecycleAux; // Keeps buses alive
 
+    // Fast lookup maps (ID -> Pointer)
+    // Audio thread usage: Read-only access to find tracks by ID from RoutingGraph
+    std::unordered_map<std::string, zenith::Track *> trackMap;
+    std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
+
     TrackSnapshot() = default;
+    
+    // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
         const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses);
@@ -941,6 +950,9 @@ private:
 
   // ID Counter for Aux Busses
   std::atomic<int> auxBusIdCounter{0};
+
+  // ID Counter for Tracks
+  std::atomic<uint64_t> nextTrackId_{0};
 
   // Flag to prevent use-after-free in async callbacks
   std::atomic<bool> isShuttingDown_{false};

@@ -29,10 +29,10 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "ProjectState.h"
 #include "../network/AudioAnalysisService.h"
 #include "../network/GrokAPIClient.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include <atomic>
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -42,6 +42,7 @@
 #include <queue>
 #include <unordered_set>
 #include <vector>
+
 
 namespace zenith {
 namespace ai {
@@ -324,8 +325,8 @@ private:
   // Thread state
   std::atomic<bool> isHunting_{false};
   std::atomic<float> progress_{0.0f};
-  juce::CriticalSection statusLock_;
-  juce::CriticalSection samplesLock_; // Protects foundSamples_
+  mutable juce::CriticalSection statusLock_;
+  mutable juce::CriticalSection samplesLock_; // Protects foundSamples_
   juce::String currentStatus_;
 
   // Queues

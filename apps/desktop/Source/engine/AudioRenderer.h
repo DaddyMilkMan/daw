@@ -94,10 +94,6 @@ public:
         juce::AudioBuffer<float>& outputBuffer,
         int numSamples,
         juce::int64 playheadPosition,
-    void renderAudioGraph(
-        juce::AudioBuffer<float>& outputBuffer,
-        int numSamples,
-        juce::int64 playheadPosition,
         std::span<const std::shared_ptr<Track>> tracks,
         std::span<const std::shared_ptr<AuxBus>> auxBuses,
         const RoutingGraph& routingGraph,
@@ -116,7 +112,7 @@ public:
      * @param tracks Vector of tracks
      * @return Maximum latency in samples
      */
-    int calculatePDC(const std::vector<std::shared_ptr<Track>>& tracks);
+    int calculatePDC(const std::vector<Track*>& tracks);
 
     /**
      * @brief Enable/disable PDC
@@ -217,8 +213,6 @@ private:
     std::vector<int> pdcDelayWritePos_;
 
     // Metering (atomic for lock-free GUI access)
-    std::atomic<float> masterLevel_{0.0f};
-    std::atomic<float> masterPeakLevel_{0.0f};
     std::atomic<float> masterLevel_{0.0f};
     std::atomic<float> masterPeakLevel_{0.0f};
     std::atomic<int> masterLatency_{0};

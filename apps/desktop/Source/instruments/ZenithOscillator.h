@@ -62,6 +62,7 @@ private:
   double phase_ = 0.0;
   double sampleRate_ = 44100.0;
   float detuneCents_ = 0.0f;
+  float lastTriangleValue_ = 0.0f;
 
   // Flagship State
   bool syncEnabled_ = false;
