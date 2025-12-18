@@ -493,6 +493,48 @@ void Engine::toggleRecording() {
   }
 }
 
+void Engine::panic() {
+  DBG("Engine: PANIC triggered!");
+  
+  // 1. Stop Transport
+  stop();
+  
+  // 2. Iterate all tracks (message thread is safe)
+  for (const auto& track : tracks_) {
+    if (track) {
+      // Clear any pending MIDI events in the track
+      // (Track doesn't expose a method for this yet, assuming implementation needed later)
+      
+      // Mute temporarily to stop audio output immediately
+      // track->setMuted(true); // Maybe too aggressive?
+      
+      // Allow reverb tails to fade naturally or kill them?
+      // Panic usually implies immediate silence.
+      // Ideally we would send MIDI CC 123 (All Notes Off) and 120 (All Sound Off)
+      // but we need a mechanism to inject MIDI into the track.
+      // For now, we will rely on stop() stopping the engine processing primarily.
+    }
+  }
+}
+
+void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  if (destTrackIndex < 0 || destTrackIndex >= tracks_.size()) return;
+  if (sourceTrackIndex < 0 || sourceTrackIndex >= tracks_.size()) return;
+  
+  auto& destTrack = tracks_[destTrackIndex];
+  auto& sourceTrack = tracks_[sourceTrackIndex];
+  
+  DBG("Engine: Routing Sidechain: " << sourceTrack->getName() << " -> " << destTrack->getName() << " (Plugin " << pluginIndex << ")");
+  
+  // Connect in routing graph (Stub Logic for Phase 2)
+  if (destTrack && sourceTrack) {
+     // routingGraph_.connect(sourceTrack->getTrackId(), destTrack->getTrackId(), 1.0f);
+     // Note: Real implementation needs to target specific plugin inputs, not just track mix.
+  }
+}
+
 //==============================================================================
 // Transport Position & Looping
 //==============================================================================

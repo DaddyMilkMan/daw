@@ -252,10 +252,23 @@ public:
     void setOnStop(TransportCallback cb) { onStop_ = cb; }
     void setOnSeek(TransportCallback cb) { onSeek_ = cb; }
 
+    //==========================================================================
+    // Metronome
+    //==========================================================================
+
+    void setMetronomeEnabled(bool enabled) { metronomeEnabled_.store(enabled); }
+    bool isMetronomeEnabled() const { return metronomeEnabled_.load(); }
+    void setMetronomeLevel(float level) { metronomeLevel_.store(level); }
+    float getMetronomeLevel() const { return metronomeLevel_.load(); }
+
 private:
     //==========================================================================
     // State
     //==========================================================================
+    
+    // Metronome state
+    std::atomic<bool> metronomeEnabled_{false};
+    std::atomic<float> metronomeLevel_{0.5f};
 
     // Tempo map (owned by Engine)
     const TempoMap* tempoMap_ = nullptr;

@@ -851,15 +851,14 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
 }
 
 void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_)
+  if (greetingEditor_.isVisible())
     return;
 
-  greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
-  greetingEditor_->setText(greetingText_);
-  greetingEditor_->setSelectAllWhenFocused(true);
-  greetingEditor_->setJustification(juce::Justification::left);
+  greetingEditor_.setText(greetingText_);
+  greetingEditor_.setSelectAllWhenFocused(true);
+  greetingEditor_.setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f));
+  greetingEditor_.setFont(juce::Font(18.0f));
 
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
@@ -877,26 +876,19 @@ void ZenithHubComponent::showGreetingEditor() {
       (int)greetingTextBounds_.top() + (int)greetingTextBounds_.height() / 2,
       (int)(greetingTextBounds_.width() + kEditorWidthPadding), kEditorHeight);
 
-  greetingEditor_->setBounds(bounds);
-  // Use async destruction to avoid crashes when destroying from callback
-  greetingEditor_->onReturnKey = [this]() {
-    greetingText_ = greetingEditor_->getText();
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-      repaint();
-    });
-  };
-
-  // Shared lambda for dismissing the editor without saving
-  auto dismissEditor = [this]() {
-    juce::MessageManager::callAsync([this]() { greetingEditor_.reset(); });
-  };
-
-  greetingEditor_.onEscapeKey = dismissEditor;
-  greetingEditor_.onFocusLost = dismissEditor;
-
-  addAndMakeVisible(&greetingEditor_);
+  greetingEditor_.setBounds(bounds);
+  greetingEditor_.setVisible(true);
   greetingEditor_.grabKeyboardFocus();
+}
+
+void ZenithHubComponent::hideGreetingEditor(bool save) {
+  if (save) {
+    greetingText_ = greetingEditor_.getText();
+  }
+  greetingEditor_.setVisible(false);
+  
+  // Ensure we repaint to show the updated text
+  repaint();
 }
 
 // Agent 5: Keyboard Navigation - Refactored to if-else per compiler

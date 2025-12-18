@@ -51,6 +51,12 @@ void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
     pdcDelayBuffers_[i].clear();
   }
 
+  // Prepare dither
+  dither_.prepare(2); // Stereo
+
+  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
+      juce::String(numAuxBuses) + " aux buses");
+
   DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
       juce::String(numAuxBuses) + " aux buses");
 }
@@ -76,11 +82,18 @@ void AudioRenderer::reset() {
 void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition,
-    const std::vector<std::shared_ptr<Track>> &tracks,
-    const std::vector<std::shared_ptr<AuxBus>> &auxBuses,
+void AudioRenderer::renderAudioGraph(
+    juce::AudioBuffer<float> &outputBuffer, int numSamples,
+    juce::int64 playheadPosition,
+    std::span<const std::shared_ptr<Track>> tracks,
+    std::span<const std::shared_ptr<AuxBus>> auxBuses,
+    const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
     const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
-    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi) {
+    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi) noexcept {
+
+  // RT-Safety: Disable denormals to prevent CPU spikes with near-zero floats
+  juce::ScopedNoDenormals noDenormals;
 
   // Clear output buffer
   outputBuffer.clear();
@@ -117,28 +130,28 @@ void AudioRenderer::renderAudioGraph(
     }
 
     if (track != nullptr) {
-      // Handle frozen tracks - play back their freeze file instead of
-      // processing
+      // Handle frozen tracks - play back their freeze buffer (RT-safe)
+      // instead of processing
       if (track->isFrozen()) {
-        const juce::File &freezeFile = track->getFreezeFile();
-        if (freezeFile.existsAsFile() && trackIdx < trackBuffers_.size()) {
+        auto freezeBuffer = track->getFreezeBuffer();
+        if (freezeBuffer != nullptr && trackIdx < trackBuffers_.size()) {
           auto &trackBuffer = trackBuffers_[trackIdx];
           trackBuffer.clear();
 
-          // Read from the freeze file at the current playhead position
-          auto *freezeReader = track->getFreezeReader();
-          if (freezeReader != nullptr) {
-            // Calculate read position in freeze file
-            const juce::int64 readPos = playheadPosition;
-            const int samplesToRead = juce::jmin(
+          // Calculate read position in freeze buffer
+          const juce::int64 readPos = playheadPosition;
+          const int bufferLength = freezeBuffer->getNumSamples();
+          
+          if (readPos >= 0 && readPos < bufferLength) {
+             const int samplesToRead = juce::jmin(
                 numSamples,
-                static_cast<int>(freezeReader->lengthInSamples - readPos));
-
-            if (samplesToRead > 0 && readPos >= 0 &&
-                readPos < freezeReader->lengthInSamples) {
-              freezeReader->read(&trackBuffer, 0, samplesToRead, readPos, true,
-                                 true);
-            }
+                static_cast<int>(bufferLength - readPos));
+                
+             if (samplesToRead > 0) {
+                 for (int ch = 0; ch < juce::jmin(trackBuffer.getNumChannels(), freezeBuffer->getNumChannels()); ++ch) {
+                     trackBuffer.copyFrom(ch, 0, *freezeBuffer, ch, (int)readPos, samplesToRead);
+                 }
+             }
           }
 
           // Apply track volume/pan (frozen tracks still allow fader/pan)
@@ -258,6 +271,13 @@ void AudioRenderer::renderAudioGraph(
 
   // Apply master limiter (final clipping protection)
   masterLimiter.process(outputBuffer);
+
+  // Apply TPDF Dither (always on for 24-bit/16-bit DACs, or internal float dither)
+  // Even if float, TPDF helps prevents truncation quantization noise if converted later.
+  // Standard practice for DAWs to dither the final monitoring output.
+  dither_.process(outputBuffer, 24); // Assume 24-bit DAC monitoring
+
+  // Update metering
 
   // Update metering
   updateMasterMeters(outputBuffer);

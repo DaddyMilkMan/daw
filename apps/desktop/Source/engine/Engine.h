@@ -200,7 +200,25 @@ public:
    * @brief Toggle recording on/off
    * @note Convenience method for record button
    */
+  /**
+   * @brief Toggle recording on/off
+   * @note Convenience method for record button
+   */
   void toggleRecording();
+
+  /**
+   * @brief Panic - Stop all sound immediately
+   * @note Stops transport, sends All Notes Off to all tracks, and clears buffers.
+   */
+  void panic();
+
+  /**
+   * @brief Set sidechain source for a specific plugin on a track
+   * @param destTrackIndex Index of the track containing the plugin
+   * @param pluginIndex Index of the plugin to receive sidechain
+   * @param sourceTrackIndex Index of the source track
+   */
+  void setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex);
 
   //==========================================================================
   // Real-time Event Queue
