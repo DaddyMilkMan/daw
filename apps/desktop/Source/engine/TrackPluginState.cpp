@@ -7,6 +7,7 @@
 #include "PluginHost.h"
 #include "ZenithLogger.h"
 #include <juce_core/juce_core.h>
+#include <limits>
 
 namespace zenith {
 
@@ -56,8 +57,13 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
         if (blob && blob->getSize() > 0) {
             juce::MemoryBlock block(*blob);
             try {
-                instance->setStateInformation(block.getData(), static_cast<int>(block.getSize()));
-                ZENITH_LOG_INFO("Restored plugin state (" + juce::String(block.getSize()) + " bytes)");
+                const auto size = block.getSize();
+                if (size > static_cast<size_t>(std::numeric_limits<int>::max())) {
+                    ZENITH_LOG_ERROR("Plugin state is too large to restore: " + juce::String(size) + " bytes");
+                } else {
+                    instance->setStateInformation(block.getData(), static_cast<int>(size));
+                    ZENITH_LOG_INFO("Restored plugin state (" + juce::String(size) + " bytes)");
+                }
             } catch (const std::exception& e) {
                 ZENITH_LOG_ERROR("Exception restoring plugin state: " + juce::String(e.what()));
             } catch (...) {
