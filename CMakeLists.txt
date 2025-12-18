@@ -163,6 +163,7 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source/dsp
     apps/desktop/Source/rendering
     apps/desktop/Source/ai
+    apps/desktop/Source/ui/skia
     apps/desktop/Source/utils
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode

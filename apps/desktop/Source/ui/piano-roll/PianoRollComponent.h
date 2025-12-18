@@ -130,15 +130,18 @@ public:
   bool keyPressed(
       const juce::KeyPress &key) override; // from SkiaComponent/Component
 
+  // Mouse Helper Methods
+  void handleToolbarClick(const juce::MouseEvent &e, float x, float y);
+  void handlePianoKeyClick(const juce::MouseEvent &e, float x, float y);
+  void handleVelocityLaneClick(const juce::MouseEvent &e, float x, float y);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e, float x, float y);
+
   juce::MouseCursor getMouseCursor() override; // from SkiaComponent/Component
 
   //==========================================================================
   // Public API - Advanced Features
   //==========================================================================
 
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
@@ -506,7 +509,7 @@ public:
 
   /** Lock notes to a specific scale when moving */
   void setScaleLock(bool enabled);
-  bool getScaleLock() const { return scaleLockEnabled; }
+  bool getScaleLock() const;
 
   /** Set the scale for scale lock (root 0-11, scale type) */
   void setScaleLockKey(int rootNote, ScaleType scale);
@@ -671,8 +674,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -871,6 +872,12 @@ private:
   CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
                                  juce::Rectangle<float> &laneRect);
 
+  // Mouse Down Helpers
+  void handleToolbarClick(const juce::MouseEvent &e);
+  void handlePianoKeyClick(const juce::MouseEvent &e);
+  void handleVelocityLaneClick(const juce::MouseEvent &e);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e);
+
   //==========================================================================
   // Editing Operations (with batched undo)
   //==========================================================================
@@ -979,6 +986,7 @@ private:
 
   // Layout
   static constexpr int PIANO_WIDTH = 60;
+  static constexpr int TOOLBAR_HEIGHT = 40;
   static constexpr int RULER_HEIGHT = 30;
   int velocityLaneHeight = 160; // Increased from 120 for better precision
                                 // (~1.26px per velocity value)
@@ -1014,7 +1022,6 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-
 
   //==========================================================================
   // Ghost Notes State
@@ -1133,7 +1140,7 @@ private:
                     int transposition);
 
   //==========================================================================
-  // Scale Lock State
+  // Scale Highlight State
   //==========================================================================
 
   bool scaleLockEnabled = false;
@@ -1142,6 +1149,10 @@ private:
   std::vector<bool> scaleLockNotes; // 12 bools for which notes are in scale
 
   void updateScaleLockNotes();
+
+  //==========================================================================
+  // Chord Detection Helper
+  //==========================================================================
 
   //==========================================================================
   // Fold Mode State (Ableton-style)
@@ -1185,13 +1196,19 @@ private:
 
   std::map<juce::String, ScriptCallback> scriptCallbacks;
 
+  // Visual Resources (Optimized)
+  SkFont rulerBarFont_;
+  SkFont rulerBeatFont_;
+  SkFont clipNameFont_;
+  SkPaint textPaint_;
+  SkPaint borderPaint_;
+  SkPaint generalPaint_;
+
   //==========================================================================
   // Timer Callback
   //==========================================================================
 
   void timerCallback() override;
-
-
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };

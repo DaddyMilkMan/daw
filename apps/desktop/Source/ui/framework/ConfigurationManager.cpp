@@ -457,9 +457,9 @@ void ConfigurationManager::addChangeListener(ConfigChangeCallback callback) {
 }
 
 void ConfigurationManager::removeChangeListener(ConfigChangeCallback callback) {
-  juce::ScopedLock lock(lock_);
-  // changeListeners_.removeAllInstancesOf(callback);
-  // TODO: std::function is not comparable. Use a token/ID system for removal.
+  // NOOP: std::function cannot be compared with operator==
+  // In a real implementation, you would need to use wrapper with an ID
+  juce::ignoreUnused(callback);
 }
 
 void ConfigurationManager::notifyChangeListeners(const juce::String &key,
@@ -547,10 +547,10 @@ bool ConfigurationManager::restoreFromBackup() {
   }
 
   // Sort by modification time (newest first)
-  auto comparator = [](const juce::File &a, const juce::File &b) {
-    return a.getLastModificationTime() > b.getLastModificationTime();
-  };
-  std::sort(backupFiles.begin(), backupFiles.end(), comparator);
+  std::sort(backupFiles.begin(), backupFiles.end(),
+            [](const juce::File &a, const juce::File &b) {
+              return a.getLastModificationTime() > b.getLastModificationTime();
+            });
 
   // Restore from most recent backup
   return importConfiguration(backupFiles[0]);
@@ -679,7 +679,7 @@ void ConfigurationManager::setNestedValueInObject(
     return;
   }
 
-  juce::StringArray keyParts = this->splitKey(key);
+  juce::StringArray keyParts = splitKey(key);
 
   juce::DynamicObject::Ptr currentObject = object;
   for (int i = 0; i < keyParts.size() - 1; ++i) {
@@ -687,7 +687,7 @@ void ConfigurationManager::setNestedValueInObject(
 
     if (!existingValue.isObject()) {
       juce::DynamicObject::Ptr newObject = new juce::DynamicObject();
-      currentObject->setProperty(keyParts[i], newObject.get());
+      currentObject->setProperty(keyParts[i], juce::var(newObject.get()));
       currentObject = newObject;
     } else {
       currentObject = existingValue.getDynamicObject();
@@ -712,7 +712,7 @@ ConfigurationManager::ensureNestedObject(const juce::String &key) {
 
     if (!existingValue.isObject()) {
       juce::DynamicObject::Ptr newObject = new juce::DynamicObject();
-      currentObject->setProperty(keyParts[i], newObject.get());
+      currentObject->setProperty(keyParts[i], juce::var(newObject.get()));
       currentObject = newObject;
     } else {
       currentObject = existingValue.getDynamicObject();

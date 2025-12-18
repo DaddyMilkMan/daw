@@ -11,7 +11,6 @@
 */
 
 #include "AdaptiveUISettings.h"
-#include "AdaptiveUISettings.h"
 #include "../framework/ConfigurationManager.h"
 
 namespace zenith {

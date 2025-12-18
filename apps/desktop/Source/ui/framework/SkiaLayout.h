@@ -127,7 +127,7 @@ public:
   void addChild(SkiaComponent *child, float flex = 0.0f,
                 Alignment verticalAlignment = Alignment::Center);
 
-private:
+protected:
   void calculateLayout() override;
 };
 
@@ -144,7 +144,7 @@ public:
   void addChild(SkiaComponent *child, float flex = 0.0f,
                 Alignment horizontalAlignment = Alignment::Center);
 
-private:
+protected:
   void calculateLayout() override;
 };
 

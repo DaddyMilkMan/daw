@@ -10,7 +10,7 @@
 
 #include "RightSidePanel.h"
 #include "../../SimpleLogger.h"
-#include "../ui/widgets/SpectraAnalyzerComponent.h"
+#include "../widgets/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
@@ -25,13 +25,12 @@ namespace zenith {
 
 #ifdef ZENITH_USE_SKIA
 
-RightSidePanel::RightSidePanel(CommandAPI &api, AIBridgeClient &client,
-                               Engine &engine) {
+RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
   logToFile("RightSidePanel: Constructor started");
   setSize(300, 600);
 
   logToFile("RightSidePanel: Creating WingmanPanel...");
-  wingmanPanel_ = std::make_unique<WingmanPanel>(api, client, engine);
+  wingmanPanel_ = std::make_unique<WingmanPanel>(api, engine);
   logToFile("RightSidePanel: WingmanPanel created. Adding child...");
   addChildComponent(wingmanPanel_.get());
   wingmanPanel_->setVisible(true);

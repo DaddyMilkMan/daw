@@ -5,6 +5,7 @@
 
 #include "MenuBar.h"
 #include "CollabPanel.h"
+#include <core/SkFontMgr.h>
 
 namespace zenith {
 
@@ -43,10 +44,16 @@ void ZenithMenuBar::drawSkia(SkCanvas *canvas) {
   textPaint.setColor(SK_ColorWHITE);
   textPaint.setAntiAlias(true);
 
-  // Use generic font directly if Typeface provider not hooked up yet, or use
-  // default
-  #include "ZenithDesignSystem.h"
-  SkFont font = zenith::design::typography::getSkFont(14.0f);
+  // Use SkFontMgr for font creation
+  sk_sp<SkFontMgr> fontMgr = SkFontMgr::RefEmpty();
+  sk_sp<SkTypeface> typeface;
+  if (fontMgr) {
+    typeface = fontMgr->matchFamilyStyle("Roboto", SkFontStyle());
+  }
+  if (!typeface) {
+    typeface = SkTypeface::MakeEmpty();
+  }
+  SkFont font(typeface, 14.0f);
 
   SkPaint hoverPaint;
   hoverPaint.setColor(SkColorSetARGB(40, 255, 255, 255));

@@ -37,7 +37,7 @@
 namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
-class AIBridgeClient;
+class CommandAPI;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
@@ -72,7 +72,7 @@ public:
   using NewProjectCallback = std::function<void()>;
 
   MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
-                zenith::AIBridgeClient &aiClient, zenith::ProjectState &state,
+                zenith::ProjectState &state,
                 zenith::RecentProjectManager &recentProjects,
                 LoadProjectCallback onLoadProject,
                 NewProjectCallback onNewProject);
@@ -250,9 +250,6 @@ public:
 
   // Phase 5: Wingman command API
   std::unique_ptr<zenith::CommandAPI> commandAPI;
-
-  // Phase 7: AI bridge client
-  std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
 
   // Integration: Clip synchronizer
   std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;

@@ -126,6 +126,12 @@ public:
   void stopRecording(const std::vector<std::shared_ptr<Track>> &tracks);
 
   /**
+   * @brief Stop recording and discard all data (delete files)
+   * @note MESSAGE THREAD ONLY
+   */
+  void discardCurrentRecording();
+
+  /**
    * @brief Check if recording is active
    */
   bool isRecording() const { return isRecording_.load(); }

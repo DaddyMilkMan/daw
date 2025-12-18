@@ -477,10 +477,10 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
 
   // Compressor
   compressorEnabled.store(state.getProperty("compressorEnabled", false));
-  compThreshold.store(state.getProperty("compThreshold", zenith::constants::kDefaultCompThresholdDb));
-  compRatio.store(state.getProperty("compRatio", zenith::constants::kDefaultCompRatio));
-  compAttack.store(state.getProperty("compAttack", zenith::constants::kDefaultCompAttackMs));
-  compRelease.store(state.getProperty("compRelease", zenith::constants::kDefaultCompReleaseMs));
+  compThreshold.store(state.getProperty("compThreshold", constants::kDefaultCompThresholdDb));
+  compRatio.store(state.getProperty("compRatio", constants::kDefaultCompRatio));
+  compAttack.store(state.getProperty("compAttack", constants::kDefaultCompAttackMs));
+  compRelease.store(state.getProperty("compRelease", constants::kDefaultCompReleaseMs));
   compMakeup.store(state.getProperty("compMakeup", 0.0f));
   
   // Update ProCompressor with loaded values

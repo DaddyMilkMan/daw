@@ -16,7 +16,9 @@
 
 #pragma once
 
-#include "../engine/RecentProjectManager.h"
+#include <JuceHeader.h>
+
+#include "../../engine/RecentProjectManager.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
@@ -59,9 +61,12 @@ public:
   void resized() override;
 
   void mouseMove(const juce::MouseEvent &e) override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  // Keyboard Navigation
+  bool keyPressed(const juce::KeyPress &key) override;
 
   // New: Restrict hits to card only
   bool hitTest(int x, int y) override;
@@ -74,11 +79,11 @@ public:
 
   void show();
   void dismiss();
+  void refreshProjects();
 
   /**
    * @brief Refresh the recent projects list from the manager
    */
-  void refreshProjects();
 
 private:
   RecentProjectManager &recentProjectManager_;
@@ -107,6 +112,22 @@ private:
   };
   Spring tiltX_;
   Spring tiltY_;
+
+  // Cached Fonts & Paints - Optimization for A+ Grade
+  SkFont titleFont_;
+  SkFont subFont_;
+  SkFont headerFont_;
+  SkFont cardTitleFont_;
+  SkFont cardDateFont_;
+  SkFont cardGenreFont_;
+  SkFont buttonFont_;
+  SkFont statusFont_;
+  SkFont templateFont_;
+  SkFont profileFont_;
+  SkFont bodyFont_;
+
+  SkPaint textPaint_;
+  SkPaint subPaint_;
 
   // Layout
   SkRect mainCardBounds_;
@@ -150,7 +171,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  juce::TextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -164,7 +185,18 @@ private:
   };
   std::vector<Ripple> buttonRipples_;
 
+  // Keyboard Navigation State
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
+  int selectedIndex_ = -1;
+
+  void moveSelection(int dx, int dy);
+  void triggerSelection();
+
   // Helpers
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);

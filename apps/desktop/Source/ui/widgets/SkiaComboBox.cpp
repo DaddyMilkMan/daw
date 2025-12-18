@@ -20,7 +20,7 @@ SkiaComboBox::SkiaComboBox(const juce::String &componentName) {
 
   // Create trigger button
   triggerButton_ = std::make_unique<SkiaButton>();
-  triggerButton_->setButtonStyle(SkiaButton::Style::Secondary);
+  triggerButton_->setStyle(SkiaButton::Style::Secondary);
   triggerButton_->onClick = [this]() {
     if (isPopupActive_) {
       hidePopup();
@@ -276,7 +276,7 @@ void SkiaComboBox::updateTriggerButtonText() {
     buttonText = textWhenNothingSelected_;
   }
 
-  triggerButton_->setButtonText(buttonText);
+  triggerButton_->setText(buttonText);
 }
 
 } // namespace zenith
