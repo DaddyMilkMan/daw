@@ -190,7 +190,7 @@ private:
   SelectionSection selectedSection_ = SelectionSection::None;
   int selectedIndex_ = -1;
 
-  void moveSelection(int delta);
+  void moveSelection(int dx, int dy);
   void triggerSelection();
 
   // Helpers

@@ -1659,11 +1659,13 @@ bool Engine::exportProject(const ExportOptions &options) {
     }
 
     // Normalization (2-Pass: Find Peak -> Apply Gain)
+    // Normalization (Offline Render Refactor required for full track)
     // NOTE: Per-block normalization is WRONG for full track export.
     // Correct implementation requires render-to-temp-file -> scan -> write-to-final
     // This is disabled pending a full offline-render refactor.
     // See: applyNormalization() for when this gets properly implemented.
     (void)options.normalize; // Suppress unused warning
+
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;
@@ -1719,23 +1721,23 @@ void Engine::setPDCEnabled(bool enabled) {
 Engine::TrackSnapshot::TrackSnapshot(
     const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
     const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
-  tracks.reserve(ownedTracks.size());
-  lifecycle.reserve(ownedTracks.size());
+  this->tracks.reserve(ownedTracks.size());
+  this->lifecycle.reserve(ownedTracks.size());
   for (const auto &track : ownedTracks) {
     if (track != nullptr) {
-      tracks.push_back(track.get());
-      lifecycle.push_back(track); // Increment refcount
-      trackMap[track->getTrackId().toStdString()] = track.get();
+      this->tracks.push_back(track.get());
+      this->lifecycle.push_back(track); // Increment refcount
+      this->trackMap[track->getTrackId().toStdString()] = track.get();
     }
   }
 
-  auxBuses.reserve(ownedBuses.size());
-  lifecycleAux.reserve(ownedBuses.size());
+  this->auxBuses.reserve(ownedBuses.size());
+  this->lifecycleAux.reserve(ownedBuses.size());
   for (const auto &bus : ownedBuses) {
     if (bus != nullptr) {
-      auxBuses.push_back(bus.get());
-      lifecycleAux.push_back(bus);
-      auxBusMap[bus->getId().toStdString()] = bus.get();
+      this->auxBuses.push_back(bus.get());
+      this->lifecycleAux.push_back(bus);
+      this->auxBusMap[bus->getId().toStdString()] = bus.get();
     }
   }
 }

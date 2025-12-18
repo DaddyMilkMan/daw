@@ -235,6 +235,7 @@ void ZenithHubComponent::updateLayout() {
     profileBounds_.setEmpty();
   }
 
+
   // Update Recent Project Cards Layout (Grid)
   if (!recentArea_.isEmpty()) {
     float gridW = recentArea_.width();
@@ -253,7 +254,7 @@ void ZenithHubComponent::updateLayout() {
     }
   }
 
-  // Update Template Cards
+  // Update Template Cards (Larger with icons)
   if (!templatesArea_.isEmpty()) {
     float tCardH = 90.0f;
     float cardGap = 16.0f;
@@ -328,7 +329,6 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   greetingTextBounds_ = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height() + 4);
 
-  // Agent 5: Use Helper
   SkRect helperBounds = SkRect::MakeXYWH(subX, subY - bounds.height(),
                                          bounds.width(), bounds.height());
   drawText(canvas, greetingText_, helperBounds, subFont_, subPaint_, false);
@@ -349,6 +349,7 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
 
   icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_,
                           kGreetingIconSize, iconStyle);
+
 
   drawRecentProjects(canvas);
   drawAccount(canvas);
@@ -375,18 +376,21 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
   drawText(canvas, "Recent Projects", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop - 40, 300, 30), 
            headerFont_, textPaint_, false);
 
+
   // Empty state check
   if (recentProjects_.empty()) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
     drawText(canvas, "No recent projects yet.", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + 10, 300, 20), 
              bodyFont_, emptyStatePaint, false);
+
     return;
   }
 
   for (size_t i = 0; i < recentProjects_.size(); ++i) {
     const auto &proj = recentProjects_[i];
-    bool isSelected = (this->selectedSection_ == SelectionSection::Recent && (int)i == selectedIndex_);
+    bool isSelected = (selectedSection_ == SelectionSection::Recent && (int)i == selectedIndex_);
+
     bool active = proj.isHovered || isSelected;
 
     SkRRect rrect = SkRRect::MakeRectXY(proj.bounds, 12.0f, 12.0f);
@@ -399,6 +403,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
     borderPaint.setColor(active ? withAlpha(proj.accent, 0.6f) : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+
     borderPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, borderPaint);
 
@@ -461,6 +466,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
   for (size_t i = 0; i < templates_.size(); ++i) {
     const auto &tmpl = templates_[i];
     bool isSelected = (this->selectedSection_ == SelectionSection::Templates && (int)i == selectedIndex_);
+
     bool active = tmpl.isHovered || isSelected;
 
     SkRRect rrect = SkRRect::MakeRectXY(tmpl.bounds, 12.0f, 12.0f);
@@ -468,6 +474,14 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     cardPaint.setColor(active ? withAlpha(tmpl.color, 0.15f) : withAlpha(colors::BG_LIGHT, 0.08f));
     cardPaint.setAntiAlias(true);
     canvas->drawRRect(rrect, cardPaint);
+
+    // Border
+    SkPaint borderPaint;
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(isSelected ? 2.0f : 1.0f);
+    borderPaint.setColor(active ? withAlpha(tmpl.color, 0.6f) : withAlpha(colors::TEXT_PRIMARY, 0.06f));
+    borderPaint.setAntiAlias(true);
+    canvas->drawRRect(rrect, borderPaint);
 
     float iconSize = 48.0f;
     SkRect iconBounds = SkRect::MakeXYWH(tmpl.bounds.fLeft + 20, tmpl.bounds.centerY() - iconSize * 0.5f, iconSize, iconSize);
@@ -490,6 +504,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 
     drawText(canvas, tmpl.name, SkRect::MakeXYWH(iconBounds.right() + 16, tmpl.bounds.centerY() - 12, 200, 24), 
              templateFont_, textPaint_, false);
+
   }
 }
 
@@ -507,16 +522,18 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
   SkPaint avatarPaint;
   avatarPaint.setColor(colors::AMBER);
   avatarPaint.setAntiAlias(true);
-  canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f, profileBounds_.centerY(), avatarSize * 0.5f, avatarPaint);
+  float centerY = profileBounds_.fTop + profileBounds_.height() * 0.5f;
+  canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f, centerY, avatarSize * 0.5f, avatarPaint);
 
-  drawText(canvas, "SoundDesigner99", SkRect::MakeXYWH(profileBounds_.fLeft + 90, profileBounds_.centerY() - 18, 200, 24), 
+  drawText(canvas, "SoundDesigner99", SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY - 18, 200, 24), 
            profileFont_, textPaint_, false);
 
-  SkPaint statusPaint;
-  statusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); 
-  statusPaint.setAntiAlias(true);
-  drawText(canvas, "● Online", SkRect::MakeXYWH(profileBounds_.fLeft + 90, profileBounds_.centerY() + 4, 100, 20), 
-           statusFont_, statusPaint, false);
+  SkPaint onlineStatusPaint;
+  onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); 
+  onlineStatusPaint.setAntiAlias(true);
+  drawText(canvas, "● Online", SkRect::MakeXYWH(profileBounds_.fLeft + 90, (profileBounds_.fTop + profileBounds_.height() * 0.5f) + 4, 100, 20), 
+           statusFont_, onlineStatusPaint, false);
+
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
@@ -538,6 +555,7 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
 
   canvas->drawRRect(SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f), btnPaint);
   drawText(canvas, "New Project", newProjectButtonBounds_, buttonFont_, textPaint_, true);
+
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {
@@ -636,6 +654,7 @@ void ZenithHubComponent::showGreetingEditor() {
 
   greetingEditor_.setBounds(bounds);
   greetingEditor_.setVisible(true);
+  greetingEditor_.selectAll();
   greetingEditor_.grabKeyboardFocus();
 }
 
@@ -650,41 +669,87 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
   const int code = key.getKeyCode();
 
-  if (code == juce::KeyPress::returnKey) {
+  if (key.isKeyCode(juce::KeyPress::upKey)) {
+    moveSelection(0, -1);
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::downKey)) {
+    moveSelection(0, 1);
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::leftKey)) {
+    moveSelection(-1, 0);
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::rightKey)) {
+    moveSelection(1, 0);
+    return true;
+  }
+  if (key.isKeyCode(juce::KeyPress::returnKey)) {
     triggerSelection();
     return true;
   }
-  if (code == juce::KeyPress::upKey) {
-    moveSelection(-2);
+  if (key.isKeyCode(juce::KeyPress::escapeKey)) {
+    dismiss();
     return true;
   }
-  if (code == juce::KeyPress::downKey) {
-    moveSelection(2);
-    return true;
-  }
-  if (code == juce::KeyPress::leftKey) {
-    moveSelection(-1);
-    return true;
-  }
-  if (code == juce::KeyPress::rightKey) {
-    moveSelection(1);
-    return true;
-  }
+
   return SkiaComponent::keyPressed(key);
 }
 
-// Agent 5: Selection logic - Fixed empty list bug per code review
-void ZenithHubComponent::moveSelection(int delta) {
-  if (recentProjects_.empty()) {
-    selectedSection_ = SelectionSection::None;
-    selectedIndex_ = -1;
-  } else if (selectedSection_ == SelectionSection::None) {
+void ZenithHubComponent::moveSelection(int dx, int dy) {
+  if (selectedSection_ == SelectionSection::None) {
     selectedSection_ = SelectionSection::Recent;
     selectedIndex_ = 0;
-  } else {
-    selectedIndex_ += delta;
-    selectedIndex_ =
-        juce::jlimit(0, (int)recentProjects_.size() - 1, selectedIndex_);
+    repaint();
+    return;
+  }
+
+  if (selectedSection_ == SelectionSection::Recent) {
+    int row = selectedIndex_ / 2;
+    int col = selectedIndex_ % 2;
+
+    if (dx == 1 && col == 1) {
+      // Move to Sidebar
+      selectedSection_ = SelectionSection::New;
+      selectedIndex_ = -1;
+    } else if (dx == -1 && col == 0) {
+      // Stay
+    } else {
+      // Navigation within grid
+      int newRow = row + dy;
+      int newCol = col + dx;
+      
+      // Vertical wrap or limit? Let's limit for now to be predictable.
+      if (newRow < 0) newRow = 0;
+      if (newRow >= (int)(recentProjects_.size() + 1) / 2) newRow = (int)(recentProjects_.size() + 1) / 2 - 1;
+
+      int newIdx = (newRow * 2) + newCol;
+      if (newIdx >= 0 && newIdx < (int)recentProjects_.size()) {
+        selectedIndex_ = newIdx;
+      }
+    }
+  } else if (selectedSection_ == SelectionSection::New) {
+    if (dy == 1 && !templates_.empty()) {
+      selectedSection_ = SelectionSection::Templates;
+      selectedIndex_ = 0;
+    } else if (dx == -1) {
+      selectedSection_ = SelectionSection::Recent;
+      selectedIndex_ = std::min((int)recentProjects_.size() - 1, 1);
+    }
+  } else if (selectedSection_ == SelectionSection::Templates) {
+    if (dy == -1 && selectedIndex_ == 0) {
+      selectedSection_ = SelectionSection::New;
+      selectedIndex_ = -1;
+    } else if (dx == -1) {
+      selectedSection_ = SelectionSection::Recent;
+      selectedIndex_ = std::min((int)recentProjects_.size() - 1, 5);
+    } else {
+      int newIdx = selectedIndex_ + dy;
+      if (newIdx >= 0 && newIdx < (int)templates_.size()) {
+        selectedIndex_ = newIdx;
+      }
+    }
   }
   repaint();
 }
@@ -695,13 +760,14 @@ void ZenithHubComponent::triggerSelection() {
     if (onLoadProject_) {
       onLoadProject_(recentProjects_[selectedIndex_].path);
     }
+    dismiss();
   } else if (selectedSection_ == SelectionSection::New || selectedSection_ == SelectionSection::Templates) {
     if (onNewProject_) onNewProject_();
     dismiss();
   }
 }
 
-// Agent 5: Text Rendering Helper
+// Text Rendering Helper - Fixed vertical alignment per code review
 void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                                   const SkRect &bounds, const SkFont &font,
                                   const SkPaint &paint, bool centerVertical) {
@@ -711,10 +777,11 @@ void ZenithHubComponent::drawText(SkCanvas *canvas, const juce::String &text,
                    &textBounds);
 
   float x = bounds.left();
+  // Align text top to the top of the bounds (A+ alignment)
   float y = bounds.fTop - textBounds.fTop;
 
   if (centerVertical) {
-    y = bounds.centerY() + (textBounds.height() * 0.5f);
+    y = bounds.centerY() + (textBounds.height() * 0.5f) - textBounds.fBottom;
   }
   canvas->drawString(skText, x, y, font, paint);
 }
