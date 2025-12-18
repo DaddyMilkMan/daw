@@ -21,6 +21,10 @@
 
 using namespace zenith;
 
+// Magic numbers moved to constants/theme
+static constexpr float NOTE_CORNER_RADIUS = 3.0f;
+static constexpr float SELECTION_STROKE_WIDTH = 2.0f;
+static constexpr float HOVER_STROKE_WIDTH = 2.0f;
 constexpr float RULER_HEIGHT = 30.0f;
 constexpr float TOOLBAR_HEIGHT = 40.0f;
 constexpr float PIANO_WIDTH = 80.0f;
@@ -32,6 +36,7 @@ constexpr float TOOLBAR_BUTTON_HEIGHT = 30.0f;
 constexpr float TOOLBAR_BUTTON_MARGIN = 5.0f;
 constexpr int DEFAULT_PIANO_KEY_VELOCITY = 100;
 
+
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
@@ -40,6 +45,20 @@ PianoRollComponent::PianoRollComponent(zenith::ProjectState &state)
     : projectState(state) {
   setWantsKeyboardFocus(true);
   setMouseCursor(juce::MouseCursor::NormalCursor);
+
+  // Initialize visual resources
+  using namespace zenith::design;
+  rulerBarFont_ = typography::getMonoFont(11.0f, FontWeight::Bold);
+  rulerBeatFont_ = typography::getMonoFont(9.0f, FontWeight::Regular);
+  clipNameFont_ = typography::getSkFont(10.0f, FontWeight::Medium);
+
+  textPaint_.setAntiAlias(true);
+  textPaint_.setColor(colors::TEXT_PRIMARY);
+
+  borderPaint_.setStyle(SkPaint::kStroke_Style);
+  borderPaint_.setAntiAlias(true);
+
+  generalPaint_.setAntiAlias(true);
 }
 
 PianoRollComponent::~PianoRollComponent() {
@@ -406,10 +425,16 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (!currentClip.isValid())
     return;
 
+  if (stepSequencerMode) {
+    // Step sequencer mode handled separately
+    return;
+  }
+
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
   float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
   float velocityLaneTop = contentTop + noteGridHeight;
+
 
   // 1. Check Toolbar Clicks
   if (y < TOOLBAR_HEIGHT) {
@@ -566,6 +591,7 @@ void PianoRollComponent::handleNoteMainAreaClick(const juce::MouseEvent &e,
   }
 }
 
+
 void PianoRollComponent::mouseDrag(const juce::MouseEvent &e) {
   if (sprayCanMode && currentDragMode == DragMode::None) {
     handleSprayPaint(e.position.x, e.position.y);
@@ -698,6 +724,7 @@ void PianoRollComponent::createNoteAtPosition(float x, float y) {
   double lengthBeats = gridBeats;
 
   zenith::ProjectState::MidiNoteSpec note;
+  note.id = juce::Uuid().toString();
   note.pitch = pitch;
   note.startBeats = startBeats;
   note.lengthBeats = lengthBeats;
@@ -705,6 +732,15 @@ void PianoRollComponent::createNoteAtPosition(float x, float y) {
   note.muted = false;
 
   projectState.addMidiNote(currentClip.clipId, note, "Create MIDI note");
+
+  // Interaction Polish: Immediately select the new note
+  // addMidiNote triggers listeners synchronously, so noteRects should be updated.
+  for (auto& n : noteRects) {
+      if (n.id == note.id) {
+          selectNote(&n, false);
+          break;
+      }
+  }
 }
 
 void PianoRollComponent::deleteSelectedNotes() {
@@ -1109,8 +1145,11 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   // Background (Deep Slate)
   canvas->clear(colors::BG_DARKEST);
 
-  SkPaint paint;
-  paint.setAntiAlias(true);
+  generalPaint_.setColor(colors::BG_DARKER);
+  generalPaint_.setStyle(SkPaint::kFill_Style); 
+  
+  // Alias for legacy code
+  SkPaint& paint = generalPaint_;
 
   auto localBounds = getLocalBounds();
   float width = (float)localBounds.getWidth();
@@ -1120,8 +1159,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   // 1. Piano Keys Area Background
   SkRect pianoRect =
       SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
-  paint.setColor(colors::BG_DARKER);
-  canvas->drawRect(pianoRect, paint);
+  canvas->drawRect(pianoRect, generalPaint_);
 
   //==========================================================================
   // PROFESSIONAL TIMELINE RULER (Ableton/Logic style)
@@ -1132,15 +1170,15 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     // Ruler background with gradient
     SkPoint gradPts[] = {{0, 0}, {0, RULER_HEIGHT}};
     SkColor gradColors[] = {colors::BG_DARK, colors::BG_DARKER};
-    paint.setShader(SkGradientShader::MakeLinear(gradPts, gradColors, nullptr,
-                                                 2, SkTileMode::kClamp));
-    canvas->drawRect(rulerRect, paint);
-    paint.setShader(nullptr);
-
+    generalPaint_.setShader(SkGradientShader::MakeLinear(gradPts, gradColors, nullptr, 2, SkTileMode::kClamp));
+    canvas->drawRect(rulerRect, generalPaint_);
+    generalPaint_.setShader(nullptr);
+    
     // Bottom border
-    paint.setColor(colors::BORDER_DEFAULT);
-    canvas->drawLine(0, RULER_HEIGHT - 1, width, RULER_HEIGHT - 1, paint);
-
+    borderPaint_.setColor(colors::BORDER_DEFAULT);
+    borderPaint_.setStrokeWidth(1.0f);
+    canvas->drawLine(0, RULER_HEIGHT - 1, width, RULER_HEIGHT - 1, borderPaint_);
+    
     // Calculate visible beat range
     double visibleStartBeat = viewStartBeats;
     double visibleEndBeat = pixelsToBeats(width);
@@ -1163,9 +1201,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     }
 
     // Draw bar numbers and markers
-    SkFont barFont = typography::getMonoFont(11.0f, FontWeight::Bold);
-    SkFont beatFont = typography::getMonoFont(9.0f, FontWeight::Regular);
-
+    // Fonts are now members: rulerBarFont_, rulerBeatFont_
+    
     double startBar = std::floor(visibleStartBeat / beatsPerBar) * beatsPerBar;
 
     for (double beat = startBar; beat <= visibleEndBeat; beat += beatSubdiv) {
@@ -1180,70 +1217,54 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
 
       if (isBarStart) {
         // Bar marker - tall line + number
-        paint.setColor(colors::TEXT_SECONDARY);
-        paint.setStrokeWidth(1.5f);
-        canvas->drawLine(x, 4, x, RULER_HEIGHT - 4, paint);
-
+        generalPaint_.setColor(colors::TEXT_SECONDARY);
+        generalPaint_.setStrokeWidth(1.5f);
+        canvas->drawLine(x, 4, x, RULER_HEIGHT - 4, generalPaint_);
+        
         // Bar number with subtle glow
-        SkPaint textPaint;
-        textPaint.setAntiAlias(true);
-        textPaint.setColor(colors::TEXT_PRIMARY);
+        textPaint_.setColor(colors::TEXT_PRIMARY);
         juce::String barStr = juce::String(barNum);
-        canvas->drawString(barStr.toStdString().c_str(), x + 4, 18, barFont,
-                           textPaint);
-
+        canvas->drawString(barStr.toStdString().c_str(), x + 4, 18, rulerBarFont_, textPaint_);
+        
       } else if (isDownbeat && pixelsPerBeat >= 30.0) {
         // Beat marker - medium line
-        paint.setColor(colors::BORDER_SUBTLE);
-        paint.setStrokeWidth(1.0f);
-        canvas->drawLine(x, RULER_HEIGHT - 12, x, RULER_HEIGHT - 4, paint);
-
+        generalPaint_.setColor(colors::BORDER_SUBTLE);
+        generalPaint_.setStrokeWidth(1.0f);
+        canvas->drawLine(x, RULER_HEIGHT - 12, x, RULER_HEIGHT - 4, generalPaint_);
+        
         // Beat number (1.2, 1.3, etc)
         if (pixelsPerBeat >= 50.0) {
-          SkPaint textPaint;
-          textPaint.setAntiAlias(true);
-          textPaint.setColor(colors::TEXT_TERTIARY);
+          textPaint_.setColor(colors::TEXT_TERTIARY);
           int beatInBarNum = static_cast<int>(beatInBar) + 1;
-          juce::String label =
-              juce::String(barNum) + "." + juce::String(beatInBarNum);
-          canvas->drawString(label.toStdString().c_str(), x + 2,
-                             RULER_HEIGHT - 6, beatFont, textPaint);
+          juce::String label = juce::String(barNum) + "." + juce::String(beatInBarNum);
+          canvas->drawString(label.toStdString().c_str(), x + 2, RULER_HEIGHT - 6, rulerBeatFont_, textPaint_);
         }
       } else if (pixelsPerBeat >= 80.0) {
         // Subdivision tick - short line
-        paint.setColor(SkColorSetARGB(60, 255, 255, 255));
-        paint.setStrokeWidth(0.5f);
-        canvas->drawLine(x, RULER_HEIGHT - 6, x, RULER_HEIGHT - 2, paint);
+        generalPaint_.setColor(SkColorSetARGB(60, 255, 255, 255));
+        generalPaint_.setStrokeWidth(0.5f);
+        canvas->drawLine(x, RULER_HEIGHT - 6, x, RULER_HEIGHT - 2, generalPaint_);
       }
     }
 
     // Clip name badge (top-left)
     if (currentClip.isValid()) {
-      SkRect badge = SkRect::MakeXYWH(
-          4, 4, juce::jmin(150.0f, static_cast<float>(PIANO_WIDTH - 8)), 22);
-      paint.setColor(withAlpha(colors::VIOLET, 0.3f));
-      canvas->drawRoundRect(badge, 4, 4, paint);
-
+      SkRect badge = SkRect::MakeXYWH(4, 4, juce::jmin(150.0f, static_cast<float>(PIANO_WIDTH - 8)), 22);
+      generalPaint_.setColor(withAlpha(colors::VIOLET, 0.3f));
+      canvas->drawRoundRect(badge, 4, 4, generalPaint_);
+      
       // Border glow
-      SkPaint borderPaint;
-      borderPaint.setStyle(SkPaint::kStroke_Style);
-      borderPaint.setColor(withAlpha(colors::VIOLET, 0.6f));
-      borderPaint.setStrokeWidth(1.0f);
-      borderPaint.setAntiAlias(true);
-      canvas->drawRoundRect(badge, 4, 4, borderPaint);
-
+      borderPaint_.setColor(withAlpha(colors::VIOLET, 0.6f));
+      borderPaint_.setStrokeWidth(1.0f);
+      canvas->drawRoundRect(badge, 4, 4, borderPaint_);
+      
       // Clip name
-      SkPaint textPaint;
-      textPaint.setAntiAlias(true);
-      textPaint.setColor(colors::TEXT_PRIMARY);
-      SkFont labelFont = typography::getSkFont(10.0f, FontWeight::Medium);
-
-      juce::String clipName =
-          currentClip.clipName.isEmpty() ? "MIDI Clip" : currentClip.clipName;
-      if (clipName.length() > 18)
-        clipName = clipName.substring(0, 17) + "...";
-      canvas->drawString(clipName.toStdString().c_str(), 10, 19, labelFont,
-                         textPaint);
+      textPaint_.setColor(colors::TEXT_PRIMARY);
+      // font is clipNameFont_
+      
+      juce::String clipName = currentClip.clipName.isEmpty() ? "MIDI Clip" : currentClip.clipName;
+      if (clipName.length() > 18) clipName = clipName.substring(0, 17) + "...";
+      canvas->drawString(clipName.toStdString().c_str(), 10, 19, clipNameFont_, textPaint_);
     }
   }
 

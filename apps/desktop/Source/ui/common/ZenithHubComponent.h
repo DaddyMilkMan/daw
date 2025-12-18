@@ -120,8 +120,8 @@ private:
   SkFont profileFont_;
   SkFont bodyFont_;
 
-  SkPaint textPaint_;
-  SkPaint subPaint_;
+  SkPaint mainTextPaint_;
+  SkPaint subTextPaint_;
 
   // Layout
   SkRect mainCardBounds_;
@@ -165,7 +165,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  juce::TextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -179,22 +179,23 @@ private:
   };
   std::vector<Ripple> buttonRipples_;
 
+  // Keyboard Navigation State
+  enum class Section { None, RecentProjects, NewProject, Templates };
+  Section selectedSection_ = Section::None;
+  int selectedIndex_ = -1;
+
+  void moveSelection(int dx, int dy);
+  void triggerSelection();
+
   // Helpers
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
+                bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);
   void drawTemplates(SkCanvas *canvas);
   void drawAccount(SkCanvas *canvas);
   void drawNewProjectButton(SkCanvas *canvas);
-  void drawText(SkCanvas *canvas, const juce::String &text,
-                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
-                bool centerVertical = true);
-
-  // Keyboard Navigation State
-  enum class SelectionSection { None, Recent, New, Templates };
-  SelectionSection selectedSection_ = SelectionSection::None;
-  int selectedIndex_ = -1;
-  void moveSelection(int delta);
-  void triggerSelection();
 
   /** @brief Convert RecentProjectEntry to internal format */
   void loadFromManager();

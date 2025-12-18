@@ -38,6 +38,9 @@ constexpr int kDefaultBufferSize = 512;
 /// Maximum buffer size in samples (for allocation)
 constexpr int kMaxBufferSize = 8192;
 
+/// ID of the Master Bus node in the Routing Graph
+constexpr const char *kMasterNodeId = "master";
+
 //==============================================================================
 // Metering Constants
 //==============================================================================

@@ -872,6 +872,12 @@ private:
   CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
                                  juce::Rectangle<float> &laneRect);
 
+  // Mouse Down Helpers
+  void handleToolbarClick(const juce::MouseEvent &e);
+  void handlePianoKeyClick(const juce::MouseEvent &e);
+  void handleVelocityLaneClick(const juce::MouseEvent &e);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e);
+
   //==========================================================================
   // Editing Operations (with batched undo)
   //==========================================================================
@@ -1189,6 +1195,14 @@ private:
   //==========================================================================
 
   std::map<juce::String, ScriptCallback> scriptCallbacks;
+
+  // Visual Resources (Optimized)
+  SkFont rulerBarFont_;
+  SkFont rulerBeatFont_;
+  SkFont clipNameFont_;
+  SkPaint textPaint_;
+  SkPaint borderPaint_;
+  SkPaint generalPaint_;
 
   //==========================================================================
   // Timer Callback

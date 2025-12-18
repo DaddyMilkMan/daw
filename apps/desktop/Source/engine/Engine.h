@@ -785,6 +785,8 @@ private:
    */
   void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
                         juce::int64 playheadPosition,
+                        const std::vector<zenith::Track *> &tracks,
+                        const std::vector<zenith::AuxBus *> &auxBuses,
                         const juce::MidiBuffer *incomingMidi = nullptr);
 
   juce::AudioFormatManager formatManager;
@@ -839,24 +841,17 @@ private:
     std::vector<std::shared_ptr<zenith::AuxBus>>
         lifecycleAux; // Keeps buses alive
 
+    // Fast lookup maps (ID -> Pointer)
+    // Audio thread usage: Read-only access to find tracks by ID from RoutingGraph
+    std::unordered_map<std::string, zenith::Track *> trackMap;
+    std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
+
     TrackSnapshot() = default;
+    
+    // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
-      tracks.reserve(ownedTracks.size());
-      lifecycle.reserve(ownedTracks.size());
-      for (const auto &track : ownedTracks) {
-        tracks.push_back(track.get());
-        lifecycle.push_back(track); // Increment refcount
-      }
-
-      auxBuses.reserve(ownedBuses.size());
-      lifecycleAux.reserve(ownedBuses.size());
-      for (const auto &bus : ownedBuses) {
-        auxBuses.push_back(bus.get());
-        lifecycleAux.push_back(bus);
-      }
-    }
+        const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses);
   };
 
   // Lock-free snapshot mechanism
@@ -927,6 +922,9 @@ private:
 
   // ID Counter for Aux Busses
   std::atomic<int> auxBusIdCounter{0};
+
+  // ID Counter for Tracks
+  std::atomic<uint64_t> nextTrackId_{0};
 
   // Flag to prevent use-after-free in async callbacks
   std::atomic<bool> isShuttingDown_{false};
