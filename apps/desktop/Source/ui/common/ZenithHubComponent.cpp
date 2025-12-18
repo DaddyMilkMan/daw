@@ -381,9 +381,8 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
   if (recentProjects_.empty()) {
     SkPaint emptyStatePaint = textPaint_;
     emptyStatePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.35f));
-    drawText(canvas, "No recent projects yet.", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + 10, 300, 20), 
+    drawText(canvas, "No recent projects yet.", SkRect::MakeXYWH(recentArea_.fLeft, recentArea_.fTop + 10, 300, 20),
              bodyFont_, emptyStatePaint, false);
-
     return;
   }
 
@@ -666,9 +665,8 @@ void ZenithHubComponent::hideGreetingEditor(bool save) {
   repaint();
 }
 
+// Keyboard Navigation
 bool ZenithHubComponent::keyPressed(const juce::KeyPress &key) {
-  const int code = key.getKeyCode();
-
   if (key.isKeyCode(juce::KeyPress::upKey)) {
     moveSelection(0, -1);
     return true;
