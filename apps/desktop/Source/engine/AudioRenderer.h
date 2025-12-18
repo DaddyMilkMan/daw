@@ -23,9 +23,11 @@
 #include <atomic>
 #include <vector>
 #include <memory>
+#include <span>
 
 #include "EngineConstants.h"
 #include "RoutingGraph.h"
+#include "../dsp/Dither.h"
 
 namespace zenith {
 
@@ -92,13 +94,14 @@ public:
         juce::AudioBuffer<float>& outputBuffer,
         int numSamples,
         juce::int64 playheadPosition,
-        const std::vector<Track*>& tracks,
-        const std::vector<AuxBus*>& auxBuses,
+        std::span<const std::shared_ptr<Track>> tracks,
+        std::span<const std::shared_ptr<AuxBus>> auxBuses,
+        const RoutingGraph& routingGraph,
         const RoutingGraph& routingGraph,
         MasterLimiter& masterLimiter,
         std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
         const TempoMap* tempoMap,
-        const juce::MidiBuffer* incomingMidi = nullptr);
+        const juce::MidiBuffer* incomingMidi = nullptr) noexcept;
 
     //==========================================================================
     // PDC (Plugin Delay Compensation)
@@ -213,6 +216,9 @@ private:
     std::atomic<float> masterLevel_{0.0f};
     std::atomic<float> masterPeakLevel_{0.0f};
     std::atomic<int> masterLatency_{0};
+
+    // Dither
+    zenith::dsp::Dither dither_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };

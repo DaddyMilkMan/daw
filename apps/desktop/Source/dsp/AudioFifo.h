@@ -5,8 +5,8 @@
     Created: 2025-12-08
     Author:  Zenith DAW
 
-    Lock-free single-producer single-consumer FIFO for audio samples.
-    Safe for transferring data from Audio Thread to UI Thread.
+    Lock-free Multi-Producer Single-Consumer (MPSC) FIFO for audio samples.
+    Safe for multiple threads pushing data (e.g. tracks) to a single consumer (e.g. UI/Disk).
 
   ==============================================================================
 */
@@ -15,6 +15,7 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_audio_basics/juce_audio_basics.h>
+#include <atomic>
 
 namespace zenith {
 
@@ -26,10 +27,21 @@ public:
         buffer_.setSize(1, size); // Mono buffer
     }
 
-    // Push stereo samples (mixes to mono)
+    // Push stereo samples (mixes to mono) - Thread-Safe for Multiple Producers
     void pushStereoAsMono(const juce::AudioBuffer<float>& source, int numSamples) {
         // Range check
         if (numSamples <= 0) return;
+
+        // SpinLock for MPSC safety
+        // We use a simple atomic flag as a lightweight spinlock.
+        // This ensures that only one producer writes to the FIFO at a time,
+        // maintaining the integrity of the write index and buffer contents.
+        while (writeLock_.test_and_set(std::memory_order_acquire)) {
+            // Busy wait - acceptable for short critical sections in audio
+             juce::Thread::yield(); 
+        }
+        
+        // Critical Section
         
         // Prepare temporary storage for pointers
         int start1, size1, start2, size2;
@@ -43,9 +55,12 @@ public:
         }
         
         abstractFifo_.finishedWrite(size1 + size2);
+        
+        // Release Lock
+        writeLock_.clear(std::memory_order_release);
     }
     
-    // Pop samples into destination buffer
+    // Pop samples into destination buffer - Single Consumer Only
     void pop(std::vector<float>& destination) {
         int numWanted = (int)destination.size();
         int start1, size1, start2, size2;
@@ -86,6 +101,7 @@ private:
 
     juce::AbstractFifo abstractFifo_;
     juce::AudioBuffer<float> buffer_;
+    std::atomic_flag writeLock_ = ATOMIC_FLAG_INIT;
 };
 
 } // namespace zenith

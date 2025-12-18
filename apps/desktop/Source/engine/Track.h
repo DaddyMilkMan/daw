@@ -79,8 +79,7 @@ public:
   // AudioSource interface
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
   void releaseResources() override;
-  void
-  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
+
 
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
@@ -152,12 +151,12 @@ public:
   const juce::File &getFreezeFile() const { return freezeFile_; }
 
   /**
-   * @brief Get the audio reader for the freeze file
-   * @return Reader instance, or nullptr if not available
-   * @note Audio thread safe - reader is pre-created
+   * @brief Get the freeze audio buffer
+   * @return Shared pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - RCU pattern
    */
-  juce::AudioFormatReader *getFreezeReader() const {
-    return freezeReader_.get();
+  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
+    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
   }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
@@ -283,7 +282,8 @@ private:
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  std::unique_ptr<juce::AudioFormatReader> freezeReader_;
+  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
+  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing

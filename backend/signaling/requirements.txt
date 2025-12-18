@@ -1,0 +1,3 @@
+# Zenith Signaling Server Requirements
+# Currently only uses Python Standard Library (socket, threading, json, time, random)
+# No external dependencies required yet.

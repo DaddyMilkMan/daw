@@ -80,8 +80,10 @@ private:
   //==========================================================================
   // UI Components
 
+#include "../widgets/MarkdownComponent.h"
+// ...
   std::unique_ptr<juce::TextEditor> inputField;
-  std::unique_ptr<juce::TextEditor> conversationDisplay;
+  std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
   std::unique_ptr<juce::TextButton> sendButton;
   std::unique_ptr<juce::ComboBox> modeSelector;
   std::unique_ptr<juce::Label> modeLabel;
