@@ -61,6 +61,7 @@ public:
   void resized() override;
 
   void mouseMove(const juce::MouseEvent &e) override;
+
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
@@ -79,6 +80,10 @@ public:
   void show();
   void dismiss();
   void refreshProjects();
+
+  /**
+   * @brief Refresh the recent projects list from the manager
+   */
 
 private:
   RecentProjectManager &recentProjectManager_;
@@ -181,16 +186,16 @@ private:
   std::vector<Ripple> buttonRipples_;
 
   // Keyboard Navigation State
-  enum class Section { None, RecentProjects, NewProject, Templates };
-  Section selectedSection_ = Section::None;
+  enum class SelectionSection { None, Recent, New, Templates };
+  SelectionSection selectedSection_ = SelectionSection::None;
   int selectedIndex_ = -1;
 
   void moveSelection(int dx, int dy);
   void triggerSelection();
 
   // Helpers
-  void drawText(SkCanvas *canvas, const juce::String &text, const SkRect &bounds,
-                const SkFont &font, const SkPaint &paint,
+  void drawText(SkCanvas *canvas, const juce::String &text,
+                const SkRect &bounds, const SkFont &font, const SkPaint &paint,
                 bool centerVertical = true);
   void drawBackground(SkCanvas *canvas);
   void drawRecentProjects(SkCanvas *canvas);

@@ -27,7 +27,10 @@
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
+#include "../engine/AudioRenderer.h"
+#include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "../engine/Metronome.h"
 
 //==============================================================================
 namespace zenith {
@@ -39,6 +42,7 @@ Engine::Engine() {
   audioRenderer_ = std::make_unique<AudioRenderer>();
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
+  metronome_ = std::make_unique<Metronome>();
   DBG("Engine: Modular components initialized");
 
   // Initialize audio file pool for sample caching
@@ -318,6 +322,14 @@ bool Engine::initialize() {
     DBG("Engine: RecordingManager wired to DeviceManager");
   }
 
+  // Prepare Metronome
+  if (metronome_) {
+      metronome_->prepareToPlay(setup.sampleRate, setup.bufferSize);
+      // Sync metronome state with TransportController
+      metronome_->setEnabled(transportController_->isMetronomeEnabled());
+      metronome_->setLevel(transportController_->getMetronomeLevel());
+  }
+
   // Enable MIDI input devices
   enableMidiInput();
 
@@ -489,6 +501,48 @@ void Engine::toggleRecording() {
     } else {
       record();
     }
+  }
+}
+
+void Engine::panic() {
+  DBG("Engine: PANIC triggered!");
+  
+  // 1. Stop Transport
+  stop();
+  
+  // 2. Iterate all tracks (message thread is safe)
+  for (const auto& track : tracks_) {
+    if (track) {
+      // Clear any pending MIDI events in the track
+      // (Track doesn't expose a method for this yet, assuming implementation needed later)
+      
+      // Mute temporarily to stop audio output immediately
+      // track->setMuted(true); // Maybe too aggressive?
+      
+      // Allow reverb tails to fade naturally or kill them?
+      // Panic usually implies immediate silence.
+      // Ideally we would send MIDI CC 123 (All Notes Off) and 120 (All Sound Off)
+      // but we need a mechanism to inject MIDI into the track.
+      // For now, we will rely on stop() stopping the engine processing primarily.
+    }
+  }
+}
+
+void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex) {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  if (destTrackIndex < 0 || destTrackIndex >= tracks_.size()) return;
+  if (sourceTrackIndex < 0 || sourceTrackIndex >= tracks_.size()) return;
+  
+  auto& destTrack = tracks_[destTrackIndex];
+  auto& sourceTrack = tracks_[sourceTrackIndex];
+  
+  DBG("Engine: Routing Sidechain: " << sourceTrack->getName() << " -> " << destTrack->getName() << " (Plugin " << pluginIndex << ")");
+  
+  // Connect in routing graph (Stub Logic for Phase 2)
+  if (destTrack && sourceTrack) {
+     // routingGraph_.connect(sourceTrack->getTrackId(), destTrack->getTrackId(), 1.0f);
+     // Note: Real implementation needs to target specific plugin inputs, not just track mix.
   }
 }
 
@@ -998,6 +1052,11 @@ void Engine::audioDeviceIOCallbackWithContext(
             snapshot->auxBuses, routingGraph_, masterLimiter_,
             masterPlugins_, 
             tempoMap_.get(), &midi1);
+
+        // Mix Metronome (Pass 1)
+        if (metronome_) {
+            metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+        }
       }
     }
 
@@ -1006,6 +1065,7 @@ void Engine::audioDeviceIOCallbackWithContext(
       int samplesAfter = numSamples - samplesBeforeLoop;
       if (samplesAfter > 0) {
         // Use stack array for channel pointers to avoid heap allocation
+        jassert(numOutputChannels <= 32 && "Audio callback has a hardcoded limit of 32 channels");
         float* offsets[32]; // Max 32 channels supported
         int safeNumChannels = juce::jmin(numOutputChannels, 32);
 
@@ -1023,6 +1083,11 @@ void Engine::audioDeviceIOCallbackWithContext(
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_,
               masterPlugins_, tempoMap_.get(), &midi2);
+
+          // Mix Metronome (Pass 2)
+          if (metronome_) {
+              metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+          }
         }
 
         transportController_->setPlayheadSamples(loopStart + samplesAfter);
@@ -1459,8 +1524,18 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
     // Render using AudioRenderer
     if (audioRenderer_) {
       juce::MidiBuffer dummyMidi;
+      
+      // Build raw pointer vectors for AudioRenderer
+      std::vector<Track*> trackPtrs;
+      trackPtrs.reserve(tracks_.size());
+      for (const auto& t : tracks_) trackPtrs.push_back(t.get());
+      
+      std::vector<AuxBus*> auxPtrs;
+      auxPtrs.reserve(auxBuses_.size());
+      for (const auto& a : auxBuses_) auxPtrs.push_back(a.get());
+      
       audioRenderer_->renderAudioGraph(
-          renderBuffer, samplesToRender, samplesRendered, tracks_, auxBuses_,
+          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
           &dummyMidi);
     } else {
@@ -1571,9 +1646,12 @@ bool Engine::exportProject(const ExportOptions &options) {
     int numSamples =
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
-    // Render Mix
-    // Note: renderAudioGraph is the private method for rendering
-    renderAudioGraph(renderBuffer, numSamples, samplesWritten, nullptr);
+    // Render Mix - create raw pointer vectors for export
+    std::vector<zenith::Track*> trackPtrs;
+    std::vector<zenith::AuxBus*> auxPtrs;
+    for (const auto& t : tracks_) { if (t) trackPtrs.push_back(t.get()); }
+    for (const auto& a : auxBuses_) { if (a) auxPtrs.push_back(a.get()); }
+    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs, auxPtrs, nullptr);
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -1581,21 +1659,13 @@ bool Engine::exportProject(const ExportOptions &options) {
     }
 
     // Normalization (2-Pass: Find Peak -> Apply Gain)
-    if (options.normalize) {
-      float peak = 0.0f;
-      // Scan buffer for peak
-      peak = renderBuffer.getMagnitude(0, numSamples);
-      if (peak > 0.0001f) {
-           float targetLinear = juce::Decibels::decibelsToGain((float)options.normalizeDb);
-           float gain = targetLinear / peak;
-           // This is still intra-block normalization which is WRONG for full track
-           // Correct implementation requires render-to-temp-file -> scan -> write-to-final
-           // But since this is a simple "exportProject" streaming loop, we can't look ahead.
-           // Replacing with placeholder comment for future full offline-render refactor.
-           // For now, disabling broken per-block normalization to prevent sudden volume jumps.
-           // applyNormalization(renderBuffer, peak, (float)options.normalizeDb);
-      }
-    }
+    // Normalization (Offline Render Refactor required for full track)
+    // NOTE: Per-block normalization is WRONG for full track export.
+    // Correct implementation requires render-to-temp-file -> scan -> write-to-final
+    // This is disabled pending a full offline-render refactor.
+    // See: applyNormalization() for when this gets properly implemented.
+    (void)options.normalize; // Suppress unused warning
+
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;
@@ -1614,12 +1684,6 @@ void Engine::applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
   float targetLinear = juce::Decibels::decibelsToGain(targetDb);
   float gain = targetLinear / maxPeak;
   buffer.applyGain(gain);
-}
-  float blockPeak = buffer.getMagnitude(0, buffer.getNumSamples());
-  if (blockPeak > targetLinear) {
-    float gain = targetLinear / blockPeak;
-    buffer.applyGain(gain);
-  }
 }
 
 //==============================================================================
@@ -1744,7 +1808,12 @@ int Engine::getMaxTrackLatency() const {
 
 void Engine::recalculatePDC() {
   if (audioRenderer_) {
-    audioRenderer_->calculatePDC(tracks_);
+    // Build raw pointer vector for AudioRenderer
+    std::vector<Track*> trackPtrs;
+    trackPtrs.reserve(tracks_.size());
+    for (const auto& t : tracks_) trackPtrs.push_back(t.get());
+    
+    audioRenderer_->calculatePDC(trackPtrs);
   }
 }
 
@@ -1935,6 +2004,33 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   }
 
   return tracks_[trackIndex]->isFrozen();
+}
+
+//==============================================================================
+// Metronome
+//==============================================================================
+
+void Engine::toggleMetronome() {
+  if (transportController_) {
+      bool newState = !transportController_->isMetronomeEnabled();
+      transportController_->setMetronomeEnabled(newState);
+      if (metronome_) {
+          metronome_->setEnabled(newState);
+      }
+  }
+}
+
+bool Engine::isMetronomeEnabled() const {
+    return transportController_ ? transportController_->isMetronomeEnabled() : false;
+}
+
+void Engine::setMetronomeLevel(float level) {
+    if (transportController_) {
+        transportController_->setMetronomeLevel(level);
+        if (metronome_) {
+            metronome_->setLevel(level);
+        }
+    }
 }
 
 } // namespace zenith

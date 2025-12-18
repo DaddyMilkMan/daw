@@ -20,36 +20,24 @@
 namespace zenith {
 
 //==============================================================================
-WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
-                           Engine &engine)
-    : commandAPI(api), aiBridgeClient(client), engine_(engine) {
+//==============================================================================
+WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
+    : commandAPI(api), engine_(engine) {
   logToFile("WingmanPanel: Constructor started");
   // Create Grok controller
   logToFile("WingmanPanel: Creating GrokDAWController...");
   grokController = std::make_unique<GrokDAWController>(commandAPI);
 
   //==========================================================================
-  // Conversation Display
-  conversationDisplay = std::make_unique<juce::TextEditor>("Conversation");
-  conversationDisplay->setMultiLine(true);
-  conversationDisplay->setReadOnly(true);
-  conversationDisplay->setScrollbarsShown(true);
-  conversationDisplay->setCaretVisible(false);
-  conversationDisplay->setPopupMenuEnabled(true);
-  conversationDisplay->setColour(juce::TextEditor::backgroundColourId,
-                                 ZenithTheme::Colors::bg_02);
-  conversationDisplay->setColour(juce::TextEditor::textColourId,
-                                 ZenithTheme::Colors::text_primary);
-  conversationDisplay->setColour(juce::TextEditor::outlineColourId,
-                                 ZenithTheme::Colors::border_default);
-  conversationDisplay->setFont(ZenithTheme::Typography::getBodyFont());
+  // Conversation Display (Markdown Enabled)
+  conversationDisplay = std::make_unique<widgets::MarkdownComponent>();
+  // conversationDisplay->setColour(...) - MarkdownComponent handles its own colors via Skia
   addAndMakeVisible(conversationDisplay.get());
 
   // Welcome message
   appendToConversation(
       "Wingman",
-      "Hello! I'm Wingman, your AI assistant. I can control the DAW, generate "
-      "presets, and help you create music. What would you like to do?");
+      "**Hello!** I'm Wingman, your AI assistant.\nI can control the DAW, generate presets, and help you create music.\n\n*What would you like to do?*");
 
   //==========================================================================
   // Input Field
@@ -281,14 +269,7 @@ void WingmanPanel::sendCommand() {
 
 void WingmanPanel::appendToConversation(const juce::String &speaker,
                                         const juce::String &message) {
-  juce::String timestamp =
-      juce::Time::getCurrentTime().toString(false, true, false, true);
-  juce::String entry =
-      "[" + timestamp + "] " + speaker + ": " + message + "\n\n";
-
-  conversationDisplay->moveCaretToEnd();
-  conversationDisplay->insertTextAtCaret(entry);
-  conversationDisplay->moveCaretToEnd();
+  conversationDisplay->appendMessage(speaker, message);
 }
 
 void WingmanPanel::setStatus(const juce::String &status, juce::Colour colour) {

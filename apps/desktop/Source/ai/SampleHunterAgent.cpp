@@ -114,17 +114,17 @@ void SampleHunterAgent::stopHunting() {
 }
 
 juce::String SampleHunterAgent::getStatusMessage() const {
-  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(statusLock_));
+  juce::ScopedLock lock(statusLock_);
   return currentStatus_;
 }
 
 std::vector<FoundSample> SampleHunterAgent::getFoundSamples() const {
-  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(samplesLock_));
+  juce::ScopedLock lock(samplesLock_);
   return foundSamples_;
 }
 
 std::vector<juce::File> SampleHunterAgent::getImportedFiles() const {
-  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(samplesLock_));
+  juce::ScopedLock lock(samplesLock_);
   std::vector<juce::File> imported;
   for (const auto &sample : foundSamples_) {
     if (sample.localFile.exists()) {

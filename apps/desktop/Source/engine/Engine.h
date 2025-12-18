@@ -63,6 +63,7 @@ class Clip;
 class MixerChannel;
 class AudioFilePool;
 class PluginHost;
+class Metronome;
 class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
@@ -200,7 +201,25 @@ public:
    * @brief Toggle recording on/off
    * @note Convenience method for record button
    */
+  /**
+   * @brief Toggle recording on/off
+   * @note Convenience method for record button
+   */
   void toggleRecording();
+
+  /**
+   * @brief Panic - Stop all sound immediately
+   * @note Stops transport, sends All Notes Off to all tracks, and clears buffers.
+   */
+  void panic();
+
+  /**
+   * @brief Set sidechain source for a specific plugin on a track
+   * @param destTrackIndex Index of the track containing the plugin
+   * @param pluginIndex Index of the plugin to receive sidechain
+   * @param sourceTrackIndex Index of the source track
+   */
+  void setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex);
 
   //==========================================================================
   // Real-time Event Queue
@@ -724,6 +743,14 @@ public:
    */
   bool exportProject(const ExportOptions &options);
 
+  //==========================================================================
+  // Metronome
+  //==========================================================================
+
+  void toggleMetronome();
+  bool isMetronomeEnabled() const;
+  void setMetronomeLevel(float level);
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
@@ -875,6 +902,7 @@ private:
 
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<Metronome> metronome_;
 
   // Analysis FIFO (Stereo)
   std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;

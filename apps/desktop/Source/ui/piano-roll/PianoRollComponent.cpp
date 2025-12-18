@@ -425,10 +425,16 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (!currentClip.isValid())
     return;
 
+  if (stepSequencerMode) {
+    // Step sequencer mode handled separately
+    return;
+  }
+
   float x = static_cast<float>(e.x);
   float y = static_cast<float>(e.y);
   float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
   float velocityLaneTop = contentTop + noteGridHeight;
+
 
   // 1. Check Toolbar Clicks
   if (y < TOOLBAR_HEIGHT) {
@@ -480,7 +486,6 @@ void PianoRollComponent::handleToolbarClick(const juce::MouseEvent &e, float x,
     btnX += TOOLBAR_BUTTON_WIDTH + TOOLBAR_BUTTON_MARGIN;
   }
 }
-
 
 
 void PianoRollComponent::handlePianoKeyClick(const juce::MouseEvent &e, float x,
@@ -1180,7 +1185,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
     borderPaint_.setColor(colors::BORDER_DEFAULT);
     borderPaint_.setStrokeWidth(1.0f);
     canvas->drawLine(0, RULER_HEIGHT - 1, width, RULER_HEIGHT - 1, borderPaint_);
-
+    
     // Calculate visible beat range
     double visibleStartBeat = viewStartBeats;
     double visibleEndBeat = pixelsToBeats(width);
@@ -1222,6 +1227,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         generalPaint_.setColor(colors::TEXT_SECONDARY);
         generalPaint_.setStrokeWidth(1.5f);
         canvas->drawLine(x, 4, x, RULER_HEIGHT - 4, generalPaint_);
+        
 
         // Bar number with subtle glow
         textPaint_.setColor(colors::TEXT_PRIMARY);
@@ -1233,6 +1239,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         generalPaint_.setColor(colors::BORDER_SUBTLE);
         generalPaint_.setStrokeWidth(1.0f);
         canvas->drawLine(x, RULER_HEIGHT - 12, x, RULER_HEIGHT - 4, generalPaint_);
+        
 
         // Beat number (1.2, 1.3, etc)
         if (pixelsPerBeat >= 50.0) {

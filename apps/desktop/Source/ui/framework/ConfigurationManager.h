@@ -97,6 +97,9 @@ const juce::String PROJECT_DEFAULT_TIMESIG_NUM = "project.defaultTimeSigNum";
 const juce::String PROJECT_DEFAULT_TIMESIG_DEN = "project.defaultTimeSigDen";
 const juce::String PROJECT_DEFAULT_SAMPLE_RATE = "project.defaultSampleRate";
 const juce::String PROJECT_DEFAULT_BUFFER_SIZE = "project.defaultBufferSize";
+
+// Collaboration
+const juce::String COLLAB_SALT = "collab.salt";
 } // namespace keys
 
 // ============================================================================

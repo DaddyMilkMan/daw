@@ -231,8 +231,11 @@ private:
         script = exe.getParentDirectory().getChildFile("scripts/audio_analyzer.py");
         if (script.existsAsFile()) return script;
         
-        // 3. Hardcoded path for this session (fallback)
-        return juce::File("c:\\zenith\\daw\\zenith-core\\scripts\\audio_analyzer.py");
+        // 3. Check in project root (assuming we are in apps/desktop/build/...)
+        script = exe.getParentDirectory().getParentDirectory().getParentDirectory().getParentDirectory().getChildFile("zenith-core/scripts/audio_analyzer.py");
+        if (script.existsAsFile()) return script;
+
+        return {}; // Not found
     }
     
     void notifyError(const juce::String& error)

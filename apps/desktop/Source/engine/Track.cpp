@@ -315,11 +315,7 @@ void Track::getNextAudioBlock(
   mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
 }
 
-// Legacy overload: uses default playhead of 0
-void Track::getNextAudioBlock(
-    const juce::AudioSourceChannelInfo &bufferToFill) {
-  getNextAudioBlock(bufferToFill, 0);
-}
+
 
 //==============================================================================
 void Track::setName(const juce::String &newName) {
@@ -361,7 +357,7 @@ void Track::setFreezeFile(const juce::File &file) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
   freezeFile_ = file;
-  freezeReader_.reset();
+  std::shared_ptr<juce::AudioBuffer<float>> newBuffer = nullptr;
 
   if (file.existsAsFile()) {
     // Register basic formats if not already done
@@ -370,17 +366,30 @@ void Track::setFreezeFile(const juce::File &file) {
     }
 
     // Create reader for the freeze file
-    freezeReader_.reset(freezeFormatManager_.createReaderFor(file));
+    std::unique_ptr<juce::AudioFormatReader> reader(
+        freezeFormatManager_.createReaderFor(file));
 
-    if (freezeReader_ == nullptr) {
+    if (reader == nullptr) {
       DBG("Track::setFreezeFile: Failed to create reader for " +
           file.getFullPathName());
       freezeFile_ = juce::File();
     } else {
-      DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() +
-          " (" + juce::String(freezeReader_->lengthInSamples) + " samples)");
+      // Load entire file into memory (RT-safe for playback)
+      // Check for rational size limit (e.g. < 2GB) to prevent crashes
+      if (reader->lengthInSamples > 0 && reader->lengthInSamples < 200 * 60 * 48000) { // ~200 mins
+         newBuffer = std::make_shared<juce::AudioBuffer<float>>(reader->numChannels, (int)reader->lengthInSamples);
+         reader->read(newBuffer.get(), 0, (int)reader->lengthInSamples, 0, true, true);
+         
+         DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() +
+             " (" + juce::String(reader->lengthInSamples) + " samples)");
+      } else {
+         DBG("Track::setFreezeFile: File too large to freeze in RAM: " + file.getFileName());
+      }
     }
   }
+  
+  // Atomic store new buffer
+  std::atomic_store_explicit(&freezeBuffer_, newBuffer, std::memory_order_release);
 }
 
 //==============================================================================
