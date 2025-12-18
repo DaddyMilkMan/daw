@@ -1078,7 +1078,16 @@ void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
   const int fftSize = 1024;
   std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
 
-  // Use the first 1024 samples of the loaded section
+  // Mix to mono if there are multiple channels, then use the first 1024 samples
+  if (tempBuffer.getNumChannels() > 1) {
+    // Simple mixdown to the first channel
+    for (int ch = 1; ch < tempBuffer.getNumChannels(); ++ch) {
+      tempBuffer.addFrom(0, 0, tempBuffer, ch, 0, tempBuffer.getNumSamples());
+    }
+    tempBuffer.applyGain(0, 0, tempBuffer.getNumSamples(),
+                         1.0f / static_cast<float>(tempBuffer.getNumChannels()));
+  }
+
   const float *data = tempBuffer.getReadPointer(0);
   for (int i = 0; i < fftSize && i < tempBuffer.getNumSamples(); ++i) {
     fftData[static_cast<size_t>(i)] = data[i];

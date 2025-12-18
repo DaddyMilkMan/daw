@@ -1,4 +1,5 @@
 #include "CollaborationManager.h"
+#include "../ui/framework/ConfigurationManager.h"
 
 CollaborationManager::CollaborationManager()
     : juce::Thread("CollabP2PThread") {}
@@ -182,7 +183,9 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
         
         // A+ Security: Response = Hash(Challenge + SessionCode + Salt)
         // We use string hashing as a robust mechanism since simple XOR is reversible.
-        juce::String secret = juce::String(challenge) + sessionCode + "ZENITH_SALT_2025";
+        juce::String salt = zenith::config::ConfigurationManager::getInstance()
+                               .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
+        juce::String secret = juce::String(challenge) + sessionCode + salt;
         int response = secret.hashCode(); 
         
         sendPacket(PacketType::ChallengeResponse, &response, sizeof(int));
@@ -192,7 +195,9 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
         int receivedResponse = 0;
         memcpy(&receivedResponse, payloadPtr, sizeof(int));
         
-        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + "ZENITH_SALT_2025";
+        juce::String salt = zenith::config::ConfigurationManager::getInstance()
+                               .getString(zenith::config::keys::COLLAB_SALT, "ZENITH_SALT_2025");
+        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + salt;
         int expectedResponse = expectedSecret.hashCode();
 
         if (receivedResponse == expectedResponse) {
