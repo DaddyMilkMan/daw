@@ -238,8 +238,7 @@ void ZenithHubComponent::updateLayout() {
 void ZenithHubComponent::timerCallback() {
   animationTime_ += 0.016f;
   alpha_.update(16.0f);
-  if (alpha_.isAnimating()) repaint();
-  repaint();
+  if (alpha_.isAnimating() || auroraBackground_) repaint();
 }
 
 void ZenithHubComponent::show() {
@@ -349,6 +348,35 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     thumbPaint.setAntiAlias(true);
     canvas->drawRRect(SkRRect::MakeRectXY(thumbRect, 8.0f, 8.0f), thumbPaint);
 
+    // Draw genre-specific icon
+    SkPath iconPath = icons::Project(); // Default
+    auto it = kGenreIconMap.find(proj.genre.toLowerCase());
+    if (it != kGenreIconMap.end()) {
+      iconPath = it->second();
+    }
+
+    SkRect pathBounds = iconPath.getBounds();
+    SkPaint iconPaint;
+    iconPaint.setColor(withAlpha(proj.accent, 0.8f));
+    iconPaint.setAntiAlias(true);
+
+    if (!pathBounds.isEmpty()) {
+      float iconSize = 40.0f;
+      float scale = iconSize / std::max(pathBounds.width(), pathBounds.height());
+
+      SkMatrix matrix;
+      matrix.reset();
+      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
+      matrix.postScale(scale, scale);
+      matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
+
+      SkPath scaledPath;
+      iconPath.transform(matrix, &scaledPath);
+      canvas->drawPath(scaledPath, iconPaint);
+    } else {
+      canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12, iconPaint);
+    }
+
     float textX = thumbRect.right() + 16;
     drawText(canvas, proj.name, SkRect::MakeXYWH(textX, proj.bounds.fTop + 20, proj.bounds.width() - 110, 24), 
              cardTitleFont_, mainTextPaint_, false);
@@ -384,7 +412,18 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     SkPaint iconPaint;
     iconPaint.setColor(tmpl.color);
     iconPaint.setAntiAlias(true);
-    canvas->drawCircle(iconBounds.centerX(), iconBounds.centerY(), 12, iconPaint);
+    
+    // Draw template-specific icon
+    SkPath iconPath = icons::Template(); // fallback
+    auto it = kTemplateIconMap.find(tmpl.icon);
+    if (it != kTemplateIconMap.end()) {
+      iconPath = it->second();
+    }
+
+    icons::IconStyle iconStyle;
+    iconStyle.color = tmpl.color;
+    iconStyle.strokeWidth = icons::STROKE_REGULAR;
+    icons::drawIconCentered(canvas, iconPath, iconBounds, iconBounds.width() * 0.6f, iconStyle);
 
     drawText(canvas, tmpl.name, SkRect::MakeXYWH(iconBounds.right() + 16, tmpl.bounds.centerY() - 12, 200, 24), 
              templateFont_, mainTextPaint_, false);

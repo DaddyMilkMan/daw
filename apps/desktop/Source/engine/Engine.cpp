@@ -1006,6 +1006,7 @@ void Engine::audioDeviceIOCallbackWithContext(
       int samplesAfter = numSamples - samplesBeforeLoop;
       if (samplesAfter > 0) {
         // Use stack array for channel pointers to avoid heap allocation
+        jassert(numOutputChannels <= 32 && "Audio callback has a hardcoded limit of 32 channels");
         float* offsets[32]; // Max 32 channels supported
         int safeNumChannels = juce::jmin(numOutputChannels, 32);
 
@@ -1594,21 +1595,11 @@ bool Engine::exportProject(const ExportOptions &options) {
     }
 
     // Normalization (2-Pass: Find Peak -> Apply Gain)
-    if (options.normalize) {
-      float peak = 0.0f;
-      // Scan buffer for peak
-      peak = renderBuffer.getMagnitude(0, numSamples);
-      if (peak > 0.0001f) {
-           float targetLinear = juce::Decibels::decibelsToGain((float)options.normalizeDb);
-           float gain = targetLinear / peak;
-           // This is still intra-block normalization which is WRONG for full track
-           // Correct implementation requires render-to-temp-file -> scan -> write-to-final
-           // But since this is a simple "exportProject" streaming loop, we can't look ahead.
-           // Replacing with placeholder comment for future full offline-render refactor.
-           // For now, disabling broken per-block normalization to prevent sudden volume jumps.
-           // applyNormalization(renderBuffer, peak, (float)options.normalizeDb);
-      }
-    }
+    // NOTE: Per-block normalization is WRONG for full track export.
+    // Correct implementation requires render-to-temp-file -> scan -> write-to-final
+    // This is disabled pending a full offline-render refactor.
+    // See: applyNormalization() for when this gets properly implemented.
+    (void)options.normalize; // Suppress unused warning
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;
