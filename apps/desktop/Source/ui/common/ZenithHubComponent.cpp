@@ -245,17 +245,37 @@ void ZenithHubComponent::updateLayout() {
   newProjectButtonBounds_ = SkRect::MakeXYWH(
       sidebarX, accountArea_.bottom() + padding, colTwoW, buttonH);
 
-  // Templates
-  templatesArea_ = SkRect::MakeXYWH(
-      sidebarX, newProjectButtonBounds_.bottom() + padding, colTwoW,
-      recentArea_.bottom() - (newProjectButtonBounds_.bottom() + padding));
+  // 2. Layout Sidebar (Account, Button, Templates)
+  auto sidebarRows = ZenithLayout::begin()
+      .withFloatBounds(SkRect::MakeXYWH(sidebarX, recentArea_.fTop, colTwoW, cardH - (padding * 2) - headerHeight))
+      .withGap(padding)
+      .addFlexItem(juce::FlexItem().withHeight(100.0f))
+      .addFlexItem(juce::FlexItem().withHeight(60.0f))
+      .addFlexItem(juce::FlexItem().withFlex(1.0f))
+      .layout(juce::FlexBox::Direction::column);
+      
+  if (sidebarRows.size() >= 3) {
+      auto a = sidebarRows[0];
+      accountArea_ = SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
+      
+      auto b = sidebarRows[1];
+      newProjectButtonBounds_ = SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
+      
+      auto t = sidebarRows[2];
+      templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
 
-  // Profile Button
-  profileBounds_ =
-      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                       accountArea_.width(), 90.0f);
+      // Profile Button - SAFE calculation inside valid sidebar check
+      profileBounds_ =
+        SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+               accountArea_.width(), 90.0f);
+  } else {
+    accountArea_.setEmpty();
+    newProjectButtonBounds_.setEmpty();
+    templatesArea_.setEmpty();
+    profileBounds_.setEmpty();
+  }
 
-  // Restore Layout Loops (Grid for Projects)
+  // Update Recent Project Cards Layout (Grid)
   if (!recentArea_.isEmpty()) {
     float gridW = recentArea_.width();
     float cardGap = 16.0f;
@@ -273,16 +293,19 @@ void ZenithHubComponent::updateLayout() {
     }
   }
 
-  // Restore Layout Loops (Stack for Templates)
+  // Update Template Cards
   if (!templatesArea_.isEmpty()) {
     float tCardH = 90.0f;
     float cardGap = 16.0f;
     for (size_t i = 0; i < templates_.size(); ++i) {
       float tx = templatesArea_.fLeft;
       float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
-      templates_[i].bounds =
-          SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
+      templates_[i].bounds = SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
     }
+  }
+
+  if (greetingEditor_.isVisible()) {
+      showGreetingEditor(); // Re-layout editor
   }
 }
 
@@ -841,7 +864,7 @@ void ZenithHubComponent::showGreetingEditor() {
   greetingEditor_->onFocusLost = dismissEditor;
 
   addAndMakeVisible(greetingEditor_.get());
-  greetingEditor_->grabKeyboardFocus();
+  greetingEditor_.grabKeyboardFocus();
 }
 
 // Agent 5: Keyboard Navigation - Refactored to if-else per compiler

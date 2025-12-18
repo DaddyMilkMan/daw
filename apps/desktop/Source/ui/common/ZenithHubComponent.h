@@ -65,6 +65,9 @@ public:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+  
+  // Keyboard Navigation
+  bool keyPressed(const juce::KeyPress &key) override;
   bool keyPressed(const juce::KeyPress &key) override;
 
   // New: Restrict hits to card only
@@ -170,7 +173,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  std::unique_ptr<juce::TextEditor> greetingEditor_;
+  juce::TextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
