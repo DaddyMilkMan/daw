@@ -1459,8 +1459,18 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
     // Render using AudioRenderer
     if (audioRenderer_) {
       juce::MidiBuffer dummyMidi;
+      
+      // Build raw pointer vectors for AudioRenderer
+      std::vector<Track*> trackPtrs;
+      trackPtrs.reserve(tracks_.size());
+      for (const auto& t : tracks_) trackPtrs.push_back(t.get());
+      
+      std::vector<AuxBus*> auxPtrs;
+      auxPtrs.reserve(auxBuses_.size());
+      for (const auto& a : auxBuses_) auxPtrs.push_back(a.get());
+      
       audioRenderer_->renderAudioGraph(
-          renderBuffer, samplesToRender, samplesRendered, tracks_, auxBuses_,
+          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
           &dummyMidi);
     } else {
@@ -1571,9 +1581,12 @@ bool Engine::exportProject(const ExportOptions &options) {
     int numSamples =
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
-    // Render Mix
-    // Note: renderAudioGraph is the private method for rendering
-    renderAudioGraph(renderBuffer, numSamples, samplesWritten, nullptr);
+    // Render Mix - create raw pointer vectors for export
+    std::vector<zenith::Track*> trackPtrs;
+    std::vector<zenith::AuxBus*> auxPtrs;
+    for (const auto& t : tracks_) { if (t) trackPtrs.push_back(t.get()); }
+    for (const auto& a : auxBuses_) { if (a) auxPtrs.push_back(a.get()); }
+    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs, auxPtrs, nullptr);
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -1584,7 +1597,7 @@ bool Engine::exportProject(const ExportOptions &options) {
     if (options.normalize) {
       float peak = 0.0f;
       // Scan buffer for peak
-      peak = buffer.getMagnitude(0, numSamples);
+      peak = renderBuffer.getMagnitude(0, numSamples);
       if (peak > 0.0001f) {
            float targetLinear = juce::Decibels::decibelsToGain((float)options.normalizeDb);
            float gain = targetLinear / peak;
@@ -1614,12 +1627,6 @@ void Engine::applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
   float targetLinear = juce::Decibels::decibelsToGain(targetDb);
   float gain = targetLinear / maxPeak;
   buffer.applyGain(gain);
-}
-  float blockPeak = buffer.getMagnitude(0, buffer.getNumSamples());
-  if (blockPeak > targetLinear) {
-    float gain = targetLinear / blockPeak;
-    buffer.applyGain(gain);
-  }
 }
 
 //==============================================================================
@@ -1744,7 +1751,12 @@ int Engine::getMaxTrackLatency() const {
 
 void Engine::recalculatePDC() {
   if (audioRenderer_) {
-    audioRenderer_->calculatePDC(tracks_);
+    // Build raw pointer vector for AudioRenderer
+    std::vector<Track*> trackPtrs;
+    trackPtrs.reserve(tracks_.size());
+    for (const auto& t : tracks_) trackPtrs.push_back(t.get());
+    
+    audioRenderer_->calculatePDC(trackPtrs);
   }
 }
 
