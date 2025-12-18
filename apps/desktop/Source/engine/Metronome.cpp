@@ -124,9 +124,8 @@ void Metronome::getNextAudioBlock(juce::AudioBuffer<float>& bufferToFill,
             // Trigger!
             int beatIndex = static_cast<int>(std::floor(thisSampleBeat));
             
-            // Assume 4/4 for now. Measure start (High Click) is when beatIndex % 4 == 0.
-            // TODO: Get Time Signature from TempoMap properly
-            int numerator = 4; // Default
+            // Get Time Signature from TempoMap properly
+            int numerator = tempoMap.getTimeSignatureNumerator();
             
             if (beatIndex % numerator == 0)
                 triggerClick(kHighClickFreq);

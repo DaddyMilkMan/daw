@@ -59,9 +59,7 @@ PresetGeneticistView::PresetGeneticistView(
     fileChooser_->launchAsync(flags, [this](const juce::FileChooser &fc) {
       auto file = fc.getResult();
       if (file.exists()) {
-        // TODO: Implement setTargetAudio in PresetGeneticistAgent
-        // agent_.setTargetAudio(file);
-        juce::ignoreUnused(file);
+        agent_.setTargetAudio(file);
       }
     });
   };

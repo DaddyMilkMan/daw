@@ -10,8 +10,7 @@
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
-    - Plugin hosting stubbed for Phase 2
-
+    Audio/MIDI track with clip playback, plugin chain, and mixer controls
   ==============================================================================
 */
 
@@ -80,6 +79,11 @@ public:
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
   void releaseResources() override;
 
+
+  // Standard AudioSource override to avoid abstraction issue
+  void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override {
+    getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr);
+  }
 
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
@@ -262,6 +266,14 @@ public:
 
 private:
   //==============================================================================
+  // MIDI Scheduler state
+  struct ActiveNote {
+    int pitch;
+    int channel;
+    juce::String noteId; // For tracking which ValueTree note this came from
+  };
+
+  //==============================================================================
   // Track properties
   juce::String trackName;
   juce::String trackId;
@@ -426,11 +438,7 @@ private:
                          int numSamples);
 
   // MIDI Scheduler state
-  struct ActiveNote {
-    int pitch;
-    int channel;
-    juce::String noteId; // For tracking which ValueTree note this came from
-  };
+
 
   std::vector<ActiveNote> activeNotes;
   juce::CriticalSection

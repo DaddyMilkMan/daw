@@ -82,9 +82,8 @@ void AudioRenderer::reset() {
 void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition,
-    std::span<const std::shared_ptr<Track>> tracks,
-    std::span<const std::shared_ptr<AuxBus>> auxBuses,
-    const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
+    std::span<Track* const> tracks,
+    std::span<AuxBus* const> auxBuses,
     const RoutingGraph &routingGraph, MasterLimiter &masterLimiter,
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
     const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi) noexcept {
@@ -281,8 +280,7 @@ void AudioRenderer::renderAudioGraph(
 }
 
 //==============================================================================
-int AudioRenderer::calculatePDC(
-    const std::vector<Track*> &tracks) {
+int AudioRenderer::calculatePDC(std::span<Track *const> tracks) {
   int maxLatency = 0;
 
   for (size_t i = 0; i < tracks.size() && i < trackLatencies_.size(); ++i) {
