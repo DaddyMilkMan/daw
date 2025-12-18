@@ -140,6 +140,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DebugConsoleComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DeviceChainComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SpectraAnalyzerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/MarkdownComponent.cpp
     
     # Zenith widget system
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithControl.cpp

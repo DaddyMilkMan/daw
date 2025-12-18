@@ -56,7 +56,7 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
         if (blob && blob->getSize() > 0) {
             juce::MemoryBlock block(*blob);
             try {
-                instance->setStateInformation(block.getData(), (int)block.getSize());
+                instance->setStateInformation(block.getData(), static_cast<int>(block.getSize()));
                 ZENITH_LOG_INFO("Restored plugin state (" + juce::String(block.getSize()) + " bytes)");
             } catch (const std::exception& e) {
                 ZENITH_LOG_ERROR("Exception restoring plugin state: " + juce::String(e.what()));
@@ -73,8 +73,8 @@ void Track::loadPluginState(const juce::ValueTree& pluginTree, PluginHost& host)
     if (paramsTree.isValid()) {
         for (int i = 0; i < paramsTree.getNumChildren(); ++i) {
             auto paramTree = paramsTree.getChild(i);
-            auto paramIndex = (int)paramTree.getProperty("index", -1);
-            auto paramValue = (float)paramTree.getProperty("value", 0.0f);
+            auto paramIndex = static_cast<int>(paramTree.getProperty("index", -1));
+            auto paramValue = static_cast<float>(paramTree.getProperty("value", 0.0f));
             
             if (paramIndex >= 0 && paramIndex < instance->getParameters().size()) {
                 instance->getParameters()[paramIndex]->setValue(paramValue);

@@ -229,7 +229,7 @@ public:
         
         // Get choices array
         auto choices = response.getProperty("choices", juce::var());
-        if (!choices.isArray() || choices.size() == 0)
+        if (!choices.isArray() || choices.getArray()->isEmpty())
         {
             result.hasError = true;
             result.errorMessage = "No choices in response";

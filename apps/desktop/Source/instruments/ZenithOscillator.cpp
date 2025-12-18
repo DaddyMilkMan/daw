@@ -101,32 +101,29 @@ float ZenithOscillator::processSquare(float frequency, float pulseWidth) {
 
 float ZenithOscillator::processTriangle(float frequency) {
     float phaseInc = frequency / sampleRate_;
-    // Simple naive triangle for interpolation (DPW too complex to state save/restore easily without side effects)
-    // Actually, DPW relies on phase_ history only via integration? No, it's stateless transformation of phase_
-    // EXCEPT "previous sample" differentiation?
-    // My previous implementation was DPW2 stateless?
-    // "float parabola = bipolarPhase * bipolarPhase;" -> Stateless.
-    // "sample = 4.0 * phase - 1.0". 
-    // It looks stateless. Only phase_ is state.
     
-    float sample;
-    if (phase_ < 0.5) {
-        sample = 4.0f * static_cast<float>(phase_) - 1.0f;
-    } else {
-        sample = 3.0f - 4.0f * static_cast<float>(phase_);
-    }
+    // Leaky Integration of PolyBLEP Square Wave
+    // 1. Calculate BL Square Sample (without advancing phase)
+    float square = (phase_ < 0.5) ? 1.0f : -1.0f;
+    square += poly_blep(static_cast<float>(phase_), phaseInc);
     
-    // Apply soft-knee anti-aliasing (Stateless approximation)
-    float nyquist = sampleRate_ * 0.5f;
-    if (frequency > nyquist * 0.5f) {
-        float rolloff = 1.0f - (frequency - nyquist * 0.5f) / (nyquist * 0.5f);
-        rolloff = juce::jlimit(0.2f, 1.0f, rolloff);
-        sample *= rolloff;
-    }
+    float phase2 = static_cast<float>(phase_) - 0.5f;
+    if (phase2 < 0.0f) phase2 += 1.0f;
+    square -= poly_blep(phase2, phaseInc);
+
+    // 2. Integrate
+    // Scale factor 4*freq/SR makes slope 4, resulting in amplitude 1
+    lastTriangleValue_ += 4.0f * phaseInc * square;
+
+    // 3. Apply Leak (High-pass filter to center waveform and prevent drift)
+    // Coeff 0.9999 is -3dB around 5-10Hz depending on SR
+    lastTriangleValue_ *= 0.9999f;
     
+    // 4. Advance Phase
     phase_ += phaseInc;
     if (phase_ >= 1.0) phase_ -= 1.0;
-    return sample;
+    
+    return lastTriangleValue_;
 }
 
 float ZenithOscillator::processNoise() {

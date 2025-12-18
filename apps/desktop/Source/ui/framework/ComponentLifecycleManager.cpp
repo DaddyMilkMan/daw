@@ -365,7 +365,7 @@ void ComponentLifecycleManager::checkForMemoryLeaks() {
   auto readyComponents = getComponentsInState(ComponentState::Ready);
   auto suspendedComponents = getComponentsInState(ComponentState::Suspended);
 
-  if (readyComponents.size() > 0 || suspendedComponents.size() > 0) {
+  if (!readyComponents.isEmpty() || !suspendedComponents.isEmpty()) {
     DBG("Potential memory leak detected: "
         << readyComponents.size() + suspendedComponents.size()
         << " components not properly destroyed");

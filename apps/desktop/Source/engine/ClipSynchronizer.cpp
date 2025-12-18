@@ -43,6 +43,11 @@ juce::String ClipSynchronizer::createClip(const juce::String &trackId,
   DBG("ClipSynchronizer: createClip(" + trackId + ", " +
       juce::String(startBeats) + ", " + juce::String(lengthBeats) + ", " +
       clipType + ")");
+      
+  // Consistency checks
+  jassert(startBeats >= 0.0);
+  jassert(lengthBeats > 0.0);
+  jassert(clipType == "audio" || clipType == "midi");
 
   // 1. Create in zenith::ProjectState first to generate ID
   auto &state = projectState.getState();
@@ -99,6 +104,13 @@ void ClipSynchronizer::syncEngineToProjectState() {
   // Guard against re-entrant checks
   if (isModifyingState)
     return;
+    
+  // Safety check: Engine must be initialized with valid sample rate
+  if (engine.getSampleRate() <= 0.0)
+     return;
+     
+  // Check buffer size consistency (sanity check)
+  jassert(engine.getBufferSize() > 0);
 
   isModifyingState = true;
 

@@ -10,8 +10,7 @@
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
-    - Plugin hosting stubbed for Phase 2
-
+    Audio/MIDI track with clip playback, plugin chain, and mixer controls
   ==============================================================================
 */
 
@@ -79,8 +78,12 @@ public:
   // AudioSource interface
   void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
   void releaseResources() override;
-  void
-  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
+
+
+  // Standard AudioSource override to avoid abstraction issue
+  void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override {
+    getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr);
+  }
 
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
@@ -152,12 +155,12 @@ public:
   const juce::File &getFreezeFile() const { return freezeFile_; }
 
   /**
-   * @brief Get the audio reader for the freeze file
-   * @return Reader instance, or nullptr if not available
-   * @note Audio thread safe - reader is pre-created
+   * @brief Get the freeze audio buffer
+   * @return Shared pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - RCU pattern
    */
-  juce::AudioFormatReader *getFreezeReader() const {
-    return freezeReader_.get();
+  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
+    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
   }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
@@ -263,6 +266,14 @@ public:
 
 private:
   //==============================================================================
+  // MIDI Scheduler state
+  struct ActiveNote {
+    int pitch;
+    int channel;
+    juce::String noteId; // For tracking which ValueTree note this came from
+  };
+
+  //==============================================================================
   // Track properties
   juce::String trackName;
   juce::String trackId;
@@ -283,7 +294,8 @@ private:
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  std::unique_ptr<juce::AudioFormatReader> freezeReader_;
+  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
+  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing
@@ -426,11 +438,7 @@ private:
                          int numSamples);
 
   // MIDI Scheduler state
-  struct ActiveNote {
-    int pitch;
-    int channel;
-    juce::String noteId; // For tracking which ValueTree note this came from
-  };
+
 
   std::vector<ActiveNote> activeNotes;
   juce::CriticalSection

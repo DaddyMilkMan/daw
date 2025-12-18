@@ -36,22 +36,24 @@ public:
 
   //==============================================================================
   // Properties
-  const juce::String &getName() const { return name_; }
+  [[nodiscard]] const juce::String &getName() const { return name_; }
   void setName(const juce::String &newName) { name_ = newName; }
   
-  const juce::String &getId() const { return id_; }
+  [[nodiscard]] const juce::String &getId() const { return id_; }
   void setId(const juce::String &newId) { id_ = newId; }
 
   //==============================================================================
   // Mixer controls (delegated to MixerChannel)
+  //==============================================================================
+  // Mixer controls (delegated to MixerChannel)
   void setVolume(float volume) { mixerChannel.setVolume(volume); }
-  float getVolume() const { return mixerChannel.getVolume(); }
+  [[nodiscard]] float getVolume() const { return mixerChannel.getVolume(); }
 
   void setPan(float pan) { mixerChannel.setPan(pan); }
-  float getPan() const { return mixerChannel.getPan(); }
+  [[nodiscard]] float getPan() const { return mixerChannel.getPan(); }
 
   void setMuted(bool muted) { mixerChannel.setMuted(muted); }
-  bool isMuted() const { return mixerChannel.isMuted(); }
+  [[nodiscard]] bool isMuted() const { return mixerChannel.isMuted(); }
 
   //==============================================================================
   // Plugin chain management
@@ -63,8 +65,8 @@ public:
 
   //==============================================================================
   // Metering
-  float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
-  float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+  [[nodiscard]] float getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+  [[nodiscard]] float getPeakLevel() const { return mixerChannel.getOutputPeak(); }
   void resetPeakMeters() { mixerChannel.resetPeaks(); }
 
   //==============================================================================
