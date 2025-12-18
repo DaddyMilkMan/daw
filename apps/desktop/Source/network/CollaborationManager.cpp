@@ -148,25 +148,24 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
 
   // Case B: Message from Peer (Hole Punch Success!)
   if (msg == "HELLO_PEER" || size >= 4) {
-    // If we were punching, we are now connected!
+    // If we were punching, we are now handshaking!
     if (currentState == ConnectionState::Punching) {
-      currentState = ConnectionState::Connected;
-      DBG("Collab: P2P UDP Connection Established!");
-      sendChangeMessage();
+      if (peerIP.isNotEmpty()) {
+        currentState = ConnectionState::Handshaking;
+        DBG("Collab: Hole Punch Successful! Starting Handshake...");
+        sendChangeMessage();
 
-      // Handshake - send our name
-      juce::MemoryBlock m;
-      int t = (int)PacketType::Hello;
-      m.append(&t, sizeof(int));
-      m.append(localUserName.toRawUTF8(), localUserName.length());
-      p2pSocket.write(peerIP, peerPort, m.getData(), (int)m.getSize());
+        // Send Challenge
+        juce::Random rng;
+        sentChallenge = rng.nextInt();
+        sendPacket(PacketType::Challenge, &sentChallenge, sizeof(int));
+      }
     }
 
     if (size < 4)
       return;
 
     // Handle Real Data
-    // ... (Header parsing logic similar to before) ...
     int typeInt = 0;
     memcpy(&typeInt, data, sizeof(int));
     PacketType type = (PacketType)typeInt;
@@ -175,7 +174,40 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
     char *payloadPtr = (char *)data + headerSize;
     int payloadSize = size - headerSize;
 
-    if (type == PacketType::Hello && payloadSize > 0) {
+    // --- Authentication Flow ---
+    if (type == PacketType::Challenge) {
+      if (payloadSize == sizeof(int)) {
+        int challenge = 0;
+        memcpy(&challenge, payloadPtr, sizeof(int));
+        // Simple Auth: XOR with Session Code Hash
+        int response = challenge ^ sessionCode.hashCode();
+        sendPacket(PacketType::ChallengeResponse, &response, sizeof(int));
+      }
+    } else if (type == PacketType::ChallengeResponse) {
+      if (payloadSize == sizeof(int)) {
+        int receivedResponse = 0;
+        memcpy(&receivedResponse, payloadPtr, sizeof(int));
+        int expectedResponse = sentChallenge ^ sessionCode.hashCode();
+
+        if (receivedResponse == expectedResponse) {
+          DBG("Collab: Auth Successful!");
+          currentState = ConnectionState::Connected;
+          sendChangeMessage();
+
+          // Auth complete, send our User Info
+          juce::MemoryBlock m;
+          int t = (int)PacketType::Hello;
+          m.append(&t, sizeof(int));
+          m.append(localUserName.toRawUTF8(), localUserName.length());
+          p2pSocket.write(peerIP, peerPort, m.getData(), (int)m.getSize());
+        } else {
+          DBG("Collab: Auth Failed! Disconnecting.");
+          disconnect();
+        }
+      }
+    }
+    // --- Application Data ---
+    else if (type == PacketType::Hello && payloadSize > 0) {
       // Received remote user's name
       juce::String remoteName = juce::String::fromUTF8(payloadPtr, payloadSize);
       {
@@ -206,12 +238,17 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       }
       sendChangeMessage();
     } else if (type == PacketType::EditCommand) {
-      if (payloadSize > 0) {
-        juce::String cmdData = juce::String::fromUTF8(payloadPtr, payloadSize);
-        if (onEditReceived) {
-          juce::MessageManager::callAsync(
-              [this, cmdData]() { onEditReceived(cmdData); });
+      if (allowRemoteEditing) {
+        if (payloadSize > 0) {
+          juce::String cmdData =
+              juce::String::fromUTF8(payloadPtr, payloadSize);
+          if (onEditReceived) {
+            juce::MessageManager::callAsync(
+                [this, cmdData]() { onEditReceived(cmdData); });
+          }
         }
+      } else {
+        DBG("Collab: Security blocked remote edit command.");
       }
     }
   }
@@ -219,7 +256,8 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
 
 void CollaborationManager::sendPacket(PacketType type, const void *data,
                                       size_t size) {
-  if (currentState != ConnectionState::Connected)
+  if (currentState != ConnectionState::Connected &&
+      currentState != ConnectionState::Handshaking)
     return;
 
   juce::MemoryBlock msg;

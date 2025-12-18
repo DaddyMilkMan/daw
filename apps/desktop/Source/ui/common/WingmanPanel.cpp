@@ -29,27 +29,15 @@ WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
   grokController = std::make_unique<GrokDAWController>(commandAPI);
 
   //==========================================================================
-  // Conversation Display
-  conversationDisplay = std::make_unique<juce::TextEditor>("Conversation");
-  conversationDisplay->setMultiLine(true);
-  conversationDisplay->setReadOnly(true);
-  conversationDisplay->setScrollbarsShown(true);
-  conversationDisplay->setCaretVisible(false);
-  conversationDisplay->setPopupMenuEnabled(true);
-  conversationDisplay->setColour(juce::TextEditor::backgroundColourId,
-                                 ZenithTheme::Colors::bg_02);
-  conversationDisplay->setColour(juce::TextEditor::textColourId,
-                                 ZenithTheme::Colors::text_primary);
-  conversationDisplay->setColour(juce::TextEditor::outlineColourId,
-                                 ZenithTheme::Colors::border_default);
-  conversationDisplay->setFont(ZenithTheme::Typography::getBodyFont());
+  // Conversation Display (Markdown Enabled)
+  conversationDisplay = std::make_unique<widgets::MarkdownComponent>();
+  // conversationDisplay->setColour(...) - MarkdownComponent handles its own colors via Skia
   addAndMakeVisible(conversationDisplay.get());
 
   // Welcome message
   appendToConversation(
       "Wingman",
-      "Hello! I'm Wingman, your AI assistant. I can control the DAW, generate "
-      "presets, and help you create music. What would you like to do?");
+      "**Hello!** I'm Wingman, your AI assistant.\nI can control the DAW, generate presets, and help you create music.\n\n*What would you like to do?*");
 
   //==========================================================================
   // Input Field
@@ -280,15 +268,19 @@ void WingmanPanel::sendCommand() {
 }
 
 void WingmanPanel::appendToConversation(const juce::String &speaker,
-                                        const juce::String &message) {
+                                      const juce::String &message) {
+  // Format as markdown
+  juce::String formatted;
   juce::String timestamp =
       juce::Time::getCurrentTime().toString(false, true, false, true);
-  juce::String entry =
-      "[" + timestamp + "] " + speaker + ": " + message + "\n\n";
 
-  conversationDisplay->moveCaretToEnd();
-  conversationDisplay->insertTextAtCaret(entry);
-  conversationDisplay->moveCaretToEnd();
+  if (speaker == "You") {
+      formatted = "\n**You** (" + timestamp + "):\n" + message + "\n";
+  } else {
+      formatted = "\n## " + speaker + "\n" + message + "\n";
+  }
+  
+  conversationDisplay->appendMarkdown(formatted);
 }
 
 void WingmanPanel::setStatus(const juce::String &status, juce::Colour colour) {

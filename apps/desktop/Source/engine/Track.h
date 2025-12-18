@@ -151,10 +151,6 @@ public:
   const juce::File &getFreezeFile() const { return freezeFile_; }
 
   /**
-   * @brief Get the audio reader for the freeze file
-   * @return Reader instance, or nullptr if not available
-   * @note Audio thread safe - reader is pre-created
-   */
    * @brief Get the freeze audio buffer
    * @return Shared pointer to buffer, or nullptr if not frozen
    * @note Audio thread safe - RCU pattern

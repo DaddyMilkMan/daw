@@ -28,7 +28,10 @@
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
+#include "../engine/AudioRenderer.h"
+#include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "../engine/Metronome.h"
 
 //==============================================================================
 namespace zenith {
@@ -40,6 +43,7 @@ Engine::Engine() {
   audioRenderer_ = std::make_unique<AudioRenderer>();
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
+  metronome_ = std::make_unique<Metronome>();
   DBG("Engine: Modular components initialized");
 
   // Initialize audio file pool for sample caching
@@ -317,6 +321,14 @@ bool Engine::initialize() {
     recordingManager_->setDeviceManager(&deviceManager);
     recordingManager_->prepare(setup.sampleRate);
     DBG("Engine: RecordingManager wired to DeviceManager");
+  }
+
+  // Prepare Metronome
+  if (metronome_) {
+      metronome_->prepareToPlay(setup.sampleRate, setup.bufferSize);
+      // Sync metronome state with TransportController
+      metronome_->setEnabled(transportController_->isMetronomeEnabled());
+      metronome_->setLevel(transportController_->getMetronomeLevel());
   }
 
   // Enable MIDI input devices
@@ -1041,6 +1053,11 @@ void Engine::audioDeviceIOCallbackWithContext(
             snapshot->lifecycleAux, routingGraph_, masterLimiter_,
             masterPlugins_, // masterPlugins
             tempoMap_.get(), &midi1);
+
+        // Mix Metronome (Pass 1)
+        if (metronome_) {
+            metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+        }
       }
     }
 
@@ -1062,6 +1079,11 @@ void Engine::audioDeviceIOCallbackWithContext(
               buffer2, samplesAfter, loopStart, snapshot->lifecycle,
               snapshot->lifecycleAux, routingGraph_, masterLimiter_,
               masterPlugins_, tempoMap_.get(), &midi2);
+
+          // Mix Metronome (Pass 2)
+          if (metronome_) {
+              metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+          }
         }
 
         transportController_->setPlayheadSamples(loopStart + samplesAfter);
@@ -1949,6 +1971,33 @@ bool Engine::isTrackFrozen(int trackIndex) const {
   }
 
   return tracks_[trackIndex]->isFrozen();
+}
+
+//==============================================================================
+// Metronome
+//==============================================================================
+
+void Engine::toggleMetronome() {
+  if (transportController_) {
+      bool newState = !transportController_->isMetronomeEnabled();
+      transportController_->setMetronomeEnabled(newState);
+      if (metronome_) {
+          metronome_->setEnabled(newState);
+      }
+  }
+}
+
+bool Engine::isMetronomeEnabled() const {
+    return transportController_ ? transportController_->isMetronomeEnabled() : false;
+}
+
+void Engine::setMetronomeLevel(float level) {
+    if (transportController_) {
+        transportController_->setMetronomeLevel(level);
+        if (metronome_) {
+            metronome_->setLevel(level);
+        }
+    }
 }
 
 } // namespace zenith

@@ -63,6 +63,7 @@ class Clip;
 class MixerChannel;
 class AudioFilePool;
 class PluginHost;
+class Metronome;
 class PluginEditorWindowManager;
 class TempoMap;
 class AuxBus;
@@ -742,6 +743,14 @@ public:
    */
   bool exportProject(const ExportOptions &options);
 
+  //==========================================================================
+  // Metronome
+  //==========================================================================
+
+  void toggleMetronome();
+  bool isMetronomeEnabled() const;
+  void setMetronomeLevel(float level);
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
@@ -884,6 +893,7 @@ private:
 
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<Metronome> metronome_;
 
   // Analysis FIFO (Stereo)
   std::unique_ptr<zenith::StereoAudioFifo> analysisFifo_;
