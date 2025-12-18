@@ -11,7 +11,7 @@
 #include "PianoRollComponent.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
-#include "../network/AIBridgeClient.h"
+#include "../engine/Track.h"
 #include "InstrumentBrowserPanel.h"
 #include "MainLayoutComponent.h"
 #include "MenuBar.h"
@@ -41,7 +41,6 @@ using namespace zenith;
 //==============================================================================
 
 MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
-                             zenith::AIBridgeClient &aiClient,
                              zenith::ProjectState &state,
                              zenith::RecentProjectManager &recentProjects,
                              LoadProjectCallback onLoadProject,
@@ -132,7 +131,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   DBG("→ Creating RightSidePanel...");
   logToFile("→ Creating RightSidePanel...");
   rightSidePanel =
-      std::make_unique<zenith::RightSidePanel>(api, aiClient, engine);
+      std::make_unique<zenith::RightSidePanel>(api, engine);
   addAndMakeVisible(rightSidePanel.get());
   logToFile("✓ RightSidePanel created");
   DBG("✓ RightSidePanel created and made visible at " +
@@ -511,9 +510,6 @@ MainWindow::MainWindow(const juce::String &name)
   // Phase 5: Create Wingman command API
   commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
 
-  // Phase 7: Create AI bridge client
-  aiBridgeClient = std::move(std::make_unique<zenith::AIBridgeClient>());
-
   // Phase 13: Connect project state to engine for automation
   engine->setProjectState(projectState.get());
 
@@ -530,8 +526,9 @@ MainWindow::MainWindow(const juce::String &name)
   projectState->addTrack("Audio 2", "audio");
 
   // Main content with project loading callbacks
+  // Main content with project loading callbacks
   mainComponent = std::make_unique<MainComponent>(
-      *engine, *commandAPI, *aiBridgeClient, *projectState,
+      *engine, *commandAPI, *projectState,
       *recentProjectManager_,
       // Load project callback
       [this](const juce::File &file) { loadProject(file); },

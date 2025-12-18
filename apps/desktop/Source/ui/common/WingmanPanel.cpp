@@ -20,9 +20,9 @@
 namespace zenith {
 
 //==============================================================================
-WingmanPanel::WingmanPanel(CommandAPI &api, AIBridgeClient &client,
-                           Engine &engine)
-    : commandAPI(api), aiBridgeClient(client), engine_(engine) {
+//==============================================================================
+WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
+    : commandAPI(api), engine_(engine) {
   logToFile("WingmanPanel: Constructor started");
   // Create Grok controller
   logToFile("WingmanPanel: Creating GrokDAWController...");
@@ -268,19 +268,8 @@ void WingmanPanel::sendCommand() {
 }
 
 void WingmanPanel::appendToConversation(const juce::String &speaker,
-                                      const juce::String &message) {
-  // Format as markdown
-  juce::String formatted;
-  juce::String timestamp =
-      juce::Time::getCurrentTime().toString(false, true, false, true);
-
-  if (speaker == "You") {
-      formatted = "\n**You** (" + timestamp + "):\n" + message + "\n";
-  } else {
-      formatted = "\n## " + speaker + "\n" + message + "\n";
-  }
-  
-  conversationDisplay->appendMarkdown(formatted);
+                                        const juce::String &message) {
+  conversationDisplay->appendMessage(speaker, message);
 }
 
 void WingmanPanel::setStatus(const juce::String &status, juce::Colour colour) {

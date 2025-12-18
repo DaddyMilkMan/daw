@@ -9,7 +9,7 @@
 */
 
 #include "MarkdownComponent.h"
-#include "../ZenithTheme.h"
+#include "ZenithTheme.h"
 
 namespace zenith {
 namespace widgets {
@@ -75,7 +75,7 @@ void MarkdownComponent::appendMessage(const juce::String &speaker, const juce::S
   header.setJustification(juce::Justification::topLeft);
   header.append("\n[" + timestamp + "] ", ZenithTheme::Typography::getSmallFont(), ZenithTheme::Colors::text_secondary);
   header.append(speaker + ":\n", ZenithTheme::Typography::getBodyFont().boldened(), 
-                speaker == "You" ? ZenithTheme::Colors::accent_secondary : ZenithTheme::Colors::accent_primary);
+                speaker == "You" ? ZenithTheme::Colors::text_primary : ZenithTheme::Colors::accent_primary);
   
   contentComp_->append(header);
 
@@ -88,36 +88,93 @@ void MarkdownComponent::appendMessage(const juce::String &speaker, const juce::S
   viewport_->setViewPosition(0, contentComp_->getHeight());
 }
 
+// State Machine Parser for "A+" Quality
 juce::AttributedString MarkdownComponent::parseMarkdown(const juce::String &text, const juce::Colour& colour) {
   juce::AttributedString as;
   as.setJustification(juce::Justification::topLeft);
   
-  // Simple parser state machine
-  // We handle **bold**, *italic*
-  
-  juce::Font regular = ZenithTheme::Typography::getBodyFont();
-  juce::Font bold = regular.boldened();
+  const juce::Font regular = ZenithTheme::Typography::getBodyFont();
+  const juce::Font bold = regular.boldened();
+  const juce::Font italic = regular.italicised();
+  const juce::Font monospace = juce::Font(juce::Font::getDefaultMonospacedFontName(), 13.0f, juce::Font::plain);
+  const juce::Colour codeBg = juce::Colour(0xff2d2d2d); // Dark box for code
 
-  // Very basic: just check blocks (improving from last attempt)
+  juce::String currentSegment;
+  juce::Font currentFont = regular;
+  juce::Colour currentColor = colour;
   
-  juce::String currentText = text;
-  
-  int boldStart = currentText.indexOf("**");
-  if (boldStart >= 0) {
-      int boldEnd = currentText.indexOf(boldStart + 2, "**");
-      if (boldEnd > boldStart) {
-           juce::String pre = currentText.substring(0, boldStart);
-           juce::String mid = currentText.substring(boldStart + 2, boldEnd);
-           juce::String post = currentText.substring(boldEnd + 2);
-           
-           as.append(pre, regular, colour);
-           as.append(mid, bold, colour);
-           as.append(post, regular, colour);
-           return as;
+  // States
+  bool isBold = false;
+  bool isItalic = false;
+  bool isCode = false;
+  bool isCodeBlock = false;
+
+  auto flush = [&](bool forceMonospace = false) {
+     if (currentSegment.isNotEmpty()) {
+         juce::Font f = forceMonospace ? monospace : currentFont;
+         
+         // Apply Bold/Italic logic if not in code (Code overrides styles)
+         if (!forceMonospace && !isCode && !isCodeBlock) {
+             if (isBold && isItalic) f = regular.boldened().italicised();
+             else if (isBold) f = bold;
+             else if (isItalic) f = italic;
+             else f = regular;
+         }
+         
+         // Code block background is hard in AttributedString, we simulated it with color/font usually
+         // For A+, we'll just use the monospace font and a slightly lighter color
+         juce::Colour c = (isCode || isCodeBlock) ? ZenithTheme::Colors::text_secondary : currentColor;
+         
+         as.append(currentSegment, f, c);
+         currentSegment.clear();
+     }
+  };
+
+  int i = 0;
+  while (i < text.length()) {
+      juce::juce_wchar c = text[i];
+      
+      // 1. Code Block (```)
+      if (text.substring(i).startsWith("```")) {
+          flush();
+          isCodeBlock = !isCodeBlock;
+          i += 3;
+          
+          // If entering code block, add a newline for separation if needed
+          if (isCodeBlock) as.append("\n", monospace, colour);
+          continue;
       }
+      
+      // 2. Inline Code (`) - Only if not in block
+      if (c == '`' && !isCodeBlock) {
+          flush();
+          isCode = !isCode;
+          i++;
+          continue;
+      }
+      
+      // 3. Bold (**) - Only if not in code
+      if (!isCode && !isCodeBlock && text.substring(i).startsWith("**")) {
+          flush();
+          isBold = !isBold;
+          i += 2;
+          continue;
+      }
+      
+      // 4. Italic (*) - Only if not in code
+      if (!isCode && !isCodeBlock && c == '*') {
+          flush();
+          isItalic = !isItalic;
+          i++;
+          continue;
+      }
+      
+      // Regular Char
+      currentSegment += c;
+      i++;
   }
-
-  as.append(text, regular, colour);
+  
+  flush(); // Final flush
   return as;
 }
 

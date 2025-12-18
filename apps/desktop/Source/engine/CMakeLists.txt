@@ -13,6 +13,7 @@ target_sources(ZenithDAW PRIVATE
     RoutingGraph.cpp
     TempoMap.cpp
     TrackFreeze.cpp
+    Metronome.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp

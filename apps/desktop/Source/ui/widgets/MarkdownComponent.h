@@ -26,7 +26,10 @@ public:
   void paint(juce::Graphics &g) override;
   void resized() override;
 
-  void appendMessage(const juce::String &speaker, const juce::String &message);
+  void setMarkdown(const juce::String& markdownText);
+  void appendMarkdown(const juce::String& markdownText);
+  /** Appends a chat message with standard formatting (Timestamp + Speaker + Message). */
+  void appendMessage(const juce::String& speaker, const juce::String& message);
   void clear();
 
 private:

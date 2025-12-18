@@ -1784,28 +1784,6 @@ double Engine::autoDetectProjectDuration() const {
 
 // getPlayheadSamples() and getPlaybackPosition() are now inline in Engine.h
 
-Engine::TrackSnapshot::TrackSnapshot(
-    const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
-    const std::vector<std::shared_ptr<zenith::AuxBus>> &ownedBuses) {
-  tracks.reserve(ownedTracks.size());
-  lifecycle.reserve(ownedTracks.size());
-  for (const auto &track : ownedTracks) {
-    if (track != nullptr) {
-      tracks.push_back(track.get());
-      lifecycle.push_back(track); // Increment refcount
-    }
-  }
-
-  auxBuses.reserve(ownedBuses.size());
-  lifecycleAux.reserve(ownedBuses.size());
-  for (const auto &bus : ownedBuses) {
-    if (bus != nullptr) {
-      auxBuses.push_back(bus.get());
-      lifecycleAux.push_back(bus);
-    }
-  }
-}
-
 bool Engine::isLooping() const {
   return transportController_ ? transportController_->isLooping() : false;
 }

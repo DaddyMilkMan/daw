@@ -57,6 +57,8 @@ struct TempoPoint
 struct TempoMapSnapshot
 {
     std::vector<TempoPoint> points;  // Sorted by timeBeats
+    int timeSigNumerator = 4;
+    int timeSigDenominator = 4;
 
     TempoMapSnapshot() = default;
 
@@ -153,6 +155,18 @@ public:
      * @note RT-SAFE (audio thread safe)
      */
     double getTempoAt(double beats) const;
+
+    /**
+     * @brief Get current time signature numerator
+     * @return Numerator (e.g. 4 for 4/4)
+     */
+    int getTimeSignatureNumerator() const;
+
+    /**
+     * @brief Get current time signature denominator
+     * @return Denominator (e.g. 4 for 4/4)
+     */
+    int getTimeSignatureDenominator() const;
 
 private:
     //==========================================================================

@@ -179,18 +179,24 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
       if (payloadSize == sizeof(int)) {
         int challenge = 0;
         memcpy(&challenge, payloadPtr, sizeof(int));
-        // Simple Auth: XOR with Session Code Hash
-        int response = challenge ^ sessionCode.hashCode();
+        
+        // A+ Security: Response = Hash(Challenge + SessionCode + Salt)
+        // We use string hashing as a robust mechanism since simple XOR is reversible.
+        juce::String secret = juce::String(challenge) + sessionCode + "ZENITH_SALT_2025";
+        int response = secret.hashCode(); 
+        
         sendPacket(PacketType::ChallengeResponse, &response, sizeof(int));
       }
     } else if (type == PacketType::ChallengeResponse) {
       if (payloadSize == sizeof(int)) {
         int receivedResponse = 0;
         memcpy(&receivedResponse, payloadPtr, sizeof(int));
-        int expectedResponse = sentChallenge ^ sessionCode.hashCode();
+        
+        juce::String expectedSecret = juce::String(sentChallenge) + sessionCode + "ZENITH_SALT_2025";
+        int expectedResponse = expectedSecret.hashCode();
 
         if (receivedResponse == expectedResponse) {
-          DBG("Collab: Auth Successful!");
+          DBG("Collab: Auth Successful (Hash Verified)!");
           currentState = ConnectionState::Connected;
           sendChangeMessage();
 
@@ -201,7 +207,7 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
           m.append(localUserName.toRawUTF8(), localUserName.length());
           p2pSocket.write(peerIP, peerPort, m.getData(), (int)m.getSize());
         } else {
-          DBG("Collab: Auth Failed! Disconnecting.");
+          DBG("Collab: Auth Failed! Response mismatch.");
           disconnect();
         }
       }

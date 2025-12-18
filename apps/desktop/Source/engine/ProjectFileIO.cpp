@@ -128,7 +128,7 @@ bool ProjectFileIO::saveToFile(const juce::File& file)
 
     // Add metadata
     auto now = juce::Time::getCurrentTime();
-    xml->setAttribute("appVersion", "0.1.0"); // TODO: Use ProjectInfo::versionString
+    xml->setAttribute("appVersion", "0.1.0-alpha"); 
     xml->setAttribute("savedAt", now.formatted("%Y-%m-%d %H:%M:%S"));
     xml->setAttribute("timestamp", static_cast<double>(now.toMilliseconds()));
     xml->setAttribute("isCrashDump", "0");

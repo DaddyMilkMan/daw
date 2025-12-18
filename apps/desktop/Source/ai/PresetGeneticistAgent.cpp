@@ -1052,5 +1052,57 @@ int PresetGeneticistAgent::randomInt(int min, int max) {
   return dist(rng_);
 }
 
+void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
+  if (!file.exists())
+    return;
+
+  // Load audio file
+  juce::AudioFormatManager manager;
+  manager.registerBasicFormats();
+
+  std::unique_ptr<juce::AudioFormatReader> reader(manager.createReaderFor(file));
+  if (reader == nullptr)
+    return;
+
+  // Read a representative section (middle 1 second)
+  int64_t startSample = reader->lengthInSamples / 2;
+  int64_t numSamples = std::min(reader->lengthInSamples - startSample,
+                                static_cast<int64_t>(reader->sampleRate));
+
+  juce::AudioBuffer<float> tempBuffer(static_cast<int>(reader->numChannels),
+                                      static_cast<int>(numSamples));
+  reader->read(&tempBuffer, 0, static_cast<int>(numSamples), startSample, true,
+               true);
+
+  // Compute spectrum
+  const int fftSize = 1024;
+  std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
+
+  // Use the first 1024 samples of the loaded section
+  const float *data = tempBuffer.getReadPointer(0);
+  for (int i = 0; i < fftSize && i < tempBuffer.getNumSamples(); ++i) {
+    fftData[static_cast<size_t>(i)] = data[i];
+  }
+
+  // Apply Hann window
+  for (int i = 0; i < fftSize; ++i) {
+    float window =
+        0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi *
+                                 static_cast<float>(i) /
+                                 static_cast<float>(fftSize - 1)));
+    fftData[static_cast<size_t>(i)] *= window;
+  }
+
+  fft_.performFrequencyOnlyForwardTransform(fftData.data());
+
+  // Store target spectrum
+  targetSpectrum_.clear();
+  for (int i = 0; i < fftSize / 2; ++i) {
+    targetSpectrum_.push_back(std::abs(fftData[static_cast<size_t>(i)]));
+  }
+
+  DBG("PresetGeneticistAgent: Loaded target audio " << file.getFileName());
+}
+
 } // namespace ai
 } // namespace zenith
