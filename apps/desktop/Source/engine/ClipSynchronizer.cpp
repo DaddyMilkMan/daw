@@ -7,6 +7,7 @@
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
 #include "ClipTrack.h"
+#include "ZenithLogger.h"
 
 namespace zenith {
 
@@ -379,7 +380,11 @@ void ClipSynchronizer::valueTreeChildRemoved(
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
         zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
-        if (clipTrack == nullptr) return;
+        if (clipTrack == nullptr) {
+            jassertfalse;
+            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal");
+            return;
+        }
 
         const int numClips = clipTrack->getNumClips();
         for (int i = 0; i < numClips; ++i) {

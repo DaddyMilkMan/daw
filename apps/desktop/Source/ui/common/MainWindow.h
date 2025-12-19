@@ -161,6 +161,9 @@ private:
   // Zenith Hub (Start Screen)
   std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
 
+  // Source of Truth Demo
+  std::unique_ptr<zenith::ZenithKnob> volumeKnob;
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
 

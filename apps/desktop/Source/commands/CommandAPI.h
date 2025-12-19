@@ -53,6 +53,23 @@ public:
   };
 
   //==========================================================================
+  // Command API (Step 2)
+  //==========================================================================
+  
+  // The UI or AI calls this
+  void setTrackVolume(int trackIndex, float newVolume) {
+      auto tracks = projectState.state.getChildWithName(Zenith::IDs::TRACKS);
+      auto track = tracks.getChild(trackIndex);
+      
+      if (track.isValid()) {
+          track.setProperty(Zenith::IDs::volume, newVolume, &projectState.undoManager);
+      }
+  }
+
+  void undo() { projectState.undoManager.undo(); }
+  void redo() { projectState.undoManager.redo(); }
+
+  //==========================================================================
   CommandAPI(ProjectState &projectState, Engine &engine);
   ~CommandAPI();
 

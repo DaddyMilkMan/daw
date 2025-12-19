@@ -363,7 +363,7 @@ void RoutingGraph::fromVar(const juce::var& data)
                     c.sourceId = connObj->getProperty("source").toString();
                     c.destId = connObj->getProperty("dest").toString();
                     c.gain = connObj->getProperty("gain");
-                    currentTopology_->connections.push_back(c);
+                    connections_.push_back(c);
                 }
             }
         }
@@ -396,7 +396,7 @@ void RoutingGraph::fromValueTree(const juce::ValueTree& state)
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     
     const juce::ScopedLock sl(writeLock_);
-    currentTopology_->connections.clear();
+    connections_.clear();
     
     if (state.hasType("RoutingGraph"))
     {
@@ -408,7 +408,7 @@ void RoutingGraph::fromValueTree(const juce::ValueTree& state)
                 c.sourceId = child.getProperty("source");
                 c.destId = child.getProperty("dest");
                 c.gain = child.getProperty("gain", 1.0f);
-                currentTopology_->connections.push_back(c);
+                connections_.push_back(c);
             }
         }
     }

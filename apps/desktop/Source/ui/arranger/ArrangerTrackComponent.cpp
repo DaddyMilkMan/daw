@@ -21,11 +21,7 @@ ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps, TrackType type)
     : projectState(ps), type_(type) {
   
   if (type_ == TrackType::Section) {
-      // Hardcoded demo sections if state is empty
-      sections_ = {{"Intro", 0.0, 8.0, juce::Colours::cyan},
-                   {"Verse 1", 8.0, 16.0, juce::Colours::purple},
-                   {"Chorus", 24.0, 16.0, juce::Colours::orange},
-                   {"Outro", 40.0, 8.0, juce::Colours::lightblue}};
+      rebuildSections();
   }
 }
 
@@ -385,10 +381,29 @@ void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
   if (index < 0 || index >= sections_.size()) return;
   auto &section = sections_[index];
-  double originalStart = initialSectionStart_; 
-  // Simplified for this context
-  section.startBeats = newStartBeats;
+  
+  // Call ProjectState to move the section AND its content
+  projectState.moveSectionContent(section.id, newStartBeats, "Move section content");
+  
+  // Refresh our cache
+  rebuildSections();
   repaint();
+}
+
+void ArrangerTrackComponent::rebuildSections() {
+    sections_.clear();
+    auto sectionsNode = projectState.getSections();
+    if (!sectionsNode.isValid()) return;
+
+    for (auto s : sectionsNode) {
+        ArrangementSection section;
+        section.id = s.getProperty(ProjectState::PROP_ID).toString();
+        section.name = s.getProperty(ProjectState::PROP_NAME).toString();
+        section.startBeats = s.getProperty(ProjectState::PROP_START);
+        section.lengthBeats = s.getProperty(ProjectState::PROP_LENGTH);
+        section.color = juce::Colour::fromString(s.getProperty(ProjectState::PROP_COLOR).toString());
+        sections_.push_back(section);
+    }
 }
 
 void ArrangerTrackComponent::setVisibleRange(double startBeats, double endBeats) {

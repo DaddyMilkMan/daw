@@ -141,6 +141,15 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   addAndMakeVisible(bottomBar.get());
   ZENITH_LOG_INFO("✓ BottomBar created");
 
+  // Source of Truth Demo (Step 5)
+  auto trackNode = projectState.state.getChildWithName(Zenith::IDs::TRACKS).getChild(0);
+  if (trackNode.isValid()) {
+      volumeKnob = std::make_unique<zenith::ZenithKnob>(trackNode.getPropertyAsValue(Zenith::IDs::volume, &projectState.undoManager));
+      volumeKnob->setLabel("Track 1 Volume");
+      addAndMakeVisible(volumeKnob.get());
+      ZENITH_LOG_INFO("✓ VolumeKnob created (Source of Truth Demo)");
+  }
+
   // Connect view toggle callback
   transportBar->onViewToggleClicked = [this]() {
     if (mainLayout) {
@@ -296,6 +305,9 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
 
   // 6. Zenith Hub (Topmost Overlay)
   drawChild(hubComponent.get(), hubComponent.get());
+
+  // 7. Source of Truth Knob
+  drawChild(volumeKnob.get(), volumeKnob.get());
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
@@ -388,6 +400,11 @@ void MainComponent::resized() {
   // Overlay: Zenith Hub
   if (hubComponent) {
     hubComponent->setBounds(getLocalBounds());
+  }
+
+  // Source of Truth Demo Positioning
+  if (volumeKnob) {
+      volumeKnob->setBounds(10, 10, 100, 100);
   }
 }
 

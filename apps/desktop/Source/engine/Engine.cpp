@@ -1153,121 +1153,66 @@ void Engine::processEvents() noexcept {
   commandFifo_.prepareToRead(commandFifo_.getNumReady(), start1, size1, start2,
                              size2);
 
-  // Load snapshot once for event processing
   auto *snapshot = activeSnapshot_.load();
 
   if (size1 > 0) {
     for (int i = 0; i < size1; ++i) {
-      const auto &e = commandBuffer_[start1 + i];
-      // Process event based on snapshot
-      // Note: snapshot is already acquired in processAudio
-      // But we need to access the tracks safely.
-      // Since we are in processAudio, we are safe to modify RT parameters
-      // IF the track objects support it.
-      // Zenith tracks generally use atomic parameters or critical sections
-      // internally for parameters.
-
-      if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
-        // Get thread-safe snapshot (we are in audio thread, so we read
-        // snapshot) But wait, we need to apply this to the track. The track
-        // pointer in snapshot is valid. Finding the track:
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          auto *track = snapshot->tracks[e.trackIndex];
-          if (track) {
-            auto *plugin = track->getPlugin(e.pluginIndex);
-            if (plugin) {
-              auto params = plugin->getParameters();
-              if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
-                // JUCE parameters are thread-safe
-                params[e.paramIndex]->setValueNotifyingHost(e.value);
-              }
-            }
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setVolume(e.value);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setPan(e.value);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setMuted(e.boolValue);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setSolo(e.boolValue);
-          }
-        }
-      }
-      // Implement other event types here...
+      applyEvent(commandBuffer_[start1 + i], snapshot);
     }
   }
   if (size2 > 0) {
     for (int i = 0; i < size2; ++i) {
-      const auto &e = commandBuffer_[start2 + i];
-      // (Duplicate logic for wrap-around - ideally factor this out)
-      if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          auto *track = snapshot->tracks[e.trackIndex];
-          if (track) {
-            auto *plugin = track->getPlugin(e.pluginIndex);
-            if (plugin) {
-              auto params = plugin->getParameters();
-              if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
-                params[e.paramIndex]->setValueNotifyingHost(e.value);
-              }
-            }
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setVolume(e.value);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setPan(e.value);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setMuted(e.boolValue);
-          }
-        }
-      } else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
-        if (snapshot && e.trackIndex >= 0 &&
-            e.trackIndex < (int)snapshot->tracks.size()) {
-          if (auto *track = snapshot->tracks[e.trackIndex]) {
-            track->setSolo(e.boolValue);
-          }
-        }
-      }
+      applyEvent(commandBuffer_[start2 + i], snapshot);
     }
   }
 
   commandFifo_.finishedRead(size1 + size2);
+}
+
+void Engine::applyEvent(const zenith::EngineEvent& e, TrackSnapshot* snapshot) noexcept {
+  if (e.type == zenith::EngineEvent::Type::SetPluginParam) {
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      auto *track = snapshot->tracks[e.trackIndex];
+      if (track) {
+        auto *plugin = track->getPlugin(e.pluginIndex);
+        if (plugin) {
+          auto params = plugin->getParameters();
+          if (e.paramIndex >= 0 && e.paramIndex < (int)params.size()) {
+            params[e.paramIndex]->setValueNotifyingHost(e.value);
+          }
+        }
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::SetTrackVolume) {
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        track->setVolume(e.value);
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::SetTrackPan) {
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        track->setPan(e.value);
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::SetTrackMute) {
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        track->setMuted(e.boolValue);
+      }
+    }
+  } else if (e.type == zenith::EngineEvent::Type::SetTrackSolo) {
+    if (snapshot && e.trackIndex >= 0 &&
+        e.trackIndex < (int)snapshot->tracks.size()) {
+      if (auto *track = snapshot->tracks[e.trackIndex]) {
+        track->setSolo(e.boolValue);
+      }
+    }
+  }
 }
 
 //==============================================================================
