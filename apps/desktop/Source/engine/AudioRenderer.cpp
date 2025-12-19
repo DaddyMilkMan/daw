@@ -13,9 +13,6 @@
 #include "AudioRenderer.h"
 #include "../dsp/MasterLimiter.h"
 #include "../dsp/SIMDHelpers.h"
-#include "AudioTrack.h"
-#include "Clip.h"
-#include "ClipTrack.h"
 #include "AuxBus.h"
 #include "TempoMap.h"
 #include "Track.h"
@@ -99,7 +96,7 @@ void AudioRenderer::renderAudioGraph(
 
   // Get routing snapshot (lock-free)
   const auto *snapshot = routingGraph.getSnapshot();
-  if (snapshot == nullptr || snapshot->topology->processingOrder.empty()) {
+  if (snapshot == nullptr || snapshot->processingOrder.empty()) {
     return;
   }
 
@@ -127,7 +124,7 @@ void AudioRenderer::renderAudioGraph(
   for(size_t i = 0; i < actualAuxCount; ++i) auxBufferPtrsVector_.push_back(auxBufferPtrs[i]);
 
   // Process nodes in topological order using FAST LOOKUP
-  for (const auto &nodeId : snapshot->topology->processingOrder) {
+  for (const auto &nodeId : snapshot->processingOrder) {
     // 1. Try to find a Track using fast lookup
     auto trackIt = snapshot->trackLookup.find(nodeId);
     if (trackIt != snapshot->trackLookup.end() && trackIt->second != nullptr) {
@@ -156,7 +153,7 @@ void AudioRenderer::renderAudioGraph(
           track->applyGainAndPan(trackBuffer, numSamples);
 
           // Mix frozen track using SIMD if possible
-          for (const auto &conn : snapshot->topology->connections) {
+          for (const auto &conn : snapshot->connections) {
             if (conn.sourceId == nodeId && conn.destId == "master") {
               if (conn.gain != 1.0f) trackBuffer.applyGain(conn.gain);
               
@@ -190,7 +187,7 @@ void AudioRenderer::renderAudioGraph(
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
       }
 
-      for (const auto &conn : snapshot->topology->connections) {
+      for (const auto &conn : snapshot->connections) {
         if (conn.sourceId == nodeId && conn.destId == "master") {
           for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
             outputBuffer.addFrom(ch, 0, trackBuffer.getReadPointer(ch), numSamples, conn.gain);
@@ -223,7 +220,7 @@ void AudioRenderer::renderAudioGraph(
         juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
         bus->getNextAudioBlock(auxInfo);
 
-        for (const auto &conn : snapshot->topology->connections) {
+        for (const auto &conn : snapshot->connections) {
           if (conn.sourceId == nodeId && conn.destId == "master") {
             for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
               outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
@@ -251,21 +248,6 @@ void AudioRenderer::renderAudioGraph(
 
   // Update metering
   updateMasterMeters(outputBuffer);
-}
-
-//==============================================================================
-void AudioRenderer::updateClipPositions(std::span<Track* const> tracks, 
-                                        juce::int64 playheadPosition) noexcept {
-  for (auto* track : tracks) {
-    if (track == nullptr) continue;
-
-    const int numClips = track->getNumClips();
-    for (int i = 0; i < numClips; ++i) {
-      if (auto* clip = track->getClip(i)) {
-        clip->setTransportPosition(playheadPosition);
-      }
-    }
-  }
 }
 
 //==============================================================================
