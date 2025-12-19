@@ -27,6 +27,10 @@
 
 namespace zenith {
 
+// Forward declarations
+class Track;
+class AuxBus;
+
 class RoutingGraph
 {
 public:
@@ -40,10 +44,6 @@ public:
         Master,
         PluginSidechain
     };
-
-    // Forward declarations for pointers
-    class Track;
-    class AuxBus;
 
     struct Node
     {

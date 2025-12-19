@@ -188,8 +188,10 @@ public:
   juce::AudioPluginInstance *getPlugin(int index) const;
   virtual int getNumClips() const { return 0; }
   virtual Clip* getClip(int index) const { return nullptr; }
-  virtual void addClip(std::unique_ptr<Clip>) {}
+  virtual void addClip(Clip* clip) { juce::ignoreUnused(clip); }
+  virtual void addClip(std::unique_ptr<Clip> clip);
   virtual Instrument* getInstrument() const { return nullptr; }
+  virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
   // MIDI Scheduling (moved to MIDITrack)
 
