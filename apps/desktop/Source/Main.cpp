@@ -6,7 +6,6 @@
  */
 
 #include "MainWindow.h"
-#include "engine/ZenithLogger.h"
 #include "utils/SampleGenerator.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -45,18 +44,15 @@ public:
   //==========================================================================
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
+    // Input validation should be added here for production releases
     juce::ignoreUnused(commandLine);
 
-    // RAII Console - allocated immediately
-    debugConsole = std::make_unique<zenith::ScopedDebugConsole>();
+    // Log startup
+    DBG("Zenith DAW starting...");
+    DBG("Version: " + getApplicationVersion());
+    DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
 
-    // Set ZenithLogger as the global JUCE logger
-    zenith::ZenithLogger::makeGlobal();
-
-    ZENITH_LOG_INFO("Zenith DAW starting...");
-    ZENITH_LOG_INFO("Version: " + getApplicationVersion());
-    ZENITH_LOG_INFO("JUCE Version: " + juce::SystemStats::getJUCEVersion());
-
+    // Log system info
     logSystemInfo();
 
     // Ensure content validity (Generate missing samples if needed)
@@ -65,16 +61,16 @@ public:
     // Create main window
     mainWindow = std::make_unique<MainWindow>(getApplicationName());
 
-    ZENITH_LOG_INFO("Zenith DAW initialized successfully!");
+    DBG("Zenith DAW initialized successfully!");
   }
 
   void shutdown() override {
-    ZENITH_LOG_INFO("Zenith DAW shutting down...");
+    DBG("Zenith DAW shutting down...");
 
     // Close main window (releases all resources)
     mainWindow.reset();
 
-    // Console and Logger cleanup handled by RAII/Destructors
+    DBG("Zenith DAW shutdown complete.");
   }
 
   //==========================================================================
@@ -119,19 +115,20 @@ public:
 private:
   //==========================================================================
   void logSystemInfo() {
-    ZENITH_LOG_INFO("========================================");
-    ZENITH_LOG_INFO("System Information");
-    ZENITH_LOG_INFO("========================================");
-    ZENITH_LOG_INFO("OS: " + juce::SystemStats::getOperatingSystemName());
-    ZENITH_LOG_INFO("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) + " MHz");
-    ZENITH_LOG_INFO("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
-    ZENITH_LOG_INFO("Memory: " + juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
-    ZENITH_LOG_INFO("========================================");
+    DBG("========================================");
+    DBG("System Information");
+    DBG("========================================");
+    DBG("OS: " + juce::SystemStats::getOperatingSystemName());
+    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) +
+        " MHz");
+    DBG("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
+    DBG("Memory: " +
+        juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
+    DBG("========================================");
   }
 
   //==========================================================================
   std::unique_ptr<MainWindow> mainWindow;
-  std::unique_ptr<zenith::ScopedDebugConsole> debugConsole;
 };
 
 //==============================================================================

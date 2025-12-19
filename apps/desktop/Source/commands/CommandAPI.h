@@ -53,23 +53,6 @@ public:
   };
 
   //==========================================================================
-  // Command API (Step 2)
-  //==========================================================================
-  
-  // The UI or AI calls this
-  void setTrackVolume(int trackIndex, float newVolume) {
-      auto tracks = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-      auto track = tracks.getChild(trackIndex);
-      
-      if (track.isValid()) {
-          track.setProperty(ProjectState::PROP_VOLUME, newVolume, &projectState.getUndoManager());
-      }
-  }
-
-  void undo() { projectState.getUndoManager().undo(); }
-  void redo() { projectState.getUndoManager().redo(); }
-
-  //==========================================================================
   CommandAPI(ProjectState &projectState, Engine &engine);
   ~CommandAPI();
 
