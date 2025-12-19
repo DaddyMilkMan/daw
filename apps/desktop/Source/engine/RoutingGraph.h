@@ -100,26 +100,33 @@ public:
 private:
     //==============================================================================
     // Snapshot for lock-free read access
+    struct Topology
+    {
+        std::vector<Connection> connections;
+        std::vector<juce::String> processingOrder;
+        int version = 0;
+    };
+
     struct Snapshot
     {
         std::unordered_map<std::string, Node> nodes;
-        std::vector<Connection> connections;
-        std::vector<juce::String> processingOrder;
+        std::shared_ptr<Topology> topology;
         
         // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
         std::unordered_map<juce::String, Track*> trackLookup;
         std::unordered_map<juce::String, AuxBus*> auxBusLookup;
 
-        Snapshot() = default;
+        Snapshot() : topology(std::make_shared<Topology>()) {}
         Snapshot(const std::unordered_map<std::string, Node>& n, 
-                 const std::vector<Connection>& c,
-                 const std::vector<juce::String>& order)
-            : nodes(n), connections(c), processingOrder(order) {}
+                 std::shared_ptr<Topology> t)
+            : nodes(n), topology(t) {}
     };
     
     // Owning data (message thread only, protected by lock)
     std::unordered_map<std::string, Node> nodes_;
     std::vector<Connection> connections_;
+    std::shared_ptr<Topology> currentTopology_;
+    int nextTopologyVersion_ = 1;
 
     // Lock for modifications (message thread only)
     mutable juce::CriticalSection writeLock_;

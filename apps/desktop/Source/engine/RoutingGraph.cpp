@@ -18,8 +18,9 @@ namespace zenith {
 
 RoutingGraph::RoutingGraph()
 {
-    // Initialize with empty snapshot
-    currentSnapshot_ = std::make_shared<Snapshot>();
+    // Initialize with empty snapshot and topology
+    currentTopology_ = std::make_shared<Topology>();
+    currentSnapshot_ = std::make_shared<Snapshot>(nodes_, currentTopology_);
     activeSnapshot_.store(currentSnapshot_.get(), std::memory_order_release);
 }
 
@@ -35,8 +36,11 @@ void RoutingGraph::updateSnapshot()
 {
     // Called from message thread while holding writeLock_
 
-    // 1. Calculate Processing Order (Kahn's Algorithm)
-    std::vector<juce::String> processingOrder;
+    // 1. Create a new topology and calculate Processing Order
+    auto nextTopology = std::make_shared<Topology>();
+    nextTopology->version = nextTopologyVersion_++;
+    nextTopology->connections = connections_; // Copy master connections list
+    
     std::unordered_map<std::string, int> inDegree;
     std::unordered_map<std::string, std::vector<std::string>> adjList;
 
@@ -46,7 +50,7 @@ void RoutingGraph::updateSnapshot()
     }
 
     // Build graph and calculate in-degrees
-    for (const auto& c : connections_) {
+    for (const auto& c : nextTopology->connections) {
         std::string src = c.sourceId.toStdString();
         std::string dst = c.destId.toStdString();
         
@@ -68,7 +72,7 @@ void RoutingGraph::updateSnapshot()
     size_t queueIndex = 0;
     while (queueIndex < queue.size()) {
         std::string u = queue[queueIndex++];
-        processingOrder.push_back(u);
+        nextTopology->processingOrder.push_back(u);
 
         for (const auto& v : adjList[u]) {
             inDegree[v]--;
@@ -78,23 +82,35 @@ void RoutingGraph::updateSnapshot()
         }
     }
 
-    // Handle Cycles: If we have a cycle, some nodes weren't added.
-    // We append them at the end to ensure they still run (albeit with potential feedback delay issues).
-    if (processingOrder.size() < nodes_.size()) {
+    // Handle Cycles
+    if (nextTopology->processingOrder.size() < nodes_.size()) {
         for (const auto& pair : nodes_) {
             bool alreadyAdded = false;
-            // Simple linear scan is fine here as this only happens on cycles (error case) 
-            // and graph size is usually small (< 1000 nodes).
-            for (const auto& id : processingOrder) {
+            for (const auto& id : nextTopology->processingOrder) {
                 if (id == pair.second.id) {
                     alreadyAdded = true;
                     break;
                 }
             }
             if (!alreadyAdded) {
-                processingOrder.push_back(pair.second.id);
+                nextTopology->processingOrder.push_back(pair.second.id);
             }
         }
+    }
+
+    // Update state
+    currentTopology_ = nextTopology;
+
+    // Create new snapshot
+    auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
+    
+    // Atomic swap
+    activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+    snapshotTrash_.push_back(currentSnapshot_);
+    currentSnapshot_ = newSnapshot;
+
+    while (snapshotTrash_.size() > 10) {
+        snapshotTrash_.erase(snapshotTrash_.begin());
     }
 }
 
@@ -105,14 +121,8 @@ void RoutingGraph::updateSnapshotWithPointers(
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     const juce::ScopedLock sl(writeLock_);
 
-    // 1. Calculate Processing Order (same as updateSnapshot but we use it here)
-    // In a real implementation, we might want to avoid re-calculating the order if only pointers changed.
-    // For now, let's keep it simple and robust.
-    std::vector<juce::String> processingOrder;
-    // ... (logic from updateSnapshot could be refactored into a helper)
-    // For brevity, let's assume we reuse the current nodes/connections but add pointers.
-    
-    auto newSnapshot = std::make_shared<Snapshot>(nodes_, connections_, currentSnapshot_->processingOrder);
+    // 10/10 Optimization: Reuse the currentTopology_ (no re-sort, no copy of connections)
+    auto newSnapshot = std::make_shared<Snapshot>(nodes_, currentTopology_);
     newSnapshot->trackLookup = trackMap;
     newSnapshot->auxBusLookup = auxBusMap;
 
@@ -238,11 +248,11 @@ std::vector<RoutingGraph::Connection> RoutingGraph::getConnectionsFrom(const juc
 {
     // RT-SAFE: Uses atomic snapshot load
     const auto* snapshot = getSnapshot();
-    if (!snapshot) return {};
+    if (!snapshot || !snapshot->topology) return {};
     
     std::vector<Connection> result;
-    result.reserve(snapshot->connections.size()); // Over-reserve to avoid realloc
-    for (const auto& c : snapshot->connections)
+    result.reserve(snapshot->topology->connections.size()); // Over-reserve to avoid realloc
+    for (const auto& c : snapshot->topology->connections)
     {
         if (c.sourceId == sourceId)
             result.push_back(c);
@@ -254,11 +264,11 @@ std::vector<RoutingGraph::Connection> RoutingGraph::getConnectionsTo(const juce:
 {
     // RT-SAFE: Uses atomic snapshot load
     const auto* snapshot = getSnapshot();
-    if (!snapshot) return {};
+    if (!snapshot || !snapshot->topology) return {};
     
     std::vector<Connection> result;
-    result.reserve(snapshot->connections.size()); // Over-reserve to avoid realloc
-    for (const auto& c : snapshot->connections)
+    result.reserve(snapshot->topology->connections.size()); // Over-reserve to avoid realloc
+    for (const auto& c : snapshot->topology->connections)
     {
         if (c.destId == destId)
             result.push_back(c);
@@ -270,8 +280,8 @@ std::vector<juce::String> RoutingGraph::getProcessingOrder() const
 {
     // RT-SAFE: Uses atomic snapshot load
     const auto* snapshot = getSnapshot();
-    if (!snapshot) return {};
-    return snapshot->processingOrder;
+    if (!snapshot || !snapshot->topology) return {};
+    return snapshot->topology->processingOrder;
 }
 
 //==============================================================================
@@ -369,7 +379,7 @@ juce::ValueTree RoutingGraph::toValueTree() const
     const juce::ScopedLock sl(writeLock_);
     juce::ValueTree tree("RoutingGraph");
     
-    for (const auto& c : connections_)
+    for (const auto& c : currentTopology_->connections)
     {
         juce::ValueTree conn("Connection");
         conn.setProperty("source", c.sourceId, nullptr);

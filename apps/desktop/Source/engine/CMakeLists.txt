@@ -6,6 +6,7 @@ target_sources(ZenithDAW PRIVATE
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
+    InstrumentTrack.cpp
     ClipTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp
@@ -18,6 +19,9 @@ target_sources(ZenithDAW PRIVATE
     TempoMap.cpp
     TrackFreeze.cpp
     Metronome.cpp
+    MeteringSystem.cpp
+    PluginChain.cpp
+    AutomationManager.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp

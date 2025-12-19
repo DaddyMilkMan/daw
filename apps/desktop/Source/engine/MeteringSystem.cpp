@@ -16,7 +16,7 @@ void MeteringSystem::process(const juce::AudioBuffer<float>& buffer) {
     }
     
     // Update FIFO
-    analysisFifo->push(buffer);
+    analysisFifo->push(buffer, buffer.getNumSamples());
 }
 
 } // namespace zenith

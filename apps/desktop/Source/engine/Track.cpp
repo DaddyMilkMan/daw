@@ -3,6 +3,7 @@
 #include "TempoMap.h"
 #include "AudioTrack.h"
 #include "MIDITrack.h"
+#include "InstrumentTrack.h"
 #include "AuxBusTrack.h"
 #include "PluginHost.h"
 #include "../instruments/Instrument.h"
@@ -178,6 +179,11 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
 void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
   // This track type does not support clips. The passed clip will be destroyed on scope exit.
   jassertfalse; 
+}
+
+void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer, int numSamples) {
+  juce::ignoreUnused(numSamples);
+  mixerChannel.updateMeters(buffer, false); // false = output meters
 }
 
 } // namespace zenith

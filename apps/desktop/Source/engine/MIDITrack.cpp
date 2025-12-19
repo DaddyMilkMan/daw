@@ -1,105 +1,57 @@
 #include "MIDITrack.h"
-#include "Clip.h"
-#include "Instrument.h"
-#include "TempoMap.h"
+#include "EngineConstants.h"
 
 namespace zenith {
 
-void MIDITrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
-                                 int64_t playheadSamples,
-                                 const juce::MidiBuffer* incomingMidi,
-                                 const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
-                                 const TempoMap* tempoMap) {
-    juce::ignoreUnused(incomingMidi);
-    bufferToFill.clearActiveBufferRegion();
-
-    if (!enabled.load()) return;
-
-    juce::MidiBuffer midiOut;
-    const double tempo = tempoMap ? tempoMap->getTempoAt(playheadSamples) : 120.0;
-    generateMidiForBlock(tempo, currentSampleRate, playheadSamples, bufferToFill.numSamples, midiOut);
-
-    juce::AudioBuffer<float> localBuffer(bufferToFill.buffer->getArrayOfWritePointers(), 
-                                         bufferToFill.buffer->getNumChannels(), 
-                                         bufferToFill.startSample, 
-                                         bufferToFill.numSamples);
-
-    processPluginChain(localBuffer, midiOut, bufferToFill.numSamples);
-
-    juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0, bufferToFill.numSamples);
-    mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
+MIDITrack::MIDITrack(const juce::String& name) 
+    : ClipTrack(name, Type::MIDI) {
 }
 
-void MIDITrack::generateMidiForBlock(double tempo, double sampleRate, juce::int64 blockStartSample, int blockSize, juce::MidiBuffer& midiOut) {
-    const ClipSnapshot* snapshot = activeClipSnapshot_.load(std::memory_order_acquire);
-    if (!snapshot) return;
-
-    for (auto* clip : snapshot->clips) {
-        if (clip != nullptr && clip->getType() == Clip::Type::MIDI && clip->isPlaying() && clip->isActiveAt(blockStartSample)) {
-            clip->getMidiEvents(midiOut, blockSize);
-        }
-    }
+void MIDITrack::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
+    ClipTrack::prepareToPlay(samplesPerBlockExpected, sampleRate);
 }
 
-// INSTRUMENT TRACK IMPLEMENTATION
-
-void InstrumentTrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill, 
-                                       int64_t playheadSamples,
-                                       const juce::MidiBuffer* incomingMidi,
-                                       const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
-                                       const TempoMap* tempoMap) {
-    bufferToFill.clearActiveBufferRegion();
-
-    if (!enabled.load()) return;
-
-    juce::MidiBuffer midiOut;
+void MIDITrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFill,
+                                  int64_t playheadSamples,
+                                  const juce::MidiBuffer* incomingMidi,
+                                  const std::vector<juce::AudioBuffer<float>*>& auxBuffers,
+                                  const TempoMap* tempoMap) {
+    juce::ignoreUnused(auxBuffers, tempoMap);
+    auto numSamples = bufferToFill.numSamples;
     
-    // Route live incoming MIDI if armed
-    if (incomingMidi != nullptr && armed.load()) {
-        midiOut.addEvents(*incomingMidi, 0, bufferToFill.numSamples, 0);
+    // 1. Clear Audio Buffer (Instrument will fill it)
+    bufferToFill.clearActiveBufferRegion();
+    
+    // 2. Prepare MIDI Buffer
+    juce::MidiBuffer midiBuffer;
+    if (incomingMidi != nullptr) {
+        midiBuffer.addEvents(*incomingMidi, 0, numSamples, 0);
     }
-
-    // Generate clip MIDI
-    const double tempo = tempoMap ? tempoMap->getTempoAt(playheadSamples) : 120.0;
-    generateMidiForBlock(tempo, currentSampleRate, playheadSamples, bufferToFill.numSamples, midiOut);
-
-    juce::AudioBuffer<float> localBuffer(bufferToFill.buffer->getArrayOfWritePointers(), 
-                                         bufferToFill.buffer->getNumChannels(), 
-                                         bufferToFill.startSample, 
-                                         bufferToFill.numSamples);
-
-    // Process instrument
-    if (instrument_ != nullptr) {
-        instrumentBuffer_.setSize(2, bufferToFill.numSamples, false, false, true);
-        instrumentBuffer_.clear();
-        
-        auto* processor = instrument_->getAudioProcessor();
-        if (processor != nullptr) {
-            processor->processBlock(instrumentBuffer_, midiOut);
-        }
-        
-        for (int ch = 0; ch < juce::jmin(localBuffer.getNumChannels(), instrumentBuffer_.getNumChannels()); ++ch) {
-            localBuffer.addFrom(ch, 0, instrumentBuffer_, ch, 0, bufferToFill.numSamples);
+    
+    // 3. Add Clip MIDI
+    auto* snapshot = activeClipSnapshot_.load(std::memory_order_acquire);
+    if (snapshot != nullptr) {
+        for (auto* clip : snapshot->clips) {
+             if (clip->getType() == Clip::Type::MIDI) {
+                 clip->setTransportPosition(playheadSamples);
+                 clip->getMidiEvents(midiBuffer, numSamples);
+             }
         }
     }
-
-    // Process MIDI through plugins (if any respond to MIDI)
-    processPluginChain(localBuffer, midiOut, bufferToFill.numSamples);
-
-    // Mixer
-    juce::AudioSourceChannelInfo mixerInfo(&localBuffer, 0, bufferToFill.numSamples);
-    mixerChannel.getNextAudioBlock(mixerInfo, auxBuffers);
-}
-
-void InstrumentTrack::setInstrument(std::unique_ptr<Instrument> instrument) {
-    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-    instrument_ = std::move(instrument);
-    if (instrument_ != nullptr && currentSampleRate > 0) {
-        auto* processor = instrument_->getAudioProcessor();
-        if (processor != nullptr) {
-            processor->prepareToPlay(currentSampleRate, currentBlockSize);
-        }
-    }
+    
+    // 4. Process Plugin Chain (Instrument)
+    // Create proxy buffer for correct offset handling
+    juce::AudioBuffer<float> proxyBuffer(bufferToFill.buffer->getArrayOfWritePointers(), 
+                                        bufferToFill.buffer->getNumChannels(), 
+                                        bufferToFill.startSample, numSamples);
+                                        
+    processPluginChain(proxyBuffer, midiBuffer, numSamples);
+    
+    // 5. Apply Mixer
+    applyGainAndPan(proxyBuffer, numSamples);
+    
+    // 6. Metering
+    updateLevelMeters(proxyBuffer, numSamples);
 }
 
 } // namespace zenith

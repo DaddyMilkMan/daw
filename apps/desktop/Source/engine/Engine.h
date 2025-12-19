@@ -891,6 +891,9 @@ private:
 
   void updateTrackSnapshot();
 
+  // RT-safe event applicator to deduplicate processEvents logic
+  void applyEvent(const zenith::EngineEvent& e, TrackSnapshot* snapshot) noexcept;
+
   // Phase 1.2: Audio file pool
   std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
 

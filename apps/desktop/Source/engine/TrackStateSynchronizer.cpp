@@ -156,7 +156,7 @@ void TrackStateSynchronizer::valueTreeChildAdded(
         
         zenith::Track::Type type = (typeStr == "midi") ? zenith::Track::Type::MIDI : zenith::Track::Type::Audio;
         
-        auto track = std::make_unique<zenith::Track>(name, type);
+        auto track = zenith::Track::create(name, type);
         track->setTrackId(id);
         
         // Set initial properties

@@ -1,6 +1,6 @@
 /**
  * @file ArrangerTrackComponent.cpp
- * @brief Implementation of the 'Arranger Track' for global section editing.
+ * @brief Implementation of Arranger Tracks (Generic and Section)
  */
 
 #include "ArrangerTrackComponent.h"
@@ -15,18 +15,42 @@
 
 namespace zenith {
 
-ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps)
-    : projectState(ps) {
-  // Hardcoded demo sections if state is empty, to verify visuals immediately
-  // In a real flow, this would read from a ProjectState::ID_ARRANGER_TRACK
-  // node.
-  sections_ = {{"Intro", 0.0, 8.0, juce::Colours::cyan},
-               {"Verse 1", 8.0, 16.0, juce::Colours::purple},
-               {"Chorus", 24.0, 16.0, juce::Colours::orange},
-               {"Outro", 40.0, 8.0, juce::Colours::lightblue}};
+static constexpr float HEADER_WIDTH = 260.0f;
+
+ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps, TrackType type)
+    : projectState(ps), type_(type) {
+  
+  if (type_ == TrackType::Section) {
+      // Hardcoded demo sections if state is empty
+      sections_ = {{"Intro", 0.0, 8.0, juce::Colours::cyan},
+                   {"Verse 1", 8.0, 16.0, juce::Colours::purple},
+                   {"Chorus", 24.0, 16.0, juce::Colours::orange},
+                   {"Outro", 40.0, 8.0, juce::Colours::lightblue}};
+  }
 }
 
 ArrangerTrackComponent::~ArrangerTrackComponent() = default;
+
+void ArrangerTrackComponent::setMuted(bool m) {
+    if (isMuted_ != m) {
+        isMuted_ = m;
+        repaint();
+    }
+}
+
+void ArrangerTrackComponent::setSoloed(bool s) {
+    if (isSoloed_ != s) {
+        isSoloed_ = s;
+        repaint();
+    }
+}
+
+void ArrangerTrackComponent::setRecordArmed(bool r) {
+    if (isRecordArmed_ != r) {
+        isRecordArmed_ = r;
+        repaint();
+    }
+}
 
 void ArrangerTrackComponent::setViewContext(double pixelsPerBeat,
                                             double viewStartBeats) {
@@ -39,222 +63,323 @@ void ArrangerTrackComponent::setViewContext(double pixelsPerBeat,
 }
 
 void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
-  using namespace design;
+    auto bounds = getLocalBounds();
+    SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+    
+    if (type_ == TrackType::Section) {
+        drawSections(canvas, rect);
+    } else {
+        // Generic Track (Audio/Midi)
+        drawTrackBackground(canvas, rect);
+        drawTrackHeader(canvas, rect);
+    }
+}
 
-  auto bounds = getLocalBounds();
+void ArrangerTrackComponent::drawTrackHeader(SkCanvas* canvas, const SkRect& bounds) {
+    using namespace design;
+    
+    float y = 0;
+    float trackHeight = bounds.height();
+    SkRect headerRect = SkRect::MakeXYWH(0, 0, HEADER_WIDTH, trackHeight);
 
-  // Premium Background - subtle gradient
-  {
-    SkPoint bgPts[2] = {{0, 0}, {0, (float)bounds.getHeight()}};
-    SkColor bgColors[2] = {SkColorSetRGB(28, 28, 35),
-                           SkColorSetRGB(22, 22, 28)};
-    SkPaint bgPaint;
-    bgPaint.setShader(SkGradientShader::MakeLinear(bgPts, bgColors, nullptr, 2,
-                                                   SkTileMode::kClamp));
-    canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                     bgPaint);
-  }
+    SkPaint trackBgPaint;
+    trackBgPaint.setStyle(SkPaint::kFill_Style);
 
-  // Bottom border
-  SkPaint borderPaint;
-  borderPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
-  borderPaint.setStrokeWidth(1.0f);
-  canvas->drawLine(0, bounds.getHeight() - 0.5f, bounds.getWidth(),
-                   bounds.getHeight() - 0.5f, borderPaint);
-
-  // Draw Sections as glassmorphic pills
-  SkFont font =
-      typography::getSkFont(typography::FONT_XS, FontWeight::SemiBold);
-
-  for (size_t idx = 0; idx < sections_.size(); ++idx) {
-    const auto &section = sections_[idx];
-
-    // Calculate X position
-    double relStart = section.startBeats - viewStartBeats_;
-    float x = static_cast<float>(relStart * pixelsPerBeat_);
-    float w = static_cast<float>(section.lengthBeats * pixelsPerBeat_);
-
-    // Bounds check
-    if (x + w < 0 || x > bounds.getWidth())
-      continue;
-
-    // Make pills slightly inset from top/bottom
-    float padding = 3.0f;
-    SkRect rect =
-        SkRect::MakeXYWH(x + 2, padding, w - 4,
-                         static_cast<float>(bounds.getHeight()) - padding * 2);
-
-    if (rect.width() < 8)
-      continue; // Too small to render
-
-    SkRRect rrect = SkRRect::MakeRectXY(rect, 6.0f, 6.0f);
-
-    // Get section color
-    SkColor c =
-        SkColorSetARGB(255, section.color.getRed(), section.color.getGreen(),
-                       section.color.getBlue());
-
-    bool isDragging = (draggingSectionIndex_ == static_cast<int>(idx));
-
-    // ========================================
-    // 1. DROP SHADOW
-    // ========================================
+    // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT
     {
-      SkPaint shadowPaint;
-      shadowPaint.setAntiAlias(true);
-      shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
-      shadowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
-      SkRect shadowRect = rect;
-      shadowRect.offset(0, 1);
-      canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 6.0f, 6.0f),
-                        shadowPaint);
+        SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
+        SkColor hdrGradColors[3] = {
+            SkColorSetRGB(35, 45, 55), // Top - Cyan tint
+            SkColorSetRGB(25, 25, 30), // Middle
+            SkColorSetRGB(18, 18, 22)  // Bottom - darkest
+        };
+        float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
+        trackBgPaint.setShader(SkGradientShader::MakeLinear(
+            hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
+        canvas->drawRect(headerRect, trackBgPaint);
     }
 
-    // ========================================
-    // 2. GLASSMORPHIC FILL
-    // ========================================
+    // Top edge highlight
+    SkPaint topHighlight;
+    topHighlight.setColor(SkColorSetARGB(20, 255, 255, 255));
+    topHighlight.setStrokeWidth(1.0f);
+    canvas->drawLine(0, 0.5f, HEADER_WIDTH, 0.5f, topHighlight);
+
+    // D. Header Content
+    SkFont nameFont = typography::getSkFont(typography::FONT_MD, FontWeight::Medium);
+    SkFont smallFont = typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
+
+    // Track Number Badge
     {
-      SkPaint fillPaint;
-      fillPaint.setAntiAlias(true);
+        SkPaint badgePaint;
+        badgePaint.setAntiAlias(true);
+        badgePaint.setColor(SkColorSetARGB(40, 255, 255, 255));
+        SkRect badgeRect = SkRect::MakeXYWH(spacing::SM, 8, 24, 18);
+        canvas->drawRRect(SkRRect::MakeRectXY(badgeRect, 4, 4), badgePaint);
 
-      SkPoint pts[2] = {{rect.left(), rect.top()},
-                        {rect.left(), rect.bottom()}};
-      SkColor gradColors[3] = {
-          withAlpha(lighten(c, 0.2f), isDragging ? 0.9f : 0.7f),
-          withAlpha(c, isDragging ? 0.7f : 0.5f),
-          withAlpha(darken(c, 0.2f), isDragging ? 0.6f : 0.4f)};
-      float positions[3] = {0.0f, 0.4f, 1.0f};
-
-      fillPaint.setShader(SkGradientShader::MakeLinear(
-          pts, gradColors, positions, 3, SkTileMode::kClamp));
-      canvas->drawRRect(rrect, fillPaint);
+        SkPaint numPaint;
+        numPaint.setAntiAlias(true);
+        numPaint.setColor(colors::TEXT_SECONDARY);
+        canvas->drawString(juce::String(trackIndex_ + 1).toStdString().c_str(),
+                           spacing::SM + 6, 21, smallFont, numPaint);
     }
 
-    // ========================================
-    // 3. GLOW (if dragging or active)
-    // ========================================
-    if (isDragging) {
-      SkPaint glowPaint;
-      glowPaint.setAntiAlias(true);
-      glowPaint.setStyle(SkPaint::kStroke_Style);
-      glowPaint.setStrokeWidth(3.0f);
-      glowPaint.setColor(withAlpha(c, 0.6f));
-      glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
-      canvas->drawRRect(rrect, glowPaint);
-    }
-
-    // ========================================
-    // 4. BORDER
-    // ========================================
+    // Track Name
     {
-      SkPaint borderPaint;
-      borderPaint.setAntiAlias(true);
-      borderPaint.setStyle(SkPaint::kStroke_Style);
-      borderPaint.setStrokeWidth(1.0f);
+        SkPaint shadowPaint;
+        shadowPaint.setAntiAlias(true);
+        shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
+        canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24 + 1,
+                           23.0f + 1, nameFont, shadowPaint);
 
-      SkPoint borderPts[2] = {{rect.left(), rect.top()},
-                              {rect.left(), rect.bottom()}};
-      SkColor borderColors[2] = {withAlpha(lighten(c, 0.3f), 0.8f),
-                                 withAlpha(c, 0.4f)};
-      borderPaint.setShader(SkGradientShader::MakeLinear(
-          borderPts, borderColors, nullptr, 2, SkTileMode::kClamp));
-      canvas->drawRRect(rrect, borderPaint);
+        SkPaint textPaint;
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(colors::TEXT_PRIMARY);
+        canvas->drawString(trackName_.toStdString().c_str(), spacing::MD + 24,
+                           23.0f, nameFont, textPaint);
     }
 
-    // ========================================
-    // 5. TOP RIM HIGHLIGHT
-    // ========================================
+    // Controls (Mute/Solo/Rec)
+    drawControls(canvas, spacing::MD, 42.0f);
+
+    // E. Right Border for Header
     {
-      SkPaint rimPaint;
-      rimPaint.setAntiAlias(true);
-      rimPaint.setStyle(SkPaint::kStroke_Style);
-      rimPaint.setStrokeWidth(1.0f);
+        SkPaint dividerPaint;
+        SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0}, {HEADER_WIDTH - 1, trackHeight}};
+        SkColor divColors[3] = {
+            SkColorSetARGB(60, 255, 255, 255),
+            SkColorSetARGB(30, 255, 255, 255),
+            SkColorSetARGB(10, 255, 255, 255)
+        };
+        float divPos[3] = {0.0f, 0.2f, 1.0f};
+        dividerPaint.setShader(SkGradientShader::MakeLinear(
+            divPts, divColors, divPos, 3, SkTileMode::kClamp));
+        canvas->drawLine(HEADER_WIDTH - 0.5f, 0, HEADER_WIDTH - 0.5f, trackHeight, dividerPaint);
 
-      SkPoint rimPts[2] = {{rect.left(), rect.top()},
-                           {rect.left() + rect.width() * 0.5f, rect.top() + 6}};
-      SkColor rimColors[2] = {SkColorSetARGB(100, 255, 255, 255),
-                              SkColorSetARGB(0, 255, 255, 255)};
-      rimPaint.setShader(SkGradientShader::MakeLinear(
-          rimPts, rimColors, nullptr, 2, SkTileMode::kClamp));
+        SkPaint shadowLine;
+        shadowLine.setColor(SkColorSetARGB(40, 0, 0, 0));
+        canvas->drawLine(HEADER_WIDTH + 0.5f, 0, HEADER_WIDTH + 0.5f, trackHeight, shadowLine);
+    }
+}
 
-      SkRRect innerRR = rrect;
-      innerRR.inset(0.5f, 0.5f);
-      canvas->drawRRect(innerRR, rimPaint);
+void ArrangerTrackComponent::drawTrackBackground(SkCanvas* canvas, const SkRect& bounds) {
+    using namespace design;
+    
+    // Alternating row tint
+    if (trackIndex_ % 2 == 1) {
+        SkPaint altRowPaint;
+        altRowPaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+        canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0, bounds.width() - HEADER_WIDTH, bounds.height()),
+                         altRowPaint);
     }
 
-    // ========================================
-    // 6. LABEL with pill background
-    // ========================================
-    if (w > 30) {
-      juce::String label = section.name;
+    // Separator
+    SkPaint sepPaint;
+    SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
+    SkColor sepColors[3] = {
+        SkColorSetARGB(60, 255, 255, 255),
+        SkColorSetARGB(30, 255, 255, 255),
+        SkColorSetARGB(10, 255, 255, 255)
+    };
+    float sepPos[3] = {0.0f, 0.3f, 1.0f};
+    sepPaint.setShader(SkGradientShader::MakeLinear(
+        sepPts, sepColors, sepPos, 3, SkTileMode::kClamp));
+    canvas->drawLine(0, bounds.height() - 0.5f, bounds.width(), bounds.height() - 0.5f, sepPaint);
+}
 
-      // Text shadow
-      SkPaint shadowPaint;
-      shadowPaint.setAntiAlias(true);
-      shadowPaint.setColor(SkColorSetARGB(120, 0, 0, 0));
-      canvas->drawSimpleText(label.toRawUTF8(), label.length(),
-                             SkTextEncoding::kUTF8, x + 9,
-                             rect.centerY() + 4.5f, font, shadowPaint);
+void ArrangerTrackComponent::drawControls(SkCanvas* canvas, float startX, float btnY) {
+    using namespace design;
+    
+    float btnSize = 22.0f;
+    float btnGap = 28.0f;
+    SkFont smallFont = typography::getSkFont(typography::FONT_XS, FontWeight::Bold);
 
-      // Main text
-      SkPaint textPaint;
-      textPaint.setColor(SK_ColorWHITE);
-      textPaint.setAntiAlias(true);
-      canvas->drawSimpleText(label.toRawUTF8(), label.length(),
-                             SkTextEncoding::kUTF8, x + 8,
-                             rect.centerY() + 4.0f, font, textPaint);
+    auto drawBtn = [&](int index, const char* label, bool active, SkColor activeColor) {
+        float bx = startX + (index * btnGap);
+        SkRect btnRect = SkRect::MakeXYWH(bx, btnY, btnSize, btnSize);
+        SkRRect btnRRect = SkRRect::MakeRectXY(btnRect, 6.0f, 6.0f);
+        
+        bool isHovered = (hoveredButtonIndex_ == index);
+
+        // Shadow
+        SkPaint shadowPaint;
+        shadowPaint.setAntiAlias(true);
+        shadowPaint.setColor(SkColorSetARGB(40, 0, 0, 0));
+        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 2.0f));
+        SkRect shadowRect = btnRect; shadowRect.offset(0, 1);
+        canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, 6.0f, 6.0f), shadowPaint);
+
+        if (active) {
+             // Active state
+             SkPaint glowPaint;
+             glowPaint.setAntiAlias(true);
+             glowPaint.setColor(withAlpha(activeColor, 0.5f));
+             glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+             canvas->drawRRect(btnRRect, glowPaint);
+
+             SkPaint btnPaint;
+             btnPaint.setAntiAlias(true);
+             btnPaint.setColor(activeColor);
+             canvas->drawRRect(btnRRect, btnPaint);
+        } else {
+             // Inactive state
+             SkPaint btnPaint;
+             btnPaint.setAntiAlias(true);
+             btnPaint.setColor(isHovered ? SkColorSetARGB(30, 255, 255, 255) : SkColorSetARGB(15, 255, 255, 255));
+             canvas->drawRRect(btnRRect, btnPaint);
+             
+             SkPaint border;
+             border.setStyle(SkPaint::kStroke_Style);
+             border.setColor(SkColorSetARGB(30, 255, 255, 255));
+             canvas->drawRRect(btnRRect, border);
+        }
+
+        // Label
+        SkPaint textPaint;
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(active ? SK_ColorWHITE : colors::TEXT_SECONDARY);
+        float textW = smallFont.measureText(label, strlen(label), SkTextEncoding::kUTF8);
+        canvas->drawString(label, bx + (btnSize - textW) * 0.5f, btnY + 15, smallFont, textPaint);
+    };
+
+    drawBtn(0, "M", isMuted_, colors::AMBER);
+    drawBtn(1, "S", isSoloed_, colors::NEON_CYAN);
+    drawBtn(2, "R", isRecordArmed_, colors::NEON_RED);
+}
+
+void ArrangerTrackComponent::drawSections(SkCanvas* canvas, const SkRect& bounds) {
+    using namespace design;
+
+    // Background
+    {
+      SkPoint bgPts[2] = {{0, 0}, {0, (float)bounds.height()}};
+      SkColor bgColors[2] = {SkColorSetRGB(28, 28, 35),
+                             SkColorSetRGB(22, 22, 28)};
+      SkPaint bgPaint;
+      bgPaint.setShader(SkGradientShader::MakeLinear(bgPts, bgColors, nullptr, 2, SkTileMode::kClamp));
+      canvas->drawRect(bounds, bgPaint);
     }
-  }
+    
+    SkFont font = typography::getSkFont(typography::FONT_XS, FontWeight::SemiBold);
+
+    for (size_t idx = 0; idx < sections_.size(); ++idx) {
+        const auto &section = sections_[idx];
+        double relStart = section.startBeats - viewStartBeats_;
+        float x = static_cast<float>(relStart * pixelsPerBeat_);
+        float w = static_cast<float>(section.lengthBeats * pixelsPerBeat_);
+
+        if (x + w < 0 || x > bounds.width()) continue;
+
+        float padding = 3.0f;
+        SkRect rect = SkRect::MakeXYWH(x + 2, padding, w - 4, bounds.height() - padding * 2);
+        if (rect.width() < 8) continue;
+
+        SkRRect rrect = SkRRect::MakeRectXY(rect, 6.0f, 6.0f);
+        SkColor c = SkColorSetARGB(255, section.color.getRed(), section.color.getGreen(), section.color.getBlue());
+        bool isDragging = (draggingSectionIndex_ == static_cast<int>(idx));
+
+        // Pill Fill
+        SkPaint fillPaint;
+        fillPaint.setAntiAlias(true);
+        SkPoint pts[2] = {{rect.left(), rect.top()}, {rect.left(), rect.bottom()}};
+        SkColor gradColors[3] = {
+            withAlpha(lighten(c, 0.2f), isDragging ? 0.9f : 0.7f),
+            withAlpha(c, isDragging ? 0.7f : 0.5f),
+            withAlpha(darken(c, 0.2f), isDragging ? 0.6f : 0.4f)};
+        float positions[3] = {0.0f, 0.4f, 1.0f};
+        fillPaint.setShader(SkGradientShader::MakeLinear(pts, gradColors, positions, 3, SkTileMode::kClamp));
+        canvas->drawRRect(rrect, fillPaint);
+        
+        // Label
+        if (w > 30) {
+             SkPaint textPaint;
+             textPaint.setColor(SK_ColorWHITE);
+             textPaint.setAntiAlias(true);
+             juce::String label = section.name;
+             canvas->drawSimpleText(label.toRawUTF8(), label.length(), SkTextEncoding::kUTF8, x + 8, rect.centerY() + 4.0f, font, textPaint);
+        }
+    }
 }
 
 void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
-  // Hit test
-  double clickBeats = (e.position.x / pixelsPerBeat_) + viewStartBeats_;
-
-  draggingSectionIndex_ = -1;
-  for (size_t i = 0; i < sections_.size(); ++i) {
-    if (clickBeats >= sections_[i].startBeats &&
-        clickBeats < sections_[i].startBeats + sections_[i].lengthBeats) {
-      draggingSectionIndex_ = static_cast<int>(i);
-      dragStartBeats_ = clickBeats;
-      initialSectionStart_ = sections_[i].startBeats;
-      repaint();
-      return;
-    }
+  if (type_ == TrackType::Section) {
+      double clickBeats = (e.position.x / pixelsPerBeat_) + viewStartBeats_;
+      draggingSectionIndex_ = -1;
+      for (size_t i = 0; i < sections_.size(); ++i) {
+        if (clickBeats >= sections_[i].startBeats &&
+            clickBeats < sections_[i].startBeats + sections_[i].lengthBeats) {
+          draggingSectionIndex_ = static_cast<int>(i);
+          dragStartBeats_ = clickBeats;
+          initialSectionStart_ = sections_[i].startBeats;
+          repaint();
+          return;
+        }
+      }
+  } else {
+      // Generic Track Headers
+      if (e.position.x < HEADER_WIDTH && hoveredButtonIndex_ >= 0) {
+          // Button clicked
+          if (hoveredButtonIndex_ == 0) {
+              setMuted(!isMuted_);
+              // TODO: Sync to ValueTree
+          } else if (hoveredButtonIndex_ == 1) {
+              setSoloed(!isSoloed_);
+          } else if (hoveredButtonIndex_ == 2) {
+            setRecordArmed(!isRecordArmed_);
+          }
+      }
   }
 }
 
 void ArrangerTrackComponent::mouseDrag(const juce::MouseEvent &e) {
-  if (draggingSectionIndex_ >= 0) {
+  if (type_ == TrackType::Section && draggingSectionIndex_ >= 0) {
     double currentBeats = (e.position.x / pixelsPerBeat_) + viewStartBeats_;
     double delta = currentBeats - dragStartBeats_;
-
-    // Update visual position temporarily
     sections_[draggingSectionIndex_].startBeats = initialSectionStart_ + delta;
     repaint();
-
-    // In a real implementation, this would show a "Global Slice" guide line
-    // down the entire ArrangerComponent to show what will be moved.
   }
 }
 
 void ArrangerTrackComponent::mouseUp(const juce::MouseEvent &e) {
-  if (draggingSectionIndex_ >= 0) {
-    // Commit Move
+  if (type_ == TrackType::Section && draggingSectionIndex_ >= 0) {
     double finalStart = sections_[draggingSectionIndex_].startBeats;
-
-    // Snap to grid (simplified)
-    finalStart = std::round(finalStart);
-
-    moveSection(draggingSectionIndex_, finalStart);
+    moveSection(draggingSectionIndex_, std::round(finalStart));
   }
   draggingSectionIndex_ = -1;
 }
 
 void ArrangerTrackComponent::mouseDoubleClick(const juce::MouseEvent &e) {
-  // ADD NEW SECTION logic would go here
+}
+
+void ArrangerTrackComponent::mouseMove(const juce::MouseEvent &e) {
+    if (type_ != TrackType::Section && e.position.x < HEADER_WIDTH) {
+        using namespace design;
+        float startX = spacing::MD;
+        float btnY = 42.0f;
+        float btnSize = 22.0f;
+        float btnGap = 28.0f;
+        
+        int oldHover = hoveredButtonIndex_;
+        hoveredButtonIndex_ = -1;
+        
+        for (int i=0; i<3; ++i) {
+            float bx = startX + (i * btnGap);
+            if (e.position.x >= bx && e.position.x <= bx + btnSize &&
+                e.position.y >= btnY && e.position.y <= btnY + btnSize) {
+                hoveredButtonIndex_ = i;
+                break;
+            }
+        }
+        
+        if (oldHover != hoveredButtonIndex_) repaint();
+    }
+}
+
+void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
+    if (hoveredButtonIndex_ != -1) {
+        hoveredButtonIndex_ = -1;
+        repaint();
+    }
 }
 
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
@@ -308,8 +433,7 @@ void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
   repaint();
 }
 
-void ArrangerTrackComponent::setVisibleRange(double startBeats,
-                                             double endBeats) {
+void ArrangerTrackComponent::setVisibleRange(double startBeats, double endBeats) {
   juce::ignoreUnused(endBeats);
   viewStartBeats_ = startBeats;
   repaint();
@@ -320,8 +444,7 @@ const ArrangementSection *ArrangerTrackComponent::getHoveredSection() const {
 }
 
 const ArrangementSection *ArrangerTrackComponent::getDraggingSection() const {
-  if (draggingSectionIndex_ >= 0 &&
-      draggingSectionIndex_ < (int)sections_.size()) {
+  if (draggingSectionIndex_ >= 0 && draggingSectionIndex_ < (int)sections_.size()) {
     return &sections_[draggingSectionIndex_];
   }
   return nullptr;

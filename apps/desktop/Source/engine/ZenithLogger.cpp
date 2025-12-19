@@ -7,32 +7,65 @@
 #include "ZenithLogger.h"
 #include <iomanip>
 
+#if JUCE_WINDOWS
+#include <windows.h>
+#endif
+
 namespace zenith {
 
+ScopedDebugConsole::ScopedDebugConsole() {
+#if JUCE_WINDOWS
+    if (AllocConsole()) {
+        allocated = true;
+        SetConsoleTitleW(L"Zenith Debug Console");
+        
+        FILE* fp;
+        freopen_s(&fp, "CONOUT$", "w", stdout);
+        freopen_s(&fp, "CONOUT$", "w", stderr);
+        freopen_s(&fp, "CONIN$", "r", stdin);
+
+        std::cout.clear();
+        std::cerr.clear();
+        std::cin.clear();
+
+        std::ios::sync_with_stdio(true);
+        
+        std::cout << "========================================" << std::endl;
+        std::cout << "Zenith Professional Debug Console" << std::endl;
+        std::cout << "RAII Management: Active" << std::endl;
+        std::cout << "========================================" << std::endl;
+    }
+#endif
+}
+
+ScopedDebugConsole::~ScopedDebugConsole() {
+#if JUCE_WINDOWS
+    if (allocated) {
+        std::cout << "\nConsole session ending..." << std::endl;
+        FreeConsole();
+    }
+#endif
+}
+
+//==============================================================================
 ZenithLogger& ZenithLogger::getInstance() {
     static ZenithLogger instance;
     return instance;
 }
 
+void ZenithLogger::makeGlobal() {
+    juce::Logger::setCurrentLogger(&getInstance());
+}
+
 ZenithLogger::ZenithLogger() {
-    // Default log file location
     auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-    logFile_ = appDataDir.getChildFile("Zenith DAW").getChildFile("zenith.log");
+    auto logFile = appDataDir.getChildFile("Zenith DAW").getChildFile("zenith.log");
     
-    // Ensure directory exists
-    logFile_.getParentDirectory().createDirectory();
-    
-    // Open log file in append mode
-    logFileStream_ = std::make_unique<juce::FileOutputStream>(logFile_);
-    
-    if (logFileStream_->openedOk()) {
-        log(LogLevel::Info, "ZenithLogger initialized", "Logger");
-    }
+    fileLogger_ = std::make_unique<juce::FileLogger>(logFile, "Zenith DAW Log Started", 1024 * 1024);
 }
 
 ZenithLogger::~ZenithLogger() {
-    flush();
-    logFileStream_.reset();
+    juce::Logger::setCurrentLogger(nullptr);
 }
 
 void ZenithLogger::setLogLevel(LogLevel level) {
@@ -42,7 +75,13 @@ void ZenithLogger::setLogLevel(LogLevel level) {
 
 void ZenithLogger::setLogToFile(bool enabled) {
     std::lock_guard<std::mutex> lock(logMutex_);
-    logToFile_ = enabled;
+    if (!enabled) {
+        fileLogger_.reset();
+    } else if (!fileLogger_) {
+        auto appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+        auto logFile = appDataDir.getChildFile("Zenith DAW").getChildFile("zenith.log");
+        fileLogger_ = std::make_unique<juce::FileLogger>(logFile, "Zenith DAW Log Re-Started", 1024 * 1024);
+    }
 }
 
 void ZenithLogger::setLogToConsole(bool enabled) {
@@ -50,11 +89,8 @@ void ZenithLogger::setLogToConsole(bool enabled) {
     logToConsole_ = enabled;
 }
 
-void ZenithLogger::setLogFile(const juce::File& file) {
-    std::lock_guard<std::mutex> lock(logMutex_);
-    logFile_ = file;
-    logFile_.getParentDirectory().createDirectory();
-    logFileStream_ = std::make_unique<juce::FileOutputStream>(logFile_);
+void ZenithLogger::logMessage(const juce::String& message) {
+    log(LogLevel::Info, message, "System");
 }
 
 void ZenithLogger::trace(const juce::String& message, const juce::String& category) {
@@ -82,19 +118,11 @@ void ZenithLogger::critical(const juce::String& message, const juce::String& cat
 }
 
 void ZenithLogger::log(LogLevel level, const juce::String& message, const juce::String& category) {
-    // Check if this log level should be output
     if (static_cast<int>(level) < static_cast<int>(currentLogLevel_)) {
         return;
     }
     
-    writeLog(level, message, category);
-}
-
-void ZenithLogger::writeLog(LogLevel level, const juce::String& message, const juce::String& category) {
-    std::lock_guard<std::mutex> lock(logMutex_);
-    
-    // Format: [TIMESTAMP] [LEVEL] [CATEGORY] Message
-    juce::String logEntry = "[" + getCurrentTimestamp() + "] ";
+    juce::String logEntry = "[" + juce::Time::getCurrentTime().formatted("%H:%M:%S") + "] ";
     logEntry += "[" + levelToString(level) + "] ";
     
     if (category.isNotEmpty()) {
@@ -103,9 +131,8 @@ void ZenithLogger::writeLog(LogLevel level, const juce::String& message, const j
     
     logEntry += message;
     
-    // Output to console (if enabled)
+    // Console output
     if (logToConsole_) {
-        // Use different output streams based on severity
         if (level >= LogLevel::Error) {
             std::cerr << logEntry.toStdString() << std::endl;
         } else {
@@ -113,10 +140,13 @@ void ZenithLogger::writeLog(LogLevel level, const juce::String& message, const j
         }
     }
     
-    // Output to file (if enabled and stream is open)
-    if (logToFile_ && logFileStream_ && logFileStream_->openedOk()) {
-        logFileStream_->writeText(logEntry + "\n", false, false, nullptr);
+    // File output via juce::FileLogger (High performance, thread-safe buffering)
+    if (fileLogger_) {
+        fileLogger_->logMessage(logEntry);
     }
+
+    // Always keep DBG output for IDE users
+    juce::Logger::outputDebugString(logEntry);
 }
 
 juce::String ZenithLogger::levelToString(LogLevel level) const {
@@ -131,16 +161,9 @@ juce::String ZenithLogger::levelToString(LogLevel level) const {
     }
 }
 
-juce::String ZenithLogger::getCurrentTimestamp() const {
-    auto now = juce::Time::getCurrentTime();
-    return now.formatted("%Y-%m-%d %H:%M:%S");
-}
-
 void ZenithLogger::flush() {
-    std::lock_guard<std::mutex> lock(logMutex_);
-    if (logFileStream_ && logFileStream_->openedOk()) {
-        logFileStream_->flush();
-    }
+    // FileLogger handles flushing
 }
 
 } // namespace zenith
+

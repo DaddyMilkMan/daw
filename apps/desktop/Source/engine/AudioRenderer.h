@@ -102,6 +102,14 @@ public:
         const TempoMap* tempoMap,
         const juce::MidiBuffer* incomingMidi = nullptr) noexcept;
 
+    /**
+     * @brief Update playhead position for all clips in all tracks
+     * @param tracks List of tracks to synchronize
+     * @param playheadPosition Current position in samples
+     */
+    void updateClipPositions(std::span<Track* const> tracks, 
+                             juce::int64 playheadPosition) noexcept;
+
     //==========================================================================
     // PDC (Plugin Delay Compensation)
     //==========================================================================
