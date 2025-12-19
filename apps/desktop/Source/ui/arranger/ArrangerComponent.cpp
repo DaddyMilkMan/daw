@@ -244,6 +244,53 @@ void ArrangerComponent::rebuildClipViews() {
   int visibleTracks = (int)(getHeight() - RULER_HEIGHT) / (int)TRACK_HEIGHT;
   miniMap.setVisibleRange(viewStartBeats, visibleBeats, firstVisibleTrackIndex,
                           visibleTracks);
+  
+  rebuildTrackComponents();
+}
+
+void ArrangerComponent::rebuildTrackComponents() {
+    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+    if (!tracksNode.isValid()) {
+        trackComponents.clear();
+        return;
+    }
+    
+    // Sync vector size
+    int numTracks = tracksNode.getNumChildren();
+    
+    // Naively rebuild for now (Optimize later to reuse components)
+    // Actually, simple reuse is easy: resize vector, update data
+    
+    size_t required = (size_t)numTracks;
+    
+    // Add if needed
+    while (trackComponents.size() < required) {
+        auto type = ArrangerTrackComponent::TrackType::Audio; // Default
+        auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState, type);
+        addChildComponent(newTrack.get());
+        trackComponents.push_back(std::move(newTrack));
+    }
+    
+    // Remove if needed
+    while (trackComponents.size() > required) {
+        trackComponents.pop_back(); // unique_ptr handles destruction and removal from parent? No, addChildComponent doesn't take ownership. 
+        // Component destruction removes from parent automatically.
+    }
+    
+    // Update Data
+    for (int i = 0; i < numTracks; ++i) {
+        auto trackNode = tracksNode.getChild(i);
+        auto* comp = trackComponents[i].get();
+        
+        comp->setTrackId(trackNode[zenith::ProjectState::PROP_ID].toString());
+        comp->setTrackName(trackNode[zenith::ProjectState::PROP_NAME].toString());
+        comp->setTrackIndex(i);
+        comp->setViewContext(pixelsPerBeat, viewStartBeats);
+        
+        // TODO: Sync Mute/Solo/Rec state from ValueTree
+    }
+    
+    resized(); // Layout
 }
 
 void ArrangerComponent::recomputeClipBounds() {
@@ -501,6 +548,26 @@ void ArrangerComponent::resized() {
     float y = RULER_HEIGHT + 20.0f;
     macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
   }
+  
+  // Layout Tracks
+  const float trackHeight = TRACK_HEIGHT; // 80.0f
+  // We need to account for scroll position (firstVisibleTrackIndex)
+  // For now, simple vertical stack starting from TOP_MARGIN
+  
+  float yEntry = TOP_MARGIN; // + (0 - firstVisibleTrackIndex) * trackHeight?
+  // Actually trackIndexToY handles the scroll math:
+  // TOP_MARGIN + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT
+  
+  for (size_t i = 0; i < trackComponents.size(); ++i) {
+      float y = trackIndexToY((int)i);
+      if (y + trackHeight < TOP_MARGIN || y > getHeight()) {
+          trackComponents[i]->setVisible(false);
+      } else {
+          trackComponents[i]->setVisible(true);
+          trackComponents[i]->setBounds(0, (int)y, getWidth(), (int)trackHeight);
+          trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
+      }
+  }
 }
 
 //==============================================================================
@@ -649,7 +716,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
   // ============================================================================
   // 3. TRACKS RENDER LOOP
   // ============================================================================
-  if (tracksNode.isValid()) {
+  if (false) { // tracksNode.isValid()) {
+    // 3. TRACKS RENDER LOOP - DISABLED (Handled by ArrangerTrackComponent)
     SkPaint trackBgPaint;
     trackBgPaint.setStyle(SkPaint::kFill_Style);
 

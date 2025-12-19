@@ -9,7 +9,7 @@
 */
 
 #include "RightSidePanel.h"
-#include "../../SimpleLogger.h"
+#include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithLayout.h"
 #include "../widgets/SpectraAnalyzerComponent.h"
 
@@ -27,12 +27,12 @@ namespace zenith {
 #ifdef ZENITH_USE_SKIA
 
 RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
-  logToFile("RightSidePanel: Constructor started");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started");
   setSize(300, 600);
 
-  logToFile("RightSidePanel: Creating WingmanPanel...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Creating WingmanPanel...");
   wingmanPanel_ = std::make_unique<WingmanPanel>(api, engine);
-  logToFile("RightSidePanel: WingmanPanel created. Adding child...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: WingmanPanel created. Adding child...");
   addChildComponent(wingmanPanel_.get());
   wingmanPanel_->setVisible(true);
 
@@ -41,9 +41,9 @@ RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
   addChildComponent(spectraAnalyzer_.get());
   spectraAnalyzer_->setVisible(true);
 
-  logToFile("RightSidePanel: Starting timer...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Starting timer...");
   startTimerHz(60); // Animation timer
-  logToFile("RightSidePanel: Constructor complete");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor complete");
 }
 
 RightSidePanel::~RightSidePanel() { stopTimer(); }

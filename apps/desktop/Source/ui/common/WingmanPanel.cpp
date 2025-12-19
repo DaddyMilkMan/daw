@@ -11,7 +11,7 @@
 */
 
 #include "WingmanPanel.h"
-#include "SimpleLogger.h"
+#include "../engine/ZenithLogger.h"
 #include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
 #include "ZenithLookAndFeel.h"
@@ -23,9 +23,9 @@ namespace zenith {
 //==============================================================================
 WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
     : commandAPI(api), engine_(engine) {
-  logToFile("WingmanPanel: Constructor started");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Constructor started");
   // Create Grok controller
-  logToFile("WingmanPanel: Creating GrokDAWController...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Creating GrokDAWController...");
   grokController = std::make_unique<GrokDAWController>(commandAPI);
 
   //==========================================================================
@@ -121,9 +121,9 @@ WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
   addAndMakeVisible(settingsButton.get());
 
   // Update status based on Grok readiness (Moved to END of constructor)
-  logToFile("WingmanPanel: Initializing Grok...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Initializing Grok...");
   initializeGrok();
-  logToFile("WingmanPanel: Grok initialized (or failed gracefully)");
+  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Grok initialized (or failed gracefully)");
 }
 
 WingmanPanel::~WingmanPanel() { inputField->removeListener(this); }

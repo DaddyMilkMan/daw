@@ -286,6 +286,8 @@ private:
 
   std::unique_ptr<MacroToolbar> macroToolbar;
   std::unique_ptr<ArrangerTrackComponent> sectionTrack;
+  std::vector<std::unique_ptr<ArrangerTrackComponent>> trackComponents;
+  void rebuildTrackComponents();
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerComponent)
 };

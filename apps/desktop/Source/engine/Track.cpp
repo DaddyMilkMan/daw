@@ -3,6 +3,7 @@
 #include "TempoMap.h"
 #include "AudioTrack.h"
 #include "MIDITrack.h"
+#include "InstrumentTrack.h"
 #include "AuxBusTrack.h"
 #include "PluginHost.h"
 #include "../instruments/Instrument.h"

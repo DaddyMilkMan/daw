@@ -6,6 +6,7 @@
 #include "ClipSynchronizer.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
+#include "ClipTrack.h"
 
 namespace zenith {
 
@@ -134,9 +135,6 @@ void ClipSynchronizer::syncEngineToProjectState() {
       continue;
     }
 
-    // Get Engine's clip list (thread-safe read via accessor)
-    const auto &engineClips = trackPtr->getClips();
-
     // Get zenith::ProjectState clips container
     auto clipsNode =
         projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
@@ -146,8 +144,11 @@ void ClipSynchronizer::syncEngineToProjectState() {
     }
 
     // Sync each Engine clip to zenith::ProjectState
-    for (size_t i = 0; i < engineClips.size(); ++i) {
-      const auto &engineClip = engineClips[i];
+    for (int i = 0; i < trackPtr->getNumClips(); ++i) {
+      auto* engineClip = trackPtr->getClip(i);
+      
+      if (engineClip == nullptr)
+          continue;
 
       // Check if this clip exists in zenith::ProjectState
       juce::String clipId = engineClip->getName(); // Assuming Name == ID
@@ -285,9 +286,9 @@ void ClipSynchronizer::valueTreePropertyChanged(
   // Find in Engine
   for (const auto &trackPtr : engine.tracks()) {
     if (trackPtr->getTrackId() == trackId) {
-      const auto &clips = trackPtr->getClips();
-      for (const auto &clipPtr : clips) {
-        if (clipPtr->getName() == clipId) {
+      for (int i = 0; i < trackPtr->getNumClips(); ++i) {
+        auto* clipPtr = trackPtr->getClip(i);
+        if (clipPtr != nullptr && clipPtr->getName() == clipId) {
           // Found it, sync properties
           double tempo = projectState.getTempo();
           double sampleRate = engine.getSampleRate();
@@ -377,10 +378,14 @@ void ClipSynchronizer::valueTreeChildRemoved(
     // Remove from Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        const auto &clips = trackPtr->getClips();
-        for (const auto &clip : clips) {
-          if (clip->getName() == clipId) {
-            trackPtr->removeClip(clip.get());
+        zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
+        if (clipTrack == nullptr) return;
+
+        const int numClips = clipTrack->getNumClips();
+        for (int i = 0; i < numClips; ++i) {
+          zenith::Clip* clipPtr = clipTrack->getClip(i);
+          if (clipPtr != nullptr && clipPtr->getName() == clipId) {
+            clipTrack->removeClip(clipPtr);
             DBG("ClipSynchronizer: Removed clip " + clipId);
             return;
           }

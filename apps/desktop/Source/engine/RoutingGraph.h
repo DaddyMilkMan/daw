@@ -124,6 +124,7 @@ private:
     
     // Owning data (message thread only, protected by lock)
     std::unordered_map<std::string, Node> nodes_;
+    std::vector<Connection> connections_;
     std::shared_ptr<Topology> currentTopology_;
     int nextTopologyVersion_ = 1;
 

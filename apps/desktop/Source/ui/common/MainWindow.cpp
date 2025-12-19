@@ -23,7 +23,7 @@
 #include "../ai/SessionDebuggerAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../ai/PresetGeneticistAgent.h"
-#include "SimpleLogger.h"
+#include "../engine/ZenithLogger.h"
 
 #include "SkiaComponent.h"
 #include "SkiaMainWindowIntegration.h"
@@ -58,31 +58,28 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Add Debug Overlay
   // addChildComponent(&zenith::DebugLogOverlay::getInstance());
 
-  // Show Console
-  showDebugConsole();
+
 
   setSize(1400, 800);
 
-  DBG("========================================");
-  DBG("MainComponent Constructor - Modern DAW Layout");
-  DBG("========================================");
+  ZENITH_LOG_INFO("========================================");
+  ZENITH_LOG_INFO("MainComponent Constructor - Modern DAW Layout");
+  ZENITH_LOG_INFO("========================================");
 
-  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-            "EXECUTING <<<");
+  ZENITH_LOG_INFO(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<");
 
   // Initialize Skia rendering system
   // Skia initialization is handled by
   // SkiaMainWindowIntegration::newOpenGLContextCreated
 
   // Instantiate the SkiaRenderer
-  logToFile("→ Initializing SkiaRenderer...");
+  ZENITH_LOG_INFO("→ Initializing SkiaRenderer...");
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
 
   // Top: Transport Bar
-  DBG("→ Creating TransportBar...");
-  logToFile("→ Creating TransportBar...");
+  ZENITH_LOG_INFO("→ Creating TransportBar...");
   transportBar = std::make_unique<zenith::TransportBar>();
   transportBar->setProjectName("Zenith DAW");
   transportBar->setTempo(120.0);
@@ -91,58 +88,46 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Hook up transport callbacks
   transportBar->onPlayClicked = [this]() {
     engine.play();
-    DBG("Play clicked");
+    ZENITH_LOG_DEBUG("Play clicked");
   };
   transportBar->onStopClicked = [this]() {
     engine.stop();
-    DBG("Stop clicked");
+    ZENITH_LOG_DEBUG("Stop clicked");
   };
   transportBar->onRecordClicked = [this]() {
     engine.toggleRecording();
     bool isRec = engine.isRecording();
     transportBar->setRecording(isRec);
     if (isRec) {
-      DBG("Recording started");
+      ZENITH_LOG_DEBUG("Recording started");
     } else {
-      DBG("Recording stopped");
+      ZENITH_LOG_DEBUG("Recording stopped");
     }
   };
 
   addAndMakeVisible(transportBar.get());
-  logToFile("✓ TransportBar created");
-  DBG("✓ TransportBar created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(transportBar.get())));
+  ZENITH_LOG_INFO("✓ TransportBar created");
 
   // The "Perfect DAW" Tri-Pane Layout Manager
-  DBG("→ Creating MainLayoutComponent...");
-  logToFile("→ Creating MainLayoutComponent...");
+  ZENITH_LOG_INFO("→ Creating MainLayoutComponent...");
   mainLayout =
       std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
   addAndMakeVisible(mainLayout.get());
-  logToFile("✓ MainLayoutComponent created");
-  DBG("✓ MainLayoutComponent created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(mainLayout.get())));
+  ZENITH_LOG_INFO("✓ MainLayoutComponent created");
 
   // Connect browser collapse callback (proxied through MainLayout if needed, or
   // handled internally) For now, MainLayout handles its own resizing when
   // browser toggles.
 
   // Right: AI Assistant Panel (Wingman) - Pure Skia
-  DBG("→ Creating RightSidePanel...");
-  logToFile("→ Creating RightSidePanel...");
+  ZENITH_LOG_INFO("→ Creating RightSidePanel...");
   rightSidePanel =
       std::make_unique<zenith::RightSidePanel>(api, engine);
   addAndMakeVisible(rightSidePanel.get());
-  logToFile("✓ RightSidePanel created");
-  DBG("✓ RightSidePanel created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(rightSidePanel.get())));
+  ZENITH_LOG_INFO("✓ RightSidePanel created");
 
   // Bottom: Piano Keyboard + Mixer Strip
-  DBG("→ Creating BottomBar...");
-  logToFile("→ Creating BottomBar...");
+  ZENITH_LOG_INFO("→ Creating BottomBar...");
   bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
                                                   projectState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
@@ -150,14 +135,11 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Connect Session Debugger
   if (auto *debugger = engine.getSessionDebugger()) {
     bottomBar->setDebugger(debugger);
-    DBG("✓ Session Debugger connected to BottomBar");
+    ZENITH_LOG_INFO("✓ Session Debugger connected to BottomBar");
   }
 
   addAndMakeVisible(bottomBar.get());
-  logToFile("✓ BottomBar created");
-  DBG("✓ BottomBar created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(bottomBar.get())));
+  ZENITH_LOG_INFO("✓ BottomBar created");
 
   // Connect view toggle callback
   transportBar->onViewToggleClicked = [this]() {
