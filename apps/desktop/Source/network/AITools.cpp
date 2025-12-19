@@ -77,6 +77,17 @@ juce::Array<GrokFunction> AITools::getAvailableFunctions()
 
     myFunctions.add(createFunctionDef("list_presets", "List available presets", presetSchema));
 
+    // Plugin Search
+    juce::String searchSchema = "{";
+    searchSchema += "\"type\": \"object\",";
+    searchSchema += "\"properties\": {";
+    searchSchema += "\"query\": { \"type\": \"string\", \"description\": \"Search query for plugins (name, manufacturer, or category)\" }";
+    searchSchema += "},";
+    searchSchema += "\"required\": [\"query\"]";
+    searchSchema += "}";
+
+    myFunctions.add(createFunctionDef("search_plugins", "Search for VST/AudioUnit plugins by name or category", searchSchema));
+
     // AI Audio Processing
     juce::String stemsSchema = "{";
     stemsSchema += "\"type\": \"object\",";
@@ -87,6 +98,22 @@ juce::Array<GrokFunction> AITools::getAvailableFunctions()
     stemsSchema += "}";
 
     myFunctions.add(createFunctionDef("separate_stems", "Separate audio track into stems", stemsSchema));
+
+    // Routing Graph
+    myFunctions.add(createFunctionDef("get_routing_graph", "Get the current audio routing graph (nodes and connections)", 
+        "{ \"type\": \"object\", \"properties\": {} }"));
+
+    // Evolution
+    juce::String startEvoSchema = "{";
+    startEvoSchema += "\"type\": \"object\",";
+    startEvoSchema += "\"properties\": {";
+    startEvoSchema += "\"maxGenerations\": { \"type\": \"integer\", \"description\": \"Maximum generations to evolve (default 100)\" }";
+    startEvoSchema += "}";
+    startEvoSchema += "}";
+
+    myFunctions.add(createFunctionDef("start_evolution", "Start the Preset Geneticist evolutionary sound design process", startEvoSchema));
+    myFunctions.add(createFunctionDef("stop_evolution", "Stop the current evolution process", "{ \"type\": \"object\", \"properties\": {} }"));
+    myFunctions.add(createFunctionDef("get_evolution_stats", "Get current progress and best fitness of the evolution", "{ \"type\": \"object\", \"properties\": {} }"));
 
     return myFunctions;
 }

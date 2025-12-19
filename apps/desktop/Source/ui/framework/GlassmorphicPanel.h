@@ -482,15 +482,24 @@ private:
     borderPaint.setStyle(SkPaint::kStroke_Style);
     borderPaint.setStrokeWidth(1.0f);
 
+    SkRect bounds = rrect.getBounds();
+    SkRRect borderRRect = rrect;
+    borderRRect.inset(0.5f, 0.5f);
+
     if (opts.style == Style::ActiveGlow && opts.accentColor != 0x00000000) {
       borderPaint.setColor(withAlpha(opts.accentColor, 0.6f));
     } else {
-      // Standard border is very subtle, mostly defined by rim light and shadow
-      borderPaint.setColor(SkColorSetA(colors::BORDER_DEFAULT, 40));
+      // PREMIUM: Linear gradient border (Top-Left Highlight to Bottom-Right Subtle)
+      SkPoint pts[2] = {{bounds.left(), bounds.top()},
+                        {bounds.right(), bounds.bottom()}};
+      SkColor colors[2] = {
+          SkColorSetA(SK_ColorWHITE, 60), // Brighter top-left
+          SkColorSetA(SK_ColorWHITE, 20)  // Subtler bottom-right
+      };
+      borderPaint.setShader(SkGradientShader::MakeLinear(
+          pts, colors, nullptr, 2, SkTileMode::kClamp));
     }
 
-    SkRRect borderRRect = rrect;
-    borderRRect.inset(0.5f, 0.5f);
     canvas->drawRRect(borderRRect, borderPaint);
   }
 

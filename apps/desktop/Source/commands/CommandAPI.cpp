@@ -27,6 +27,8 @@
 #include "TransportCommands.h"
 
 #include "../ai/AIMasteringAgent.h"
+#include "../ai/PresetGeneticistAgent.h"
+#include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
 
 namespace zenith {
@@ -127,6 +129,18 @@ void CommandAPI::initializeCommandMap() {
   // Vision Command
   commandMap["get_ui_state"] = CommandID::GetUIState;
 
+  // Evolution Commands
+  commandMap["start_evolution"] = CommandID::StartEvolution;
+  commandMap["stop_evolution"] = CommandID::StopEvolution;
+  commandMap["get_evolution_stats"] = CommandID::GetEvolutionStats;
+
+  // Routing Graph Commands
+  commandMap["get_routing_graph"] = CommandID::GetRoutingGraph;
+  commandMap["connect_nodes"] = CommandID::ConnectNodes;
+  commandMap["disconnect_nodes"] = CommandID::DisconnectNodes;
+
+  commandMap["search_plugins"] = CommandID::SearchPlugins;
+
   // Quick Wins: Mixer Control
   commandMap["set_track_send"] = CommandID::SetTrackSend;
   commandMap["set_track_eq"] = CommandID::SetTrackEQ;
@@ -214,6 +228,8 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return removePlugin(p); });
   registerCommand("list_plugins",
                   [this](const juce::var &p) { return listPlugins(p); });
+  registerCommand("search_plugins",
+                  [this](const juce::var &p) { return searchPlugins(p); });
   registerCommand("set_plugin_param",
                   [this](const juce::var &p) { return setPluginParam(p); });
   registerCommand("get_plugin_params",
@@ -243,6 +259,14 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return moveNote(p); });
   registerCommand("get_notes",
                   [this](const juce::var &p) { return getNotes(p); });
+
+  registerCommand("start_evolution",
+                  [this](const juce::var &p) { return startEvolution(p); });
+  registerCommand("stop_evolution",
+                  [this](const juce::var &p) { return stopEvolution(p); });
+  registerCommand("get_evolution_stats", [this](const juce::var &p) {
+    return getEvolutionStats(p);
+  });
   registerCommand("set_note_velocity",
                   [this](const juce::var &p) { return setNoteVelocity(p); });
   registerCommand("set_note_length",
@@ -268,8 +292,18 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return getAuxBuses(p); });
 
   // Vision Handler
+  registerCommand("get_ui_health",
+                  [this](const juce::var &p) { return getUIHealth(p); });
   registerCommand("get_ui_state",
                   [this](const juce::var &p) { return getUIState(p); });
+
+  // Routing Graph Handlers
+  registerCommand("get_routing_graph",
+                  [this](const juce::var &p) { return getRoutingGraph(p); });
+  registerCommand("connect_nodes",
+                  [this](const juce::var &p) { return connectNodes(p); });
+  registerCommand("disconnect_nodes",
+                  [this](const juce::var &p) { return disconnectNodes(p); });
 }
 
 void CommandAPI::registerCommand(const juce::String &commandName,
@@ -298,154 +332,12 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
 
   DBG("CommandAPI: Executing command: " + commandStr);
 
-  // Map Lookup
-  auto it = commandMap.find(commandStr.toStdString());
-  if (it == commandMap.end()) {
-    return createErrorResponse("Unknown command: " + commandStr);
+  // Use Handler Map lookup (BRAIN Architecture)
+  if (commandHandlers.count(commandStr) > 0) {
+    return commandHandlers[commandStr](params);
   }
 
-  CommandID id = it->second;
-
-  switch (id) {
-  case CommandID::ListTracks:
-    return trackCommands->listTracks(params);
-  case CommandID::CreateTrack:
-    return trackCommands->createTrack(params);
-  case CommandID::DeleteTrack:
-    return trackCommands->deleteTrack(params);
-  case CommandID::RenameTrack:
-    return trackCommands->renameTrack(params);
-  case CommandID::SetTrackVolume:
-    return trackCommands->setTrackVolume(params);
-  case CommandID::SetTrackPan:
-    return trackCommands->setTrackPan(params);
-  case CommandID::ExportAudio:
-    return exportAudio(params);
-  case CommandID::ExportProjectAdvanced:
-    return exportProjectAdvanced(params);
-  case CommandID::SeparateTrack:
-    return trackCommands->separateTrack(params);
-
-  case CommandID::ListClips:
-    return clipCommands->listClips(params);
-  case CommandID::CreateClip:
-    return clipCommands->createClip(params);
-  case CommandID::DeleteClip:
-    return clipCommands->deleteClip(params);
-  case CommandID::SplitClip:
-    return clipCommands->splitClip(params);
-  case CommandID::MoveClip:
-    return clipCommands->moveClip(params);
-  case CommandID::ResizeClip:
-    return clipCommands->resizeClip(params);
-
-  case CommandID::Play:
-    return transportCommands->play(params);
-  case CommandID::Stop:
-    return transportCommands->stop(params);
-  case CommandID::Record:
-    return transportCommands->record(params);
-  case CommandID::Rewind:
-    return transportCommands->rewind(params);
-  case CommandID::SetLoop:
-    return transportCommands->setLoop(params);
-  case CommandID::SetTempo:
-    return transportCommands->setTempo(params);
-  case CommandID::SetTimeSignature:
-    return transportCommands->setTimeSignature(params);
-
-  case CommandID::GetSessionGraph:
-    return getSessionGraph(params);
-  case CommandID::Undo:
-    return undo(params);
-  case CommandID::Redo:
-    return redo(params);
-  case CommandID::History:
-    return history(params);
-
-  case CommandID::DescribeInstrument:
-    return describeInstrument(params);
-
-  case CommandID::AddPlugin:
-    return addPlugin(params);
-  case CommandID::RemovePlugin:
-    return removePlugin(params);
-  case CommandID::ListPlugins:
-    return listPlugins(params);
-  case CommandID::SetPluginParam:
-    return setPluginParam(params);
-  case CommandID::GetPluginParams:
-    return getPluginParams(params);
-
-  case CommandID::AddAutomationPoint:
-    return addAutomationPoint(params);
-  case CommandID::ClearAutomation:
-    return clearAutomation(params);
-  case CommandID::GetAutomation:
-    return getAutomation(params);
-
-  case CommandID::AddTempoChange:
-    return transportCommands->addTempoChange(params);
-  case CommandID::GetTempoMap:
-    return transportCommands->getTempoMap(params);
-
-  case CommandID::AddMarker:
-    return addMarker(params);
-  case CommandID::GetMarkers:
-    return getMarkers(params);
-  case CommandID::DeleteMarker:
-    return deleteMarker(params);
-  case CommandID::GotoMarker:
-    return gotoMarker(params);
-
-  case CommandID::AddNote:
-    return addNote(params);
-  case CommandID::DeleteNote:
-    return deleteNote(params);
-  case CommandID::MoveNote:
-    return moveNote(params);
-  case CommandID::GetNotes:
-    return getNotes(params);
-  case CommandID::SetNoteVelocity:
-    return setNoteVelocity(params);
-  case CommandID::SetNoteLength:
-    return setNoteLength(params);
-  case CommandID::GetMidiData:
-    return getMidiData(params);
-  case CommandID::SetClipNotes:
-    return clipCommands->setClipNotes(params);
-
-  case CommandID::ListPresets:
-    return listPresets(params);
-  case CommandID::LoadPreset:
-    return loadPreset(params);
-  case CommandID::SavePreset:
-    return savePreset(params);
-  case CommandID::CreatePreset:
-    return createPreset(params);
-  case CommandID::DeletePreset:
-    return deletePreset(params);
-  case CommandID::GeneratePreset:
-    return generatePreset(params);
-
-  case CommandID::GetInstrumentParameters:
-    return getInstrumentParameters(params);
-  case CommandID::SetInstrumentParameter:
-    return setInstrumentParameter(params);
-  case CommandID::GetInstrumentParameterSchema:
-    return getInstrumentParameterSchema(params);
-
-  // Quick Wins: Mixer Control
-  case CommandID::SetTrackSend:
-    return trackCommands->setTrackSend(params);
-  case CommandID::SetTrackEQ:
-    return trackCommands->setTrackEQ(params);
-  case CommandID::SetTrackCompressor:
-    return trackCommands->setTrackCompressor(params);
-
-  default:
-    return createErrorResponse("Command ID not implemented: " + commandStr);
-  }
+  return createErrorResponse("Unknown command or handler not registered: " + commandStr);
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {
@@ -603,6 +495,44 @@ juce::var CommandAPI::getSessionGraph(const juce::var &params) {
   return createSuccessResponse(graphData);
 }
 
+juce::var CommandAPI::getRoutingGraph(const juce::var &params) {
+  juce::ignoreUnused(params);
+  return createSuccessResponse(engine.getRoutingGraph().toVar());
+}
+
+juce::var CommandAPI::connectNodes(const juce::var &params) {
+  if (!params.hasProperty("sourceId"))
+    return createErrorResponse("Missing 'sourceId' parameter");
+  if (!params.hasProperty("destId"))
+    return createErrorResponse("Missing 'destId' parameter");
+
+  juce::String sourceId = params["sourceId"].toString();
+  juce::String destId = params["destId"].toString();
+  float gain = params.hasProperty("gain") ? (float)params["gain"] : 1.0f;
+
+  if (engine.getRoutingGraph().connect(sourceId, destId, gain)) {
+    return createSuccessResponse();
+  }
+
+  return createErrorResponse("Failed to connect nodes: check if IDs exist");
+}
+
+juce::var CommandAPI::disconnectNodes(const juce::var &params) {
+  if (!params.hasProperty("sourceId"))
+    return createErrorResponse("Missing 'sourceId' parameter");
+  if (!params.hasProperty("destId"))
+    return createErrorResponse("Missing 'destId' parameter");
+
+  juce::String sourceId = params["sourceId"].toString();
+  juce::String destId = params["destId"].toString();
+
+  if (engine.getRoutingGraph().disconnect(sourceId, destId)) {
+    return createSuccessResponse();
+  }
+
+  return createErrorResponse("Failed to disconnect nodes");
+}
+
 juce::var CommandAPI::undo(const juce::var &params) {
   juce::ignoreUnused(params);
 
@@ -618,7 +548,45 @@ juce::var CommandAPI::undo(const juce::var &params) {
 
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("undone", true);
-  resultObj->setProperty("message", "Undo successful");
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getUIState(const juce::var &params) {
+  juce::ignoreUnused(params);
+  
+  auto *resultObj = new juce::DynamicObject();
+  
+  if (uxDirector_) {
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+    
+    juce::var issuesArray;
+    for (const auto &issue : uxDirector_->getIssues()) {
+        if (!issue.isFixed) {
+            auto *issueObj = new juce::DynamicObject();
+            issueObj->setProperty("type", (int)issue.type);
+            issueObj->setProperty("severity", (int)issue.severity);
+            issueObj->setProperty("description", issue.description);
+            issueObj->setProperty("componentName", issue.componentName);
+            issueObj->setProperty("componentType", issue.componentType);
+            issueObj->setProperty("suggestedFix", issue.suggestedFix);
+            issuesArray.append(juce::var(issueObj));
+        }
+    }
+    resultObj->setProperty("unresolvedIssues", issuesArray);
+    resultObj->setProperty("issueCount", uxDirector_->getUnresolvedIssueCount());
+    
+    // Add health breakdown
+    auto breakdown = uxDirector_->getHealthBreakdown();
+    auto *breakdownObj = new juce::DynamicObject();
+    breakdownObj->setProperty("styleConsistency", breakdown.styleConsistency);
+    breakdownObj->setProperty("dataBindingHealth", breakdown.dataBindingHealth);
+    breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
+    breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
+    resultObj->setProperty("healthBreakdown", juce::var(breakdownObj));
+  } else {
+    resultObj->setProperty("error", "UXDirectorAgent not available");
+  }
 
   return createSuccessResponse(juce::var(resultObj));
 }
@@ -725,6 +693,41 @@ juce::var CommandAPI::listPlugins(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("plugins", pluginsArray);
   resultObj->setProperty("count", knownPlugins.getNumTypes());
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::searchPlugins(const juce::var &params) {
+  if (!params.hasProperty("query"))
+    return createErrorResponse("Missing 'query' parameter");
+
+  juce::String query = params["query"].toString().toLowerCase();
+  juce::var resultsArray;
+  auto *resultsArrayPtr = resultsArray.getArray();
+
+  const auto &knownPlugins = engine.getPluginHost().getKnownPlugins();
+
+  for (int i = 0; i < knownPlugins.getNumTypes(); ++i) {
+    auto desc = knownPlugins.getTypes()[i];
+    
+    bool match = desc.name.toLowerCase().contains(query) ||
+                 desc.manufacturerName.toLowerCase().contains(query) ||
+                 desc.category.toLowerCase().contains(query);
+                 
+    if (match) {
+      auto *pluginObj = new juce::DynamicObject();
+      pluginObj->setProperty("id", juce::var(desc.createIdentifierString()));
+      pluginObj->setProperty("name", juce::var(desc.name));
+      pluginObj->setProperty("manufacturer", juce::var(desc.manufacturerName));
+      pluginObj->setProperty("format", juce::var(desc.pluginFormatName));
+      pluginObj->setProperty("category", juce::var(desc.category));
+      resultsArrayPtr->add(juce::var(pluginObj));
+    }
+  }
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("results", resultsArray);
+  resultObj->setProperty("count", resultsArray.size());
 
   return createSuccessResponse(juce::var(resultObj));
 }
@@ -2063,19 +2066,51 @@ static void traverseComponentTree(juce::Component *comp,
   }
 }
 
-juce::var CommandAPI::getUIState(const juce::var &params) {
-  juce::ignoreUnused(params);
+juce::var CommandAPI::startEvolution(const juce::var &params) {
+  if (presetGeneticist_ == nullptr)
+    return createErrorResponse("PresetGeneticistAgent not available");
 
-  juce::Array<juce::var> uiElements;
+  int maxGens = params.hasProperty("maxGenerations")
+                    ? static_cast<int>(params["maxGenerations"])
+                    : 100;
 
-  // Find the main window(s)
-  for (int i = 0; i < juce::TopLevelWindow::getNumTopLevelWindows(); ++i) {
-    traverseComponentTree(juce::TopLevelWindow::getTopLevelWindow(i),
-                          uiElements);
-  }
+  presetGeneticist_->startEvolution(maxGens);
 
   auto *resultObj = new juce::DynamicObject();
-  resultObj->setProperty("elements", uiElements);
+  resultObj->setProperty("success", true);
+  resultObj->setProperty("message", "Evolution started");
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::stopEvolution(const juce::var &params) {
+  juce::ignoreUnused(params);
+  if (presetGeneticist_ == nullptr)
+    return createErrorResponse("PresetGeneticistAgent not available");
+
+  presetGeneticist_->stopEvolution();
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("success", true);
+  resultObj->setProperty("message", "Evolution stopped");
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getEvolutionStats(const juce::var &params) {
+  juce::ignoreUnused(params);
+  if (presetGeneticist_ == nullptr)
+    return createErrorResponse("PresetGeneticistAgent not available");
+
+  auto stats = presetGeneticist_->getStats();
+
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("generation", stats.generation);
+  resultObj->setProperty("bestFitness", stats.bestFitness);
+  resultObj->setProperty("averageFitness", stats.averageFitness);
+  resultObj->setProperty("totalEvaluated", stats.totalEvaluated);
+  resultObj->setProperty("bestPresetName", stats.bestPresetName);
+  resultObj->setProperty("isRunning", presetGeneticist_->isRunning());
+  resultObj->setProperty("isPaused", presetGeneticist_->isPaused());
+
   return createSuccessResponse(juce::var(resultObj));
 }
 

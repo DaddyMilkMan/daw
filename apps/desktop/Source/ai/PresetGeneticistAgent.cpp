@@ -847,6 +847,9 @@ void PresetGeneticistAgent::analyzeAudio(const juce::AudioBuffer<float> &buffer,
 
   // Calculate spectral centroid
   individual.spectralCentroid = calculateSpectralCentroid(buffer);
+
+  // If this is the best individual so far (visualize only)
+  // We'll update currentBestSpectrum_ in updateStats for thread safety
 }
 
 float PresetGeneticistAgent::calculateHarmonicRichness(
@@ -1017,6 +1020,24 @@ void PresetGeneticistAgent::updateStats() {
       if (individual.fitness > best) {
         best = individual.fitness;
         bestName = individual.preset.name;
+        
+        // Update visualization spectrum (Proof of Concept)
+        // In a real implementation we might want to store this in the Individual
+        // but for now we'll re-render once or use a cached version if we had one.
+        // For simplicity, let's just trigger a re-render of THIS specific individual to get its spectrum
+        juce::AudioBuffer<float> bestBuffer = renderPreset(individual.preset);
+        
+        const int fftSize = 1024;
+        std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
+        const float* data = bestBuffer.getReadPointer(0);
+        for (int i = 0; i < fftSize && i < bestBuffer.getNumSamples(); ++i)
+            fftData[static_cast<size_t>(i)] = data[i];
+            
+        fft_.performFrequencyOnlyForwardTransform(fftData.data());
+        
+        currentBestSpectrum_.clear();
+        for (int i = 0; i < fftSize / 2; ++i)
+            currentBestSpectrum_.push_back(std::abs(fftData[static_cast<size_t>(i)]));
       }
       if (individual.fitness < worst) {
         worst = individual.fitness;

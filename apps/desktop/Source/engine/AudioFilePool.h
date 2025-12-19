@@ -82,10 +82,16 @@ public:
      */
     HandlePtr loadFile(const juce::File& file, juce::String& errorMessage);
 
-    /**
-     * Overload without errorMessage for compatibility
-     */
     HandlePtr loadFile(const juce::File& file);
+
+    /**
+     * Load an audio file into the pool asynchronously.
+     *
+     * @param file The audio file to load
+     * @param callback Function to call when loading is complete
+     */
+    void loadFileAsync(const juce::File& file,
+                       std::function<void(HandlePtr loadedHandle, juce::String error)> callback);
 
     /**
      * Get a previously loaded file (thread-safe)

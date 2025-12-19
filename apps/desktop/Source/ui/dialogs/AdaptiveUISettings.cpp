@@ -11,6 +11,7 @@
 */
 
 #include "AdaptiveUISettings.h"
+#include "../design-system/ZenithLayout.h"
 #include "../framework/ConfigurationManager.h"
 
 namespace zenith {
@@ -152,38 +153,58 @@ void AdaptiveUISettings::createUI() {
 void AdaptiveUISettings::resized() {
   auto bounds = getLocalBounds();
 
-  // Title at top
+  // 1. Title at top
   titleLabel_->setBounds(bounds.removeFromTop(40).reduced(10, 5));
 
+  // 2. Settings Rows (Vertical Stack)
+  auto settingsArea = bounds.removeFromTop(160); // 4 rows * 40px
+  
+  // Row components for ZenithLayout
+  std::vector<juce::Component*> rows;
+  // Note: We'll use ZenithLayout for EACH row to align label/input 
+  
   // Enable/disable toggle
-  auto enabledRow = bounds.removeFromTop(40);
-  enabledLabel_->setBounds(enabledRow.removeFromLeft(150).reduced(10, 5));
-  enabledButton_->setBounds(enabledRow.removeFromLeft(80).reduced(10, 5));
+  ZenithLayout::begin()
+      .withBounds(settingsArea.removeFromTop(40))
+      .withGap(10.0f)
+      .addItem(enabledLabel_.get())
+      .addItem(enabledButton_.get()) // This is narrower in original (80px), but withFlex(1) will make it wider. 
+      // We can use withWidth if we want to preserve exact feel, or just let Flex take over.
+      .applyRow();
 
   // Learning rate
-  auto learningRateRow = bounds.removeFromTop(40);
-  learningRateLabel_->setBounds(
-      learningRateRow.removeFromLeft(150).reduced(10, 5));
-  learningRateCombo_->setBounds(
-      learningRateRow.removeFromLeft(200).reduced(10, 5));
+  ZenithLayout::begin()
+      .withBounds(settingsArea.removeFromTop(40))
+      .withGap(10.0f)
+      .addItem(learningRateLabel_.get())
+      .addItem(learningRateCombo_.get())
+      .applyRow();
 
   // Adaptation speed
-  auto adaptationSpeedRow = bounds.removeFromTop(40);
-  adaptationSpeedLabel_->setBounds(
-      adaptationSpeedRow.removeFromLeft(150).reduced(10, 5));
-  adaptationSpeedCombo_->setBounds(
-      adaptationSpeedRow.removeFromLeft(200).reduced(10, 5));
+  ZenithLayout::begin()
+      .withBounds(settingsArea.removeFromTop(40))
+      .withGap(10.0f)
+      .addItem(adaptationSpeedLabel_.get())
+      .addItem(adaptationSpeedCombo_.get())
+      .applyRow();
 
   // Preferred layout
-  auto layoutRow = bounds.removeFromTop(40);
-  layoutLabel_->setBounds(layoutRow.removeFromLeft(150).reduced(10, 5));
-  layoutCombo_->setBounds(layoutRow.removeFromLeft(200).reduced(10, 5));
+  ZenithLayout::begin()
+      .withBounds(settingsArea.removeFromTop(40))
+      .withGap(10.0f)
+      .addItem(layoutLabel_.get())
+      .addItem(layoutCombo_.get())
+      .applyRow();
 
-  // Buttons at bottom
-  auto buttonRow = bounds.removeFromBottom(50);
-  resetButton_->setBounds(buttonRow.removeFromLeft(150).reduced(10, 10));
-  buttonRow.removeFromLeft(20);
-  applyButton_->setBounds(buttonRow.removeFromLeft(100).reduced(10, 10));
+  // 3. Buttons at bottom
+  auto buttonRowArea = bounds.removeFromBottom(50);
+  ZenithLayout::begin()
+      .withBounds(buttonRowArea)
+      .withGap(20.0f)
+      .withJustify(juce::FlexBox::JustifyContent::center)
+      .addItem(resetButton_.get())
+      .addItem(applyButton_.get())
+      .applyRow();
 }
 
 void AdaptiveUISettings::drawSkia(SkCanvas *canvas) {

@@ -47,7 +47,8 @@ class ClipStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
 
-class ProjectState : public juce::ValueTree::Listener {
+class ProjectState : public juce::ValueTree::Listener,
+                     private juce::Timer {
   friend class ArrangerComponent;
   friend class TrackStateManager;
   friend class ClipStateManager;
@@ -162,6 +163,12 @@ public:
     isDirty = true;
   }
   void valueTreeParentChanged(juce::ValueTree &) override { isDirty = true; }
+
+  //==========================================================================
+  // Timer callback for autosave
+  void timerCallback() override;
+  void startAutosaveTimer(int intervalMinutes = 5);
+  void stopAutosaveTimer();
 
   //==========================================================================
   // Project Properties

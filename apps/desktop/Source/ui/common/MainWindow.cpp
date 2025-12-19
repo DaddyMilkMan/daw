@@ -21,6 +21,8 @@
 #include "ZenithLookAndFeel.h" // For colors
 
 #include "../ai/SessionDebuggerAgent.h"
+#include "../ai/UXDirectorAgent.h"
+#include "../ai/PresetGeneticistAgent.h"
 #include "SimpleLogger.h"
 
 #include "SkiaComponent.h"
@@ -464,8 +466,8 @@ void MainComponent::handleImportAudio() {
         }
 
         // Create a new clip
-        auto clip = std::make_unique<zenith::Track::Clip>();
-        clip->setType(zenith::Track::Clip::Type::Audio);
+        auto clip = std::make_unique<zenith::Clip>();
+        clip->setType(zenith::Clip::Type::Audio);
         clip->setName(file.getFileNameWithoutExtension());
 
         // Load audio file through pool (message thread - safe to do I/O)
@@ -538,6 +540,14 @@ MainWindow::MainWindow(const juce::String &name)
         DBG("MainWindow: New project requested");
         // In the future, could show a template dialog or reset project state
       });
+
+  // Instantiate AI agents (Brain integration)
+  uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState, *mainComponent);
+  commandAPI->setUXDirector(uxDirector.get());
+  uxDirector->startMonitoring(500); // 500ms intervals
+
+  presetGeneticist = std::make_unique<ai::PresetGeneticistAgent>();
+  commandAPI->setPresetGeneticist(presetGeneticist.get());
 
   // Set up window
   setUsingNativeTitleBar(true);

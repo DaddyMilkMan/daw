@@ -37,11 +37,11 @@
 namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
-class CommandAPI;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
+namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 } // namespace zenith
 
 //==============================================================================
@@ -259,6 +259,10 @@ public:
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
+
+  // AI Agents (Brain integration)
+  std::unique_ptr<zenith::ai::UXDirectorAgent> uxDirector;
+  std::unique_ptr<zenith::ai::PresetGeneticistAgent> presetGeneticist;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

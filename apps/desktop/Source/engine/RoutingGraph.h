@@ -41,6 +41,10 @@ public:
         PluginSidechain
     };
 
+    // Forward declarations for pointers
+    class Track;
+    class AuxBus;
+
     struct Node
     {
         juce::String id;
@@ -77,6 +81,13 @@ public:
     std::vector<Connection> getConnectionsFrom(const juce::String& sourceId) const;
     std::vector<Connection> getConnectionsTo(const juce::String& destId) const;
     std::vector<juce::String> getProcessingOrder() const;
+
+    /**
+     * @brief Update snapshot with direct pointers (MESSAGE THREAD ONLY)
+     */
+    void updateSnapshotWithPointers(
+        const std::unordered_map<juce::String, Track*>& trackMap,
+        const std::unordered_map<juce::String, AuxBus*>& auxBusMap);
     
     //==============================================================================
     // Serialization (MESSAGE THREAD ONLY)
@@ -95,6 +106,10 @@ private:
         std::vector<Connection> connections;
         std::vector<juce::String> processingOrder;
         
+        // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
+        std::unordered_map<juce::String, Track*> trackLookup;
+        std::unordered_map<juce::String, AuxBus*> auxBusLookup;
+
         Snapshot() = default;
         Snapshot(const std::unordered_map<std::string, Node>& n, 
                  const std::vector<Connection>& c,

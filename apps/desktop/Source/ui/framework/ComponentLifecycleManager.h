@@ -59,6 +59,16 @@ struct LifecycleEvent {
 };
 
 // ============================================================================
+// Lifecycle Listener Interface
+// ============================================================================
+
+class LifecycleListener {
+public:
+  virtual ~LifecycleListener() = default;
+  virtual void onLifecycleEvent(const LifecycleEvent &event) = 0;
+};
+
+// ============================================================================
 // Component Lifecycle Interface
 // ============================================================================
 
@@ -108,9 +118,8 @@ public:
   static juce::String getStateName(ComponentState state);
 
   // Event handling
-  using LifecycleCallback = std::function<void(const LifecycleEvent &)>;
-  void addLifecycleListener(LifecycleCallback callback);
-  void removeLifecycleListener(LifecycleCallback callback);
+  void addLifecycleListener(LifecycleListener *listener);
+  void removeLifecycleListener(LifecycleListener *listener);
 
   // Batch operations
   void suspendAllComponents();
@@ -150,7 +159,7 @@ private:
   };
 
   juce::HashMap<const LifecycleAware *, ComponentEntry> componentStates_;
-  std::vector<LifecycleCallback> lifecycleListeners_;
+  juce::Array<LifecycleListener *> lifecycleListeners_;
   juce::CriticalSection lock_;
   juce::int64 nextComponentId_ = 1;
 

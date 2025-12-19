@@ -77,6 +77,11 @@ public:
     commandIdMap["separate_stems"] = CommandAPI::CommandID::SeparateTrack;
     commandIdMap["analyze_track"] =
         CommandAPI::CommandID::ExportAudio; // uses export
+    commandIdMap["search_plugins"] = CommandAPI::CommandID::SearchPlugins;
+    commandIdMap["get_routing_graph"] = CommandAPI::CommandID::GetRoutingGraph;
+    commandIdMap["start_evolution"] = CommandAPI::CommandID::StartEvolution;
+    commandIdMap["stop_evolution"] = CommandAPI::CommandID::StopEvolution;
+    commandIdMap["get_evolution_stats"] = CommandAPI::CommandID::GetEvolutionStats;
 
     // Handler for audio analysis (special case with side effects)
     functionRegistry["analyze_track"] = [this](const GrokFunctionCall &call,
@@ -145,7 +150,9 @@ public:
     const char *standardCommands[] = {
         "create_track",          "list_tracks",    "delete_track",
         "list_presets",          "add_note",       "set_tempo",
-        "generate_midi_pattern", "generate_lyrics"};
+        "generate_midi_pattern", "generate_lyrics", "search_plugins",
+        "get_routing_graph",     "start_evolution", "stop_evolution",
+        "get_evolution_stats"};
 
     for (const char *cmd : standardCommands) {
       functionRegistry[std::string(cmd)] = defaultHandler;
