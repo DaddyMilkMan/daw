@@ -200,7 +200,7 @@ void ClipSynchronizer::syncEngineToProjectState() {
         newClip.setProperty(zenith::ProjectState::PROP_NAME, clipId, nullptr);
         newClip.setProperty(
             zenith::ProjectState::PROP_TYPE,
-            (engineClip->getType() == zenith::Track::Clip::Type::MIDI
+            (engineClip->getType() == zenith::Clip::Type::MIDI
                  ? "midi"
                  : "audio"),
             nullptr);
@@ -336,7 +336,7 @@ void ClipSynchronizer::valueTreeChildAdded(
     // Add to Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        auto newClip = std::make_unique<zenith::Track::Clip>();
+        auto newClip = std::make_unique<zenith::Clip>();
 
         double tempo = projectState.getTempo();
         double sampleRate = engine.getSampleRate();
@@ -345,8 +345,8 @@ void ClipSynchronizer::valueTreeChildAdded(
             beatsToSamples(startBeats, tempo, sampleRate));
         newClip->setLength(beatsToSamples(lengthBeats, tempo, sampleRate));
         newClip->setName(clipId);
-        newClip->setType(clipType == "midi" ? zenith::Track::Clip::Type::MIDI
-                                            : zenith::Track::Clip::Type::Audio);
+        newClip->setType(clipType == "midi" ? zenith::Clip::Type::MIDI
+                                            : zenith::Clip::Type::Audio);
 
         trackPtr->addClip(std::move(newClip));
         DBG("ClipSynchronizer: Added new clip via Listener " + clipId);

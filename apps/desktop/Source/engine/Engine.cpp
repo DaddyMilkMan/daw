@@ -30,6 +30,7 @@
 #include "../engine/AudioRenderer.h"
 #include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
+#include "../engine/MeteringSystem.h"
 #include "../engine/Metronome.h"
 
 //==============================================================================
@@ -43,6 +44,7 @@ Engine::Engine() {
   recordingManager_ = std::make_unique<RecordingManager>();
   transportController_ = std::make_unique<TransportController>();
   metronome_ = std::make_unique<Metronome>();
+  meteringSystem_ = std::make_unique<MeteringSystem>();
   DBG("Engine: Modular components initialized");
 
   // Initialize audio file pool for sample caching
@@ -69,9 +71,7 @@ Engine::Engine() {
   sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
   DBG("Engine: SessionDebuggerAgent initialized");
 
-  // Initialize Analysis FIFO (for visualizers like spectrum analyzer)
-  analysisFifo_ = std::make_unique<zenith::StereoAudioFifo>(16384);
-  DBG("Engine: Analysis FIFO initialized");
+  // MeteringSystem handles analysis FIFO internally
 
   // Initialize tempo map for beat/time conversions
   tempoMap_ = std::make_unique<zenith::TempoMap>();
@@ -113,6 +113,7 @@ Engine::~Engine() {
   audioRenderer_.reset();
   recordingManager_.reset();
   transportController_.reset();
+  meteringSystem_.reset();
 
   // Clear audio file pool
   if (audioFilePool_ != nullptr) {
@@ -206,10 +207,13 @@ void Engine::syncWithProjectState() {
     juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
     juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
 
-    // Create track
-    auto track = std::make_unique<zenith::Track>(
-        trackName, trackType == "midi" ? zenith::Track::Type::MIDI
-                                       : zenith::Track::Type::Audio);
+    // Create track via Factory
+    zenith::Track::Type actualType = zenith::Track::Type::Audio;
+    if (trackType == "midi") actualType = zenith::Track::Type::MIDI;
+    else if (trackType == "instrument") actualType = zenith::Track::Type::Instrument;
+    else if (trackType == "bus") actualType = zenith::Track::Type::Bus;
+
+    auto track = zenith::Track::create(trackName, actualType);
 
     // Set track ID
     track->setTrackId(trackNode[ProjectState::PROP_ID].toString());
@@ -267,6 +271,7 @@ void Engine::syncWithProjectState() {
     }
 
     // Add track to engine
+    track->setTrackIndex((int)tracks_.size());
     tracks_.push_back(std::move(track));
 
     // Register with RoutingGraph and connect to master bus
@@ -617,9 +622,8 @@ void Engine::addTestTracks(int count) {
   tracks_.reserve(tracks_.size() + static_cast<size_t>(count));
 
   for (int i = 0; i < count; ++i) {
-    // Create track with default name and type
-    // Use shared_ptr to allow track references to outlive snapshot updates
-    auto track = std::make_shared<zenith::Track>(
+    // Create track via Factory
+    auto track = zenith::Track::create(
         "Track " + juce::String(tracks_.size() + 1),
         zenith::Track::Type::Audio);
 
@@ -628,6 +632,7 @@ void Engine::addTestTracks(int count) {
       track->prepareToPlay(currentBufferSize.load(), currentSampleRate.load());
     }
 
+    track->setTrackIndex((int)tracks_.size());
     tracks_.push_back(track); // No std::move needed for shared_ptr
 
     // Register track with RoutingGraph and connect to master bus
@@ -792,18 +797,21 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
 }
 
 float Engine::getMasterLevel() const {
-  return audioRenderer_ ? audioRenderer_->getMasterLevel() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getMasterLevel() : 0.0f;
 }
 
 float Engine::getMasterPeakLevel() const {
-  return audioRenderer_ ? audioRenderer_->getMasterPeakLevel() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getMasterPeakLevel() : 0.0f;
 }
 
 void Engine::resetPeakMeters() {
   // Reset master peak
-  if (audioRenderer_)
+  if (meteringSystem_) {
+    meteringSystem_->resetMasterPeak();
+  }
+  if (audioRenderer_) {
     audioRenderer_->resetPeakMeters();
-
+  }
   // Reset all track peaks (message thread only)
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -856,6 +864,7 @@ void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
   juce::String name = track->getName();
   juce::String id = track->getTrackId();
 
+  track->setTrackIndex((int)tracks_.size());
   tracks_.push_back(track); // Shared_ptr, no move needed
 
   // Register with RoutingGraph
@@ -921,6 +930,21 @@ void Engine::updateTrackSnapshot() {
   // Create new snapshot
   // Include Aux Buses in snapshot for consistent audio thread access
   auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
+
+  // [DSP Optimization] Update routing graph snapshot with direct pointers for fast lookup
+  {
+      std::unordered_map<juce::String, Track*> trackMap;
+      for (const auto& track : tracks_) {
+          if (track) trackMap[track->getTrackId()] = track.get();
+      }
+      
+      std::unordered_map<juce::String, AuxBus*> auxBusMap;
+      for (const auto& bus : auxBuses_) {
+          if (bus) auxBusMap[bus->getId()] = bus.get();
+      }
+      
+      routingGraph_.updateSnapshotWithPointers(trackMap, auxBusMap);
+  }
 
   // Atomic swap (release semantics for the store)
   // The audio thread will see the new pointer immediately
@@ -1298,8 +1322,8 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
   // The logic inside transportController_->isPlaying() block now handles all rendering.
 
   // Push to Analysis FIFO (Stereo)
-  if (analysisFifo_) {
-    analysisFifo_->push(outputBuffer, numSamples);
+  if (meteringSystem_) {
+    meteringSystem_->getAnalysisFifo().push(outputBuffer, numSamples);
   }
 
   // Fallback: If no tracks or all tracks are silent, optionally enable test

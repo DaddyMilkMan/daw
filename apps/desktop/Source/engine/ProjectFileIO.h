@@ -26,6 +26,15 @@ class ProjectState;
 */
 class ProjectFileIO {
 public:
+    enum class SerializationFormat {
+        Xml,
+        MessagePack
+    };
+
+    struct IOSettings {
+        SerializationFormat format = SerializationFormat::Xml;
+        bool useAtomicWrite = true;
+    };
     explicit ProjectFileIO(ProjectState& projectState);
     ~ProjectFileIO() = default;
 
@@ -41,10 +50,23 @@ public:
     bool loadFromFile(const juce::File& file);
 
     /**
+     * @brief Load project from file asynchronously
+     */
+    void loadFromFileAsync(const juce::File& file,
+                           std::function<void(bool success, juce::String error)> callback);
+
+    /**
      * @brief Save project to file
      * @return true if successful
      */
-    bool saveToFile(const juce::File& file);
+    bool saveToFile(const juce::File& file, IOSettings settings = {});
+
+    /**
+     * @brief Save project to file asynchronously
+     */
+    void saveToFileAsync(const juce::File& file,
+                         IOSettings settings,
+                         std::function<void(bool success, juce::String error)> callback);
 
     /**
      * @brief Save crash dump

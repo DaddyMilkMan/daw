@@ -18,6 +18,7 @@ namespace zenith {
     class TrackCommands;
     class ClipCommands;
     class TransportCommands;
+    namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 }
 
 namespace zenith {
@@ -42,7 +43,13 @@ public:
       // Aux Bus Commands
       CreateAuxBus, RemoveAuxBus, SetAuxBusVolume, SetAuxBusPan, SetAuxBusMute, GetAuxBuses,
       // Vision Command
-      GetUIState
+      GetUIState,
+      SearchPlugins,
+      StartEvolution,
+      StopEvolution,
+      GetEvolutionStats,
+      // Routing Graph Commands
+      GetRoutingGraph, ConnectNodes, DisconnectNodes
   };
 
   //==========================================================================
@@ -60,6 +67,13 @@ public:
   using CommandHandler = std::function<juce::var(const juce::var &params)>;
   void registerCommand(const juce::String &commandName, CommandHandler handler);
 
+  void setUXDirector(ai::UXDirectorAgent* agent) { uxDirector_ = agent; }
+  void setPresetGeneticist(ai::PresetGeneticistAgent* agent) { presetGeneticist_ = agent; }
+
+  juce::var startEvolution(const juce::var& params);
+  juce::var stopEvolution(const juce::var& params);
+  juce::var getEvolutionStats(const juce::var& params);
+
 private:
   void initializeCommandMap();
 
@@ -74,6 +88,7 @@ private:
   juce::var addPlugin(const juce::var& params);
   juce::var removePlugin(const juce::var& params);
   juce::var listPlugins(const juce::var& params);
+  juce::var searchPlugins(const juce::var& params);
   juce::var setPluginParam(const juce::var& params);
   juce::var getPluginParams(const juce::var& params);
   juce::var addAutomationPoint(const juce::var& params);
@@ -110,8 +125,14 @@ private:
   juce::var setAuxBusMute(const juce::var& params);
   juce::var getAuxBuses(const juce::var& params);
 
-  // Vision Handler
+  // Vision Handlers
+  juce::var getUIHealth(const juce::var& params);
   juce::var getUIState(const juce::var& params);
+
+  // Routing Graph Handlers
+  juce::var getRoutingGraph(const juce::var& params);
+  juce::var connectNodes(const juce::var& params);
+  juce::var disconnectNodes(const juce::var& params);
 
   // Helpers
   juce::String createResponse(const juce::var &data) const;
@@ -129,6 +150,9 @@ private:
 
   std::map<std::string, CommandID> commandMap;
   std::map<juce::String, CommandHandler> commandHandlers;
+
+  ai::UXDirectorAgent* uxDirector_ = nullptr;
+  ai::PresetGeneticistAgent* presetGeneticist_ = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CommandAPI)
 };

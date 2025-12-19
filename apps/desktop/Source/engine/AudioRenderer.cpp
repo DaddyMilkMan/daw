@@ -101,48 +101,48 @@ void AudioRenderer::renderAudioGraph(
   }
 
   // Pre-clear aux bus buffers
-  for (size_t i = 0; i < auxBuses.size() && i < auxBusBuffers_.size(); ++i) {
+  const size_t numBuses = juce::jmin(auxBuses.size(), auxBusBuffers_.size());
+  for (size_t i = 0; i < numBuses; ++i) {
     auxBusBuffers_[i].clear();
   }
 
-  // Build aux buffer pointers for tracks
-  std::vector<juce::AudioBuffer<float> *> auxBufferPtrs;
-  for (size_t i = 0; i < auxBusBuffers_.size(); ++i) {
-    auxBufferPtrs.push_back(&auxBusBuffers_[i]);
+  // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
+  // We'll use a local array for safety since it's small (max 16 aux buses usually)
+  static constexpr int kMaxAuxBuses = 32;
+  std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
+  size_t actualAuxCount = 0;
+  for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
+    auxBufferPtrs[actualAuxCount++] = &auxBusBuffers_[i];
   }
+  
+  // Wrap in a vector-like view for getNextAudioBlock compatibility
+  // Note: Track::getNextAudioBlock takes std::vector<juce::AudioBuffer<float> *>.
+  // This is a violation of RT-safety if we create the vector here, but if we pass 
+  // a pre-allocated one, it's fine. However, the signature expects std::vector.
+  // We'll have to use a member variable vector to avoid allocation.
+  auxBufferPtrsVector_.clear();
+  for(size_t i = 0; i < actualAuxCount; ++i) auxBufferPtrsVector_.push_back(auxBufferPtrs[i]);
 
-  // Process nodes in topological order
+  // Process nodes in topological order using FAST LOOKUP
   for (const auto &nodeId : snapshot->processingOrder) {
-    // 1. Try to find a Track
-    Track *track = nullptr;
-    size_t trackIdx = 0;
+    // 1. Try to find a Track using fast lookup
+    auto trackIt = snapshot->trackLookup.find(nodeId);
+    if (trackIt != snapshot->trackLookup.end() && trackIt->second != nullptr) {
+      Track* track = trackIt->second;
+      int trackIdx = track->getTrackIndex(); 
 
-    for (size_t i = 0; i < tracks.size(); ++i) {
-      if (tracks[i] && tracks[i]->getTrackId() == nodeId) {
-        track = tracks[i];
-        trackIdx = i;
-        break;
-      }
-    }
-
-    if (track != nullptr) {
       // Handle frozen tracks - play back their freeze buffer (RT-safe)
-      // instead of processing
       if (track->isFrozen()) {
         auto freezeBuffer = track->getFreezeBuffer();
-        if (freezeBuffer != nullptr && trackIdx < trackBuffers_.size()) {
+        if (freezeBuffer != nullptr && trackIdx >= 0 && trackIdx < (int)trackBuffers_.size()) {
           auto &trackBuffer = trackBuffers_[trackIdx];
           trackBuffer.clear();
 
-          // Calculate read position in freeze buffer
           const juce::int64 readPos = playheadPosition;
           const int bufferLength = freezeBuffer->getNumSamples();
           
           if (readPos >= 0 && readPos < bufferLength) {
-             const int samplesToRead = juce::jmin(
-                numSamples,
-                static_cast<int>(bufferLength - readPos));
-                
+             const int samplesToRead = juce::jmin(numSamples, static_cast<int>(bufferLength - readPos));
              if (samplesToRead > 0) {
                  for (int ch = 0; ch < juce::jmin(trackBuffer.getNumChannels(), freezeBuffer->getNumChannels()); ++ch) {
                      trackBuffer.copyFrom(ch, 0, *freezeBuffer, ch, (int)readPos, samplesToRead);
@@ -150,73 +150,47 @@ void AudioRenderer::renderAudioGraph(
              }
           }
 
-          // Apply track volume/pan (frozen tracks still allow fader/pan)
           track->applyGainAndPan(trackBuffer, numSamples);
 
-          // Mix frozen track to output based on graph connections
+          // Mix frozen track using SIMD if possible
           for (const auto &conn : snapshot->connections) {
             if (conn.sourceId == nodeId && conn.destId == "master") {
-              trackBuffer.applyGain(conn.gain);
-              for (int channel = 0;
-                   channel < juce::jmin(outputBuffer.getNumChannels(),
-                                        trackBuffer.getNumChannels());
-                   ++channel) {
-                outputBuffer.addFrom(channel, 0,
-                                     trackBuffer.getReadPointer(channel),
-                                     numSamples);
+              if (conn.gain != 1.0f) trackBuffer.applyGain(conn.gain);
+              
+              for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
+                  juce::FloatVectorOperations::add(outputBuffer.getWritePointer(ch), 
+                                                trackBuffer.getReadPointer(ch), 
+                                                numSamples);
               }
-              break; // Assume single connection to master for now
+              break; 
             }
           }
         }
-        continue; // Skip normal processing for frozen tracks
+        continue;
       }
 
-      if (trackIdx >= trackBuffers_.size())
+      if (trackIdx < 0 || trackIdx >= (int)trackBuffers_.size())
         continue;
 
       auto &trackBuffer = trackBuffers_[trackIdx];
-
-      // Safety check
-      if (trackBuffer.getNumSamples() < numSamples) {
-        continue;
-      }
-
       trackBuffer.clear();
       juce::AudioSourceChannelInfo trackInfo(&trackBuffer, 0, numSamples);
 
-      // Route MIDI to armed instrument tracks
-      const juce::MidiBuffer *trackMidiInput = nullptr;
-      if (incomingMidi != nullptr && !incomingMidi->isEmpty() &&
-          track->getType() == Track::Type::Instrument && track->isArmed()) {
-        trackMidiInput = incomingMidi;
-      }
+      const juce::MidiBuffer *trackMidiInput = (incomingMidi != nullptr && !incomingMidi->isEmpty() &&
+                                              track->getType() == Track::Type::Instrument && track->isArmed()) 
+                                              ? incomingMidi : nullptr;
 
-      // Render track
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
-                               auxBufferPtrs, tempoMap);
+                                auxBufferPtrsVector_, tempoMap);
 
-      // Apply PDC if enabled
-      if (pdcEnabled_.load() && trackIdx < trackLatencies_.size()) {
+      if (pdcEnabled_.load()) {
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
       }
 
-      // Mix to master output based on graph connections
       for (const auto &conn : snapshot->connections) {
         if (conn.sourceId == nodeId && conn.destId == "master") {
-          // Apply connection gain (e.g. master fader/send level if modeled that
-          // way) Note: Track fader is already applied in getNextAudioBlock via
-          // applyGainAndPan? Usually getNextAudioBlock produces "post-fader"
-          // audio if it includes fader. If connection gain is unity, this is
-          // just a mix.
-
-          for (int channel = 0;
-               channel < juce::jmin(outputBuffer.getNumChannels(),
-                                    trackBuffer.getNumChannels());
-               ++channel) {
-            outputBuffer.addFrom(channel, 0,
-                                 trackBuffer.getReadPointer(channel),
-                                 numSamples, conn.gain);
+          for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
+            outputBuffer.addFrom(ch, 0, trackBuffer.getReadPointer(ch), numSamples, conn.gain);
           }
           break;
         }
@@ -224,35 +198,32 @@ void AudioRenderer::renderAudioGraph(
       continue;
     }
 
-    // 2. Try to find an Aux Bus
-    AuxBus *bus = nullptr;
-    size_t busIdx = 0;
+    // 2. Try to find an Aux Bus using fast lookup
+    auto busIt = snapshot->auxBusLookup.find(nodeId);
+    if (busIt != snapshot->auxBusLookup.end() && busIt->second != nullptr) {
+       AuxBus* bus = busIt->second;
+       // We need the index of the bus for the buffer
+       // For now, let's look it up in the auxBuses span for the index
+       // (Optimization: AuxBus could also store its index)
+       size_t busIdx = 0;
+       bool found = false;
+       for (size_t i = 0; i < auxBuses.size(); ++i) {
+           if (auxBuses[i] == bus) {
+               busIdx = i;
+               found = true;
+               break;
+           }
+       }
 
-    for (size_t i = 0; i < auxBuses.size(); ++i) {
-      if (auxBuses[i] && auxBuses[i]->getId() == nodeId) {
-        bus = auxBuses[i];
-        busIdx = i;
-        break;
-      }
-    }
-
-    if (bus != nullptr) {
-      if (busIdx < auxBusBuffers_.size()) {
+       if (found && busIdx < auxBusBuffers_.size()) {
         auto &busBuffer = auxBusBuffers_[busIdx];
-
-        // Process the bus
         juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
         bus->getNextAudioBlock(auxInfo);
 
-        // Mix to master output based on graph connections
         for (const auto &conn : snapshot->connections) {
           if (conn.sourceId == nodeId && conn.destId == "master") {
-            for (int channel = 0;
-                 channel < juce::jmin(outputBuffer.getNumChannels(),
-                                      busBuffer.getNumChannels());
-                 ++channel) {
-              outputBuffer.addFrom(channel, 0, busBuffer, channel, 0,
-                                   numSamples, conn.gain);
+            for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
+              outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
             }
             break;
           }

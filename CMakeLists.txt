@@ -337,6 +337,9 @@ if(BUILD_TESTS)
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
+        apps/desktop/Source/engine
+        apps/desktop/Source/ui
+        apps/desktop/Source/ui/common
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"

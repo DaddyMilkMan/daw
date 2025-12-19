@@ -131,10 +131,14 @@ ProjectState::ProjectState() {
 
   newProject();
   state.addListener(this);
+
+  // Start autosave timer by default (5 minutes)
+  startAutosaveTimer(5);
 }
 
 ProjectState::~ProjectState() {
   DBG("ProjectState: Destructor");
+  stopTimer();
   state.removeListener(this);
 }
 
@@ -178,6 +182,36 @@ juce::File ProjectState::saveCrashDump() {
   if (projectFileIO)
     return projectFileIO->saveCrashDump();
   return juce::File();
+}
+
+void ProjectState::timerCallback() {
+  if (isDirty && projectFile.existsAsFile()) {
+    DBG("ProjectState: Autosaving...");
+    
+    auto autosaveFile = projectFile.getSiblingFile(projectFile.getFileNameWithoutExtension() + "_autosave" + projectFile.getFileExtension());
+    
+    if (projectFileIO) {
+        ProjectFileIO::IOSettings settings;
+        settings.format = ProjectFileIO::SerializationFormat::MessagePack; // favor speed for autosave
+        settings.useAtomicWrite = true;
+        
+        projectFileIO->saveToFileAsync(autosaveFile, settings, [this](bool success, juce::String error) {
+            if (success) {
+                DBG("ProjectState: Autosave successful");
+            } else {
+                DBG("ProjectState: Autosave failed: " + error);
+            }
+        });
+    }
+  }
+}
+
+void ProjectState::startAutosaveTimer(int intervalMinutes) {
+    startTimer(intervalMinutes * 60 * 1000);
+}
+
+void ProjectState::stopAutosaveTimer() {
+    stopTimer();
 }
 
 void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,

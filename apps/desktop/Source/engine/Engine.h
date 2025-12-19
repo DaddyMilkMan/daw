@@ -72,6 +72,7 @@ class TrackFreezeManager;
 class AudioRenderer;
 class RecordingManager;
 class TransportController;
+class MeteringSystem;
 
 namespace ai {
 class SessionDebuggerAgent;
@@ -920,6 +921,7 @@ private:
   std::unique_ptr<AudioRenderer> audioRenderer_;
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
+  std::unique_ptr<MeteringSystem> meteringSystem_;
   std::unique_ptr<zenith::TempoMap>
       tempoMap_; // Kept for now, shared with controllers
 

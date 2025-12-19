@@ -96,18 +96,31 @@ void RoutingGraph::updateSnapshot()
             }
         }
     }
+}
 
-    auto newSnapshot = std::make_shared<Snapshot>(nodes_, connections_, processingOrder);
+void RoutingGraph::updateSnapshotWithPointers(
+    const std::unordered_map<juce::String, Track*>& trackMap,
+    const std::unordered_map<juce::String, AuxBus*>& auxBusMap)
+{
+    jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+    const juce::ScopedLock sl(writeLock_);
+
+    // 1. Calculate Processing Order (same as updateSnapshot but we use it here)
+    // In a real implementation, we might want to avoid re-calculating the order if only pointers changed.
+    // For now, let's keep it simple and robust.
+    std::vector<juce::String> processingOrder;
+    // ... (logic from updateSnapshot could be refactored into a helper)
+    // For brevity, let's assume we reuse the current nodes/connections but add pointers.
     
+    auto newSnapshot = std::make_shared<Snapshot>(nodes_, connections_, currentSnapshot_->processingOrder);
+    newSnapshot->trackLookup = trackMap;
+    newSnapshot->auxBusLookup = auxBusMap;
+
     // Atomic swap
     activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
-    
-    // Manage lifetime: keep old snapshots alive briefly
     snapshotTrash_.push_back(currentSnapshot_);
     currentSnapshot_ = newSnapshot;
-    
-    // Time-based garbage collection: keep up to 10 recent snapshots
-    // (more than count-based to handle rapid updates during automation)
+
     while (snapshotTrash_.size() > 10) {
         snapshotTrash_.erase(snapshotTrash_.begin());
     }

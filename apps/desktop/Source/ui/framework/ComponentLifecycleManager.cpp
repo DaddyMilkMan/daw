@@ -267,21 +267,15 @@ ComponentLifecycleManager::getComponentsInState(ComponentState state) const {
 }
 
 void ComponentLifecycleManager::addLifecycleListener(
-    LifecycleCallback callback) {
+    LifecycleListener *listener) {
   juce::ScopedLock lock(lock_);
-  lifecycleListeners_.push_back(callback);
+  lifecycleListeners_.addIfNotAlreadyThere(listener);
 }
 
 void ComponentLifecycleManager::removeLifecycleListener(
-    LifecycleCallback callback) {
+    LifecycleListener *listener) {
   juce::ScopedLock lock(lock_);
-  // NOTE: std::function doesn't support operator==, so we can't remove by
-  // value. This is a known limitation. Consider using indexed listeners if
-  // removal is needed.
-  juce::ignoreUnused(callback);
-  DBG("removeLifecycleListener: Cannot remove std::function listeners by "
-      "value. "
-      "Consider using indexed listener system if removal is required.");
+  lifecycleListeners_.removeAllInstancesOf(listener);
 }
 
 void ComponentLifecycleManager::suspendAllComponents() {
@@ -413,8 +407,8 @@ void ComponentLifecycleManager::fireLifecycleEvent(
   }
 
   // Notify listeners
-  for (auto &callback : lifecycleListeners_) {
-    callback(event);
+  for (auto *listener : lifecycleListeners_) {
+    listener->onLifecycleEvent(event);
   }
 }
 

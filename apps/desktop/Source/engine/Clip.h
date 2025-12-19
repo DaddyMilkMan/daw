@@ -72,7 +72,7 @@ struct MidiNoteSpec {
     Thread-safe design allows clips to be modified from the UI thread while
     playing back on the audio thread.
 */
-class Track::Clip : public juce::AudioSource {
+class Clip : public juce::AudioSource {
 public:
   //==============================================================================
   enum class Type { Audio, MIDI };
@@ -147,7 +147,8 @@ public:
   // MIDI clip specific
   void setMidiSequence(const juce::MidiMessageSequence &sequence);
   const juce::MidiMessageSequence *getMidiSequence() const {
-    return &midiSequence;
+    auto seq = midiSequence_.load(std::memory_order_acquire);
+    return seq.get();
   }
 
   /**
@@ -214,6 +215,7 @@ public:
   // Allow Track to access processing methods
   //==============================================================================
   friend class Track;
+  friend class AudioTrack;
 
 private:
   //==============================================================================
@@ -253,7 +255,7 @@ private:
 
   //==============================================================================
   // MIDI data
-  juce::MidiMessageSequence midiSequence;
+  std::atomic<std::shared_ptr<const juce::MidiMessageSequence>> midiSequence_;
   juce::CriticalSection midiLock;
 
   //==============================================================================
@@ -289,6 +291,10 @@ private:
   void processMidiClip(const juce::AudioSourceChannelInfo &bufferToFill);
 
   float calculateFadeMultiplier(int64_t positionInClip) const;
+
+  void applyFadesSIMD(const juce::AudioSourceChannelInfo& bufferToFill, 
+                      int64_t startPositionInClip, 
+                      int numSamples);
 
   //==============================================================================
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Clip)

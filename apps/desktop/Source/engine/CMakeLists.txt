@@ -3,6 +3,10 @@ target_sources(ZenithDAW PRIVATE
     ProjectState.cpp
     Track.cpp
     Clip.cpp
+    AudioTrack.cpp
+    MIDITrack.cpp
+    AuxBusTrack.cpp
+    ClipTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp
     PluginHost.cpp

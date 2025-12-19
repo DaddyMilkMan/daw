@@ -10,6 +10,7 @@
 
 #include "RightSidePanel.h"
 #include "../../SimpleLogger.h"
+#include "../design-system/ZenithLayout.h"
 #include "../widgets/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -120,15 +121,12 @@ void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
 void RightSidePanel::resized() {
   auto bounds = getLocalBounds();
 
-  // Spectra at Top (150px)
-  if (spectraAnalyzer_) {
-    spectraAnalyzer_->setBounds(bounds.removeFromTop(150).reduced(5));
-  }
-
-  // Wingman takes the rest
-  if (wingmanPanel_) {
-    wingmanPanel_->setBounds(bounds.reduced(5));
-  }
+  ZenithLayout::begin()
+      .withBounds(bounds)
+      .withGap(5.0f)
+      .addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(), 150.0f)
+      .addItem(wingmanPanel_.get())
+      .applyColumn();
 }
 
 #endif // ZENITH_USE_SKIA

@@ -140,13 +140,19 @@ public:
       return *this;
     }
 
-    // Classic component-based add
-    Builder &addItem(juce::Component *item) {
+    // Enhanced component-based add
+    Builder &addItem(juce::Component *item, float flex = 1.0f) {
       if (item) {
-         // Default behavior mimicking previous version: Flex 1, auto margin handled in apply
-         flexItems_.push_back(juce::FlexItem(*item).withFlex(1.0f));
-         // Store pointer to apply bounds later if using applyRow/Column
+         flexItems_.push_back(juce::FlexItem(*item).withFlex(flex));
          componentMap_.push_back(item); 
+      }
+      return *this;
+    }
+
+    Builder &addFixedItem(juce::Component *item, float width, float height) {
+      if (item) {
+         flexItems_.push_back(juce::FlexItem(*item).withWidth(width).withHeight(height));
+         componentMap_.push_back(item);
       }
       return *this;
     }

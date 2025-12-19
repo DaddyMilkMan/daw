@@ -293,13 +293,6 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
   canvas->saveLayerAlpha(nullptr, (U8CPU)(opacity * 255));
   drawBackground(canvas);
 
-  SkPaint shadowPaint;
-  shadowPaint.setColor(SkColorSetARGB(80, 0, 0, 0));
-  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 30.0f));
-  shadowPaint.setAntiAlias(true);
-  SkRRect shadowRRect = SkRRect::MakeRectXY(mainCardBounds_.makeOutset(5.0f, 5.0f), 16.0f, 16.0f);
-  canvas->drawRRect(shadowRRect, shadowPaint);
-
   GlassmorphicPanel::draw(canvas, mainCardBounds_, GlassmorphicPanel::Style::Floating);
 
   // Header with proper hierarchy
@@ -412,36 +405,22 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     thumbPaint.setAntiAlias(true);
     canvas->drawRRect(SkRRect::MakeRectXY(thumbRect, 8.0f, 8.0f), thumbPaint);
 
-    // Draw genre-specific icon
+    // PREMIUM: Draw genre-specific vector icon
     SkPath iconPath = icons::Project(); // Default
     auto it = kGenreIconMap.find(proj.genre.toLowerCase());
     if (it != kGenreIconMap.end()) {
       iconPath = it->second();
     }
 
-    // Draw icon centered in thumbnail
-    SkRect pathBounds = iconPath.getBounds();
-    SkPaint iconPaint;
-    iconPaint.setColor(withAlpha(proj.accent, 0.8f));
-    iconPaint.setAntiAlias(true);
-
-    if (!pathBounds.isEmpty()) {
-      float iconSize = 40.0f; // Fits nicely in 86x86
-      float scale =
-          iconSize / std::max(pathBounds.width(), pathBounds.height());
-
-      SkMatrix matrix;
-      matrix.reset();
-      matrix.postTranslate(-pathBounds.centerX(), -pathBounds.centerY());
-      matrix.postScale(scale, scale);
-      matrix.postTranslate(thumbRect.centerX(), thumbRect.centerY());
-
-      SkPath scaledPath;
-      iconPath.transform(matrix, &scaledPath);
-      canvas->drawPath(scaledPath, iconPaint);
-    } else {
-      canvas->drawCircle(thumbRect.centerX(), thumbRect.centerY(), 12, iconPaint);
+    icons::IconStyle iconStyle;
+    iconStyle.color = active ? proj.accent : withAlpha(proj.accent, 0.6f);
+    iconStyle.strokeWidth = icons::STROKE_REGULAR;
+    if (active) {
+        iconStyle.glowRadius = 4.0f;
+        iconStyle.glowColor = withAlpha(proj.accent, 0.4f);
     }
+
+    icons::drawIconCentered(canvas, iconPath, thumbRect, 40.0f, iconStyle);
 
     float textX = thumbRect.right() + 16;
     drawText(canvas, proj.name, SkRect::MakeXYWH(textX, proj.bounds.fTop + 20, proj.bounds.width() - 110, 24), 
@@ -489,7 +468,7 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
     iconBgPaint.setAntiAlias(true);
     canvas->drawRoundRect(iconBounds, 8.0f, 8.0f, iconBgPaint);
 
-    // Draw template-specific icon
+    // PREMIUM: Draw template-specific vector icon with glow
     SkPath iconPath = icons::Template(); // fallback
     auto it = kTemplateIconMap.find(tmpl.icon);
     if (it != kTemplateIconMap.end()) {
@@ -498,7 +477,11 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 
     icons::IconStyle iconStyle;
     iconStyle.color = tmpl.color;
-    iconStyle.strokeWidth = icons::STROKE_REGULAR;
+    iconStyle.strokeWidth = active ? icons::STROKE_BOLD : icons::STROKE_REGULAR;
+    if (active) {
+        iconStyle.glowRadius = 8.0f;
+        iconStyle.glowColor = withAlpha(tmpl.color, 0.5f);
+    }
     icons::drawIconCentered(canvas, iconPath, iconBounds, iconBounds.width() * 0.6f, iconStyle);
 
     drawText(canvas, tmpl.name, SkRect::MakeXYWH(iconBounds.right() + 16, tmpl.bounds.centerY() - 12, 200, 24), 
@@ -539,22 +522,29 @@ void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
   bool isSelected = (this->selectedSection_ == SelectionSection::New);
   bool active = isNewProjectHovered_ || isSelected;
 
-  SkColor buttonColor = active ? SkColorSetARGB(255, 96, 165, 250) : SkColorSetARGB(255, 59, 130, 246);
-  SkPaint btnPaint;
-  btnPaint.setColor(buttonColor);
-  btnPaint.setAntiAlias(true);
+  // PREMIUM: Real glassmorphism button
+  GlassmorphicPanel::Options opts;
+  opts.style = active ? GlassmorphicPanel::Style::ActiveGlow : GlassmorphicPanel::Style::Elevated;
+  opts.accentColor = colors::BLUE;
+  opts.cornerRadius = 12.0f;
+  opts.glowIntensity = active ? 1.5f : 0.0f;
+  
+  GlassmorphicPanel::drawWithOptions(canvas, newProjectButtonBounds_, opts);
 
-  if (active) {
-    SkPaint shadowPaint;
-    shadowPaint.setColor(withAlpha(buttonColor, 0.4f));
-    shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f));
-    shadowPaint.setAntiAlias(true);
-    canvas->drawRRect(SkRRect::MakeRectXY(newProjectButtonBounds_.makeOutset(4.0f, 4.0f), 12.0f, 12.0f), shadowPaint);
-  }
+  // Draw Icon + Text
+  float iconSize = 20.0f;
+  SkRect iconBounds = SkRect::MakeXYWH(newProjectButtonBounds_.fLeft + 20, 
+                                       newProjectButtonBounds_.centerY() - iconSize * 0.5f, 
+                                       iconSize, iconSize);
+  
+  icons::IconStyle iconStyle;
+  iconStyle.color = colors::TEXT_PRIMARY;
+  iconStyle.strokeWidth = icons::STROKE_BOLD;
+  icons::drawIconCentered(canvas, icons::Plus(), iconBounds, iconSize, iconStyle);
 
-  canvas->drawRRect(SkRRect::MakeRectXY(newProjectButtonBounds_, 12.0f, 12.0f), btnPaint);
-  drawText(canvas, "New Project", newProjectButtonBounds_, buttonFont_, textPaint_, true);
-
+  SkRect textBounds = newProjectButtonBounds_;
+  textBounds.fLeft += 45;
+  drawText(canvas, "New Project", textBounds, buttonFont_, textPaint_, true);
 }
 
 void ZenithHubComponent::mouseMove(const juce::MouseEvent &e) {

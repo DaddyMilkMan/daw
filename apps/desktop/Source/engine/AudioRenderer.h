@@ -219,6 +219,9 @@ private:
     // Dither
     zenith::dsp::Dither dither_;
 
+    // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT allocations
+    std::vector<juce::AudioBuffer<float>*> auxBufferPtrsVector_;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
 };
 
