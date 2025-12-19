@@ -30,29 +30,29 @@ namespace zenith {
 
 SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
     : targetComponent_(componentToAttach) {
-  ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Constructor called");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor called");
   // Attach OpenGL context to this component
   if (targetComponent_) {
     try {
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Setting renderer...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting renderer...");
       openGLContext_.setRenderer(this);
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Attaching to component...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Attaching to component...");
       openGLContext_.attachTo(*targetComponent_);
       
       // DISABLE JUCE COMPONENT PAINTING - Pure Skia Mode
       openGLContext_.setComponentPaintingEnabled(false);
       
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Setting continuous repainting...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting continuous repainting...");
       openGLContext_.setContinuousRepainting(true);
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Constructor complete");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor complete");
     } catch (const std::exception &e) {
-      ZENITH_LOG_DEBUG(std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
+      ZENITH_LOG_ERROR(std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
                 e.what());
     } catch (...) {
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Unknown exception in constructor");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception in constructor");
     }
   } else {
-    ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: WARNING - targetComponent is null!");
+    ZENITH_LOG_WARNING("SkiaOpenGLRenderer: WARNING - targetComponent is null!");
   }
 }
 
@@ -63,32 +63,32 @@ SkiaOpenGLRenderer::~SkiaOpenGLRenderer() {
 }
 
 void SkiaOpenGLRenderer::newOpenGLContextCreated() {
-  ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: newOpenGLContextCreated called");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer: newOpenGLContextCreated called");
   try {
-    ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Creating GL interface...");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: Creating GL interface...");
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface) {
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: FAILED to create GL interface!");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: FAILED to create GL interface!");
       return;
     }
-    ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: GL interface created, making context...");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: GL interface created, making context...");
     grContext_ = GrDirectContexts::MakeGL(glInterface);
 
     if (!grContext_) {
-      ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: Failed to create Skia GrDirectContext!");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Failed to create Skia GrDirectContext!");
       return;
     }
 
-    ZENITH_LOG_DEBUG("SkiaOpenGLRenderer: GrDirectContext created successfully!");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: GrDirectContext created successfully!");
     contextInitialized_ = true;
     recreateSurface();
   } catch (const std::exception &e) {
-    ZENITH_LOG_DEBUG(
+    ZENITH_LOG_ERROR(
         std::string(
             "SkiaOpenGLRenderer: Exception in newOpenGLContextCreated: ") +
         e.what());
   } catch (...) {
-    ZENITH_LOG_DEBUG(
+    ZENITH_LOG_ERROR(
         "SkiaOpenGLRenderer: Unknown exception in newOpenGLContextCreated");
   }
 }

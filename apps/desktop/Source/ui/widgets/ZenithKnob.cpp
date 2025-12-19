@@ -29,6 +29,17 @@ ZenithKnob::ZenithKnob(const juce::String &name, SkColor color)
   accentColor_ = color;
 }
 
+ZenithKnob::ZenithKnob(juce::Value valueToControl)
+    : ZenithControl(""), value(valueToControl) {
+    value.addListener(this);
+    // Initial sync
+    setValue(value.getValue(), false);
+}
+
+ZenithKnob::~ZenithKnob() {
+    value.removeListener(this);
+}
+
 void ZenithKnob::mouseDrag(const juce::MouseEvent &e) {
   if (!isDragging_ || !isEnabled())
     return;
@@ -55,7 +66,12 @@ void ZenithKnob::mouseDrag(const juce::MouseEvent &e) {
   }
 
   float newValue = range_.start + newNormValue * (range_.end - range_.start);
-  setValue(newValue, true);
+  
+  if (!value.getValue().isVoid()) {
+      value.setValue(newValue);
+  } else {
+      setValue(newValue, true);
+  }
 
   // Trigger animation
   lastChangeTime_ = juce::Time::currentTimeMillis();

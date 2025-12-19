@@ -12,6 +12,7 @@
 namespace zenith {
 
 struct ArrangementSection {
+  juce::String id;
   juce::String name;
   double startBeats;
   double lengthBeats;

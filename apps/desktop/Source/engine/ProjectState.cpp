@@ -114,8 +114,10 @@ const juce::Identifier ProjectState::PROP_IS_QUARANTINE("isQuarantine");
 const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
 
 //==============================================================================
-ProjectState::ProjectState() {
+ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {
   DBG("ProjectState: Constructor");
+  
+  state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr);
 
   trackStateManager = std::make_unique<TrackStateManager>(*this);
   clipStateManager = std::make_unique<ClipStateManager>(*this);

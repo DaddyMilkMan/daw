@@ -21,11 +21,7 @@ ArrangerTrackComponent::ArrangerTrackComponent(ProjectState &ps, TrackType type)
     : projectState(ps), type_(type) {
   
   if (type_ == TrackType::Section) {
-      // Hardcoded demo sections if state is empty
-      sections_ = {{"Intro", 0.0, 8.0, juce::Colours::cyan},
-                   {"Verse 1", 8.0, 16.0, juce::Colours::purple},
-                   {"Chorus", 24.0, 16.0, juce::Colours::orange},
-                   {"Outro", 40.0, 8.0, juce::Colours::lightblue}};
+      rebuildSections();
   }
 }
 
@@ -383,54 +379,31 @@ void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
-  // THIS IS THE "PROMPT 4" CORE LOGIC
-  // Moving a section block should logically move all clips inside that time
-  // range.
-
-  if (index < 0 || index >= sections_.size())
-    return;
-
-  // 1. Calculate Delta
-  double originalStart = initialSectionStart_;
-  double delta = newStartBeats - originalStart;
-
-  if (std::abs(delta) < 0.001)
-    return;
-
+  if (index < 0 || index >= sections_.size()) return;
   auto &section = sections_[index];
-  double sectionEnd = originalStart + section.lengthBeats;
-
-  projectState.getUndoManager().beginNewTransaction(
-      "Arranger Track: Move Section");
-
-  // 2. Iterate ALL clips in the project
-  // We need to access the raw ValueTree for the track list
-  auto tracksNode =
-      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-
-  for (auto track : tracksNode) {
-    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
-    if (!clipsNode.isValid()) {
-      continue;
-    }
-
-    for (auto clip : clipsNode) {
-      double clipStart = clip[ProjectState::PROP_START_BEATS];
-
-      // check if clip starts INSIDE the section
-      if (clipStart >= originalStart && clipStart < sectionEnd) {
-        double newClipStart = clipStart + delta;
-
-        // Apply move
-        clip.setProperty(ProjectState::PROP_START_BEATS, newClipStart,
-                         &projectState.getUndoManager());
-      }
-    }
-  }
-
-  // Update local model
-  section.startBeats = newStartBeats;
+  
+  // Call ProjectState to move the section AND its content
+  projectState.moveSectionContent(section.id, newStartBeats, "Move section content");
+  
+  // Refresh our cache
+  rebuildSections();
   repaint();
+}
+
+void ArrangerTrackComponent::rebuildSections() {
+    sections_.clear();
+    auto sectionsNode = projectState.getSections();
+    if (!sectionsNode.isValid()) return;
+
+    for (auto s : sectionsNode) {
+        ArrangementSection section;
+        section.id = s.getProperty(ProjectState::PROP_ID).toString();
+        section.name = s.getProperty(ProjectState::PROP_NAME).toString();
+        section.startBeats = s.getProperty(ProjectState::PROP_START);
+        section.lengthBeats = s.getProperty(ProjectState::PROP_LENGTH);
+        section.color = juce::Colour::fromString(s.getProperty(ProjectState::PROP_COLOR).toString());
+        sections_.push_back(section);
+    }
 }
 
 void ArrangerTrackComponent::setVisibleRange(double startBeats, double endBeats) {

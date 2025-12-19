@@ -102,6 +102,21 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
+    apps/desktop/Source/engine/MeteringSystem.cpp
+    apps/desktop/Source/engine/AutomationStateManager.cpp
+    apps/desktop/Source/engine/Metronome.cpp
+    apps/desktop/Source/engine/AudioTrack.cpp
+    apps/desktop/Source/engine/MIDITrack.cpp
+    apps/desktop/Source/engine/InstrumentTrack.cpp
+    apps/desktop/Source/engine/ClipTrack.cpp
+    apps/desktop/Source/engine/AuxBusTrack.cpp
+    apps/desktop/Source/engine/ClipStateManager.cpp
+    apps/desktop/Source/engine/TrackStateManager.cpp
+    apps/desktop/Source/engine/AutomationManager.cpp
+    apps/desktop/Source/engine/PluginChain.cpp
+    apps/desktop/Source/engine/RecentProjectManager.cpp
+    apps/desktop/Source/engine/ProjectFileIO.cpp
+    apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
@@ -360,6 +375,8 @@ if(BUILD_TESTS)
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
     )
+
+    target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
     if(ZENITH_ENABLE_SKIA)
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
