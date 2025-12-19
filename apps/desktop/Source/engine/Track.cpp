@@ -181,4 +181,9 @@ void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
   jassertfalse; 
 }
 
+void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer, int numSamples) {
+  juce::ignoreUnused(numSamples);
+  mixerChannel.updateMeters(buffer, false); // false = output meters
+}
+
 } // namespace zenith

@@ -379,7 +379,11 @@ void ClipSynchronizer::valueTreeChildRemoved(
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
         zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
-        if (clipTrack == nullptr) return;
+        if (clipTrack == nullptr) 
+        {
+            jassertfalse; // This should not happen if the track has a clip being removed.
+            return;
+        }
 
         const int numClips = clipTrack->getNumClips();
         for (int i = 0; i < numClips; ++i) {

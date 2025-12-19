@@ -383,10 +383,52 @@ void ArrangerTrackComponent::mouseExit(const juce::MouseEvent &e) {
 }
 
 void ArrangerTrackComponent::moveSection(int index, double newStartBeats) {
-  if (index < 0 || index >= sections_.size()) return;
+  // THIS IS THE "PROMPT 4" CORE LOGIC
+  // Moving a section block should logically move all clips inside that time
+  // range.
+
+  if (index < 0 || index >= sections_.size())
+    return;
+
+  // 1. Calculate Delta
+  double originalStart = initialSectionStart_;
+  double delta = newStartBeats - originalStart;
+
+  if (std::abs(delta) < 0.001)
+    return;
+
   auto &section = sections_[index];
-  double originalStart = initialSectionStart_; 
-  // Simplified for this context
+  double sectionEnd = originalStart + section.lengthBeats;
+
+  projectState.getUndoManager().beginNewTransaction(
+      "Arranger Track: Move Section");
+
+  // 2. Iterate ALL clips in the project
+  // We need to access the raw ValueTree for the track list
+  auto tracksNode =
+      projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+
+  for (auto track : tracksNode) {
+    auto clipsNode = track.getChildWithName(ProjectState::ID_CLIPS);
+    if (!clipsNode.isValid()) {
+      continue;
+    }
+
+    for (auto clip : clipsNode) {
+      double clipStart = clip[ProjectState::PROP_START_BEATS];
+
+      // check if clip starts INSIDE the section
+      if (clipStart >= originalStart && clipStart < sectionEnd) {
+        double newClipStart = clipStart + delta;
+
+        // Apply move
+        clip.setProperty(ProjectState::PROP_START_BEATS, newClipStart,
+                         &projectState.getUndoManager());
+      }
+    }
+  }
+
+  // Update local model
   section.startBeats = newStartBeats;
   repaint();
 }
