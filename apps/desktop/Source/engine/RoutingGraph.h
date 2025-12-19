@@ -21,6 +21,7 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <unordered_map>
 #include <vector>
+#include <deque>
 #include <string>
 #include <atomic>
 #include <memory>
@@ -134,7 +135,7 @@ private:
     // Lock-free snapshot for reads (any thread)
     std::atomic<const Snapshot*> activeSnapshot_{nullptr};
     std::shared_ptr<Snapshot> currentSnapshot_;
-    std::vector<std::shared_ptr<Snapshot>> snapshotTrash_;
+    std::deque<std::shared_ptr<Snapshot>> snapshotTrash_;
     
     // Helper to update snapshot after modification
     void updateSnapshot();
