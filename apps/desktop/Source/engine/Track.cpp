@@ -5,6 +5,8 @@
 #include "MIDITrack.h"
 #include "AuxBusTrack.h"
 #include "PluginHost.h"
+#include "../instruments/Instrument.h"
+#include "Clip.h"
 #include <algorithm>
 
 namespace zenith {
@@ -170,6 +172,12 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
     // MixerChannel handles gain and pan internally during getNextAudioBlock
     // This method is kept for API compatibility but is now a no-op
     juce::ignoreUnused(buffer, numSamples);
+}
+
+
+void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
+  // This track type does not support clips. The passed clip will be destroyed on scope exit.
+  jassertfalse; 
 }
 
 } // namespace zenith
