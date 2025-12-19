@@ -110,7 +110,7 @@ void RoutingGraph::updateSnapshot()
     currentSnapshot_ = newSnapshot;
 
     while (snapshotTrash_.size() > 10) {
-        snapshotTrash_.erase(snapshotTrash_.begin());
+        snapshotTrash_.pop_front();
     }
 }
 
@@ -132,7 +132,7 @@ void RoutingGraph::updateSnapshotWithPointers(
     currentSnapshot_ = newSnapshot;
 
     while (snapshotTrash_.size() > 10) {
-        snapshotTrash_.erase(snapshotTrash_.begin());
+        snapshotTrash_.pop_front();
     }
 }
 
