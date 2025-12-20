@@ -60,16 +60,48 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   // 3. Run Separation
   ONNXStemSeparator separator;
 
-  // Check for model file availability (Assuming a default location or checking
-  // internal logic) The ONNXStemSeparator might look for models in app data or
-  // dll resource.
-  if (!separator.isAvailable()) {
-    result.error = "ONNX Runtime not available or model missing.";
-    if (callback_) {
-      juce::MessageManager::callAsync(
-          [cb = callback_, res = result]() { cb(res); });
-    }
-    return juce::ThreadPoolJob::jobHasFinished;
+  // Check for model file availability
+  juce::File modelFile;
+
+  // 1. Check AppData
+  auto appDataDir =
+      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+  auto appDataModel = appDataDir.getChildFile("ZenithDAW/Models/htdemucs.onnx");
+
+  // 2. Check App Directory (Portable)
+  auto appDir =
+      juce::File::getSpecialLocation(juce::File::currentApplicationFile)
+          .getParentDirectory();
+  auto localModel = appDir.getChildFile("Models/htdemucs.onnx");
+
+  if (appDataModel.existsAsFile()) {
+    modelFile = appDataModel;
+  } else if (localModel.existsAsFile()) {
+    modelFile = localModel;
+  }
+
+  // Initialize separator
+  bool onnxReady = false;
+  if (modelFile.existsAsFile()) {
+    onnxReady = separator.initialize(modelFile);
+  }
+
+  // If initialization failed but we expected it to work (model exists), log
+  // warning
+  if (modelFile.existsAsFile() && !onnxReady) {
+    DBG("StemSeparationJob: Model found but failed to initialize ONNX session");
+  }
+
+  if (!separator.isAvailable() && !onnxReady) {
+    // If we can't use ONNX (runtime missing OR model missing/failed),
+    // the separator might have a DSP fallback.
+    // However, if the user explicitly requested AI separation, this might be
+    // disappointing. For now, we proceed to separate(), which handles fallback
+    // internally and sets the 'usedONNX' flag in the result.
+
+    // Optional: Abort if stricter requirements needed
+    // result.error = "ONNX Runtime not available or model missing.";
+    // ...
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);
