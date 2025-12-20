@@ -41,6 +41,7 @@ class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
+class ExportDialog; // Added
 namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 } // namespace zenith
 
@@ -115,11 +116,17 @@ private:
    */
   void openPianoRoll(const juce::String &trackId, const juce::String &clipId);
 
+  /**
+   * @brief Toggle visibility of all major DAW UI components
+   */
+  void setDAWVisible(bool visible);
+
   //==========================================================================
   // Member variables
   //==========================================================================
 
   zenith::Engine &engine;
+  zenith::CommandAPI &commandAPI;
   zenith::ProjectState &projectState;
   zenith::RecentProjectManager &recentProjectManager_;
   LoadProjectCallback onLoadProject_;
@@ -145,6 +152,7 @@ private:
   // Wingman panel (owned by MainComponent, hosted in RightSidePanel when using
   // Skia)
   std::unique_ptr<zenith::WingmanPanel> wingmanPanelPtr_;
+  std::unique_ptr<zenith::ExportDialog> exportDialog; // Added
 
   // Virtual MIDI Keyboard state (shared between Skia and JUCE builds)
   juce::MidiKeyboardState midiKeyboardState;
@@ -157,6 +165,7 @@ private:
   //==========================================================================
 
   void handleImportAudio();
+  void handleExportProject();
 
   // Zenith Hub (Start Screen)
   std::unique_ptr<zenith::ZenithHubComponent> hubComponent;

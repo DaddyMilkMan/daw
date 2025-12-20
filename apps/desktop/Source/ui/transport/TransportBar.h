@@ -90,6 +90,7 @@ public:
   std::function<void()> onRecordClicked;
   std::function<void()> onViewToggleClicked;
   std::function<void()> onSettingsClicked;
+  std::function<void()> onExportClicked;
 
 private:
   bool isPlaying_ = false;
@@ -106,6 +107,7 @@ private:
   juce::Rectangle<int> recordButtonBounds_;
   juce::Rectangle<int> viewToggleButtonBounds_;
   juce::Rectangle<int> settingsButtonBounds_;
+  juce::Rectangle<int> exportButtonBounds_;
 
   // Interaction states
   InteractionState playState_;
@@ -113,6 +115,7 @@ private:
   InteractionState recordState_;
   InteractionState viewToggleState_;
   InteractionState settingsState_;
+  InteractionState exportState_;
 
   void drawTransportButton(SkCanvas *canvas, const juce::Rectangle<int> &bounds,
                            const SkPath &iconPath, bool isActive,

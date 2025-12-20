@@ -304,6 +304,12 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return connectNodes(p); });
   registerCommand("disconnect_nodes",
                   [this](const juce::var &p) { return disconnectNodes(p); });
+
+  // AI Advanced Context Handlers
+  registerCommand("get_engine_stats",
+                  [this](const juce::var &p) { return getEngineStats(p); });
+  registerCommand("set_track_automation",
+                  [this](const juce::var &p) { return setTrackAutomation(p); });
 }
 
 void CommandAPI::registerCommand(const juce::String &commandName,
@@ -589,6 +595,64 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
   }
 
   return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+  auto *resultObj = new juce::DynamicObject();
+
+  if (uxDirector_) {
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+  } else {
+    resultObj->setProperty("healthScore", 100.0f);
+    resultObj->setProperty("summary", "UXDirectorAgent not available");
+  }
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getEngineStats(const juce::var &params) {
+  juce::ignoreUnused(params);
+  
+  auto *resultObj = new juce::DynamicObject();
+  resultObj->setProperty("cpuUsage", engine.getCpuUsage());
+  resultObj->setProperty("sampleRate", engine.getSampleRate());
+  resultObj->setProperty("bufferSize", engine.getBufferSize());
+  resultObj->setProperty("numTracks", engine.getNumTracks());
+  resultObj->setProperty("playheadSamples", engine.getPlayheadSamples());
+  resultObj->setProperty("playbackBeats", engine.getPlaybackPositionBeats());
+  resultObj->setProperty("isPlaying", engine.isPlaying());
+  resultObj->setProperty("isRecording", engine.isRecording());
+  resultObj->setProperty("isLooping", engine.isLooping());
+  
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::setTrackAutomation(const juce::var &params) {
+    if (!params.hasProperty("trackIndex"))
+        return createErrorResponse("Missing 'trackIndex' parameter");
+    if (!params.hasProperty("paramId"))
+        return createErrorResponse("Missing 'paramId' parameter");
+    if (!params.hasProperty("value"))
+        return createErrorResponse("Missing 'value' parameter");
+
+    int trackIndex = (int)params["trackIndex"];
+    juce::String paramId = params["paramId"].toString();
+    float value = (float)params["value"];
+
+    auto tracks = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
+    auto track = tracks.getChild(trackIndex);
+
+    if (track.isValid()) {
+        // This is a simplified version; real automation involves adding points to a curve
+        // For now, we'll set the immediate parameter value if it's a known property
+        // or route it to the automation curve if it exists.
+        track.setProperty(paramId, value, &projectState.getUndoManager());
+        return createSuccessResponse();
+    }
+
+    return createErrorResponse("Track not found at index " + juce::String(trackIndex));
 }
 
 juce::var CommandAPI::redo(const juce::var &params) {
@@ -1897,12 +1961,12 @@ juce::var CommandAPI::exportProjectAdvanced(const juce::var &params) {
 // Helper Method Implementations
 //==============================================================================
 
-juce::String
+juce::var
 CommandAPI::createErrorResponse(const juce::String &errorMessage) const {
   auto *response = new juce::DynamicObject();
   response->setProperty("success", false);
   response->setProperty("error", errorMessage);
-  return juce::JSON::toString(juce::var(response));
+  return juce::var(response);
 }
 
 juce::var CommandAPI::createSuccessResponse(const juce::var &result) const {
@@ -2141,5 +2205,6 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
 
   return createErrorResponse("Unknown command ID");
 }
+
 
 } // namespace zenith

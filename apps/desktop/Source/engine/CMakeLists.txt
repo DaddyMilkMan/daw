@@ -9,6 +9,7 @@ target_sources(ZenithDAW PRIVATE
     InstrumentTrack.cpp
     ClipTrack.cpp
     MixerChannel.cpp
+    MixerController.cpp
     AudioFilePool.cpp
     PluginHost.cpp
     AuxBus.cpp
@@ -25,6 +26,7 @@ target_sources(ZenithDAW PRIVATE
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp
+    AudioExporter.cpp
     RecordingManager.cpp
     TransportController.cpp
     ProjectEngineBridge.cpp
