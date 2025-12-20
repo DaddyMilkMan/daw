@@ -110,6 +110,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
 )
 
 # -----------------------------------------------------------------------------
