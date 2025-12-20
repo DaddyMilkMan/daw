@@ -5,8 +5,8 @@
 
 #pragma once
 
+#include "../../engine/ProjectState.h"
 #include "SkiaComponent.h"
-#include "ProjectState.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
@@ -40,15 +40,25 @@ public:
   void setVisibleRange(double startBeats, double endBeats);
 
   // Track Data Setters
-  void setTrackId(const juce::String& id) { trackId_ = id; }
-  void setTrackName(const juce::String& name) { trackName_ = name; repaint(); }
-  void setTrackIndex(int index) { trackIndex_ = index; repaint(); }
-  
+  void setTrackId(const juce::String &id) { trackId_ = id; }
+  void setTrackName(const juce::String &name) {
+    trackName_ = name;
+    repaint();
+  }
+  void setTrackIndex(int index) {
+    trackIndex_ = index;
+    repaint();
+  }
+
   void setMuted(bool m);
   void setSoloed(bool s);
   void setRecordArmed(bool r);
-  
-  void setAccentColor(juce::Colour c) { accentColor_ = c; repaint(); }
+  void setInputMonitor(bool i);
+
+  void setAccentColor(juce::Colour c) {
+    accentColor_ = c;
+    repaint();
+  }
 
   // Command to re-order sections (The "Magic" of this feature)
   void moveSection(int index, double newStartBeats);
@@ -60,21 +70,22 @@ public:
 private:
   ProjectState &projectState;
   TrackType type_;
-  
+
   // Track State
   juce::String trackId_;
   juce::String trackName_ = "Track";
   int trackIndex_ = 0;
   juce::Colour accentColor_ = juce::Colours::cyan;
-  
+
   bool isMuted_ = false;
   bool isSoloed_ = false;
   bool isRecordArmed_ = false;
+  bool isInputMonitoring_ = false;
 
   // Interaction State
   bool isHovered_ = false;
   int hoveredButtonIndex_ = -1; // 0=Mute, 1=Solo, 2=Rec
-  
+
   // Section Specific State
   std::vector<ArrangementSection> sections_; // Cache
 
@@ -88,12 +99,12 @@ private:
   double initialSectionStart_ = 0.0;
 
   void rebuildSections(); // Pull from ProjectState
-  
+
   // Helpers
-  void drawTrackHeader(SkCanvas* canvas, const SkRect& bounds);
-  void drawTrackBackground(SkCanvas* canvas, const SkRect& bounds);
-  void drawControls(SkCanvas* canvas, float x, float y);
-  void drawSections(SkCanvas* canvas, const SkRect& bounds);
+  void drawTrackHeader(SkCanvas *canvas, const SkRect &bounds);
+  void drawTrackBackground(SkCanvas *canvas, const SkRect &bounds);
+  void drawControls(SkCanvas *canvas, float x, float y);
+  void drawSections(SkCanvas *canvas, const SkRect &bounds);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerTrackComponent)
 };
