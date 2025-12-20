@@ -19,6 +19,7 @@ target_sources(ZenithDAW PRIVATE
 
     # Agents
     AIMasteringAgent.h
+    AIMasteringAgent.cpp
     SessionDebuggerAgent.h
     SessionDebuggerAgent.cpp
     ProjectRefactorerAgent.h
