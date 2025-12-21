@@ -33,39 +33,42 @@ public:
     beginTest("Track creation");
     {
       // Test track creation with valid parameters
-      zenith::Track track("test-track-001", zenith::Track::Type::Audio);
-      expect(track.getName() == "test-track-001");
-      expect(track.getType() == zenith::Track::Type::Audio);
+      auto track = zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
+      expect(track != nullptr);
+      expect(track->getName() == "test-track-001");
+      expect(track->getType() == zenith::Track::Type::Audio);
     }
 
     beginTest("Track mute/solo");
     {
-      zenith::Track track("test-track-001", zenith::Track::Type::Audio);
+      auto track = zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
+      expect(track != nullptr);
 
       // Test mute functionality
-      track.setMuted(true);
-      expect(track.isMuted());
+      track->setMuted(true);
+      expect(track->isMuted());
 
       // Test solo functionality
-      track.setSoloed(true);
-      expect(track.isSoloed());
+      track->setSoloed(true);
+      expect(track->isSoloed());
     }
 
     beginTest("Track volume processing");
     {
       // Create a track
-      zenith::Track track("VolumeTestTrack", zenith::Track::Type::Audio);
+      auto track = zenith::Track::create("VolumeTestTrack", zenith::Track::Type::Audio);
+      expect(track != nullptr);
 
       // Set volume to -6dB (0.5 linear)
       float volumeDb = -6.0f;
       float targetGain = juce::Decibels::decibelsToGain(volumeDb);
 
-      track.setVolume(targetGain);
+      track->setVolume(targetGain);
 
       // Verify the track's mixer channel accepted the volume
       // This tests that Track::setVolume correctly propagates to MixerChannel
-      expectEquals(track.getVolume(), targetGain);
-      expectEquals(track.getMixerChannel().getVolume(), targetGain);
+      expectEquals(track->getVolume(), targetGain);
+      expectEquals(track->getMixerChannel().getVolume(), targetGain);
 
       // Note: Full DSP testing requires running getNextAudioBlock with a
       // context, which is heavy for a unit test. We trust MixerChannel tests
@@ -75,14 +78,15 @@ public:
 
     beginTest("Track pan processing");
     {
-      zenith::Track track("PanTestTrack", zenith::Track::Type::Audio);
+      auto track = zenith::Track::create("PanTestTrack", zenith::Track::Type::Audio);
+      expect(track != nullptr);
 
       // Pan hard left
       float pan = -1.0f;
-      track.setPan(pan);
+      track->setPan(pan);
 
-      expectEquals(track.getPan(), pan);
-      expectEquals(track.getMixerChannel().getPan(), pan);
+      expectEquals(track->getPan(), pan);
+      expectEquals(track->getMixerChannel().getPan(), pan);
     }
   }
 };
@@ -107,7 +111,7 @@ public:
 
     beginTest("Clip Timing Accuracy");
     {
-      zenith::Track::Clip clip;
+      zenith::Clip clip;
       clip.setStartPosition(kClipStart);
       clip.setLength(kClipLength);
 
@@ -154,7 +158,7 @@ public:
 
     beginTest("Clip start/stop");
     {
-      zenith::Track::Clip clip;
+      zenith::Clip clip;
       clip.setStartPosition(0);
       clip.setLength(1000);
       juce::AudioBuffer<float> content(1, 1000);
@@ -169,7 +173,7 @@ public:
 
     beginTest("Clip looping");
     {
-      zenith::Track::Clip clip;
+      zenith::Clip clip;
       clip.setStartPosition(0);
       clip.setLength(100); // Short clip
       clip.setLooping(true);

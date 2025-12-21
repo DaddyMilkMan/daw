@@ -21,11 +21,16 @@
 #include <juce_data_structures/juce_data_structures.h>
 #include <unordered_map>
 #include <vector>
+#include <deque>
 #include <string>
 #include <atomic>
 #include <memory>
 
 namespace zenith {
+
+// Forward declarations
+class Track;
+class AuxBus;
 
 class RoutingGraph
 {
@@ -77,6 +82,13 @@ public:
     std::vector<Connection> getConnectionsFrom(const juce::String& sourceId) const;
     std::vector<Connection> getConnectionsTo(const juce::String& destId) const;
     std::vector<juce::String> getProcessingOrder() const;
+
+    /**
+     * @brief Update snapshot with direct pointers (MESSAGE THREAD ONLY)
+     */
+    void updateSnapshotWithPointers(
+        const std::unordered_map<juce::String, Track*>& trackMap,
+        const std::unordered_map<juce::String, AuxBus*>& auxBusMap);
     
     //==============================================================================
     // Serialization (MESSAGE THREAD ONLY)
@@ -89,22 +101,33 @@ public:
 private:
     //==============================================================================
     // Snapshot for lock-free read access
+    struct Topology
+    {
+        std::vector<Connection> connections;
+        std::vector<juce::String> processingOrder;
+        int version = 0;
+    };
+
     struct Snapshot
     {
         std::unordered_map<std::string, Node> nodes;
-        std::vector<Connection> connections;
-        std::vector<juce::String> processingOrder;
+        std::shared_ptr<Topology> topology;
         
-        Snapshot() = default;
+        // Fast lookup maps (populated by RoutingGraph::updateSnapshot)
+        std::unordered_map<juce::String, Track*> trackLookup;
+        std::unordered_map<juce::String, AuxBus*> auxBusLookup;
+
+        Snapshot() : topology(std::make_shared<Topology>()) {}
         Snapshot(const std::unordered_map<std::string, Node>& n, 
-                 const std::vector<Connection>& c,
-                 const std::vector<juce::String>& order)
-            : nodes(n), connections(c), processingOrder(order) {}
+                 std::shared_ptr<Topology> t)
+            : nodes(n), topology(t) {}
     };
     
     // Owning data (message thread only, protected by lock)
     std::unordered_map<std::string, Node> nodes_;
     std::vector<Connection> connections_;
+    std::shared_ptr<Topology> currentTopology_;
+    int nextTopologyVersion_ = 1;
 
     // Lock for modifications (message thread only)
     mutable juce::CriticalSection writeLock_;
@@ -112,7 +135,7 @@ private:
     // Lock-free snapshot for reads (any thread)
     std::atomic<const Snapshot*> activeSnapshot_{nullptr};
     std::shared_ptr<Snapshot> currentSnapshot_;
-    std::vector<std::shared_ptr<Snapshot>> snapshotTrash_;
+    std::deque<std::shared_ptr<Snapshot>> snapshotTrash_;
     
     // Helper to update snapshot after modification
     void updateSnapshot();

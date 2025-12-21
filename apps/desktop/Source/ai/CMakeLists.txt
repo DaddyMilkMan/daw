@@ -1,6 +1,25 @@
 # AI Agents module
 target_sources(ZenithDAW PRIVATE
+    # Core Infrastructure
+    AIStatusManager.h
+    AIStatusManager.cpp
+    AIEventBus.h
+    AIEventBus.cpp
+    AIResponseCache.h
+    AIResponseCache.cpp
+    GrokAPIClient.h
+
+    # Style & UI
+    ZenithStyleApplicator.h
+    ZenithStyleApplicator.cpp
+
+    # Fitness Evaluation
+    AudioFitnessEvaluator.h
+    AudioFitnessEvaluator.cpp
+
+    # Agents
     AIMasteringAgent.h
+    AIMasteringAgent.cpp
     SessionDebuggerAgent.h
     SessionDebuggerAgent.cpp
     ProjectRefactorerAgent.h
@@ -12,5 +31,3 @@ target_sources(ZenithDAW PRIVATE
     PresetGeneticistAgent.h
     PresetGeneticistAgent.cpp
 )
-
-

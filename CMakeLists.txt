@@ -24,7 +24,6 @@ endif()
 
 
 
-
 # 4. Options
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
 option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
@@ -102,7 +101,47 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
+    apps/desktop/Source/engine/MeteringSystem.cpp
+    apps/desktop/Source/engine/AutomationStateManager.cpp
+    apps/desktop/Source/engine/Metronome.cpp
+    apps/desktop/Source/engine/AudioTrack.cpp
+    apps/desktop/Source/engine/MIDITrack.cpp
+    # Instruments
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+
+    # AI
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/ai/AIMasteringAgent.cpp
+
+    apps/desktop/Source/ai/SampleHunterAgent.cpp
+    apps/desktop/Source/ai/UXDirectorAgent.cpp
+    apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
+    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+
+    apps/desktop/Source/engine/ClipTrack.cpp
+    apps/desktop/Source/engine/AuxBusTrack.cpp
+    apps/desktop/Source/engine/ClipStateManager.cpp
+    apps/desktop/Source/engine/TrackStateManager.cpp
+    apps/desktop/Source/engine/AutomationManager.cpp
+    apps/desktop/Source/engine/PluginChain.cpp
+    apps/desktop/Source/engine/RecentProjectManager.cpp
+    apps/desktop/Source/engine/ProjectFileIO.cpp
+    apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -115,8 +154,6 @@ juce_add_gui_app(ZenithDAW
     VERSION ${PROJECT_VERSION}
     BUNDLE_ID com.zenithaudio.daw
 )
-
-
 
 # Generate JuceHeader.h for compatibility
 juce_generate_juce_header(ZenithDAW)
@@ -136,7 +173,6 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
-
 
 # Include directories (updated for new domain-based structure)
 target_include_directories(ZenithDAW PUBLIC
@@ -337,6 +373,13 @@ if(BUILD_TESTS)
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
+        apps/desktop/Source/engine
+        apps/desktop/Source/ui
+        apps/desktop/Source/ui/common
+        apps/desktop/Source/ui/instruments
+        apps/desktop/Source/ui/browser
+        apps/desktop/Source/instruments
+        apps/desktop/Source/ai
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
@@ -357,6 +400,8 @@ if(BUILD_TESTS)
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
     )
+
+    target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
     if(ZENITH_ENABLE_SKIA)
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})

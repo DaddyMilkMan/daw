@@ -18,9 +18,9 @@
 
 #include "Engine.h"
 #include "../ai/SampleHunterAgent.h"
-#include "../network/AIBridgeClient.h"
 #include "../network/GrokDAWController.h"
 #include "../../commands/CommandAPI.h"
+#include "../widgets/MarkdownComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
@@ -37,7 +37,7 @@ class WingmanPanel : public juce::Component,
                      public ai::SampleHunterAgent::Listener {
 public:
   //==========================================================================
-  WingmanPanel(CommandAPI &api, AIBridgeClient &client, Engine &engine);
+  WingmanPanel(CommandAPI &api, Engine &engine);
   ~WingmanPanel() override;
 
   //==========================================================================
@@ -80,8 +80,9 @@ private:
   //==========================================================================
   // UI Components
 
+// ...
   std::unique_ptr<juce::TextEditor> inputField;
-  std::unique_ptr<juce::TextEditor> conversationDisplay;
+  std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
   std::unique_ptr<juce::TextButton> sendButton;
   std::unique_ptr<juce::ComboBox> modeSelector;
   std::unique_ptr<juce::Label> modeLabel;
@@ -93,7 +94,6 @@ private:
   // Backend
 
   CommandAPI &commandAPI;
-  AIBridgeClient &aiBridgeClient;
   Engine &engine_;
   std::unique_ptr<GrokDAWController> grokController;
 

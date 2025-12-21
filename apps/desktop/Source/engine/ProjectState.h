@@ -35,19 +35,30 @@
 
 //==============================================================================
 //==============================================================================
-namespace zenith {
+namespace Zenith {
+// Unique identifiers for our data nodes
+namespace IDs {
+const juce::Identifier PROJECT{"PROJECT"};
+const juce::Identifier TRACKS{"TRACKS"};
+const juce::Identifier TRACK{"TRACK"};
+const juce::Identifier volume{"volume"};
+const juce::Identifier name{"name"};
 
-/**
- * @class ProjectState
- * @brief Manages all project state using ValueTree
- */
+// Extended IDs from existing implementation
+const juce::Identifier CLIPS{"CLIPS"};
+const juce::Identifier CLIP{"CLIP"};
+const juce::Identifier MIXER{"MIXER"};
+} // namespace IDs
+} // namespace Zenith
+
+namespace zenith {
 
 class TrackStateManager;
 class ClipStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
 
-class ProjectState : public juce::ValueTree::Listener {
+class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ArrangerComponent;
   friend class TrackStateManager;
   friend class ClipStateManager;
@@ -56,8 +67,19 @@ class ProjectState : public juce::ValueTree::Listener {
 
 public:
   //==========================================================================
-  // Identifiers for ValueTree types and properties
+  // Source of Truth Structure (from Step 1)
   //==========================================================================
+  juce::ValueTree state;
+  juce::UndoManager undoManager;
+
+  // Helper to add a track via state manipulation (as requested in Step 1)
+  void addTrack(const juce::String &trackName) {
+    juce::ValueTree t(Zenith::IDs::TRACK);
+    t.setProperty(Zenith::IDs::name, trackName, nullptr);
+    t.setProperty(Zenith::IDs::volume, 0.75f, nullptr);
+    state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr)
+        .addChild(t, -1, &undoManager);
+  }
 
   static const juce::Identifier ID_PROJECT;
   static const juce::Identifier ID_TRACKS;
@@ -91,6 +113,7 @@ public:
   static const juce::Identifier PROP_MUTE;
   static const juce::Identifier PROP_SOLO;
   static const juce::Identifier PROP_ARMED;
+  static const juce::Identifier PROP_INPUT_MONITOR;
 
   static const juce::Identifier PROP_START;
   static const juce::Identifier PROP_LENGTH;
@@ -164,6 +187,12 @@ public:
   void valueTreeParentChanged(juce::ValueTree &) override { isDirty = true; }
 
   //==========================================================================
+  // Timer callback for autosave
+  void timerCallback() override;
+  void startAutosaveTimer(int intervalMinutes = 5);
+  void stopAutosaveTimer();
+
+  //==========================================================================
   // Project Properties
   //==========================================================================
 
@@ -211,6 +240,10 @@ public:
   void setTrackArmed(const juce::String &trackId, bool armed,
                      const juce::String &actionName = "Set track armed");
   bool isTrackArmed(const juce::String &trackId) const;
+  void setTrackInputMonitor(
+      const juce::String &trackId, bool monitoring,
+      const juce::String &actionName = "Set track input monitor");
+  bool isTrackInputMonitoring(const juce::String &trackId) const;
   juce::String getTrackName(const juce::String &trackId) const;
   juce::String getTrackType(const juce::String &trackId) const;
 
@@ -507,8 +540,8 @@ private:
   // Member Variables
   //==========================================================================
 
-  juce::ValueTree state;
-  juce::UndoManager undoManager;
+  // juce::ValueTree state; // Moved to public as per Step 1
+  // juce::UndoManager undoManager; // Moved to public as per Step 1
   std::atomic<int> idCounter{0};
   mutable std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
   std::atomic<bool> isDirty{false};

@@ -54,6 +54,11 @@ juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& cont
             "- Edit MIDI\n"
             "- Control transport and project settings\n"
             "- Analyze audio tracks\n"
+            "- Search for plugins and inspect signal routing\n"
+            "\n"
+            "Formatting:\n"
+            "- Use Mermaid diagrams (```mermaid) to visualize audio routing.\n"
+            "- Use Markdown tables for plugin search results.\n"
             "\n"
             "Use available functions to fulfill user requests. "
             "Confirm actions concisely.\n";

@@ -166,7 +166,7 @@ juce::var SessionGraph::serializeClips(const Track* track)
 
     for (int i = 0; i < track->getNumClips(); ++i)
     {
-        Track::Clip* clip = track->getClip(i);
+        Clip* clip = track->getClip(i);
         if (clip != nullptr)
         {
             clipsArrayPtr->add(serializeClip(clip, i));
@@ -176,13 +176,13 @@ juce::var SessionGraph::serializeClips(const Track* track)
     return clipsArray;
 }
 
-juce::var SessionGraph::serializeClip(const Track::Clip* clip, int clipIndex)
+juce::var SessionGraph::serializeClip(const Clip* clip, int clipIndex)
 {
     auto* clipObj = new juce::DynamicObject();
 
     clipObj->setProperty("id", "clip_" + juce::String(clipIndex));
     clipObj->setProperty("name", clip->getName());
-    clipObj->setProperty("type", clip->getType() == Track::Clip::Type::Audio ? "audio" : "midi");
+    clipObj->setProperty("type", clip->getType() == Clip::Type::Audio ? "audio" : "midi");
     clipObj->setProperty("startSamples", (juce::int64)clip->getStartPosition());
     clipObj->setProperty("lengthSamples", (juce::int64)clip->getLength());
     clipObj->setProperty("offsetSamples", (juce::int64)clip->getOffset());
@@ -196,7 +196,7 @@ juce::var SessionGraph::serializeClip(const Track::Clip* clip, int clipIndex)
     clipObj->setProperty("fadeOutSamples", (juce::int64)clip->getFadeOut());
 
     // Type-specific data
-    if (clip->getType() == Track::Clip::Type::Audio)
+    if (clip->getType() == Clip::Type::Audio)
     {
         // Audio clip - include file path and buffer info
         auto audioFile = clip->getAudioFile();
@@ -210,7 +210,7 @@ juce::var SessionGraph::serializeClip(const Track::Clip* clip, int clipIndex)
             clipObj->setProperty("numSamples", audioBuffer->getNumSamples());
         }
     }
-    else if (clip->getType() == Track::Clip::Type::MIDI)
+    else if (clip->getType() == Clip::Type::MIDI)
     {
         // MIDI clip - count notes and events
         const auto* midiSeq = clip->getMidiSequence();

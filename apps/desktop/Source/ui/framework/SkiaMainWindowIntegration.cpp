@@ -13,7 +13,7 @@
 #include "SkiaMainWindowIntegration.h"
 
 #ifdef ZENITH_USE_SKIA
-#include "../../SimpleLogger.h"
+#include "../../engine/ZenithLogger.h"
 #include <core/SkSurface.h>
 #include <gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_opengl/juce_opengl.h>
@@ -30,29 +30,29 @@ namespace zenith {
 
 SkiaOpenGLRenderer::SkiaOpenGLRenderer(juce::Component *componentToAttach)
     : targetComponent_(componentToAttach) {
-  logToFile("SkiaOpenGLRenderer: Constructor called");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor called");
   // Attach OpenGL context to this component
   if (targetComponent_) {
     try {
-      logToFile("SkiaOpenGLRenderer: Setting renderer...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting renderer...");
       openGLContext_.setRenderer(this);
-      logToFile("SkiaOpenGLRenderer: Attaching to component...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Attaching to component...");
       openGLContext_.attachTo(*targetComponent_);
       
       // DISABLE JUCE COMPONENT PAINTING - Pure Skia Mode
       openGLContext_.setComponentPaintingEnabled(false);
       
-      logToFile("SkiaOpenGLRenderer: Setting continuous repainting...");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Setting continuous repainting...");
       openGLContext_.setContinuousRepainting(true);
-      logToFile("SkiaOpenGLRenderer: Constructor complete");
+      ZENITH_LOG_INFO("SkiaOpenGLRenderer: Constructor complete");
     } catch (const std::exception &e) {
-      logToFile(std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
+      ZENITH_LOG_ERROR(std::string("SkiaOpenGLRenderer: Exception in constructor: ") +
                 e.what());
     } catch (...) {
-      logToFile("SkiaOpenGLRenderer: Unknown exception in constructor");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Unknown exception in constructor");
     }
   } else {
-    logToFile("SkiaOpenGLRenderer: WARNING - targetComponent is null!");
+    ZENITH_LOG_WARNING("SkiaOpenGLRenderer: WARNING - targetComponent is null!");
   }
 }
 
@@ -63,32 +63,32 @@ SkiaOpenGLRenderer::~SkiaOpenGLRenderer() {
 }
 
 void SkiaOpenGLRenderer::newOpenGLContextCreated() {
-  logToFile("SkiaOpenGLRenderer: newOpenGLContextCreated called");
+  ZENITH_LOG_INFO("SkiaOpenGLRenderer: newOpenGLContextCreated called");
   try {
-    logToFile("SkiaOpenGLRenderer: Creating GL interface...");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: Creating GL interface...");
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface) {
-      logToFile("SkiaOpenGLRenderer: FAILED to create GL interface!");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: FAILED to create GL interface!");
       return;
     }
-    logToFile("SkiaOpenGLRenderer: GL interface created, making context...");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: GL interface created, making context...");
     grContext_ = GrDirectContexts::MakeGL(glInterface);
 
     if (!grContext_) {
-      logToFile("SkiaOpenGLRenderer: Failed to create Skia GrDirectContext!");
+      ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Failed to create Skia GrDirectContext!");
       return;
     }
 
-    logToFile("SkiaOpenGLRenderer: GrDirectContext created successfully!");
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: GrDirectContext created successfully!");
     contextInitialized_ = true;
     recreateSurface();
   } catch (const std::exception &e) {
-    logToFile(
+    ZENITH_LOG_ERROR(
         std::string(
             "SkiaOpenGLRenderer: Exception in newOpenGLContextCreated: ") +
         e.what());
   } catch (...) {
-    logToFile(
+    ZENITH_LOG_ERROR(
         "SkiaOpenGLRenderer: Unknown exception in newOpenGLContextCreated");
   }
 }
@@ -180,9 +180,9 @@ void SkiaOpenGLRenderer::recreateSurface() {
       kRGBA_8888_SkColorType, nullptr, nullptr);
 
   if (!surface_) {
-    logToFile("SkiaOpenGLRenderer: Failed to create Skia surface!");
+    ZENITH_LOG_ERROR("SkiaOpenGLRenderer: Failed to create Skia surface!");
   } else {
-    logToFile("SkiaOpenGLRenderer: Skia surface created successfully (" +
+    ZENITH_LOG_INFO("SkiaOpenGLRenderer: Skia surface created successfully (" +
               std::to_string(width) + "x" + std::to_string(height) + ")");
   }
 }

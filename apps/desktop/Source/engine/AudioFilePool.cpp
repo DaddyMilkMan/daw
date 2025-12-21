@@ -110,6 +110,23 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file) {
   return loadFile(file, errorMessage);
 }
 
+void AudioFilePool::loadFileAsync(const juce::File& file, std::function<void(HandlePtr loadedHandle, juce::String error)> callback) {
+  // Capture basic info to avoid thread safety issues if possible
+  // shared_ptr to this to ensure pool stays alive
+  // Actually, pool is usually a singleton or long-lived in Zenith.
+  
+  juce::Thread::launch([this, file, callback]() {
+    juce::String error;
+    auto handle = loadFile(file, error);
+    
+    if (callback) {
+      juce::MessageManager::callAsync([handle, error, callback]() {
+        callback(handle, error);
+      });
+    }
+  });
+}
+
 AudioFilePool::HandlePtr AudioFilePool::getFile(const juce::File &file) const {
   const juce::ScopedLock sl(cacheLock_);
   auto it = fileCache_.find(file.getFullPathName());

@@ -6,6 +6,8 @@
 #include "ClipSynchronizer.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
+#include "ClipTrack.h"
+#include "ZenithLogger.h"
 
 namespace zenith {
 
@@ -43,6 +45,11 @@ juce::String ClipSynchronizer::createClip(const juce::String &trackId,
   DBG("ClipSynchronizer: createClip(" + trackId + ", " +
       juce::String(startBeats) + ", " + juce::String(lengthBeats) + ", " +
       clipType + ")");
+      
+  // Consistency checks
+  jassert(startBeats >= 0.0);
+  jassert(lengthBeats > 0.0);
+  jassert(clipType == "audio" || clipType == "midi");
 
   // 1. Create in zenith::ProjectState first to generate ID
   auto &state = projectState.getState();
@@ -99,6 +106,13 @@ void ClipSynchronizer::syncEngineToProjectState() {
   // Guard against re-entrant checks
   if (isModifyingState)
     return;
+    
+  // Safety check: Engine must be initialized with valid sample rate
+  if (engine.getSampleRate() <= 0.0)
+     return;
+     
+  // Check buffer size consistency (sanity check)
+  jassert(engine.getBufferSize() > 0);
 
   isModifyingState = true;
 
@@ -122,9 +136,6 @@ void ClipSynchronizer::syncEngineToProjectState() {
       continue;
     }
 
-    // Get Engine's clip list (thread-safe read via accessor)
-    const auto &engineClips = trackPtr->getClips();
-
     // Get zenith::ProjectState clips container
     auto clipsNode =
         projectTrack.getChildWithName(zenith::ProjectState::ID_CLIPS);
@@ -134,8 +145,11 @@ void ClipSynchronizer::syncEngineToProjectState() {
     }
 
     // Sync each Engine clip to zenith::ProjectState
-    for (size_t i = 0; i < engineClips.size(); ++i) {
-      const auto &engineClip = engineClips[i];
+    for (int i = 0; i < trackPtr->getNumClips(); ++i) {
+      auto* engineClip = trackPtr->getClip(i);
+      
+      if (engineClip == nullptr)
+          continue;
 
       // Check if this clip exists in zenith::ProjectState
       juce::String clipId = engineClip->getName(); // Assuming Name == ID
@@ -188,7 +202,7 @@ void ClipSynchronizer::syncEngineToProjectState() {
         newClip.setProperty(zenith::ProjectState::PROP_NAME, clipId, nullptr);
         newClip.setProperty(
             zenith::ProjectState::PROP_TYPE,
-            (engineClip->getType() == zenith::Track::Clip::Type::MIDI
+            (engineClip->getType() == zenith::Clip::Type::MIDI
                  ? "midi"
                  : "audio"),
             nullptr);
@@ -273,9 +287,9 @@ void ClipSynchronizer::valueTreePropertyChanged(
   // Find in Engine
   for (const auto &trackPtr : engine.tracks()) {
     if (trackPtr->getTrackId() == trackId) {
-      const auto &clips = trackPtr->getClips();
-      for (const auto &clipPtr : clips) {
-        if (clipPtr->getName() == clipId) {
+      for (int i = 0; i < trackPtr->getNumClips(); ++i) {
+        auto* clipPtr = trackPtr->getClip(i);
+        if (clipPtr != nullptr && clipPtr->getName() == clipId) {
           // Found it, sync properties
           double tempo = projectState.getTempo();
           double sampleRate = engine.getSampleRate();
@@ -324,7 +338,7 @@ void ClipSynchronizer::valueTreeChildAdded(
     // Add to Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        auto newClip = std::make_unique<zenith::Track::Clip>();
+        auto newClip = std::make_unique<zenith::Clip>();
 
         double tempo = projectState.getTempo();
         double sampleRate = engine.getSampleRate();
@@ -333,8 +347,8 @@ void ClipSynchronizer::valueTreeChildAdded(
             beatsToSamples(startBeats, tempo, sampleRate));
         newClip->setLength(beatsToSamples(lengthBeats, tempo, sampleRate));
         newClip->setName(clipId);
-        newClip->setType(clipType == "midi" ? zenith::Track::Clip::Type::MIDI
-                                            : zenith::Track::Clip::Type::Audio);
+        newClip->setType(clipType == "midi" ? zenith::Clip::Type::MIDI
+                                            : zenith::Clip::Type::Audio);
 
         trackPtr->addClip(std::move(newClip));
         DBG("ClipSynchronizer: Added new clip via Listener " + clipId);
@@ -365,10 +379,18 @@ void ClipSynchronizer::valueTreeChildRemoved(
     // Remove from Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        const auto &clips = trackPtr->getClips();
-        for (const auto &clip : clips) {
-          if (clip->getName() == clipId) {
-            trackPtr->removeClip(clip.get());
+        zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
+        if (clipTrack == nullptr) {
+            jassertfalse;
+            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal");
+            return;
+        }
+
+        const int numClips = clipTrack->getNumClips();
+        for (int i = 0; i < numClips; ++i) {
+          zenith::Clip* clipPtr = clipTrack->getClip(i);
+          if (clipPtr != nullptr && clipPtr->getName() == clipId) {
+            clipTrack->removeClip(clipPtr);
             DBG("ClipSynchronizer: Removed clip " + clipId);
             return;
           }

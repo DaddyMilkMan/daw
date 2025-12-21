@@ -141,7 +141,6 @@ private:
     headers.set("Authorization", "Bearer " + apiKey_);
 
     // Create input stream options
-    // Create input stream options
     // Use ignoreAllParameters because we're sending raw JSON body via
     // withPOSTData()
     juce::URL::InputStreamOptions options(

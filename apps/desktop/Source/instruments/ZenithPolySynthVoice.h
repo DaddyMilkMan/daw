@@ -16,34 +16,29 @@
 #include "ZenithOscillator.h"
 #include "ZenithPolySynthDefs.h"
 #include <juce_audio_basics/juce_audio_basics.h>
-
+#include <juce_dsp/juce_dsp.h>
 
 namespace zenith {
 
-// Forward declaration of Sound
-class ZenithPolySynthSound : public juce::SynthesiserSound {
-public:
-  ZenithPolySynthSound() {}
-  bool appliesToNote(int /*midiNoteNumber*/) override { return true; }
-  bool appliesToChannel(int /*midiChannel*/) override { return true; }
-};
+// MPE Synthesiser doesn't use Sound classes in the same way as standard
+// Synthesiser but we keep the file clean.
 
 /**
-    Voice for ZenithPolySynth - RT-safe polyphonic voice
+    Voice for ZenithPolySynth - RT-safe MPE polyphonic voice
 */
-class ZenithPolySynthVoice : public juce::SynthesiserVoice {
+class ZenithPolySynthVoice : public juce::MPESynthesiserVoice {
 public:
   ZenithPolySynthVoice();
   ~ZenithPolySynthVoice() override = default;
 
-  bool canPlaySound(juce::SynthesiserSound *sound) override;
-  void startNote(int midiNoteNumber, float velocity,
-                 juce::SynthesiserSound *sound,
-                 int currentPitchWheelPosition) override;
-  void stopNote(float velocity, bool allowTailOff) override;
-  void pitchWheelMoved(int newPitchWheelValue) override;
-  void controllerMoved(int controllerNumber, int newControllerValue) override;
-  void channelPressureChanged(int newChannelPressureValue) override;
+  // MPE Overrides
+  void noteStarted() override;
+  void noteStopped(bool allowTailOff) override;
+  void notePressureChanged() override;
+  void notePitchbendChanged() override;
+  void noteTimbreChanged() override;
+  void noteKeyStateChanged() override;
+
   void renderNextBlock(juce::AudioBuffer<float> &outputBuffer, int startSample,
                        int numSamples) override;
 
@@ -87,7 +82,7 @@ public:
 
   void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
   void setMonoMode(bool mono) { monoMode_ = mono; }
-  void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
+  void setQualityPreset(QualityPreset quality);
 
   // New Phase 1 Fixes
   void setFilterEnvAmount(float amount) { filterEnvAmount_ = amount; }
@@ -136,7 +131,9 @@ public:
   void setOsc2Sync(bool sync) { osc2Sync_ = sync; }
   void setOsc2FM(float amount) { osc2FM_ = amount; }
   void setRingMod(float amount) { ringMod_ = amount; }
-  void setFilterModel(FilterModelType model) { filterModel_ = static_cast<int>(model); }
+  void setFilterModel(FilterModelType model) {
+    filterModel_ = static_cast<int>(model);
+  }
 
   // Oscillator shape setters (public for ZenithPolySynth access)
   void setOsc1Shape(float shape) { osc1Shape_.setTargetValue(shape); }
@@ -242,6 +239,7 @@ private:
   float velocity_ = 0.0f;
   float modWheel_ = 0.0f;
   float aftertouch_ = 0.0f;
+  float timbre_ = 0.0f; // MPE Timbre (Slide)
   float pitchBend_ = 0.0f;
   float currentAmplitude_ = 0.0f;
 
@@ -270,6 +268,21 @@ private:
   void computeModulation();
   float getModulationSourceValue(ModulationSource source);
   float computeLFOValue(double phase, LFOWaveform waveform, float &shValue);
+
+  // Oversampling support
+  void renderInnerBlock(juce::AudioBuffer<float> &buffer, int startSample,
+                        int numSamples);
+  void updateSampleRate(); // Propagate currentSampleRate to sub-components
+
+  std::unique_ptr<juce::dsp::Oversampling<float>> oversampler_;
+  juce::CriticalSection oversamplerLock_;
+  juce::AudioBuffer<float>
+      oversamplingBuffer_; // Pre-allocated upsampled buffer
+  juce::AudioBuffer<float> downsamplingBuffer_; // Pre-allocated temp buffer
+  int maxBlockSize_ = 4096;                     // Safe maximum
+
+  int oversamplingFactor_ = 1;
+  double baseSampleRate_ = 44100.0;
 };
 
 } // namespace zenith

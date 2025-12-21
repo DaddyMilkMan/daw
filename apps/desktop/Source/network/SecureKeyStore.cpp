@@ -11,11 +11,14 @@
 */
 
 #include "SecureKeyStore.h"
-#include "../../SimpleLogger.h"
+#include "../engine/ZenithLogger.h"
 
 #if JUCE_WINDOWS
-#include <wincrypt.h>
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
 #include <windows.h>
+#include <wincrypt.h>
 #pragma comment(lib, "crypt32.lib")
 #elif JUCE_MAC
 #include <Security/Security.h>
@@ -45,7 +48,7 @@ bool SecureKeyStore::storeKey(const juce::String &keyName,
     return false;
 
 #if JUCE_WINDOWS
-  logToFile("SecureKeyStore: Calling storeKeyWindows");
+  ZENITH_LOG_INFO("SecureKeyStore: Calling storeKeyWindows");
   return storeKeyWindows(keyName, keyValue);
 #elif JUCE_MAC
   return storeKeyMac(keyName, keyValue);
@@ -62,8 +65,7 @@ bool SecureKeyStore::retrieveKey(const juce::String &keyName,
     return false;
 
 #if JUCE_WINDOWS
-  logToFile(("SecureKeyStore: Calling retrieveKeyWindows for " + keyName)
-                .toStdString());
+  ZENITH_LOG_INFO("SecureKeyStore: Calling retrieveKeyWindows for " + keyName);
   return retrieveKeyWindows(keyName, outKey);
 #elif JUCE_MAC
   return retrieveKeyMac(keyName, outKey);
@@ -110,7 +112,7 @@ bool SecureKeyStore::clearAllKeys() {
 
 bool SecureKeyStore::storeKeyWindows(const juce::String &keyName,
                                      const juce::String &keyValue) {
-  logToFile("SecureKeyStore: storeKeyWindows started");
+  ZENITH_LOG_INFO("SecureKeyStore: storeKeyWindows started");
   // Convert to UTF-8
   auto utf8Data = keyValue.toUTF8();
 
@@ -131,8 +133,7 @@ bool SecureKeyStore::storeKeyWindows(const juce::String &keyName,
                                  &dataOut);
 
   if (!result) {
-    logToFile(
-        ("SecureKeyStore: Failed to encrypt key: " + keyName).toStdString());
+    ZENITH_LOG_ERROR("SecureKeyStore: Failed to encrypt key: " + keyName);
     return false;
   }
 
@@ -159,26 +160,23 @@ bool SecureKeyStore::storeKeyWindows(const juce::String &keyName,
 
 bool SecureKeyStore::retrieveKeyWindows(const juce::String &keyName,
                                         juce::String &outKey) {
-  logToFile("SecureKeyStore: retrieveKeyWindows started");
+  ZENITH_LOG_INFO("SecureKeyStore: retrieveKeyWindows started");
   // Read encrypted data from file
   auto appDataDir =
       juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
           .getChildFile("ZenithDAW")
           .getChildFile("keys");
 
-  logToFile(
-      ("SecureKeyStore: Checking keys dir: " + appDataDir.getFullPathName())
-          .toStdString());
+  ZENITH_LOG_INFO("SecureKeyStore: Checking keys dir: " + appDataDir.getFullPathName());
   auto keyFile = appDataDir.getChildFile(keyName + ".key");
 
   if (!keyFile.existsAsFile()) {
-    logToFile(("SecureKeyStore: Key file does not exist: " +
-               keyFile.getFullPathName())
-                  .toStdString());
+    ZENITH_LOG_WARNING("SecureKeyStore: Key file does not exist: " +
+               keyFile.getFullPathName());
     return false;
   }
 
-  logToFile("SecureKeyStore: Loading key file...");
+  ZENITH_LOG_INFO("SecureKeyStore: Loading key file...");
   auto base64 = keyFile.loadFileAsString();
 
   // Decode from base64
@@ -202,8 +200,7 @@ bool SecureKeyStore::retrieveKeyWindows(const juce::String &keyName,
                                    CRYPTPROTECT_UI_FORBIDDEN, &dataOut);
 
   if (!result) {
-    logToFile(
-        ("SecureKeyStore: Failed to decrypt key: " + keyName).toStdString());
+    ZENITH_LOG_ERROR("SecureKeyStore: Failed to decrypt key: " + keyName);
     return false;
   }
 

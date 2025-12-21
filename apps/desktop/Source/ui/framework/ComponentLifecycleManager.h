@@ -59,6 +59,16 @@ struct LifecycleEvent {
 };
 
 // ============================================================================
+// Lifecycle Listener Interface
+// ============================================================================
+
+class LifecycleListener {
+public:
+  virtual ~LifecycleListener() = default;
+  virtual void onLifecycleEvent(const LifecycleEvent &event) = 0;
+};
+
+// ============================================================================
 // Component Lifecycle Interface
 // ============================================================================
 
@@ -108,9 +118,8 @@ public:
   static juce::String getStateName(ComponentState state);
 
   // Event handling
-  using LifecycleCallback = std::function<void(const LifecycleEvent &)>;
-  void addLifecycleListener(LifecycleCallback callback);
-  void removeLifecycleListener(LifecycleCallback callback);
+  void addLifecycleListener(LifecycleListener *listener);
+  void removeLifecycleListener(LifecycleListener *listener);
 
   // Batch operations
   void suspendAllComponents();
@@ -144,12 +153,17 @@ private:
                                ComponentState newState);
 
   // Data members
-  juce::HashMap<LifecycleAware *, ComponentState> componentStates_;
-  std::vector<LifecycleCallback> lifecycleListeners_;
+  struct ComponentEntry {
+    ComponentState state;
+    LifecycleAware *component; // Mutable pointer stored in value
+  };
+
+  juce::HashMap<const LifecycleAware *, ComponentEntry> componentStates_;
+  juce::Array<LifecycleListener *> lifecycleListeners_;
   juce::CriticalSection lock_;
   juce::int64 nextComponentId_ = 1;
 
-  juce::HashMap<LifecycleAware *, juce::String> componentIds_;
+  juce::HashMap<const LifecycleAware *, juce::String> componentIds_;
   juce::Array<LifecycleEvent> eventHistory_;
   static constexpr int MAX_EVENT_HISTORY = 1000;
 };

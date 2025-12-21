@@ -32,13 +32,12 @@ namespace design {
 
 namespace colors {
 // Primary Accents - "Electric Dreams"
-inline SkColor CYAN =
-    0xFF00F0FF; // Electric Blue/Cyan (Slightly warmer than pure Cyan)
+inline SkColor CYAN = 0xFF00F0FF;        // Electric Blue (Refined)
 inline SkColor MAGENTA = 0xFFFF00D4;     // Hot Pink/Magenta
 inline SkColor NEON_GREEN = 0xFF00FF9D;  // Spring Green (Modern Mint)
-inline SkColor NEON_PINK = 0xFFFF1493;   // Deep Pink (For Ripple Edit Mode)
+inline SkColor NEON_PINK = 0xFFFF1493;   // Deep Pink
 inline SkColor NEON_RED = 0xFFFF073A;    // Neon Red
-inline SkColor NEON_CYAN = 0xFF00FFFF;   // Cyan
+inline SkColor NEON_CYAN = 0xFF00F0FF;   // Match refined Cyan
 inline SkColor NEON_YELLOW = 0xFFFFFF00; // Yellow
 inline SkColor NEON_PURPLE = 0xFFAA00FF; // Purple
 inline SkColor VIOLET = 0xFF7000FF;      // Deep Violet
@@ -56,25 +55,30 @@ inline SkColor BG_DARK = 0xFF1C1C24;    // Surface/Component Background
 inline SkColor BG_MEDIUM = 0xFF25252D;  // Hover Surface
 inline SkColor BG_LIGHT = 0xFF2F2F3D;   // Active/Selected Surface
 
+// Aliases for Zen Components
+inline SkColor SURFACE_BASE = BG_DARK;
+inline SkColor SURFACE_ELEVATED = BG_DARKER;
+inline SkColor SUCCESS = GREEN;
+inline SkColor DANGER = RED;
+
 // Text - "High Legibility"
 inline SkColor TEXT_PRIMARY = 0xFFF2F2F7;   // Off-white for less eye strain
 inline SkColor TEXT_SECONDARY = 0xFFA1A1AA; // Zinc-400 equivalent
 inline SkColor TEXT_TERTIARY = 0xFF71717A;  // Zinc-500 equivalent
+inline SkColor TEXT_DISABLED = 0xFF52525B;  // Disabled text (Zinc-600)
 
 // Borders & Dividers
 inline SkColor BORDER_DEFAULT = 0x1FFFFFFF; // Very subtle white overlay
 inline SkColor BORDER_FOCUS = CYAN;
-inline SkColor BORDER_SUBTLE = 0x0FFFFFFF; // Ultra subtle
-inline SkColor BORDER_STRONG = 0x33FFFFFF; // Visible separation
+inline SkColor BORDER_SUBTLE = 0x0FFFFFFF;   // Ultra subtle
+inline SkColor BORDER_STRONG = 0x33FFFFFF;   // Visible separation
+inline SkColor BORDER_GREETING = 0x1AFFFFFF; // For interactive text fields
 
 // Glassmorphism System
 inline SkColor GLASS_HIGHLIGHT = 0x1AFFFFFF; // Top edge highlight
 inline SkColor GLASS_SHADOW = 0x40000000;    // Drop shadow
 inline SkColor GLASS_HOVER = 0x0DFFFFFF;     // White overlay for hover
 inline SkColor GLASS_10 = 0x1AFFFFFF; // 10% white (alias for legacy code)
-
-// Text (Additional)
-inline SkColor TEXT_DISABLED = 0xFF52525B; // Disabled text (Zinc-600)
 
 // Helper to reset
 inline void resetToDefault() {

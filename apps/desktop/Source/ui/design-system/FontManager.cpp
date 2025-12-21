@@ -74,20 +74,41 @@ void FontManager::initialize() {
 #endif
 
   // Determine font resource directory
-  // Try multiple locations for robustness
-  juce::File appDir =
+  // Determine font resource directory
+  // Robust search strategy for various deployment scenarios
+  juce::File exeDir =
       juce::File::getSpecialLocation(juce::File::currentExecutableFile)
           .getParentDirectory();
+  
+  // Potential font locations in order of preference
+  juce::Array<juce::File> candidateDirs;
 
-  // Check for development layout (running from build directory)
-  fontDir_ = appDir.getChildFile("../../apps/desktop/Resources/fonts");
-  if (!fontDir_.isDirectory()) {
-    // Check for installed layout
-    fontDir_ = appDir.getChildFile("Resources/fonts");
-  }
-  if (!fontDir_.isDirectory()) {
-    fontDir_ = juce::File::getCurrentWorkingDirectory().getChildFile(
-        "apps/desktop/Resources/fonts");
+  // 1. Standard Install / App Bundle (exe/Resources/fonts)
+  candidateDirs.add(exeDir.getChildFile("Resources/fonts"));
+
+  // 2. Development Build (relative to build/bin output)
+  // Assuming build/debug/bin, so ../../../apps/desktop/Resources/fonts
+  candidateDirs.add(exeDir.getChildFile("../../../apps/desktop/Resources/fonts"));
+  
+  // 3. Fallback Development (relative to standard CMake build folder)
+  candidateDirs.add(exeDir.getChildFile("../../apps/desktop/Resources/fonts"));
+
+  // 4. Current Working Directory (CLI usage)
+  candidateDirs.add(juce::File::getCurrentWorkingDirectory().getChildFile(
+        "apps/desktop/Resources/fonts"));
+        
+  // 5. User AppData (e.g. C:/Users/Name/AppData/Roaming/ZenithDAW/Fonts)
+  candidateDirs.add(juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("ZenithDAW/Fonts"));
+
+  // Find first valid directory
+  bool found = false;
+  for (const auto& dir : candidateDirs) {
+    if (dir.isDirectory()) {
+        fontDir_ = dir;
+        found = true;
+        break;
+    }
   }
 
   if (!fontDir_.isDirectory()) {

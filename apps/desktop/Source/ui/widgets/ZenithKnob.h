@@ -33,7 +33,8 @@
 
 namespace zenith {
 
-class ZenithKnob : public ZenithControl {
+class ZenithKnob : public ZenithControl,
+                   public juce::Value::Listener {
 public:
   // ----- Knob Modes -----
   enum class Mode {
@@ -54,7 +55,8 @@ public:
   ZenithKnob();
   explicit ZenithKnob(const juce::String &name,
                       SkColor color = SkColorSetRGB(0, 255, 255));
-  ~ZenithKnob() override = default;
+  explicit ZenithKnob(juce::Value valueToControl);
+  ~ZenithKnob() override;
 
   // ----- Mode & Style -----
   void setMode(Mode mode) {
@@ -113,6 +115,14 @@ public:
   // ----- Rendering -----
   void drawSkia(SkCanvas *canvas) override;
 
+  // juce::Value::Listener
+  void valueChanged(juce::Value& v) override {
+      if (v.refersToSameSourceAs(value)) {
+          setValue(v.getValue(), false);
+          markDirty();
+      }
+  }
+
 protected:
   void mouseDrag(const juce::MouseEvent &e) override;
 
@@ -152,6 +162,8 @@ private:
   // Animation
   float animatedGlow_ = 0.0f;
   juce::int64 lastChangeTime_ = 0;
+
+  juce::Value value;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithKnob)
 };

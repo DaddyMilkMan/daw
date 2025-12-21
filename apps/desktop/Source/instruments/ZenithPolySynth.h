@@ -171,7 +171,7 @@ public:
   void setReverb(float amount) { effects_.setReverb(amount); }
 
 private:
-  juce::Synthesiser synthesiser_;
+  juce::MPESynthesiser synthesiser_;
   double currentBpm_ = 120.0;
   juce::AudioProcessorValueTreeState parameters_;
 
