@@ -906,6 +906,7 @@ private:
 
   // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
 
   // Analysis FIFO (Stereo)

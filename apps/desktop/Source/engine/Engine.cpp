@@ -12,6 +12,7 @@
 
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/SessionDebuggerAgent.h"
+#include "../ai/AIMasteringAgent.h"
 #include "../engine/AudioFilePool.h"
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
@@ -69,7 +70,8 @@ Engine::Engine() {
 
   // Initialize Session Debugger Agent (AI Technical Integrity)
   sessionDebugger_ = std::make_unique<ai::SessionDebuggerAgent>(*this);
-  DBG("Engine: SessionDebuggerAgent initialized");
+  masteringAgent_ = std::make_unique<ai::AIMasteringAgent>(*this);
+  DBG("Engine: SessionDebuggerAgent and AIMasteringAgent initialized");
 
   // MeteringSystem handles analysis FIFO internally
 

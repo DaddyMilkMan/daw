@@ -57,8 +57,7 @@ void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
   DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
       juce::String(numAuxBuses) + " aux buses");
 
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
+
 }
 
 //==============================================================================
