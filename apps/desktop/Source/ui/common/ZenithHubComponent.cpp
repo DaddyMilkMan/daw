@@ -69,7 +69,22 @@ ZenithHubComponent::ZenithHubComponent(
   alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
 
   startTimerHz(60);
-}
+
+  // Initialize Greeting Editor as permanent hidden child
+  addChildComponent(greetingEditor_);
+  greetingEditor_.setVisible(false);
+  greetingEditor_.setMultiLine(false);
+  greetingEditor_.setReturnKeyStartsNewLine(false);
+
+  // Configure callbacks for safe hiding
+  greetingEditor_.onReturnKey = [this]() {
+    greetingText_ = greetingEditor_.getText();
+    greetingEditor_.setVisible(false);
+    repaint();
+  };
+
+  greetingEditor_.onEscapeKey = [this]() { greetingEditor_.setVisible(false); };
+  greetingEditor_.onFocusLost = [this]() { greetingEditor_.setVisible(false); };
 
 ZenithHubComponent::~ZenithHubComponent() {
   stopTimer();
@@ -188,39 +203,64 @@ void ZenithHubComponent::updateLayout() {
 
   mainCardBounds_ = SkRect::MakeXYWH(cardX, cardY, cardW, cardH);
 
+  mainCardBounds_ = SkRect::MakeXYWH(cardX, cardY, cardW, cardH);
+
   // Internal Layout
   float padding = 40.0f; // Generous padding
   float gridGap = 40.0f; // Requested 40px grid gap
-
-  float availableW = cardW - (padding * 2);
-  float colOneW = (availableW - gridGap) * 0.6f; // 60% for Recent
-  float colTwoW = (availableW - gridGap) * 0.4f; // 40% for Sidebar
-
-  // Recent Projects Area
-  // Header consumes significant vertical space now due to large title
   float headerHeight = 140.0f;
 
-  recentArea_ =
-      SkRect::MakeXYWH(cardX + padding, cardY + padding + headerHeight, colOneW,
-                       cardH - (padding * 2) - headerHeight);
+  // Define Content Area (Main Card minus padding and header)
+  juce::Rectangle<float> contentRect(
+      cardX + padding, 
+      cardY + padding + headerHeight,
+      cardW - (padding * 2), 
+      cardH - (padding * 2) - headerHeight);
 
-  // Sidebar (Account + Templates)
-  float sidebarX = cardX + padding + colOneW + gridGap;
+  // 1. Layout Left (Recent) vs Right (Sidebar) using ZenithLayout
+  auto mainColumns = ZenithLayout::begin()
+      .withFloatBounds(contentRect)
+      .withGap(gridGap)
+      .addFlexItem(juce::FlexItem().withFlex(0.6f)) // Recent Area (60%)
+      .addFlexItem(juce::FlexItem().withFlex(0.4f)) // Sidebar (40%)
+      .layout(juce::FlexBox::Direction::row);
 
-  // Account (Top Right aligned with recent area top)
-  float accountH = 100.0f;
-  accountArea_ =
-      SkRect::MakeXYWH(sidebarX, recentArea_.fTop, colTwoW, accountH);
+  if (mainColumns.size() >= 2) {
+      auto r = mainColumns[0];
+      recentArea_ = SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+      
+      auto s = mainColumns[1];
+      // sidebarX/Rect used for sub-layout
+      juce::Rectangle<float> sidebarRect = s; 
 
-  // New Project Button (Solid, professional)
-  float buttonH = 60.0f;
-  newProjectButtonBounds_ = SkRect::MakeXYWH(
-      sidebarX, accountArea_.bottom() + padding, colTwoW, buttonH);
-
-  // Templates
-  templatesArea_ = SkRect::MakeXYWH(
-      sidebarX, newProjectButtonBounds_.bottom() + padding, colTwoW,
-      recentArea_.bottom() - (newProjectButtonBounds_.bottom() + padding));
+      // 2. Layout Sidebar (Account, Button, Templates)
+      // Account: Fixed 100px
+      // Button: Fixed 60px
+      // Templates: Flex 1 (remaining)
+      auto sidebarRows = ZenithLayout::begin()
+          .withFloatBounds(sidebarRect)
+          .withGap(padding) // Matches original vertical logic
+          .addFlexItem(juce::FlexItem().withHeight(100.0f))                                   // Account
+          .addFlexItem(juce::FlexItem().withHeight(60.0f))                                    // New Project Btn
+          .addFlexItem(juce::FlexItem().withFlex(1.0f))                                       // Templates
+          .layout(juce::FlexBox::Direction::column);
+          
+      if (sidebarRows.size() >= 3) {
+          auto a = sidebarRows[0];
+          accountArea_ = SkRect::MakeXYWH(a.getX(), a.getY(), a.getWidth(), a.getHeight());
+          
+          auto b = sidebarRows[1];
+          newProjectButtonBounds_ = SkRect::MakeXYWH(b.getX(), b.getY(), b.getWidth(), b.getHeight());
+          
+          auto t = sidebarRows[2];
+          templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
+      }
+  }
+  
+  // Profile Button (Manual sub-positioning within account area remains ok as it's specific rendering)
+  profileBounds_ =
+      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+                       accountArea_.width(), 90.0f);
 
   // Update Recent Project Cards Layout (Grid)
   float gridW = recentArea_.width();
@@ -246,11 +286,6 @@ void ZenithHubComponent::updateLayout() {
     templates_[i].bounds =
         SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
   }
-
-  // Profile Button
-  profileBounds_ =
-      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                       accountArea_.width(), 90.0f);
 }
 
 void ZenithHubComponent::timerCallback() {
@@ -740,15 +775,12 @@ void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) {
   juce::ignoreUnused(e);
 }
 
-void ZenithHubComponent::showGreetingEditor() {
-  if (greetingEditor_) return;
+  if (greetingEditor_.isVisible()) return;
 
-  greetingEditor_ = std::make_unique<juce::TextEditor>("GreetingEditor");
-  greetingEditor_->setText(greetingText_);
-  greetingEditor_->setSelectAllWhenFocused(true);
-  greetingEditor_->setJustification(juce::Justification::left);
+  greetingEditor_.setText(greetingText_);
+  greetingEditor_.setJustification(juce::Justification::left);
   // Use a standard JUCE font that matches size approx
-  greetingEditor_->setFont(juce::Font(18.0f)); 
+  greetingEditor_.setFont(juce::Font(18.0f)); 
   
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;
@@ -761,28 +793,11 @@ void ZenithHubComponent::showGreetingEditor() {
       (int)(greetingTextBounds_.width() + kEditorWidthPadding), 
       kEditorHeight);
       
-  greetingEditor_->setBounds(bounds);
-  // Use async destruction to avoid crashes when destroying from callback
-  greetingEditor_->onReturnKey = [this]() {
-    greetingText_ = greetingEditor_->getText();
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-      repaint();
-    });
-  };
-  
-  // Shared lambda for dismissing the editor without saving
-  auto dismissEditor = [this]() {
-    juce::MessageManager::callAsync([this]() {
-      greetingEditor_.reset();
-    });
-  };
-
-  greetingEditor_->onEscapeKey = dismissEditor;
-  greetingEditor_->onFocusLost = dismissEditor;
-
-  addAndMakeVisible(greetingEditor_.get());
-  greetingEditor_->grabKeyboardFocus();
+  greetingEditor_.setBounds(bounds);
+  greetingEditor_.setVisible(true);
+  greetingEditor_.selectAll();
+  greetingEditor_.grabKeyboardFocus();
 }
+
 
 } // namespace zenith

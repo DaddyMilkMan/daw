@@ -25,6 +25,48 @@ constexpr float RULER_HEIGHT = 30.0f;
 constexpr float TOOLBAR_HEIGHT = 40.0f;
 constexpr float PIANO_WIDTH = 80.0f;
 
+// Toolbar Layout
+constexpr float TOOLBAR_BUTTON_START_X = 10.0f;
+constexpr float TOOLBAR_BUTTON_WIDTH = 60.0f;
+constexpr float TOOLBAR_BUTTON_HEIGHT = 30.0f;
+constexpr float TOOLBAR_BUTTON_MARGIN = 5.0f;
+
+// Note Layout & Rendering Constants
+namespace Layout {
+    constexpr float NOTE_CORNER_RADIUS = 3.0f;
+    constexpr float NOTE_INSET = 1.0f;
+    constexpr float SELECTION_GLOW_RADIUS = 4.0f;
+    constexpr float COLLISION_GLOW_RADIUS = 3.0f;
+    constexpr float VELOCITY_STRIPE_HEIGHT = 2.0f;
+    
+    // Piano Key Labels
+    constexpr float KEY_LABEL_MIN_ZOOM = 12.0f;
+    constexpr float KEY_LABEL_DETAIL_ZOOM = 18.0f;
+    constexpr float KEY_LABEL_MAX_FONT_SIZE = 11.0f;
+    constexpr float KEY_LABEL_DETAIL_MAX_FONT_SIZE = 9.0f;
+    constexpr float KEY_LABEL_OFFSET = -24.0f;
+    constexpr float KEY_LABEL_DETAIL_OFFSET = -18.0f;
+
+    // Visibility Thresholds & Strokes
+    constexpr float STRIPE_MIN_NOTE_HEIGHT = 6.0f;
+    constexpr float STRIPE_MIN_NOTE_WIDTH = 10.0f;
+    constexpr float PROBABILITY_MIN_NOTE_WIDTH = 20.0f;
+    constexpr float PROBABILITY_MIN_NOTE_HEIGHT = 12.0f;
+    constexpr float MUTE_ICON_MIN_WIDTH = 14.0f;
+    
+    constexpr float HOVER_STROKE_WIDTH = 1.5f;
+    constexpr float COLLISION_BORDER_WIDTH = 1.5f;
+    constexpr float DEFAULT_BORDER_WIDTH = 1.0f;
+    constexpr float SELECTED_OUTSET = 2.0f;
+}
+
+namespace RenderColors {
+    const SkColor KEY_SHADOW = SkColorSetARGB(50, 0, 0, 0);
+    const SkColor NOTE_BORDER = SkColorSetARGB(80, 0, 0, 0);
+    const SkColor SUBDIVISION_TICK = SkColorSetARGB(60, 255, 255, 255);
+    const SkColor PROBABILITY_BG = SkColorSetARGB(100, 0, 0, 0);
+}
+
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
@@ -389,41 +431,26 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (!currentClip.isValid())
     return;
 
-  float x = static_cast<float>(e.x);
-  float y = static_cast<float>(e.y);
-
   if (stepSequencerMode) {
     // Step sequencer mode handled separately
     return;
   }
 
+  float x = static_cast<float>(e.x);
+  float y = static_cast<float>(e.y);
+  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
+  float velocityLaneTop = contentTop + noteGridHeight;
+
   // 1. Check Toolbar Clicks
   if (y < TOOLBAR_HEIGHT) {
-    float btnX = 10.0f;
-    float btnSize = 30.0f;
-    float btnMargin = 5.0f;
-    float btnY = (TOOLBAR_HEIGHT - btnSize) / 2.0f;
-
-    Tool tools[] = {Tool::Select, Tool::Draw, Tool::Erase, Tool::Slice};
-    for (int i = 0; i < 4; ++i) {
-      if (x >= btnX && x < btnX + 60.0f && y >= btnY && y < btnY + btnSize) {
-        setCurrentTool(tools[i]);
-        return;
-      }
-      btnX += 60.0f + btnMargin;
-    }
+    handleToolbarClick(e);
     return;
   }
 
-  float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
-
   // 2. Check Piano Key Clicks
   if (x < PIANO_WIDTH && y >= contentTop) {
-    // noteGridHeight is cached
     if (y < contentTop + noteGridHeight) {
-      int pitch = pixelsToPitch(y);
-      pitch = juce::jlimit(0, 127, pitch);
-      playPianoKey(pitch, 100);
+      handlePianoKeyClick(e);
       return;
     }
   }
@@ -432,22 +459,55 @@ void PianoRollComponent::mouseDown(const juce::MouseEvent &e) {
   if (y < RULER_HEIGHT)
     return;
 
-  // noteGridHeight is cached
-  float velocityLaneTop = contentTop + noteGridHeight;
-
   // Velocity lane interaction
   if (y >= velocityLaneTop) {
-    auto *note = findNoteInVelocityLane(x, y);
-    if (note) {
-      startEditingVelocity(note, e);
-      return;
-    }
+    handleVelocityLaneClick(e);
+    return;
   }
 
   // Main note area - behavior depends on current tool
   if (x < PIANO_WIDTH)
     return;
 
+  handleNoteMainAreaClick(e);
+}
+
+void PianoRollComponent::handleToolbarClick(const juce::MouseEvent &e) {
+  float x = static_cast<float>(e.x);
+  float y = static_cast<float>(e.y);
+  float btnX = TOOLBAR_BUTTON_START_X;
+  float btnY = (TOOLBAR_HEIGHT - TOOLBAR_BUTTON_HEIGHT) / 2.0f;
+
+  Tool tools[] = {Tool::Select, Tool::Draw, Tool::Erase, Tool::Slice};
+  for (int i = 0; i < 4; ++i) {
+    if (x >= btnX && x < btnX + TOOLBAR_BUTTON_WIDTH && y >= btnY &&
+        y < btnY + TOOLBAR_BUTTON_HEIGHT) {
+      setCurrentTool(tools[i]);
+      return;
+    }
+    btnX += TOOLBAR_BUTTON_WIDTH + TOOLBAR_BUTTON_MARGIN;
+  }
+}
+
+void PianoRollComponent::handlePianoKeyClick(const juce::MouseEvent &e) {
+  float y = static_cast<float>(e.y);
+  int pitch = pixelsToPitch(y);
+  pitch = juce::jlimit(0, 127, pitch);
+  playPianoKey(pitch, 100);
+}
+
+void PianoRollComponent::handleVelocityLaneClick(const juce::MouseEvent &e) {
+  float x = static_cast<float>(e.x);
+  float y = static_cast<float>(e.y);
+  auto *note = findNoteInVelocityLane(x, y);
+  if (note) {
+    startEditingVelocity(note, e);
+  }
+}
+
+void PianoRollComponent::handleNoteMainAreaClick(const juce::MouseEvent &e) {
+  float x = static_cast<float>(e.x);
+  float y = static_cast<float>(e.y);
   auto *note = findNoteAtPosition(x, y);
 
   switch (currentTool) {
@@ -1082,8 +1142,11 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   // Background (Deep Slate)
   canvas->clear(colors::BG_DARKEST);
 
-  SkPaint paint;
-  paint.setAntiAlias(true);
+  generalPaint_.setColor(colors::BG_DARKER);
+  generalPaint_.setStyle(SkPaint::kFill_Style); 
+  
+  // Alias for legacy code
+  SkPaint& paint = generalPaint_;
 
   auto localBounds = getLocalBounds();
   float width = (float)localBounds.getWidth();
@@ -1093,8 +1156,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   // 1. Piano Keys Area Background
   SkRect pianoRect =
       SkRect::MakeXYWH(0, RULER_HEIGHT, PIANO_WIDTH, notesHeight);
-  paint.setColor(colors::BG_DARKER);
-  canvas->drawRect(pianoRect, paint);
+  canvas->drawRect(pianoRect, generalPaint_);
 
   //==========================================================================
   // PROFESSIONAL TIMELINE RULER (Ableton/Logic style)

@@ -23,6 +23,7 @@
 #include <atomic>
 #include <vector>
 #include <memory>
+#include <algorithm>
 
 #include "EngineConstants.h"
 #include "RoutingGraph.h"
