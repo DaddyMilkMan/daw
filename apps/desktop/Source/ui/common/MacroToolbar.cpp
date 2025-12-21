@@ -304,7 +304,11 @@ void MacroToolbar::instantFreeze() {
 
   if (trackIndex >= 0) {
     DBG("MacroToolbar: Freezing track " << trackIndex);
-    engine_.freezeTrack(trackIndex);
+    engine_.freezeTrack(trackIndex,
+                        [this](float progress, const juce::String &status) {
+                          if (onFreezeProgress)
+                            onFreezeProgress(progress, status);
+                        });
   }
 }
 

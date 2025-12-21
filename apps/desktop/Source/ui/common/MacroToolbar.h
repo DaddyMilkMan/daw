@@ -36,6 +36,7 @@ public:
   // Callbacks to access Arranger context
   std::function<juce::StringArray()> getSelectedClipIds;
   std::function<juce::String()> getSelectedTrackId;
+  std::function<void(float, const juce::String &)> onFreezeProgress;
 
   // Proximity check from parent
   void checkProximity(juce::Point<float> mousePosInParent);

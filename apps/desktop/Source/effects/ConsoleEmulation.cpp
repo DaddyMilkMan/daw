@@ -15,35 +15,34 @@ namespace zenith {
 namespace effects {
 
 void ConsoleEmulation::prepare(juce::dsp::ProcessSpec &spec) {
-  sampleRate = (float)spec.sampleRate;
+  sampleRate = static_cast<float>(spec.sampleRate);
+  coefficientsDirty = true;  // Force coefficient update on prepare
   reset();
 }
 
 void ConsoleEmulation::reset() {
-  auto spec = juce::dsp::ProcessSpec{(double)sampleRate, 512, 2};
-
-  // Default filters
-  *lowPass.coefficients =
-      *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
-  *highPass.coefficients =
-      *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 20.0f);
-
+  // Initialize lowpass filter with default coefficients
+  updateFilterCoefficients();
   lowPass.reset();
-  highPass.reset();
+}
+
+void ConsoleEmulation::updateFilterCoefficients() {
+  // Only update coefficients when mode has changed (performance optimization)
+  if (!coefficientsDirty) return;
+  coefficientsDirty = false;
+
+  // Set lowpass cutoff based on mode
+  float cutoff = (mode == Mode::Vintage) ? 16000.0f : 20000.0f;
+  *lowPass.coefficients =
+      *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, cutoff);
 }
 
 void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
   if (mode == Mode::Clean && drive < 0.01f)
     return;
 
-  // Update filters based on mode for each block (simple approx)
-  if (mode == Mode::Vintage) {
-    *lowPass.coefficients =
-        *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 16000.0f);
-  } else {
-    *lowPass.coefficients =
-        *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
-  }
+  // Update filter coefficients only when mode has changed
+  updateFilterCoefficients();
 
   const int numChannels = buffer.getNumChannels();
   const int numSamples = buffer.getNumSamples();
