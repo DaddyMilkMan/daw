@@ -78,6 +78,7 @@ ZenithHubComponent::ZenithHubComponent(
   greetingEditor_.setVisible(false);
   greetingEditor_.setMultiLine(false);
   greetingEditor_.setReturnKeyStartsNewLine(false);
+  greetingEditor_.setSelectAllWhenFocused(true);
   
   auto safeDismiss = [this]() { hideGreetingEditor(false); };
   greetingEditor_.onEscapeKey = safeDismiss;
