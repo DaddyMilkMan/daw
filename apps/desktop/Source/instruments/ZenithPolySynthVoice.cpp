@@ -213,6 +213,7 @@ void ZenithPolySynthVoice::renderNextBlock(
     // 1. Render synth logic into upsampled buffer
     // Note: Internal components (Oscs, Filters) are already configured for
     // baseRate * factor
+    oversamplingBuffer_.clear(0, upsampledChunk);
     renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
 
     // 2. Downsample
@@ -611,10 +612,6 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
-    // We must call updateSampleRate to propagate the new rate
-    // Note: This calls updateSampleRate recursively but we released lock?
-    // No, we hold lock. updateSampleRate also takes lock. Recursive lock is
-    // needed? juce::CriticalSection IS recursive.
   }
 
   // Call updateSampleRate outside the if to ensure logic runs
