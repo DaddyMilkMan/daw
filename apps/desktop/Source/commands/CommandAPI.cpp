@@ -26,12 +26,7 @@
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
-<<<<<<< HEAD
-
 #include "../ai/AIMasteringAgent.h"
-=======
-// #include "../ai/AIMasteringAgent.h"
->>>>>>> origin/master
 #include "../ai/PresetGeneticistAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"

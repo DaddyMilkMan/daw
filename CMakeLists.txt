@@ -24,7 +24,6 @@ endif()
 
 
 
-
 # 4. Options
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
 option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
@@ -32,13 +31,6 @@ option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
 # Auto-enable sanitizers in Debug builds
-<<<<<<< HEAD
-if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-    set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-endif()
-
-=======
 # (Disabled to prevent ASAN in Release builds)
 # if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
 #     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
@@ -53,7 +45,6 @@ endif()
 # add_definitions(-DZENITH_USE_SKIA=1) - Removed: Handled via target_compile_definitions in SkiaManualIntegration.cmake
 
 # JUCE Setup - prefer local directory if available
->>>>>>> origin/master
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
     message(STATUS "Using local JUCE from external/JUCE")
     add_subdirectory(external/JUCE)
@@ -110,11 +101,6 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
-<<<<<<< HEAD
-    apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    
-    apps/desktop/Source/tests/AccessibilityTests.cpp
-=======
     apps/desktop/Source/engine/MeteringSystem.cpp
     apps/desktop/Source/engine/AutomationStateManager.cpp
     apps/desktop/Source/engine/Metronome.cpp
@@ -155,10 +141,10 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
->>>>>>> origin/master
 )
 
 # Create main executable
@@ -253,8 +239,6 @@ elseif(UNIX AND NOT APPLE)
     endif()
 endif()
 
-<<<<<<< HEAD
-=======
 # Skia Integration (Manual) - option defined earlier
 if(ZENITH_ENABLE_SKIA)
     include(apps/desktop/cmake/SkiaManualIntegration.cmake)
@@ -268,7 +252,6 @@ endif()
 # Build Optimization Integration
 # ==============================================================================
 # Apply build optimizations (parallel compile, incremental link, etc.)
->>>>>>> origin/master
 enable_zenith_build_optimizations(ZenithDAW)
 
 # Precompiled Headers - dramatically reduces incremental build times

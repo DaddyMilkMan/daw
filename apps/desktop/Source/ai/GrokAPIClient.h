@@ -47,12 +47,8 @@ public:
   juce::String callGrok(const juce::String &prompt,
                         const juce::String &systemMessage) {
     if (!hasAPIKey()) {
-<<<<<<< HEAD
-      DBG("ERROR: No API key configured. Set GROK_API_KEY environment variable.");
-=======
       DBG("ERROR: No API key configured. Set GROK_API_KEY environment "
           "variable.");
->>>>>>> origin/master
       return "{}";
     }
 
@@ -145,19 +141,11 @@ private:
     headers.set("Authorization", "Bearer " + apiKey_);
 
     // Create input stream options
-<<<<<<< HEAD
-    juce::URL::InputStreamOptions options(juce::URL::ParameterHandling::inPostData);
-    options = options.withExtraHeaders(
-        "Content-Type: application/json\r\n"
-        "Authorization: Bearer " + apiKey_);
-=======
-    // Create input stream options
     // Use ignoreAllParameters because we're sending raw JSON body via
     // withPOSTData()
     juce::URL::InputStreamOptions options(
         juce::URL::ParameterHandling::ignoreAllParameters);
     options = options.withExtraHeaders(headers.getHeadersAsString());
->>>>>>> origin/master
     options = options.withConnectionTimeoutMs(30000); // 30 second timeout
 
     // Make the HTTP POST request

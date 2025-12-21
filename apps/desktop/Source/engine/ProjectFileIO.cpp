@@ -122,22 +122,6 @@ bool ProjectFileIO::saveToFile(const juce::File& file, IOSettings settings)
 
     if (settings.format == SerializationFormat::Xml)
     {
-<<<<<<< HEAD
-        DBG("ProjectFileIO: Failed to create XML from ValueTree");
-        return false;
-    }
-
-    // Add metadata
-    auto now = juce::Time::getCurrentTime();
-    xml->setAttribute("appVersion", "0.1.0"); // TODO: Use ProjectInfo::versionString
-    xml->setAttribute("savedAt", now.formatted("%Y-%m-%d %H:%M:%S"));
-    xml->setAttribute("timestamp", static_cast<double>(now.toMilliseconds()));
-    xml->setAttribute("isCrashDump", "0");
-    xml->setAttribute("platform", juce::SystemStats::getOperatingSystemName());
-
-    // Save to file
-    if (!xml->writeTo(file))
-=======
         xml = projectState_.getState().createXml();
         if (xml == nullptr)
         {
@@ -184,7 +168,6 @@ bool ProjectFileIO::saveToFile(const juce::File& file, IOSettings settings)
 
     // Attempt to swap temp file with target file
     if (settings.useAtomicWrite)
->>>>>>> origin/master
     {
         if (!tempFile.moveFileTo(targetFile))
         {
@@ -200,17 +183,8 @@ bool ProjectFileIO::saveToFile(const juce::File& file, IOSettings settings)
 
     DBG("ProjectFileIO: Saved successfully");
     projectState_.setProjectFile(file);
-<<<<<<< HEAD
-    
-    // Reset dirty flag is handled by ProjectState listener or manually here if needed
-    // accessing isDirty directly if friend, or via method if available. 
-    // projectState_.markClean(); // Assuming this exists or similar?
-    // If not, we skip it as per original file.
-    
-=======
     projectState_.isDirty = false;
 
->>>>>>> origin/master
     return true;
 }
 

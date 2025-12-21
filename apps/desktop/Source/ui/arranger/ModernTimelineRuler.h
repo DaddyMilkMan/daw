@@ -6,11 +6,7 @@
 #pragma once
 
 #include <juce_gui_basics/juce_gui_basics.h>
-<<<<<<< HEAD
-#include "../engine/AudioConstants.h"
-=======
 #include <functional>
->>>>>>> origin/master
 
 
 namespace zenith {
