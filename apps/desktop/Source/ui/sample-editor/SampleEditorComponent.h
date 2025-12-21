@@ -456,6 +456,12 @@ private:
     // FFT for spectral processing (placeholder - would use FFTW or similar)
     static constexpr int fftSize_ = 2048;
 
+    // Optimization: Cached Spectrogram
+    juce::Image cachedSpectrogram_;
+
+    // Thread Safety: Global Clipboard Lock
+    static juce::CriticalSection clipboardLock_;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SampleEditorComponent)
 };
 

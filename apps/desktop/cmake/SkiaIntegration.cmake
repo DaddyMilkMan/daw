@@ -138,11 +138,11 @@ if(NOT unofficial-skia_FOUND)
         $<$<PLATFORM_ID:Linux>:SK_VULKAN>
     )
 
-    # C++17 required by Skia
-    target_compile_features(Skia::Skia INTERFACE cxx_std_17)
+    # C++20 required by Zenith DAW (upgraded from C++17)
+    target_compile_features(Skia::Skia INTERFACE cxx_std_20)
 else()
     # vcpkg unofficial-skia already configures everything needed
-    # Just ensure C++17 is used
+    # Just ensure C++20 is used
     if(TARGET unofficial::skia::skia)
         message(STATUS "Skia target: unofficial::skia::skia")
     endif()

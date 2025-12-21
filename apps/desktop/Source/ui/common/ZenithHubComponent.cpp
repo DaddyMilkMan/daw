@@ -11,8 +11,10 @@
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <random>
 
 namespace zenith {
@@ -32,7 +34,7 @@ static const std::map<juce::String, SkPath (*)()> kTemplateIconMap = {
     {"icon_note", &icons::MusicNote},
     {"icon_mic", &icons::Microphone}};
 
-ZenithHubComponent::ZenithHubComponent(
+ ZenithHubComponent::ZenithHubComponent(
     RecentProjectManager &recentProjectManager,
     LoadProjectCallback onLoadProject, NewProjectCallback onNewProject,
     std::function<void()> onDismiss)
@@ -42,6 +44,8 @@ ZenithHubComponent::ZenithHubComponent(
   setWantsKeyboardFocus(true);
 
   recentProjectManager_.addListener(this);
+  IdentityManager::getInstance().addChangeListener(this);
+  
   loadFromManager();
 
   templates_ = {{"Electronic", "icon_synth", colors::CYAN, {}, false},
@@ -71,8 +75,6 @@ ZenithHubComponent::ZenithHubComponent(
   addChildComponent(&greetingEditor_);
   greetingEditor_.setVisible(false);
   greetingEditor_.setMultiLine(false);
-  greetingEditor_.setReturnKeyStartsNewLine(false);
-  greetingEditor_.setSelectAllWhenFocused(true);
 
   auto safeDismiss = [this]() { hideGreetingEditor(false); };
   greetingEditor_.onEscapeKey = safeDismiss;
@@ -82,15 +84,22 @@ ZenithHubComponent::ZenithHubComponent(
   // Initialize Aurora Background
   auroraBackground_ = std::make_unique<AuroraBackground>();
 
-  alpha_.setTarget(0.0f, 0);
   alpha_.setTarget(1.0f, 600, AnimatedValue::EasingCurve::EaseOut);
+
+  // Initialize Identity Overlay
+  identityOverlay_ = std::make_unique<IdentityOverlay>([this]() {
+    // Dismissal callback
+  });
+  addChildComponent(identityOverlay_.get());
 
   startTimerHz(60);
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
+  isShuttingDown_->store(true);
   stopTimer();
   recentProjectManager_.removeListener(this);
+  IdentityManager::getInstance().removeChangeListener(this);
 }
 
 void ZenithHubComponent::mouseExit(const juce::MouseEvent &e) {
@@ -155,7 +164,23 @@ SkColor ZenithHubComponent::getAccentColorForGenre(const juce::String &genre) {
 void ZenithHubComponent::refreshProjects() { loadFromManager(); }
 
 void ZenithHubComponent::recentProjectsChanged() {
-  juce::MessageManager::callAsync([this]() { loadFromManager(); });
+  auto shutdownFlag = isShuttingDown_;
+  juce::MessageManager::callAsync([this, shutdownFlag]() {
+    if (shutdownFlag->load()) return;
+    loadFromManager();
+  });
+}
+
+void ZenithHubComponent::changeListenerCallback(juce::ChangeBroadcaster* source) {
+  if (source == &IdentityManager::getInstance()) {
+    auto& identity = IdentityManager::getInstance();
+    if (identity.isLoggedIn()) {
+      greetingText_ = "Welcome back, " + identity.getUserProfile().displayName;
+    } else {
+      greetingText_ = "Welcome to Zenith";
+    }
+    repaint();
+  }
 }
 
 void ZenithHubComponent::resized() { updateLayout(); }
@@ -268,12 +293,51 @@ void ZenithHubComponent::updateLayout() {
   if (greetingEditor_.isVisible()) {
       showGreetingEditor(); // Re-layout editor
   }
+
+  if (identityOverlay_) {
+      identityOverlay_->setBounds(getLocalBounds());
+  }
 }
 
 void ZenithHubComponent::timerCallback() {
-  animationTime_ += 0.016f;
-  alpha_.update(16.0f);
-  if (alpha_.isAnimating() || auroraBackground_) repaint();
+  SkiaComponent::timerCallback(); // Base animations (handles markDirty if any base animations are active)
+
+  const float dt = 16.66f; // Standard 60fps delta (60Hz timer)
+  
+  // 1. Update Opacity Animation
+  alpha_.update(dt);
+  
+  // 2. Update Interactive Springs (tilt/pulsing)
+  tiltX_.update();
+  tiltY_.update();
+  
+  for (auto &proj : recentProjects_) {
+    proj.scaleSpring.update();
+  }
+  
+  for (auto &tmpl : templates_) {
+    tmpl.scaleSpring.update();
+  }
+  
+  // 3. Update Visual Counters
+  animationTime_ += dt * 0.001f;
+  buttonGradientAngle_ += 0.02f;
+
+  // 4. Update Button Ripples
+  for (auto it = buttonRipples_.begin(); it != buttonRipples_.end();) {
+    it->radius += 2.0f;
+    it->opacity *= 0.92f;
+    if (it->opacity < 0.05f) it = buttonRipples_.erase(it);
+    else ++it;
+  }
+
+  // 5. ESSENTIAL: Keep the Hub repainting while animating or if aurora is active
+  // Since SkiaComponent::timerCallback will stop the timer if it doesn't find its 
+  // own animations, we ensure we keep repainting if OUR custom animations are alive.
+  bool isAnyHubAnimationActive = alpha_.isAnimating() || !buttonRipples_.empty();
+  if (isAnyHubAnimationActive || auroraBackground_) {
+    markDirty();
+  }
 }
 
 void ZenithHubComponent::show() {
@@ -491,7 +555,11 @@ void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
-  drawText(canvas, "Collaborations", SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop - 40, 200, 30), 
+  auto& identity = IdentityManager::getInstance();
+  bool loggedIn = identity.isLoggedIn();
+  auto profile = identity.getUserProfile();
+
+  drawText(canvas, "Zenith Identity", SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop - 40, 200, 30), 
            headerFont_, textPaint_, false);
 
   SkRRect rrect = SkRRect::MakeRectXY(profileBounds_, 12.0f, 12.0f);
@@ -502,20 +570,28 @@ void ZenithHubComponent::drawAccount(SkCanvas *canvas) {
 
   float avatarSize = 48.0f;
   SkPaint avatarPaint;
-  avatarPaint.setColor(colors::AMBER);
+  avatarPaint.setColor(loggedIn ? (profile.hasPremiumAccess ? colors::CYAN : colors::AMBER) : colors::TEXT_SECONDARY);
   avatarPaint.setAntiAlias(true);
   float centerY = profileBounds_.fTop + profileBounds_.height() * 0.5f;
   canvas->drawCircle(profileBounds_.fLeft + 30 + avatarSize * 0.5f, centerY, avatarSize * 0.5f, avatarPaint);
 
-  drawText(canvas, "SoundDesigner99", SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY - 18, 200, 24), 
+  juce::String mainText = loggedIn ? profile.displayName : "Sign In to Zenith";
+  drawText(canvas, mainText, SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY - 18, 200, 24), 
            profileFont_, textPaint_, false);
 
-  SkPaint onlineStatusPaint;
-  onlineStatusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); 
-  onlineStatusPaint.setAntiAlias(true);
-  drawText(canvas, "● Online", SkRect::MakeXYWH(profileBounds_.fLeft + 90, (profileBounds_.fTop + profileBounds_.height() * 0.5f) + 4, 100, 20), 
-           statusFont_, onlineStatusPaint, false);
-
+  SkPaint statusPaint;
+  statusPaint.setAntiAlias(true);
+  
+  if (loggedIn) {
+    statusPaint.setColor(SkColorSetARGB(255, 16, 185, 129)); // Green
+    drawText(canvas, "● Authenticated" + (profile.hasPremiumAccess ? juce::String(" (Pro)") : ""), 
+             SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY + 4, 200, 20), 
+             statusFont_, statusPaint, false);
+  } else {
+    statusPaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.4f));
+    drawText(canvas, "○ Offline Mode", SkRect::MakeXYWH(profileBounds_.fLeft + 90, centerY + 4, 150, 20), 
+             statusFont_, statusPaint, false);
+  }
 }
 
 void ZenithHubComponent::drawNewProjectButton(SkCanvas *canvas) {
@@ -615,6 +691,14 @@ void ZenithHubComponent::mouseDown(const juce::MouseEvent &e) {
     showGreetingEditor();
     return;
   }
+
+  // Identity Login Toggle
+  if (profileBounds_.contains(pt.fX, pt.fY)) {
+    if (identityOverlay_) {
+        identityOverlay_->setMode(IdentityOverlay::Mode::Login);
+        identityOverlay_->show();
+    }
+  }
 }
 
 void ZenithHubComponent::mouseUp(const juce::MouseEvent &e) { juce::ignoreUnused(e); }
@@ -624,9 +708,8 @@ void ZenithHubComponent::showGreetingEditor() {
     return;
 
   greetingEditor_.setText(greetingText_);
-  greetingEditor_.setSelectAllWhenFocused(true);
-  greetingEditor_.setJustification(juce::Justification::left);
-  greetingEditor_.setFont(juce::Font(18.0f));
+  greetingEditor_.setFont(design::typography::getSkFont(design::typography::FONT_MD, design::FontWeight::Regular));
+  greetingEditor_.setTextColour(colors::TEXT_PRIMARY);
 
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;

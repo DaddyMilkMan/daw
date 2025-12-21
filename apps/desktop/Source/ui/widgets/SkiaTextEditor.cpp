@@ -62,6 +62,13 @@ void SkiaTextEditor::setTextToShowWhenEmpty(const juce::String &text,
   markDirty();
 }
 
+void SkiaTextEditor::setPasswordMode(bool isPassword) {
+  if (isPassword_ != isPassword) {
+    isPassword_ = isPassword;
+    markDirty();
+  }
+}
+
 void SkiaTextEditor::setFont(const SkFont &font) {
   font_ = font;
   markDirty();
@@ -109,8 +116,15 @@ void SkiaTextEditor::drawSkia(SkCanvas *canvas) {
   const juce::String &textToDraw = text_.isEmpty() ? placeholderText_ : text_;
 
   if (!textToDraw.isEmpty()) {
+    juce::String displayString = textToDraw;
+    
+    // Mask with bullets if in password mode and not empty
+    if (isPassword_ && !text_.isEmpty()) {
+        displayString = juce::String::repeatedString("*", text_.length());
+    }
+
     // Simple single-line text drawing (multi-line support can be added later)
-    canvas->drawString(textToDraw.toRawUTF8(), 8.0f,
+    canvas->drawString(displayString.toRawUTF8(), 8.0f,
                        bounds.getHeight() * 0.5f + font_.getSize() * 0.3f,
                        font_, textPaint);
   }
@@ -118,9 +132,14 @@ void SkiaTextEditor::drawSkia(SkCanvas *canvas) {
   // Draw caret if focused and visible
   if (isFocused() && caretVisible_ && !readOnly_ && !text_.isEmpty()) {
     // Calculate caret position (simplified)
+    juce::String measureString = text_.substring(0, caretPosition_);
+    if (isPassword_) {
+        measureString = juce::String::repeatedString("*", caretPosition_);
+    }
+
     float caretX =
-        8.0f + font_.measureText(text_.substring(0, caretPosition_).toRawUTF8(),
-                                 text_.substring(0, caretPosition_).length(),
+        8.0f + font_.measureText(measureString.toRawUTF8(),
+                                 measureString.length(),
                                  SkTextEncoding::kUTF8);
 
     SkPaint caretPaint;

@@ -520,5 +520,32 @@ void LayoutManager::setEditModeEnabled(bool enabled) {
   sendChangeMessage();
 }
 
+void LayoutManager::applySemanticMorph(AgentContext context) {
+  // User preference check
+  if (!morphingEnabled_)
+    return;
+
+  // Log and notify
+  DBG("LayoutManager: Applying semantic morph for context: " + 
+      juce::String(static_cast<int>(context)));
+  
+  // NOTE: Real implementation would modify panel visibility/sizing.
+  // For now, this is a structural placeholder that shows the API.
+  // 
+  // Future implementation would:
+  // 1. Query registered panels by type
+  // 2. Expand relevant panels (e.g., "browser" for SampleHunter)
+  // 3. Collapse/dim irrelevant panels
+  // 4. Animate transitions using AnimationSettings
+  //
+  // Example:
+  // if (context == AgentContext::SampleHunter) {
+  //     expandPanel("browser");
+  //     dimPanel("mixer");
+  // }
+  
+  sendChangeMessage();
+}
+
 } // namespace layout
 } // namespace zenith

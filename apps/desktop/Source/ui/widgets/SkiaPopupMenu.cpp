@@ -98,10 +98,27 @@ void SkiaPopupMenu::showAt(juce::Point<int> screenPosition) {
 
   setSize(maxWidth, totalHeight + 4); // +4 for padding
 
-  // Position on screen
-  setBounds(screenPosition.x, screenPosition.y, getWidth(), getHeight());
+// Show menu
+  addToDesktop(juce::ComponentPeer::windowIsTemporary | 
+               juce::ComponentPeer::windowHasDropShadow |
+               juce::ComponentPeer::windowIgnoresMouseClicks); // Initially ignore to preventing click-through issues? No.
+
   setVisible(true);
   toFront(true);
+  grabKeyboardFocus();
+}
+
+void SkiaPopupMenu::focusLost(FocusChangeType cause) {
+  // if (cause != focusChangedDirectly) return; // Only close if real focus loss?
+  // If focus moves to submenu, don't hide.
+  // But verifying submenu focus is hard without tracking it.
+  // For now, simple auto-close. 
+  // TODO: Handle submenu focus properly.
+  // hideMenu(); // This might optionally be delayed
+}
+
+void SkiaPopupMenu::inputAttemptWhenModal() {
+    hideMenu();
 }
 
 void SkiaPopupMenu::setBackgroundColour(SkColor colour) {

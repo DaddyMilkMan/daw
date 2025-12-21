@@ -28,6 +28,7 @@
 #include "../framework/SkiaComponent.h"
 #include "DrumPadComponent.h"
 #include "ProjectState.h"
+#include "../widgets/SkiaButton.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -1278,7 +1279,7 @@ private:
   zenith::Engine &engine_;
   std::unique_ptr<PianoRollComponent> pianoRoll;
   std::unique_ptr<DrumPadComponent> drumPad;
-  juce::TextButton toggleButton;
+  zenith::SkiaButton toggleButton;
 
   enum class View { PianoRoll, DrumPad };
   View activeView = View::PianoRoll;

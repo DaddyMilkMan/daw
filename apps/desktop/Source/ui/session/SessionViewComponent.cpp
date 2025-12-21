@@ -47,6 +47,7 @@ SessionViewComponent::SessionViewComponent(Engine &engine, ProjectState &state)
 }
 
 SessionViewComponent::~SessionViewComponent() {
+  isShuttingDown_->store(true);
   stopTimer();
   projectState_.getState().removeListener(this);
 }
@@ -332,7 +333,9 @@ void SessionViewComponent::launchClip(int trackIndex, int sceneIndex) {
     slot.isQueued = true;
 
     // Simulated: Set clip as playing after queue
-    juce::Timer::callAfterDelay(100, [this, trackIndex, sceneIndex]() {
+    auto shutdownFlag = isShuttingDown_;
+    juce::Timer::callAfterDelay(100, [this, shutdownFlag, trackIndex, sceneIndex]() {
+      if (shutdownFlag->load()) return;
       if (trackIndex < static_cast<int>(clipGrid_.size()) &&
           sceneIndex < static_cast<int>(clipGrid_[trackIndex].size())) {
         clipGrid_[trackIndex][sceneIndex].isQueued = false;

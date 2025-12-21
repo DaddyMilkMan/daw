@@ -33,6 +33,8 @@ namespace zenith {
 const juce::String SecureKeyStore::GrokAPIKey = "zenith_grok_api_key";
 const juce::String SecureKeyStore::OpenAIAPIKey = "zenith_openai_api_key";
 const juce::String SecureKeyStore::AnthropicAPIKey = "zenith_anthropic_api_key";
+const juce::String SecureKeyStore::ZenithAuthToken = "zenith_auth_token";
+const juce::String SecureKeyStore::ZenithLicenseData = "zenith_license_data";
 
 juce::String SecureKeyStore::getServiceName() {
   return "com.zenithaudio.zenith-daw";

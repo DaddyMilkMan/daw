@@ -78,6 +78,8 @@ public:
     static const juce::String GrokAPIKey;
     static const juce::String OpenAIAPIKey;
     static const juce::String AnthropicAPIKey;
+    static const juce::String ZenithAuthToken;
+    static const juce::String ZenithLicenseData;
     
 private:
     //==========================================================================

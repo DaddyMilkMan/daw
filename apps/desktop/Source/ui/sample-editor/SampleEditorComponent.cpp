@@ -10,6 +10,10 @@
 #include <include/core/SkFont.h>
 #include <include/core/SkRRect.h>
 #include <include/effects/SkGradientShader.h>
+#include <skia/include/core/SkImage.h>
+#include <skia/include/core/SkSurface.h>
+// #include <skia/include/core/SkImages.h> // Unavailable
+#include <include/core/SkPixmap.h>
 #include <juce_audio_formats/juce_audio_formats.h>
 
 namespace zenith {
@@ -18,6 +22,7 @@ namespace zenith {
 std::unique_ptr<juce::AudioBuffer<float>> SampleEditorComponent::clipboard_ =
     nullptr;
 double SampleEditorComponent::clipboardSampleRate_ = 44100.0;
+juce::CriticalSection SampleEditorComponent::clipboardLock_;
 
 namespace Colors {
 constexpr SkColor bg = SkColorSetRGB(25, 25, 30);
@@ -414,6 +419,10 @@ void SampleEditorComponent::drawWaveform(SkCanvas *canvas,
 
   float w = bounds.width();
   float h = bounds.height();
+
+  if (w <= 0.0f || h <= 0.0f)
+    return;
+
   float channelHeight = h / (float)numChannels;
 
   juce::int64 startSample = timeToSamples(timeOffset_);
@@ -622,6 +631,13 @@ void SampleEditorComponent::drawSpectrogram(SkCanvas *canvas,
                                             const SkRect &bounds) {
   if (!audioHandle_)
     return;
+    
+  float w = bounds.width();
+  float h = bounds.height();
+  
+  // Safety guard for invalid dimensions
+  if (w <= 0.0f || h <= 0.0f)
+    return;
 
   const juce::AudioBuffer<float> *bufferPtr = &audioHandle_->buffer;
   if (editBuffer_)
@@ -633,80 +649,112 @@ void SampleEditorComponent::drawSpectrogram(SkCanvas *canvas,
   if (numSamples == 0)
     return;
 
-  float w = bounds.width();
-  float h = bounds.height();
+  // Check if cache needs update
+  // Ideally, we'd check if zoom/timeOffset/buffer content changed.
+  // For now, we'll lazily update if size mismatch or empty.
+  // In a full implementation, dirty flags would be better.
+  if (cachedSpectrogram_.isNull() || cachedSpectrogram_.getWidth() != (int)w || cachedSpectrogram_.getHeight() != (int)h) {
+    
+    cachedSpectrogram_ = juce::Image(juce::Image::ARGB, (int)w, (int)h, true);
+    
+    // Draw to cache
+    juce::Image::BitmapData bitmapData(cachedSpectrogram_, juce::Image::BitmapData::readWrite);
+    SkImageInfo info = SkImageInfo::MakeN32Premul((int)w, (int)h);
+    auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0), bitmapData.lineStride);
+    
+    if (skSurface) {
+        SkCanvas* cacheCanvas = skSurface->getCanvas();
+        cacheCanvas->clear(SK_ColorTRANSPARENT);
+        
+        // Calculate visible range
+        juce::int64 startSample = timeToSamples(timeOffset_);
+        juce::int64 endSample = timeToSamples(timeOffset_ + viewWidthSeconds_);
+        startSample = std::max<juce::int64>(0, startSample);
+        endSample = std::min<juce::int64>(numSamples, endSample);
 
-  // Calculate visible range
-  juce::int64 startSample = timeToSamples(timeOffset_);
-  juce::int64 endSample = timeToSamples(timeOffset_ + viewWidthSeconds_);
-  startSample = std::max<juce::int64>(0, startSample);
-  endSample = std::min<juce::int64>(numSamples, endSample);
+        if (startSample >= endSample)
+            return;
 
-  if (startSample >= endSample)
-    return;
+        // Simple spectrogram using energy bands (basic FFT approximation)
+        constexpr int numBands = 32;    // Frequency bands
+        constexpr int windowSize = 512; // Analysis window
 
-  // Simple spectrogram using energy bands (basic FFT approximation)
-  // For real FFT, integrate a library like FFTW or use juce::dsp::FFT
-  constexpr int numBands = 32;    // Frequency bands
-  constexpr int windowSize = 512; // Analysis window
+        float samplesPerPixel = (float)(endSample - startSample) / w;
+        float bandHeight = h / numBands;
+        
+        // Optimized paint for batch drawing could be used here, but for now we draw rets
+        SkPaint paint;
+        paint.setAntiAlias(false);
 
-  float samplesPerPixel = (float)(endSample - startSample) / w;
-  float bandHeight = h / numBands;
+        // Color gradient for intensity
+        auto getSpectrogramColor = [](float intensity) -> SkColor {
+            // Blue -> Cyan -> Green -> Yellow -> Red
+            intensity = juce::jlimit(0.0f, 1.0f, intensity);
+            if (intensity < 0.25f) {
+            float t = intensity / 0.25f;
+            return SkColorSetRGB(0, (int)(t * 50), (int)(50 + t * 150));
+            } else if (intensity < 0.5f) {
+            float t = (intensity - 0.25f) / 0.25f;
+            return SkColorSetRGB(0, (int)(50 + t * 200), (int)(200 - t * 100));
+            } else if (intensity < 0.75f) {
+            float t = (intensity - 0.5f) / 0.25f;
+            return SkColorSetRGB((int)(t * 255), 255, (int)(100 - t * 100));
+            } else {
+            float t = (intensity - 0.75f) / 0.25f;
+            return SkColorSetRGB(255, (int)(255 - t * 255), 0);
+            }
+        };
 
-  // Color gradient for intensity
-  auto getSpectrogramColor = [](float intensity) -> SkColor {
-    // Blue -> Cyan -> Green -> Yellow -> Red
-    intensity = juce::jlimit(0.0f, 1.0f, intensity);
-    if (intensity < 0.25f) {
-      float t = intensity / 0.25f;
-      return SkColorSetRGB(0, (int)(t * 50), (int)(50 + t * 150));
-    } else if (intensity < 0.5f) {
-      float t = (intensity - 0.25f) / 0.25f;
-      return SkColorSetRGB(0, (int)(50 + t * 200), (int)(200 - t * 100));
-    } else if (intensity < 0.75f) {
-      float t = (intensity - 0.5f) / 0.25f;
-      return SkColorSetRGB((int)(t * 255), 255, (int)(100 - t * 100));
-    } else {
-      float t = (intensity - 0.75f) / 0.25f;
-      return SkColorSetRGB(255, (int)(255 - t * 255), 0);
+        // Draw spectrogram columns
+        for (float x = 0; x < w; x += 2.0f) { // Step by 2 pixels for performance
+            juce::int64 samplePos = startSample + (juce::int64)(x * samplesPerPixel);
+            if (samplePos + windowSize >= numSamples)
+            break;
+
+            // Calculate energy in frequency bands using simple bandpass energy
+            std::array<float, numBands> bandEnergies = {};
+
+            for (int b = 0; b < numBands; b++) {
+            // Approximate: divide window into bands and measure energy
+            int bandStart = (b * windowSize) / numBands;
+            int bandEnd = ((b + 1) * windowSize) / numBands;
+
+            float energy = 0.0f;
+            for (int i = bandStart; i < bandEnd && samplePos + i < numSamples; i++) {
+                float sample = data[samplePos + i];
+                energy += sample * sample;
+            }
+            bandEnergies[b] = std::sqrt(energy / (bandEnd - bandStart));
+            }
+
+            // Draw vertical column of bands
+            for (int b = 0; b < numBands; b++) {
+            // Map band index to y (low freq at bottom)
+            float y = h - (b + 1) * bandHeight; // Local coordinate for cache
+            float intensity = bandEnergies[b] * 3.0f; // Amplify for visibility
+
+            paint.setColor(getSpectrogramColor(intensity));
+            cacheCanvas->drawRect(SkRect::MakeXYWH(x, y, 2.0f, bandHeight), paint);
+            }
+        }
     }
-  };
+  }
 
-  SkPaint paint;
-  paint.setAntiAlias(false);
-
-  // Draw spectrogram columns
-  for (float x = 0; x < w; x += 2.0f) { // Step by 2 pixels for performance
-    juce::int64 samplePos = startSample + (juce::int64)(x * samplesPerPixel);
-    if (samplePos + windowSize >= numSamples)
-      break;
-
-    // Calculate energy in frequency bands using simple bandpass energy
-    std::array<float, numBands> bandEnergies = {};
-
-    for (int b = 0; b < numBands; b++) {
-      // Approximate: divide window into bands and measure energy
-      int bandStart = (b * windowSize) / numBands;
-      int bandEnd = ((b + 1) * windowSize) / numBands;
-
-      float energy = 0.0f;
-      for (int i = bandStart; i < bandEnd && samplePos + i < numSamples; i++) {
-        float sample = data[samplePos + i];
-        energy += sample * sample;
+  // Draw cached image to the destination canvas
+  // We need to draw it at the bounds location
+  
+  // Note: Since SkiaComponent doesn't have a direct 'drawImage' for juce::Image (unless we go through Bitmap),
+  // we do the same wrap as above or use a simpler blit if possible.
+  // Ideally, we'd keep 'cachedSpectrogram_' as an SkImage, but sticking to JUCE Image for lifecycle ease.
+  
+  {
+      juce::Image::BitmapData bitmapData(cachedSpectrogram_, juce::Image::BitmapData::readOnly);
+      SkImageInfo info = SkImageInfo::MakeN32Premul(cachedSpectrogram_.getWidth(), cachedSpectrogram_.getHeight());
+      // Use SkImages::RasterFromPixmapCopy (Standard Skia)
+      auto skImage = SkImages::RasterFromPixmapCopy(SkPixmap(info, bitmapData.getLinePointer(0), bitmapData.lineStride));
+      if (skImage) {
+           canvas->drawImageRect(skImage.get(), SkRect::MakeWH(w, h), bounds, SkSamplingOptions(), nullptr, SkCanvas::kFast_SrcRectConstraint);
       }
-      bandEnergies[b] = std::sqrt(energy / (bandEnd - bandStart));
-    }
-
-    // Draw vertical column of bands
-    for (int b = 0; b < numBands; b++) {
-      // Map band index to y (low freq at bottom)
-      float y = bounds.bottom() - (b + 1) * bandHeight;
-      float intensity = bandEnergies[b] * 3.0f; // Amplify for visibility
-
-      paint.setColor(getSpectrogramColor(intensity));
-      canvas->drawRect(SkRect::MakeXYWH(bounds.left() + x, y, 2.0f, bandHeight),
-                       paint);
-    }
   }
 }
 
@@ -931,18 +979,22 @@ void SampleEditorComponent::zoomHorizontal(float factor, float centerX) {
   viewWidthSeconds_ = juce::jlimit(0.01, 600.0, viewWidthSeconds_);
   timeOffset_ = centerT - (centerX / getWidth()) * viewWidthSeconds_;
   timeOffset_ = std::max(0.0, timeOffset_);
+  cachedSpectrogram_ = juce::Image(); // Invalidate cache
   repaint();
 }
 
 void SampleEditorComponent::zoomVertical(float factor) {
   verticalZoom_ *= factor;
   verticalZoom_ = juce::jlimit(0.1f, 10.0f, verticalZoom_);
+  // typically spectrogram doesn't use vertical zoom in this implementation, but if it did...
+  // cachedSpectrogram_ = juce::Image(); 
   repaint();
 }
 
 void SampleEditorComponent::scrollHorizontal(float delta) {
   timeOffset_ += (delta / getWidth()) * viewWidthSeconds_;
   timeOffset_ = std::max(0.0, timeOffset_);
+  cachedSpectrogram_ = juce::Image(); // Invalidate cache
   repaint();
 }
 
@@ -950,6 +1002,7 @@ void SampleEditorComponent::fitToWindow() {
   if (audioHandle_) {
     timeOffset_ = 0;
     viewWidthSeconds_ = samplesToTime(audioHandle_->lengthInSamples) * 1.02;
+    cachedSpectrogram_ = juce::Image(); // Invalidate cache
     repaint();
   }
 }
@@ -958,6 +1011,7 @@ void SampleEditorComponent::zoomToSelection() {
   if (hasSelection()) {
     timeOffset_ = selection_.getStart() - 0.1;
     viewWidthSeconds_ = selection_.getLength() + 0.2;
+    cachedSpectrogram_ = juce::Image(); // Invalidate cache
     repaint();
   }
 }
@@ -1016,6 +1070,8 @@ void SampleEditorComponent::copySelection() {
   auto s = timeToSamples(selection_.getStart());
   auto e = timeToSamples(selection_.getEnd());
   int len = (int)(e - s);
+
+  const juce::ScopedLock sl(clipboardLock_);
   clipboard_ = std::make_unique<juce::AudioBuffer<float>>(
       audioHandle_->buffer.getNumChannels(), len);
   for (int ch = 0; ch < audioHandle_->buffer.getNumChannels(); ch++)
@@ -1034,6 +1090,9 @@ void SampleEditorComponent::paste() {
   auto &buffer = *editBuffer_;
   int numChannels = buffer.getNumChannels();
   int numSamples = buffer.getNumSamples();
+
+  const juce::ScopedLock sl(clipboardLock_);
+  if (!clipboard_) return; // Double check under lock
   int clipboardSamples = clipboard_->getNumSamples();
 
   // Insert position: playhead or start of selection

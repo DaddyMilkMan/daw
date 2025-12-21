@@ -167,6 +167,7 @@ void SkiaComponent::animateColorChange() {
 
 void SkiaComponent::animateTo(const juce::String &property, float target,
                               int durationMs) {
+  juce::ScopedLock sl(animationLock_);
   auto it = animations_.find(property);
   if (it == animations_.end()) {
     // Create new animation
@@ -183,6 +184,7 @@ void SkiaComponent::animateTo(const juce::String &property, float target,
 void SkiaComponent::animateWithSpring(const juce::String &property,
                                       float target, float stiffness,
                                       float damping) {
+  juce::ScopedLock sl(animationLock_);
   auto it = animations_.find(property);
   if (it == animations_.end()) {
     animations_[property] = std::make_unique<AnimatedValue>(0.0f);
@@ -194,6 +196,7 @@ void SkiaComponent::animateWithSpring(const juce::String &property,
 }
 
 void SkiaComponent::stopAnimation(const juce::String &property) {
+  juce::ScopedLock sl(animationLock_);
   auto it = animations_.find(property);
   if (it != animations_.end()) {
     it->second->stop();
@@ -201,6 +204,7 @@ void SkiaComponent::stopAnimation(const juce::String &property) {
 }
 
 void SkiaComponent::stopAllAnimations() {
+  juce::ScopedLock sl(animationLock_);
   for (auto &pair : animations_) {
     pair.second->stop();
   }
@@ -208,16 +212,19 @@ void SkiaComponent::stopAllAnimations() {
 }
 
 float SkiaComponent::getAnimatedValue(const juce::String &property) const {
+  juce::ScopedLock sl(animationLock_);
   auto it = animations_.find(property);
   return it != animations_.end() ? it->second->getCurrentValue() : 0.0f;
 }
 
 bool SkiaComponent::isAnimating(const juce::String &property) const {
+  juce::ScopedLock sl(animationLock_);
   auto it = animations_.find(property);
   return it != animations_.end() && it->second->isAnimating();
 }
 
 void SkiaComponent::timerCallback() {
+  juce::ScopedLock sl(animationLock_);
   bool anyAnimating = false;
   float deltaTimeMs = 1000.0f / targetFPS_;
 
@@ -229,7 +236,7 @@ void SkiaComponent::timerCallback() {
   }
 
   if (anyAnimating) {
-    markDirty();
+    if (!isDirty()) markDirty();
   } else {
     stopTimer();
   }

@@ -62,6 +62,8 @@ public:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseMove(const juce::MouseEvent &e) override;
+  void focusLost(FocusChangeType cause) override;
+  void inputAttemptWhenModal() override;
 
 private:
   std::vector<Item> items_;
