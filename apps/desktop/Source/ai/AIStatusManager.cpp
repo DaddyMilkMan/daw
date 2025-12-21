@@ -197,15 +197,16 @@ std::vector<AIOperation> AIStatusManager::getRecentOperations() const {
   return recentOperations_;
 }
 
-AIOperation *AIStatusManager::getOperation(const juce::String &operationId) {
+std::optional<AIOperation>
+AIStatusManager::getOperation(const juce::String &operationId) {
   juce::ScopedLock sl(lock_);
 
   auto it = operations_.find(operationId);
   if (it != operations_.end()) {
-    return &it->second;
+    return it->second;
   }
 
-  return nullptr;
+  return std::nullopt;
 }
 
 bool AIStatusManager::hasActiveOperations() const {

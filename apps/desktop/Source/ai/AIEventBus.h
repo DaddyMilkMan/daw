@@ -13,6 +13,7 @@
 
 #pragma once
 
+#include <deque>
 #include <functional>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
@@ -250,7 +251,7 @@ private:
 
   mutable juce::CriticalSection lock_;
   std::map<AIEventType, std::vector<AIEventSubscription>> subscriptions_;
-  std::vector<AIEvent> recentEvents_;
+  std::deque<AIEvent> recentEvents_;
   int nextSubscriptionId_ = 1;
   mutable Stats stats_;
 

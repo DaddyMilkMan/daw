@@ -13,6 +13,7 @@
 #include "AudioFitnessEvaluator.h"
 #include "PresetGeneticistAgent.h"
 #include <cmath>
+#include <juce_dsp/juce_dsp.h>
 
 namespace zenith {
 namespace ai {
@@ -222,6 +223,42 @@ AudioFitnessEvaluator::analyzeSpectrum(const juce::AudioBuffer<float> &buffer,
                                        double sampleRate) const {
   std::array<float, 8> bands = {0.0f};
 
+  const int numSamples = buffer.getNumSamples();
+  if (numSamples < 512)
+    return bands;
+
+  // Use 1024 points for FFT
+  const int fftOrder = 10;
+  const int fftSize = 1 << fftOrder;
+  juce::dsp::FFT fft(fftOrder);
+  juce::dsp::WindowingFunction<float> window(
+      fftSize, juce::dsp::WindowingFunction<float>::hann);
+
+  std::vector<float> avgMagnitudes(fftSize / 2, 0.0f);
+  const float *data = buffer.getReadPointer(0); // Analyze mono/left channel
+
+  int numWindows = 0;
+  for (int pos = 0; pos + fftSize <= numSamples; pos += fftSize / 2) {
+    std::vector<float> fftData(fftSize * 2, 0.0f);
+    for (int i = 0; i < fftSize; ++i)
+      fftData[i] = data[pos + i];
+
+    window.multiplyWithWindowingTable(fftData.data(), fftSize);
+    fft.performFrequencyOnlyForwardTransform(fftData.data());
+
+    for (int i = 0; i < fftSize / 2; ++i)
+      avgMagnitudes[i] += fftData[i];
+
+    numWindows++;
+  }
+
+  if (numWindows == 0)
+    return bands;
+
+  // Average magnitudes
+  for (int i = 0; i < fftSize / 2; ++i)
+    avgMagnitudes[i] /= static_cast<float>(numWindows);
+
   // Frequency band boundaries (Hz)
   // Sub: 20-60, Bass: 60-250, Low-Mid: 250-500, Mid: 500-2k
   // High-Mid: 2k-4k, Presence: 4k-6k, Brilliance: 6k-10k, Air: 10k-20k
@@ -229,52 +266,24 @@ AudioFitnessEvaluator::analyzeSpectrum(const juce::AudioBuffer<float> &buffer,
                                                500.0f,  2000.0f,  4000.0f,
                                                6000.0f, 10000.0f, 20000.0f};
 
-  // Simple approach: use zero-crossing rate and energy in time domain
-  // (A proper implementation would use FFT, but this is a reasonable
-  // approximation)
+  float binWidth = static_cast<float>(sampleRate) / fftSize;
 
-  int numSamples = buffer.getNumSamples();
-  if (numSamples < 256)
-    return bands;
-
-  // Measure energy in different frequency ranges using simple filtering
-  // This is a simplified approach - production code would use FFT
-
-  const float *data =
-      buffer.getReadPointer(0); // Mono or left channel for analysis
-
-  // Count zero crossings (correlates with frequency content)
-  int zeroCrossings = 0;
-  for (int i = 1; i < numSamples; ++i) {
-    if ((data[i - 1] >= 0.0f && data[i] < 0.0f) ||
-        (data[i - 1] < 0.0f && data[i] >= 0.0f)) {
-      zeroCrossings++;
-    }
-  }
-
-  float estimatedFreq =
-      (zeroCrossings * static_cast<float>(sampleRate)) / (2.0f * numSamples);
-
-  // Calculate total energy
-  float totalEnergy = 0.0f;
-  for (int i = 0; i < numSamples; ++i) {
-    totalEnergy += data[i] * data[i];
-  }
-
-  // Distribute energy based on estimated frequency
-  // This is a rough approximation
-  for (size_t b = 0; b < 8; ++b) {
+  for (int b = 0; b < 8; ++b) {
     float lowFreq = freqBounds[b];
     float highFreq = freqBounds[b + 1];
 
-    if (estimatedFreq >= lowFreq && estimatedFreq < highFreq) {
-      bands[b] = totalEnergy * 0.6f; // Primary band gets most energy
-    } else if (estimatedFreq >= lowFreq * 0.5f &&
-               estimatedFreq < highFreq * 2.0f) {
-      bands[b] = totalEnergy * 0.15f; // Adjacent bands get some
-    } else {
-      bands[b] = totalEnergy * 0.02f; // Distant bands get little
+    int flow = static_cast<int>(std::floor(lowFreq / binWidth));
+    int fhigh = static_cast<int>(std::ceil(highFreq / binWidth));
+
+    flow = juce::jlimit(0, fftSize / 2 - 1, flow);
+    fhigh = juce::jlimit(0, fftSize / 2 - 1, fhigh);
+
+    float energy = 0.0f;
+    for (int i = flow; i <= fhigh; ++i) {
+      energy += avgMagnitudes[i];
     }
+
+    bands[b] = energy / std::max(1, fhigh - flow + 1);
   }
 
   // Normalize bands

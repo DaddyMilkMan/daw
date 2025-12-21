@@ -20,8 +20,7 @@ namespace ai {
 //==============================================================================
 
 AIEventBus::AIEventBus() {
-  // Reserve space for recent events
-  recentEvents_.reserve(50);
+  // No need to reserve for std::deque
 }
 
 //==============================================================================
@@ -37,7 +36,7 @@ void AIEventBus::publish(const AIEvent &event) {
     // Store in recent events
     recentEvents_.push_back(event);
     if (recentEvents_.size() > 50) {
-      recentEvents_.erase(recentEvents_.begin());
+      recentEvents_.pop_front();  // O(1) for deque
     }
 
     stats_.totalPublished++;
@@ -54,11 +53,17 @@ void AIEventBus::publish(const AIEvent &event) {
   // Invoke callbacks asynchronously on message thread (outside lock)
   if (!callbacksToInvoke.empty()) {
     juce::MessageManager::callAsync([callbacksToInvoke, event, this]() {
+      int deliveredCount = 0;
       for (const auto &callback : callbacksToInvoke) {
         if (callback) {
           callback(event);
-          stats_.totalDelivered++;
+          deliveredCount++;
         }
+      }
+
+      {
+        juce::ScopedLock sl(lock_);
+        stats_.totalDelivered += deliveredCount;
       }
     });
   }

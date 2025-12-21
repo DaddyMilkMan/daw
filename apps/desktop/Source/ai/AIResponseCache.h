@@ -178,7 +178,7 @@ private:
 
   juce::File getCacheFile() const;
 
-  mutable juce::ReadWriteLock cacheLock_;
+  mutable juce::CriticalSection cacheLock_;
 
   // In-memory cache (backed by SQLite for persistence)
   std::map<juce::String, CacheEntry> cache_;

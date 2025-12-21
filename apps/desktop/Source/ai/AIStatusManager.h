@@ -17,6 +17,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <map>
+#include <optional>
 #include <vector>
 
 
@@ -164,9 +165,9 @@ public:
   std::vector<AIOperation> getRecentOperations() const;
 
   /**
-   * Get operation by ID.
+   * Get operation by ID. Returns a copy of the operation.
    */
-  AIOperation *getOperation(const juce::String &operationId);
+  std::optional<AIOperation> getOperation(const juce::String &operationId);
 
   /**
    * Check if any operation is active.
