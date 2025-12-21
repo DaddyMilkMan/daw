@@ -42,6 +42,9 @@ inline SkColor NEON_YELLOW = 0xFFFFFF00; // Yellow
 inline SkColor NEON_PURPLE = 0xFFAA00FF; // Purple
 inline SkColor VIOLET = 0xFF7000FF;      // Deep Violet
 
+// Primary Accent Alias (for consistent naming)
+inline SkColor ACCENT_PRIMARY = CYAN;
+
 // Semantic/Status Colors
 inline SkColor AMBER = 0xFFFFAB00; // Warm Warning
 inline SkColor RED = 0xFFFF453A;   // Soft Red (Apple style)
@@ -63,8 +66,8 @@ inline SkColor TEXT_TERTIARY = 0xFF71717A;  // Zinc-500 equivalent
 // Borders & Dividers
 inline SkColor BORDER_DEFAULT = 0x1FFFFFFF; // Very subtle white overlay
 inline SkColor BORDER_FOCUS = CYAN;
-inline SkColor BORDER_SUBTLE = 0x0FFFFFFF; // Ultra subtle
-inline SkColor BORDER_STRONG = 0x33FFFFFF; // Visible separation
+inline SkColor BORDER_SUBTLE = 0x0FFFFFFF;   // Ultra subtle
+inline SkColor BORDER_STRONG = 0x33FFFFFF;   // Visible separation
 inline SkColor BORDER_GREETING = 0x1AFFFFFF; // For interactive text fields
 
 // Glassmorphism System
