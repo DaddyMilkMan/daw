@@ -19,6 +19,12 @@ option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
 
+# Auto-enable sanitizers in Debug builds
+if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
+    set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
+endif()
+
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/CMakeLists.txt")
     add_subdirectory(external/JUCE)
 else()
@@ -40,6 +46,32 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/ConcurrencyTests.cpp
     apps/desktop/Source/tests/AITests.cpp
     apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    
+    # Engine sources required for linking
+    apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/ProjectState.cpp
+    apps/desktop/Source/engine/Track.cpp
+    apps/desktop/Source/engine/Clip.cpp
+    apps/desktop/Source/engine/MixerChannel.cpp
+    apps/desktop/Source/engine/AudioFilePool.cpp
+    apps/desktop/Source/engine/PluginHost.cpp
+    apps/desktop/Source/engine/AuxBus.cpp
+    apps/desktop/Source/engine/ZenithLogger.cpp
+    apps/desktop/Source/engine/TrackPluginState.cpp
+    apps/desktop/Source/engine/AudioRecorder.cpp
+    apps/desktop/Source/engine/RoutingGraph.cpp
+    apps/desktop/Source/engine/ClipSynchronizer.cpp
+    apps/desktop/Source/engine/TrackStateSynchronizer.cpp
+    apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMapSynchronizer.cpp
+    apps/desktop/Source/engine/TempoMap.cpp
+    apps/desktop/Source/engine/TrackFreeze.cpp
+    apps/desktop/Source/engine/AudioRenderer.cpp
+    apps/desktop/Source/engine/RecordingManager.cpp
+    apps/desktop/Source/engine/TransportController.cpp
+    apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    
     apps/desktop/Source/tests/AccessibilityTests.cpp
 )
 
@@ -50,8 +82,6 @@ juce_add_gui_app(ZenithDAW
     VERSION ${PROJECT_VERSION}
     BUNDLE_ID com.zenithaudio.daw
 )
-
-
 
 # Generate JuceHeader.h for compatibility
 juce_generate_juce_header(ZenithDAW)
@@ -71,7 +101,6 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
-
 
 # Include directories (updated for new domain-based structure)
 target_include_directories(ZenithDAW PUBLIC
@@ -126,8 +155,6 @@ elseif(UNIX AND NOT APPLE)
         target_link_libraries(ZenithDAW PRIVATE vulkan)
     endif()
 endif()
-
-
 
 enable_zenith_build_optimizations(ZenithDAW)
 include(apps/desktop/cmake/PrecompiledHeaders.cmake)

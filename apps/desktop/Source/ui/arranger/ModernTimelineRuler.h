@@ -8,7 +8,7 @@
 
 #include <juce_gui_basics/juce_gui_basics.h>
 #include "../engine/AudioConstants.h"
-#include "ZenithTheme.h"
+
 
 namespace zenith {
 
