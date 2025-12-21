@@ -1584,7 +1584,7 @@ bool Engine::exportProject(const ExportOptions &options) {
     if (options.normalize) {
       float peak = 0.0f;
       // Scan buffer for peak
-      peak = buffer.getMagnitude(0, numSamples);
+      peak = renderBuffer.getMagnitude(0, numSamples);
       if (peak > 0.0001f) {
            float targetLinear = juce::Decibels::decibelsToGain((float)options.normalizeDb);
            float gain = targetLinear / peak;

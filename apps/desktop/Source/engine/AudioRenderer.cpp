@@ -122,8 +122,8 @@ void AudioRenderer::renderAudioGraph(
       if (track->isFrozen()) {
         const juce::File &freezeFile = track->getFreezeFile();
         if (freezeFile.existsAsFile() && trackIdx < trackBuffers_.size()) {
-          auto &trackBuffer = trackBuffers_[trackIdx];
-          trackBuffer.clear();
+          auto* trackBuffer = &trackBuffers_[trackIdx];
+          trackBuffer->clear();
 
           // Read from the freeze file at the current playhead position
           auto *freezeReader = track->getFreezeReader();
@@ -136,7 +136,7 @@ void AudioRenderer::renderAudioGraph(
 
             if (samplesToRead > 0 && readPos >= 0 &&
                 readPos < freezeReader->lengthInSamples) {
-              freezeReader->read(&trackBuffer, 0, samplesToRead, readPos, true,
+              freezeReader->read(trackBuffer, 0, samplesToRead, readPos, true,
                                  true);
             }
           }
