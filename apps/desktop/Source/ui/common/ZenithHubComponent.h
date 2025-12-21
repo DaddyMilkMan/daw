@@ -65,6 +65,7 @@ public:
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;
+
   // Keyboard Navigation
   bool keyPressed(const juce::KeyPress &key) override;
 
@@ -79,11 +80,11 @@ public:
 
   void show();
   void dismiss();
-  void refreshProjects();
 
   /**
    * @brief Refresh the recent projects list from the manager
    */
+  void refreshProjects();
 
 private:
   RecentProjectManager &recentProjectManager_;

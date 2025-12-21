@@ -2,289 +2,251 @@
   ==============================================================================
 
     UXDirectorAgent.cpp
-    Created: 2025-12-07
-    Author:  Zenith DAW AI Team
-
-    Implementation of the UX Director Agent.
+    Implementation of UX Director Agent - Autonomous UI Health Monitor
 
   ==============================================================================
 */
 
 #include "UXDirectorAgent.h"
-#include "ClipComponent.h"
-#include "MixerChannelComponent.h"
-#include "SkiaComponent.h"
-#include <algorithm>
-#include <typeinfo>
+#include "../ui/arranger/ArrangerComponent.h"
+#include "../ui/mixer/MixerChannelComponent.h"
+#include "../ui/piano-roll/PianoRollComponent.h"
 
 namespace zenith {
 namespace ai {
 
+// Helper for type deduction (for JUCE components)
+template <typename T>
+static bool isComponentType(juce::Component *comp) {
+  return dynamic_cast<T *>(comp) != nullptr;
+}
+
 //==============================================================================
-// Constructor / Destructor
+// Initialization & Configuration
 //==============================================================================
 
-UXDirectorAgent::UXDirectorAgent(Engine &engine, ProjectState &projectState,
-                                 juce::Component &rootComponent)
-    : engine_(engine), projectState_(projectState),
-      rootComponent_(rootComponent) {
-  // Initial analysis on construction
+UXDirectorAgent::UXDirectorAgent(Engine &engine, juce::Component &rootComponent)
+    : engine_(engine), rootComponent_(rootComponent) {
+  // Default config
+  config_.enableAutoScan = true;
+  config_.enableAutomaticFixes = true;
+  config_.scanIntervalMs = 5000;
+  config_.autoBindOrphans = true;
+  config_.autoStyleComponents = true;
+  config_.autoFixLayout = false; // Layout fixes are risky
+  config_.autoUpdateNames = true;
+  config_.minComponentSize = 10;
+  config_.maxIssuesPerScan = 50;
+
+  // Register with engine for track changes
+  engine_.addChangeListener(this);
+
+  // Rebuild bindings from existing components
   rebuildBindingsFromTracks();
-
-  DBG("UXDirectorAgent: Initialized with root component: " +
-      rootComponent.getName());
 }
 
-UXDirectorAgent::~UXDirectorAgent() { stopMonitoring(); }
-
-//==============================================================================
-// Monitoring Control
-//==============================================================================
-
-void UXDirectorAgent::startMonitoring(int intervalMs) {
-  if (isMonitoring_.load())
-    return;
-
-  config_.analysisIntervalMs = intervalMs;
-  isMonitoring_.store(true);
-  startTimer(intervalMs);
-
-  DBG("UXDirectorAgent: Started monitoring at " + juce::String(intervalMs) +
-      "ms intervals");
-}
-
-void UXDirectorAgent::stopMonitoring() {
-  isMonitoring_.store(false);
+UXDirectorAgent::~UXDirectorAgent() {
   stopTimer();
+  engine_.removeChangeListener(this);
 
-  DBG("UXDirectorAgent: Stopped monitoring");
+  // Remove ourselves as listener from all bound tracks
+  for (auto &[comp, binding] : bindings_) {
+    if (binding.linkedTrack != nullptr) {
+      binding.linkedTrack->removeChangeListener(this);
+    }
+  }
 }
 
-void UXDirectorAgent::runAnalysis() {
-  // Debounce rapid calls
-  auto now = juce::Time::currentTimeMillis();
-  if (now - lastAnalysisTime_ < minAnalysisIntervalMs_)
+void UXDirectorAgent::configure(const Config &config) {
+  config_ = config;
+
+  if (config_.enableAutoScan && (!isTimerRunning() || isEnabled_)) {
+    startTimer(config_.scanIntervalMs);
+  } else {
+    stopTimer();
+  }
+}
+
+UXDirectorAgent::Config UXDirectorAgent::getConfig() const { return config_; }
+
+void UXDirectorAgent::setEnabled(bool enabled) {
+  if (isEnabled_ == enabled)
     return;
-  lastAnalysisTime_ = now;
 
-  // Clear previous analysis
-  orphanComponents_.clear();
-  unstyledComponents_.clear();
-  layoutViolations_.clear();
-  staleDataComponents_.clear();
-  analyzedComponents_.clear();
+  isEnabled_ = enabled;
 
-  // Scan the entire UI tree
-  scanComponentTree(&rootComponent_);
+  if (enabled && config_.enableAutoScan) {
+    startTimer(config_.scanIntervalMs);
+  } else {
+    stopTimer();
+  }
+}
 
-  // Run specific analyzers
-  if (config_.detectOrphans)
-    analyzeOrphanComponents();
-  if (config_.detectUnstyled)
-    analyzeUnstyledComponents();
-  if (config_.detectLayoutIssues)
-    analyzeLayoutIssues();
-  if (config_.detectStaleData)
-    analyzeNameConsistency();
+bool UXDirectorAgent::isEnabled() const { return isEnabled_; }
 
-  // Update health score
+//==============================================================================
+// Scanning
+//==============================================================================
+
+void UXDirectorAgent::scanUI() {
+  if (!isEnabled_)
+    return;
+
+  // Step 1: Clear working sets
+  {
+    juce::ScopedLock sl(analysisLock_);
+    analyzedComponents_.clear();
+    orphanComponents_.clear();
+    unstyledComponents_.clear();
+    layoutViolations_.clear();
+    staleDataComponents_.clear();
+  }
+
+  // Step 2: Recursive scan
+  scanComponentTree(&rootComponent_, 0);
+
+  // Step 3: Cross-reference analysis
+  analyzeOrphanComponents();
+  analyzeUnstyledComponents();
+  analyzeLayoutIssues();
+  analyzeNameConsistency();
+
+  // Step 4: Update health score
   updateHealthScore();
 
-  // Notify listeners
-  sendChangeMessage();
-}
-
-//==============================================================================
-// Timer Callback
-//==============================================================================
-
-void UXDirectorAgent::timerCallback() {
-  // 1. Process pending UI tasks (Time Slicing)
-  processPendingTasks();
-
-  // 2. Run analysis periodically
-  runAnalysis();
-
-  // 3. Schedule auto-fixes if configured
-  if (config_.autoBindOrphans || config_.autoStyleComponents ||
-      config_.autoFixLayout || config_.autoUpdateNames) {
+  // Step 5: Apply automatic fixes if enabled
+  if (config_.enableAutomaticFixes) {
     applyAutomaticFixes();
   }
+
+  // Step 6: Notify listeners
+  notifyListeners();
 }
 
-//==============================================================================
-// Async Task Queue
-//==============================================================================
-
-void UXDirectorAgent::scheduleTask(std::function<void()> task) {
-  // OVERFLOW PROTECTION: If queue is too large, something is wrong.
-  // Either issues are being generated faster than fixed, or fixes are failing.
-  // Clear the queue to prevent unbounded memory growth.
-  static constexpr size_t maxQueueSize = 100;
-
-  if (uiTaskQueue_.size() >= maxQueueSize) {
-    DBG("UXDirectorAgent: Task queue overflow! Clearing " +
-        juce::String(uiTaskQueue_.size()) + " pending tasks.");
-    uiTaskQueue_.clear();
-
-    // Also clear fixPending flags so issues can be re-scheduled
-    juce::ScopedLock sl(issuesLock_);
-    for (auto &issue : issues_) {
-      issue.fixPending = false;
-    }
-  }
-
-  uiTaskQueue_.push_back(std::move(task));
+void UXDirectorAgent::scanAsync() {
+  scheduleTask([this]() { scanUI(); });
 }
 
-void UXDirectorAgent::processPendingTasks() {
-  if (uiTaskQueue_.empty())
-    return;
+void UXDirectorAgent::performScan() { scanUI(); }
 
-  // Execute a small batch of tasks to avoid freezing the UI
-  int executedCount = 0;
-
-  // Consume tasks from front of queue
-  while (!uiTaskQueue_.empty() && executedCount < maxTasksPerFrame_) {
-    auto task = std::move(uiTaskQueue_.front());
-    uiTaskQueue_.erase(uiTaskQueue_.begin());
-
-    // Execute task - lambda already has SafePointer for component safety
-    if (task) {
-      task();
-    }
-
-    executedCount++;
-  }
-
-  // Log queue status if it's building up (early warning)
-  if (uiTaskQueue_.size() > 50) {
-    DBG("UXDirectorAgent: Warning - task queue has " +
-        juce::String(uiTaskQueue_.size()) + " pending items");
-  }
-}
-
-void UXDirectorAgent::clearPendingTasks() {
-  uiTaskQueue_.clear();
-
-  // Clear pending flags so issues can be re-processed
-  juce::ScopedLock sl(issuesLock_);
-  for (auto &issue : issues_) {
-    issue.fixPending = false;
-  }
-}
-
-//==============================================================================
-// ChangeListener (for Track changes)
-//==============================================================================
+void UXDirectorAgent::timerCallback() { scanAsync(); }
 
 void UXDirectorAgent::changeListenerCallback(juce::ChangeBroadcaster *source) {
-  // Check if a track we're bound to has changed
-  for (auto &[comp, binding] : bindings_) {
-    if (binding.linkedTrack == source) {
-      // Track data changed, sync to UI
-      syncBindingToUI(binding);
+  // Check if this is a track change
+  if (auto *track = dynamic_cast<Track *>(source)) {
+    // Find the binding for this track and update UI
+    for (auto &[comp, binding] : bindings_) {
+      if (binding.linkedTrack == track) {
+        syncBindingToUI(binding);
+      }
     }
   }
-
-  // Re-analyze on next timer tick
-  lastAnalysisTime_ = 0; // Force immediate re-analysis
+  // Engine change - scan for new tracks
+  else if (source == &engine_) {
+    rebuildBindingsFromTracks();
+    scanAsync();
+  }
 }
 
-//==============================================================================
-// Component Tree Scanning
-//==============================================================================
+void UXDirectorAgent::scanComponentTree(juce::Component *comp, int depth) {
+  if (comp == nullptr || depth > 100)
+    return; // Prevent infinite recursion
 
-void UXDirectorAgent::scanComponentTree(juce::Component *comp) {
-  if (comp == nullptr)
-    return;
+  // Skip trivial components (scroll bars, viewports, etc.)
+  if (!isTrivialComponent(comp)) {
+    {
+      juce::ScopedLock sl(analysisLock_);
+      analyzedComponents_.push_back(comp);
+    }
 
-  // Skip already-analyzed components
-  if (analyzedComponents_.count(comp) > 0)
-    return;
-  analyzedComponents_.insert(comp);
+    // Check for common issues
+    bool hasIssue = false;
 
-  // Skip trivial components if configured
-  if (config_.skipTrivialComponents && isTrivialComponent(comp))
-    return;
+    // Check 1: Orphan component (no name, no ID, not bound to data)
+    if (isOrphanComponent(comp)) {
+      juce::ScopedLock sl(analysisLock_);
+      orphanComponents_.push_back(comp);
+      hasIssue = true;
+    }
 
-  // Check for orphan status
-  if (isOrphanComponent(comp)) {
-    orphanComponents_.push_back(comp);
-  }
+    // Check 2: Unstyled (default JUCE look, not using design system)
+    if (isUnstyled(comp)) {
+      juce::ScopedLock sl(analysisLock_);
+      unstyledComponents_.push_back(comp);
+      hasIssue = true;
+    }
 
-  // Check for unstyled status
-  if (isUnstyledComponent(comp)) {
-    unstyledComponents_.push_back(comp);
-  }
+    // Check 3: Layout issues (off-screen, overlapping, zero-size)
+    if (hasLayoutIssue(comp)) {
+      juce::ScopedLock sl(analysisLock_);
+      layoutViolations_.push_back(comp);
+      hasIssue = true;
+    }
 
-  // Check for layout issues
-  if (hasLayoutIssue(comp)) {
-    layoutViolations_.push_back(comp);
-  }
+    // Check 4: Stale data (bound track name != displayed name)
+    if (hasStaleData(comp)) {
+      juce::ScopedLock sl(analysisLock_);
+      staleDataComponents_.push_back(comp);
+      hasIssue = true;
+    }
 
-  // Check for stale data
-  if (hasStaleData(comp)) {
-    staleDataComponents_.push_back(comp);
+    juce::ignoreUnused(hasIssue);
   }
 
   // Recurse into children
   for (int i = 0; i < comp->getNumChildComponents(); ++i) {
-    scanComponentTree(comp->getChildComponent(i));
+    scanComponentTree(comp->getChildComponent(i), depth + 1);
   }
 }
 
 //==============================================================================
-// Issue Detection
+// Component Type Checks
 //==============================================================================
 
 bool UXDirectorAgent::isOrphanComponent(juce::Component *comp) const {
   if (comp == nullptr)
     return false;
 
-  // Skip if already bound
-  if (bindings_.count(comp) > 0)
+  // Components with names or IDs are not orphans
+  if (comp->getName().isNotEmpty() || comp->getComponentID().isNotEmpty())
     return false;
 
-  // Check if name and ID are both empty
-  bool hasName = comp->getName().isNotEmpty();
-  bool hasId = comp->getComponentID().isNotEmpty();
-
-  if (hasName || hasId)
+  // Bound components are not orphans
+  if (bindings_.find(comp) != bindings_.end())
     return false;
 
-  // Only flag specific component types that should have bindings
-  // Use RTTI to check type
-  if (dynamic_cast<zenith::MixerChannelComponent *>(comp) != nullptr)
-    return true;
-  if (dynamic_cast<ClipComponent *>(comp) != nullptr)
-    return true;
+  // MixerChannelComponents should be bound
+  if (isComponentType<zenith::MixerChannelComponent>(comp))
+    return true; // Orphan if not bound above
 
+  // ArrangerComponent is always valid as the main view
+  if (isComponentType<zenith::ArrangerComponent>(comp))
+    return false;
+
+  // PianoRollComponent is always valid
+  if (isComponentType<zenith::PianoRollComponent>(comp))
+    return false;
+
+  // Default: don't flag as orphan
   return false;
 }
 
-bool UXDirectorAgent::isUnstyledComponent(juce::Component *comp) const {
+bool UXDirectorAgent::isUnstyled(juce::Component *comp) const {
   if (comp == nullptr)
     return false;
 
-  // Check if it's a SkiaComponent (already using our system)
-  if (dynamic_cast<zenith::SkiaComponent *>(comp) != nullptr)
-    return false;
+  // Check for LookAndFeel - if using default JUCE L&F, flag as unstyled
+  // Note: This is a heuristic. We use Skia for rendering, so JUCE L&F
+  // doesn't really apply. This check is for JUCE widgets like TextEditors.
 
-  // Check if component has default JUCE look
-  // We consider it "unstyled" if it's a button/slider/etc using default LAF
-  if (auto *button = dynamic_cast<juce::Button *>(comp)) {
-    // Check if using default LookAndFeel
-    auto &laf = button->getLookAndFeel();
-    // If it's the default JUCE LAF, it's unstyled
-    if (typeid(laf) == typeid(juce::LookAndFeel_V4))
-      return true;
-  }
-
-  if (auto *slider = dynamic_cast<juce::Slider *>(comp)) {
-    auto &laf = slider->getLookAndFeel();
-    if (typeid(laf) == typeid(juce::LookAndFeel_V4))
-      return true;
+  // For now, we'll check if it's a JUCE widget that might need styling
+  if (dynamic_cast<juce::Slider *>(comp) != nullptr ||
+      dynamic_cast<juce::ComboBox *>(comp) != nullptr ||
+      dynamic_cast<juce::TextButton *>(comp) != nullptr) {
+    // These should have custom L&F or be wrapped in Skia components
+    // For now, just check if they have a custom L&F set
+    auto *defaultLAF = &juce::LookAndFeel::getDefaultLookAndFeel();
+    return &comp->getLookAndFeel() == defaultLAF;
   }
 
   return false;
@@ -842,6 +804,7 @@ bool UXDirectorAgent::fixComponentLayout(juce::Component *component) {
 void UXDirectorAgent::syncAllNames() {
   for (auto &[comp, binding] : bindings_) {
     if (binding.linkedTrack != nullptr && binding.uiComponent != nullptr) {
+      // Simplified: binding.uiComponent is already non-const
       binding.uiComponent->setName(binding.linkedTrack->getName());
       binding.uiComponent->repaint();
     }
