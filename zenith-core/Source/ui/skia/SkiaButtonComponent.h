@@ -10,7 +10,6 @@
 
 #pragma once
 
-#include "../../rendering/SkiaRenderer.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>

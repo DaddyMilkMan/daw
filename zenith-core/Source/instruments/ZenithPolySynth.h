@@ -56,21 +56,17 @@ enum class QualityPreset {
 };
 
 /**
-    LFO target parameters (legacy - now part of modulation matrix)
+    LFO Waveform Types
 */
-enum class LFOTarget {
-  FilterCutoff = 0,
-  Osc1Pitch,
-  Osc2Pitch,
-  Osc1Mix,
-  Osc2Mix,
-  NumTargets
+enum class LFOWaveform {
+  Sine = 0,
+  Triangle,
+  Square,
+  SawUp,
+  SawDown,
+  SampleHold,
+  NumWaveforms
 };
-
-//==============================================================================
-/**
-    Modulation Matrix System
-*/
 
 /**
     Modulation sources available in the matrix
@@ -239,7 +235,7 @@ public:
     delayBufferL_.fill(0.0f);
     delayBufferR_.fill(0.0f);
     delayPos_ = 0;
-    chorusPhase_ = 0.0f;
+    chorusPhase_ = 0.0f; // Reset chorus LFO phase for consistency
   }
 
   void setDistortion(float amount) { distortionAmount_ = amount; }
@@ -307,30 +303,47 @@ public:
   }
   void setUnisonDetune(float cents) { unisonDetune_ = cents; }
 
+  void setSubOscLevel(float level) { subOscLevel_ = level; }
+  void setNoiseLevel(float level) { noiseLevel_ = level; }
+
   void setFilterType(FilterType type) { filter1_.setType(type); }
   void setFilterCutoff(float cutoff) { filterCutoff_ = cutoff; }
-  void setFilterResonance(float resonance) { filter1_.setResonance(resonance); }
+  void setFilterResonance(float resonance) { 
+    filterResonance_ = resonance;
+    filter1_.setResonance(resonance); 
+  }
   void setFilterDrive(float drive) { filter1_.setDrive(drive); }
+  void setFilterEnvAmount(float amount) { filterEnvAmount_ = amount; }
 
   void setFilter2Type(FilterType type) { filter2_.setType(type); }
   void setFilter2Cutoff(float cutoff) { filter2Cutoff_ = cutoff; }
   void setFilter2Resonance(float resonance) {
     filter2_.setResonance(resonance);
   }
+  void setFilter2Drive(float drive) { filter2_.setDrive(drive); }
   void setFilterRouting(bool serial) { filterSerial_ = serial; }
+
+  void setDistortion(float amount) { effects_.setDistortion(amount); }
+  void setChorus(float amount) { effects_.setChorus(amount); }
 
   void setAmpEnvelope(float attack, float decay, float sustain, float release);
   void setModEnvelope(float attack, float decay, float sustain, float release);
 
-  void setLFO1(float rate, float amount, LFOTarget target);
-  void setLFO2(float rate, float amount, LFOTarget target);
+  void setLFO1(float rate, float amount) {
+    lfo1Rate_ = rate;
+    lfo1Amount_ = amount;
+  }
+  void setLFO2(float rate, float amount) {
+    lfo2Rate_ = rate;
+    lfo2Amount_ = amount;
+  }
+
+  void setLFO1Waveform(LFOWaveform waveform) { lfo1Waveform_ = waveform; }
+  void setLFO2Waveform(LFOWaveform waveform) { lfo2Waveform_ = waveform; }
 
   void setGlideTime(float glideTimeSeconds) { glideTime_ = glideTimeSeconds; }
   void setMonoMode(bool mono) { monoMode_ = mono; }
   void setQualityPreset(QualityPreset quality) { qualityPreset_ = quality; }
-
-  void setDistortion(float amount) { effects_.setDistortion(amount); }
-  void setChorus(float amount) { effects_.setChorus(amount); }
 
   void setSampleRate(double sampleRate);
 
@@ -338,8 +351,8 @@ public:
   // Modulation Matrix Control
   //==========================================================================
 
-  void setModulationSlot(int slotIndex, ModulationSource source,
-                         ModulationDestination destination, float amount);
+  void setModulationAmount(ModulationSource source, ModulationDestination destination, float amount);
+  float getModulationAmount(ModulationSource source, ModulationDestination destination) const;
 
   void setModWheel(float value) { modWheel_ = juce::jlimit(0.0f, 1.0f, value); }
   void setAftertouch(float value) {
@@ -377,7 +390,15 @@ private:
   int unisonVoices_ = 1;
   float unisonDetune_ = 0.0f;
 
+  float subOscLevel_ = 0.0f; // Sub oscillator level (0 to 1)
+  double subOscPhase_ = 0.0; // Sub oscillator phase
+
+  float noiseLevel_ = 0.0f; // Noise level (0 to 1)
+  juce::Random noiseRandom_; // Random generator for noise
+
   float filterCutoff_ = 1000.0f;
+  float filterResonance_ = 0.5f; // Base resonance value
+  float filterEnvAmount_ = 0.0f; // Filter envelope amount (0 to 1)
   float filter2Cutoff_ = 1000.0f;
   bool filterSerial_ = true;
 
@@ -386,28 +407,39 @@ private:
 
   float lfo1Rate_ = 1.0f;
   float lfo1Amount_ = 0.0f;
-  LFOTarget lfo1Target_ = LFOTarget::FilterCutoff;
+  LFOWaveform lfo1Waveform_ = LFOWaveform::Sine;
+  float lfo1SampleHold_ = 0.0f;
+  double lastLfo1Phase_ = 0.0;
 
   float lfo2Rate_ = 1.0f;
   float lfo2Amount_ = 0.0f;
-  LFOTarget lfo2Target_ = LFOTarget::FilterCutoff;
+  LFOWaveform lfo2Waveform_ = LFOWaveform::Sine;
+  float lfo2SampleHold_ = 0.0f;
+  double lastLfo2Phase_ = 0.0;
 
   float glideTime_ = 0.0f;
   bool monoMode_ = false;
   QualityPreset qualityPreset_ = QualityPreset::Medium;
 
-  // Modulation Matrix
-  std::array<ModulationSlot, 8> modulationMatrix_;
+  // Modulation Matrix (Dense)
+  // [Source][Destination] -> Amount (-1.0 to 1.0)
+  float modulationMatrix_[static_cast<int>(ModulationSource::NumSources)][static_cast<int>(ModulationDestination::NumDestinations)];
   ModulationState modulationState_;
 
   // Performance state
   float currentFrequency_ = 440.0f;
   float targetFrequency_ = 440.0f;
+  int currentMidiNote_ = -1; // Store MIDI note for pitch wheel
+  float pitchBendRange_ = 2.0f; // Pitch bend range in semitones
   float velocity_ = 0.0f;
   float modWheel_ = 0.0f;
   float aftertouch_ = 0.0f;
   float currentAmplitude_ = 0.0f;
   float oscShape_ = 0.5f; // Global shape parameter for square waves
+  
+  // Cached envelope values for modulation (to avoid calling getNextSample twice)
+  float currentAmpEnv_ = 0.0f;
+  float currentModEnv_ = 0.0f;
 
   // Internal helpers
   void updateFrequency();
@@ -444,8 +476,8 @@ public:
                     juce::MidiBuffer &midiMessages) override;
 
   // Editor
-  juce::AudioProcessorEditor *createEditor() override { return nullptr; }
-  bool hasEditor() const override { return false; }
+  juce::AudioProcessorEditor *createEditor() override;
+  bool hasEditor() const override;
 
   // Metadata
   const juce::String getName() const override { return "Zenith Poly Synth"; }
@@ -466,6 +498,14 @@ public:
   // State save/load
   void getStateInformation(juce::MemoryBlock &destData) override;
   void setStateInformation(const void *data, int sizeInBytes) override;
+
+  // Modulation Matrix Access
+  void setModulationMatrix(ModulationSource src, ModulationDestination dst, float amount);
+  float getModulationMatrix(ModulationSource src, ModulationDestination dst) const;
+
+  // Visualizer Data
+  void pushToVisualizer(const juce::AudioBuffer<float>& buffer);
+  int readFromVisualizer(float* dest, int numSamples);
 
   // Parameter layout
   juce::AudioProcessorValueTreeState &getParameters() { return parameters_; }
@@ -501,11 +541,9 @@ public:
 
   static const juce::String LFO1Rate;
   static const juce::String LFO1Amount;
-  static const juce::String LFO1Target;
 
   static const juce::String LFO2Rate;
   static const juce::String LFO2Amount;
-  static const juce::String LFO2Target;
 
   static const juce::String GlideTime;
   static const juce::String MonoMode;
@@ -524,33 +562,11 @@ private:
 
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
   void updateVoiceParameters();
-  void updateVoiceCount();
-
   juce::SynthesiserVoice *
   findFreeVoice(juce::SynthesiserSound *soundToPlay, int midiChannel,
                 int midiNoteNumber, bool stealIfNoneAvailable) const override;
 
 #if JUCE_DEBUG
-  void logCPUStats();
-#endif
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithPolySynthProcessor)
-};
-
-//==============================================================================
-/**
-    ZenithPolySynth Instrument Wrapper
-*/
-class ZenithPolySynth : public InstrumentBase {
-public:
-  ZenithPolySynth();
-  ~ZenithPolySynth() override = default;
-
-  juce::AudioProcessorValueTreeState *getParameterState() {
-    if (auto *proc =
-            dynamic_cast<ZenithPolySynthProcessor *>(getAudioProcessor())) {
-      return &proc->getParameters();
-    }
     return nullptr;
   }
 

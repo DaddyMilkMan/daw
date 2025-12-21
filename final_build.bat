@@ -1,17 +1,24 @@
 @echo off
-setlocal enabledelayedexpansion
+echo Setting up Visual Studio 2026 environment...
+call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64
 
-REM Set up Visual Studio 2026 environment
-call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\vcvarsall.bat" x64 >nul 2>&1
+if errorlevel 1 (
+    echo Failed to set up Visual Studio environment
+    exit /b 1
+)
 
-REM Clean and rebuild
+echo Environment set up successfully
+where cl.exe
+
 cd /d C:\zenith\daw
+echo Cleaning build directory...
 rmdir /s /q build 2>nul
 mkdir build
 cd build
 
-echo Configuring with CMake...
-cmake .. -G Ninja -DCMAKE_CXX_COMPILER=cl.exe -DCMAKE_C_COMPILER=cl.exe -DZENITH_ENABLE_SKIA=ON -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
+echo.
+echo Configuring with CMake (Skia enabled)...
+cmake .. -G Ninja -DZENITH_ENABLE_SKIA=ON -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 
 if errorlevel 1 (
     echo CMake configuration failed
@@ -19,20 +26,15 @@ if errorlevel 1 (
 )
 
 echo.
-echo Building with Ninja...
+echo Building ZenithDAW...
 ninja ZenithDAW 2>&1
 
 echo.
-echo Build complete\!
-echo.
-echo Checking for executable...
+echo Build complete\! Exit code: %ERRORLEVEL%
 if exist zenith-core\ZenithDAW.exe (
     echo.
-    echo ^^^^^^^^ SUCCESS\! ^^^^^^^^
-    echo Found ZenithDAW.exe
+    echo ============================================
+    echo SUCCESS: ZenithDAW.exe built successfully\!
+    echo ============================================
     dir zenith-core\ZenithDAW.exe
-) else (
-    echo.
-    echo Searching for any .exe files...
-    for /r . %%%%F in (*.exe) do echo Found: %%%%F
 )

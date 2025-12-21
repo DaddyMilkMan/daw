@@ -1,0 +1,133 @@
+﻿CMake is re-running because C:/zenith/daw/build/CMakeFiles/generate.stamp is out-of-date.
+  the file 'C:/zenith/daw/CMakeLists.txt'
+  is newer than 'C:/zenith/daw/build/CMakeFiles/generate.stamp.depend'
+  result='-1'
+-- ============================================
+-- Configuring Build Optimizations
+-- ============================================
+--   ccache: FOUND at C:/Users/micah/AppData/Local/Microsoft/WinGet/Packages/BrechtSanders.WinLibs.POSIX.UCRT_Microsoft.Winget.Source_8wekyb3d8bbwe/mingw64/bin/ccache.exe
+--   ccache: ENABLED
+--   Generator: Visual Studio (use /MP for parallel builds)
+-- ============================================
+-- Using local JUCE from external/JUCE
+-- Configuring juceaide
+-- Building juceaide
+-- Exporting juceaide
+-- Testing juceaide
+-- Finished setting up juceaide
+-- ============================================
+-- Configuring Skia Integration (Audited)
+-- ============================================
+--   SKIA_ROOT: Using platform default fallback
+--   SKIA_ROOT: C:/vcpkg/installed/x64-windows
+--   Strategy: Manual Search (unofficial-skia not found)
+--   Skia headers: C:/vcpkg/installed/x64-windows/include/skia
+--   Skia library: C:/vcpkg/installed/x64-windows/lib/skia.dll.lib
+--   Skia graphics library: LINKED (Manual)
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/abseil_dll.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/brotlicommon.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/brotlidec.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/brotlienc.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/bz2.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/freetype.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/harfbuzz-subset.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/harfbuzz.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/icudt78.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/icuin78.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/icuio78.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/icutu78.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/icuuc78.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/jpeg62.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libexpat.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libpng16.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libsharpyuv.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libwebp.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libwebpdecoder.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libwebpdemux.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/libwebpmux.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/pkgconf-7.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/skia.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/skparagraph.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/skshaper.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/skunicode_core.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/skunicode_icu.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/turbojpeg.dll - Configuring auto-copy
+--   Found dependency: C:/vcpkg/installed/x64-windows/bin/zlib1.dll - Configuring auto-copy
+--   Skia UI Components: Managed by ui/CMakeLists.txt
+--   Skia UI components: ENABLED
+-- ============================================
+-- Zenith DAW: Skia rendering ENABLED
+--   Applying build optimizations to: ZenithDAW
+--     MSVC: Parallel compilation enabled (/MP)
+--     MSVC: Incremental linking enabled for Debug
+--   Build optimizations applied to: ZenithDAW
+-- ============================================
+-- Configuring Precompiled Headers (PCH)
+-- ============================================
+--   PCH Header: C:/zenith/daw/apps/desktop/Source/pch/ZenithPCH.h
+--   PCH: ENABLED for ZenithDAW target
+--   MSVC PCH memory: Increased (/Zm200)
+-- ============================================
+-- Sanitizers enabled (Address, UB)
+-- ZenithDAW COMPILE_OPTIONS: /fsanitize=address;/MP;/Zc:inline;/wd4250;/Zm200;/fsanitize=address
+-- ZenithDAW INTERFACE_COMPILE_OPTIONS: INT_OPTS-NOTFOUND
+-- ZenithDAW_rc_lib INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_core INTERFACE_COMPILE_OPTIONS: /bigobj
+-- juce::juce_cryptography INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_events INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_graphics INTERFACE_COMPILE_OPTIONS: /bigobj
+-- juce::juce_data_structures INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_gui_basics INTERFACE_COMPILE_OPTIONS: /bigobj
+-- juce::juce_gui_extra INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_audio_basics INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_audio_devices INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_audio_formats INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_audio_processors INTERFACE_COMPILE_OPTIONS: /bigobj
+-- juce::juce_audio_utils INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_dsp INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- juce::juce_opengl INTERFACE_COMPILE_OPTIONS: LIB_OPTS-NOTFOUND
+-- Configuring done (3.3s)
+-- Generating done (1.4s)
+-- Build files have been written to: C:/zenith/daw/build
+MSBuild version 17.14.23+b0019275e for .NET Framework
+
+  Checking File Globs
+  1>Checking Build System
+CUSTOMBUILD : warning : Environment variable CMAKE_GENERATOR_PLATFORM will be ignored, because CMAKE_GENERATOR is not set. [C:\zenith\daw\build\ZERO_CHECK.vcxproj]
+  Generating ZenithDAWTests_artefacts/JuceLibraryCode/ZenithDAWTests_resources.rc
+  Building Custom Rule C:/zenith/daw/CMakeLists.txt
+CUSTOMBUILD : warning : Environment variable CMAKE_GENERATOR_PLATFORM will be ignored, because CMAKE_GENERATOR is not set. [C:\zenith\daw\build\ZenithDAWTests_rc_lib.vcxproj]
+  ZenithDAWTests_rc_lib.vcxproj -> C:\zenith\daw\build\ZenithDAWTests_rc_lib.dir\Debug\ZenithDAWTests_rc_lib.lib
+  Generating ZenithDAWTests_artefacts/JuceLibraryCode/JuceHeader.h
+  Building Custom Rule C:/zenith/daw/CMakeLists.txt
+CUSTOMBUILD : warning : Environment variable CMAKE_GENERATOR_PLATFORM will be ignored, because CMAKE_GENERATOR is not set. [C:\zenith\daw\build\ZenithDAWTests.vcxproj]
+  TestMain.cpp
+  AudioEngineTests.cpp
+  ProjectStateTests.cpp
+  EngineTests.cpp
+  ConcurrencyTests.cpp
+  AITests.cpp
+  UITests.cpp
+  ZenithLayout.cpp
+  Engine.cpp
+  ProjectState.cpp
+C:\zenith\daw\apps\desktop\Source\engine\Engine.cpp(34,10): error C1083: Cannot open include file: '../engine/MixerController.h': No such file or directory [C:\zenith\daw\build\ZenithDAWTests.vcxproj]
+  Track.cpp
+C:\zenith\daw\apps\desktop\Source\engine\Track.cpp(6,10): error C1083: Cannot open include file: 'InstrumentTrack.h': No such file or directory [C:\zenith\daw\build\ZenithDAWTests.vcxproj]
+  Clip.cpp
+  MixerChannel.cpp
+  AudioFilePool.cpp
+  PluginHost.cpp
+  AuxBus.cpp
+  ZenithLogger.cpp
+  TrackPluginState.cpp
+  AudioRecorder.cpp
+  RoutingGraph.cpp
+  Generating Code...
+  Compiling...
+  ClipSynchronizer.cpp
+  TrackStateSynchronizer.cpp
+  TrackAutomationSynchronizer.cpp
+  TempoMapSynchronizer.cpp
+  TempoMap.cpp
+  TrackFreeze.cpp

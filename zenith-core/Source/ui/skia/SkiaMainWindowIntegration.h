@@ -1,9 +1,9 @@
 #pragma once
-#include "../../rendering/SkiaRenderer.h"
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
+#include <atomic>
 
 
 #ifdef ZENITH_USE_SKIA
@@ -22,6 +22,17 @@
 
 namespace zenith {
 
+/**
+ * @class SkiaMainWindowIntegration
+ * @brief Direct OpenGL framebuffer rendering with Skia
+ *
+ * Architecture:
+ * - Creates single GrDirectContext on OpenGL context creation
+ * - Caches SkSurface wrapping default framebuffer (FBO 0)
+ * - Recreates surface only on resize
+ * - Renders at 60 FPS via continuous repainting
+ * - Recursively traverses JUCE component tree and calls drawSkia()
+ */
 class SkiaMainWindowIntegration : public juce::Component,
                                   public juce::OpenGLRenderer {
 public:
@@ -40,11 +51,24 @@ private:
   void renderComponentRecursively(juce::Component *comp, SkCanvas *canvas);
 
   juce::OpenGLContext openGLContext;
-  std::unique_ptr<SkiaRenderer> renderer_;
   bool rendererInitialized_ = false;
 
 #ifdef ZENITH_USE_SKIA
+  // GPU context (shared across all components)
   sk_sp<GrDirectContext> grContext_;
+
+  // Cached surface for default framebuffer (recreated on resize)
+  sk_sp<SkSurface> cachedSurface_;
+  int cachedWidth_ = 0;
+  int cachedHeight_ = 0;
+
+  // Thread-safe surface validity flag (fixes resize race condition)
+  std::atomic<bool> surfaceValid_{false};
+
+  // One-time logging flags (member variables to avoid static bool anti-pattern)
+  bool loggedSurfaceError_ = false;
+  bool loggedComponentTree_ = false;
+  bool loggedSuccess_ = false;
 #endif
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaMainWindowIntegration)

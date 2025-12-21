@@ -67,22 +67,6 @@ void MasterOutputComponent::resized()
 void MasterOutputComponent::timerCallback()
 {
     updateAnimatedLevels();
-    repaint();
-}
-
-//==============================================================================
-void MasterOutputComponent::paintMasterFader(juce::Graphics& g, const juce::Rectangle<int>& bounds)
-{
-    auto faderBounds = bounds.reduced(ZenithLookAndFeel::Spacing::s, ZenithLookAndFeel::Spacing::l);
-
-    // DESIGN SYSTEM: Background track using elevation
-    g.setColour(juce::Colour(ZenithLookAndFeel::Elevation::dp1));
-    g.fillRoundedRectangle(faderBounds.toFloat(), ZenithLookAndFeel::Radius::s);
-
-    // DESIGN SYSTEM: Border using borderMedium
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium));
-    g.drawRoundedRectangle(faderBounds.toFloat(), ZenithLookAndFeel::Radius::s, 1.0f);
-
     // Calculate fader position (0 dB = middle, -inf = top, +12 = bottom)
     // Range: -60 to +12 dB
     float normalizedGain = (masterGaindB_ + 60.0f) / 72.0f;

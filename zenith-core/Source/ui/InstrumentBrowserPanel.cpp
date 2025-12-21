@@ -249,18 +249,18 @@ void InstrumentBrowserPanel::paint(juce::Graphics& g)
 
 void InstrumentBrowserPanel::resized()
 {
-    auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Spacing::s);
+    auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Metrics::s);
 
     // Title
     titleLabel.setBounds(bounds.removeFromTop(30));
 
-    bounds.removeFromTop(ZenithLookAndFeel::Spacing::s);  // Spacing
+    bounds.removeFromTop(ZenithLookAndFeel::Metrics::s);  // Spacing
 
     // Search section
     searchLabel.setBounds(bounds.removeFromTop(20));
     searchBox.setBounds(bounds.removeFromTop(30));
 
-    bounds.removeFromTop(ZenithLookAndFeel::Spacing::s);  // Spacing
+    bounds.removeFromTop(ZenithLookAndFeel::Metrics::s);  // Spacing
 
     // Tag chips section
     tagsLabel.setBounds(bounds.removeFromTop(20));
@@ -270,7 +270,7 @@ void InstrumentBrowserPanel::resized()
     // Layout tag chips in a grid (5 per row)
     int chipWidth = 55;
     int chipHeight = 28;
-    int chipSpacing = ZenithLookAndFeel::Spacing::xs;
+    int chipSpacing = ZenithLookAndFeel::Metrics::xs;
     int x = 0;
     int y = 0;
 
@@ -286,14 +286,14 @@ void InstrumentBrowserPanel::resized()
         }
     }
 
-    bounds.removeFromTop(ZenithLookAndFeel::Spacing::s);  // Spacing
+    bounds.removeFromTop(ZenithLookAndFeel::Metrics::s);  // Spacing
 
     // Instrument list section
     instrumentsLabel.setBounds(bounds.removeFromTop(20));
     auto instrumentListArea = bounds.removeFromTop(150);
     instrumentList.setBounds(instrumentListArea);
 
-    bounds.removeFromTop(ZenithLookAndFeel::Spacing::s);  // Spacing
+    bounds.removeFromTop(ZenithLookAndFeel::Metrics::s);  // Spacing
 
     // Preset list section
     presetsLabel.setBounds(bounds.removeFromTop(20));
@@ -302,13 +302,13 @@ void InstrumentBrowserPanel::resized()
     auto loadButtonArea = bounds.removeFromBottom(35);
     loadPresetButton.setBounds(loadButtonArea);
 
-    bounds.removeFromBottom(ZenithLookAndFeel::Spacing::xs);  // Spacing
+    bounds.removeFromBottom(ZenithLookAndFeel::Metrics::xs);  // Spacing
 
     // Preset list takes remaining space
     presetList.setBounds(bounds);
 
     // Status label (overlay at bottom)
-    statusLabel.setBounds(getLocalBounds().removeFromBottom(40).reduced(ZenithLookAndFeel::Spacing::m, ZenithLookAndFeel::Spacing::s));
+    statusLabel.setBounds(getLocalBounds().removeFromBottom(40).reduced(ZenithLookAndFeel::Metrics::m, ZenithLookAndFeel::Metrics::s));
 }
 
 void InstrumentBrowserPanel::toggleVisibility()

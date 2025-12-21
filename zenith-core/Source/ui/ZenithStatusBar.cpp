@@ -36,7 +36,7 @@ void ZenithStatusBar::paint(juce::Graphics& g)
     g.drawRect(bounds.removeFromTop(1), 1);
 
     // DESIGN SYSTEM: Padding using Spacing constants
-    bounds.reduce(ZenithLookAndFeel::Spacing::s, 0);
+    bounds.reduce(ZenithLookAndFeel::Metrics::s, 0);
 
     // Draw CPU Usage (Right side)
     {

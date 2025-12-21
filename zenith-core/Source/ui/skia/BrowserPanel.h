@@ -106,14 +106,17 @@ protected:
   // Skia Rendering
   //==========================================================================
 
+#if ZENITH_ENABLE_SKIA
   void paintSkia(SkCanvas &canvas,
                  const juce::Rectangle<int> &bounds) override;
+#endif
 
 private:
   //==========================================================================
   // Internal Rendering Methods
   //==========================================================================
 
+#if ZENITH_ENABLE_SKIA
   void drawBackground(SkCanvas &canvas, const SkRect &bounds);
   void drawTabBar(SkCanvas &canvas, const SkRect &bounds);
   void drawSearchBar(SkCanvas &canvas, const SkRect &bounds);
@@ -125,6 +128,7 @@ private:
   void drawBrowserItem(SkCanvas &canvas, const SkRect &rect,
                        const BrowserItem &item, bool isSelected,
                        bool isHovered);
+#endif
 
   //==========================================================================
   // Hit Testing

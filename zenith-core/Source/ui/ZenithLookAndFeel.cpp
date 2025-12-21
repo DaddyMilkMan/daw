@@ -386,6 +386,55 @@ void ZenithLookAndFeel::drawTabButton(juce::TabBarButton& button,
 }
 
 //==============================================================================
+// Popup Menu Drawing
+//==============================================================================
+
+void ZenithLookAndFeel::drawPopupMenuBackground(juce::Graphics& g, int width, int height)
+{
+    g.fillAll(juce::Colour(Colors::backgroundPanel));
+    g.setColour(juce::Colour(Colors::border));
+    g.drawRect(0, 0, width, height);
+}
+
+void ZenithLookAndFeel::drawPopupMenuItem(juce::Graphics& g, const juce::Rectangle<int>& area,
+                                         bool isSeparator, bool isActive, bool isHighlighted,
+                                         bool isTicked, bool hasSubMenu,
+                                         const juce::String& text,
+                                         const juce::String& shortcutKeyText,
+                                         const juce::Drawable* icon,
+                                         const juce::Colour* textColour)
+{
+    if (isSeparator)
+    {
+        auto r = area.reduced(5, 0);
+        g.setColour(juce::Colour(Colors::divider));
+        g.fillRect(r.withHeight(1).withCentre(r.getCentre()));
+        return;
+    }
+
+    auto textCol = (textColour != nullptr) ? *textColour : juce::Colour(Colors::textPrimary);
+
+    if (isHighlighted && isActive)
+    {
+        g.setColour(juce::Colour(Colors::accentPrimary));
+        g.fillRect(area);
+        textCol = juce::Colour(Colors::textOnAccent);
+    }
+
+    g.setColour(textCol);
+    g.setFont(getFontBody());
+    
+    auto r = area.reduced(10, 0); // Padding
+    g.drawFittedText(text, r, juce::Justification::centredLeft, 1);
+    
+    if (shortcutKeyText.isNotEmpty())
+    {
+        g.setFont(getFontSmall());
+        g.drawText(shortcutKeyText, r, juce::Justification::centredRight, true);
+    }
+}
+
+//==============================================================================
 // Helper Methods
 //==============================================================================
 

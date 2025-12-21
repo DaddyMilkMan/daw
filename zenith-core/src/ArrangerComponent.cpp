@@ -4,7 +4,6 @@
  */
 
 #include "../Source/ui/ArrangerComponent.h"
-#include "../Source/rendering/SkiaContextManager.h"
 
 #ifdef ZENITH_USE_SKIA
 #include <include/core/SkCanvas.h>

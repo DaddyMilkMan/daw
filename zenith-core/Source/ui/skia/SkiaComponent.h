@@ -2,11 +2,15 @@
   ==============================================================================
     SkiaComponent.h
     Inherit from this instead of juce::Component for your custom controls.
+
+    DIRECT RENDERING MODE:
+    - Components are rendered directly to OpenGL framebuffer
+    - SkiaMainWindowIntegration calls drawSkia() with the main canvas
+    - No intermediate surfaces or blitting required
   ==============================================================================
 */
 #pragma once
 
-#include "../../rendering/SkiaContextManager.h"
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
@@ -21,54 +25,84 @@ class SkCanvas;
 
 namespace zenith {
 
+/**
+ * @class SkiaComponent
+ * @brief Base class for Skia-rendered components
+ *
+ * DIRECT RENDERING ARCHITECTURE:
+ * - Inherits from juce::Component for hierarchy and event handling
+ * - drawSkia() is called by SkiaMainWindowIntegration during renderOpenGL()
+ * - Canvas is the main framebuffer canvas (no intermediate surfaces)
+ * - paint() is NOT called (OpenGL bypasses JUCE rendering)
+ */
 class SkiaComponent : public juce::Component {
 public:
   SkiaComponent() {
-    // Skia handles the background, so JUCE shouldn't try to draw an opaque
-    // background
-    setOpaque(false);
+    setOpaque(false);  // Don't let JUCE draw background
   }
 
-  virtual ~SkiaComponent() {
-    // Notify manager to clean up the cached surface for this component
-    if (zenith::SkiaContextManager::getInstance().isInitialized())
-      zenith::SkiaContextManager::getInstance().componentDestroyed(*this);
+  virtual ~SkiaComponent() = default;
+
+  /**
+   * @brief Draw this component with Skia
+   * @param canvas The Skia canvas (pre-transformed to component's local coordinates)
+   *
+   * LIFECYCLE AND THREADING:
+   * - Called from the OpenGL rendering thread at ~60 FPS (continuous repainting)
+   * - Called by SkiaMainWindowIntegration::renderOpenGL() during component tree traversal
+   * - Canvas is already translated to this component's local coordinates (0,0 is top-left)
+   * - Canvas is clipped to this component's bounds automatically
+   *
+   * CRITICAL SAFETY RULES:
+   * - The SkCanvas* pointer is ONLY valid during this call - DO NOT store it
+   * - DO NOT call repaint(), resized(), or any JUCE GUI methods from here
+   * - DO NOT access mutable state without synchronization
+   * - Use only const member variables or thread-safe reads
+   *
+   * DRAWING COORDINATES:
+   * - (0, 0) is the top-left corner of THIS component
+   * - getWidth() and getHeight() give you the component's size
+   * - Children are rendered automatically after this returns
+   *
+   * EXAMPLE:
+   * @code
+   * void MyButton::drawSkia(SkCanvas* canvas) {
+   *     SkPaint paint;
+   *     paint.setColor(SK_ColorBLUE);
+   *     paint.setAntiAlias(true);
+   *
+   *     // Draw button background (0,0 is already at our top-left)
+   *     SkRect rect = SkRect::MakeWH(getWidth(), getHeight());
+   *     canvas->drawRoundRect(rect, 4.0f, 4.0f, paint);
+   * }
+   * @endcode
+   */
+  virtual void drawSkia(SkCanvas * const canvas) = 0;
+
+  /**
+   * @brief JUCE paint override - should never be called
+   *
+   * When OpenGL rendering is active, JUCE's paint system is disabled.
+   * If this is called, it means OpenGL failed to initialize.
+   */
+  void paint(juce::Graphics &g) override {
+    // Fallback for when OpenGL rendering is not active
+    g.fillAll(juce::Colours::darkgrey);
+    g.setColour(juce::Colours::red);
+    g.drawText("OpenGL rendering not active!", getLocalBounds(),
+               juce::Justification::centred);
   }
 
-  // Abstract method: Implement this in your widgets
-  virtual void drawSkia(SkCanvas *canvas) = 0;
-
-  // Final overrides - Do not override these in your child classes
-  void paint(juce::Graphics &g) final {
-    auto &manager = zenith::SkiaContextManager::getInstance();
-
-    if (manager.isInitialized()) {
-      // Helper callback that forwards to your virtual drawSkia()
-      manager.renderToComponent(g, *this,
-                                [this](SkCanvas *c) { this->drawSkia(c); });
-    } else {
-      // Fallback if Skia crashed or didn't load
-      paintFallback(g);
-    }
-  }
-
-  // Optional: Override this to provide custom JUCE-based fallback rendering
-  virtual void paintFallback(juce::Graphics &g) {
-    g.fillAll(juce::Colours::red.withAlpha(0.5f));
-    g.setColour(juce::Colours::white);
-    g.drawText("Skia Error", getLocalBounds(), juce::Justification::centred);
-  }
-
+  /**
+   * @brief Optional override point for resize logic
+   */
   void resized() override {
-    // Notify manager that surface size needs to change
-    if (zenith::SkiaContextManager::getInstance().isInitialized())
-      zenith::SkiaContextManager::getInstance().componentResized(*this);
-
-    // Call generic resized handler (optional hook)
     onResized();
   }
 
-  // Optional: Override this if you need standard resize logic
+  /**
+   * @brief Override this if you need custom resize handling
+   */
   virtual void onResized() {}
 };
 

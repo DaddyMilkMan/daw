@@ -59,15 +59,11 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
   DBG("========================================");
 
 #ifdef ZENITH_USE_SKIA
-  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-            "EXECUTING <<<");
+  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - DIRECT OPENGL RENDERING MODE <<<");
 
-  // Initialize Skia rendering system
-  // Skia initialization is handled by
-  // SkiaMainWindowIntegration::newOpenGLContextCreated
+  // OpenGL context and Skia GrDirectContext are created automatically by
+  // SkiaMainWindowIntegration base class (see SkiaMainWindowIntegration.cpp)
 
-  // Instantiate the SkiaRenderer
-  logToFile("→ Initializing SkiaRenderer...");
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
@@ -137,8 +133,9 @@ MainComponent::MainComponent(Engine &eng, zenith::CommandAPI &api,
     }
   };
 
-  // Start animation timer (SkiaMainWindowIntegration handles this)
-  DBG("✓ Animation timer managed by SkiaMainWindowIntegration");
+  // OpenGL continuous rendering is enabled in SkiaMainWindowIntegration constructor
+  // (setContinuousRepainting(true) provides 60 FPS rendering)
+  DBG("✓ OpenGL continuous rendering active (60 FPS)");
 
 #else
   // ============================================================================
@@ -318,8 +315,13 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
 
 void MainComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
-  // Delegate to base class which handles initialization status
-  SkiaMainWindowIntegration::paint(g);
+  // OpenGL rendering is active - this should not be called
+  // If you see this, OpenGL context failed to attach
+  g.fillAll(juce::Colours::darkred);
+  g.setColour(juce::Colours::white);
+  g.drawText("ERROR: OpenGL rendering failed!", getLocalBounds(),
+             juce::Justification::centred);
+  DBG("ERROR: MainComponent::paint() called - OpenGL should be handling rendering!");
 #else
   // JUCE fallback rendering (when Skia disabled)
   static int paintCallCount = 0;

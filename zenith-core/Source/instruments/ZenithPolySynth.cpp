@@ -5,13 +5,13 @@
     Created: 2025-11-18
     Author:  Zenith DAW
 
-    Implementation of ZenithPolySynth - multi-oscillator subtractive
     synthesizer.
 
   ==============================================================================
 */
 
 #include "ZenithPolySynth.h"
+#include "../ui/skia/ZenithPolySynthUI.h"
 #include "../utils/PresetGenerator.h"
 #include <cmath>
 
@@ -272,6 +272,11 @@ ZenithPolySynthVoice::ZenithPolySynthVoice() {
   osc1_.setWaveform(OscillatorWaveform::Saw);
   osc2_.setWaveform(OscillatorWaveform::Square);
   osc3_.setWaveform(OscillatorWaveform::Sine);
+  
+  // Clear matrix
+  for (int i = 0; i < (int)ModulationSource::NumSources; ++i)
+    for (int j = 0; j < (int)ModulationDestination::NumDestinations; ++j)
+      modulationMatrix_[i][j] = 0.0f;
 }
 
 bool ZenithPolySynthVoice::canPlaySound(juce::SynthesiserSound *sound) {
@@ -281,6 +286,7 @@ bool ZenithPolySynthVoice::canPlaySound(juce::SynthesiserSound *sound) {
 void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
                                      juce::SynthesiserSound * /*sound*/,
                                      int /*currentPitchWheelPosition*/) {
+  currentMidiNote_ = midiNoteNumber; // Store for pitch wheel
   currentFrequency_ = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
   targetFrequency_ = currentFrequency_;
   velocity_ = velocity;
@@ -302,6 +308,9 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
     osc.randomizePhase();
   }
 
+  // Reset sub oscillator phase for clean bass
+  subOscPhase_ = 0.0;
+
   filter1_.reset();
   filter2_.reset();
   effects_.reset();
@@ -318,8 +327,17 @@ void ZenithPolySynthVoice::stopNote(float /*velocity*/, bool allowTailOff) {
   }
 }
 
-void ZenithPolySynthVoice::pitchWheelMoved(int /*newPitchWheelValue*/) {
-  // Handle pitch wheel if needed
+void ZenithPolySynthVoice::pitchWheelMoved(int newPitchWheelValue) {
+  if (currentMidiNote_ < 0) return; // No note playing
+  
+  // Convert MIDI pitch wheel (0-16383, center=8192) to semitones
+  // Typical range is ±2 semitones (configurable via pitchBendRange_)
+  float pitchBendSemitones = ((newPitchWheelValue - 8192.0f) / 8192.0f) * pitchBendRange_;
+  
+  // Apply to target frequency (glide will smooth it)
+  float baseFrequency = juce::MidiMessage::getMidiNoteInHertz(currentMidiNote_);
+  float pitchBendMultiplier = std::pow(2.0f, pitchBendSemitones / 12.0f);
+  targetFrequency_ = baseFrequency * pitchBendMultiplier;
 }
 
 void ZenithPolySynthVoice::controllerMoved(int controllerNumber,
@@ -366,18 +384,19 @@ void ZenithPolySynthVoice::renderNextBlock(
     computeModulation();
 
     // Apply modulation to parameters
+    // Filter envelope: dedicated amount control for intuitive filter sweeps
+    float filterEnvMod = currentModEnv_ * filterEnvAmount_ * 10000.0f;
+    
     float modCutoff =
         filterCutoff_ +
-        modulationState_.get(ModulationDestination::FilterCutoff) * 10000.0f;
+        filterEnvMod +  // Direct filter envelope
+        modulationState_.get(ModulationDestination::FilterCutoff) * 10000.0f;  // Matrix modulation
     filter1_.setCutoff(modCutoff);
 
-    float modResonance =
-        filter1_.getResonance() +
-        modulationState_.get(
-            ModulationDestination::FilterResonance); // Need getter? Assuming
-                                                     // handled by setResonance
-    // Actually setResonance is on filter, we should use base + mod.
-    // For simplicity, we'll just re-set resonance with mod
+    float modResonance = juce::jlimit(0.0f, 1.0f,
+        filterResonance_ +
+        modulationState_.get(ModulationDestination::FilterResonance));
+    filter1_.setResonance(modResonance);
 
     // Render audio
     for (int i = 0; i < blockSize; ++i) {
@@ -387,12 +406,28 @@ void ZenithPolySynthVoice::renderNextBlock(
       }
 
       float ampEnv = ampEnvelope_.getNextSample();
-      float modEnv = modEnvelope_.getNextSample(); // Advance mod env
+      float modEnv = modEnvelope_.getNextSample();
+      
+      // Cache envelope values for modulation system
+      currentAmpEnv_ = ampEnv;
+      currentModEnv_ = modEnv;
+
+      // Update frequency with glide/portamento
+      updateFrequency();
+
+      // Apply pitch modulation (in semitones, converted to frequency multiplier)
+      float osc1PitchMod = modulationState_.get(ModulationDestination::Osc1Pitch);
+      float osc2PitchMod = modulationState_.get(ModulationDestination::Osc2Pitch);
+      float osc3PitchMod = modulationState_.get(ModulationDestination::Osc3Pitch);
+      
+      float osc1Freq = currentFrequency_ * std::pow(2.0f, osc1PitchMod / 12.0f);
+      float osc2Freq = currentFrequency_ * std::pow(2.0f, osc2PitchMod / 12.0f);
+      float osc3Freq = currentFrequency_ * std::pow(2.0f, osc3PitchMod / 12.0f);
 
       // Oscillators
-      float osc1 = osc1_.getNextSample(currentFrequency_, oscShape_);
-      float osc2 = osc2_.getNextSample(currentFrequency_, oscShape_);
-      float osc3 = osc3_.getNextSample(currentFrequency_, oscShape_);
+      float osc1 = osc1_.getNextSample(osc1Freq, oscShape_);
+      float osc2 = osc2_.getNextSample(osc2Freq, oscShape_);
+      float osc3 = osc3_.getNextSample(osc3Freq, oscShape_);
 
       // Unison
       float unisonOutput = 0.0f;
@@ -411,27 +446,71 @@ void ZenithPolySynthVoice::renderNextBlock(
           unisonOscillators_[v].setWaveform(osc1_.getWaveform());
 
           unisonOutput +=
-              unisonOscillators_[v].getNextSample(currentFrequency_, oscShape_);
+              unisonOscillators_[v].getNextSample(osc1Freq, oscShape_);  // Use osc1Freq with pitch modulation
         }
         unisonOutput /= effectiveUnisonVoices; // Normalize
         osc1 = (osc1 + unisonOutput) * 0.5f;
       }
 
-      // Mix
-      float mixed = osc1 * osc1Mix_ + osc2 * osc2Mix_ + osc3 * osc3Mix_;
+      // Apply mix modulation
+      float osc1MixMod = juce::jlimit(0.0f, 1.0f, 
+          osc1Mix_ + modulationState_.get(ModulationDestination::Osc1Mix));
+      float osc2MixMod = juce::jlimit(0.0f, 1.0f,
+          osc2Mix_ + modulationState_.get(ModulationDestination::Osc2Mix));
+      float osc3MixMod = juce::jlimit(0.0f, 1.0f,
+          osc3Mix_ + modulationState_.get(ModulationDestination::Osc3Mix));
 
-      // Filter
-      float filtered = filter1_.processSample(mixed);
-      if (!filterSerial_) {
-        // Parallel routing logic could go here
+      // Mix
+      float mixed = osc1 * osc1MixMod + osc2 * osc2MixMod + osc3 * osc3MixMod;
+
+      // Sub Oscillator (sine wave, -1 octave for fat bass)
+      if (subOscLevel_ > 0.01f) {
+        float subFreq = osc1Freq * 0.5f; // One octave below Osc1
+        float subSample = std::sin(subOscPhase_ * juce::MathConstants<double>::twoPi);
+        subOscPhase_ += subFreq / getSampleRate();
+        if (subOscPhase_ >= 1.0) subOscPhase_ -= 1.0;
+        
+        mixed += subSample * subOscLevel_;
+      }
+
+      // Noise Generator
+      if (noiseLevel_ > 0.01f) {
+        float noise = (noiseRandom_.nextFloat() * 2.0f - 1.0f) * noiseLevel_;
+        mixed += noise;
+      }
+
+      // Dual Filter Routing
+      float filtered;
+      if (filterSerial_) {
+        // Serial: Filter1 -> Filter2
+        float temp = filter1_.processSample(mixed);
+        filtered = filter2_.processSample(temp);
+      } else {
+        // Parallel: (Filter1 + Filter2) / 2
+        float filter1Out = filter1_.processSample(mixed);
+        float filter2Out = filter2_.processSample(mixed);
+        filtered = (filter1Out + filter2Out) * 0.5f;
       }
 
       // Amp Envelope
       filtered *= ampEnv * velocity_;
 
+      // Apply volume modulation
+      float volumeMod = 1.0f + modulationState_.get(ModulationDestination::Volume);
+      filtered *= juce::jlimit(0.0f, 2.0f, volumeMod);
+
+      // Apply pan modulation with equal-power panning
+      float panMod = modulationState_.get(ModulationDestination::Pan);
+      float panValue = juce::jlimit(-1.0f, 1.0f, panMod);
+      
+      // Equal power panning: -1 = left, 0 = center, +1 = right
+      float panAngle = (panValue + 1.0f) * juce::MathConstants<float>::pi / 4.0f;
+      float leftGain = std::cos(panAngle);
+      float rightGain = std::sin(panAngle);
+
       // Effects
-      float left = filtered;
-      float right = filtered;
+      float left = filtered * leftGain;
+      float right = filtered * rightGain;
       effects_.process(left, right);
 
       // Output
@@ -447,22 +526,85 @@ void ZenithPolySynthVoice::renderNextBlock(
 void ZenithPolySynthVoice::computeModulation() {
   modulationState_.reset();
 
-  // LFOs
-  lfo1Value_ = std::sin(lfo1Phase_ * juce::MathConstants<double>::twoPi);
+  // LFO1
+  switch (lfo1Waveform_) {
+    case LFOWaveform::Sine:
+      lfo1Value_ = std::sin(lfo1Phase_ * juce::MathConstants<double>::twoPi);
+      break;
+    case LFOWaveform::Triangle:
+      lfo1Value_ = (lfo1Phase_ < 0.5) 
+        ? (4.0f * (float)lfo1Phase_ - 1.0f)
+        : (3.0f - 4.0f * (float)lfo1Phase_);
+      break;
+    case LFOWaveform::Square:
+      lfo1Value_ = (lfo1Phase_ < 0.5) ? 1.0f : -1.0f;
+      break;
+    case LFOWaveform::SawUp:
+      lfo1Value_ = 2.0f * (float)lfo1Phase_ - 1.0f;
+      break;
+    case LFOWaveform::SawDown:
+      lfo1Value_ = 1.0f - 2.0f * (float)lfo1Phase_;
+      break;
+    case LFOWaveform::SampleHold:
+      if (lfo1Phase_ < lastLfo1Phase_) { // Wrapped
+        lfo1SampleHold_ = (float)noiseRandom_.nextFloat() * 2.0f - 1.0f;
+      }
+      lfo1Value_ = lfo1SampleHold_;
+      break;
+    default:
+      lfo1Value_ = std::sin(lfo1Phase_ * juce::MathConstants<double>::twoPi);
+      break;
+  }
+  
+  lastLfo1Phase_ = lfo1Phase_;
   lfo1Phase_ += lfo1Rate_ / getSampleRate();
-  if (lfo1Phase_ >= 1.0)
-    lfo1Phase_ -= 1.0;
+  if (lfo1Phase_ >= 1.0) lfo1Phase_ -= 1.0;
 
-  lfo2Value_ = std::sin(lfo2Phase_ * juce::MathConstants<double>::twoPi);
+  // LFO2
+  switch (lfo2Waveform_) {
+    case LFOWaveform::Sine:
+      lfo2Value_ = std::sin(lfo2Phase_ * juce::MathConstants<double>::twoPi);
+      break;
+    case LFOWaveform::Triangle:
+      lfo2Value_ = (lfo2Phase_ < 0.5) 
+        ? (4.0f * (float)lfo2Phase_ - 1.0f)
+        : (3.0f - 4.0f * (float)lfo2Phase_);
+      break;
+    case LFOWaveform::Square:
+      lfo2Value_ = (lfo2Phase_ < 0.5) ? 1.0f : -1.0f;
+      break;
+    case LFOWaveform::SawUp:
+      lfo2Value_ = 2.0f * (float)lfo2Phase_ - 1.0f;
+      break;
+    case LFOWaveform::SawDown:
+      lfo2Value_ = 1.0f - 2.0f * (float)lfo2Phase_;
+      break;
+    case LFOWaveform::SampleHold:
+      if (lfo2Phase_ < lastLfo2Phase_) { // Wrapped
+        lfo2SampleHold_ = (float)noiseRandom_.nextFloat() * 2.0f - 1.0f;
+      }
+      lfo2Value_ = lfo2SampleHold_;
+      break;
+    default:
+      lfo2Value_ = std::sin(lfo2Phase_ * juce::MathConstants<double>::twoPi);
+      break;
+  }
+
+  lastLfo2Phase_ = lfo2Phase_;
   lfo2Phase_ += lfo2Rate_ / getSampleRate();
-  if (lfo2Phase_ >= 1.0)
-    lfo2Phase_ -= 1.0;
+  if (lfo2Phase_ >= 1.0) lfo2Phase_ -= 1.0;
 
-  // Apply matrix
-  for (const auto &slot : modulationMatrix_) {
-    if (slot.isActive()) {
-      float sourceVal = getModulationSourceValue(slot.source);
-      modulationState_.add(slot.destination, sourceVal * slot.amount);
+  // Apply matrix (Dense)
+  for (int src = 1; src < (int)ModulationSource::NumSources; ++src) {
+    float sourceVal = getModulationSourceValue((ModulationSource)src);
+    // Optimization: Skip if source is near zero (except for envelopes which might be active)
+    // Actually, let's just process it.
+    
+    for (int dst = 1; dst < (int)ModulationDestination::NumDestinations; ++dst) {
+       float amount = modulationMatrix_[src][dst];
+       if (amount != 0.0f) {
+         modulationState_.add((ModulationDestination)dst, sourceVal * amount);
+       }
     }
   }
 
@@ -481,9 +623,9 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {
   case ModulationSource::LFO2:
     return lfo2Value_;
   case ModulationSource::Env1:
-    return 0.0f; // Amp env not easily accessible here without peeking
+    return currentAmpEnv_; // Use cached amp envelope value
   case ModulationSource::Env2:
-    return 0.0f; // Mod env
+    return currentModEnv_; // Use cached mod envelope value
   case ModulationSource::Velocity:
     return velocity_;
   case ModulationSource::ModWheel:
@@ -525,14 +667,41 @@ void ZenithPolySynthVoice::setLFO2(float rate, float amount, LFOTarget target) {
   lfo2Target_ = target;
 }
 
-void ZenithPolySynthVoice::setModulationSlot(int slotIndex,
-                                             ModulationSource source,
+void ZenithPolySynthVoice::setModulationAmount(ModulationSource source,
                                              ModulationDestination destination,
                                              float amount) {
-  if (slotIndex >= 0 && slotIndex < 8) {
-    modulationMatrix_[slotIndex].source = source;
-    modulationMatrix_[slotIndex].destination = destination;
-    modulationMatrix_[slotIndex].amount = amount;
+  int src = (int)source;
+  int dst = (int)destination;
+  if (src >= 0 && src < (int)ModulationSource::NumSources &&
+      dst >= 0 && dst < (int)ModulationDestination::NumDestinations) {
+    modulationMatrix_[src][dst] = amount;
+  }
+}
+
+float ZenithPolySynthVoice::getModulationAmount(ModulationSource source,
+                                                ModulationDestination destination) const {
+  int src = (int)source;
+  int dst = (int)destination;
+  if (src >= 0 && src < (int)ModulationSource::NumSources &&
+      dst >= 0 && dst < (int)ModulationDestination::NumDestinations) {
+    return modulationMatrix_[src][dst];
+  }
+  return 0.0f;
+}
+
+void ZenithPolySynthVoice::updateFrequency() {
+  // Implement glide/portamento
+  if (glideTime_ > 0.0f && getSampleRate() > 0.0) {
+    // Calculate glide rate (time constant for exponential smoothing)
+    // glideTime_ is in seconds, convert to samples
+    float glideSamples = glideTime_ * static_cast<float>(getSampleRate());
+    float glideCoeff = 1.0f - std::exp(-1.0f / glideSamples);
+    
+    // Exponential smoothing toward target frequency
+    currentFrequency_ += (targetFrequency_ - currentFrequency_) * glideCoeff;
+  } else {
+    // No glide, jump directly to target
+    currentFrequency_ = targetFrequency_;
   }
 }
 
@@ -571,28 +740,22 @@ const juce::String ZenithPolySynthProcessor::ModRelease = "mod_release";
 
 const juce::String ZenithPolySynthProcessor::LFO1Rate = "lfo1_rate";
 const juce::String ZenithPolySynthProcessor::LFO1Amount = "lfo1_amount";
-const juce::String ZenithPolySynthProcessor::LFO1Target = "lfo1_target";
 
 const juce::String ZenithPolySynthProcessor::LFO2Rate = "lfo2_rate";
 const juce::String ZenithPolySynthProcessor::LFO2Amount = "lfo2_amount";
-const juce::String ZenithPolySynthProcessor::LFO2Target = "lfo2_target";
 
 const juce::String ZenithPolySynthProcessor::GlideTime = "glide_time";
 const juce::String ZenithPolySynthProcessor::MonoMode = "mono_mode";
 const juce::String ZenithPolySynthProcessor::MasterGain = "master_gain";
 
-const juce::String ZenithPolySynthProcessor::MaxVoices = "max_voices";
-const juce::String ZenithPolySynthProcessor::QualitySetting = "quality";
+ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {}
 
-ZenithPolySynthProcessor::ZenithPolySynthProcessor()
-    : AudioProcessor(BusesProperties().withOutput(
-          "Output", juce::AudioChannelSet::stereo(), true)),
-      parameters_(*this, nullptr, "Parameters", createParameterLayout()) {
-
-  updateVoiceCount();
+//==============================================================================
+juce::AudioProcessorEditor *ZenithPolySynthProcessor::createEditor() {
+  return new ZenithPolySynthUI(*this);
 }
 
-ZenithPolySynthProcessor::~ZenithPolySynthProcessor() {}
+bool ZenithPolySynthProcessor::hasEditor() const { return true; }
 
 void ZenithPolySynthProcessor::prepareToPlay(double sampleRate,
                                              int samplesPerBlock) {
@@ -623,6 +786,9 @@ void ZenithPolySynthProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // Master Gain
   float masterGain = *parameters_.getRawParameterValue(MasterGain);
   buffer.applyGain(juce::Decibels::decibelsToGain(masterGain));
+  
+  // Visualizer
+  pushToVisualizer(buffer);
 }
 
 void ZenithPolySynthProcessor::updateVoiceParameters() {
@@ -653,39 +819,38 @@ void ZenithPolySynthProcessor::updateVoiceParameters() {
       voice->setUnisonVoices((int)getVal(UnisonVoices));
       voice->setUnisonDetune(getVal(UnisonDetune));
 
+      voice->setSubOscLevel(getVal("sub_level"));
+      voice->setNoiseLevel(getVal("noise_level"));
+
       voice->setFilterType((zenith::FilterType)getChoice(FilterType));
       voice->setFilterCutoff(getVal(FilterCutoff));
       voice->setFilterResonance(getVal(FilterResonance));
       voice->setFilterDrive(getVal(FilterDrive));
+      voice->setFilterEnvAmount(getVal("filter_env_amount"));
+
+      voice->setFilter2Type((zenith::FilterType)getChoice("filter2_type"));
+      voice->setFilter2Cutoff(getVal("filter2_cutoff"));
+      voice->setFilter2Resonance(getVal("filter2_resonance"));
+      voice->setFilter2Drive(getVal("filter2_drive"));
+      voice->setFilterRouting(getVal("filter_serial") > 0.5f);
+
+      voice->setDistortion(getVal("distortion"));
+      voice->setChorus(getVal("chorus"));
 
       voice->setAmpEnvelope(getVal(AmpAttack), getVal(AmpDecay),
                             getVal(AmpSustain), getVal(AmpRelease));
       voice->setModEnvelope(getVal(ModAttack), getVal(ModDecay),
                             getVal(ModSustain), getVal(ModRelease));
 
-      voice->setLFO1(getVal(LFO1Rate), getVal(LFO1Amount),
-                     (LFOTarget)getChoice(LFO1Target));
-      voice->setLFO2(getVal(LFO2Rate), getVal(LFO2Amount),
-                     (LFOTarget)getChoice(LFO2Target));
+      voice->setLFO1(getVal(LFO1Rate), getVal(LFO1Amount));
+      voice->setLFO1Waveform((LFOWaveform)getChoice("lfo1_waveform"));
+
+      voice->setLFO2(getVal(LFO2Rate), getVal(LFO2Amount));
+      voice->setLFO2Waveform((LFOWaveform)getChoice("lfo2_waveform"));
 
       voice->setGlideTime(getVal(GlideTime));
       voice->setMonoMode(getVal(MonoMode) > 0.5f);
       voice->setQualityPreset((QualityPreset)getChoice(QualitySetting));
-    }
-  }
-}
-
-juce::AudioProcessorValueTreeState::ParameterLayout
-ZenithPolySynthProcessor::createParameterLayout() {
-  juce::AudioProcessorValueTreeState::ParameterLayout layout;
-
-  // Oscillators
-  auto oscWaveforms = juce::StringArray{"Sine",     "Saw",   "Square",
-                                        "Triangle", "Noise", "Supersaw"};
-  layout.add(std::make_unique<juce::AudioParameterChoice>(
-      Osc1Wave, "Osc 1 Wave", oscWaveforms, 1));
-  layout.add(std::make_unique<juce::AudioParameterFloat>(
-      Osc1Detune, "Osc 1 Detune", -100.0f, 100.0f, 0.0f));
   layout.add(std::make_unique<juce::AudioParameterFloat>(Osc1Mix, "Osc 1 Mix",
                                                          0.0f, 1.0f, 1.0f));
 
@@ -709,7 +874,13 @@ ZenithPolySynthProcessor::createParameterLayout() {
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       UnisonDetune, "Unison Detune", 0.0f, 100.0f, 10.0f));
 
-  // Filter
+  // Sub & Noise
+  layout.add(std::make_unique<juce::AudioParameterFloat>(
+      "sub_level", "Sub Level", 0.0f, 1.0f, 0.0f));
+  layout.add(std::make_unique<juce::AudioParameterFloat>(
+      "noise_level", "Noise Level", 0.0f, 1.0f, 0.0f));
+
+  // Filter 1
   auto filterTypes = juce::StringArray{"Lowpass", "Bandpass", "Highpass"};
   layout.add(std::make_unique<juce::AudioParameterChoice>(
       FilterType, "Filter Type", filterTypes, 0));
@@ -719,11 +890,10 @@ ZenithPolySynthProcessor::createParameterLayout() {
       FilterResonance, "Resonance", 0.0f, 1.0f, 0.0f));
   layout.add(std::make_unique<juce::AudioParameterFloat>(FilterDrive, "Drive",
                                                          1.0f, 5.0f, 1.0f));
-
-  // Envelopes
   layout.add(std::make_unique<juce::AudioParameterFloat>(
-      AmpAttack, "Amp Attack", 0.001f, 5.0f, 0.01f));
-  layout.add(std::make_unique<juce::AudioParameterFloat>(AmpDecay, "Amp Decay",
+      "filter_env_amount", "Filter Env Amount", 0.0f, 1.0f, 0.5f));
+
+  // Filter 2
                                                          0.001f, 5.0f, 0.1f));
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       AmpSustain, "Amp Sustain", 0.0f, 1.0f, 0.7f));
@@ -742,19 +912,21 @@ ZenithPolySynthProcessor::createParameterLayout() {
   // LFOs
   auto lfoTargets = juce::StringArray{"Cutoff", "Osc1 Pitch", "Osc2 Pitch",
                                       "Osc1 Mix", "Osc2 Mix"};
+  auto lfoWaveforms = juce::StringArray{"Sine", "Triangle", "Square", "SawUp", "SawDown", "S&H"};
+
+  layout.add(std::make_unique<juce::AudioParameterChoice>(
+      "lfo1_waveform", "LFO1 Waveform", lfoWaveforms, 0));
   layout.add(std::make_unique<juce::AudioParameterFloat>(LFO1Rate, "LFO 1 Rate",
                                                          0.1f, 20.0f, 1.0f));
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       LFO1Amount, "LFO 1 Amount", 0.0f, 1.0f, 0.0f));
-  layout.add(std::make_unique<juce::AudioParameterChoice>(
-      LFO1Target, "LFO 1 Target", lfoTargets, 0));
 
+  layout.add(std::make_unique<juce::AudioParameterChoice>(
+      "lfo2_waveform", "LFO2 Waveform", lfoWaveforms, 0));
   layout.add(std::make_unique<juce::AudioParameterFloat>(LFO2Rate, "LFO 2 Rate",
                                                          0.1f, 20.0f, 1.0f));
   layout.add(std::make_unique<juce::AudioParameterFloat>(
       LFO2Amount, "LFO 2 Amount", 0.0f, 1.0f, 0.0f));
-  layout.add(std::make_unique<juce::AudioParameterChoice>(
-      LFO2Target, "LFO 2 Target", lfoTargets, 0));
 
   // Global
   layout.add(std::make_unique<juce::AudioParameterFloat>(
@@ -788,6 +960,24 @@ juce::SynthesiserVoice *
 ZenithPolySynthProcessor::findFreeVoice(juce::SynthesiserSound *soundToPlay,
                                         int midiChannel, int midiNoteNumber,
                                         bool stealIfNoneAvailable) const {
+  // Check if mono mode is enabled
+  bool monoMode = *parameters_.getRawParameterValue(MonoMode) > 0.5f;
+  
+  if (monoMode) {
+    // In mono mode, always use the first voice and steal it if necessary
+    if (getNumVoices() > 0) {
+      auto* voice = getVoice(0);
+      if (voice != nullptr) {
+        // If voice is currently playing, stop it for legato transition
+        if (voice->isVoiceActive()) {
+          voice->stopNote(1.0f, false); // Hard stop for legato
+        }
+        return voice;
+      }
+    }
+  }
+  
+  // Poly mode: use default JUCE behavior
   return juce::Synthesiser::findFreeVoice(soundToPlay, midiChannel,
                                           midiNoteNumber, stealIfNoneAvailable);
 }
@@ -808,6 +998,60 @@ void ZenithPolySynthProcessor::setStateInformation(const void *data,
       parameters_.replaceState(juce::ValueTree::fromXml(*xmlState));
     }
   }
+}
+
+//==============================================================================
+void ZenithPolySynthProcessor::setModulationMatrix(ModulationSource src, ModulationDestination dst, float amount) {
+  int s = (int)src;
+  int d = (int)dst;
+  if (s >= 0 && s < (int)ModulationSource::NumSources &&
+      d >= 0 && d < (int)ModulationDestination::NumDestinations) {
+    processorModulationMatrix_[s][d] = amount;
+  }
+}
+
+float ZenithPolySynthProcessor::getModulationMatrix(ModulationSource src, ModulationDestination dst) const {
+  int s = (int)src;
+  int d = (int)dst;
+  if (s >= 0 && s < (int)ModulationSource::NumSources &&
+      d >= 0 && d < (int)ModulationDestination::NumDestinations) {
+    return processorModulationMatrix_[s][d];
+  }
+  return 0.0f;
+}
+
+void ZenithPolySynthProcessor::pushToVisualizer(const juce::AudioBuffer<float>& buffer) {
+    if (buffer.getNumChannels() > 0) {
+        auto* channelData = buffer.getReadPointer(0);
+        int numSamples = buffer.getNumSamples();
+        
+        int start1, size1, start2, size2;
+        visualizerFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
+        
+        if (size1 > 0) {
+            for (int i = 0; i < size1; ++i) visualizerBuffer_[start1 + i] = channelData[i];
+        }
+        if (size2 > 0) {
+            for (int i = 0; i < size2; ++i) visualizerBuffer_[start2 + i] = channelData[size1 + i];
+        }
+        
+        visualizerFifo_.finishedWrite(size1 + size2);
+    }
+}
+
+int ZenithPolySynthProcessor::readFromVisualizer(float* dest, int numSamples) {
+    int start1, size1, start2, size2;
+    visualizerFifo_.prepareToRead(numSamples, start1, size1, start2, size2);
+    
+    if (size1 > 0) {
+        for (int i = 0; i < size1; ++i) dest[i] = visualizerBuffer_[start1 + i];
+    }
+    if (size2 > 0) {
+        for (int i = 0; i < size2; ++i) dest[size1 + i] = visualizerBuffer_[start2 + i];
+    }
+    
+    visualizerFifo_.finishedRead(size1 + size2);
+    return size1 + size2;
 }
 
 //==============================================================================
@@ -891,15 +1135,11 @@ ZenithPolySynth::ZenithPolySynth()
                getParamIndex(proc, ZenithPolySynthProcessor::LFO1Rate));
   mapParameter("lfo1_amount",
                getParamIndex(proc, ZenithPolySynthProcessor::LFO1Amount));
-  mapParameter("lfo1_target",
-               getParamIndex(proc, ZenithPolySynthProcessor::LFO1Target));
 
   mapParameter("lfo2_rate",
                getParamIndex(proc, ZenithPolySynthProcessor::LFO2Rate));
   mapParameter("lfo2_amount",
                getParamIndex(proc, ZenithPolySynthProcessor::LFO2Amount));
-  mapParameter("lfo2_target",
-               getParamIndex(proc, ZenithPolySynthProcessor::LFO2Target));
 
   mapParameter("glide_time",
                getParamIndex(proc, ZenithPolySynthProcessor::GlideTime));

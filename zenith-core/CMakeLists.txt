@@ -177,16 +177,23 @@ target_sources(ZenithDAW PRIVATE
     Source/instruments/InstrumentRegistry.h
     Source/instruments/InstrumentRegistry.cpp
     Source/instruments/ContentPaths.h
-    Source/instruments/ZenithPolySynth.h
-    Source/instruments/ZenithPolySynth.cpp
+    # TEMPORARILY DISABLED: Merge conflict damage in ZenithPolySynth
+    # Source/instruments/ZenithPolySynth.h
+    # Source/instruments/ZenithPolySynth.cpp
     Source/instruments/ZenithSampler.h
     # Source/instruments/ZenithSampler.cpp  # TODO: Fix constructor definitions
     Source/instruments/ZenithSamplerEditor.h
     # Source/instruments/ZenithSamplerEditor.cpp  # Depends on ZenithSampler
     Source/instruments/RegisterBuiltInInstruments.h
     # Source/instruments/RegisterBuiltInInstruments.cpp  # Depends on ZenithSampler
-    Source/instruments/ZenithPolySynthEditor.h
-    Source/instruments/ZenithPolySynthEditor.cpp
+    # Source/instruments/ZenithPolySynthEditor.h
+    # Source/instruments/ZenithPolySynthEditor.cpp
+
+    # Synth UI (Skia)
+    # Source/ui/skia/ZenithPolySynthUI.h
+    # Source/ui/skia/ZenithPolySynthUI.cpp
+    # Source/ui/skia/ZenithUIComponents.h
+
     include/InstrumentCommandHelpers.h
 )
 
@@ -589,13 +596,10 @@ if(ZENITH_ENABLE_SKIA)
 
     target_link_libraries(SkiaSimpleTest PRIVATE
         juce::juce_core
-        ${SKIA_LIBRARY}
+        unofficial::skia::skia
     )
 
-    target_include_directories(SkiaSimpleTest PRIVATE
-        ${SKIA_INCLUDE_DIR}
-        ${SKIA_DIR}/include
-    )
+    # vcpkg handles include directories automatically
 
     target_compile_definitions(SkiaSimpleTest PRIVATE
         JUCE_USE_CURL=0

@@ -1,73 +1,40 @@
 # ============================================================================
-# Manual Skia Integration (instead of vcpkg)
+# Skia Integration via vcpkg
 # ============================================================================
-# This file replaces the vcpkg-based Skia integration in CMakeLists.txt
+# This file integrates Skia from vcpkg installation
 # 
-# Usage: Include this after line 195 in zenith-core/CMakeLists.txt
-#        (replacing the "if(ZENITH_ENABLE_SKIA)" block)
+# Prerequisites:
+#   - Skia installed via vcpkg: vcpkg install skia:x64-windows
+#   - CMake configured with: -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake
 # ============================================================================
 
 if(ZENITH_ENABLE_SKIA)
     message(STATUS "============================================")
-    message(STATUS "Configuring Manual Skia Integration")
+    message(STATUS "Configuring Skia Integration (vcpkg)")
     message(STATUS "============================================")
 
-    # Skia directory
-    set(SKIA_DIR "C:/zenith/skia" CACHE PATH "Path to Skia installation")
+    # Find Skia via vcpkg
+    find_package(unofficial-skia CONFIG)
     
-    if(NOT EXISTS "${SKIA_DIR}")
-        message(FATAL_ERROR 
+    if(NOT unofficial-skia_FOUND)
+        message(WARNING 
             "\n"
-            "Skia directory not found: ${SKIA_DIR}\n"
-            "\n"
-            "Please download Skia first:\n"
-            "  1. Run: C:\\zenith\\daw\\download-skia.bat\n"
-            "  2. Or manually download from: https://github.com/JetBrains/skia-pack/releases\n"
-            "\n"
+            "Skia package not found via vcpkg!\n"
+            "CMAKE_TOOLCHAIN_FILE: ${CMAKE_TOOLCHAIN_FILE}\n"
+            "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}\n"
+            "VCPKG_TARGET_TRIPLET: ${VCPKG_TARGET_TRIPLET}\n"
         )
+        set(ZENITH_ENABLE_SKIA OFF)
+        return()
     endif()
 
-    # Find Skia headers and library
-    find_path(SKIA_INCLUDE_DIR 
-        NAMES include/core/SkCanvas.h
-        PATHS ${SKIA_DIR}
-        NO_DEFAULT_PATH
-    )
-
-    # Try multiple possible library locations
-    find_library(SKIA_LIBRARY
-        NAMES skia
-        PATHS 
-            ${SKIA_DIR}/out/Release-windows-x64
-            ${SKIA_DIR}/out/Release-x64
-            ${SKIA_DIR}/out/Release
-        NO_DEFAULT_PATH
-    )
-
-    if(NOT SKIA_INCLUDE_DIR)
-        message(FATAL_ERROR "Could not find Skia headers in ${SKIA_DIR}/include")
-    endif()
-
-    if(NOT SKIA_LIBRARY)
-        message(FATAL_ERROR 
-            "Could not find Skia library\n"
-            "Searched in:\n"
-            "  ${SKIA_DIR}/out/Release-windows-x64\n"
-            "  ${SKIA_DIR}/out/Release-x64\n"
-            "  ${SKIA_DIR}/out/Release\n"
-        )
-    endif()
-
-    message(STATUS "  Skia headers: ${SKIA_INCLUDE_DIR}")
-    message(STATUS "  Skia library: ${SKIA_LIBRARY}")
+    message(STATUS "  Skia found via vcpkg (unofficial-skia)")
+    message(STATUS "  Skia target: unofficial::skia::skia")
 
     # Add Skia source files
     target_sources(ZenithDAW PRIVATE
-        # Skia rendering core
-        Source/rendering/SkiaRenderer.h
-        Source/rendering/SkiaRenderer.cpp
-        Source/rendering/SkiaContextManager.h
-        Source/rendering/SkiaContextManager.cpp
+        # Skia rendering core (SkiaRenderer and SkiaContextManager removed - unused)
+        # Direct framebuffer rendering via SkiaMainWindowIntegration instead
 
         # Skia UI components
         Source/ui/skia/SkiaTheme.h
@@ -87,28 +54,57 @@ if(ZENITH_ENABLE_SKIA)
         Source/ui/skia/SkiaPianoRollRenderer.cpp
         Source/ui/skia/SkiaClipRenderer.h
         Source/ui/skia/SkiaClipRenderer.cpp
-        Source/ui/skia/SkiaKnobComponent.h
-        Source/ui/skia/SkiaKnobComponent.cpp
-        Source/ui/skia/SkiaSliderComponent.h
-        Source/ui/skia/SkiaSliderComponent.cpp
-        Source/ui/skia/SkiaButtonComponent.h
-        Source/ui/skia/SkiaButtonComponent.cpp
-        Source/ui/skia/SkiaMixerChannelComponent.h
-        Source/ui/skia/SkiaMixerChannelComponent.cpp
-        Source/ui/skia/SkiaTransportControlComponent.h
-        Source/ui/skia/SkiaTransportControlComponent.cpp
-        Source/ui/skia/SkiaMasterOutputMeterComponent.h
-        Source/ui/skia/SkiaMasterOutputMeterComponent.cpp
-        Source/ui/skia/SkiaEffectsChainComponent.h
-        Source/ui/skia/SkiaEffectsChainComponent.cpp
-        Source/ui/skia/SkiaInstrumentBrowserComponent.h
-        Source/ui/skia/SkiaInstrumentBrowserComponent.cpp
-        Source/ui/skia/SkiaPresetBrowserComponent.h
-        Source/ui/skia/SkiaPresetBrowserComponent.cpp
-        Source/ui/skia/SkiaSettingsManager.h
-        Source/ui/skia/SkiaSettingsManager.cpp
-        Source/ui/skia/SkiaPerformanceDashboard.h
-        Source/ui/skia/SkiaPerformanceDashboard.cpp
+
+        # =======================================================================
+        # OBSOLETE COMPONENTS (Use SkiaRenderer - DELETED)
+        # =======================================================================
+        # These components use the OLD architecture with per-component SkiaRenderer.
+        # They reference the deleted SkiaRenderer class and WILL cause compilation errors.
+        # Use SkiaButtonComponent_NEW.h instead (uses SkiaComponent base class).
+        #
+        # Source/ui/skia/SkiaKnobComponent.h
+        # Source/ui/skia/SkiaKnobComponent.cpp
+        # Source/ui/skia/SkiaSliderComponent.h
+        # Source/ui/skia/SkiaSliderComponent.cpp
+        # Source/ui/skia/SkiaButtonComponent.h
+        # Source/ui/skia/SkiaButtonComponent.cpp
+
+        # =======================================================================
+        # DISABLED COMPONENTS (Merge Conflict Damage - Need Manual Repair)
+        # =======================================================================
+        # TODO: These components exist on disk but are disabled due to merge
+        # conflicts from previous UI transformation. To re-enable:
+        # 1. Review each .h/.cpp pair for compilation errors
+        # 2. Fix any broken includes or API changes
+        # 3. Uncomment the lines below
+        # 4. Test build
+        #
+        # Priority order for re-enabling:
+        # - SkiaMixerChannelComponent (critical for mixing)
+        # - SkiaTransportControlComponent (transport bar alternative)
+        # - SkiaMasterOutputMeterComponent (master output metering)
+        # - SkiaEffectsChainComponent, SkiaInstrumentBrowserComponent,
+        #   SkiaPresetBrowserComponent, SkiaSettingsManager,
+        #   SkiaPerformanceDashboard (nice-to-have)
+        #
+        # Source/ui/skia/SkiaMixerChannelComponent.h
+        # Source/ui/skia/SkiaMixerChannelComponent.cpp
+        # Source/ui/skia/SkiaTransportControlComponent.h
+        # Source/ui/skia/SkiaTransportControlComponent.cpp
+        # Source/ui/skia/SkiaMasterOutputMeterComponent.h
+        # Source/ui/skia/SkiaMasterOutputMeterComponent.cpp
+        # Source/ui/skia/SkiaEffectsChainComponent.h
+        # Source/ui/skia/SkiaEffectsChainComponent.cpp
+        # Source/ui/skia/SkiaInstrumentBrowserComponent.h
+        # Source/ui/skia/SkiaInstrumentBrowserComponent.cpp
+        # Source/ui/skia/SkiaPresetBrowserComponent.h
+        # Source/ui/skia/SkiaPresetBrowserComponent.cpp
+        # Source/ui/skia/SkiaSettingsManager.h
+        # Source/ui/skia/SkiaSettingsManager.cpp
+        # Source/ui/skia/SkiaPerformanceDashboard.h
+        # Source/ui/skia/SkiaPerformanceDashboard.cpp
+        # =======================================================================
+
         Source/ui/skia/SkiaMainWindowIntegration.h
         Source/ui/skia/SkiaMainWindowIntegration.cpp
         Source/ui/skia/SkiaCanvasComponent.cpp
@@ -142,17 +138,14 @@ if(ZENITH_ENABLE_SKIA)
         Source/ui/MainLayoutComponent.h
     )
 
-    # Add include directories
+    # Add include directories for Skia UI components
     target_include_directories(ZenithDAW PRIVATE
-        ${SKIA_INCLUDE_DIR}
-        ${SKIA_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_CURRENT_SOURCE_DIR}/Source/ui/skia
-        ${CMAKE_CURRENT_SOURCE_DIR}/Source/rendering
     )
 
-    # Link Skia library
-    target_link_libraries(ZenithDAW PRIVATE ${SKIA_LIBRARY})
+    # Link Skia library via vcpkg target
+    target_link_libraries(ZenithDAW PRIVATE unofficial::skia::skia)
 
     # Add compile definitions
     target_compile_definitions(ZenithDAW PRIVATE 

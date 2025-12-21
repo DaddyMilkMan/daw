@@ -1,5 +1,4 @@
 #include "SkiaMainWindowIntegration.h"
-#include "../../../src/SimpleLogger.h"
 #include "../skia/SkiaComponent.h"
 #include <gl/GL.h>
 #include <include/core/SkColorSpace.h>
@@ -17,61 +16,76 @@
 namespace zenith {
 
 SkiaMainWindowIntegration::SkiaMainWindowIntegration() {
-  // 1. Setup OpenGL Context
+  // Setup OpenGL Context
   openGLContext.setRenderer(this);
-  openGLContext.setContinuousRepainting(true); // Force 60FPS
+  openGLContext.setContinuousRepainting(true); // 60 FPS continuous rendering
   openGLContext.setComponentPaintingEnabled(
-      false); // DISABLE JUCE painting - we're using pure OpenGL/Skia
+      false); // DISABLE JUCE painting - using pure OpenGL/Skia
   openGLContext.setMultisamplingEnabled(true);
   openGLContext.attachTo(*this);
 }
 
 SkiaMainWindowIntegration::~SkiaMainWindowIntegration() {
   openGLContext.detach();
-  renderer_.reset();
+  // Clean up Skia resources
+  cachedSurface_.reset();
+  grContext_.reset();
 }
 
 void SkiaMainWindowIntegration::newOpenGLContextCreated() {
-  logToFile(
-      "SkiaMainWindowIntegration::newOpenGLContextCreated - OpenGL context "
-      "created, will initialize Skia on first render");
+  DBG("SkiaMainWindowIntegration: OpenGL context created, will initialize Skia on first render");
   // Defer actual initialization to first renderOpenGL() call
   // when we're guaranteed to be in the rendering thread
   rendererInitialized_ = false;
+
+  // Reset cached surface on context recreation
+  cachedSurface_.reset();
+  cachedWidth_ = 0;
+  cachedHeight_ = 0;
 }
 
 void SkiaMainWindowIntegration::openGLContextClosing() {
-  grContext_.reset();
-  renderer_.reset();
+  DBG("SkiaMainWindowIntegration: OpenGL context closing, releasing Skia resources");
+
+  // Invalidate surface first (thread-safe signal)
+  surfaceValid_.store(false, std::memory_order_release);
+
+  // Release cached surface
+  cachedSurface_.reset();
+
+  // Flush and submit pending GPU work before releasing context
+  if (grContext_) {
+    grContext_->flushAndSubmit(GrSyncCpu::kYes);
+    grContext_.reset();
+  }
+
+  rendererInitialized_ = false;
 }
 
 void SkiaMainWindowIntegration::renderOpenGL() {
-  // Lazy initialization on first render when OpenGL context is guaranteed to be
-  // active
+  // Lazy initialization on first render when OpenGL context is guaranteed to be active
   if (!rendererInitialized_) {
-    logToFile("SkiaMainWindowIntegration::renderOpenGL - Initializing Skia "
-              "renderer for direct framebuffer rendering");
+    DBG("SkiaMainWindowIntegration: Initializing Skia renderer for direct framebuffer rendering");
 
     // Create GrDirectContext
     auto glInterface = GrGLMakeNativeInterface();
     if (!glInterface) {
-      logToFile("ERROR: Failed to create GL interface");
+      DBG("ERROR: Failed to create GL interface");
       return;
     }
 
     grContext_ = GrDirectContexts::MakeGL(glInterface);
     if (!grContext_) {
-      logToFile("ERROR: Failed to create GrDirectContext");
+      DBG("ERROR: Failed to create GrDirectContext");
       return;
     }
 
-    logToFile(
-        "Successfully created Skia GrDirectContext for framebuffer rendering");
+    DBG("Successfully created Skia GrDirectContext for framebuffer rendering");
     rendererInitialized_ = true;
   }
 
   if (!grContext_) {
-    logToFile("ERROR: No GrDirectContext available");
+    DBG("ERROR: No GrDirectContext available");
     return;
   }
 
@@ -83,34 +97,49 @@ void SkiaMainWindowIntegration::renderOpenGL() {
     return; // Component not ready yet
   }
 
-  // Create backend render target info for the default framebuffer (FBO 0)
-  GrGLFramebufferInfo fbInfo;
-  fbInfo.fFBOID = 0;       // Default framebuffer
-  fbInfo.fFormat = 0x8058; // GL_RGBA8
+  // ===========================================================================
+  // SURFACE CACHING - Only recreate when size changes (fixes memory leak bug)
+  // Thread-safe check using atomic flag to prevent resize race condition
+  // ===========================================================================
+  if (!surfaceValid_.load(std::memory_order_acquire) || !cachedSurface_ ||
+      cachedWidth_ != fbWidth || cachedHeight_ != fbHeight) {
+    DBG("SkiaMainWindowIntegration: Creating new surface (" << fbWidth << "x" << fbHeight << ")");
 
-  // Create backend render target wrapping the default framebuffer using factory
-  // method
-  GrBackendRenderTarget backendRT =
-      GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 1, 8, fbInfo);
+    // Create backend render target info for the default framebuffer (FBO 0)
+    GrGLFramebufferInfo fbInfo;
+    fbInfo.fFBOID = 0;       // Default framebuffer
+    fbInfo.fFormat = 0x8058; // GL_RGBA8
 
-  SkSurfaceProps props(0, kRGB_H_SkPixelGeometry);
-  sk_sp<SkSurface> surface = SkSurfaces::WrapBackendRenderTarget(
-      grContext_.get(), backendRT, kBottomLeft_GrSurfaceOrigin,
-      kRGBA_8888_SkColorType, nullptr, &props);
+    // FIXED: Correct MSAA and stencil bits for default framebuffer (0, 0 not 1, 8)
+    // Default FBO has no MSAA samples and no stencil buffer
+    GrBackendRenderTarget backendRT =
+        GrBackendRenderTargets::MakeGL(fbWidth, fbHeight, 0, 0, fbInfo);
 
-  if (!surface) {
-    static bool loggedError = false;
-    if (!loggedError) {
-      logToFile("ERROR: Failed to create Skia surface from framebuffer");
-      loggedError = true;
+    SkSurfaceProps props(0, kRGB_H_SkPixelGeometry);
+    cachedSurface_ = SkSurfaces::WrapBackendRenderTarget(
+        grContext_.get(), backendRT, kBottomLeft_GrSurfaceOrigin,
+        kRGBA_8888_SkColorType, nullptr, &props);
+
+    if (!cachedSurface_) {
+      if (!loggedSurfaceError_) {
+        DBG("ERROR: Failed to create Skia surface from framebuffer");
+        loggedSurfaceError_ = true;
+      }
+      surfaceValid_.store(false, std::memory_order_release);
+      return;
     }
-    return;
+
+    // Update cached dimensions and mark surface valid
+    cachedWidth_ = fbWidth;
+    cachedHeight_ = fbHeight;
+    surfaceValid_.store(true, std::memory_order_release);
+    loggedSurfaceError_ = false; // Reset error flag on successful creation
   }
 
-  // Get canvas and start drawing
-  SkCanvas *canvas = surface->getCanvas();
+  // Get canvas from cached surface
+  SkCanvas *canvas = cachedSurface_->getCanvas();
   if (!canvas) {
-    logToFile("ERROR: No canvas from surface");
+    DBG("ERROR: No canvas from surface");
     return;
   }
 
@@ -118,43 +147,57 @@ void SkiaMainWindowIntegration::renderOpenGL() {
   canvas->clear(SkColorSetRGB(40, 40, 45));
 
   // Recursively render the component tree
-  // Iterate over all children of the MainComponent
   int childCount = 0;
   for (auto *child : getChildren()) {
     childCount++;
-    // Render ALL visible children, not just SkiaComponents
     renderComponentRecursively(child, canvas);
   }
 
-  static bool loggedComponentTree = false;
-  if (!loggedComponentTree) {
-    logToFile("SkiaMainWindowIntegration: Rendering " +
-              std::to_string(childCount) + " child components");
-    loggedComponentTree = true;
+  // Log component tree on first render (member variable instead of static bool)
+  if (!loggedComponentTree_) {
+    DBG("SkiaMainWindowIntegration: Rendering " << childCount << " child components");
+    loggedComponentTree_ = true;
   }
 
   // Flush all Skia GPU commands to the framebuffer
   grContext_->flush();
 
-  static bool loggedSuccess = false;
-  if (!loggedSuccess) {
-    logToFile("Skia framebuffer rendering initialized successfully!");
-    loggedSuccess = true;
+  // Log success on first render (member variable instead of static bool)
+  if (!loggedSuccess_) {
+    DBG("Skia framebuffer rendering initialized successfully!");
+    loggedSuccess_ = true;
   }
 }
 
 void SkiaMainWindowIntegration::renderComponentRecursively(
     juce::Component *comp, SkCanvas *canvas) {
-  if (!comp->isVisible())
+  if (!comp || !comp->isVisible())
     return;
+
+  // Validate canvas pointer
+  if (!canvas) {
+    DBG("ERROR: Null canvas passed to renderComponentRecursively");
+    return;
+  }
 
   canvas->save();
 
   auto bounds = comp->getBounds();
-  canvas->translate((SkScalar)bounds.getX(), (SkScalar)bounds.getY());
+
+  // Validate bounds (prevent negative width/height)
+  jassert(bounds.getWidth() >= 0 && bounds.getHeight() >= 0);
+  if (bounds.getWidth() < 0 || bounds.getHeight() < 0) {
+    DBG("WARNING: Component has negative bounds: " << bounds.toString());
+    canvas->restore();
+    return;
+  }
+
+  canvas->translate(static_cast<SkScalar>(bounds.getX()),
+                    static_cast<SkScalar>(bounds.getY()));
 
   // Clip to bounds
-  canvas->clipRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()));
+  canvas->clipRect(SkRect::MakeWH(static_cast<SkScalar>(bounds.getWidth()),
+                                   static_cast<SkScalar>(bounds.getHeight())));
 
   // Check if this is a Skia-aware component
   if (auto *skiaComp = dynamic_cast<SkiaComponent *>(comp)) {
@@ -174,10 +217,16 @@ void SkiaMainWindowIntegration::paint(juce::Graphics &g) {
   // when setComponentPaintingEnabled(false) is set.
   // If you see this, OpenGL context failed to attach.
   // Leave empty - OpenGL handles all rendering
+  juce::ignoreUnused(g);
 }
 
 void SkiaMainWindowIntegration::resized() {
-  // MainComponent handles resizing of children
+  // Invalidate cached surface on resize - it will be recreated in renderOpenGL()
+  // Signal to OpenGL thread that surface needs recreation (thread-safe)
+  surfaceValid_.store(false, std::memory_order_release);
+  cachedSurface_.reset();
+  cachedWidth_ = 0;
+  cachedHeight_ = 0;
 }
 
 } // namespace zenith

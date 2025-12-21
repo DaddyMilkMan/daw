@@ -50,23 +50,6 @@ void ZenithTransportBar::paint(juce::Graphics& g)
     // DESIGN SYSTEM: Top border using borderSubtle
     g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderSubtle));
     g.drawLine(0.0f, 0.0f, (float)getWidth(), 0.0f, 1.0f);
-    
-    // DESIGN SYSTEM: Bottom border using borderMedium (stronger)
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::borderMedium));
-    g.drawLine(0.0f, (float)getHeight(), (float)getWidth(), (float)getHeight(), 1.0f);
-    
-    // DESIGN SYSTEM: Left section: Project name using textPrimary
-    auto leftSection = bounds.removeFromLeft(200).reduced(ZenithLookAndFeel::Spacing::m, 0);
-    g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textPrimary));
-    g.setFont(ZenithLookAndFeel::Typography::getH4());
-    g.drawText("Zenith DAW", leftSection, juce::Justification::centredLeft, true);
-    
-    // Right section: Status displays
-    auto rightSection = bounds.removeFromRight(400).reduced(ZenithLookAndFeel::Spacing::m, 0);
-    
-    // DESIGN SYSTEM: Track count using textSecondary (rightmost)
-    auto trackCountArea = rightSection.removeFromRight(100);
-    g.setFont(ZenithLookAndFeel::Typography::getSmall());
     g.setColour(juce::Colour(ZenithLookAndFeel::Colors::textSecondary));
     g.drawText(juce::String(trackCount_) + " tracks", trackCountArea, juce::Justification::centredRight, true);
     

@@ -28,7 +28,9 @@ public:
   void mouseExit(const juce::MouseEvent &e) override;
 
   // The Skia Render Loop
+#if ZENITH_ENABLE_SKIA
   void paintSkia(SkCanvas &canvas, const juce::Rectangle<int> &bounds) override;
+#endif
 
   // Timer for animation
   void timerCallback() override;
@@ -45,7 +47,7 @@ private:
     bool isQueued = false;
     juce::String name;
     float playProgress = 0.0f;
-    SkColor color = 0xFF4DABF7;
+    juce::uint32 color = 0xFF4DABF7; // Replaced SkColor with uint32
   };
 
   //============================================================================
@@ -54,6 +56,7 @@ private:
 
   void initializeDemoData();
 
+#if ZENITH_ENABLE_SKIA
   void drawBackground(SkCanvas &canvas, const juce::Rectangle<int> &bounds);
   void drawGridPanel(SkCanvas &canvas, const juce::Rectangle<int> &bounds,
                      float clipWidth, float clipHeight);
@@ -69,6 +72,7 @@ private:
   void drawWaveform(SkCanvas &canvas, const SkRect &rect, const ClipSlot &slot);
   void drawMasterSection(SkCanvas &canvas, const juce::Rectangle<int> &bounds);
   void drawGridLines(SkCanvas &canvas, const juce::Rectangle<int> &bounds);
+#endif
 
   //============================================================================
   // Hit Testing

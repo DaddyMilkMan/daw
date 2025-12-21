@@ -4,7 +4,6 @@
  */
 
 #include "../include/MixerComponent.h"
-#include "../Source/rendering/SkiaContextManager.h"
 #include "../Source/ui/ZenithLookAndFeel.h"
 
 #ifdef ZENITH_USE_SKIA
@@ -182,10 +181,10 @@ void MixerComponent::drawTrackStripSkia(SkCanvas *canvas, SkRect stripBounds,
 void MixerComponent::resized() {
   using namespace zenith;
 
-  auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Spacing::m);
+  auto bounds = getLocalBounds().reduced(ZenithLookAndFeel::Metrics::m);
   int x = 0;
   const int localStripWidth = 80; // Fixed strip width
-  const int localStripSpacing = ZenithLookAndFeel::Spacing::s;
+  const int localStripSpacing = ZenithLookAndFeel::Metrics::s;
 
   for (auto &strip : trackStrips) {
     if (!strip)
@@ -206,13 +205,13 @@ void MixerComponent::resized() {
     auto volumeArea = area.removeFromTop(area.getHeight() - 100);
     if (strip->volumeSlider)
       strip->volumeSlider->setBounds(
-          volumeArea.reduced(ZenithLookAndFeel::Spacing::s, 0));
+          volumeArea.reduced(ZenithLookAndFeel::Metrics::s, 0));
 
     // 3. Pan Slider (Knob)
     auto panArea = area.removeFromTop(60);
     if (strip->panSlider)
       strip->panSlider->setBounds(
-          panArea.reduced(ZenithLookAndFeel::Spacing::s));
+          panArea.reduced(ZenithLookAndFeel::Metrics::s));
 
     // 4. Mute/Solo Buttons (Bottom)
     auto buttonArea = area.removeFromBottom(40);
