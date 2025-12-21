@@ -181,7 +181,7 @@ juce::String GrokMasteringAI::buildPrompt(
 {
     float dynamicRange = features.peakDb - features.rmsDb;
     
-    juce::String prompt = R"(You are a Grammy-winning mastering engineer with 30 years of experience. Analyze this audio and provide professional mastering parameters.
+    juce::String msg = R"(You are a Grammy-winning mastering engineer with 30 years of experience. Analyze this audio and provide professional mastering parameters.
 
 AUDIO ANALYSIS:
 ═══════════════════════════════════════════════════════════════
@@ -207,6 +207,11 @@ Width: )" + juce::String(features.stereoWidth * 100.0f, 1) + R"(%
 TARGET SPECIFICATION:
 ═══════════════════════════════════════════════════════════════
 Target Loudness: )" + juce::String(targetLoudness, 1) + R"( LUFS (streaming standard)
+// Target loudness values follow streaming platform standards:
+// -14 LUFS: Spotify, YouTube (default)
+// -16 LUFS: Apple Music
+// -23 LUFS: Broadcast (EBU R128)
+// This is configurable via Options::targetLoudness
 User Intent: ")" + userIntent + R"("
 
 MASTERING GUIDELINES:
@@ -216,6 +221,7 @@ MASTERING GUIDELINES:
 3. Determine EQ moves to enhance clarity and balance
 4. Set compression to glue the mix without over-squashing
 5. Choose limiter ceiling based on target loudness and headroom
+6. Explain your reasoning for EVERY decision
 
 Respond with ONLY this JSON structure (no markdown, no extra text):
 {
@@ -235,7 +241,7 @@ Respond with ONLY this JSON structure (no markdown, no extra text):
   "reasoning": "<brief professional explanation of your choices>"
 })";
     
-    return prompt;
+    return msg;
 }
 
 GrokMasteringAI::MasteringDecision GrokMasteringAI::parseGrokResponse(
@@ -292,6 +298,9 @@ GrokMasteringAI::MasteringDecision GrokMasteringAI::parseGrokResponse(
     decision.compression.attack = juce::jlimit(10.0f, 100.0f, decision.compression.attack);
     decision.compression.release = juce::jlimit(50.0f, 500.0f, decision.compression.release);
     
+    // Limiter ceiling is negative because it represents dB below 0dBFS.
+    // Range -1.0 to -0.1 dB provides headroom for true peak limiting
+    // while maximizing loudness. -0.3 dB is typical for streaming.
     decision.limiterCeiling = juce::jlimit(-1.0f, -0.1f, decision.limiterCeiling);
     
     decision.valid = true;
@@ -359,6 +368,10 @@ AIMasteringAgent::AIMasteringAgent(Engine& engine)
 }
 
 AIMasteringAgent::~AIMasteringAgent() {
+    // Bug 32 fix: Properly release DSP resources
+    eq_.reset();
+    compressor_.reset();
+    limiter_.reset();
     DBG("AI Mastering Agent destroyed");
 }
 
@@ -422,7 +435,7 @@ void AIMasteringAgent::analyzeAndConfigure(
             const juce::ScopedLock lock(decisionLock_);
             lastDecision_ = decision;
             applyAIDecision(decision);
-            isConfigured_.store(true);
+            isConfigured_.store(true, std::memory_order_release);
             DBG("✓ AI mastering configuration applied successfully");
         } else {
             DBG("ERROR: AI decision invalid, mastering not configured");
@@ -437,7 +450,8 @@ void AIMasteringAgent::analyzeAndConfigure(
 
 void AIMasteringAgent::applyAIDecision(const GrokMasteringAI::MasteringDecision& decision) {
     // Apply EQ settings
-    if (decision.valid) {
+    // (Caller ensures decision.valid, removing redundant check - Bug 65)
+    {
         MasteringEQ::Settings eqSettings;
         eqSettings.lowShelfGain = decision.eq.lowShelfGain;
         eqSettings.midCutGain = decision.eq.midCutGain;
@@ -463,9 +477,10 @@ void AIMasteringAgent::applyAIDecision(const GrokMasteringAI::MasteringDecision&
 }
 
 void AIMasteringAgent::balanceTracks(const Options& options) {
-    auto& tracks = engine_.tracks();
+    juce::ignoreUnused(options);
+    const auto& tracks = engine_.tracks();
     if (tracks.empty()) {
-        DBG("No tracks to balance");
+        DBG("AIMasteringAgent: No tracks to balance");
         return;
     }
     
