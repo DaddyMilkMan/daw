@@ -26,8 +26,12 @@
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
+<<<<<<< HEAD
 
 #include "../ai/AIMasteringAgent.h"
+=======
+// #include "../ai/AIMasteringAgent.h"
+>>>>>>> origin/master
 #include "../ai/PresetGeneticistAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
@@ -550,6 +554,29 @@ juce::var CommandAPI::undo(const juce::var &params) {
   auto *resultObj = new juce::DynamicObject();
   resultObj->setProperty("undone", true);
   return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  if (uxDirector_) {
+    auto *resultObj = new juce::DynamicObject();
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+
+    // Add breakdown
+    auto breakdown = uxDirector_->getHealthBreakdown();
+    auto *breakdownObj = new juce::DynamicObject();
+    breakdownObj->setProperty("styleConsistency", breakdown.styleConsistency);
+    breakdownObj->setProperty("dataBindingHealth", breakdown.dataBindingHealth);
+    breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
+    breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
+    resultObj->setProperty("breakdown", juce::var(breakdownObj));
+
+    return createSuccessResponse(juce::var(resultObj));
+  }
+
+  return createErrorResponse("UXDirectorAgent not available");
 }
 
 juce::var CommandAPI::getUIState(const juce::var &params) {
@@ -2164,3 +2191,4 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
 }
 
 } // namespace zenith
+//==============================================================================

@@ -54,8 +54,8 @@ void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
   // Prepare dither
   dither_.prepare(2); // Stereo
 
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
+  // [DSP Optimization] Pre-reserve vector capacity for RT-safety
+  auxBufferPtrsVector_.reserve(kMaxAuxBuses);
 
   DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
       juce::String(numAuxBuses) + " aux buses");
@@ -83,9 +83,14 @@ void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition, std::span<Track *const> tracks,
     std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+<<<<<<< HEAD
     MasterLimiter &masterLimiter,
+=======
+    MasterLimiter &masterLimiter, MasterLimiter &masterLimiter,
+>>>>>>> origin/master
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
-    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi) noexcept {
+    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
+    const float *const *inputChannelData, int numInputChannels) noexcept {
 
   // RT-Safety: Disable denormals to prevent CPU spikes with near-zero floats
   juce::ScopedNoDenormals noDenormals;
@@ -109,7 +114,10 @@ void AudioRenderer::renderAudioGraph(
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed
   // member) We'll use a local array for safety since it's small (max 16 aux
   // buses usually)
+<<<<<<< HEAD
   static constexpr int kMaxAuxBuses = 32;
+=======
+>>>>>>> origin/master
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
   for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
@@ -195,6 +203,32 @@ void AudioRenderer::renderAudioGraph(
 
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                auxBufferPtrsVector_, tempoMap);
+<<<<<<< HEAD
+=======
+
+      // Input Monitoring Logic
+      if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
+        const int inputChIndex = track->getInputChannel();
+        // Assuming stereo tracks: Map Input N -> Left, Input N+1 -> Right
+        // If mono input selected for stereo track, map Input N to both.
+        // For simplicity: Map Input N to Left, Input N+1 to Right if available.
+
+        for (int ch = 0; ch < trackBuffer.getNumChannels(); ++ch) {
+          const int sourceCh = inputChIndex + ch;
+          if (sourceCh < numInputChannels &&
+              inputChannelData[sourceCh] != nullptr) {
+            // Add input signal (mix with existing clip audio)
+            trackBuffer.addFrom(ch, 0, inputChannelData[sourceCh], numSamples);
+          } else if (ch > 0 && inputChIndex < numInputChannels &&
+                     inputChannelData[inputChIndex] != nullptr) {
+            // Fallback: If Right input missing but Left exists, map Left to
+            // Right (Mono -> Stereo) Simple heuristic for now.
+            trackBuffer.addFrom(ch, 0, inputChannelData[inputChIndex],
+                                numSamples);
+          }
+        }
+      }
+>>>>>>> origin/master
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
@@ -429,6 +463,18 @@ void AudioRenderer::updateMasterLatency(
   }
 
   masterLatency_.store(totalLatency);
+}
+
+//==============================================================================
+void AudioRenderer::updateClipPositions(std::span<Track *const> tracks,
+                                        juce::int64 playheadPosition) noexcept {
+  for (auto *track : tracks) {
+    if (track != nullptr) {
+      // Update clip scheduling/positions based on playhead
+      // This ensures clips are ready for processing in the render callback
+      track->updateClipPositions(playheadPosition);
+    }
+  }
 }
 
 } // namespace zenith

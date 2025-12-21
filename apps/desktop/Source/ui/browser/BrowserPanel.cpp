@@ -14,6 +14,8 @@
 */
 
 #include "BrowserPanel.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include "ZenithDesignSystem.h"
 #include "ZenithIcons.h"
 #include <cmath>
@@ -306,22 +308,11 @@ void BrowserPanel::drawSkia(SkCanvas *canvas) {
   listAreaBounds_ = juce::Rectangle<int>(
       0, y, bounds.getWidth(), bounds.getHeight() - y - previewHeight_);
 
-  // 1. Premium Background - subtle gradient
-  SkPoint bgGradPoints[2] = {{0, 0},
-                             {0, static_cast<float>(bounds.getHeight())}};
-  SkColor bgGradColors[3] = {
-      design::colors::BG_DARK,    // Top
-      design::colors::BG_DARKEST, // Middle - darkest
-      design::colors::BG_DARKEST  // Bottom
-  };
-  float bgPositions[3] = {0.0f, 0.4f, 1.0f};
-  auto bgGradient = SkGradientShader::MakeLinear(
-      bgGradPoints, bgGradColors, bgPositions, 3, SkTileMode::kClamp);
-
-  SkPaint bgPaint;
-  bgPaint.setShader(bgGradient);
-  canvas->drawRect(SkRect::MakeWH(bounds.getWidth(), bounds.getHeight()),
-                   bgPaint);
+  // 1. Premium Background - Glassmorphic
+  GlassmorphicPanel::fillBackground(
+      canvas,
+      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
+                       (float)bounds.getWidth(), (float)bounds.getHeight()));
 
   // 2. Subtle side accent glow
   SkPaint accentGlow;
@@ -367,12 +358,21 @@ void BrowserPanel::drawHeader(SkCanvas *canvas) {
   bool showBack = (currentRoot_ != model_.getRoot()) && searchText_.isEmpty();
 
   if (showBack) {
-    // Enhanced back button with glow
+    // Enhanced back button with glow - Glassmorphic
     backButtonBounds_ = juce::Rectangle<int>(8, 10, 28, 28);
 
-    // Button background with gradient
+    // Background
+    GlassmorphicPanel::draw(canvas,
+                            SkRect::MakeXYWH(backButtonBounds_.getX(),
+                                             backButtonBounds_.getY(),
+                                             backButtonBounds_.getWidth(),
+                                             backButtonBounds_.getHeight()),
+                            GlassmorphicPanel::Style::Subtle);
+
+    /* Original manual drawing removed */
     SkPaint backBtnBg;
-    backBtnBg.setColor(SkColorSetARGB(80, 255, 255, 255));
+    backBtnBg.setColor(SkColorSetARGB(
+        0, 0, 0, 0)); // Transparent (handled by GlassmorphicPanel)
     backBtnBg.setAntiAlias(true);
     canvas->drawRoundRect(SkRect::MakeXYWH(backButtonBounds_.getX(),
                                            backButtonBounds_.getY(),
@@ -604,36 +604,22 @@ void BrowserPanel::drawBrowserItem(SkCanvas *canvas, int index,
 
   // Selection / Hover Background
   if (index == selectedIndex_) {
-    SkPoint selGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor selGradColors[2] = {design::withAlpha(design::colors::CYAN, 0.25f),
-                                design::withAlpha(design::colors::CYAN, 0.05f)};
-    auto selGradient = SkGradientShader::MakeLinear(
-        selGradPoints, selGradColors, nullptr, 2, SkTileMode::kClamp);
+    GlassmorphicPanel::draw(canvas, SkRect::MakeXYWH(x, y, w, h),
+                            GlassmorphicPanel::Style::ActiveGlow);
 
-    SkPaint selPaint;
-    selPaint.setShader(selGradient);
-    canvas->drawRect(SkRect::MakeXYWH(x, y, w, h), selPaint);
-
-    SkPaint barGlowPaint;
-    barGlowPaint.setColor(design::withAlpha(design::colors::CYAN, 0.5f));
-    barGlowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 3.0f));
-    canvas->drawRect(SkRect::MakeXYWH(0, y, 6, h), barGlowPaint);
-
+    // Neon Accent Bar
+    SkRect barRect = SkRect::MakeXYWH(x, y + 2, 3, h - 4);
     SkPaint barPaint;
     barPaint.setColor(design::colors::CYAN);
+    barPaint.setAntiAlias(true);
+    canvas->drawRect(barRect, barPaint);
+    NeonGlow::drawGlow(canvas, barRect, design::colors::CYAN,
+                       NeonGlow::Intensity::Medium);
 
   } else if (index == hoverIndex_) {
-    SkPoint hovGradPoints[2] = {{x, 0}, {x + w, 0}};
-    SkColor hovGradColors[2] = {design::withAlpha(design::colors::CYAN, 0.15f),
-                                design::withAlpha(design::colors::CYAN, 0.0f)};
-    auto hovGradient = SkGradientShader::MakeLinear(
-        hovGradPoints, hovGradColors, nullptr, 2, SkTileMode::kClamp);
-
-    SkPaint hovPaint;
-    hovPaint.setShader(hovGradient);
-    canvas->drawRoundRect(SkRect::MakeXYWH(x + 4, y + 1, w - 8, h - 2), 4, 4,
-                          hovPaint);
+    GlassmorphicPanel::draw(canvas,
+                            SkRect::MakeXYWH(x + 4, y + 1, w - 8, h - 2),
+                            GlassmorphicPanel::Style::Subtle);
   }
 
   // === RICH MEDIA WAVEFORM ===
@@ -1203,12 +1189,12 @@ void BrowserPanel::startItemDrag(int itemIndex) {
   BrowserDragSource::startDrag(this, item, dragImage);
 }
 
-// ... (Existing mouseDoubleClick etc) - Wait, I'm replacing just startItemDrag
-// and appending others at the end of the file. No, replace tool works on line
-// numbers. I will just replace startItemDrag. Then I will append the others
-// using a separate call or same call if contiguous? startItemDrag is at 1040.
-// The new methods should be at the end of the file (after 1387). I will do two
-// calls. First replace startItemDrag.
+// ... (Existing mouseDoubleClick etc) - Wait, I'm replacing just
+// startItemDrag and appending others at the end of the file. No, replace tool
+// works on line numbers. I will just replace startItemDrag. Then I will
+// append the others using a separate call or same call if contiguous?
+// startItemDrag is at 1040. The new methods should be at the end of the file
+// (after 1387). I will do two calls. First replace startItemDrag.
 
 void BrowserPanel::mouseDoubleClick(const juce::MouseEvent &e) {
   if (listAreaBounds_.contains(e.getPosition())) {
@@ -1477,7 +1463,8 @@ void BrowserPanel::drawFilterTab(SkCanvas *canvas,
 
   SkPaint textPaint;
   textPaint.setColor(active ? design::colors::CYAN
-                            : design::withAlpha(design::colors::TEXT_PRIMARY, 160.0f / 255.0f));
+                            : design::withAlpha(design::colors::TEXT_PRIMARY,
+                                                160.0f / 255.0f));
   textPaint.setAntiAlias(true);
 
   // Center text
@@ -1559,8 +1546,8 @@ void BrowserPanel::showContextMenu(int itemIndex, juce::Point<int> position) {
                               repaint();
                             }
                           }
-                          // AlertWindow is managed by JUCE, no manual deletion
-                          // needed
+                          // AlertWindow is managed by JUCE, no manual
+                          // deletion needed
                         }));
         } else if (result >= 100) {
           // Remove tag

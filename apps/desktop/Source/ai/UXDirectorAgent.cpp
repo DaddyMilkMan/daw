@@ -14,6 +14,7 @@
 #include "ClipComponent.h"
 #include "MixerChannelComponent.h"
 #include "SkiaComponent.h"
+#include "ZenithStyleApplicator.h"
 #include <algorithm>
 #include <typeinfo>
 
@@ -703,17 +704,18 @@ bool UXDirectorAgent::applyStyleFix(juce::Component *component) {
   if (component == nullptr)
     return false;
 
-  // We can't really apply a LookAndFeel here since we use Skia
-  // But we can mark the component for repaint with Skia styling
-  // For JUCE components, we'd need a custom LookAndFeel
+  // Use ZenithStyleApplicator for proper styling
+  auto result = ZenithStyleApplicator::applyToComponent(component);
 
-  // For now, just trigger a repaint which will use Skia if available
-  component->repaint();
+  if (result.success) {
+    recordFix(UIIssueType::UnstyledComponent,
+              "Style applied: " + result.appliedStyle, component->getName());
+    return true;
+  }
 
-  recordFix(UIIssueType::UnstyledComponent, "Repaint triggered",
-            component->getName());
-
-  return true;
+  // Log failure but don't record as fix (honest failure)
+  DBG("UXDirectorAgent: Failed to style component: " + result.reason);
+  return false;
 }
 
 bool UXDirectorAgent::applyLayoutFix(juce::Component *component) {

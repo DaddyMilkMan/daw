@@ -8,8 +8,8 @@
 
 // Skia Includes
 #ifdef ZENITH_USE_SKIA
-#include "GlassmorphicPanel.h"
-#include "NeonGlow.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include <core/SkBlurTypes.h> // For SkBlurStyle enum
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -29,6 +29,7 @@
 
 // Zenith Includes
 #include "../../Source/engine/AudioFilePool.h"
+#include "../../utils/StemSeparationJob.h" // For AI Stem Separation
 #include "../browser/BrowserDragSource.h"
 #include "../engine/AudioFilePool.h"
 #include "ZenithDesignSystem.h" // Explicitly include to make typography visible
@@ -96,7 +97,35 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
       return juce::String();
     auto *view = findClipView(selectedClipIds[0]);
     return view ? view->trackId : juce::String();
+    return view ? view->trackId : juce::String();
   };
+
+  // Setup Freeze Progress Callback
+  macroToolbar->onFreezeProgress = [this](float progress,
+                                          const juce::String &status) {
+    if (!freezeOverlay)
+      return;
+
+    if (!freezeOverlay->isVisible())
+      freezeOverlay->setVisible(true);
+
+    freezeOverlay->setProgress(progress);
+    freezeOverlay->setStatus(status);
+
+    // Hide when done
+    if (progress >= 1.0f) {
+      // Delay hide slightly or handle via generic finish
+      freezeOverlay->setVisible(false);
+    }
+  };
+
+  // Initialize Freeze Overlay (after MacroToolbar so it sits on top if added
+  // later, but z-order matters) Actually addAndMakeVisible brings to front.
+  freezeOverlay = std::make_unique<FreezeProgressOverlay>();
+  addAndMakeVisible(freezeOverlay.get());
+  freezeOverlay->setVisible(false);
+
+  freezeOverlay->onCancel = [this]() { engine_.cancelFreeze(); };
 
   // Initialize Section Track
   sectionTrack = std::make_unique<ArrangerTrackComponent>(projectState);
@@ -242,55 +271,66 @@ void ArrangerComponent::rebuildClipViews() {
   // Also update visible range immediately
   double visibleBeats = (getWidth() - HEADER_WIDTH) / pixelsPerBeat;
   int visibleTracks = (int)(getHeight() - RULER_HEIGHT) / (int)TRACK_HEIGHT;
+  config.setFloat(config::keys::ARRANGER_SCROLL_X, (float)viewStartBeats);
+  config.setInt(config::keys::ARRANGER_SCROLL_Y, firstVisibleTrackIndex);
+  config.setBool(config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
+
   miniMap.setVisibleRange(viewStartBeats, visibleBeats, firstVisibleTrackIndex,
                           visibleTracks);
-  
+
   rebuildTrackComponents();
 }
 
 void ArrangerComponent::rebuildTrackComponents() {
-    auto tracksNode = projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
-    if (!tracksNode.isValid()) {
-        trackComponents.clear();
-        return;
-    }
-    
-    // Sync vector size
-    int numTracks = tracksNode.getNumChildren();
-    
-    // Naively rebuild for now (Optimize later to reuse components)
-    // Actually, simple reuse is easy: resize vector, update data
-    
-    size_t required = (size_t)numTracks;
-    
-    // Add if needed
-    while (trackComponents.size() < required) {
-        auto type = ArrangerTrackComponent::TrackType::Audio; // Default
-        auto newTrack = std::make_unique<ArrangerTrackComponent>(projectState, type);
-        addChildComponent(newTrack.get());
-        trackComponents.push_back(std::move(newTrack));
-    }
-    
-    // Remove if needed
-    while (trackComponents.size() > required) {
-        trackComponents.pop_back(); // unique_ptr handles destruction and removal from parent? No, addChildComponent doesn't take ownership. 
-        // Component destruction removes from parent automatically.
-    }
-    
-    // Update Data
-    for (int i = 0; i < numTracks; ++i) {
-        auto trackNode = tracksNode.getChild(i);
-        auto* comp = trackComponents[i].get();
-        
-        comp->setTrackId(trackNode[zenith::ProjectState::PROP_ID].toString());
-        comp->setTrackName(trackNode[zenith::ProjectState::PROP_NAME].toString());
-        comp->setTrackIndex(i);
-        comp->setViewContext(pixelsPerBeat, viewStartBeats);
-        
-        // TODO: Sync Mute/Solo/Rec state from ValueTree
-    }
-    
-    resized(); // Layout
+  auto tracksNode =
+      projectState.getState().getChildWithName(zenith::ProjectState::ID_TRACKS);
+  if (!tracksNode.isValid()) {
+    trackComponents.clear();
+    return;
+  }
+
+  // Sync vector size
+  int numTracks = tracksNode.getNumChildren();
+
+  // Naively rebuild for now (Optimize later to reuse components)
+  // Actually, simple reuse is easy: resize vector, update data
+
+  size_t required = (size_t)numTracks;
+
+  // Add if needed
+  while (trackComponents.size() < required) {
+    auto type = ArrangerTrackComponent::TrackType::Audio; // Default
+    auto newTrack =
+        std::make_unique<ArrangerTrackComponent>(projectState, type);
+    addChildComponent(newTrack.get());
+    trackComponents.push_back(std::move(newTrack));
+  }
+
+  // Remove if needed
+  while (trackComponents.size() > required) {
+    trackComponents
+        .pop_back(); // unique_ptr handles destruction and removal from parent?
+                     // No, addChildComponent doesn't take ownership.
+                     // Component destruction removes from parent automatically.
+  }
+
+  // Update Data
+  for (int i = 0; i < numTracks; ++i) {
+    auto trackNode = tracksNode.getChild(i);
+    auto *comp = trackComponents[i].get();
+
+    comp->setTrackId(trackNode[zenith::ProjectState::PROP_ID].toString());
+    comp->setTrackName(trackNode[zenith::ProjectState::PROP_NAME].toString());
+    comp->setTrackIndex(i);
+    comp->setViewContext(pixelsPerBeat, viewStartBeats);
+
+    comp->setMuted(trackNode[zenith::ProjectState::PROP_MUTE]);
+    comp->setSoloed(trackNode[zenith::ProjectState::PROP_SOLO]);
+    comp->setRecordArmed(trackNode[zenith::ProjectState::PROP_ARMED]);
+    comp->setInputMonitor(trackNode[zenith::ProjectState::PROP_INPUT_MONITOR]);
+  }
+
+  resized(); // Layout
 }
 
 void ArrangerComponent::recomputeClipBounds() {
@@ -546,27 +586,33 @@ void ArrangerComponent::resized() {
     float h = 60.0f;
     float x = (getWidth() - w) * 0.5f;
     float y = RULER_HEIGHT + 20.0f;
+    float x = (getWidth() - w) * 0.5f;
+    float y = RULER_HEIGHT + 20.0f;
     macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
   }
-  
+
+  if (freezeOverlay) {
+    freezeOverlay->setBounds(getLocalBounds());
+  }
+
   // Layout Tracks
   const float trackHeight = TRACK_HEIGHT; // 80.0f
   // We need to account for scroll position (firstVisibleTrackIndex)
   // For now, simple vertical stack starting from TOP_MARGIN
-  
+
   float yEntry = TOP_MARGIN; // + (0 - firstVisibleTrackIndex) * trackHeight?
   // Actually trackIndexToY handles the scroll math:
   // TOP_MARGIN + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT
-  
+
   for (size_t i = 0; i < trackComponents.size(); ++i) {
-      float y = trackIndexToY((int)i);
-      if (y + trackHeight < TOP_MARGIN || y > getHeight()) {
-          trackComponents[i]->setVisible(false);
-      } else {
-          trackComponents[i]->setVisible(true);
-          trackComponents[i]->setBounds(0, (int)y, getWidth(), (int)trackHeight);
-          trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
-      }
+    float y = trackIndexToY((int)i);
+    if (y + trackHeight < TOP_MARGIN || y > getHeight()) {
+      trackComponents[i]->setVisible(false);
+    } else {
+      trackComponents[i]->setVisible(true);
+      trackComponents[i]->setBounds(0, (int)y, getWidth(), (int)trackHeight);
+      trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
+    }
   }
 }
 
@@ -627,8 +673,9 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       // Subtle gradient highlight
       SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
       SkColor gradColors[2] = {
-          SkColorSetARGB(kBarHighlightAlphaTop, 255, 255, 255),    // Subtle top
-          SkColorSetARGB(kBarHighlightAlphaBottom, 255, 255, 255)  // More subtle bottom
+          SkColorSetARGB(kBarHighlightAlphaTop, 255, 255, 255), // Subtle top
+          SkColorSetARGB(kBarHighlightAlphaBottom, 255, 255,
+                         255) // More subtle bottom
       };
       barHighlightPaint.setShader(SkGradientShader::MakeLinear(
           pts, gradColors, nullptr, 2, SkTileMode::kClamp));
@@ -745,26 +792,10 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       SkRect headerRect = SkRect::MakeXYWH(0, y, HEADER_WIDTH, trackHeight);
 
       // A. Track Header Background - PREMIUM GLASSMORPHIC GRADIENT
+      // A. Track Header Background - PREMIUM GLASSMORPHIC
       {
-        // Gradient from slightly lighter top to darker bottom
-        SkPoint hdrGradPts[2] = {{0, y}, {0, y + trackHeight}};
-        SkColor hdrGradColors[3] = {
-            SkColorSetRGB(35, 45,
-                          55), // Top - Cyan tint (visible Neon Noir style)
-            SkColorSetRGB(25, 25, 30), // Middle
-            SkColorSetRGB(18, 18, 22)  // Bottom - darkest
-        };
-        float hdrPositions[3] = {0.0f, 0.3f, 1.0f};
-        trackBgPaint.setShader(SkGradientShader::MakeLinear(
-            hdrGradPts, hdrGradColors, hdrPositions, 3, SkTileMode::kClamp));
-        canvas->drawRect(headerRect, trackBgPaint);
-        trackBgPaint.setShader(nullptr);
-
-        // Top edge highlight (glass effect)
-        SkPaint topHighlight;
-        topHighlight.setColor(SkColorSetARGB(20, 255, 255, 255));
-        topHighlight.setStrokeWidth(1.0f);
-        canvas->drawLine(0, y + 0.5f, HEADER_WIDTH, y + 0.5f, topHighlight);
+        GlassmorphicPanel::draw(canvas, headerRect,
+                                GlassmorphicPanel::Style::Subtle);
       }
 
       // B. Track Timeline Background - Subtle alternating row tint
@@ -1328,6 +1359,69 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
   auto *clip = findClipAtPoint(e.position);
 
   if (clip != nullptr) {
+    // Context Menu (Right Click)
+    if (e.mods.isPopupMenu()) {
+      juce::PopupMenu m;
+      m.addItem(1, "Rename...");
+      m.addItem(2, "Delete");
+      m.addSeparator();
+
+      // AI Features for Audio Clips
+      if (!clip->isMidi) {
+        m.addItem(10, "Extract Stems (AI)...");
+      }
+
+      m.showMenuAsync(
+          juce::PopupMenu::Options().withTargetComponent(this),
+          [this, clipId = clip->clipId, isMidi = clip->isMidi](int result) {
+            if (result == 0)
+              return;
+
+            if (result == 1) {
+              // Rename logic (placeholder)
+            } else if (result == 2) {
+            } else if (result == 2) {
+              auto [track, clipNode] = projectState.findClip(clipId);
+              if (track.isValid()) {
+                juce::String trackId =
+                    track.getProperty(zenith::ProjectState::PROP_ID);
+                projectState.deleteClip(trackId, clipId, "Delete Clip");
+              }
+            } else if (result == 10) {
+              // Extract Stems
+              if (auto *view = findClipView(clipId)) {
+                juce::File inputFile(view->audioFilePath);
+                juce::File outputDir =
+                    projectState.getProjectFile()
+                        .getParentDirectory()
+                        .getChildFile("Stems")
+                        .getChildFile(inputFile.getFileNameWithoutExtension());
+
+                // Launch background job
+                auto job = std::make_unique<zenith::utils::StemSeparationJob>(
+                    inputFile, outputDir,
+                    [this,
+                     clipId](const zenith::utils::StemSeparationJob::StemFiles
+                                 &stems) {
+                      // On completion (Message Thread)
+                      if (stems.success) {
+                        DBG("Stem Separation Complete!");
+                        // Ideally, import these stems as new tracks.
+                        // For now, just notify user (maybe via a toast if we
+                        // had one, or just DBG)
+                      } else {
+                        DBG("Stem Separation Failed: " + stems.error);
+                      }
+                    });
+
+                // Add to engine's thread pool
+                engine_.getThreadPool().addJob(job.release(), true);
+              }
+            }
+          });
+      return;
+    }
+
     // Check for resize zones (standard logic)
     if (clip->isInLeftResizeZone(e.position)) {
       currentDragMode = DragMode::ResizeClipLeft;
@@ -2027,7 +2121,7 @@ void ArrangerComponent::updatePlayheadFromEngine() {
   // repaints)
   if (std::abs(newPlayheadBeats - playheadBeats_) > 0.0001 ||
       wasPlaying != isPlaying_) {
-      
+
     // 1. Invalidate OLD playhead position (Dirty Rect)
     float oldX = beatsToX(playheadBeats_);
     // Playhead is ~15px wide with cap, cover full height
@@ -2046,10 +2140,10 @@ void ArrangerComponent::updatePlayheadFromEngine() {
         viewStartBeats = playheadBeats_ - (visibleWidth * 0.2 / pixelsPerBeat);
         viewStartBeats = juce::jmax(0.0, viewStartBeats);
         recomputeClipBounds();
-        
+
         // If we scrolled, we MUST repaint everything as the grid/clips moved
-        repaint(); 
-        return; 
+        repaint();
+        return;
       }
     }
 
@@ -2375,3 +2469,33 @@ void ArrangerComponent::drawClipWaveform(SkCanvas *canvas, const ClipView &clip,
 #endif
 
 } // namespace zenith
+
+bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
+  // Playhead Lock (Toggle Follow)
+  if (key.getKeyCode() == 'f' || key.getTextCharacter() == 'f' ||
+      key.getTextCharacter() == 'F') {
+    followPlayhead_ = !followPlayhead_;
+    auto &config = config::ConfigurationManager::getInstance();
+    config.setBool(config::keys::ARRANGER_FOLLOW_PLAYHEAD, followPlayhead_);
+    DBG("ArrangerComponent: Playhead Lock "
+        << (followPlayhead_ ? "Enabled" : "Disabled"));
+    return true;
+  }
+
+  // Delete Clips
+  if (key.getKeyCode() == juce::KeyPress::deleteKey ||
+      key.getKeyCode() == juce::KeyPress::backspaceKey) {
+    deleteSelectedClips();
+    return true;
+  }
+
+  // Duplicate Clips (Ctrl+D)
+  if ((key.getKeyCode() == 'd' || key.getTextCharacter() == 'd' ||
+       key.getTextCharacter() == 'D') &&
+      key.getModifiers().isCommandDown()) {
+    duplicateSelectedClips();
+    return true;
+  }
+
+  return false;
+}

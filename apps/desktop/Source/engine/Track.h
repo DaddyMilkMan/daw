@@ -15,9 +15,12 @@
 */
 
 #pragma once
-
 #include "AutomationLane.h"
 #include "AutomationManager.h"
+<<<<<<< HEAD
+=======
+#include "EngineEvent.h" // For MidiFifo
+>>>>>>> origin/master
 #include "MixerChannel.h"
 #include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -64,7 +67,6 @@ public:
   bool isSoloed() const;
 
 public:
-public:
   //==============================================================================
   enum class Type {
     Audio,
@@ -102,6 +104,12 @@ public:
       const juce::MidiBuffer *incomingMidi = nullptr,
       const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
       const TempoMap *tempoMap = nullptr) = 0;
+
+  /**
+   * @brief Update clip scheduling/positions based on playhead
+   * @param playheadPosition Current playhead position in samples
+   */
+  virtual void updateClipPositions(juce::int64 playheadPosition);
 
   //==============================================================================
   // Track properties
@@ -177,6 +185,16 @@ public:
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
 
   // Instrument management (moved to InstrumentTrack)
+
+  //==============================================================================
+  // Live MIDI Injection (Thread-safe)
+  //==============================================================================
+  /**
+   * @brief Inject a MIDI message from the message thread (e.g. virtual
+   * keyboard)
+   * @param message The MIDI message to inject
+   */
+  void injectLiveMidiMessage(const juce::MidiMessage &message);
 
   //==============================================================================
   // Plugin chain management (Phase 3: VST3 hosting MVP)
@@ -291,8 +309,14 @@ protected:
   PluginChain pluginChain;
   AutomationManager automationManager;
 
+  // Thread-safe FIFO for live MIDI injection
+  MidiFifo liveMidiFifo_;
+
+<<<<<<< HEAD
+=======
   juce::AudioBuffer<float> pluginBuffer;
 
+>>>>>>> origin/master
   //==============================================================================
   // Helper methods
   void processPluginChain(juce::AudioBuffer<float> &buffer,

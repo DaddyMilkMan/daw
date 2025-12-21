@@ -4,26 +4,27 @@
  */
 
 #include "MainWindow.h"
-#include "ClipSynchronizer.h"
 #include "../../commands/CommandAPI.h"
-#include "TrackAutomationSynchronizer.h"
-#include "ArrangerComponent.h"
-#include "PianoRollComponent.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
-#include "../engine/Track.h"
+#include "ArrangerComponent.h"
+#include "ClipSynchronizer.h"
 #include "InstrumentBrowserPanel.h"
 #include "MainLayoutComponent.h"
 #include "MenuBar.h"
+#include "PianoRollComponent.h"
 #include "SettingsComponent.h"
+#include "TrackAutomationSynchronizer.h"
 #include "WingmanPanel.h"
 #include "ZenithHubComponent.h"
 #include "ZenithLookAndFeel.h" // For colors
 
+
+#include "../ai/PresetGeneticistAgent.h"
 #include "../ai/SessionDebuggerAgent.h"
 #include "../ai/UXDirectorAgent.h"
-#include "../ai/PresetGeneticistAgent.h"
 #include "../engine/ZenithLogger.h"
+
 
 #include "SkiaComponent.h"
 #include "SkiaMainWindowIntegration.h"
@@ -58,15 +59,14 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Add Debug Overlay
   // addChildComponent(&zenith::DebugLogOverlay::getInstance());
 
-
-
   setSize(1400, 800);
 
   ZENITH_LOG_INFO("========================================");
   ZENITH_LOG_INFO("MainComponent Constructor - Modern DAW Layout");
   ZENITH_LOG_INFO("========================================");
 
-  ZENITH_LOG_INFO(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH EXECUTING <<<");
+  ZENITH_LOG_INFO(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT "
+                  "BRANCH EXECUTING <<<");
 
   // Initialize Skia rendering system
   // Skia initialization is handled by
@@ -121,8 +121,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
 
   // Right: AI Assistant Panel (Wingman) - Pure Skia
   ZENITH_LOG_INFO("→ Creating RightSidePanel...");
-  rightSidePanel =
-      std::make_unique<zenith::RightSidePanel>(api, engine);
+  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, engine);
   addAndMakeVisible(rightSidePanel.get());
   ZENITH_LOG_INFO("✓ RightSidePanel created");
 
@@ -142,12 +141,15 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   ZENITH_LOG_INFO("✓ BottomBar created");
 
   // Source of Truth Demo (Step 5)
-  auto trackNode = projectState.state.getChildWithName(Zenith::IDs::TRACKS).getChild(0);
+  auto trackNode =
+      projectState.state.getChildWithName(Zenith::IDs::TRACKS).getChild(0);
   if (trackNode.isValid()) {
-      volumeKnob = std::make_unique<zenith::ZenithKnob>(trackNode.getPropertyAsValue(Zenith::IDs::volume, &projectState.undoManager));
-      volumeKnob->setLabel("Track 1 Volume");
-      addAndMakeVisible(volumeKnob.get());
-      ZENITH_LOG_INFO("✓ VolumeKnob created (Source of Truth Demo)");
+    volumeKnob =
+        std::make_unique<zenith::ZenithKnob>(trackNode.getPropertyAsValue(
+            Zenith::IDs::volume, &projectState.undoManager));
+    volumeKnob->setLabel("Track 1 Volume");
+    addAndMakeVisible(volumeKnob.get());
+    ZENITH_LOG_INFO("✓ VolumeKnob created (Source of Truth Demo)");
   }
 
   // Connect view toggle callback
@@ -257,6 +259,15 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
     transportBar->onViewToggleClicked();
     DBG("Keyboard shortcut: Toggle Session/Arranger View (Tab)");
     return true;
+  }
+
+  // F11: Toggle Full Screen
+  if (key == juce::KeyPress::F11Key) {
+    if (auto *window = findParentComponentOfClass<juce::DocumentWindow>()) {
+      window->setFullScreen(!window->isFullScreen());
+      DBG("Keyboard shortcut: Toggle Full Screen (F11)");
+      return true;
+    }
   }
 
   return false; // Key not handled
@@ -404,7 +415,7 @@ void MainComponent::resized() {
 
   // Source of Truth Demo Positioning
   if (volumeKnob) {
-      volumeKnob->setBounds(10, 10, 100, 100);
+    volumeKnob->setBounds(10, 10, 100, 100);
   }
 }
 
@@ -529,8 +540,7 @@ MainWindow::MainWindow(const juce::String &name)
   // Main content with project loading callbacks
   // Main content with project loading callbacks
   mainComponent = std::make_unique<MainComponent>(
-      *engine, *commandAPI, *projectState,
-      *recentProjectManager_,
+      *engine, *commandAPI, *projectState, *recentProjectManager_,
       // Load project callback
       [this](const juce::File &file) { loadProject(file); },
       // New project callback
@@ -541,7 +551,8 @@ MainWindow::MainWindow(const juce::String &name)
       });
 
   // Instantiate AI agents (Brain integration)
-  uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState, *mainComponent);
+  uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState,
+                                                     *mainComponent);
   commandAPI->setUXDirector(uxDirector.get());
   uxDirector->startMonitoring(500); // 500ms intervals
 

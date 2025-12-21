@@ -130,13 +130,19 @@ void ZenithChannelStrip::prepareToPlay(double sampleRate, int samplesPerBlock) {
   compressor.prepare(spec);
   saturation.prepare(spec);
 
+<<<<<<< HEAD
   // Force initial EQ coefficient update
   cachedHpfFreq = -1.0f; // Reset to force update
   updateEqCoefficientsIfNeeded(sampleRate);
+=======
+  // Initial parameter updates
+  updateParameters();
+>>>>>>> origin/master
 }
 
 void ZenithChannelStrip::releaseResources() {}
 
+<<<<<<< HEAD
 void ZenithChannelStrip::updateEqCoefficientsIfNeeded(double sr) {
   float hpf = eqHpfFreq->load();
   float lowF = eqLowFreq->load();
@@ -172,6 +178,28 @@ void ZenithChannelStrip::updateEqCoefficientsIfNeeded(double sr) {
       sr, midF, midQ, juce::Decibels::decibelsToGain(midG));
   *eq.get<3>().state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
       sr, highF, 0.707f, juce::Decibels::decibelsToGain(highG));
+=======
+void ZenithChannelStrip::updateParameters() {
+  // Gate
+  gate.setThreshold(gateThresh->load());
+
+  // EQ
+  auto &hpf = eq.get<0>();
+  auto &low = eq.get<1>();
+  auto &mid = eq.get<2>();
+  auto &high = eq.get<3>();
+
+  float sr = static_cast<float>(
+      getLastSampleRate()); // Use last known proper sample rate if possible,
+                            // but prepareToPlay sets it in filters.
+
+  // Since we use IIR filters which don't auto-update from parameters unless we
+  // update their coefficients: We should ideally do this once per block or
+  // smoother. JUCE's IIR::Filter requires explicit coefficient updates. For
+  // per-block updates:
+  // ...
+  // Note: getSampleRate() is valid inside processBlock.
+>>>>>>> origin/master
 }
 
 void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,
@@ -191,8 +219,27 @@ void ZenithChannelStrip::processBlock(juce::AudioBuffer<float> &buffer,
   if (sr <= 0)
     sr = 44100.0; // Safety
 
+<<<<<<< HEAD
   // Update EQ coefficients only when parameters change
   updateEqCoefficientsIfNeeded(sr);
+=======
+  // Update coefficients (Parameters)
+  // 1. HPF
+  *eq.get<0>().state =
+      *juce::dsp::IIR::Coefficients<float>::makeHighPass(sr, eqHpfFreq->load());
+  // 2. Low Shelf
+  *eq.get<1>().state = *juce::dsp::IIR::Coefficients<float>::makeLowShelf(
+      sr, eqLowFreq->load(), 0.707f,
+      juce::Decibels::decibelsToGain(eqLowGain->load()));
+  // 3. Mid Peak
+  *eq.get<2>().state = *juce::dsp::IIR::Coefficients<float>::makePeakFilter(
+      sr, eqMidFreq->load(), eqMidQ->load(),
+      juce::Decibels::decibelsToGain(eqMidGain->load()));
+  // 4. High Shelf
+  *eq.get<3>().state = *juce::dsp::IIR::Coefficients<float>::makeHighShelf(
+      sr, eqHighFreq->load(), 0.707f,
+      juce::Decibels::decibelsToGain(eqHighGain->load()));
+>>>>>>> origin/master
 
   // Compressor
   compressor.setThreshold(compThresh->load());

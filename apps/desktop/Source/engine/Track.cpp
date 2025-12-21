@@ -3,6 +3,10 @@
 #include "AudioTrack.h"
 #include "AuxBusTrack.h"
 #include "Clip.h"
+<<<<<<< HEAD
+=======
+#include "InstrumentTrack.h"
+>>>>>>> origin/master
 #include "MIDITrack.h"
 #include "PluginHost.h"
 #include "ProjectState.h"
@@ -19,8 +23,12 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   case Type::MIDI:
     return std::make_unique<MIDITrack>(name);
   case Type::Instrument:
+<<<<<<< HEAD
     return std::make_unique<MIDITrack>(
         name); // InstrumentTrack removed; use MIDITrack
+=======
+    return std::make_unique<InstrumentTrack>(name);
+>>>>>>> origin/master
   case Type::Bus:
     return std::make_unique<AuxBusTrack>(name);
   default:
@@ -142,6 +150,7 @@ juce::ValueTree Track::getState() const {
   state.setProperty("muted", mixerChannel.isMuted(), nullptr);
   state.setProperty("solo", mixerChannel.isSolo(), nullptr);
   state.setProperty("armed", armed.load(), nullptr);
+  state.setProperty("inputMonitor", inputMonitor_.load(), nullptr);
   state.setProperty("enabled", enabled.load(), nullptr);
 
   juce::ValueTree pluginsState("Plugins");
@@ -164,6 +173,7 @@ void Track::loadState(const juce::ValueTree &state) {
   mixerChannel.setMuted(state.getProperty("muted", false));
   mixerChannel.setSolo(state.getProperty("solo", false));
   armed.store(state.getProperty("armed", false));
+  inputMonitor_.store(state.getProperty("inputMonitor", false));
   enabled.store(state.getProperty("enabled", true));
 
   // Plugin states are loaded via loadPluginStates() from Engine
@@ -182,9 +192,19 @@ void Track::loadPluginStates(const juce::ValueTree &state,
   }
 }
 
+void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
+  liveMidiFifo_.push(message);
+}
+
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
                                juce::MidiBuffer &midi, int numSamples) {
+<<<<<<< HEAD
+=======
+  // Inject live MIDI messages
+  liveMidiFifo_.drainTo(midi, numSamples);
+
+>>>>>>> origin/master
   pluginChain.process(buffer, midi);
 }
 
@@ -204,6 +224,14 @@ void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                               int numSamples) {
   juce::ignoreUnused(numSamples);
   mixerChannel.updateMeters(buffer, false); // false = output meters
+}
+
+void Track::updateClipPositions(juce::int64 playheadPosition) {
+  for (int i = 0; i < getNumClips(); ++i) {
+    if (auto *clip = getClip(i)) {
+      clip->setTransportPosition(playheadPosition);
+    }
+  }
 }
 
 } // namespace zenith
