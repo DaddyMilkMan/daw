@@ -835,17 +835,19 @@ float Engine::getTrackPeakLevel(int trackIndex) const {
 }
 
 float Engine::getMasterLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterLevel() : 0.0f;
+  return meteringSystem_
+             ? meteringSystem_->getLevel(MeteringSystem::MeterMode::Peak)
+             : 0.0f;
 }
 
 float Engine::getMasterPeakLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterPeak() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getPeak() : 0.0f;
 }
 
 void Engine::resetPeakMeters() {
   // Reset master peak
   if (meteringSystem_) {
-    meteringSystem_->resetMasterPeak();
+    meteringSystem_->resetPeak();
   }
   if (audioRenderer_) {
     audioRenderer_->resetPeakMeters();
@@ -1113,15 +1115,15 @@ void Engine::audioDeviceIOCallbackWithContext(
       midiFifo_.drainTo(midi1, samplesBeforeLoop);
 
       if (audioRenderer_) {
+        audioRenderer_->renderAudioGraph(
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
             snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins_,
-            tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
+            tempoMap_.get(), &midi1);
 
-            // Mix Metronome (Pass 1)
-            if (metronome_) {
-              metronome_->getNextAudioBlock(buffer1, currentPos, true,
-                                            *tempoMap_);
-            }
+        // Mix Metronome (Pass 1)
+        if (metronome_) {
+          metronome_->getNextAudioBlock(buffer1, currentPos, true, *tempoMap_);
+        }
       }
     }
 
@@ -1145,15 +1147,15 @@ void Engine::audioDeviceIOCallbackWithContext(
         midiFifo_.drainTo(midi2, samplesAfter);
 
         if (audioRenderer_) {
+          audioRenderer_->renderAudioGraph(
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins_,
-              tempoMap_.get(), &midi2, offsets, safeNumChannels); // Using offset inputs
+              tempoMap_.get(), &midi2);
 
-              // Mix Metronome (Pass 2)
-              if (metronome_) {
-                metronome_->getNextAudioBlock(buffer2, loopStart, true,
-                                              *tempoMap_);
-              }
+          // Mix Metronome (Pass 2)
+          if (metronome_) {
+            metronome_->getNextAudioBlock(buffer2, loopStart, true, *tempoMap_);
+          }
         }
 
         transportController_->setPlayheadSamples(loopStart + samplesAfter);
@@ -1344,9 +1346,10 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
                               const juce::MidiBuffer *incomingMidi) {
   if (audioRenderer_) {
     // Pass raw pointers (tracks, auxBuses) to AudioRenderer
+    audioRenderer_->renderAudioGraph(outputBuffer, numSamples, playheadPosition,
                                      tracks, auxBuses, routingGraph_,
                                      masterLimiter_, masterPlugins_,
-                                     tempoMap_.get(), incomingMidi, nullptr, 0);
+                                     tempoMap_.get(), incomingMidi);
   } else {
     outputBuffer.clear();
   }
@@ -1539,8 +1542,10 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
       for (const auto &a : auxBuses_)
         auxPtrs.push_back(a.get());
 
+      audioRenderer_->renderAudioGraph(
+          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
-          &dummyMidi, nullptr, 0);
+          &dummyMidi);
     } else {
       renderBuffer.clear();
     }

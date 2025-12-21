@@ -83,7 +83,11 @@ void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition, std::span<Track *const> tracks,
     std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+<<<<<<< HEAD
+    MasterLimiter &masterLimiter,
+=======
     MasterLimiter &masterLimiter, MasterLimiter &masterLimiter,
+>>>>>>> origin/master
     std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
     const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
     const float *const *inputChannelData, int numInputChannels) noexcept {
@@ -110,6 +114,10 @@ void AudioRenderer::renderAudioGraph(
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed
   // member) We'll use a local array for safety since it's small (max 16 aux
   // buses usually)
+<<<<<<< HEAD
+  static constexpr int kMaxAuxBuses = 32;
+=======
+>>>>>>> origin/master
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
   for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
@@ -195,6 +203,8 @@ void AudioRenderer::renderAudioGraph(
 
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                auxBufferPtrsVector_, tempoMap);
+<<<<<<< HEAD
+=======
 
       // Input Monitoring Logic
       if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
@@ -218,6 +228,7 @@ void AudioRenderer::renderAudioGraph(
           }
         }
       }
+>>>>>>> origin/master
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
@@ -291,6 +302,16 @@ void AudioRenderer::renderAudioGraph(
 
   // Update metering
   updateMasterMeters(outputBuffer);
+}
+
+//==============================================================================
+void AudioRenderer::updateClipPositions(std::span<Track *const> tracks,
+                                        juce::int64 playheadPosition) noexcept {
+  for (auto *track : tracks) {
+    if (track != nullptr) {
+      track->updateClipPositions(playheadPosition);
+    }
+  }
 }
 
 //==============================================================================
