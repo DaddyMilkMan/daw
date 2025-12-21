@@ -24,7 +24,6 @@ endif()
 
 
 
-
 # 4. Options
 option(ENABLE_IPO "Enable Interprocedural Optimization (LTO)" OFF)
 option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
@@ -142,6 +141,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    apps/desktop/Source/tests/AccessibilityTests.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -154,8 +154,6 @@ juce_add_gui_app(ZenithDAW
     VERSION ${PROJECT_VERSION}
     BUNDLE_ID com.zenithaudio.daw
 )
-
-
 
 # Generate JuceHeader.h for compatibility
 juce_generate_juce_header(ZenithDAW)
@@ -175,7 +173,6 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
-
 
 # Include directories (updated for new domain-based structure)
 target_include_directories(ZenithDAW PUBLIC

@@ -322,10 +322,17 @@ juce::File ProjectFileIO::saveCrashDump()
 
     DBG("ProjectFileIO: Saving crash dump to " + dumpFile.getFullPathName());
 
+    // We use saveToFile but we might want to add crash specific metadata.
+    // Since saveToFile adds metadata, we can't easily injection "isCrashDump=1" unless we modify saveToFile 
+    // or manually write XML here.
+    // For now, using saveToFile is robust.
+    
     if (saveToFile(dumpFile))
         return dumpFile;
 
     return juce::File();
 }
+
+
 
 } // namespace zenith
