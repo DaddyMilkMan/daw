@@ -145,10 +145,6 @@ public:
   void setCurrentTool(Tool tool);
   Tool getCurrentTool() const { return currentTool; }
 
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
-
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
@@ -159,22 +155,6 @@ public:
   /** Apply velocity curve to selected notes */
   enum class VelocityCurve { RampUp, RampDown, Compress, Expand, Invert };
   void applyVelocityCurve(VelocityCurve curve, float amount = 1.0f);
-
-  //==========================================================================
-  // Tool System
-  //==========================================================================
-
-  /** Available editing tools */
-  enum class Tool {
-    Select, // Selection and manipulation of existing notes
-    Draw,   // Create notes on click
-    Erase,  // Delete notes on click
-    Slice   // Split notes at cursor position
-  };
-
-  /** Set current editing tool */
-  void setCurrentTool(Tool tool);
-  Tool getCurrentTool() const { return currentTool; }
 
   /** Piano key interaction */
   void playPianoKey(int pitch, int velocity = 100);
@@ -681,9 +661,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
