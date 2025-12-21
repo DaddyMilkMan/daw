@@ -1,4 +1,4 @@
-/*
+﻿/*
   ==============================================================================
 
     ZenithUIComponents.h
@@ -559,17 +559,17 @@ public:
 /**
     Glassy Button
 */
-class ZenithButton : public SkiaComponent {
+class ZenithButton : public ZenithControl {
 public:
   enum ButtonStyle { Primary, Secondary, Danger, Warning, Success };
 
   // Default constructor for compatibility
-  ZenithButton() : text_(""), onClick_(nullptr) {}
+  ZenithButton() : ZenithControl(""), text_(""), onClick_(nullptr) {}
 
   // Constructor with text and callback
   explicit ZenithButton(const juce::String &text,
                         std::function<void()> onClick = nullptr)
-      : text_(text), onClick_(onClick) {}
+      : ZenithControl(text), text_(text), onClick_(onClick) {}
 
   // API compatibility methods
   void setButtonText(const juce::String &text) {

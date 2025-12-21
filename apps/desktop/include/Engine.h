@@ -1,4 +1,4 @@
-
+﻿
 /**
  * @file Engine.h
  * @brief Core audio engine for Zenith DAW
@@ -50,6 +50,8 @@
 #include "../Source/engine/EngineConstants.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
+#include "../Source/engine/TransportController.h"
+#include "../Source/engine/RecordingManager.h"
 
 // Forward declarations
 namespace zenith {
@@ -629,7 +631,7 @@ public:
   /**
    * @brief Main audio processing callback (JUCE 8 version with context)
    *
-   * ⚠️ CRITICAL: This runs on the AUDIO THREAD!
+   * ÃŽâ€œÃƒÅ“ÃƒÂ¡Ã¢Ë†Â©Ã¢â€¢â€¢Ãƒâ€¦ CRITICAL: This runs on the AUDIO THREAD!
    *
    * NEVER do these things here:
    * - Allocate memory (malloc, new, std::vector::push_back)
@@ -759,6 +761,11 @@ private:
 
   juce::AudioFormatManager formatManager;
   zenith::dsp::Dither dither;
+
+  /**
+   * @brief Auto-detect project duration from clips
+   */
+  double autoDetectProjectDuration() const;
 
   void registerFormats();
 

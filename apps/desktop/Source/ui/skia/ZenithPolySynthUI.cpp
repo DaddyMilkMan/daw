@@ -13,9 +13,19 @@
 
 #include "ZenithPolySynthUI.h"
 #include "ZenithUIComponents.h"
+#include "ZenithLayout.h"
 #include <vector>
 
 namespace zenith {
+
+namespace ZenithUtils {
+    inline SkRect toSkRect(const juce::Rectangle<int>& r) {
+        return SkRect::MakeXYWH((float)r.getX(), (float)r.getY(), (float)r.getWidth(), (float)r.getHeight());
+    }
+    inline SkRect toSkRect(const juce::Rectangle<float>& r) {
+        return SkRect::MakeXYWH(r.getX(), r.getY(), r.getWidth(), r.getHeight());
+    }
+}
 
 ZenithPolySynthUI::ZenithPolySynthUI(ZenithPolySynthProcessor &p)
     : juce::AudioProcessorEditor(&p), processor(p) {

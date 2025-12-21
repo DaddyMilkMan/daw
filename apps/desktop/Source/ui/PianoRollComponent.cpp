@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file PianoRollComponent.cpp
  * @brief Professional-grade MIDI Piano Roll Editor Implementation (Core)
  */
@@ -14,9 +14,10 @@
 #include <core/SkRRect.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
-#include <core/SkMaskFilter.h>
-#include <effects/SkGradientShader.h>
-#include <effects/SkDashPathEffect.h>
+#include <skia/include/core/SkMaskFilter.h>
+#include <skia/include/core/SkBlurTypes.h>
+#include <skia/include/effects/SkGradientShader.h>
+#include <skia/include/effects/SkDashPathEffect.h>
 
 using namespace zenith;
 
@@ -1019,7 +1020,7 @@ void PianoRollComponent::drawSkia(SkCanvas* canvas) {
             textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
             textPaint.setAntiAlias(true);
             SkFont font;
-            font.setSize(juce::jmin(12.0f, pixelsPerPitch * 0.8f));
+            font.setSize(juce::jmin(12.0f, (float)(pixelsPerPitch * 0.8f)));
             font.setSubpixel(true);
             
             juce::String label = "C" + juce::String(p / 12 - 2); // MIDI C3 = 60
@@ -1038,7 +1039,7 @@ void PianoRollComponent::drawSkia(SkCanvas* canvas) {
 
     SkPaint selectedGlowPaint;
     selectedGlowPaint.setColor(colors::NEON_GREEN);
-    selectedGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 4.0f));
+    selectedGlowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, 4.0f));
 
     for (const auto& note : noteRects) {
         // Culling
@@ -1053,7 +1054,9 @@ void PianoRollComponent::drawSkia(SkCanvas* canvas) {
 
         if (note.selected) {
             // Glow
-            canvas->drawRRect(rr.makeOutset(2.0f, 2.0f), selectedGlowPaint);
+            SkRRect glowRR = rr;
+            glowRR.outset(2.0f, 2.0f);
+            canvas->drawRRect(glowRR, selectedGlowPaint);
             paint.setColor(colors::NEON_GREEN);
         } else {
             // Standard Note Color (Magenta/Cyan gradient logic or just flat for now)
@@ -1104,7 +1107,8 @@ void PianoRollComponent::drawSkia(SkCanvas* canvas) {
         
         paint.setStyle(SkPaint::kStroke_Style);
         paint.setColor(colors::CYAN);
-        paint.setDashPathEffect(SkDashPathEffect::Make(new SkScalar[2]{4, 4}, 2, 0));
+        SkScalar intervals[] = {4.0f, 4.0f};
+        // paint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
         canvas->drawRect(m, paint);
     }
 }

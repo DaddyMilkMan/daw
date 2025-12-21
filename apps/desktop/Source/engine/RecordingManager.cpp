@@ -317,9 +317,9 @@ void RecordingManager::finalizeRecordings(
             if (track) {
                 // Create clip via ProjectState
                 juce::ValueTree clipState(ProjectState::ID_CLIP);
-                clipState.setProperty(ProjectState::PROP_FILE, 
+                clipState.setProperty(ProjectState::PROP_AUDIO_FILE, 
                                       session.file.getFullPathName(), nullptr);
-                clipState.setProperty(ProjectState::PROP_POSITION, 
+                clipState.setProperty(ProjectState::PROP_START, 
                                       static_cast<juce::int64>(session.startSamplePosition), 
                                       nullptr);
                 clipState.setProperty(ProjectState::PROP_LENGTH, 
@@ -329,7 +329,7 @@ void RecordingManager::finalizeRecordings(
                                       session.file.getFileNameWithoutExtension(), nullptr);
 
                 // Add to track in project state
-                auto trackState = projectState_->getTrackStateById(track->getTrackId());
+                auto trackState = projectState_->getTrack(track->getTrackId());
                 if (trackState.isValid()) {
                     auto clipsNode = trackState.getChildWithName(ProjectState::ID_CLIPS);
                     if (clipsNode.isValid()) {

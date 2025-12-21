@@ -194,31 +194,70 @@ private:
 };
 
 //==============================================================================
-// Plugins Settings Tab
+// Plugins Settings Tab - Enhanced with Progress & Blacklist Management
 //==============================================================================
 class PluginSettingsTab : public SettingsTab {
 public:
   PluginSettingsTab(PluginHost &host) : host_(host) {
+    // Scan button
     scanButton_ = std::make_unique<SkiaButton>("Scan Plugins");
     scanButton_->setStyle(SkiaButton::Style::Success);
     scanButton_->onClick = [this]() { startScan(); };
     addAndMakeVisible(scanButton_.get());
+    
+    // Cancel button (initially hidden)
+    cancelButton_ = std::make_unique<SkiaButton>("Cancel");
+    cancelButton_->setStyle(SkiaButton::Style::Danger);
+    cancelButton_->onClick = [this]() { 
+      host_.cancelScan();
+      scanButton_->setText("Scan Plugins");
+      cancelButton_->setVisible(false);
+    };
+    addChildComponent(cancelButton_.get());
+    
+    // Add path button
+    addPathButton_ = std::make_unique<SkiaButton>("+ Add Path");
+    addPathButton_->setStyle(SkiaButton::Style::Secondary);
+    addPathButton_->onClick = [this]() { addCustomPath(); };
+    addAndMakeVisible(addPathButton_.get());
+    
+    // Clear blacklist button
+    clearBlacklistButton_ = std::make_unique<SkiaButton>("Clear Blacklist");
+    clearBlacklistButton_->setStyle(SkiaButton::Style::Ghost);
+    clearBlacklistButton_->onClick = [this]() {
+      host_.clearBlacklist();
+      markDirty();
+    };
+    addAndMakeVisible(clearBlacklistButton_.get());
 
-    // Simple text editor for paths (standard JUCE for now, styled later)
-    pathList_.setMultiLine(true);
-    pathList_.setReadOnly(true);
-    pathList_.setColour(juce::TextEditor::backgroundColourId,
-                        juce::Colours::transparentBlack);
-    pathList_.setColour(juce::TextEditor::outlineColourId,
-                        juce::Colours::white.withAlpha(0.2f));
-    addAndMakeVisible(pathList_);
-
-    updateList();
+    // Start timer for UI updates during scanning
+    startTimer(100);
+  }
+  
+  ~PluginSettingsTab() override {
+    stopTimer();
   }
 
   void resized() override {
-    pathList_.setBounds(20, 80, getWidth() - 40, getHeight() - 140);
-    scanButton_->setBounds(getWidth() - 140, getHeight() - 50, 120, 36);
+    int btnWidth = 120;
+    int btnHeight = 36;
+    int margin = 20;
+    int bottomY = getHeight() - 50;
+    
+    // Bottom row buttons
+    scanButton_->setBounds(getWidth() - margin - btnWidth, bottomY, btnWidth, btnHeight);
+    cancelButton_->setBounds(getWidth() - margin - btnWidth * 2 - 10, bottomY, btnWidth, btnHeight);
+    addPathButton_->setBounds(margin, bottomY, btnWidth, btnHeight);
+    clearBlacklistButton_->setBounds(margin + btnWidth + 10, bottomY, btnWidth + 20, btnHeight);
+  }
+  
+  void timerCallback() override {
+    // Call base class for animations
+    SkiaComponent::timerCallback();
+    
+    if (host_.isScanningPlugins()) {
+      markDirty();
+    }
   }
 
   void drawSkia(SkCanvas *canvas) override {
@@ -232,32 +271,152 @@ public:
 
     SkFont labelFont;
     labelFont.setSize(14.0f);
+    labelFont.setEmbolden(true);
+    
+    SkFont valueFont;
+    valueFont.setSize(14.0f);
+    
+    SkFont smallFont;
+    smallFont.setSize(12.0f);
 
-    canvas->drawString("Plugin Management", 20, 40, headerFont, textPaint);
-    canvas->drawString("Search Paths:", 20, 70, labelFont, textPaint);
+    float y = 40;
+    
+    // Header
+    canvas->drawString("Plugin Management", 20, y, headerFont, textPaint);
+    y += 40;
+    
+    // Plugin count
+    int pluginCount = host_.getKnownPlugins().getNumTypes();
+    textPaint.setColor(SkColorSetARGB(180, 255, 255, 255));
+    canvas->drawString("Known Plugins:", 20, y, labelFont, textPaint);
+    textPaint.setColor(SK_ColorWHITE);
+    canvas->drawString(std::to_string(pluginCount).c_str(), 140, y, valueFont, textPaint);
+    y += 30;
+    
+    // Scanning status
+    if (host_.isScanningPlugins()) {
+      // Show scanning status
+      textPaint.setColor(SkColorSetARGB(255, 100, 255, 150)); // Green tint
+      canvas->drawString("Scanning...", 20, y, labelFont, textPaint);
+      y += 25;
+      
+      // Show current plugin
+      auto currentPlugin = host_.getCurrentlyScanning();
+      if (currentPlugin.isNotEmpty()) {
+        textPaint.setColor(SkColorSetARGB(200, 255, 255, 255));
+        canvas->drawString(currentPlugin.toStdString().c_str(), 30, y, smallFont, textPaint);
+        y += 20;
+      }
+      
+      // Draw progress bar
+      float barX = 20;
+      float barY = y;
+      float barW = getWidth() - 40.0f;
+      float barH = 8;
+      
+      // Background
+      SkPaint barBgPaint;
+      barBgPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+      barBgPaint.setAntiAlias(true);
+      canvas->drawRoundRect(SkRect::MakeXYWH(barX, barY, barW, barH), 4, 4, barBgPaint);
+      
+      // Progress (pulsing animation for indeterminate)
+      SkPaint barFgPaint;
+      barFgPaint.setColor(SkColorSetARGB(255, 100, 200, 255)); // Cyan
+      barFgPaint.setAntiAlias(true);
+      
+      // Animate progress bar
+      float progress = (std::sin(juce::Time::getMillisecondCounterHiRes() / 200.0f) + 1.0f) / 2.0f;
+      float progressW = barW * 0.3f;
+      float progressX = barX + progress * (barW - progressW);
+      canvas->drawRoundRect(SkRect::MakeXYWH(progressX, barY, progressW, barH), 4, 4, barFgPaint);
+      
+      y += 30;
+    }
+    else {
+      y += 10;
+    }
+    
+    // Search Paths section
+    textPaint.setColor(SkColorSetARGB(180, 255, 255, 255));
+    canvas->drawString("Search Paths:", 20, y, labelFont, textPaint);
+    y += 20;
+    
+    auto paths = host_.getSearchPaths();
+    textPaint.setColor(SkColorSetARGB(150, 255, 255, 255));
+    if (paths.size() == 0) {
+      canvas->drawString("(Default paths only)", 30, y, smallFont, textPaint);
+      y += 18;
+    } else {
+      for (const auto& path : paths) {
+        canvas->drawString(path.toStdString().c_str(), 30, y, smallFont, textPaint);
+        y += 18;
+        if (y > getHeight() - 150) break; // Prevent overflow
+      }
+    }
+    
+    y += 15;
+    
+    // Blacklist section
+    auto blacklist = host_.getBlacklistedPlugins();
+    if (blacklist.size() > 0) {
+      textPaint.setColor(SkColorSetARGB(255, 255, 100, 100)); // Red tint
+      canvas->drawString(("Blacklisted Plugins: " + std::to_string(blacklist.size())).c_str(), 
+                         20, y, labelFont, textPaint);
+      y += 20;
+      
+      textPaint.setColor(SkColorSetARGB(150, 255, 150, 150));
+      for (int i = 0; i < std::min((int)blacklist.size(), 5); ++i) {
+        juce::File f(blacklist[i]);
+        canvas->drawString(f.getFileName().toStdString().c_str(), 30, y, smallFont, textPaint);
+        y += 18;
+      }
+      if (blacklist.size() > 5) {
+        canvas->drawString(("... and " + std::to_string(blacklist.size() - 5) + " more").c_str(), 
+                           30, y, smallFont, textPaint);
+      }
+    }
   }
 
 private:
   void startScan() {
+    if (host_.isScanningPlugins()) return;
+    
     scanButton_->setText("Scanning...");
-    // Fake async scan call for UI update
-    host_.scanAsync([this](int p, int c, const juce::String &m) {
-      if (p >= 100)
+    cancelButton_->setVisible(true);
+    markDirty();
+    
+    host_.scanAsync([this](int progress, int count, const juce::String &msg) {
+      // This callback runs on message thread
+      if (progress >= 100) {
         scanButton_->setText("Scan Plugins");
+        cancelButton_->setVisible(false);
+      }
+      markDirty();
     });
   }
-
-  void updateList() {
-    juce::String text;
-    for (const auto &path : host_.getSearchPaths()) {
-      text += path + "\n";
-    }
-    pathList_.setText(text);
+  
+  void addCustomPath() {
+    juce::FileChooser chooser("Select Plugin Folder",
+                              juce::File::getSpecialLocation(juce::File::userHomeDirectory),
+                              "", true);
+                              
+    chooser.launchAsync(juce::FileBrowserComponent::openMode | 
+                        juce::FileBrowserComponent::canSelectDirectories,
+                        [this](const juce::FileChooser& fc) {
+      auto result = fc.getResult();
+      if (result.exists()) {
+        host_.addSearchPath(result.getFullPathName());
+        markDirty();
+      }
+    });
   }
 
   PluginHost &host_;
   std::unique_ptr<SkiaButton> scanButton_;
-  juce::TextEditor pathList_;
+  std::unique_ptr<SkiaButton> cancelButton_;
+  std::unique_ptr<SkiaButton> addPathButton_;
+  std::unique_ptr<SkiaButton> clearBlacklistButton_;
 };
 
 //==============================================================================

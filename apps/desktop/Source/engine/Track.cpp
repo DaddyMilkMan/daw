@@ -1,15 +1,15 @@
-/*
+﻿/*
   ==============================================================================
 
     Track.cpp
     Ported from: ZenithDAW-Native/Source/Audio/Track.cpp (2025-11-11)
-    Author:  Zenith DAW → Zenith DAW
+    Author:  Zenith DAW ΓåÆ Zenith DAW
 
     Audio/MIDI track implementation
 
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
-    - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
+    - OwnedArray<Clip> ΓåÆ std::vector<std::unique_ptr<Clip>>
     - Plugin hosting stubbed for Phase 2
 
   ==============================================================================
@@ -351,6 +351,36 @@ void Track::setArmed(bool shouldBeArmed) {
 void Track::setEnabled(bool shouldBeEnabled) {
   enabled.store(shouldBeEnabled);
   sendChangeMessage();
+}
+
+//==============================================================================
+// Freeze file management
+//==============================================================================
+
+void Track::setFreezeFile(const juce::File& file) {
+  // THREAD SAFETY: Message thread only
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+  
+  freezeFile_ = file;
+  freezeReader_.reset();
+  
+  if (file.existsAsFile()) {
+    // Register basic formats if not already done
+    if (freezeFormatManager_.getNumKnownFormats() == 0) {
+      freezeFormatManager_.registerBasicFormats();
+    }
+    
+    // Create reader for the freeze file
+    freezeReader_.reset(freezeFormatManager_.createReaderFor(file));
+    
+    if (freezeReader_ == nullptr) {
+      DBG("Track::setFreezeFile: Failed to create reader for " + file.getFullPathName());
+      freezeFile_ = juce::File();
+    } else {
+      DBG("Track::setFreezeFile: Loaded freeze file " + file.getFileName() + 
+          " (" + juce::String(freezeReader_->lengthInSamples) + " samples)");
+    }
+  }
 }
 
 //==============================================================================
@@ -746,9 +776,9 @@ void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
     return;
 
   // For MVP: Simple linear plugin chain processing
-  // Audio tracks: audio in → plugins → audio out
-  // Instrument tracks: MIDI in → first plugin (synth) → audio → remaining
-  // plugins → audio out
+  // Audio tracks: audio in ΓåÆ plugins ΓåÆ audio out
+  // Instrument tracks: MIDI in ΓåÆ first plugin (synth) ΓåÆ audio ΓåÆ remaining
+  // plugins ΓåÆ audio out
 
   // ROAST FIX #2: Iterate over snapshot (shared_ptr keeps plugins alive)
   for (const auto &plugin : snapshot->plugins) {

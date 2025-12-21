@@ -183,10 +183,21 @@ private:
     MoveClips,
     ResizeClipLeft,
     ResizeClipRight,
+    MoveAutomationPoint,
+    MoveMarker,
+    LoopStart,
+    LoopEnd,
+    LoopRegion,
     Marquee
   };
   DragMode currentDragMode = DragMode::None;
   juce::Point<float> dragStartPoint;
+
+  struct MarkerDragState {
+      juce::String markerId;
+      double originalBeats;
+  };
+  juce::Optional<MarkerDragState> markerDragState_;
 
   struct ClipDragState {
     juce::String clipId;
@@ -205,6 +216,23 @@ private:
   bool isDropTargetActive_ = false;
   int dropTargetTrackIndex_ = -1;
   double dropTargetBeats_ = 0.0;
+
+  // Automation state
+  bool showAutomation_ = false;
+  juce::String currentAutomationParam_ = "volume";
+  
+  struct AutomationPointDragState {
+      juce::String pointId;
+      juce::String trackId;
+      double originalTime;
+      float originalValue;
+  };
+  juce::Optional<AutomationPointDragState> automationDragState_;
+
+  // Automation helpers
+  juce::String findAutomationPointAt(juce::Point<float> p,
+                                     juce::String &outTrackId,
+                                     double &outTime, float &outValue);
 
     //==========================================================================
     // Clip Content Rendering Helpers (Skia)

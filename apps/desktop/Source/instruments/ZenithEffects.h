@@ -39,8 +39,7 @@ public:
   void setDistortion(float amount) { distortionAmount_ = amount; }
   void setChorus(float amount) { chorusAmount_ = amount; }
   void setReverb(float amount) { reverbAmount_ = amount; }
-      delayTime_ = time; delayFeedback_ = feedback; delayMix_ = mix;
-  }
+  void setDelay(float time, float feedback, float mix) { delayTime_ = time; delayFeedback_ = feedback; delayMix_ = mix; }
   void setBpm(double bpm) { bpm_ = bpm; }
   void setDelaySync(bool sync, SyncRate rate) { delaySync_ = sync; delaySyncRate_ = rate; }
 

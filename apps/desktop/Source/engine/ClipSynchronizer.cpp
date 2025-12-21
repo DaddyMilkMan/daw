@@ -26,11 +26,13 @@ void ClipSynchronizer::start(int updateRateHz) {
   if (updateRateHz <= 0)
     updateRateHz = 30;
 
+  projectState.getState().addListener(this);
   startTimer(1000 / updateRateHz);
   DBG("ClipSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
 
 void ClipSynchronizer::stop() {
+  projectState.getState().removeListener(this);
   stopTimer();
   DBG("ClipSynchronizer: Stopped");
 }
@@ -42,6 +44,8 @@ juce::String ClipSynchronizer::createClip(const juce::String &trackId,
   DBG("ClipSynchronizer: createClip(" + trackId + ", " +
       juce::String(startBeats) + ", " + juce::String(lengthBeats) + ", " +
       clipType + ")");
+
+  juce::ScopedValueSetter<bool> svs(isModifyingState, true);
 
   // 1. Create in zenith::ProjectState first to generate ID
   auto &state = projectState.getState();
@@ -123,6 +127,8 @@ void ClipSynchronizer::timerCallback() {
 void ClipSynchronizer::syncEngineToProjectState() {
   // This method implements Engine→ProjectState sync for recorded clips.
   // Called from timer (Message Thread), so safe to modify ProjectState.
+
+  juce::ScopedValueSetter<bool> svs(isModifyingState, true);
 
   // Get all Engine tracks (read-only access, should be lock-free)
   const auto &engineTracks = engine.tracks();
@@ -244,6 +250,135 @@ double ClipSynchronizer::samplesToBeats(int64_t samples, double tempo,
   // samples / sampleRate / (60 / tempo) = beats
   double seconds = static_cast<double>(samples) / sampleRate;
   return seconds / (60.0 / tempo);
+}
+
+//==============================================================================
+void ClipSynchronizer::valueTreeChildAdded(juce::ValueTree &parentTree,
+                                           juce::ValueTree &child) {
+  if (isModifyingState)
+    return;
+
+  if (child.hasType(zenith::ProjectState::ID_CLIP)) {
+    // 1. Get Track ID from parent (CLIPS -> TRACK)
+    auto trackNode = parentTree.getParent();
+    if (!trackNode.isValid() ||
+        !trackNode.hasType(zenith::ProjectState::ID_TRACK))
+      return;
+
+    juce::String trackId = trackNode[zenith::ProjectState::PROP_ID];
+
+    // 2. Get Clip Properties
+    juce::String clipId = child[zenith::ProjectState::PROP_ID];
+    juce::String clipType = child[zenith::ProjectState::PROP_TYPE];
+    double startBeats = child[zenith::ProjectState::PROP_START];
+    double lengthBeats = child[zenith::ProjectState::PROP_LENGTH];
+
+    // 3. Find Engine Track
+    for (const auto &trackPtr : engine.tracks()) {
+      if (trackPtr->getTrackId() == trackId) {
+        // Double check not already existing
+        for (const auto &c : trackPtr->getClips()) {
+          if (c->getName() == clipId)
+            return;
+        }
+
+        auto newClip = std::make_unique<zenith::Track::Clip>();
+
+        double tempo = projectState.getTempo();
+        double sampleRate = engine.getSampleRate();
+
+        newClip->setStartPosition(
+            beatsToSamples(startBeats, tempo, sampleRate));
+        newClip->setLength(beatsToSamples(lengthBeats, tempo, sampleRate));
+        newClip->setName(clipId);
+        newClip->setType(clipType == "midi" ? zenith::Track::Clip::Type::MIDI
+                                            : zenith::Track::Clip::Type::Audio);
+
+        {
+          juce::ScopedValueSetter<bool> svs(isModifyingState, true);
+          trackPtr->addClip(std::move(newClip));
+        }
+        DBG("ClipSynchronizer: Synced added clip " + clipId);
+        break;
+      }
+    }
+  }
+}
+
+void ClipSynchronizer::valueTreeChildRemoved(juce::ValueTree &parentTree,
+                                             juce::ValueTree &child,
+                                             int index) {
+  if (isModifyingState)
+    return;
+
+  if (child.hasType(zenith::ProjectState::ID_CLIP)) {
+    auto trackNode = parentTree.getParent();
+    if (!trackNode.isValid())
+      return;
+
+    juce::String trackId = trackNode[zenith::ProjectState::PROP_ID];
+    juce::String clipId = child[zenith::ProjectState::PROP_ID];
+
+    for (const auto &trackPtr : engine.tracks()) {
+      if (trackPtr->getTrackId() == trackId) {
+        for (const auto &c : trackPtr->getClips()) {
+          if (c->getName() == clipId) {
+            juce::ScopedValueSetter<bool> svs(isModifyingState, true);
+            trackPtr->removeClip(c);
+            DBG("ClipSynchronizer: Synced removed clip " + clipId);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
+}
+
+void ClipSynchronizer::valueTreePropertyChanged(juce::ValueTree &tree,
+                                                const juce::Identifier &prop) {
+  if (isModifyingState)
+    return;
+
+  if (tree.hasType(zenith::ProjectState::ID_CLIP)) {
+    // Determine which property changed
+    bool timeChanged = (prop == zenith::ProjectState::PROP_START ||
+                        prop == zenith::ProjectState::PROP_LENGTH ||
+                        prop == zenith::ProjectState::PROP_OFFSET);
+
+    if (!timeChanged)
+      return;
+
+    juce::String clipId = tree[zenith::ProjectState::PROP_ID];
+    auto trackNode = tree.getParent().getParent();
+    if (!trackNode.isValid())
+      return;
+
+    juce::String trackId = trackNode[zenith::ProjectState::PROP_ID];
+
+    for (const auto &trackPtr : engine.tracks()) {
+      if (trackPtr->getTrackId() == trackId) {
+        for (const auto &c : trackPtr->getClips()) {
+          if (c->getName() == clipId) {
+            double start = tree[zenith::ProjectState::PROP_START];
+            double len = tree[zenith::ProjectState::PROP_LENGTH];
+            double offset = tree[zenith::ProjectState::PROP_OFFSET];
+
+            double tempo = projectState.getTempo();
+            double sampleRate = engine.getSampleRate();
+
+            c->setStartPosition(beatsToSamples(start, tempo, sampleRate));
+            c->setLength(beatsToSamples(len, tempo, sampleRate));
+            c->setOffset(beatsToSamples(offset, tempo, sampleRate));
+            
+            DBG("ClipSynchronizer: Synced property change for " + clipId);
+            break;
+          }
+        }
+        break;
+      }
+    }
+  }
 }
 
 } // namespace zenith

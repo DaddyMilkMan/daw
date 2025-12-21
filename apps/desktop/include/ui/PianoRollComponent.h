@@ -134,11 +134,15 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
+
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
 
-  /** Humanize velocities of selected notes */
+  /** Humanize selected notes (timing and velocity) */
+  void humanizeSelected(double maxTimingDriftMs = 10.0, int maxVelocityDrift = 10);
+
+  /** Humanize velocities of selected notes (Legacy/Specific) */
   void humanizeVelocity(float amount = 0.3f);
 
   /** Apply velocity curve to selected notes */
@@ -710,6 +714,11 @@ private:
   ScaleHighlight scaleHighlight;
   void updateScaleHighlight();
   bool isNoteInScale(int pitch) const;
+
+  //==========================================================================
+  // UI Controls
+  //==========================================================================
+  juce::TextButton toolsButton{"Tools"};
 
   //==========================================================================
   // Chord Detection

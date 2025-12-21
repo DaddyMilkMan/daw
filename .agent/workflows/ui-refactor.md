@@ -100,7 +100,7 @@ cmake --build build --config Release --target ZenithDAW
 ## Next Steps
 
 You are currently at:
-- **Week 1, Task 1.1**: Implement frame capture in `ZenithPolySynthUI.cpp`
+- **Week 1, Task 1.1**:- [x] Implement Quantize and Humanize tools in Piano RollySynthUI.cpp`
 
 To continue:
 1. Open `apps/desktop/Source/ui/skia/ZenithPolySynthUI.cpp`

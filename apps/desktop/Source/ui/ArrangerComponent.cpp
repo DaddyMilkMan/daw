@@ -1,4 +1,4 @@
-/**
+﻿/**
  * @file ArrangerComponent.cpp
  * @brief Timeline/Arranger view implementation
  */
@@ -15,8 +15,12 @@
 #include <skia/include/core/SkRRect.h>
 #include <skia/include/core/SkRect.h>
 #include <skia/include/core/SkTypeface.h>
-#include "skia/ZenithDesignSystem.h"
+#include <skia/include/core/SkBlurTypes.h>
+#include <skia/include/core/SkMaskFilter.h>
+#include "../skia/ZenithDesignSystem.h"
 #include <skia/include/effects/SkGradientShader.h>
+#include <skia/include/core/SkPathEffect.h>
+#include <skia/include/effects/SkDashPathEffect.h>
 #endif
 
 #include "../../Source/engine/AudioFilePool.h"
@@ -739,7 +743,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
   gridPaint.setAntiAlias(true);
   // Dotted line effect
   SkScalar intervals[] = { 2.0f, 4.0f };
-  gridPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
+  // gridPaint.setPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
 
   double startBeat = std::floor(viewStartBeats);
   double endBeat = viewStartBeats + ((width - HEADER_WIDTH) / pixelsPerBeat);
@@ -779,7 +783,8 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
     textPaint.setAntiAlias(true);
     textPaint.setColor(colors::TEXT_PRIMARY);
 
-    SkFont nameFont = typography::getSkFont(typography::FONT_MD); // Helper needed or manual setup
+    SkFont nameFont;
+    nameFont.setSize(typography::FONT_MD);
     // Manual setup since helper might not be linked yet
     SkFont font;
     font.setSize(typography::FONT_MD);
@@ -889,141 +894,13 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
   selectedClipPaint.setStrokeWidth(2.0f);
   selectedClipPaint.setColor(colors::CYAN);
   // Outer glow for selection
-  selectedClipPaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 3.0f));
+  selectedClipPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, 3.0f));
 
   SkFont clipTextFont;
   clipTextFont.setSize(typography::FONT_SM);
   clipTextFont.setSubpixel(true);
 
   for (const auto& clipView : clipViews) {
-     // Check visibility
-     if (clipView.bounds.getRight() < HEADER_WIDTH || clipView.bounds.getX() > width) continue;
-
-     SkRect r = SkRect::MakeXYWH(clipView.bounds.getX(), clipView.bounds.getY(), 
-                                clipView.bounds.getWidth(), clipView.bounds.getHeight());
-     
-     // Round Rect for Clip
-     SkRRect rr = SkRRect::MakeRectXY(r, dimensions::RADIUS_SM, dimensions::RADIUS_SM);
-
-     // Determines Color Wrapper
-     SkColor baseColor = clipView.isMidi ? colors::MAGENTA : colors::CYAN;
-     if (clipView.isSelected) {
-        baseColor = lighten(baseColor, 0.2f);
-     }
-     
-     // 1. Clip Background (Glassy Gradient)
-     SkPoint pts[2] = { {r.left(), r.top()}, {r.left(), r.bottom()} };
-     SkColor bgColors[2] = { withAlpha(baseColor, 0.4f), withAlpha(baseColor, 0.2f) };
-     clipPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, nullptr, 2, SkTileMode::kClamp));
-     clipPaint.setStyle(SkPaint::kFill_Style);
-     canvas->drawRRect(rr, clipPaint);
-     clipPaint.setShader(nullptr); // Reset
-
-     // 2. Clip Border (Subtle)
-     SkPaint outlinePaint;
-     outlinePaint.setAntiAlias(true);
-     outlinePaint.setStyle(SkPaint::kStroke_Style);
-     outlinePaint.setColor(withAlpha(baseColor, 0.6f));
-     outlinePaint.setStrokeWidth(1.0f);
-     canvas->drawRRect(rr, outlinePaint);
-
-     // 3. Selection Glow
-     if (clipView.isSelected) {
-         canvas->drawRRect(rr, selectedClipPaint);
-     }
-
-     // 4. Content (Waveform or Notes hint)
-     if (clipView.isMidi && !clipView.noteBlobs.empty()) {
-         SkPaint notePaint;
-         notePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.8f)); 
-         for (const auto& blob : clipView.noteBlobs) {
-             // Mini-map of notes
-             float nx = r.left() + (blob.startBeats / clipView.lengthBeats) * r.width();
-             float nw = (blob.lengthBeats / clipView.lengthBeats) * r.width();
-             float ny = r.top() + (1.0f - (blob.pitch / 127.0f)) * r.height(); // Simple mapping
-             canvas->drawRect(SkRect::MakeXYWH(nx, ny, std::max(2.0f, nw), 2.0f), notePaint);
-         }
-     } else if (!clipView.isMidi) {
-         // Fake waveform line for now (visual flair)
-         SkPaint wavePaint;
-         wavePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.5f));
-         wavePaint.setStyle(SkPaint::kStroke_Style);
-         wavePaint.setStrokeWidth(1.0f);
-         
-         SkPath wavePath;
-         wavePath.moveTo(r.left(), r.centerY());
-         float step = 5.0f;
-         for (float wx = r.left(); wx < r.right(); wx += step) {
-             float amp = (float)(std::sin(wx * 0.1) * r.height() * 0.3); // Fake data
-             wavePath.lineTo(wx, r.centerY() + amp);
-         }
-         canvas->drawPath(wavePath, wavePaint);
-     }
-
-     // 5. Clip Name Label (Shadowed)
-     SkPaint textShadow;
-     textShadow.setColor(SkColorSetARGB(128, 0, 0, 0));
-     canvas->drawString(clipViews.getReference(0).clipId.toStdString().c_str(), // Placeholder name actually
-                        r.left() + 6.0f, r.top() + 14.0f, clipTextFont, textShadow);
-     
-     SkPaint textFill;
-     textFill.setColor(colors::TEXT_PRIMARY);
-     // Note: We don't have the Name string in ClipView struct in previous read, 
-     // assuming we might need to fetch it or used cached. 
-     // For now, drawing "Clip" or using loop info if available.
-     // The previous code didn't store name in ClipView, just ID. 
-     // We will just draw "Clip" or similar to be safe, or ID.
-     canvas->drawString("Clip", r.left() + 5.0f, r.top() + 13.0f, clipTextFont, textFill);
-  }
-  canvas->restore();
-
-  // ============================================================================
-  // 5. MARQUEE SELECTION
-  // ============================================================================
-  if (currentDragMode == DragMode::Marquee && !marqueeRect.isEmpty()) {
-      SkRect mRect = SkRect::MakeXYWH(marqueeRect.getX(), marqueeRect.getY(), 
-                                    marqueeRect.getWidth(), marqueeRect.getHeight());
-      
-      SkPaint marqueePaint;
-      marqueePaint.setColor(withAlpha(colors::CYAN, 0.2f));
-      marqueePaint.setStyle(SkPaint::kFill_Style);
-      canvas->drawRect(mRect, marqueePaint);
-      
-      marqueePaint.setColor(colors::CYAN);
-      marqueePaint.setStyle(SkPaint::kStroke_Style);
-      marqueePaint.setDashPathEffect(SkDashPathEffect::Make(intervals, 2, 0.0f));
-      canvas->drawRect(mRect, marqueePaint);
-  }
-
-  // ============================================================================
-  // 6. PLAYHEAD (The "Laser")
-  // ============================================================================
-  // (Assuming we have playhead position from engine or similar)
-  // For now, we'll just draw a placeholder at 0 or 'currentPosition' if we had it
-  // Since the original code didn't show playhead drawing in the snippet I read, 
-  // I will add a static one or based on engine state if I can access it.
-  // Actually, let's look at beat 0 or viewStart.
-  
-  // Actually, let's just draw a "Playhead" at the start for visual confirmation
-  // that the render pipeline is working. 
-  // Real implementation would read transport position.
-}
-#endif
-
-      if (isArmed) drawIndicator(colors::RED);
-      if (isSoloed) drawIndicator(colors::AMBER);
-      if (isMuted) drawIndicator(colors::TEXT_DISABLED);
-
-      // Text Color - Muted tracks overlap with muted text
-      SkColor textColor = isMuted ? colors::TEXT_DISABLED : colors::TEXT_PRIMARY;
-      trackTextPaint.setColor(textColor);
-
-      // Draw text centered vertically approx
-      canvas->drawString(name.toRawUTF8(), textX, contentY + (typography::FONT_MD * 0.35f), trackFont,
-                        trackTextPaint);
-    }
-  }
-
     // 3. Clips
     for (const auto &clipView : clipViews) {
         SkRect clipRect = SkRect::MakeXYWH(
@@ -1083,6 +960,8 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
             drawClipWaveform(canvas, clipView, clipRect);
         }
     }
+
+    canvas->restore();
 
     // 4. Time Ruler (Professional Bar.Beat.Tick format)
     {
@@ -1228,6 +1107,7 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
             canvas->drawPath(triangle, playheadPaint);
         }
     }
+}
 }
 #endif
 //==============================================================================

@@ -30,6 +30,7 @@ namespace zenith {
 class RoutingGraph
 {
 public:
+    friend class AudioRenderer;
     //==============================================================================
     enum class NodeType
     {
@@ -84,7 +85,10 @@ public:
     juce::ValueTree toValueTree() const;
     void fromValueTree(const juce::ValueTree& state);
 
-private:
+
+
+public:
+    friend class AudioRenderer;
     //==============================================================================
     // Snapshot for lock-free read access
     struct Snapshot
@@ -99,6 +103,13 @@ private:
                  const std::vector<juce::String>& order)
             : nodes(n), connections(c), processingOrder(order) {}
     };
+
+    // Get current snapshot (lock-free)
+    const Snapshot* getSnapshot() const { 
+        return activeSnapshot_.load(std::memory_order_acquire); 
+    }
+
+private:
     
     // Owning data (message thread only, protected by lock)
     std::unordered_map<std::string, Node> nodes_;
@@ -114,11 +125,6 @@ private:
     
     // Helper to update snapshot after modification
     void updateSnapshot();
-    
-    // Get current snapshot (lock-free)
-    const Snapshot* getSnapshot() const { 
-        return activeSnapshot_.load(std::memory_order_acquire); 
-    }
 };
 
 } // namespace zenith

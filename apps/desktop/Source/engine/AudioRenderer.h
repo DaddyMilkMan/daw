@@ -1,4 +1,4 @@
-/*
+﻿/*
   ==============================================================================
 
     AudioRenderer.h
@@ -178,7 +178,9 @@ private:
     std::vector<juce::AudioBuffer<float>> auxBusBuffers_;
 
     // PDC state
-    std::atomic<bool> pdcEnabled_{true};
+    // Note: PDC is disabled by default to avoid unexpected latency when adding plugins.
+    // Enable explicitly via setPDCEnabled(true) when latency compensation is needed.
+    std::atomic<bool> pdcEnabled_{false};
     std::atomic<int> maxTrackLatency_{0};
     std::vector<int> trackLatencies_;
     std::vector<juce::AudioBuffer<float>> pdcDelayBuffers_;
