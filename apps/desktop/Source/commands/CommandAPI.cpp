@@ -586,6 +586,7 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
     resultObj->setProperty("healthBreakdown", juce::var(breakdownObj));
   } else {
     resultObj->setProperty("error", "UXDirectorAgent not available");
+      resultObj->setProperty("error", "UXDirectorAgent not available");
   }
 
   return createSuccessResponse(juce::var(resultObj));
@@ -600,14 +601,23 @@ juce::var CommandAPI::getUIHealth(const juce::var &params) {
     resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
     resultObj->setProperty("issueCount", uxDirector_->getUnresolvedIssueCount());
     resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+    
+    auto breakdown = uxDirector_->getHealthBreakdown();
+    auto *breakdownObj = new juce::DynamicObject();
+    breakdownObj->setProperty("styleConsistency", breakdown.styleConsistency);
+    breakdownObj->setProperty("dataBindingHealth", breakdown.dataBindingHealth);
+    breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
+    breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
+    resultObj->setProperty("healthBreakdown", juce::var(breakdownObj));
+    resultObj->setProperty("success", true);
   } else {
-    resultObj->setProperty("healthScore", 1.0f);
-    resultObj->setProperty("issueCount", 0);
-    resultObj->setProperty("summary", "UXDirectorAgent not available");
+    resultObj->setProperty("success", false);
+    resultObj->setProperty("error", "UXDirectorAgent not available");
   }
 
-  return createSuccessResponse(juce::var(resultObj));
+  return juce::var(resultObj);
 }
+
 
 juce::var CommandAPI::redo(const juce::var &params) {
   juce::ignoreUnused(params);
