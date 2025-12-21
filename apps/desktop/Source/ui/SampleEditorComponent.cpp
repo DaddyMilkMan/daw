@@ -14,11 +14,9 @@
 
 namespace zenith {
 
-// Static clipboard
-std::unique_ptr<juce::AudioBuffer<float>> SampleEditorComponent::clipboard_ =
-    nullptr;
-double SampleEditorComponent::clipboardSampleRate_ = 44100.0;
-
+//==============================================================================
+// Color palette configuration
+//==============================================================================
 namespace Colors {
 constexpr SkColor bg = SkColorSetRGB(25, 25, 30);
 constexpr SkColor toolbarBg = SkColorSetRGB(35, 35, 42);
@@ -36,6 +34,11 @@ constexpr SkColor marker = SkColorSetRGB(255, 200, 50);
 constexpr SkColor overviewBg = SkColorSetRGB(30, 30, 36);
 constexpr SkColor overviewViewport = SkColorSetARGB(80, 255, 255, 255);
 } // namespace Colors
+
+// Static clipboard
+std::unique_ptr<juce::AudioBuffer<float>> SampleEditorComponent::clipboard_ =
+    nullptr;
+double SampleEditorComponent::clipboardSampleRate_ = 44100.0;
 
 //==============================================================================
 SampleEditorComponent::SampleEditorComponent(Engine &engine,
@@ -63,6 +66,9 @@ SampleEditorComponent::~SampleEditorComponent() {
   projectState_.getState().removeListener(this);
 }
 
+
+
+void SampleEditorComponent::timerCallback() {
   if (isPlaying_) {
     // Update playhead from engine
     playheadPosition_ += 1.0 / 30.0; // Approximate
@@ -97,8 +103,20 @@ SampleEditorComponent::~SampleEditorComponent() {
 
         // Copy from FIFO circular buffer
         for (int ch = 0; ch < 2; ++ch) {
-          if (size1 > 0)
-            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch,
+          if (size1 > 0) {
+             recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch, start1, size1);
+          }
+          if (size2 > 0) {
+             recordBuffer_->copyFrom(ch, recordWritePos_ + size1, incomingBuffer_, ch, start2, size2);
+          }
+        }
+        recordWritePos_ += numReady;
+      }
+      incomingFifo_.finishedRead(size1 + size2);
+      repaint();
+    }
+  }
+}            recordBuffer_->copyFrom(ch, recordWritePos_, incomingBuffer_, ch,
                                     start1, size1);
           if (size2 > 0)
             recordBuffer_->copyFrom(ch, recordWritePos_ + size1,
@@ -114,36 +132,7 @@ SampleEditorComponent::~SampleEditorComponent() {
   }
 }
 
-void SampleEditorComponent::onAudioInput(const float *const *inputData,
-                                         int numInputChannels, int numSamples) {
-  if (!isRecording_)
-    return;
-
-  // Real-time safe write to FIFO
-  int start1, size1, start2, size2;
-  incomingFifo_.prepareToWrite(numSamples, start1, size1, start2, size2);
-
-  if (size1 > 0) {
-    for (int ch = 0; ch < juce::jmin(2, numInputChannels); ++ch) {
-      incomingBuffer_.copyFrom(ch, start1, inputData[ch], size1);
-    }
-    // Mono to Stereo
-    if (numInputChannels == 1) {
-      incomingBuffer_.copyFrom(1, start1, inputData[0], size1);
-    }
-  }
-
-  if (size2 > 0) {
-    for (int ch = 0; ch < juce::jmin(2, numInputChannels); ++ch) {
-      incomingBuffer_.copyFrom(ch, start2, inputData[ch] + size1, size2);
-    }
-    if (numInputChannels == 1) {
-      incomingBuffer_.copyFrom(1, start2, inputData[0] + size1, size2);
-    }
-  }
-
-  incomingFifo_.finishedWrite(size1 + size2);
-}
+// (Removed misplaced onAudioInput from here - it was duplicate/misplaced)
 
 //==============================================================================
 void SampleEditorComponent::setClipToEdit(const juce::String &trackId,
@@ -280,6 +269,14 @@ void SampleEditorComponent::drawToolbar(SkCanvas *canvas,
   drawBtn(isPlaying_ ? "||" : ">", false);
   drawBtn("[]", false);
   drawBtn("L", isLooping_);
+  x += 12;
+
+  // Recording
+  if (isRecording_) {
+       drawBtn("REC", true);
+  } else {
+       drawBtn("REC", false);
+  }
 
   x += 12;
 
