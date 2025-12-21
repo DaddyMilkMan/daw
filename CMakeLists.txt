@@ -356,10 +356,10 @@ if(BUILD_TESTS)
         juce::juce_graphics
         juce::juce_gui_basics
     )
-    target_compile_definitions(ZenithDAWTests PRIVATE
-        JUCE_WEB_BROWSER=0
-        JUCE_USE_CURL=0
-    )
+    
+
+    # C++20 required for std::span
+    target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
     if(ZENITH_ENABLE_SKIA)
         target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
