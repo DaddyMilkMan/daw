@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include "../../engine/ProjectState.h"
 #include "../framework/SkiaComponent.h"
-#include "DrumPadComponent.h"
-#include "ProjectState.h"
+#include "../session/DrumPadComponent.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -38,6 +38,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+
 
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -1220,58 +1221,17 @@ private:
  */
 class MidiEditorContainer : public juce::Component {
 public:
-  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
-      : projectState(state), engine_(engine) {
-    pianoRoll = std::make_unique<PianoRollComponent>(state);
-    addAndMakeVisible(pianoRoll.get());
+  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine);
+  ~MidiEditorContainer() override;
 
-    drumPad = std::make_unique<DrumPadComponent>(engine, state);
-    addChildComponent(drumPad.get()); // Hidden by default
+  void setClipContext(const MidiClipContext &context);
 
-    // Toggle Button
-    toggleButton.setButtonText("Switch to Drum View");
-    toggleButton.onClick = [this] { toggleView(); };
-    addAndMakeVisible(toggleButton);
-  }
+  void resized() override;
 
-  void setClipContext(const MidiClipContext &context) {
-    pianoRoll->setClipContext(context);
-    drumPad->setClipContext(context.clipId);
+  void toggleView();
 
-    // Auto-detect mode based on track name? For now manual.
-    if (context.trackId.containsIgnoreCase("drum")) {
-      if (activeView == View::PianoRoll)
-        toggleView();
-    }
-  }
-
-  void resized() override {
-    auto area = getLocalBounds();
-    auto topBar = area.removeFromTop(30);
-
-    toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
-
-    if (activeView == View::PianoRoll) {
-      pianoRoll->setBounds(area);
-    } else {
-      drumPad->setBounds(area);
-    }
-  }
-
-  void toggleView() {
-    if (activeView == View::PianoRoll) {
-      activeView = View::DrumPad;
-      pianoRoll->setVisible(false);
-      drumPad->setVisible(true);
-      toggleButton.setButtonText("Switch to Piano Roll");
-    } else {
-      activeView = View::PianoRoll;
-      pianoRoll->setVisible(true);
-      drumPad->setVisible(false);
-      toggleButton.setButtonText("Switch to Drum View");
-    }
-    resized();
-  }
+  // Helper for injection
+  void injectMidiMessage(const juce::MidiMessage &msg);
 
 private:
   zenith::ProjectState &projectState;
@@ -1279,6 +1239,8 @@ private:
   std::unique_ptr<PianoRollComponent> pianoRoll;
   std::unique_ptr<DrumPadComponent> drumPad;
   juce::TextButton toggleButton;
+
+  MidiClipContext currentContext;
 
   enum class View { PianoRoll, DrumPad };
   View activeView = View::PianoRoll;

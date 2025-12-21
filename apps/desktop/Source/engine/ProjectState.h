@@ -36,20 +36,20 @@
 //==============================================================================
 //==============================================================================
 namespace Zenith {
-    // Unique identifiers for our data nodes
-    namespace IDs {
-        const juce::Identifier PROJECT { "PROJECT" };
-        const juce::Identifier TRACKS  { "TRACKS" };
-        const juce::Identifier TRACK   { "TRACK" };
-        const juce::Identifier volume  { "volume" };
-        const juce::Identifier name    { "name" };
-        
-        // Extended IDs from existing implementation
-        const juce::Identifier CLIPS   { "CLIPS" };
-        const juce::Identifier CLIP    { "CLIP" };
-        const juce::Identifier MIXER   { "MIXER" };
-    }
-}
+// Unique identifiers for our data nodes
+namespace IDs {
+const juce::Identifier PROJECT{"PROJECT"};
+const juce::Identifier TRACKS{"TRACKS"};
+const juce::Identifier TRACK{"TRACK"};
+const juce::Identifier volume{"volume"};
+const juce::Identifier name{"name"};
+
+// Extended IDs from existing implementation
+const juce::Identifier CLIPS{"CLIPS"};
+const juce::Identifier CLIP{"CLIP"};
+const juce::Identifier MIXER{"MIXER"};
+} // namespace IDs
+} // namespace Zenith
 
 namespace zenith {
 
@@ -58,8 +58,7 @@ class ClipStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
 
-class ProjectState : public juce::ValueTree::Listener,
-                     private juce::Timer {
+class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ArrangerComponent;
   friend class TrackStateManager;
   friend class ClipStateManager;
@@ -67,19 +66,20 @@ class ProjectState : public juce::ValueTree::Listener,
   friend class ProjectFileIO;
 
 public:
-    //==========================================================================
-    // Source of Truth Structure (from Step 1)
-    //==========================================================================
-    juce::ValueTree state;
-    juce::UndoManager undoManager;
+  //==========================================================================
+  // Source of Truth Structure (from Step 1)
+  //==========================================================================
+  juce::ValueTree state;
+  juce::UndoManager undoManager;
 
-    // Helper to add a track via state manipulation (as requested in Step 1)
-    void addTrack(const juce::String& trackName) {
-        juce::ValueTree t(Zenith::IDs::TRACK);
-        t.setProperty(Zenith::IDs::name, trackName, nullptr);
-        t.setProperty(Zenith::IDs::volume, 0.75f, nullptr);
-        state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr).addChild(t, -1, &undoManager);
-    }
+  // Helper to add a track via state manipulation (as requested in Step 1)
+  void addTrack(const juce::String &trackName) {
+    juce::ValueTree t(Zenith::IDs::TRACK);
+    t.setProperty(Zenith::IDs::name, trackName, nullptr);
+    t.setProperty(Zenith::IDs::volume, 0.75f, nullptr);
+    state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr)
+        .addChild(t, -1, &undoManager);
+  }
 
   static const juce::Identifier ID_PROJECT;
   static const juce::Identifier ID_TRACKS;
@@ -113,6 +113,7 @@ public:
   static const juce::Identifier PROP_MUTE;
   static const juce::Identifier PROP_SOLO;
   static const juce::Identifier PROP_ARMED;
+  static const juce::Identifier PROP_INPUT_MONITOR;
 
   static const juce::Identifier PROP_START;
   static const juce::Identifier PROP_LENGTH;
@@ -239,6 +240,10 @@ public:
   void setTrackArmed(const juce::String &trackId, bool armed,
                      const juce::String &actionName = "Set track armed");
   bool isTrackArmed(const juce::String &trackId) const;
+  void setTrackInputMonitor(
+      const juce::String &trackId, bool monitoring,
+      const juce::String &actionName = "Set track input monitor");
+  bool isTrackInputMonitoring(const juce::String &trackId) const;
   juce::String getTrackName(const juce::String &trackId) const;
   juce::String getTrackType(const juce::String &trackId) const;
 

@@ -9,7 +9,6 @@
 #include "ProjectFileIO.h"
 #include "TrackStateManager.h"
 
-
 #include <functional>
 
 namespace {
@@ -74,6 +73,7 @@ const juce::Identifier ProjectState::PROP_PAN("pan");
 const juce::Identifier ProjectState::PROP_MUTE("mute");
 const juce::Identifier ProjectState::PROP_SOLO("solo");
 const juce::Identifier ProjectState::PROP_ARMED("armed");
+const juce::Identifier ProjectState::PROP_INPUT_MONITOR("inputMonitor");
 
 const juce::Identifier ProjectState::PROP_START("start");
 const juce::Identifier ProjectState::PROP_LENGTH("length");
@@ -116,7 +116,7 @@ const juce::Identifier ProjectState::PROP_SELECTED_TRACK_ID("selectedTrackId");
 //==============================================================================
 ProjectState::ProjectState() : state(Zenith::IDs::PROJECT) {
   DBG("ProjectState: Constructor");
-  
+
   state.getOrCreateChildWithName(Zenith::IDs::TRACKS, nullptr);
 
   trackStateManager = std::make_unique<TrackStateManager>(*this);
@@ -189,32 +189,35 @@ juce::File ProjectState::saveCrashDump() {
 void ProjectState::timerCallback() {
   if (isDirty && projectFile.existsAsFile()) {
     DBG("ProjectState: Autosaving...");
-    
-    auto autosaveFile = projectFile.getSiblingFile(projectFile.getFileNameWithoutExtension() + "_autosave" + projectFile.getFileExtension());
-    
+
+    auto autosaveFile = projectFile.getSiblingFile(
+        projectFile.getFileNameWithoutExtension() + "_autosave" +
+        projectFile.getFileExtension());
+
     if (projectFileIO) {
-        ProjectFileIO::IOSettings settings;
-        settings.format = ProjectFileIO::SerializationFormat::MessagePack; // favor speed for autosave
-        settings.useAtomicWrite = true;
-        
-        projectFileIO->saveToFileAsync(autosaveFile, settings, [this](bool success, juce::String error) {
+      ProjectFileIO::IOSettings settings;
+      settings.format =
+          ProjectFileIO::SerializationFormat::MessagePack; // favor speed for
+                                                           // autosave
+      settings.useAtomicWrite = true;
+
+      projectFileIO->saveToFileAsync(
+          autosaveFile, settings, [this](bool success, juce::String error) {
             if (success) {
-                DBG("ProjectState: Autosave successful");
+              DBG("ProjectState: Autosave successful");
             } else {
-                DBG("ProjectState: Autosave failed: " + error);
+              DBG("ProjectState: Autosave failed: " + error);
             }
-        });
+          });
     }
   }
 }
 
 void ProjectState::startAutosaveTimer(int intervalMinutes) {
-    startTimer(intervalMinutes * 60 * 1000);
+  startTimer(intervalMinutes * 60 * 1000);
 }
 
-void ProjectState::stopAutosaveTimer() {
-    stopTimer();
-}
+void ProjectState::stopAutosaveTimer() { stopTimer(); }
 
 void ProjectState::valueTreeChildAdded(juce::ValueTree &parent,
                                        juce::ValueTree &child) {
@@ -335,6 +338,19 @@ bool ProjectState::isTrackSolo(const juce::String &trackId) const {
 bool ProjectState::isTrackArmed(const juce::String &trackId) const {
   if (trackStateManager)
     return trackStateManager->isTrackArmed(trackId);
+  return false;
+}
+
+void ProjectState::setTrackInputMonitor(const juce::String &trackId,
+                                        bool monitoring,
+                                        const juce::String &actionName) {
+  if (trackStateManager)
+    trackStateManager->setTrackInputMonitor(trackId, monitoring, actionName);
+}
+
+bool ProjectState::isTrackInputMonitoring(const juce::String &trackId) const {
+  if (trackStateManager)
+    return trackStateManager->isTrackInputMonitoring(trackId);
   return false;
 }
 
