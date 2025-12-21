@@ -174,10 +174,8 @@ private:
     //==========================================================================
 
     // Current snapshot (read by audio thread, swapped by message thread)
-    std::shared_ptr<const TempoMapSnapshot> snapshot_;
-
-    // Spinlock to protect snapshot_ access
-    mutable juce::SpinLock snapshotLock_;
+    // RT-safe: Uses C++20 atomic shared_ptr for lock-free access
+    std::atomic<std::shared_ptr<const TempoMapSnapshot>> snapshot_;
 
     //==========================================================================
     // Helper Methods

@@ -206,6 +206,20 @@ private:
 
     // Per-track buffers (pre-allocated)
     std::vector<juce::AudioBuffer<float>> trackBuffers_;
+
+    // Private helpers for renderAudioGraph breakdown (Bug 61)
+    void renderFrozenTrack(int trackIdx, Track* track, juce::AudioBuffer<float>& outputBuffer, 
+                           int numSamples, juce::int64 playheadPosition, 
+                           const RoutingGraph::Snapshot* snapshot, const std::string& nodeId);
+
+    void renderLiveTrack(int trackIdx, Track* track, juce::AudioBuffer<float>& outputBuffer,
+                         int numSamples, juce::int64 playheadPosition,
+                         const RoutingGraph::Snapshot* snapshot, const std::string& nodeId,
+                         const juce::MidiBuffer* incomingMidi, const TempoMap* tempoMap);
+
+    void renderAuxBus(const RoutingGraph::Snapshot* snapshot, const std::string& nodeId,
+                      std::span<AuxBus* const> auxBuses, juce::AudioBuffer<float>& outputBuffer,
+                      int numSamples);
     
     // Aux bus buffers
     std::vector<juce::AudioBuffer<float>> auxBusBuffers_;
@@ -227,7 +241,8 @@ private:
     // Dither
     zenith::dsp::Dither dither_;
 
-    // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT allocations
+    // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT allocations (Bug 69)
+    // Reserved in prepare()
     std::vector<juce::AudioBuffer<float>*> auxBufferPtrsVector_;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)

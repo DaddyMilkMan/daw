@@ -71,11 +71,25 @@ struct MidiNoteSpec {
 
     Thread-safe design allows clips to be modified from the UI thread while
     playing back on the audio thread.
+
+    ## Ownership Model (to prevent shared_ptr cycles):
+
+    **ClipTrack -> Clip:** ClipTrack owns Clip via std::unique_ptr
+    **Clip -> Track:** No back-reference stored (track passed by parameter when needed)
+    **Clip -> AudioFilePool:** Uses shared_ptr<const void> for RT-safe handle (no cycle)
+
+    @note Clip should NEVER hold std::shared_ptr<Track> or std::shared_ptr<ClipTrack>
 */
 class Clip : public juce::AudioSource {
 public:
   //==============================================================================
-  enum class Type { Audio, MIDI };
+  /**
+   * @brief Enumeration of clip types.
+   */
+  enum class Type { 
+      Audio, /**< Audio clip containing waveform data */
+      MIDI   /**< MIDI clip containing note data */
+  };
 
   //==============================================================================
   Clip();
@@ -98,7 +112,16 @@ public:
 
   //==============================================================================
   // Timeline position (in samples)
+  /**
+   * @brief Sets the start position of the clip on the timeline.
+   * @param position Position in samples.
+   */
   void setStartPosition(int64_t position);
+
+  /**
+   * @brief Gets the start position of the clip.
+   * @return Position in samples.
+   */
   int64_t getStartPosition() const { return startPosition.load(); }
 
   void setLength(int64_t lengthInSamples);
@@ -131,6 +154,15 @@ public:
   // Audio clip specific
 
   // Phase 1.2: Use AudioFilePool for RT-safe file access
+  /**
+   * @brief Sets the audio file for this clip using the AudioFilePool.
+   * 
+   * This is the preferred method for loading audio files as it ensures
+   * thread-safe access to the file handle.
+   * 
+   * @param file The audio file to load.
+   * @param pool Reference to the AudioFilePool to use for loading.
+   */
   void setAudioFileFromPool(const juce::File &file,
                             zenith::AudioFilePool &pool);
 
@@ -244,6 +276,8 @@ private:
   // Audio data
   juce::File audioFile;
   juce::AudioBuffer<float> audioBuffer; // Legacy: for setAudioBuffer()
+  // MESSAGE THREAD ONLY - Protects file/buffer swapping on message thread.
+  // Audio thread access is through audioFileHandle_ (atomic).
   juce::CriticalSection audioLock;
 
   // Legacy audio source (required for setAudioFile)
@@ -256,6 +290,8 @@ private:
   //==============================================================================
   // MIDI data
   std::atomic<std::shared_ptr<const juce::MidiMessageSequence>> midiSequence_;
+  // MESSAGE THREAD ONLY - Protects MIDI sequence updates.
+  // Audio thread access is through midiSequence_ (atomic).
   juce::CriticalSection midiLock;
 
   //==============================================================================
