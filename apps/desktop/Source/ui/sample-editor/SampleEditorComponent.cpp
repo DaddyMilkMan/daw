@@ -1937,6 +1937,10 @@ void SampleEditorComponent::startRecording() {
   recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(numChans, initialSamples);
   recordBuffer_->clear();
   recordWritePos_ = 0;
+  
+  // Register callback
+  engine_.getDeviceManager().addAudioCallback(this);
+
 
   isRecording_ = true;
   repaint();

@@ -136,6 +136,9 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
+  //==========================================================================
+  // Public API - Advanced Features
+  //==========================================================================
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
