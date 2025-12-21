@@ -37,6 +37,8 @@ private:
   std::atomic<float> *threshold = nullptr;
   std::atomic<float> *frequency = nullptr;
   std::atomic<float> *amount = nullptr;
+  // Note: listen is AudioParameterBool but getRawParameterValue returns float*
+  // Check against 0.5f threshold for boolean semantics
   std::atomic<float> *listen = nullptr; // Listen to delta/sibilance
 
   // DSP
@@ -45,6 +47,9 @@ private:
   juce::dsp::LinkwitzRileyFilter<float> crossoverHigh;
 
   juce::dsp::Compressor<float> compressor;
+
+  // Pre-allocated buffer for high band (real-time safe)
+  juce::AudioBuffer<float> highBand;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithDeEsser)
 };

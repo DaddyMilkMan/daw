@@ -76,12 +76,11 @@ void ZenithDeEsser::processBlock(juce::AudioBuffer<float> &buffer,
   float ratio = 1.0f + (amt * 19.0f); // Max 20:1
   compressor.setRatio(ratio);
 
-  // Resize highBand if needed (shouldn't happen often, but handle gracefully)
-  if (highBand.getNumChannels() < buffer.getNumChannels() ||
-      highBand.getNumSamples() < buffer.getNumSamples()) {
-    highBand.setSize(buffer.getNumChannels(), buffer.getNumSamples(), false, false, true);
-  }
-  
+  // Ensure highBand is large enough without resizing
+  // Real-time safety check: we expect prepareToPlay to have allocated enough.
+  jassert(highBand.getNumChannels() >= buffer.getNumChannels() &&
+          highBand.getNumSamples() >= buffer.getNumSamples());
+
   // Copy input to highBand buffer
   for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
     highBand.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());

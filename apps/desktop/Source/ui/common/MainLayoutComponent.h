@@ -13,7 +13,6 @@
 #include "../framework/SkiaComponent.h"
 #include <JuceHeader.h>
 
-
 namespace zenith {
 
 class Engine;
@@ -22,7 +21,9 @@ class BrowserModel;
 class ResizablePanelContainer;
 class RemoteCursorOverlay;
 class SampleEditorComponent;
+class SampleEditorComponent;
 class ViewSwitcher;
+class MidiEditorContainer;
 
 class MainLayoutComponent : public SkiaComponent {
 public:
@@ -40,7 +41,11 @@ public:
   bool isBrowserVisible() const;
   bool isSampleEditorVisible() const;
 
+  bool isSampleEditorVisible() const;
+  bool isMidiEditorVisible() const;
+
   SampleEditorComponent *getSampleEditor();
+  MidiEditorContainer *getMidiEditor();
 
 private:
   Engine &engine_;
@@ -51,8 +56,11 @@ private:
 
   // Raw pointers to managed components (owned by containers)
   ResizablePanelContainer *centerContainer_ = nullptr;
+  ResizablePanelContainer *centerContainer_ = nullptr;
   ViewSwitcher *viewSwitcher_ = nullptr;
+  ViewSwitcher *editorSwitcher_ = nullptr;
   SampleEditorComponent *sampleEditor_ = nullptr;
+  MidiEditorContainer *midiEditor_ = nullptr;
 
   std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
 

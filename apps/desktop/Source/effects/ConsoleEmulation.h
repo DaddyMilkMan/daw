@@ -34,11 +34,13 @@ public:
   // Process a block of audio (in-place)
   void process(juce::AudioBuffer<float> &buffer);
 
+  void updateFilters();
+
   // Parameters
   void setMode(Mode newMode) {
     if (mode != newMode) {
       mode = newMode;
-      coefficientsDirty = true;
+      updateFilters();
     }
   }
   void setDrive(float newDrive) { drive = juce::jlimit(0.0f, 1.0f, newDrive); }
@@ -50,14 +52,13 @@ private:
   Mode mode = Mode::Clean;
   float drive = 0.0f;     // 0.0 to 1.0
   float character = 0.0f; // 0.0 to 1.0 (mix or intensity)
-  bool coefficientsDirty = true;
 
   float sampleRate = 44100.0f;
 
   // Filters for tonal shaping
   juce::dsp::IIR::Filter<float> lowPass;
+  juce::dsp::IIR::Filter<float> highPass;
 
-  void updateCoefficients();
   float applySaturation(float input, float driveAmount);
 };
 
