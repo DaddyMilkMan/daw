@@ -76,6 +76,7 @@ class MeteringSystem;
 
 namespace ai {
 class SessionDebuggerAgent;
+class AIMasteringAgent;
 }
 
 //==============================================================================
@@ -386,6 +387,15 @@ public:
   const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
+
+  //==========================================================================
+  // AI Mastering Agent
+  //==========================================================================
+
+  /**
+   * @brief Get the AI mastering agent
+   */
+  ai::AIMasteringAgent *getMasteringAgent() { return masteringAgent_.get(); }
 
   //==========================================================================
   // Analysis (Visualizers)

@@ -1075,7 +1075,8 @@ void Engine::audioDeviceIOCallbackWithContext(
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
             snapshot->auxBuses, routingGraph_, masterLimiter_,
             masterPlugins_, 
-            tempoMap_.get(), &midi1);
+            tempoMap_.get(), &midi1,
+            inputChannelData, numInputChannels);
 
         // Mix Metronome (Pass 1)
         if (metronome_) {
@@ -1106,7 +1107,8 @@ void Engine::audioDeviceIOCallbackWithContext(
           audioRenderer_->renderAudioGraph(
               buffer2, samplesAfter, loopStart, snapshot->tracks,
               snapshot->auxBuses, routingGraph_, masterLimiter_,
-              masterPlugins_, tempoMap_.get(), &midi2);
+              masterPlugins_, tempoMap_.get(), &midi2,
+              inputChannelData, numInputChannels);
 
           // Mix Metronome (Pass 2)
           if (metronome_) {
@@ -1302,7 +1304,8 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
     audioRenderer_->renderAudioGraph(outputBuffer, numSamples, playheadPosition,
                                      tracks, auxBuses, routingGraph_,
                                      masterLimiter_, masterPlugins_,
-                                     tempoMap_.get(), incomingMidi);
+                                     tempoMap_.get(), incomingMidi,
+                                     nullptr, 0);
   } else {
     outputBuffer.clear();
   }
@@ -1496,7 +1499,7 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
       audioRenderer_->renderAudioGraph(
           renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
-          &dummyMidi);
+          &dummyMidi, nullptr, 0);
     } else {
       renderBuffer.clear();
     }

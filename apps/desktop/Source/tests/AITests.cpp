@@ -65,7 +65,8 @@ public:
 
       // Update progress
       mgr.updateProgress(opId, 0.5f, "Halfway done");
-      auto *op = mgr.getOperation(opId);
+      auto op = mgr.getOperation(opId);
+      expect(op.has_value());
       expectWithinAbsoluteError(op->progress, 0.5f, 0.01f);
 
       // Complete operation
@@ -149,11 +150,14 @@ public:
       bool eventReceived = false;
       juce::String receivedPayload;
 
+      juce::WaitableEvent eventDone;
+
       // Subscribe
       int subId = bus.subscribe(ai::AIEventType::SamplesFound, "TestSubscriber",
                                 [&](const ai::AIEvent &e) {
                                   eventReceived = true;
                                   receivedPayload = e.payload.toString();
+                                  eventDone.signal();
                                 });
 
       expect(subId > 0);
@@ -165,7 +169,7 @@ public:
       bus.publish(ai::AIEventType::SamplesFound, "TestAgent", payload);
 
       // Wait for async delivery
-      juce::Thread::sleep(100);
+      expect(eventDone.wait(2000)); // Wait up to 2 seconds
 
       // Verify
       auto stats = bus.getStats();

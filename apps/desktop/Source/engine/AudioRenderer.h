@@ -100,7 +100,9 @@ public:
         MasterLimiter& masterLimiter,
         std::vector<std::unique_ptr<juce::AudioPluginInstance>>& masterPlugins,
         const TempoMap* tempoMap,
-        const juce::MidiBuffer* incomingMidi = nullptr) noexcept;
+        const juce::MidiBuffer* incomingMidi = nullptr,
+        const float* const* inputChannelData = nullptr,
+        int numInputChannels = 0) noexcept;
 
     /**
      * @brief Update playhead position for all clips in all tracks
