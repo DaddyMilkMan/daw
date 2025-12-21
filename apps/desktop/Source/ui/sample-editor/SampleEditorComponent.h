@@ -115,17 +115,6 @@ public:
     void timerCallback() override;
 
     //==============================================================================
-    // AudioIODeviceCallback overrides
-    void audioDeviceAboutToStart(juce::AudioIODevice* device) override;
-    void audioDeviceStopped() override;
-    void audioDeviceIOCallbackWithContext(const float* const* inputChannelData,
-                                          int numInputChannels,
-                                          float* const* outputChannelData,
-                                          int numOutputChannels,
-                                          int numSamples,
-                                          const juce::AudioIODeviceCallbackContext& context) override;
-
-    //==============================================================================
     // Editor API
     void setClipToEdit(const juce::String& trackId, const juce::String& clipId);
     void clearClip();
@@ -428,13 +417,8 @@ private:
     std::atomic<int> recordWritePos_{0};
 
     // Thread-safe FIFO for incoming audio
-    static constexpr int kRecordFifoSize = 131072; // ~3 sec at 44.1k
-    juce::AbstractFifo incomingFifo_{kRecordFifoSize};
-    juce::AudioBuffer<float> incomingBuffer_; // Ring buffer for thread exchange
-    
-    // Thread-safe recording
     std::unique_ptr<juce::AbstractFifo> incomingFifo_;
-    juce::AudioBuffer<float> incomingBuffer_;
+    juce::AudioBuffer<float> incomingBuffer_; // Ring buffer for thread exchange
     
     //==============================================================================
     // Undo/Redo

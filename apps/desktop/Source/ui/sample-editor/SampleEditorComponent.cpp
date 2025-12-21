@@ -104,43 +104,6 @@ void SampleEditorComponent::timerCallback() {
     }
     repaint();
   }
-
-  if (isRecording_) {
-    // Drain FIFO to record buffer
-    int numReady = incomingFifo_.getNumReady();
-    if (numReady > 0) {
-      if (!recordBuffer_) {
-        // Should have been allocated in startRecording
-        incomingFifo_.reset();
-        return;
-      }
-
-      int start1, size1, start2, size2;
-      incomingFifo_.prepareToRead(numReady, start1, size1, start2, size2);
-
-      // Append to recordBuffer_
-      int currentCapacity = recordBuffer_->getNumSamples();
-      int requiredCapacity = recordWritePos_ + size1 + size2;
-      
-      // Grow buffer if needed (amortized doubling)
-      if (currentCapacity < requiredCapacity) {
-        int newCapacity = std::max(requiredCapacity, currentCapacity * 2);
-        newCapacity = std::max(newCapacity, 4096); // Min size
-        recordBuffer_->setSize(1, newCapacity, true, true, true);
-      }
-      
-      // Copy data from ring buffer
-      if (size1 > 0)
-        recordBuffer_->copyFrom(0, recordWritePos_, incomingBuffer_, 0, start1, size1);
-      if (size2 > 0)
-        recordBuffer_->copyFrom(0, recordWritePos_ + size1, incomingBuffer_, 0, start2, size2);
-
-      incomingFifo_.finishedRead(size1 + size2);
-      recordWritePos_ += (size1 + size2);
-      
-      repaint();
-    }
-  }
 }
 
 //==============================================================================
