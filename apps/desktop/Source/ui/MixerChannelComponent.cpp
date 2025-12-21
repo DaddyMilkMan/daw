@@ -17,7 +17,10 @@
 #include "../../Source/ui/skia/NeonGlow.h"
 #include "../../Source/ui/skia/SkiaTheme.h"
 #include "../../Source/ui/skia/ZenithDesignSystem.h"
-#include <JuceHeader.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_core/juce_core.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 #include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>

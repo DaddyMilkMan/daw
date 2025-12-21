@@ -1366,6 +1366,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       // Triangle marker in ruler/toolbar area
       static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
       static constexpr float kPlayheadMarkerHeight = 8.0f;
+      float contentTop = (float)RULER_HEIGHT;
 
       SkPath trianglePath;
       trianglePath.moveTo(playheadX, contentTop);
