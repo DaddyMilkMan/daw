@@ -14,8 +14,8 @@
 
 #include "SkiaButton.h"
 #include "SkiaComponent.h"
-#include "../components/SkiaComboBox.h"
-#include "../components/SkiaLabel.h"
+#include "../widgets/SkiaComboBox.h"
+#include "../widgets/SkiaLabel.h"
 
 namespace zenith {
 namespace settings {

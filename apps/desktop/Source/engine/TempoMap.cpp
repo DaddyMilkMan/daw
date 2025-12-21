@@ -73,6 +73,10 @@ void TempoMap::updateFromValueTree(const juce::ValueTree& tempoMapTree)
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
     auto newSnapshot = std::make_shared<TempoMapSnapshot>();
+    
+    // Get time signature from properties
+    newSnapshot->timeSigNumerator = tempoMapTree.getProperty("timeSigNum", 4);
+    newSnapshot->timeSigDenominator = tempoMapTree.getProperty("timeSigDen", 4);
 
     if (!tempoMapTree.isValid())
     {
@@ -234,6 +238,16 @@ double TempoMap::getTempoAt(double beats) const
     }
 
     return snap->cachedPoints[index].bpm;
+}
+
+int TempoMap::getTimeSignatureNumerator() const
+{
+    return loadSnapshot()->timeSigNumerator;
+}
+
+int TempoMap::getTimeSignatureDenominator() const
+{
+    return loadSnapshot()->timeSigDenominator;
 }
 
 } // namespace zenith

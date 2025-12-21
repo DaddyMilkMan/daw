@@ -14,6 +14,7 @@
 #include "ClipComponent.h"
 #include "MixerChannelComponent.h"
 #include "SkiaComponent.h"
+#include "ZenithStyleApplicator.h"
 #include <algorithm>
 #include <typeinfo>
 
@@ -243,7 +244,7 @@ bool UXDirectorAgent::isOrphanComponent(juce::Component *comp) const {
     return false;
 
   // Skip if already bound
-  if (bindings_.count(const_cast<juce::Component *>(comp)) > 0)
+  if (bindings_.count(comp) > 0)
     return false;
 
   // Check if name and ID are both empty
@@ -334,7 +335,7 @@ bool UXDirectorAgent::hasStaleData(juce::Component *comp) const {
     return false;
 
   // Check if component is bound to a track
-  auto it = bindings_.find(const_cast<juce::Component *>(comp));
+  auto it = bindings_.find(comp);
   if (it == bindings_.end())
     return false;
 
@@ -703,17 +704,18 @@ bool UXDirectorAgent::applyStyleFix(juce::Component *component) {
   if (component == nullptr)
     return false;
 
-  // We can't really apply a LookAndFeel here since we use Skia
-  // But we can mark the component for repaint with Skia styling
-  // For JUCE components, we'd need a custom LookAndFeel
+  // Use ZenithStyleApplicator for proper styling
+  auto result = ZenithStyleApplicator::applyToComponent(component);
 
-  // For now, just trigger a repaint which will use Skia if available
-  component->repaint();
+  if (result.success) {
+    recordFix(UIIssueType::UnstyledComponent,
+              "Style applied: " + result.appliedStyle, component->getName());
+    return true;
+  }
 
-  recordFix(UIIssueType::UnstyledComponent, "Repaint triggered",
-            component->getName());
-
-  return true;
+  // Log failure but don't record as fix (honest failure)
+  DBG("UXDirectorAgent: Failed to style component: " + result.reason);
+  return false;
 }
 
 bool UXDirectorAgent::applyLayoutFix(juce::Component *component) {
@@ -841,9 +843,9 @@ bool UXDirectorAgent::fixComponentLayout(juce::Component *component) {
 
 void UXDirectorAgent::syncAllNames() {
   for (auto &[comp, binding] : bindings_) {
-    if (binding.linkedTrack != nullptr) {
-      comp->setName(binding.linkedTrack->getName());
-      comp->repaint();
+    if (binding.linkedTrack != nullptr && binding.uiComponent != nullptr) {
+      binding.uiComponent->setName(binding.linkedTrack->getName());
+      binding.uiComponent->repaint();
     }
   }
 }

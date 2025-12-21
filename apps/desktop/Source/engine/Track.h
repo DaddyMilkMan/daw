@@ -10,15 +10,16 @@
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - OwnedArray<Clip> → std::vector<std::unique_ptr<Clip>>
-    - Plugin hosting stubbed for Phase 2
-
+    Audio/MIDI track with clip playback, plugin chain, and mixer controls
   ==============================================================================
 */
 
 #pragma once
-
 #include "AutomationLane.h"
+#include "AutomationManager.h"
+#include "EngineEvent.h" // For MidiFifo
 #include "MixerChannel.h"
+#include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -32,11 +33,11 @@
 #include <unordered_map>
 #include <vector>
 
-
 // Forward declarations
 namespace zenith {
 class Instrument;
 class TempoMap;
+class Clip; // Move outside
 } // namespace zenith
 
 namespace zenith {
@@ -56,11 +57,11 @@ class PluginHost;
 */
 class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
-    friend class AudioRenderer; // Allow AudioRenderer to access private members
+  friend class AudioRenderer; // Allow AudioRenderer to access private members
 
-    void setSoloed(bool shouldBeSoloed);
-    bool isSoloed() const;
-public:
+  void setSoloed(bool shouldBeSoloed);
+  bool isSoloed() const;
+
 public:
   //==============================================================================
   enum class Type {
@@ -72,23 +73,39 @@ public:
   };
 
   //==============================================================================
+  /**
+   * @brief Track Factory - Create the appropriate track subclass based on type
+   */
+  static std::unique_ptr<Track> create(const juce::String &name, Type type);
+
   Track(const juce::String &name, Type type);
   ~Track() override;
 
   //==============================================================================
   // AudioSource interface
-  void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
-  void releaseResources() override;
+  virtual void prepareToPlay(int samplesPerBlockExpected,
+                             double sampleRate) override;
+  virtual void releaseResources() override;
+
+  // Standard AudioSource override to avoid abstraction issue
   void
-  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override;
+  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override {
+    getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr);
+  }
 
   // Phase 1.3: Version that takes explicit playhead position and optional
   // incoming MIDI and aux buffers. Added optional TempoMap for automation.
-  void getNextAudioBlock(
+  virtual void getNextAudioBlock(
       const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
       const juce::MidiBuffer *incomingMidi = nullptr,
       const std::vector<juce::AudioBuffer<float> *> &auxBuffers = {},
-      const TempoMap *tempoMap = nullptr);
+      const TempoMap *tempoMap = nullptr) = 0;
+
+  /**
+   * @brief Update clip scheduling/positions based on playhead
+   * @param playheadPosition Current playhead position in samples
+   */
+  virtual void updateClipPositions(juce::int64 playheadPosition);
 
   //==============================================================================
   // Track properties
@@ -137,50 +154,43 @@ public:
   // Freeze state (for CPU optimization)
   void setFrozen(bool shouldBeFrozen) { frozen.store(shouldBeFrozen); }
   bool isFrozen() const { return frozen.load(); }
-  
+
   /**
    * @brief Set the freeze file for this track
    * @param file The pre-rendered audio file
    * @note Message thread only
    */
-  void setFreezeFile(const juce::File& file);
-  
+  void setFreezeFile(const juce::File &file);
+
   /**
    * @brief Get the freeze file for this track
    * @return The freeze file, or invalid file if not frozen
    */
-  const juce::File& getFreezeFile() const { return freezeFile_; }
-  
+  const juce::File &getFreezeFile() const { return freezeFile_; }
+
   /**
-   * @brief Get the audio reader for the freeze file
-   * @return Reader instance, or nullptr if not available
-   * @note Audio thread safe - reader is pre-created
+   * @brief Get the freeze audio buffer
+   * @return Shared pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - RCU pattern
    */
-  juce::AudioFormatReader* getFreezeReader() const { return freezeReader_.get(); }
+  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
+    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
+  }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
   const MixerChannel &getMixerChannel() const { return mixerChannel; }
 
+  // Instrument management (moved to InstrumentTrack)
+
   //==============================================================================
-  // Instrument management (for Instrument tracks)
+  // Live MIDI Injection (Thread-safe)
+  //==============================================================================
   /**
-   * @brief Set the instrument for this track
-   * @param instrument Instrument instance (must be non-null)
-   * @note Message thread only
+   * @brief Inject a MIDI message from the message thread (e.g. virtual
+   * keyboard)
+   * @param message The MIDI message to inject
    */
-  void setInstrument(std::unique_ptr<Instrument> instrument);
-
-  /**
-   * @brief Get the current instrument (if any)
-   * @return Pointer to instrument, or nullptr if no instrument set
-   * @note Message thread only
-   */
-  Instrument *getInstrument() const { return instrument_.get(); }
-
-  /**
-   * @brief Check if track has an instrument
-   */
-  bool hasInstrument() const { return instrument_ != nullptr; }
+  void injectLiveMidiMessage(const juce::MidiMessage &message);
 
   //==============================================================================
   // Plugin chain management (Phase 3: VST3 hosting MVP)
@@ -192,35 +202,26 @@ public:
   void clearPlugins();
   int getNumPlugins() const;
   juce::AudioPluginInstance *getPlugin(int index) const;
+  virtual int getNumClips() const { return 0; }
+  virtual Clip *getClip(int index) const { return nullptr; }
+  virtual void addClip(Clip *clip) { juce::ignoreUnused(clip); }
+  virtual void addClip(std::unique_ptr<Clip> clip);
+  virtual Instrument *getInstrument() const { return nullptr; }
+  virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
-  //==============================================================================
-  // MIDI Scheduling
   /**
-   * @brief Generate MIDI events for the current audio block from NOTES in clips
-   * @param trackState ValueTree for this track from ProjectState
-   * @param tempo Current tempo in BPM
-   * @param sampleRate Current sample rate
-   * @param blockStartSample Transport position at start of block
-   * @param blockSize Number of samples in block
-   * @param midiOut MIDI buffer to fill with events
+   * @brief Update clip playback positions for this track
+   * @param playheadPosition Current playhead position in samples
+   * @note Audio thread safe - implementations should be lock-free
    */
-  void generateMidiForBlock(const juce::ValueTree &trackState, double tempo,
-                            double sampleRate, juce::int64 blockStartSample,
-                            int blockSize, juce::MidiBuffer &midiOut);
-
-  //==============================================================================
-  // Clip management
-  class Clip; // Forward declaration
-
-  void addClip(std::unique_ptr<Clip> clip);
-  void removeClip(int clipIndex);
-  void removeClip(Clip *clip);
-  void clearClips();
-  int getNumClips() const;
-  Clip *getClip(int index) const;
-  const std::vector<std::unique_ptr<Clip>> &getClips() const {
-    return clipsOwned_;
+  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept {
+    juce::ignoreUnused(playheadPosition);
+    // Default implementation does nothing - subclasses with clips override
   }
+
+  // MIDI Scheduling (moved to MIDITrack)
+
+  // Clip management (moved to subclasses)
 
   //==============================================================================
   // Monitoring
@@ -256,10 +257,12 @@ public:
 
   // Message thread only: update automation for a specific parameter
   void addAutomationLane(const juce::String &paramId,
-                         std::shared_ptr<AutomationLane> lane);
-  void clearAutomationLanes();
+                         std::shared_ptr<AutomationLane> lane) {
+    automationManager.addLane(paramId, lane);
+  }
+  void clearAutomationLanes() { automationManager.clearLanes(); }
 
-private:
+protected:
   //==============================================================================
   // Track properties
   juce::String trackName;
@@ -267,6 +270,7 @@ private:
   Type trackType;
   int trackIndex = -1;
 
+protected:
   //==============================================================================
   // Audio processing state
   double currentSampleRate = 48000.0;
@@ -281,7 +285,8 @@ private:
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  std::unique_ptr<juce::AudioFormatReader> freezeReader_;
+  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
+  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing
@@ -292,126 +297,18 @@ private:
   // We keep wrappers for compatibility but they read from MixerChannel
 
   //==============================================================================
-  // Instrument (for Instrument tracks)
-  std::unique_ptr<Instrument> instrument_;
-  juce::AudioBuffer<float> instrumentBuffer_;
-
-  //==============================================================================
   // Mixer Channel Strip (EQ, Comp, Sends, Volume, Pan)
   MixerChannel mixerChannel;
 
   //==============================================================================
-  // Plugin chain with RT-safe snapshot pattern (Phase 3: VST3 hosting MVP)
-  //
-  // Pattern (same as clips):
-  // - Track owns plugins via std::vector<shared_ptr<Plugin>> (message thread only)
-  // - PluginSnapshot holds shared_ptr for audio thread to iterate safely
-  // - Audio thread loads snapshot atomically, iterates without locking
-  // - Message thread creates new snapshot when modifying plugins, swaps atomically
-  //
-  // This eliminates the data race from the original code:
-  // OLD: Audio thread reads std::vector while message thread modifies it (UB!)
-  // NEW: Audio thread holds shared_ptr snapshot, ensuring plugins stay alive
+  // Plugin chain and Automation management (delegated)
+  PluginChain pluginChain;
+  AutomationManager automationManager;
 
-  struct PluginSnapshot {
-    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
-
-    PluginSnapshot() = default;
-    explicit PluginSnapshot(
-        const std::vector<std::shared_ptr<juce::AudioPluginInstance>>
-            &ownedPlugins) {
-      plugins.reserve(ownedPlugins.size());
-      for (const auto &plugin : ownedPlugins)
-        plugins.push_back(plugin); // Copy shared_ptr (increment refcount)
-    }
-  };
-
-  // Plugin ownership (message thread only)
-  std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
-
-  // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
-  // Audio thread reads this raw pointer atomically
-  // Message thread manages lifetime via currentPluginSnapshot_ and
-  // pluginSnapshotTrash_
-  std::atomic<const PluginSnapshot *> activePluginSnapshot_{nullptr};
-  std::shared_ptr<PluginSnapshot> currentPluginSnapshot_;
-  std::vector<std::shared_ptr<PluginSnapshot>> pluginSnapshotTrash_;
-
-  // Helper: Create new snapshot from current ownership
-  void updatePluginSnapshot();
+  // Thread-safe FIFO for live MIDI injection
+  MidiFifo liveMidiFifo_;
 
   juce::AudioBuffer<float> pluginBuffer;
-
-  //==============================================================================
-  // Phase 2A: Lock-free clip list using RCU-style atomic snapshot
-  //
-  // Pattern:
-  // - Track owns clips via std::vector<std::unique_ptr<Clip>> (message thread
-  // only)
-  // - ClipSnapshot holds raw Clip* pointers for audio thread to iterate
-  // - Audio thread loads snapshot atomically, iterates without locking
-  // - Message thread creates new snapshot when modifying clips, swaps
-  // atomically
-  //
-  // This eliminates clipsLock from the audio thread (RT-safe).
-
-  struct ClipSnapshot {
-    std::vector<Clip *> clips; // Raw pointers (non-owning)
-
-    ClipSnapshot() = default;
-    explicit ClipSnapshot(
-        const std::vector<std::unique_ptr<Clip>> &ownedClips) {
-      clips.reserve(ownedClips.size());
-      for (const auto &clip : ownedClips)
-        clips.push_back(clip.get());
-    }
-  };
-
-  // Clip ownership (message thread only)
-  std::vector<std::unique_ptr<Clip>> clipsOwned_;
-
-  // Lock-free atomic snapshot for audio thread (truly RT-safe - no SpinLock!)
-  // Audio thread reads this raw pointer atomically
-  // Message thread manages lifetime via currentClipSnapshot_ and
-  // clipSnapshotTrash_
-  std::atomic<const ClipSnapshot *> activeClipSnapshot_{nullptr};
-  std::shared_ptr<ClipSnapshot> currentClipSnapshot_;
-  std::vector<std::shared_ptr<ClipSnapshot>> clipSnapshotTrash_;
-
-  // Helper: Create new snapshot from current ownership
-  void updateClipSnapshot();
-
-  // Phase 1: Pre-allocated clip buffer to avoid RT allocations
-  juce::AudioBuffer<float> clipBuffer_;
-
-  // Phase 2A: Pre-allocated MIDI buffer for MIDI clip playback and instruments
-  juce::MidiBuffer midiBuffer_;
-
-  //==============================================================================
-  // Automation State (Lock-free RCU)
-  //==============================================================================
-
-  struct AutomationSnapshot {
-    std::unordered_map<juce::String, std::shared_ptr<AutomationLane>> lanes;
-
-    AutomationSnapshot() = default;
-    explicit AutomationSnapshot(
-        const std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>
-            &ownedLanes) {
-      lanes = ownedLanes;
-    }
-  };
-
-  // Ownership (Message thread)
-  std::unordered_map<juce::String, std::shared_ptr<AutomationLane>>
-      automationLanesOwned_;
-
-  // RT Snapshot
-  std::atomic<const AutomationSnapshot *> activeAutomationSnapshot_{nullptr};
-  std::shared_ptr<AutomationSnapshot> currentAutomationSnapshot_;
-  std::vector<std::shared_ptr<AutomationSnapshot>> automationSnapshotTrash_;
-
-  void updateAutomationSnapshot();
 
   //==============================================================================
   // Helper methods
@@ -420,17 +317,6 @@ private:
   void applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples);
   void updateLevelMeters(const juce::AudioBuffer<float> &buffer,
                          int numSamples);
-
-  // MIDI Scheduler state
-  struct ActiveNote {
-    int pitch;
-    int channel;
-    juce::String noteId; // For tracking which ValueTree note this came from
-  };
-  std::vector<ActiveNote> activeNotes;
-  juce::CriticalSection
-      activeNotesLock; // Protects activeNotes vector for thread safety
-  juce::int64 lastProcessedSample = 0;
 
   std::atomic<bool> soloed_{false};
 

@@ -6,8 +6,7 @@
     Author:  Zenith DAW
 
     Utility functions for Grok AI integration.
-    Separated for testability.
-
+ 
   ==============================================================================
 */
 

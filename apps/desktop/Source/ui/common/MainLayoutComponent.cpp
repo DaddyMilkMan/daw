@@ -9,14 +9,22 @@
 */
 
 #include "MainLayoutComponent.h"
-#include "Engine.h"
-#include "../engine/PluginHost.h"
-#include "../instruments/InstrumentRegistry.h"
-#include "SessionViewComponent.h"
-#include "BrowserPanel.h"
-#include "GlassmorphicPanel.h"
-#include "SkiaMainWindowIntegration.h"
-#include "ZenithDesignSystem.h"
+#include "../../browser/BrowserModel.h"
+#include "../../engine/Engine.h"
+#include "../../engine/PluginHost.h"
+#include "../../instruments/InstrumentRegistry.h"
+#include "../arranger/ArrangerComponent.h"
+#include "../browser/BrowserPanel.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/LayoutManager.h"
+#include "../framework/SkiaMainWindowIntegration.h"
+#include "../piano-roll/PianoRollComponent.h"
+#include "../sample-editor/SampleEditorComponent.h"
+#include "../session/SessionViewComponent.h"
+#include "RemoteCursorOverlay.h"
+#include "ResizablePanelContainer.h"
+
 
 namespace zenith {
 
@@ -109,9 +117,36 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
             std::make_unique<ArrangerComponent>(engine_, projectState_);
         arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                                const juce::String &clipId) {
-          if (auto *editor = getSampleEditor()) {
-            editor->setClipToEdit(trackId, clipId);
-            toggleSampleEditor();
+          // Check clip type
+          auto [track, clip] = projectState_.findClip(clipId);
+          if (clip.isValid()) {
+            bool isMidi = clip.getProperty("type").toString() == "midi";
+
+            if (isMidi) {
+              // Switch to MIDI Editor
+              if (editorSwitcher_)
+                editorSwitcher_->setActiveView(1);
+              if (midiEditor_) {
+                MidiClipContext ctx;
+                ctx.clipId = clipId;
+                ctx.trackId = trackId;
+                ctx.clipName = clip.getProperty("name");
+                ctx.clipStartBeats = clip.getProperty("start");
+                ctx.clipLengthBeats = clip.getProperty("length");
+                midiEditor_->setClipContext(ctx);
+              }
+            } else {
+              // Switch to Audio Editor
+              if (editorSwitcher_)
+                editorSwitcher_->setActiveView(0);
+              if (sampleEditor_) {
+                sampleEditor_->setClipToEdit(trackId, clipId);
+              }
+            }
+
+            // Ensure bottom panel is visible
+            toggleSampleEditor(); // Renamed conceptually to toggleEditor, but
+                                  // keeping method name for now
           }
         };
         switcher->addView(std::move(arranger));
@@ -166,8 +201,30 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   auto arranger = std::make_unique<ArrangerComponent>(engine_, projectState_);
   arranger->onClipDoubleClicked = [this](const juce::String &trackId,
                                          const juce::String &clipId) {
-    if (auto *editor = getSampleEditor()) {
-      editor->setClipToEdit(trackId, clipId);
+    // Check clip type
+    auto [track, clip] = projectState_.findClip(clipId);
+    if (clip.isValid()) {
+      bool isMidi = clip.getProperty("type").toString() == "midi";
+
+      if (isMidi) {
+        if (editorSwitcher_)
+          editorSwitcher_->setActiveView(1);
+        if (midiEditor_) {
+          MidiClipContext ctx;
+          ctx.clipId = clipId;
+          ctx.trackId = trackId;
+          ctx.clipName = clip.getProperty("name");
+          ctx.clipStartBeats = clip.getProperty("start");
+          ctx.clipLengthBeats = clip.getProperty("length");
+          midiEditor_->setClipContext(ctx);
+        }
+      } else {
+        if (editorSwitcher_)
+          editorSwitcher_->setActiveView(0);
+        if (sampleEditor_) {
+          sampleEditor_->setClipToEdit(trackId, clipId);
+        }
+      }
       toggleSampleEditor();
     }
   };
@@ -184,22 +241,34 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
 
   centerContainer->addPanel(std::move(switcher), viewsCfg);
 
-  // 4b. Sample Editor
+  // 4b. Editors Panel (Switcher: Sample Editor | MIDI Editor)
+  auto editorSwitcher = std::make_unique<ViewSwitcher>();
+  editorSwitcher_ = editorSwitcher.get();
+
+  // View 0: Sample Editor
   auto sampleEditor =
       std::make_unique<SampleEditorComponent>(engine_, projectState_);
   sampleEditor_ = sampleEditor.get();
+  editorSwitcher->addView(std::move(sampleEditor));
+
+  // View 1: MIDI Editor
+  auto midiEditor =
+      std::make_unique<MidiEditorContainer>(projectState_, engine_);
+  midiEditor_ = midiEditor.get();
+  editorSwitcher->addView(std::move(midiEditor));
 
   layout::PanelConfig editorCfg;
-  editorCfg.id = "sample_editor";
-  editorCfg.type = "sample_editor"; // Important
-  editorCfg.name = "Sample Editor";
-  editorCfg.initialSize = 250;
+  editorCfg.id =
+      "sample_editor"; // Keep ID for layout persistence compatibility
+  editorCfg.type = "sample_editor";
+  editorCfg.name = "Editor";
+  editorCfg.initialSize = 300;
   editorCfg.minSize = 150;
   editorCfg.flex = 0; // Fixed height
   editorCfg.isCollapsible = true;
   editorCfg.isCollapsed = true;
 
-  centerContainer->addPanel(std::move(sampleEditor), editorCfg);
+  centerContainer->addPanel(std::move(editorSwitcher), editorCfg);
 
   // Add Center Container
   layout::PanelConfig centerCfg;
@@ -290,6 +359,20 @@ bool MainLayoutComponent::isSampleEditorVisible() const {
 
 SampleEditorComponent *MainLayoutComponent::getSampleEditor() {
   return sampleEditor_;
+}
+
+MidiEditorContainer *MainLayoutComponent::getMidiEditor() {
+  return midiEditor_;
+}
+
+bool MainLayoutComponent::isMidiEditorVisible() const {
+  if (centerContainer_) {
+    if (auto *wrapper = centerContainer_->getPanel("sample_editor")) {
+      return !wrapper->isCollapsed() && editorSwitcher_ &&
+             editorSwitcher_->getActiveViewIndex() == 1;
+    }
+  }
+  return false;
 }
 
 } // namespace zenith

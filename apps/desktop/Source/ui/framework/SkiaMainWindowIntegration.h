@@ -6,6 +6,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_opengl/juce_opengl.h>
 
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>

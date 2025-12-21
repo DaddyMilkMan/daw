@@ -4,24 +4,27 @@
  */
 
 #include "MainWindow.h"
-#include "ClipSynchronizer.h"
-#include "CommandAPI.h"
-#include "TrackAutomationSynchronizer.h"
-#include "ArrangerComponent.h"
-#include "PianoRollComponent.h"
+#include "../../commands/CommandAPI.h"
 #include "../engine/Clip.h"
 #include "../engine/Track.h"
-#include "../network/AIBridgeClient.h"
+#include "ArrangerComponent.h"
+#include "ClipSynchronizer.h"
 #include "InstrumentBrowserPanel.h"
 #include "MainLayoutComponent.h"
 #include "MenuBar.h"
+#include "PianoRollComponent.h"
 #include "SettingsComponent.h"
+#include "TrackAutomationSynchronizer.h"
 #include "WingmanPanel.h"
 #include "ZenithHubComponent.h"
 #include "ZenithLookAndFeel.h" // For colors
 
+
+#include "../ai/PresetGeneticistAgent.h"
 #include "../ai/SessionDebuggerAgent.h"
-#include "SimpleLogger.h"
+#include "../ai/UXDirectorAgent.h"
+#include "../engine/ZenithLogger.h"
+
 
 #include "SkiaComponent.h"
 #include "SkiaMainWindowIntegration.h"
@@ -41,7 +44,6 @@ using namespace zenith;
 //==============================================================================
 
 MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
-                             zenith::AIBridgeClient &aiClient,
                              zenith::ProjectState &state,
                              zenith::RecentProjectManager &recentProjects,
                              LoadProjectCallback onLoadProject,
@@ -57,31 +59,27 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Add Debug Overlay
   // addChildComponent(&zenith::DebugLogOverlay::getInstance());
 
-  // Show Console
-  showDebugConsole();
-
   setSize(1400, 800);
 
-  DBG("========================================");
-  DBG("MainComponent Constructor - Modern DAW Layout");
-  DBG("========================================");
+  ZENITH_LOG_INFO("========================================");
+  ZENITH_LOG_INFO("MainComponent Constructor - Modern DAW Layout");
+  ZENITH_LOG_INFO("========================================");
 
-  logToFile(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT BRANCH "
-            "EXECUTING <<<");
+  ZENITH_LOG_INFO(">>> ZENITH_USE_SKIA IS DEFINED - MODERN SKIA DAW LAYOUT "
+                  "BRANCH EXECUTING <<<");
 
   // Initialize Skia rendering system
   // Skia initialization is handled by
   // SkiaMainWindowIntegration::newOpenGLContextCreated
 
   // Instantiate the SkiaRenderer
-  logToFile("→ Initializing SkiaRenderer...");
+  ZENITH_LOG_INFO("→ Initializing SkiaRenderer...");
   // ============================================================================
   // Create Modern DAW Layout Panels
   // ============================================================================
 
   // Top: Transport Bar
-  DBG("→ Creating TransportBar...");
-  logToFile("→ Creating TransportBar...");
+  ZENITH_LOG_INFO("→ Creating TransportBar...");
   transportBar = std::make_unique<zenith::TransportBar>();
   transportBar->setProjectName("Zenith DAW");
   transportBar->setTempo(120.0);
@@ -90,58 +88,45 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Hook up transport callbacks
   transportBar->onPlayClicked = [this]() {
     engine.play();
-    DBG("Play clicked");
+    ZENITH_LOG_DEBUG("Play clicked");
   };
   transportBar->onStopClicked = [this]() {
     engine.stop();
-    DBG("Stop clicked");
+    ZENITH_LOG_DEBUG("Stop clicked");
   };
   transportBar->onRecordClicked = [this]() {
     engine.toggleRecording();
     bool isRec = engine.isRecording();
     transportBar->setRecording(isRec);
     if (isRec) {
-      DBG("Recording started");
+      ZENITH_LOG_DEBUG("Recording started");
     } else {
-      DBG("Recording stopped");
+      ZENITH_LOG_DEBUG("Recording stopped");
     }
   };
 
   addAndMakeVisible(transportBar.get());
-  logToFile("✓ TransportBar created");
-  DBG("✓ TransportBar created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(transportBar.get())));
+  ZENITH_LOG_INFO("✓ TransportBar created");
 
   // The "Perfect DAW" Tri-Pane Layout Manager
-  DBG("→ Creating MainLayoutComponent...");
-  logToFile("→ Creating MainLayoutComponent...");
+  ZENITH_LOG_INFO("→ Creating MainLayoutComponent...");
   mainLayout =
       std::make_unique<zenith::MainLayoutComponent>(engine, projectState);
   addAndMakeVisible(mainLayout.get());
-  logToFile("✓ MainLayoutComponent created");
-  DBG("✓ MainLayoutComponent created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(mainLayout.get())));
+  ZENITH_LOG_INFO("✓ MainLayoutComponent created");
 
   // Connect browser collapse callback (proxied through MainLayout if needed, or
   // handled internally) For now, MainLayout handles its own resizing when
   // browser toggles.
 
   // Right: AI Assistant Panel (Wingman) - Pure Skia
-  DBG("→ Creating RightSidePanel...");
-  logToFile("→ Creating RightSidePanel...");
-  rightSidePanel =
-      std::make_unique<zenith::RightSidePanel>(api, aiClient, engine);
+  ZENITH_LOG_INFO("→ Creating RightSidePanel...");
+  rightSidePanel = std::make_unique<zenith::RightSidePanel>(api, engine);
   addAndMakeVisible(rightSidePanel.get());
-  logToFile("✓ RightSidePanel created");
-  DBG("✓ RightSidePanel created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(rightSidePanel.get())));
+  ZENITH_LOG_INFO("✓ RightSidePanel created");
 
   // Bottom: Piano Keyboard + Mixer Strip
-  DBG("→ Creating BottomBar...");
-  logToFile("→ Creating BottomBar...");
+  ZENITH_LOG_INFO("→ Creating BottomBar...");
   bottomBar = std::make_unique<zenith::BottomBar>(midiKeyboardState, engine,
                                                   projectState);
   bottomBar->setKeyboardVisible(false); // Hidden by default
@@ -149,14 +134,23 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Connect Session Debugger
   if (auto *debugger = engine.getSessionDebugger()) {
     bottomBar->setDebugger(debugger);
-    DBG("✓ Session Debugger connected to BottomBar");
+    ZENITH_LOG_INFO("✓ Session Debugger connected to BottomBar");
   }
 
   addAndMakeVisible(bottomBar.get());
-  logToFile("✓ BottomBar created");
-  DBG("✓ BottomBar created and made visible at " +
-      juce::String::toHexString(
-          reinterpret_cast<juce::pointer_sized_int>(bottomBar.get())));
+  ZENITH_LOG_INFO("✓ BottomBar created");
+
+  // Source of Truth Demo (Step 5)
+  auto trackNode =
+      projectState.state.getChildWithName(Zenith::IDs::TRACKS).getChild(0);
+  if (trackNode.isValid()) {
+    volumeKnob =
+        std::make_unique<zenith::ZenithKnob>(trackNode.getPropertyAsValue(
+            Zenith::IDs::volume, &projectState.undoManager));
+    volumeKnob->setLabel("Track 1 Volume");
+    addAndMakeVisible(volumeKnob.get());
+    ZENITH_LOG_INFO("✓ VolumeKnob created (Source of Truth Demo)");
+  }
 
   // Connect view toggle callback
   transportBar->onViewToggleClicked = [this]() {
@@ -267,6 +261,15 @@ bool MainComponent::keyPressed(const juce::KeyPress &key,
     return true;
   }
 
+  // F11: Toggle Full Screen
+  if (key == juce::KeyPress::F11Key) {
+    if (auto *window = findParentComponentOfClass<juce::DocumentWindow>()) {
+      window->setFullScreen(!window->isFullScreen());
+      DBG("Keyboard shortcut: Toggle Full Screen (F11)");
+      return true;
+    }
+  }
+
   return false; // Key not handled
 }
 
@@ -313,6 +316,9 @@ void MainComponent::drawSkiaContent(SkCanvas *canvas) {
 
   // 6. Zenith Hub (Topmost Overlay)
   drawChild(hubComponent.get(), hubComponent.get());
+
+  // 7. Source of Truth Knob
+  drawChild(volumeKnob.get(), volumeKnob.get());
 }
 
 void MainComponent::mouseDown(const juce::MouseEvent &e) {
@@ -406,6 +412,11 @@ void MainComponent::resized() {
   if (hubComponent) {
     hubComponent->setBounds(getLocalBounds());
   }
+
+  // Source of Truth Demo Positioning
+  if (volumeKnob) {
+    volumeKnob->setBounds(10, 10, 100, 100);
+  }
 }
 
 //==============================================================================
@@ -465,8 +476,8 @@ void MainComponent::handleImportAudio() {
         }
 
         // Create a new clip
-        auto clip = std::make_unique<zenith::Track::Clip>();
-        clip->setType(zenith::Track::Clip::Type::Audio);
+        auto clip = std::make_unique<zenith::Clip>();
+        clip->setType(zenith::Clip::Type::Audio);
         clip->setName(file.getFileNameWithoutExtension());
 
         // Load audio file through pool (message thread - safe to do I/O)
@@ -511,9 +522,6 @@ MainWindow::MainWindow(const juce::String &name)
   // Phase 5: Create Wingman command API
   commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
 
-  // Phase 7: Create AI bridge client
-  aiBridgeClient = std::move(std::make_unique<zenith::AIBridgeClient>());
-
   // Phase 13: Connect project state to engine for automation
   engine->setProjectState(projectState.get());
 
@@ -530,9 +538,9 @@ MainWindow::MainWindow(const juce::String &name)
   projectState->addTrack("Audio 2", "audio");
 
   // Main content with project loading callbacks
+  // Main content with project loading callbacks
   mainComponent = std::make_unique<MainComponent>(
-      *engine, *commandAPI, *aiBridgeClient, *projectState,
-      *recentProjectManager_,
+      *engine, *commandAPI, *projectState, *recentProjectManager_,
       // Load project callback
       [this](const juce::File &file) { loadProject(file); },
       // New project callback
@@ -541,6 +549,15 @@ MainWindow::MainWindow(const juce::String &name)
         DBG("MainWindow: New project requested");
         // In the future, could show a template dialog or reset project state
       });
+
+  // Instantiate AI agents (Brain integration)
+  uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState,
+                                                     *mainComponent);
+  commandAPI->setUXDirector(uxDirector.get());
+  uxDirector->startMonitoring(500); // 500ms intervals
+
+  presetGeneticist = std::make_unique<ai::PresetGeneticistAgent>();
+  commandAPI->setPresetGeneticist(presetGeneticist.get());
 
   // Set up window
   setUsingNativeTitleBar(true);

@@ -116,43 +116,104 @@ public:
     Builder() = default;
 
     Builder &withBounds(const juce::Rectangle<int> &bounds) {
+      bounds_ = bounds.toFloat();
+      return *this;
+    }
+    
+    Builder &withFloatBounds(const juce::Rectangle<float> &bounds) {
       bounds_ = bounds;
       return *this;
     }
+
     Builder &withGap(float gap) {
       gap_ = gap;
       return *this;
     }
+
     Builder &withJustify(juce::FlexBox::JustifyContent justify) {
       justify_ = justify;
       return *this;
     }
+
     Builder &withAlign(juce::FlexBox::AlignItems align) {
       align_ = align;
       return *this;
     }
-    Builder &withItems(const std::vector<juce::Component *> &items) {
-      items_ = items;
-      return *this;
-    }
-    Builder &addItem(juce::Component *item) {
-      items_.push_back(item);
+
+    // Enhanced component-based add
+    Builder &addItem(juce::Component *item, float flex = 1.0f) {
+      if (item) {
+         flexItems_.push_back(juce::FlexItem(*item).withFlex(flex));
+         componentMap_.push_back(item); 
+      }
       return *this;
     }
 
-    // Apply row layout
+    Builder &addFixedItem(juce::Component *item, float width, float height) {
+      if (item) {
+         flexItems_.push_back(juce::FlexItem(*item).withWidth(width).withHeight(height));
+         componentMap_.push_back(item);
+      }
+      return *this;
+    }
+
+    // Generic FlexItem add
+    Builder &addFlexItem(juce::FlexItem item) {
+      flexItems_.push_back(item);
+      componentMap_.push_back(nullptr); // No associated component to auto-resize
+      return *this;
+    }
+
+    // Apply row layout to components
     void applyRow() {
-      ZenithLayout::row(bounds_, items_, gap_, justify_, align_);
+        performLayout(juce::FlexBox::Direction::row);
     }
 
-    // Apply column layout
+    // Apply column layout to components
     void applyColumn() {
-      ZenithLayout::column(bounds_, items_, gap_, justify_, align_);
+        performLayout(juce::FlexBox::Direction::column);
+    }
+
+    // Calculate and return bounds (robust mode)
+    std::vector<juce::Rectangle<float>> layout(juce::FlexBox::Direction direction) {
+        juce::FlexBox flex;
+        flex.flexDirection = direction;
+        flex.justifyContent = justify_;
+        flex.alignItems = align_;
+
+        // Apply gap if items don't have custom margins
+        // Note: Logic here tries to respect previous simple "gap" param 
+        // while allowing complex FlexItems. 
+        for (auto& item : flexItems_) {
+            if (gap_ > 0.0f && item.margin.left == 0 && item.margin.right == 0 && 
+                item.margin.top == 0 && item.margin.bottom == 0) {
+                 item.withMargin(gap_ / 2.0f);
+            }
+            flex.items.add(item);
+        }
+
+        flex.performLayout(bounds_);
+
+        std::vector<juce::Rectangle<float>> results;
+        for (const auto& item : flex.items) {
+            results.push_back(item.currentBounds);
+        }
+        return results;
     }
 
   private:
-    juce::Rectangle<int> bounds_;
-    std::vector<juce::Component *> items_;
+    void performLayout(juce::FlexBox::Direction direction) {
+        auto rects = layout(direction);
+        for (size_t i = 0; i < rects.size() && i < componentMap_.size(); ++i) {
+            if (auto* comp = componentMap_[i]) {
+                comp->setBounds(rects[i].toNearestInt());
+            }
+        }
+    }
+
+    juce::Rectangle<float> bounds_;
+    std::vector<juce::FlexItem> flexItems_;
+    std::vector<juce::Component*> componentMap_;
     float gap_ = 0.0f;
     juce::FlexBox::JustifyContent justify_ =
         juce::FlexBox::JustifyContent::flexStart;

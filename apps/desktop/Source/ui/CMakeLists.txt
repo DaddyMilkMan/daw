@@ -59,7 +59,6 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/PianoRollComponent_SkiaHelper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/piano-roll/ModulationMatrixView.cpp
 )
 
@@ -111,6 +110,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/common/AudioFeedback.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PluginEditorWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/common/PianoKeyboardViewSkia.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/common/AIAssistantPanel.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -141,6 +141,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DebugConsoleComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/DeviceChainComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SpectraAnalyzerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/MarkdownComponent.cpp
     
     # Zenith widget system
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/ZenithControl.cpp

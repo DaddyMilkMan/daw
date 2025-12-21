@@ -10,6 +10,7 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
+#include "SkiaTheme.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>
@@ -106,9 +107,11 @@ AutomationLaneComponent::getDefaultVolumeInfo() {
 void AutomationLaneComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
-  auto &theme = zenith::SkiaTheme::getInstance();
-  const auto &colors = theme.getColors();
-  const auto &typo = theme.getTypography();
+  using namespace zenith::design;
+  
+  // Get theme colors and typography
+  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
+  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
 
   // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
   juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
@@ -127,7 +130,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Background with subtle tint
       SkPaint bgPaint;
-      bgPaint.setColor(colors.bg2);
+      bgPaint.setColor(zenith::design::colors::BG_DARKER);
       bgPaint.setAntiAlias(true);
       canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
@@ -176,7 +179,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Draw curve
         SkPaint curvePaint;
-        curvePaint.setColor(colors.accentMain);
+        curvePaint.setColor(colors::VIOLET);
         curvePaint.setStyle(SkPaint::kStroke_Style);
         curvePaint.setStrokeWidth(2.5f);
         curvePaint.setAntiAlias(true);
@@ -184,7 +187,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       }
 
       // Draw control points with selection highlighting
-      SkColor selectionColor = colors.primary;
+      SkColor selectionColor = colors::CYAN;
       for (const auto &handle : pointHandles) {
         bool isSelected = (handle.pointId == draggedPointId);
         bool isHovered = (handle.pointId == hoveredPointId);
@@ -201,16 +204,16 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Control point fill
         SkPaint fillPaint;
-        fillPaint.setColor(isSelected  ? colors.accentMain
-                           : isHovered ? colors.accentMain
-                                       : colors.accentMain);
+        fillPaint.setColor(isSelected  ? colors::VIOLET
+                           : isHovered ? colors::VIOLET
+                                       : colors::VIOLET);
         fillPaint.setAntiAlias(true);
         canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
                           fillPaint);
 
         // Control point border
         SkPaint borderPaint;
-        borderPaint.setColor(isSelected ? selectionColor : colors.textStrong);
+        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
         borderPaint.setAntiAlias(true);
@@ -233,7 +236,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-        SkFont font = zenith::design::typography::getMonoFont(typo.tiny.size);
+        SkFont font = zenith::design::typography::getMonoFont(typography::FONT_XS);
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -252,7 +255,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Tooltip background
         SkPaint tooltipBg;
-        tooltipBg.setColor(colors.bg3);
+        tooltipBg.setColor(colors::BG_DARK);
         tooltipBg.setAntiAlias(true);
         SkRRect tooltipRect = SkRRect::MakeRectXY(
             SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
@@ -261,7 +264,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Tooltip border
         SkPaint tooltipBorder;
-        tooltipBorder.setColor(colors.borderSubtle);
+        tooltipBorder.setColor(colors::BORDER_SUBTLE);
         tooltipBorder.setStyle(SkPaint::kStroke_Style);
         tooltipBorder.setStrokeWidth(1.0f);
         tooltipBorder.setAntiAlias(true);
@@ -269,17 +272,17 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Tooltip text
         SkPaint textPaint;
-        textPaint.setColor(colors.textStrong);
+        textPaint.setColor(colors::TEXT_PRIMARY);
         textPaint.setAntiAlias(true);
         auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
         canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
       }
 
       // Draw parameter name
-      SkFont nameFont = zenith::design::typography::getSkFont(typo.body.size);
+      SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_MD);
 
       SkPaint namePaint;
-      namePaint.setColor(colors.textMuted);
+      namePaint.setColor(colors::TEXT_SECONDARY);
       namePaint.setAntiAlias(true);
 
       auto nameStr = paramInfo.displayName.toStdString();

@@ -5,72 +5,64 @@
     Created: 2025-11-28
     Author:  Dr. Aris Vokos + Leo Rossi + Isabella Moretti
 
-    Tri-pane layout manager for Browser, Session View, and Arranger View.
-    The heart of the "Perfect DAW" layout.
-
   ==============================================================================
 */
 
 #pragma once
 
-#include "LayoutManager.h"
-#include "ResizablePanelContainer.h"
-
-// ... (keep existing includes if needed, or rely on factories)
-#include "BrowserPanel.h"
-#include "SkiaComponent.h"
-#include "ProjectState.h"
-#include "ArrangerComponent.h"
-#include "../browser/BrowserModel.h"
-#include "RemoteCursorOverlay.h"
-#include "SampleEditorComponent.h"
-#include "SessionViewComponent.h"
-
-class Engine; // Forward declaration
+#include "../framework/SkiaComponent.h"
+#include <JuceHeader.h>
 
 namespace zenith {
 
+class Engine;
+class ProjectState;
+class BrowserModel;
+class ResizablePanelContainer;
+class RemoteCursorOverlay;
+class SampleEditorComponent;
+class SampleEditorComponent;
 class ViewSwitcher;
+class MidiEditorContainer;
 
-/**
- * @brief Main layout component managing flexible panes via
- * ResizablePanelContainer
- */
 class MainLayoutComponent : public SkiaComponent {
 public:
-  explicit MainLayoutComponent(Engine &engine, ProjectState &state);
+  MainLayoutComponent(Engine &engine, ProjectState &state);
   ~MainLayoutComponent() override;
 
   void resized() override;
   void drawSkia(SkCanvas *canvas) override;
 
-  // View management (Mapped to Layout Presets)
-  void
-  toggleView(); // Switch between Production (Arranger) and Mixing (Session)
-  void toggleBrowser();      // Toggle Browser panel visibility
-  void toggleSampleEditor(); // Toggle Sample Editor panel visibility
+  void toggleView();
+  void toggleBrowser();
+  void toggleSampleEditor();
 
   bool isSessionView() const;
   bool isBrowserVisible() const;
   bool isSampleEditorVisible() const;
 
-  // Accessors (finding panels dynamically)
+  bool isSampleEditorVisible() const;
+  bool isMidiEditorVisible() const;
+
   SampleEditorComponent *getSampleEditor();
+  MidiEditorContainer *getMidiEditor();
 
 private:
   Engine &engine_;
   ProjectState &projectState_;
 
-  std::unique_ptr<ResizablePanelContainer> panelContainer_;
-  std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
-
-  // Persistent models (shared across panel re-creation)
   std::unique_ptr<BrowserModel> browserModel_;
+  std::unique_ptr<ResizablePanelContainer> panelContainer_;
 
-  // Cached pointers for fast access
-  ViewSwitcher *viewSwitcher_ = nullptr;
-  SampleEditorComponent *sampleEditor_ = nullptr;
+  // Raw pointers to managed components (owned by containers)
   ResizablePanelContainer *centerContainer_ = nullptr;
+  ResizablePanelContainer *centerContainer_ = nullptr;
+  ViewSwitcher *viewSwitcher_ = nullptr;
+  ViewSwitcher *editorSwitcher_ = nullptr;
+  SampleEditorComponent *sampleEditor_ = nullptr;
+  MidiEditorContainer *midiEditor_ = nullptr;
+
+  std::unique_ptr<RemoteCursorOverlay> cursorOverlay_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainLayoutComponent)
 };

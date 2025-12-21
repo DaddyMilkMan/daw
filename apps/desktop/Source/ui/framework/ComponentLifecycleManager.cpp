@@ -32,7 +32,7 @@ void ComponentLifecycleManager::registerComponent(LifecycleAware *component) {
   juce::ScopedLock lock(lock_);
 
   juce::String componentId = "component_" + juce::String(nextComponentId_++);
-  componentStates_.set(component, ComponentState::Uninitialized);
+  componentStates_.set(component, {ComponentState::Uninitialized, component});
   componentIds_.set(component, componentId);
 
   // Fire create event
@@ -57,7 +57,7 @@ void ComponentLifecycleManager::unregisterComponent(LifecycleAware *component) {
   if (componentStates_.contains(component)) {
     LifecycleEvent event;
     event.type = LifecycleEvent::Type::Destroy;
-    event.oldState = componentStates_[component];
+    event.oldState = componentStates_[component].state;
     event.newState = ComponentState::Destroyed;
     event.timestamp = juce::Time::getCurrentTime();
     event.componentId = componentIds_[component];
@@ -80,7 +80,7 @@ void ComponentLifecycleManager::initializeComponent(LifecycleAware *component) {
     registerComponent(component);
   }
 
-  ComponentState currentState = componentStates_[component];
+  ComponentState currentState = componentStates_[component].state;
 
   // Validate state transition
   if (currentState != ComponentState::Uninitialized &&
@@ -116,7 +116,7 @@ void ComponentLifecycleManager::updateComponent(LifecycleAware *component) {
     return;
   }
 
-  ComponentState currentState = componentStates_[component];
+  ComponentState currentState = componentStates_[component].state;
 
   if (currentState != ComponentState::Ready) {
     reportError(component, "Component must be in Ready state to update");
@@ -154,7 +154,7 @@ void ComponentLifecycleManager::suspendComponent(LifecycleAware *component) {
     return;
   }
 
-  ComponentState currentState = componentStates_[component];
+  ComponentState currentState = componentStates_[component].state;
 
   if (currentState != ComponentState::Ready) {
     reportError(component, "Component must be in Ready state to suspend");
@@ -188,7 +188,7 @@ void ComponentLifecycleManager::resumeComponent(LifecycleAware *component) {
     return;
   }
 
-  ComponentState currentState = componentStates_[component];
+  ComponentState currentState = componentStates_[component].state;
 
   if (currentState != ComponentState::Suspended) {
     reportError(component, "Component must be in Suspended state to resume");
@@ -221,7 +221,7 @@ void ComponentLifecycleManager::destroyComponent(LifecycleAware *component) {
     return; // Already destroyed or never registered
   }
 
-  ComponentState currentState = componentStates_[component];
+  ComponentState currentState = componentStates_[component].state;
 
   // Transition to destroying
   transitionComponent(component, ComponentState::Destroying);
@@ -245,7 +245,10 @@ void ComponentLifecycleManager::destroyComponent(LifecycleAware *component) {
 ComponentState ComponentLifecycleManager::getComponentState(
     const LifecycleAware *component) const {
   juce::ScopedLock lock(lock_);
-  return componentStates_.get(component, ComponentState::Uninitialized);
+  if (componentStates_.contains(component)) {
+    return componentStates_[component].state;
+  }
+  return ComponentState::Uninitialized;
 }
 
 juce::Array<LifecycleAware *>
@@ -253,24 +256,26 @@ ComponentLifecycleManager::getComponentsInState(ComponentState state) const {
   juce::ScopedLock lock(lock_);
 
   juce::Array<LifecycleAware *> result;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
-      result.add(const_cast<LifecycleAware *>(pair.key));
+  for (juce::HashMap<const LifecycleAware *, ComponentEntry>::Iterator it(
+           componentStates_);
+       it.next();) {
+    if (it.getValue().state == state) {
+      result.add(it.getValue().component);
     }
   }
   return result;
 }
 
 void ComponentLifecycleManager::addLifecycleListener(
-    LifecycleCallback callback) {
+    LifecycleListener *listener) {
   juce::ScopedLock lock(lock_);
-  lifecycleListeners_.add(callback);
+  lifecycleListeners_.addIfNotAlreadyThere(listener);
 }
 
 void ComponentLifecycleManager::removeLifecycleListener(
-    LifecycleCallback callback) {
+    LifecycleListener *listener) {
   juce::ScopedLock lock(lock_);
-  lifecycleListeners_.removeAllInstancesOf(callback);
+  lifecycleListeners_.removeAllInstancesOf(listener);
 }
 
 void ComponentLifecycleManager::suspendAllComponents() {
@@ -296,8 +301,10 @@ void ComponentLifecycleManager::destroyAllComponents() {
 
   // Destroy components in reverse order of registration
   juce::Array<LifecycleAware *> components;
-  for (auto &pair : componentStates_) {
-    components.add(const_cast<LifecycleAware *>(pair.key));
+  for (juce::HashMap<const LifecycleAware *, ComponentEntry>::Iterator it(
+           componentStates_);
+       it.next();) {
+    components.add(it.getValue().component);
   }
 
   for (int i = components.size() - 1; i >= 0; --i) {
@@ -315,8 +322,10 @@ int ComponentLifecycleManager::getComponentCountInState(
   juce::ScopedLock lock(lock_);
 
   int count = 0;
-  for (auto &pair : componentStates_) {
-    if (pair.value == state) {
+  for (juce::HashMap<const LifecycleAware *, ComponentEntry>::Iterator it(
+           componentStates_);
+       it.next();) {
+    if (it.getValue().state == state) {
       ++count;
     }
   }
@@ -350,7 +359,7 @@ void ComponentLifecycleManager::checkForMemoryLeaks() {
   auto readyComponents = getComponentsInState(ComponentState::Ready);
   auto suspendedComponents = getComponentsInState(ComponentState::Suspended);
 
-  if (readyComponents.size() > 0 || suspendedComponents.size() > 0) {
+  if (!readyComponents.isEmpty() || !suspendedComponents.isEmpty()) {
     DBG("Potential memory leak detected: "
         << readyComponents.size() + suspendedComponents.size()
         << " components not properly destroyed");
@@ -365,13 +374,13 @@ void ComponentLifecycleManager::forceGarbageCollection() {
 
 void ComponentLifecycleManager::transitionComponent(LifecycleAware *component,
                                                     ComponentState newState) {
-  ComponentState oldState = componentStates_[component];
+  ComponentState oldState = componentStates_[component].state;
 
   // Validate state transition
   validateStateTransition(oldState, newState);
 
   // Update state
-  componentStates_.set(component, newState);
+  componentStates_.set(component, {newState, component});
 
   // Fire state change event
   LifecycleEvent event;
@@ -398,8 +407,8 @@ void ComponentLifecycleManager::fireLifecycleEvent(
   }
 
   // Notify listeners
-  for (auto &callback : lifecycleListeners_) {
-    callback(event);
+  for (auto *listener : lifecycleListeners_) {
+    listener->onLifecycleEvent(event);
   }
 }
 
@@ -458,7 +467,7 @@ void ComponentLifecycleManager::reportError(LifecycleAware *component,
   // Fire error event
   LifecycleEvent event;
   event.type = LifecycleEvent::Type::StateChange;
-  event.oldState = componentStates_[component];
+  event.oldState = componentStates_[component].state;
   event.newState = ComponentState::Uninitialized;
   event.timestamp = juce::Time::getCurrentTime();
   event.componentId = componentIds_[component];
@@ -673,8 +682,10 @@ juce::StringArray ComponentFactory::getRegisteredComponentTypes() const {
   juce::ScopedLock lock(lock_);
 
   juce::StringArray types;
-  for (auto &pair : componentCreators_) {
-    types.add(pair.key);
+  for (juce::HashMap<juce::String, ComponentCreator>::Iterator it(
+           componentCreators_);
+       it.next();) {
+    types.add(it.getKey());
   }
   return types;
 }
@@ -708,8 +719,7 @@ void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
 
   // Update type counts
   juce::String typeName = typeid(*component).name();
-  int currentCount = stats_.componentTypeCounts.get(typeName, 0);
-  stats_.componentTypeCounts.set(typeName, currentCount + 1);
+  stats_.componentTypeCounts[typeName]++;
 }
 
 void MemoryLeakDetector::untrackComponent(const LifecycleComponent *component) {
@@ -732,8 +742,10 @@ void MemoryLeakDetector::checkForLeaks() {
     DBG("=== MEMORY LEAK DETECTED ===");
     DBG("Active components: " << activeComponents_.size());
 
-    for (auto &pair : activeComponents_) {
-      DBG("  - " << pair.value);
+    for (juce::HashMap<const LifecycleComponent *, juce::String>::Iterator it(
+             activeComponents_);
+         it.next();) {
+      DBG("  - " << it.getValue());
     }
   } else {
     DBG("No memory leaks detected");
@@ -747,8 +759,10 @@ juce::String MemoryLeakDetector::getLeakReport() const {
   report << "=== Memory Leak Report ===\n";
   report << "Active Components: " << activeComponents_.size() << "\n";
 
-  for (auto &pair : activeComponents_) {
-    report << "  - " << pair.value << "\n";
+  for (juce::HashMap<const LifecycleComponent *, juce::String>::Iterator it(
+           activeComponents_);
+       it.next();) {
+    report << "  - " << it.getValue() << "\n";
   }
 
   return report;
@@ -819,7 +833,7 @@ juce::String ComponentStatePersistence::serializeComponentState(
   // Component-specific state would be added here
   // This would be customized in subclasses
 
-  juce::String json = juce::JSON::toString(state);
+  juce::String json = juce::JSON::toString(juce::var(state.get()));
   return json;
 }
 

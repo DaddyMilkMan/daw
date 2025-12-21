@@ -165,8 +165,13 @@ void AudioFeedback::initialize() {
       toneSource.reset();
       feedbackDeviceManager.reset();
     }
+  } catch (const std::exception& e) {
+    DBG("AudioFeedback: Exception during initialization: " + juce::String(e.what()));
+    feedbackPlayer.reset();
+    toneSource.reset();
+    feedbackDeviceManager.reset();
   } catch (...) {
-    DBG("AudioFeedback: Exception during initialization");
+    DBG("AudioFeedback: Unknown exception during initialization");
     feedbackPlayer.reset();
     toneSource.reset();
     feedbackDeviceManager.reset();

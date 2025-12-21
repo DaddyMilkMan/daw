@@ -1,8 +1,9 @@
-target_sources(ZenithDAW_lib PRIVATE
+target_sources(ZenithDAW PRIVATE
     Instrument.cpp
     InstrumentRegistry.cpp
     RegisterBuiltInInstruments.cpp
     PresetGenerator.cpp
+    WavetableLoader.cpp
     ZenithOscillator.cpp
     ZenithFilter.cpp
     ZenithEffects.cpp

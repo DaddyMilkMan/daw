@@ -1,12 +1,13 @@
 #include "DrumPadComponent.h"
-#include "ZenithDesignSystem.h"
 #include "Engine.h"
+#include "ZenithDesignSystem.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <utils/SkShadowUtils.h>
+
 
 using namespace zenith;
 
@@ -296,6 +297,21 @@ void DrumPadComponent::hitPad(int index, float velocity) {
 
   // Animation
   pads[index].flashLevel = 1.0f;
+
+  // Trigger preview callback if set
+  if (notePreviewCallback) {
+    notePreviewCallback(pads[index].noteNumber, (int)(velocity * 127.0f), true);
+    // Note off logic handled by engine or simple one-shot for drums
+    // For accurate preview, we might want a localized note-off or just let the
+    // engine envelope handle it sending note off immediately usually cuts it
+    // short. For drums, usually just NoteOn is fine. But let's send NoteOff
+    // after a short delay via Timer if we wanted to be fancy. For now: just
+    // NoteOn.
+
+    // Simulating release for preview consistency
+    // notePreviewCallback(pads[index].noteNumber, 0, false);
+  }
+
   repaint();
 
   // Trigger Audio - Placeholder for future implementation
@@ -308,19 +324,24 @@ void DrumPadComponent::hitPad(int index, float velocity) {
   if (engine.isRecording() && currentClipId.isNotEmpty()) {
     auto [track, clip] = projectState.findClip(currentClipId);
     if (!clip.isValid())
-        return;
+      return;
 
     double position = engine.getPlaybackPositionBeats();
-    double clipStart = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
-    double clipLength = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_LENGTH));
-    double clipOffset = static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_OFFSET));
+    double clipStart =
+        static_cast<double>(clip.getProperty(zenith::ProjectState::PROP_START));
+    double clipLength = static_cast<double>(
+        clip.getProperty(zenith::ProjectState::PROP_LENGTH));
+    double clipOffset = static_cast<double>(
+        clip.getProperty(zenith::ProjectState::PROP_OFFSET));
     // Fallback to a default length if clipLength is invalid or unset
     if (clipLength <= 0.001)
-        clipLength = 4.0; // Default to 4 beats (e.g., a bar)
+      clipLength = 4.0; // Default to 4 beats (e.g., a bar)
 
     // Calculate relative position with loop wrapping
+    // Calculate relative position with loop wrapping
+
     double relativeStart = position - clipStart + clipOffset;
-    
+
     // For a drum pad component, recording should always wrap within the clip's
     // length, regardless of the global transport's loop state.
     if (clipLength > 0.0) {
@@ -452,4 +473,3 @@ void DrumPadComponent::timerCallback() {
   SkiaComponent::timerCallback();
   updateAnimations();
 }
-

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "SkiaComponent.h"
-#include "DrumPadComponent.h"
-#include "ProjectState.h"
+#include "../../engine/ProjectState.h"
+#include "../framework/SkiaComponent.h"
+#include "../session/DrumPadComponent.h"
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -38,6 +38,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+
 
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
@@ -130,15 +131,18 @@ public:
   bool keyPressed(
       const juce::KeyPress &key) override; // from SkiaComponent/Component
 
+  // Mouse Helper Methods
+  void handleToolbarClick(const juce::MouseEvent &e, float x, float y);
+  void handlePianoKeyClick(const juce::MouseEvent &e, float x, float y);
+  void handleVelocityLaneClick(const juce::MouseEvent &e, float x, float y);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e, float x, float y);
+
   juce::MouseCursor getMouseCursor() override; // from SkiaComponent/Component
 
   //==========================================================================
   // Public API - Advanced Features
   //==========================================================================
 
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
@@ -506,7 +510,7 @@ public:
 
   /** Lock notes to a specific scale when moving */
   void setScaleLock(bool enabled);
-  bool getScaleLock() const { return scaleLockEnabled; }
+  bool getScaleLock() const;
 
   /** Set the scale for scale lock (root 0-11, scale type) */
   void setScaleLockKey(int rootNote, ScaleType scale);
@@ -671,9 +675,6 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
-  void playPianoKey(int pitch, int velocity);
-  void stopPianoKey(int pitch);
-
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -872,6 +873,12 @@ private:
   CCPoint *findCCPointAtPosition(int ccNumber, float x, float y,
                                  juce::Rectangle<float> &laneRect);
 
+  // Mouse Down Helpers
+  void handleToolbarClick(const juce::MouseEvent &e);
+  void handlePianoKeyClick(const juce::MouseEvent &e);
+  void handleVelocityLaneClick(const juce::MouseEvent &e);
+  void handleNoteMainAreaClick(const juce::MouseEvent &e);
+
   //==========================================================================
   // Editing Operations (with batched undo)
   //==========================================================================
@@ -980,6 +987,7 @@ private:
 
   // Layout
   static constexpr int PIANO_WIDTH = 60;
+  static constexpr int TOOLBAR_HEIGHT = 40;
   static constexpr int RULER_HEIGHT = 30;
   int velocityLaneHeight = 160; // Increased from 120 for better precision
                                 // (~1.26px per velocity value)
@@ -1015,8 +1023,6 @@ private:
 
   // Tool state
   Tool currentTool = Tool::Select;
-  int hoveredPianoKey = -1; // -1 = no key hovered
-  int playingPianoKey = -1; // -1 = no key being played
 
   //==========================================================================
   // Ghost Notes State
@@ -1135,7 +1141,7 @@ private:
                     int transposition);
 
   //==========================================================================
-  // Scale Lock State
+  // Scale Highlight State
   //==========================================================================
 
   bool scaleLockEnabled = false;
@@ -1144,6 +1150,10 @@ private:
   std::vector<bool> scaleLockNotes; // 12 bools for which notes are in scale
 
   void updateScaleLockNotes();
+
+  //==========================================================================
+  // Chord Detection Helper
+  //==========================================================================
 
   //==========================================================================
   // Fold Mode State (Ableton-style)
@@ -1187,13 +1197,19 @@ private:
 
   std::map<juce::String, ScriptCallback> scriptCallbacks;
 
+  // Visual Resources (Optimized)
+  SkFont rulerBarFont_;
+  SkFont rulerBeatFont_;
+  SkFont clipNameFont_;
+  SkPaint textPaint_;
+  SkPaint borderPaint_;
+  SkPaint generalPaint_;
+
   //==========================================================================
   // Timer Callback
   //==========================================================================
 
   void timerCallback() override;
-
-  Tool currentTool = Tool::Select;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollComponent)
 };
@@ -1205,58 +1221,17 @@ private:
  */
 class MidiEditorContainer : public juce::Component {
 public:
-  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
-      : projectState(state), engine_(engine) {
-    pianoRoll = std::make_unique<PianoRollComponent>(state);
-    addAndMakeVisible(pianoRoll.get());
+  MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine);
+  ~MidiEditorContainer() override;
 
-    drumPad = std::make_unique<DrumPadComponent>(engine, state);
-    addChildComponent(drumPad.get()); // Hidden by default
+  void setClipContext(const MidiClipContext &context);
 
-    // Toggle Button
-    toggleButton.setButtonText("Switch to Drum View");
-    toggleButton.onClick = [this] { toggleView(); };
-    addAndMakeVisible(toggleButton);
-  }
+  void resized() override;
 
-  void setClipContext(const MidiClipContext &context) {
-    pianoRoll->setClipContext(context);
-    drumPad->setClipContext(context.clipId);
+  void toggleView();
 
-    // Auto-detect mode based on track name? For now manual.
-    if (context.trackId.containsIgnoreCase("drum")) {
-      if (activeView == View::PianoRoll)
-        toggleView();
-    }
-  }
-
-  void resized() override {
-    auto area = getLocalBounds();
-    auto topBar = area.removeFromTop(30);
-
-    toggleButton.setBounds(topBar.removeFromRight(150).reduced(2));
-
-    if (activeView == View::PianoRoll) {
-      pianoRoll->setBounds(area);
-    } else {
-      drumPad->setBounds(area);
-    }
-  }
-
-  void toggleView() {
-    if (activeView == View::PianoRoll) {
-      activeView = View::DrumPad;
-      pianoRoll->setVisible(false);
-      drumPad->setVisible(true);
-      toggleButton.setButtonText("Switch to Piano Roll");
-    } else {
-      activeView = View::PianoRoll;
-      pianoRoll->setVisible(true);
-      drumPad->setVisible(false);
-      toggleButton.setButtonText("Switch to Drum View");
-    }
-    resized();
-  }
+  // Helper for injection
+  void injectMidiMessage(const juce::MidiMessage &msg);
 
 private:
   zenith::ProjectState &projectState;
@@ -1264,6 +1239,8 @@ private:
   std::unique_ptr<PianoRollComponent> pianoRoll;
   std::unique_ptr<DrumPadComponent> drumPad;
   juce::TextButton toggleButton;
+
+  MidiClipContext currentContext;
 
   enum class View { PianoRoll, DrumPad };
   View activeView = View::PianoRoll;

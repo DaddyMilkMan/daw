@@ -14,6 +14,7 @@
 
 #include "SkiaComponent.h"
 #include <juce_core/juce_core.h>
+#include <vector>
 
 namespace zenith {
 namespace lifecycle {
@@ -55,6 +56,16 @@ struct LifecycleEvent {
   juce::Time timestamp;
   juce::String componentId;
   juce::String message;
+};
+
+// ============================================================================
+// Lifecycle Listener Interface
+// ============================================================================
+
+class LifecycleListener {
+public:
+  virtual ~LifecycleListener() = default;
+  virtual void onLifecycleEvent(const LifecycleEvent &event) = 0;
 };
 
 // ============================================================================
@@ -104,11 +115,11 @@ public:
   ComponentState getComponentState(const LifecycleAware *component) const;
   juce::Array<LifecycleAware *>
   getComponentsInState(ComponentState state) const;
+  static juce::String getStateName(ComponentState state);
 
   // Event handling
-  using LifecycleCallback = std::function<void(const LifecycleEvent &)>;
-  void addLifecycleListener(LifecycleCallback callback);
-  void removeLifecycleListener(LifecycleCallback callback);
+  void addLifecycleListener(LifecycleListener *listener);
+  void removeLifecycleListener(LifecycleListener *listener);
 
   // Batch operations
   void suspendAllComponents();
@@ -123,6 +134,9 @@ public:
   // Memory management
   void checkForMemoryLeaks();
   void forceGarbageCollection();
+
+  // Utility
+  void reportError(LifecycleAware *component, const juce::String &error);
 
 private:
   ComponentLifecycleManager() = default;
@@ -139,12 +153,17 @@ private:
                                ComponentState newState);
 
   // Data members
-  juce::HashMap<LifecycleAware *, ComponentState> componentStates_;
-  juce::Array<LifecycleCallback> lifecycleListeners_;
+  struct ComponentEntry {
+    ComponentState state;
+    LifecycleAware *component; // Mutable pointer stored in value
+  };
+
+  juce::HashMap<const LifecycleAware *, ComponentEntry> componentStates_;
+  juce::Array<LifecycleListener *> lifecycleListeners_;
   juce::CriticalSection lock_;
   juce::int64 nextComponentId_ = 1;
 
-  juce::HashMap<LifecycleAware *, juce::String> componentIds_;
+  juce::HashMap<const LifecycleAware *, juce::String> componentIds_;
   juce::Array<LifecycleEvent> eventHistory_;
   static constexpr int MAX_EVENT_HISTORY = 1000;
 };
@@ -265,7 +284,7 @@ public:
     int totalComponentsCreated = 0;
     int totalComponentsDestroyed = 0;
     int currentComponentCount = 0;
-    juce::HashMap<juce::String, int> componentTypeCounts;
+    std::map<juce::String, int> componentTypeCounts;
   };
 
   MemoryStats getMemoryStats() const;

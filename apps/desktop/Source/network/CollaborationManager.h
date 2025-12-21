@@ -17,6 +17,8 @@ enum class PacketType {
   Hello = 0,
   CursorMove = 1,
   EditCommand = 2,
+  Challenge = 3,
+  ChallengeResponse = 4,
   KeepAlive = 99
 };
 
@@ -33,6 +35,7 @@ public:
     Registering, // Getting Code from TCP
     Connecting,  // Joiner waiting for connection
     Punching,    // Sending UDP to Server to open ports
+    Handshaking, // Challenge-Response Auth
     Hosting,     // Acting as session host
     Connected,   // P2P UDP Stream Active
     Error
@@ -56,6 +59,10 @@ public:
   // --- User Identity ---
   void setLocalUserName(const juce::String &name) { localUserName = name; }
   juce::String getLocalUserName() const { return localUserName; }
+
+  // --- Security ---
+  void setAllowRemoteEditing(bool allow) { allowRemoteEditing = allow; }
+  bool isRemoteEditingAllowed() const { return allowRemoteEditing; }
 
   std::function<void(const juce::String &)> onEditReceived;
 
@@ -87,6 +94,9 @@ private:
   juce::String peerIP;
   int peerPort = 0;
   bool isHost = false;
+  bool allowRemoteEditing = false;
+  int sentChallenge = 0; // The challenge we sent
+
 
   // TCP Helper
   juce::String registerWithSignalingTCP();
@@ -99,4 +109,5 @@ private:
 
   // Hole Punching Logic
   void startHolePunching();
+  void reportError(const juce::String& error);
 };

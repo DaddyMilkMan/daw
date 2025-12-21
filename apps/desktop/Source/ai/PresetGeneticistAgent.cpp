@@ -847,6 +847,9 @@ void PresetGeneticistAgent::analyzeAudio(const juce::AudioBuffer<float> &buffer,
 
   // Calculate spectral centroid
   individual.spectralCentroid = calculateSpectralCentroid(buffer);
+
+  // If this is the best individual so far (visualize only)
+  // We'll update currentBestSpectrum_ in updateStats for thread safety
 }
 
 float PresetGeneticistAgent::calculateHarmonicRichness(
@@ -1017,6 +1020,24 @@ void PresetGeneticistAgent::updateStats() {
       if (individual.fitness > best) {
         best = individual.fitness;
         bestName = individual.preset.name;
+        
+        // Update visualization spectrum (Proof of Concept)
+        // In a real implementation we might want to store this in the Individual
+        // but for now we'll re-render once or use a cached version if we had one.
+        // For simplicity, let's just trigger a re-render of THIS specific individual to get its spectrum
+        juce::AudioBuffer<float> bestBuffer = renderPreset(individual.preset);
+        
+        const int fftSize = 1024;
+        std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
+        const float* data = bestBuffer.getReadPointer(0);
+        for (int i = 0; i < fftSize && i < bestBuffer.getNumSamples(); ++i)
+            fftData[static_cast<size_t>(i)] = data[i];
+            
+        fft_.performFrequencyOnlyForwardTransform(fftData.data());
+        
+        currentBestSpectrum_.clear();
+        for (int i = 0; i < fftSize / 2; ++i)
+            currentBestSpectrum_.push_back(std::abs(fftData[static_cast<size_t>(i)]));
       }
       if (individual.fitness < worst) {
         worst = individual.fitness;
@@ -1050,6 +1071,67 @@ float PresetGeneticistAgent::randomFloat(float min, float max) {
 int PresetGeneticistAgent::randomInt(int min, int max) {
   std::uniform_int_distribution<int> dist(min, max);
   return dist(rng_);
+}
+
+void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
+  if (!file.exists())
+    return;
+
+  // Load audio file
+  juce::AudioFormatManager manager;
+  manager.registerBasicFormats();
+
+  std::unique_ptr<juce::AudioFormatReader> reader(manager.createReaderFor(file));
+  if (reader == nullptr)
+    return;
+
+  // Read a representative section (middle 1 second)
+  int64_t startSample = reader->lengthInSamples / 2;
+  int64_t numSamples = std::min(reader->lengthInSamples - startSample,
+                                static_cast<int64_t>(reader->sampleRate));
+
+  juce::AudioBuffer<float> tempBuffer(static_cast<int>(reader->numChannels),
+                                      static_cast<int>(numSamples));
+  reader->read(&tempBuffer, 0, static_cast<int>(numSamples), startSample, true,
+               true);
+
+  // Compute spectrum
+  const int fftSize = 1024;
+  std::vector<float> fftData(static_cast<size_t>(fftSize * 2), 0.0f);
+
+  // Mix to mono if there are multiple channels, then use the first 1024 samples
+  if (tempBuffer.getNumChannels() > 1) {
+    // Simple mixdown to the first channel
+    for (int ch = 1; ch < tempBuffer.getNumChannels(); ++ch) {
+      tempBuffer.addFrom(0, 0, tempBuffer, ch, 0, tempBuffer.getNumSamples());
+    }
+    tempBuffer.applyGain(0, 0, tempBuffer.getNumSamples(),
+                         1.0f / static_cast<float>(tempBuffer.getNumChannels()));
+  }
+
+  const float *data = tempBuffer.getReadPointer(0);
+  for (int i = 0; i < fftSize && i < tempBuffer.getNumSamples(); ++i) {
+    fftData[static_cast<size_t>(i)] = data[i];
+  }
+
+  // Apply Hann window
+  for (int i = 0; i < fftSize; ++i) {
+    float window =
+        0.5f * (1.0f - std::cos(2.0f * juce::MathConstants<float>::pi *
+                                 static_cast<float>(i) /
+                                 static_cast<float>(fftSize - 1)));
+    fftData[static_cast<size_t>(i)] *= window;
+  }
+
+  fft_.performFrequencyOnlyForwardTransform(fftData.data());
+
+  // Store target spectrum
+  targetSpectrum_.clear();
+  for (int i = 0; i < fftSize / 2; ++i) {
+    targetSpectrum_.push_back(std::abs(fftData[static_cast<size_t>(i)]));
+  }
+
+  DBG("PresetGeneticistAgent: Loaded target audio " << file.getFileName());
 }
 
 } // namespace ai

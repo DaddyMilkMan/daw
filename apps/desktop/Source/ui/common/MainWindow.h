@@ -17,15 +17,15 @@
 #include "SkiaButton.h"
 #include "SkiaMainWindowIntegration.h"
 #include "TransportBar.h"
-#include "views/PianoKeyboardViewSkia.h"
+#include "PianoKeyboardViewSkia.h"
 #include "ArrangementComponent.h"
 #include "ClipSynchronizer.h"
 #include "Engine.h"
 #include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
-#include "ui/ArrangerComponent.h"
-#include "ui/MixerComponent.h"
+#include "../arranger/ArrangerComponent.h"
+#include "../mixer/MixerComponent.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -37,11 +37,11 @@
 namespace zenith {
 class InstrumentBrowserPanel;
 class CommandAPI;
-class AIBridgeClient;
 class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
+namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
 } // namespace zenith
 
 //==============================================================================
@@ -72,7 +72,7 @@ public:
   using NewProjectCallback = std::function<void()>;
 
   MainComponent(zenith::Engine &engine, zenith::CommandAPI &api,
-                zenith::AIBridgeClient &aiClient, zenith::ProjectState &state,
+                zenith::ProjectState &state,
                 zenith::RecentProjectManager &recentProjects,
                 LoadProjectCallback onLoadProject,
                 NewProjectCallback onNewProject);
@@ -160,6 +160,9 @@ private:
 
   // Zenith Hub (Start Screen)
   std::unique_ptr<zenith::ZenithHubComponent> hubComponent;
+
+  // Source of Truth Demo
+  std::unique_ptr<zenith::ZenithKnob> volumeKnob;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainComponent)
 };
@@ -251,9 +254,6 @@ public:
   // Phase 5: Wingman command API
   std::unique_ptr<zenith::CommandAPI> commandAPI;
 
-  // Phase 7: AI bridge client
-  std::unique_ptr<zenith::AIBridgeClient> aiBridgeClient;
-
   // Integration: Clip synchronizer
   std::unique_ptr<zenith::ClipSynchronizer> clipSynchronizer;
 
@@ -262,6 +262,10 @@ public:
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;
+
+  // AI Agents (Brain integration)
+  std::unique_ptr<zenith::ai::UXDirectorAgent> uxDirector;
+  std::unique_ptr<zenith::ai::PresetGeneticistAgent> presetGeneticist;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(MainWindow)
 };

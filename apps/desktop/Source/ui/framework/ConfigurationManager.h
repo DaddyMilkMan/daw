@@ -97,6 +97,9 @@ const juce::String PROJECT_DEFAULT_TIMESIG_NUM = "project.defaultTimeSigNum";
 const juce::String PROJECT_DEFAULT_TIMESIG_DEN = "project.defaultTimeSigDen";
 const juce::String PROJECT_DEFAULT_SAMPLE_RATE = "project.defaultSampleRate";
 const juce::String PROJECT_DEFAULT_BUFFER_SIZE = "project.defaultBufferSize";
+
+// Collaboration
+const juce::String COLLAB_SALT = "collab.salt";
 } // namespace keys
 
 // ============================================================================
@@ -253,7 +256,11 @@ private:
   // Internal methods
   void loadDefaults();
   juce::var getNestedValue(const juce::String &key) const;
+  juce::var getNestedValueFromObject(const juce::String &key,
+                                     const juce::DynamicObject::Ptr &object) const;
   void setNestedValue(const juce::String &key, const juce::var &value);
+  void setNestedValueInObject(const juce::String &key, const juce::var &value,
+                              const juce::DynamicObject::Ptr &object);
   juce::StringArray splitKey(const juce::String &key) const;
   juce::DynamicObject::Ptr ensureNestedObject(const juce::String &key);
 

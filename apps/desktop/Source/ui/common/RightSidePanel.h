@@ -13,7 +13,7 @@
 #pragma once
 
 #include "WingmanPanel.h" // Include full header to use unique_ptr
-#include "../views/SpectraAnalyzerComponent.h"
+#include "../widgets/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
@@ -26,15 +26,15 @@
 namespace zenith {
 
 // Forward declarations
+// Forward declarations
 class CommandAPI;
-class AIBridgeClient;
 class Engine;
 
 #ifdef ZENITH_USE_SKIA
 
 class RightSidePanel : public SkiaComponent {
 public:
-  RightSidePanel(CommandAPI &api, AIBridgeClient &client, Engine &engine);
+  RightSidePanel(CommandAPI &api, Engine &engine);
   ~RightSidePanel() override;
 
   void drawSkia(SkCanvas *canvas) override;

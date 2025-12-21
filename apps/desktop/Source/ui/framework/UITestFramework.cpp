@@ -12,6 +12,9 @@
 
 #include "UITestFramework.h"
 #include "ZenithDesignSystem.h"
+#include "widgets/SkiaButton.h"
+#include "widgets/SkiaLabel.h"
+#include "widgets/SkiaTextEditor.h"
 #include <algorithm>
 #include <cmath>
 
@@ -152,10 +155,12 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
 
       if (baselinePixel != currentPixel) {
         // Pixel differs - mark in red
-        g.setPixel(x, y, juce::Colours::red.withAlpha(0.5f));
+        g.setColour(juce::Colours::red.withAlpha(0.5f));
+        g.fillRect(x, y, 1, 1);
       } else {
         // Pixel matches - use baseline pixel with reduced opacity
-        g.setPixel(x, y, baselinePixel.withAlpha(0.3f));
+        g.setColour(baselinePixel.withAlpha(0.3f));
+        g.fillRect(x, y, 1, 1);
       }
     }
   }
@@ -298,36 +303,35 @@ ComponentValidator &ComponentValidator::getInstance() {
   return instance;
 }
 
-void ComponentValidator::registerRule(const ValidationRule &rule) {
-  juce::ScopedLock lock(lock_);
-  validationRules_.add(rule);
-}
+ComponentValidator::ComponentValidator() { registerBuiltInValidators(); }
 
-void ComponentValidator::registerRule(
-    const juce::String &name, std::function<bool(SkiaComponent *)> check,
-    const juce::String &errorMessage, const juce::String &successMessage) {
+void ComponentValidator::registerRule(const juce::String &name,
+                                      ValidationFunc validator,
+                                      const juce::String &failureMessage,
+                                      const juce::String &successMessage) {
   ValidationRule rule;
   rule.name = name;
-  rule.check = check;
-  rule.errorMessage = errorMessage;
+  rule.validator = validator;
+  rule.failureMessage = failureMessage;
   rule.successMessage = successMessage;
 
-  registerRule(rule);
+  juce::ScopedLock lock(lock_);
+  rules_.add(rule);
 }
 
-TestReport ComponentValidator::validateComponent(SkiaComponent *component) {
+TestReport ComponentValidator::validate(SkiaComponent *component) {
   TestReport report;
   report.testName = "Component Validation";
   report.timestamp = juce::Time::getCurrentTime();
   report.result = TestResult::Passed;
 
-  juce::Array<juce::String> failures;
+  juce::StringArray failures;
 
   juce::ScopedLock lock(lock_);
 
-  for (const auto &rule : validationRules_) {
-    if (!rule.check(component)) {
-      failures.add(rule.errorMessage);
+  for (const auto &rule : rules_) {
+    if (!rule.validator(component)) {
+      failures.add(rule.failureMessage);
       report.result = TestResult::Failed;
     }
   }
@@ -341,12 +345,12 @@ TestReport ComponentValidator::validateComponent(SkiaComponent *component) {
   return report;
 }
 
-juce::Array<TestReport> ComponentValidator::validateComponents(
+juce::Array<TestReport> ComponentValidator::runValidationSuite(
     const juce::Array<SkiaComponent *> &components) {
   juce::Array<TestReport> reports;
 
   for (auto *component : components) {
-    reports.add(validateComponent(component));
+    reports.add(validate(component));
   }
 
   return reports;

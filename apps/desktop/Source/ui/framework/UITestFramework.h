@@ -116,8 +116,8 @@ private:
   juce::Image captureComponent(SkiaComponent *component);
   float calculateImageSimilarity(const juce::Image &baseline,
                                  const juce::Image &current);
-  juce::File getScreenshotPath(const juce::String &testName);
-  juce::File getBaselinePath(const juce::String &testName);
+  juce::File getScreenshotPath(const juce::String &testName) const;
+  juce::File getBaselinePath(const juce::String &testName) const;
 
   juce::File baselineDirectory_;
   juce::File screenshotDirectory_;
@@ -150,6 +150,13 @@ public:
   TestReport runPerformanceTest(SkiaComponent *component,
                                 const juce::String &testName);
 
+  void setFpsThreshold(float minFps);
+  void setFrameTimeThreshold(float maxMs);
+  void setMemoryThreshold(juce::int64 maxBytes);
+
+  juce::Array<PerformanceMetrics> getBenchmarkHistory() const;
+  void clearBenchmarkHistory();
+
   juce::int64 getCurrentMemoryUsage();
   float getCurrentCpuUsage();
 
@@ -157,6 +164,12 @@ private:
   PerformanceTester() = default;
 
   PerformanceMetrics calculateMetrics(const juce::Array<float> &frameTimes);
+
+  float fpsThreshold_ = 30.0f;
+  float frameTimeThreshold_ = 33.0f;
+  juce::int64 memoryThreshold_ = 100 * 1024 * 1024; // 100 MB
+  juce::Array<PerformanceMetrics> benchmarkHistory_;
+  mutable juce::CriticalSection lock_;
 };
 
 // ============================================================================

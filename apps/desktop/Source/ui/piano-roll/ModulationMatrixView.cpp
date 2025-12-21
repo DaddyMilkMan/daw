@@ -15,8 +15,8 @@
 */
 
 #include "ModulationMatrixView.h"
-#include "Engine.h"
 #include "../../engine/Track.h"
+#include "Engine.h"
 #include <algorithm>
 #include <cmath>
 #include <core/SkBlurTypes.h>
@@ -170,7 +170,8 @@ void ModulationMatrixView::drawSkia(SkCanvas *canvas) {
   titlePaint.setColor(design::colors::TEXT_PRIMARY);
   titlePaint.setAntiAlias(true);
 
-  auto font = design::typography::getDisplayFont(20.0f, FontWeight::Bold);
+  auto font =
+      design::typography::getDisplayFont(20.0f, design::FontWeight::Bold);
   canvas->drawString("Modulation Matrix", 20, 35, font, titlePaint);
 
   // Draw subtitle
@@ -227,7 +228,8 @@ void ModulationMatrixView::drawSourceNodes(SkCanvas *canvas) {
   SkPaint headerPaint;
   headerPaint.setColor(design::colors::TEXT_SECONDARY);
   headerPaint.setAntiAlias(true);
-  auto headerFont = design::typography::getSkFont(14.0f, FontWeight::SemiBold);
+  auto headerFont =
+      design::typography::getSkFont(14.0f, design::FontWeight::SemiBold);
   canvas->drawString("SOURCES", kSourceColumnX - 25, kHeaderHeight - 10,
                      headerFont, headerPaint);
 
@@ -242,7 +244,8 @@ void ModulationMatrixView::drawDestNodes(SkCanvas *canvas) {
   SkPaint headerPaint;
   headerPaint.setColor(design::colors::TEXT_SECONDARY);
   headerPaint.setAntiAlias(true);
-  auto headerFont = design::typography::getSkFont(14.0f, FontWeight::SemiBold);
+  auto headerFont =
+      design::typography::getSkFont(14.0f, design::FontWeight::SemiBold);
   canvas->drawString("DESTINATIONS", kDestColumnX - 40, kHeaderHeight - 10,
                      headerFont, headerPaint);
 
@@ -320,7 +323,7 @@ void ModulationMatrixView::drawNode(SkCanvas *canvas,
   textPaint.setAntiAlias(true);
   textPaint.setColor(design::colors::TEXT_PRIMARY);
 
-  auto font = design::typography::getSkFont(10.0f, FontWeight::Medium);
+  auto font = design::typography::getSkFont(10.0f, design::FontWeight::Medium);
 
   // Draw label below node
   float labelWidth = font.measureText(label.toRawUTF8(), label.length(),
@@ -478,7 +481,8 @@ void ModulationMatrixView::drawBipolarIndicator(
   textPaint.setAntiAlias(true);
   textPaint.setColor(design::colors::TEXT_PRIMARY);
 
-  auto font = design::typography::getMonoFont(10.0f, FontWeight::Medium);
+  auto font =
+      design::typography::getMonoFont(10.0f, design::FontWeight::Medium);
 
   juce::String amountStr = juce::String(conn.amount * 100.0f, 0) + "%";
 
@@ -541,52 +545,53 @@ void ModulationMatrixView::drawAmountEditor(SkCanvas *canvas) {
   // Find connection midpoint for editor placement
   SkPathMeasure measure(selectedConnection_->path, false);
   SkPoint midPos;
-  measure.getPosTan(measure.getLength() * 0.5f, &midPos, nullptr);
+  if (measure.getPosTan(measure.getLength() * 0.5f, &midPos, nullptr)) {
+    // Draw larger editor panel
+    float panelWidth = 120.0f;
+    float panelHeight = 60.0f;
+    SkRect panelRect = SkRect::MakeXYWH(midPos.fX - panelWidth / 2,
+                                        midPos.fY + 20, panelWidth, panelHeight);
 
-  // Draw larger editor panel
-  float panelWidth = 120.0f;
-  float panelHeight = 60.0f;
-  SkRect panelRect = SkRect::MakeXYWH(midPos.fX - panelWidth / 2,
-                                      midPos.fY + 20, panelWidth, panelHeight);
+    // Panel background with glass effect
+    SkPaint panelPaint;
+    panelPaint.setAntiAlias(true);
+    panelPaint.setColor(design::colors::BG_DARK);
+    canvas->drawRoundRect(panelRect, 8, 8, panelPaint);
 
-  // Panel background with glass effect
-  SkPaint panelPaint;
-  panelPaint.setAntiAlias(true);
-  panelPaint.setColor(design::colors::BG_DARK);
-  canvas->drawRoundRect(panelRect, 8, 8, panelPaint);
+    // Border
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    borderPaint.setColor(selectedConnection_->getColor());
+    canvas->drawRoundRect(panelRect, 8, 8, borderPaint);
 
-  // Border
-  SkPaint borderPaint;
-  borderPaint.setAntiAlias(true);
-  borderPaint.setStyle(SkPaint::kStroke_Style);
-  borderPaint.setStrokeWidth(1.0f);
-  borderPaint.setColor(selectedConnection_->getColor());
-  canvas->drawRoundRect(panelRect, 8, 8, borderPaint);
+    // Title
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(design::colors::TEXT_SECONDARY);
+    auto smallFont = design::typography::getSkFont(10.0f);
+    canvas->drawString("AMOUNT", panelRect.centerX() - 22, panelRect.fTop + 16,
+                       smallFont, textPaint);
 
-  // Title
-  SkPaint textPaint;
-  textPaint.setAntiAlias(true);
-  textPaint.setColor(design::colors::TEXT_SECONDARY);
-  auto smallFont = design::typography::getSkFont(10.0f);
-  canvas->drawString("AMOUNT", panelRect.centerX() - 22, panelRect.fTop + 16,
-                     smallFont, textPaint);
+    // Value display
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
+    auto valueFont =
+        design::typography::getMonoFont(18.0f, design::FontWeight::Bold);
 
-  // Value display
-  textPaint.setColor(design::colors::TEXT_PRIMARY);
-  auto valueFont = design::typography::getMonoFont(18.0f, FontWeight::Bold);
+    juce::String valueStr =
+        juce::String(selectedConnection_->amount * 100.0f, 0) + "%";
+    float valueWidth = valueFont.measureText(
+        valueStr.toRawUTF8(), valueStr.length(), SkTextEncoding::kUTF8);
+    canvas->drawString(valueStr.toRawUTF8(), panelRect.centerX() - valueWidth / 2,
+                       panelRect.fTop + 40, valueFont, textPaint);
 
-  juce::String valueStr =
-      juce::String(selectedConnection_->amount * 100.0f, 0) + "%";
-  float valueWidth = valueFont.measureText(
-      valueStr.toRawUTF8(), valueStr.length(), SkTextEncoding::kUTF8);
-  canvas->drawString(valueStr.toRawUTF8(), panelRect.centerX() - valueWidth / 2,
-                     panelRect.fTop + 40, valueFont, textPaint);
-
-  // Hint
-  textPaint.setColor(design::colors::TEXT_TERTIARY);
-  auto hintFont = design::typography::getSkFont(9.0f);
-  canvas->drawString("Drag to adjust", panelRect.centerX() - 30,
-                     panelRect.fBottom - 6, hintFont, textPaint);
+    // Hint
+    textPaint.setColor(design::colors::TEXT_TERTIARY);
+    auto hintFont = design::typography::getSkFont(9.0f);
+    canvas->drawString("Drag to adjust", panelRect.centerX() - 30,
+                       panelRect.fBottom - 6, hintFont, textPaint);
+  }
 }
 
 //==============================================================================
@@ -729,7 +734,7 @@ void ModulationMatrixView::buildConnections() {
   connections_.clear();
 
   // Create some default connections for demo
-  if (sourceNodes_.size() > 0 && destNodes_.size() > 0) {
+  if (!sourceNodes_.empty() && !destNodes_.empty()) {
     createConnection(sourceNodes_[0].id, destNodes_[0].id); // LFO1 -> Cutoff
     connections_.back().amount = 0.5f;
 
@@ -918,9 +923,10 @@ ModulationMatrixView::hitTestConnection(const juce::Point<float> &pos) {
   for (auto &conn : connections_) {
     SkPathMeasure measure(conn.path, false);
     SkPoint mid;
-    measure.getPosTan(measure.getLength() * 0.5f, &mid, nullptr);
-    if (pos.getDistanceFrom({mid.fX, mid.fY}) < 20.0f) {
-      return &conn;
+    if (measure.getPosTan(measure.getLength() * 0.5f, &mid, nullptr)) {
+      if (pos.getDistanceFrom({mid.fX, mid.fY}) < 20.0f) {
+        return &conn;
+      }
     }
   }
   return nullptr;
@@ -942,7 +948,18 @@ void ModulationMatrixView::createConnection(const juce::String &sourceId,
 }
 
 void ModulationMatrixView::deleteConnection(ModulationConnection *conn) {
-  // TODO: remove from vector
+  if (conn == nullptr)
+    return;
+    
+  connections_.erase(
+      std::remove_if(connections_.begin(), connections_.end(),
+                     [conn](const ModulationConnection &c) { return &c == conn; }),
+      connections_.end());
+      
+  if (selectedConnection_ == conn)
+      selectedConnection_ = nullptr;
+      
+  repaint();
 }
 
 void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
@@ -956,7 +973,27 @@ void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
 std::vector<zenith::SkiaComponent::AIElementInfo>
 ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
-  // TODO: Expose nodes and connections for AI access
+  
+  for (const auto& node : sourceNodes_) {
+    AIElementInfo info;
+    info.id = node.id;
+    info.type = "modulation_source";
+    info.label = node.displayName;
+    info.bounds = SkRect::MakeXYWH((float)node.position.x - node.radius, (float)node.position.y - node.radius, 
+                                   (float)node.radius * 2.0f, (float)node.radius * 2.0f);
+    elements.push_back(info);
+  }
+  
+  for (const auto& node : destNodes_) {
+    AIElementInfo info;
+    info.id = node.id;
+    info.type = "modulation_dest";
+    info.label = node.displayName;
+    info.bounds = SkRect::MakeXYWH((float)node.position.x - node.radius, (float)node.position.y - node.radius, 
+                                   (float)node.radius * 2.0f, (float)node.radius * 2.0f);
+    elements.push_back(info);
+  }
+  
   return elements;
 }
 

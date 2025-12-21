@@ -1,6 +1,4 @@
-target_sources(ZenithDAW_lib PRIVATE
-    AIBridgeClient.cpp
-    MockAIProvider.cpp
+target_sources(ZenithDAW PRIVATE
     GrokAPIClient.cpp
     GrokDAWController.cpp
     GrokUtils.cpp

@@ -1,16 +1,22 @@
 /**
  * @file ModernTimelineRuler.cpp
  * @brief Professional timeline ruler implementation
- * @author Fixed by Claude - December 2025
  */
 
 #include "ModernTimelineRuler.h"
+#include "ZenithDesignSystem.h"
 #include <cmath>
 
 namespace zenith {
 
+// Helper to convert SkColor to juce::Colour
+static juce::Colour skToJuce(SkColor sk) {
+  return juce::Colour::fromRGBA(SkColorGetR(sk), SkColorGetG(sk),
+                                SkColorGetB(sk), SkColorGetA(sk));
+}
+
 ModernTimelineRuler::ModernTimelineRuler() {
-    setSize(800, 48);  // Height from spacing system
+    setSize(800, 48);
 }
 
 void ModernTimelineRuler::paint(juce::Graphics& g) {
@@ -22,22 +28,18 @@ void ModernTimelineRuler::paint(juce::Graphics& g) {
 }
 
 void ModernTimelineRuler::drawRulerBackground(juce::Graphics& g) {
-    using namespace ZenithTheme;
-    
     auto bounds = getLocalBounds().toFloat();
     
     // Background
-    g.setColour(Colors::bg_02);
+    g.setColour(skToJuce(design::colors::BG_DARK));
     g.fillRect(bounds);
     
     // Bottom border
-    g.setColour(Colors::border_default);
+    g.setColour(skToJuce(design::colors::BORDER_DEFAULT));
     g.fillRect(bounds.removeFromBottom(1.0f));
 }
 
 void ModernTimelineRuler::drawGridLines(juce::Graphics& g) {
-    using namespace ZenithTheme;
-    
     auto bounds = getLocalBounds();
     int width = bounds.getWidth();
     int height = bounds.getHeight();
@@ -58,11 +60,11 @@ void ModernTimelineRuler::drawGridLines(juce::Graphics& g) {
         
         if (isBarLine) {
             // Bar line (strong)
-            g.setColour(Colors::border_strong);
+            g.setColour(skToJuce(design::colors::BORDER_STRONG));
             g.fillRect(x, 0, 2, height);
         } else {
             // Beat line (default)
-            g.setColour(Colors::border_default);
+            g.setColour(skToJuce(design::colors::BORDER_DEFAULT));
             g.fillRect(x, 0, 1, height);
         }
     }
@@ -80,102 +82,88 @@ void ModernTimelineRuler::drawGridLines(juce::Graphics& g) {
             
             if (x < 0 || x > width) continue;
             
-            // Skip if this is a beat or bar line
-            if (std::fmod(subdivision, subdivisionsPerBeat) < 0.01) continue;
+            // Skip if this is on a beat line
+            if (std::fmod(subdivision, subdivisionsPerBeat) == 0.0) continue;
             
-            // Subtle subdivision line
-            g.setColour(Colors::border_subtle);
+            g.setColour(skToJuce(design::colors::BORDER_SUBTLE));
             g.fillRect(x, height - 8, 1, 8);
         }
     }
 }
 
 void ModernTimelineRuler::drawTimeMarkers(juce::Graphics& g) {
-    using namespace ZenithTheme;
-    
     auto bounds = getLocalBounds();
     int width = bounds.getWidth();
     
-    // Calculate visible beat range
     double startBeat = viewportStartBeat_;
     double endBeat = startBeat + (width / pixelsPerBeat_);
     
     int beatsPerBar = timeSignatureNumerator_;
     
-    // Draw bar numbers
-    g.setColour(Colors::text_secondary);
-    g.setFont(Typography::getSmallFont(Typography::Weight::Medium));
+    g.setColour(skToJuce(design::colors::TEXT_SECONDARY));
+    g.setFont(design::typography::FONT_SM);
     
+    // Draw bar numbers
     for (int beat = std::floor(startBeat); beat <= std::ceil(endBeat); ++beat) {
-        // Only draw markers on bar lines
         if ((beat % beatsPerBar) != 0) continue;
         
         int x = beatToPixel(beat);
-        
         if (x < 0 || x > width) continue;
         
         int barNumber = (beat / beatsPerBar) + 1;
-        juce::String markerText = formatTime(beat);
+        juce::String label = formatTimeDisplay(beat);
         
-        auto textBounds = juce::Rectangle<int>(x + 4, 4, 100, 20);
-        g.drawText(markerText, textBounds, juce::Justification::left, false);
+        juce::Rectangle<int> textBounds(x + 4, 4, 100, 20);
+        g.drawText(label, textBounds, juce::Justification::left, false);
     }
 }
 
 void ModernTimelineRuler::drawPlayhead(juce::Graphics& g) {
-    using namespace ZenithTheme;
-    
     int x = beatToPixel(playheadBeat_);
+    
+    if (x < 0 || x > getWidth()) return;
+    
     auto bounds = getLocalBounds();
     
-    if (x < 0 || x > bounds.getWidth()) return;
-    
-    // Playhead line
-    g.setColour(Colors::playhead);
+    // Playhead line with glow
+    g.setColour(skToJuce(design::colors::NEON_RED).withAlpha(0.5f));
     g.fillRect(x - 1, 0, 3, bounds.getHeight());
     
-    // Playhead handle (triangle at top)
-    juce::Path handle;
-    handle.addTriangle(x - 6.0f, 0.0f, x + 6.0f, 0.0f, x, 8.0f);
+    // Core line
+    g.setColour(skToJuce(design::colors::NEON_RED));
+    g.fillRect(x, 0, 1, bounds.getHeight());
     
-    g.setColour(Colors::playhead);
-    g.fillPath(handle);
-    
-    // Glow effect
-    g.setColour(Colors::playhead.withAlpha(0.3f));
-    g.fillRect(x - 2, 0, 5, bounds.getHeight());
+    // Triangle indicator at top
+    juce::Path triangle;
+    triangle.addTriangle(x - 6.0f, 0.0f, x + 6.0f, 0.0f, x, 8.0f);
+    g.setColour(skToJuce(design::colors::NEON_RED));
+    g.fillPath(triangle);
 }
 
 void ModernTimelineRuler::drawLoopRegion(juce::Graphics& g) {
     if (!loopEnabled_) return;
     
-    using namespace ZenithTheme;
+    int loopStartX = beatToPixel(loopStartBeat_);
+    int loopEndX = beatToPixel(loopEndBeat_);
     
-    int startX = beatToPixel(loopStartBeat_);
-    int endX = beatToPixel(loopEndBeat_);
+    if (loopEndX < 0 || loopStartX > getWidth()) return;
+    
     auto bounds = getLocalBounds();
+    juce::Rectangle<int> loopBounds(loopStartX, 0, loopEndX - loopStartX, bounds.getHeight());
     
-    // Clamp to visible area
-    startX = std::max(0, std::min(startX, bounds.getWidth()));
-    endX = std::max(0, std::min(endX, bounds.getWidth()));
-    
-    if (startX >= endX) return;
-    
-    // Loop region highlight
-    auto loopBounds = juce::Rectangle<float>(startX, 0, endX - startX, bounds.getHeight());
-    
-    g.setColour(Colors::accent_subtle);
+    // Filled region
+    g.setColour(skToJuce(design::colors::CYAN).withAlpha(0.1f));
     g.fillRect(loopBounds);
     
-    // Loop boundaries
-    g.setColour(Colors::accent_primary);
-    g.fillRect(startX - 1, 0, 2, bounds.getHeight());
-    g.fillRect(endX - 1, 0, 2, bounds.getHeight());
+    // Loop markers
+    g.setColour(skToJuce(design::colors::CYAN));
+    g.fillRect(loopStartX, 0, 2, bounds.getHeight());
+    g.fillRect(loopEndX - 2, 0, 2, bounds.getHeight());
 }
 
 void ModernTimelineRuler::mouseDown(const juce::MouseEvent& e) {
     double beat = pixelToBeat(e.x);
-    
+
     // Check if clicking near playhead (within 8px)
     int playheadX = beatToPixel(playheadBeat_);
     if (std::abs(e.x - playheadX) < 8) {
@@ -195,8 +183,13 @@ void ModernTimelineRuler::mouseDrag(const juce::MouseEvent& e) {
     }
 }
 
+void ModernTimelineRuler::mouseUp(const juce::MouseEvent& e) {
+    juce::ignoreUnused(e);
+    isDraggingPlayhead_ = false;
+}
+
 //==============================================================================
-// Timeline Control
+// Public API
 //==============================================================================
 
 void ModernTimelineRuler::setPixelsPerBeat(double ppb) {
@@ -205,7 +198,12 @@ void ModernTimelineRuler::setPixelsPerBeat(double ppb) {
 }
 
 void ModernTimelineRuler::setViewportStartBeat(double beat) {
-    viewportStartBeat_ = std::max(0.0, beat);
+    viewportStartBeat_ = beat;
+    repaint();
+}
+
+void ModernTimelineRuler::setPlayheadPosition(double beat) {
+    playheadBeat_ = beat;
     repaint();
 }
 
@@ -217,37 +215,12 @@ void ModernTimelineRuler::setTimeSignature(int numerator, int denominator) {
 
 void ModernTimelineRuler::setTempo(double bpm) {
     tempo_ = bpm;
-    repaint();
 }
 
-void ModernTimelineRuler::setSampleRate(double sampleRate) {
-    if (sampleRate > 0.0) {
-        sampleRate_ = sampleRate;
-        repaint();
-    }
-}
-
-void ModernTimelineRuler::setFrameRate(double fps) {
-    if (fps > 0.0) {
-        fps_ = fps;
-        repaint();
-    }
-}
-
-void ModernTimelineRuler::setPlayheadPosition(double beat) {
-    playheadBeat_ = std::max(0.0, beat);
-    repaint();
-}
-
-void ModernTimelineRuler::setLoopRegion(double startBeat, double endBeat) {
-    loopEnabled_ = true;
+void ModernTimelineRuler::setLoopRegion(bool enabled, double startBeat, double endBeat) {
+    loopEnabled_ = enabled;
     loopStartBeat_ = startBeat;
     loopEndBeat_ = endBeat;
-    repaint();
-}
-
-void ModernTimelineRuler::clearLoopRegion() {
-    loopEnabled_ = false;
     repaint();
 }
 
@@ -257,54 +230,50 @@ void ModernTimelineRuler::setTimeFormat(TimeFormat format) {
 }
 
 //==============================================================================
-// Helper Functions
+// Private Helpers
 //==============================================================================
 
-juce::String ModernTimelineRuler::formatTime(double beat) {
-    int beatsPerBar = timeSignatureNumerator_;
-    
-    switch (timeFormat_) {
-        case TimeFormat::Bars: {
-            int bar = static_cast<int>(beat / beatsPerBar) + 1;
-            int beatInBar = static_cast<int>(std::fmod(beat, beatsPerBar)) + 1;
-            int tick = static_cast<int>((beat - std::floor(beat)) * 480.0);  // 480 ticks per beat
-            return juce::String(bar) + "." + juce::String(beatInBar) + "." + juce::String(tick);
-        }
-        
-        case TimeFormat::Time: {
-            double seconds = (beat / tempo_) * 60.0;
-            int minutes = static_cast<int>(seconds / 60.0);
-            int secs = static_cast<int>(std::fmod(seconds, 60.0));
-            int millis = static_cast<int>((seconds - std::floor(seconds)) * 1000.0);
-            
-            juce::String timeStr;
-            timeStr << juce::String(minutes).paddedLeft('0', 2) << ":"
-                   << juce::String(secs).paddedLeft('0', 2) << ":"
-                   << juce::String(millis).paddedLeft('0', 3);
-            return timeStr;
-        }
-        
-        case TimeFormat::Samples: {
-            int samples = static_cast<int>(beat * (60.0 / tempo_) * sampleRate_);
-            return juce::String(samples);
-        }
-        
-        case TimeFormat::Frames: {
-            int frames = static_cast<int>(beat * (60.0 / tempo_) * fps_);
-            return juce::String(frames);
-        }
-        
-        default:
-            return juce::String(static_cast<int>(beat / beatsPerBar) + 1);
-    }
-}
-
-int ModernTimelineRuler::beatToPixel(double beat) {
+int ModernTimelineRuler::beatToPixel(double beat) const {
     return static_cast<int>((beat - viewportStartBeat_) * pixelsPerBeat_);
 }
 
-double ModernTimelineRuler::pixelToBeat(int pixel) {
+double ModernTimelineRuler::pixelToBeat(int pixel) const {
     return viewportStartBeat_ + (pixel / pixelsPerBeat_);
+}
+
+juce::String ModernTimelineRuler::formatTimeDisplay(double beat) const {
+    int beatsPerBar = timeSignatureNumerator_;
+    
+    switch (timeFormat_) {
+    case TimeFormat::Bars: {
+        int barNumber = static_cast<int>(beat / beatsPerBar) + 1;
+        int beatInBar = static_cast<int>(beat) % beatsPerBar + 1;
+        return juce::String(barNumber) + "." + juce::String(beatInBar);
+    }
+    
+    case TimeFormat::Time: {
+        double seconds = beat * 60.0 / tempo_;
+        int minutes = static_cast<int>(seconds / 60.0);
+        int secs = static_cast<int>(seconds) % 60;
+        int ms = static_cast<int>((seconds - std::floor(seconds)) * 1000.0);
+        return juce::String::formatted("%d:%02d.%03d", minutes, secs, ms);
+    }
+    
+    case TimeFormat::Samples: {
+        int sampleRate = 44100; // Default, should be configurable
+        juce::int64 samples = static_cast<juce::int64>(beat * 60.0 / tempo_ * sampleRate);
+        return juce::String(samples);
+    }
+    
+    case TimeFormat::Frames: {
+        double seconds = beat * 60.0 / tempo_;
+        int frames = static_cast<int>(seconds * 30.0); // 30 fps default
+        return juce::String(frames) + "f";
+    }
+    
+    default:
+        return juce::String(static_cast<int>(beat));
+    }
 }
 
 } // namespace zenith
