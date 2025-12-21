@@ -304,31 +304,29 @@ void MacroToolbar::instantFreeze() {
 
   if (trackIndex >= 0) {
     DBG("MacroToolbar: Freezing track " << trackIndex);
-    if (trackIndex >= 0) {
-      DBG("MacroToolbar: Freezing track " << trackIndex);
-      engine_.freezeTrack(trackIndex,
-                          [this](float progress, const juce::String &status) {
-                            if (onFreezeProgress)
-                              onFreezeProgress(progress, status);
-                          });
+    engine_.freezeTrack(trackIndex,
+                        [this](float progress, const juce::String &status) {
+                          if (onFreezeProgress)
+                            onFreezeProgress(progress, status);
+                        });
+  }
+}
+
+void MacroToolbar::colorByTrack() {
+  if (!getSelectedClipIds)
+    return;
+  auto clipIds = getSelectedClipIds();
+
+  projectState_.getUndoManager().beginNewTransaction("Macro: Color by Track");
+
+  for (const auto &id : clipIds) {
+    auto [trackV, clipV] = projectState_.findClip(id);
+    if (clipV.isValid()) {
+      clipV.removeProperty(ProjectState::PROP_MANUALLY_COLORED,
+                           &projectState_.getUndoManager());
+      clipV.removeProperty("color", &projectState_.getUndoManager());
     }
   }
-
-  void MacroToolbar::colorByTrack() {
-    if (!getSelectedClipIds)
-      return;
-    auto clipIds = getSelectedClipIds();
-
-    projectState_.getUndoManager().beginNewTransaction("Macro: Color by Track");
-
-    for (const auto &id : clipIds) {
-      auto [trackV, clipV] = projectState_.findClip(id);
-      if (clipV.isValid()) {
-        clipV.removeProperty(ProjectState::PROP_MANUALLY_COLORED,
-                             &projectState_.getUndoManager());
-        clipV.removeProperty("color", &projectState_.getUndoManager());
-      }
-    }
-  }
+}
 
 } // namespace zenith

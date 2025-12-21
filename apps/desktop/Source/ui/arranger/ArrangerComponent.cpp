@@ -586,8 +586,6 @@ void ArrangerComponent::resized() {
     float h = 60.0f;
     float x = (getWidth() - w) * 0.5f;
     float y = RULER_HEIGHT + 20.0f;
-    float x = (getWidth() - w) * 0.5f;
-    float y = RULER_HEIGHT + 20.0f;
     macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
   }
 
@@ -1379,7 +1377,6 @@ void ArrangerComponent::mouseDown(const juce::MouseEvent &e) {
 
             if (result == 1) {
               // Rename logic (placeholder)
-            } else if (result == 2) {
             } else if (result == 2) {
               auto [track, clipNode] = projectState.findClip(clipId);
               if (track.isValid()) {
