@@ -43,6 +43,9 @@ constexpr int DEFAULT_PIANO_KEY_VELOCITY = 100;
 
 PianoRollComponent::PianoRollComponent(zenith::ProjectState &state)
     : projectState(state) {
+  // Thread Safety: Constructor must be called from message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   setWantsKeyboardFocus(true);
   setMouseCursor(juce::MouseCursor::NormalCursor);
 
@@ -78,6 +81,9 @@ PianoRollComponent::~PianoRollComponent() {
 //==============================================================================
 
 void PianoRollComponent::setClipContext(const MidiClipContext &context) {
+  // Thread Safety: Clip context changes must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   if (currentClip.isValid()) {
     auto [oldTrack, oldClip] = projectState.findClip(currentClip.clipId);
     if (oldClip.isValid()) {
@@ -107,6 +113,9 @@ void PianoRollComponent::setClipContext(const MidiClipContext &context) {
 }
 
 void PianoRollComponent::refreshNotesFromProjectState() {
+  // Thread Safety: Note refresh must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   if (!currentClip.isValid()) {
     noteRects.clear();
     repaint();

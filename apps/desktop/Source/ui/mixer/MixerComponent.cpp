@@ -78,6 +78,9 @@ int MixerComponent::ChannelContainer::getTotalWidth(int stripWidth,
 
 MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
     : engine_(engine), projectState_(state) {
+  // Thread Safety: Constructor must be called from message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   // Listen to the entire state tree for changes
   projectState_.getState().addListener(this);
 
@@ -236,6 +239,9 @@ void MixerComponent::resized() {
 //==============================================================================
 
 void MixerComponent::selectChannel(const juce::String &trackId) {
+  // Thread Safety: Selection changes must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   if (selectedTrackId_ == trackId)
     return;
 
@@ -268,6 +274,9 @@ void MixerComponent::updateSelection() {
 //==============================================================================
 
 void MixerComponent::rebuildChannels() {
+  // Thread Safety: Channel rebuilding accesses engine tracks and must be on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   trackContainer_->clearChannels();
 
   // Iterate tracks from ProjectState to maintain order

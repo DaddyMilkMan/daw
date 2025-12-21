@@ -50,6 +50,9 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
     : engine(eng), projectState(state), recentProjectManager_(recentProjects),
       onLoadProject_(std::move(onLoadProject)),
       onNewProject_(std::move(onNewProject)) {
+  // Thread Safety: UI component construction must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   // Register as key listener for undo/redo shortcuts
   addKeyListener(this);
   addMouseListener(this, true); // Intercept mouse events recursively
@@ -414,6 +417,9 @@ void MainComponent::resized() {
 
 void MainComponent::openPianoRoll(const juce::String &trackId,
                                   const juce::String &clipId) {
+  // Thread Safety: Window creation must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   DBG("MainComponent: Opening piano roll for " + trackId + "/" + clipId);
 
   // Create new piano roll editor window
@@ -428,6 +434,9 @@ void MainComponent::openPianoRoll(const juce::String &trackId,
 //==============================================================================
 
 void MainComponent::handleImportAudio() {
+  // Thread Safety: File chooser and UI updates must happen on message thread
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   // Create file chooser for audio files
   auto chooser = std::make_shared<juce::FileChooser>(
       "Import Audio File", juce::File{},

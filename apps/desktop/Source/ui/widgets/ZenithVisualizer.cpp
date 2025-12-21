@@ -11,6 +11,7 @@
 */
 
 #include "ZenithVisualizer.h"
+// Forced compilation check
 
 namespace zenith {
 
