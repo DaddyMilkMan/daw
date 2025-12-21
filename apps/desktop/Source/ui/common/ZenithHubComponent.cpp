@@ -75,6 +75,7 @@ ZenithHubComponent::ZenithHubComponent(
   greetingEditor_.setVisible(false);
   greetingEditor_.setMultiLine(false);
   greetingEditor_.setReturnKeyStartsNewLine(false);
+  greetingEditor_.setSelectAllWhenFocused(true);
   
   // Configure callbacks for safe hiding
   auto safeDismiss = [this]() { hideGreetingEditor(false); };
@@ -245,36 +246,53 @@ void ZenithHubComponent::updateLayout() {
           
           auto t = sidebarRows[2];
           templatesArea_ = SkRect::MakeXYWH(t.getX(), t.getY(), t.getWidth(), t.getHeight());
+
+          // Profile Button - SAFE calculation inside valid sidebar check
+          profileBounds_ =
+            SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+                   accountArea_.width(), 90.0f);
+      } else {
+        accountArea_.setEmpty();
+        newProjectButtonBounds_.setEmpty();
+        templatesArea_.setEmpty();
+        profileBounds_.setEmpty();
       }
+  } else {
+    // Reset layout on failure
+    recentArea_.setEmpty();
+    accountArea_.setEmpty();
+    newProjectButtonBounds_.setEmpty();
+    templatesArea_.setEmpty();
+    profileBounds_.setEmpty();
   }
 
-  // Profile Button
-  profileBounds_ =
-      SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                       accountArea_.width(), 90.0f);
-
   // Update Recent Project Cards Layout (Grid)
-  float gridW = recentArea_.width();
-  float cardGap = 16.0f;
-  float pCardW = (gridW - cardGap) / 2.0f;
-  float pCardH = 110.0f;
+  if (!recentArea_.isEmpty()) {
+    float gridW = recentArea_.width();
+    float cardGap = 16.0f;
+    float pCardW = (gridW - cardGap) / 2.0f;
+    float pCardH = 110.0f;
 
-  for (size_t i = 0; i < recentProjects_.size(); ++i) {
-    int row = (int)i / 2;
-    int col = (int)i % 2;
+    for (size_t i = 0; i < recentProjects_.size(); ++i) {
+      int row = (int)i / 2;
+      int col = (int)i % 2;
 
-    float px = recentArea_.fLeft + (col * (pCardW + cardGap));
-    float py = recentArea_.fTop + (row * (pCardH + cardGap));
+      float px = recentArea_.fLeft + (col * (pCardW + cardGap));
+      float py = recentArea_.fTop + (row * (pCardH + cardGap));
 
-    recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
+      recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
+    }
   }
 
   // Update Template Cards
-  float tCardH = 90.0f;
-  for (size_t i = 0; i < templates_.size(); ++i) {
-    float tx = templatesArea_.fLeft;
-    float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
-    templates_[i].bounds = SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
+  if (!templatesArea_.isEmpty()) {
+    float tCardH = 90.0f;
+    float cardGap = 16.0f;
+    for (size_t i = 0; i < templates_.size(); ++i) {
+      float tx = templatesArea_.fLeft;
+      float ty = templatesArea_.fTop + 50.0f + (i * (tCardH + cardGap));
+      templates_[i].bounds = SkRect::MakeXYWH(tx, ty, templatesArea_.width(), tCardH);
+    }
   }
 
   if (greetingEditor_.isVisible()) {
