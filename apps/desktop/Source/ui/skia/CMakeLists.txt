@@ -1,5 +1,5 @@
 if(ZENITH_ENABLE_SKIA)
-    target_sources(ZenithDAW PRIVATE
+    target_sources(ZenithDAW_lib PRIVATE
         # Core UI
         AuroraBackground.cpp
         BottomBar.cpp
@@ -36,3 +36,5 @@ if(ZENITH_ENABLE_SKIA)
         widgets/ZenithVisualizer.cpp
     )
 endif()
+
+
