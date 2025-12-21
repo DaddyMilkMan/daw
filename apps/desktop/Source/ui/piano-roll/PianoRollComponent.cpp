@@ -31,6 +31,30 @@ constexpr float TOOLBAR_BUTTON_WIDTH = 60.0f;
 constexpr float TOOLBAR_BUTTON_HEIGHT = 30.0f;
 constexpr float TOOLBAR_BUTTON_MARGIN = 5.0f;
 
+// Note Layout & Rendering Constants
+namespace Layout {
+    constexpr float NOTE_CORNER_RADIUS = 3.0f;
+    constexpr float NOTE_INSET = 1.0f;
+    constexpr float SELECTION_GLOW_RADIUS = 4.0f;
+    constexpr float COLLISION_GLOW_RADIUS = 3.0f;
+    constexpr float VELOCITY_STRIPE_HEIGHT = 2.0f;
+    
+    // Piano Key Labels
+    constexpr float KEY_LABEL_MIN_ZOOM = 12.0f;
+    constexpr float KEY_LABEL_DETAIL_ZOOM = 18.0f;
+    constexpr float KEY_LABEL_MAX_FONT_SIZE = 11.0f;
+    constexpr float KEY_LABEL_DETAIL_MAX_FONT_SIZE = 9.0f;
+    constexpr float KEY_LABEL_OFFSET = -24.0f;
+    constexpr float KEY_LABEL_DETAIL_OFFSET = -18.0f;
+}
+
+namespace RenderColors {
+    const SkColor KEY_SHADOW = SkColorSetARGB(50, 0, 0, 0);
+    const SkColor NOTE_BORDER = SkColorSetARGB(80, 0, 0, 0);
+    const SkColor SUBDIVISION_TICK = SkColorSetARGB(60, 255, 255, 255);
+    const SkColor PROBABILITY_BG = SkColorSetARGB(100, 0, 0, 0);
+}
+
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
@@ -1236,7 +1260,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         }
       } else if (pixelsPerBeat >= 80.0) {
         // Subdivision tick - short line
-        generalPaint_.setColor(SkColorSetARGB(60, 255, 255, 255));
+        generalPaint_.setColor(RenderColors::SUBDIVISION_TICK);
         generalPaint_.setStrokeWidth(0.5f);
         canvas->drawLine(x, RULER_HEIGHT - 6, x, RULER_HEIGHT - 2, generalPaint_);
       }
@@ -1306,13 +1330,6 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
                   noteInOctave == 8 || noteInOctave == 10);
 
     // Draw Key
-    static constexpr float kKeyLabelMinZoom = 12.0f;
-    static constexpr float kKeyLabelDetailZoom = 18.0f;
-    static constexpr float kKeyLabelMaxFontSize = 11.0f;
-    static constexpr float kKeyLabelDetailMaxFontSize = 9.0f;
-    static constexpr float kKeyLabelOffset = -24.0f;
-    static constexpr float kKeyLabelDetailOffset = -18.0f;
-
     SkRect keyRect = SkRect::MakeXYWH(0, y, PIANO_WIDTH, h);
     paint.setStyle(SkPaint::kFill_Style);
 
@@ -1343,12 +1360,12 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
 
       // Shadow for depth
       SkPaint shadow;
-      shadow.setColor(SkColorSetARGB(50, 0, 0, 0));
+      shadow.setColor(RenderColors::KEY_SHADOW);
       canvas->drawRect(SkRect::MakeXYWH(0, y + h - 1, PIANO_WIDTH, 1), shadow);
     }
 
     // Key Label
-    if (pixelsPerPitch > kKeyLabelMinZoom) {
+    if (pixelsPerPitch > Layout::KEY_LABEL_MIN_ZOOM) {
       static const char *noteNames[] = {"C",  "C#", "D",  "D#", "E",  "F",
                                         "F#", "G",  "G#", "A",  "A#", "B"};
       SkPaint textPaint;
@@ -1358,19 +1375,19 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
         // C notes get octave number
         textPaint.setColor(black ? colors::TEXT_SECONDARY : colors::BG_DARKEST);
         SkFont font = getMonoFont(
-            juce::jmin(kKeyLabelMaxFontSize, (float)(pixelsPerPitch * 0.7f)),
+            juce::jmin(Layout::KEY_LABEL_MAX_FONT_SIZE, (float)(pixelsPerPitch * 0.7f)),
             FontWeight::Bold);
         juce::String label = "C" + juce::String(p / 12 - 2);
         canvas->drawString(label.toStdString().c_str(),
-                           PIANO_WIDTH + kKeyLabelOffset, y + h * 0.7f, font,
+                           PIANO_WIDTH + Layout::KEY_LABEL_OFFSET, y + h * 0.7f, font,
                            textPaint);
-      } else if (pixelsPerPitch > kKeyLabelDetailZoom) {
+      } else if (pixelsPerPitch > Layout::KEY_LABEL_DETAIL_ZOOM) {
         textPaint.setColor(colors::TEXT_TERTIARY);
-        SkFont font = getMonoFont(juce::jmin(kKeyLabelDetailMaxFontSize,
+        SkFont font = getMonoFont(juce::jmin(Layout::KEY_LABEL_DETAIL_MAX_FONT_SIZE,
                                              (float)(pixelsPerPitch * 0.5f)),
                                   FontWeight::Regular);
         canvas->drawString(noteNames[noteInOctave],
-                           PIANO_WIDTH + kKeyLabelDetailOffset, y + h * 0.7f,
+                           PIANO_WIDTH + Layout::KEY_LABEL_DETAIL_OFFSET, y + h * 0.7f,
                            font, textPaint);
       }
     }
@@ -1388,12 +1405,12 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
   SkPaint selectedGlowPaint;
   selectedGlowPaint.setColor(colors::CYAN);
   selectedGlowPaint.setMaskFilter(
-      SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, 4.0f));
+      SkMaskFilter::MakeBlur(SkBlurStyle::kSolid_SkBlurStyle, Layout::SELECTION_GLOW_RADIUS));
 
   SkPaint collisionGlowPaint;
   collisionGlowPaint.setColor(colors::AMBER);
   collisionGlowPaint.setMaskFilter(
-      SkMaskFilter::MakeBlur(SkBlurStyle::kOuter_SkBlurStyle, 3.0f));
+      SkMaskFilter::MakeBlur(SkBlurStyle::kOuter_SkBlurStyle, Layout::COLLISION_GLOW_RADIUS));
 
   for (const auto &note : noteRects) {
     // Culling
@@ -1407,12 +1424,12 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
                          note.bounds.getWidth(), note.bounds.getHeight());
 
     // Inner Rect for pseudo-3D
-    SkRect inner = r.makeInset(1.0f, 1.0f);
-    SkRRect rr = SkRRect::MakeRectXY(inner, 3.0f, 3.0f);
+    SkRect inner = r.makeInset(Layout::NOTE_INSET, Layout::NOTE_INSET);
+    SkRRect rr = SkRRect::MakeRectXY(inner, Layout::NOTE_CORNER_RADIUS, Layout::NOTE_CORNER_RADIUS);
 
     // COLLISION WARNING: Amber glow for overlapping notes
     if (note.hasCollision && !note.selected) {
-      SkRect collisionRect = rr.rect().makeOutset(3.0f, 3.0f);
+      SkRect collisionRect = rr.rect().makeOutset(Layout::COLLISION_GLOW_RADIUS, Layout::COLLISION_GLOW_RADIUS);
       canvas->drawRect(collisionRect, collisionGlowPaint);
     }
 
@@ -1454,9 +1471,8 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
 
     // Velocity indicator stripe at top (like Ableton)
     if (r.height() > 6.0f && r.width() > 10.0f) {
-      float stripeHeight = 2.0f;
       SkRect stripe = SkRect::MakeXYWH(inner.left() + 1, inner.top() + 1,
-                                       inner.width() - 2, stripeHeight);
+                                       inner.width() - 2, Layout::VELOCITY_STRIPE_HEIGHT);
       SkPaint stripePaint;
       stripePaint.setColor(withAlpha(colors::TEXT_PRIMARY, 0.3f + (note.velocity / 127.0f) * 0.4f));
       stripePaint.setAntiAlias(true);
@@ -1471,7 +1487,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       border.setColor(withAlpha(colors::AMBER, 0.8f));
       border.setStrokeWidth(1.5f);
     } else {
-      border.setColor(SkColorSetARGB(80, 0, 0, 0));
+      border.setColor(RenderColors::NOTE_BORDER);
       border.setStrokeWidth(1.0f);
     }
     canvas->drawRRect(rr, border);
@@ -1494,7 +1510,7 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       SkRect probFill = SkRect::MakeXYWH(r.right() - probSize - 3, r.bottom() - 6, probWidth, 3);
       
       SkPaint probBgPaint;
-      probBgPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
+      probBgPaint.setColor(RenderColors::PROBABILITY_BG);
       canvas->drawRoundRect(probBg, 1, 1, probBgPaint);
       
       SkPaint probFillPaint;
