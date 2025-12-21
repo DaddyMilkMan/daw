@@ -716,11 +716,11 @@ void MemoryLeakDetector::trackComponent(const LifecycleComponent *component) {
   stats_.totalComponentsCreated++;
   stats_.currentComponentCount++;
 
-  // Update type counts
+  // Update type counts (std::map auto-initializes int to 0)
   juce::String typeName = typeid(*component).name();
   int count = 0;
   if (stats_.componentTypeCounts.contains(typeName)) {
-      count = stats_.componentTypeCounts[typeName];
+    count = stats_.componentTypeCounts[typeName];
   }
   stats_.componentTypeCounts.set(typeName, count + 1);
 }

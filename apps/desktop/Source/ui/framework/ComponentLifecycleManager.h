@@ -272,7 +272,6 @@ public:
     int currentComponentCount = 0;
     juce::HashMap<juce::String, int> componentTypeCounts;
 
-
     MemoryStats() = default;
     MemoryStats(const MemoryStats &other) {
       totalComponentsCreated = other.totalComponentsCreated;

@@ -1512,3 +1512,13 @@ SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   juce::Colour c = getColorForVelocity(velocity);
   return SkColorSetARGB(c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue());
 }
+
+juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+  float velocityFactor = velocity / 127.0f;
+  // Use VIOLET base color as per design requirements
+  SkColor skC = zenith::design::interpolateColor(
+      zenith::design::darken(zenith::design::colors::VIOLET, 0.3f),
+      zenith::design::lighten(zenith::design::colors::VIOLET, 0.1f),
+      velocityFactor);
+  return juce::Colour((juce::uint32)skC);
+}

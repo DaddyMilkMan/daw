@@ -128,7 +128,7 @@ public:
                 Alignment verticalAlignment = Alignment::Center);
 
 private:
-  void calculateLayout() override;
+
 };
 
 // ============================================================================
@@ -145,7 +145,7 @@ public:
                 Alignment horizontalAlignment = Alignment::Center);
 
 private:
-  void calculateLayout() override;
+
 };
 
 // ============================================================================
