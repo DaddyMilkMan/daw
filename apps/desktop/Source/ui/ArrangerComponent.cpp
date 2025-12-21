@@ -551,8 +551,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       // Subtle gradient highlight
       SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
       SkColor gradColors[2] = {
-          SkColorSetARGB(15, 255, 255, 255), // Subtle top
-          SkColorSetARGB(8, 255, 255, 255)   // More subtle bottom
+          SkColorSetARGB(8, 255, 255, 255), // Very subtle top
+          SkColorSetARGB(4, 255, 255, 255)  // Even more subtle bottom
       };
       barHighlightPaint.setShader(SkGradientShader::MakeLinear(
           pts, gradColors, nullptr, 2, SkTileMode::kClamp));
@@ -576,11 +576,11 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
     if (isBarLine) {
       // BAR LINES - more visible, solid
-      gridPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
-      gridPaint.setStrokeWidth(1.5f);
+      gridPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
+      gridPaint.setStrokeWidth(1.0f);
     } else {
       // BEAT LINES - subtle, dotted
-      gridPaint.setColor(SkColorSetARGB(50, 255, 255, 255));
+      gridPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
       gridPaint.setStrokeWidth(1.0f);
       static const SkScalar intervals[] = {2.0f, 4.0f};
       static const auto dashEffect =

@@ -220,6 +220,20 @@ void ModernTimelineRuler::setTempo(double bpm) {
     repaint();
 }
 
+void ModernTimelineRuler::setSampleRate(double sampleRate) {
+    if (sampleRate > 0.0) {
+        sampleRate_ = sampleRate;
+        repaint();
+    }
+}
+
+void ModernTimelineRuler::setFrameRate(double fps) {
+    if (fps > 0.0) {
+        fps_ = fps;
+        repaint();
+    }
+}
+
 void ModernTimelineRuler::setPlayheadPosition(double beat) {
     playheadBeat_ = std::max(0.0, beat);
     repaint();
@@ -271,14 +285,12 @@ juce::String ModernTimelineRuler::formatTime(double beat) {
         }
         
         case TimeFormat::Samples: {
-            double sampleRate = 44100.0;  // TODO: Get from audio engine
-            int samples = static_cast<int>(beat * (60.0 / tempo_) * sampleRate);
+            int samples = static_cast<int>(beat * (60.0 / tempo_) * sampleRate_);
             return juce::String(samples);
         }
         
         case TimeFormat::Frames: {
-            double fps = 30.0;  // TODO: Get from project settings
-            int frames = static_cast<int>(beat * (60.0 / tempo_) * fps);
+            int frames = static_cast<int>(beat * (60.0 / tempo_) * fps_);
             return juce::String(frames);
         }
         
