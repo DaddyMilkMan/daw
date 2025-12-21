@@ -266,3 +266,4 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
 }
 
 } // namespace zenith
+

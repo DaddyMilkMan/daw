@@ -327,3 +327,4 @@ static PluginHostingTests pluginHostingTests;
 
 } // namespace tests
 } // namespace zenith
+

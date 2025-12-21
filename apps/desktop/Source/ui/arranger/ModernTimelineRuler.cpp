@@ -308,3 +308,4 @@ double ModernTimelineRuler::pixelToBeat(int pixel) {
 }
 
 } // namespace zenith
+
