@@ -106,7 +106,6 @@ void BottomBar::drawSkia(SkCanvas *canvas) {
   // Top border glow
   canvas->drawLine(0.0f, 0.0f, skBounds.width(), 0.0f, borderPaint_);
 
-  // If keyboard is hidden, show mixer strip OR device chain
   if (!keyboardVisible_) {
 
     // If we have a real device chain component visible, don't draw the fake one

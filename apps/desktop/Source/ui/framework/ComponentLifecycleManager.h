@@ -279,7 +279,9 @@ public:
       totalComponentsDestroyed = other.totalComponentsDestroyed;
       currentComponentCount = other.currentComponentCount;
 
-      juce::HashMap<juce::String, int>::Iterator it(other.componentTypeCounts);
+      // juce::HashMap::Iterator requires non-const reference, so we need const_cast
+      auto& nonConstMap = const_cast<juce::HashMap<juce::String, int>&>(other.componentTypeCounts);
+      juce::HashMap<juce::String, int>::Iterator it(nonConstMap);
       while (it.next()) {
         componentTypeCounts.set(it.getKey(), it.getValue());
       }

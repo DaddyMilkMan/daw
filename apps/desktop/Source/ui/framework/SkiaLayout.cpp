@@ -247,6 +247,10 @@ void SkiaHorizontalLayout::addChild(SkiaComponent *child, float flex,
   SkiaLayoutContainer::addChild(child, params);
 }
 
+void SkiaHorizontalLayout::calculateLayout() {
+  SkiaLayoutContainer::calculateLayout();
+}
+
 // ============================================================================
 // SkiaVerticalLayout Implementation
 // ============================================================================
@@ -262,6 +266,10 @@ void SkiaVerticalLayout::addChild(SkiaComponent *child, float flex,
                                   Alignment horizontalAlignment) {
   LayoutParams params(flex, horizontalAlignment);
   SkiaLayoutContainer::addChild(child, params);
+}
+
+void SkiaVerticalLayout::calculateLayout() {
+  SkiaLayoutContainer::calculateLayout();
 }
 
 // ============================================================================

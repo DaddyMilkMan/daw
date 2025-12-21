@@ -331,12 +331,19 @@ void ZenithHubComponent::drawSkia(SkCanvas *canvas) {
     // Draw Pencil Icon
     greetingEditIconBounds_ = SkRect::MakeXYWH(subX + bounds.width() + 10, subY - 14, 16, 16);
     
-    // Use the icon system for consistency and maintainability
-    icons::IconStyle iconStyle;
-    iconStyle.color = isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f);
-    iconStyle.strokeWidth = 1.5f;
+    SkPaint iconPaint;
+    iconPaint.setColor(isGreetingHovered_ ? colors::CYAN : withAlpha(colors::TEXT_SECONDARY, 0.5f));
+    iconPaint.setAntiAlias(true);
+    iconPaint.setStyle(SkPaint::kStroke_Style);
+    iconPaint.setStrokeWidth(1.5f);
     
-    icons::drawIconCentered(canvas, icons::Edit(), greetingEditIconBounds_, 16.0f, iconStyle);
+    SkPath pencil = icons::Edit();
+    // Translate to position (Icon is defined in ~16x16 local coords)
+    SkMatrix m;
+    m.setTranslate(greetingEditIconBounds_.fLeft, greetingEditIconBounds_.fTop);
+    pencil.transform(m);
+    
+    canvas->drawPath(pencil, iconPaint);
   }
 
   drawRecentProjects(canvas);
@@ -429,7 +436,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
     // For now assuming icons::... returns a path around 0,0 or 24x24.
     // Let's just fill a rect with color for now as in original code, or try to
     // draw path if we knew how to scale it. Original HEAD code had
-    // `canvas->drawRRect` for thumbnail. Let's stick to the color block as the
+    // `canvas->drawRRect` for thumbnail. Let's stick to the accent color block as the
     // "Thumbnail". Wait, the review mentioned: "Mock Image / Icon (accent
     // colored rectangle)" was master. HEAD had "Thumbnail with accent color".
     // I will stick to the accent color block for safety, but maybe add a small
@@ -760,26 +767,33 @@ void ZenithHubComponent::showGreetingEditor() {
       
   greetingEditor_->setBounds(bounds);
   
-  // Callbacks - use async destruction to prevent crashes from deleting
-  // the TextEditor from within its own callback
-  greetingEditor_->onReturnKey = [this]() { hideGreetingEditor(true); };
-  greetingEditor_->onEscapeKey = [this]() { hideGreetingEditor(false); };
-  greetingEditor_->onFocusLost = [this]() { hideGreetingEditor(false); };
+  // Callbacks
+  // Helper to commit changes safely
+  auto commit = [this]() {
+    if (!greetingEditor_) return;
+    greetingText_ = greetingEditor_->getText();
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+      repaint();
+    });
+  };
 
+  // Helper to cancel safely
+  auto cancel = [this]() {
+    if (!greetingEditor_) return;
+    juce::MessageManager::callAsync([this]() {
+      greetingEditor_.reset();
+      repaint();
+    });
+  };
+
+  greetingEditor_->onReturnKey = commit;
+  greetingEditor_->onFocusLost = commit; // Save on focus lost
+  greetingEditor_->onEscapeKey = cancel;
   addAndMakeVisible(greetingEditor_.get());
   greetingEditor_->grabKeyboardFocus();
 }
 
-void ZenithHubComponent::hideGreetingEditor(bool save) {
-  if (!greetingEditor_) return;
-  auto text = greetingEditor_->getText();
-  
-  juce::MessageManager::callAsync([this, save, text]() {
-    if (save) greetingText_ = text;
-    greetingEditor_.reset();
-    repaint();
-  });
-}
-}
+
 
 } // namespace zenith
