@@ -24,7 +24,9 @@
 #include "../ZenithTheme.h"
 #include "../skia/SkiaComponent.h"
 #include "../skia/ZenithDesignSystem.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 #include <core/SkPath.h>
 #include <core/SkPathMeasure.h>
 #include <random>

@@ -21,7 +21,9 @@
 #include "RenderTree.h"
 #include "SkiaMainWindowIntegration.h"
 #include "ZenithUIComponents.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 
 namespace zenith {
 

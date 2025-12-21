@@ -2,7 +2,9 @@
 // version. Use zenith::CollabPanel from ui/skia/CollabPanel.h instead.
 #pragma once
 #include "../network/CollaborationManager.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 
 class CollabPopup : public juce::Component, public juce::ChangeListener {
 public:

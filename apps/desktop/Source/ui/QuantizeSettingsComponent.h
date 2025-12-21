@@ -13,7 +13,9 @@
 #include "skia/SkiaComponent.h"
 #include "skia/ZenithDesignSystem.h"
 #include "ui/PianoRollComponent.h"
-#include <JuceHeader.h>
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
 
 class QuantizeSettingsComponent : public zenith::SkiaComponent {
 public:

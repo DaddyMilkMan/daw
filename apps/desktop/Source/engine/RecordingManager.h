@@ -23,9 +23,7 @@
 
 #pragma once
 
-#include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_audio_devices/juce_audio_devices.h>
-#include <juce_core/juce_core.h>
+#include <JuceHeader.h>
 #include <atomic>
 #include <map>
 #include <memory>
