@@ -206,8 +206,8 @@ public:
 
   //==============================================================================
   // State management
-  juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  virtual juce::ValueTree getState() const;
+  virtual void loadState(const juce::ValueTree &state);
 
   /**
    * @brief Load plugin states from ValueTree
