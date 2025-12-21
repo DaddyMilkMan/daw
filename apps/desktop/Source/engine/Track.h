@@ -17,9 +17,9 @@
 #pragma once
 
 #include "AutomationLane.h"
+#include "AutomationManager.h"
 #include "MixerChannel.h"
 #include "PluginChain.h"
-#include "AutomationManager.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -32,6 +32,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+
 
 // Forward declarations
 namespace zenith {
@@ -84,12 +85,13 @@ public:
 
   //==============================================================================
   // AudioSource interface
-  virtual void prepareToPlay(int samplesPerBlockExpected, double sampleRate) override;
+  virtual void prepareToPlay(int samplesPerBlockExpected,
+                             double sampleRate) override;
   virtual void releaseResources() override;
 
-
   // Standard AudioSource override to avoid abstraction issue
-  void getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override {
+  void
+  getNextAudioBlock(const juce::AudioSourceChannelInfo &bufferToFill) override {
     getNextAudioBlock(bufferToFill, 0, nullptr, {}, nullptr);
   }
 
@@ -187,11 +189,21 @@ public:
   int getNumPlugins() const;
   juce::AudioPluginInstance *getPlugin(int index) const;
   virtual int getNumClips() const { return 0; }
-  virtual Clip* getClip(int index) const { return nullptr; }
-  virtual void addClip(Clip* clip) { juce::ignoreUnused(clip); }
+  virtual Clip *getClip(int index) const { return nullptr; }
+  virtual void addClip(Clip *clip) { juce::ignoreUnused(clip); }
   virtual void addClip(std::unique_ptr<Clip> clip);
-  virtual Instrument* getInstrument() const { return nullptr; }
+  virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
+
+  /**
+   * @brief Update clip playback positions for this track
+   * @param playheadPosition Current playhead position in samples
+   * @note Audio thread safe - implementations should be lock-free
+   */
+  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept {
+    juce::ignoreUnused(playheadPosition);
+    // Default implementation does nothing - subclasses with clips override
+  }
 
   // MIDI Scheduling (moved to MIDITrack)
 
@@ -280,7 +292,6 @@ protected:
   AutomationManager automationManager;
 
   juce::AudioBuffer<float> pluginBuffer;
-
 
   //==============================================================================
   // Helper methods

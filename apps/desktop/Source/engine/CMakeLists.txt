@@ -6,7 +6,6 @@ target_sources(ZenithDAW PRIVATE
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
-    InstrumentTrack.cpp
     ClipTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp
@@ -35,11 +34,8 @@ target_sources(ZenithDAW PRIVATE
     RecentProjectManager.cpp
     
     # Deprecated synchronizers (kept for backward compatibility, will be removed)
-    # TODO: Remove these after ProjectEngineBridge is fully integrated
     ClipSynchronizer.cpp
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
-)# Touch for rebuild
-
-
+)
