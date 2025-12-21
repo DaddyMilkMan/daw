@@ -43,13 +43,8 @@ ZenithDeEsser::createParameterLayout() {
 void ZenithDeEsser::prepareToPlay(double sampleRate, int samplesPerBlock) {
   juce::dsp::ProcessSpec spec;
   spec.sampleRate = sampleRate;
-<<<<<<< HEAD
   spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
   spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
-=======
-  spec.maximumBlockSize = samplesPerBlock;
-  spec.numChannels = getTotalNumOutputChannels();
->>>>>>> origin/master
 
   crossoverLow.prepare(spec);
   crossoverHigh.prepare(spec);
@@ -58,12 +53,9 @@ void ZenithDeEsser::prepareToPlay(double sampleRate, int samplesPerBlock) {
   // De-Esser settings: Fast attack, Fast release usually
   compressor.setAttack(1.0f);   // 1ms
   compressor.setRelease(50.0f); // 50ms
-<<<<<<< HEAD
 
   // Pre-allocate highBand buffer for real-time safety
   highBand.setSize(static_cast<int>(spec.numChannels), samplesPerBlock);
-=======
->>>>>>> origin/master
 }
 
 void ZenithDeEsser::releaseResources() {}
@@ -84,21 +76,15 @@ void ZenithDeEsser::processBlock(juce::AudioBuffer<float> &buffer,
   float ratio = 1.0f + (amt * 19.0f); // Max 20:1
   compressor.setRatio(ratio);
 
-<<<<<<< HEAD
-  // Resize highBand if needed
-  if (highBand.getNumChannels() < buffer.getNumChannels() ||
-      highBand.getNumSamples() < buffer.getNumSamples()) {
-    highBand.setSize(buffer.getNumChannels(), buffer.getNumSamples(), false, false, true);
-  }
-  
+  // Ensure highBand is large enough without resizing
+  // Real-time safety check: we expect prepareToPlay to have allocated enough.
+  jassert(highBand.getNumChannels() >= buffer.getNumChannels() &&
+          highBand.getNumSamples() >= buffer.getNumSamples());
+
   // Copy input to highBand buffer
   for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
     highBand.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
   }
-=======
-  // Create copy for High Band
-  juce::AudioBuffer<float> highBand(buffer);
->>>>>>> origin/master
 
   juce::dsp::AudioBlock<float> block(buffer);
   juce::dsp::AudioBlock<float> highBlock(highBand);
@@ -115,17 +101,10 @@ void ZenithDeEsser::processBlock(juce::AudioBuffer<float> &buffer,
 
   // Sum
   if (listen->load() > 0.5f) {
-<<<<<<< HEAD
     // Output only compressed high band (real-time safe copy)
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
       buffer.copyFrom(ch, 0, highBand, ch, 0, buffer.getNumSamples());
     }
-=======
-    // Output only compressed high band
-    buffer.allocate(buffer.getNumChannels(),
-                    buffer.getNumSamples()); // Clear? No.
-    buffer.makeCopyOf(highBand);
->>>>>>> origin/master
   } else {
     // Sum Low + High
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {

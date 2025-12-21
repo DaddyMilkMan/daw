@@ -3,16 +3,12 @@
 #include "AudioTrack.h"
 #include "AuxBusTrack.h"
 #include "Clip.h"
-<<<<<<< HEAD
-=======
 #include "InstrumentTrack.h"
->>>>>>> origin/master
 #include "MIDITrack.h"
 #include "PluginHost.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
 #include <algorithm>
-
 
 namespace zenith {
 
@@ -23,12 +19,7 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   case Type::MIDI:
     return std::make_unique<MIDITrack>(name);
   case Type::Instrument:
-<<<<<<< HEAD
-    return std::make_unique<MIDITrack>(
-        name); // InstrumentTrack removed; use MIDITrack
-=======
     return std::make_unique<InstrumentTrack>(name);
->>>>>>> origin/master
   case Type::Bus:
     return std::make_unique<AuxBusTrack>(name);
   default:
@@ -199,12 +190,9 @@ void Track::injectLiveMidiMessage(const juce::MidiMessage &message) {
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer,
                                juce::MidiBuffer &midi, int numSamples) {
-<<<<<<< HEAD
-=======
   // Inject live MIDI messages
   liveMidiFifo_.drainTo(midi, numSamples);
 
->>>>>>> origin/master
   pluginChain.process(buffer, midi);
 }
 

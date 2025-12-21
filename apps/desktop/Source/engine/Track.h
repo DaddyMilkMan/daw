@@ -17,10 +17,7 @@
 #pragma once
 #include "AutomationLane.h"
 #include "AutomationManager.h"
-<<<<<<< HEAD
-=======
 #include "EngineEvent.h" // For MidiFifo
->>>>>>> origin/master
 #include "MixerChannel.h"
 #include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
@@ -35,7 +32,6 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
-
 
 // Forward declarations
 namespace zenith {
@@ -312,11 +308,8 @@ protected:
   // Thread-safe FIFO for live MIDI injection
   MidiFifo liveMidiFifo_;
 
-<<<<<<< HEAD
-=======
   juce::AudioBuffer<float> pluginBuffer;
 
->>>>>>> origin/master
   //==============================================================================
   // Helper methods
   void processPluginChain(juce::AudioBuffer<float> &buffer,

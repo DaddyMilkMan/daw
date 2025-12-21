@@ -34,7 +34,6 @@ public:
   // Process a block of audio (in-place)
   void process(juce::AudioBuffer<float> &buffer);
 
-<<<<<<< HEAD
   void updateFilters();
 
   // Parameters
@@ -44,10 +43,6 @@ public:
       updateFilters();
     }
   }
-=======
-  // Parameters
-  void setMode(Mode newMode) { mode = newMode; }
->>>>>>> origin/master
   void setDrive(float newDrive) { drive = juce::jlimit(0.0f, 1.0f, newDrive); }
   void setCharacter(float newChar) {
     character = juce::jlimit(0.0f, 1.0f, newChar);

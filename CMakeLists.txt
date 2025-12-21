@@ -126,7 +126,7 @@ set(ZENITH_TEST_SOURCES
     # AI
     apps/desktop/Source/ai/SessionDebuggerAgent.cpp
     apps/desktop/Source/ai/AIMasteringAgent.cpp
-    apps/desktop/Source/ai/AIMasteringAgent_impl.cpp
+
     apps/desktop/Source/ai/SampleHunterAgent.cpp
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
