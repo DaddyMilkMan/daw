@@ -187,6 +187,7 @@ juce::File ProjectState::saveCrashDump() {
 }
 
 void ProjectState::timerCallback() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
   if (isDirty && projectFile.existsAsFile()) {
     DBG("ProjectState: Autosaving...");
     

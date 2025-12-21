@@ -225,8 +225,7 @@ void FreezeRenderThread::run() {
     
     // Create output file
     juce::WavAudioFormat wavFormat;
-    std::unique_ptr<juce::FileOutputStream> outputStream(
-        new juce::FileOutputStream(outputFile_));
+    auto outputStream = std::make_unique<juce::FileOutputStream>(outputFile_);
     
     if (!outputStream->openedOk()) {
         DBG("FreezeRenderThread: Failed to create output file");

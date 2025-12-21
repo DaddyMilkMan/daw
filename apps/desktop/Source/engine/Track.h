@@ -54,6 +54,15 @@ class PluginHost;
 
     This class is designed to be used from both the audio thread and the
     message thread, so all controls use atomic operations for lock-free access.
+
+    ## Ownership Model (to prevent shared_ptr cycles):
+
+    **Engine -> Track:** Engine holds std::shared_ptr<Track> (parent owns child)
+    **Track -> Engine:** No back-reference stored (engine passed by reference when needed)
+    **ClipTrack -> Clip:** ClipTrack owns clips via std::unique_ptr (parent owns child)
+    **Clip -> Track:** No back-reference stored
+
+    @note Track should NEVER hold std::shared_ptr<Engine> to avoid cycles.
 */
 class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
@@ -80,7 +89,8 @@ public:
   static std::unique_ptr<Track> create(const juce::String &name, Type type);
 
   Track(const juce::String &name, Type type);
-  ~Track() override;
+  // Bug 25: Ensure destructor is virtual for proper cleanup of derived classes
+  virtual ~Track() override;
 
   //==============================================================================
   // AudioSource interface
