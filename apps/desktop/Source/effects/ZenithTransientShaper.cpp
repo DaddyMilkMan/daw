@@ -34,12 +34,20 @@ ZenithTransientShaper::createParameterLayout() {
 
 void ZenithTransientShaper::prepareToPlay(double sampleRate,
                                           int samplesPerBlock) {
+  juce::ignoreUnused(samplesPerBlock);
   sampleRate_ = static_cast<float>(sampleRate);
 
-  for (int i = 0; i < 2; ++i) {
-    fastEnvelope[i] = 0.0f;
-    slowEnvelope[i] = 0.0f;
-  }
+  // Pre-compute envelope coefficients
+  fastCoeff_ = std::exp(-1.0f / (sampleRate_ * 0.010f));
+  slowCoeff_ = std::exp(-1.0f / (sampleRate_ * 0.100f));
+
+  // Resize envelope vectors
+  const int numChannels = getTotalNumOutputChannels();
+  fastEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+  slowEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+
+  std::fill(fastEnvelope.begin(), fastEnvelope.end(), 0.0f);
+  std::fill(slowEnvelope.begin(), slowEnvelope.end(), 0.0f);
 }
 
 void ZenithTransientShaper::releaseResources() {}
@@ -49,22 +57,23 @@ void ZenithTransientShaper::processBlock(juce::AudioBuffer<float> &buffer,
   float att = attackGain->load();
   float sus = sustainGain->load();
 
-  auto numChannels = buffer.getNumChannels();
-  auto numSamples = buffer.getNumSamples();
+  const int numChannels = buffer.getNumChannels();
+  const int numSamples = buffer.getNumSamples();
 
-  // Coefficients
-  // Fast: 10ms approx
-  // Slow: 100ms approx
-  const float fastCoeff = std::exp(-1.0f / (sampleRate_ * 0.010f));
-  const float slowCoeff = std::exp(-1.0f / (sampleRate_ * 0.100f));
+  // Use pre-computed coefficients
+  const float fastCoeff = fastCoeff_;
+  const float slowCoeff = slowCoeff_;
+
+  // Ensure vectors are large enough
+  if (static_cast<int>(fastEnvelope.size()) < numChannels) {
+    fastEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+    slowEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+  }
 
   for (int ch = 0; ch < numChannels; ++ch) {
-    if (ch >= 2)
-      break; // Support stereo only for logic simplicity, or dup
-
     auto *data = buffer.getWritePointer(ch);
-    float &fastEnv = fastEnvelope[ch];
-    float &slowEnv = slowEnvelope[ch];
+    float &fastEnv = fastEnvelope[static_cast<size_t>(ch)];
+    float &slowEnv = slowEnvelope[static_cast<size_t>(ch)];
 
     for (int i = 0; i < numSamples; ++i) {
       float in = data[i];

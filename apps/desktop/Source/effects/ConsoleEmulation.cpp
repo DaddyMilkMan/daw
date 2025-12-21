@@ -16,27 +16,19 @@ namespace effects {
 
 void ConsoleEmulation::prepare(juce::dsp::ProcessSpec &spec) {
   sampleRate = (float)spec.sampleRate;
+  coefficientsDirty = true;
   reset();
 }
 
 void ConsoleEmulation::reset() {
-  auto spec = juce::dsp::ProcessSpec{(double)sampleRate, 512, 2};
-
-  // Default filters
-  *lowPass.coefficients =
-      *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
-  *highPass.coefficients =
-      *juce::dsp::IIR::Coefficients<float>::makeHighPass(sampleRate, 20.0f);
-
+  updateCoefficients();
   lowPass.reset();
-  highPass.reset();
 }
 
-void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
-  if (mode == Mode::Clean && drive < 0.01f)
+void ConsoleEmulation::updateCoefficients() {
+  if (!coefficientsDirty)
     return;
 
-  // Update filters based on mode for each block (simple approx)
   if (mode == Mode::Vintage) {
     *lowPass.coefficients =
         *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 16000.0f);
@@ -44,6 +36,15 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
     *lowPass.coefficients =
         *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
   }
+  
+  coefficientsDirty = false;
+}
+
+void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
+  if (mode == Mode::Clean && drive < 0.01f)
+    return;
+
+  updateCoefficients();
 
   const int numChannels = buffer.getNumChannels();
   const int numSamples = buffer.getNumSamples();
