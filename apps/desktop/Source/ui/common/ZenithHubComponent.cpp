@@ -206,11 +206,11 @@ void ZenithHubComponent::updateLayout() {
                                                      sidebarRows[1].getWidth(), sidebarRows[1].getHeight());
           templatesArea_ = SkRect::MakeXYWH(sidebarRows[2].getX(), sidebarRows[2].getY(), 
                                             sidebarRows[2].getWidth(), sidebarRows[2].getHeight());
+
+          profileBounds_ = SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+                                            accountArea_.width(), 90.0f);
       }
   }
-
-  profileBounds_ = SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
-                                    accountArea_.width(), 90.0f);
 
   float cardGap = 16.0f;
   float pCardW = (recentArea_.width() - cardGap) / 2.0f;
