@@ -46,7 +46,7 @@ namespace zenith {
  * ProjectState
  * - Keeps clip positions, lengths, and properties synchronized
  */
-namespace zenith {
+
 
 class ClipSynchronizer : public juce::Timer {
 public:

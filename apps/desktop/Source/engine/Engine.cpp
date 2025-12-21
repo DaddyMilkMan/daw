@@ -130,12 +130,14 @@ void Engine::syncWithProjectState() {
 
   if (projectState_ == nullptr) {
     DBG("Engine: No project state, clearing tracks");
+    // Remove all track nodes from routing graph
+    for (const auto &track : tracks_) {
+      routingGraph_.removeNode(track->getTrackId());
+    }
     tracks_.clear();
+    updateTrackSnapshot();
     return;
   }
-
-  // Clear existing tracks
-  tracks_.clear();
 
   // Get tracks from project state
   auto &state = projectState_->getState();
@@ -143,6 +145,12 @@ void Engine::syncWithProjectState() {
 
   if (!tracksNode.isValid()) {
     DBG("Engine: No tracks in project state");
+    // Remove all track nodes from routing graph
+    for (const auto &track : tracks_) {
+      routingGraph_.removeNode(track->getTrackId());
+    }
+    tracks_.clear();
+    updateTrackSnapshot();
     return;
   }
 
@@ -150,7 +158,6 @@ void Engine::syncWithProjectState() {
   const int bufferSize = currentBufferSize.load();
   const double tempo = projectState_->getTempo();
 
-  // Helper: convert beats to samples
   // Helper: convert beats to samples using TempoMap
   auto beatsToSamples = [this, sampleRate](double beats) -> juce::int64 {
     if (tempoMap_) {
@@ -163,31 +170,64 @@ void Engine::syncWithProjectState() {
     return static_cast<juce::int64>(seconds * sampleRate);
   };
 
-  // Create engine tracks from project state
+  std::vector<std::shared_ptr<zenith::Track>> newTracks;
+  std::vector<juce::String> processedTrackIds;
+
+  // Sync tracks (Create or Update)
   for (auto trackNode : tracksNode) {
-    juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
-    juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+    juce::String trackId = trackNode[ProjectState::PROP_ID].toString();
+    processedTrackIds.push_back(trackId);
 
-    // Create track
-    auto track = std::make_unique<zenith::Track>(
-        trackName, trackType == "midi" ? zenith::Track::Type::MIDI
-                                       : zenith::Track::Type::Audio);
+    // Try to find existing track
+    auto it = std::find_if(
+        tracks_.begin(), tracks_.end(),
+        [&trackId](const auto &t) { return t->getTrackId() == trackId; });
 
-    // Set track ID
-    track->setTrackId(trackNode[ProjectState::PROP_ID].toString());
+    std::shared_ptr<zenith::Track> track;
+    bool isNewTrack = false;
 
-    // Set mixer properties
+    if (it != tracks_.end()) {
+      // Reuse existing track (CRITICAL: Preserves Plugins and Audio State)
+      track = *it;
+      // DBG("Engine: Updating existing track " + trackId);
+    } else {
+      // Create new track
+      isNewTrack = true;
+      juce::String trackName = trackNode[ProjectState::PROP_NAME].toString();
+      juce::String trackType = trackNode[ProjectState::PROP_TYPE].toString();
+
+      track = std::make_shared<zenith::Track>(
+          trackName, trackType == "midi" ? zenith::Track::Type::MIDI
+                                         : zenith::Track::Type::Audio);
+      track->setTrackId(trackId);
+      
+      // Register with RoutingGraph
+      RoutingGraph::Node node;
+      node.id = trackId;
+      node.name = trackName;
+      node.type = RoutingGraph::NodeType::Track;
+      routingGraph_.addNode(node);
+      
+      DBG("Engine: Created new track " + trackId);
+    }
+
+    // Update properties (for both new and existing)
+    track->setName(trackNode[ProjectState::PROP_NAME].toString());
     track->setVolume(trackNode[ProjectState::PROP_VOLUME]);
     track->setPan(trackNode[ProjectState::PROP_PAN]);
     track->setMuted(trackNode[ProjectState::PROP_MUTE]);
     track->setSolo(trackNode[ProjectState::PROP_SOLO]);
 
-    // Prepare track for playback
-    if (sampleRate > 0) {
+    // Prepare if needed (new tracks or if engine started)
+    if (isNewTrack && sampleRate > 0) {
       track->prepareToPlay(bufferSize, sampleRate);
     }
 
-    // Load clips
+    // Sync Clips (Diffing clips is harder without IDs, so we rebuild them for now)
+    // NOTE: While this replaces Clip objects, it keeps the Track (and Plugins) alive.
+    // Ideally we would diff clips too, but this solves the "Catastrophic Plugin Reload" issue.
+    track->clearClips();
+
     auto clipsNode = trackNode.getChildWithName(ProjectState::ID_CLIPS);
     if (clipsNode.isValid()) {
       for (auto clipNode : clipsNode) {
@@ -207,11 +247,14 @@ void Engine::syncWithProjectState() {
         if (audioFilePath.isNotEmpty()) {
           juce::File audioFile(audioFilePath);
           if (audioFile.existsAsFile()) {
-            clip->setAudioFile(audioFile);
+            // Use AudioFilePool if available
+            if (audioFilePool_) {
+               clip->setAudioFileFromPool(audioFile, *audioFilePool_);
+            } else {
+               clip->setAudioFile(audioFile);
+            }
             clip->setType(zenith::Track::Clip::Type::Audio);
-            DBG("Engine: Loaded audio file: " + audioFile.getFileName());
-          } else {
-            DBG("Engine: Warning - audio file not found: " + audioFilePath);
+            // DBG("Engine: Loaded audio file: " + audioFile.getFileName());
           }
         }
 
@@ -220,24 +263,29 @@ void Engine::syncWithProjectState() {
           clip->prepareToPlay(bufferSize, sampleRate);
         }
 
-        // Set clip as playing (so it's active during playback)
+        // Set clip as playing (default)
         clip->setPlaying(true);
 
         // Add clip to track
         track->addClip(std::move(clip));
       }
     }
-
-    // Add track to engine
-    tracks_.push_back(std::move(track));
-
-    // Register with RoutingGraph
-    RoutingGraph::Node node;
-    node.id = tracks_.back()->getTrackId();
-    node.name = tracks_.back()->getName();
-    node.type = RoutingGraph::NodeType::Track;
-    routingGraph_.addNode(node);
+    
+    newTracks.push_back(track);
   }
+
+  // Remove deleted tracks from RoutingGraph
+  for (const auto &oldTrack : tracks_) {
+    bool stillExists = std::find(processedTrackIds.begin(), processedTrackIds.end(), 
+                               oldTrack->getTrackId()) != processedTrackIds.end();
+    if (!stillExists) {
+       routingGraph_.removeNode(oldTrack->getTrackId());
+       DBG("Engine: Removed track " + oldTrack->getTrackId());
+    }
+  }
+
+  // Atomically swap the track list
+  tracks_ = std::move(newTracks);
 
   DBG("Engine: Synced " + juce::String(tracks_.size()) + " tracks");
 
@@ -2360,6 +2408,15 @@ void Engine::recalculatePDC() {
 
   DBG("Engine: Recalculating PDC...");
 
+  if (!pdcEnabled_.load()) {
+    // Reset all tracks to 0 compensation
+    for (auto& track : tracks_) {
+      if (track) track->setLatencyCompensation(0);
+    }
+    maxTrackLatency_.store(0);
+    return;
+  }
+
   // Calculate per-track latency
   trackLatencies_.resize(tracks_.size());
   int maxLatency = 0;
@@ -2371,16 +2428,10 @@ void Engine::recalculatePDC() {
       continue;
     }
 
-    // Sum latency from all plugins in the track
-    int trackLatency = 0;
-    for (int p = 0; p < track->getNumPlugins(); ++p) {
-      auto *plugin = track->getPlugin(p);
-      if (plugin != nullptr) {
-        trackLatency += plugin->getLatencySamples();
-      }
-    }
-
+    // Use Track's built-in reporting (sums plugins)
+    int trackLatency = track->getLatencySamples();
     trackLatencies_[i] = trackLatency;
+    
     if (trackLatency > maxLatency) {
       maxLatency = trackLatency;
     }
@@ -2400,25 +2451,15 @@ void Engine::recalculatePDC() {
       juce::String(maxLatency) +
       " samples, master latency: " + juce::String(masterLatency_) + " samples");
 
-  // Allocate/resize PDC delay buffers if PDC is enabled
-  if (pdcEnabled_.load() && maxLatency > 0) {
-    pdcDelayBuffers_.resize(tracks_.size());
-    pdcDelayWritePos_.resize(tracks_.size(), 0);
+  // Set compensation on tracks
+  for (size_t i = 0; i < tracks_.size(); ++i) {
+      auto *track = tracks_[i].get();
+      if (!track) continue;
 
-    for (size_t i = 0; i < tracks_.size(); ++i) {
-      // Calculate delay needed for this track (max - track's own latency)
       int delayNeeded = maxLatency - trackLatencies_[i];
-
-      if (delayNeeded > 0) {
-        // Allocate circular buffer for delay
-        pdcDelayBuffers_[i].setSize(2, delayNeeded + currentBufferSize.load(),
-                                    false, true, false);
-        pdcDelayBuffers_[i].clear();
-        pdcDelayWritePos_[i] = 0;
-      } else {
-        pdcDelayBuffers_[i].setSize(0, 0); // No delay needed
-      }
-    }
+      track->setLatencyCompensation(delayNeeded);
+      
+      // if (delayNeeded > 0) DBG("  Track " + track->getName() + " compensation: " + juce::String(delayNeeded));
   }
 }
 

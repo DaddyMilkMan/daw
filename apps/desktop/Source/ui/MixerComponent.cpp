@@ -1,16 +1,18 @@
-/**
- * @file MixerComponent.cpp
- * @brief Mixer component implementation
- */
+/*
+  ==============================================================================
 
-#include \"../../Source/ui/skia/ZenithDesignSystem.h\"
-#include \"../../include/Engine.h\"
-#include \"../../include/ui/MixerChannelComponent.h\"
-#include \"../../include/ui/MixerComponent.h\"
-#include \"../engine/Track.h\"
+    MixerComponent.cpp
+    Created: 2025-12-05
+    Author:  Zenith DAW
 
+    Mixer UI implementation.
 
-// Check for Skia availability
+  ==============================================================================
+*/
+
+#include "../../include/ui/MixerComponent.h"
+#include "../../Source/engine/Track.h"
+
 #ifdef ZENITH_USE_SKIA
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
@@ -136,6 +138,9 @@ void MixerComponent::rebuildChannels() {
 Track *MixerComponent::findTrackById(const juce::String &trackId) {
   // Safe message-thread iteration of Engine tracks
   // Engine::tracks() returns const ref to vector<shared_ptr<Track>>
+  // Check if we are on message thread
+  if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) return nullptr;
+
   const auto &tracks = engine_.tracks();
   for (const auto &track : tracks) {
     if (track->getTrackId() == trackId) {

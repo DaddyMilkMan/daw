@@ -14,5 +14,6 @@ if(ZENITH_ENABLE_SKIA)
         ZenithPolySynthUI.cpp
         ../../rendering/SkiaRenderer.cpp
         ExportDialog.cpp
+        DebugConsoleComponent.cpp
     )
 endif()

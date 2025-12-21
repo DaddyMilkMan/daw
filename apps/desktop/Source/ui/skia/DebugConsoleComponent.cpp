@@ -39,11 +39,11 @@ DebugConsoleComponent::DebugConsoleComponent(ai::SessionDebuggerAgent &debugger)
   setSize(300, static_cast<int>(kCollapsedHeight));
 
   // Start animation timer
-  startTimerHz(30); // 30 FPS for smooth animations
+  juce::Timer::startTimerHz(30); // 30 FPS for smooth animations
 }
 
 DebugConsoleComponent::~DebugConsoleComponent() {
-  stopTimer();
+  juce::Timer::stopTimer();
   debugger_.removeListener(this);
 }
 

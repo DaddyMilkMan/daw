@@ -11,6 +11,8 @@
 */
 
 #include "SkiaSlider.h"
+#include "ZenithAnimation.h"
+#include "../ZenithTypography.h"
 #include <core/SkCanvas.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
@@ -183,11 +185,13 @@ float SkiaSlider::positionToValue(const juce::Point<int>& pos) const {
 }
 
 void SkiaSlider::onHoverEnter() {
-    animateTo("glow", 1.0f, design::animation::DURATION_FAST);
+    animateWithSpring("glow", 1.0f, 300.0f, 20.0f);
+    animateWithSpring("scale", 1.05f, 400.0f, 25.0f);
 }
 
 void SkiaSlider::onHoverExit() {
-    animateTo("glow", 0.0f, design::animation::DURATION_FAST);
+    animateWithSpring("glow", 0.0f, 300.0f, 25.0f);
+    animateWithSpring("scale", 1.0f, 300.0f, 25.0f);
 }
 
 // ============================================================================
@@ -239,28 +243,39 @@ bool SkiaSlider::keyPressed(const juce::KeyPress& key, juce::Component* origin) 
 
 void SkiaSlider::drawSkia(SkCanvas* canvas) {
     auto bounds = getLocalBounds().toFloat();
+    float scale = getAnimatedValue("scale");
+    if (scale < 0.01f) scale = 1.0f;
+    
+    // Apply slight scale on hover
+    if (std::abs(scale - 1.0f) > 0.001f) {
+        float cx = bounds.getCentreX();
+        float cy = bounds.getCentreY();
+        canvas->translate(cx, cy);
+        canvas->scale(scale, scale);
+        canvas->translate(-cx, -cy);
+    }
     
     // Track
     SkPaint trackPaint;
-    trackPaint.setColor(design::withAlpha(design::colors::BG_LIGHT, 0.3f));
+    trackPaint.setColor(SkColorSetARGB(40, 255, 255, 255));
     trackPaint.setAntiAlias(true);
     
     SkRect trackRect;
     if (orientation_ == Orientation::Vertical) {
-        float w = (style_ == Style::Line) ? 4.0f : bounds.getWidth() * 0.3f;
+        float w = (style_ == Style::Line) ? 2.0f : 6.0f; // Thinner track
         trackRect = SkRect::MakeXYWH(bounds.getCentreX() - w/2.0f, 0.0f, w, bounds.getHeight());
     } else {
-        float h = (style_ == Style::Line) ? 4.0f : bounds.getHeight() * 0.3f;
+        float h = (style_ == Style::Line) ? 2.0f : 6.0f;
         trackRect = SkRect::MakeXYWH(0.0f, bounds.getCentreY() - h/2.0f, bounds.getWidth(), h);
     }
     
-    canvas->drawRoundRect(trackRect, 4.0f, 4.0f, trackPaint);
+    canvas->drawRoundRect(trackRect, 2.0f, 2.0f, trackPaint);
     
     // Fill (for Bar style)
     if (style_ == Style::Bar) {
         SkPaint fillPaint;
         SkColor color = valueColoring_ ? 
-            design::interpolateColor(design::colors::BLUE, design::colors::CYAN, value_) : 
+            design::interpolateColor(design::colors::BLUE, design::colors::NEON_GREEN, value_) : 
             design::colors::CYAN;
             
         fillPaint.setColor(color);
@@ -275,60 +290,85 @@ void SkiaSlider::drawSkia(SkCanvas* canvas) {
         }
         
         // Glow
-        if (isGlowEnabled() || isHovered()) {
+        float glowIntensity = getAnimatedValue("glow");
+        float globalGlow = design::Settings::getGlowIntensity();
+        
+        if ((glowIntensity > 0.01f || isHovered()) && globalGlow > 0.01f) {
             SkPaint glowPaint = fillPaint;
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f));
-            glowPaint.setAlpha(100);
-            canvas->drawRoundRect(fillRect, 4.0f, 4.0f, glowPaint);
+            float intensity = std::max(glowIntensity, isHovered() ? 0.5f : 0.0f);
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 8.0f * globalGlow));
+            glowPaint.setAlpha(static_cast<U8CPU>(150 * intensity));
+            canvas->drawRoundRect(fillRect, 2.0f, 2.0f, glowPaint);
         }
         
-        canvas->drawRoundRect(fillRect, 4.0f, 4.0f, fillPaint);
+        canvas->drawRoundRect(fillRect, 2.0f, 2.0f, fillPaint);
     }
     
     // Handle (for Line and Fader styles)
     if (style_ != Style::Bar) {
         SkRect handleRect;
-        float handleSize = (style_ == Style::Fader) ? 20.0f : 12.0f; // Reduced from 30.0f
-        float handleThickness = (style_ == Style::Fader) ? 10.0f : 12.0f; // Reduced from 15.0f
+        float handleSize = (style_ == Style::Fader) ? 24.0f : 14.0f;
+        float handleThickness = (style_ == Style::Fader) ? 12.0f : 14.0f;
         
         if (orientation_ == Orientation::Vertical) {
             float y = bounds.getHeight() * (1.0f - value_);
+            // Clamp handle within bounds
+            y = juce::jlimit(handleThickness/2.0f, bounds.getHeight() - handleThickness/2.0f, y);
             handleRect = SkRect::MakeXYWH(bounds.getCentreX() - handleSize/2.0f, y - handleThickness/2.0f, handleSize, handleThickness);
         } else {
             float x = bounds.getWidth() * value_;
+            x = juce::jlimit(handleThickness/2.0f, bounds.getWidth() - handleThickness/2.0f, x);
             handleRect = SkRect::MakeXYWH(x - handleThickness/2.0f, bounds.getCentreY() - handleSize/2.0f, handleThickness, handleSize);
         }
         
         SkPaint handlePaint;
-        handlePaint.setColor(design::colors::TEXT_PRIMARY);
         handlePaint.setAntiAlias(true);
         
         // Fader cap detail
         if (style_ == Style::Fader) {
-            handlePaint.setColor(design::colors::BG_LIGHT);
+            // Modern Fader Cap
+            handlePaint.setColor(design::colors::BG_LIGHT); // Dark body
             canvas->drawRoundRect(handleRect, 2.0f, 2.0f, handlePaint);
             
-            // Center line
+            // Border
+            SkPaint borderPaint;
+            borderPaint.setStyle(SkPaint::kStroke_Style);
+            borderPaint.setStrokeWidth(1.0f);
+            borderPaint.setColor(SkColorSetARGB(100, 255, 255, 255));
+            borderPaint.setAntiAlias(true);
+            canvas->drawRoundRect(handleRect, 2.0f, 2.0f, borderPaint);
+            
+            // Center Indicator Line
             SkPaint linePaint;
             linePaint.setColor(design::colors::CYAN);
             linePaint.setStrokeWidth(2.0f);
+            linePaint.setAntiAlias(true);
+            
+            // Glow on indicator
+            float glow = getAnimatedValue("glow");
+            if (glow > 0.01f) {
+                linePaint.setMaskFilter(SkMaskFilter::MakeBlur(kSolid_SkBlurStyle, 3.0f * glow));
+            }
+            
             if (orientation_ == Orientation::Vertical) {
-                canvas->drawLine(handleRect.left(), handleRect.centerY(), handleRect.right(), handleRect.centerY(), linePaint);
+                canvas->drawLine(handleRect.left() + 2, handleRect.centerY(), handleRect.right() - 2, handleRect.centerY(), linePaint);
             } else {
-                canvas->drawLine(handleRect.centerX(), handleRect.top(), handleRect.centerX(), handleRect.bottom(), linePaint);
+                canvas->drawLine(handleRect.centerX(), handleRect.top() + 2, handleRect.centerX(), handleRect.bottom() - 2, linePaint);
             }
         } else {
-            // Simple dot/circle
+            // Simple dot/circle for Line style
+            handlePaint.setColor(SK_ColorWHITE);
             canvas->drawCircle(handleRect.centerX(), handleRect.centerY(), handleSize/2.0f, handlePaint);
         }
         
-        // Handle Glow
-        if (isHovered()) {
+        // Handle Hover Glow
+        float glow = getAnimatedValue("glow");
+        if (glow > 0.01f) {
             SkPaint glowPaint;
             glowPaint.setColor(design::colors::CYAN);
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f));
-            glowPaint.setAlpha(128);
-            canvas->drawRect(handleRect, glowPaint);
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+            glowPaint.setAlpha(static_cast<U8CPU>(100 * glow));
+            canvas->drawRoundRect(handleRect, 2.0f, 2.0f, glowPaint);
         }
     }
 }

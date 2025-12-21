@@ -19,7 +19,6 @@
 #include <skia/include/effects/SkGradientShader.h>
 #endif
 
-#include "../../Source/engine/AudioFilePool.h"
 #include "../browser/BrowserDragSource.h"
 #include "../engine/AudioFilePool.h"
 
@@ -1019,9 +1018,10 @@ void ArrangerComponent::drawSkia(SkCanvas* canvas) {
         }
     }
 }
-}
 #endif
+
 //==============================================================================
+namespace zenith {
 
 bool ArrangerComponent::keyPressed(const juce::KeyPress &key) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

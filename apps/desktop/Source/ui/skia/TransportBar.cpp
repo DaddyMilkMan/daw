@@ -3,264 +3,591 @@
 
     TransportBar.cpp
     Created: 2025-11-28
-    Author:  Leo "Lil Bit" Rossi
+    Updated: 2025-12-08 - Major UI Overhaul with Spring Physics
+    Author:  Leo "Lil Bit" Rossi, UI Overhaul Team
 
-    Implementation of transport controls with Neon Noir styling.
+    Implementation of transport controls with modern microinteractions.
 
   ==============================================================================
 */
 
 #include "TransportBar.h"
+#include "ZenithDesignSystem.h"
 
-#include <core/SkBlurTypes.h> // Explicitly include
+#include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
 #include <core/SkColor.h>
 #include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
 #include <core/SkPaint.h>
 #include <core/SkRRect.h>
+#include <core/SkPath.h>
 #include <effects/SkGradientShader.h>
 
 #ifdef ZENITH_USE_SKIA
-#include <effects/SkGradientShader.h>
 
 namespace zenith {
 
-TransportBar::TransportBar() { setSize(800, 60); }
+// ============================================================================
+// CONSTRUCTION
+// ============================================================================
+
+TransportBar::TransportBar() {
+    setSize(800, 60);
+    initializeButtons();
+    
+    // Start animation timer at 60fps
+    startTimerHz(60);
+}
+
+void TransportBar::initializeButtons() {
+    // Play button - green
+    playButton_.label = "▶";
+    playButton_.activeColor = design::colors::NEON_GREEN;
+    
+    // Stop button - blue
+    stopButton_.label = "■";
+    stopButton_.activeColor = design::colors::BLUE;
+    
+    // Record button - red
+    recordButton_.label = "●";
+    recordButton_.activeColor = design::colors::RED;
+    
+    // View toggle - cyan
+    viewToggleButton_.label = "↹";
+    viewToggleButton_.activeColor = design::colors::CYAN;
+    
+    // Settings - white
+    settingsButton_.label = "⚙";
+    settingsButton_.activeColor = 0xFFFFFFFF;
+}
+
+void TransportBar::initializePaints() {
+    if (paintsInitialized_) return;
+    
+    // Initialize typography
+    ZenithTypography::initialize();
+    transportFont_ = ZenithTypography::transportFont();
+    labelFont_ = ZenithTypography::labelFont();
+    
+    paintsInitialized_ = true;
+}
+
+// ============================================================================
+// STATE MANAGEMENT
+// ============================================================================
+
+void TransportBar::setPlaying(bool playing) {
+    if (isPlaying_ == playing) return;
+    isPlaying_ = playing;
+    playButton_.isActive = playing;
+    
+    // Trigger play pulse animation
+    if (playing) {
+        playPulse_.setTarget(1.0f);
+    } else {
+        playPulse_.setTarget(0.0f);
+    }
+    
+    playButton_.glowIntensity.setTarget(playing ? 1.0f : 0.0f);
+    stopButton_.isActive = !playing;
+    stopButton_.glowIntensity.setTarget(!playing ? 0.3f : 0.0f);
+    
+    repaint();
+}
+
+void TransportBar::setRecording(bool recording) {
+    if (isRecording_ == recording) return;
+    isRecording_ = recording;
+    recordButton_.isActive = recording;
+    
+    // Trigger record pulse
+    if (recording) {
+        recordPulse_.setTarget(1.0f);
+    } else {
+        recordPulse_.setTarget(0.0f);
+    }
+    
+    recordButton_.glowIntensity.setTarget(recording ? 1.0f : 0.0f);
+    repaint();
+}
+
+void TransportBar::setTempo(double bpm) {
+    tempo_ = bpm;
+    repaint();
+}
+
+void TransportBar::setCPU(float percent) {
+    cpuUsage_ = percent;
+    repaint();
+}
+
+void TransportBar::setPosition(double seconds) {
+    position_ = seconds;
+    repaint();
+}
+
+void TransportBar::setProjectName(const juce::String& name) {
+    projectName_ = name;
+    repaint();
+}
+
+void TransportBar::setTimeSignature(int num, int den) {
+    timeSigNum_ = num;
+    timeSigDen_ = den;
+    repaint();
+}
+
+// ============================================================================
+// LAYOUT
+// ============================================================================
 
 void TransportBar::resized() {
-  auto area = getLocalBounds();
-  int buttonWidth = 50;
-  int spacing = 10;
-
-  auto leftSection = area.removeFromLeft(250);
-  playButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(spacing);
-  leftSection.removeFromLeft(spacing);
-  stopButtonBounds_ = leftSection.removeFromLeft(buttonWidth).reduced(spacing);
-  leftSection.removeFromLeft(spacing);
-  recordButtonBounds_ =
-      leftSection.removeFromLeft(buttonWidth).reduced(spacing);
-
-  // View Toggle Button (Right side)
-  auto rightSection = area.removeFromRight(120); // Increased width
-  settingsButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
-  viewToggleButtonBounds_ = rightSection.removeFromRight(60).reduced(10);
-
-  // Update cached resources on Message Thread (Safe)
-  SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
-  updateCachedPaints(skBounds);
-  cachedBounds_ = skBounds;
+    initializePaints();
+    updateButtonBounds();
 }
 
-void TransportBar::drawSkia(SkCanvas *canvas) {
-  auto bounds = getLocalBounds().toFloat();
-  SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
-
-  // 1. Background Gradient (Zero allocation)
-  canvas->drawRect(skBounds, bgPaint_);
-
-  // 2. Bottom Border Glow
-  canvas->drawLine(0.0f, skBounds.height(), skBounds.width(), skBounds.height(),
-                   borderPaint_);
-
-  // 3. Draw buttons (Delegated helper - still allocates, needs future fix but
-  // acceptable for now)
-  drawButton(canvas, playButtonBounds_, "▶", isPlaying_, 0xFF00FF64);  // Green
-  drawButton(canvas, stopButtonBounds_, "■", !isPlaying_, 0xFF6464FF); // Blue
-  drawButton(canvas, recordButtonBounds_, "●", isRecording_, 0xFFFF3232); // Red
-
-  // View Toggle
-  drawButton(canvas, viewToggleButtonBounds_, "↹", false, 0xFFFFFFFF);
-
-  // Settings Button
-  drawButton(canvas, settingsButtonBounds_, "⚙", false, 0xFFFFFFFF);
-
-  // 4. Draw Info Text (Tempo & Project)
-  SkPaint textPaint; // Stack alloc is cheap
-  textPaint.setStyle(SkPaint::kFill_Style);
-  textPaint.setColor(SK_ColorWHITE);
-  textPaint.setAntiAlias(true);
-
-  // Tempo
-  juce::String tempoStr = juce::String(tempo_, 1) + " BPM";
-  canvas->drawString(tempoStr.toStdString().c_str(), 260.0f, 38.0f, font_,
-                     textPaint);
-
-  // Project Name (Subtle)
-  textPaint.setColor(SkColorSetARGB(150, 255, 255, 255));
-  canvas->drawString(projectName_.toStdString().c_str(), 380.0f, 37.0f,
-                     smallFont_, textPaint);
-
-  // 5. Draw CPU meter
-  juce::Rectangle<int> cpuBounds((int)bounds.getWidth() - 250, 20, 100, 20);
-  drawMeter(canvas, cpuBounds, cpuUsage_ / 100.0f, "CPU");
+void TransportBar::updateButtonBounds() {
+    auto area = getLocalBounds().toFloat();
+    const float buttonSize = 44.0f;
+    const float buttonSpacing = 8.0f;
+    const float padding = 12.0f;
+    
+    float x = padding;
+    float y = (area.getHeight() - buttonSize) / 2.0f;
+    
+    // Transport buttons (left side)
+    playButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
+    x += buttonSize + buttonSpacing;
+    
+    stopButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
+    x += buttonSize + buttonSpacing;
+    
+    recordButton_.bounds = juce::Rectangle<float>(x, y, buttonSize, buttonSize);
+    
+    // Right side buttons
+    float rightX = area.getWidth() - padding - buttonSize;
+    settingsButton_.bounds = juce::Rectangle<float>(rightX, y, buttonSize, buttonSize);
+    rightX -= buttonSize + buttonSpacing;
+    
+    viewToggleButton_.bounds = juce::Rectangle<float>(rightX, y, buttonSize, buttonSize);
 }
 
-void TransportBar::updateCachedPaints(const SkRect &bounds) {
-  // 1. Background Paint
-  bgPaint_.setAntiAlias(true);
-  SkPoint pts[2] = {{0, 0}, {0, bounds.height()}};
-  SkColor colors[2] = {SkColorSetARGB(240, 20, 20, 25),
-                       SkColorSetARGB(240, 10, 10, 15)};
-  bgPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
-                                                  SkTileMode::kClamp));
-  bgPaint_.setStyle(SkPaint::kFill_Style);
+// ============================================================================
+// ANIMATION
+// ============================================================================
 
-  // 2. Border Paint
-  borderPaint_.setAntiAlias(true);
-  borderPaint_.setStyle(SkPaint::kStroke_Style);
-  borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(50, 0, 255, 255)); // Cyan glow
-
-  // 3. Fonts
-  font_.setSize(18.0f);
-  font_.setSubpixel(true);
-
-  smallFont_.setSize(14.0f);
-  smallFont_.setSubpixel(true);
+void TransportBar::timerCallback() {
+    const float deltaSeconds = 1.0f / 60.0f;
+    
+    // Update button animations
+    playButton_.updateAnimations(deltaSeconds);
+    stopButton_.updateAnimations(deltaSeconds);
+    recordButton_.updateAnimations(deltaSeconds);
+    viewToggleButton_.updateAnimations(deltaSeconds);
+    settingsButton_.updateAnimations(deltaSeconds);
+    
+    // Update pulse animations
+    playPulse_.update(deltaSeconds);
+    recordPulse_.update(deltaSeconds);
+    
+    // Continuous pulse phase for active states
+    if (isPlaying_ || isRecording_) {
+        pulsePhase_ += deltaSeconds * 2.0f;  // 2 cycles per second
+        if (pulsePhase_ > 6.28318f) pulsePhase_ -= 6.28318f;
+    }
+    
+    // Check if we need to keep repainting
+    bool needsRepaint = playButton_.isAnimating() || 
+                        stopButton_.isAnimating() ||
+                        recordButton_.isAnimating() ||
+                        viewToggleButton_.isAnimating() ||
+                        settingsButton_.isAnimating() ||
+                        playPulse_.isAnimating() ||
+                        recordPulse_.isAnimating() ||
+                        isPlaying_ || isRecording_;  // Always repaint when playing/recording
+    
+    if (needsRepaint) {
+        repaint();
+    }
 }
 
-void TransportBar::drawButton(SkCanvas *canvas,
-                              const juce::Rectangle<int> &bounds,
-                              const char *label, bool isActive,
-                              uint32_t color) {
-  SkPaint paint;
-  paint.setAntiAlias(true);
+// ============================================================================
+// MOUSE HANDLING
+// ============================================================================
 
-  SkRect rect =
-      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
-                       (float)bounds.getWidth(), (float)bounds.getHeight());
-  SkRRect rrect = SkRRect::MakeRectXY(rect, 6.0f, 6.0f);
-
-  // Button Background (Gradient)
-  SkPoint pts[2] = {{rect.left(), rect.top()}, {rect.left(), rect.bottom()}};
-  SkColor bgColors[2];
-
-  if (isActive) {
-    // Active: Glowy Gradient
-    bgColors[0] = SkColorSetA(color, 100);
-    bgColors[1] = SkColorSetA(color, 50);
-  } else {
-    // Inactive: Dark Glass
-    bgColors[0] = SkColorSetARGB(50, 255, 255, 255);
-    bgColors[1] = SkColorSetARGB(20, 255, 255, 255);
-  }
-
-  paint.setShader(SkGradientShader::MakeLinear(pts, bgColors, nullptr, 2,
-                                               SkTileMode::kClamp));
-  paint.setStyle(SkPaint::kFill_Style);
-  canvas->drawRRect(rrect, paint);
-  paint.setShader(nullptr);
-
-  // Active Glow (Outer)
-  float globalGlow = design::Settings::getGlowIntensity();
-  if (isActive && globalGlow > 0.01f) {
-    SkPaint glowPaint;
-    glowPaint.setAntiAlias(true);
-    glowPaint.setStyle(SkPaint::kStroke_Style);
-    glowPaint.setStrokeWidth(2.0f);
-    glowPaint.setColor(SkColorSetA(color, 150));
-    glowPaint.setMaskFilter(
-        SkMaskFilter::MakeBlur((SkBlurStyle)0, 8.0f * globalGlow));
-    canvas->drawRRect(rrect, glowPaint);
-  }
-
-  // Border (Rim Light)
-  paint.setStyle(SkPaint::kStroke_Style);
-  paint.setStrokeWidth(1.0f);
-  SkColor borderColors[2] = {SkColorSetARGB(100, 255, 255, 255),
-                             SkColorSetARGB(50, 0, 0, 0)};
-  paint.setShader(SkGradientShader::MakeLinear(pts, borderColors, nullptr, 2,
-                                               SkTileMode::kClamp));
-  canvas->drawRRect(rrect, paint);
-  paint.setShader(nullptr);
-
-  // Label
-  SkFont font;
-  font.setSize(22.0f); // Larger icons
-  font.setSubpixel(true);
-  paint.setStyle(SkPaint::kFill_Style);
-  paint.setColor(isActive ? SK_ColorWHITE : SkColorSetARGB(200, 255, 255, 255));
-
-  // Text Shadow
-  SkPaint shadowPaint;
-  shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
-  shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur((SkBlurStyle)0, 2.0f));
-
-  float textWidth =
-      font.measureText(label, strlen(label), SkTextEncoding::kUTF8);
-  float textX = (float)bounds.getCentreX() - textWidth / 2.0f;
-  float textY = (float)bounds.getCentreY() + 8.0f;
-
-  canvas->drawSimpleText(label, strlen(label), SkTextEncoding::kUTF8, textX,
-                         textY + 1.0f, font, shadowPaint);
-  canvas->drawSimpleText(label, strlen(label), SkTextEncoding::kUTF8, textX,
-                         textY, font, paint);
+TransportBar::ButtonState* TransportBar::findButtonAt(const juce::Point<int>& pos) {
+    juce::Point<float> posF(static_cast<float>(pos.x), static_cast<float>(pos.y));
+    
+    if (playButton_.bounds.contains(posF)) return &playButton_;
+    if (stopButton_.bounds.contains(posF)) return &stopButton_;
+    if (recordButton_.bounds.contains(posF)) return &recordButton_;
+    if (viewToggleButton_.bounds.contains(posF)) return &viewToggleButton_;
+    if (settingsButton_.bounds.contains(posF)) return &settingsButton_;
+    
+    return nullptr;
 }
 
-void TransportBar::drawMeter(SkCanvas *canvas,
-                             const juce::Rectangle<int> &bounds, float value,
-                             const char *label) {
-  SkPaint paint;
-  paint.setAntiAlias(true);
-
-  SkRect rect =
-      SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(),
-                       (float)bounds.getWidth(), (float)bounds.getHeight());
-  SkRRect rrect = SkRRect::MakeRectXY(rect, 4.0f, 4.0f);
-
-  // Background Track
-  paint.setColor(SkColorSetARGB(50, 0, 0, 0));
-  canvas->drawRRect(rrect, paint);
-
-  // Fill Gradient
-  float fillWidth = (float)bounds.getWidth() * juce::jlimit(0.0f, 1.0f, value);
-  if (fillWidth > 0) {
-    SkRect fillRect =
-        SkRect::MakeXYWH((float)bounds.getX(), (float)bounds.getY(), fillWidth,
-                         (float)bounds.getHeight());
-    SkRRect fillRRect = SkRRect::MakeRectXY(fillRect, 4.0f, 4.0f);
-
-    SkPoint pts[2] = {{rect.left(), rect.centerY()},
-                      {rect.right(), rect.centerY()}};
-    SkColor colors[3] = {0xFF00FF64, 0xFFFFC800,
-                         0xFFFF3232}; // Green -> Amber -> Red
-    SkScalar pos[3] = {0.0f, 0.6f, 1.0f};
-
-    paint.setShader(
-        SkGradientShader::MakeLinear(pts, colors, pos, 3, SkTileMode::kClamp));
-    canvas->drawRRect(fillRRect, paint);
-    paint.setShader(nullptr);
-  }
-
-  // Label
-  SkFont font;
-  font.setSize(12.0f);
-  font.setSubpixel(true);
-  paint.setColor(SK_ColorWHITE);
-  canvas->drawString(label, (float)bounds.getX() + 5.0f,
-                     (float)bounds.getY() - 5.0f, font, paint);
+void TransportBar::updateHoverState(const juce::Point<int>& pos) {
+    ButtonState* buttons[] = {&playButton_, &stopButton_, &recordButton_, 
+                              &viewToggleButton_, &settingsButton_};
+    
+    ButtonState* hoveredButton = findButtonAt(pos);
+    
+    for (auto* btn : buttons) {
+        bool wasHovered = btn->isHovered;
+        btn->isHovered = (btn == hoveredButton);
+        
+        if (btn->isHovered && !wasHovered) {
+            // Just started hovering - animate scale up
+            btn->hoverScale.setTarget(1.08f);  // 8% larger
+            btn->glowIntensity.setTarget(btn->isActive ? 1.2f : 0.4f);
+        } else if (!btn->isHovered && wasHovered) {
+            // Just stopped hovering - animate back
+            btn->hoverScale.setTarget(1.0f);
+            btn->glowIntensity.setTarget(btn->isActive ? 1.0f : 0.0f);
+        }
+    }
 }
 
-void TransportBar::mouseDown(const juce::MouseEvent &e) {
-  if (playButtonBounds_.contains(e.getPosition())) {
-    if (onPlayClicked)
-      onPlayClicked();
-  } else if (stopButtonBounds_.contains(e.getPosition())) {
-    if (onStopClicked)
-      onStopClicked();
-  } else if (recordButtonBounds_.contains(e.getPosition())) {
-    if (onRecordClicked)
-      onRecordClicked();
-  } else if (viewToggleButtonBounds_.contains(e.getPosition())) {
-    if (onViewToggleClicked)
-      onViewToggleClicked();
-  } else if (settingsButtonBounds_.contains(e.getPosition())) {
-    if (onSettingsClicked)
-      onSettingsClicked();
-  }
+void TransportBar::mouseMove(const juce::MouseEvent& e) {
+    updateHoverState(e.getPosition());
+}
+
+void TransportBar::mouseExit(const juce::MouseEvent& e) {
+    juce::ignoreUnused(e);
+    
+    // Reset all hover states
+    ButtonState* buttons[] = {&playButton_, &stopButton_, &recordButton_, 
+                              &viewToggleButton_, &settingsButton_};
+    for (auto* btn : buttons) {
+        if (btn->isHovered) {
+            btn->isHovered = false;
+            btn->hoverScale.setTarget(1.0f);
+            btn->glowIntensity.setTarget(btn->isActive ? 1.0f : 0.0f);
+        }
+    }
+}
+
+void TransportBar::mouseDown(const juce::MouseEvent& e) {
+    ButtonState* btn = findButtonAt(e.getPosition());
+    if (btn) {
+        btn->isPressed = true;
+        btn->pressScale.setTarget(0.92f);  // Press shrinks button slightly
+    }
+}
+
+void TransportBar::mouseUp(const juce::MouseEvent& e) {
+    ButtonState* clickedBtn = findButtonAt(e.getPosition());
+    
+    // Reset all press states
+    ButtonState* buttons[] = {&playButton_, &stopButton_, &recordButton_, 
+                              &viewToggleButton_, &settingsButton_};
+    for (auto* btn : buttons) {
+        if (btn->isPressed) {
+            btn->isPressed = false;
+            btn->pressScale.setTarget(1.0f);
+        }
+    }
+    
+    // Trigger click callbacks
+    if (clickedBtn == &playButton_ && onPlayClicked) {
+        onPlayClicked();
+    } else if (clickedBtn == &stopButton_ && onStopClicked) {
+        onStopClicked();
+    } else if (clickedBtn == &recordButton_ && onRecordClicked) {
+        onRecordClicked();
+    } else if (clickedBtn == &viewToggleButton_ && onViewToggleClicked) {
+        onViewToggleClicked();
+    } else if (clickedBtn == &settingsButton_ && onSettingsClicked) {
+        onSettingsClicked();
+    }
+}
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+
+void TransportBar::drawSkia(SkCanvas* canvas) {
+    initializePaints();
+    
+    drawBackground(canvas);
+    
+    // Draw transport buttons
+    drawTransportButton(canvas, playButton_);
+    drawTransportButton(canvas, stopButton_);
+    drawTransportButton(canvas, recordButton_);
+    drawTransportButton(canvas, viewToggleButton_);
+    drawTransportButton(canvas, settingsButton_);
+    
+    // Draw displays
+    drawTimeDisplay(canvas);
+    drawTempoDisplay(canvas);
+    drawCPUMeter(canvas);
+    drawProjectName(canvas);
+}
+
+void TransportBar::drawBackground(SkCanvas* canvas) {
+    auto bounds = getLocalBounds().toFloat();
+    SkRect skBounds = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+    
+    // Gradient background
+    SkPoint pts[2] = {{0, 0}, {0, skBounds.height()}};
+    SkColor colors[2] = {
+        SkColorSetARGB(245, 18, 18, 22),   // Slightly transparent dark
+        SkColorSetARGB(245, 10, 10, 14)
+    };
+    
+    SkPaint bgPaint;
+    bgPaint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2, SkTileMode::kClamp));
+    bgPaint.setAntiAlias(true);
+    canvas->drawRect(skBounds, bgPaint);
+    
+    // Bottom border glow
+    SkPaint borderPaint;
+    borderPaint.setColor(design::colors::CYAN);
+    borderPaint.setAlpha(40);
+    borderPaint.setAntiAlias(true);
+    canvas->drawLine(0, skBounds.height() - 1, skBounds.width(), skBounds.height() - 1, borderPaint);
+    
+    // Subtle highlight at top
+    SkPaint highlightPaint;
+    highlightPaint.setColor(SkColorSetARGB(15, 255, 255, 255));
+    canvas->drawLine(0, 0, skBounds.width(), 0, highlightPaint);
+}
+
+void TransportBar::drawTransportButton(SkCanvas* canvas, ButtonState& button) {
+    const float scale = button.getScale();
+    const float glowIntensity = button.glowIntensity.getValue();
+    
+    // Calculate scaled bounds
+    float centerX = button.bounds.getCentreX();
+    float centerY = button.bounds.getCentreY();
+    float halfWidth = button.bounds.getWidth() * scale * 0.5f;
+    float halfHeight = button.bounds.getHeight() * scale * 0.5f;
+    
+    SkRect scaledBounds = SkRect::MakeXYWH(
+        centerX - halfWidth, centerY - halfHeight,
+        halfWidth * 2.0f, halfHeight * 2.0f
+    );
+    
+    SkRRect rrect = SkRRect::MakeRectXY(scaledBounds, 10.0f * scale, 10.0f * scale);
+    
+    // Glow layer (when hovered or active)
+    if (glowIntensity > 0.01f) {
+        SkPaint glowPaint;
+        glowPaint.setAntiAlias(true);
+        glowPaint.setColor(button.activeColor);
+        glowPaint.setAlpha(static_cast<U8CPU>(glowIntensity * 100));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 12.0f * glowIntensity));
+        canvas->drawRRect(rrect, glowPaint);
+    }
+    
+    // Button background
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    
+    SkPoint pts[2] = {{scaledBounds.left(), scaledBounds.top()}, 
+                      {scaledBounds.left(), scaledBounds.bottom()}};
+    
+    SkColor bgColors[2];
+    if (button.isActive) {
+        // Active state - vibrant gradient
+        bgColors[0] = SkColorSetA(button.activeColor, 80);
+        bgColors[1] = SkColorSetA(button.activeColor, 40);
+    } else if (button.isHovered) {
+        // Hover state - subtle highlight
+        bgColors[0] = SkColorSetARGB(60, 255, 255, 255);
+        bgColors[1] = SkColorSetARGB(30, 255, 255, 255);
+    } else {
+        // Default state - glass effect
+        bgColors[0] = SkColorSetARGB(35, 255, 255, 255);
+        bgColors[1] = SkColorSetARGB(15, 255, 255, 255);
+    }
+    
+    bgPaint.setShader(SkGradientShader::MakeLinear(pts, bgColors, nullptr, 2, SkTileMode::kClamp));
+    canvas->drawRRect(rrect, bgPaint);
+    
+    // Border (rim light effect)
+    SkPaint borderPaint;
+    borderPaint.setAntiAlias(true);
+    borderPaint.setStyle(SkPaint::kStroke_Style);
+    borderPaint.setStrokeWidth(1.0f);
+    
+    SkColor borderColors[2] = {
+        SkColorSetARGB(80, 255, 255, 255),  // Top: bright
+        SkColorSetARGB(30, 0, 0, 0)          // Bottom: shadow
+    };
+    borderPaint.setShader(SkGradientShader::MakeLinear(pts, borderColors, nullptr, 2, SkTileMode::kClamp));
+    
+    SkRRect borderRRect = rrect;
+    borderRRect.inset(0.5f, 0.5f);
+    canvas->drawRRect(borderRRect, borderPaint);
+    
+    // Icon/Label
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(button.isActive ? SK_ColorWHITE : SkColorSetARGB(220, 255, 255, 255));
+    
+    SkFont iconFont;
+    iconFont.setSize(20.0f * scale);
+    iconFont.setEdging(SkFont::Edging::kAntiAlias);
+    
+    // Measure and center text
+    const char* label = button.label.toRawUTF8();
+    float textWidth = iconFont.measureText(label, strlen(label), SkTextEncoding::kUTF8);
+    float textX = centerX - textWidth / 2.0f;
+    float textY = centerY + 6.0f * scale;
+    
+    // Text shadow for depth
+    SkPaint shadowPaint;
+    shadowPaint.setAntiAlias(true);
+    shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
+    canvas->drawSimpleText(label, strlen(label), SkTextEncoding::kUTF8, 
+                           textX, textY + 1.5f, iconFont, shadowPaint);
+    
+    // Main text
+    canvas->drawSimpleText(label, strlen(label), SkTextEncoding::kUTF8, 
+                           textX, textY, iconFont, textPaint);
+    
+    // Active pulse ring (for play/record)
+    if (button.isActive && (&button == &playButton_ || &button == &recordButton_)) {
+        float pulseIntensity = (&button == &playButton_) ? 
+            playPulse_.getValue() : recordPulse_.getValue();
+        
+        // Continuous gentle pulse when active
+        float pulse = 0.5f + 0.5f * std::sin(pulsePhase_);
+        pulseIntensity *= pulse;
+        
+        if (pulseIntensity > 0.01f) {
+            SkPaint pulsePaint;
+            pulsePaint.setAntiAlias(true);
+            pulsePaint.setStyle(SkPaint::kStroke_Style);
+            pulsePaint.setStrokeWidth(2.0f);
+            pulsePaint.setColor(button.activeColor);
+            pulsePaint.setAlpha(static_cast<U8CPU>(pulseIntensity * 150));
+            
+            SkRRect pulseRRect = rrect;
+            pulseRRect.outset(3.0f * pulseIntensity, 3.0f * pulseIntensity);
+            canvas->drawRRect(pulseRRect, pulsePaint);
+        }
+    }
+}
+
+void TransportBar::drawTimeDisplay(SkCanvas* canvas) {
+    // Position after transport buttons
+    float x = 180.0f;
+    float y = getHeight() / 2.0f;
+    
+    // Format time as MM:SS.mmm
+    int minutes = static_cast<int>(position_) / 60;
+    int seconds = static_cast<int>(position_) % 60;
+    int millis = static_cast<int>((position_ - std::floor(position_)) * 1000);
+    
+    char timeStr[32];
+    snprintf(timeStr, sizeof(timeStr), "%02d:%02d.%03d", minutes, seconds, millis);
+    
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
+    
+    canvas->drawString(timeStr, x, y + 6.0f, transportFont_, textPaint);
+    
+    // Label above
+    SkPaint labelPaint;
+    labelPaint.setAntiAlias(true);
+    labelPaint.setColor(design::colors::TEXT_SECONDARY);
+    labelPaint.setAlpha(150);
+    
+    canvas->drawString("TIME", x, y - 8.0f, labelFont_, labelPaint);
+}
+
+void TransportBar::drawTempoDisplay(SkCanvas* canvas) {
+    float x = 320.0f;
+    float y = getHeight() / 2.0f;
+    
+    char tempoStr[32];
+    snprintf(tempoStr, sizeof(tempoStr), "%.1f", tempo_);
+    
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(design::colors::TEXT_PRIMARY);
+    
+    canvas->drawString(tempoStr, x, y + 6.0f, transportFont_, textPaint);
+    
+    // BPM label
+    SkPaint labelPaint;
+    labelPaint.setAntiAlias(true);
+    labelPaint.setColor(design::colors::TEXT_SECONDARY);
+    labelPaint.setAlpha(150);
+    
+    canvas->drawString("BPM", x, y - 8.0f, labelFont_, labelPaint);
+    
+    // Time signature
+    char sigStr[16];
+    snprintf(sigStr, sizeof(sigStr), "%d/%d", timeSigNum_, timeSigDen_);
+    canvas->drawString(sigStr, x + 70.0f, y + 6.0f, labelFont_, textPaint);
+}
+
+void TransportBar::drawCPUMeter(SkCanvas* canvas) {
+    float width = getWidth();
+    float meterWidth = 80.0f;
+    float meterHeight = 16.0f;
+    float x = width - 280.0f;
+    float y = (getHeight() - meterHeight) / 2.0f;
+    
+    SkRect meterBounds = SkRect::MakeXYWH(x, y, meterWidth, meterHeight);
+    SkRRect meterRRect = SkRRect::MakeRectXY(meterBounds, 4.0f, 4.0f);
+    
+    // Background
+    SkPaint bgPaint;
+    bgPaint.setAntiAlias(true);
+    bgPaint.setColor(SkColorSetARGB(60, 0, 0, 0));
+    canvas->drawRRect(meterRRect, bgPaint);
+    
+    // Fill
+    float fillWidth = meterWidth * juce::jlimit(0.0f, 1.0f, cpuUsage_ / 100.0f);
+    if (fillWidth > 0) {
+        SkRect fillBounds = SkRect::MakeXYWH(x, y, fillWidth, meterHeight);
+        SkRRect fillRRect = SkRRect::MakeRectXY(fillBounds, 4.0f, 4.0f);
+        
+        // Color based on load
+        SkColor fillColor;
+        if (cpuUsage_ > 80.0f) {
+            fillColor = design::colors::RED;
+        } else if (cpuUsage_ > 60.0f) {
+            fillColor = design::colors::AMBER;
+        } else {
+            fillColor = design::colors::NEON_GREEN;
+        }
+        
+        SkPaint fillPaint;
+        fillPaint.setAntiAlias(true);
+        fillPaint.setColor(fillColor);
+        canvas->drawRRect(fillRRect, fillPaint);
+    }
+    
+    // Label
+    SkPaint labelPaint;
+    labelPaint.setAntiAlias(true);
+    labelPaint.setColor(design::colors::TEXT_SECONDARY);
+    labelPaint.setAlpha(150);
+    canvas->drawString("CPU", x, y - 4.0f, labelFont_, labelPaint);
+}
+
+void TransportBar::drawProjectName(SkCanvas* canvas) {
+    float x = 450.0f;
+    float y = getHeight() / 2.0f + 4.0f;
+    
+    SkPaint textPaint;
+    textPaint.setAntiAlias(true);
+    textPaint.setColor(design::colors::TEXT_SECONDARY);
+    textPaint.setAlpha(180);
+    
+    canvas->drawString(projectName_.toStdString().c_str(), x, y, labelFont_, textPaint);
 }
 
 } // namespace zenith
 
 #endif // ZENITH_USE_SKIA
+

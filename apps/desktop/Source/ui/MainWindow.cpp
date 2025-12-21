@@ -299,8 +299,18 @@ void MainComponent::mouseDown(const juce::MouseEvent &e) {
 
   if (e.mods.isPopupMenu()) {
     juce::PopupMenu m;
-    m.addItem("Show Debug Logs", [] {
-      // Debug logs action
+    m.addItem("Show Debug Logs", [] { DBG("Debug logs requested"); });
+    m.showMenuAsync(juce::PopupMenu::Options());
+  }
+}
+
+void MainComponent::mouseDrag(const juce::MouseEvent &e) {
+  if (activeDragComponent && zenith::design::LayoutManager::getInstance().isEditModeEnabled()) {
+    auto offset = e.getOffsetFromDragStart();
+    auto newPos = dragStartBounds.getTopLeft() + offset;
+    activeDragComponent->setTopLeftPosition(newPos);
+  }
+}
 
 void MainComponent::mouseUp(const juce::MouseEvent &e) {
   activeDragComponent = nullptr;

@@ -26,10 +26,10 @@
 namespace zenith {
 class Track;
 
-class MixerChannelComponent : public zenith::SkiaComponent,
+class MixerChannelComponent : public SkiaComponent,
                               public juce::ChangeListener {
 public:
-  explicit MixerChannelComponent(zenith::Track *track);
+  explicit MixerChannelComponent(Track *track);
   ~MixerChannelComponent() override;
 
   void drawSkia(SkCanvas *canvas) override;
@@ -38,7 +38,7 @@ public:
   // ChangeListener
   void changeListenerCallback(juce::ChangeBroadcaster *source) override;
 
-  zenith::Track *getTrack() const { return track_; }
+  Track *getTrack() const { return track_; }
   void updateFromTrack();
 
 private:
@@ -49,16 +49,16 @@ private:
   void onMuteClicked();
   void onSoloClicked();
 
-  zenith::Track *track_;
+  Track *track_;
 
   juce::Label nameLabel_;
 
-  zenith::SkiaSlider faderSlider_;
-  zenith::SkiaKnob panKnob_;
-  zenith::SkiaButton muteButton_;
-  zenith::SkiaButton soloButton_;
+  SkiaSlider faderSlider_;
+  SkiaKnob panKnob_;
+  SkiaButton muteButton_;
+  SkiaButton soloButton_;
 
-  class LevelMeter : public zenith::SkiaComponent {
+  class LevelMeter : public SkiaComponent {
   public:
     LevelMeter();
     ~LevelMeter() override;

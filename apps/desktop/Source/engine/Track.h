@@ -162,6 +162,12 @@ public:
   int getNumPlugins() const;
   juce::AudioPluginInstance *getPlugin(int index) const;
 
+  /**
+   * @brief Get total latency of the track in samples (PDC)
+   * Sums the latency of all plugins in the chain.
+   */
+  int getLatencySamples() const;
+
   //==============================================================================
   // MIDI Scheduling
   /**
@@ -228,7 +234,16 @@ public:
                          std::shared_ptr<AutomationLane> lane);
   void clearAutomationLanes();
 
+  // PDC Support
+  void setLatencyCompensation(int samples);
+  int getLatencyCompensation() const { return latencyCompensationSamples.load(); }
+
 private:
+  // PDC State
+  std::atomic<int> latencyCompensationSamples{0};
+  juce::AudioBuffer<float> compensationBuffer;
+  int compensationWritePos = 0;
+
   //==============================================================================
   // Track properties
   juce::String trackName;
