@@ -10,7 +10,6 @@
 #include <algorithm> // For std::remove_if
 #include <array>     // For RT-safe stack allocation in audio callback
 
-
 // C3: Include donor headers (NOT in Engine.h to avoid exposing implementation)
 #include "../ai/SessionDebuggerAgent.h"
 #include "../engine/AudioFilePool.h"
@@ -1338,18 +1337,15 @@ void Engine::enableMidiInput() {
     DBG("Engine: No MIDI inputs could be opened");
   }
 }
-
 void Engine::disableMidiInput() {
-  if (!midiInputs_.empty()) {
-    DBG("Engine: Stopping " + juce::String(midiInputs_.size()) +
-        " MIDI inputs...");
-    for (auto &input : midiInputs_) {
-      if (input)
-        input->stop();
-    }
-    midiInputs_.clear();
-    DBG("Engine: MIDI inputs stopped");
+  DBG("Engine: Disabling MIDI inputs...");
+
+  for (auto &input : midiInputs_) {
+    if (input)
+      input->stop();
   }
+  midiInputs_.clear();
+  DBG("Engine: MIDI inputs stopped");
 }
 
 void Engine::handleIncomingMidiMessage(juce::MidiInput *source,

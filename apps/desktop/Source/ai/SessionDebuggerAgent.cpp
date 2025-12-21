@@ -331,7 +331,7 @@ void SessionDebuggerAgent::setTrackDebuggingLocked(int trackIndex,
 }
 
 bool SessionDebuggerAgent::isTrackDebuggingLocked(int trackIndex) const {
-  juce::ScopedLock lock(const_cast<juce::CriticalSection &>(lockedTracksLock_));
+  juce::ScopedLock lock(lockedTracksLock_);
   return lockedTracks_.find(trackIndex) != lockedTracks_.end();
 }
 
