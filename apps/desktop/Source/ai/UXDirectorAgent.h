@@ -28,11 +28,11 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "ProjectState.h"
+#include "../../include/Engine.h"
+#include "../../include/ProjectState.h"
 #include "../engine/Track.h"
-#include "SkiaComponent.h"
-#include "ZenithDesignSystem.h"
+#include "../ui/skia/SkiaComponent.h"
+#include "../ui/skia/ZenithDesignSystem.h"
 #include <atomic>
 #include <functional>
 #include <juce_core/juce_core.h>

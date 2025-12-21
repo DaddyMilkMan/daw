@@ -3,8 +3,8 @@
  * @brief RT-safe tempo map implementation
  */
 
-#include "TempoMap.h"
-#include "ProjectState.h"
+#include "../../include/TempoMap.h"
+#include "../../include/ProjectState.h"
 
 namespace zenith {
 

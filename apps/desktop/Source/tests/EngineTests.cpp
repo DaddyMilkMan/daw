@@ -9,8 +9,8 @@
 */
 
 #include <juce_core/juce_core.h>
-#include "Engine.h"
-#include "EngineEvent.h"
+#include "../../include/Engine.h"
+#include "../../include/EngineEvent.h"
 
 // Simple test runner
 struct EngineTests

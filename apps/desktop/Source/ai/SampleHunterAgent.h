@@ -29,8 +29,8 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "ProjectState.h"
+#include "../../include/Engine.h"
+#include "../../include/ProjectState.h"
 #include "../network/AudioAnalysisService.h"
 #include "../network/GrokAPIClient.h"
 #include <atomic>

@@ -23,7 +23,7 @@ This is an **early prototype** in active development. Core features are still be
 - Project save/load (unstable)
 - Plugin automation
 - Export/rendering pipeline
-- Most "AI features" (mocked/unstable)
+- Most "AI features" (experimental only)
 
 ---
 

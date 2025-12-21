@@ -1,10 +1,10 @@
-/**
+﻿/**
  * @file Engine.cpp
  * @brief Audio engine implementation
  */
 
 #include "Engine.h"
-#include "TrackAutomationSynchronizer.h"
+#include "../../include/TrackAutomationSynchronizer.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
 #include <algorithm> // For std::remove_if
@@ -22,7 +22,7 @@
 #include "../engine/TrackFreeze.h"
 #include "../instruments/InstrumentRegistry.h"
 #include "../instruments/RegisterBuiltInInstruments.h"
-#include "PluginEditorWindow.h"
+#include "../ui/PluginEditorWindow.h"
 
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"

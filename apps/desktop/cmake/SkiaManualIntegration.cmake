@@ -86,12 +86,27 @@ foreach(DLL ${SKIA_DLLS})
     )
 endforeach()
 
-# Skia UI source files are now included from apps/desktop/Source/ui/CMakeLists.txt
-# via the domain-based organization (framework/, widgets/, etc.)
-message(STATUS "  Skia UI Components: Managed by ui/CMakeLists.txt")
+# Add Skia UI source files
+message(STATUS "  Enabling Skia UI Components...")
+target_sources(ZenithDAW PRIVATE
+    apps/desktop/Source/ui/skia/SkiaComponent.cpp
+    apps/desktop/Source/ui/skia/SkiaButton.cpp
+    apps/desktop/Source/ui/skia/SkiaKnob.cpp
+    apps/desktop/Source/ui/skia/SkiaSlider.cpp
+    apps/desktop/Source/ui/skia/SkiaMainWindowIntegration.cpp
+    apps/desktop/Source/ui/skia/TransportBar.cpp
+    apps/desktop/Source/ui/skia/BottomBar.cpp
+    apps/desktop/Source/ui/skia/BrowserPanel.cpp
+    apps/desktop/Source/ui/skia/RightSidePanel.cpp
+    apps/desktop/Source/ui/skia/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ui/skia/SkiaSpectrumComponent.cpp
+    apps/desktop/Source/ui/skia/ZenithDesignSystem.cpp
+    apps/desktop/Source/ui/skia/views/PianoKeyboardViewSkia.cpp
+    apps/desktop/Source/ui/skia/ZenithUIComponents.h
+)
 
 target_include_directories(ZenithDAW PRIVATE
-    apps/desktop/Source/ui/framework
+    apps/desktop/Source/ui/skia
 )
 
 target_compile_definitions(ZenithDAW PRIVATE ZENITH_USE_SKIA=1)

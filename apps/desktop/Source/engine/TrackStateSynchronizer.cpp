@@ -3,7 +3,7 @@
  * @brief Implementation of TrackStateSynchronizer
  */
 
-#include "TrackStateSynchronizer.h"
+#include "../include/TrackStateSynchronizer.h"
 #include "engine/Track.h"
 
 namespace zenith {

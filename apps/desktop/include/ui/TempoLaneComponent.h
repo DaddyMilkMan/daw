@@ -1,0 +1,161 @@
+/**
+ * @file TempoLaneComponent.h
+ * @brief UI component for displaying and editing tempo map
+ *
+ * Phase 15: Tempo Map & Global Markers MVP
+ *
+ * Displays tempo points as nodes along a timeline.
+ * Allows adding, moving, and deleting tempo points via mouse interaction.
+ */
+
+#pragma once
+
+#include <juce_core/juce_core.h>
+#include <juce_gui_basics/juce_gui_basics.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_events/juce_events.h>
+#include <juce_audio_basics/juce_audio_basics.h>
+#include <juce_audio_devices/juce_audio_devices.h>
+#include <juce_audio_formats/juce_audio_formats.h>
+#include <juce_audio_processors/juce_audio_processors.h>
+#include <juce_data_structures/juce_data_structures.h>
+#include "ProjectState.h"
+
+//==============================================================================
+namespace zenith {
+
+/**
+ * @class TempoLaneComponent
+ * @brief UI lane for tempo map editing
+ *
+ * User interactions:
+ * - Double-click to add tempo point
+ * - Drag to move tempo point (horizontal = time, vertical = BPM)
+ * - Select point + Delete/Backspace to remove
+ */
+class TempoLaneComponent : public juce::Component,
+                           private juce::ValueTree::Listener
+{
+public:
+    //==========================================================================
+    /**
+     * @brief Constructor
+     * @param projectState Reference to project state
+     */
+    explicit TempoLaneComponent(ProjectState& projectState);
+
+    /**
+     * @brief Destructor
+     */
+    ~TempoLaneComponent() override;
+
+    //==========================================================================
+    // Component interface
+    //==========================================================================
+
+    void paint(juce::Graphics& g) override;
+    void resized() override;
+
+    void mouseDown(const juce::MouseEvent& event) override;
+    void mouseDrag(const juce::MouseEvent& event) override;
+    void mouseUp(const juce::MouseEvent& event) override;
+    void mouseDoubleClick(const juce::MouseEvent& event) override;
+
+    bool keyPressed(const juce::KeyPress& key) override;
+
+private:
+    //==========================================================================
+    // ValueTree::Listener
+    //==========================================================================
+
+    void valueTreePropertyChanged(juce::ValueTree& tree, const juce::Identifier& property) override;
+    void valueTreeChildAdded(juce::ValueTree& parent, juce::ValueTree& child) override;
+    void valueTreeChildRemoved(juce::ValueTree& parent, juce::ValueTree& child, int index) [[maybe_unused]] override;
+    void valueTreeChildOrderChanged(juce::ValueTree& parent, int oldIndex, int newIndex) [[maybe_unused]] override;
+    void valueTreeParentChanged(juce::ValueTree& tree) override;
+
+    //==========================================================================
+    // Helper Methods
+    //==========================================================================
+
+    /**
+     * @brief Convert X coordinate to beats
+     */
+    double xToBeats(float x) const;
+
+    /**
+     * @brief Convert beats to X coordinate
+     */
+    float beatsToX(double beats) const;
+
+    /**
+     * @brief Convert Y coordinate to BPM
+     */
+    double yToBpm(float y) const;
+
+    /**
+     * @brief Convert BPM to Y coordinate
+     */
+    float bpmToY(double bpm) const;
+
+    /**
+     * @brief Find tempo point at position (returns ID or empty string)
+     */
+    juce::String findPointAt(float x, float y) const;
+
+    /**
+     * @brief Draw a tempo point
+     */
+    void drawTempoPoint(juce::Graphics& g, double timeBeats, double bpm, bool selected) const;
+
+    /**
+     * @brief Draw grid lines for BPM
+     */
+    void drawGrid(juce::Graphics& g) const;
+
+    /**
+     * @brief Draw tempo curve connecting points
+     */
+    void drawTempoCurve(juce::Graphics& g) const;
+
+    /**
+     * @brief Draw all tempo points
+     */
+    void drawTempoPoints(juce::Graphics& g) const;
+
+    /**
+     * @brief Track mouse movement for hover effects
+     */
+    void mouseMove(const juce::MouseEvent& event) override;
+
+    /**
+     * @brief Clear hover state when mouse exits
+     */
+    void mouseExit(const juce::MouseEvent& event) override;
+
+
+    //==========================================================================
+    // Member Variables
+    //==========================================================================
+
+    ProjectState& projectState;
+
+    // View settings (MVP: fixed range, no zoom/scroll)
+    double viewStartBeats = 0.0;
+    double viewEndBeats = 64.0;  // 16 bars at 4/4
+    double minBpm = 40.0;
+    double maxBpm = 240.0;
+
+    // Interaction state
+    juce::String selectedPointId;
+    juce::String hoveredPointId;
+    bool isDraggingPoint = false;
+    float dragStartX = 0.0f;
+    float dragStartY = 0.0f;
+
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TempoLaneComponent)
+};
+
+} // namespace zenith
+

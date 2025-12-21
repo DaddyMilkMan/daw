@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include "PresetBrowserComponent.h"
+#include "../ui/PresetBrowserComponent.h"
 #include "InstrumentPreset.h"
 #include "ZenithPolySynth.h"
 #include <juce_audio_basics/juce_audio_basics.h>

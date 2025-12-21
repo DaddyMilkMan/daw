@@ -31,12 +31,6 @@ option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
-# Auto-enable sanitizers in Debug builds
-if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-    set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-    set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-endif()
-
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
 # set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -77,7 +71,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/tests/ConcurrencyTests.cpp
     apps/desktop/Source/tests/AITests.cpp
     apps/desktop/Source/tests/UITests.cpp
-    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    apps/desktop/Source/ui/skia/ZenithLayout.cpp
     
     # Engine sources required for linking
     apps/desktop/Source/engine/Engine.cpp
@@ -101,7 +95,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
-    apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    apps/desktop/Source/ui/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -137,25 +131,11 @@ add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
 
 
-# Include directories (updated for new domain-based structure)
+# Include directories
 target_include_directories(ZenithDAW PUBLIC
+    apps/desktop/include
     ${CMAKE_BINARY_DIR}/ZenithDAW_artefacts/JuceLibraryCode
     apps/desktop/Source
-    apps/desktop/Source/engine
-    apps/desktop/Source/ui
-    apps/desktop/Source/ui/framework
-    apps/desktop/Source/ui/design-system
-    apps/desktop/Source/ui/arranger
-    apps/desktop/Source/ui/mixer
-    apps/desktop/Source/ui/piano-roll
-    apps/desktop/Source/ui/browser
-    apps/desktop/Source/ui/transport
-    apps/desktop/Source/ui/common
-    apps/desktop/Source/ui/widgets
-    apps/desktop/Source/ui/session
-    apps/desktop/Source/ui/instruments
-    apps/desktop/Source/ui/dialogs
-    apps/desktop/Source/ui/sample-editor
     ${CMAKE_PREFIX_PATH}/include
     ${CMAKE_BINARY_DIR}/JuceLibraryCode
     "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
@@ -217,7 +197,7 @@ target_compile_definitions(ZenithDAW PRIVATE
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
-    JUCE_DISPLAY_SPLASH_SCREEN=0
+
     JUCE_REPORT_APP_USAGE=0
 )
 
@@ -385,3 +365,4 @@ add_custom_command(TARGET ZenithDAW POST_BUILD
     $<TARGET_FILE_DIR:ZenithDAW>/Resources/fonts
     COMMENT "Copying Fonts to Output Directory"
 )
+

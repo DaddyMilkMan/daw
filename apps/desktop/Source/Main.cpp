@@ -5,7 +5,7 @@
  * This file initializes the JUCE application and creates the main window.
  */
 
-#include "MainWindow.h"
+#include "../include/MainWindow.h"
 #include "utils/SampleGenerator.h"
 #include <JuceHeader.h>
 #include <juce_core/juce_core.h>

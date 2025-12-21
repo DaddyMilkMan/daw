@@ -16,8 +16,8 @@
 */
 
 #include "Track.h"
-#include "ProjectState.h"
-#include "TempoMap.h"
+#include "../../include/ProjectState.h"
+#include "../../include/TempoMap.h"
 #include "../instruments/Instrument.h"
 #include "Clip.h"
 #include "PluginHost.h"

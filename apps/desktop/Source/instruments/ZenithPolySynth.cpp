@@ -14,7 +14,7 @@
 */
 
 #include "ZenithPolySynth.h"
-#include "ZenithPolySynthUI.h"
+#include "../ui/skia/ZenithPolySynthUI.h"
 #include "ContentPaths.h"
 #include "ZenithPolySynthVoice.h"
 #include <juce_core/juce_core.h>
