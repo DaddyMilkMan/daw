@@ -59,9 +59,6 @@ class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
   friend class AudioRenderer; // Allow AudioRenderer to access private members
 
-  void setSoloed(bool shouldBeSoloed);
-  bool isSoloed() const;
-
 public:
 public:
   //==============================================================================

@@ -49,8 +49,8 @@ public:
       expect(track->isMuted());
 
       // Test solo functionality
-      track->setSoloed(true);
-      expect(track->isSoloed());
+      track->setSolo(true);
+      expect(track->isSolo());
     }
 
     beginTest("Track volume processing");
