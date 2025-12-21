@@ -10,25 +10,51 @@
 
 #include "PresetGeneticistView.h"
 #include "../design-system/ZenithTheme.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkPath.h>
+#include <effects/SkGradientShader.h>
 
 namespace zenith {
 namespace ui {
 namespace views {
+
+// Local helper to convert juce::Path to SkPath
+static SkPath jucePathToSkPath(const juce::Path& path) {
+    SkPath skPath;
+    juce::Path::Iterator it(path);
+    while (it.next()) {
+        switch (it.elementType) {
+            case juce::Path::Iterator::startNewSubPath:
+                skPath.moveTo(it.x1, it.y1);
+                break;
+            case juce::Path::Iterator::lineTo:
+                skPath.lineTo(it.x1, it.y1);
+                break;
+            case juce::Path::Iterator::quadraticTo:
+                skPath.quadTo(it.x1, it.y1, it.x2, it.y2);
+                break;
+            case juce::Path::Iterator::cubicTo:
+                skPath.cubicTo(it.x1, it.y1, it.x2, it.y2, it.x3, it.y3);
+                break;
+            case juce::Path::Iterator::closePath:
+                skPath.close();
+                break;
+        }
+    }
+    return skPath;
+}
+
 
 PresetGeneticistView::PresetGeneticistView(
     zenith::ai::PresetGeneticistAgent &agent)
     : agent_(agent) {
   // Setup controls
   addAndMakeVisible(startButton_);
-  startButton_.setToggleState(false,
-                              juce::NotificationType::dontSendNotification);
-  startButton_.setClickingTogglesState(true);
-  startButton_.setColour(juce::TextButton::buttonColourId,
-                         ZenithTheme::Colors::bg_02);
-  startButton_.setColour(juce::TextButton::buttonOnColourId,
-                         ZenithTheme::Colors::accent_primary);
-  startButton_.setColour(juce::TextButton::textColourOnId,
-                         ZenithTheme::Colors::bg_01);
+  startButton_.setToggleable(true);
+  startButton_.setToggleState(false);
+  startButton_.setButtonStyle(SkiaButton::Style::Primary);
 
   startButton_.onClick = [this] {
     if (startButton_.getToggleState()) {
@@ -45,8 +71,7 @@ PresetGeneticistView::PresetGeneticistView(
   };
 
   addAndMakeVisible(loadTargetButton_);
-  loadTargetButton_.setColour(juce::TextButton::buttonColourId,
-                              ZenithTheme::Colors::bg_02);
+  loadTargetButton_.setButtonStyle(SkiaButton::Style::Secondary);
   loadTargetButton_.onClick = [this] {
     fileChooser_ = std::make_unique<juce::FileChooser>(
         "Select Target Sample",
@@ -70,68 +95,95 @@ PresetGeneticistView::PresetGeneticistView(
 
 PresetGeneticistView::~PresetGeneticistView() { stopTimer(); }
 
-void PresetGeneticistView::paint(juce::Graphics &g) {
-  auto bounds = getLocalBounds().toFloat();
+void PresetGeneticistView::drawSkia(SkCanvas *canvas) {
+  using namespace zenith::design;
+  auto area = getLocalBounds().toFloat();
 
   // Background
-  g.fillAll(ZenithTheme::Colors::bg_01);
+  canvas->drawColor(colors::BG_DARKEST);
 
-  // Draw Grid / Context for Sci-fi look
-  g.setColour(ZenithTheme::Colors::border_subtle);
-  g.drawRect(bounds, 1.0f);
+  // Draw Grid Boundary
+  SkPaint borderPaint;
+  borderPaint.setColor(colors::BORDER_SUBTLE);
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setStrokeWidth(1.0f);
+  canvas->drawRect(SkRect::MakeXYWH(0, 0, area.getWidth(), area.getHeight()), borderPaint);
 
   // Draw Display Area
-  auto displayArea = bounds.reduced(10.0f, 40.0f); // Leave room for buttons
-  displayArea.removeFromBottom(10);                // Spacing
+  SkRect displayArea = SkRect::MakeXYWH(10, 10, area.getWidth() - 20, area.getHeight() - 60);
 
-  g.setColour(ZenithTheme::Colors::bg_02);
-  g.fillRect(displayArea);
-  g.setColour(ZenithTheme::Colors::border_default);
-  g.drawRect(displayArea, 1.0f);
+  SkPaint displayBgPaint;
+  displayBgPaint.setColor(colors::BG_DARKER);
+  canvas->drawRect(displayArea, displayBgPaint);
+
+  SkPaint displayBorderPaint;
+  displayBorderPaint.setColor(colors::BORDER_DEFAULT);
+  displayBorderPaint.setStyle(SkPaint::kStroke_Style);
+  displayBorderPaint.setStrokeWidth(1.0f);
+  canvas->drawRect(displayArea, displayBorderPaint);
 
   // Visualize Target (Ghost)
   if (!targetSpectrumPath_.isEmpty()) {
-    g.setColour(ZenithTheme::Colors::text_secondary.withAlpha(0.3f));
-    g.strokePath(targetSpectrumPath_, juce::PathStrokeType(2.0f));
+    SkPath skTarget = jucePathToSkPath(targetSpectrumPath_);
+    
+    SkPaint targetPaint;
+    targetPaint.setColor(withAlpha(colors::TEXT_SECONDARY, 0.3f));
+    targetPaint.setStyle(SkPaint::kStroke_Style);
+    targetPaint.setStrokeWidth(2.0f);
+    targetPaint.setAntiAlias(true);
+    canvas->drawPath(skTarget, targetPaint);
 
     // Fill gradient
-    juce::ColourGradient grad(
-        ZenithTheme::Colors::text_secondary.withAlpha(0.1f),
-        displayArea.getBottomLeft(),
-        ZenithTheme::Colors::text_secondary.withAlpha(0.0f),
-        displayArea.getTopLeft(), false);
-    g.setGradientFill(grad);
-    g.fillPath(targetSpectrumPath_);
+    SkPoint gradPts[2] = {{0, displayArea.fBottom}, {0, displayArea.fTop}};
+    SkColor gradColors[2] = {withAlpha(colors::TEXT_SECONDARY, 0.1f), 0};
+    SkPaint targetFillPaint;
+    targetFillPaint.setShader(SkGradientShader::MakeLinear(gradPts, gradColors, nullptr, 2, SkTileMode::kClamp));
+    canvas->drawPath(skTarget, targetFillPaint);
   }
 
   // Visualize Current (Glowing)
   if (!currentSpectrumPath_.isEmpty()) {
-    // Outer Glow (simulated)
-    g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.1f));
-    g.strokePath(currentSpectrumPath_, juce::PathStrokeType(8.0f));
+    SkPath skCurrent = jucePathToSkPath(currentSpectrumPath_);
 
-    g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.3f));
-    g.strokePath(currentSpectrumPath_, juce::PathStrokeType(4.0f));
+    // Outer Glow
+    SkPaint glowPaint;
+    glowPaint.setColor(withAlpha(zenith::design::colors::CYAN, 0.1f));
+    glowPaint.setStyle(SkPaint::kStroke_Style);
+    glowPaint.setStrokeWidth(8.0f);
+    glowPaint.setAntiAlias(true);
+    canvas->drawPath(skCurrent, glowPaint);
+
+    glowPaint.setColor(withAlpha(zenith::design::colors::CYAN, 0.3f));
+    glowPaint.setStrokeWidth(4.0f);
+    canvas->drawPath(skCurrent, glowPaint);
 
     // Main line
-    g.setColour(ZenithTheme::Colors::accent_primary);
-    g.strokePath(currentSpectrumPath_, juce::PathStrokeType(2.0f));
+    SkPaint linePaint;
+    linePaint.setColor(zenith::design::colors::CYAN);
+    linePaint.setStyle(SkPaint::kStroke_Style);
+    linePaint.setStrokeWidth(2.0f);
+    linePaint.setAntiAlias(true);
+    canvas->drawPath(skCurrent, linePaint);
   }
 
   // Stats Overlay
-  g.setColour(ZenithTheme::Colors::text_primary);
-  g.setFont(ZenithTheme::Typography::getSmallFont());
+  SkPaint textPaint;
+  textPaint.setColor(colors::TEXT_PRIMARY);
+  textPaint.setAntiAlias(true);
+
+  SkFont font = typography::getSkFont(typography::FONT_XS, FontWeight::Regular);
 
   auto stats = agent_.getStats();
-  juce::String statusText =
+  juce::String statusLine =
       "Gen: " + juce::String(stats.generation) +
       " | Best Fitness: " + juce::String(stats.bestFitness, 2) +
       " | Patch: " + stats.bestPresetName;
 
   if (!startButton_.getToggleState())
-    statusText += " [PAUSED]";
+    statusLine += " [PAUSED]";
 
-  g.drawText(statusText, displayArea.reduced(10), juce::Justification::topLeft);
+  SkString skStatus(statusLine.toRawUTF8());
+  canvas->drawString(skStatus, displayArea.fLeft + 10, displayArea.fTop + 20, font, textPaint);
 }
 
 void PresetGeneticistView::resized() {

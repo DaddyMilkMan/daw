@@ -26,6 +26,7 @@ public:
   void setText(const juce::String &text);
   juce::String getText() const;
   void clear();
+  void selectAll() { selectionStart_ = 0; selectionEnd_ = (int)text_.length(); }
 
   // Multi-line support
   void setMultiLine(bool multiLine);
@@ -38,6 +39,10 @@ public:
   // Placeholder text
   void setTextToShowWhenEmpty(const juce::String &text, SkColor colour);
 
+  // Password mode
+  void setPasswordMode(bool isPassword);
+  bool isPasswordMode() const { return isPassword_; }
+
   // Font and appearance
   void setFont(const SkFont &font);
   void setTextColour(SkColor colour);
@@ -49,6 +54,8 @@ public:
   // Event callbacks
   std::function<void()> onTextChange;
   std::function<void()> onReturnKey;
+  std::function<void()> onEscapeKey;
+  std::function<void()> onFocusLost;
 
   // Component interface
   void drawSkia(SkCanvas *canvas) override;
@@ -66,6 +73,7 @@ private:
   bool multiLine_ = false;
   bool readOnly_ = false;
   bool scrollbarsShown_ = false;
+  bool isPassword_ = false;
 
   SkFont font_;
   SkColor textColour_;

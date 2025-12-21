@@ -208,6 +208,24 @@ public:
   void setEditModeEnabled(bool enabled);
   bool isEditModeEnabled() const { return editModeEnabled_; }
 
+  //============================================================================
+  // Semantic Layout Morphing
+  //============================================================================
+
+  enum class AgentContext { None, SampleHunter, Wingman, PresetEvolver };
+  
+  /**
+   * @brief Apply a semantic layout morph based on active AI agent.
+   * Expands relevant panels and dims others to focus attention.
+   */
+  void applySemanticMorph(AgentContext context);
+  
+  /**
+   * @brief Enable/disable layout morphing (user preference).
+   */
+  void setMorphingEnabled(bool enabled) { morphingEnabled_ = enabled; }
+  bool isMorphingEnabled() const { return morphingEnabled_; }
+
 private:
   LayoutManager();
   ~LayoutManager() = default;
@@ -222,6 +240,7 @@ private:
   // Settings
   AnimationSettings animationSettings_;
   bool editModeEnabled_ = false;
+  bool morphingEnabled_ = false; // Disabled by default per user request
 
   // Built-in presets
   void initializeBuiltInPresets();

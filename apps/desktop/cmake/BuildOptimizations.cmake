@@ -59,12 +59,17 @@ function(enable_zenith_build_optimizations TARGET_NAME)
         
         # Fast linking optimizations
         if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CMAKE_CONFIGURATION_TYPES)
-            if(ZENITH_ENABLE_INCREMENTAL_LINK)
+            if(ZENITH_ENABLE_INCREMENTAL_LINK AND NOT ENABLE_SANITIZERS)
                 target_link_options(${TARGET_NAME} PRIVATE
                     $<$<CONFIG:Debug>:/INCREMENTAL>
                     $<$<CONFIG:Debug>:/DEBUG:FASTLINK>
                 )
                 message(STATUS "    MSVC: Incremental linking enabled for Debug")
+            elseif(ENABLE_SANITIZERS)
+                target_link_options(${TARGET_NAME} PRIVATE
+                    $<$<CONFIG:Debug>:/INCREMENTAL:NO>
+                )
+                message(STATUS "    MSVC: Incremental linking DISABLED for Sanitizers")
             endif()
         endif()
         

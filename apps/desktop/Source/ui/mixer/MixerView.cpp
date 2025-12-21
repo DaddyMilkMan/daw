@@ -7,8 +7,16 @@
 #include "MixerChannelComponent.h"
 #include "Engine.h"
 #include "../../Source/engine/Track.h"
+#include "../design-system/ZenithDesignSystem.h"
+
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
+#include <core/SkTextBlob.h>
 
 using namespace zenith;
+using namespace zenith::design;
 
 //==============================================================================
 MixerView::MixerView(Engine& engine)
@@ -33,20 +41,28 @@ MixerView::~MixerView()
 }
 
 //==============================================================================
-void MixerView::paint(juce::Graphics& g)
+void MixerView::drawSkia(SkCanvas* canvas)
 {
-    // Background
-    g.fillAll(juce::Colour(0xff1e1e1e));
+    // Background using design system
+    canvas->clear(colors::BG_DARKER);
 
     // If no tracks, show helpful message
     if (channels_.empty())
     {
-        g.setColour(juce::Colours::grey);
-        g.setFont(juce::FontOptions(16.0f));
-        g.drawText("No tracks in mixer",
-                   getLocalBounds(),
-                   juce::Justification::centred,
-                   true);
+        SkPaint textPaint;
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(colors::TEXT_TERTIARY);
+
+        SkFont font = typography::getSkFont(typography::FONT_LG);
+        
+        const char* message = "No tracks in mixer";
+        SkRect textBounds;
+        font.measureText(message, strlen(message), SkTextEncoding::kUTF8, &textBounds);
+        
+        float x = (getWidth() - textBounds.width()) * 0.5f;
+        float y = (getHeight() + textBounds.height()) * 0.5f;
+        
+        canvas->drawString(message, x, y, font, textPaint);
     }
 }
 

@@ -5,6 +5,7 @@
 */
 
 #include "SkiaKnob.h"
+#include "../framework/UISoundManager.h"
 #include <cmath>
 #include <core/SkBlurTypes.h> // Explicitly include
 #include <core/SkCanvas.h>
@@ -73,6 +74,9 @@ void SkiaKnob::setValue(float value) {
 
   if (std::abs(value_ - clampedValue) > 0.0001f) {
     value_ = clampedValue;
+
+    // UI Sound Feedback (suppressed during playback/recording)
+    ui::UISoundManager::getInstance().playKnobTick();
 
     if (onValueChange) {
       onValueChange(value_);

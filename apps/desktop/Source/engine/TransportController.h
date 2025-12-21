@@ -52,6 +52,24 @@ public:
     //==========================================================================
 
     /**
+     * @brief Information about looping within a buffer block
+     */
+    struct LoopInfo {
+        int samplesBeforeLoop = 0;
+        int samplesAfterLoop = 0;
+        bool wrapped = false;
+        juce::int64 currentPos = 0;
+        juce::int64 loopStart = 0;
+    };
+
+    /**
+     * @brief Calculate loop information for the current buffer
+     * @param numSamples Number of samples in the buffer
+     * @return LoopInfo structure
+     */
+    LoopInfo getLoopInfo(int numSamples) const;
+
+    /**
      * @brief Set the tempo map for beat/time conversions
      */
     void setTempoMap(const TempoMap* tempoMap) { tempoMap_ = tempoMap; }

@@ -15,6 +15,8 @@
 
 #include "../../ai/PresetGeneticistAgent.h"
 #include "../design-system/ZenithDesignSystem.h"
+#include "../framework/SkiaComponent.h"
+#include "../widgets/SkiaButton.h"
 #include <juce_dsp/juce_dsp.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -23,14 +25,14 @@ namespace zenith {
 namespace ui {
 namespace views {
 
-class PresetGeneticistView : public juce::Component, public juce::Timer {
+class PresetGeneticistView : public SkiaComponent {
 public:
   //==============================================================================
   explicit PresetGeneticistView(zenith::ai::PresetGeneticistAgent &agent);
   ~PresetGeneticistView() override;
 
   //==============================================================================
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
   void resized() override;
   void timerCallback() override;
 
@@ -40,8 +42,8 @@ private:
   zenith::ai::PresetGeneticistAgent &agent_;
 
   // UI Controls
-  juce::TextButton startButton_{"START EVOLUTION"};
-  juce::TextButton loadTargetButton_{"LOAD TARGET"};
+  SkiaButton startButton_{"START EVOLUTION"};
+  SkiaButton loadTargetButton_{"LOAD TARGET"};
 
   // Visualization Data
   juce::Path currentSpectrumPath_;

@@ -12,9 +12,9 @@
 
 #pragma once
 
+#include "../framework/SkiaComponent.h"
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
 #include <juce_events/juce_events.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -38,8 +38,7 @@ class MixerChannelComponent;
  * Displays one MixerChannelComponent per track in the engine.
  * Updates automatically when tracks are added or removed.
  */
-class MixerView : public juce::Component,
-                  private juce::Timer
+class MixerView : public SkiaComponent
 {
 public:
     //==========================================================================
@@ -51,10 +50,10 @@ public:
     ~MixerView() override;
 
     //==========================================================================
-    // Component interface
+    // SkiaComponent interface
     //==========================================================================
 
-    void paint(juce::Graphics& g) override;
+    void drawSkia(SkCanvas* canvas) override;
     void resized() override;
 
     //==========================================================================

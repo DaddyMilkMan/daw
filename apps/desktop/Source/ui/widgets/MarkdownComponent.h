@@ -13,17 +13,18 @@
 
 #pragma once
 
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "../framework/SkiaComponent.h"
 
 namespace zenith {
 namespace widgets {
 
-class MarkdownComponent : public juce::Component {
+class MarkdownComponent : public SkiaComponent {
 public:
   MarkdownComponent();
   ~MarkdownComponent() override;
 
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
+  void paint(juce::Graphics& g) override { SkiaComponent::paint(g); }
   void resized() override;
 
   void setMarkdown(const juce::String& markdownText);

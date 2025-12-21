@@ -19,17 +19,22 @@
 #include <JuceHeader.h>
 
 #include "../../engine/RecentProjectManager.h"
+#include "../../network/IdentityManager.h"
+#include "IdentityOverlay.h"
 #include "AuroraBackground.h"
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
+#include "../widgets/SkiaTextEditor.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 
 namespace zenith {
 
 class ZenithHubComponent : public SkiaComponent,
-                           public RecentProjectManager::Listener {
+                           public RecentProjectManager::Listener,
+                           public juce::ChangeListener {
 public:
   /**
    * @brief Callback type for project loading
@@ -76,6 +81,9 @@ public:
 
   // RecentProjectManager::Listener
   void recentProjectsChanged() override;
+
+  // juce::ChangeListener
+  void changeListenerCallback(juce::ChangeBroadcaster* source) override;
 
   void show();
   void dismiss();
@@ -171,7 +179,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  juce::TextEditor greetingEditor_;
+  zenith::SkiaTextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -213,6 +221,13 @@ private:
 
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+
+  // Identity Overlay
+  std::unique_ptr<IdentityOverlay> identityOverlay_;
+
+  // Thread safety: Shutdown flag to prevent use-after-free in async callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ = 
+      std::make_shared<std::atomic<bool>>(false);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

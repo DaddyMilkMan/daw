@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <core/SkCanvas.h>
 #include <core/SkColorFilter.h>
 #include <core/SkPaint.h>

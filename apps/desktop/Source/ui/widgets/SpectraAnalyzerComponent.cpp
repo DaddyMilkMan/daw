@@ -43,13 +43,14 @@ SpectraAnalyzerComponent::SpectraAnalyzerComponent(Engine &engine)
   scopeBtn.onClick = [this] { setMode(AnalysisMode::Scope); };
   stereoBtn.onClick = [this] { setMode(AnalysisMode::StereoField); };
 
-  // Basic styling
+  // Button styling using design system colors
   auto styleBtn = [](juce::TextButton &btn) {
     btn.setColour(juce::TextButton::buttonColourId,
-                  juce::Colours::black.withAlpha(0.5f));
+                  design::toJuce(design::colors::BG_DARKEST).withAlpha(0.5f));
     btn.setColour(juce::TextButton::textColourOffId,
-                  juce::Colours::white.withAlpha(0.7f));
-    btn.setColour(juce::TextButton::textColourOnId, juce::Colours::cyan);
+                  design::toJuce(design::colors::TEXT_PRIMARY).withAlpha(0.7f));
+    btn.setColour(juce::TextButton::textColourOnId, 
+                  design::toJuce(design::colors::NEON_CYAN));
   };
   styleBtn(spectrumBtn);
   styleBtn(scopeBtn);

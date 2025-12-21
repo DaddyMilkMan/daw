@@ -218,6 +218,7 @@ namespace zenith {
     static int getSystemRefreshRate();
 
     std::map<juce::String, std::unique_ptr<AnimatedValue>> animations_;
+    mutable juce::CriticalSection animationLock_;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SkiaComponent)
   };
 

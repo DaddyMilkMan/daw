@@ -70,7 +70,7 @@ private:
   int lastWidth_ = 0;
   int lastHeight_ = 0;
 
-  void recreateSurface();
+  void recreateSurface(int physicalWidth, int physicalHeight);
 };
 
 /**
@@ -87,6 +87,7 @@ public:
   // Component overrides
   void paint(juce::Graphics &g) override;
   void resized() override;
+  void mouseMove(const juce::MouseEvent &e) override;
 
   SkiaMainWindowIntegration(const SkiaMainWindowIntegration &) = delete;
   SkiaMainWindowIntegration &

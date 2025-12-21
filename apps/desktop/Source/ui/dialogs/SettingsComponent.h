@@ -127,7 +127,7 @@ private:
 
     options.content.setOwned(content);
     options.dialogTitle = "Audio Device Configuration";
-    options.dialogBackgroundColour = juce::Colours::black;
+    options.dialogBackgroundColour = design::toJuce(design::colors::BG_DARKEST);
     options.escapeKeyTriggersCloseButton = true;
     options.useNativeTitleBar = true;
     options.resizable = false;
@@ -210,7 +210,7 @@ public:
     pathList_.setColour(juce::TextEditor::backgroundColourId,
                         juce::Colours::transparentBlack);
     pathList_.setColour(juce::TextEditor::outlineColourId,
-                        juce::Colours::white.withAlpha(0.2f));
+                        design::toJuce(design::colors::TEXT_PRIMARY).withAlpha(0.2f));
     addAndMakeVisible(pathList_);
 
     updateList();

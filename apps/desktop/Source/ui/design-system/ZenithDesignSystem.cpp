@@ -22,6 +22,8 @@ float Settings::glowIntensity = 1.0f;
 float Settings::uiScale = 1.0f;
 Settings::Theme Settings::currentTheme = Settings::Theme::NeonNoir;
 Settings::BlurQuality Settings::blurQuality = Settings::BlurQuality::High;
+SkPoint Settings::mousePosition = {0.0f, 0.0f};
+Settings::AestheticProfile Settings::currentProfile = Settings::AestheticProfile::Cyberpunk;
 
 // ============================================================================
 // THEME MANAGER IMPLEMENTATION
@@ -152,6 +154,52 @@ void LayoutManager::loadLayout(const juce::String &name) {
         }
       }
     }
+  }
+}
+
+// ============================================================================
+// AESTHETIC PROFILE IMPLEMENTATION
+// ============================================================================
+
+void applyProfile(Settings::AestheticProfile profile) {
+  Settings::currentProfile = profile;
+  
+  switch (profile) {
+    case Settings::AestheticProfile::Cyberpunk:
+      colors::CYAN = 0xFF00F0FF;
+      colors::MAGENTA = 0xFFFF00D4;
+      colors::NEON_GREEN = 0xFF00FF9D;
+      colors::BG_DARKEST = 0xFF0D0D11;
+      colors::BG_DARKER = 0xFF141419;
+      colors::BG_DARK = 0xFF1C1C24;
+      break;
+      
+    case Settings::AestheticProfile::Vaporwave:
+      colors::CYAN = 0xFF88D8FF;       // Sky Blue
+      colors::MAGENTA = 0xFFFF77FF;    // Soft Pink
+      colors::NEON_GREEN = 0xFF99FFCC; // Mint
+      colors::BG_DARKEST = 0xFF1B1B2F; // Night Navy
+      colors::BG_DARKER = 0xFF24243E;  // Deep Purple
+      colors::BG_DARK = 0xFF302B63;    // Slate Blue
+      break;
+      
+    case Settings::AestheticProfile::Retro:
+      colors::CYAN = 0xFFFFD700;       // Gold
+      colors::MAGENTA = 0xFFFF4500;    // Orange Red
+      colors::NEON_GREEN = 0xFFADFF2F; // Green Yellow
+      colors::BG_DARKEST = 0xFF1A1A1A; // Near Black
+      colors::BG_DARKER = 0xFF2A2A2A;  // Dark Grey
+      colors::BG_DARK = 0xFF3A3A3A;    // Med Grey
+      break;
+      
+    case Settings::AestheticProfile::Classic:
+      colors::CYAN = 0xFF3B82F6;       // Pro Blue
+      colors::MAGENTA = 0xFF8B5CF6;    // Pro Purple
+      colors::NEON_GREEN = 0xFF10B981; // Pro Emerald
+      colors::BG_DARKEST = 0xFF0A0A0A; // OLED Black
+      colors::BG_DARKER = 0xFF121212;  // Studio Grey
+      colors::BG_DARK = 0xFF1A1A1A;    // Panel Grey
+      break;
   }
 }
 

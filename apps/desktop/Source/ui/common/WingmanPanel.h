@@ -16,14 +16,23 @@
 
 #pragma once
 
-#include "Engine.h"
-#include "../ai/SampleHunterAgent.h"
-#include "../network/GrokDAWController.h"
-#include "../../commands/CommandAPI.h"
-#include "../widgets/MarkdownComponent.h"
+#include <atomic>
+#include <memory>
 #include <juce_gui_basics/juce_gui_basics.h>
+#include "../framework/SkiaComponent.h"
+#include "../widgets/SkiaButton.h"
+#include "../widgets/SkiaLabel.h"
+#include "../widgets/SkiaTextEditor.h"
+#include "../widgets/SkiaComboBox.h"
+#include "../widgets/MarkdownComponent.h"
+#include "../../ai/SampleHunterAgent.h"
+#include "../../network/AIBridgeClient.h"
 
 namespace zenith {
+
+class Engine;
+class CommandAPI;
+// GrokDAWController removed
 
 /**
     Wingman AI Assistant Panel
@@ -31,71 +40,52 @@ namespace zenith {
     Provides a chat-like interface for controlling the DAW with natural
    language. Now includes Sample Hunter integration for finding sounds via chat.
 */
-class WingmanPanel : public juce::Component,
-                     private juce::TextEditor::Listener,
-                     private juce::Button::Listener,
-                     public ai::SampleHunterAgent::Listener {
+class WingmanPanel : public SkiaComponent,
+                     public ai::SampleHunterAgent::Listener,
+                     public AIBridgeClient::Listener { // Added listener for AIBridge
 public:
   //==========================================================================
   WingmanPanel(CommandAPI &api, Engine &engine);
   ~WingmanPanel() override;
 
   //==========================================================================
-  // Component overrides
-  void paint(juce::Graphics &g) override;
+  // SkiaComponent overrides
+  void drawSkia(SkCanvas *canvas) override;
+  void paint(juce::Graphics& g) override { SkiaComponent::paint(g); }
   void resized() override;
 
   //==========================================================================
-  /**
-      Initialize Grok integration
+  // AIBridgeClient::Listener overrides
+  void responseReceived(const juce::String& response) override;
+  void errorReceived(const juce::String& error) override;
+  void statusChanged(const juce::String& status) override;
 
-      @param apiKey Grok API key (optional, retrieves from SecureKeyStore if
-     empty)
-      @return true if initialized successfully
-  */
-  bool initializeGrok(const juce::String &apiKey = juce::String());
-
-  /**
-      Check if Grok is ready
-  */
-  bool isGrokReady() const;
-
-private:
-  //==========================================================================
-  // TextEditor::Listener
-  void textEditorReturnKeyPressed(juce::TextEditor &editor) override;
-
-  // Button::Listener
-  void buttonClicked(juce::Button *button) override;
-
-  //==========================================================================
-  // SampleHunterAgent::Listener
+  // SampleHunterAgent::Listener overrides
   void sampleDownloaded(const ai::FoundSample &sample) override;
   void sampleAnalyzed(const ai::FoundSample &sample) override;
   void sampleImported(const juce::File &file) override;
-  void huntingProgressChanged(float progress,
-                              const juce::String &status) override;
+  void huntingProgressChanged(float progress, const juce::String &status) override;
   void huntingComplete(const ai::HuntingStats &stats, bool success) override;
 
-  //==========================================================================
-  // UI Components
-
-// ...
-  std::unique_ptr<juce::TextEditor> inputField;
+private:
+  // ... existing UI components ...
+  std::unique_ptr<SkiaTextEditor> inputField;
   std::unique_ptr<widgets::MarkdownComponent> conversationDisplay;
-  std::unique_ptr<juce::TextButton> sendButton;
-  std::unique_ptr<juce::ComboBox> modeSelector;
-  std::unique_ptr<juce::Label> modeLabel;
-  std::unique_ptr<juce::Label> statusLabel;
-  std::unique_ptr<juce::TextButton> clearButton;
-  std::unique_ptr<juce::TextButton> settingsButton;
+  std::unique_ptr<SkiaButton> sendButton;
+  std::unique_ptr<SkiaComboBox> modeSelector;
+  std::unique_ptr<SkiaLabel> modeLabel;
+  std::unique_ptr<SkiaLabel> statusLabel;
+  std::unique_ptr<SkiaButton> clearButton;
+  std::unique_ptr<SkiaButton> settingsButton;
 
   //==========================================================================
   // Backend
 
   CommandAPI &commandAPI;
   Engine &engine_;
-  std::unique_ptr<GrokDAWController> grokController;
+  std::unique_ptr<AIBridgeClient> aiClient_; // Replaced GrokDAWController
+
+  // ... state ...
 
   //==========================================================================
   // State
@@ -108,6 +98,10 @@ private:
   std::vector<ai::FoundSample> lastSearchResults_;
   juce::String lastSearchQuery_;
 
+  // Thread safety: shutdown flag for async callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ =
+      std::make_shared<std::atomic<bool>>(false);
+
   //==========================================================================
   // Methods
 
@@ -115,7 +109,7 @@ private:
   void appendToConversation(const juce::String &speaker,
                             const juce::String &message);
   void setStatus(const juce::String &status,
-                 juce::Colour colour = juce::Colours::white);
+                 SkColor colour = 0xFFFFFFFF);
   void updateModeFromSelector();
   void showSettings();
 

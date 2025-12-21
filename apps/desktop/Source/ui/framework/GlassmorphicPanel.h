@@ -22,7 +22,7 @@
 
 #include "../../Settings.h"
 #include "BackdropBlur.h"
-#include "ZenithDesignSystem.h"
+#include "../design-system/ZenithDesignSystem.h"
 #include <core/SkBitmap.h>
 #include <core/SkBlurTypes.h>
 #include <core/SkCanvas.h>
@@ -300,10 +300,31 @@ private:
     }
 
     if (blurAmount > 0) {
+      // DYNAMIC SHADOW: Offset away from mouse
+      SkPoint mousePos = design::Settings::mousePosition;
+      SkRect bounds = rrect.getBounds();
+      SkPoint center = {bounds.centerX(), bounds.centerY()};
+      
+      // Calculate vector from mouse to panel center
+      float dx = center.x() - mousePos.x();
+      float dy = center.y() - mousePos.y();
+      float dist = std::sqrt(dx * dx + dy * dy);
+      
+      float shadowX = offset;
+      float shadowY = offset;
+      
+      if (dist > 1.0f) {
+          // Normalize and scale offset based on distance (parallax effect)
+          // Near mouse = small offset, Far mouse = large offset
+          float strength = std::min(10.0f, dist / 100.0f);
+          shadowX = (dx / dist) * offset * strength;
+          shadowY = (dy / dist) * offset * strength;
+      }
+
       shadowPaint.setMaskFilter(
           SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurAmount));
       SkRRect shadowRRect = rrect;
-      shadowRRect.offset(0, offset);
+      shadowRRect.offset(shadowX, shadowY);
       canvas->drawRRect(shadowRRect, shadowPaint);
     }
   }
@@ -414,12 +435,29 @@ private:
     rimPaint.setStyle(SkPaint::kStroke_Style);
     rimPaint.setStrokeWidth(1.0f); // 1px stroke
 
-    // Gradient from Top-Left (White) to Bottom-Right (Transparent)
-    // This simulates light catching the top-left edge
-    SkPoint pts[2] = {
-        {bounds.left(), bounds.top()},
-        {bounds.right() * 0.5f, bounds.bottom() * 0.5f} // Fade out halfway
-    };
+    // DYNAMIC RIM LIGHT: Catch light from mouse direction
+    SkPoint mousePos = design::Settings::mousePosition;
+    SkPoint center = {bounds.centerX(), bounds.centerY()};
+    
+    // Vector from mouse to panel
+    float dx = mousePos.x() - center.x();
+    float dy = mousePos.y() - center.y();
+    float dist = std::sqrt(dx * dx + dy * dy);
+    
+    // Gradient points: start at edge closest to mouse
+    SkPoint pts[2];
+    if (dist > 1.0f) {
+        float nx = dx / dist;
+        float ny = dy / dist;
+        
+        pts[0] = {center.x() + nx * (bounds.width() * 0.5f), 
+                  center.y() + ny * (bounds.height() * 0.5f)};
+        pts[1] = {center.x(), center.y()}; // Fade to center
+    } else {
+        // Fallback for when mouse is inside
+        pts[0] = {bounds.left(), bounds.top()};
+        pts[1] = {bounds.right() * 0.5f, bounds.bottom() * 0.5f};
+    }
 
     SkColor colors[2] = {
         SkColorSetA(SK_ColorWHITE, 180), // ~70% White at corner
