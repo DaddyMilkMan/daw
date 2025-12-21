@@ -58,8 +58,7 @@ MainComponent::MainComponent(zenith::Engine &eng, zenith::CommandAPI &api,
   // Add Debug Overlay
   // addChildComponent(&zenith::DebugLogOverlay::getInstance());
 
-  // Show Console
-  showDebugConsole();
+
 
   setSize(1400, 800);
 
@@ -482,7 +481,7 @@ void MainComponent::handleImportAudio() {
             ", length: " + juce::String(clip->getLength()) + " samples");
 
         // Add clip to track
-        track->addClip(std::move(clip));
+        track->addClip(clip.release());
 
         DBG("Audio import complete! Track now has " +
             juce::String(track->getNumClips()) + " clip(s)");

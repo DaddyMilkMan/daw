@@ -6,6 +6,7 @@
 #include "ClipSynchronizer.h"
 #include "../../Source/engine/Clip.h"
 #include "../../Source/engine/Track.h"
+#include "../../Source/engine/ClipTrack.h"
 
 namespace zenith {
 
@@ -135,7 +136,10 @@ void ClipSynchronizer::syncEngineToProjectState() {
     }
 
     // Get Engine's clip list (thread-safe read via accessor)
-    const auto &engineClips = trackPtr->getClips();
+    auto* clipTrack = dynamic_cast<ClipTrack*>(trackPtr.get());
+    if (clipTrack == nullptr) continue;
+
+    const std::vector<std::unique_ptr<zenith::Clip>>& engineClips = clipTrack->getClips();
 
     // Get zenith::ProjectState clips container
     auto clipsNode =
@@ -285,27 +289,31 @@ void ClipSynchronizer::valueTreePropertyChanged(
   // Find in Engine
   for (const auto &trackPtr : engine.tracks()) {
     if (trackPtr->getTrackId() == trackId) {
-      const auto &clips = trackPtr->getClips();
-      for (const auto &clipPtr : clips) {
-        if (clipPtr->getName() == clipId) {
-          // Found it, sync properties
-          double tempo = projectState.getTempo();
-          double sampleRate = engine.getSampleRate();
-          double startBeats =
-              treeWhosePropertyHasChanged[zenith::ProjectState::PROP_START];
-          double lenBeats =
-              treeWhosePropertyHasChanged[zenith::ProjectState::PROP_LENGTH];
+      if (auto* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get())) {
+          const std::vector<std::unique_ptr<zenith::Clip>>& clipsList = clipTrack->getClips();
+          for (size_t i = 0; i < clipsList.size(); ++i) {
+              auto& clipPtr = clipsList[i];
+              if (clipPtr->getName() == clipId) {
+                  // Found it, sync properties
+                  double tempo = projectState.getTempo();
+                  double sampleRate = engine.getSampleRate();
+                  double startBeats =
+                      treeWhosePropertyHasChanged[zenith::ProjectState::PROP_START];
+                  double lenBeats =
+                      treeWhosePropertyHasChanged[zenith::ProjectState::PROP_LENGTH];
 
-          clipPtr->setStartPosition(
-              beatsToSamples(startBeats, tempo, sampleRate));
-          clipPtr->setLength(beatsToSamples(lenBeats, tempo, sampleRate));
-          DBG("ClipSynchronizer: Synced prop change for " + clipId);
-          return;
-        }
+                  clipPtr->setStartPosition(
+                      beatsToSamples(startBeats, tempo, sampleRate));
+                  clipPtr->setLength(beatsToSamples(lenBeats, tempo, sampleRate));
+                  DBG("ClipSynchronizer: Synced prop change for " + clipId);
+                  return;
+              }
+          }
       }
     }
   }
 }
+
 
 void ClipSynchronizer::valueTreeChildAdded(
     juce::ValueTree &parentTree, juce::ValueTree &childWhichHasBeenAdded) {
@@ -348,7 +356,7 @@ void ClipSynchronizer::valueTreeChildAdded(
         newClip->setType(clipType == "midi" ? zenith::Clip::Type::MIDI
                                             : zenith::Clip::Type::Audio);
 
-        trackPtr->addClip(std::move(newClip));
+        trackPtr->addClip(newClip.release());
         DBG("ClipSynchronizer: Added new clip via Listener " + clipId);
         return;
       }
@@ -377,10 +385,13 @@ void ClipSynchronizer::valueTreeChildRemoved(
     // Remove from Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        const auto &clips = trackPtr->getClips();
-        for (const auto &clip : clips) {
-          if (clip->getName() == clipId) {
-            trackPtr->removeClip(clip.get());
+        auto* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
+        if (clipTrack == nullptr) return;
+
+        const std::vector<std::unique_ptr<zenith::Clip>>& clipsList = clipTrack->getClips();
+        for (size_t i = 0; i < clipsList.size(); ++i) {
+          if (clipsList[i]->getName() == clipId) {
+            clipTrack->removeClip(clipsList[i].get());
             DBG("ClipSynchronizer: Removed clip " + clipId);
             return;
           }

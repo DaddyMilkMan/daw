@@ -40,11 +40,12 @@ public:
 
     // Clip management
     void addClip(std::unique_ptr<Clip> clip);
+    void addClip(Clip* clip) override { addClip(std::unique_ptr<Clip>(clip)); }
     void removeClip(int clipIndex);
     void removeClip(Clip* clip);
     void clearClips();
-    int getNumClips() const { return static_cast<int>(clipsOwned_.size()); }
-    Clip* getClip(int index) const {
+    int getNumClips() const override { return static_cast<int>(clipsOwned_.size()); }
+    Clip* getClip(int index) const override {
         if (index >= 0 && index < static_cast<int>(clipsOwned_.size()))
             return clipsOwned_[index].get();
         return nullptr;

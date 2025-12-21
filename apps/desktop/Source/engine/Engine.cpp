@@ -234,7 +234,7 @@ void Engine::syncWithProjectState() {
     if (clipsNode.isValid()) {
       for (auto clipNode : clipsNode) {
         // Create clip
-        auto clip = std::make_unique<zenith::Track::Clip>();
+        auto clip = std::make_unique<zenith::Clip>();
 
         // Set basic properties
         double startBeats = clipNode[ProjectState::PROP_START];
@@ -250,7 +250,7 @@ void Engine::syncWithProjectState() {
           juce::File audioFile(audioFilePath);
           if (audioFile.existsAsFile()) {
             clip->setAudioFile(audioFile);
-            clip->setType(zenith::Track::Clip::Type::Audio);
+            clip->setType(zenith::Clip::Type::Audio);
             DBG("Engine: Loaded audio file: " + audioFile.getFileName());
           } else {
             DBG("Engine: Warning - audio file not found: " + audioFilePath);
@@ -266,7 +266,7 @@ void Engine::syncWithProjectState() {
         clip->setPlaying(true);
 
         // Add clip to track
-        track->addClip(std::move(clip));
+        track->addClip(clip.release());
       }
     }
 
@@ -623,7 +623,7 @@ void Engine::addTestTracks(int count) {
 
   for (int i = 0; i < count; ++i) {
     // Create track via Factory
-    auto track = zenith::Track::create(
+    std::shared_ptr<zenith::Track> track = zenith::Track::create(
         "Track " + juce::String(tracks_.size() + 1),
         zenith::Track::Type::Audio);
 
@@ -633,7 +633,7 @@ void Engine::addTestTracks(int count) {
     }
 
     track->setTrackIndex((int)tracks_.size());
-    tracks_.push_back(track); // No std::move needed for shared_ptr
+    tracks_.push_back(std::move(track)); // No std::move needed for shared_ptr
 
     // Register track with RoutingGraph and connect to master bus
     RoutingGraph::Node node;
@@ -801,7 +801,7 @@ float Engine::getMasterLevel() const {
 }
 
 float Engine::getMasterPeakLevel() const {
-  return meteringSystem_ ? meteringSystem_->getMasterPeakLevel() : 0.0f;
+  return meteringSystem_ ? meteringSystem_->getMasterPeak() : 0.0f;
 }
 
 void Engine::resetPeakMeters() {
@@ -839,7 +839,7 @@ juce::String Engine::createTrack(const juce::String &name,
     zenith::Track::Type trackType = (type == "midi")
                                         ? zenith::Track::Type::MIDI
                                         : zenith::Track::Type::Audio;
-    auto track = std::make_shared<zenith::Track>(name, trackType);
+    std::shared_ptr<zenith::Track> track = zenith::Track::create(name, trackType);
 
     // Use atomic counter for ID generation
     juce::String trackId = "track_" + juce::String(nextTrackId_++);

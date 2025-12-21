@@ -18,6 +18,9 @@ target_sources(ZenithDAW PRIVATE
     TempoMap.cpp
     TrackFreeze.cpp
     Metronome.cpp
+    MeteringSystem.cpp
+    PluginChain.cpp
+    AutomationManager.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
     AudioRenderer.cpp

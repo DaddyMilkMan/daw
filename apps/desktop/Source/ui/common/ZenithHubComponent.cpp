@@ -218,7 +218,7 @@ void ZenithHubComponent::updateLayout() {
 
           // Profile Button - SAFE calculation inside valid sidebar check
           profileBounds_ =
-            SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 50.0f,
+            SkRect::MakeXYWH(accountArea_.fLeft, accountArea_.fTop + 10.0f,
                    accountArea_.width(), 90.0f);
       } else {
         accountArea_.setEmpty();
@@ -248,7 +248,7 @@ void ZenithHubComponent::updateLayout() {
       int col = (int)i % 2;
 
       float px = recentArea_.fLeft + (col * (pCardW + cardGap));
-      float py = recentArea_.fTop + (row * (pCardH + cardGap));
+      float py = recentArea_.fTop + 10.0f + (row * (pCardH + cardGap));
 
       recentProjects_[i].bounds = SkRect::MakeXYWH(px, py, pCardW, pCardH);
     }
@@ -438,7 +438,7 @@ void ZenithHubComponent::drawRecentProjects(SkCanvas *canvas) {
 }
 
 void ZenithHubComponent::drawTemplates(SkCanvas *canvas) {
-  drawText(canvas, "Quick Start", SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop - 40, 200, 30), 
+  drawText(canvas, "Quick Start", SkRect::MakeXYWH(templatesArea_.fLeft, templatesArea_.fTop, 200, 30), 
            headerFont_, textPaint_, false);
 
   for (size_t i = 0; i < templates_.size(); ++i) {

@@ -6,6 +6,7 @@
  */
 
 #include "MainWindow.h"
+#include "SimpleLogger.h"
 #include "utils/SampleGenerator.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
@@ -47,10 +48,13 @@ public:
     // Input validation should be added here for production releases
     juce::ignoreUnused(commandLine);
 
+    // Initialize Debug Console immediately
+    showDebugConsole();
+
     // Log startup
-    DBG("Zenith DAW starting...");
-    DBG("Version: " + getApplicationVersion());
-    DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
+    logToFile("Zenith DAW starting...");
+    logToFile("Version: " + getApplicationVersion().toStdString());
+    logToFile("JUCE Version: " + juce::SystemStats::getJUCEVersion().toStdString());
 
     // Log system info
     logSystemInfo();
@@ -61,7 +65,7 @@ public:
     // Create main window
     mainWindow = std::make_unique<MainWindow>(getApplicationName());
 
-    DBG("Zenith DAW initialized successfully!");
+    logToFile("Zenith DAW initialized successfully!");
   }
 
   void shutdown() override {
@@ -115,16 +119,14 @@ public:
 private:
   //==========================================================================
   void logSystemInfo() {
-    DBG("========================================");
-    DBG("System Information");
-    DBG("========================================");
-    DBG("OS: " + juce::SystemStats::getOperatingSystemName());
-    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) +
-        " MHz");
-    DBG("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
-    DBG("Memory: " +
-        juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
-    DBG("========================================");
+    logToFile("========================================");
+    logToFile("System Information");
+    logToFile("========================================");
+    logToFile("OS: " + juce::SystemStats::getOperatingSystemName().toStdString());
+    logToFile("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()).toStdString() + " MHz");
+    logToFile("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()).toStdString());
+    logToFile("Memory: " + juce::String(juce::SystemStats::getMemorySizeInMegabytes()).toStdString() + " MB");
+    logToFile("========================================");
   }
 
   //==========================================================================

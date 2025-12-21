@@ -15,10 +15,25 @@
 inline void showDebugConsole() {
 #if JUCE_WINDOWS
   AllocConsole();
-  FILE *fp;
+  SetConsoleTitle(L"Zenith Debug Console");
+  
+  // redirect unbuffered STDOUT to the console
+  FILE* fp;
   freopen_s(&fp, "CONOUT$", "w", stdout);
   freopen_s(&fp, "CONOUT$", "w", stderr);
-  std::cout << "Debug Console Started" << std::endl;
+  freopen_s(&fp, "CONIN$", "r", stdin);
+
+  // Clear streams
+  std::cout.clear();
+  std::cerr.clear();
+  std::cin.clear();
+
+  // Sync
+  std::ios::sync_with_stdio(true);
+
+  std::cout << "========================================" << std::endl;
+  std::cout << "Zenith Debug Console Started" << std::endl;
+  std::cout << "========================================" << std::endl;
 #endif
 }
 
