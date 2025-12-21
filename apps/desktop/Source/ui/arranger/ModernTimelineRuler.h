@@ -38,9 +38,6 @@ public:
     
     void setTimeSignature(int numerator, int denominator);
     void setTempo(double bpm);
-
-    void setSampleRate(double sampleRate);
-    void setFrameRate(double fps);
     
     void setPlayheadPosition(double beat);
     double getPlayheadPosition() const { return playheadBeat_; }
@@ -92,9 +89,6 @@ private:
     int timeSignatureNumerator_ = 4;
     int timeSignatureDenominator_ = 4;
     double tempo_ = 120.0;
-
-    double sampleRate_ = 44100.0;
-    double fps_ = 30.0;
     
     bool loopEnabled_ = false;
     double loopStartBeat_ = 0.0;

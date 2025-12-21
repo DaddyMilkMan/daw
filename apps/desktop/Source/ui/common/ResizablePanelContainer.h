@@ -58,10 +58,6 @@ public:
 
   static constexpr int headerHeight = 28;
 
-  // Accessibility
-  std::unique_ptr<juce::AccessibilityHandler>
-  createAccessibilityHandler() override;
-
 private:
   juce::String title_;
   bool isCollapsible_ = true;
@@ -169,10 +165,6 @@ public:
 
   static constexpr int dividerSize = 6;
 
-  // Accessibility
-  std::unique_ptr<juce::AccessibilityHandler>
-  createAccessibilityHandler() override;
-
 private:
   bool isHorizontal_;
   bool isDragging_ = false;
@@ -194,16 +186,8 @@ private:
  */
 class TabGroup : public SkiaComponent {
 public:
-  /**
-   * @brief Constructor with optional accessibility title
-   * @param accessibilityTitle Title for screen readers to distinguish multiple
-   * TabGroups
-   */
-  explicit TabGroup(const juce::String &accessibilityTitle = "Tab List");
+  TabGroup();
   ~TabGroup() override;
-
-  /** @brief Set the accessibility title for this TabGroup */
-  void setAccessibilityTitle(const juce::String &title);
 
   void drawSkia(SkCanvas *canvas) override;
   void resized() override;
@@ -231,10 +215,6 @@ public:
 
   static constexpr int tabBarHeight = 32;
 
-  // Accessibility
-  std::unique_ptr<juce::AccessibilityHandler>
-  createAccessibilityHandler() override;
-
 private:
   struct TabInfo {
     juce::String id;
@@ -248,8 +228,6 @@ private:
   std::vector<TabInfo> tabs_;
   int activeTabIndex_ = -1;
   bool dragReorderEnabled_ = true;
-  juce::String
-      accessibilityTitle_; // Unique title for screen reader identification
   int draggedTabIndex_ = -1;
   juce::Point<int> dragStartPos_;
 

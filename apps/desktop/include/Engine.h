@@ -49,10 +49,8 @@
 #include "../Source/dsp/MasterLimiter.h"
 #include "../Source/dsp/StereoAudioFifo.h"
 #include "../Source/engine/EngineConstants.h"
-#include "../Source/engine/MacroControl.h"
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
-
 
 // Forward declarations
 namespace zenith {
@@ -100,14 +98,6 @@ public:
    * @brief Get the plugin format manager
    */
   juce::AudioPluginFormatManager &getPluginFormatManager();
-
-  /**
-   * @brief Get the recording manager
-   */
-  RecordingManager &getRecordingManager() { return *recordingManager_; }
-  const RecordingManager &getRecordingManager() const {
-    return *recordingManager_;
-  }
 
   /**
    * @brief Get the audio device manager
@@ -338,13 +328,6 @@ public:
    * @return CPU usage (0.0 - 100.0)
    */
   double getCpuUsage() const;
-
-  //==========================================================================
-  // Macro Controls
-  //==========================================================================
-
-  MacroControl &getMacro(int index) { return macroBank_[index]; }
-  const MacroControl &getMacro(int index) const { return macroBank_[index]; }
 
   //==========================================================================
   // Instrument Registry
@@ -938,9 +921,6 @@ private:
 
   // Flag to prevent use-after-free in async callbacks
   std::atomic<bool> isShuttingDown_{false};
-
-  // Macro Bank
-  MacroBank macroBank_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Engine)
 };

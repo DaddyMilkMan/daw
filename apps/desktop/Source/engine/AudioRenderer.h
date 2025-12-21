@@ -141,20 +141,6 @@ public:
      */
     void resetPeakMeters() { masterPeakLevel_.store(0.0f); }
 
-    //==========================================================================
-    // Latency Query
-    //==========================================================================
-
-    /**
-     * @brief Get latency for a specific track in samples
-     */
-    int getTrackLatency(int trackIndex) const;
-
-    /**
-     * @brief Get master bus latency in samples
-     */
-    int getMasterLatency() const;
-
 private:
     //==========================================================================
     // Internal Methods

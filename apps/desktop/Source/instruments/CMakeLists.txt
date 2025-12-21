@@ -1,4 +1,4 @@
-target_sources(ZenithDAW_lib PRIVATE
+target_sources(ZenithDAW PRIVATE
     Instrument.cpp
     InstrumentRegistry.cpp
     RegisterBuiltInInstruments.cpp
@@ -14,5 +14,3 @@ target_sources(ZenithDAW_lib PRIVATE
     ZenithSampler.cpp
     ZenithSamplerEditor.cpp
 )
-
-

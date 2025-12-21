@@ -58,10 +58,8 @@ void MacroToolbar::rebuildButtons() {
     btn->setButtonStyle(ZenithButton::Style::Ghost); // Glassy look
     btn->setButtonSize(ZenithButton::Size::Medium);
 
-
-
-    // Add tooltip
-    btn->setTooltip(macro.description);
+    // Note: Tooltip functionality not yet implemented in ZenithButton
+    // TODO: Add tooltip support to ZenithButton via juce::TooltipClient
 
     addAndMakeVisible(btn);
     buttons_.add(btn);

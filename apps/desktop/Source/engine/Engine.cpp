@@ -1028,7 +1028,7 @@ void Engine::audioDeviceIOCallbackWithContext(
     }
   }
 
-  if (recordingManager_ && (recordingManager_->isRecording() || recordingManager_->hasActiveListeners())) {
+  if (recordingManager_ && recordingManager_->isRecording()) {
     recordingManager_->captureAudio(inputChannelData, numInputChannels,
                                     numSamples, snapshot->lifecycle);
   }
@@ -1610,15 +1610,14 @@ void Engine::applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
 
 int Engine::getTrackLatency(int trackIndex) const {
   if (audioRenderer_) {
-    return audioRenderer_->getTrackLatency(trackIndex);
+    // TODO: Expose per-track latency in AudioRenderer
+    return 0; // audioRenderer_->getTrackLatency(trackIndex);
   }
   return 0;
 }
 
 int Engine::getMasterLatency() const {
-  if (audioRenderer_) {
-    return audioRenderer_->getMasterLatency();
-  }
+  // TODO: Expose master latency in AudioRenderer
   return 0;
 }
 
@@ -1695,9 +1694,7 @@ int Engine::getMaxTrackLatency() const {
 }
 
 void Engine::recalculatePDC() {
-  if (audioRenderer_) {
-    audioRenderer_->calculatePDC(tracks_);
-  }
+  // PDC is handled by AudioRenderer during prepare/render
 }
 
 void Engine::updateSoloState() {

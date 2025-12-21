@@ -32,8 +32,6 @@
 
 namespace zenith {
 
-using design::FontWeight;
-
 //==============================================================================
 // Constructor / Destructor
 //==============================================================================
@@ -626,11 +624,11 @@ void ModulationMatrixView::buildSourceNodes() {
   for (int i = 0; i < kNumMacros; ++i) {
     ModulationSourceNode node;
     node.id = "sys:macro:" + juce::String(i);
-    // if (engine_) {
-    //   node.displayName = engine_->getMacro(i).getName();
-    // } else {
-    node.displayName = "Macro " + juce::String(i + 1);
-    // }
+    if (engine_) {
+      node.displayName = engine_->getMacro(i).getName();
+    } else {
+      node.displayName = "Macro " + juce::String(i + 1);
+    }
     node.type = ModulationSourceNode::Type::Macro;
     node.color = design::colors::NEON_GREEN;
     sourceNodes_.push_back(node);
@@ -840,7 +838,7 @@ void ModulationMatrixView::mouseUp(const juce::MouseEvent &e) {
   if (isDraggingConnection_) {
     if (auto *dest = hitTestDest(pos)) {
       createConnection(dragSourceId_, dest->id);
-      updateConnectionPaths();
+      refreshMatrix(); // Rebuild paths
     }
     isDraggingConnection_ = false;
     repaint();
@@ -942,27 +940,7 @@ void ModulationMatrixView::createConnection(const juce::String &sourceId,
 }
 
 void ModulationMatrixView::deleteConnection(ModulationConnection *conn) {
-  if (!conn)
-    return;
-
-  // Capture IDs to identify connection safely
-  juce::String sourceId = conn->sourceId;
-  juce::String destId = conn->destId;
-
-  connections_.erase(
-      std::remove_if(connections_.begin(), connections_.end(),
-                     [&](const ModulationConnection &c) {
-                       return c.sourceId == sourceId && c.destId == destId;
-                     }),
-      connections_.end());
-
-  // Clear pointers to avoid dangling references
-  if (selectedConnection_ == conn)
-    selectedConnection_ = nullptr;
-  if (hoveredConnection_ == conn)
-    hoveredConnection_ = nullptr;
-
-  repaint();
+  // TODO: remove from vector
 }
 
 void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
@@ -973,68 +951,10 @@ void ModulationMatrixView::updateConnectionAmount(ModulationConnection *conn,
   }
 }
 
-std::vector<SkiaComponent::AIElementInfo>
-ModulationMatrixView::getInspectableElements() {
+std::vector<AIElementInfo> ModulationMatrixView::getInspectableElements() {
   std::vector<AIElementInfo> elements;
-
-  // 1. Source Nodes
-  for (const auto &node : sourceNodes_) {
-    auto screenPos = worldToScreen(node.position);
-    float r = node.radius * zoomLevel_;
-
-    AIElementInfo info;
-    info.bounds =
-        SkRect::MakeXYWH(screenPos.x - r, screenPos.y - r, r * 2.0f, r * 2.0f);
-    info.type = "mod-source";
-    info.parameterId = node.id;
-    info.currentValue = node.currentValue;
-    elements.push_back(info);
-  }
-
-  // 2. Destination Nodes
-  for (const auto &node : destNodes_) {
-    auto screenPos = worldToScreen(node.position);
-    float r = node.radius * zoomLevel_;
-
-    AIElementInfo info;
-    info.bounds =
-        SkRect::MakeXYWH(screenPos.x - r, screenPos.y - r, r * 2.0f, r * 2.0f);
-    info.type = "mod-dest";
-    info.parameterId = node.id;
-    info.currentValue = node.currentValue;
-    elements.push_back(info);
-  }
-
-  // 3. Connections
-  for (const auto &conn : connections_) {
-    // Expose interaction handle (midpoint)
-    SkPathMeasure measure(conn.path, false);
-    SkPoint mid;
-    if (measure.getPosTan(measure.getLength() * 0.5f, &mid, nullptr)) {
-      auto screenPos = worldToScreen({mid.fX, mid.fY});
-      float r = 20.0f * zoomLevel_; // Match hit test radius
-
-      AIElementInfo info;
-      info.bounds = SkRect::MakeXYWH(screenPos.x - r, screenPos.y - r, r * 2.0f,
-                                     r * 2.0f);
-      info.type = "mod-connection";
-      info.parameterId = conn.sourceId + "->" + conn.destId;
-      info.currentValue = conn.amount;
-      elements.push_back(info);
-    }
-  }
-
+  // TODO: Expose nodes and connections for AI access
   return elements;
-}
-
-juce::Point<float>
-ModulationMatrixView::screenToWorld(const juce::Point<float> &screen) const {
-  return (screen - viewOffset_) / zoomLevel_;
-}
-
-juce::Point<float>
-ModulationMatrixView::worldToScreen(const juce::Point<float> &world) const {
-  return world * zoomLevel_ + viewOffset_;
 }
 
 } // namespace zenith

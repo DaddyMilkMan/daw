@@ -240,8 +240,6 @@ void MixerChannelComponent::drawSkia(SkCanvas *canvas) {
 }
 
 void MixerChannelComponent::resized() {
-  auto bounds = getLocalBounds();
-
   // Top section: Track name
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));

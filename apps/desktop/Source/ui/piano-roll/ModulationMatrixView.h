@@ -187,7 +187,7 @@ public:
   void refreshMatrix();
 
   // AI Vision Support
-  std::vector<SkiaComponent::AIElementInfo> getInspectableElements() override;
+  std::vector<AIElementInfo> getInspectableElements() override;
 
 private:
   Engine *engine_ = nullptr;

@@ -23,7 +23,6 @@
 #pragma once
 
 #include "../../include/Engine.h"
-#include "../engine/RecordingManager.h"
 #include "../../include/ProjectState.h"
 #include "skia/SkiaComponent.h"
 #include "../engine/AudioFilePool.h"
@@ -79,8 +78,7 @@ enum class WaveformViewMode {
 
 //==============================================================================
 class SampleEditorComponent : public SkiaComponent,
-                              public juce::ValueTree::Listener,
-                              public AudioInputListener
+                              public juce::ValueTree::Listener
 {
 public:
     SampleEditorComponent(Engine& engine, ProjectState& projectState);
@@ -101,12 +99,7 @@ public:
     bool keyPressed(const juce::KeyPress& key) override;
 
     // Timer for playhead updates
-    // Timer for playhead updates and recording
     void timerCallback() override;
-
-    // AudioInputListener override
-    void onAudioInput(const float *const *inputData, int numInputChannels,
-                      int numSamples) override;
 
     //==============================================================================
     // Editor API
@@ -408,13 +401,7 @@ private:
     bool isRecording_ = false;
     int recordInputChannel_ = 0;
     std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
-    std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
     std::atomic<int> recordWritePos_{0};
-
-    // FIFO for RT-safe recording transfer
-    static constexpr int fifoSize_ = 65536; // ~1.5 sec at 44.1k
-    juce::AbstractFifo incomingFifo_{fifoSize_};
-    juce::AudioBuffer<float> incomingBuffer_;
     
     //==============================================================================
     // Undo/Redo

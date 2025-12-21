@@ -136,12 +136,6 @@ public:
   // Public API - Advanced Features
   //==========================================================================
 
-  //==========================================================================
-
-  //==========================================================================
-  // Public API - Advanced Features
-  //==========================================================================
-
   /** Quantize selected notes with strength and swing */
   void quantizeSelected(double gridSize, float strength = 1.0f,
                         float swing = 0.0f);
@@ -674,6 +668,9 @@ public:
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
 private:
+  void playPianoKey(int pitch, int velocity);
+  void stopPianoKey(int pitch);
+
   //==========================================================================
   // Internal Note Representation
   //==========================================================================
@@ -1012,6 +1009,11 @@ private:
 
   // Cursor state
   CursorType currentCursorType = CursorType::Normal;
+
+  // Tool state
+  Tool currentTool = Tool::Select;
+  int hoveredPianoKey = -1; // -1 = no key hovered
+  int playingPianoKey = -1; // -1 = no key being played
 
   //==========================================================================
   // Ghost Notes State
