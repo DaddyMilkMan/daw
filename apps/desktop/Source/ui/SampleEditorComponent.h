@@ -408,7 +408,6 @@ private:
     bool isRecording_ = false;
     int recordInputChannel_ = 0;
     std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
-    std::unique_ptr<juce::AudioBuffer<float>> recordBuffer_;
     std::atomic<int> recordWritePos_{0};
 
     // FIFO for RT-safe recording transfer

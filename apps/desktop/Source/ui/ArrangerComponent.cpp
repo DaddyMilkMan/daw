@@ -57,6 +57,13 @@ static constexpr float TOP_MARGIN =
     SECTION_HEIGHT + RULER_HEIGHT; // Offset for tracks
 static constexpr float SCROLLBAR_HEIGHT = 14.0f;
 
+// Grid Visibility Constants
+static constexpr uint8_t kBarHighlightAlphaTop = 15;    // Zebra stripe gradient top
+static constexpr uint8_t kBarHighlightAlphaBottom = 8;  // Zebra stripe gradient bottom
+static constexpr uint8_t kBarLineAlpha = 100;           // Bar line opacity
+static constexpr float kBarLineWidth = 1.5f;            // Bar line stroke width
+static constexpr uint8_t kBeatLineAlpha = 50;           // Beat line opacity
+
 //==============================================================================
 
 ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
@@ -551,8 +558,8 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
       // Subtle gradient highlight
       SkPoint pts[2] = {{barStartX, SECTION_HEIGHT}, {barStartX, height}};
       SkColor gradColors[2] = {
-          SkColorSetARGB(8, 255, 255, 255), // Very subtle top
-          SkColorSetARGB(4, 255, 255, 255)  // Even more subtle bottom
+          SkColorSetARGB(kBarHighlightAlphaTop, 255, 255, 255),
+          SkColorSetARGB(kBarHighlightAlphaBottom, 255, 255, 255)
       };
       barHighlightPaint.setShader(SkGradientShader::MakeLinear(
           pts, gradColors, nullptr, 2, SkTileMode::kClamp));
@@ -576,11 +583,11 @@ void ArrangerComponent::drawSkia(SkCanvas *canvas) {
 
     if (isBarLine) {
       // BAR LINES - more visible, solid
-      gridPaint.setColor(SkColorSetARGB(60, 255, 255, 255));
-      gridPaint.setStrokeWidth(1.0f);
+      gridPaint.setColor(SkColorSetARGB(kBarLineAlpha, 255, 255, 255));
+      gridPaint.setStrokeWidth(kBarLineWidth);
     } else {
       // BEAT LINES - subtle, dotted
-      gridPaint.setColor(SkColorSetARGB(25, 255, 255, 255));
+      gridPaint.setColor(SkColorSetARGB(kBeatLineAlpha, 255, 255, 255));
       gridPaint.setStrokeWidth(1.0f);
       static const SkScalar intervals[] = {2.0f, 4.0f};
       static const auto dashEffect =

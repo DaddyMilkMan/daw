@@ -146,6 +146,54 @@ void SampleEditorComponent::onAudioInput(const float *const *inputData,
   incomingFifo_.finishedWrite(size1 + size2);
 }
 
+void SampleEditorComponent::startRecording() {
+  if (isRecording_)
+    return;
+
+  // Initialize recording buffer (10 seconds at 48kHz stereo)
+  int initialSize = 48000 * 10;
+  recordBuffer_ = std::make_unique<juce::AudioBuffer<float>>(2, initialSize);
+  recordBuffer_->clear();
+  recordWritePos_ = 0;
+
+  // Initialize FIFO buffer
+  incomingBuffer_.setSize(2, fifoSize_);
+  incomingBuffer_.clear();
+  incomingFifo_.reset();
+
+  // Register as audio input listener
+  engine_.getRecordingManager().addAudioInputListener(this);
+  isRecording_ = true;
+
+  repaint();
+}
+
+void SampleEditorComponent::stopRecording() {
+  if (!isRecording_)
+    return;
+
+  // Unregister listener
+  engine_.getRecordingManager().removeAudioInputListener(this);
+  isRecording_ = false;
+
+  // Finalize the recorded buffer
+  if (recordBuffer_ && recordWritePos_ > 0) {
+    // Trim buffer to actual recorded size
+    auto finalBuffer = std::make_unique<juce::AudioBuffer<float>>(2, recordWritePos_.load());
+    for (int ch = 0; ch < 2; ++ch) {
+      finalBuffer->copyFrom(ch, 0, *recordBuffer_, ch, 0, recordWritePos_.load());
+    }
+
+    // Set as edit buffer
+    editBuffer_ = std::move(finalBuffer);
+    hasUnsavedChanges_ = true;
+    fitToWindow();
+  }
+
+  recordBuffer_.reset();
+  repaint();
+}
+
 //==============================================================================
 void SampleEditorComponent::setClipToEdit(const juce::String &trackId,
                                           const juce::String &clipId) {
