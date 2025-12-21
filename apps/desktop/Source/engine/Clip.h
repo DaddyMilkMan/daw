@@ -210,6 +210,8 @@ public:
   // State management
   juce::ValueTree getState() const;
   void loadState(const juce::ValueTree &state);
+  
+  static std::unique_ptr<Clip> createFromState(const juce::ValueTree &state);
 
   //==============================================================================
   // Allow Track to access processing methods

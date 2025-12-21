@@ -7,6 +7,7 @@
 #include "Engine.h"
 #include "../engine/Track.h"
 #include "../engine/PluginHost.h"
+#include "../design-system/ZenithTheme.h"
 
 using namespace zenith;
 
@@ -31,9 +32,8 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
     addAndMakeVisible(searchLabel);
 
     searchBox.setMultiLine(false);
-    searchBox.setReturnKeyStartsNewLine(false);
-    searchBox.setTextToShowWhenEmpty("Type to filter plugins...", juce::Colours::grey);
-    searchBox.addListener(this);
+    searchBox.setTextToShowWhenEmpty("Type to filter plugins...", zenith::design::colors::TEXT_TERTIARY);
+    searchBox.onTextChange = [this] { updateFilteredList(); };
     addAndMakeVisible(searchBox);
 
     // Track selector
@@ -62,8 +62,8 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
 
     // Plugin table
     pluginTable.setModel(this);
-    pluginTable.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff2e2e2e));
-    pluginTable.setColour(juce::ListBox::outlineColourId, juce::Colour(0xff555555));
+    pluginTable.setColour(juce::ListBox::backgroundColourId, ZenithTheme::Colors::bg_02);
+    pluginTable.setColour(juce::ListBox::outlineColourId, ZenithTheme::Colors::border_default);
     pluginTable.setOutlineThickness(1);
     pluginTable.setMultipleSelectionEnabled(false);
 
@@ -92,12 +92,11 @@ PluginBrowserComponent::PluginBrowserComponent(Engine& eng)
 
 PluginBrowserComponent::~PluginBrowserComponent()
 {
-    searchBox.removeListener(this);
 }
 
 void PluginBrowserComponent::paint(juce::Graphics& g)
 {
-    g.fillAll(juce::Colour(0xff1e1e1e));  // Dark grey background
+    g.fillAll(ZenithTheme::Colors::bg_01);  // Design system background
 }
 
 void PluginBrowserComponent::resized()
@@ -212,16 +211,16 @@ int PluginBrowserComponent::getNumRows()
 void PluginBrowserComponent::paintRowBackground(juce::Graphics& g, int rowNumber, int width, int height, bool rowIsSelected)
 {
     if (rowIsSelected)
-        g.fillAll(juce::Colour(0xff4a4a4a));
+        g.fillAll(ZenithTheme::Colors::accent_subtle);
     else if (rowNumber % 2 == 0)
-        g.fillAll(juce::Colour(0xff2a2a2a));
+        g.fillAll(ZenithTheme::Colors::bg_02);
     else
-        g.fillAll(juce::Colour(0xff2e2e2e));
+        g.fillAll(ZenithTheme::Colors::bg_03);
 }
 
 void PluginBrowserComponent::paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected)
 {
-    g.setColour(rowIsSelected ? juce::Colours::white : juce::Colours::lightgrey);
+    g.setColour(rowIsSelected ? ZenithTheme::Colors::text_primary : ZenithTheme::Colors::text_secondary);
     g.setFont(14.0f);
 
     if (rowNumber >= 0 && rowNumber < filteredPlugins.size())
@@ -253,15 +252,7 @@ void PluginBrowserComponent::cellDoubleClicked(int rowNumber, int columnId, cons
     }
 }
 
-//==============================================================================
-// TextEditor::Listener interface
-//==============================================================================
-
-void PluginBrowserComponent::textEditorTextChanged(juce::TextEditor& editor)
-{
-    juce::ignoreUnused(editor);
-    updateFilteredList();
-}
+// TextEditor listener removed
 
 //==============================================================================
 // Helper methods

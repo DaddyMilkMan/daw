@@ -22,6 +22,7 @@
 #include "../../browser/BrowserPreviewEngine.h"
 #include "../../browser/BrowserScanner.h"
 #include "SkiaComponent.h"
+#include <list>
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
@@ -183,6 +184,9 @@ private:
     bool isRangeOne = false; // Normalized -1..1
   };
   std::map<juce::String, CachedWaveform> listWaveformCache_;
+  std::list<juce::String> cacheOrder_;
+  static constexpr size_t kMaxWaveformCacheSize = 500;
+  void updateCacheUsage(const juce::String& path);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserPanel)
 };

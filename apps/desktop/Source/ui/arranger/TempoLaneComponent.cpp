@@ -12,6 +12,7 @@
  */
 
 #include "TempoLaneComponent.h"
+#include "../design-system/ZenithTheme.h"
 
 using namespace zenith;
 
@@ -41,11 +42,11 @@ void TempoLaneComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background
-    g.fillAll(juce::Colour(0xff2a2a2a));
+    // Background - use design system
+    g.fillAll(ZenithTheme::Colors::bg_02);
 
     // Border
-    g.setColour(juce::Colours::black);
+    g.setColour(ZenithTheme::Colors::border_subtle);
     g.drawRect(bounds, 1);
 
     // Draw grid lines for BPM
@@ -70,7 +71,7 @@ void TempoLaneComponent::paint(juce::Graphics& g)
                 float x = beatsToX(timeBeats);
                 float y = bpmToY(bpm);
 
-                g.setColour(juce::Colours::yellow.withAlpha(0.3f));
+                g.setColour(ZenithTheme::Colors::warning.withAlpha(0.3f));
                 g.fillEllipse(x - 8, y - 8, 16, 16);
                 break;
             }
@@ -284,7 +285,7 @@ void TempoLaneComponent::drawGrid(juce::Graphics& g) const
     auto bounds = getLocalBounds().toFloat();
 
     // Draw horizontal BPM grid lines
-    g.setColour(juce::Colour(0xff3a3a3a));
+    g.setColour(ZenithTheme::Colors::border_subtle);
     const int bpmStep = 20;
 
     for (int bpm = static_cast<int>(minBpm); bpm <= static_cast<int>(maxBpm); bpm += bpmStep)
@@ -293,7 +294,7 @@ void TempoLaneComponent::drawGrid(juce::Graphics& g) const
         g.drawLine(0, y, bounds.getWidth(), y, 1.0f);
 
         // Draw BPM label
-        g.setColour(juce::Colours::grey);
+        g.setColour(ZenithTheme::Colors::text_secondary);
         g.setFont(10.0f);
         g.drawText(juce::String(bpm) + " BPM", 5, static_cast<int>(y) - 12, 60, 12,
                    juce::Justification::centredLeft);
@@ -307,7 +308,7 @@ void TempoLaneComponent::drawTempoCurve(juce::Graphics& g) const
         return;
 
     // Draw connecting lines between tempo points
-    g.setColour(juce::Colour(0xff4a9eff).withAlpha(0.7f));
+    g.setColour(ZenithTheme::Colors::accent_primary.withAlpha(0.7f));
 
     juce::Path curvePath;
     bool firstPoint = true;
@@ -358,21 +359,21 @@ void TempoLaneComponent::drawTempoPoint(juce::Graphics& g, double timeBeats, dou
     // Draw point
     if (selected)
     {
-        g.setColour(juce::Colours::orange);
+        g.setColour(ZenithTheme::Colors::warning);
         g.fillEllipse(x - 6, y - 6, 12, 12);
     }
     else
     {
-        g.setColour(juce::Colours::white);
+        g.setColour(ZenithTheme::Colors::text_primary);
         g.fillEllipse(x - 5, y - 5, 10, 10);
     }
 
     // Draw border
-    g.setColour(juce::Colours::black);
+    g.setColour(ZenithTheme::Colors::bg_01);
     g.drawEllipse(x - 5, y - 5, 10, 10, 1.0f);
 
     // Draw BPM label
-    g.setColour(juce::Colours::white);
+    g.setColour(ZenithTheme::Colors::text_primary);
     g.setFont(10.0f);
     g.drawText(juce::String(bpm, 1), static_cast<int>(x) - 20, static_cast<int>(y) + 8, 40, 12,
                juce::Justification::centred);

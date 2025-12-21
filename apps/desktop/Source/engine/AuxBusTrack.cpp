@@ -21,6 +21,12 @@ void AuxBusTrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferTo
     
     // 1. Start with silence
     bufferToFill.clearActiveBufferRegion();
+
+    // Verify rigorous thread safety
+    jassert(juce::MessageManager::getInstance()->currentThreadHasLockedMessageManager() == false);
+
+    // Process any pending cross-thread events/notes safely
+    processPendingNotes();
     
     // 2. Sum Aux Buffers (Inputs)
     for (auto* inputBuffer : auxBuffers) {

@@ -7,159 +7,119 @@
 #include "ZenithDesignSystem.h"
 #include <cmath>
 
-namespace zenith {
+#include <core/SkCanvas.h>
+#include <core/SkFont.h>
+#include <core/SkPaint.h>
+#include <core/SkPath.h>
+#include <core/SkRect.h>
+#include <core/SkTextBlob.h>
 
-// Helper to convert SkColor to juce::Colour
-static juce::Colour skToJuce(SkColor sk) {
-  return juce::Colour::fromRGBA(SkColorGetR(sk), SkColorGetG(sk),
-                                SkColorGetB(sk), SkColorGetA(sk));
-}
+namespace zenith {
 
 ModernTimelineRuler::ModernTimelineRuler() {
     setSize(800, 48);
 }
 
-void ModernTimelineRuler::paint(juce::Graphics& g) {
-    drawRulerBackground(g);
-    drawLoopRegion(g);
-    drawGridLines(g);
-    drawTimeMarkers(g);
-    drawPlayhead(g);
-}
-
-void ModernTimelineRuler::drawRulerBackground(juce::Graphics& g) {
-    auto bounds = getLocalBounds().toFloat();
+void ModernTimelineRuler::drawSkia(SkCanvas* canvas) {
+    auto bounds = getLocalBounds();
+    float width = (float)bounds.getWidth();
+    float height = (float)bounds.getHeight();
+    
+    using namespace design;
     
     // Background
-    g.setColour(skToJuce(design::colors::BG_DARK));
-    g.fillRect(bounds);
+    canvas->clear(colors::BG_DARK);
     
     // Bottom border
-    g.setColour(skToJuce(design::colors::BORDER_DEFAULT));
-    g.fillRect(bounds.removeFromBottom(1.0f));
-}
-
-void ModernTimelineRuler::drawGridLines(juce::Graphics& g) {
-    auto bounds = getLocalBounds();
-    int width = bounds.getWidth();
-    int height = bounds.getHeight();
+    SkPaint borderPaint;
+    borderPaint.setColor(colors::BORDER_DEFAULT);
+    canvas->drawRect(SkRect::MakeXYWH(0, height - 1.0f, width, 1.0f), borderPaint);
     
-    // Calculate visible beat range
+    // Loop Region
+    if (loopEnabled_) {
+        float loopStartX = (float)beatToPixel(loopStartBeat_);
+        float loopEndX = (float)beatToPixel(loopEndBeat_);
+        
+        if (loopEndX >= 0 && loopStartX <= width) {
+            SkPaint loopBgPaint;
+            loopBgPaint.setColor(colors::CYAN);
+            loopBgPaint.setAlphaf(0.1f);
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, loopEndX - loopStartX, height), loopBgPaint);
+            
+            SkPaint loopMarkerPaint;
+            loopMarkerPaint.setColor(colors::CYAN);
+            canvas->drawRect(SkRect::MakeXYWH(loopStartX, 0, 2.0f, height), loopMarkerPaint);
+            canvas->drawRect(SkRect::MakeXYWH(loopEndX - 2.0f, 0, 2.0f, height), loopMarkerPaint);
+        }
+    }
+    
+    // Grid Lines
     double startBeat = viewportStartBeat_;
     double endBeat = startBeat + (width / pixelsPerBeat_);
-    
     int beatsPerBar = timeSignatureNumerator_;
     
-    // Draw beat lines
-    for (int beat = std::floor(startBeat); beat <= std::ceil(endBeat); ++beat) {
-        int x = beatToPixel(beat);
-        
+    SkPaint linePaint;
+    linePaint.setAntiAlias(true);
+    
+    for (int beat = (int)std::floor(startBeat); beat <= (int)std::ceil(endBeat); ++beat) {
+        float x = (float)beatToPixel(beat);
         if (x < 0 || x > width) continue;
         
         bool isBarLine = (beat % beatsPerBar) == 0;
-        
         if (isBarLine) {
-            // Bar line (strong)
-            g.setColour(skToJuce(design::colors::BORDER_STRONG));
-            g.fillRect(x, 0, 2, height);
+            linePaint.setColor(colors::BORDER_STRONG);
+            canvas->drawRect(SkRect::MakeXYWH(x, 0, 2.0f, height), linePaint);
+            
+            // Bar numbers
+            SkPaint textPaint;
+            textPaint.setColor(colors::TEXT_SECONDARY);
+            textPaint.setAntiAlias(true);
+            SkFont font = typography::getSkFont(typography::FONT_SM);
+            juce::String label = formatTimeDisplay(beat);
+            canvas->drawString(label.toRawUTF8(), x + 4, 16.0f, font, textPaint);
         } else {
-            // Beat line (default)
-            g.setColour(skToJuce(design::colors::BORDER_DEFAULT));
-            g.fillRect(x, 0, 1, height);
+            linePaint.setColor(colors::BORDER_DEFAULT);
+            canvas->drawRect(SkRect::MakeXYWH(x, 0, 1.0f, height), linePaint);
         }
     }
     
-    // Draw subdivision lines (16th notes) if zoomed in enough
+    // Subdivision lines
     if (pixelsPerBeat_ > 20.0) {
-        double subdivisionsPerBeat = 4.0;  // 16th notes
-        
+        linePaint.setColor(colors::BORDER_SUBTLE);
+        double subdivisionsPerBeat = 4.0;
         for (double subdivision = std::floor(startBeat * subdivisionsPerBeat); 
              subdivision <= std::ceil(endBeat * subdivisionsPerBeat); 
              ++subdivision) {
-            
             double beat = subdivision / subdivisionsPerBeat;
-            int x = beatToPixel(beat);
-            
+            float x = (float)beatToPixel(beat);
             if (x < 0 || x > width) continue;
-            
-            // Skip if this is on a beat line
             if (std::fmod(subdivision, subdivisionsPerBeat) == 0.0) continue;
-            
-            g.setColour(skToJuce(design::colors::BORDER_SUBTLE));
-            g.fillRect(x, height - 8, 1, 8);
+            canvas->drawRect(SkRect::MakeXYWH(x, height - 8.0f, 1.0f, 8.0f), linePaint);
         }
     }
-}
-
-void ModernTimelineRuler::drawTimeMarkers(juce::Graphics& g) {
-    auto bounds = getLocalBounds();
-    int width = bounds.getWidth();
     
-    double startBeat = viewportStartBeat_;
-    double endBeat = startBeat + (width / pixelsPerBeat_);
-    
-    int beatsPerBar = timeSignatureNumerator_;
-    
-    g.setColour(skToJuce(design::colors::TEXT_SECONDARY));
-    g.setFont(design::typography::FONT_SM);
-    
-    // Draw bar numbers
-    for (int beat = std::floor(startBeat); beat <= std::ceil(endBeat); ++beat) {
-        if ((beat % beatsPerBar) != 0) continue;
+    // Playhead
+    float playheadX = (float)beatToPixel(playheadBeat_);
+    if (playheadX >= 0 && playheadX <= width) {
+        SkPaint phGlowPaint;
+        phGlowPaint.setColor(colors::NEON_RED);
+        phGlowPaint.setAlphaf(0.5f);
+        canvas->drawRect(SkRect::MakeXYWH(playheadX - 1.0f, 0, 3.0f, height), phGlowPaint);
         
-        int x = beatToPixel(beat);
-        if (x < 0 || x > width) continue;
+        SkPaint phPaint;
+        phPaint.setColor(colors::NEON_RED);
+        canvas->drawRect(SkRect::MakeXYWH(playheadX, 0, 1.0f, height), phPaint);
         
-        int barNumber = (beat / beatsPerBar) + 1;
-        juce::String label = formatTimeDisplay(beat);
-        
-        juce::Rectangle<int> textBounds(x + 4, 4, 100, 20);
-        g.drawText(label, textBounds, juce::Justification::left, false);
+        SkPath triangle;
+        triangle.moveTo(playheadX - 6.0f, 0.0f);
+        triangle.lineTo(playheadX + 6.0f, 0.0f);
+        triangle.lineTo(playheadX, 8.0f);
+        triangle.close();
+        canvas->drawPath(triangle, phPaint);
     }
 }
 
-void ModernTimelineRuler::drawPlayhead(juce::Graphics& g) {
-    int x = beatToPixel(playheadBeat_);
-    
-    if (x < 0 || x > getWidth()) return;
-    
-    auto bounds = getLocalBounds();
-    
-    // Playhead line with glow
-    g.setColour(skToJuce(design::colors::NEON_RED).withAlpha(0.5f));
-    g.fillRect(x - 1, 0, 3, bounds.getHeight());
-    
-    // Core line
-    g.setColour(skToJuce(design::colors::NEON_RED));
-    g.fillRect(x, 0, 1, bounds.getHeight());
-    
-    // Triangle indicator at top
-    juce::Path triangle;
-    triangle.addTriangle(x - 6.0f, 0.0f, x + 6.0f, 0.0f, x, 8.0f);
-    g.setColour(skToJuce(design::colors::NEON_RED));
-    g.fillPath(triangle);
-}
 
-void ModernTimelineRuler::drawLoopRegion(juce::Graphics& g) {
-    if (!loopEnabled_) return;
-    
-    int loopStartX = beatToPixel(loopStartBeat_);
-    int loopEndX = beatToPixel(loopEndBeat_);
-    
-    if (loopEndX < 0 || loopStartX > getWidth()) return;
-    
-    auto bounds = getLocalBounds();
-    juce::Rectangle<int> loopBounds(loopStartX, 0, loopEndX - loopStartX, bounds.getHeight());
-    
-    // Filled region
-    g.setColour(skToJuce(design::colors::CYAN).withAlpha(0.1f));
-    g.fillRect(loopBounds);
-    
-    // Loop markers
-    g.setColour(skToJuce(design::colors::CYAN));
-    g.fillRect(loopStartX, 0, 2, bounds.getHeight());
-    g.fillRect(loopEndX - 2, 0, 2, bounds.getHeight());
-}
 
 void ModernTimelineRuler::mouseDown(const juce::MouseEvent& e) {
     double beat = pixelToBeat(e.x);

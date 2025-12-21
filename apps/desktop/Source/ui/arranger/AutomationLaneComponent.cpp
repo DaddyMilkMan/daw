@@ -105,22 +105,26 @@ AutomationLaneComponent::getDefaultVolumeInfo() {
 //==============================================================================
 
 void AutomationLaneComponent::paint(juce::Graphics &g) {
-#ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
   using namespace zenith::design;
   
   // Get theme colors and typography
   const auto& colors = zenith::SkiaTheme::getInstance().getColors();
-  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
 
-  // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
-  juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
-                        std::max(1, getHeight()), true);
+  // Lazy allocation/resize of cached image to prevent allocation churn
+  if (cachedImage_.isNull() || cachedImage_.getWidth() != getWidth() || cachedImage_.getHeight() != getHeight()) {
+    cachedImage_ = juce::Image(juce::Image::ARGB, std::max(1, getWidth()),
+                               std::max(1, getHeight()), true);
+  } else {
+    // Clear existing image
+    cachedImage_.clear(cachedImage_.getBounds(), juce::Colours::transparentBlack);
+  }
+
   {
-    juce::Image::BitmapData bitmapData(tempImage,
+    juce::Image::BitmapData bitmapData(cachedImage_,
                                        juce::Image::BitmapData::readWrite);
     SkImageInfo info =
-        SkImageInfo::MakeN32Premul(tempImage.getWidth(), tempImage.getHeight());
+        SkImageInfo::MakeN32Premul(cachedImage_.getWidth(), cachedImage_.getHeight());
     auto skSurface = SkSurfaces::WrapPixels(info, bitmapData.getLinePointer(0),
                                             bitmapData.lineStride);
 
@@ -135,7 +139,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
       canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
       // Draw components
-      drawGrid(g); // Keep JUCE grid for now (lighter weight)
+      drawGridSkia(canvas);
 
       // Draw envelope curve with Skia (smooth)
       rebuildPointHandles();
@@ -292,19 +296,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
   }
 
   // Draw the rendered image
-  g.drawImageAt(tempImage, 0, 0);
-#else
-  // Fallback: Original JUCE rendering
-  g.fillAll(juce::Colour(0xff2a2a2a));
-  drawGrid(g);
-  drawEnvelopeCurve(g);
-  rebuildPointHandles();
-  drawControlPoints(g);
-  g.setColour(juce::Colours::white.withAlpha(0.7f));
-  g.setFont(14.0f);
-  g.drawText(paramInfo.displayName, 5, 5, 100, 20,
-             juce::Justification::centredLeft);
-#endif
+  g.drawImageAt(cachedImage_, 0, 0);
 }
 
 void AutomationLaneComponent::resized() { repaint(); }
@@ -313,17 +305,23 @@ void AutomationLaneComponent::resized() { repaint(); }
 // Drawing Methods
 //==============================================================================
 
-void AutomationLaneComponent::drawGrid(juce::Graphics &g) {
+void AutomationLaneComponent::drawGridSkia(SkCanvas &canvas) {
   const int width = getWidth();
   const int height = getHeight();
 
-  g.setColour(juce::Colour(0xff444444));
+  using namespace zenith::design;
+  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
+
+  SkPaint linePaint;
+  linePaint.setColor(colors::BORDER_SUBTLE);
+  linePaint.setStrokeWidth(0.5f);
+  linePaint.setAntiAlias(true);
 
   // Horizontal lines (value divisions)
   const int numHLines = 5;
   for (int i = 0; i <= numHLines; ++i) {
     float y = i * height / static_cast<float>(numHLines);
-    g.drawLine(0.0f, y, static_cast<float>(width), y, 0.5f);
+    canvas.drawLine(0.0f, y, static_cast<float>(width), y, linePaint);
   }
 
   // Vertical lines (beat grid)
@@ -335,99 +333,16 @@ void AutomationLaneComponent::drawGrid(juce::Graphics &g) {
     if (x >= 0.0f && x <= width) {
       // Stronger line every 4 beats (measure)
       if (static_cast<int>(beat) % 4 == 0)
-        g.setColour(juce::Colour(0xff666666));
+        linePaint.setColor(colors::BORDER_DEFAULT);
       else
-        g.setColour(juce::Colour(0xff444444));
+        linePaint.setColor(colors::BORDER_SUBTLE);
 
-      g.drawLine(x, 0.0f, x, static_cast<float>(height), 0.5f);
+      canvas.drawLine(x, 0.0f, x, static_cast<float>(height), linePaint);
     }
   }
 }
 
-void AutomationLaneComponent::drawEnvelopeCurve(juce::Graphics &g) {
-  if (!envelopeNode.isValid())
-    return;
 
-  const int numPoints = envelopeNode.getNumChildren();
-  if (numPoints == 0)
-    return;
-
-  // Build path for automation curve
-  juce::Path path;
-  bool firstPoint = true;
-
-  // Gather all points
-  struct PointData {
-    double timeBeats;
-    double value;
-    float x;
-    float y;
-  };
-  std::vector<PointData> points;
-
-  for (int i = 0; i < numPoints; ++i) {
-    auto pointNode = envelopeNode.getChild(i);
-    double timeBeats =
-        pointNode.getProperty(zenith::ProjectState::PROP_TIME_BEATS, 0.0);
-    double value = pointNode.getProperty(zenith::ProjectState::PROP_VALUE, 0.0);
-
-    PointData pt;
-    pt.timeBeats = timeBeats;
-    pt.value = value;
-    pt.x = beatsToPixels(timeBeats);
-    pt.y = valueToPixelY(value);
-    points.push_back(pt);
-  }
-
-  // Sort by time (should already be sorted, but just in case)
-  std::sort(points.begin(), points.end(),
-            [](const PointData &a, const PointData &b) {
-              return a.timeBeats < b.timeBeats;
-            });
-
-  // Draw line from left edge to first point
-  if (!points.empty()) {
-    path.startNewSubPath(0.0f, points[0].y);
-    path.lineTo(points[0].x, points[0].y);
-  }
-
-  // Draw lines between points
-  for (size_t i = 0; i < points.size(); ++i) {
-    if (i == 0)
-      path.lineTo(points[i].x, points[i].y);
-    else
-      path.lineTo(points[i].x, points[i].y);
-  }
-
-  // Draw line from last point to right edge (hold value)
-  if (!points.empty()) {
-    path.lineTo(static_cast<float>(getWidth()), points.back().y);
-  }
-
-  // Draw the path
-  g.setColour(juce::Colour(0xff4a9eff));
-  g.strokePath(path, juce::PathStrokeType(2.0f));
-}
-
-void AutomationLaneComponent::drawControlPoints(juce::Graphics &g) {
-  for (const auto &handle : pointHandles) {
-    // Check if this point is being dragged
-    bool isSelected = (handle.pointId == draggedPointId);
-
-    // Draw circle
-    g.setColour(isSelected ? juce::Colour(0xffff9944)
-                           : juce::Colour(0xff4a9eff));
-    g.fillEllipse(handle.screenPos.x - handle.radius,
-                  handle.screenPos.y - handle.radius, handle.radius * 2.0f,
-                  handle.radius * 2.0f);
-
-    // Draw outline
-    g.setColour(juce::Colours::white);
-    g.drawEllipse(handle.screenPos.x - handle.radius,
-                  handle.screenPos.y - handle.radius, handle.radius * 2.0f,
-                  handle.radius * 2.0f, 1.5f);
-  }
-}
 
 void AutomationLaneComponent::rebuildPointHandles() {
   pointHandles.clear();

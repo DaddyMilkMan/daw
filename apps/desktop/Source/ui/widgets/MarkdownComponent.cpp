@@ -9,7 +9,11 @@
 */
 
 #include "MarkdownComponent.h"
+#include "../../Source/ui/framework/SkiaComponent.h"
 #include "ZenithTheme.h"
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
 
 namespace zenith {
 namespace widgets {
@@ -53,10 +57,24 @@ MarkdownComponent::MarkdownComponent() {
 
 MarkdownComponent::~MarkdownComponent() = default;
 
-void MarkdownComponent::paint(juce::Graphics &g) {
-    g.fillAll(ZenithTheme::Colors::bg_02);
-    g.setColour(ZenithTheme::Colors::border_default);
-    g.drawRect(getLocalBounds(), 1);
+void MarkdownComponent::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds();
+  float width = (float)bounds.getWidth();
+  float height = (float)bounds.getHeight();
+
+  using namespace design;
+
+  // Background
+  SkPaint bgPaint;
+  bgPaint.setColor(colors::BG_DARK);
+  canvas->drawRect(SkRect::MakeWH(width, height), bgPaint);
+
+  // Border
+  SkPaint borderPaint;
+  borderPaint.setColor(colors::BORDER_DEFAULT);
+  borderPaint.setStyle(SkPaint::kStroke_Style);
+  borderPaint.setStrokeWidth(1.0f);
+  canvas->drawRect(SkRect::MakeWH(width, height), borderPaint);
 }
 
 void MarkdownComponent::resized() {

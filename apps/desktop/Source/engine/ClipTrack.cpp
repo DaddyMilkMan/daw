@@ -57,4 +57,33 @@ void ClipTrack::updateClipSnapshot() {
         clipSnapshotTrash_.erase(clipSnapshotTrash_.begin());
 }
 
+juce::ValueTree ClipTrack::getState() const {
+    juce::ValueTree state = Track::getState();
+    
+    juce::ValueTree clipsTree("Clips");
+    for (const auto& clip : clipsOwned_) {
+        if (clip != nullptr) {
+            clipsTree.appendChild(clip->getState(), nullptr);
+        }
+    }
+    state.appendChild(clipsTree, nullptr);
+    
+    return state;
+}
+
+void ClipTrack::loadState(const juce::ValueTree& state) {
+    Track::loadState(state);
+    
+    juce::ValueTree clipsTree = state.getChildWithName("Clips");
+    clearClips();
+    
+    for (int i = 0; i < clipsTree.getNumChildren(); ++i) {
+        auto clipState = clipsTree.getChild(i);
+        auto clip = Clip::createFromState(clipState);
+        if (clip != nullptr) {
+            addClip(std::move(clip));
+        }
+    }
+}
+
 } // namespace zenith

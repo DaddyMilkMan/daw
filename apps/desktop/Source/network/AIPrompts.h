@@ -19,7 +19,8 @@ namespace zenith {
 
 class AIPrompts {
 public:
-    static juce::String buildSystemPrompt(const std::function<juce::var()>& contextProvider);
+    static juce::String buildSystemPrompt(const std::function<juce::var()>& contextProvider,
+                                         const juce::String& recentAgentActivity = "");
 };
 
 } // namespace zenith

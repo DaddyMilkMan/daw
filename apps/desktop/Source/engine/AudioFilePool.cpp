@@ -18,7 +18,10 @@ AudioFilePool::AudioFilePool() {
   formatManager_.registerBasicFormats();
 }
 
-AudioFilePool::~AudioFilePool() { clear(); }
+AudioFilePool::~AudioFilePool() { 
+    if (isShuttingDown_) *isShuttingDown_ = true;
+    clear(); 
+}
 
 //==============================================================================
 AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file,
@@ -111,16 +114,26 @@ AudioFilePool::HandlePtr AudioFilePool::loadFile(const juce::File &file) {
 }
 
 void AudioFilePool::loadFileAsync(const juce::File& file, std::function<void(HandlePtr loadedHandle, juce::String error)> callback) {
-  // Capture basic info to avoid thread safety issues if possible
-  // shared_ptr to this to ensure pool stays alive
-  // Actually, pool is usually a singleton or long-lived in Zenith.
+  // Capture shutdown flag to check liveness
+  std::weak_ptr<std::atomic<bool>> weakShutdown = isShuttingDown_;
   
-  juce::Thread::launch([this, file, callback]() {
+  juce::Thread::launch([this, file, callback, weakShutdown]() {
+    // Check if pool is still alive
+    auto shutdown = weakShutdown.lock();
+    if (!shutdown || *shutdown) return;
+
     juce::String error;
     auto handle = loadFile(file, error);
     
+    // Check again before callback
+    if (!shutdown || *shutdown) return;
+
     if (callback) {
-      juce::MessageManager::callAsync([handle, error, callback]() {
+      juce::MessageManager::callAsync([handle, error, callback, weakShutdown]() {
+        // Final check on message thread
+        auto shutdown = weakShutdown.lock();
+        if (!shutdown || *shutdown) return;
+        
         callback(handle, error);
       });
     }

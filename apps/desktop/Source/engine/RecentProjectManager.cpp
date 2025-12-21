@@ -248,8 +248,8 @@ bool RecentProjectManager::load() {
   // Sort by time (most recent first)
   sortByTime();
 
-  // Prune invalid entries
-  pruneInvalidEntries();
+  // Prune invalid entries - DISABLED for startup performance
+  // pruneInvalidEntries();
 
   // Enforce max size
   enforceMaxSize();

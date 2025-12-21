@@ -146,12 +146,13 @@ void ZenithTextInput::startEditing() {
   editor_->selectAll();
   editor_->addListener(this);
 
-  // Style the editor
+  // Style the editor using design system colors
   editor_->setColour(juce::TextEditor::backgroundColourId,
                      juce::Colours::transparentBlack);
-  editor_->setColour(juce::TextEditor::textColourId, juce::Colours::white);
+  editor_->setColour(juce::TextEditor::textColourId, 
+                     design::toJuce(design::colors::TEXT_PRIMARY));
   editor_->setColour(juce::TextEditor::highlightColourId,
-                     juce::Colour(0, 255, 255).withAlpha(0.3f));
+                     design::toJuce(design::colors::CYAN).withAlpha(0.3f));
   editor_->setColour(juce::TextEditor::outlineColourId,
                      juce::Colours::transparentBlack);
   editor_->setColour(juce::TextEditor::focusedOutlineColourId,

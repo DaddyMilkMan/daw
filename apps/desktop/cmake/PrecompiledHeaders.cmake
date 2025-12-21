@@ -3,7 +3,9 @@
 # ==============================================================================
 # Purpose: Provide a PCH that includes heavy JUCE headers, reducing
 #          incremental build times significantly.
-#
+
+return() # FORCE DISABLE PCH due to build errors
+
 # Usage: Include this file from the main CMakeLists.txt after defining
 #        the ZenithDAW target.
 #

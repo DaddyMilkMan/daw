@@ -55,6 +55,7 @@ ZenithSamplerProcessor::ZenithSamplerProcessor()
 }
 
 ZenithSamplerProcessor::~ZenithSamplerProcessor() {
+  isShuttingDown_->store(true);
   if (loadingThread != nullptr && loadingThread->isThreadRunning()) {
     loadingThread->stopThread(1000);
   }
@@ -279,18 +280,25 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
 
   isLoadingPatch.store(true);
 
+  // Capture shutdown flag for safe async callback
+  auto shutdownFlag = isShuttingDown_;
+
   // Create a loading thread
   class LoadingThread : public juce::Thread {
   public:
-    LoadingThread(ZenithSamplerProcessor &owner, const juce::File &file)
-        : juce::Thread("BankLoader"), processor(owner), bankFile(file) {}
+    LoadingThread(ZenithSamplerProcessor &owner, const juce::File &file,
+                  std::shared_ptr<std::atomic<bool>> shutdown)
+        : juce::Thread("BankLoader"), processor(owner), bankFile(file),
+          shutdownFlag_(shutdown) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
 
       if (processor.parseBankFile(bankFile, *bankData)) {
         // Apply on message thread
-        juce::MessageManager::callAsync([this, data = bankData]() mutable {
+        auto flag = shutdownFlag_;
+        juce::MessageManager::callAsync([this, data = bankData, flag]() mutable {
+          if (flag->load()) return; // Processor destroyed
           processor.applyBankData(std::move(data));
           processor.isLoadingPatch.store(false);
         });
@@ -303,9 +311,10 @@ void ZenithSamplerProcessor::loadBankAsync(const juce::File &bankFile) {
   private:
     ZenithSamplerProcessor &processor;
     juce::File bankFile;
+    std::shared_ptr<std::atomic<bool>> shutdownFlag_;
   };
 
-  loadingThread = std::make_unique<LoadingThread>(*this, bankFile);
+  loadingThread = std::make_unique<LoadingThread>(*this, bankFile, shutdownFlag);
   loadingThread->startThread();
 }
 
@@ -318,13 +327,17 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
 
   isLoadingPatch.store(true);
 
+  // Capture shutdown flag for safe async callback
+  auto shutdownFlag = isShuttingDown_;
+
   // Create a loading thread
   class JsonLoadingThread : public juce::Thread {
   public:
     JsonLoadingThread(ZenithSamplerProcessor &owner, const juce::String &json,
-                      const juce::String &name)
+                      const juce::String &name,
+                      std::shared_ptr<std::atomic<bool>> shutdown)
         : juce::Thread("JsonBankLoader"), processor(owner), jsonString(json),
-          bankName(name) {}
+          bankName(name), shutdownFlag_(shutdown) {}
 
     void run() override {
       auto bankData = std::make_shared<SampleBankData>();
@@ -338,7 +351,9 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
 
         if (processor.parseBankJson(json, baseDir, *bankData)) {
           // Apply on message thread
-          juce::MessageManager::callAsync([this, data = bankData]() mutable {
+          auto flag = shutdownFlag_;
+          juce::MessageManager::callAsync([this, data = bankData, flag]() mutable {
+            if (flag->load()) return; // Processor destroyed
             processor.applyBankData(data);
             processor.isLoadingPatch.store(false);
           });
@@ -354,10 +369,11 @@ void ZenithSamplerProcessor::loadBankFromJsonAsync(
     ZenithSamplerProcessor &processor;
     juce::String jsonString;
     juce::String bankName;
+    std::shared_ptr<std::atomic<bool>> shutdownFlag_;
   };
 
   loadingThread =
-      std::make_unique<JsonLoadingThread>(*this, jsonString, bankName);
+      std::make_unique<JsonLoadingThread>(*this, jsonString, bankName, shutdownFlag);
   loadingThread->startThread();
 }
 

@@ -42,7 +42,7 @@ private:
 
   ProjectState &projectState;
   Engine &engine;
-  bool isModifyingState = false;
+  std::atomic<bool> isModifyingState{false};
   std::map<int, int> engineClipCounts;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ClipSynchronizer)

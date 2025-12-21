@@ -109,7 +109,7 @@ public:
    * @param pruneInvalid If true, removes entries for non-existent files
    * @return Vector of recent project entries
    */
-  std::vector<RecentProjectEntry> getRecentProjects(bool pruneInvalid = true);
+  std::vector<RecentProjectEntry> getRecentProjects(bool pruneInvalid = false);
 
   /**
    * Get a specific project by index

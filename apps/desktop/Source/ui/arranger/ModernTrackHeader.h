@@ -4,8 +4,7 @@
  * @author Fixed by Claude - December 2025
  */
 
-#pragma once
-
+#include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
@@ -14,15 +13,16 @@ namespace zenith {
  * @class ModernTrackHeader
  * @brief Track header component with proper visual hierarchy and interactions
  */
-class ModernTrackHeader : public juce::Component {
+class ModernTrackHeader : public SkiaComponent {
 public:
   ModernTrackHeader(int trackIndex = 0);
   ~ModernTrackHeader() override = default;
 
   //==========================================================================
-  // Component Overrides
+  // SkiaComponent Overrides
   //==========================================================================
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
+  void paint(juce::Graphics& g) override { SkiaComponent::paint(g); }
   void resized() override;
   void mouseEnter(const juce::MouseEvent &e) override;
   void mouseExit(const juce::MouseEvent &e) override;

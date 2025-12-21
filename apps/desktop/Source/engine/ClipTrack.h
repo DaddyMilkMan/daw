@@ -50,6 +50,10 @@ public:
         return nullptr;
     }
     const std::vector<std::unique_ptr<Clip>>& getClips() const { return clipsOwned_; }
+    
+    // State management
+    juce::ValueTree getState() const override;
+    void loadState(const juce::ValueTree& state) override;
 
 protected:
     struct ClipSnapshot {

@@ -10,8 +10,9 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
-#include <juce_events/juce_events.h>
+#include "../widgets/SkiaButton.h"
+#include "../widgets/SkiaComboBox.h"
+#include "../widgets/SkiaTextEditor.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -87,11 +88,7 @@ private:
     void paintCell(juce::Graphics& g, int rowNumber, int columnId, int width, int height, bool rowIsSelected) [[maybe_unused]] override;
     void cellDoubleClicked(int rowNumber, int columnId, const juce::MouseEvent& e) override;
 
-    //==========================================================================
-    // TextEditor::Listener interface
-    //==========================================================================
-
-    void textEditorTextChanged(juce::TextEditor& editor) override;
+    // No longer using TextEditor listener
 
     //==========================================================================
     // Helper methods
@@ -109,14 +106,14 @@ private:
 
     // UI Components
     juce::Label titleLabel;
-    juce::TextEditor searchBox;
+    SkiaTextEditor searchBox;
     juce::Label searchLabel;
     juce::TableListBox pluginTable;
-    juce::TextButton loadButton;
+    SkiaButton loadButton;
     juce::Label statusLabel;
 
-    // Track selector (simple combo box for now)
-    juce::ComboBox trackSelector;
+    // Track selector (Skia combo box)
+    SkiaComboBox trackSelector;
     juce::Label trackLabel;
 
     // Filtered list of plugin descriptions

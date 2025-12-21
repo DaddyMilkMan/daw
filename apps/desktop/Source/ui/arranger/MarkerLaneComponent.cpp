@@ -13,6 +13,7 @@
  */
 
 #include "MarkerLaneComponent.h"
+#include "../design-system/ZenithTheme.h"
 
 using namespace zenith;
 
@@ -42,11 +43,11 @@ void MarkerLaneComponent::paint(juce::Graphics& g)
 {
     auto bounds = getLocalBounds();
 
-    // Background
-    g.fillAll(juce::Colour(0xff2d2d2d));
+    // Background - use design system
+    g.fillAll(ZenithTheme::Colors::bg_02);
 
     // Border
-    g.setColour(juce::Colours::black);
+    g.setColour(ZenithTheme::Colors::border_subtle);
     g.drawRect(bounds, 1);
 
     // Draw markers
@@ -63,7 +64,7 @@ void MarkerLaneComponent::paint(juce::Graphics& g)
                 double timeBeats = marker[ProjectState::PROP_TIME_BEATS];
                 float x = beatsToX(timeBeats);
 
-                g.setColour(juce::Colours::yellow.withAlpha(0.2f));
+                g.setColour(ZenithTheme::Colors::warning.withAlpha(0.2f));
                 g.fillRect(x - 12, 0.0f, 24.0f, static_cast<float>(getHeight()));
                 break;
             }

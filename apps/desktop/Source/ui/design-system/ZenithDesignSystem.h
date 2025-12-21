@@ -301,6 +301,18 @@ constexpr float LEFT_SIDEBAR_WIDTH = 280.0f;
 constexpr float RIGHT_SIDEBAR_WIDTH = 320.0f;
 constexpr float BOTTOM_PANEL_HEIGHT = 200.0f;
 
+// Arranger Layout
+constexpr float ARRANGER_HEADER_WIDTH = 260.0f;
+constexpr float ARRANGER_RULER_HEIGHT = 30.0f;
+constexpr float ARRANGER_SECTION_HEIGHT = 24.0f;
+constexpr float ARRANGER_TRACK_HEIGHT = 80.0f;
+constexpr float TRACK_DEFAULT_HEIGHT = ARRANGER_TRACK_HEIGHT; // Alias
+constexpr float TRACK_HEADER_WIDTH = ARRANGER_HEADER_WIDTH; // Alias
+
+// Window Constraints
+constexpr int MIN_WINDOW_WIDTH = 1024;
+constexpr int MIN_WINDOW_HEIGHT = 768;
+
 // Minimum Sizes
 constexpr float MIN_PANEL_WIDTH = 200.0f;
 constexpr float MIN_PANEL_HEIGHT = 100.0f;
@@ -386,6 +398,14 @@ inline SkColor withAlpha(SkColor color, float alpha) {
                         SkColorGetG(color), SkColorGetB(color));
 }
 
+// Convert SkColor to juce::Colour for JUCE widget styling
+inline juce::Colour toJuce(SkColor sk) {
+  return juce::Colour(static_cast<juce::uint8>(SkColorGetR(sk)),
+                      static_cast<juce::uint8>(SkColorGetG(sk)),
+                      static_cast<juce::uint8>(SkColorGetB(sk)),
+                      static_cast<juce::uint8>(SkColorGetA(sk)));
+}
+
 // Lighten color
 inline SkColor lighten(SkColor color, float amount) {
   return SkColorSetARGB(
@@ -427,6 +447,13 @@ struct Settings {
   // Theme Management
   enum class Theme { NeonNoir, OLEDBlack, Classic };
   static Theme currentTheme;
+
+  // Global Interaction (Light Source)
+  static SkPoint mousePosition; 
+
+  // Aesthetic Profiles (Generative Skinning)
+  enum class AestheticProfile { Cyberpunk, Vaporwave, Classic, Retro };
+  static AestheticProfile currentProfile;
 
   // Backdrop Blur Quality (for glassmorphism performance)
   // Off = solid panels, Low = 50% blur, Medium = 75% blur, High = full blur

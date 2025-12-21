@@ -338,47 +338,59 @@ inline SkPath ChevronRight() {
 // ============================================================================
 
 /** Folder icon */
-inline SkPath Folder() {
-  SkPath path;
-  // Folder shape with tab
-  path.moveTo(4.0f, 8.0f);
-  path.lineTo(4.0f, 18.0f);
-  path.lineTo(20.0f, 18.0f);
-  path.lineTo(20.0f, 8.0f);
-  path.lineTo(12.0f, 8.0f);
-  path.lineTo(10.0f, 6.0f);
-  path.lineTo(4.0f, 6.0f);
-  path.close();
+/** Folder icon */
+inline const SkPath& Folder() {
+  static const SkPath path = []{
+    SkPath p;
+    // Folder shape with tab
+    p.moveTo(4.0f, 8.0f);
+    p.lineTo(4.0f, 18.0f);
+    p.lineTo(20.0f, 18.0f);
+    p.lineTo(20.0f, 8.0f);
+    p.lineTo(12.0f, 8.0f);
+    p.lineTo(10.0f, 6.0f);
+    p.lineTo(4.0f, 6.0f);
+    p.close();
+    return p;
+  }();
   return path;
 }
 
 /** File/Document icon */
-inline SkPath File() {
-  SkPath path;
-  // File with corner fold
-  path.moveTo(6.0f, 4.0f);
-  path.lineTo(6.0f, 20.0f);
-  path.lineTo(18.0f, 20.0f);
-  path.lineTo(18.0f, 9.0f);
-  path.lineTo(13.0f, 4.0f);
-  path.close();
-  // Corner fold
-  path.moveTo(13.0f, 4.0f);
-  path.lineTo(13.0f, 9.0f);
-  path.lineTo(18.0f, 9.0f);
+/** File/Document icon */
+inline const SkPath& File() {
+  static const SkPath path = []{
+    SkPath p;
+    // File with corner fold
+    p.moveTo(6.0f, 4.0f);
+    p.lineTo(6.0f, 20.0f);
+    p.lineTo(18.0f, 20.0f);
+    p.lineTo(18.0f, 9.0f);
+    p.lineTo(13.0f, 4.0f);
+    p.close();
+    // Corner fold
+    p.moveTo(13.0f, 4.0f);
+    p.lineTo(13.0f, 9.0f);
+    p.lineTo(18.0f, 9.0f);
+    return p;
+  }();
   return path;
 }
 
 /** Audio waveform icon */
-inline SkPath Audio() {
-  SkPath path;
-  // Vertical bars of varying heights (waveform style)
-  path.addRect(SkRect::MakeLTRB(4.0f, 10.0f, 6.0f, 14.0f));
-  path.addRect(SkRect::MakeLTRB(7.0f, 7.0f, 9.0f, 17.0f));
-  path.addRect(SkRect::MakeLTRB(10.0f, 4.0f, 12.0f, 20.0f));
-  path.addRect(SkRect::MakeLTRB(13.0f, 8.0f, 15.0f, 16.0f));
-  path.addRect(SkRect::MakeLTRB(16.0f, 6.0f, 18.0f, 18.0f));
-  path.addRect(SkRect::MakeLTRB(19.0f, 9.0f, 21.0f, 15.0f));
+/** Audio waveform icon */
+inline const SkPath& Audio() {
+  static const SkPath path = []{
+    SkPath p;
+    // Vertical bars of varying heights (waveform style)
+    p.addRect(SkRect::MakeLTRB(4.0f, 10.0f, 6.0f, 14.0f));
+    p.addRect(SkRect::MakeLTRB(7.0f, 7.0f, 9.0f, 17.0f));
+    p.addRect(SkRect::MakeLTRB(10.0f, 4.0f, 12.0f, 20.0f));
+    p.addRect(SkRect::MakeLTRB(13.0f, 8.0f, 15.0f, 16.0f));
+    p.addRect(SkRect::MakeLTRB(16.0f, 6.0f, 18.0f, 18.0f));
+    p.addRect(SkRect::MakeLTRB(19.0f, 9.0f, 21.0f, 15.0f));
+    return p;
+  }();
   return path;
 }
 
@@ -878,6 +890,131 @@ inline SkPath Microphone() { return Arm(); }
 
 /** Waveform alias */
 inline SkPath Waveform() { return Audio(); }
+
+// ============================================================================
+// FILE BROWSER ICONS
+// ============================================================================
+
+/** Home - House icon for home directory */
+inline SkPath Home() {
+  SkPath path;
+  // Roof
+  path.moveTo(12.0f, 3.0f);
+  path.lineTo(4.0f, 10.0f);
+  path.lineTo(6.0f, 10.0f);
+  path.lineTo(6.0f, 20.0f);
+  path.lineTo(18.0f, 20.0f);
+  path.lineTo(18.0f, 10.0f);
+  path.lineTo(20.0f, 10.0f);
+  path.close();
+  // Door
+  path.moveTo(10.0f, 14.0f);
+  path.lineTo(10.0f, 20.0f);
+  path.moveTo(14.0f, 14.0f);
+  path.lineTo(14.0f, 20.0f);
+  path.moveTo(10.0f, 14.0f);
+  path.lineTo(14.0f, 14.0f);
+  return path;
+}
+
+/** Desktop - Monitor icon */
+inline SkPath Desktop() {
+  SkPath path;
+  // Screen
+  path.addRoundRect(SkRect::MakeLTRB(3.0f, 4.0f, 21.0f, 15.0f), 2.0f, 2.0f);
+  // Stand
+  path.moveTo(12.0f, 15.0f);
+  path.lineTo(12.0f, 18.0f);
+  // Base
+  path.moveTo(8.0f, 18.0f);
+  path.lineTo(16.0f, 18.0f);
+  path.lineTo(17.0f, 20.0f);
+  path.lineTo(7.0f, 20.0f);
+  path.close();
+  return path;
+}
+
+/** HardDrive - Storage drive icon */
+inline SkPath HardDrive() {
+  SkPath path;
+  // Drive body
+  path.addRoundRect(SkRect::MakeLTRB(4.0f, 8.0f, 20.0f, 16.0f), 2.0f, 2.0f);
+  // Activity light
+  path.addCircle(17.0f, 12.0f, 1.5f);
+  // Divider line
+  path.moveTo(4.0f, 12.0f);
+  path.lineTo(12.0f, 12.0f);
+  return path;
+}
+
+/** Image - Picture/photo icon */
+inline SkPath Image() {
+  SkPath path;
+  // Frame
+  path.addRoundRect(SkRect::MakeLTRB(4.0f, 5.0f, 20.0f, 19.0f), 2.0f, 2.0f);
+  // Sun
+  path.addCircle(8.0f, 9.0f, 2.0f);
+  // Mountain landscape
+  path.moveTo(4.0f, 17.0f);
+  path.lineTo(9.0f, 12.0f);
+  path.lineTo(13.0f, 16.0f);
+  path.lineTo(15.0f, 14.0f);
+  path.lineTo(20.0f, 19.0f);
+  return path;
+}
+
+/** Video - Film/movie icon */
+inline SkPath Video() {
+  SkPath path;
+  // Film body
+  path.addRoundRect(SkRect::MakeLTRB(4.0f, 6.0f, 16.0f, 18.0f), 2.0f, 2.0f);
+  // Camera/record triangle
+  path.moveTo(18.0f, 9.0f);
+  path.lineTo(22.0f, 7.0f);
+  path.lineTo(22.0f, 17.0f);
+  path.lineTo(18.0f, 15.0f);
+  path.close();
+  return path;
+}
+
+/** FolderOpen - Open folder icon */
+inline SkPath FolderOpen() {
+  SkPath path;
+  // Folder back
+  path.moveTo(4.0f, 6.0f);
+  path.lineTo(10.0f, 6.0f);
+  path.lineTo(12.0f, 8.0f);
+  path.lineTo(20.0f, 8.0f);
+  path.lineTo(20.0f, 10.0f);
+  // Open flap
+  path.lineTo(22.0f, 10.0f);
+  path.lineTo(20.0f, 18.0f);
+  path.lineTo(2.0f, 18.0f);
+  path.lineTo(4.0f, 10.0f);
+  path.lineTo(4.0f, 6.0f);
+  path.close();
+  return path;
+}
+
+/** NewFolder - Folder with plus */
+inline SkPath NewFolder() {
+  SkPath path;
+  // Folder shape
+  path.moveTo(4.0f, 8.0f);
+  path.lineTo(4.0f, 18.0f);
+  path.lineTo(20.0f, 18.0f);
+  path.lineTo(20.0f, 8.0f);
+  path.lineTo(12.0f, 8.0f);
+  path.lineTo(10.0f, 6.0f);
+  path.lineTo(4.0f, 6.0f);
+  path.close();
+  // Plus sign
+  path.moveTo(12.0f, 10.0f);
+  path.lineTo(12.0f, 16.0f);
+  path.moveTo(9.0f, 13.0f);
+  path.lineTo(15.0f, 13.0f);
+  return path;
+}
 
 // ============================================================================
 // DRAWING HELPERS

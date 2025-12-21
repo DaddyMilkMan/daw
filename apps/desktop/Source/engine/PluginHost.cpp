@@ -81,21 +81,29 @@ int PluginHost::scanInternal(std::function<void(const juce::String&)> onProgress
 
         if (!location.exists()) continue;
 
-        // Use KnownPluginList to scan and add plugins
-        juce::PluginDirectoryScanner scanner(
-            knownPlugins,
-            *vst3Format,
-            searchPaths, // Use combined paths
-            true,  // Search recursively
-            juce::File()  // No dead-mans pedal file
-        );
+        // Get all files in this location
+        juce::Array<juce::File> files;
+        location.findChildFiles(files, juce::File::findFiles, true, "*.vst3");
 
-        juce::String pluginBeingScanned;
-
-        while (scanner.scanNextFile(true, pluginBeingScanned))
+        for (const auto& file : files)
         {
             if (shouldCancel_) break;
-            if (onProgress) onProgress("Scanning: " + pluginBeingScanned);
+            
+            if (!knownPlugins.getBlacklistedFiles().contains(file.getFullPathName()))
+            {
+                if (onProgress) onProgress("Scanning: " + file.getFileName());
+
+                juce::PluginDescription desc;
+                if (scanPluginOutOfProcess(file, desc))
+                {
+                    knownPlugins.addType(desc);
+                }
+                else
+                {
+                    DBG("PluginHost: Blacklisting " + file.getFullPathName() + " due to scan failure");
+                    knownPlugins.addToBlacklist(file.getFullPathName());
+                }
+            }
         }
 
         foundCount = knownPlugins.getNumTypes();
@@ -145,7 +153,8 @@ void PluginHost::scanAsync(std::function<void(int, int, const juce::String&)> pr
         DBG("PluginHost: Async scan complete.");
     });
     
-    scanThread_.detach();
+    // Don't detach - destructor will join to ensure proper cleanup
+    // scanThread_.detach() was causing use-after-free if PluginHost destroyed during scan
 }
 
 void PluginHost::cancelScan()
@@ -176,26 +185,89 @@ bool PluginHost::scanPath(const juce::File& path)
 
     DBG("PluginHost: Scanning path: " + path.getFullPathName());
 
-    juce::FileSearchPath searchPath(path.getFullPathName());
+    juce::Array<juce::File> files;
+    if (path.isDirectory())
+        path.findChildFiles(files, juce::File::findFiles, true, "*.vst3");
+    else
+        files.add(path);
 
-    juce::PluginDirectoryScanner scanner(
-        knownPlugins,
-        *vst3Format,
-        searchPath,
-        true,  // Search recursively
-        juce::File()  // No dead-mans pedal file
-    );
-
-    juce::String pluginBeingScanned;
-
-    while (scanner.scanNextFile(true, pluginBeingScanned))
+    for (const auto& file : files)
     {
-        DBG("PluginHost: Scanning " + pluginBeingScanned);
+        if (!knownPlugins.getBlacklistedFiles().contains(file.getFullPathName()))
+        {
+            DBG("PluginHost: Out-of-process scan for " + file.getFileName());
+            juce::PluginDescription desc;
+            if (scanPluginOutOfProcess(file, desc))
+            {
+                knownPlugins.addType(desc);
+            }
+            else
+            {
+                DBG("PluginHost: Blacklisting " + file.getFullPathName() + " due to scan failure");
+                knownPlugins.addToBlacklist(file.getFullPathName());
+            }
+        }
     }
 
     DBG("PluginHost: Path scan complete - total plugins: " + juce::String(knownPlugins.getNumTypes()));
 
     return true;
+}
+
+bool PluginHost::scanPluginOutOfProcess(const juce::File& file, juce::PluginDescription& result)
+{
+    // Use the current executable itself as the scanner
+    juce::File scannerExe = juce::File::getSpecialLocation(juce::File::currentExecutableFile);
+
+    if (!scannerExe.existsAsFile())
+    {
+        DBG("PluginHost: ERROR - Current executable not found!");
+        return false;
+    }
+
+    juce::StringArray args;
+    args.add(scannerExe.getFullPathName());
+    args.add("--scan-plugin");
+    args.add(file.getFullPathName());
+
+    juce::ChildProcess child;
+    if (child.start(args))
+    {
+        if (child.waitForProcessToFinish(5000))
+        {
+            if (child.getExitCode() == 0)
+            {
+                juce::String output = child.readAllProcessOutput();
+                auto var = juce::JSON::parse(output);
+                
+                if (var.isObject())
+                {
+                    result.name = var["name"];
+                    result.descriptiveName = var["descriptiveName"];
+                    result.pluginFormatName = var["pluginFormatName"];
+                    result.category = var["category"];
+                    result.manufacturerName = var["manufacturerName"];
+                    result.version = var["version"];
+                    result.fileOrIdentifier = var["fileOrIdentifier"];
+                    result.lastFileModTime = juce::Time((juce::int64)var["lastFileModTime"]);
+                    result.lastInfoUpdateTime = juce::Time((juce::int64)var["lastInfoUpdateTime"]);
+                    result.uniqueId = (int)var["uniqueId"];
+                    result.isInstrument = (bool)var["isInstrument"];
+                    result.numInputChannels = (int)var["numInputChannels"];
+                    result.numOutputChannels = (int)var["numOutputChannels"];
+                    result.hasSharedContainer = (bool)var["hasSharedContainer"];
+                    return true;
+                }
+            }
+        }
+        else
+        {
+            DBG("PluginHost: Scan TIMEOUT or CRASH for " + file.getFullPathName());
+            child.kill();
+        }
+    }
+
+    return false;
 }
 
 void PluginHost::clearPluginList()
@@ -327,6 +399,48 @@ juce::StringArray PluginHost::getSearchPaths() const
 int PluginHost::scanAll(bool async)
 {
     return scanDefaultLocations(async);
+}
+
+//==============================================================================
+// XML Caching
+//==============================================================================
+
+bool PluginHost::loadPluginList()
+{
+    juce::File cacheFile = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("ZenithDAW")
+        .getChildFile("plugin_cache.xml");
+
+    if (!cacheFile.existsAsFile())
+        return false;
+
+    auto xml = juce::XmlDocument::parse(cacheFile);
+    if (xml != nullptr && xml->hasTagName("KNOWN_PLUGINS"))
+    {
+        knownPlugins.recreateFromXml(*xml);
+        DBG("PluginHost: Loaded " + juce::String(knownPlugins.getNumTypes()) + " plugins from cache");
+        return true;
+    }
+
+    return false;
+}
+
+void PluginHost::savePluginList()
+{
+    juce::File appDataDir = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("ZenithDAW");
+
+    if (!appDataDir.exists())
+        appDataDir.createDirectory();
+
+    juce::File cacheFile = appDataDir.getChildFile("plugin_cache.xml");
+
+    auto xml = knownPlugins.createXml();
+    if (xml != nullptr)
+    {
+        xml->writeTo(cacheFile);
+        DBG("PluginHost: Saved plugin cache to " + cacheFile.getFullPathName());
+    }
 }
 
 } // namespace zenith

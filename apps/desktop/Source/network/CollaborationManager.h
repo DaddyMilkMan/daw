@@ -1,4 +1,6 @@
 #pragma once
+#include <atomic>
+#include <memory>
 #include <juce_core/juce_core.h>
 #include <juce_events/juce_events.h>
 #include <juce_graphics/juce_graphics.h>
@@ -96,6 +98,10 @@ private:
   bool isHost = false;
   bool allowRemoteEditing = false;
   int sentChallenge = 0; // The challenge we sent
+
+  // Thread safety: shutdown flag for async callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ =
+      std::make_shared<std::atomic<bool>>(false);
 
 
   // TCP Helper

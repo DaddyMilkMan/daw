@@ -347,6 +347,10 @@ private:
   // Listeners
   juce::ListenerList<Listener> listeners_;
 
+  // Thread safety: shutdown flag for async callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ =
+      std::make_shared<std::atomic<bool>>(false);
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SampleHunterAgent)
 };
 

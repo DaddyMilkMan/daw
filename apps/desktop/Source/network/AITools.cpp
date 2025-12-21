@@ -115,6 +115,22 @@ juce::Array<GrokFunction> AITools::getAvailableFunctions()
     myFunctions.add(createFunctionDef("stop_evolution", "Stop the current evolution process", "{ \"type\": \"object\", \"properties\": {} }"));
     myFunctions.add(createFunctionDef("get_evolution_stats", "Get current progress and best fitness of the evolution", "{ \"type\": \"object\", \"properties\": {} }"));
 
+    // Engine Stats & Automation
+    myFunctions.add(createFunctionDef("get_engine_stats", "Get real-time engine performance metrics (CPU, track count, playback position)",
+        "{ \"type\": \"object\", \"properties\": {} }"));
+
+    juce::String autoSchema = "{";
+    autoSchema += "\"type\": \"object\",";
+    autoSchema += "\"properties\": {";
+    autoSchema += "\"trackIndex\": { \"type\": \"integer\", \"description\": \"Index of the track\" },";
+    autoSchema += "\"paramId\": { \"type\": \"string\", \"description\": \"Parameter ID (e.g., volume, pan)\" },";
+    autoSchema += "\"value\": { \"type\": \"number\", \"description\": \"Value to set (0.0 to 1.0)\" }";
+    autoSchema += "},";
+    autoSchema += "\"required\": [\"trackIndex\", \"paramId\", \"value\"]";
+    autoSchema += "}";
+
+    myFunctions.add(createFunctionDef("set_track_automation", "Set immediate automation/parameter value for a track", autoSchema));
+
     return myFunctions;
 }
 

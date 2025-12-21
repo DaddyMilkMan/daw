@@ -48,9 +48,10 @@ MixerChannel::MixerChannel() {
   eqBands[3].frequency.store(8000.0f);
   
   // Initialize coefficient buffers
-  coeffsA_ = std::make_unique<FilterCoefficients>();
-  coeffsB_ = std::make_unique<FilterCoefficients>();
-  activeCoeffs_.store(coeffsA_.get());
+    coeffsA_ = std::make_unique<FilterCoefficients>();
+    coeffsB_ = std::make_unique<FilterCoefficients>();
+    activeCoeffs_.store(coeffsA_.get());
+    pendingCoeffs_.store(nullptr);
 }
 
 MixerChannel::~MixerChannel() {}
@@ -88,76 +89,56 @@ void MixerChannel::releaseResources() {
 }
 
 void MixerChannel::recalculateCoefficients() {
-  // Called from message thread - pre-calculate all coefficients
   if (currentSampleRate <= 0) return;
-  
-  // Get the inactive buffer to write to
-  FilterCoefficients* target = useCoeffsA_.load() ? coeffsB_.get() : coeffsA_.get();
-  
-  // Calculate HPF coefficients
-  auto hpfCoeffs = juce::IIRCoefficients::makeHighPass(currentSampleRate, hpfFrequency.load());
-  target->hpf = {hpfCoeffs.coefficients[0], hpfCoeffs.coefficients[1], hpfCoeffs.coefficients[2],
-                 1.0, hpfCoeffs.coefficients[3], hpfCoeffs.coefficients[4]};
-  
-  // Calculate EQ coefficients
+
+  // Determine which buffer is NOT active and write to it
+  auto* currentActive = activeCoeffs_.load();
+  auto* targetCoeffs = (currentActive == coeffsA_.get()) ? coeffsB_.get() : coeffsA_.get();
+
+  // Recalculate filter coefficients into targetCoeffs
+  auto hpfCoeffsObj = juce::IIRCoefficients::makeHighPass(currentSampleRate, hpfFrequency.load());
+  auto& hpfC = hpfCoeffsObj.coefficients;
+  for (int k = 0; k < 6; ++k) targetCoeffs->hpf[k] = hpfC[k];
+
   for (int i = 0; i < numEQBands; ++i) {
-    const float freq = eqBands[i].frequency.load();
-    const float gain = eqBands[i].gain.load();
-    const float q = eqBands[i].q.load();
-    
-    juce::IIRCoefficients coeffs;
-    
-    switch (eqBands[i].type) {
-    case EQBand::Type::LowShelf:
-      coeffs = juce::IIRCoefficients::makeLowShelf(currentSampleRate, freq, q,
-                                                   dbToGain(gain));
-      break;
-
-    case EQBand::Type::Peak:
-      coeffs = juce::IIRCoefficients::makePeakFilter(currentSampleRate, freq, q,
-                                                     dbToGain(gain));
-      break;
-
-    case EQBand::Type::HighShelf:
-      coeffs = juce::IIRCoefficients::makeHighShelf(currentSampleRate, freq, q,
-                                                    dbToGain(gain));
-      break;
+    const auto &band = eqBands[i];
+    if (band.enabled.load()) {
+      auto coeffsObj = juce::IIRCoefficients::makePeakFilter(
+                        currentSampleRate, band.frequency.load(),
+                        band.q.load(), dbToGain(band.gain.load()));
+      auto& c = coeffsObj.coefficients;
+      for (int k = 0; k < 6; ++k) targetCoeffs->eq[i][k] = c[k];
+    } else {
+      targetCoeffs->eq[i] = {1.0, 0.0, 0.0, 1.0, 0.0, 0.0};
     }
-    
-    target->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1], coeffs.coefficients[2],
-                     1.0, coeffs.coefficients[3], coeffs.coefficients[4]};
   }
   
-  // Mark for swap
-  coeffsDirty_.store(true);
+  // Store as pending for the audio thread to pick up
+  pendingCoeffs_.store(targetCoeffs);
 }
 
 void MixerChannel::applyCoefficients() {
-  // Called from audio thread - apply pre-calculated coefficients
-  if (!coeffsDirty_.load()) return;
+  FilterCoefficients* pending = pendingCoeffs_.exchange(nullptr);
   
-  // Swap to the newly calculated coefficients
-  bool useA = useCoeffsA_.load();
-  FilterCoefficients* newCoeffs = useA ? coeffsB_.get() : coeffsA_.get();
+  if (pending == nullptr)
+    return;
+    
+  // Make these the active coefficients
+  activeCoeffs_.store(pending);
   
   // Apply HPF
-  juce::IIRCoefficients hpf(newCoeffs->hpf[0], newCoeffs->hpf[1], newCoeffs->hpf[2],
-                            newCoeffs->hpf[3], newCoeffs->hpf[4], newCoeffs->hpf[5]);
-  hpfFilterL.setCoefficients(hpf);
-  hpfFilterR.setCoefficients(hpf);
+  juce::IIRCoefficients hpfCoeffs(pending->hpf[0], pending->hpf[1], pending->hpf[2],
+                                  pending->hpf[3], pending->hpf[4], pending->hpf[5]);
+  hpfFilterL.setCoefficients(hpfCoeffs);
+  hpfFilterR.setCoefficients(hpfCoeffs);
   
   // Apply EQ bands
   for (int i = 0; i < numEQBands; ++i) {
-    juce::IIRCoefficients eq(newCoeffs->eq[i][0], newCoeffs->eq[i][1], newCoeffs->eq[i][2],
-                             newCoeffs->eq[i][3], newCoeffs->eq[i][4], newCoeffs->eq[i][5]);
-    eqFiltersL[i].setCoefficients(eq);
-    eqFiltersR[i].setCoefficients(eq);
+    juce::IIRCoefficients eqCoeffs(pending->eq[i][0], pending->eq[i][1], pending->eq[i][2],
+                                   pending->eq[i][3], pending->eq[i][4], pending->eq[i][5]);
+    eqFiltersL[i].setCoefficients(eqCoeffs);
+    eqFiltersR[i].setCoefficients(eqCoeffs);
   }
-  
-  // Swap active buffer
-  activeCoeffs_.store(newCoeffs);
-  useCoeffsA_.store(!useA);
-  coeffsDirty_.store(false);
 }
 
 void MixerChannel::getNextAudioBlock(

@@ -42,6 +42,8 @@
 #include <effects/SkGradientShader.h>
 #endif
 
+#include <atomic>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -312,6 +314,10 @@ private:
 
   // Drop target highlight
   bool isDropTargetActive_ = false;
+
+  // Thread safety: Shutdown flag to prevent use-after-free in timer callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ = 
+      std::make_shared<std::atomic<bool>>(false);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(SessionViewComponent)
 };

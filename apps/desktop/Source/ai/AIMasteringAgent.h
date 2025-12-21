@@ -35,8 +35,13 @@ public:
         
         // Envelope follower
         envelope_ = 0.0f;
-        attackCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.001f)); // 1ms attack
-        releaseCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.100f)); // 100ms release
+        if (sampleRate_ > 0.0) {
+            attackCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.001f)); // 1ms attack
+            releaseCoeff_ = std::exp(-1.0f / static_cast<float>(sampleRate_ * 0.100f)); // 100ms release
+        } else {
+            attackCoeff_ = 0.0f;
+            releaseCoeff_ = 0.0f;
+        }
     }
     
     void reset() {
@@ -258,18 +263,18 @@ public:
         // Store options for real-time processing
         currentOptions_ = options;
         
-        // Configure processors
+        // Update atomic parameters for real-time thread safety
         if (options.applyCompression) {
-            compressor_.setAmount(options.compressionAmount);
+            currentCompressionAmount_.store(options.compressionAmount);
         }
         
         if (options.applyLimiter) {
             // Set ceiling based on target
             float ceiling = options.target8Bit ? -0.5f : -0.1f;
-            limiter_.setCeiling(ceiling);
+            currentLimiterCeiling_.store(ceiling);
         }
         
-        masteredSuccessfully_ = true;
+        masteredSuccessfully_.store(true);
         DBG("AIMasteringAgent: Mastering pass complete");
     }
     
@@ -291,11 +296,15 @@ public:
         
         // Apply compression
         if (currentOptions_.applyCompression) {
+            // Safe parameter update on audio thread
+            compressor_.setAmount(currentCompressionAmount_.load());
             compressor_.process(context);
         }
         
         // Apply limiting
         if (currentOptions_.applyLimiter) {
+            // Safe parameter update on audio thread
+            limiter_.setCeiling(currentLimiterCeiling_.load());
             limiter_.process(context);
         }
     }
@@ -343,9 +352,13 @@ private:
     GlueCompressor compressor_;
     MasteringLimiter limiter_;
     
-    bool isPrepared_ = false;
-    bool masteredSuccessfully_ = false;
+    std::atomic<bool> isPrepared_{false};
+    std::atomic<bool> masteredSuccessfully_{false};
     MasteringOptions currentOptions_;
+
+    // Thread-safe parameters
+    std::atomic<float> currentCompressionAmount_{0.5f};
+    std::atomic<float> currentLimiterCeiling_{-0.1f};
 
     void performAutoMixing() {
         // Analyze tracks and balance levels

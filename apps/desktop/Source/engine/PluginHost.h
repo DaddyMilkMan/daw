@@ -171,14 +171,29 @@ public:
     void removeSearchPath(int index);
     juce::StringArray getSearchPaths() const;
     
-    /**
-     * @brief Scan both default locations and custom paths
-     */
     int scanAll(bool async = false);
+
+    /**
+     * @brief Load plugin list from XML cache
+     * @return true if loaded successfully
+     */
+    bool loadPluginList();
+
+    /**
+     * @brief Save plugin list to XML cache
+     */
+    void savePluginList();
 
 private:
     // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
+    
+    /**
+     * @brief Performs an out-of-process scan for a single plugin
+     * @return true if successful, false if it crashed or timed out
+     */
+    bool scanPluginOutOfProcess(const juce::File& file, juce::PluginDescription& result);
+
 
     //==============================================================================
     // Member Variables

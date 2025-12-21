@@ -43,7 +43,7 @@ private:
     void updateSnapshot();
 
     std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
-    std::atomic<const PluginSnapshot*> activeSnapshot_{ nullptr };
+    std::shared_ptr<PluginSnapshot> activeSnapshot_{ std::make_shared<PluginSnapshot>() }; // Active snapshot for lock-free audio thread access (managed via atomic_load/store)
     std::shared_ptr<PluginSnapshot> currentSnapshot_;
     std::vector<std::shared_ptr<PluginSnapshot>> snapshotTrash_;
 

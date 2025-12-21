@@ -13,6 +13,8 @@
 #include "GrokAPIClient.h"
 #include "SecureKeyStore.h"
 #include <juce_core/juce_core.h>
+#include <atomic>
+#include <memory>
 
 namespace zenith {
 
@@ -24,7 +26,7 @@ class GrokAPIClient::Impl
 {
 public:
     Impl() = default;
-    ~Impl() = default;
+    ~Impl() { isShuttingDown_->store(true); }
     
     //==========================================================================
     // Configuration
@@ -146,8 +148,10 @@ public:
         }
         
         // Poll for completion (JUCE async pattern)
-        juce::Timer::callAfterDelay(100, [this, onSuccess, onError]()
+        auto shutdownFlag = isShuttingDown_;
+        juce::Timer::callAfterDelay(100, [this, shutdownFlag, onSuccess, onError]()
         {
+            if (shutdownFlag->load()) return;
             checkRequestCompletion(onSuccess, onError);
         });
     }
@@ -196,12 +200,19 @@ public:
         else
         {
             // Still downloading, check again
-            juce::Timer::callAfterDelay(100, [this, onSuccess, onError]()
+            auto shutdownFlag = isShuttingDown_;
+            juce::Timer::callAfterDelay(100, [this, shutdownFlag, onSuccess, onError]()
             {
+                if (shutdownFlag->load()) return;
                 checkRequestCompletion(onSuccess, onError);
             });
         }
     }
+    
+    //==========================================================================
+    // Thread safety: Shutdown flag to prevent use-after-free in async callbacks
+    std::shared_ptr<std::atomic<bool>> isShuttingDown_ = 
+        std::make_shared<std::atomic<bool>>(false);
     
     //==========================================================================
     /**

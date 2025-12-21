@@ -140,6 +140,9 @@ private:
     // File cache: path → audio handle
     std::unordered_map<juce::String, HandlePtr> fileCache_;
     mutable juce::CriticalSection cacheLock_;
+    
+    // Thread safety flag for async operations
+    std::shared_ptr<std::atomic<bool>> isShuttingDown_{ std::make_shared<std::atomic<bool>>(false) };
 
     // Audio format manager for loading files
     juce::AudioFormatManager formatManager_;

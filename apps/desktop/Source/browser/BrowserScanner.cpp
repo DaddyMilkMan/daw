@@ -22,6 +22,7 @@ BrowserScanner::BrowserScanner()
 
 BrowserScanner::~BrowserScanner()
 {
+    isShuttingDown_->store(true);
     cancelScan();
 }
 
@@ -113,8 +114,11 @@ void BrowserScanner::run()
     // Notify completion on message thread
     if (onScanComplete)
     {
-        juce::MessageManager::callAsync([this]() {
-            if (onScanComplete) onScanComplete();
+        auto shutdownFlag = isShuttingDown_;
+        auto callback = onScanComplete;
+        juce::MessageManager::callAsync([shutdownFlag, callback]() {
+            if (shutdownFlag->load()) return;
+            if (callback) callback();
         });
     }
 }
@@ -218,8 +222,11 @@ void BrowserScanner::enqueueItem(std::shared_ptr<BrowserItem> item)
     if (onItemsDiscovered)
     {
         auto items = pendingItems_;
-        juce::MessageManager::callAsync([this, items]() {
-            if (onItemsDiscovered) onItemsDiscovered(items);
+        auto shutdownFlag = isShuttingDown_;
+        auto callback = onItemsDiscovered;
+        juce::MessageManager::callAsync([shutdownFlag, callback, items]() {
+            if (shutdownFlag->load()) return;
+            if (callback) callback(items);
         });
     }
 }
@@ -233,8 +240,11 @@ void BrowserScanner::notifyProgress(float progress, const juce::String& message)
     
     if (onProgressUpdated)
     {
-        juce::MessageManager::callAsync([this, progress, message]() {
-            if (onProgressUpdated) onProgressUpdated(progress, message);
+        auto shutdownFlag = isShuttingDown_;
+        auto callback = onProgressUpdated;
+        juce::MessageManager::callAsync([shutdownFlag, callback, progress, message]() {
+            if (shutdownFlag->load()) return;
+            if (callback) callback(progress, message);
         });
     }
 }

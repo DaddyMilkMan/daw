@@ -211,6 +211,43 @@ public:
     void setLoopWrapOffset(int offset) { loopWrapOffset_.store(offset); }
 
     //==========================================================================
+    // RT-Safe Loop Calculation
+    //==========================================================================
+    
+    struct LoopInfo {
+        bool wrapped = false;
+        int samplesBeforeLoop = 0;
+        int samplesAfterLoop = 0;
+        juce::int64 currentPos = 0;
+        juce::int64 loopStart = 0;
+    };
+
+    /**
+     * @brief Calculate loop wraparound for the next buffer
+     * @note AUDIO THREAD - RT-safe
+     */
+    LoopInfo getLoopInfo(int numSamples) const noexcept {
+        LoopInfo info;
+        info.currentPos = playheadSamples_.load();
+        info.samplesBeforeLoop = numSamples;
+        info.samplesAfterLoop = 0;
+
+        if (isPlaying_.load() && isLooping_.load()) {
+            juce::int64 loopEnd = loopEndSamples_.load();
+            juce::int64 loopStart = loopStartSamples_.load();
+            
+            if (loopEnd > loopStart && info.currentPos < loopEnd && 
+                (info.currentPos + numSamples) > loopEnd) {
+                info.wrapped = true;
+                info.samplesBeforeLoop = static_cast<int>(loopEnd - info.currentPos);
+                info.samplesAfterLoop = numSamples - info.samplesBeforeLoop;
+                info.loopStart = loopStart;
+            }
+        }
+        return info;
+    }
+
+    //==========================================================================
     // Tempo
     //==========================================================================
 

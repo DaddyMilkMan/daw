@@ -216,9 +216,19 @@ bool SessionDebuggerAgent::undoLastFix() {
 // Manual Fix Triggers
 //==============================================================================
 
-bool SessionDebuggerAgent::optimizeTrackCpu(int trackIndex, bool freeze) {
+bool SessionDebuggerAgent::optimizeTrackCpu(const juce::String& trackId, bool freeze) {
   auto &tracks = engine_.tracks();
-  if (trackIndex < 0 || trackIndex >= static_cast<int>(tracks.size())) {
+  int trackIndex = -1;
+  
+  // Resolve index from ID
+  for (size_t i = 0; i < tracks.size(); ++i) {
+      if (tracks[i] && tracks[i]->getTrackId() == trackId) {
+          trackIndex = static_cast<int>(i);
+          break;
+      }
+  }
+
+  if (trackIndex < 0) {
     return false;
   }
 
@@ -424,6 +434,7 @@ void SessionDebuggerAgent::analyzeCpuUsage() {
                            : IssueSeverity::Warning;
       issue.trackIndex = static_cast<int>(i);
       issue.trackName = track->getName();
+      issue.trackId = track->getTrackId();
       issue.description = "Track \"" + track->getName() + "\" is consuming " +
                           juce::String(estimatedCpu, 0) + "% CPU";
       issue.suggestedFix = "Freeze Track " +
@@ -638,8 +649,19 @@ void SessionDebuggerAgent::applyAutomaticFixes() {
     switch (issue.type) {
     case IssueType::CPUSpike:
       if (config_.autoFixCpuSpikes &&
-          issue.severity == IssueSeverity::Critical && issue.trackIndex >= 0) {
-        if (freezeTrack(issue.trackIndex)) {
+          issue.severity == IssueSeverity::Critical && issue.trackId.isNotEmpty()) {
+        
+        // Resolve ID to index
+        int currentIndex = -1;
+        auto& tracks = engine_.tracks();
+        for(size_t i=0; i<tracks.size(); ++i) {
+             if (tracks[i] && tracks[i]->getTrackId() == issue.trackId) {
+                 currentIndex = static_cast<int>(i);
+                 break;
+             }
+        }
+        
+        if (currentIndex >= 0 && freezeTrack(currentIndex)) {
           issue.isFixed = true;
           issue.fixApplied = "Froze track to save CPU";
 

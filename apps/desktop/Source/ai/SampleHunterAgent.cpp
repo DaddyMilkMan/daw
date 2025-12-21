@@ -10,6 +10,7 @@
 */
 
 #include "SampleHunterAgent.h"
+#include "AgentEventBroadcaster.h"
 #include "../network/SecureKeyStore.h"
 #include <juce_audio_formats/juce_audio_formats.h>
 #include <juce_cryptography/juce_cryptography.h>
@@ -69,7 +70,10 @@ SampleHunterAgent::SampleHunterAgent(Engine &engine)
   DBG("SampleHunterAgent: Initialized");
 }
 
-SampleHunterAgent::~SampleHunterAgent() { stopHunting(); }
+SampleHunterAgent::~SampleHunterAgent() {
+  isShuttingDown_->store(true);
+  stopHunting();
+}
 
 //==============================================================================
 // Control
@@ -79,7 +83,9 @@ void SampleHunterAgent::startHunting(const HuntingConfig &config) {
   // Fail gracefully if no API key is available
   if (!apiKeyAvailable_) {
     DBG("SampleHunterAgent: Cannot start hunting - no Freesound API key configured!");
-    juce::MessageManager::callAsync([this]() {
+    auto shutdownFlag = isShuttingDown_;
+    juce::MessageManager::callAsync([this, shutdownFlag]() {
+      if (shutdownFlag->load()) return;
       listeners_.call(&Listener::huntingComplete, stats_, false);
     });
     return;
@@ -285,8 +291,10 @@ void SampleHunterAgent::run() {
           auto analysisBatch = pendingAnalysisNotifications;
           auto importBatch = pendingImportNotifications;
 
+          auto shutdownFlag = isShuttingDown_;
           juce::MessageManager::callAsync(
-              [this, downloadBatch, analysisBatch, importBatch]() {
+              [this, downloadBatch, analysisBatch, importBatch, shutdownFlag]() {
+                if (shutdownFlag->load()) return;
                 for (const auto &s : downloadBatch)
                   listeners_.call(&Listener::sampleDownloaded, s);
                 for (const auto &s : analysisBatch)
@@ -321,8 +329,10 @@ void SampleHunterAgent::run() {
       auto analysisBatch = pendingAnalysisNotifications;
       auto importBatch = pendingImportNotifications;
 
+      auto shutdownFlag = isShuttingDown_;
       juce::MessageManager::callAsync(
-          [this, downloadBatch, analysisBatch, importBatch]() {
+          [this, downloadBatch, analysisBatch, importBatch, shutdownFlag]() {
+            if (shutdownFlag->load()) return;
             for (const auto &s : downloadBatch)
               listeners_.call(&Listener::sampleDownloaded, s);
             for (const auto &s : analysisBatch)
@@ -337,15 +347,30 @@ void SampleHunterAgent::run() {
     updateProgress(1.0f);
     setStatus("Sample hunt complete!");
 
-    juce::MessageManager::callAsync([this]() {
+    // BROADCAST FEEDBACK FOR AI
+    AgentEventBroadcaster::getInstance().broadcast(
+        "SampleHunter", "COMPLETED",
+        "Sample hunt finished: found " + juce::String(stats_.samplesFound) +
+            " samples.",
+        stats_.getSummary());
+
+    juce::MessageManager::callAsync([this, shutdownFlag = isShuttingDown_]() {
+      if (shutdownFlag->load()) return;
       listeners_.call(&Listener::huntingComplete, stats_, true);
       sendChangeMessage();
     });
   } catch (const std::exception &e) {
     DBG("SampleHunterAgent: Error - " + juce::String(e.what()));
     setStatus("Error: " + juce::String(e.what()));
+
+    AgentEventBroadcaster::getInstance().broadcast(
+        "SampleHunter", "ERROR", "Failed to hunt samples: " + juce::String(e.what()));
+
     juce::MessageManager::callAsync(
-        [this]() { listeners_.call(&Listener::huntingComplete, stats_, false); });
+        [this, shutdownFlag = isShuttingDown_]() {
+          if (shutdownFlag->load()) return;
+          listeners_.call(&Listener::huntingComplete, stats_, false);
+        });
   }
 
   isHunting_.store(false);
@@ -591,7 +616,9 @@ bool SampleHunterAgent::importToPool(FoundSample &sample) {
 void SampleHunterAgent::setStatus(const juce::String &status) {
   juce::ScopedLock lock(statusLock_);
   currentStatus_ = status;
-  juce::MessageManager::callAsync([status, this]() {
+  auto shutdownFlag = isShuttingDown_;
+  juce::MessageManager::callAsync([status, this, shutdownFlag]() {
+    if (shutdownFlag->load()) return;
     listeners_.call(&Listener::huntingProgressChanged, progress_.load(),
                     status);
   });
@@ -600,7 +627,9 @@ void SampleHunterAgent::setStatus(const juce::String &status) {
 void SampleHunterAgent::updateProgress(float p) {
   progress_.store(juce::jlimit(0.0f, 1.0f, p));
   juce::String s = getStatusMessage();
-  juce::MessageManager::callAsync([p, s, this]() {
+  auto shutdownFlag = isShuttingDown_;
+  juce::MessageManager::callAsync([p, s, this, shutdownFlag]() {
+    if (shutdownFlag->load()) return;
     listeners_.call(&Listener::huntingProgressChanged, p, s);
   });
 }

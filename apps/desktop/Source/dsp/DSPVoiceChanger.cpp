@@ -80,12 +80,21 @@ void DSPVoiceChanger::process(const juce::dsp::AudioBlock<const float>& inputBlo
             readPos_ += pitchRatio;
             if (readPos_ >= delayBuffer_.size()) readPos_ -= delayBuffer_.size();
             
-            // Sync read/write pointers to avoid drift (hacky but works for FX)
-            float dist = writePos_ - readPos_;
-            if (dist < 0) dist += delayBuffer_.size();
-            if (dist < 100 || dist > delayBuffer_.size() - 100) {
-                readPos_ = writePos_ - 2000; // Jump back
-                if (readPos_ < 0) readPos_ += delayBuffer_.size();
+            // Sync read/write pointers to avoid drift
+            // Optimization: If pitch ratio is 1.0 (no shift), lock the read pointer relative to write pointer
+            // to avoid any drift or interpolation artifacts.
+            if (std::abs(pitchRatio - 1.0f) < 0.0001f) {
+                 float targetReadPos = (float)writePos_ - 2000.0f; // Maintain constant delay
+                 if (targetReadPos < 0) targetReadPos += delayBuffer_.size();
+                 readPos_ = targetReadPos;
+            } else {
+                // Pitch shifting active - existing drift correction
+                float dist = writePos_ - readPos_;
+                if (dist < 0) dist += delayBuffer_.size();
+                if (dist < 100 || dist > delayBuffer_.size() - 100) {
+                    readPos_ = writePos_ - 2000; // Jump back
+                    if (readPos_ < 0) readPos_ += delayBuffer_.size();
+                }
             }
         }
 

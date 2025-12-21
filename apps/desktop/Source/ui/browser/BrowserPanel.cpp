@@ -955,53 +955,54 @@ void BrowserPanel::drawIcon(SkCanvas *canvas, BrowserItemType type, float x,
 
   switch (type) {
   case BrowserItemType::Folder: {
-    iconPaint.setColor(SkColorSetRGB(220, 180, 80));
-    // Folder shape
-    SkPath folder;
-    folder.moveTo(x - 6, y - 4);
-    folder.lineTo(x - 2, y - 4);
-    folder.lineTo(x, y - 6);
-    folder.lineTo(x + 6, y - 6);
-    folder.lineTo(x + 6, y + 4);
-    folder.lineTo(x - 6, y + 4);
-    folder.close();
-    canvas->drawPath(folder, iconPaint);
+    // Standard Folder Icon
+    icons::IconStyle style;
+    style.color = SkColorSetRGB(220, 180, 80);
+    style.filled = true;
+    icons::drawIconCentered(canvas, icons::Folder(), 
+        SkRect::MakeXYWH(x - size/2, y - size/2, size, size), size, style);
     break;
   }
-  case BrowserItemType::AudioFile:
-    iconPaint.setColor(SkColorSetRGB(100, 220, 100));
-    // Waveform icon
-    canvas->drawRect(SkRect::MakeXYWH(x - 6, y - 2, 3, 4), iconPaint);
-    canvas->drawRect(SkRect::MakeXYWH(x - 2, y - 5, 3, 10), iconPaint);
-    canvas->drawRect(SkRect::MakeXYWH(x + 2, y - 3, 3, 6), iconPaint);
+  case BrowserItemType::AudioFile: {
+    // Audio Waveform Icon
+    icons::IconStyle style;
+    style.color = SkColorSetRGB(100, 220, 100);
+    style.filled = true;
+    icons::drawIconCentered(canvas, icons::Audio(), 
+        SkRect::MakeXYWH(x - size/2, y - size/2, size, size), size, style);
     break;
-
-  case BrowserItemType::MidiFile:
-    iconPaint.setColor(SkColorSetRGB(220, 100, 220));
-    // Piano keys icon
-    canvas->drawRect(SkRect::MakeXYWH(x - 5, y - 4, 10, 8), iconPaint);
-    iconPaint.setColor(SkColorSetRGB(40, 40, 45));
-    canvas->drawRect(SkRect::MakeXYWH(x - 3, y - 4, 2, 5), iconPaint);
-    canvas->drawRect(SkRect::MakeXYWH(x + 1, y - 4, 2, 5), iconPaint);
+  }
+  case BrowserItemType::MidiFile: {
+    // MIDI Icon
+    icons::IconStyle style;
+    style.color = SkColorSetRGB(220, 100, 220);
+    style.filled = true;
+    icons::drawIconCentered(canvas, icons::MIDI(), 
+        SkRect::MakeXYWH(x - size/2, y - size/2, size, size), size, style);
     break;
-
+  }
   case BrowserItemType::Plugin:
-  case BrowserItemType::Instrument:
-    iconPaint.setColor(SkColorSetRGB(100, 150, 255));
-    canvas->drawRoundRect(SkRect::MakeXYWH(x - 5, y - 5, 10, 10), 2, 2,
-                          iconPaint);
-    iconPaint.setColor(SkColorSetRGB(200, 220, 255));
-    canvas->drawCircle(x, y, 3, iconPaint);
+  case BrowserItemType::Instrument: {
+    // Plugin Icon
+    icons::IconStyle style;
+    style.color = SkColorSetRGB(100, 150, 255);
+    style.filled = true;
+    icons::drawIconCentered(canvas, icons::Plugin(), 
+        SkRect::MakeXYWH(x - size/2, y - size/2, size, size), size, style);
     break;
-
+  }
   case BrowserItemType::Preset:
     iconPaint.setColor(SkColorSetRGB(200, 100, 200));
     canvas->drawCircle(x, y, size * 0.4f, iconPaint);
     break;
 
   default:
-    iconPaint.setColor(SK_ColorGRAY);
-    canvas->drawCircle(x, y, size * 0.3f, iconPaint);
+    // Generic File
+    icons::IconStyle style;
+    style.color = SK_ColorGRAY;
+    style.filled = true;
+    icons::drawIconCentered(canvas, icons::File(), 
+        SkRect::MakeXYWH(x - size/2, y - size/2, size, size), size, style);
     break;
   }
 }

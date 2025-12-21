@@ -31,12 +31,17 @@ option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
 option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
-# Auto-enable sanitizers in Debug builds
-# (Disabled to prevent ASAN in Release builds)
-# if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-#     set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-# endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" ON)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
+else()
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
+endif()
+
+if(ENABLE_SANITIZERS AND MSVC)
+    add_compile_options(/fsanitize=address)
+endif()
 
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
@@ -117,10 +122,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/RecentProjectManager.cpp
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
-    apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
-    # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/tests/BasicAudioTest.cpp
 )
 
 # Create main executable
@@ -130,8 +132,6 @@ juce_add_gui_app(ZenithDAW
     VERSION ${PROJECT_VERSION}
     BUNDLE_ID com.zenithaudio.daw
 )
-
-
 
 # Generate JuceHeader.h for compatibility
 juce_generate_juce_header(ZenithDAW)
@@ -234,7 +234,7 @@ endif()
 enable_zenith_build_optimizations(ZenithDAW)
 
 # Precompiled Headers - dramatically reduces incremental build times
-include(apps/desktop/cmake/PrecompiledHeaders.cmake)
+# include(apps/desktop/cmake/PrecompiledHeaders.cmake)
 
 # Compile definitions
 target_compile_definitions(ZenithDAW PRIVATE
@@ -329,13 +329,9 @@ endif()
 # endif()
 
 # 9. Sanitizers
-if(ENABLE_SANITIZERS)
-    if(MSVC)
-        target_compile_options(ZenithDAW PRIVATE /fsanitize=address)
-    else()
-        target_compile_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
-        target_link_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
-    endif()
+if(ENABLE_SANITIZERS AND NOT MSVC)
+    target_compile_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
+    target_link_options(ZenithDAW PRIVATE -fsanitize=address -fsanitize=undefined)
     message(STATUS "Sanitizers enabled (Address, UB)")
 endif()
 

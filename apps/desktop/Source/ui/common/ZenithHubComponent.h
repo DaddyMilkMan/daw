@@ -23,6 +23,8 @@
 #include "GlassmorphicPanel.h"
 #include "SkiaComponent.h"
 #include "ZenithDesignSystem.h"
+#include "../widgets/SkiaTextEditor.h"
+#include <atomic>
 #include <functional>
 #include <memory>
 
@@ -171,7 +173,7 @@ private:
   juce::String greetingText_ = "Welcome back, User";
   SkRect greetingTextBounds_;
   SkRect greetingEditIconBounds_;
-  juce::TextEditor greetingEditor_;
+  zenith::SkiaTextEditor greetingEditor_;
   bool isGreetingHovered_ = false;
 
   void showGreetingEditor();
@@ -213,6 +215,10 @@ private:
 
   // Aurora living background
   std::unique_ptr<AuroraBackground> auroraBackground_;
+
+  // Thread safety: Shutdown flag to prevent use-after-free in async callbacks
+  std::shared_ptr<std::atomic<bool>> isShuttingDown_ = 
+      std::make_shared<std::atomic<bool>>(false);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithHubComponent)
 };

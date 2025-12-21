@@ -20,6 +20,13 @@ ProjectFileIO::ProjectFileIO(ProjectState& projectState)
 {
 }
 
+ProjectFileIO::~ProjectFileIO()
+{
+    // Signal to async callbacks that this object is being destroyed
+    // Callbacks check this flag before accessing member variables
+    isShuttingDown_->store(true);
+}
+
 void ProjectFileIO::newProject()
 {
     DBG("ProjectFileIO: Creating new project");
@@ -65,19 +72,34 @@ bool ProjectFileIO::loadFromFile(const juce::File& file)
 
     if (!newState.isValid() || newState.getType() != ProjectState::ID_PROJECT)
     {
-        DBG("ProjectFileIO: Invalid project file");
+        DBG("ProjectFileIO: Invalid project file - wrong type or invalid state");
         return false;
     }
+    
+    // Validate and repair project structure
+    // Ensure required child nodes exist (for backward compatibility with older projects)
+    if (!newState.getChildWithName(ProjectState::ID_TRACKS).isValid()) {
+        DBG("ProjectFileIO: Project missing TRACKS node, creating empty one");
+        newState.appendChild(juce::ValueTree(ProjectState::ID_TRACKS), nullptr);
+    }
+    
+    // Validate required properties exist, use defaults if missing
+    if (!newState.hasProperty(ProjectState::PROP_TEMPO)) {
+        DBG("ProjectFileIO: Project missing tempo, setting default 120 BPM");
+        newState.setProperty(ProjectState::PROP_TEMPO, 120.0, nullptr);
+    }
+    
+    if (!newState.hasProperty(ProjectState::PROP_TIME_SIG_NUM)) {
+        newState.setProperty(ProjectState::PROP_TIME_SIG_NUM, 4, nullptr);
+    }
+    
+    if (!newState.hasProperty(ProjectState::PROP_TIME_SIG_DEN)) {
+        newState.setProperty(ProjectState::PROP_TIME_SIG_DEN, 4, nullptr);
+    }
 
-    // Replace current state
+    // Replace current state with loaded state
     auto& state = projectState_.getState();
     state.removeListener(&projectState_);
-    // We can't assign to a reference, but we can assign to the ValueTree it refers to if it's a member
-    // Actually, ProjectState::getState() returns a reference. ValueTree assignment is shallow (reference counting).
-    // So this updates the internal ValueTree of ProjectState? 
-    // Wait, ProjectState::state is a member. assigning to the reference returned by getState() updates the member
-    // ONLY IF getState() returns a reference to the member.
-    // Yes, `juce::ValueTree &getState() { return state; }`
     state = newState;
     state.addListener(&projectState_);
 
@@ -91,25 +113,12 @@ bool ProjectFileIO::loadFromFile(const juce::File& file)
     projectState_.getUndoManager().clearUndoHistory();
 
     projectState_.setProjectFile(file);
+    
+    // Reset isDirty flag - project was just loaded, no unsaved changes
+    // ProjectFileIO is declared as friend in ProjectState.h so we can access isDirty
+    projectState_.isDirty = false;
+    
     DBG("ProjectFileIO: Loaded successfully");
-    // isDirty is false
-    // We can't access isDirty directly if it's private and we are not a friend yet.
-    // Assuming we will be a friend.
-    // But `setProjectFile` likely doesn't reset dirty flag.
-    // ProjectState doesn't have setDirty(bool).
-    // I'll assume I can access it via friendship or need to add a setter.
-    
-    // For now, I'll access it directly assuming friendship.
-    // projectState_.isDirty = false; 
-    // Wait, let's look at ProjectState.h again.
-    // I need to implement setIsDirty or similar if I can't access it.
-    // But cleaning up ProjectState is the goal.
-    
-    // I will use a trick: save to file resets dirty in ProjectState usually?
-    // In the original code: `isDirty = false;`
-    
-    // Implementation note: friend class declaration in ProjectState.h is required.
-    
     return true;
 }
 
@@ -194,12 +203,11 @@ void ProjectFileIO::saveToFileAsync(const juce::File& file, IOSettings settings,
     // For simplicity and safety, we take a copy of the ValueTree snapshot
     auto stateSnapshot = projectState_.getState().createCopy();
     
-    juce::Thread::launch([this, file, settings, stateSnapshot, callback]() mutable {
+    // Capture shutdown flag by value (shared_ptr) for safe async access
+    auto shutdownFlag = isShuttingDown_;
+    
+    juce::Thread::launch([this, file, settings, stateSnapshot, callback, shutdownFlag]() mutable {
         DBG("ProjectFileIO: Starting async save...");
-        
-        // We use a temporary ProjectFileIO or similar logic to perform the write without touching the main projectState_ directly
-        // But saveToFile updates projectState_.isDirty and setProjectFile.
-        // We should probably handle those UI-thread updates via a callback on the message thread.
         
         std::unique_ptr<juce::XmlElement> xml;
         juce::MemoryBlock msgPackData;
@@ -239,7 +247,13 @@ void ProjectFileIO::saveToFileAsync(const juce::File& file, IOSettings settings,
 
         if (writeSuccess) {
             if (tempFile.moveFileTo(file)) {
-                juce::MessageManager::callAsync([this, file, callback] {
+                juce::MessageManager::callAsync([this, file, callback, shutdownFlag] {
+                    // Check if object was destroyed before accessing this->
+                    if (shutdownFlag->load()) {
+                        DBG("ProjectFileIO: Skipping save completion - object destroyed");
+                        callback(false, "Operation cancelled - project closed");
+                        return;
+                    }
                     projectState_.setProjectFile(file);
                     projectState_.isDirty = false;
                     callback(true, "");
@@ -256,7 +270,10 @@ void ProjectFileIO::saveToFileAsync(const juce::File& file, IOSettings settings,
 
 void ProjectFileIO::loadFromFileAsync(const juce::File& file, std::function<void(bool success, juce::String error)> callback)
 {
-    juce::Thread::launch([this, file, callback]() {
+    // Capture shutdown flag by value (shared_ptr) for safe async access
+    auto shutdownFlag = isShuttingDown_;
+    
+    juce::Thread::launch([this, file, callback, shutdownFlag]() {
         DBG("ProjectFileIO: Starting async load...");
         
         if (!file.existsAsFile()) {
@@ -284,7 +301,14 @@ void ProjectFileIO::loadFromFileAsync(const juce::File& file, std::function<void
             return;
         }
 
-        juce::MessageManager::callAsync([this, file, newState, callback] {
+        juce::MessageManager::callAsync([this, file, newState, callback, shutdownFlag] {
+            // Check if object was destroyed before accessing this->
+            if (shutdownFlag->load()) {
+                DBG("ProjectFileIO: Skipping load completion - object destroyed");
+                callback(false, "Operation cancelled - project closed");
+                return;
+            }
+            
             // Re-check type safely on message thread
             if (newState.getType() != ProjectState::ID_PROJECT) {
                 callback(false, "File is not a Zenith project");

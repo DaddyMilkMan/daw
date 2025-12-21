@@ -47,15 +47,15 @@
 //==============================================================================
 namespace zenith {
 
-// Constants
-static constexpr float HEADER_WIDTH = 220.0f;
-static constexpr float SECTION_HEIGHT = 24.0f;
-static constexpr float RULER_HEIGHT = 30.0f;
-static constexpr float TRACK_HEIGHT =
-    80.0f; // Taller tracks for better visibility
+// Standardized layout constants now pulled from zenith::design::dimensions
 static constexpr float TOP_MARGIN =
-    SECTION_HEIGHT + RULER_HEIGHT; // Offset for tracks
+    zenith::design::dimensions::ARRANGER_SECTION_HEIGHT +
+    zenith::design::dimensions::ARRANGER_RULER_HEIGHT; // Offset for tracks
 static constexpr float SCROLLBAR_HEIGHT = 14.0f;
+static constexpr float HEADER_WIDTH = zenith::design::dimensions::TRACK_HEADER_WIDTH;
+static constexpr float RULER_HEIGHT = zenith::design::dimensions::ARRANGER_RULER_HEIGHT;
+static constexpr float TRACK_HEIGHT = zenith::design::dimensions::TRACK_DEFAULT_HEIGHT;
+static constexpr float SECTION_HEIGHT = zenith::design::dimensions::ARRANGER_SECTION_HEIGHT;
 
 // Grid Visibility Constants (Review Feedback #199)
 static constexpr SkAlpha kBarHighlightAlphaTop = 15;
@@ -287,7 +287,9 @@ void ArrangerComponent::rebuildTrackComponents() {
         comp->setTrackIndex(i);
         comp->setViewContext(pixelsPerBeat, viewStartBeats);
         
-        // TODO: Sync Mute/Solo/Rec state from ValueTree
+        comp->setMuted(trackNode[zenith::ProjectState::PROP_MUTE]);
+        comp->setSoloed(trackNode[zenith::ProjectState::PROP_SOLO]);
+        comp->setRecordArmed(trackNode[zenith::ProjectState::PROP_ARMED]);
     }
     
     resized(); // Layout
@@ -545,28 +547,29 @@ void ArrangerComponent::resized() {
     float w = 420.0f;
     float h = 60.0f;
     float x = (getWidth() - w) * 0.5f;
-    float y = RULER_HEIGHT + 20.0f;
+    float y = zenith::design::dimensions::ARRANGER_RULER_HEIGHT + 20.0f;
     macroToolbar->setBounds((int)x, (int)y, (int)w, (int)h);
   }
   
   // Layout Tracks
-  const float trackHeight = TRACK_HEIGHT; // 80.0f
+  const float trackHeight =
+      zenith::design::dimensions::ARRANGER_TRACK_HEIGHT; // 80.0f
   // We need to account for scroll position (firstVisibleTrackIndex)
   // For now, simple vertical stack starting from TOP_MARGIN
-  
+
   float yEntry = TOP_MARGIN; // + (0 - firstVisibleTrackIndex) * trackHeight?
   // Actually trackIndexToY handles the scroll math:
   // TOP_MARGIN + (trackIndex - firstVisibleTrackIndex) * TRACK_HEIGHT
-  
+
   for (size_t i = 0; i < trackComponents.size(); ++i) {
-      float y = trackIndexToY((int)i);
-      if (y + trackHeight < TOP_MARGIN || y > getHeight()) {
-          trackComponents[i]->setVisible(false);
-      } else {
-          trackComponents[i]->setVisible(true);
-          trackComponents[i]->setBounds(0, (int)y, getWidth(), (int)trackHeight);
-          trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
-      }
+    float y = trackIndexToY((int)i);
+    if (y + trackHeight < TOP_MARGIN || y > getHeight()) {
+      trackComponents[i]->setVisible(false);
+    } else {
+      trackComponents[i]->setVisible(true);
+      trackComponents[i]->setBounds(0, (int)y, getWidth(), (int)trackHeight);
+      trackComponents[i]->setViewContext(pixelsPerBeat, viewStartBeats);
+    }
   }
 }
 

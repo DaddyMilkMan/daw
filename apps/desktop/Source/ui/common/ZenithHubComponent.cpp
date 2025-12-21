@@ -11,8 +11,10 @@
 #include "../design-system/ZenithLayout.h"
 #include "ZenithIcons.h"
 #include <array>
+#include <atomic>
 #include <cmath>
 #include <map>
+#include <memory>
 #include <random>
 
 namespace zenith {
@@ -71,8 +73,6 @@ ZenithHubComponent::ZenithHubComponent(
   addChildComponent(&greetingEditor_);
   greetingEditor_.setVisible(false);
   greetingEditor_.setMultiLine(false);
-  greetingEditor_.setReturnKeyStartsNewLine(false);
-  greetingEditor_.setSelectAllWhenFocused(true);
 
   auto safeDismiss = [this]() { hideGreetingEditor(false); };
   greetingEditor_.onEscapeKey = safeDismiss;
@@ -89,6 +89,7 @@ ZenithHubComponent::ZenithHubComponent(
 }
 
 ZenithHubComponent::~ZenithHubComponent() {
+  isShuttingDown_->store(true);
   stopTimer();
   recentProjectManager_.removeListener(this);
 }
@@ -155,7 +156,11 @@ SkColor ZenithHubComponent::getAccentColorForGenre(const juce::String &genre) {
 void ZenithHubComponent::refreshProjects() { loadFromManager(); }
 
 void ZenithHubComponent::recentProjectsChanged() {
-  juce::MessageManager::callAsync([this]() { loadFromManager(); });
+  auto shutdownFlag = isShuttingDown_;
+  juce::MessageManager::callAsync([this, shutdownFlag]() {
+    if (shutdownFlag->load()) return;
+    loadFromManager();
+  });
 }
 
 void ZenithHubComponent::resized() { updateLayout(); }
@@ -271,9 +276,44 @@ void ZenithHubComponent::updateLayout() {
 }
 
 void ZenithHubComponent::timerCallback() {
-  animationTime_ += 0.016f;
-  alpha_.update(16.0f);
-  if (alpha_.isAnimating() || auroraBackground_) repaint();
+  SkiaComponent::timerCallback(); // Base animations (handles markDirty if any base animations are active)
+
+  const float dt = 16.66f; // Standard 60fps delta (60Hz timer)
+  
+  // 1. Update Opacity Animation
+  alpha_.update(dt);
+  
+  // 2. Update Interactive Springs (tilt/pulsing)
+  tiltX_.update();
+  tiltY_.update();
+  
+  for (auto &proj : recentProjects_) {
+    proj.scaleSpring.update();
+  }
+  
+  for (auto &tmpl : templates_) {
+    tmpl.scaleSpring.update();
+  }
+  
+  // 3. Update Visual Counters
+  animationTime_ += dt * 0.001f;
+  buttonGradientAngle_ += 0.02f;
+
+  // 4. Update Button Ripples
+  for (auto it = buttonRipples_.begin(); it != buttonRipples_.end();) {
+    it->radius += 2.0f;
+    it->opacity *= 0.92f;
+    if (it->opacity < 0.05f) it = buttonRipples_.erase(it);
+    else ++it;
+  }
+
+  // 5. ESSENTIAL: Keep the Hub repainting while animating or if aurora is active
+  // Since SkiaComponent::timerCallback will stop the timer if it doesn't find its 
+  // own animations, we ensure we keep repainting if OUR custom animations are alive.
+  bool isAnyHubAnimationActive = alpha_.isAnimating() || !buttonRipples_.empty();
+  if (isAnyHubAnimationActive || auroraBackground_) {
+    markDirty();
+  }
 }
 
 void ZenithHubComponent::show() {
@@ -624,9 +664,8 @@ void ZenithHubComponent::showGreetingEditor() {
     return;
 
   greetingEditor_.setText(greetingText_);
-  greetingEditor_.setSelectAllWhenFocused(true);
-  greetingEditor_.setJustification(juce::Justification::left);
-  greetingEditor_.setFont(juce::Font(18.0f));
+  greetingEditor_.setFont(design::typography::getSkFont(design::typography::FONT_MD, design::FontWeight::Regular));
+  greetingEditor_.setTextColour(colors::TEXT_PRIMARY);
 
   // Named constants for TextEditor sizing
   constexpr int kEditorWidthPadding = 60;

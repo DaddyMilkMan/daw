@@ -6,6 +6,7 @@
 */
 
 #include "GrokDAWController.h"
+#include "../ai/AgentEventBroadcaster.h"
 #include "../dsp/DSPStemSeparator.h"
 #include "../dsp/DSPVoiceChanger.h"
 #include "../dsp/ONNXStemSeparator.h"

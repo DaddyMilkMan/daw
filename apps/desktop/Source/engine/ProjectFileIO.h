@@ -16,6 +16,8 @@
 
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <atomic>
+#include <memory>
 
 namespace zenith {
 
@@ -36,7 +38,7 @@ public:
         bool useAtomicWrite = true;
     };
     explicit ProjectFileIO(ProjectState& projectState);
-    ~ProjectFileIO() = default;
+    ~ProjectFileIO();
 
     /**
      * @brief Create a new empty project
@@ -76,8 +78,13 @@ public:
 
 private:
     ProjectState& projectState_;
+    
+    // Shared flag to prevent use-after-free in async callbacks
+    // Destructor sets this to true, async callbacks check before accessing this->
+    std::shared_ptr<std::atomic<bool>> isShuttingDown_ = std::make_shared<std::atomic<bool>>(false);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectFileIO)
 };
 
 } // namespace zenith
+

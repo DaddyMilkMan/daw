@@ -323,68 +323,65 @@ public:
   }
 };
 
+
 /**
- * @class BasicAudioTest
- * @brief Tests that validate actual audio engine behavior
+ * @class RoutingGraphTests
+ * @brief Tests for audio routing graph topology and updates
  */
-class BasicAudioTest : public juce::UnitTest {
+class RoutingGraphTests : public juce::UnitTest {
 public:
-  BasicAudioTest() : juce::UnitTest("Basic Audio Processing") {}
+  RoutingGraphTests() : juce::UnitTest("Routing Graph", "AudioEngine") {}
 
   void runTest() override {
-    beginTest("Track processes audio without NaN/Inf");
+    beginTest("Graph Topology - Simple Serial");
     {
-      // Setup
-      zenith::Engine engine;
-      // Note: We can't fully initialize the engine without a proper setup
-      // This is a simplified test that checks basic audio buffer validation
-
-      // Create test buffer
-      const int numChannels = 2;
-      const int numSamples = 512;
-      juce::AudioBuffer<float> buffer(numChannels, numSamples);
-      buffer.clear();
-
-      // Fill with some test data (simulate processed audio)
-      for (int ch = 0; ch < numChannels; ++ch) {
-        float *samples = buffer.getWritePointer(ch);
-        for (int i = 0; i < numSamples; ++i) {
-          // Generate a simple sine wave to simulate valid audio output
-          float phase = (float)i / (float)numSamples * 2.0f * juce::MathConstants<float>::pi;
-          samples[i] =
-              std::sin(phase) * 0.1f; // Low amplitude to avoid clipping
-        }
+      zenith::RoutingGraph graph;
+      
+      zenith::RoutingGraph::Node n1 { "t1", zenith::RoutingGraph::NodeType::Track, "Track 1" };
+      zenith::RoutingGraph::Node n2 { "t2", zenith::RoutingGraph::NodeType::Track, "Track 2" };
+      zenith::RoutingGraph::Node master { "master", zenith::RoutingGraph::NodeType::Master, "Master" };
+      
+      graph.addNode(n1);
+      graph.addNode(n2);
+      graph.addNode(master);
+      
+      graph.connect("t1", "t2", 1.0f);
+      graph.connect("t2", "master", 1.0f);
+      
+      // Updates are automatic on modification in the real implementation
+      // graph.updateSnapshot(); // Private
+      
+      auto order = graph.getProcessingOrder();
+      
+      // Verify processing order: t1 -> t2 -> master
+      expect(order.size() == 3);
+      
+      // t1 must be before t2
+      int idx1 = -1, idx2 = -1, idxMaster = -1;
+      for (int i = 0; i < (int)order.size(); ++i) {
+          if (order[i] == "t1") idx1 = i;
+          if (order[i] == "t2") idx2 = i;
+          if (order[i] == "master") idxMaster = i;
       }
-
-      // ACTUAL ASSERTION - check output is valid
-      for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-        const float *samples = buffer.getReadPointer(ch);
-        for (int i = 0; i < buffer.getNumSamples(); ++i) {
-          expect(!std::isnan(samples[i]), "Output contains NaN");
-          expect(!std::isinf(samples[i]), "Output contains Inf");
-          // Also check reasonable range (should be between -1 and 1 for
-          // normalized audio)
-          expect(samples[i] >= -1.0f && samples[i] <= 1.0f,
-                 "Output out of valid range");
-        }
-      }
+      
+      expect(idx1 != -1 && idx2 != -1 && idxMaster != -1, "All nodes should be in processing order");
+      expect(idx1 < idx2, "Track 1 should be processed before Track 2");
+      expect(idx2 < idxMaster, "Track 2 should be processed before Master");
     }
 
-    beginTest("Audio buffer operations are safe");
+    beginTest("Cycle Detection");
     {
-      juce::AudioBuffer<float> buffer(2, 1024);
-      buffer.clear();
-
-      // Test basic buffer operations
-      expect(buffer.getNumChannels() == 2);
-      expect(buffer.getNumSamples() == 1024);
-
-      // Fill with valid data
-      buffer.setSample(0, 100, 0.5f);
-      buffer.setSample(1, 200, -0.3f);
-
-      expectEquals(buffer.getSample(0, 100), 0.5f);
-      expectEquals(buffer.getSample(1, 200), -0.3f);
+       zenith::RoutingGraph graph;
+       graph.addNode({ "a", zenith::RoutingGraph::NodeType::Track, "A" });
+       graph.addNode({ "b", zenith::RoutingGraph::NodeType::Track, "B" });
+       
+       graph.connect("a", "b", 1.0f);
+       graph.connect("b", "a", 1.0f); // CYCLE!
+       
+       auto order = graph.getProcessingOrder();
+       
+       // Snapshot should still contain both nodes via processingOrder fallback
+       expect(order.size() == 2);
     }
   }
 };
@@ -395,7 +392,7 @@ static ClipPlaybackTests clipPlaybackTests;
 static MIDIRoutingTests midiRoutingTests;
 static MixerChannelTests mixerChannelTests;
 static PluginHostingTests pluginHostingTests;
-static BasicAudioTest basicAudioTest;
+static RoutingGraphTests routingGraphTests;
 
 } // namespace tests
 } // namespace zenith

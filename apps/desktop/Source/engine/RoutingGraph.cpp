@@ -109,7 +109,9 @@ void RoutingGraph::updateSnapshot()
     snapshotTrash_.push_back(currentSnapshot_);
     currentSnapshot_ = newSnapshot;
 
-    while (snapshotTrash_.size() > 10) {
+    // Safety: Keep 64 old snapshots to ensure audio thread finishes reading
+    // before destruction. At 44.1kHz/2048 buffer, each callback ~46ms.
+    while (snapshotTrash_.size() > 64) {
         snapshotTrash_.pop_front();
     }
 }
@@ -131,7 +133,8 @@ void RoutingGraph::updateSnapshotWithPointers(
     snapshotTrash_.push_back(currentSnapshot_);
     currentSnapshot_ = newSnapshot;
 
-    while (snapshotTrash_.size() > 10) {
+    // Safety: Keep 64 old snapshots to ensure audio thread finishes reading
+    while (snapshotTrash_.size() > 64) {
         snapshotTrash_.pop_front();
     }
 }

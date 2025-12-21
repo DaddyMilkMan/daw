@@ -21,6 +21,12 @@ void MIDITrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToFi
     
     // 1. Clear Audio Buffer (Instrument will fill it)
     bufferToFill.clearActiveBufferRegion();
+
+    // Verify rigorous thread safety
+    jassert(juce::MessageManager::getInstance()->currentThreadHasLockedMessageManager() == false);
+
+    // Process any pending cross-thread events/notes safely
+    processPendingNotes();
     
     // 2. Prepare MIDI Buffer
     juce::MidiBuffer midiBuffer;

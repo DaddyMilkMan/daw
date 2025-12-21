@@ -11,6 +11,7 @@
 */
 
 #include "UXDirectorAgent.h"
+#include "AgentEventBroadcaster.h"
 #include "ClipComponent.h"
 #include "MixerChannelComponent.h"
 #include "SkiaComponent.h"
@@ -89,6 +90,14 @@ void UXDirectorAgent::runAnalysis() {
 
   // Update health score
   updateHealthScore();
+
+  // BROADCAST FEEDBACK FOR AI
+  if (getUnresolvedIssueCount() > 0) {
+    AgentEventBroadcaster::getInstance().broadcast(
+        "UXDirector", "UI_HEALTH_UPDATE",
+        "UI Health check: " + juce::String(getUnresolvedIssueCount()) + " issues identified.",
+        getIssueSummary());
+  }
 
   // Notify listeners
   sendChangeMessage();

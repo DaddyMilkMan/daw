@@ -12,9 +12,16 @@
 
 namespace zenith {
 
-juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& contextProvider)
+juce::String AIPrompts::buildSystemPrompt(const std::function<juce::var()>& contextProvider,
+                                         const juce::String& recentAgentActivity)
 {
     juce::String prompt;
+
+    if (recentAgentActivity.isNotEmpty())
+    {
+        prompt += "RECENT AGENT ACTIVITY:\n";
+        prompt += recentAgentActivity + "\n\n";
+    }
     
     // Try to load from file (Complaint #7 Fix)
     // Priority 1: Relative to executable (Deployment)

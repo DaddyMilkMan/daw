@@ -3,6 +3,7 @@
 #include "Engine.h"
 #include "ProjectState.h"
 #include "../instruments/InstrumentRegistry.h"
+#include "../design-system/ZenithDesignSystem.h"
 
 namespace zenith {
 
@@ -16,13 +17,13 @@ public:
     }
 
     void paint(juce::Graphics& g) override {
-        g.fillAll(juce::Colours::black); // Dark background
+        g.fillAll(design::toJuce(design::colors::BG_DARKEST)); // Dark background
         
         // Header
-        g.setColour(juce::Colours::darkgrey);
+        g.setColour(design::toJuce(design::colors::BG_DARK));
         g.fillRect(0, 0, getWidth(), 30);
         
-        g.setColour(juce::Colours::white);
+        g.setColour(design::toJuce(design::colors::TEXT_PRIMARY));
         g.setFont(juce::Font(16.0f, juce::Font::bold));
         g.drawText("Instruments", 10, 0, getWidth() - 20, 30, juce::Justification::centredLeft, true);
 
@@ -31,18 +32,18 @@ public:
         int y = 40;
         
         if (instrumentIds_.isEmpty()) {
-             g.setColour(juce::Colours::grey);
+             g.setColour(design::toJuce(design::colors::TEXT_SECONDARY));
              g.drawText("No instruments found.", 0, 40, getWidth(), 40, juce::Justification::centred, true);
              return;
         }
 
         for (const auto& id : instrumentIds_) {
             // Simple hover effect could be added here if we tracked mouse
-            g.setColour(juce::Colours::white);
+            g.setColour(design::toJuce(design::colors::TEXT_PRIMARY));
             g.drawText(id, 20, y, getWidth() - 40, 24, juce::Justification::left, true);
             
             // Separator
-            g.setColour(juce::Colours::white.withAlpha(0.1f));
+            g.setColour(design::toJuce(design::colors::TEXT_PRIMARY).withAlpha(0.1f));
             g.fillRect(10, y + 24, getWidth() - 20, 1);
             
             y += 28;

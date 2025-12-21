@@ -28,8 +28,7 @@
 #include <functional>
 #include <memory>
 
-// Forward declaration
-class AutomationLaneComponent;
+#include "AutomationLaneComponent.h"
 
 //==============================================================================
 /**
@@ -160,71 +159,5 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ArrangerView)
 };
 
-//==============================================================================
-/**
- * @class AutomationLaneComponent
- * @brief Displays and edits automation curves for a track parameter
- *
- * Shows automation points from ProjectState and allows editing:
- * - Click to add point
- * - Drag to move point
- * - Delete key to remove point
- * - Draws interpolated curve between points
- */
-class AutomationLaneComponent : public juce::Component
-{
-public:
-    //==========================================================================
-    /**
-     * @brief Constructor
-     * @param projectState Reference to project state
-     * @param trackId Track ID
-     * @param paramId Parameter ID ("volume", "pan", or "mute")
-     */
-    AutomationLaneComponent(ProjectState& projectState,
-                            const juce::String& trackId,
-                            const juce::String& paramId);
 
-    /**
-     * @brief Destructor
-     */
-    ~AutomationLaneComponent() override;
-
-    //==========================================================================
-    // Component interface
-    //==========================================================================
-
-    void paint(juce::Graphics& g) override;
-    void resized() override;
-    void mouseDown(const juce::MouseEvent& event) override;
-    void mouseDrag(const juce::MouseEvent& event) override;
-
-private:
-    //==========================================================================
-    // Helper Methods
-    //==========================================================================
-
-    /**
-     * @brief Convert value (0-1 or -1 to 1) to Y pixel coordinate
-     */
-    float valueToY(double value) const;
-
-    /**
-     * @brief Convert Y pixel coordinate to value
-     */
-    double yToValue(float y) const;
-
-    //==========================================================================
-    // Member Variables
-    //==========================================================================
-
-    ProjectState& projectState;
-    juce::String trackId;
-    juce::String paramId;
-
-    // Selected automation point (for dragging)
-    juce::String selectedPointId;
-
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AutomationLaneComponent)
-};
 

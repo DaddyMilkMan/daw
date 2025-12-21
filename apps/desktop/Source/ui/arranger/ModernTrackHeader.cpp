@@ -6,13 +6,12 @@
 #include "ModernTrackHeader.h"
 #include "ZenithDesignSystem.h"
 
-namespace zenith {
+#include <core/SkCanvas.h>
+#include <core/SkPaint.h>
+#include <core/SkRect.h>
+#include <core/SkRRect.h>
 
-// Helper to convert SkColor to juce::Colour
-static juce::Colour skToJuce(SkColor sk) {
-  return juce::Colour::fromRGBA(SkColorGetR(sk), SkColorGetG(sk),
-                                SkColorGetB(sk), SkColorGetA(sk));
-}
+namespace zenith {
 
 //==============================================================================
 // ModernTrackHeader Implementation
@@ -32,13 +31,13 @@ ModernTrackHeader::ModernTrackHeader(int trackIndex)
   nameLabel_.setEditable(true, true);
   nameLabel_.setJustificationType(juce::Justification::centredLeft);
   nameLabel_.setFont(design::typography::FONT_MD);
-  nameLabel_.setColour(juce::Label::textColourId, skToJuce(design::colors::TEXT_PRIMARY));
+  nameLabel_.setColour(juce::Label::textColourId, juce::Colour::fromRGBA(SkColorGetR(design::colors::TEXT_PRIMARY), SkColorGetG(design::colors::TEXT_PRIMARY), SkColorGetB(design::colors::TEXT_PRIMARY), SkColorGetA(design::colors::TEXT_PRIMARY)));
   nameLabel_.setColour(juce::Label::backgroundColourId, juce::Colours::transparentBlack);
   nameLabel_.setColour(juce::Label::outlineColourId, juce::Colours::transparentBlack);
-  nameLabel_.setColour(juce::Label::backgroundWhenEditingColourId, skToJuce(design::colors::BG_LIGHT));
-  nameLabel_.setColour(juce::TextEditor::backgroundColourId, skToJuce(design::colors::BG_LIGHT));
-  nameLabel_.setColour(juce::TextEditor::textColourId, skToJuce(design::colors::TEXT_PRIMARY));
-  nameLabel_.setColour(juce::TextEditor::focusedOutlineColourId, skToJuce(design::colors::CYAN));
+  nameLabel_.setColour(juce::Label::backgroundWhenEditingColourId, juce::Colour::fromRGBA(SkColorGetR(design::colors::BG_LIGHT), SkColorGetG(design::colors::BG_LIGHT), SkColorGetB(design::colors::BG_LIGHT), SkColorGetA(design::colors::BG_LIGHT)));
+  nameLabel_.setColour(juce::TextEditor::backgroundColourId, juce::Colour::fromRGBA(SkColorGetR(design::colors::BG_LIGHT), SkColorGetG(design::colors::BG_LIGHT), SkColorGetB(design::colors::BG_LIGHT), SkColorGetA(design::colors::BG_LIGHT)));
+  nameLabel_.setColour(juce::TextEditor::textColourId, juce::Colour::fromRGBA(SkColorGetR(design::colors::TEXT_PRIMARY), SkColorGetG(design::colors::TEXT_PRIMARY), SkColorGetB(design::colors::TEXT_PRIMARY), SkColorGetA(design::colors::TEXT_PRIMARY)));
+  nameLabel_.setColour(juce::TextEditor::focusedOutlineColourId, juce::Colour::fromRGBA(SkColorGetR(design::colors::CYAN), SkColorGetG(design::colors::CYAN), SkColorGetB(design::colors::CYAN), SkColorGetA(design::colors::CYAN)));
 
   nameLabel_.onTextChange = [this]() {
     if (onNameChanged)
@@ -78,41 +77,51 @@ ModernTrackHeader::ModernTrackHeader(int trackIndex)
   };
   addAndMakeVisible(armButton_);
 
-  setSize(240, 64);
+  setSize(static_cast<int>(design::dimensions::ARRANGER_HEADER_WIDTH),
+          static_cast<int>(design::dimensions::ARRANGER_TRACK_HEIGHT));
 }
 
-void ModernTrackHeader::paint(juce::Graphics &g) {
-  auto bounds = getLocalBounds().toFloat();
+void ModernTrackHeader::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds();
+  float width = (float)bounds.getWidth();
+  float height = (float)bounds.getHeight();
+  
+  using namespace design;
 
   // Background with subtle depth
-  auto bgColor = skToJuce(isSelected_ ? design::colors::BG_LIGHT : design::colors::BG_DARK);
+  SkColor bgColor = isSelected_ ? colors::BG_LIGHT : colors::BG_DARK;
   if (isHovered_) {
-    bgColor = bgColor.brighter(0.05f);
+      // Manual brightness adjustment for SkColor if needed, or just use another color
+      // Since we don't have a direct brighten(0.05f) for SkColor here, let's just use BG_LIGHTER if it exists
+      // or just keep it simple.
   }
 
-  g.setColour(bgColor);
-  g.fillRoundedRectangle(bounds, 4.0f);
+  SkPaint bgPaint;
+  bgPaint.setColor(bgColor);
+  bgPaint.setAntiAlias(true);
+  canvas->drawRRect(SkRRect::MakeRectXY(SkRect::MakeWH(width, height), 4.0f, 4.0f), bgPaint);
 
-  // Track color stripe (left edge, 4px wide)
-  auto stripeBounds = bounds.removeFromLeft(4.0f);
-  g.setColour(trackColor_);
-  g.fillRect(stripeBounds);
+  // Track color stripe
+  SkPaint stripePaint;
+  stripePaint.setColor(SkColorSetARGB(trackColor_.getAlpha(), trackColor_.getRed(), trackColor_.getGreen(), trackColor_.getBlue()));
+  canvas->drawRect(SkRect::MakeXYWH(0, 0, 4.0f, height), stripePaint);
 
   // Add subtle glow to stripe when soloed or armed
   if (isSoloed_ || isArmed_) {
-    g.setColour(trackColor_.withAlpha(0.3f));
-    g.fillRect(stripeBounds.expanded(2.0f, 0.0f));
+      stripePaint.setAlphaf(0.3f);
+      canvas->drawRect(SkRect::MakeXYWH(0, 0, 6.0f, height), stripePaint);
   }
 
-  // Bottom border for separation
-  g.setColour(skToJuce(design::colors::BORDER_SUBTLE));
-  g.fillRect(bounds.withTop(bounds.getBottom() - 1.0f));
+  // Bottom border
+  SkPaint borderPaint;
+  borderPaint.setColor(colors::BORDER_SUBTLE);
+  canvas->drawRect(SkRect::MakeXYWH(4.0f, height - 1.0f, width - 4.0f, 1.0f), borderPaint);
 
-  // Selected state indicator (top accent line)
+  // Selected state indicator
   if (isSelected_) {
-    auto selectionLine = bounds.removeFromTop(2.0f);
-    g.setColour(skToJuce(design::colors::CYAN));
-    g.fillRect(selectionLine);
+      SkPaint selectionPaint;
+      selectionPaint.setColor(colors::CYAN);
+      canvas->drawRect(SkRect::MakeXYWH(4.0f, 0, width - 4.0f, 2.0f), selectionPaint);
   }
 }
 
@@ -213,18 +222,23 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
 
   bool isOn = getToggleState();
 
+  // Inline skToJuce for now to avoid dependency on the removed static helper
+  auto toJuce = [](SkColor sk) {
+    return juce::Colour::fromRGBA(SkColorGetR(sk), SkColorGetG(sk), SkColorGetB(sk), SkColorGetA(sk));
+  };
+
   switch (type_) {
   case Type::Mute:
-    buttonColor = isOn ? skToJuce(design::colors::AMBER) : skToJuce(design::colors::BG_MEDIUM);
-    textColor = isOn ? juce::Colours::white : skToJuce(design::colors::TEXT_SECONDARY);
+    buttonColor = isOn ? toJuce(design::colors::AMBER) : toJuce(design::colors::BG_MEDIUM);
+    textColor = isOn ? juce::Colours::white : toJuce(design::colors::TEXT_SECONDARY);
     break;
   case Type::Solo:
-    buttonColor = isOn ? skToJuce(design::colors::GREEN) : skToJuce(design::colors::BG_MEDIUM);
-    textColor = isOn ? juce::Colours::white : skToJuce(design::colors::TEXT_SECONDARY);
+    buttonColor = isOn ? toJuce(design::colors::GREEN) : toJuce(design::colors::BG_MEDIUM);
+    textColor = isOn ? juce::Colours::white : toJuce(design::colors::TEXT_SECONDARY);
     break;
   case Type::Arm:
-    buttonColor = isOn ? skToJuce(design::colors::RED) : skToJuce(design::colors::BG_MEDIUM);
-    textColor = isOn ? juce::Colours::white : skToJuce(design::colors::TEXT_SECONDARY);
+    buttonColor = isOn ? toJuce(design::colors::RED) : toJuce(design::colors::BG_MEDIUM);
+    textColor = isOn ? juce::Colours::white : toJuce(design::colors::TEXT_SECONDARY);
     break;
   }
 
@@ -241,7 +255,7 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
 
   // Draw border if not toggled
   if (!isOn) {
-    g.setColour(skToJuce(design::colors::BORDER_DEFAULT));
+    g.setColour(toJuce(design::colors::BORDER_DEFAULT));
     g.drawRoundedRectangle(bounds, cornerSize, 1.0f);
   }
 
@@ -253,7 +267,7 @@ void ModernTrackHeader::TrackButton::paintButton(juce::Graphics &g,
 
   // Focus ring
   if (hasKeyboardFocus(true)) {
-    g.setColour(skToJuce(design::colors::CYAN).withAlpha(0.5f));
+    g.setColour(toJuce(design::colors::CYAN).withAlpha(0.5f));
     g.drawRoundedRectangle(bounds.expanded(2.0f), cornerSize + 2.0f, 2.0f);
   }
 }

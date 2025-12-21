@@ -78,8 +78,9 @@ enum class UIIssueSeverity {
 struct UIIssue {
   UIIssueType type = UIIssueType::None;
   UIIssueSeverity severity = UIIssueSeverity::Cosmetic;
-
-  juce::Component *component = nullptr;
+  
+  // Use SafePointer to prevent use-after-free when component is deleted
+  juce::Component::SafePointer<juce::Component> component;
   juce::String componentName;
   juce::String componentId;
   juce::String componentType; // RTTI type name

@@ -16,8 +16,11 @@
 #include "AuxBus.h"
 #include "TempoMap.h"
 #include "Track.h"
+#include "Clip.h"
 
 namespace zenith {
+    
+static constexpr int kMaxAuxBuses = 32;
 
 //==============================================================================
 void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
@@ -53,12 +56,14 @@ void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
 
   // Prepare dither
   dither_.prepare(2); // Stereo
+  
+  // Pre-allocate aux buffer vector to avoid RT allocations
+  auxBufferPtrsVector_.reserve(kMaxAuxBuses);
 
   DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
       juce::String(numAuxBuses) + " aux buses");
 
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
+
 }
 
 //==============================================================================
@@ -96,7 +101,7 @@ void AudioRenderer::renderAudioGraph(
 
   // Get routing snapshot (lock-free)
   const auto *snapshot = routingGraph.getSnapshot();
-  if (snapshot == nullptr || snapshot->processingOrder.empty()) {
+  if (snapshot == nullptr || snapshot->topology == nullptr || snapshot->topology->processingOrder.empty()) {
     return;
   }
 
@@ -108,7 +113,7 @@ void AudioRenderer::renderAudioGraph(
 
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
   // We'll use a local array for safety since it's small (max 16 aux buses usually)
-  static constexpr int kMaxAuxBuses = 32;
+  // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed member)
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
   for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
@@ -124,7 +129,7 @@ void AudioRenderer::renderAudioGraph(
   for(size_t i = 0; i < actualAuxCount; ++i) auxBufferPtrsVector_.push_back(auxBufferPtrs[i]);
 
   // Process nodes in topological order using FAST LOOKUP
-  for (const auto &nodeId : snapshot->processingOrder) {
+  for (const auto &nodeId : snapshot->topology->processingOrder) {
     // 1. Try to find a Track using fast lookup
     auto trackIt = snapshot->trackLookup.find(nodeId);
     if (trackIt != snapshot->trackLookup.end() && trackIt->second != nullptr) {
@@ -153,7 +158,7 @@ void AudioRenderer::renderAudioGraph(
           track->applyGainAndPan(trackBuffer, numSamples);
 
           // Mix frozen track using SIMD if possible
-          for (const auto &conn : snapshot->connections) {
+          for (const auto &conn : snapshot->topology->connections) {
             if (conn.sourceId == nodeId && conn.destId == "master") {
               if (conn.gain != 1.0f) trackBuffer.applyGain(conn.gain);
               
@@ -187,7 +192,7 @@ void AudioRenderer::renderAudioGraph(
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
       }
 
-      for (const auto &conn : snapshot->connections) {
+      for (const auto &conn : snapshot->topology->connections) {
         if (conn.sourceId == nodeId && conn.destId == "master") {
           for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), trackBuffer.getNumChannels()); ++ch) {
             outputBuffer.addFrom(ch, 0, trackBuffer.getReadPointer(ch), numSamples, conn.gain);
@@ -220,7 +225,7 @@ void AudioRenderer::renderAudioGraph(
         juce::AudioSourceChannelInfo auxInfo(&busBuffer, 0, numSamples);
         bus->getNextAudioBlock(auxInfo);
 
-        for (const auto &conn : snapshot->connections) {
+        for (const auto &conn : snapshot->topology->connections) {
           if (conn.sourceId == nodeId && conn.destId == "master") {
             for (int ch = 0; ch < juce::jmin(outputBuffer.getNumChannels(), busBuffer.getNumChannels()); ++ch) {
               outputBuffer.addFrom(ch, 0, busBuffer, ch, 0, numSamples, conn.gain);
@@ -399,6 +404,22 @@ void AudioRenderer::updateMasterLatency(
   }
   
   masterLatency_.store(totalLatency);
+}
+
+//==============================================================================
+void AudioRenderer::updateClipPositions(std::span<Track* const> tracks,
+                                        juce::int64 playheadPosition) noexcept {
+  // Update playhead position for all clips in all tracks
+  // This is called from the audio thread to keep clips synchronized
+  for (auto* track : tracks) {
+    if (track != nullptr) {
+      for (int i = 0; i < track->getNumClips(); ++i) {
+        if (auto* clip = track->getClip(i)) {
+          clip->setTransportPosition(playheadPosition);
+        }
+      }
+    }
+  }
 }
 
 } // namespace zenith

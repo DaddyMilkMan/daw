@@ -75,8 +75,8 @@ struct SessionIssue {
   IssueType type = IssueType::None;
   IssueSeverity severity = IssueSeverity::Info;
 
-  juce::String trackId;
   juce::String trackName;
+  juce::String trackId; // Added for robust identification
   int trackIndex = -1;
 
   juce::String pluginName; // If issue is plugin-related
@@ -359,14 +359,14 @@ public:
    * @param trackIndex Track to optimize
    * @param freeze If true, freeze the track; if false, reduce plugin count
    */
-  bool optimizeTrackCpu(int trackIndex, bool freeze = true);
+  bool optimizeTrackCpu(const juce::String& trackId, bool freeze);
 
   /**
    * @brief Manually fix gain staging for a track
    * @param trackIndex Track to fix
    * @param targetHeadroom Target headroom in dB
    */
-  bool fixTrackGainStaging(int trackIndex, float targetHeadroom = -6.0f);
+  bool fixTrackGainStaging(int trackIndex, float targetHeadroom = -1.0f);
 
   /**
    * @brief Enable low latency mode for a track (bypass high-latency plugins)

@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <atomic>
 #include "AutomationLane.h"
 #include "MixerChannel.h"
 #include "PluginChain.h"
@@ -62,7 +63,6 @@ public:
   void setSoloed(bool shouldBeSoloed);
   bool isSoloed() const;
 
-public:
 public:
   //==============================================================================
   enum class Type {
@@ -164,11 +164,11 @@ public:
 
   /**
    * @brief Get the freeze audio buffer
-   * @return Shared pointer to buffer, or nullptr if not frozen
-   * @note Audio thread safe - RCU pattern
+   * @return Pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - Lock-free
    */
-  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
-    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
+  juce::AudioBuffer<float>* getFreezeBuffer() const {
+    return activeFreezeBuffer_.load(std::memory_order_acquire);
   }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
@@ -206,8 +206,8 @@ public:
 
   //==============================================================================
   // State management
-  juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  virtual juce::ValueTree getState() const;
+  virtual void loadState(const juce::ValueTree &state);
 
   /**
    * @brief Load plugin states from ValueTree
@@ -218,7 +218,7 @@ public:
    * @param state The track state ValueTree
    * @param pluginHost Reference to PluginHost for plugin instantiation
    */
-  void loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost);
+  virtual void loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost);
 
   // Single plugin state helpers
   void loadPluginState(const juce::ValueTree &pluginTree, PluginHost &host);
@@ -235,6 +235,28 @@ public:
     automationManager.addLane(paramId, lane);
   }
   void clearAutomationLanes() { automationManager.clearLanes(); }
+
+  //==============================================================================
+  // Lock-free Note Event Buffer
+  //==============================================================================
+  struct ActiveNote {
+    int noteNumber;
+    float velocity; // 0.0-1.0
+    int midiChannel;
+    int sampleOffset;
+  };
+
+  /**
+   * @brief Push a note event to the audio thread queue
+   * @note Thread-safe, wait-free for caller
+   */
+  void subscribeNote(const ActiveNote& note);
+
+  /**
+   * @brief Process pending note events on audio thread
+   * @note Audio thread only
+   */
+  void processPendingNotes();
 
 protected:
   //==============================================================================
@@ -259,8 +281,12 @@ protected:
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
-  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
+  
+  // Freeze buffer storage (Lock-free RCU pattern)
+  std::shared_ptr<juce::AudioBuffer<float>> freezeBufferOwner_; // Message thread owner
+  std::atomic<juce::AudioBuffer<float>*> activeFreezeBuffer_{nullptr}; // Audio thread view
+  std::vector<std::shared_ptr<juce::AudioBuffer<float>>> freezeTrash_; // Garbage collection
+  
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing
@@ -280,6 +306,10 @@ protected:
   AutomationManager automationManager;
 
   juce::AudioBuffer<float> pluginBuffer;
+
+  // Lock-free note buffering
+  juce::AbstractFifo noteFifo_{ 256 };
+  std::array<ActiveNote, 256> noteBuffer_;
 
 
   //==============================================================================

@@ -49,7 +49,9 @@ public:
       StopEvolution,
       GetEvolutionStats,
       // Routing Graph Commands
-      GetRoutingGraph, ConnectNodes, DisconnectNodes
+      GetRoutingGraph, ConnectNodes, DisconnectNodes,
+      // AI Advanced Context
+      GetEngineStats, SetTrackAutomation
   };
 
   //==========================================================================
@@ -151,9 +153,13 @@ private:
   juce::var connectNodes(const juce::var& params);
   juce::var disconnectNodes(const juce::var& params);
 
+  // AI Advanced Context Handlers
+  juce::var getEngineStats(const juce::var& params);
+  juce::var setTrackAutomation(const juce::var& params);
+
   // Helpers
   juce::String createResponse(const juce::var &data) const;
-  juce::String createErrorResponse(const juce::String &errorMessage) const;
+  juce::var createErrorResponse(const juce::String &errorMessage) const;
   juce::var createSuccessResponse(const juce::var& result = juce::var()) const;
   bool validateParam(const juce::var &params, const juce::String &paramName, juce::String &errorOut) const;
 

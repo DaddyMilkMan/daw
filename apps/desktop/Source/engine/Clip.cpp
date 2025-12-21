@@ -479,6 +479,13 @@ void Clip::loadState(const juce::ValueTree& state)
     }
 }
 
+std::unique_ptr<Clip> Clip::createFromState(const juce::ValueTree& state) {
+    if (!state.hasType("Clip")) return nullptr;
+    auto clip = std::make_unique<Clip>();
+    clip->loadState(state);
+    return clip;
+}
+
 //==============================================================================
 // Phase 1.3: Process audio clip with explicit playhead position and Time-Stretching
 void Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, int64_t playheadSamples)
@@ -705,6 +712,7 @@ void Clip::applyFadesSIMD(const juce::AudioSourceChannelInfo& bufferToFill,
         }
     }
 }
+
 
 } // namespace zenith
 

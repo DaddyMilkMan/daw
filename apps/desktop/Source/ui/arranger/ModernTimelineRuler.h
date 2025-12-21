@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include "../framework/SkiaComponent.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <functional>
 
@@ -15,15 +16,16 @@ namespace zenith {
  * @class ModernTimelineRuler
  * @brief Timeline ruler showing time, beats, and grid divisions
  */
-class ModernTimelineRuler : public juce::Component {
+class ModernTimelineRuler : public SkiaComponent {
 public:
   ModernTimelineRuler();
   ~ModernTimelineRuler() override = default;
 
   //==========================================================================
-  // Component Overrides
+  // SkiaComponent Overrides
   //==========================================================================
-  void paint(juce::Graphics &g) override;
+  void drawSkia(SkCanvas *canvas) override;
+  void paint(juce::Graphics& g) override { SkiaComponent::paint(g); }
   void mouseDown(const juce::MouseEvent &e) override;
   void mouseDrag(const juce::MouseEvent &e) override;
   void mouseUp(const juce::MouseEvent &e) override;
@@ -66,14 +68,7 @@ public:
   std::function<void(double, double)> onLoopRegionChanged;
 
 private:
-  //==========================================================================
-  // Drawing Helpers
-  //==========================================================================
-  void drawRulerBackground(juce::Graphics &g);
-  void drawGridLines(juce::Graphics &g);
-  void drawTimeMarkers(juce::Graphics &g);
-  void drawPlayhead(juce::Graphics &g);
-  void drawLoopRegion(juce::Graphics &g);
+
 
   juce::String formatTimeDisplay(double beat) const;
   int beatToPixel(double beat) const;

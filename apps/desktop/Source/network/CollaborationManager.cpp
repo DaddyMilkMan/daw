@@ -4,7 +4,10 @@
 CollaborationManager::CollaborationManager()
     : juce::Thread("CollabP2PThread") {}
 
-CollaborationManager::~CollaborationManager() { disconnect(); }
+CollaborationManager::~CollaborationManager() {
+  isShuttingDown_->store(true);
+  disconnect();
+}
 
 void CollaborationManager::startHosting() {
   disconnect();
@@ -16,11 +19,13 @@ void CollaborationManager::startHosting() {
   currentState = ConnectionState::Registering;
   sendChangeMessage();
 
-  juce::Thread::launch([this]() {
+  auto shutdownFlag = isShuttingDown_;
+  juce::Thread::launch([this, shutdownFlag]() {
     // 2. Register via TCP to get Code
     juce::String code = registerWithSignalingTCP();
 
-    juce::MessageManager::callAsync([this, code]() {
+    juce::MessageManager::callAsync([this, code, shutdownFlag]() {
+      if (shutdownFlag->load()) return;
       if (code != "ERR" && code.isNotEmpty()) {
         sessionCode = code;
         startHolePunching(); // Move to UDP phase
@@ -40,12 +45,17 @@ void CollaborationManager::joinSession(const juce::String &code) {
   currentState = ConnectionState::Registering;
   sendChangeMessage();
 
-  juce::Thread::launch([this, code]() {
+  auto shutdownFlag = isShuttingDown_;
+  juce::Thread::launch([this, code, shutdownFlag]() {
     // 1. Verify Code via TCP
     if (verifyCodeTCP(code)) {
-      juce::MessageManager::callAsync([this]() { startHolePunching(); });
+      juce::MessageManager::callAsync([this, shutdownFlag]() {
+        if (shutdownFlag->load()) return;
+        startHolePunching();
+      });
     } else {
-      juce::MessageManager::callAsync([this]() {
+      juce::MessageManager::callAsync([this, shutdownFlag]() {
+        if (shutdownFlag->load()) return;
         currentState = ConnectionState::Error;
         sendChangeMessage();
       });
@@ -85,12 +95,14 @@ void CollaborationManager::run() {
     if (threadShouldExit())
       return;
     p2pSocket.write(SIGNALING_SERVER_IP, SIGNALING_UDP_PORT,
-                    punchMsg.toRawUTF8(), (int)punchMsg.length());
+                    punchMsg.toRawUTF8(), (int)punchMsg.getNumBytesAsUTF8());
     wait(200);
   }
 
   // 2. Listen Loop
   char buffer[2048];
+  juce::int64 lastKeepAlive = 0;
+  
   while (!threadShouldExit()) {
     // Read
     if (p2pSocket.waitUntilReady(true, 100) == 1) {
@@ -113,10 +125,9 @@ void CollaborationManager::run() {
       if (peerIP.isNotEmpty()) {
         juce::String hello = "HELLO_PEER";
         p2pSocket.write(peerIP, peerPort, hello.toRawUTF8(),
-                        (int)hello.length());
+                        (int)hello.getNumBytesAsUTF8());
       }
     } else if (currentState == ConnectionState::Connected) {
-      static juce::int64 lastKeepAlive = 0;
       auto now = juce::Time::currentTimeMillis();
       if (now - lastKeepAlive > 2000) {
         juce::MemoryBlock msg;
@@ -209,7 +220,7 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
           juce::MemoryBlock m;
           int t = (int)PacketType::Hello;
           m.append(&t, sizeof(int));
-          m.append(localUserName.toRawUTF8(), localUserName.length());
+          m.append(localUserName.toRawUTF8(), localUserName.getNumBytesAsUTF8());
           p2pSocket.write(peerIP, peerPort, m.getData(), (int)m.getSize());
         } else {
           DBG("Collab: Auth Failed! Response mismatch.");
@@ -254,8 +265,13 @@ void CollaborationManager::handleIncomingPacket(const void *data, int size,
           juce::String cmdData =
               juce::String::fromUTF8(payloadPtr, payloadSize);
           if (onEditReceived) {
+            auto shutdownFlag = isShuttingDown_;
+            auto callback = onEditReceived;
             juce::MessageManager::callAsync(
-                [this, cmdData]() { onEditReceived(cmdData); });
+                [shutdownFlag, callback, cmdData]() {
+                  if (shutdownFlag->load()) return;
+                  callback(cmdData);
+                });
           }
         }
       } else {
@@ -285,7 +301,7 @@ void CollaborationManager::updateLocalCursor(float x, float y) {
 
 void CollaborationManager::broadcastEdit(const juce::String &commandData) {
   sendPacket(PacketType::EditCommand, commandData.toRawUTF8(),
-             commandData.length());
+             commandData.getNumBytesAsUTF8());
 }
 
 // --- Helpers ---
@@ -294,7 +310,7 @@ juce::String CollaborationManager::registerWithSignalingTCP() {
   juce::StreamingSocket sock;
   if (sock.connect(SIGNALING_SERVER_IP, SIGNALING_TCP_PORT, 2000)) {
     juce::String req = "{\"action\": \"REGISTER\"}";
-    sock.write(req.toRawUTF8(), req.length());
+    sock.write(req.toRawUTF8(), req.getNumBytesAsUTF8());
 
     char buffer[1024];
     int bytes = sock.read(buffer, 1024, true);
@@ -311,7 +327,7 @@ bool CollaborationManager::verifyCodeTCP(const juce::String &code) {
   juce::StreamingSocket sock;
   if (sock.connect(SIGNALING_SERVER_IP, SIGNALING_TCP_PORT, 2000)) {
     juce::String req = "{\"action\": \"LOOKUP\", \"code\": \"" + code + "\"}";
-    sock.write(req.toRawUTF8(), req.length());
+    sock.write(req.toRawUTF8(), req.getNumBytesAsUTF8());
 
     char buffer[1024];
     int bytes = sock.read(buffer, 1024, true);

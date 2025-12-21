@@ -65,7 +65,6 @@ void ArrangerTrackComponent::drawSkia(SkCanvas *canvas) {
     if (type_ == TrackType::Section) {
         drawSections(canvas, rect);
     } else {
-        // Generic Track (Audio/Midi)
         drawTrackBackground(canvas, rect);
         drawTrackHeader(canvas, rect);
     }
@@ -76,7 +75,7 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas* canvas, const SkRect& bou
     
     float y = 0;
     float trackHeight = bounds.height();
-    SkRect headerRect = SkRect::MakeXYWH(0, 0, HEADER_WIDTH, trackHeight);
+    SkRect headerRect = SkRect::MakeXYWH(0, 0, dimensions::ARRANGER_HEADER_WIDTH, trackHeight);
 
     SkPaint trackBgPaint;
     trackBgPaint.setStyle(SkPaint::kFill_Style);
@@ -99,7 +98,7 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas* canvas, const SkRect& bou
     SkPaint topHighlight;
     topHighlight.setColor(SkColorSetARGB(20, 255, 255, 255));
     topHighlight.setStrokeWidth(1.0f);
-    canvas->drawLine(0, 0.5f, HEADER_WIDTH, 0.5f, topHighlight);
+    canvas->drawLine(0, 0.5f, dimensions::ARRANGER_HEADER_WIDTH, 0.5f, topHighlight);
 
     // D. Header Content
     SkFont nameFont = typography::getSkFont(typography::FONT_MD, FontWeight::Medium);
@@ -141,7 +140,7 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas* canvas, const SkRect& bou
     // E. Right Border for Header
     {
         SkPaint dividerPaint;
-        SkPoint divPts[2] = {{HEADER_WIDTH - 1, 0}, {HEADER_WIDTH - 1, trackHeight}};
+        SkPoint divPts[2] = {{dimensions::ARRANGER_HEADER_WIDTH - 1, 0}, {dimensions::ARRANGER_HEADER_WIDTH - 1, trackHeight}};
         SkColor divColors[3] = {
             SkColorSetARGB(60, 255, 255, 255),
             SkColorSetARGB(30, 255, 255, 255),
@@ -150,37 +149,40 @@ void ArrangerTrackComponent::drawTrackHeader(SkCanvas* canvas, const SkRect& bou
         float divPos[3] = {0.0f, 0.2f, 1.0f};
         dividerPaint.setShader(SkGradientShader::MakeLinear(
             divPts, divColors, divPos, 3, SkTileMode::kClamp));
-        canvas->drawLine(HEADER_WIDTH - 0.5f, 0, HEADER_WIDTH - 0.5f, trackHeight, dividerPaint);
+        canvas->drawLine(dimensions::ARRANGER_HEADER_WIDTH - 0.5f, 0, dimensions::ARRANGER_HEADER_WIDTH - 0.5f, trackHeight, dividerPaint);
 
         SkPaint shadowLine;
         shadowLine.setColor(SkColorSetARGB(40, 0, 0, 0));
-        canvas->drawLine(HEADER_WIDTH + 0.5f, 0, HEADER_WIDTH + 0.5f, trackHeight, shadowLine);
+        canvas->drawLine(dimensions::ARRANGER_HEADER_WIDTH + 0.5f, 0, dimensions::ARRANGER_HEADER_WIDTH + 0.5f, trackHeight, shadowLine);
     }
 }
 
-void ArrangerTrackComponent::drawTrackBackground(SkCanvas* canvas, const SkRect& bounds) {
-    using namespace design;
-    
-    // Alternating row tint
-    if (trackIndex_ % 2 == 1) {
-        SkPaint altRowPaint;
-        altRowPaint.setColor(SkColorSetARGB(8, 255, 255, 255));
-        canvas->drawRect(SkRect::MakeXYWH(HEADER_WIDTH, 0, bounds.width() - HEADER_WIDTH, bounds.height()),
-                         altRowPaint);
-    }
+void ArrangerTrackComponent::drawTrackBackground(SkCanvas *canvas,
+                                                 const SkRect &bounds) {
+  using namespace design;
 
-    // Separator
-    SkPaint sepPaint;
-    SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
-    SkColor sepColors[3] = {
-        SkColorSetARGB(60, 255, 255, 255),
-        SkColorSetARGB(30, 255, 255, 255),
-        SkColorSetARGB(10, 255, 255, 255)
-    };
-    float sepPos[3] = {0.0f, 0.3f, 1.0f};
-    sepPaint.setShader(SkGradientShader::MakeLinear(
-        sepPts, sepColors, sepPos, 3, SkTileMode::kClamp));
-    canvas->drawLine(0, bounds.height() - 0.5f, bounds.width(), bounds.height() - 0.5f, sepPaint);
+  // Alternating row tint
+  if (trackIndex_ % 2 == 1) {
+    SkPaint altRowPaint;
+    altRowPaint.setColor(SkColorSetARGB(8, 255, 255, 255));
+    canvas->drawRect(SkRect::MakeXYWH(dimensions::ARRANGER_HEADER_WIDTH, 0,
+                                      bounds.width() -
+                                          dimensions::ARRANGER_HEADER_WIDTH,
+                                      bounds.height()),
+                     altRowPaint);
+  }
+
+  // Separator
+  SkPaint sepPaint;
+  SkPoint sepPts[2] = {{0, 0}, {bounds.width(), 0}};
+  SkColor sepColors[3] = {SkColorSetARGB(60, 255, 255, 255),
+                          SkColorSetARGB(30, 255, 255, 255),
+                          SkColorSetARGB(10, 255, 255, 255)};
+  float sepPos[3] = {0.0f, 0.3f, 1.0f};
+  sepPaint.setShader(SkGradientShader::MakeLinear(
+      sepPts, sepColors, sepPos, 3, SkTileMode::kClamp));
+  canvas->drawLine(0, bounds.height() - 0.5f, bounds.width(),
+                   bounds.height() - 0.5f, sepPaint);
 }
 
 void ArrangerTrackComponent::drawControls(SkCanvas* canvas, float startX, float btnY) {
@@ -317,11 +319,13 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
           // Button clicked
           if (hoveredButtonIndex_ == 0) {
               setMuted(!isMuted_);
-              // TODO: Sync to ValueTree
+              projectState.setTrackMute(trackId_, isMuted_);
           } else if (hoveredButtonIndex_ == 1) {
               setSoloed(!isSoloed_);
+              projectState.setTrackSolo(trackId_, isSoloed_);
           } else if (hoveredButtonIndex_ == 2) {
             setRecordArmed(!isRecordArmed_);
+            projectState.setTrackArmed(trackId_, isRecordArmed_);
           }
       }
   }

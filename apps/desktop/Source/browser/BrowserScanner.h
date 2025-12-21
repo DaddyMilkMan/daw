@@ -112,6 +112,10 @@ private:
     // Supported extensions
     juce::StringArray audioExtensions_;
     juce::StringArray midiExtensions_;
+    
+    // Thread safety: shutdown flag for async callbacks
+    std::shared_ptr<std::atomic<bool>> isShuttingDown_ =
+        std::make_shared<std::atomic<bool>>(false);
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(BrowserScanner)
 };

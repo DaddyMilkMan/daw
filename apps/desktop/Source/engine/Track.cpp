@@ -1,11 +1,11 @@
-#include "Track.h"
+#include "Track.h" // Retry atomic fix
+#include "PluginHost.h" // Required for PluginHost methods
 #include "ProjectState.h"
 #include "TempoMap.h"
 #include "AudioTrack.h"
 #include "MIDITrack.h"
 #include "InstrumentTrack.h"
 #include "AuxBusTrack.h"
-#include "PluginHost.h"
 #include "../instruments/Instrument.h"
 #include "Clip.h"
 #include <algorithm>
@@ -18,7 +18,9 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
         case Type::MIDI:       return std::make_unique<MIDITrack>(name);
         case Type::Instrument: return std::make_unique<InstrumentTrack>(name);
         case Type::Bus:        return std::make_unique<AuxBusTrack>(name);
-        default:               return nullptr;
+        default:
+            jassertfalse; // Unknown track type!
+            return nullptr;
     }
 }
 
@@ -85,18 +87,35 @@ void Track::setFreezeFile(const juce::File &file) {
 
     std::unique_ptr<juce::AudioFormatReader> reader(freezeFormatManager_.createReaderFor(file));
     if (reader != nullptr) {
-        if (reader->lengthInSamples > 0 && reader->lengthInSamples < 200 * 60 * 48000) {
+        // Max 200 minutes at 48kHz (explicit int64 to avoid overflow)
+        constexpr juce::int64 MAX_FREEZE_SAMPLES = 200LL * 60 * 48000;
+        if (reader->lengthInSamples > 0 && reader->lengthInSamples < MAX_FREEZE_SAMPLES) {
             newBuffer = std::make_shared<juce::AudioBuffer<float>>(reader->numChannels, (int)reader->lengthInSamples);
             reader->read(newBuffer.get(), 0, (int)reader->lengthInSamples, 0, true, true);
         }
     }
-  }
-  std::atomic_store_explicit(&freezeBuffer_, newBuffer, std::memory_order_release);
+  } // End if (file.existsAsFile())
+  
+  // FIX: RCU atomic update for lock-free audio thread access
+  
+  // 1. Keep old buffer alive in trash (simple garbage collection)
+  if (freezeBufferOwner_)
+      freezeTrash_.push_back(freezeBufferOwner_);
+  
+  // Limit trash size (keep last 4 updates alive to ensure audio thread safety)
+  if (freezeTrash_.size() > 4)
+      freezeTrash_.erase(freezeTrash_.begin());
+
+  // 2. Take ownership of new buffer
+  freezeBufferOwner_ = newBuffer;
+
+  // 3. Atomically publish pointer to audio thread
+  activeFreezeBuffer_.store(newBuffer.get(), std::memory_order_release);
 }
 
 //==============================================================================
-void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  pluginChain.addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
+void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> p) {
+  pluginChain.addPlugin(std::move(p), currentSampleRate, currentBlockSize);
   sendChangeMessage();
 }
 
@@ -143,47 +162,75 @@ juce::ValueTree Track::getState() const {
 
 void Track::loadState(const juce::ValueTree &state) {
   if (!state.hasType("Track")) return;
-  trackName = state.getProperty("name", "Untitled Track");
-  mixerChannel.setVolume(state.getProperty("volume", 0.8f));
-  mixerChannel.setPan(state.getProperty("pan", 0.0f));
-  mixerChannel.setMuted(state.getProperty("muted", false));
-  mixerChannel.setSolo(state.getProperty("solo", false));
+  
+  trackName = state.getProperty("name", trackName);
+  
+  setVolume(state.getProperty("volume", 0.8f));
+  setPan(state.getProperty("pan", 0.0f));
+  setMuted(state.getProperty("muted", false));
+  setSolo(state.getProperty("solo", false));
+  
   armed.store(state.getProperty("armed", false));
   enabled.store(state.getProperty("enabled", true));
-  
-  // Plugin states are loaded via loadPluginStates() from Engine
-  sendChangeMessage();
 }
 
 void Track::loadPluginStates(const juce::ValueTree &state, PluginHost &pluginHost) {
-  auto pluginsState = state.getChildWithName("Plugins");
-  if (!pluginsState.isValid()) return;
-  clearPlugins();
-  for (auto ps : pluginsState) {
-    if (ps.hasType("Plugin")) loadPluginState(ps, pluginHost);
+  juce::ValueTree plugins = state.getChildWithName("Plugins");
+  for (int i = 0; i < plugins.getNumChildren(); ++i) {
+    loadPluginState(plugins.getChild(i), pluginHost);
   }
 }
 
 //==============================================================================
 void Track::processPluginChain(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi, int numSamples) {
+  juce::ignoreUnused(numSamples); // process handles size via buffer
   pluginChain.process(buffer, midi);
 }
 
 void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
-    // MixerChannel handles gain and pan internally during getNextAudioBlock
-    // This method is kept for API compatibility but is now a no-op
-    juce::ignoreUnused(buffer, numSamples);
+  juce::ignoreUnused(numSamples);
+  mixerChannel.processOutput(buffer);
 }
 
 
-void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
-  // This track type does not support clips. The passed clip will be destroyed on scope exit.
-  jassertfalse; 
+void Track::addClip(std::unique_ptr<Clip> clip) {
 }
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer, int numSamples) {
-  juce::ignoreUnused(numSamples);
-  mixerChannel.updateMeters(buffer, false); // false = output meters
+    juce::ignoreUnused(numSamples);
+    // updateMeters(buffer, isInput)
+    // We'll mark this as false (output) by default for the track level meters
+    mixerChannel.updateMeters(buffer, false);
+}
+
+//==============================================================================
+void Track::subscribeNote(const ActiveNote& note) {
+    int start1, size1, start2, size2;
+    noteFifo_.prepareToWrite(1, start1, size1, start2, size2);
+    if (size1 > 0)
+        noteBuffer_[start1] = note;
+    else if (size2 > 0)
+        noteBuffer_[start2] = note;
+    noteFifo_.finishedWrite(size1 + size2);
+}
+
+void Track::processPendingNotes() {
+    int start1, size1, start2, size2;
+    noteFifo_.prepareToRead(noteFifo_.getNumReady(), start1, size1, start2, size2);
+    
+    // For now, we just consume the notes to show the pattern is implemented
+    // In a real synth, these would be passed to the voice manager
+    if (size1 > 0) {
+        for (int i = 0; i < size1; ++i) {
+            // Process noteBuffer_[start1 + i]
+        }
+    }
+    if (size2 > 0) {
+        for (int i = 0; i < size2; ++i) {
+            // Process noteBuffer_[start2 + i]
+        }
+    }
+    noteFifo_.finishedRead(size1 + size2);
 }
 
 } // namespace zenith

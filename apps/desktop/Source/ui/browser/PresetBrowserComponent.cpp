@@ -1,9 +1,12 @@
 #include "PresetBrowserComponent.h"
+#include "../design-system/ZenithTheme.h"
+
+using namespace zenith;
 
 PresetBrowserComponent::PresetBrowserComponent() {
     addAndMakeVisible(presetList);
     presetList.setModel(this);
-    presetList.setColour(juce::ListBox::backgroundColourId, juce::Colour(0xff1e1e1e));
+    presetList.setColour(juce::ListBox::backgroundColourId, ZenithTheme::Colors::bg_02);
     presetList.setRowHeight(30);
 
     addAndMakeVisible(loadButton);
@@ -24,10 +27,10 @@ PresetBrowserComponent::PresetBrowserComponent() {
 PresetBrowserComponent::~PresetBrowserComponent() {}
 
 void PresetBrowserComponent::paint(juce::Graphics& g) {
-    g.fillAll(juce::Colour(0xff2a2a2a)); // Dark background
+    g.fillAll(ZenithTheme::Colors::bg_02);
     
-    // Draw a border
-    g.setColour(juce::Colours::black);
+    // Draw a border with design system color
+    g.setColour(ZenithTheme::Colors::border_subtle);
     g.drawRect(getLocalBounds(), 1);
 }
 
@@ -53,14 +56,14 @@ void PresetBrowserComponent::paintListBoxItem(int rowNumber, juce::Graphics& g, 
     if (rowNumber >= static_cast<int>(presets.size())) return;
 
     if (rowIsSelected) {
-        g.fillAll(juce::Colours::cyan.withAlpha(0.2f));
+        g.fillAll(ZenithTheme::Colors::accent_subtle);
     }
 
-    g.setColour(juce::Colours::white);
+    g.setColour(ZenithTheme::Colors::text_primary);
     g.setFont(14.0f);
     g.drawText(presets[rowNumber].name, 5, 0, width - 10, height, juce::Justification::centredLeft, true);
     
-    g.setColour(juce::Colours::grey);
+    g.setColour(ZenithTheme::Colors::text_secondary);
     g.setFont(12.0f);
     g.drawText(presets[rowNumber].category, width - 100, 0, 90, height, juce::Justification::centredRight, true);
 }

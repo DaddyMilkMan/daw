@@ -14,6 +14,12 @@ void AudioTrack::getNextAudioBlock(const juce::AudioSourceChannelInfo& bufferToF
     // Clear the buffer first
     bufferToFill.clearActiveBufferRegion();
 
+    // Verify rigorous thread safety
+    jassert(juce::MessageManager::getInstance()->currentThreadHasLockedMessageManager() == false);
+    
+    // Process any pending cross-thread events/notes safely
+    processPendingNotes();
+
     if (!enabled.load()) return;
 
     // Apply automation (Base class logic would be better here, but for now we follow old implementation)

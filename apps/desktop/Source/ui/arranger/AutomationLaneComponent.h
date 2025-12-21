@@ -214,6 +214,9 @@ private:
   double hoveredPointTime = 0.0;
   double hoveredPointValue = 0.0;
 
+  // Cached render image
+  juce::Image cachedImage_;
+
   //==========================================================================
   // Coordinate Conversion
   //==========================================================================
@@ -271,7 +274,7 @@ private:
   /**
    * @brief Draw background grid (beat lines)
    */
-  void drawGrid(juce::Graphics &g);
+    void drawGridSkia(SkCanvas &canvas);
 
   /**
    * @brief Draw automation envelope curve

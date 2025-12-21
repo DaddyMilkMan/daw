@@ -15,6 +15,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/ConfigurationManager.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/SkiaLayout.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/UITestFramework.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/framework/UISoundManager.cpp
 )
 
 # -----------------------------------------------------------------------------
@@ -158,6 +159,7 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaAlertWindow.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaComboBox.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaFileChooser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaFileChooserDialog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaLabel.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaListBox.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/widgets/SkiaPopupMenu.cpp
