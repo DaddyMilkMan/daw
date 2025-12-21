@@ -1,6 +1,7 @@
 # AI Agents module
 target_sources(ZenithDAW PRIVATE
     AIMasteringAgent.h
+    AIMasteringAgent.cpp
     SessionDebuggerAgent.h
     SessionDebuggerAgent.cpp
     ProjectRefactorerAgent.h

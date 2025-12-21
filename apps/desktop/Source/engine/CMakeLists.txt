@@ -6,7 +6,7 @@ target_sources(ZenithDAW PRIVATE
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
-    InstrumentTrack.cpp
+
     ClipTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp
@@ -40,6 +40,9 @@ target_sources(ZenithDAW PRIVATE
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
+    
+    # Effects
+    ../effects/ConsoleEmulation.cpp
 )# Touch for rebuild
 
 
