@@ -21,7 +21,6 @@ class BrowserModel;
 class ResizablePanelContainer;
 class RemoteCursorOverlay;
 class SampleEditorComponent;
-class SampleEditorComponent;
 class ViewSwitcher;
 class MidiEditorContainer;
 
@@ -40,8 +39,6 @@ public:
   bool isSessionView() const;
   bool isBrowserVisible() const;
   bool isSampleEditorVisible() const;
-
-  bool isSampleEditorVisible() const;
   bool isMidiEditorVisible() const;
 
   SampleEditorComponent *getSampleEditor();
@@ -55,7 +52,6 @@ private:
   std::unique_ptr<ResizablePanelContainer> panelContainer_;
 
   // Raw pointers to managed components (owned by containers)
-  ResizablePanelContainer *centerContainer_ = nullptr;
   ResizablePanelContainer *centerContainer_ = nullptr;
   ViewSwitcher *viewSwitcher_ = nullptr;
   ViewSwitcher *editorSwitcher_ = nullptr;

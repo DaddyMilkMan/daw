@@ -81,7 +81,17 @@ private:
   std::atomic<float> *drive = nullptr;
   std::atomic<float> *outputGain = nullptr;
 
-  void updateParameters();
+  // Cached EQ param values for dirty checking
+  float cachedHpfFreq = 0.0f;
+  float cachedLowFreq = 0.0f;
+  float cachedLowGain = 0.0f;
+  float cachedMidFreq = 0.0f;
+  float cachedMidGain = 0.0f;
+  float cachedMidQ = 0.0f;
+  float cachedHighFreq = 0.0f;
+  float cachedHighGain = 0.0f;
+
+  void updateEqCoefficientsIfNeeded(double sampleRate);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithChannelStrip)
 };

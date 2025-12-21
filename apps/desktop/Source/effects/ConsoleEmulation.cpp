@@ -36,12 +36,12 @@ void ConsoleEmulation::updateCoefficients() {
     *lowPass.coefficients =
         *juce::dsp::IIR::Coefficients<float>::makeLowPass(sampleRate, 20000.0f);
   }
-  
+
   coefficientsDirty = false;
 }
 
 void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
-  if (mode == Mode::Clean && drive < 0.01f)
+  if (mode == Mode::Clean && drive < 0.01f && character < 0.01f)
     return;
 
   updateCoefficients();
@@ -49,7 +49,6 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
   const int numChannels = buffer.getNumChannels();
   const int numSamples = buffer.getNumSamples();
 
-  // Drive gain compensation (rough)
   float gainComp = 1.0f / (1.0f + drive * 0.5f);
 
   for (int ch = 0; ch < numChannels; ++ch) {
@@ -57,17 +56,17 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
     for (int i = 0; i < numSamples; ++i) {
       float in = data[i];
 
-      // Saturation
-      float out = applySaturation(in, drive * 2.0f); // Boost drive range
+      float saturated = applySaturation(in, drive * 2.0f);
 
-      // Mix with Dry if Character is used as Mix? Or used as tonal?
-      // Let's assume Character is just intensity for now.
+      float mixed = saturated;
+      if (character < 1.0f) {
+        mixed = in * (1.0f - character) + saturated * character;
+      }
 
-      data[i] = out * gainComp;
+      data[i] = mixed * gainComp;
     }
   }
 
-  // Apply filters if needed (Vintage roll-off)
   if (mode == Mode::Vintage) {
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::ProcessContextReplacing<float> context(block);
@@ -78,10 +77,6 @@ void ConsoleEmulation::process(juce::AudioBuffer<float> &buffer) {
 float ConsoleEmulation::applySaturation(float input, float driveAmount) {
   if (mode == Mode::Clean)
     return input;
-
-  // Simple tanh saturation
-  // x = input * (1 + drive)
-  // f(x) = tanh(x)
 
   float x = input * (1.0f + driveAmount * 2.0f);
 

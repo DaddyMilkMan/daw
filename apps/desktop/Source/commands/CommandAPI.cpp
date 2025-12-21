@@ -26,7 +26,12 @@
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
+<<<<<<< HEAD
+
+#include "../ai/AIMasteringAgent.h"
+=======
 // #include "../ai/AIMasteringAgent.h"
+>>>>>>> origin/master
 #include "../ai/PresetGeneticistAgent.h"
 #include "../ai/UXDirectorAgent.h"
 #include "../dsp/ONNXStemSeparator.h"
@@ -610,6 +615,25 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
     resultObj->setProperty("healthBreakdown", juce::var(breakdownObj));
   } else {
     resultObj->setProperty("error", "UXDirectorAgent not available");
+  }
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  auto *resultObj = new juce::DynamicObject();
+
+  if (uxDirector_) {
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("issueCount",
+                           uxDirector_->getUnresolvedIssueCount());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+  } else {
+    resultObj->setProperty("healthScore", 100);
+    resultObj->setProperty("issueCount", 0);
+    resultObj->setProperty("summary", "UXDirectorAgent not available");
   }
 
   return createSuccessResponse(juce::var(resultObj));

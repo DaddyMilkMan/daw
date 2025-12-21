@@ -113,7 +113,31 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/Metronome.cpp
     apps/desktop/Source/engine/AudioTrack.cpp
     apps/desktop/Source/engine/MIDITrack.cpp
-    apps/desktop/Source/engine/InstrumentTrack.cpp
+    # Instruments
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+
+    # AI
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/ai/AIMasteringAgent.cpp
+
+    apps/desktop/Source/ai/SampleHunterAgent.cpp
+    apps/desktop/Source/ai/UXDirectorAgent.cpp
+    apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
+    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
@@ -362,6 +386,10 @@ if(BUILD_TESTS)
         apps/desktop/Source/engine
         apps/desktop/Source/ui
         apps/desktop/Source/ui/common
+        apps/desktop/Source/ui/instruments
+        apps/desktop/Source/ui/browser
+        apps/desktop/Source/instruments
+        apps/desktop/Source/ai
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
