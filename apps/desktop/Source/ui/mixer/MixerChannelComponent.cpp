@@ -11,6 +11,7 @@
  */
 
 #include "MixerChannelComponent.h"
+#include "../../Source/effects/ConsoleEmulation.h"
 #include "../../Source/engine/EngineConstants.h"
 #include "../../Source/engine/Track.h"
 #include "GlassmorphicPanel.h"
@@ -18,6 +19,7 @@
 #include "SkiaTheme.h"
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
+
 
 #include <core/SkCanvas.h>
 #include <core/SkMaskFilter.h>

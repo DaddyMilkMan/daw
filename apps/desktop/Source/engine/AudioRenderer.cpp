@@ -14,6 +14,7 @@
 #include "../dsp/MasterLimiter.h"
 #include "../dsp/SIMDHelpers.h"
 #include "AuxBus.h"
+#include "Clip.h"
 #include "TempoMap.h"
 #include "Track.h"
 
@@ -53,9 +54,6 @@ void AudioRenderer::prepare(double sampleRate, int blockSize, size_t numTracks,
 
   // Prepare dither
   dither_.prepare(2); // Stereo
-
-  DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
-      juce::String(numAuxBuses) + " aux buses");
 
   DBG("AudioRenderer: Prepared with " + juce::String(numTracks) + " tracks, " +
       juce::String(numAuxBuses) + " aux buses");
@@ -265,8 +263,6 @@ void AudioRenderer::renderAudioGraph(
   dither_.process(outputBuffer, 24); // Assume 24-bit DAC monitoring
 
   // Update metering
-
-  // Update metering
   updateMasterMeters(outputBuffer);
 }
 
@@ -419,6 +415,19 @@ void AudioRenderer::updateMasterLatency(
   }
 
   masterLatency_.store(totalLatency);
+}
+
+void AudioRenderer::updateClipPositions(std::span<Track *const> tracks,
+                                        juce::int64 playheadPosition) noexcept {
+  for (auto *track : tracks) {
+    if (track != nullptr) {
+      for (int i = 0; i < track->getNumClips(); ++i) {
+        if (auto *clip = track->getClip(i)) {
+          clip->setTransportPosition(playheadPosition);
+        }
+      }
+    }
+  }
 }
 
 } // namespace zenith

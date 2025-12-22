@@ -30,7 +30,8 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
 
 //==============================================================================
 Track::Track(const juce::String &name, Type type)
-    : trackName(name), trackType(type) {}
+    : trackName(name), trackType(type), currentSampleRate(44100.0),
+      currentBlockSize(512) {}
 
 Track::~Track() {}
 
@@ -80,6 +81,13 @@ void Track::setEnabled(bool shouldBeEnabled) {
   enabled.store(shouldBeEnabled);
   sendChangeMessage();
 }
+
+void Track::setSoloed(bool shouldBeSoloed) {
+  mixerChannel.setSolo(shouldBeSoloed);
+  sendChangeMessage();
+}
+
+bool Track::isSoloed() const { return mixerChannel.isSolo(); }
 
 //==============================================================================
 void Track::setFreezeFile(const juce::File &file) {

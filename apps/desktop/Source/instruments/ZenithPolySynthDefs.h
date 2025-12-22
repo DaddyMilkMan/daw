@@ -79,7 +79,12 @@ enum class LFOTarget {
 /**
     Filter key tracking modes
 */
-enum class FilterKeyTrack { Off = 0, Half, Full, NumModes };
+enum class FilterKeyTrack {
+  Off = 0,
+  Half, // 50% tracking
+  Full, // 100% tracking
+  NumModes
+};
 
 /**
     Rhythmic sync rates
@@ -107,13 +112,14 @@ enum class SyncRate {
 */
 enum class ModulationSource {
   None = 0,   // No modulation
-  LFO1,       // Low-frequency oscillator 1
-  LFO2,       // Low-frequency oscillator 2
-  Env1,       // Amplitude envelope
-  Env2,       // Modulation envelope
-  Velocity,   // Note-on velocity
-  ModWheel,   // MIDI mod wheel CC#1
-  Aftertouch, // MIDI channel pressure
+  LFO1,       // Low-frequency oscillator 1 (sine wave, -1 to +1)
+  LFO2,       // Low-frequency oscillator 2 (sine wave, -1 to +1)
+  Env1,       // Amplitude envelope (0 to 1, ADSR)
+  Env2,       // Modulation envelope (0 to 1, ADSR)
+  Velocity,   // Note-on velocity (0 to 1)
+  ModWheel,   // MIDI mod wheel CC#1 (0 to 1)
+  Aftertouch, // MIDI channel pressure (0 to 1)
+  Timbre,     // MPE Y-axis (CC#74) (0 to 1)
   NumSources
 };
 

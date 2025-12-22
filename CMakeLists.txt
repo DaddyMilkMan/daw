@@ -120,7 +120,22 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/WavetableLoader.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
 )
 
 # Create main executable
@@ -350,13 +365,29 @@ if(BUILD_TESTS)
     juce_generate_juce_header(ZenithDAWTests)
     
     target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
-    target_include_directories(ZenithDAWTests PRIVATE 
-        apps/desktop/Source 
+    target_include_directories(ZenithDAWTests PRIVATE
         apps/desktop/Source/engine
+        apps/desktop/Source/instruments
         apps/desktop/Source/ui
+        apps/desktop/Source/ui/arranger
+        apps/desktop/Source/ui/browser
         apps/desktop/Source/ui/common
-        apps/desktop/include
-        ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
+        apps/desktop/Source/ui/mixer
+        apps/desktop/Source/ui/piano-roll
+        apps/desktop/Source/ui/sample-editor
+        apps/desktop/Source/ui/session
+        apps/desktop/Source/ui/transport
+        apps/desktop/Source/ui/dialogs
+        apps/desktop/Source/ui/widgets
+        apps/desktop/Source/ui/framework
+        apps/desktop/Source/ui/design-system
+        apps/desktop/Source/ai
+        apps/desktop/Source/network
+        apps/desktop/Source/dsp
+        apps/desktop/Source/automation
+        apps/desktop/Source # Retain this general source path
+        apps/desktop/include # Retain this general include path
+        ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode # Retain this
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     target_link_libraries(ZenithDAWTests PRIVATE
