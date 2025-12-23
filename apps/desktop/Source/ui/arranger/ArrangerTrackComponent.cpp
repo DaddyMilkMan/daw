@@ -317,11 +317,28 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
           // Button clicked
           if (hoveredButtonIndex_ == 0) {
               setMuted(!isMuted_);
-              // TODO: Sync to ValueTree
+              if (trackId_.isNotEmpty()) {
+                  auto track = projectState.getTrack(trackId_);
+                  if (track.isValid()) {
+                      track.setProperty(ProjectState::PROP_MUTE, isMuted_, &projectState.getUndoManager());
+                  }
+              }
           } else if (hoveredButtonIndex_ == 1) {
               setSoloed(!isSoloed_);
+              if (trackId_.isNotEmpty()) {
+                  auto track = projectState.getTrack(trackId_);
+                  if (track.isValid()) {
+                      track.setProperty(ProjectState::PROP_SOLO, isSoloed_, &projectState.getUndoManager());
+                  }
+              }
           } else if (hoveredButtonIndex_ == 2) {
             setRecordArmed(!isRecordArmed_);
+            if (trackId_.isNotEmpty()) {
+                  auto track = projectState.getTrack(trackId_);
+                  if (track.isValid()) {
+                      track.setProperty(ProjectState::PROP_ARMED, isRecordArmed_, &projectState.getUndoManager());
+                  }
+              }
           }
       }
   }

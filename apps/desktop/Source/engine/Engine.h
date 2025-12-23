@@ -53,7 +53,6 @@
 #include "../Source/engine/RoutingGraph.h"
 #include "EngineEvent.h"
 
-
 // Forward declarations
 namespace zenith {
 class ProjectState;
@@ -76,7 +75,8 @@ class MeteringSystem;
 
 namespace ai {
 class SessionDebuggerAgent;
-}
+class AIMasteringAgent;
+} // namespace ai
 
 //==============================================================================
 /**
@@ -228,7 +228,8 @@ public:
 
   /**
    * @brief Panic - Stop all sound immediately
-   * @note Stops transport, sends All Notes Off to all tracks, and clears buffers.
+   * @note Stops transport, sends All Notes Off to all tracks, and clears
+   * buffers.
    */
   void panic();
 
@@ -238,7 +239,8 @@ public:
    * @param pluginIndex Index of the plugin to receive sidechain
    * @param sourceTrackIndex Index of the source track
    */
-  void setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex);
+  void setSidechainSource(int destTrackIndex, int pluginIndex,
+                          int sourceTrackIndex);
 
   //==========================================================================
   // Real-time Event Queue
@@ -403,6 +405,13 @@ public:
   }
   const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
+  }
+
+  /**
+   * @brief Get the AI Mastering Agent
+   */
+  ai::AIMasteringAgent *getMasteringAgent() const {
+    return masteringAgent_.get();
   }
 
   //==========================================================================
@@ -627,6 +636,12 @@ public:
    */
   bool isTrackFrozen(int trackIndex) const;
 
+  /**
+   * @brief Cancel any active freeze operation
+   * @note MESSAGE THREAD ONLY
+   */
+  void cancelFreeze();
+
   //==========================================================================
   // Audio File Pool
   //==========================================================================
@@ -770,6 +785,15 @@ public:
   bool isMetronomeEnabled() const;
   void setMetronomeLevel(float level);
 
+  //==========================================================================
+  // Application Thread Pool (Background Tasks)
+  //==========================================================================
+
+  /**
+   * @brief Get the shared thread pool for background tasks
+   */
+  juce::ThreadPool &getThreadPool();
+
 private:
   //==========================================================================
   // Audio Processing (AUDIO THREAD)
@@ -888,12 +912,13 @@ private:
         lifecycleAux; // Keeps buses alive
 
     // Fast lookup maps (ID -> Pointer)
-    // Audio thread usage: Read-only access to find tracks by ID from RoutingGraph
+    // Audio thread usage: Read-only access to find tracks by ID from
+    // RoutingGraph
     std::unordered_map<std::string, zenith::Track *> trackMap;
     std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
 
     TrackSnapshot() = default;
-    
+
     // Constructor defined in .cpp to avoid circular includes
     TrackSnapshot(
         const std::vector<std::shared_ptr<zenith::Track>> &ownedTracks,
@@ -910,7 +935,8 @@ private:
   void updateTrackSnapshot();
 
   // RT-safe event applicator to deduplicate processEvents logic
-  void applyEvent(const zenith::EngineEvent& e, TrackSnapshot* snapshot) noexcept;
+  void applyEvent(const zenith::EngineEvent &e,
+                  TrackSnapshot *snapshot) noexcept;
 
   // Phase 1.2: Audio file pool
   std::unique_ptr<zenith::AudioFilePool> audioFilePool_;
@@ -923,7 +949,9 @@ private:
   std::unique_ptr<zenith::InstrumentRegistry> instrumentRegistry_;
 
   // Session Debugger Agent
+  // Session Debugger Agent
   std::unique_ptr<ai::SessionDebuggerAgent> sessionDebugger_;
+  std::unique_ptr<ai::AIMasteringAgent> masteringAgent_;
   std::unique_ptr<Metronome> metronome_;
 
   // Analysis FIFO (Stereo)
@@ -934,6 +962,10 @@ private:
 
   // Automation synchronizer
   std::unique_ptr<TrackAutomationSynchronizer> automationSynchronizer;
+
+  // Thread Pool (Shared)
+  juce::ThreadPool threadPool{
+      1}; // Start with 1 thread to be safe, or default constructor
 
   //==========================================================================
   // Modular Engine Components (Refactor 2025-12-09)

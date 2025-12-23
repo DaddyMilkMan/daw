@@ -60,9 +60,7 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   // 3. Run Separation
   ONNXStemSeparator separator;
 
-  // Check for model file availability (Assuming a default location or checking
-  // internal logic) The ONNXStemSeparator might look for models in app data or
-  // dll resource.
+  // Check for model file availability (delegated to platform discovery)
   if (!separator.isAvailable()) {
     result.error = "ONNX Runtime not available.";
     if (callback_) {

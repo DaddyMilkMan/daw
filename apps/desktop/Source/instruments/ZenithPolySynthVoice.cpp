@@ -213,6 +213,7 @@ void ZenithPolySynthVoice::renderNextBlock(
     // 1. Render synth logic into upsampled buffer
     // Note: Internal components (Oscs, Filters) are already configured for
     // baseRate * factor
+    oversamplingBuffer_.clear(0, upsampledChunk);
     renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
 
     // 2. Downsample
@@ -611,11 +612,9 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
-    // updateSampleRate will be called below after releasing the lock
+    // Call updateSampleRate only when the factor changes.
+    updateSampleRate();
   }
-
-  // Call updateSampleRate outside the if to ensure logic runs
-  updateSampleRate();
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,
