@@ -11,9 +11,7 @@
 #include "SkiaComponent.h"
 #include <core/SkBlurTypes.h> // Explicitly include
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include "PlatformDisplayUtils.h"
 
 namespace zenith {
 
@@ -279,28 +277,9 @@ void SkiaComponent::handleContextMenuResult(int result) {
 // ============================================================================
 
 int SkiaComponent::getSystemRefreshRate() {
-#ifdef _WIN32
-  DEVMODE devMode;
-  devMode.dmSize = sizeof(DEVMODE);
-  devMode.dmDriverExtra = 0;
-
-  if (EnumDisplaySettings(nullptr, ENUM_CURRENT_SETTINGS, &devMode)) {
-    systemRefreshRate_ = devMode.dmDisplayFrequency;
-    // Ensure reasonable bounds (e.g., 30Hz to 360Hz)
-    if (systemRefreshRate_ < 30)
-      systemRefreshRate_ = 30;
-    if (systemRefreshRate_ > 360)
-      systemRefreshRate_ = 360;
-
-    targetFPS_ = systemRefreshRate_; // Default to system rate
-    return systemRefreshRate_;
-  }
-#endif
-
-  // Fallback for other platforms or if detection fails
-  systemRefreshRate_ = 60;
-  targetFPS_ = 60;
-  return 60;
+  systemRefreshRate_ = PlatformDisplayUtils::getSystemRefreshRate();
+  targetFPS_ = systemRefreshRate_;
+  return systemRefreshRate_;
 }
 
 void SkiaComponent::setTargetFPS(int fps) {
