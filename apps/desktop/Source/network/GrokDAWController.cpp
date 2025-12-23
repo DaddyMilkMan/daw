@@ -96,6 +96,26 @@ public:
                                                 auto onProgress) {
       if (onProgress)
         executeOnMessageThread([onProgress]() {
+          onProgress("Checking AI model availability...");
+        });
+
+      // Task: Verify model path validity before attempting command
+      juce::File defaultModel = ONNXStemSeparator::findDefaultModel();
+      if (!defaultModel.existsAsFile()) {
+          juce::String errorMsg = "AI Model not found. Please install 'htdemucs.onnx' or 'demucs.onnx' in one of the following locations:\n";
+#if JUCE_LINUX
+          errorMsg += "- ~/.local/share/zenith/models/\n";
+          errorMsg += "- /usr/share/zenith/models/\n";
+#else
+          errorMsg += "- Application Directory\n";
+          errorMsg += "- Resources/models/\n";
+#endif
+          executeOnMessageThread([onError, errorMsg]() { onError(errorMsg); });
+          return;
+      }
+
+      if (onProgress)
+        executeOnMessageThread([onProgress]() {
           onProgress("Separating stems (this may take a moment)...");
         });
 
