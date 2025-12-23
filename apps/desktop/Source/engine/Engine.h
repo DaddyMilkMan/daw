@@ -385,7 +385,7 @@ public:
   ai::SessionDebuggerAgent *getSessionDebugger() {
     return sessionDebugger_.get();
   }
-  ai::SessionDebuggerAgent *getSessionDebugger() const {
+  const ai::SessionDebuggerAgent *getSessionDebugger() const {
     return sessionDebugger_.get();
   }
 
