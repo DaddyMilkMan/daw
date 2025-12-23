@@ -27,7 +27,7 @@ target_sources(ZenithDAW PRIVATE
     AutomationManager.cpp
     
     # Modular Engine Components (2025-12-11 Refactor)
-    AudioRenderer_Fixed.cpp
+    AudioRenderer.cpp
     RecordingManager.cpp
     TransportController.cpp
     ProjectEngineBridge.cpp
