@@ -234,45 +234,49 @@ void RecordingManager::drainMidiFifo() {
   midiFifoIndex_.prepareToRead(numReady, start1, size1, start2, size2);
 
   // Process first block
-  for (int i = 0; i < size1; ++i) {
-    const auto &entry = midiFifoData_[start1 + i];
+  {
+      // Acquire lock ONCE before the loops to avoid overhead
+      const juce::ScopedLock sl(sessionLock_);
 
-    // Find matching session
-    const juce::ScopedLock sl(sessionLock_);
-    for (auto &session : midiSessions_) {
-      if (session.trackIndex == entry.trackIndex && session.isActive) {
-        // Calculate time relative to recording start
-        double timeSeconds = static_cast<double>(entry.samplePosition -
-                                                 session.startSamplePosition) /
-                             sampleRate_;
+      // Process first block
+      for (int i = 0; i < size1; ++i) {
+        const auto &entry = midiFifoData_[start1 + i];
 
-        // Only add positive time events
-        if (timeSeconds >= 0.0) {
-          session.sequence.addEvent(entry.message, timeSeconds);
+        // Find matching session
+        for (auto &session : midiSessions_) {
+          if (session.trackIndex == entry.trackIndex && session.isActive) {
+            // Calculate time relative to recording start
+            double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                     session.startSamplePosition) /
+                                 sampleRate_;
+
+            // Only add positive time events
+            if (timeSeconds >= 0.0) {
+              session.sequence.addEvent(entry.message, timeSeconds);
+            }
+            break;
+          }
         }
-        break;
       }
-    }
-  }
 
-  // Process second block (wrap-around)
-  for (int i = 0; i < size2; ++i) {
-    const auto &entry = midiFifoData_[start2 + i];
-
-    const juce::ScopedLock sl(sessionLock_);
-    for (auto &session : midiSessions_) {
-      if (session.trackIndex == entry.trackIndex && session.isActive) {
-        double timeSeconds = static_cast<double>(entry.samplePosition -
-                                                 session.startSamplePosition) /
-                             sampleRate_;
-        if (timeSeconds >= 0.0) {
-          session.sequence.addEvent(entry.message, timeSeconds);
+      // Process second block (wrap-around)
+      for (int i = 0; i < size2; ++i) {
+        const auto &entry = midiFifoData_[start2 + i];
+        
+        // Find matching session
+        for (auto &session : midiSessions_) {
+          if (session.trackIndex == entry.trackIndex && session.isActive) {
+            double timeSeconds = static_cast<double>(entry.samplePosition -
+                                                     session.startSamplePosition) /
+                                 sampleRate_;
+            if (timeSeconds >= 0.0) {
+              session.sequence.addEvent(entry.message, timeSeconds);
+            }
+            break;
+          }
         }
-        break;
       }
-    }
   }
-
   midiFifoIndex_.finishedRead(size1 + size2);
 }
 
