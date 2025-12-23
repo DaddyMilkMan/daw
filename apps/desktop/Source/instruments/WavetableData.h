@@ -140,8 +140,15 @@ private:
         curr[i] = 0.25f * prev[i_prev] + 0.5f * prev[i] + 0.25f * prev[i_next];
       }
 
-      // Removed normalization to preserve relative energy between levels
-      // as suggested in code review.
+      // Normalize to maintain peak amplitude
+      float maxVal = 0.0f;
+      for (float s : curr)
+        maxVal = std::max(maxVal, std::abs(s));
+      if (maxVal > 0.0f) {
+        float scale = 1.0f / maxVal;
+        for (float &s : curr)
+          s *= scale;
+      }
     }
   }
 };

@@ -63,6 +63,13 @@ public:
     phase_ -= amount;
   } // For adjusting phase after sync reset
 
+  // Wavetable management (Pro Upgrade)
+  void setWavetable(const Wavetable *wt) { wavetable_ = wt; }
+  const Wavetable *getWavetable() const { return wavetable_; }
+  bool hasWavetable() const {
+    return wavetable_ != nullptr && wavetable_->isValid();
+  }
+
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
   double phase_ = 0.0;
@@ -98,13 +105,8 @@ private:
   // Random number generator for noise and phase randomization
   juce::Random random_;
 
-public:
-  // Wavetable management (Pro Upgrade)
-  void setWavetable(const Wavetable *wt) { wavetable_ = wt; }
-  const Wavetable *getWavetable() const { return wavetable_; }
-  bool hasWavetable() const {
-    return wavetable_ != nullptr && wavetable_->isValid();
-  }
+
+
 
 private:
   // PolyBLEP anti-aliasing helper
