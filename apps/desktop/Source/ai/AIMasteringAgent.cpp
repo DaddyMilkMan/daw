@@ -181,7 +181,7 @@ juce::String GrokMasteringAI::buildPrompt(
 {
     float dynamicRange = features.peakDb - features.rmsDb;
     
-    juce::String msg = R"(You are a Grammy-winning mastering engineer with 30 years of experience. Analyze this audio and provide professional mastering parameters.
+    juce::String prompt = R"(You are a Grammy-winning mastering engineer with 30 years of experience. Analyze this audio and provide professional mastering parameters.
 
 AUDIO ANALYSIS:
 ═══════════════════════════════════════════════════════════════
@@ -241,7 +241,7 @@ Respond with ONLY this JSON structure (no markdown, no extra text):
   "reasoning": "<brief professional explanation of your choices>"
 })";
     
-    return msg;
+    return prompt;
 }
 
 GrokMasteringAI::MasteringDecision GrokMasteringAI::parseGrokResponse(

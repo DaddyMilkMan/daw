@@ -142,7 +142,7 @@ private:
       float maxVal = 0.0f;
       for (float s : curr)
         maxVal = std::max(maxVal, std::abs(s));
-      if (maxVal > 0.0f && maxVal < 0.99f) {
+      if (maxVal > 1e-6f) {
         float scale = 1.0f / maxVal;
         for (float &s : curr)
           s *= scale;

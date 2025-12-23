@@ -6,7 +6,7 @@ target_sources(ZenithDAW PRIVATE
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
-    InstrumentTrack.cpp
+
     ClipTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp

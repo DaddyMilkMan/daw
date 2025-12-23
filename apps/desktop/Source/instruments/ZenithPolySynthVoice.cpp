@@ -611,14 +611,9 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
-    // We must call updateSampleRate to propagate the new rate
-    // Note: This calls updateSampleRate recursively but we released lock?
-    // No, we hold lock. updateSampleRate also takes lock. Recursive lock is
-    // needed? juce::CriticalSection IS recursive.
+    // Call updateSampleRate only when the factor changes.
+    updateSampleRate();
   }
-
-  // Call updateSampleRate outside the if to ensure logic runs
-  updateSampleRate();
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,
