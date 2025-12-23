@@ -97,7 +97,6 @@ ArrangerComponent::ArrangerComponent(Engine &eng, ProjectState &ps)
       return juce::String();
     auto *view = findClipView(selectedClipIds[0]);
     return view ? view->trackId : juce::String();
-    return view ? view->trackId : juce::String();
   };
 
   // Setup Freeze Progress Callback
