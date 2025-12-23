@@ -60,16 +60,23 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   // 3. Run Separation
   ONNXStemSeparator separator;
 
-  // Check for model file availability (Assuming a default location or checking
-  // internal logic) The ONNXStemSeparator might look for models in app data or
-  // dll resource.
+  // Check for model file availability (delegated to platform discovery)
   if (!separator.isAvailable()) {
-    result.error = "ONNX Runtime not available or model missing.";
+    result.error = "ONNX Runtime not available.";
     if (callback_) {
       juce::MessageManager::callAsync(
           [cb = callback_, res = result]() { cb(res); });
     }
     return juce::ThreadPoolJob::jobHasFinished;
+  }
+
+  // Initialize with default model path
+  if (!separator.initialize(ONNXStemSeparator::findDefaultModel())) {
+      result.error = "Failed to load AI model (demucs.onnx)";
+      if (callback_) {
+          juce::MessageManager::callAsync([cb = callback_, res = result]() { cb(res); });
+      }
+      return juce::ThreadPoolJob::jobHasFinished;
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);

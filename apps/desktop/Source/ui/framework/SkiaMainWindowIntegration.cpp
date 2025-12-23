@@ -14,8 +14,8 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "../../engine/ZenithLogger.h"
-#include <core/SkSurface.h>
-#include <gpu/ganesh/gl/GrGLInterface.h>
+#include "PlatformWindowUtils.h"
+#include <include/gpu/ganesh/gl/GrGLDirectContext.h>
 #include <juce_opengl/juce_opengl.h>
 
 #endif
@@ -66,8 +66,9 @@ void SkiaOpenGLRenderer::newOpenGLContextCreated() {
   ZENITH_LOG_INFO("SkiaOpenGLRenderer: newOpenGLContextCreated called");
   try {
     ZENITH_LOG_INFO("SkiaOpenGLRenderer: Creating GL interface...");
-    auto glInterface = GrGLMakeNativeInterface();
-    if (!glInterface) {
+  // Create platform-specific native interface
+  interface_ = PlatformWindowUtils::createNativeGLInterface(openGLContext_);
+    if (!interface_) {
       ZENITH_LOG_ERROR("SkiaOpenGLRenderer: FAILED to create GL interface!");
       return;
     }
