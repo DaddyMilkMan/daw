@@ -90,6 +90,24 @@ class AIMasteringAgent;
  * 4. MIDI input routing
  * 5. Audio input recording
  * 6. CPU usage monitoring
+ *
+ * ## Ownership Model (to prevent shared_ptr cycles):
+ *
+ * **Parent -> Child (shared_ptr/unique_ptr):**
+ * - Engine owns Tracks via std::vector<std::shared_ptr<Track>>
+ * - Engine owns AuxBuses via std::vector<std::shared_ptr<AuxBus>>
+ * - Engine owns subsystems via std::unique_ptr (AudioRenderer, RecordingManager, etc.)
+ *
+ * **Child -> Parent (raw pointer/reference):**
+ * - Subsystems hold Engine& references (TrackStateSynchronizer, RecordingManager, etc.)
+ * - No child component holds std::shared_ptr<Engine>
+ *
+ * **RT-safe snapshots:**
+ * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle vector)
+ * - Audio thread accesses raw pointers extracted from the snapshot
+ *
+ * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
+ *       Use Engine& or Engine* for back-references.
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback {

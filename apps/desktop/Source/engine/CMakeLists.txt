@@ -1,5 +1,10 @@
 target_sources(ZenithDAW PRIVATE
     Engine.cpp
+    EngineTransport.cpp
+    EngineTrackManagement.cpp
+    EngineMixing.cpp
+    EngineRecording.cpp
+    EngineExport.cpp
     ProjectState.cpp
     Track.cpp
     Clip.cpp
@@ -33,7 +38,12 @@ target_sources(ZenithDAW PRIVATE
     RecentProjectManager.cpp
     
     # Deprecated synchronizers (kept for backward compatibility, will be removed)
-    # TODO: Remove these after ProjectEngineBridge is fully integrated
+    # Deprecated synchronizers - Migration Status:
+    # - ClipSynchronizer.cpp: Functions moved to ClipStateManager.cpp
+    # - TrackStateSynchronizer.cpp: Functions moved to TrackStateManager.cpp
+    # - TrackAutomationSynchronizer.cpp: Functions moved to AutomationStateManager.cpp
+    # - TempoMapSynchronizer.cpp: Functions moved to TempoMap.cpp
+    # These files are retained for backward compatibility and will be removed in v2.0
     ClipSynchronizer.cpp
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp

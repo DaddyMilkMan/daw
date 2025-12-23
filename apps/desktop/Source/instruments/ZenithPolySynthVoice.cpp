@@ -612,10 +612,9 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
+    // Call updateSampleRate only when the factor changes.
+    updateSampleRate();
   }
-
-  // Call updateSampleRate outside the if to ensure logic runs
-  updateSampleRate();
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,

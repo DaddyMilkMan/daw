@@ -19,16 +19,13 @@ void InstrumentTrack::getNextAudioBlock(
   juce::ignoreUnused(auxBuffers, tempoMap);
   auto numSamples = bufferToFill.numSamples;
 
-  // 1. Clear Audio Buffer (Instrument plugin will fill it)
   bufferToFill.clearActiveBufferRegion();
 
-  // 2. Prepare MIDI Buffer
   juce::MidiBuffer midiBuffer;
   if (incomingMidi != nullptr) {
     midiBuffer.addEvents(*incomingMidi, 0, numSamples, 0);
   }
 
-  // 3. Add Clip MIDI (from MIDI clips on this instrument track)
   auto *snapshot = activeClipSnapshot_.load(std::memory_order_acquire);
   if (snapshot != nullptr) {
     for (auto *clip : snapshot->clips) {
@@ -39,8 +36,6 @@ void InstrumentTrack::getNextAudioBlock(
     }
   }
 
-  // 4. Process Plugin Chain (first plugin should be a virtual instrument)
-  // Create proxy buffer for correct offset handling
   juce::AudioBuffer<float> proxyBuffer(
       bufferToFill.buffer->getArrayOfWritePointers(),
       bufferToFill.buffer->getNumChannels(), bufferToFill.startSample,
@@ -48,10 +43,8 @@ void InstrumentTrack::getNextAudioBlock(
 
   processPluginChain(proxyBuffer, midiBuffer, numSamples);
 
-  // 5. Apply Mixer (gain/pan)
   applyGainAndPan(proxyBuffer, numSamples);
 
-  // 6. Update Metering
   updateLevelMeters(proxyBuffer, numSamples);
 }
 
