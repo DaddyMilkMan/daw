@@ -50,6 +50,12 @@ public:
      */
     juce::String getModelInfo() const;
 
+    /**
+     * @brief Find the default model file using standard system paths
+     * @return File object pointing to the model if found, or an empty non-existent file if not
+     */
+    static juce::File findDefaultModel();
+
 
 private:
     struct Impl;

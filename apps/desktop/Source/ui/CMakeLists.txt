@@ -17,6 +17,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/UITestFramework.cpp
 )
 
+# Platform-specific sources are handled via Source/platform/[os]/master
+
 # -----------------------------------------------------------------------------
 # Design System (Theming, fonts, icons)
 # -----------------------------------------------------------------------------

@@ -5,8 +5,6 @@ target_sources(ZenithDAW PRIVATE
     Clip.cpp
     AudioTrack.cpp
     MIDITrack.cpp
-    AuxBusTrack.cpp
-    InstrumentTrack.cpp
     ClipTrack.cpp
     MixerChannel.cpp
     MixerController.cpp
