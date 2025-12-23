@@ -57,6 +57,9 @@ static float getFrequencyForSyncRate(SyncRate rate, double bpm) {
 }
 
 ZenithPolySynthVoice::ZenithPolySynthVoice() {
+  baseSampleRate_ = 44100.0;
+  oversamplingFactor_ = 1;
+
   constexpr double DEFAULT_SAMPLE_RATE = 44100.0;
   ampEnvelope_.setSampleRate(DEFAULT_SAMPLE_RATE);
   modEnvelope_.setSampleRate(DEFAULT_SAMPLE_RATE);
@@ -70,23 +73,23 @@ ZenithPolySynthVoice::ZenithPolySynthVoice() {
   osc1Shape_.setCurrentAndTargetValue(0.5f);
   osc2Shape_.setCurrentAndTargetValue(0.5f);
   osc3Shape_.setCurrentAndTargetValue(0.5f);
+
+  // Pre-allocate buffers for RT safety
+  // Assumes stereo (2 channels) and a reasonable max block size
+  // Max needed = maxBlockSize * maxOversampling (e.g. 4x)
+  // We'll allocate for 4x oversampling at 4096 samples block size to be safe
+  oversamplingBuffer_.setSize(2, 4096 * 4);
+  downsamplingBuffer_.setSize(2, 4096);
 }
 
-bool ZenithPolySynthVoice::canPlaySound(juce::SynthesiserSound *sound) {
-  return dynamic_cast<ZenithPolySynthSound *>(sound) != nullptr;
-}
-
-void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
-                                     juce::SynthesiserSound *sound,
-                                     int currentPitchWheelPosition) {
-  juce::ignoreUnused(sound);
-
-  midiNoteNumber_ = midiNoteNumber;
+void ZenithPolySynthVoice::noteStarted() {
+  auto note = getCurrentlyPlayingNote();
+  midiNoteNumber_ = note.initialNote;
 
   if (monoMode_ && isVoiceActive()) {
     previousFrequency_ = currentFrequency_;
   } else {
-    previousFrequency_ = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
+    previousFrequency_ = note.getFrequencyInHertz();
     currentFrequency_ = previousFrequency_;
     osc1_.randomizePhase();
     osc2_.randomizePhase();
@@ -100,10 +103,16 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
     modulationState_.reset();
   }
 
-  targetFrequency_ = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-  velocity_ = std::pow(velocity, velocityCurve_);
+  targetFrequency_ = note.getFrequencyInHertz();
+  velocity_ = std::pow(note.noteOnVelocity.toFloat(), velocityCurve_);
 
-  pitchWheelMoved(currentPitchWheelPosition);
+  // Initialize MPE values
+  aftertouch_ = note.pressure.toFloat();
+  timbre_ = note.timbre.toFloat();
+
+  // Pitch bend calculation for Mod Matrix (normalized approx)
+  // ZenithPolySynth uses pitchBendRange_ parameter, we can normalize against it
+  pitchBend_ = note.totalPitchbendInSemitones / (float)pitchBendRange_;
 
   ampEnvelope_.noteOn();
   modEnvelope_.noteOn();
@@ -115,26 +124,30 @@ void ZenithPolySynthVoice::startNote(int midiNoteNumber, float velocity,
   prevOsc1Phase_ = osc1_.getPhase();
 }
 
-void ZenithPolySynthVoice::stopNote(float velocity, bool allowTailOff) {
-  juce::ignoreUnused(velocity);
+void ZenithPolySynthVoice::noteStopped(bool allowTailOff) {
   ampEnvelope_.noteOff();
   modEnvelope_.noteOff();
   if (!allowTailOff)
     clearCurrentNote();
 }
 
-void ZenithPolySynthVoice::pitchWheelMoved(int newPitchWheelValue) {
-  pitchBend_ = (newPitchWheelValue - 8192) / 8192.0f;
+void ZenithPolySynthVoice::notePressureChanged() {
+  aftertouch_ = getCurrentlyPlayingNote().pressure.toFloat();
 }
 
-void ZenithPolySynthVoice::controllerMoved(int controllerNumber,
-                                           int newControllerValue) {
-  if (controllerNumber == 1)
-    modWheel_ = newControllerValue / 127.0f;
+void ZenithPolySynthVoice::notePitchbendChanged() {
+  auto note = getCurrentlyPlayingNote();
+  targetFrequency_ = note.getFrequencyInHertz();
+  // Normalize for modulation source usage
+  pitchBend_ = note.totalPitchbendInSemitones / (float)pitchBendRange_;
 }
 
-void ZenithPolySynthVoice::channelPressureChanged(int newChannelPressureValue) {
-  aftertouch_ = newChannelPressureValue / 127.0f;
+void ZenithPolySynthVoice::noteTimbreChanged() {
+  timbre_ = getCurrentlyPlayingNote().timbre.toFloat();
+}
+
+void ZenithPolySynthVoice::noteKeyStateChanged() {
+  // Handle key state changes if needed
 }
 
 float ZenithPolySynthVoice::computeLFOValue(double phase, LFOWaveform waveform,
@@ -162,7 +175,69 @@ float ZenithPolySynthVoice::computeLFOValue(double phase, LFOWaveform waveform,
   }
 }
 
+// RT-Safe Wrapper with Oversampling support
 void ZenithPolySynthVoice::renderNextBlock(
+    juce::AudioBuffer<float> &outputBuffer, int startSample, int numSamples) {
+
+  // Acquire lock to prevent race with setQualityPreset
+  juce::ScopedLock sl(oversamplerLock_);
+
+  // If oversampling is disabled or invalid
+  if (oversamplingFactor_ <= 1 || oversampler_ == nullptr) {
+    renderInnerBlock(outputBuffer, startSample, numSamples);
+    return;
+  }
+
+  // Oversampled processing
+  // Ensure we don't exceed pre-allocated buffer limits
+  // If request is too large, we process in chunks
+  int samplesProcessed = 0;
+
+  while (samplesProcessed < numSamples) {
+    int chunk = juce::jmin(numSamples - samplesProcessed,
+                           maxBlockSize_); // Limit to max safe block
+    int upsampledChunk = chunk * oversamplingFactor_;
+
+    // Safety check against buffer sizes
+    if (chunk > downsamplingBuffer_.getNumSamples() ||
+        upsampledChunk > oversamplingBuffer_.getNumSamples()) {
+      // This should theoretically not happen if maxBlockSize_ is respected and
+      // buffers are sized correctly
+      jassertfalse;
+      // Fallback: render non-oversampled to avoid crash/silence
+      renderInnerBlock(outputBuffer, startSample + samplesProcessed,
+                       numSamples - samplesProcessed);
+      return;
+    }
+
+    // 1. Render synth logic into upsampled buffer
+    // Note: Internal components (Oscs, Filters) are already configured for
+    // baseRate * factor
+    renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
+
+    // 2. Downsample
+    juce::dsp::AudioBlock<float> upBlock(oversamplingBuffer_);
+    // Slice only the valid part
+    juce::dsp::AudioBlock<float> validUpBlock =
+        upBlock.getSubBlock(0, upsampledChunk);
+
+    juce::dsp::AudioBlock<float> downBlock(downsamplingBuffer_);
+    juce::dsp::AudioBlock<float> validDownBlock =
+        downBlock.getSubBlock(0, chunk);
+
+    oversampler_->processSamplesDown(validDownBlock, validUpBlock);
+
+    // 3. Mix into output buffer
+    for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
+      outputBuffer.addFrom(ch, startSample + samplesProcessed,
+                           downsamplingBuffer_, ch, 0, chunk);
+    }
+
+    samplesProcessed += chunk;
+  }
+}
+
+void ZenithPolySynthVoice::renderInnerBlock(
     juce::AudioBuffer<float> &outputBuffer, int startSample, int numSamples) {
   if (!isVoiceActive())
     return;
@@ -178,8 +253,11 @@ void ZenithPolySynthVoice::renderNextBlock(
       (lfo2Sync_ ? getFrequencyForSyncRate(lfo2SyncRate_, bpm_) : lfo2Rate_) /
       sampleRate;
 
-  float pitchBendFactor =
-      std::exp2((pitchBend_ * static_cast<float>(pitchBendRange_)) / 12.0f);
+  // Get write pointers once to avoid overhead in loop
+  auto *leftOut = outputBuffer.getWritePointer(0, startSample);
+  auto *rightOut = outputBuffer.getNumChannels() > 1
+                       ? outputBuffer.getWritePointer(1, startSample)
+                       : nullptr;
 
   for (int i = 0; i < numSamples; ++i) {
     // Envelopes
@@ -238,7 +316,7 @@ void ZenithPolySynthVoice::renderNextBlock(
         break;
       case LFOTarget::Osc1Shape:
         dest = ModulationDestination::Osc1Shape;
-        break; // Added
+        break;
       default:
         break;
       }
@@ -268,7 +346,7 @@ void ZenithPolySynthVoice::renderNextBlock(
         break;
       case LFOTarget::Osc1Shape:
         dest = ModulationDestination::Osc1Shape;
-        break; // Added
+        break;
       default:
         break;
       }
@@ -321,7 +399,7 @@ void ZenithPolySynthVoice::renderNextBlock(
       currentFrequency_ = targetFrequency_;
     }
 
-    float baseFreq = currentFrequency_ * pitchBendFactor;
+    float baseFreq = currentFrequency_;
 
     // Osc Shape & Mod
     float sh1 = juce::jlimit(
@@ -444,9 +522,10 @@ void ZenithPolySynthVoice::renderNextBlock(
     float modAmp = modulationState_.get(ModulationDestination::AmpGain);
     sample *= (env1 + modAmp) * velocity_ * masterGain_.getNextValue();
 
-    for (int channel = 0; channel < outputBuffer.getNumChannels(); ++channel) {
-      outputBuffer.addSample(channel, startSample + i, sample);
-    }
+    // Add to buffer (replacing old addSample loop for cleaner code)
+    leftOut[i] += sample;
+    if (rightOut)
+      rightOut[i] += sample;
 
     currentAmplitude_ = std::abs(sample);
     if (!ampEnvelope_.isActive()) {
@@ -457,24 +536,89 @@ void ZenithPolySynthVoice::renderNextBlock(
 }
 
 void ZenithPolySynthVoice::setSampleRate(double sampleRate) {
-  osc1_.setSampleRate(sampleRate);
-  osc2_.setSampleRate(sampleRate);
-  osc3_.setSampleRate(sampleRate);
-  subOsc_.setSampleRate(sampleRate);
-  filter1_.setSampleRate(sampleRate);
-  filter2_.setSampleRate(sampleRate);
-  for (auto &osc : unisonOscillators_)
-    osc.setSampleRate(sampleRate);
-  ampEnvelope_.setSampleRate(sampleRate);
-  modEnvelope_.setSampleRate(sampleRate);
+  baseSampleRate_ = sampleRate;
+  updateSampleRate();
+}
 
-  osc1Shape_.reset(sampleRate, 0.05);
-  osc2Shape_.reset(sampleRate, 0.05);
-  osc3Shape_.reset(sampleRate, 0.05);
-  osc1Mix_.reset(sampleRate, 0.05);
-  osc2Mix_.reset(sampleRate, 0.05);
-  osc3Mix_.reset(sampleRate, 0.05);
-  masterGain_.reset(sampleRate, 0.05);
+void ZenithPolySynthVoice::updateSampleRate() {
+  double rate = baseSampleRate_ * oversamplingFactor_;
+  this->setCurrentSampleRate(rate);
+
+  osc1_.setSampleRate(rate);
+  osc2_.setSampleRate(rate);
+  osc3_.setSampleRate(rate);
+  subOsc_.setSampleRate(rate);
+  filter1_.setSampleRate(rate);
+  filter2_.setSampleRate(rate);
+  for (auto &osc : unisonOscillators_)
+    osc.setSampleRate(rate);
+  ampEnvelope_.setSampleRate(rate);
+  modEnvelope_.setSampleRate(rate);
+
+  osc1Shape_.reset(rate, 0.05);
+  osc2Shape_.reset(rate, 0.05);
+  osc3Shape_.reset(rate, 0.05);
+  osc1Mix_.reset(rate, 0.05);
+  osc2Mix_.reset(rate, 0.05);
+  osc3Mix_.reset(rate, 0.05);
+  masterGain_.reset(rate, 0.05);
+
+  {
+    // Resize buffers safely (Message thread or prepare step)
+    // Assuming maxBlockSize_ is sufficient, otherwise we resize larger
+    juce::ScopedLock sl(oversamplerLock_);
+    int requiredUpSize = maxBlockSize_ * oversamplingFactor_;
+    if (oversamplingBuffer_.getNumSamples() < requiredUpSize) {
+      oversamplingBuffer_.setSize(2, requiredUpSize);
+    }
+    if (downsamplingBuffer_.getNumSamples() < maxBlockSize_) {
+      downsamplingBuffer_.setSize(2, maxBlockSize_);
+    }
+
+    // Update oversampler if factor > 1
+    if (oversampler_ && oversamplingFactor_ > 1) {
+      oversampler_->initProcessing(requiredUpSize);
+    }
+  }
+}
+
+void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
+  if (qualityPreset_ == quality)
+    return;
+
+  qualityPreset_ = quality;
+
+  int newFactor = 1;
+  if (quality == QualityPreset::Medium)
+    newFactor = 2;
+  else if (quality == QualityPreset::High)
+    newFactor = 4; // Ultra could be 4x or 8x
+
+  if (newFactor != oversamplingFactor_) {
+    // PROTECT the switch
+    juce::ScopedLock sl(oversamplerLock_);
+
+    oversamplingFactor_ = newFactor;
+    if (oversamplingFactor_ > 1) {
+      oversampler_ = std::make_unique<juce::dsp::Oversampling<float>>(
+          2,                                   // numChannels
+          (int)std::log2(oversamplingFactor_), // factorLog2
+          juce::dsp::Oversampling<
+              float>::filter_half_band_polyphase_iir, // filter
+          true                                        // isBuffered
+      );
+    } else {
+      oversampler_ = nullptr;
+    }
+
+    // We must call updateSampleRate to propagate the new rate
+    // Note: This calls updateSampleRate recursively but we released lock?
+    // No, we hold lock. updateSampleRate also takes lock. Recursive lock is
+    // needed? juce::CriticalSection IS recursive.
+  }
+
+  // Call updateSampleRate outside the if to ensure logic runs
+  updateSampleRate();
 }
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,
@@ -541,6 +685,8 @@ float ZenithPolySynthVoice::getModulationSourceValue(ModulationSource source) {
     return velocity_;
   case ModulationSource::ModWheel:
     return modWheel_;
+  case ModulationSource::Timbre:
+    return timbre_;
   default:
     return 0.0f;
   }
