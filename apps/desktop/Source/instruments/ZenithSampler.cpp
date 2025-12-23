@@ -618,7 +618,7 @@ void ZenithSamplerVoice::setParameters(
 void ZenithSamplerVoice::startNote(int midiNoteNumber, float vel,
                                    juce::SynthesiserSound *s,
                                    int /*currentPitchWheelPosition*/) {
-  if (auto *sound = dynamic_cast<ZenithSamplerSound *>(s)) {
+  if (auto *sound = static_cast<ZenithSamplerSound *>(s)) {
     // Check velocity layer
     int midiVelocity = static_cast<int>(vel * 127.0f);
     if (!sound->appliesToVelocity(midiVelocity)) {
@@ -695,7 +695,7 @@ void ZenithSamplerVoice::controllerMoved(int /*controllerNumber*/,
 
 void ZenithSamplerVoice::renderNextBlock(juce::AudioBuffer<float> &outputBuffer,
                                          int startSample, int numSamples) {
-  if (auto *sound = dynamic_cast<ZenithSamplerSound *>(
+  if (auto *sound = static_cast<ZenithSamplerSound *>(
           getCurrentlyPlayingSound().get())) {
     auto *audioData = sound->getAudioData();
     if (!audioData)
