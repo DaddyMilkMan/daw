@@ -10,15 +10,15 @@
     JUCE 8 / C++20 adaptations:
     - Wrapped in namespace zenith
     - Professional ProCompressor with RMS/Lookahead
-    - Lock-free coefficient swapping
+    - Lock-free coefficient swapping via ReferenceCountedObject
 
   ==============================================================================
 */
 
 #include "MixerChannel.h"
-#include "EngineConstants.h"
-#include "../dsp/SIMDHelpers.h"
 #include "../dsp/AudioFifo.h"
+#include "../dsp/SIMDHelpers.h"
+#include "EngineConstants.h"
 
 namespace zenith {
 
@@ -46,11 +46,11 @@ MixerChannel::MixerChannel() {
   // Band 3: High shelf at 8kHz
   eqBands[3].type = EQBand::Type::HighShelf;
   eqBands[3].frequency.store(8000.0f);
-  
+
   // Initialize coefficient buffers
-  coeffsA_ = std::make_unique<FilterCoefficients>();
-  coeffsB_ = std::make_unique<FilterCoefficients>();
-  activeCoeffs_.store(coeffsA_.get());
+  activeCoeffs_ = new FilterCoefficients();
+
+  consoleEmulation = std::make_unique<zenith::effects::ConsoleEmulation>();
 }
 
 MixerChannel::~MixerChannel() {}
@@ -61,6 +61,23 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
+  juce::dsp::ProcessSpec spec;
+  spec.sampleRate = sampleRate;
+  spec.maximumBlockSize = samplesPerBlockExpected;
+  spec.numChannels = 2;
+
+  // Prepare Console Emulation
+  if (consoleEmulation) {
+    consoleEmulation->prepare(spec);
+    consoleEmulation->setMode(consoleMode.load());
+    consoleEmulation->setDrive(consoleDrive.load());
+    consoleEmulation->setCharacter(consoleCharacter.load());
+  }
+
+  // Prepare Gain
+  gain.prepare(spec);
+  gain.setRampDurationSeconds(0.05); // Smooth volume changes
+
   // Prepare ProCompressor
   compressor_.prepare(sampleRate, samplesPerBlockExpected);
   compressor_.setThreshold(compThreshold.load());
@@ -68,10 +85,11 @@ void MixerChannel::prepareToPlay(int samplesPerBlockExpected,
   compressor_.setAttack(compAttack.load());
   compressor_.setRelease(compRelease.load());
   compressor_.setMakeup(compMakeup.load());
-  
+
   // Pre-calculate filter coefficients on message thread
   recalculateCoefficients();
-  applyCoefficients();
+  // Ensure filters are updated before playback
+  updateFiltersFromCoefficients();
 }
 
 void MixerChannel::releaseResources() {
@@ -83,30 +101,37 @@ void MixerChannel::releaseResources() {
 
   hpfFilterL.reset();
   hpfFilterR.reset();
-  
+
+  hpfFilterR.reset();
+
   compressor_.reset();
+  if (consoleEmulation)
+    consoleEmulation->reset();
 }
 
 void MixerChannel::recalculateCoefficients() {
   // Called from message thread - pre-calculate all coefficients
-  if (currentSampleRate <= 0) return;
-  
-  // Get the inactive buffer to write to
-  FilterCoefficients* target = useCoeffsA_.load() ? coeffsB_.get() : coeffsA_.get();
-  
+  if (currentSampleRate <= 0)
+    return;
+
+  // Create NEW coefficients object
+  auto newCoeffs = new FilterCoefficients();
+
   // Calculate HPF coefficients
-  auto hpfCoeffs = juce::IIRCoefficients::makeHighPass(currentSampleRate, hpfFrequency.load());
-  target->hpf = {hpfCoeffs.coefficients[0], hpfCoeffs.coefficients[1], hpfCoeffs.coefficients[2],
-                 1.0, hpfCoeffs.coefficients[3], hpfCoeffs.coefficients[4]};
-  
+  auto hpfK = juce::IIRCoefficients::makeHighPass(currentSampleRate,
+                                                  hpfFrequency.load());
+  newCoeffs->hpf = {hpfK.coefficients[0], hpfK.coefficients[1],
+                    hpfK.coefficients[2], 1.0,
+                    hpfK.coefficients[3], hpfK.coefficients[4]};
+
   // Calculate EQ coefficients
   for (int i = 0; i < numEQBands; ++i) {
     const float freq = eqBands[i].frequency.load();
     const float gain = eqBands[i].gain.load();
     const float q = eqBands[i].q.load();
-    
+
     juce::IIRCoefficients coeffs;
-    
+
     switch (eqBands[i].type) {
     case EQBand::Type::LowShelf:
       coeffs = juce::IIRCoefficients::makeLowShelf(currentSampleRate, freq, q,
@@ -123,41 +148,43 @@ void MixerChannel::recalculateCoefficients() {
                                                     dbToGain(gain));
       break;
     }
-    
-    target->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1], coeffs.coefficients[2],
-                     1.0, coeffs.coefficients[3], coeffs.coefficients[4]};
+
+    newCoeffs->eq[i] = {coeffs.coefficients[0], coeffs.coefficients[1],
+                        coeffs.coefficients[2], 1.0,
+                        coeffs.coefficients[3], coeffs.coefficients[4]};
   }
-  
-  // Mark for swap
-  coeffsDirty_.store(true);
+
+  // Atomically swap pointer
+  juce::ScopedLock sl(coeffLock_);
+  activeCoeffs_ = newCoeffs;
 }
 
-void MixerChannel::applyCoefficients() {
-  // Called from audio thread - apply pre-calculated coefficients
-  if (!coeffsDirty_.load()) return;
-  
-  // Swap to the newly calculated coefficients
-  bool useA = useCoeffsA_.load();
-  FilterCoefficients* newCoeffs = useA ? coeffsB_.get() : coeffsA_.get();
-  
+void MixerChannel::updateFiltersFromCoefficients() {
+  // Safe atomic retrieval of current coefficients
+  FilterCoefficients::Ptr localCoeffs;
+  {
+    juce::ScopedLock sl(coeffLock_);
+    localCoeffs = activeCoeffs_;
+  }
+
+  if (!localCoeffs)
+    return;
+
   // Apply HPF
-  juce::IIRCoefficients hpf(newCoeffs->hpf[0], newCoeffs->hpf[1], newCoeffs->hpf[2],
-                            newCoeffs->hpf[3], newCoeffs->hpf[4], newCoeffs->hpf[5]);
+  juce::IIRCoefficients hpf(localCoeffs->hpf[0], localCoeffs->hpf[1],
+                            localCoeffs->hpf[2], localCoeffs->hpf[3],
+                            localCoeffs->hpf[4], localCoeffs->hpf[5]);
   hpfFilterL.setCoefficients(hpf);
   hpfFilterR.setCoefficients(hpf);
-  
+
   // Apply EQ bands
   for (int i = 0; i < numEQBands; ++i) {
-    juce::IIRCoefficients eq(newCoeffs->eq[i][0], newCoeffs->eq[i][1], newCoeffs->eq[i][2],
-                             newCoeffs->eq[i][3], newCoeffs->eq[i][4], newCoeffs->eq[i][5]);
+    juce::IIRCoefficients eq(localCoeffs->eq[i][0], localCoeffs->eq[i][1],
+                             localCoeffs->eq[i][2], localCoeffs->eq[i][3],
+                             localCoeffs->eq[i][4], localCoeffs->eq[i][5]);
     eqFiltersL[i].setCoefficients(eq);
     eqFiltersR[i].setCoefficients(eq);
   }
-  
-  // Swap active buffer
-  activeCoeffs_.store(newCoeffs);
-  useCoeffsA_.store(!useA);
-  coeffsDirty_.store(false);
 }
 
 void MixerChannel::getNextAudioBlock(
@@ -167,8 +194,8 @@ void MixerChannel::getNextAudioBlock(
 
 void MixerChannel::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill,
-    const std::vector<juce::AudioBuffer<float>*>& auxBuffers) {
-    
+    const std::vector<juce::AudioBuffer<float> *> &auxBuffers) {
+
   if (muted.load() || silencedBySolo.load()) {
     bufferToFill.clearActiveBufferRegion();
     inputLevel.store(0.0f);
@@ -176,8 +203,8 @@ void MixerChannel::getNextAudioBlock(
     return;
   }
 
-  // Apply any pending coefficient changes (RT-safe: just pointer swap)
-  applyCoefficients();
+  // Update filter coefficients safely before processing block
+  updateFiltersFromCoefficients();
 
   // Create a local buffer for processing
   juce::AudioBuffer<float> localBuffer(
@@ -209,7 +236,7 @@ void MixerChannel::getNextAudioBlock(
 
   // Process output section (pan, volume)
   processOutput(localBuffer);
-  
+
   // Process POST-FADER Sends
   processSends(localBuffer, auxBuffers, false);
 
@@ -225,8 +252,8 @@ void MixerChannel::processSends(
        ++i) {
     // Check if this send matches the requested pre/post mode
     if (sendPreFader[i].load() != matchPreFader)
-        continue;
-           
+      continue;
+
     auto *sendBuffer = sendBuffers[i];
     if (sendBuffer == nullptr)
       continue;
@@ -307,13 +334,15 @@ void MixerChannel::setCompressorRatio(float ratio) {
 }
 
 void MixerChannel::setCompressorAttack(float attackMs) {
-  compAttack.store(juce::jlimit(constants::kMinCompAttackMs, constants::kMaxCompAttackMs, attackMs));
+  compAttack.store(juce::jlimit(constants::kMinCompAttackMs,
+                                constants::kMaxCompAttackMs, attackMs));
   compressor_.setAttack(attackMs);
   sendChangeMessage();
 }
 
 void MixerChannel::setCompressorRelease(float releaseMs) {
-  compRelease.store(juce::jlimit(constants::kMinCompReleaseMs, constants::kMaxCompReleaseMs, releaseMs));
+  compRelease.store(juce::jlimit(constants::kMinCompReleaseMs,
+                                 constants::kMaxCompReleaseMs, releaseMs));
   compressor_.setRelease(releaseMs);
   sendChangeMessage();
 }
@@ -395,9 +424,39 @@ void MixerChannel::setSolo(bool shouldBeSolo) {
 }
 
 //==============================================================================
-void MixerChannel::resetPeaks() {
-  inputPeak.store(0.0f);
-  outputPeak.store(0.0f);
+void MixerChannel::setConsoleMode(
+    zenith::effects::ConsoleEmulation::Mode mode) {
+  consoleMode.store(mode);
+  if (consoleEmulation) {
+    consoleEmulation->setMode(mode);
+  }
+  sendChangeMessage();
+}
+
+zenith::effects::ConsoleEmulation::Mode MixerChannel::getConsoleMode() const {
+  return consoleMode.load();
+}
+
+void MixerChannel::setConsoleDrive(float drive) {
+  consoleDrive.store(juce::jlimit(0.0f, 1.0f, drive));
+  if (consoleEmulation) {
+    consoleEmulation->setDrive(drive);
+  }
+  sendChangeMessage();
+}
+
+float MixerChannel::getConsoleDrive() const { return consoleDrive.load(); }
+
+void MixerChannel::setConsoleCharacter(float character) {
+  consoleCharacter.store(juce::jlimit(0.0f, 1.0f, character));
+  if (consoleEmulation) {
+    consoleEmulation->setCharacter(character);
+  }
+  sendChangeMessage();
+}
+
+float MixerChannel::getConsoleCharacter() const {
+  return consoleCharacter.load();
 }
 
 //==============================================================================
@@ -430,6 +489,12 @@ juce::ValueTree MixerChannel::getState() const {
   state.setProperty("compAttack", compAttack.load(), nullptr);
   state.setProperty("compRelease", compRelease.load(), nullptr);
   state.setProperty("compMakeup", compMakeup.load(), nullptr);
+
+  // Console Emulation
+  state.setProperty("consoleMode", static_cast<int>(consoleMode.load()),
+                    nullptr);
+  state.setProperty("consoleDrive", consoleDrive.load(), nullptr);
+  state.setProperty("consoleCharacter", consoleCharacter.load(), nullptr);
 
   // Sends
   for (int i = 0; i < numSends; ++i) {
@@ -477,12 +542,27 @@ void MixerChannel::loadState(const juce::ValueTree &state) {
 
   // Compressor
   compressorEnabled.store(state.getProperty("compressorEnabled", false));
-  compThreshold.store(state.getProperty("compThreshold", constants::kDefaultCompThresholdDb));
+  compThreshold.store(
+      state.getProperty("compThreshold", constants::kDefaultCompThresholdDb));
   compRatio.store(state.getProperty("compRatio", constants::kDefaultCompRatio));
-  compAttack.store(state.getProperty("compAttack", constants::kDefaultCompAttackMs));
-  compRelease.store(state.getProperty("compRelease", constants::kDefaultCompReleaseMs));
+  compAttack.store(
+      state.getProperty("compAttack", constants::kDefaultCompAttackMs));
+  compRelease.store(
+      state.getProperty("compRelease", constants::kDefaultCompReleaseMs));
   compMakeup.store(state.getProperty("compMakeup", 0.0f));
-  
+
+  // Console Emulation
+  consoleMode.store(static_cast<zenith::effects::ConsoleEmulation::Mode>(
+      static_cast<int>(state.getProperty("consoleMode", 0))));
+  consoleDrive.store(state.getProperty("consoleDrive", 0.1f));
+  consoleCharacter.store(state.getProperty("consoleCharacter", 0.0f));
+
+  if (consoleEmulation) {
+    consoleEmulation->setMode(consoleMode.load());
+    consoleEmulation->setDrive(consoleDrive.load());
+    consoleEmulation->setCharacter(consoleCharacter.load());
+  }
+
   // Update ProCompressor with loaded values
   compressor_.setThreshold(compThreshold.load());
   compressor_.setRatio(compRatio.load());
@@ -520,91 +600,52 @@ void MixerChannel::processInput(juce::AudioBuffer<float> &buffer) {
   if (invertPhase) {
     buffer.applyGain(-1.0f);
   }
+
+  // Apply Console Emulation (Saturation/Color)
+  if (consoleEmulation) {
+    consoleEmulation->process(buffer);
+  }
 }
 
 void MixerChannel::processHighPass(juce::AudioBuffer<float> &buffer) {
-  if (buffer.getNumChannels() >= 1)
-    hpfFilterL.processSamples(buffer.getWritePointer(0),
-                              buffer.getNumSamples());
-
-  if (buffer.getNumChannels() >= 2)
+  juce::dsp::AudioBlock<float> block(buffer);
+  juce::dsp::ProcessContextReplacing<float> context(block);
+  hpfFilterL.processSamples(buffer.getWritePointer(0), buffer.getNumSamples());
+  if (buffer.getNumChannels() > 1)
     hpfFilterR.processSamples(buffer.getWritePointer(1),
                               buffer.getNumSamples());
 }
 
 void MixerChannel::processEQ(juce::AudioBuffer<float> &buffer) {
-  for (int band = 0; band < numEQBands; ++band) {
-    if (eqBands[band].enabled.load()) {
-      if (buffer.getNumChannels() >= 1)
-        eqFiltersL[band].processSamples(buffer.getWritePointer(0),
-                                        buffer.getNumSamples());
-
-      if (buffer.getNumChannels() >= 2)
-        eqFiltersR[band].processSamples(buffer.getWritePointer(1),
-                                        buffer.getNumSamples());
+  for (int i = 0; i < numEQBands; ++i) {
+    if (eqBands[i].enabled.load()) {
+      eqFiltersL[i].processSamples(buffer.getWritePointer(0),
+                                   buffer.getNumSamples());
+      if (buffer.getNumChannels() > 1)
+        eqFiltersR[i].processSamples(buffer.getWritePointer(1),
+                                     buffer.getNumSamples());
     }
   }
 }
 
 void MixerChannel::processCompressor(juce::AudioBuffer<float> &buffer) {
-  // Use the professional ProCompressor
   compressor_.process(buffer);
 }
 
 void MixerChannel::processOutput(juce::AudioBuffer<float> &buffer) {
-  const float vol = volume.load();
-  const float panValue = pan.load();
+  gain.setGainLinear(volume.load());
 
-  // Calculate left and right gains from pan (-3dB center, constant power)
-  const float piOver4 = juce::MathConstants<float>::pi / 4.0f;
-  const float leftGain = vol * std::cos(piOver4 * (1.0f + panValue));
-  const float rightGain = vol * std::sin(piOver4 * (1.0f + panValue));
-
-  if (buffer.getNumChannels() >= 2) {
-    buffer.applyGain(0, 0, buffer.getNumSamples(), leftGain);
-    buffer.applyGain(1, 0, buffer.getNumSamples(), rightGain);
-  } else if (buffer.getNumChannels() == 1) {
-    buffer.applyGain(0, 0, buffer.getNumSamples(), vol);
-  }
-  
-  // Push to visualizer (post-fader, post-pan)
-  if (auto* fifo = spectrumFifo_.load(std::memory_order_relaxed)) {
-      fifo->pushStereoAsMono(buffer, buffer.getNumSamples());
-  }
+  // Apply gain
+  juce::dsp::AudioBlock<float> block(buffer);
+  gain.process(juce::dsp::ProcessContextReplacing<float>(block));
 }
 
 void MixerChannel::updateMeters(const juce::AudioBuffer<float> &buffer,
                                 bool isInput) {
-  float maxLevel = 0.0f;
-
-  for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-    const float *channelData = buffer.getReadPointer(ch);
-    for (int i = 0; i < buffer.getNumSamples(); ++i) {
-      const float absValue = std::abs(channelData[i]);
-      if (absValue > maxLevel)
-        maxLevel = absValue;
-    }
-  }
-
-  if (isInput) {
-    const float currentLevelValue = inputLevel.load();
-    const float smoothingFactor = 0.3f;
-    const float newLevel = currentLevelValue * (1.0f - smoothingFactor) +
-                           maxLevel * smoothingFactor;
-    inputLevel.store(newLevel);
-
-    if (maxLevel > inputPeak.load())
-      inputPeak.store(maxLevel);
-  } else {
-    const float currentLevelValue = outputLevel.load();
-    const float smoothingFactor = 0.3f;
-    const float newLevel = currentLevelValue * (1.0f - smoothingFactor) +
-                           maxLevel * smoothingFactor;
-    outputLevel.store(newLevel);
-
-    if (maxLevel > outputPeak.load())
-      outputPeak.store(maxLevel);
-  }
+  if (isInput)
+    inputMeter.process(buffer);
+  else
+    outputMeter.process(buffer);
 }
 
 } // namespace zenith

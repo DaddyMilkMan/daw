@@ -81,46 +81,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/ui/design-system/ZenithLayout.cpp
     
     # Engine sources required for linking
-    apps/desktop/Source/engine/Engine.cpp
-    apps/desktop/Source/engine/ProjectState.cpp
-    apps/desktop/Source/engine/Track.cpp
-    apps/desktop/Source/engine/Clip.cpp
-    apps/desktop/Source/engine/MixerChannel.cpp
-    apps/desktop/Source/engine/AudioFilePool.cpp
-    apps/desktop/Source/engine/PluginHost.cpp
-    apps/desktop/Source/engine/AuxBus.cpp
-    apps/desktop/Source/engine/ZenithLogger.cpp
-    apps/desktop/Source/engine/TrackPluginState.cpp
-    apps/desktop/Source/engine/AudioRecorder.cpp
-    apps/desktop/Source/engine/RoutingGraph.cpp
-    apps/desktop/Source/engine/ClipSynchronizer.cpp
-    apps/desktop/Source/engine/TrackStateSynchronizer.cpp
-    apps/desktop/Source/engine/TrackAutomationSynchronizer.cpp
-    apps/desktop/Source/engine/TempoMapSynchronizer.cpp
-    apps/desktop/Source/engine/TempoMap.cpp
-    apps/desktop/Source/engine/TrackFreeze.cpp
-    apps/desktop/Source/engine/AudioRenderer.cpp
-    apps/desktop/Source/engine/RecordingManager.cpp
-    apps/desktop/Source/engine/TransportController.cpp
-    apps/desktop/Source/engine/MeteringSystem.cpp
-    apps/desktop/Source/engine/AutomationStateManager.cpp
-    apps/desktop/Source/engine/Metronome.cpp
-    apps/desktop/Source/engine/AudioTrack.cpp
-    apps/desktop/Source/engine/MIDITrack.cpp
-    apps/desktop/Source/engine/InstrumentTrack.cpp
-    apps/desktop/Source/engine/ClipTrack.cpp
-    apps/desktop/Source/engine/AuxBusTrack.cpp
-    apps/desktop/Source/engine/ClipStateManager.cpp
-    apps/desktop/Source/engine/TrackStateManager.cpp
-    apps/desktop/Source/engine/AutomationManager.cpp
-    apps/desktop/Source/engine/PluginChain.cpp
-    apps/desktop/Source/engine/RecentProjectManager.cpp
-    apps/desktop/Source/engine/ProjectFileIO.cpp
-    apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
-    # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/tests/BasicAudioTest.cpp
 )
 
 # Create main executable
@@ -190,9 +152,6 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_cryptography
     juce::juce_events
     juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-    juce::juce_gui_extra
     juce::juce_audio_basics
     juce::juce_audio_devices
     juce::juce_audio_formats
@@ -201,6 +160,23 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_dsp
     juce::juce_opengl
 )
+
+# Audio Driver Configuration
+include(apps/desktop/cmake/AudioDrivers.cmake)
+
+if(UNIX AND NOT APPLE)
+    target_link_libraries(ZenithDAW PRIVATE
+        alsa_driver
+        jack_driver
+        pulse_driver
+    )
+    
+    target_compile_definitions(ZenithDAW PRIVATE
+        JUCE_ALSA=1
+        JUCE_JACK=1
+        JUCE_PULSEAUDIO=1
+    )
+endif()
 
 # Platform-specific libraries for Graphics Backends
 if(WIN32)
@@ -216,6 +192,23 @@ elseif(UNIX AND NOT APPLE)
         message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
         target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
     endif()
+    
+    # Linux-specific libraries for Skia FontConfig and X11 UI
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
+    pkg_check_modules(X11 REQUIRED x11)
+    
+    target_include_directories(ZenithDAW PRIVATE 
+        ${FONTCONFIG_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIRS}
+    )
+    target_link_libraries(ZenithDAW PRIVATE 
+        ${FONTCONFIG_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${X11_LIBRARIES}
+    )
 endif()
 
 # Skia Integration (Manual) - option defined earlier

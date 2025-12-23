@@ -546,12 +546,13 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, in
             int idx1 = idx0 + 1;
             float alpha = static_cast<float>(currentReadPos - idx0);
 
-            if (looping.load()) {
-                idx0 %= sourceLen;
-                idx1 %= sourceLen;
+            // Bug 39 & 45: Guard modulo and boundary conditions
+            if (looping.load() && sourceLen > 0) {
+                idx0 = juce::positiveModulo(idx0, sourceLen);
+                idx1 = juce::positiveModulo(idx1, sourceLen);
             } else {
-                idx0 = juce::jmin(idx0, sourceLen - 1);
-                idx1 = juce::jmin(idx1, sourceLen - 1);
+                idx0 = juce::jlimit(0, sourceLen - 1, idx0);
+                idx1 = juce::jlimit(0, sourceLen - 1, idx1);
             }
 
             outData[i] = (1.0f - alpha) * inData[idx0] + alpha * inData[idx1];
