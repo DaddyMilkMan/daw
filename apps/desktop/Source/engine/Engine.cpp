@@ -29,11 +29,8 @@
 
 // Refactor 2025-12-09: Modular Components
 #include "../engine/AudioRenderer.h"
-<<<<<<< HEAD
 #include "../engine/RecordingManager.h"
 #include "../engine/TransportController.h"
-=======
->>>>>>> origin/master
 #include "../engine/MeteringSystem.h"
 #include "../engine/Metronome.h"
 #include "../engine/RecordingManager.h"
@@ -406,8 +403,6 @@ void Engine::shutdown() {
 }
 
 //==============================================================================
-<<<<<<< HEAD
-=======
 // Transport Controls
 //==============================================================================
 
@@ -630,7 +625,6 @@ void Engine::setLoopRegion(juce::int64 start, juce::int64 end) {
 }
 
 //==============================================================================
->>>>>>> origin/master
 // Audio Device Management
 //==============================================================================
 
@@ -657,8 +651,6 @@ double Engine::getCpuUsage() const {
 }
 
 //==============================================================================
-<<<<<<< HEAD
-=======
 // Track Management
 //==============================================================================
 
@@ -720,7 +712,6 @@ void Engine::addTestTracks(int count) {
 }
 
 //==============================================================================
->>>>>>> origin/master
 // Audio File Pool
 //==============================================================================
 
@@ -767,13 +758,13 @@ juce::AudioPluginFormatManager &Engine::getPluginFormatManager() {
   return pluginHost_->getFormatManager();
 }
 
-<<<<<<< HEAD
 void Engine::registerFormats() {
   // Bug 27: JUCE FormatManager takes ownership of registered formats
   formatManager.registerBasicFormats();
   formatManager.registerFormat(new juce::FlacAudioFormat(), false);
   formatManager.registerFormat(new juce::OggVorbisAudioFormat(), false);
-=======
+}
+
 void Engine::setTrackPan(int trackIndex, float pan) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
 
@@ -1025,7 +1016,8 @@ void Engine::updateTrackSnapshot() {
   if (snapshotTrash_.size() > 5) {
     snapshotTrash_.erase(snapshotTrash_.begin());
   }
->>>>>>> origin/master
+}
+
 }
 
 //==============================================================================
@@ -1133,30 +1125,18 @@ void Engine::audioDeviceIOCallbackWithContext(
       // Use proxy buffer to avoid allocation
       juce::AudioBuffer<float> buffer1(outputChannelData, numOutputChannels,
                                        samplesBeforeLoop);
-<<<<<<< HEAD
-      
-      // Extract MIDI for this section (simple split not supported by MidiBuffer, using full buffer for now or empty?)
-      // For correctness in looping, we should split MIDI, but for now passing empty/full might be acceptable if events are sparse.
-      // Ideally handled by AudioRenderer splitting. Here we pass the full drained midi to the first block or handle properly.
-      // AudioRenderer::renderAudioGraph is responsible for processing MIDI. 
-=======
-
       juce::MidiBuffer midi1;
       midiFifo_.drainTo(midi1, samplesBeforeLoop);
->>>>>>> origin/master
+
 
       if (audioRenderer_) {
         // NOTE: We pass 'midiBuffer' (full buffer) to first pass. 
         // This is a simplification; ideally we split MIDI events based on timestamp.
         audioRenderer_->renderAudioGraph(
             buffer1, samplesBeforeLoop, currentPos, snapshot->tracks,
-<<<<<<< HEAD
-            snapshot->auxBuses, routingGraph_, masterLimiter_,
-            masterPlugins_, tempoMap_.get(), &midiBuffer);
-=======
             snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins_,
             tempoMap_.get(), &midi1, inputChannelData, numInputChannels);
->>>>>>> origin/master
+
 
             // Mix Metronome (Pass 1)
             if (metronome_) {
@@ -1188,13 +1168,9 @@ void Engine::audioDeviceIOCallbackWithContext(
         if (audioRenderer_) {
           audioRenderer_->renderAudioGraph(
               buffer2, samplesAfter, loopStart, snapshot->tracks,
-<<<<<<< HEAD
-              snapshot->auxBuses, routingGraph_, masterLimiter_,
-              masterPlugins_, tempoMap_.get(), &emptyMidi);
-=======
               snapshot->auxBuses, routingGraph_, masterLimiter_, masterPlugins_,
               tempoMap_.get(), &midi2, offsets, safeNumChannels); // Using offset inputs
->>>>>>> origin/master
+
 
               // Mix Metronome (Pass 2)
               if (metronome_) {
@@ -1313,9 +1289,8 @@ void Engine::applyEvent(const zenith::EngineEvent &e,
   }
 }
 
-<<<<<<< HEAD
 // Retain legacy public render API for other consumers if any (but AudioRenderer does the work)
-=======
+
 //==============================================================================
 // Audio Processing (AUDIO THREAD)
 //==============================================================================
@@ -1391,11 +1366,9 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
       phase += phaseIncrement;
       if (phase >= 2.0 * juce::MathConstants<double>::pi)
         phase -= 2.0 * juce::MathConstants<double>::pi;
-    }
   }
 }
 
->>>>>>> origin/master
 void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
                               int numSamples, juce::int64 playheadPosition,
                               const std::vector<zenith::Track *> &tracks,
@@ -1411,18 +1384,15 @@ void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
   }
 }
 
-<<<<<<< HEAD
-// Legacy processAudioBlock - keep as private helper if needed or just remove, but to match summary:
 void Engine::processAudioBlock(const float *const *inputChannelData,
                                int numInputChannels,
                                float *const *outputChannelData,
                                int numOutputChannels, int numSamples) noexcept {
     // Legacy method - delegated to audioDeviceIOCallbackWithContext logic via loop
     // But since IO callback is the updated one, this might be unused.
-    // However, keeping it as an empty shell or redirecting to ensure signature match if vtable requires it.
-    // Engine declares it private.
     juce::ignoreUnused(inputChannelData, numInputChannels, outputChannelData, numOutputChannels, numSamples);
-=======
+}
+
 //==============================================================================
 // Track Management (MESSAGE THREAD)
 //==============================================================================
@@ -2124,7 +2094,7 @@ void Engine::setMetronomeLevel(float level) {
       metronome_->setLevel(level);
     }
   }
->>>>>>> origin/master
+
 }
 
 //==============================================================================
