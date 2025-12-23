@@ -3,7 +3,6 @@ target_sources(ZenithDAW PRIVATE
     InstrumentRegistry.cpp
     RegisterBuiltInInstruments.cpp
     PresetGenerator.cpp
-    WavetableLoader.cpp
     ZenithOscillator.cpp
     ZenithFilter.cpp
     ZenithEffects.cpp

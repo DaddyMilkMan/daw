@@ -19,6 +19,35 @@
 
 namespace zenith {
 
+// Helper to reduce copy-paste code (Bug 66)
+static void registerSamplerPreset(InstrumentRegistry& registry,
+                                  const juce::String& id,
+                                  const juce::String& name,
+                                  const juce::String& category,
+                                  const juce::String& description,
+                                  const std::vector<juce::String>& tags,
+                                  const char* bankJson) {
+  auto metadata = ZenithSampler::createMetadata();
+  metadata.instrumentId = "zenith_sampler." + id;
+  metadata.name = name;
+  metadata.category = category;
+  metadata.description = description;
+  juce::StringArray tagArray;
+  for (const auto& t : tags) tagArray.add(t);
+  metadata.tags = tagArray;
+
+  // Capture json pointer by value (literal string persistence assumed/guaranteed by usage)
+  registry.registerInstrument(metadata.instrumentId, metadata, [bankJson, name]() {
+    auto sampler = std::make_unique<ZenithSampler>();
+    auto *proc =
+        dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
+    if (proc && bankJson) {
+      proc->loadSampleBankFromJson(bankJson, name);
+    }
+    return sampler;
+  });
+}
+
 void registerBuiltInInstruments(InstrumentRegistry& registry) {
   // Register ZenithPolySynth
   registry.registerInstrument(
@@ -34,24 +63,10 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
   // These are factory templates that ship with Zenith
 
   // 1. 808 Essentials - Classic drum machine
-  {
-    auto metadata = ZenithSampler::createMetadata();
-    metadata.instrumentId = "zenith_sampler.808_essentials";
-    metadata.name = "808 Essentials";
-    metadata.category = "drums";
-    metadata.description =
-        "Classic 808 drum sounds - kick, snare, hi-hats, and bass";
-    metadata.tags = {"drums", "808", "classic", "electronic"};
-
-    registry.registerInstrument(metadata.instrumentId, metadata, []() {
-      auto sampler = std::make_unique<ZenithSampler>();
-      // Sample bank JSON embedded for built-in instruments
-      // Note: Actual samples need to be in
-      // Content/Instruments/ZenithSampler/Samples/
-      auto *proc =
-          dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
-      if (proc) {
-        const char *bankJson = R"({
+  registerSamplerPreset(registry, "808_essentials", "808 Essentials", "drums",
+      "Classic 808 drum sounds - kick, snare, hi-hats, and bass",
+      {"drums", "808", "classic", "electronic"},
+      R"({
                         "name": "808 Essentials",
                         "category": "drums",
                         "parameters": {
@@ -67,29 +82,13 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
                             { "filePath": "808-hihat-open.wav", "rootNote": 46, "lowNote": 46, "highNote": 46, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 0.8, "tune": 0.0 },
                             { "filePath": "808-bass.wav", "rootNote": 48, "lowNote": 24, "highNote": 72, "lowVel": 0, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 }
                         ]
-                    })";
-        proc->loadSampleBankFromJson(bankJson, "808 Essentials");
-      }
-      return sampler;
-    });
-  }
+                    })");
 
   // 2. LoFi Keys - Vintage piano with character
-  {
-    auto metadata = ZenithSampler::createMetadata();
-    metadata.instrumentId = "zenith_sampler.lofi_keys";
-    metadata.name = "LoFi Keys";
-    metadata.category = "keys";
-    metadata.description =
-        "Lo-fi piano with vintage character and tape saturation";
-    metadata.tags = {"piano", "keys", "lofi", "vintage"};
-
-    registry.registerInstrument(metadata.instrumentId, metadata, []() {
-      auto sampler = std::make_unique<ZenithSampler>();
-      auto *proc =
-          dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
-      if (proc) {
-        const char *bankJson = R"({
+  registerSamplerPreset(registry, "lofi_keys", "LoFi Keys", "keys",
+      "Lo-fi piano with vintage character and tape saturation",
+      {"piano", "keys", "lofi", "vintage"},
+      R"({
                         "name": "LoFi Keys",
                         "category": "keys",
                         "parameters": {
@@ -106,29 +105,13 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
                             { "filePath": "lofi-piano-C4-hard.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
                             { "filePath": "lofi-piano-C5-hard.wav", "rootNote": 72, "lowNote": 66, "highNote": 84, "lowVel": 64, "highVel": 127, "loopMode": "forward", "gain": 1.0, "tune": 0.0 }
                         ]
-                    })";
-        proc->loadSampleBankFromJson(bankJson, "LoFi Keys");
-      }
-      return sampler;
-    });
-  }
+                    })");
 
   // 3. Trap Pluck - Modern pluck synth
-  {
-    auto metadata = ZenithSampler::createMetadata();
-    metadata.instrumentId = "zenith_sampler.trap_pluck";
-    metadata.name = "Trap Pluck";
-    metadata.category = "synth";
-    metadata.description =
-        "Modern trap pluck synth - short attack, punchy release";
-    metadata.tags = {"synth", "pluck", "trap", "modern"};
-
-    registry.registerInstrument(metadata.instrumentId, metadata, []() {
-      auto sampler = std::make_unique<ZenithSampler>();
-      auto *proc =
-          dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
-      if (proc) {
-        const char *bankJson = R"({
+  registerSamplerPreset(registry, "trap_pluck", "Trap Pluck", "synth",
+      "Modern trap pluck synth - short attack, punchy release",
+      {"synth", "pluck", "trap", "modern"},
+      R"({
                         "name": "Trap Pluck",
                         "category": "synth",
                         "parameters": {
@@ -143,29 +126,13 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
                             { "filePath": "trap-pluck-C4.wav", "rootNote": 60, "lowNote": 54, "highNote": 65, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
                             { "filePath": "trap-pluck-C5.wav", "rootNote": 72, "lowNote": 66, "highNote": 77, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 }
                         ]
-                    })";
-        proc->loadSampleBankFromJson(bankJson, "Trap Pluck");
-      }
-      return sampler;
-    });
-  }
+                    })");
 
   // 4. Orchestral Strings - Lush string ensemble
-  {
-    auto metadata = ZenithSampler::createMetadata();
-    metadata.instrumentId = "zenith_sampler.orchestral_strings";
-    metadata.name = "Orchestral Strings";
-    metadata.category = "orchestral";
-    metadata.description =
-        "Lush string ensemble with natural sustain and vibrato";
-    metadata.tags = {"strings", "orchestral", "ensemble", "classical"};
-
-    registry.registerInstrument(metadata.instrumentId, metadata, []() {
-      auto sampler = std::make_unique<ZenithSampler>();
-      auto *proc =
-          dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
-      if (proc) {
-        const char *bankJson = R"({
+  registerSamplerPreset(registry, "orchestral_strings", "Orchestral Strings", "orchestral",
+      "Lush string ensemble with natural sustain and vibrato",
+      {"strings", "orchestral", "ensemble", "classical"},
+      R"({
                         "name": "Orchestral Strings",
                         "category": "orchestral",
                         "parameters": {
@@ -180,29 +147,13 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
                             { "filePath": "strings-C4.wav", "rootNote": 60, "lowNote": 60, "highNote": 71, "lowVel": 0, "highVel": 80, "loopMode": "forward", "gain": 1.0, "tune": 0.0 },
                             { "filePath": "strings-C5.wav", "rootNote": 72, "lowNote": 72, "highNote": 96, "lowVel": 0, "highVel": 80, "loopMode": "forward", "gain": 0.95, "tune": 0.0 }
                         ]
-                    })";
-        proc->loadSampleBankFromJson(bankJson, "Orchestral Strings");
-      }
-      return sampler;
-    });
-  }
+                    })");
 
   // 5. FX & Impacts - Cinematic sound effects
-  {
-    auto metadata = ZenithSampler::createMetadata();
-    metadata.instrumentId = "zenith_sampler.fx_impacts";
-    metadata.name = "FX & Impacts";
-    metadata.category = "fx";
-    metadata.description =
-        "Cinematic sound effects - risers, impacts, whooshes";
-    metadata.tags = {"fx", "impacts", "cinematic", "soundfx"};
-
-    registry.registerInstrument(metadata.instrumentId, metadata, []() {
-      auto sampler = std::make_unique<ZenithSampler>();
-      auto *proc =
-          dynamic_cast<ZenithSamplerProcessor *>(sampler->getAudioProcessor());
-      if (proc) {
-        const char *bankJson = R"({
+  registerSamplerPreset(registry, "fx_impacts", "FX & Impacts", "fx",
+      "Cinematic sound effects - risers, impacts, whooshes",
+      {"fx", "impacts", "cinematic", "soundfx"},
+      R"({
                         "name": "FX & Impacts",
                         "category": "fx",
                         "parameters": {
@@ -217,12 +168,7 @@ void registerBuiltInInstruments(InstrumentRegistry& registry) {
                             { "filePath": "fx-reverse.wav", "rootNote": 64, "lowNote": 64, "highNote": 64, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 },
                             { "filePath": "fx-whoosh.wav", "rootNote": 65, "lowNote": 65, "highNote": 65, "lowVel": 0, "highVel": 127, "loopMode": "none", "gain": 1.0, "tune": 0.0 }
                         ]
-                    })";
-        proc->loadSampleBankFromJson(bankJson, "FX & Impacts");
-      }
-      return sampler;
-    });
-  }
+                    })");
 
   DBG("Built-in instruments registered successfully (2 synths + 5 sample-based "
       "instruments)");

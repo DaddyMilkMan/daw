@@ -3,32 +3,26 @@
 
     ZenithOscillator.h
     Created: 2025-12-06
-    Refactored: 2025-12-20 (Pro Wavetable Update)
     Author:  Zenith DAW
 
     Oscillator component for ZenithPolySynth.
-    Now includes REAL wavetable support with MIP-mapping.
 
   ==============================================================================
 */
 
 #pragma once
 
-#include "WavetableData.h"
 #include "ZenithPolySynthDefs.h"
 #include <array>
 #include <cmath>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
-#include <memory>
+
 
 namespace zenith {
 
-// Forward declaration
-class Wavetable;
-
 /**
-    Single oscillator with multiple waveforms, wavetables, and detune
+    Single oscillator with multiple waveforms and detune
 */
 class ZenithOscillator {
 public:
@@ -73,11 +67,6 @@ private:
   // Flagship State
   bool syncEnabled_ = false;
 
-  // Wavetable State (Pro Upgrade)
-  const Wavetable *wavetable_ =
-      nullptr;                     // Non-owning pointer to loaded wavetable
-  float lastWavetableFreq_ = 0.0f; // For MIP level calculation
-
   float processSine(float frequency);
   float processSaw(float frequency);
   float processSquare(float frequency, float pulseWidth);
@@ -85,8 +74,6 @@ private:
   float processNoise();
   float processSupersaw(float frequency);
   float processWavetable(float frequency, float shape);
-  float processRealWavetable(float frequency,
-                             float shape); // NEW: Real wavetable playback
 
   // Supersaw state
   std::array<double, 7> supersawPhases_ = {0.0};
@@ -98,15 +85,6 @@ private:
   // Random number generator for noise and phase randomization
   juce::Random random_;
 
-public:
-  // Wavetable management (Pro Upgrade)
-  void setWavetable(const Wavetable *wt) { wavetable_ = wt; }
-  const Wavetable *getWavetable() const { return wavetable_; }
-  bool hasWavetable() const {
-    return wavetable_ != nullptr && wavetable_->isValid();
-  }
-
-private:
   // PolyBLEP anti-aliasing helper
   // t: current phase (0..1)
   // dt: phase increment per sample

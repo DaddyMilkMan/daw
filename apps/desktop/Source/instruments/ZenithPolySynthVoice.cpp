@@ -213,6 +213,7 @@ void ZenithPolySynthVoice::renderNextBlock(
     // 1. Render synth logic into upsampled buffer
     // Note: Internal components (Oscs, Filters) are already configured for
     // baseRate * factor
+    oversamplingBuffer_.clear(0, upsampledChunk);
     renderInnerBlock(oversamplingBuffer_, 0, upsampledChunk);
 
     // 2. Downsample
