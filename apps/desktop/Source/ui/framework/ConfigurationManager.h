@@ -156,7 +156,8 @@ public:
   static ConfigurationManager &getInstance();
 
   // Initialization
-  void initialize(const juce::File &configFile);
+  static juce::File getDefaultConfigurationFile();
+  void initialize(const juce::File &configFile = getDefaultConfigurationFile());
   void shutdown();
   bool isInitialized() const { return initialized_; }
 

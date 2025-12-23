@@ -83,19 +83,8 @@ private:
     //==========================================================================
     // Platform-specific implementations
     
-#if JUCE_WINDOWS
-    static bool storeKeyWindows(const juce::String& keyName, const juce::String& keyValue);
-    static bool retrieveKeyWindows(const juce::String& keyName, juce::String& outKey);
-    static bool deleteKeyWindows(const juce::String& keyName);
-#elif JUCE_MAC
-    static bool storeKeyMac(const juce::String& keyName, const juce::String& keyValue);
-    static bool retrieveKeyMac(const juce::String& keyName, juce::String& outKey);
-    static bool deleteKeyMac(const juce::String& keyName);
-#elif JUCE_LINUX
-    static bool storeKeyLinux(const juce::String& keyName, const juce::String& keyValue);
-    static bool retrieveKeyLinux(const juce::String& keyName, juce::String& outKey);
-    static bool deleteKeyLinux(const juce::String& keyName);
-#endif
+    // Platform specific implementations are now handled in separate files
+
     
     // Service name for keychain/credential manager
     static juce::String getServiceName();

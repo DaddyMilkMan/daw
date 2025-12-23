@@ -60,48 +60,23 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   // 3. Run Separation
   ONNXStemSeparator separator;
 
-  // Check for model file availability
-  juce::File modelFile;
-
-  // 1. Check AppData
-  auto appDataDir =
-      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
-  auto appDataModel = appDataDir.getChildFile("ZenithDAW/Models/htdemucs.onnx");
-
-  // 2. Check App Directory (Portable)
-  auto appDir =
-      juce::File::getSpecialLocation(juce::File::currentApplicationFile)
-          .getParentDirectory();
-  auto localModel = appDir.getChildFile("Models/htdemucs.onnx");
-
-  if (appDataModel.existsAsFile()) {
-    modelFile = appDataModel;
-  } else if (localModel.existsAsFile()) {
-    modelFile = localModel;
+  // Check for model file availability (delegated to platform discovery)
+  if (!separator.isAvailable()) {
+    result.error = "ONNX Runtime not available.";
+    if (callback_) {
+      juce::MessageManager::callAsync(
+          [cb = callback_, res = result]() { cb(res); });
+    }
+    return juce::ThreadPoolJob::jobHasFinished;
   }
 
-  // Initialize separator
-  bool onnxReady = false;
-  if (modelFile.existsAsFile()) {
-    onnxReady = separator.initialize(modelFile);
-  }
-
-  // If initialization failed but we expected it to work (model exists), log
-  // warning
-  if (modelFile.existsAsFile() && !onnxReady) {
-    DBG("StemSeparationJob: Model found but failed to initialize ONNX session");
-  }
-
-  if (!separator.isAvailable() && !onnxReady) {
-    // If we can't use ONNX (runtime missing OR model missing/failed),
-    // the separator might have a DSP fallback.
-    // However, if the user explicitly requested AI separation, this might be
-    // disappointing. For now, we proceed to separate(), which handles fallback
-    // internally and sets the 'usedONNX' flag in the result.
-
-    // Optional: Abort if stricter requirements needed
-    // result.error = "ONNX Runtime not available or model missing.";
-    // ...
+  // Initialize with default model path
+  if (!separator.initialize(ONNXStemSeparator::findDefaultModel())) {
+      result.error = "Failed to load AI model (demucs.onnx)";
+      if (callback_) {
+          juce::MessageManager::callAsync([cb = callback_, res = result]() { cb(res); });
+      }
+      return juce::ThreadPoolJob::jobHasFinished;
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);

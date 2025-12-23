@@ -1,9 +1,11 @@
+```cpp
 /**
  * @file Engine.cpp
  * @brief Audio engine implementation
  */
 
-#include "Engine.h"
+#include "PlatformAudioUtils.h"
+#include "ZenithLogger.h"
 #include "ProjectState.h"
 #include "TempoMap.h"
 #include "TrackAutomationSynchronizer.h"
@@ -301,7 +303,7 @@ void Engine::syncWithProjectState() {
 bool Engine::initialize() {
   DBG("Engine: Initializing...");
 
-  // Initialize audio device manager
+  // 1. Initialize Audio Device Manager with default devices
   auto error = deviceManager.initialiseWithDefaultDevices(2, 2); // 2 in, 2 out
 
   if (error.isNotEmpty()) {
@@ -309,11 +311,23 @@ bool Engine::initialize() {
     juce::AlertWindow::showMessageBoxAsync(
         juce::AlertWindow::WarningIcon, "Audio Device Error",
         "Failed to initialize audio device:\n" + error, "OK");
-    return false;
+    // Don't return false yet, try platform-specific fallback
   }
 
-  // Get current device setup
+  // 2. Initialize Audio Devices with platform-specific fallbacks
+  PlatformAudioUtils::initializeAudioDeviceSetup(deviceManager);
+
+  // Get current device setup (might have changed due to fallback)
   auto setup = deviceManager.getAudioDeviceSetup();
+
+          }
+      }
+  }
+  DBG("===============================================================================================");
+  
+  // Refresh setup if it changed during fallback
+  setup = deviceManager.getAudioDeviceSetup();
+#endif
 
   DBG("Engine: Audio device initialized");
   DBG("  Device: " + setup.outputDeviceName);

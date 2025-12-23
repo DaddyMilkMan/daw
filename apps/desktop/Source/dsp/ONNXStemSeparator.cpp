@@ -1,4 +1,5 @@
 #include "ONNXStemSeparator.h"
+#include "PlatformModelUtils.h"
 #include "DSPStemSeparator.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -70,13 +71,21 @@ bool ONNXStemSeparator::isAvailable() const {
 }
 
 bool ONNXStemSeparator::initialize(const juce::File &modelPath) {
-  if (!modelPath.existsAsFile()) {
+  juce::File fileToLoad = modelPath;
+
+  // If provided path is invalid or empty, try to find default
+  if (!fileToLoad.existsAsFile()) {
+    DBG("ONNXStemSeparator: Provided path not found or empty, searching for default...");
+    fileToLoad = findDefaultModel();
+  }
+
+  if (!fileToLoad.existsAsFile()) {
     DBG("ONNXStemSeparator: Model file not found - " +
         modelPath.getFullPathName());
     return false;
   }
 
-  pImpl->modelPath = modelPath;
+  pImpl->modelPath = fileToLoad;
 
 #ifdef ZENITH_USE_ONNX_RUNTIME
   try {
@@ -319,6 +328,10 @@ juce::String ONNXStemSeparator::getModelInfo() const {
 #endif
 
   return info;
+}
+
+juce::File ONNXStemSeparator::findDefaultModel() {
+    return PlatformModelUtils::findDefaultModel();
 }
 
 } // namespace zenith
