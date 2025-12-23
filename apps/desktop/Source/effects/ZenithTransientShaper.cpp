@@ -64,11 +64,9 @@ void ZenithTransientShaper::processBlock(juce::AudioBuffer<float> &buffer,
   const float fastCoeff = fastCoeff_;
   const float slowCoeff = slowCoeff_;
 
-  // Ensure vectors are large enough
-  if (static_cast<int>(fastEnvelope.size()) < numChannels) {
-    fastEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
-    slowEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
-  }
+  // Real-time safety: ensure vectors are large enough (should be sized in prepareToPlay)
+  jassert(static_cast<int>(fastEnvelope.size()) >= numChannels);
+  jassert(static_cast<int>(slowEnvelope.size()) >= numChannels);
 
   for (int ch = 0; ch < numChannels; ++ch) {
     auto *data = buffer.getWritePointer(ch);

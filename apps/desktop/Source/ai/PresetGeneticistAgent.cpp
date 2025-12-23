@@ -1087,8 +1087,8 @@ void PresetGeneticistAgent::setTargetAudio(const juce::File &file) {
 
   // Read a representative section (middle 1 second)
   int64_t startSample = reader->lengthInSamples / 2;
-  int64_t numSamples = std::min(reader->lengthInSamples - startSample,
-                                static_cast<int64_t>(reader->sampleRate));
+  juce::int64 numSamples = std::min(static_cast<juce::int64>(reader->lengthInSamples - startSample),
+                                static_cast<juce::int64>(reader->sampleRate));
 
   juce::AudioBuffer<float> tempBuffer(static_cast<int>(reader->numChannels),
                                       static_cast<int>(numSamples));

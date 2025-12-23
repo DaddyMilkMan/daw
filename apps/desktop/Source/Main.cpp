@@ -7,6 +7,7 @@
 
 #include "MainWindow.h"
 #include "utils/SampleGenerator.h"
+#include "utils/PlatformSystemUtils.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -53,7 +54,7 @@ public:
     DBG("JUCE Version: " + juce::SystemStats::getJUCEVersion());
 
     // Log system info
-    logSystemInfo();
+    zenith::PlatformSystemUtils::logSystemInfo();
 
     // Ensure content validity (Generate missing samples if needed)
     zenith::SampleGenerator::generateMissingSamples();
@@ -113,20 +114,6 @@ public:
   }
 
 private:
-  //==========================================================================
-  void logSystemInfo() {
-    DBG("========================================");
-    DBG("System Information");
-    DBG("========================================");
-    DBG("OS: " + juce::SystemStats::getOperatingSystemName());
-    DBG("CPU: " + juce::String(juce::SystemStats::getCpuSpeedInMegahertz()) +
-        " MHz");
-    DBG("CPU Cores: " + juce::String(juce::SystemStats::getNumCpus()));
-    DBG("Memory: " +
-        juce::String(juce::SystemStats::getMemorySizeInMegabytes()) + " MB");
-    DBG("========================================");
-  }
-
   //==========================================================================
   std::unique_ptr<MainWindow> mainWindow;
 };

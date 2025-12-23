@@ -116,11 +116,8 @@ float MeteringSystem::getLevel(MeterMode mode) const {
   // K-System: RMS value shifted by reference level
   // K-20: 0dB = -20dBFS. Display range -20 to +4.
   case MeterMode::K20:
-    return rmsLevel.load() *
-           10.0f; // +20dB linear gain? No, scale logic is UI side.
-                  // Let's return raw RMS, UI handles scale offset.
-                  // Wait, K-meter implies specific ballistics too (RMS with
-                  // 600ms window). For now, return RMS.
+    // Per comments, K-metering display logic is handled by the UI.
+    // This should return the raw RMS value.
     return rmsLevel.load();
   case MeterMode::K14:
     return rmsLevel.load();

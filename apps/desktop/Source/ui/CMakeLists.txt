@@ -17,6 +17,8 @@ target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/framework/UITestFramework.cpp
 )
 
+# Platform-specific sources are handled via Source/platform/[os]/master
+
 # -----------------------------------------------------------------------------
 # Design System (Theming, fonts, icons)
 # -----------------------------------------------------------------------------
@@ -33,6 +35,10 @@ target_sources(ZenithDAW PRIVATE
 # -----------------------------------------------------------------------------
 target_sources(ZenithDAW PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerComponent.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerRenderer.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerInputHandler.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerClipManager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerGridUtils.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ArrangerTrackComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/TrackHeaderComponent.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/arranger/ModernTrackHeader.cpp

@@ -137,7 +137,6 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/ai/UXDirectorAgent.cpp
     apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
     apps/desktop/Source/ai/PresetGeneticistAgent.cpp
-
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
@@ -221,9 +220,6 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_cryptography
     juce::juce_events
     juce::juce_graphics
-    juce::juce_data_structures
-    juce::juce_gui_basics
-    juce::juce_gui_extra
     juce::juce_audio_basics
     juce::juce_audio_devices
     juce::juce_audio_formats
@@ -232,6 +228,23 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_dsp
     juce::juce_opengl
 )
+
+# Audio Driver Configuration
+include(apps/desktop/cmake/AudioDrivers.cmake)
+
+if(UNIX AND NOT APPLE)
+    target_link_libraries(ZenithDAW PRIVATE
+        alsa_driver
+        jack_driver
+        pulse_driver
+    )
+    
+    target_compile_definitions(ZenithDAW PRIVATE
+        JUCE_ALSA=1
+        JUCE_JACK=1
+        JUCE_PULSEAUDIO=1
+    )
+endif()
 
 # Platform-specific libraries for Graphics Backends
 if(WIN32)
@@ -247,6 +260,23 @@ elseif(UNIX AND NOT APPLE)
         message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
         target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
     endif()
+    
+    # Linux-specific libraries for Skia FontConfig and X11 UI
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FONTCONFIG REQUIRED fontconfig)
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
+    pkg_check_modules(X11 REQUIRED x11)
+    
+    target_include_directories(ZenithDAW PRIVATE 
+        ${FONTCONFIG_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIRS}
+    )
+    target_link_libraries(ZenithDAW PRIVATE 
+        ${FONTCONFIG_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${X11_LIBRARIES}
+    )
 endif()
 
 # Skia Integration (Manual) - option defined earlier
