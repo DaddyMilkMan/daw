@@ -16,9 +16,7 @@
 #include <include/core/SkStream.h>
 
 // Platform-specific font manager includes
-#ifdef _WIN32
-#include <include/ports/SkTypeface_win.h>
-#endif
+#include "PlatformFontUtils.h"
 
 namespace zenith {
 namespace design {
@@ -60,18 +58,8 @@ FontManager::FontManager() { initialize(); }
 void FontManager::initialize() {
   std::lock_guard<std::mutex> lock(mutex_);
 
-  // Get font manager - use DirectWrite on Windows for best results
-#ifdef _WIN32
-  fontMgr_ = SkFontMgr_New_DirectWrite();
-  if (!fontMgr_) {
-    // Fallback if DirectWrite fails
-    fontMgr_ = SkFontMgr::RefEmpty();
-    DBG("[FontManager] WARNING: DirectWrite font manager unavailable, using "
-        "empty manager");
-  }
-#else
-  fontMgr_ = SkFontMgr::RefEmpty();
-#endif
+  // Get font manager - use platform-specific implementations for best results
+  fontMgr_ = PlatformFontUtils::createDefaultFontManager();
 
   // Determine font resource directory
   // Determine font resource directory

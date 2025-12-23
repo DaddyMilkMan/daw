@@ -23,15 +23,7 @@
 
 #pragma once
 
-// ==============================================================================
-// Windows-specific safety (MUST be BEFORE any includes)
-// ==============================================================================
-#ifdef _WIN32
-// NOMINMAX prevents min/max macro conflicts with std::min/std::max
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#endif
+// Platform-specific defines and system headers are now handled in Source/platform/
 
 // ==============================================================================
 // Standard Library Headers (Stable, rarely change)
