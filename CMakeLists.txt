@@ -82,6 +82,11 @@ set(ZENITH_TEST_SOURCES
     
     # Engine sources required for linking
     apps/desktop/Source/engine/Engine.cpp
+    apps/desktop/Source/engine/EngineTransport.cpp
+    apps/desktop/Source/engine/EngineTrackManagement.cpp
+    apps/desktop/Source/engine/EngineMixing.cpp
+    apps/desktop/Source/engine/EngineRecording.cpp
+    apps/desktop/Source/engine/EngineExport.cpp
     apps/desktop/Source/engine/ProjectState.cpp
     apps/desktop/Source/engine/Track.cpp
     apps/desktop/Source/engine/Clip.cpp
@@ -99,7 +104,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/TempoMapSynchronizer.cpp
     apps/desktop/Source/engine/TempoMap.cpp
     apps/desktop/Source/engine/TrackFreeze.cpp
-    apps/desktop/Source/engine/AudioRenderer.cpp
+    apps/desktop/Source/engine/AudioRenderer_Fixed.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
     apps/desktop/Source/engine/MeteringSystem.cpp
@@ -117,6 +122,18 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
+    
+    # Missing dependencies for Engine
+    apps/desktop/Source/commands/CommandAPI.cpp
+    apps/desktop/Source/commands/TrackCommands.cpp
+    apps/desktop/Source/commands/ClipCommands.cpp
+    apps/desktop/Source/commands/TransportCommands.cpp
+    apps/desktop/Source/commands/SessionGraph.cpp
+    
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice_Fixed.cpp
+    
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     # apps/desktop/Source/network/GrokUtils.cpp
@@ -379,12 +396,33 @@ if(BUILD_TESTS)
     # Generate JuceHeader.h for test target (fixes C1083: Cannot open include file: 'JuceHeader.h')
     juce_generate_juce_header(ZenithDAWTests)
     
-    target_sources(ZenithDAWTests PRIVATE ${ZENITH_TEST_SOURCES})
+    target_sources(ZenithDAWTests PRIVATE 
+        ${ZENITH_TEST_SOURCES}
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/framework/SkiaComponent.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/Instrument.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/PresetGenerator.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithEffects.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithFilter.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithOscillator.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithPresetManager.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithSampler.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ui/instruments/PresetGeneticistView.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/apps/desktop/Source/ZenithTestsUberStrings.cpp
+    )
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
         apps/desktop/Source/engine
         apps/desktop/Source/ui
         apps/desktop/Source/ui/common
+        apps/desktop/Source/ui/framework
+        apps/desktop/Source/ui/instruments
+        apps/desktop/Source/ui/design-system
+        apps/desktop/Source/ui/widgets
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"

@@ -28,14 +28,6 @@
 #include <core/SkTextBlob.h>
 #endif
 
-// Ensure includes are correct for Skia if definitions are usually
-// "core/SkCanvas.h" etc. But mostly we assume setup is correct.
-#ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkImage.h>
-#include <core/SkTextBlob.h>
-#endif
-
 namespace zenith {
 
 class ZenithButton : public SkiaComponent, public juce::TooltipClient {

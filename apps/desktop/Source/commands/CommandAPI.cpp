@@ -2142,4 +2142,13 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
   return createErrorResponse("Unknown command ID");
 }
 
+juce::var CommandAPI::getUIHealth(const juce::var& params) {
+    juce::ignoreUnused(params);
+    juce::DynamicObject* result = new juce::DynamicObject();
+    result->setProperty("status", "ok");
+    // Placeholder health stats
+    result->setProperty("fps", 60.0);
+    return createSuccessResponse(juce::var(result));
+}
+
 } // namespace zenith

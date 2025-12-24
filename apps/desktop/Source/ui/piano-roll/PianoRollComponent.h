@@ -1328,7 +1328,10 @@ public:
 
   ~PianoRollWindow() override = default;
 
-  void closeButtonPressed() override { delete this; }
+  void closeButtonPressed() override {
+    // Safe deletion - schedule for async destruction to avoid use-after-free
+    juce::MessageManager::callAsync([this]() { delete this; });
+  }
 
 private:
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PianoRollWindow)
