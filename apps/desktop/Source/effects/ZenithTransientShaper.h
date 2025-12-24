@@ -38,13 +38,13 @@ private:
   std::atomic<float> *attackGain = nullptr;
   std::atomic<float> *sustainGain = nullptr;
 
-  // Envelope followers - dynamic for multi-channel support
+  // Envelope followers (dynamic channel support)
   std::vector<float> fastEnvelope;
   std::vector<float> slowEnvelope;
 
   float sampleRate_ = 44100.0f;
 
-  // Pre-calculated coefficients (computed in prepareToPlay)
+  // Pre-computed envelope coefficients
   float fastCoeff_ = 0.0f;
   float slowCoeff_ = 0.0f;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ZenithTransientShaper)

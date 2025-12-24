@@ -196,7 +196,6 @@ void AudioRenderer::renderAudioGraph(
 
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                auxBufferPtrsVector_, tempoMap);
-<<<<<<< HEAD
 
       // Input Monitoring Logic
       if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
@@ -220,8 +219,6 @@ void AudioRenderer::renderAudioGraph(
           }
         }
       }
-=======
->>>>>>> origin/feat/effects-suite
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);

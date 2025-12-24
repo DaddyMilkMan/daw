@@ -72,8 +72,6 @@ void InternalPluginFormat::findAllTypesForFile(
     results.add(new juce::PluginDescription(it->second));
     return;
   }
-    return;
-  }
 
   // If empty or special "internal", return all
   if (fileOrIdentifier.isEmpty() || fileOrIdentifier == "Zenith Internal") {
@@ -97,7 +95,7 @@ juce::String InternalPluginFormat::getNameOfPluginFromIdentifier(
 
 bool InternalPluginFormat::doesPluginStillExist(
     const juce::PluginDescription &desc) {
-  return descriptions.count(desc.fileOrIdentifier) > 0;
+  return descriptions.find(desc.fileOrIdentifier) != descriptions.end();
 }
 
 void InternalPluginFormat::createPluginInstance(

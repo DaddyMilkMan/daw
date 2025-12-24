@@ -222,7 +222,6 @@ void ZenithPolySynthVoice::renderNextBlock(
                 upsampledBlock.getChannelPointer(ch));
     }
 
-<<<<<<< HEAD
     // 1. Render synth logic into upsampled buffer
     // Note: Internal components (Oscs, Filters) are already configured for
     // baseRate * factor
@@ -246,11 +245,6 @@ void ZenithPolySynthVoice::renderNextBlock(
       outputBuffer.addFrom(ch, startSample + samplesProcessed,
                            downsamplingBuffer_, ch, 0, chunk);
     }
-=======
-    // 3. Downsample back to original rate (modifies the original subBlock in
-    // place)
-    oversampler_->processSamplesDown(subBlock);
->>>>>>> origin/feat/effects-suite
 
     samplesProcessed += chunk;
   }
@@ -628,13 +622,6 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
     } else {
       oversampler_ = nullptr;
     }
-<<<<<<< HEAD
-
-    } else {
-      oversampler_ = nullptr;
-    }
-=======
->>>>>>> origin/feat/effects-suite
   }
 
   // Call updateSampleRate to propagate the new rate (Bug Fix)

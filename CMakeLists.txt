@@ -32,11 +32,17 @@ option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
 option(ENABLE_SPECTRE "Enable Spectre Mitigations (MSVC)" OFF)
 
 # Auto-enable sanitizers in Debug builds
-# (Disabled to prevent ASAN in Release builds)
-# if(NOT CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE STREQUAL "Debug")
-#     set(ENABLE_SANITIZERS ON CACHE BOOL "Enable Address and UB Sanitizers in Debug" FORCE)
-#     set(ENABLE_HARDENING ON CACHE BOOL "Enable Security Hardening Flags in Debug" FORCE)
-# endif()
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" ON)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" ON)
+else()
+    option(ENABLE_SANITIZERS "Enable Address and UB Sanitizers" OFF)
+    option(ENABLE_HARDENING "Enable Security Hardening Flags" OFF)
+endif()
+
+if(ENABLE_SANITIZERS AND MSVC)
+    add_compile_options(/fsanitize=address)
+endif()
 
 # 5. C++ Standard (Enforced later via target_compile_features)
 # set(CMAKE_CXX_STANDARD 20) - Removed in favor of target properties
@@ -122,7 +128,6 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    
     # Missing dependencies for Engine
     apps/desktop/Source/commands/CommandAPI.cpp
     apps/desktop/Source/commands/TrackCommands.cpp
@@ -134,6 +139,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/instruments/ZenithPolySynth.cpp
     apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
     
+    apps/desktop/Source/tests/BasicAudioTest.cpp
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
     apps/desktop/Source/network/GrokUtils.cpp

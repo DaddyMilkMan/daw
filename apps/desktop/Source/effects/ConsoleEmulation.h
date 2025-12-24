@@ -38,27 +38,35 @@ public:
   void setMode(Mode newMode) {
     if (mode != newMode) {
       mode = newMode;
-      filtersDirty = true;
+      coefficientsDirty = true;
     }
   }
-  void setDrive(float newDrive) { drive = juce::jlimit(0.0f, 1.0f, newDrive); }
+  void setDrive(float newDrive) {
+    if (drive != newDrive) {
+      drive = juce::jlimit(0.0f, 1.0f, newDrive);
+      coefficientsDirty = true;
+    }
+  }
   void setCharacter(float newChar) {
-    character = juce::jlimit(0.0f, 1.0f, newChar);
+    if (character != newChar) {
+      character = juce::jlimit(0.0f, 1.0f, newChar);
+      coefficientsDirty = true;
+    }
   }
 
 private:
   Mode mode = Mode::Clean;
   float drive = 0.0f;     // 0.0 to 1.0
   float character = 0.0f; // 0.0 to 1.0 (mix or intensity)
+  bool coefficientsDirty = true;
 
   float sampleRate = 44100.0f;
-  bool filtersDirty = true;
 
   // Filters for tonal shaping
   juce::dsp::IIR::Filter<float> lowPass;
-  // Note: highPass is currently unused but kept for future enhancements
   juce::dsp::IIR::Filter<float> highPass;
 
+  void updateCoefficients();
   float applySaturation(float input, float driveAmount);
 };
 

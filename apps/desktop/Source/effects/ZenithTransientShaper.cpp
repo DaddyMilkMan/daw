@@ -34,18 +34,18 @@ ZenithTransientShaper::createParameterLayout() {
 
 void ZenithTransientShaper::prepareToPlay(double sampleRate,
                                           int samplesPerBlock) {
-  (void)samplesPerBlock; // Unused
+  juce::ignoreUnused(samplesPerBlock);
   sampleRate_ = static_cast<float>(sampleRate);
 
-  // Pre-calculate envelope coefficients (avoid per-block std::exp)
-  // Fast: 10ms approx, Slow: 100ms approx
+  // Pre-compute envelope coefficients
   fastCoeff_ = std::exp(-1.0f / (sampleRate_ * 0.010f));
   slowCoeff_ = std::exp(-1.0f / (sampleRate_ * 0.100f));
 
-  // Resize envelope vectors for multi-channel support
-  const auto numChannels = static_cast<size_t>(getTotalNumOutputChannels());
-  fastEnvelope.resize(numChannels, 0.0f);
-  slowEnvelope.resize(numChannels, 0.0f);
+  // Resize envelope vectors
+  const int numChannels = getTotalNumOutputChannels();
+  fastEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+  slowEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
+
   std::fill(fastEnvelope.begin(), fastEnvelope.end(), 0.0f);
   std::fill(slowEnvelope.begin(), slowEnvelope.end(), 0.0f);
 }
@@ -57,24 +57,23 @@ void ZenithTransientShaper::processBlock(juce::AudioBuffer<float> &buffer,
   float att = attackGain->load();
   float sus = sustainGain->load();
 
-  auto numChannels = buffer.getNumChannels();
-  auto numSamples = buffer.getNumSamples();
+  const int numChannels = buffer.getNumChannels();
+  const int numSamples = buffer.getNumSamples();
 
-  // Ensure envelope vectors are large enough (defensive, shouldn't reallocate
-  // after prepareToPlay)
-  if (static_cast<size_t>(numChannels) > fastEnvelope.size()) {
+  // Use pre-computed coefficients
+  const float fastCoeff = fastCoeff_;
+  const float slowCoeff = slowCoeff_;
+
+  // Ensure vectors are large enough
+  if (static_cast<int>(fastEnvelope.size()) < numChannels) {
     fastEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
     slowEnvelope.resize(static_cast<size_t>(numChannels), 0.0f);
   }
 
-  // Use pre-calculated coefficients
-  const float fastCoeff = fastCoeff_;
-  const float slowCoeff = slowCoeff_;
-
   for (int ch = 0; ch < numChannels; ++ch) {
     auto *data = buffer.getWritePointer(ch);
-    float &fastEnv = fastEnvelope[ch];
-    float &slowEnv = slowEnvelope[ch];
+    float &fastEnv = fastEnvelope[static_cast<size_t>(ch)];
+    float &slowEnv = slowEnvelope[static_cast<size_t>(ch)];
 
     for (int i = 0; i < numSamples; ++i) {
       float in = data[i];
