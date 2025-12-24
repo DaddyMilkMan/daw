@@ -60,6 +60,10 @@ ZenithPolySynthVoice::ZenithPolySynthVoice() {
   baseSampleRate_ = 44100.0;
   oversamplingFactor_ = 1;
 
+  // Initialize RCU oversampler
+  currentOversamplerHolder_ = std::make_shared<OversamplerSnapshot>(1);
+  activeOversampler_.store(currentOversamplerHolder_.get());
+
   constexpr double DEFAULT_SAMPLE_RATE = 44100.0;
   ampEnvelope_.setSampleRate(DEFAULT_SAMPLE_RATE);
   modEnvelope_.setSampleRate(DEFAULT_SAMPLE_RATE);
@@ -179,14 +183,17 @@ float ZenithPolySynthVoice::computeLFOValue(double phase, LFOWaveform waveform,
 void ZenithPolySynthVoice::renderNextBlock(
     juce::AudioBuffer<float> &outputBuffer, int startSample, int numSamples) {
 
-  // Acquire lock to prevent race with setQualityPreset
-  juce::ScopedLock sl(oversamplerLock_);
+  // Get active snapshot (Lock-free load)
+  auto* snapshot = activeOversampler_.load(std::memory_order_acquire);
 
   // If oversampling is disabled or invalid
-  if (oversamplingFactor_ <= 1 || oversampler_ == nullptr) {
+  if (!snapshot || snapshot->factor <= 1 || snapshot->oversampler == nullptr) {
     renderInnerBlock(outputBuffer, startSample, numSamples);
     return;
   }
+
+  const int factor = snapshot->factor;
+  auto& oversampler = snapshot->oversampler;
 
   // Oversampled processing
   // Ensure we don't exceed pre-allocated buffer limits
@@ -196,7 +203,7 @@ void ZenithPolySynthVoice::renderNextBlock(
   while (samplesProcessed < numSamples) {
     int chunk = juce::jmin(numSamples - samplesProcessed,
                            maxBlockSize_); // Limit to max safe block
-    int upsampledChunk = chunk * oversamplingFactor_;
+    int upsampledChunk = chunk * factor;
 
     // Safety check against buffer sizes
     if (chunk > downsamplingBuffer_.getNumSamples() ||
@@ -226,7 +233,7 @@ void ZenithPolySynthVoice::renderNextBlock(
     juce::dsp::AudioBlock<float> validDownBlock =
         downBlock.getSubBlock(0, chunk);
 
-    oversampler_->processSamplesDown(validDownBlock, validUpBlock);
+    oversampler->processSamplesDown(validDownBlock, validUpBlock);
 
     // 3. Mix into output buffer
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
@@ -564,22 +571,19 @@ void ZenithPolySynthVoice::updateSampleRate() {
   osc3Mix_.reset(rate, 0.05);
   masterGain_.reset(rate, 0.05);
 
-  {
-    // Resize buffers safely (Message thread or prepare step)
-    // Assuming maxBlockSize_ is sufficient, otherwise we resize larger
-    juce::ScopedLock sl(oversamplerLock_);
-    int requiredUpSize = maxBlockSize_ * oversamplingFactor_;
-    if (oversamplingBuffer_.getNumSamples() < requiredUpSize) {
-      oversamplingBuffer_.setSize(2, requiredUpSize);
-    }
-    if (downsamplingBuffer_.getNumSamples() < maxBlockSize_) {
-      downsamplingBuffer_.setSize(2, maxBlockSize_);
-    }
+  // Buffer resizing - now handles RCU snapshot if needed
+  int requiredUpSize = maxBlockSize_ * oversamplingFactor_;
+  if (oversamplingBuffer_.getNumSamples() < requiredUpSize) {
+    oversamplingBuffer_.setSize(2, requiredUpSize);
+  }
+  if (downsamplingBuffer_.getNumSamples() < maxBlockSize_) {
+    downsamplingBuffer_.setSize(2, maxBlockSize_);
+  }
 
-    // Update oversampler if factor > 1
-    if (oversampler_ && oversamplingFactor_ > 1) {
-      oversampler_->initProcessing(requiredUpSize);
-    }
+  // Update active oversampler instance if any
+  auto snapshot = activeOversampler_.load(std::memory_order_acquire);
+  if (snapshot && snapshot->oversampler && snapshot->factor > 1) {
+    snapshot->oversampler->initProcessing(requiredUpSize);
   }
 }
 
@@ -593,29 +597,37 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
   if (quality == QualityPreset::Medium)
     newFactor = 2;
   else if (quality == QualityPreset::High)
-    newFactor = 4; // Ultra could be 4x or 8x
+    newFactor = 4;
 
   if (newFactor != oversamplingFactor_) {
-    // PROTECT the switch
-    juce::ScopedLock sl(oversamplerLock_);
-
     oversamplingFactor_ = newFactor;
-    if (oversamplingFactor_ > 1) {
-      oversampler_ = std::make_unique<juce::dsp::Oversampling<float>>(
-          2,                                   // numChannels
-          (int)std::log2(oversamplingFactor_), // factorLog2
-          juce::dsp::Oversampling<
-              float>::filter_half_band_polyphase_iir, // filter
-          true                                        // isBuffered
-      );
-    } else {
-      oversampler_ = nullptr;
+    
+    // RCU Swap for Oversampler
+    auto newSnapshot = std::make_shared<OversamplerSnapshot>(newFactor);
+    
+    // If oversampling active, initialize it
+    if (newSnapshot->oversampler) {
+        newSnapshot->oversampler->initProcessing(maxBlockSize_ * newFactor);
+    }
+    
+    // Atomic Swap
+    activeOversampler_.store(newSnapshot.get(), std::memory_order_release);
+    
+    // Lifecycle management
+    oversamplerTrash_.push_back(currentOversamplerHolder_);
+    currentOversamplerHolder_ = newSnapshot;
+    
+    // GC trash
+    if (oversamplerTrash_.size() > 5) {
+        oversamplerTrash_.erase(oversamplerTrash_.begin());
     }
 
-    // Call updateSampleRate only when the factor changes.
     updateSampleRate();
   }
 }
+
+void ZenithPolySynthVoice::updateSampleRate(); // Unused redeclaration removed in new_string below if any
+
 
 void ZenithPolySynthVoice::setAmpEnvelope(float attack, float decay,
                                           float sustain, float release) {

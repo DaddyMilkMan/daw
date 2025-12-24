@@ -28,6 +28,7 @@
 #include "../dsp/Dither.h"
 #include "EngineConstants.h"
 #include "RoutingGraph.h"
+#include "PluginChain.h"
 
 namespace zenith {
 
@@ -85,7 +86,7 @@ public:
    * @param auxBuses Vector of aux buses
    * @param routingGraph Routing graph for signal flow
    * @param masterLimiter Master bus limiter
-   * @param masterPlugins Master bus plugin chain
+   * @param masterPluginChain Master bus plugin chain
    * @param tempoMap Tempo map for automation
    * @param incomingMidi Optional incoming MIDI buffer
    * @note AUDIO THREAD ONLY
@@ -95,7 +96,7 @@ public:
       juce::int64 playheadPosition, std::span<Track *const> tracks,
       std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
       MasterLimiter &masterLimiter,
-      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+      PluginChain &masterPluginChain,
       const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
       const float *const *inputChannelData = nullptr,
       int numInputChannels = 0) noexcept;
@@ -165,12 +166,11 @@ public:
 
   /**
    * @brief Update cached master latency value
-   * @param masterPlugins List of master plugins
+   * @param masterPluginChain List of master plugins
    * @param limiterLatency Latency of the master limiter
    */
   void updateMasterLatency(
-      const std::vector<std::unique_ptr<juce::AudioPluginInstance>>
-          &masterPlugins,
+      const PluginChain &masterPluginChain,
       int limiterLatency);
 
   static constexpr int kMaxAuxBuses = 32;
@@ -191,7 +191,7 @@ private:
    */
   void processMasterPlugins(
       juce::AudioBuffer<float> &buffer,
-      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &plugins);
+      PluginChain &pluginChain);
 
   /**
    * @brief Update output metering

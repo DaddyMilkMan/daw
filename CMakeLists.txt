@@ -109,6 +109,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/MIDITrack.cpp
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
+    apps/desktop/Source/engine/EngineExport.cpp
+    apps/desktop/Source/engine/AudioExporter.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
     apps/desktop/Source/engine/TrackStateManager.cpp
     apps/desktop/Source/engine/AutomationManager.cpp
@@ -385,6 +387,7 @@ if(BUILD_TESTS)
         apps/desktop/Source/engine
         apps/desktop/Source/ui
         apps/desktop/Source/ui/common
+        apps/desktop/Source/plugins
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
@@ -408,12 +411,74 @@ if(BUILD_TESTS)
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
 
-    if(ZENITH_ENABLE_SKIA)
-        target_include_directories(ZenithDAWTests PRIVATE ${SKIA_ROOT}/include ${SKIA_INCLUDE_DIR})
-        target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
-        target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
+    if(UNIX AND NOT APPLE)
+        target_sources(ZenithDAWTests PRIVATE
+            apps/desktop/Source/platform/linux/ui/PlatformDisplayUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/fonts/PlatformFontUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/engine/PlatformAudioUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/system/PlatformSystemUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/window/PlatformWindowUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/config/PlatformPathUtils_Linux.cpp
+            apps/desktop/Source/platform/linux/dsp/PlatformModelUtils_Linux.cpp
+        )
+        target_include_directories(ZenithDAWTests PRIVATE
+            apps/desktop/Source/platform/linux/ui
+            apps/desktop/Source/platform/linux/fonts
+            apps/desktop/Source/platform/linux/engine
+            apps/desktop/Source/platform/linux/system
+            apps/desktop/Source/platform/linux/window
+            apps/desktop/Source/platform/linux/config
+            apps/desktop/Source/platform/linux/dsp
+        )
     endif()
 endif()
+
+# Plugin Scanner Subprocess
+juce_add_console_app(PluginScanner
+    PRODUCT_NAME "PluginScanner"
+)
+
+target_sources(PluginScanner PRIVATE apps/desktop/Source/engine/PluginScanner.cpp)
+target_include_directories(PluginScanner PRIVATE 
+    apps/desktop/Source 
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+)
+target_link_libraries(PluginScanner PRIVATE
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_gui_basics
+    juce::juce_core
+)
+target_compile_features(PluginScanner PRIVATE cxx_std_20)
+
+target_compile_definitions(PluginScanner PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_VST3_CAN_REPLACE_VST2=0
+)
+
+if(UNIX AND NOT APPLE)
+    target_include_directories(PluginScanner PRIVATE 
+        ${FONTCONFIG_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIRS}
+    )
+    target_link_libraries(PluginScanner PRIVATE 
+        ${FONTCONFIG_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${X11_LIBRARIES}
+        pthread
+        dl
+    )
+endif()
+
+# Copy PluginScanner to ZenithDAW output directory
+add_custom_command(TARGET PluginScanner POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:PluginScanner>
+    $<TARGET_FILE_DIR:ZenithDAW>/PluginScanner
+    COMMENT "Copying PluginScanner to ZenithDAW binary directory"
+)
 
 # Installation
 install(TARGETS ZenithDAW

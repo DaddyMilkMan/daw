@@ -31,6 +31,11 @@ public:
   float getPeak() const { return masterPeak.load(); }
   void resetPeak() { masterPeak.store(0.0f); }
 
+  // Aliases for compatibility
+  float getMasterLevel() const { return getLevel(MeterMode::Peak); }
+  float getMasterPeak() const { return getPeak(); }
+  void resetMasterPeak() { resetPeak(); }
+
   StereoAudioFifo &getAnalysisFifo() { return *analysisFifo; }
 
 private:

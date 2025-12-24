@@ -9,8 +9,15 @@
 */
 
 #include "SkiaComponent.h"
-#include <core/SkBlurTypes.h> // Explicitly include
 
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include "ZenithSkia.h" // Explicitly include
+#include <core/SkImageInfo.h>
+#include <core/SkPixmap.h>
+#include <core/SkSurface.h>
+#endif
+
+#include "../../engine/ZenithLogger.h"
 #include "PlatformDisplayUtils.h"
 
 namespace zenith {
@@ -28,7 +35,10 @@ SkiaComponent::SkiaComponent() {
 
   // Initialize refresh rate if not already done
   if (systemRefreshRate_ == 60) {
+    ZENITH_LOG_INFO("SkiaComponent: Initializing refresh rate...");
     getSystemRefreshRate();
+    ZENITH_LOG_INFO("SkiaComponent: Refresh rate initialized: " +
+                    juce::String(systemRefreshRate_));
   }
 }
 
@@ -39,9 +49,87 @@ SkiaComponent::~SkiaComponent() { stopAllAnimations(); }
 // ============================================================================
 
 void SkiaComponent::paint(juce::Graphics &g) {
-  juce::ignoreUnused(g);
-  // Skia components are rendered via drawSkia() by the parent renderer.
-  // No JUCE painting or fallback.
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+  // Check if we're in the main Skia-integrated window hierarchy
+  // If not (e.g., in a DialogWindow), we need to render via raster fallback
+
+  // Walk up the parent chain to find a SkiaMainWindowIntegration
+  juce::Component *parent = getParentComponent();
+  bool hasSkiaParent = false;
+  while (parent != nullptr) {
+    // Check if parent is a SkiaComponent that's part of the main rendering
+    // The main window (MainComponent) extends SkiaMainWindowIntegration
+    // which handles rendering all children via drawSkiaContent()
+    if (parent->getParentComponent() == nullptr) {
+      // Reached top-level component
+      // Check if it's opaque (MainComponent) - if so, assume Skia handles it
+      hasSkiaParent = parent->isOpaque();
+      break;
+    }
+    parent = parent->getParentComponent();
+  }
+
+  if (hasSkiaParent) {
+    // Part of main Skia hierarchy - rendering handled by drawSkia()
+    return;
+  }
+
+  // RASTER FALLBACK - Used when component is in a standalone window (e.g.,
+  // DialogWindow)
+  const int width = getWidth();
+  const int height = getHeight();
+
+  if (width <= 0 || height <= 0)
+    return;
+
+  // Create Raster Surface
+  SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
+  auto rasterSurface = SkSurfaces::Raster(info);
+
+  if (!rasterSurface) {
+    g.fillAll(juce::Colours::black);
+    g.setColour(juce::Colours::red);
+    g.drawText("Skia Raster Failed", getLocalBounds(),
+               juce::Justification::centred, true);
+    return;
+  }
+
+  SkCanvas *canvas = rasterSurface->getCanvas();
+  canvas->clear(SK_ColorTRANSPARENT);
+
+  // Call the virtual drawSkia method
+  drawSkia(canvas);
+
+  // Draw children
+  drawChildren(canvas);
+
+  // Convert to JUCE Image
+  sk_sp<SkImage> img(rasterSurface->makeImageSnapshot());
+  if (img) {
+    SkPixmap pixmap;
+    if (img->peekPixels(&pixmap)) {
+      juce::Image juceImage(juce::Image::ARGB, width, height, true);
+      juce::Image::BitmapData bd(juceImage, juce::Image::BitmapData::writeOnly);
+
+      if (pixmap.readPixels(SkImageInfo::Make(width, height,
+                                              kBGRA_8888_SkColorType,
+                                              kPremul_SkAlphaType),
+                            bd.data, bd.lineStride)) {
+        g.drawImageAt(juceImage, 0, 0);
+        needsRepaint_ = false;
+        return;
+      }
+    }
+  }
+
+  // Ultimate fallback
+  g.fillAll(juce::Colours::darkgrey);
+#else
+  g.fillAll(juce::Colours::darkgrey);
+  g.setColour(juce::Colours::white);
+  g.drawText("Skia Disabled", getLocalBounds(), juce::Justification::centred,
+             true);
+#endif
 }
 
 SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
@@ -55,6 +143,7 @@ SkCanvas *SkiaComponent::getSkiaCanvas(juce::Graphics &g) {
 // paintFallback removed
 
 void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   // Apply global glow intensity
   float globalIntensity = design::Settings::getGlowIntensity();
   float finalIntensity = intensity * globalIntensity;
@@ -75,10 +164,14 @@ void SkiaComponent::applyGlow(SkPaint &paint, float intensity) {
 
   paint.setStyle(SkPaint::kStroke_Style);
   paint.setStrokeWidth(2.0f + (clampedIntensity * 3.0f));
+#else
+  juce::ignoreUnused(paint, intensity);
+#endif
 }
 
 #ifdef DEBUG
 void SkiaComponent::drawDebug(SkCanvas *canvas) {
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   auto bounds = getLocalBounds().toFloat();
 
   SkPaint debugPaint;
@@ -97,6 +190,9 @@ void SkiaComponent::drawDebug(SkCanvas *canvas) {
   float cy = bounds.getCentreY();
   canvas->drawLine(cx - 5, cy, cx + 5, cy, debugPaint);
   canvas->drawLine(cx, cy - 5, cx, cy + 5, debugPaint);
+#else
+  juce::ignoreUnused(canvas);
+#endif
 }
 #endif
 
@@ -123,6 +219,21 @@ void SkiaComponent::mouseExit(const juce::MouseEvent &e) {
   markDirty();
 }
 
+void SkiaComponent::mouseDown(const juce::MouseEvent &e) {
+  onMouseDown(e);
+  markDirty();
+}
+
+void SkiaComponent::mouseDrag(const juce::MouseEvent &e) {
+  onMouseDrag(e);
+  markDirty();
+}
+
+void SkiaComponent::mouseUp(const juce::MouseEvent &e) {
+  onMouseUp(e);
+  markDirty();
+}
+
 // Force hit test to true for transparent components
 bool SkiaComponent::hitTest(int x, int y) {
   // Simple bounds check (JUCE passes local coords)
@@ -142,16 +253,54 @@ void SkiaComponent::focusLost(juce::Component::FocusChangeType cause) {
 }
 
 void SkiaComponent::drawChildren(SkCanvas *canvas) {
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
   for (auto *child : getChildren()) {
     if (child->isVisible()) {
+      canvas->save();
+      canvas->translate((float)child->getX(), (float)child->getY());
+
       if (auto *skiaChild = dynamic_cast<SkiaComponent *>(child)) {
-        canvas->save();
-        canvas->translate((float)child->getX(), (float)child->getY());
+        // Native Skia component - draw directly
         skiaChild->drawSkia(canvas);
-        canvas->restore();
+      } else {
+        // Regular JUCE component - render via raster fallback
+        const int width = child->getWidth();
+        const int height = child->getHeight();
+
+        if (width > 0 && height > 0) {
+          // Create raster surface for JUCE component
+          SkImageInfo info = SkImageInfo::MakeN32Premul(width, height);
+          auto rasterSurface = SkSurfaces::Raster(info);
+
+          if (rasterSurface) {
+            // Create JUCE image and paint the component to it
+            juce::Image juceImage(juce::Image::ARGB, width, height, true);
+            juce::Graphics g(juceImage);
+            child->paintEntireComponent(g, false);
+
+            // Copy JUCE image data to Skia surface
+            juce::Image::BitmapData bd(juceImage,
+                                       juce::Image::BitmapData::readOnly);
+            SkPixmap srcPixmap(SkImageInfo::Make(width, height,
+                                                 kBGRA_8888_SkColorType,
+                                                 kPremul_SkAlphaType),
+                               bd.data, static_cast<size_t>(bd.lineStride));
+
+            // Draw the rasterized JUCE component onto our canvas
+            auto skImage = SkImages::RasterFromPixmapCopy(srcPixmap);
+            if (skImage) {
+              canvas->drawImage(skImage, 0, 0);
+            }
+          }
+        }
       }
+
+      canvas->restore();
     }
   }
+#else
+  juce::ignoreUnused(canvas);
+#endif
 }
 
 void SkiaComponent::animateColorChange() {

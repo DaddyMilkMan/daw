@@ -55,6 +55,31 @@ void Track::setName(const juce::String &newName) {
   sendChangeMessage();
 }
 
+void Track::setVolume(float newVolume) { mixerChannel.setVolume(newVolume); }
+float Track::getVolume() const { return mixerChannel.getVolume(); }
+
+void Track::setPan(float newPan) { mixerChannel.setPan(newPan); }
+float Track::getPan() const { return mixerChannel.getPan(); }
+
+void Track::setMuted(bool shouldBeMuted) {
+  mixerChannel.setMuted(shouldBeMuted);
+}
+bool Track::isMuted() const { return mixerChannel.isMuted(); }
+
+void Track::setSolo(bool shouldBeSolo) { mixerChannel.setSolo(shouldBeSolo); }
+bool Track::isSolo() const { return mixerChannel.isSolo(); }
+
+void Track::setSilencedBySolo(bool silenced) {
+  mixerChannel.setSilencedBySolo(silenced);
+}
+bool Track::isSilencedBySolo() const { return mixerChannel.isSilencedBySolo(); }
+
+float Track::getCurrentLevel() const { return mixerChannel.getOutputLevel(); }
+float Track::getPeakLevel() const { return mixerChannel.getOutputPeak(); }
+void Track::resetPeakLevel() { mixerChannel.resetPeaks(); }
+
+// getType() is inline in Track.h
+
 juce::String Track::getTypeString() const {
   switch (trackType) {
   case Type::Audio:
@@ -141,7 +166,7 @@ juce::ValueTree Track::getState() const {
   state.setProperty("muted", mixerChannel.isMuted(), nullptr);
   state.setProperty("solo", mixerChannel.isSolo(), nullptr);
   state.setProperty("armed", armed.load(), nullptr);
-  state.setProperty("inputMonitor", inputMonitor_.load(), nullptr);
+  // inputMonitor_ removed - not in header
   state.setProperty("enabled", enabled.load(), nullptr);
 
   juce::ValueTree pluginsState("Plugins");
@@ -163,9 +188,8 @@ void Track::loadState(const juce::ValueTree &state) {
   mixerChannel.setPan(state.getProperty("pan", 0.0f));
   mixerChannel.setMuted(state.getProperty("muted", false));
   mixerChannel.setSolo(state.getProperty("solo", false));
-  armed.store(state.getProperty("armed", false));
-  inputMonitor_.store(state.getProperty("inputMonitor", false));
-  enabled.store(state.getProperty("enabled", true));
+  armed.store(static_cast<bool>(state.getProperty("armed", false)));
+  enabled.store(static_cast<bool>(state.getProperty("enabled", true)));
 
   // Plugin states are loaded via loadPluginStates() from Engine
   sendChangeMessage();

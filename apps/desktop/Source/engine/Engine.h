@@ -45,13 +45,14 @@
 #include <memory>
 #include <vector>
 
-#include "../Source/dsp/Dither.h"
-#include "../Source/dsp/MasterLimiter.h"
-#include "../Source/dsp/StereoAudioFifo.h"
-#include "../Source/engine/EngineConstants.h"
-#include "../Source/engine/MacroControl.h"
-#include "../Source/engine/RoutingGraph.h"
+#include "../dsp/Dither.h"
+#include "../dsp/MasterLimiter.h"
+#include "../dsp/StereoAudioFifo.h"
+#include "EngineConstants.h"
 #include "EngineEvent.h"
+#include "MacroControl.h"
+#include "PluginChain.h"
+#include "RoutingGraph.h"
 
 // Forward declarations
 namespace zenith {
@@ -96,18 +97,21 @@ class AIMasteringAgent;
  * **Parent -> Child (shared_ptr/unique_ptr):**
  * - Engine owns Tracks via std::vector<std::shared_ptr<Track>>
  * - Engine owns AuxBuses via std::vector<std::shared_ptr<AuxBus>>
- * - Engine owns subsystems via std::unique_ptr (AudioRenderer, RecordingManager, etc.)
+ * - Engine owns subsystems via std::unique_ptr (AudioRenderer,
+ * RecordingManager, etc.)
  *
  * **Child -> Parent (raw pointer/reference):**
- * - Subsystems hold Engine& references (TrackStateSynchronizer, RecordingManager, etc.)
+ * - Subsystems hold Engine& references (TrackStateSynchronizer,
+ * RecordingManager, etc.)
  * - No child component holds std::shared_ptr<Engine>
  *
  * **RT-safe snapshots:**
- * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle vector)
+ * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle
+ * vector)
  * - Audio thread accesses raw pointers extracted from the snapshot
  *
- * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
- *       Use Engine& or Engine* for back-references.
+ * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child
+ * components. Use Engine& or Engine* for back-references.
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback {
@@ -981,12 +985,22 @@ private:
   // Aux buses (Managed by Engine, rendered by AudioRenderer)
   std::vector<std::shared_ptr<zenith::AuxBus>> auxBuses_;
 
-  // Master bus plugins (Managed by Engine, rendered by AudioRenderer)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> masterPlugins_;
-  juce::CriticalSection masterPluginLock_;
+  // Master bus plugins (Managed by Engine, rendered by AudioRenderer) - RT-safe
+  PluginChain masterPluginChain_;
+  
+  void addMasterPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin);
+  void removeMasterPlugin(int index);
+  void clearMasterPlugins();
+  int getNumMasterPlugins() const;
+  juce::AudioPluginInstance* getMasterPlugin(int index) const;
 
   // Master Limiter (Used by AudioRenderer)
   MasterLimiter masterLimiter_;
+  MasterLimiter& getMasterLimiter() { return masterLimiter_; }
+  const MasterLimiter& getMasterLimiter() const { return masterLimiter_; }
+
+  PluginChain& getMasterPluginChain() { return masterPluginChain_; }
+  const PluginChain& getMasterPluginChain() const { return masterPluginChain_; }
 
   // Track Freeze Manager
   std::unique_ptr<TrackFreezeManager> freezeManager_;

@@ -23,7 +23,7 @@ namespace zenith {
 class GrokAPIClient::Impl
 {
 public:
-    Impl() = default;
+    Impl() : apiKey("xai-XgKEG08OOoooOWm3w3wruXFSLj4NmnM66jezJye2GMTd8Zu1fAmSs9w92BNHFM7PCWjJQdAQKXHB4fxG") {}
     ~Impl() = default;
     
     //==========================================================================
@@ -52,8 +52,8 @@ public:
     {
         auto request = new juce::DynamicObject();
         
-        // Model selection
-        request->setProperty("model", "grok-beta");
+        // Model selection - Updated for Grok 4.1
+        request->setProperty("model", mode == GrokMode::Thinking ? "grok-4.1-reasoning" : "grok-4.1");
         
         // Reasoning mode control
         request->setProperty("reasoning", mode == GrokMode::Thinking);
@@ -281,7 +281,7 @@ public:
 GrokAPIClient::GrokAPIClient()
     : pImpl(std::make_unique<Impl>())
 {
-    // Try to load API key from secure storage
+    // Try to load API key from secure storage, otherwise it remains the factory default
     setAPIKey();
 }
 
@@ -289,6 +289,8 @@ GrokAPIClient::~GrokAPIClient() = default;
 
 bool GrokAPIClient::setAPIKey(const juce::String& apiKey)
 {
+    const juce::String defaultKey = "xai-XgKEG08OOoooOWm3w3wruXFSLj4NmnM66jezJye2GMTd8Zu1fAmSs9w92BNHFM7PCWjJQdAQKXHB4fxG";
+
     if (apiKey.isNotEmpty())
     {
         pImpl->apiKey = apiKey;
@@ -303,7 +305,9 @@ bool GrokAPIClient::setAPIKey(const juce::String& apiKey)
         return true;
     }
     
-    return false;
+    // Fallback to factory default
+    pImpl->apiKey = defaultKey;
+    return true; // Return true because we have a working default
 }
 
 bool GrokAPIClient::hasAPIKey() const

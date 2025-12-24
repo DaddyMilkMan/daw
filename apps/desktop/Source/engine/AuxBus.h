@@ -1,6 +1,7 @@
 #pragma once
 
 #include "MixerChannel.h"
+#include "PluginChain.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_core/juce_core.h>
@@ -81,9 +82,8 @@ private:
   // Input buffer for accumulating sends from tracks
   juce::AudioBuffer<float> inputBuffer_;
 
-  // Plugin chain (effect processors)
-  std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins_;
-  juce::CriticalSection pluginLock_;
+  // Plugin chain (effect processors) - Using RT-safe PluginChain
+  PluginChain pluginChain;
 
   // Processing state
   double currentSampleRate_ = 44100.0;

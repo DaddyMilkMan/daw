@@ -28,6 +28,8 @@ public:
     void process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi);
     void prepareToPlay(double sampleRate, int blockSize);
     void releaseResources();
+    
+    int getPluginLatency() const;
 
 private:
     struct PluginSnapshot {

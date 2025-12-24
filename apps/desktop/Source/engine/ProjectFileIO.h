@@ -6,7 +6,7 @@
     Author:  Zenith DAW
 
     Handles project file loading, saving, and crash dumping.
-    
+
     Extracted from ProjectState.cpp.
 
   ==============================================================================
@@ -26,58 +26,58 @@ class ProjectState;
 */
 class ProjectFileIO {
 public:
-    enum class SerializationFormat {
-        Xml,
-        MessagePack
-    };
+  enum class SerializationFormat { Xml, MessagePack };
 
-    struct IOSettings {
-        SerializationFormat format = SerializationFormat::Xml;
-        bool useAtomicWrite = true;
-    };
-    explicit ProjectFileIO(ProjectState& projectState);
-    ~ProjectFileIO() = default;
+  struct IOSettings {
+    SerializationFormat format;
+    bool useAtomicWrite;
 
-    /**
-     * @brief Create a new empty project
-     */
-    void newProject();
+    IOSettings() : format(SerializationFormat::Xml), useAtomicWrite(true) {}
+  };
+  explicit ProjectFileIO(ProjectState &projectState);
+  ~ProjectFileIO() = default;
 
-    /**
-     * @brief Load project from file
-     * @return true if successful
-     */
-    bool loadFromFile(const juce::File& file);
+  /**
+   * @brief Create a new empty project
+   */
+  void newProject();
 
-    /**
-     * @brief Load project from file asynchronously
-     */
-    void loadFromFileAsync(const juce::File& file,
-                           std::function<void(bool success, juce::String error)> callback);
+  /**
+   * @brief Load project from file
+   * @return true if successful
+   */
+  bool loadFromFile(const juce::File &file);
 
-    /**
-     * @brief Save project to file
-     * @return true if successful
-     */
-    bool saveToFile(const juce::File& file, IOSettings settings = {});
+  /**
+   * @brief Load project from file asynchronously
+   */
+  void loadFromFileAsync(
+      const juce::File &file,
+      std::function<void(bool success, juce::String error)> callback);
 
-    /**
-     * @brief Save project to file asynchronously
-     */
-    void saveToFileAsync(const juce::File& file,
-                         IOSettings settings,
-                         std::function<void(bool success, juce::String error)> callback);
+  /**
+   * @brief Save project to file
+   * @return true if successful
+   */
+  bool saveToFile(const juce::File &file, IOSettings settings = IOSettings());
 
-    /**
-     * @brief Save crash dump
-     * @return File where dump was saved
-     */
-    juce::File saveCrashDump();
+  /**
+   * @brief Save project to file asynchronously
+   */
+  void saveToFileAsync(
+      const juce::File &file, IOSettings settings,
+      std::function<void(bool success, juce::String error)> callback);
+
+  /**
+   * @brief Save crash dump
+   * @return File where dump was saved
+   */
+  juce::File saveCrashDump();
 
 private:
-    ProjectState& projectState_;
+  ProjectState &projectState_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectFileIO)
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(ProjectFileIO)
 };
 
 } // namespace zenith

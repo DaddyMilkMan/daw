@@ -23,6 +23,8 @@
 #include "SkiaButton.h"
 #include "SkiaComponent.h"
 #include "SkiaSlider.h"
+#include "widgets/SkiaTextEditor.h"
+#include "../network/SecureKeyStore.h"
 #include "ZenithDesignSystem.h"
 #include <include/core/SkColor.h>
 
@@ -261,6 +263,94 @@ private:
 };
 
 //==============================================================================
+// AI Settings Tab
+//==============================================================================
+class AISettingsTab : public SettingsTab {
+public:
+  AISettingsTab() {
+    // API Key Editor
+    apiKeyEditor_ = std::make_unique<SkiaTextEditor>("GrokAPIKey");
+    apiKeyEditor_->setTextToShowWhenEmpty("Paste your x.ai API key here...", 
+                                         SkColorSetARGB(150, 255, 255, 255));
+    addAndMakeVisible(apiKeyEditor_.get());
+
+    // Load existing key (masked for security)
+    juce::String existingKey;
+    if (SecureKeyStore::retrieveKey(SecureKeyStore::GrokAPIKey, existingKey)) {
+      apiKeyEditor_->setText("********" + existingKey.suffix(4));
+    }
+
+    // Save Button
+    saveButton_ = std::make_unique<SkiaButton>("Save API Key");
+    saveButton_->setStyle(SkiaButton::Style::Primary);
+    saveButton_->onClick = [this]() { saveKey(); };
+    addAndMakeVisible(saveButton_.get());
+
+    // Clear Button
+    clearButton_ = std::make_unique<SkiaButton>("Clear");
+    clearButton_->setStyle(SkiaButton::Style::Danger);
+    clearButton_->onClick = [this]() { clearKey(); };
+    addAndMakeVisible(clearButton_.get());
+  }
+
+  void resized() override {
+    apiKeyEditor_->setBounds(20, 100, getWidth() - 40, 36);
+    saveButton_->setBounds(20, 150, 140, 36);
+    clearButton_->setBounds(170, 150, 100, 36);
+  }
+
+  void drawSkia(SkCanvas *canvas) override {
+    SkPaint textPaint;
+    textPaint.setColor(SK_ColorWHITE);
+    textPaint.setAntiAlias(true);
+
+    SkFont headerFont;
+    headerFont.setSize(24.0f);
+    headerFont.setEmbolden(true);
+
+    SkFont labelFont;
+    labelFont.setSize(14.0f);
+
+    canvas->drawString("AI Assistant Settings", 20, 40, headerFont, textPaint);
+    canvas->drawString("Grok 4.1 API Key (from console.x.ai):", 20, 85, labelFont, textPaint);
+    
+    if (showSavedMsg_) {
+        textPaint.setColor(design::colors::NEON_GREEN);
+        canvas->drawString("API Key Saved Successfully!", 20, 210, labelFont, textPaint);
+    }
+  }
+
+private:
+  void saveKey() {
+    juce::String key = apiKeyEditor_->getText().trim();
+    if (key.contains("*")) return; // Don't save the masked version
+
+    if (key.isNotEmpty()) {
+      SecureKeyStore::storeKey(SecureKeyStore::GrokAPIKey, key);
+      apiKeyEditor_->setText("********" + key.suffix(4));
+      
+      showSavedMsg_ = true;
+      juce::Timer::callAfterDelay(3000, [this]() {
+          showSavedMsg_ = false;
+          markDirty();
+      });
+      markDirty();
+    }
+  }
+
+  void clearKey() {
+    SecureKeyStore::deleteKey(SecureKeyStore::GrokAPIKey);
+    apiKeyEditor_->setText("");
+    markDirty();
+  }
+
+  std::unique_ptr<SkiaTextEditor> apiKeyEditor_;
+  std::unique_ptr<SkiaButton> saveButton_;
+  std::unique_ptr<SkiaButton> clearButton_;
+  bool showSavedMsg_ = false;
+};
+
+//==============================================================================
 // Main Settings Component
 //==============================================================================
 class SettingsComponent : public SkiaComponent {
@@ -278,10 +368,14 @@ public:
     pluginTab_ = std::make_unique<PluginSettingsTab>(engine.getPluginHost());
     addChildComponent(pluginTab_.get());
 
+    aiTab_ = std::make_unique<AISettingsTab>();
+    addChildComponent(aiTab_.get());
+
     // Create Sidebar Buttons
     createNavButton("Audio", 0);
     createNavButton("Display", 1);
     createNavButton("Plugins", 2);
+    createNavButton("AI", 3);
 
     setActiveTab(0);
   }
@@ -358,6 +452,9 @@ private:
     case 2:
       currentTab_ = pluginTab_.get();
       break;
+    case 3:
+      currentTab_ = aiTab_.get();
+      break;
     }
 
     if (currentTab_) {
@@ -372,6 +469,7 @@ private:
   std::unique_ptr<AudioSettingsTab> audioTab_;
   std::unique_ptr<DisplaySettingsTab> displayTab_;
   std::unique_ptr<PluginSettingsTab> pluginTab_;
+  std::unique_ptr<AISettingsTab> aiTab_;
 
   SkiaComponent *currentTab_ = nullptr;
 

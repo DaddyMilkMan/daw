@@ -72,6 +72,17 @@ void PluginChain::releaseResources() {
     for (auto& p : pluginsOwned_) p->releaseResources();
 }
 
+int PluginChain::getPluginLatency() const {
+    const PluginSnapshot* snapshot = activeSnapshot_.load(std::memory_order_acquire);
+    if (!snapshot) return 0;
+    
+    int total = 0;
+    for (const auto& plugin : snapshot->plugins) {
+        if (plugin) total += plugin->getLatencySamples();
+    }
+    return total;
+}
+
 void PluginChain::updateSnapshot() {
     auto newSnapshot = std::make_shared<PluginSnapshot>(pluginsOwned_);
     activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);

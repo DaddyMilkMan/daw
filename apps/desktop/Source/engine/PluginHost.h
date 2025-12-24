@@ -176,9 +176,20 @@ public:
      */
     int scanAll(bool async = false);
 
+    // Blacklist management
+    void addToBlacklist(const juce::String& pluginFileOrIdentifier);
+    bool isBlacklisted(const juce::String& pluginFileOrIdentifier) const;
+    void clearBlacklist();
+    juce::StringArray getBlacklist() const;
+
 private:
     // Internal scanning logic
     int scanInternal(std::function<void(const juce::String&)> onProgress);
+    
+    /**
+     * @brief Run the PluginScanner subprocess for a single file
+     */
+    bool scanPluginSafely(const juce::File& file, juce::Array<juce::PluginDescription>& found);
 
     //==============================================================================
     // Member Variables
@@ -189,6 +200,9 @@ private:
 
     // Known plugins list (populated by scanning)
     juce::KnownPluginList knownPlugins;
+    
+    // Blacklist of problematic plugins
+    juce::StringArray blacklist;
 
     // VST3 format (raw pointer owned by formatManager)
     juce::AudioPluginFormat* vst3Format = nullptr;

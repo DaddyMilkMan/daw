@@ -84,7 +84,7 @@ void AudioRenderer::renderAudioGraph(
     juce::int64 playheadPosition, std::span<Track *const> tracks,
     std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
     MasterLimiter &masterLimiter,
-    std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+    PluginChain &masterPluginChain,
     const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
     const float *const *inputChannelData, int numInputChannels) noexcept {
 
@@ -196,8 +196,8 @@ void AudioRenderer::renderAudioGraph(
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                auxBufferPtrsVector_, tempoMap);
 
-      // Input Monitoring Logic
-      if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
+      // Input Monitoring Logic (using isArmed as a proxy for monitoring)
+      if (inputChannelData != nullptr && track->isArmed()) {
         const int inputChIndex = track->getInputChannel();
         // Assuming stereo tracks: Map Input N -> Left, Input N+1 -> Right
         // If mono input selected for stereo track, map Input N to both.
@@ -276,7 +276,7 @@ void AudioRenderer::renderAudioGraph(
   }
 
   // Process master bus plugins
-  processMasterPlugins(outputBuffer, masterPlugins);
+  processMasterPlugins(outputBuffer, masterPluginChain);
 
   // Apply master limiter (final clipping protection)
   masterLimiter.process(outputBuffer);
@@ -383,19 +383,10 @@ void AudioRenderer::applyPDCDelay(juce::AudioBuffer<float> &buffer,
 //==============================================================================
 void AudioRenderer::processMasterPlugins(
     juce::AudioBuffer<float> &buffer,
-    std::vector<std::unique_ptr<juce::AudioPluginInstance>> &plugins) {
-
-  if (plugins.empty()) {
-    return;
-  }
+    PluginChain &pluginChain) {
 
   juce::MidiBuffer midi; // Master bus doesn't handle MIDI
-
-  for (auto &plugin : plugins) {
-    if (plugin != nullptr && !plugin->isSuspended()) {
-      plugin->processBlock(buffer, midi);
-    }
-  }
+  pluginChain.process(buffer, midi);
 }
 
 //==============================================================================
@@ -430,16 +421,10 @@ int AudioRenderer::getTrackLatency(int trackIndex) const {
 int AudioRenderer::getMasterLatency() const { return masterLatency_.load(); }
 
 void AudioRenderer::updateMasterLatency(
-    const std::vector<std::unique_ptr<juce::AudioPluginInstance>>
-        &masterPlugins,
+    const PluginChain &masterPluginChain,
     int limiterLatency) {
   int totalLatency = limiterLatency;
-
-  for (const auto &plugin : masterPlugins) {
-    if (plugin != nullptr) {
-      totalLatency += plugin->getLatencySamples();
-    }
-  }
+  totalLatency += masterPluginChain.getPluginLatency(); // Assuming getPluginLatency added to PluginChain
 
   masterLatency_.store(totalLatency);
 }

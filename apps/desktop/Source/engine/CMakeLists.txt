@@ -14,6 +14,7 @@ target_sources(ZenithDAW PRIVATE
     MixerChannel.cpp
     AudioFilePool.cpp
     PluginHost.cpp
+    ../plugins/InternalPluginFormat.cpp
     AuxBus.cpp
     ZenithLogger.cpp
     TrackPluginState.cpp

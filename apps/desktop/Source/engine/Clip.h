@@ -25,6 +25,7 @@
 #pragma once
 
 #include "Track.h"
+#include <atomic>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -35,8 +36,6 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <vector>
-#include <atomic>
-
 
 namespace zenith {
 
@@ -79,6 +78,8 @@ public:
 
   //==============================================================================
   Clip();
+  Clip(Clip &&other) noexcept;
+  Clip &operator=(Clip &&other) noexcept;
   ~Clip() override;
 
   //==============================================================================
@@ -179,7 +180,7 @@ public:
 
   void setFadeOut(int64_t fadeOutSamples);
   int64_t getFadeOut() const { return fadeOutLength.load(); }
-  
+
   void setFadeCurve(float curve) { fadeCurve.store(curve); }
   float getFadeCurve() const { return fadeCurve.load(); }
 
@@ -202,7 +203,7 @@ public:
   // Time Stretching
   void setPlaybackRate(double rate);
   double getPlaybackRate() const;
-  
+
   void setPreservePitch(bool preserve);
   bool isPreservingPitch() const;
 
@@ -250,7 +251,7 @@ private:
   std::unique_ptr<juce::AudioFormatReaderSource> audioSource;
 
   // Phase 1.2: AudioFilePool handle (RT-safe shared ownership)
-  std::shared_ptr<const void>
+  std::atomic<std::shared_ptr<const void>>
       audioFileHandle_; // Type-erased to avoid forward decl issues
 
   //==============================================================================
@@ -262,7 +263,7 @@ private:
   // Time Stretching State
   std::atomic<double> playbackRate_{1.0};
   std::atomic<bool> preservePitch_{false};
-  
+
   // WSOLA State
   static constexpr int kWsolaWindowSize = 1024;
   std::vector<float> wsolaWindow_;
@@ -292,11 +293,11 @@ private:
 
   float calculateFadeMultiplier(int64_t positionInClip) const;
 
-  void applyFadesSIMD(const juce::AudioSourceChannelInfo& bufferToFill, 
-                      int64_t startPositionInClip, 
-                      int numSamples);
+  void applyFadesSIMD(const juce::AudioSourceChannelInfo &bufferToFill,
+                      int64_t startPositionInClip, int numSamples);
 
   //==============================================================================
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(Clip)
 };
 
