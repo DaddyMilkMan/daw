@@ -180,11 +180,11 @@ public:
 
   /**
    * @brief Get the freeze audio buffer
-   * @return Shared pointer to buffer, or nullptr if not frozen
-   * @note Audio thread safe - RCU pattern
+   * @return Pointer to buffer, or nullptr if not frozen
+   * @note Audio thread safe - Lock-free
    */
-  std::shared_ptr<juce::AudioBuffer<float>> getFreezeBuffer() const {
-    return std::atomic_load_explicit(&freezeBuffer_, std::memory_order_acquire);
+  juce::AudioBuffer<float>* getFreezeBuffer() const {
+    return activeFreezeBuffer_.load(std::memory_order_acquire);
   }
 
   MixerChannel &getMixerChannel() { return mixerChannel; }
@@ -242,8 +242,8 @@ public:
 
   //==============================================================================
   // State management
-  juce::ValueTree getState() const;
-  void loadState(const juce::ValueTree &state);
+  virtual juce::ValueTree getState() const;
+  virtual void loadState(const juce::ValueTree &state);
 
   /**
    * @brief Load plugin states from ValueTree
@@ -295,8 +295,12 @@ protected:
 
   // Freeze file storage (for CPU optimization)
   juce::File freezeFile_;
-  // Freeze buffer storage (RT-safe access via shared_ptr atomic load)
-  std::shared_ptr<juce::AudioBuffer<float>> freezeBuffer_;
+  
+  // Freeze buffer storage (Lock-free RCU pattern)
+  std::shared_ptr<juce::AudioBuffer<float>> freezeBufferOwner_; // Message thread owner
+  std::atomic<juce::AudioBuffer<float>*> activeFreezeBuffer_{nullptr}; // Audio thread view
+  std::vector<std::shared_ptr<juce::AudioBuffer<float>>> freezeTrash_; // Garbage collection
+  
   juce::AudioFormatManager freezeFormatManager_;
 
   // Input routing

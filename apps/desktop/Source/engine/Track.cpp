@@ -138,8 +138,22 @@ void Track::setFreezeFile(const juce::File &file) {
       }
     }
   }
-  std::atomic_store_explicit(&freezeBuffer_, newBuffer,
-                             std::memory_order_release);
+  
+  // FIX: RCU atomic update for lock-free audio thread access
+  
+  // 1. Keep old buffer alive in trash (simple garbage collection)
+  if (freezeBufferOwner_)
+      freezeTrash_.push_back(freezeBufferOwner_);
+  
+  // Limit trash size (keep last 4 updates alive to ensure audio thread safety)
+  if (freezeTrash_.size() > 4)
+      freezeTrash_.erase(freezeTrash_.begin());
+
+  // 2. Take ownership of new buffer
+  freezeBufferOwner_ = newBuffer;
+
+  // 3. Atomically publish pointer to audio thread
+  activeFreezeBuffer_.store(newBuffer.get(), std::memory_order_release);
 }
 
 //==============================================================================
