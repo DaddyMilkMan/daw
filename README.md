@@ -17,10 +17,10 @@ This is an **early prototype** in active development. Core features are still be
 - MIDI input and piano roll editing
 - VST3 plugin loading
 - Simple synth and sampler instruments
+- Project save/load (Stable with Crash Recovery)
 
 **What doesn't work yet:**
 - Reliable multi-track recording
-- Project save/load (unstable)
 - Plugin automation
 - Export/rendering pipeline
 - Most "AI features" (mocked/unstable)
@@ -88,7 +88,7 @@ zenith-daw/
 - Clean up debug logging
 
 **Phase 2: Essential Features** (Next)
-- Project save/load (robust)
+- Project save/load (Completed)
 - Multi-track recording
 - Audio export
 - Plugin state management
