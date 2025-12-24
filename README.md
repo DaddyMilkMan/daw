@@ -4,7 +4,7 @@
 
 **Version:** 0.1.0 - Alpha (Not Production Ready)  
 **Status:** Active Development  
-**Platform:** Windows 10/11 (x64)
+**Platform:** Windows 10/11 (x64), Linux (WIP)
 
 ---
 
@@ -13,27 +13,28 @@
 This is an **early prototype** in active development. Core features are still being implemented and stabilized. Expect bugs, incomplete features, and breaking changes.
 
 **What works:**
-- Basic audio playback engine
+- Basic audio playback engine (Stabilized)
 - MIDI input and piano roll editing
 - VST3 plugin loading
 - Simple synth and sampler instruments
+- Basic unit test infrastructure (Initial real tests added)
 
 **What doesn't work yet:**
 - Reliable multi-track recording
 - Project save/load (unstable)
 - Plugin automation
 - Export/rendering pipeline
-- Most "AI features" (mocked/unstable)
+- Most "AI features" (Currently using mock responses)
 
 ---
 
 ## 🚀 Building from Source
 
 ### Prerequisites
-- Visual Studio 2022 with C++ Desktop Development
+- Visual Studio 2022 / GCC 13+
 - CMake 3.25+
 - vcpkg (for Skia dependencies)
-- Windows 10/11 x64
+- Windows 10/11 x64 or Linux
 
 ### Build Steps
 
@@ -81,17 +82,18 @@ zenith-daw/
 
 ## 🎯 Current Development Focus
 
-**Phase 1: Core Stability** (Current)
-- Fix build system reliability
-- Stabilize audio engine threading
-- Implement proper error handling
-- Clean up debug logging
+**Phase 1: Core Stability** (Stabilized Dec 2025)
+- ✅ Fix build system reliability
+- ✅ Stabilize audio engine threading
+- ✅ Implement initial unit tests with real assertions
+- ✅ Provide Skia mocks for Linux development
 
 **Phase 2: Essential Features** (Next)
 - Project save/load (robust)
 - Multi-track recording
 - Audio export
 - Plugin state management
+- Real AI API integration (Grok)
 
 **Phase 3: Polish** (Future)
 - UI refinements
@@ -117,12 +119,14 @@ See `planning/roadmaps/` for detailed plans.
 
 ### Debugging
 ```bash
-# Debug build
+# Debug build (Note: Skia may be unstable in Debug mode)
 .\build.bat --debug
 
 # View logs
 tail -f debug_log.txt
 ```
+
+**⚠️ Note on Build Types:** It is highly recommended to use the **Release** build for UI testing. Skia rendering can exhibit performance issues and unstable behavior in Debug configurations.
 
 ---
 

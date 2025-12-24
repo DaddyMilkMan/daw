@@ -80,6 +80,11 @@ void Track::setEnabled(bool shouldBeEnabled) {
   sendChangeMessage();
 }
 
+void Track::setInputMonitor(bool shouldMonitor) {
+  inputMonitor_.store(shouldMonitor);
+  sendChangeMessage();
+}
+
 //==============================================================================
 void Track::setFreezeFile(const juce::File &file) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

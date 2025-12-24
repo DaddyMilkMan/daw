@@ -10,19 +10,26 @@
   ==============================================================================
 */
 
-#include "CommandAPI.h"
-#include "Engine.h"
-#include "ProjectState.h"
-#include "TempoMap.h"
+#include <functional>
+#include <map>
+#include <memory>
+#include <string>
+#include <vector>
+
 #include "../engine/AuxBus.h"
 #include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/Track.h"
 #include "../instruments/InstrumentRegistry.h"
-#include "SkiaComponent.h"
+#include "Actions.h"
 #include "ClipCommands.h"
+#include "CommandAPI.h"
 #include "CommandUtils.h"
+#include "Engine.h"
+#include "ProjectState.h"
 #include "SessionGraph.h"
+#include "SkiaComponent.h"
+#include "TempoMap.h"
 #include "TrackCommands.h"
 #include "TransportCommands.h"
 
@@ -36,11 +43,13 @@ namespace zenith {
 //==============================================================================
 CommandAPI::CommandAPI(ProjectState &state, Engine &eng)
     : projectState(state), engine(eng) {
-  trackCommands = std::make_unique<TrackCommands>(engine, projectState);
-  clipCommands = std::make_unique<ClipCommands>(engine, projectState);
-  transportCommands = std::make_unique<TransportCommands>(engine, projectState);
+  trackCommands = std::make_unique<TrackCommands>(engine, projectState, *this);
+  clipCommands = std::make_unique<ClipCommands>(engine, projectState, *this);
+  transportCommands =
+      std::make_unique<TransportCommands>(engine, projectState, *this);
 
   DBG("CommandAPI: Initialized");
+#pragma message("C++ standard: " JUCE_STRINGIFY(__cplusplus))
   initializeCommandMap();
 }
 
@@ -264,9 +273,8 @@ void CommandAPI::initializeCommandMap() {
                   [this](const juce::var &p) { return startEvolution(p); });
   registerCommand("stop_evolution",
                   [this](const juce::var &p) { return stopEvolution(p); });
-  registerCommand("get_evolution_stats", [this](const juce::var &p) {
-    return getEvolutionStats(p);
-  });
+  registerCommand("get_evolution_stats",
+                  [this](const juce::var &p) { return getEvolutionStats(p); });
   registerCommand("set_note_velocity",
                   [this](const juce::var &p) { return setNoteVelocity(p); });
   registerCommand("set_note_length",
@@ -307,7 +315,7 @@ void CommandAPI::initializeCommandMap() {
 }
 
 void CommandAPI::registerCommand(const juce::String &commandName,
-                                 CommandHandler handler) {
+                                 CommandAPI::CommandHandler handler) {
   commandHandlers[commandName] = handler;
 }
 
@@ -337,7 +345,8 @@ juce::var CommandAPI::executeCommand(const juce::var &request) {
     return commandHandlers[commandStr](params);
   }
 
-  return createErrorResponse("Unknown command or handler not registered: " + commandStr);
+  return createErrorResponse("Unknown command or handler not registered: " +
+                             commandStr);
 }
 
 juce::String CommandAPI::executeCommandString(const juce::String &jsonRequest) {
@@ -379,9 +388,9 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       errorObj->setProperty("success", false);
       errorObj->setProperty("error", "Command at index " + juce::String(i) +
                                          " is not a JSON object");
-      errorObj->setProperty("failedIndex", i);
+      errorObj->setProperty("failedIndex", (int)i);
       errorObj->setProperty("failedCommand", cmdVar);
-      errorObj->setProperty("successCount", successCount);
+      errorObj->setProperty("successCount", (int)successCount);
 
       return juce::var(errorObj);
     }
@@ -391,9 +400,9 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       errorObj->setProperty("success", false);
       errorObj->setProperty("error", "Command at index " + juce::String(i) +
                                          " missing 'command' field");
-      errorObj->setProperty("failedIndex", i);
+      errorObj->setProperty("failedIndex", (int)i);
       errorObj->setProperty("failedCommand", cmdVar);
-      errorObj->setProperty("successCount", successCount);
+      errorObj->setProperty("successCount", (int)successCount);
 
       return juce::var(errorObj);
     }
@@ -414,9 +423,9 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
       auto *errorObj = new juce::DynamicObject();
       errorObj->setProperty("success", false);
       errorObj->setProperty("error", "Command failed: " + error);
-      errorObj->setProperty("failedIndex", i);
+      errorObj->setProperty("failedIndex", (int)i);
       errorObj->setProperty("failedCommand", cmdVar);
-      errorObj->setProperty("successCount", successCount);
+      errorObj->setProperty("successCount", (int)successCount);
 
       DBG("CommandAPI: Batch failed at command " + juce::String(i) + ": " +
           error);
@@ -429,7 +438,7 @@ juce::var CommandAPI::executeBatch(const juce::Array<juce::var> &commands,
 
   // All commands succeeded
   auto *resultObj = new juce::DynamicObject();
-  resultObj->setProperty("count", successCount);
+  resultObj->setProperty("count", (int)successCount);
 
   DBG("CommandAPI: Batch completed successfully (" +
       juce::String(successCount) + " commands)");
@@ -553,29 +562,30 @@ juce::var CommandAPI::undo(const juce::var &params) {
 
 juce::var CommandAPI::getUIState(const juce::var &params) {
   juce::ignoreUnused(params);
-  
+
   auto *resultObj = new juce::DynamicObject();
-  
+
   if (uxDirector_) {
     resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
     resultObj->setProperty("summary", uxDirector_->getIssueSummary());
-    
+
     juce::var issuesArray;
     for (const auto &issue : uxDirector_->getIssues()) {
-        if (!issue.isFixed) {
-            auto *issueObj = new juce::DynamicObject();
-            issueObj->setProperty("type", (int)issue.type);
-            issueObj->setProperty("severity", (int)issue.severity);
-            issueObj->setProperty("description", issue.description);
-            issueObj->setProperty("componentName", issue.componentName);
-            issueObj->setProperty("componentType", issue.componentType);
-            issueObj->setProperty("suggestedFix", issue.suggestedFix);
-            issuesArray.append(juce::var(issueObj));
-        }
+      if (!issue.isFixed) {
+        auto *issueObj = new juce::DynamicObject();
+        issueObj->setProperty("type", (int)issue.type);
+        issueObj->setProperty("severity", (int)issue.severity);
+        issueObj->setProperty("description", issue.description);
+        issueObj->setProperty("componentName", issue.componentName);
+        issueObj->setProperty("componentType", issue.componentType);
+        issueObj->setProperty("suggestedFix", issue.suggestedFix);
+        issuesArray.append(juce::var(issueObj));
+      }
     }
     resultObj->setProperty("unresolvedIssues", issuesArray);
-    resultObj->setProperty("issueCount", uxDirector_->getUnresolvedIssueCount());
-    
+    resultObj->setProperty("issueCount",
+                           uxDirector_->getUnresolvedIssueCount());
+
     // Add health breakdown
     auto breakdown = uxDirector_->getHealthBreakdown();
     auto *breakdownObj = new juce::DynamicObject();
@@ -584,6 +594,24 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
     breakdownObj->setProperty("layoutHealth", breakdown.layoutHealth);
     breakdownObj->setProperty("dataFreshness", breakdown.dataFreshness);
     resultObj->setProperty("healthBreakdown", juce::var(breakdownObj));
+  } else {
+    resultObj->setProperty("error", "UXDirectorAgent not available");
+  }
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  auto *resultObj = new juce::DynamicObject();
+
+  if (uxDirector_) {
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+    resultObj->setProperty("unresolvedIssues",
+                           uxDirector_->getUnresolvedIssueCount());
+    resultObj->setProperty("status", "ok");
   } else {
     resultObj->setProperty("error", "UXDirectorAgent not available");
   }
@@ -709,11 +737,11 @@ juce::var CommandAPI::searchPlugins(const juce::var &params) {
 
   for (int i = 0; i < knownPlugins.getNumTypes(); ++i) {
     auto desc = knownPlugins.getTypes()[i];
-    
+
     bool match = desc.name.toLowerCase().contains(query) ||
                  desc.manufacturerName.toLowerCase().contains(query) ||
                  desc.category.toLowerCase().contains(query);
-                 
+
     if (match) {
       auto *pluginObj = new juce::DynamicObject();
       pluginObj->setProperty("id", juce::var(desc.createIdentifierString()));
@@ -2142,4 +2170,19 @@ juce::var CommandAPI::executeCommand(CommandID id, const juce::var &params) {
   return createErrorResponse("Unknown command ID");
 }
 
+//==============================================================================
+juce::var createSuccessResponse(const juce::var &result) {
+  juce::DynamicObject::Ptr response = new juce::DynamicObject();
+  response->setProperty("success", true);
+  if (!result.isVoid())
+    response->setProperty("result", result);
+  return juce::var(response.get());
+}
+
+juce::var createErrorResponse(const juce::String &errorMessage) {
+  juce::DynamicObject::Ptr response = new juce::DynamicObject();
+  response->setProperty("success", false);
+  response->setProperty("error", errorMessage);
+  return juce::var(response.get());
+}
 } // namespace zenith

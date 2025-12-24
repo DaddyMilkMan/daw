@@ -28,9 +28,8 @@
 #include "../engine/AudioFilePool.h"
 
 
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkPaint.h>
 
 #include <vector>
 #include <atomic>

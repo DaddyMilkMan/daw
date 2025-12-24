@@ -29,10 +29,8 @@
 #pragma once
 
 #include "ZenithDesignSystem.h"
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkColorFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
 #include <core/SkSurface.h>
 #include <effects/SkGradientShader.h>
 #include <effects/SkImageFilters.h>

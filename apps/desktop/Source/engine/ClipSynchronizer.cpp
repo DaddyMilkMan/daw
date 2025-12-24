@@ -27,13 +27,13 @@ void ClipSynchronizer::start(int updateRateHz) {
   if (updateRateHz <= 0)
     updateRateHz = 30;
 
-  projectState.getState().addListener(this);
+  projectState.addListener(this);
   startTimer(1000 / updateRateHz);
   DBG("ClipSynchronizer: Started at " + juce::String(updateRateHz) + " Hz");
 }
 
 void ClipSynchronizer::stop() {
-  projectState.getState().removeListener(this);
+  projectState.removeListener(this);
   stopTimer();
   DBG("ClipSynchronizer: Stopped");
 }
@@ -45,7 +45,7 @@ juce::String ClipSynchronizer::createClip(const juce::String &trackId,
   DBG("ClipSynchronizer: createClip(" + trackId + ", " +
       juce::String(startBeats) + ", " + juce::String(lengthBeats) + ", " +
       clipType + ")");
-      
+
   // Consistency checks
   jassert(startBeats >= 0.0);
   jassert(lengthBeats > 0.0);
@@ -106,11 +106,11 @@ void ClipSynchronizer::syncEngineToProjectState() {
   // Guard against re-entrant checks
   if (isModifyingState)
     return;
-    
+
   // Safety check: Engine must be initialized with valid sample rate
   if (engine.getSampleRate() <= 0.0)
-     return;
-     
+    return;
+
   // Check buffer size consistency (sanity check)
   jassert(engine.getBufferSize() > 0);
 
@@ -146,10 +146,10 @@ void ClipSynchronizer::syncEngineToProjectState() {
 
     // Sync each Engine clip to zenith::ProjectState
     for (int i = 0; i < trackPtr->getNumClips(); ++i) {
-      auto* engineClip = trackPtr->getClip(i);
-      
+      auto *engineClip = trackPtr->getClip(i);
+
       if (engineClip == nullptr)
-          continue;
+        continue;
 
       // Check if this clip exists in zenith::ProjectState
       juce::String clipId = engineClip->getName(); // Assuming Name == ID
@@ -200,12 +200,11 @@ void ClipSynchronizer::syncEngineToProjectState() {
 
         newClip.setProperty(zenith::ProjectState::PROP_ID, clipId, nullptr);
         newClip.setProperty(zenith::ProjectState::PROP_NAME, clipId, nullptr);
-        newClip.setProperty(
-            zenith::ProjectState::PROP_TYPE,
-            (engineClip->getType() == zenith::Clip::Type::MIDI
-                 ? "midi"
-                 : "audio"),
-            nullptr);
+        newClip.setProperty(zenith::ProjectState::PROP_TYPE,
+                            (engineClip->getType() == zenith::Clip::Type::MIDI
+                                 ? "midi"
+                                 : "audio"),
+                            nullptr);
 
         // Convert samples to beats
         double tempo = projectState.getTempo();
@@ -288,7 +287,7 @@ void ClipSynchronizer::valueTreePropertyChanged(
   for (const auto &trackPtr : engine.tracks()) {
     if (trackPtr->getTrackId() == trackId) {
       for (int i = 0; i < trackPtr->getNumClips(); ++i) {
-        auto* clipPtr = trackPtr->getClip(i);
+        auto *clipPtr = trackPtr->getClip(i);
         if (clipPtr != nullptr && clipPtr->getName() == clipId) {
           // Found it, sync properties
           double tempo = projectState.getTempo();
@@ -379,16 +378,18 @@ void ClipSynchronizer::valueTreeChildRemoved(
     // Remove from Engine
     for (const auto &trackPtr : engine.tracks()) {
       if (trackPtr->getTrackId() == trackId) {
-        zenith::ClipTrack* clipTrack = dynamic_cast<zenith::ClipTrack*>(trackPtr.get());
+        zenith::ClipTrack *clipTrack =
+            dynamic_cast<zenith::ClipTrack *>(trackPtr.get());
         if (clipTrack == nullptr) {
-            jassertfalse;
-            ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack during clip removal");
-            return;
+          jassertfalse;
+          ZENITH_LOG_ERROR("ClipSynchronizer: trackPtr is not a ClipTrack "
+                           "during clip removal");
+          return;
         }
 
         const int numClips = clipTrack->getNumClips();
         for (int i = 0; i < numClips; ++i) {
-          zenith::Clip* clipPtr = clipTrack->getClip(i);
+          zenith::Clip *clipPtr = clipTrack->getClip(i);
           if (clipPtr != nullptr && clipPtr->getName() == clipId) {
             clipTrack->removeClip(clipPtr);
             DBG("ClipSynchronizer: Removed clip " + clipId);

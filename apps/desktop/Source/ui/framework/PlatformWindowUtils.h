@@ -11,8 +11,9 @@
 
 #pragma once
 
-#include <include/gpu/gl/GrGLInterface.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 #include <juce_gui_extra/juce_gui_extra.h>
+#include <juce_opengl/juce_opengl.h>
 
 namespace zenith {
 

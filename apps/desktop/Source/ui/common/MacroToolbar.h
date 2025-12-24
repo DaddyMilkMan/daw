@@ -1,7 +1,7 @@
 #pragma once
 
-#include "SkiaComponent.h"
-#include "widgets/ZenithButton.h"
+#include "../controls/ZenithButton.h"
+#include "../framework/SkiaComponent.h"
 #include "Engine.h"
 #include "ProjectState.h"
 #include <functional>

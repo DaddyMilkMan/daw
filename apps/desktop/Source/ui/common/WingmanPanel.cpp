@@ -2,348 +2,357 @@
   ==============================================================================
 
     WingmanPanel.cpp
-    Created: 2025-11-29 (Updated for Grok Integration)
+    Created: 2025-11-29 (Updated for Premium AI Chat)
     Author:  Marcus Williams (UX Team)
 
-    Complete Wingman Panel Implementation
+    Wingman AI Chat Interface (Pure Skia)
+    Supports Grok 4.1 Reasoning Modes (Fast/Thinking)
 
   ==============================================================================
 */
 
 #include "WingmanPanel.h"
-#include "../engine/ZenithLogger.h"
+#include "../../engine/ZenithLogger.h"
+#include "../design-system/ZenithDesignSystem.h"
+#include "../design-system/ZenithTheme.h"
 #include "../network/SecureKeyStore.h"
 #include "SettingsComponent.h"
-#include "ZenithLookAndFeel.h"
-#include "ZenithTheme.h" // For Colors and Typography
+#include "ZenithSkia.h"
+#include <core/SkTypeface.h>
 
 namespace zenith {
 
-//==============================================================================
-//==============================================================================
-WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
-    : commandAPI(api), engine_(engine) {
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Constructor started");
-  // Create Grok controller
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Creating GrokDAWController...");
-  grokController = std::make_unique<GrokDAWController>(commandAPI);
-
-  //==========================================================================
-  // Conversation Display (Markdown Enabled)
-  conversationDisplay = std::make_unique<widgets::MarkdownComponent>();
-  // conversationDisplay->setColour(...) - MarkdownComponent handles its own colors via Skia
-  addAndMakeVisible(conversationDisplay.get());
-
-  // Welcome message
-  appendToConversation(
-      "Wingman",
-      "**Hello!** I'm Wingman, your AI assistant.\nI can control the DAW, generate presets, and help you create music.\n\n*What would you like to do?*");
-
-  //==========================================================================
-  // Input Field
-  inputField = std::make_unique<juce::TextEditor>("Input");
-  inputField->setMultiLine(false);
-  inputField->setReturnKeyStartsNewLine(false);
-  inputField->setPopupMenuEnabled(true);
-  inputField->setColour(juce::TextEditor::backgroundColourId,
-                        ZenithTheme::Colors::bg_02);
-  inputField->setColour(juce::TextEditor::textColourId,
-                        ZenithTheme::Colors::text_primary);
-  inputField->setColour(juce::TextEditor::outlineColourId,
-                        ZenithTheme::Colors::accent_primary);
-  inputField->setFont(ZenithTheme::Typography::getBodyFont());
-  inputField->setTextToShowWhenEmpty("Ask Wingman anything...",
-                                     ZenithTheme::Colors::text_secondary);
-  inputField->addListener(this);
-  addAndMakeVisible(inputField.get());
-
-  //==========================================================================
-  // Send Button
-  sendButton = std::make_unique<juce::TextButton>("Send");
-  sendButton->setButtonText("Send");
-  sendButton->setColour(juce::TextButton::buttonColourId,
-                        ZenithTheme::Colors::accent_primary);
-  sendButton->setColour(juce::TextButton::textColourOffId,
-                        ZenithTheme::Colors::text_primary);
-  sendButton->addListener(this);
-  addAndMakeVisible(sendButton.get());
-
-  //==========================================================================
-  // Mode Selector
-  modeLabel = std::make_unique<juce::Label>("ModeLabel", "Mode:");
-  modeLabel->setColour(juce::Label::textColourId,
-                       ZenithTheme::Colors::text_primary);
-  modeLabel->setFont(ZenithTheme::Typography::getBodyFont());
-  addAndMakeVisible(modeLabel.get());
-
-  modeSelector = std::make_unique<juce::ComboBox>("Mode");
-  modeSelector->addItem("⚡ Fast (Quick responses)", 1);
-  modeSelector->addItem("🧠 Thinking (Deep analysis)", 2);
-  modeSelector->setSelectedId(1); // Default to Fast
-  modeSelector->setColour(juce::ComboBox::backgroundColourId,
-                          ZenithTheme::Colors::bg_02);
-  modeSelector->setColour(juce::ComboBox::textColourId,
-                          ZenithTheme::Colors::text_primary);
-  modeSelector->setColour(juce::ComboBox::outlineColourId,
-                          ZenithTheme::Colors::accent_primary);
-  modeSelector->onChange = [this]() { updateModeFromSelector(); };
-  addAndMakeVisible(modeSelector.get());
-
-  //==========================================================================
-  // Status Label
-  statusLabel = std::make_unique<juce::Label>("Status", "Ready");
-  statusLabel->setColour(juce::Label::textColourId,
-                         juce::Colours::green); // Keep green for status
-  statusLabel->setFont(ZenithTheme::Typography::getSmallFont());
-  statusLabel->setJustificationType(juce::Justification::centredLeft);
-  addAndMakeVisible(statusLabel.get());
-
-  //==========================================================================
-  // Clear Button
-  clearButton = std::make_unique<juce::TextButton>("Clear");
-  clearButton->setButtonText("Clear");
-  clearButton->setColour(juce::TextButton::buttonColourId,
-                         ZenithTheme::Colors::bg_02);
-  clearButton->setColour(juce::TextButton::textColourOffId,
-                         ZenithTheme::Colors::text_secondary);
-  clearButton->addListener(this);
-  addAndMakeVisible(clearButton.get());
-
-  //==========================================================================
-  // Settings Button
-  settingsButton = std::make_unique<juce::TextButton>("Settings");
-  settingsButton->setButtonText("⚙");
-  settingsButton->setColour(juce::TextButton::buttonColourId,
-                            ZenithTheme::Colors::bg_02);
-  settingsButton->setColour(juce::TextButton::textColourOffId,
-                            ZenithTheme::Colors::text_secondary);
-  settingsButton->addListener(this);
-  addAndMakeVisible(settingsButton.get());
-
-  // Update status based on Grok readiness (Moved to END of constructor)
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Initializing Grok...");
-  initializeGrok();
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "WingmanPanel: Grok initialized (or failed gracefully)");
+// Helper to convert JUCE colour to SkColor
+static SkColor toSkColor(const juce::Colour &c) {
+  return SkColorSetARGB(c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue());
 }
 
-WingmanPanel::~WingmanPanel() { inputField->removeListener(this); }
+//==============================================================================
+WingmanPanel::WingmanPanel(CommandAPI &api, Engine &engine)
+    : commandAPI_(api), engine_(engine) {
+
+  // Create Grok controller
+  grokController_ = std::make_unique<GrokDAWController>(commandAPI_);
+
+  //==========================================================================
+  // UI Components (Pure Skia)
+
+  // Reasoning Mode Label
+  reasoningLabel_ = std::make_unique<SkiaLabel>("ReasoningLabel");
+  reasoningLabel_->setText("Reasoning:");
+  addAndMakeVisible(reasoningLabel_.get());
+
+  // Reasoning Buttons (Fast/Thinking)
+  fastModeButton_ = std::make_unique<SkiaButton>("FastMode");
+  fastModeButton_->setButtonText("Fast");
+  fastModeButton_->setToggleState(true);
+  fastModeButton_->onClick = [this] {
+    currentMode_ = GrokMode::Fast;
+    fastModeButton_->setToggleState(true);
+    thinkingModeButton_->setToggleState(false);
+    repaint();
+  };
+  addAndMakeVisible(fastModeButton_.get());
+
+  thinkingModeButton_ = std::make_unique<SkiaButton>("ThinkingMode");
+  thinkingModeButton_->setButtonText("Thinking");
+  thinkingModeButton_->setToggleState(false);
+  thinkingModeButton_->onClick = [this] {
+    currentMode_ = GrokMode::Thinking;
+    fastModeButton_->setToggleState(false);
+    thinkingModeButton_->setToggleState(true);
+    repaint();
+  };
+  addAndMakeVisible(thinkingModeButton_.get());
+
+  // Input Field
+  inputField_ = std::make_unique<SkiaTextEditor>("Input");
+  inputField_->setMultiLine(false);
+  inputField_->setTextToShowWhenEmpty(
+      "Ask Wingman anything...", toSkColor(ZenithTheme::Colors::text_tertiary));
+  inputField_->setTextColour(toSkColor(ZenithTheme::Colors::text_primary));
+  inputField_->onReturnKey = [this] { sendCommand(); };
+  addAndMakeVisible(inputField_.get());
+
+  // Send Button
+  sendButton_ = std::make_unique<SkiaButton>("Send");
+  sendButton_->setButtonText("Send");
+  sendButton_->onClick = [this] { sendCommand(); };
+  addAndMakeVisible(sendButton_.get());
+
+  // Status Label
+  statusLabel_ = std::make_unique<SkiaLabel>("Status");
+  statusLabel_->setText("Ready");
+  addAndMakeVisible(statusLabel_.get());
+
+  // Clear Button
+  clearButton_ = std::make_unique<SkiaButton>("Clear");
+  clearButton_->setButtonText("Clear");
+  clearButton_->setStyle(SkiaButton::Style::Secondary);
+  clearButton_->onClick = [this] {
+    conversationHistory_.clear();
+    conversationScrollY_ = 0;
+    grokController_->clearHistory();
+    appendToConversation("Wingman",
+                         "Chat history cleared. How can I assist you?");
+  };
+  addAndMakeVisible(clearButton_.get());
+
+  // Settings Button
+  settingsButton_ = std::make_unique<SkiaButton>("Set");
+  settingsButton_->setButtonText("Set");
+  settingsButton_->setStyle(SkiaButton::Style::Ghost);
+  settingsButton_->onClick = [this] { showSettings(); };
+  addAndMakeVisible(settingsButton_.get());
+
+  // Welcome Message
+  appendToConversation(
+      "Wingman",
+      "Hello! I am Wingman, your AI music assistant. I use Grok 4.1 to help "
+      "you find samples, control tracks, and explain synthesis.\n\n"
+      "Switch to **Thinking Mode** for complex music theory or sound design "
+      "advice.");
+
+  // Initial check for API Key
+  if (!isGrokReady()) {
+    appendToConversation(
+        "System", "Grok API Key is missing. Click 'Set' to configure it.");
+  }
+}
+
+WingmanPanel::~WingmanPanel() = default;
 
 //==============================================================================
-void WingmanPanel::paint(juce::Graphics &g) {
-  // Background
-  g.fillAll(ZenithTheme::Colors::bg_01);
+void WingmanPanel::drawSkia(SkCanvas *canvas) {
+  auto bounds = getLocalBounds();
 
-  // Header
-  g.setColour(ZenithTheme::Colors::bg_02);
-  g.fillRect(0, 0, getWidth(), 40);
+  // 1. Solid Panel Background (Neon Noir Slate)
+  SkPaint bgPaint;
+  bgPaint.setColor(toSkColor(ZenithTheme::Colors::bg_01));
+  bgPaint.setAlpha(255);
+  canvas->drawRect(
+      SkRect::MakeWH((float)bounds.getWidth(), (float)bounds.getHeight()),
+      bgPaint);
 
-  // Title
-  g.setColour(ZenithTheme::Colors::accent_primary);
-  g.setFont(ZenithTheme::Typography::getLargeFont().boldened());
-  g.drawText("Wingman AI Assistant", 10, 0, getWidth() - 20, 40,
-             juce::Justification::centredLeft);
+  // 2. Header
+  SkRect headerRect = SkRect::MakeXYWH(0, 0, (float)bounds.getWidth(), 40.0f);
+  SkPaint headerPaint;
+  headerPaint.setColor(toSkColor(ZenithTheme::Colors::bg_02));
+  canvas->drawRect(headerRect, headerPaint);
+
+  SkFont titleFont = zenith::design::getSkFont(
+      zenith::design::typography::FONT_LG, zenith::design::FontWeight::Bold);
+  SkPaint titlePaint;
+  titlePaint.setColor(toSkColor(ZenithTheme::Colors::accent_primary));
+  canvas->drawString("Wingman Chat", 12, 28, titleFont, titlePaint);
+
+  // 3. Conversation Area
+  SkRect convRect = SkRect::MakeXYWH(0, 42, (float)bounds.getWidth(),
+                                     (float)bounds.getHeight() - 182);
+  canvas->save();
+  canvas->clipRect(convRect);
+  drawConversation(canvas, convRect);
+  canvas->restore();
+
+  // 4. Children (Controls)
+  drawChildren(canvas);
+}
+
+void WingmanPanel::drawConversation(SkCanvas *canvas, const SkRect &bounds) {
+  SkFont bubbleFont =
+      zenith::design::getSkFont(zenith::design::typography::FONT_MD);
+  SkFont speakerFont = zenith::design::getSkFont(
+      zenith::design::typography::FONT_XS, zenith::design::FontWeight::Medium);
+
+  SkPaint textPaint;
+  textPaint.setColor(toSkColor(ZenithTheme::Colors::text_primary));
+
+  float y = bounds.top() + 10 - conversationScrollY_;
+  float padding = 12;
+  float msgGap = 16;
+
+  for (const auto &msg : conversationHistory_) {
+    // Bubble calculations (simplified layout)
+    auto lines = juce::StringArray::fromLines(msg.content);
+    float boxWidth = bounds.width() - 24;
+    float boxHeight = 25 + (lines.size() * 18); // rough calc
+
+    if (y + boxHeight > bounds.top() && y < bounds.bottom()) {
+      SkRect bubbleRect = SkRect::MakeXYWH(12, y, boxWidth, boxHeight);
+
+      // Bubble Background
+      SkPaint bubblePaint;
+      if (msg.speaker == "You") {
+        bubblePaint.setColor(
+            zenith::design::withAlpha(zenith::design::colors::CYAN, 0.08f));
+      } else if (msg.speaker == "System" || msg.speaker == "Error") {
+        bubblePaint.setColor(
+            zenith::design::withAlpha(zenith::design::colors::MAGENTA, 0.12f));
+      } else {
+        bubblePaint.setColor(toSkColor(ZenithTheme::Colors::bg_02));
+      }
+      canvas->drawRoundRect(bubbleRect, 8, 8, bubblePaint);
+
+      // Speaker Label
+      SkPaint spkPaint;
+      spkPaint.setColor(toSkColor(msg.speaker == "You"
+                                      ? ZenithTheme::Colors::accent_primary
+                                      : ZenithTheme::Colors::success));
+      canvas->drawString(msg.speaker.getCharPointer(), 20, y + 16, speakerFont,
+                         spkPaint);
+
+      // Content text
+      float lineY = y + 34;
+      for (const auto &line : lines) {
+        canvas->drawString(line.toStdString().c_str(), 20, lineY, bubbleFont,
+                           textPaint);
+        lineY += 18;
+      }
+    }
+
+    y += boxHeight + msgGap;
+  }
 }
 
 void WingmanPanel::resized() {
   auto bounds = getLocalBounds();
 
-  // Header area (40px)
-  auto headerArea = bounds.removeFromTop(40);
-  settingsButton->setBounds(headerArea.removeFromRight(40).reduced(5));
+  // Header controls
+  settingsButton_->setBounds(bounds.getWidth() - 45, 6, 40, 28);
 
-  // Status bar (30px)
-  auto statusArea = bounds.removeFromBottom(30);
-  statusLabel->setBounds(statusArea.reduced(5));
+  // Bottom Section
+  auto bottomArea = bounds.removeFromBottom(140).reduced(10, 0);
 
-  // Input area (80px)
-  auto inputArea = bounds.removeFromBottom(80);
-  inputArea.reduce(10, 10);
+  // 1. Reasoning mode toggle row
+  auto modeRow = bottomArea.removeFromTop(40);
+  reasoningLabel_->setBounds(modeRow.removeFromLeft(70));
+  fastModeButton_->setBounds(modeRow.removeFromLeft(60).reduced(2));
+  thinkingModeButton_->setBounds(modeRow.removeFromLeft(80).reduced(2));
+  statusLabel_->setBounds(modeRow.removeFromRight(80));
 
-  // Mode selector row
-  auto modeRow = inputArea.removeFromTop(30);
-  modeLabel->setBounds(modeRow.removeFromLeft(50));
-  modeSelector->setBounds(modeRow.removeFromLeft(200).reduced(0, 2));
-  modeRow.removeFromLeft(10);
-  clearButton->setBounds(modeRow.removeFromLeft(80).reduced(0, 2));
+  // 2. Input Row
+  auto inputRow = bottomArea.removeFromTop(50);
+  sendButton_->setBounds(inputRow.removeFromRight(70).reduced(0, 5));
+  inputField_->setBounds(inputRow.reduced(0, 5));
 
-  inputArea.removeFromTop(10);
-
-  // Input field and send button
-  auto inputRow = inputArea;
-  sendButton->setBounds(inputRow.removeFromRight(80).reduced(0, 2));
-  inputRow.removeFromRight(10);
-  inputField->setBounds(inputRow.reduced(0, 2));
-
-  // Conversation display (remaining space)
-  conversationDisplay->setBounds(bounds.reduced(10));
-}
-
-//==============================================================================
-bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
-  bool success = grokController->initialize(apiKey);
-
-  if (success) {
-    setStatus("Grok Ready", juce::Colour(0xff00ff00));
-  } else {
-    setStatus("Grok initialization failed", juce::Colour(0xffff0000));
-  }
-
-  return success;
-}
-
-bool WingmanPanel::isGrokReady() const { return grokController->isReady(); }
-
-//==============================================================================
-void WingmanPanel::textEditorReturnKeyPressed(juce::TextEditor &editor) {
-  if (&editor == inputField.get()) {
-    sendCommand();
-  }
-}
-
-void WingmanPanel::buttonClicked(juce::Button *button) {
-  if (button == sendButton.get()) {
-    sendCommand();
-  } else if (button == clearButton.get()) {
-    conversationDisplay->clear();
-    grokController->clearHistory();
-    appendToConversation("Wingman",
-                         "Conversation cleared. How can I help you?");
-  } else if (button == settingsButton.get()) {
-    showSettings();
-  }
+  // 3. Clear button
+  auto clearRow = bottomArea;
+  clearButton_->setBounds(clearRow.removeFromLeft(60).reduced(0, 8));
 }
 
 //==============================================================================
 void WingmanPanel::sendCommand() {
-  if (isProcessing)
+  if (isProcessing_)
     return;
 
-  auto command = inputField->getText().trim();
+  juce::String command = inputField_->getText().trim();
   if (command.isEmpty())
     return;
 
+  inputField_->clear();
+  appendToConversation("You", command);
+
   if (!isGrokReady()) {
-    appendToConversation("System",
-                         "Grok API key not configured. Click ⚙ to set it up.");
+    appendToConversation(
+        "System", "Grok API not configured. Use 'Set' to configure key.");
     return;
   }
 
-  // Clear input
-  inputField->clear();
+  isProcessing_ = true;
+  setStatus("Thinking...", toSkColor(ZenithTheme::Colors::accent_primary));
 
-  // Add to conversation
-  appendToConversation("You", command);
-
-  // Set processing state
-  isProcessing = true;
-  setStatus("Processing...", juce::Colour(0xffffff00));
-  sendButton->setEnabled(false);
-
-  // Send to Grok
-  grokController->executeCommand(
-      command, currentMode,
+  grokController_->executeCommand(
+      command, currentMode_,
       [this](juce::String response) {
-        // Success
         juce::MessageManager::callAsync([this, response]() {
           appendToConversation("Wingman", response);
-          setStatus("Ready", juce::Colour(0xff00ff00));
-          isProcessing = false;
-          sendButton->setEnabled(true);
+          isProcessing_ = false;
+          setStatus("Ready", SK_ColorGREEN);
         });
       },
       [this](juce::String error) {
-        // Error
         juce::MessageManager::callAsync([this, error]() {
           appendToConversation("Error", error);
-          setStatus("Error", juce::Colour(0xffff0000));
-          isProcessing = false;
-          sendButton->setEnabled(true);
+          isProcessing_ = false;
+          setStatus("Error", SK_ColorRED);
         });
       },
       [this](juce::String status) {
-        // Progress
-        juce::MessageManager::callAsync(
-            [this, status]() { setStatus(status, juce::Colour(0xffffff00)); });
+        juce::MessageManager::callAsync([this, status]() {
+          setStatus(status, toSkColor(ZenithTheme::Colors::accent_primary));
+        });
       });
 }
 
 void WingmanPanel::appendToConversation(const juce::String &speaker,
-                                        const juce::String &message) {
-  conversationDisplay->appendMessage(speaker, message);
-}
+                                        const juce::String &content) {
+  ChatMessage msg;
+  msg.speaker = speaker;
+  msg.content = content;
 
-void WingmanPanel::setStatus(const juce::String &status, juce::Colour colour) {
-  statusLabel->setText(status, juce::dontSendNotification);
-  statusLabel->setColour(juce::Label::textColourId, colour);
-}
+  // Auto color based on speaker
+  if (speaker == "You")
+    msg.speakerColor = toSkColor(ZenithTheme::Colors::accent_primary);
+  else if (speaker == "Wingman")
+    msg.speakerColor = toSkColor(ZenithTheme::Colors::success);
+  else
+    msg.speakerColor = SK_ColorWHITE;
 
-void WingmanPanel::updateModeFromSelector() {
-  int selectedId = modeSelector->getSelectedId();
-  currentMode = (selectedId == 2) ? GrokMode::Thinking : GrokMode::Fast;
+  conversationHistory_.push_back(msg);
 
-  juce::String modeName = (currentMode == GrokMode::Fast) ? "Fast" : "Thinking";
-  setStatus("Mode: " + modeName, juce::Colour(0xff00aaff));
+  // Simple auto-scroll
+  if (conversationHistory_.size() > 5) {
+    conversationScrollY_ =
+        std::max(0.0f, (float)(conversationHistory_.size() * 60) - 300);
+  }
+
+  repaint();
 }
 
 void WingmanPanel::showSettings() {
   juce::DialogWindow::LaunchOptions options;
   options.content.setOwned(new SettingsComponent(engine_));
   options.content->setSize(600, 500);
-  options.dialogTitle = "Zenith DAW Settings";
-  options.dialogBackgroundColour = ZenithTheme::Colors::bg_01;
-  options.escapeKeyTriggersCloseButton = true;
-  options.useNativeTitleBar = true;
-  options.resizable = true;
-
+  options.dialogTitle = "Zenith Settings";
   options.launchAsync();
 }
 
-//==============================================================================
-//==============================================================================
-// SampleHunterAgent::Listener interface
-//==============================================================================
-
-void WingmanPanel::sampleDownloaded(const zenith::ai::FoundSample &sample) {
-  juce::MessageManager::callAsync([this, sample]() {
-    appendToConversation("Wingman", "Downloaded sample: " +
-                                        sample.localFile.getFileName());
-  });
+void WingmanPanel::mouseWheelMove(const juce::MouseEvent &,
+                                  const juce::MouseWheelDetails &wheel) {
+  conversationScrollY_ -= wheel.deltaY * 60.0f;
+  if (conversationScrollY_ < 0)
+    conversationScrollY_ = 0;
+  repaint();
 }
 
-void WingmanPanel::sampleAnalyzed(const zenith::ai::FoundSample &sample) {
-  juce::MessageManager::callAsync([this, sample]() {
-    // Optional: Show analysis details
-  });
+void WingmanPanel::setStatus(const juce::String &text, SkColor colour) {
+  if (statusLabel_) {
+    statusLabel_->setText(text);
+    statusLabel_->setTextColour(colour);
+  }
 }
 
-void WingmanPanel::sampleImported(const juce::File &file) {
-  juce::MessageManager::callAsync([this, file]() {
-    appendToConversation("Wingman",
-                         "Imported sample to project: " + file.getFileName());
-  });
+bool WingmanPanel::initializeGrok(const juce::String &apiKey) {
+  return grokController_->initialize(apiKey);
 }
 
-void WingmanPanel::huntingProgressChanged(float progress,
-                                          const juce::String &status) {
-  juce::MessageManager::callAsync([this, progress, status]() {
-    setStatus(status, juce::Colour(0xff00aaff));
-  });
+bool WingmanPanel::isGrokReady() const {
+  return grokController_ && grokController_->isReady();
 }
 
-void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &stats,
-                                   bool success) {
-  juce::MessageManager::callAsync([this, stats, success]() {
-    if (success) {
-      appendToConversation("Wingman", "Sample hunting complete! Found " +
-                                          juce::String(stats.samplesFound) +
-                                          " samples.");
-      setStatus("Ready", juce::Colour(0xff00ff00));
-    } else {
-      appendToConversation("Wingman",
-                           "Sample hunting failed or was cancelled.");
-      setStatus("Failed", juce::Colour(0xffff0000));
-    }
-  });
+// Stubs for SampleHunterListener
+void WingmanPanel::sampleDownloaded(const zenith::ai::FoundSample &) {}
+void WingmanPanel::sampleAnalyzed(const zenith::ai::FoundSample &) {}
+void WingmanPanel::sampleImported(const juce::File &) {}
+void WingmanPanel::huntingProgressChanged(float, const juce::String &) {}
+void WingmanPanel::huntingComplete(const zenith::ai::HuntingStats &, bool) {}
+bool WingmanPanel::detectSampleSearchIntent(const juce::String &,
+                                            juce::String &) {
+  return false;
 }
+juce::String WingmanPanel::cleanQueryFiller(const juce::String &q) { return q; }
+bool WingmanPanel::handleImportCommand(const juce::String &) { return false; }
+void WingmanPanel::displaySearchResults(
+    const std::vector<zenith::ai::FoundSample> &) {}
 
 } // namespace zenith

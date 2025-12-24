@@ -19,6 +19,7 @@
 #include "../dsp/AudioFifo.h"
 #include "../dsp/SIMDHelpers.h"
 #include "EngineConstants.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -155,7 +156,7 @@ void MixerChannel::recalculateCoefficients() {
   }
 
   // Atomically swap pointer
-  juce::ScopedLock sl(coeffLock_);
+  juce::SpinLock::ScopedLockType sl(coeffLock_);
   activeCoeffs_ = newCoeffs;
 }
 
@@ -163,7 +164,7 @@ void MixerChannel::updateFiltersFromCoefficients() {
   // Safe atomic retrieval of current coefficients
   FilterCoefficients::Ptr localCoeffs;
   {
-    juce::ScopedLock sl(coeffLock_);
+    juce::SpinLock::ScopedLockType sl(coeffLock_);
     localCoeffs = activeCoeffs_;
   }
 
@@ -184,6 +185,12 @@ void MixerChannel::updateFiltersFromCoefficients() {
                              localCoeffs->eq[i][4], localCoeffs->eq[i][5]);
     eqFiltersL[i].setCoefficients(eq);
     eqFiltersR[i].setCoefficients(eq);
+  }
+
+  // DEFERRED DELETION: Push the local reference to GC to ensure it's not
+  // deleted on the audio thread if it happens to be the last one.
+  if (localCoeffs->getReferenceCount() == 1) {
+    RealTimeGarbageCollector::getInstance().push(localCoeffs);
   }
 }
 

@@ -28,6 +28,7 @@
 #include "../framework/SkiaComponent.h"
 #include "DrumPadComponent.h"
 #include "ProjectState.h"
+#include <algorithm>
 #include <functional>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
@@ -39,10 +40,7 @@
 #include <set>
 #include <vector>
 
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 
 //==============================================================================
 /**
@@ -65,6 +63,7 @@ struct MidiClipContext {
  * @brief Professional-grade MIDI piano roll editor component
  */
 class PianoRollComponent : public zenith::SkiaComponent,
+                           public juce::DragAndDropContainer,
                            private juce::ValueTree::Listener {
 public:
   //==========================================================================
@@ -99,7 +98,8 @@ public:
   };
 
   //==========================================================================
-  explicit PianoRollComponent(zenith::ProjectState &state);
+  explicit PianoRollComponent(zenith::ProjectState &state,
+                              zenith::Engine &engine);
   ~PianoRollComponent() override;
 
   //==========================================================================
@@ -670,6 +670,9 @@ public:
   /** Run a script from a file (Simple Command Language) */
   void runScriptFromFile(const juce::File &file);
 
+  /** Find note by ID (safe lookup) */
+  NoteRect *findNoteById(const juce::String &id);
+
   /** Get all note data for scripting */
   std::vector<NoteRect> &getNotesForScripting() { return noteRects; }
 
@@ -695,6 +698,10 @@ private:
     CCNewPoint,       // Creating and dragging a new CC point
     ExpressionTension // Editing expression curve tension
   };
+
+  DragMode currentDragMode = DragMode::None;
+  juce::String activeNoteId;  // ID of note being dragged/resized
+  juce::String hoveredNoteId; // ID of note under mouse
 
   enum class CursorType {
     Normal,
@@ -996,7 +1003,7 @@ private:
   // Interaction State
   int hoveredPianoKey = -1;
   int playingPianoKey = -1;
-  DragMode currentDragMode = DragMode::None;
+
   NoteRect *activeNote = nullptr;
   NoteRect *hoveredNote = nullptr;
   CCPoint *activeCCPoint = nullptr; // New: Currently dragged CC point
@@ -1063,6 +1070,11 @@ private:
   bool midiInputEnabled = false;
   std::map<int, double>
       activeInputNotes; // pitch -> start time (for recording durations)
+  zenith::Engine &engine_;
+  double lastEngineBeats_ = 0.0;
+  double lastEngineTime_ = 0.0;
+  std::unique_ptr<juce::VBlankAttachment> vBlankAttachment_;
+
   double currentPlayheadBeats = 0.0; // For recording, synced with transport
 
   //==========================================================================
@@ -1222,7 +1234,7 @@ class MidiEditorContainer : public juce::Component {
 public:
   MidiEditorContainer(zenith::ProjectState &state, zenith::Engine &engine)
       : projectState(state), engine_(engine) {
-    pianoRoll = std::make_unique<PianoRollComponent>(state);
+    pianoRoll = std::make_unique<PianoRollComponent>(state, engine);
     addAndMakeVisible(pianoRoll.get());
 
     drumPad = std::make_unique<DrumPadComponent>(engine, state);

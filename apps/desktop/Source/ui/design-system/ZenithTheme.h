@@ -24,7 +24,7 @@ public:
   //==========================================================================
   struct Colors {
     // Background layers (deepest to most elevated)
-    static const juce::Colour bg_00; // #0a0a0a - Deepest layer
+    static const juce::Colour bg_00; // #050505 - Deepest layer
     static const juce::Colour bg_01; // #121212 - Canvas/main background
     static const juce::Colour bg_02; // #1a1a1a - Panels
     static const juce::Colour bg_03; // #242424 - Elevated surfaces
@@ -44,7 +44,7 @@ public:
     static const juce::Colour text_inverse; // Black 90% - On accent backgrounds
 
     // Primary accent (professional blue instead of garish cyan)
-    static const juce::Colour accent_primary; // #3b82f6 - Primary brand color
+    static const juce::Colour accent_primary; // #00f3ff - Electric Cyan
     static const juce::Colour accent_hover;   // #60a5fa - Hover state
     static const juce::Colour accent_pressed; // #2563eb - Pressed/active state
     static const juce::Colour

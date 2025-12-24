@@ -12,18 +12,22 @@
 
 #pragma once
 
-#include "MixerComponent.h"
 #include "../../engine/EngineConstants.h"
-#include "SkiaComponent.h"
+#include "MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
+#include "SkiaComponent.h"
+#include "../design-system/ZenithDesignSystem.h"
+
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include "ZenithSkia.h"
+#endif
+
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include <memory>
+#include <vector>
 
 namespace zenith {
 class Engine;
@@ -84,6 +88,19 @@ private:
   ::SkRect cachedBounds_;
 
   void updateCachedPaints(const ::SkRect &bounds);
+};
+
+#else // ZENITH_USE_SKIA
+
+class BottomBar : public juce::Component {
+public:
+    BottomBar(juce::MidiKeyboardState&, Engine&, ProjectState&) {}
+    ~BottomBar() override = default;
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
+    void setKeyboardVisible(bool) {}
+    void setDeviceChainVisible(bool) {}
+    void setDebugger(ai::SessionDebuggerAgent*) {}
+    void setDebugConsoleVisible(bool) {}
 };
 
 #endif // ZENITH_USE_SKIA

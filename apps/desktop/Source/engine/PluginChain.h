@@ -1,9 +1,9 @@
 #pragma once
 
+#include <atomic>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
 #include <vector>
-#include <atomic>
 
 namespace zenith {
 
@@ -13,44 +13,50 @@ namespace zenith {
  */
 class PluginChain {
 public:
-    PluginChain();
-    ~PluginChain();
+  PluginChain();
+  ~PluginChain();
 
-    // Message thread only
-    void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin, double sampleRate, int blockSize);
-    void removePlugin(int index);
-    void clearPlugins();
-    
-    int getNumPlugins() const;
-    juce::AudioPluginInstance* getPlugin(int index) const;
+  // Message thread only
+  void addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin,
+                 double sampleRate, int blockSize);
+  void removePlugin(int index);
+  void clearPlugins();
 
-    // Audio thread safe
-    void process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midi);
-    void prepareToPlay(double sampleRate, int blockSize);
-    void releaseResources();
+  int getNumPlugins() const;
+  juce::AudioPluginInstance *getPlugin(int index) const;
+
+  // Audio thread safe
+  void process(juce::AudioBuffer<float> &buffer, juce::MidiBuffer &midi);
+  void prepareToPlay(double sampleRate, int blockSize);
+  void releaseResources();
 
 private:
-    struct PluginSnapshot {
-        std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
-        
-        PluginSnapshot() = default;
-        explicit PluginSnapshot(const std::vector<std::shared_ptr<juce::AudioPluginInstance>>& ownedPlugins) {
-            plugins.reserve(ownedPlugins.size());
-            for (const auto& p : ownedPlugins) plugins.push_back(p);
-        }
-    };
+  struct PluginSnapshot {
+    std::vector<std::shared_ptr<juce::AudioPluginInstance>> plugins;
 
-    void updateSnapshot();
+    PluginSnapshot() = default;
+    explicit PluginSnapshot(
+        const std::vector<std::shared_ptr<juce::AudioPluginInstance>>
+            &ownedPlugins) {
+      plugins.reserve(ownedPlugins.size());
+      for (const auto &p : ownedPlugins)
+        plugins.push_back(p);
+    }
+  };
 
-    std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
-    std::atomic<const PluginSnapshot*> activeSnapshot_{ nullptr };
-    std::shared_ptr<PluginSnapshot> currentSnapshot_;
-    std::vector<std::shared_ptr<PluginSnapshot>> snapshotTrash_;
+  void updateSnapshot();
 
-    double currentSampleRate_ = 0;
-    int currentBlockSize_ = 0;
+  std::vector<std::shared_ptr<juce::AudioPluginInstance>> pluginsOwned_;
+  
+  // Audio thread reads this (lock-free)
+  std::atomic<PluginSnapshot*> activeSnapshot_{nullptr};
+  // Message thread owns this
+  std::shared_ptr<PluginSnapshot> currentSnapshot_;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginChain)
+  double currentSampleRate_ = 0;
+  int currentBlockSize_ = 0;
+
+  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(PluginChain)
 };
 
 } // namespace zenith

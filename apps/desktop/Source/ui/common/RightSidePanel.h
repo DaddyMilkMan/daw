@@ -12,16 +12,16 @@
 
 #pragma once
 
-#include "WingmanPanel.h" // Include full header to use unique_ptr
-#include "../widgets/SpectraAnalyzerComponent.h"
+#include <memory>
+#include <vector>
+
+#include "../visualization/SpectraAnalyzerComponent.h"
 #include "SkiaComponent.h"
-#include <juce_gui_basics/juce_gui_basics.h>
-#include <juce_graphics/juce_graphics.h>
+#include "WingmanPanel.h" // Include full header to use unique_ptr
+#include "ZenithSkia.h"
 #include <juce_core/juce_core.h>
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
 namespace zenith {
 
@@ -64,6 +64,15 @@ private:
   void updateCachedPaints(const ::SkRect &bounds);
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RightSidePanel)
+};
+
+#else // ZENITH_USE_SKIA
+
+class RightSidePanel : public juce::Component {
+public:
+    RightSidePanel(CommandAPI&, Engine&) {}
+    ~RightSidePanel() override = default;
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
 };
 
 #endif // ZENITH_USE_SKIA

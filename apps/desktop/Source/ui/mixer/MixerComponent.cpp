@@ -4,19 +4,16 @@
  */
 
 #include "MixerComponent.h"
-#include "GlassmorphicPanel.h"
-#include "ZenithDesignSystem.h"
-#include "Engine.h"
-#include "MixerChannelComponent.h"
 #include "../engine/Track.h"
-#include <juce_gui_basics/juce_gui_basics.h>
+#include "Engine.h"
+#include "GlassmorphicPanel.h"
+#include "MixerChannelComponent.h"
+#include "ZenithDesignSystem.h"
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <effects/SkGradientShader.h>
-#include <include/core/SkColor.h>
 
 namespace zenith {
 
@@ -78,8 +75,8 @@ int MixerComponent::ChannelContainer::getTotalWidth(int stripWidth,
 
 MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
     : engine_(engine), projectState_(state) {
-  // Listen to the entire state tree for changes
-  projectState_.getState().addListener(this);
+  // Listen to state changes
+  projectState_.addListener(this);
 
   // Create channel container for viewport
   trackContainer_ = std::make_unique<ChannelContainer>();
@@ -111,7 +108,7 @@ MixerComponent::MixerComponent(Engine &engine, ProjectState &state)
 }
 
 MixerComponent::~MixerComponent() {
-  projectState_.getState().removeListener(this);
+  projectState_.removeListener(this);
   trackContainer_->clearChannels();
   masterChannel_.reset();
 }

@@ -535,7 +535,7 @@ juce::String UXDirectorAgent::getIssueSummary() const {
     parts.add(juce::String(stale) + " Stale");
 
   if (parts.isEmpty())
-    return "✓ UI looks good!";
+    return "[OK] UI looks good!";
 
   return parts.joinIntoString(", ");
 }

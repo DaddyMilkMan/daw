@@ -19,10 +19,50 @@
 #pragma once
 
 #include <array>
-#include <include/core/SkFont.h>
+#if defined(ZENITH_USE_SKIA) && ZENITH_USE_SKIA
+#include "ZenithSkia.h"
 #include <include/core/SkFontMgr.h>
 #include <include/core/SkTypeface.h>
+#else
+#include <memory>
+#ifndef SK_SP_DEFINED
+#define SK_SP_DEFINED
+template <typename T> using sk_sp = std::shared_ptr<T>;
+#endif
+
+// Forward declare for SkFont methods
+#ifndef SK_TEXT_ENCODING_DEFINED
+#define SK_TEXT_ENCODING_DEFINED
+enum class SkTextEncoding { kUTF8 };
+#endif
+
+class SkTypeface { public: virtual ~SkTypeface() = default; };
+
+class SkFont { 
+public: 
+    enum class Edging { kSubpixelAntiAlias };
+    
+    SkFont() = default; 
+    SkFont(sk_sp<SkTypeface>, float) {}
+    
+    void setTypeface(sk_sp<SkTypeface>) {}
+    void setSize(float) {}
+    float measureText(const void*, size_t, SkTextEncoding) const { return 0.0f; }
+    void setEdging(Edging) {}
+    void setSubpixel(bool) {}
+    void setHinting(int) {}
+    void setLinearMetrics(bool) {}
+    void setBaselineSnap(bool) {}
+};
+
+class SkFontMgr { 
+public: 
+    virtual ~SkFontMgr() = default;
+    virtual sk_sp<SkTypeface> makeFromData(sk_sp<void>, int) { return nullptr; } 
+};
+#endif
 #include <juce_core/juce_core.h>
+#include <juce_graphics/juce_graphics.h>
 #include <mutex>
 
 namespace zenith {
@@ -116,6 +156,12 @@ public:
    */
   SkFont getDisplayFont(float size, FontWeight weight = FontWeight::Bold) const;
 
+  /**
+   * Get the cached JUCE typeface for a family/weight combination.
+   * Useful for mixing Skia and JUCE rendering contexts.
+   */
+  juce::Typeface::Ptr getJuceTypeface(FontFamily family, FontWeight weight) const;
+
   // ========================================================================
   // STATUS
   // ========================================================================
@@ -172,6 +218,10 @@ private:
   // STORAGE
   // ========================================================================
 
+  // ========================================================================
+  // STORAGE
+  // ========================================================================
+
   // Typeface cache: [Family][Weight] -> SkTypeface
   // Family: 0=UI, 1=Mono, 2=Display (shares with UI)
   // Weight: 0=Regular, 1=Medium, 2=SemiBold, 3=Bold
@@ -180,6 +230,10 @@ private:
 
   std::array<std::array<sk_sp<SkTypeface>, kNumWeights>, kNumFamilies>
       typefaces_;
+      
+  // Parallel cache for JUCE typefaces (avoids system lookup)
+  std::array<std::array<juce::Typeface::Ptr, kNumWeights>, kNumFamilies>
+      typefacesJuce_;
 
   // Font manager for loading
   sk_sp<SkFontMgr> fontMgr_;

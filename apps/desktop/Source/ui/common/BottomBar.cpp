@@ -16,10 +16,7 @@
 #define ZENITH_USE_SKIA 1 // FORCE DEFINITION FOR DEBUGGING
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPoint.h>
 #include <effects/SkGradientShader.h>
 

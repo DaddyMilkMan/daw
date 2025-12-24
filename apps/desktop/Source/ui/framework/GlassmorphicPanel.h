@@ -24,11 +24,8 @@
 #include "BackdropBlur.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBitmap.h>
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 #include <random>
 
@@ -283,16 +280,16 @@ private:
 
     switch (style) {
     case Style::Subtle:
-      blurAmount = effects::SHADOW_OFFSET_SM;
+      blurAmount = glow::SHADOW_OFFSET_SM;
       offset = 1.0f;
       break;
     case Style::Elevated:
-      blurAmount = effects::SHADOW_OFFSET_MD;
+      blurAmount = glow::SHADOW_OFFSET_MD;
       offset = 2.0f;
       break;
     case Style::Floating:
     case Style::ActiveGlow:
-      blurAmount = effects::SHADOW_OFFSET_LG;
+      blurAmount = glow::SHADOW_OFFSET_LG;
       offset = 4.0f;
       break;
     default:
@@ -301,7 +298,7 @@ private:
 
     if (blurAmount > 0) {
       shadowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurAmount));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurAmount));
       SkRRect shadowRRect = rrect;
       shadowRRect.offset(0, offset);
       canvas->drawRRect(shadowRRect, shadowPaint);
@@ -516,7 +513,7 @@ private:
     glowPaint.setStrokeWidth(2.0f);
     glowPaint.setColor(withAlpha(accentColor, 0.4f * globalGlow));
     glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(
-        kNormal_SkBlurStyle, effects::GLOW_MEDIUM * globalGlow));
+        SkBlurStyle::kNormal, glow::GLOW_MEDIUM * globalGlow));
 
     canvas->drawRRect(rrect, glowPaint);
   }

@@ -18,11 +18,13 @@
 
 #pragma once
 
+#include <algorithm>
+#include <array>
 #include <atomic>
+#include <cstddef>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <memory>
-#include <span>
 #include <vector>
 
 #include "../dsp/Dither.h"
@@ -92,8 +94,8 @@ public:
    */
   void renderAudioGraph(
       juce::AudioBuffer<float> &outputBuffer, int numSamples,
-      juce::int64 playheadPosition, std::span<Track *const> tracks,
-      std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+      juce::int64 playheadPosition, const std::vector<Track *> &tracks,
+      const std::vector<AuxBus *> &auxBuses, const RoutingGraph &routingGraph,
       MasterLimiter &masterLimiter,
       std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
       const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
@@ -105,7 +107,7 @@ public:
    * @param tracks List of tracks to synchronize
    * @param playheadPosition Current position in samples
    */
-  void updateClipPositions(std::span<Track *const> tracks,
+  void updateClipPositions(const std::vector<Track *> &tracks,
                            juce::int64 playheadPosition) noexcept;
 
   //==========================================================================
@@ -117,7 +119,7 @@ public:
    * @param tracks Vector of tracks
    * @return Maximum latency in samples
    */
-  int calculatePDC(std::span<Track *const> tracks);
+  int calculatePDC(const std::vector<Track *> &tracks);
 
   /**
    * @brief Enable/disable PDC

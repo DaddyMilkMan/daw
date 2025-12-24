@@ -37,7 +37,8 @@
 namespace zenith {
 class Instrument;
 class TempoMap;
-class Clip; // Move outside
+class Clip;
+class TakeFolder;
 } // namespace zenith
 
 namespace zenith {
@@ -59,8 +60,8 @@ class Track : public juce::AudioSource, public juce::ChangeBroadcaster {
 public:
   friend class AudioRenderer; // Allow AudioRenderer to access private members
 
-  void setSoloed(bool shouldBeSoloed);
-  bool isSoloed() const;
+  void setInputMonitor(bool shouldMonitor);
+  bool isInputMonitoring() const { return inputMonitor_.load(); }
 
 public:
   //==============================================================================
@@ -209,6 +210,45 @@ public:
   virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
+  //==============================================================================
+  // Take Folder Management (for multi-take recording and comping)
+  //==============================================================================
+
+  /**
+   * @brief Get number of take folders on this track.
+   */
+  virtual int getNumTakeFolders() const { return 0; }
+
+  /**
+   * @brief Get a take folder by index.
+   */
+  virtual TakeFolder *getTakeFolder(int index) const {
+    juce::ignoreUnused(index);
+    return nullptr;
+  }
+
+  /**
+   * @brief Get the take folder at a specific timeline position.
+   */
+  virtual TakeFolder *getTakeFolderAt(int64_t position) const {
+    juce::ignoreUnused(position);
+    return nullptr;
+  }
+
+  /**
+   * @brief Add a take folder to this track.
+   */
+  virtual void addTakeFolder(std::shared_ptr<TakeFolder> folder) {
+    juce::ignoreUnused(folder);
+  }
+
+  /**
+   * @brief Remove a take folder from this track.
+   */
+  virtual void removeTakeFolder(TakeFolder *folder) {
+    juce::ignoreUnused(folder);
+  }
+
   // MIDI Scheduling (moved to MIDITrack)
 
   // Clip management (moved to subclasses)
@@ -271,6 +311,7 @@ protected:
   // Note: armed and enabled are track-specific, not channel-strip specific
   std::atomic<bool> armed{false};
   std::atomic<bool> enabled{true};
+  std::atomic<bool> inputMonitor_{false}; // Input monitoring state
   std::atomic<bool> frozen{false}; // Track freeze state for CPU optimization
 
   // Freeze file storage (for CPU optimization)

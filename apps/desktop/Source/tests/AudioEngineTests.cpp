@@ -12,9 +12,12 @@
 #include "../engine/Track.h"
 #include "Engine.h"
 #include "TestUtils.h"
+#include <algorithm>
 #include <cmath> // For std::isnan and std::isinf
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_core/juce_core.h>
+#include <memory>
+#include <vector>
 
 namespace zenith {
 namespace tests {
@@ -33,7 +36,8 @@ public:
     beginTest("Track creation");
     {
       // Test track creation with valid parameters
-      auto track = zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
+      auto track =
+          zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
       expect(track != nullptr);
       expect(track->getName() == "test-track-001");
       expect(track->getType() == zenith::Track::Type::Audio);
@@ -41,7 +45,8 @@ public:
 
     beginTest("Track mute/solo");
     {
-      auto track = zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
+      auto track =
+          zenith::Track::create("test-track-001", zenith::Track::Type::Audio);
       expect(track != nullptr);
 
       // Test mute functionality
@@ -49,14 +54,15 @@ public:
       expect(track->isMuted());
 
       // Test solo functionality
-      track->setSoloed(true);
-      expect(track->isSoloed());
+      track->setSolo(true);
+      expect(track->isSolo());
     }
 
     beginTest("Track volume processing");
     {
       // Create a track
-      auto track = zenith::Track::create("VolumeTestTrack", zenith::Track::Type::Audio);
+      auto track =
+          zenith::Track::create("VolumeTestTrack", zenith::Track::Type::Audio);
       expect(track != nullptr);
 
       // Set volume to -6dB (0.5 linear)
@@ -78,7 +84,8 @@ public:
 
     beginTest("Track pan processing");
     {
-      auto track = zenith::Track::create("PanTestTrack", zenith::Track::Type::Audio);
+      auto track =
+          zenith::Track::create("PanTestTrack", zenith::Track::Type::Audio);
       expect(track != nullptr);
 
       // Pan hard left
@@ -264,20 +271,132 @@ public:
   void runTest() override {
     beginTest("EQ processing");
     {
-      // Test EQ band manipulation
-      // Verify frequency response changes
+      MixerChannel channel;
+      const double sampleRate = 44100.0;
+      const int blockSize = 512;
+      channel.prepareToPlay(blockSize, sampleRate);
+      channel.setVolume(1.0f);
+      channel.setConsoleDrive(0.0f);
+
+      // Create a buffer with white noise (random samples between -1 and 1)
+      juce::AudioBuffer<float> buffer(2, blockSize);
+      juce::Random random;
+      for (int ch = 0; ch < 2; ++ch) {
+        float *data = buffer.getWritePointer(ch);
+        for (int i = 0; i < blockSize; ++i)
+          data[i] = random.nextFloat() * 2.0f - 1.0f;
+      }
+
+      // Measure RMS before boost
+      float rmsBeforeL = buffer.getRMSLevel(0, 0, blockSize);
+      float rmsBeforeR = buffer.getRMSLevel(1, 0, blockSize);
+
+      // Boost 1kHz by 12dB (extreme for clear test)
+      auto &band = channel.getEQBand(1); // Usually a peak filter
+      band.enabled = true;
+      band.frequency = 1000.0f;
+      band.gain = 12.0f;
+      band.q = 1.0f;
+      channel.markEQDirty(1);
+
+      // Process
+      juce::AudioSourceChannelInfo info(&buffer, 0, blockSize);
+      channel.getNextAudioBlock(info);
+
+      // Measure RMS after boost
+      float rmsAfterL = buffer.getRMSLevel(0, 0, blockSize);
+      float rmsAfterR = buffer.getRMSLevel(1, 0, blockSize);
+
+      expect(rmsAfterL > rmsBeforeL, "EQ boost should increase RMS Level (L)");
+      expect(rmsAfterR > rmsBeforeR, "EQ boost should increase RMS Level (R)");
+
+      // Test EQ stability with extreme values
+      band.gain = 100.0f; // Very extreme boost
+      channel.markEQDirty(1);
+      channel.getNextAudioBlock(info);
+
+      for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+        const float *data = buffer.getReadPointer(ch);
+        for (int i = 0; i < buffer.getNumSamples(); ++i) {
+          expect(!std::isnan(data[i]), "EQ produced NaN with extreme values");
+          expect(!std::isinf(data[i]), "EQ produced Inf with extreme values");
+        }
+      }
     }
 
     beginTest("Compression");
     {
-      // Test compressor threshold
-      // Verify gain reduction
+      MixerChannel channel;
+      const double sampleRate = 44100.0;
+      const int blockSize = 1024; // Larger block for compressor to stabilize
+      channel.prepareToPlay(blockSize, sampleRate);
+
+      // Configure compressor for aggressive reduction
+      channel.setCompressorEnabled(true);
+      channel.setCompressorThreshold(-20.0f);
+      channel.setCompressorRatio(10.0f);
+      channel.setCompressorAttack(1.0f);
+      channel.setCompressorRelease(100.0f);
+      channel.setCompressorMakeup(0.0f);
+      channel.setCompressorAutoMakeup(false);
+
+      // Create a buffer with a loud sine wave (0dBFS)
+      juce::AudioBuffer<float> buffer(2, blockSize);
+      for (int i = 0; i < blockSize; ++i) {
+        float sample = std::sin(static_cast<float>(i) * 0.1f) *
+                       0.8f; // ~700Hz sine at -2dBFS
+        buffer.setSample(0, i, sample);
+        buffer.setSample(1, i, sample);
+      }
+
+      // Process multiple blocks to let compressor react
+      juce::AudioSourceChannelInfo info(&buffer, 0, blockSize);
+      for (int i = 0; i < 5; ++i) {
+        channel.getNextAudioBlock(info);
+      }
+
+      // Check gain reduction
+      float gr = channel.getGainReduction();
+      expect(gr > 5.0f, "Compressor should show significant gain reduction");
+
+      // Verify output level is lower than input
+      float rmsAfter = buffer.getRMSLevel(0, 0, blockSize);
+      float sineRMS = 0.707f; // Theoretical RMS of 1.0 sine
+      expect(rmsAfter < sineRMS * 0.5f,
+             "Compressor should reduce output RMS significantly");
     }
 
     beginTest("Send/return routing");
     {
-      // Test aux send levels
-      // Verify signal routing to returns
+      MixerChannel channel;
+      const double sampleRate = 44100.0;
+      const int blockSize = 512;
+      channel.prepareToPlay(blockSize, sampleRate);
+      channel.setVolume(
+          1.0f); // Set to unity gain to ensure sends get full signal
+      channel.setConsoleDrive(0.0f);
+
+      juce::AudioBuffer<float> buffer(2, blockSize);
+      for (int i = 0; i < blockSize; ++i)
+        buffer.setSample(0, i, 1.0f); // DC signal for simple test
+
+      juce::AudioBuffer<float> auxBuffer(2, blockSize);
+      auxBuffer.clear();
+      std::vector<juce::AudioBuffer<float> *> auxBuffers = {&auxBuffer};
+
+      channel.setSendLevel(0, 1.0f); // 0dB send
+      channel.setSendPreFader(0, true);
+
+      juce::AudioSourceChannelInfo info(&buffer, 0, blockSize);
+      std::vector<juce::AudioBuffer<float> *> auxBufs = {&auxBuffer};
+      channel.getNextAudioBlock(info, auxBufs);
+
+      // Verify signal in aux buffer
+      expect(auxBuffer.getMagnitude(0, 0, blockSize) > 0.0f,
+             "Signal should be routed to aux buffer");
+      // Allow for some gain reduction from console emulation/pan law
+      expect(auxBuffer.getSample(0, 0) > 0.3f,
+             "Signal level should be preserved (approx -8dB from console)");
     }
   }
 };
@@ -307,18 +426,49 @@ public:
   PluginHostingTests() : juce::UnitTest("Plugin Hosting", "AudioEngine") {}
 
   void runTest() override {
-    beginTest("Plugin Delay Compensation");
-    {
-      auto plugin = std::make_unique<MockPlugin>();
-      plugin->setLatency(100);
-      expectEquals(plugin->getLatencySamples(), 100);
-    }
-
     beginTest("Plugin instantiation");
     {
       auto plugin = std::make_unique<MockPlugin>();
       expect(plugin.get() != nullptr);
       expectEquals(plugin->getName(), juce::String("Mock Plugin"));
+      plugin->setLatency(100);
+      expectEquals(plugin->getLatencySamples(), 100);
+    }
+
+    beginTest("Engine PDC Accuracy");
+    {
+      zenith::Engine engine;
+      auto trackId = engine.createTrack("PDCTest", "audio");
+
+      // Check if tracks were created successfully
+      if (engine.tracks().empty()) {
+        expect(false, "Failed to create track for PDC test");
+        return;
+      }
+      auto trackVal = engine.tracks()[0];
+
+      // Create first mock plugin with latency
+      auto plugin1 = std::make_unique<MockPlugin>();
+      plugin1->setLatency(100);
+      trackVal->addPlugin(std::move(plugin1));
+
+      // Update PDC
+      engine.recalculatePDC();
+
+      // Verify initial latency
+      expectEquals(engine.getTrackLatency(0), 100,
+                   "Track latency should be 100 samples");
+
+      // Add second plugin with latency
+      auto plugin2 = std::make_unique<MockPlugin>();
+      plugin2->setLatency(50);
+      trackVal->addPlugin(std::move(plugin2));
+
+      engine.recalculatePDC();
+
+      // Verify cumulative latency
+      expectEquals(engine.getTrackLatency(0), 150,
+                   "Track latency should satisfy (100 + 50) samples");
     }
   }
 };
@@ -350,7 +500,8 @@ public:
         float *samples = buffer.getWritePointer(ch);
         for (int i = 0; i < numSamples; ++i) {
           // Generate a simple sine wave to simulate valid audio output
-          float phase = (float)i / (float)numSamples * 2.0f * juce::MathConstants<float>::pi;
+          float phase = (float)i / (float)numSamples * 2.0f *
+                        juce::MathConstants<float>::pi;
           samples[i] =
               std::sin(phase) * 0.1f; // Low amplitude to avoid clipping
         }

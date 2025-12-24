@@ -8,9 +8,11 @@ target_sources(ZenithDAW PRIVATE
     ProjectState.cpp
     Track.cpp
     Clip.cpp
+    TakeFolder.cpp
     AudioTrack.cpp
     MIDITrack.cpp
     AuxBusTrack.cpp
+    InstrumentTrack.cpp
 
     ClipTrack.cpp
     MixerChannel.cpp

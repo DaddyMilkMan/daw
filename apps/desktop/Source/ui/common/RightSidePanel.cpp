@@ -9,16 +9,12 @@
 */
 
 #include "RightSidePanel.h"
-#include "../engine/ZenithLogger.h"
 #include "../design-system/ZenithLayout.h"
-#include "../widgets/SpectraAnalyzerComponent.h"
+#include "../engine/ZenithLogger.h"
+#include "../visualization/SpectraAnalyzerComponent.h"
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 
 #endif
 
@@ -28,11 +24,13 @@ namespace zenith {
 
 RightSidePanel::RightSidePanel(CommandAPI &api, Engine &engine) {
   ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Constructor started");
-  setSize(300, 600);
+  setSize(304, 600); // 8px grid (304 / 8 = 38)
 
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: Creating WingmanPanel...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info,
+                "RightSidePanel: Creating WingmanPanel...");
   wingmanPanel_ = std::make_unique<WingmanPanel>(api, engine);
-  ZENITH_LOG_UI(zenith::LogLevel::Info, "RightSidePanel: WingmanPanel created. Adding child...");
+  ZENITH_LOG_UI(zenith::LogLevel::Info,
+                "RightSidePanel: WingmanPanel created. Adding child...");
   addChildComponent(wingmanPanel_.get());
   wingmanPanel_->setVisible(true);
 
@@ -69,41 +67,35 @@ void RightSidePanel::drawSkia(SkCanvas *canvas) {
   // Left border glow
   canvas->drawLine(0.0f, 0.0f, 0.0f, skBounds.height(), borderPaint_);
 
-  // Note: Old meter code removed. Visualizer handles it now.
+  // Draw child components (WingmanPanel, SpectraAnalyzer, etc.)
+  drawChildren(canvas);
 }
 
 void RightSidePanel::updateCachedPaints(const SkRect &bounds) {
   // 1. Background Paint
   bgPaint_.setAntiAlias(true);
-  bgPaint_.setColor(SkColorSetARGB(240, 20, 20, 20)); // Almost opaque dark grey
+  bgPaint_.setColor(design::withAlpha(design::colors::BG_DARKER, 0.94f));
   bgPaint_.setStyle(SkPaint::kFill_Style);
 
   // 2. Border Paint
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(100, 0, 170, 255)); // Cyan accent
+  borderPaint_.setColor(design::withAlpha(design::colors::CYAN, 0.4f));
 
   // 3. Text Paints
   textPaint_.setAntiAlias(true);
   textPaint_.setStyle(SkPaint::kFill_Style);
-  textPaint_.setColor(SkColorSetARGB(255, 255, 255, 255)); // White text
+  textPaint_.setColor(design::colors::TEXT_PRIMARY);
 
   subTextPaint_.setAntiAlias(true);
   subTextPaint_.setStyle(SkPaint::kFill_Style);
   subTextPaint_.setColor(SkColorSetARGB(180, 200, 200, 200)); // Light grey text
 
   // 4. Fonts
-  headerFont_.setSize(16.0f);
-  headerFont_.setEmbolden(true);
-  headerFont_.setSubpixel(true);
-
-  bodyFont_.setSize(12.0f);
-  bodyFont_.setEmbolden(false);
-  bodyFont_.setSubpixel(true);
-
-  labelFont_.setSize(10.0f);
-  labelFont_.setSubpixel(true);
+  headerFont_ = design::getSkFont(16.0f, design::FontWeight::Bold);
+  bodyFont_ = design::getSkFont(12.0f);
+  labelFont_ = design::getMonoFont(10.0f);
 
   // 5. Meter Paints
   meterBgPaint_.setAntiAlias(true);
@@ -123,8 +115,9 @@ void RightSidePanel::resized() {
 
   ZenithLayout::begin()
       .withBounds(bounds)
-      .withGap(5.0f)
-      .addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(), 150.0f)
+      .withGap(8.0f) // 8px grid
+      .addFixedItem(spectraAnalyzer_.get(), (float)bounds.getWidth(),
+                    152.0f) // 8px grid (152 / 8 = 19)
       .addItem(wingmanPanel_.get())
       .applyColumn();
 }

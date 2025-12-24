@@ -13,6 +13,8 @@
 */
 
 #include "ZenithPolySynthVoice.h"
+#include "ZenithPolySynth.h"
+#include <algorithm>
 #include <cmath>
 
 namespace zenith {
@@ -86,7 +88,7 @@ void ZenithPolySynthVoice::noteStarted() {
   auto note = getCurrentlyPlayingNote();
   midiNoteNumber_ = note.initialNote;
 
-  if (monoMode_ && isVoiceActive()) {
+  if (monoMode_ && isActive()) {
     previousFrequency_ = currentFrequency_;
   } else {
     previousFrequency_ = note.getFrequencyInHertz();
@@ -104,11 +106,11 @@ void ZenithPolySynthVoice::noteStarted() {
   }
 
   targetFrequency_ = note.getFrequencyInHertz();
-  velocity_ = std::pow(note.noteOnVelocity.toFloat(), velocityCurve_);
+  velocity_ = std::pow(note.noteOnVelocity.asSignedFloat(), velocityCurve_);
 
   // Initialize MPE values
-  aftertouch_ = note.pressure.toFloat();
-  timbre_ = note.timbre.toFloat();
+  aftertouch_ = note.pressure.asSignedFloat();
+  timbre_ = note.timbre.asSignedFloat();
 
   // Pitch bend calculation for Mod Matrix (normalized approx)
   // ZenithPolySynth uses pitchBendRange_ parameter, we can normalize against it
@@ -132,7 +134,7 @@ void ZenithPolySynthVoice::noteStopped(bool allowTailOff) {
 }
 
 void ZenithPolySynthVoice::notePressureChanged() {
-  aftertouch_ = getCurrentlyPlayingNote().pressure.toFloat();
+  aftertouch_ = getCurrentlyPlayingNote().pressure.asSignedFloat();
 }
 
 void ZenithPolySynthVoice::notePitchbendChanged() {
@@ -143,7 +145,7 @@ void ZenithPolySynthVoice::notePitchbendChanged() {
 }
 
 void ZenithPolySynthVoice::noteTimbreChanged() {
-  timbre_ = getCurrentlyPlayingNote().timbre.toFloat();
+  timbre_ = getCurrentlyPlayingNote().timbre.asSignedFloat();
 }
 
 void ZenithPolySynthVoice::noteKeyStateChanged() {
@@ -226,7 +228,7 @@ void ZenithPolySynthVoice::renderNextBlock(
     juce::dsp::AudioBlock<float> validDownBlock =
         downBlock.getSubBlock(0, chunk);
 
-    oversampler_->processSamplesDown(validDownBlock, validUpBlock);
+    oversampler_->processSamplesDown(validDownBlock);
 
     // 3. Mix into output buffer
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch) {
@@ -240,7 +242,7 @@ void ZenithPolySynthVoice::renderNextBlock(
 
 void ZenithPolySynthVoice::renderInnerBlock(
     juce::AudioBuffer<float> &outputBuffer, int startSample, int numSamples) {
-  if (!isVoiceActive())
+  if (!isActive())
     return;
 
   filter1_.setModel(static_cast<FilterModelType>(filterModel_));
@@ -604,9 +606,8 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = std::make_unique<juce::dsp::Oversampling<float>>(
           2,                                   // numChannels
           (int)std::log2(oversamplingFactor_), // factorLog2
-          juce::dsp::Oversampling<
-              float>::filter_half_band_polyphase_iir, // filter
-          true                                        // isBuffered
+          juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR, // filter
+          true // isBuffered
       );
     } else {
       oversampler_ = nullptr;

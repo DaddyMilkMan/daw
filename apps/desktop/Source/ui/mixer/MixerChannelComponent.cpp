@@ -19,9 +19,8 @@
 #include "ZenithDesignSystem.h"
 #include <JuceHeader.h>
 
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
 namespace zenith {
@@ -324,6 +323,9 @@ void MixerChannelComponent::timerCallback() {
     }
 
     meter_.repaint();
+
+    // Polling for automation and external changes
+    updateFromTrack();
   }
 }
 
@@ -463,16 +465,22 @@ MixerChannelComponent::LevelMeter::LevelMeter() { startTimerHz(60); }
 MixerChannelComponent::LevelMeter::~LevelMeter() { stopTimer(); }
 
 void MixerChannelComponent::LevelMeter::timerCallback() {
-  // Smooth meter ballistics
+  // Smooth meter ballistics with gravity-based falloff
   auto smoothLevel = [](float target, float &current, float &peak,
-                        int &peakHold) {
+                        int &peakHold, float &velocity) {
     const float attackSpeed = 0.8f;
-    const float decaySpeed = 0.05f;
+    const float gravity = 0.002f; // Downward acceleration
 
     if (target > current) {
       current += (target - current) * attackSpeed;
+      velocity = 0.0f; // Reset velocity on upward jump
     } else {
-      current += (target - current) * decaySpeed;
+      velocity += gravity;
+      current -= velocity;
+      if (current < target) {
+        current = target;
+        velocity = 0.0f;
+      }
     }
 
     // Peak hold logic
@@ -488,9 +496,9 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
 
   if (stereo_) {
     smoothLevel(targetLevelL_.load(), currentLevelL_, peakLevelL_,
-                peakHoldCounterL_);
+                peakHoldCounterL_, velocityL_);
     smoothLevel(targetLevelR_.load(), currentLevelR_, peakLevelR_,
-                peakHoldCounterR_);
+                peakHoldCounterR_, velocityR_);
 
     if (std::abs(currentLevelL_ - targetLevelL_.load()) > 0.001f ||
         std::abs(currentLevelR_ - targetLevelR_.load()) > 0.001f ||
@@ -499,7 +507,7 @@ void MixerChannelComponent::LevelMeter::timerCallback() {
     }
   } else {
     smoothLevel(targetLevel_.load(), currentLevel_, peakLevel_,
-                peakHoldCounter_);
+                peakHoldCounter_, velocity_);
 
     if (std::abs(currentLevel_ - targetLevel_.load()) > 0.001f ||
         peakLevel_ > 0.001f) {
@@ -560,7 +568,7 @@ void MixerChannelComponent::LevelMeter::drawMeterBar(SkCanvas *canvas,
       SkPaint glowPaint;
       glowPaint.setColor(withAlpha(topColor, 0.3f));
       glowPaint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
       glowPaint.setAntiAlias(true);
       canvas->drawRoundRect(meterRect, 1.0f, 1.0f, glowPaint);
     }

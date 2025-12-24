@@ -6,8 +6,9 @@
  */
 
 #include "MainWindow.h"
-#include "utils/SampleGenerator.h"
+#include "mcp/MCPServer.h"
 #include "utils/PlatformSystemUtils.h"
+#include "utils/SampleGenerator.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -17,7 +18,6 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_gui_extra/juce_gui_extra.h>
-
 
 //==============================================================================
 /**
@@ -45,8 +45,12 @@ public:
   //==========================================================================
   //==========================================================================
   void initialise(const juce::String &commandLine) override {
-    // Input validation should be added here for production releases
-    juce::ignoreUnused(commandLine);
+    // Check for MCP server mode
+    if (commandLine.contains("--mcp-server")) {
+      DBG("Zenith DAW starting in MCP server mode...");
+      runMCPServer();
+      return;
+    }
 
     // Log startup
     DBG("Zenith DAW starting...");
@@ -65,42 +69,83 @@ public:
     DBG("Zenith DAW initialized successfully!");
   }
 
+  /**
+   * @brief Run as a headless MCP server
+   *
+   * This mode allows AI models (Claude, Gemini, etc.) to control the DAW
+   * via the Model Context Protocol over stdin/stdout.
+   */
+  void runMCPServer() {
+    // Create engine and project state for headless mode
+    engine = std::make_unique<zenith::Engine>();
+    projectState = std::make_unique<zenith::ProjectState>();
+
+    // Initialize engine
+    engine->initialize();
+    engine->setProjectState(projectState.get());
+
+    // Create CommandAPI
+    commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
+
+    // Create and run MCP server
+    mcpServer = std::make_unique<zenith::mcp::MCPServer>(
+        *commandAPI, *projectState, *engine);
+
+    // Set callback to quit when server stops (EOF)
+    mcpServer->onStop = [this]() {
+      DBG("MCP Server stopped (EOF). Quitting...");
+      quit();
+    };
+
+    DBG("MCP Server ready - listening on stdin");
+    mcpServer->startBackground();
+
+    // Do NOT quit here. Return to let message loop run.
+  }
+
   void shutdown() override {
     DBG("Zenith DAW shutting down...");
+
+    if (mcpServer) {
+      mcpServer->stop();
+      mcpServer.reset();
+    }
 
     // Close main window (releases all resources)
     mainWindow.reset();
 
+    commandAPI.reset();
+    engine.reset();
+    projectState.reset();
+
     DBG("Zenith DAW shutdown complete.");
   }
 
-  //==========================================================================
+  // ... (systemRequestedQuit implementation remains same) ...
   void systemRequestedQuit() override {
+    if (mcpServer) {
+      // If headless, just quit
+      quit();
+      return;
+    }
+
     if (mainWindow != nullptr) {
-      auto *projectState = mainWindow->getProjectState();
-      if (projectState != nullptr && projectState->hasUnsavedChanges()) {
+      auto *ps = mainWindow->getProjectState();
+      if (ps != nullptr && ps->hasUnsavedChanges()) {
         int result = juce::NativeMessageBox::showYesNoCancelBox(
             juce::AlertWindow::WarningIcon, "Unsaved Changes",
             "You have unsaved changes. Do you want to save before quitting?",
             mainWindow.get(), nullptr);
 
-        // JUCE NativeMessageBox return values:
-        // 1 = Yes, 2 = No, 0 = Cancel
         const int RESULT_YES = 1;
         const int RESULT_NO = 2;
-        const int RESULT_CANCEL = 0;
 
-        if (result == RESULT_YES) // Yes
-        {
-          // Save and quit
+        if (result == RESULT_YES) {
           mainWindow->saveProject();
           quit();
-        } else if (result == RESULT_NO) // No
-        {
-          // User explicitly consented to data loss (discard changes).
+        } else if (result == RESULT_NO) {
           quit();
         }
-        // Cancel (result == RESULT_CANCEL) -> do nothing
       } else {
         quit();
       }
@@ -115,6 +160,10 @@ public:
 
 private:
   //==========================================================================
+  std::unique_ptr<zenith::Engine> engine;
+  std::unique_ptr<zenith::ProjectState> projectState;
+  std::unique_ptr<zenith::CommandAPI> commandAPI;
+  std::unique_ptr<zenith::mcp::MCPServer> mcpServer;
   std::unique_ptr<MainWindow> mainWindow;
 };
 

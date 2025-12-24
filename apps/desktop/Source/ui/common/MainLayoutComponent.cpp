@@ -14,13 +14,13 @@
 #include "../../engine/PluginHost.h"
 #include "../../instruments/InstrumentRegistry.h"
 #include "../arranger/ArrangerComponent.h"
-#include "../browser/BrowserPanel.h"
 #include "../design-system/ZenithDesignSystem.h"
 #include "../framework/GlassmorphicPanel.h"
 #include "../framework/LayoutManager.h"
 #include "../framework/SkiaMainWindowIntegration.h"
+#include "../panels/BrowserPanel.h"
 #include "../sample-editor/SampleEditorComponent.h"
-#include "../session/SessionViewComponent.h"
+#include "../views/SessionViewComponent.h"
 #include "RemoteCursorOverlay.h"
 #include "ResizablePanelContainer.h"
 
@@ -152,9 +152,9 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   browserCfg.id = "browser";
   browserCfg.type = "browser"; // Important for save/load
   browserCfg.name = "Browser";
-  browserCfg.initialSize = 300;
-  browserCfg.minSize = 200;
-  browserCfg.flex = 0; // Fixed size
+  browserCfg.initialSize = 304; // 8px grid (304 / 8 = 38)
+  browserCfg.minSize = 200;     // 8px grid (200 / 8 = 25)
+  browserCfg.flex = 0;          // Fixed size
   browserCfg.isCollapsible = true;
 
   panelContainer_->addPanel(std::move(browser), browserCfg);
@@ -199,9 +199,9 @@ MainLayoutComponent::MainLayoutComponent(Engine &engine, ProjectState &state)
   editorCfg.id = "sample_editor";
   editorCfg.type = "sample_editor"; // Important
   editorCfg.name = "Sample Editor";
-  editorCfg.initialSize = 250;
-  editorCfg.minSize = 150;
-  editorCfg.flex = 0; // Fixed height
+  editorCfg.initialSize = 248; // 8px grid (248 / 8 = 31)
+  editorCfg.minSize = 152;     // 8px grid (152 / 8 = 19)
+  editorCfg.flex = 0;          // Fixed height
   editorCfg.isCollapsible = true;
   editorCfg.isCollapsed = true;
 

@@ -69,16 +69,10 @@ set(ZENITH_SOURCES
     apps/desktop/Source/utils/SampleGenerator.cpp
 )
 
-# Test sources (optional, can be disabled)
-set(ZENITH_TEST_SOURCES
-    apps/desktop/Source/tests/TestMain.cpp
-    apps/desktop/Source/tests/AudioEngineTests.cpp
-    apps/desktop/Source/tests/ProjectStateTests.cpp
-    apps/desktop/Source/tests/EngineTests.cpp
-    apps/desktop/Source/tests/ConcurrencyTests.cpp
-    apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/UITests.cpp
+# Shared Sources (Engine, AI, Platform)
+set(ZENITH_CORE_SOURCES
     apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+
     
     # Engine sources required for linking
     apps/desktop/Source/engine/Engine.cpp
@@ -109,17 +103,103 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/MIDITrack.cpp
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
+    apps/desktop/Source/engine/EngineExport.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
     apps/desktop/Source/engine/TrackStateManager.cpp
     apps/desktop/Source/engine/AutomationManager.cpp
     apps/desktop/Source/engine/PluginChain.cpp
     apps/desktop/Source/engine/RecentProjectManager.cpp
-    apps/desktop/Source/engine/ProjectFileIO.cpp
     apps/desktop/Source/engine/ProjectEngineBridge.cpp
+    apps/desktop/Source/plugins/InternalPluginFormat.cpp
     apps/desktop/Source/ui/common/PluginEditorWindow.cpp
-    # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
-    # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    
+    # Command API sources moved to ZENITH_APP_SOURCES
+    
+    # Additional sources required for linking
+    apps/desktop/Source/engine/InstrumentTrack.cpp
+    apps/desktop/Source/engine/EngineTrackManagement.cpp
+    apps/desktop/Source/engine/EngineRecording.cpp
+    apps/desktop/Source/engine/EngineMixing.cpp
+    apps/desktop/Source/engine/EngineTransport.cpp
+    apps/desktop/Source/ai/AIMasteringAgent.cpp
+    apps/desktop/Source/effects/ConsoleEmulation.cpp
+    apps/desktop/Source/plugins/modulation/ZenithTremolo.cpp
+    apps/desktop/Source/effects/ZenithChannelStrip.cpp
+    apps/desktop/Source/effects/ZenithDeEsser.cpp
+    apps/desktop/Source/effects/ZenithTransientShaper.cpp
+    apps/desktop/Source/effects/ZenithVoiceChanger.cpp
+    apps/desktop/Source/plugins/ZenithPlugin.cpp
+    apps/desktop/Source/plugins/ZenithPluginEditor.cpp
+    apps/desktop/Source/dsp/DSPVoiceChanger.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/ai/AIStatusManager.cpp
+    apps/desktop/Source/ai/AIEventBus.cpp
+    apps/desktop/Source/ai/AIResponseCache.cpp
+    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
+    apps/desktop/Source/ai/AudioFitnessEvaluator.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+    apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ui/design-system/ZenithLookAndFeel.cpp
+    apps/desktop/Source/ui/panels/PresetBrowserComponent.cpp
+    apps/desktop/Source/ui/framework/SkiaComponent.cpp
+    apps/desktop/Source/ui/design-system/ZenithTheme.cpp
+    apps/desktop/Source/ui/design-system/ZenithDesignSystem.cpp
+    apps/desktop/Source/ui/design-system/FontManager.cpp
+    apps/desktop/Source/rendering/SkiaRenderer.cpp
+    apps/desktop/Source/ui/visualization/ZenithVisualizer.cpp
+    apps/desktop/Source/ui/controls/ZenithControl.cpp
+    apps/desktop/Source/ui/controls/ZenithKnob.cpp
+    apps/desktop/Source/ui/controls/ZenithButton.cpp
+    apps/desktop/Source/ui/controls/SkiaButton.cpp
+    apps/desktop/Source/ui/controls/SkiaComboBox.cpp
+    apps/desktop/Source/ui/controls/SkiaLabel.cpp
+    apps/desktop/Source/ui/controls/SkiaListBox.cpp
+    apps/desktop/Source/ui/controls/ZenithSlider.cpp
+    apps/desktop/Source/ui/controls/ZenithToggle.cpp
+    apps/desktop/Source/engine/ProjectFileIO.cpp
+    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+)
+
+set(ZENITH_APP_SOURCES
+    apps/desktop/Source/commands/CommandAPI.cpp
+    apps/desktop/Source/commands/SessionGraph.cpp
+    apps/desktop/Source/commands/TrackCommands.cpp
+    apps/desktop/Source/commands/ClipCommands.cpp
+    apps/desktop/Source/commands/TransportCommands.cpp
+    apps/desktop/Source/dsp/ONNXStemSeparator.cpp
+    apps/desktop/Source/ai/UXDirectorAgent.cpp
+)
+
+set(ZENITH_SOURCES 
+    apps/desktop/Source/Main.cpp
+    apps/desktop/Source/utils/SampleGenerator.cpp
+    ${ZENITH_CORE_SOURCES}
+    ${ZENITH_APP_SOURCES}
+)
+
+set(ZENITH_TEST_SOURCES
+    apps/desktop/Source/tests/TestMain.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/tests/HeadlessEngineTests.cpp
+    external/JUCE/modules/juce_graphics/unicode/sheenbidi/Source/SheenBidi.c
+    ${ZENITH_CORE_SOURCES}
 )
 
 # Create main executable
@@ -150,6 +230,18 @@ add_subdirectory(apps/desktop/Source/rendering)
 add_subdirectory(apps/desktop/Source/dsp)
 add_subdirectory(apps/desktop/Source/browser)
 add_subdirectory(apps/desktop/Source/ai)
+add_subdirectory(apps/desktop/Source/effects)
+add_subdirectory(apps/desktop/Source/plugins)
+add_subdirectory(apps/desktop/Source/mcp)
+
+# Platform Integration
+if(WIN32)
+    add_subdirectory(windows/master)
+elseif(APPLE)
+    add_subdirectory(mac/master)
+elseif(UNIX AND NOT APPLE)
+    add_subdirectory(linux/master)
+endif()
 
 
 # Include directories (updated for new domain-based structure)
@@ -167,6 +259,9 @@ target_include_directories(ZenithDAW PUBLIC
     apps/desktop/Source/ui/transport
     apps/desktop/Source/ui/common
     apps/desktop/Source/ui/widgets
+    apps/desktop/Source/ui/controls
+    apps/desktop/Source/ui/panels
+    apps/desktop/Source/ui/views
     apps/desktop/Source/ui/session
     apps/desktop/Source/ui/instruments
     apps/desktop/Source/ui/dialogs
@@ -196,23 +291,32 @@ target_link_libraries(ZenithDAW PRIVATE
     juce::juce_audio_utils
     juce::juce_dsp
     juce::juce_opengl
+    juce::juce_gui_extra
+    juce::juce_gui_basics
 )
 
 # Audio Driver Configuration
 include(apps/desktop/cmake/AudioDrivers.cmake)
 
 if(UNIX AND NOT APPLE)
-    target_link_libraries(ZenithDAW PRIVATE
-        alsa_driver
-        jack_driver
-        pulse_driver
-    )
+    if(TARGET alsa_driver)
+        target_link_libraries(ZenithDAW PRIVATE alsa_driver)
+        target_compile_definitions(ZenithDAW PRIVATE JUCE_ALSA=1)
+    endif()
     
-    target_compile_definitions(ZenithDAW PRIVATE
-        JUCE_ALSA=1
-        JUCE_JACK=1
-        JUCE_PULSEAUDIO=1
-    )
+    if(TARGET jack_driver)
+        target_link_libraries(ZenithDAW PRIVATE jack_driver)
+        target_compile_definitions(ZenithDAW PRIVATE JUCE_JACK=1)
+    else()
+        target_compile_definitions(ZenithDAW PRIVATE JUCE_JACK=0)
+    endif()
+    
+    if(TARGET pulse_driver)
+        target_link_libraries(ZenithDAW PRIVATE pulse_driver)
+        target_compile_definitions(ZenithDAW PRIVATE JUCE_PULSEAUDIO=1)
+    else()
+        target_compile_definitions(ZenithDAW PRIVATE JUCE_PULSEAUDIO=0)
+    endif()
 endif()
 
 # Platform-specific libraries for Graphics Backends
@@ -227,7 +331,7 @@ elseif(UNIX AND NOT APPLE)
         target_link_libraries(ZenithDAW PRIVATE Vulkan::Vulkan)
     else()
         message(STATUS "Vulkan not found - Skia Vulkan backend might fail at runtime")
-        target_link_libraries(ZenithDAW PRIVATE vulkan) # Try explicit link
+        # target_link_libraries(ZenithDAW PRIVATE vulkan) # Removed: causes link error if not on system
     endif()
     
     # Linux-specific libraries for Skia FontConfig and X11 UI
@@ -383,14 +487,31 @@ if(BUILD_TESTS)
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
         apps/desktop/Source/engine
+        apps/desktop/Source/plugins
+        apps/desktop/Source/instruments
         apps/desktop/Source/ui
         apps/desktop/Source/ui/common
+        apps/desktop/Source/ui/instruments
+        apps/desktop/Source/ui/design-system
+        apps/desktop/Source/ui/browser
+        apps/desktop/Source/ui/framework
+        apps/desktop/Source/dsp
+        apps/desktop/Source/effects
+        apps/desktop/Source/ai
+        apps/desktop/Source/network
+        apps/desktop/Source/utils
+        apps/desktop/Source/ui/widgets
+        apps/desktop/Source/ui/arranger
+        apps/desktop/Source/ui/mixer
+        apps/desktop/Source/ui/piano-roll
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     target_link_libraries(ZenithDAWTests PRIVATE
         juce::juce_core
+        juce::juce_cryptography
+        juce::juce_events
         juce::juce_data_structures
         juce::juce_audio_basics
         juce::juce_audio_devices
@@ -400,10 +521,29 @@ if(BUILD_TESTS)
         juce::juce_dsp
         juce::juce_graphics
         juce::juce_gui_basics
+        juce::juce_gui_extra
+        juce::juce_opengl
+        GL
+        X11
+        dl
+        pthread
     )
     target_compile_definitions(ZenithDAWTests PRIVATE
         JUCE_WEB_BROWSER=0
         JUCE_USE_CURL=0
+        JUCE_GLOBAL_MODULE_SETTINGS_INCLUDED=1
+        JUCE_MODULE_AVAILABLE_juce_core=1
+        JUCE_MODULE_AVAILABLE_juce_data_structures=1
+        JUCE_MODULE_AVAILABLE_juce_events=1
+        JUCE_MODULE_AVAILABLE_juce_audio_basics=1
+        JUCE_MODULE_AVAILABLE_juce_audio_devices=1
+        JUCE_MODULE_AVAILABLE_juce_audio_formats=1
+        JUCE_MODULE_AVAILABLE_juce_audio_processors=1
+        JUCE_MODULE_AVAILABLE_juce_audio_utils=1
+        JUCE_MODULE_AVAILABLE_juce_dsp=1
+        JUCE_MODULE_AVAILABLE_juce_graphics=1
+        JUCE_MODULE_AVAILABLE_juce_gui_basics=1
+        JUCE_MODULE_AVAILABLE_juce_gui_extra=1
     )
 
     target_compile_features(ZenithDAWTests PRIVATE cxx_std_20)
@@ -413,7 +553,65 @@ if(BUILD_TESTS)
         target_link_libraries(ZenithDAWTests PRIVATE ${SKIA_LIBRARY})
         target_compile_definitions(ZenithDAWTests PRIVATE ZENITH_USE_SKIA=1)
     endif()
+
+    # Add Linux platform sources for tests
+    if(UNIX AND NOT APPLE)
+        target_sources(ZenithDAWTests PRIVATE
+            linux/ui/PlatformDisplayUtils_Linux.cpp
+            linux/fonts/PlatformFontUtils_Linux.cpp
+            linux/engine/PlatformAudioUtils_Linux.cpp
+            linux/system/PlatformLogUtils_Linux.cpp
+        )
+        target_include_directories(ZenithDAWTests PRIVATE linux/ui linux/fonts linux/engine linux/system)
+    endif()
 endif()
+
+# Plugin Scanner Subprocess
+juce_add_console_app(PluginScanner
+    PRODUCT_NAME "PluginScanner"
+)
+
+target_sources(PluginScanner PRIVATE apps/desktop/Source/engine/PluginScanner.cpp)
+target_include_directories(PluginScanner PRIVATE 
+    apps/desktop/Source 
+    "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
+)
+target_link_libraries(PluginScanner PRIVATE
+    juce::juce_audio_processors
+    juce::juce_audio_formats
+    juce::juce_gui_basics
+    juce::juce_core
+)
+target_compile_features(PluginScanner PRIVATE cxx_std_20)
+
+target_compile_definitions(PluginScanner PRIVATE
+    JUCE_WEB_BROWSER=0
+    JUCE_USE_CURL=0
+    JUCE_VST3_CAN_REPLACE_VST2=0
+)
+
+if(UNIX AND NOT APPLE)
+    target_include_directories(PluginScanner PRIVATE 
+        ${FONTCONFIG_INCLUDE_DIRS}
+        ${FREETYPE_INCLUDE_DIRS}
+        ${X11_INCLUDE_DIRS}
+    )
+    target_link_libraries(PluginScanner PRIVATE 
+        ${FONTCONFIG_LIBRARIES}
+        ${FREETYPE_LIBRARIES}
+        ${X11_LIBRARIES}
+        pthread
+        dl
+    )
+endif()
+
+# Copy PluginScanner to ZenithDAW output directory
+add_custom_command(TARGET PluginScanner POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    $<TARGET_FILE:PluginScanner>
+    $<TARGET_FILE_DIR:ZenithDAW>/PluginScanner
+    COMMENT "Copying PluginScanner to ZenithDAW binary directory"
+)
 
 # Installation
 install(TARGETS ZenithDAW

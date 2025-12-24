@@ -25,7 +25,10 @@
 #pragma once
 
 #include <atomic>
+#include <map>
+#include <memory>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "../Source/engine/RoutingGraph.h"
@@ -64,14 +67,18 @@ class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ClipStateManager;
   friend class AutomationStateManager;
   friend class ProjectFileIO;
+  friend class CommandAPI;
+  friend class ProjectAction;
+  friend class TrackCommands;
+  friend class ClipCommands;
+  friend class TransportCommands;
 
 public:
-  //==========================================================================
-  // Source of Truth Structure (from Step 1)
-  //==========================================================================
+private:
   juce::ValueTree state;
   juce::UndoManager undoManager;
 
+public:
   // Helper to add a track via state manipulation (as requested in Step 1)
   void addTrack(const juce::String &trackName) {
     juce::ValueTree t(Zenith::IDs::TRACK);
@@ -99,6 +106,14 @@ public:
   static const juce::Identifier ID_MARKER;      // Individual marker
   static const juce::Identifier ID_SECTIONS; // Container for arranger sections
   static const juce::Identifier ID_SECTION;  // Individual arranger section
+
+  // Take Folder identifiers (for multi-take recording and comping)
+  static const juce::Identifier ID_TAKE_FOLDERS; // Container for take folders
+  static const juce::Identifier ID_TAKE_FOLDER;  // Individual take folder
+  static const juce::Identifier ID_TAKES; // Container for takes within folder
+  static const juce::Identifier ID_TAKE;  // Individual take (clip reference)
+  static const juce::Identifier ID_COMP_REGIONS; // Container for comp regions
+  static const juce::Identifier ID_COMP_REGION;  // Individual comp region
 
   static const juce::Identifier PROP_NAME;
   static const juce::Identifier PROP_TEMPO;
@@ -155,6 +170,12 @@ public:
   static const juce::Identifier
       PROP_SELECTED_TRACK_ID; // Currently selected track ID
 
+  // Take Folder properties
+  static const juce::Identifier PROP_TAKE_INDEX; // Index of take in comp region
+  static const juce::Identifier
+      PROP_ACTIVE_TAKE; // Currently auditioned take index
+  static const juce::Identifier PROP_EXPANDED; // Folder expanded state
+
   //==========================================================================
   ProjectState();
   ~ProjectState();
@@ -173,6 +194,8 @@ public:
 
   //==========================================================================
   // ValueTree::Listener overrides
+  //==========================================================================
+  // ValueTree::Listener overrides
   void valueTreePropertyChanged(juce::ValueTree &,
                                 const juce::Identifier &) override {
     isDirty = true;
@@ -185,6 +208,16 @@ public:
     isDirty = true;
   }
   void valueTreeParentChanged(juce::ValueTree &) override { isDirty = true; }
+
+  //==========================================================================
+  // Listener Management
+  //==========================================================================
+  void addListener(juce::ValueTree::Listener *listener) {
+    state.addListener(listener);
+  }
+  void removeListener(juce::ValueTree::Listener *listener) {
+    state.removeListener(listener);
+  }
 
   //==========================================================================
   // Timer callback for autosave
@@ -500,7 +533,6 @@ public:
   // State Access
   //==========================================================================
 
-  juce::ValueTree &getState() { return state; }
   const juce::ValueTree &getState() const { return state; }
 
   //==========================================================================
@@ -516,6 +548,8 @@ public:
 #if JUCE_DEBUG
   void dumpClipStructureToLog() const;
 #endif
+
+  juce::ValueTree &getStateInternal() { return state; }
 
 private:
   //==========================================================================
@@ -540,8 +574,8 @@ private:
   // Member Variables
   //==========================================================================
 
-  // juce::ValueTree state; // Moved to public as per Step 1
-  // juce::UndoManager undoManager; // Moved to public as per Step 1
+  // juce::ValueTree state; // Moved to private above
+  // juce::UndoManager undoManager; // Moved to private above
   std::atomic<int> idCounter{0};
   mutable std::unordered_map<juce::String, juce::ValueTree> trackIdMap_;
   std::atomic<bool> isDirty{false};

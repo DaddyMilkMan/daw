@@ -15,24 +15,27 @@
 */
 
 #pragma once
+#include "SkiaComponent.h"
 
 // Base control class
-#include "widgets/ZenithControl.h"
+#include "controls/ZenithControl.h"
 
 // Core controls
-#include "widgets/ZenithButton.h"
-#include "widgets/ZenithKnob.h"
-#include "widgets/ZenithSlider.h"
-
-// Form controls
-#include "widgets/ZenithDropdown.h"
-#include "widgets/ZenithTextInput.h"
-#include "widgets/ZenithToggle.h"
 
 // Specialized widgets
-#include "widgets/ZenithModMatrix.h"
-#include "widgets/ZenithTooltipOverlay.h"
-#include "widgets/ZenithVisualizer.h"
+#include "controls/ZenithTooltipOverlay.h"
+#include "visualization/ZenithModMatrix.h"
+#include "visualization/ZenithVisualizer.h"
+
+// Form controls
+#include "controls/ZenithDropdown.h"
+#include "controls/ZenithTextInput.h"
+#include "controls/ZenithToggle.h"
+
+// Specialized widgets
+#include "controls/ZenithTooltipOverlay.h"
+#include "visualization/ZenithModMatrix.h"
+#include "visualization/ZenithVisualizer.h"
 
 // Legacy aliases for compatibility
 namespace zenith {

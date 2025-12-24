@@ -17,11 +17,8 @@
 #include "ProjectState.h"
 
 #include "SkiaTheme.h"
-#include <core/SkCanvas.h>
-#include <core/SkFont.h>
-#include <core/SkPaint.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkRRect.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
 

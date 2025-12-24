@@ -10,22 +10,23 @@
 #pragma once
 
 #include "../Source/engine/RecentProjectManager.h"
-#include "SessionViewComponent.h"
+#include "../arranger/ArrangementComponent.h"
+#include "../arranger/ArrangerComponent.h"
+#include "../controls/ZenithKnob.h"
+#include "../mixer/MixerComponent.h"
+#include "../panels/BrowserPanel.h"
+#include "../views/SessionViewComponent.h"
 #include "BottomBar.h"
-#include "BrowserPanel.h"
+#include "ClipSynchronizer.h"
+#include "Engine.h"
+#include "PianoKeyboardViewSkia.h"
+#include "ProjectState.h"
 #include "RightSidePanel.h"
 #include "SkiaButton.h"
 #include "SkiaMainWindowIntegration.h"
-#include "TransportBar.h"
-#include "PianoKeyboardViewSkia.h"
-#include "ArrangementComponent.h"
-#include "ClipSynchronizer.h"
-#include "Engine.h"
-#include "ProjectState.h"
 #include "TrackAutomationSynchronizer.h"
 #include "TrackStateSynchronizer.h"
-#include "../arranger/ArrangerComponent.h"
-#include "../mixer/MixerComponent.h"
+#include "TransportBar.h"
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_audio_devices/juce_audio_devices.h>
 #include <juce_audio_formats/juce_audio_formats.h>
@@ -33,6 +34,8 @@
 #include <juce_audio_utils/juce_audio_utils.h>
 #include <juce_core/juce_core.h>
 #include <juce_data_structures/juce_data_structures.h>
+#include <memory>
+#include <vector>
 
 namespace zenith {
 class InstrumentBrowserPanel;
@@ -41,7 +44,13 @@ class MainLayoutComponent;
 class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
-namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
+namespace mcp {
+class MCPServer;
+}
+namespace ai {
+class UXDirectorAgent;
+class PresetGeneticistAgent;
+} // namespace ai
 } // namespace zenith
 
 //==============================================================================
@@ -64,7 +73,8 @@ namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
  * - Automation display and editing
  */
 class MainComponent : public zenith::SkiaMainWindowIntegration,
-                      public juce::KeyListener {
+                      public juce::KeyListener,
+                      public juce::Timer {
 public:
   //==========================================================================
   // Callback type for project loading
@@ -100,6 +110,7 @@ public:
                   Component *originatingComponent) override;
 
 private:
+  void timerCallback() override;
   // Layout Editing State
   juce::Component *activeDragComponent = nullptr;
   juce::Rectangle<int> dragStartBounds;
@@ -259,6 +270,9 @@ public:
 
   // Recent Project Manager (Pinocchio Protocol)
   std::unique_ptr<zenith::RecentProjectManager> recentProjectManager_;
+
+  // Embedded MCP Server
+  std::unique_ptr<zenith::mcp::MCPServer> mcpServer;
 
   // Main content
   std::unique_ptr<MainComponent> mainComponent;

@@ -27,12 +27,13 @@
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
 
-#include "SkiaButton.h"
+#include "../visualization/SkiaSpectrumComponent.h"
 #include "SkiaComponent.h"
-#include "SkiaKnob.h"
-#include "SkiaSlider.h"
-#include "SkiaSpectrumComponent.h"
-#include "ZenithDesignSystem.h"
+#include "controls/SkiaButton.h"
+#include "controls/SkiaKnob.h"
+#include "controls/SkiaSlider.h"
+#include "design-system/ZenithDesignSystem.h"
+#include "visualization/SkiaSpectrumComponent.h"
 
 namespace zenith {
 class Track;
@@ -161,6 +162,9 @@ private:
     float peakLevel_{0.0f};
     float peakLevelL_{0.0f};
     float peakLevelR_{0.0f};
+    float velocity_{0.0f};
+    float velocityL_{0.0f};
+    float velocityR_{0.0f};
     int peakHoldCounter_{0};
     int peakHoldCounterL_{0};
     int peakHoldCounterR_{0};

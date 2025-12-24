@@ -9,7 +9,6 @@
 // Forward declarations for Skia types
 class SkCanvas;
 class SkImage;
-template <typename T> class sk_sp;
 
 namespace zenith {
 

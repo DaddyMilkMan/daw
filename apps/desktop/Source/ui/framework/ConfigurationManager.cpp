@@ -11,6 +11,7 @@
 */
 
 #include "ConfigurationManager.h"
+#include "PlatformPathUtils.h"
 #include "ZenithDesignSystem.h"
 
 namespace zenith {

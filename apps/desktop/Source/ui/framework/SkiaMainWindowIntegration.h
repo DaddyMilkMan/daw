@@ -4,12 +4,12 @@
 #pragma once
 
 #include <juce_core/juce_core.h>
-#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_graphics/juce_graphics.h>
+#include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_opengl/juce_opengl.h>
 
 #ifdef ZENITH_USE_SKIA
-#include <core/SkCanvas.h>
+#include "ZenithSkia.h"
 #include <core/SkColorSpace.h>
 #include <core/SkRefCnt.h>
 #include <core/SkSurface.h>
@@ -18,6 +18,7 @@
 #include <gpu/ganesh/SkSurfaceGanesh.h>
 #include <gpu/ganesh/gl/GrGLBackendSurface.h>
 #include <gpu/ganesh/gl/GrGLDirectContext.h>
+#include <gpu/ganesh/gl/GrGLInterface.h>
 
 #endif
 
@@ -60,13 +61,14 @@ protected:
   SkCanvas *getSkiaCanvas() { return skiaCanvas_; }
 
   juce::OpenGLContext openGLContext_;
+  sk_sp<const GrGLInterface> interface_;
   sk_sp<GrDirectContext> grContext_;
   sk_sp<SkSurface> surface_;
   SkCanvas *skiaCanvas_ = nullptr;
+  bool contextInitialized_ = false;
 
 private:
   juce::Component *targetComponent_ = nullptr;
-  bool contextInitialized_ = false;
   int lastWidth_ = 0;
   int lastHeight_ = 0;
 
@@ -91,6 +93,23 @@ public:
   SkiaMainWindowIntegration(const SkiaMainWindowIntegration &) = delete;
   SkiaMainWindowIntegration &
   operator=(const SkiaMainWindowIntegration &) = delete;
+};
+
+#else // ZENITH_USE_SKIA
+
+class SkiaOpenGLRenderer {
+public:
+    SkiaOpenGLRenderer(juce::Component*) {}
+    virtual ~SkiaOpenGLRenderer() = default;
+    virtual void drawSkiaContent(SkCanvas*) = 0;
+};
+
+class SkiaMainWindowIntegration : public juce::Component, public SkiaOpenGLRenderer {
+public:
+    SkiaMainWindowIntegration() : SkiaOpenGLRenderer(this) {}
+    virtual ~SkiaMainWindowIntegration() = default;
+    void paint(juce::Graphics& g) override { g.fillAll(juce::Colours::black); }
+    void drawSkiaContent(SkCanvas*) override {}
 };
 
 #endif // ZENITH_USE_SKIA

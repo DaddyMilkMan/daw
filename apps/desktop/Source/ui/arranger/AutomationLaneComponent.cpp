@@ -11,14 +11,10 @@
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
 #include "SkiaTheme.h"
-#include <include/core/SkFont.h>
+#include "ZenithSkia.h"
 #include <include/core/SkImageInfo.h>
-#include <include/core/SkPaint.h>
 #include <include/core/SkPath.h>
-#include <include/core/SkRRect.h>
-#include <include/core/SkRect.h>
 #include <include/core/SkSurface.h>
-#include <include/core/SkTextBlob.h>
 
 #endif
 

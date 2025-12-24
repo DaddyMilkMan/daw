@@ -225,10 +225,10 @@ void AIAssistantPanel::drawRecentOperations(SkCanvas *canvas, float &yOffset) {
     }
 
     juce::String statusIcon =
-        op.status == ai::AIOperationStatus::Success   ? "✓ "
-        : op.status == ai::AIOperationStatus::Warning ? "⚠ "
-        : op.status == ai::AIOperationStatus::Error   ? "✗ "
-                                                      : "○ ";
+        op.status == ai::AIOperationStatus::Success   ? "[OK] "
+        : op.status == ai::AIOperationStatus::Warning ? "[!]  "
+        : op.status == ai::AIOperationStatus::Error   ? "[X]  "
+                                                      : "[o]  ";
 
     juce::String displayText = statusIcon + op.agentName;
     canvas->drawString(displayText.toStdString().c_str(), 16.0f,

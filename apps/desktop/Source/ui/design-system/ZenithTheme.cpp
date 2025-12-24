@@ -5,6 +5,8 @@
  */
 
 #include "ZenithTheme.h"
+#include "../../engine/ZenithLogger.h"
+#include "FontManager.h"
 #include <cmath>
 
 namespace zenith {
@@ -92,19 +94,27 @@ juce::Colour ZenithTheme::Colors::darken(const juce::Colour &color,
 //==============================================================================
 
 juce::Font ZenithTheme::Typography::getFont(float size, Weight weight) {
-  auto fontName = juce::Font::getDefaultSansSerifFontName();
+    // Determine internal weight and family mapping
+    design::FontWeight fw = design::FontWeight::Regular;
+    design::FontFamily ff = design::FontFamily::UI;
 
-  switch (weight) {
-  case Weight::Regular:
+    switch (weight) {
+        case Weight::Regular: fw = design::FontWeight::Regular; break;
+        case Weight::Medium:  fw = design::FontWeight::Medium; break;
+        case Weight::Bold:    fw = design::FontWeight::Bold; break;
+        default: break;
+    }
+
+    // Use FontManager to get the JUCE Typeface (bypassing system lookup)
+    auto typeface = design::FontManager::getInstance().getJuceTypeface(ff, fw);
+
+    if (typeface != nullptr) {
+        return juce::Font(typeface).withHeight(size);
+    }
+
+    // Fallback (should not happen if FontManager initialized correctly)
+    auto fontName = juce::Font::getDefaultSansSerifFontName();
     return juce::Font(fontName, size, juce::Font::plain);
-  case Weight::Medium:
-    return juce::Font(fontName, size, juce::Font::plain)
-        .withExtraKerningFactor(0.05f);
-  case Weight::Bold:
-    return juce::Font(fontName, size, juce::Font::bold);
-  default:
-    return juce::Font(fontName, size, juce::Font::plain);
-  }
 }
 
 juce::Font ZenithTheme::Typography::getTinyFont(Weight weight) {

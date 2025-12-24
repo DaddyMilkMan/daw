@@ -19,13 +19,9 @@
 
 #include "ZenithDesignSystem.h"
 #include "../../Settings.h"
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <core/SkPath.h>
-#include <core/SkFont.h>
 #include <core/SkMaskFilter.h>
-#include <core/SkBlurTypes.h>
 
 namespace zenith {
 
@@ -70,7 +66,7 @@ public:
         glowPaint.setAntiAlias(true);
         glowPaint.setStyle(SkPaint::kFill_Style);
         glowPaint.setColor(withAlpha(color, alpha));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius));
         
         if (cornerRadius > 0.0f) {
             SkRRect rrect = SkRRect::MakeRectXY(bounds, cornerRadius, cornerRadius);
@@ -100,7 +96,7 @@ public:
         outerPaint.setStyle(SkPaint::kStroke_Style);
         outerPaint.setStrokeWidth(strokeWidth + 4.0f);
         outerPaint.setColor(withAlpha(color, alpha * 0.3f));
-        outerPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius * 1.5f));
+        outerPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius * 1.5f));
         
         // Inner glow layer
         SkPaint innerPaint;
@@ -108,7 +104,7 @@ public:
         innerPaint.setStyle(SkPaint::kStroke_Style);
         innerPaint.setStrokeWidth(strokeWidth);
         innerPaint.setColor(withAlpha(color, alpha));
-        innerPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius * 0.5f));
+        innerPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius * 0.5f));
         
         // Core (solid) layer
         SkPaint corePaint;
@@ -154,7 +150,7 @@ public:
         SkPaint glowPaint;
         glowPaint.setAntiAlias(true);
         glowPaint.setColor(withAlpha(color, alpha * 0.6f));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius));
         canvas->drawString(text, x, y, font, glowPaint);
         
         // Main text
@@ -183,7 +179,7 @@ public:
         glowPaint.setStyle(SkPaint::kStroke_Style);
         glowPaint.setStrokeWidth(3.0f);
         glowPaint.setColor(withAlpha(color, alpha * 0.5f));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius));
         canvas->drawCircle(center.x(), center.y(), radius, glowPaint);
         
         // Inner ring
@@ -208,7 +204,7 @@ public:
         
         // Pulse between Subtle and Strong
         float pulseIntensity = 0.3f + 0.7f * animProgress;
-        float blurRadius = effects::GLOW_MEDIUM * pulseIntensity * globalGlow;
+        float blurRadius = glow::GLOW_MEDIUM * pulseIntensity * globalGlow;
         float alpha = 0.2f + 0.4f * pulseIntensity * globalGlow;
         
         SkPaint glowPaint;
@@ -216,7 +212,7 @@ public:
         glowPaint.setStyle(SkPaint::kStroke_Style);
         glowPaint.setStrokeWidth(2.0f + pulseIntensity * 2.0f);
         glowPaint.setColor(withAlpha(color, alpha));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius));
         
         if (cornerRadius > 0.0f) {
             SkRRect rrect = SkRRect::MakeRectXY(bounds, cornerRadius, cornerRadius);
@@ -266,11 +262,11 @@ public:
                                             8.0f, bounds.height());
             }
             
-            float blurRadius = effects::GLOW_MEDIUM * globalGlow;
+            float blurRadius = glow::GLOW_MEDIUM * globalGlow;
             SkPaint glowPaint;
             glowPaint.setAntiAlias(true);
             glowPaint.setColor(withAlpha(peakColor, 0.6f * globalGlow));
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, blurRadius));
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, blurRadius));
             canvas->drawRect(peakRect, glowPaint);
         }
     }
@@ -290,8 +286,8 @@ public:
             glowPaint.setAntiAlias(true);
             glowPaint.setStrokeWidth(4.0f);
             glowPaint.setColor(withAlpha(color, 0.3f * globalGlow));
-            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 
-                                                           effects::GLOW_MEDIUM * globalGlow));
+            glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 
+                                                           glow::GLOW_MEDIUM * globalGlow));
             canvas->drawLine(x, top, x, bottom, glowPaint);
         }
         
@@ -314,23 +310,23 @@ private:
     static float getBlurRadius(Intensity intensity) {
         using namespace design;
         switch (intensity) {
-            case Intensity::Subtle:  return effects::GLOW_SUBTLE;
-            case Intensity::Medium:  return effects::GLOW_MEDIUM;
-            case Intensity::Strong:  return effects::GLOW_STRONG;
-            case Intensity::Intense: return effects::GLOW_INTENSE;
+            case Intensity::Subtle:  return glow::GLOW_SUBTLE;
+            case Intensity::Medium:  return glow::GLOW_MEDIUM;
+            case Intensity::Strong:  return glow::GLOW_STRONG;
+            case Intensity::Intense: return glow::GLOW_INTENSE;
         }
-        return effects::GLOW_MEDIUM;
+        return glow::GLOW_MEDIUM;
     }
     
     static float getAlpha(Intensity intensity) {
         using namespace design;
         switch (intensity) {
-            case Intensity::Subtle:  return effects::OPACITY_SUBTLE;
-            case Intensity::Medium:  return effects::OPACITY_MEDIUM;
-            case Intensity::Strong:  return effects::OPACITY_STRONG;
-            case Intensity::Intense: return effects::OPACITY_INTENSE;
+            case Intensity::Subtle:  return glow::OPACITY_SUBTLE;
+            case Intensity::Medium:  return glow::OPACITY_MEDIUM;
+            case Intensity::Strong:  return glow::OPACITY_STRONG;
+            case Intensity::Intense: return glow::OPACITY_INTENSE;
         }
-        return effects::OPACITY_MEDIUM;
+        return glow::OPACITY_MEDIUM;
     }
     
     NeonGlow() = delete;  // Static-only class

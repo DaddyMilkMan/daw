@@ -1,9 +1,7 @@
 #include "DrumPadComponent.h"
 #include "ZenithDesignSystem.h"
 #include "Engine.h"
-#include <core/SkCanvas.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
+#include "ZenithSkia.h"
 #include <effects/SkGradientShader.h>
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <utils/SkShadowUtils.h>
@@ -203,7 +201,7 @@ void DrumPadComponent::drawSkia(SkCanvas *canvas) {
     // Add glow if flashed
     if (pad.flashLevel > 0.1f) {
       paint.setMaskFilter(
-          SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 10.0f * pad.flashLevel));
+          SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 10.0f * pad.flashLevel));
       canvas->drawRoundRect(padRect, 8.0f, 8.0f, paint);
       paint.setMaskFilter(nullptr); // clear filter
     }

@@ -1,0 +1,555 @@
+/*
+  ==============================================================================
+
+    ZenithButton.cpp
+    Created: 2025-12-12
+    Author:  Zenith DAW
+
+    Implementation of the premium Zenith button.
+
+  ==============================================================================
+*/
+
+#include "ZenithButton.h"
+
+#ifdef ZENITH_USE_SKIA
+#include "../design-system/ZenithDesignSystem.h" // Add design system include
+#include "ZenithSkia.h"
+#include <core/SkMaskFilter.h>
+#include <effects/SkGradientShader.h>
+
+#endif
+
+namespace zenith {
+
+ZenithButton::ZenithButton() : text_(""), iconText_("") {
+  setWantsKeyboardFocus(true);
+
+  vBlankAttachment_ = std::make_unique<juce::VBlankAttachment>(this, [this] {
+    bool needsRepaint = false;
+
+    if (!scaleSpring_.isResting()) {
+      scaleSpring_.update();
+      needsRepaint = true;
+    }
+
+    if (!glowSpring_.isResting()) {
+      glowSpring_.update();
+      needsRepaint = true;
+    }
+
+    if (needsRepaint) {
+      markDirty();
+    }
+  });
+}
+
+ZenithButton::ZenithButton(const juce::String &text,
+                           std::function<void()> clickHandler)
+    : text_(text), iconText_(""), onClick(clickHandler) {
+  setWantsKeyboardFocus(true);
+
+  vBlankAttachment_ = std::make_unique<juce::VBlankAttachment>(this, [this] {
+    bool needsRepaint = false;
+
+    if (!scaleSpring_.isResting()) {
+      scaleSpring_.update();
+      needsRepaint = true;
+    }
+
+    if (!glowSpring_.isResting()) {
+      glowSpring_.update();
+      needsRepaint = true;
+    }
+
+    if (needsRepaint) {
+      markDirty();
+    }
+  });
+}
+
+ZenithButton::~ZenithButton() = default;
+
+void ZenithButton::setButtonText(const juce::String &text) {
+  if (text_ != text) {
+    text_ = text;
+    textDirty_ = true;
+    layoutDirty_ = true;
+    repaint();
+  }
+}
+
+void ZenithButton::setButtonStyle(Style style) {
+  if (style_ != style) {
+    style_ = style;
+    repaint();
+  }
+}
+
+void ZenithButton::setButtonSize(Size size) {
+  if (size_ != size) {
+    size_ = size;
+    layoutDirty_ = true;
+    textDirty_ = true;
+    repaint();
+  }
+}
+
+#ifdef ZENITH_USE_SKIA
+void ZenithButton::setIcon(sk_sp<SkImage> icon) {
+  icon_ = icon;
+  layoutDirty_ = true;
+  repaint();
+}
+#endif
+
+void ZenithButton::setIconText(const juce::String &iconText) {
+  iconText_ = iconText;
+  layoutDirty_ = true;
+  repaint();
+}
+
+void ZenithButton::setIconPosition(IconPosition pos) {
+  if (iconPosition_ != pos) {
+    iconPosition_ = pos;
+    layoutDirty_ = true;
+    repaint();
+  }
+}
+
+void ZenithButton::setToggleable(bool toggleable) { toggleable_ = toggleable; }
+
+void ZenithButton::setToggleState(bool state, bool sendNotification) {
+  if (toggleState_ != state) {
+    toggleState_ = state;
+    repaint();
+
+    if (sendNotification && onToggle) {
+      onToggle(toggleState_);
+    }
+  }
+}
+
+void ZenithButton::setAudioReactive(bool reactive) {
+  audioReactive_ = reactive;
+}
+
+void ZenithButton::setAudioLevel(float level) {
+  audioLevel_ = juce::jlimit(0.0f, 1.0f, level);
+  if (audioReactive_) {
+    repaint();
+  }
+}
+
+void ZenithButton::setEnabled(bool enabled) {
+  if (isEnabled() != enabled) {
+    juce::Component::setEnabled(enabled);
+    repaint();
+  }
+}
+
+void ZenithButton::mouseEnter(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  hovered_ = true;
+  scaleSpring_.setTarget(1.02f);
+  glowSpring_.setTarget(0.5f);
+  markDirty();
+}
+
+void ZenithButton::mouseExit(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  hovered_ = false;
+  scaleSpring_.setTarget(1.0f);
+  glowSpring_.setTarget(0.0f);
+  markDirty();
+}
+
+void ZenithButton::mouseDown(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+  if (!isEnabled())
+    return;
+
+  pressed_ = true;
+  scaleSpring_.setTarget(0.95f);
+  glowSpring_.setTarget(1.0f);
+  markDirty();
+}
+
+void ZenithButton::mouseUp(const juce::MouseEvent &e) {
+  juce::ignoreUnused(e);
+
+  if (pressed_) {
+    pressed_ = false;
+    scaleSpring_.setTarget(hovered_ ? 1.02f : 1.0f);
+    glowSpring_.setTarget(hovered_ ? 0.5f : 0.0f);
+
+    if (isEnabled() && contains(e.position.toInt())) {
+      if (toggleable_) {
+        setToggleState(!toggleState_, true);
+      }
+
+      if (onClick) {
+        onClick();
+      }
+    }
+
+    markDirty();
+  }
+}
+
+void ZenithButton::focusGained(juce::Component::FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  focused_ = true;
+  repaint();
+}
+
+void ZenithButton::focusLost(juce::Component::FocusChangeType cause) {
+  juce::ignoreUnused(cause);
+  focused_ = false;
+  repaint();
+}
+
+void ZenithButton::resized() { layoutDirty_ = true; }
+
+float ZenithButton::getButtonHeight() const {
+  switch (size_) {
+  case Size::Small:
+    return 24.0f;
+  case Size::Large:
+    return 40.0f;
+  default:
+    return 32.0f; // Medium
+  }
+}
+
+float ZenithButton::getCornerRadius() const {
+  switch (size_) {
+  case Size::Small:
+    return 4.0f;
+  case Size::Large:
+    return 8.0f;
+  default:
+    return 6.0f; // Medium
+  }
+}
+
+float ZenithButton::getFontSize() const {
+  switch (size_) {
+  case Size::Small:
+    return 11.0f;
+  case Size::Large:
+    return 15.0f;
+  default:
+    return 13.0f; // Medium
+  }
+}
+
+void ZenithButton::drawSkia(SkCanvas *canvas) {
+#ifdef ZENITH_USE_SKIA
+  if (canvas == nullptr)
+    return;
+
+  auto bounds = getLocalBounds().toFloat();
+  SkRect rect = SkRect::MakeWH(bounds.getWidth(), bounds.getHeight());
+
+  // Apply scale animation from center
+  float currentScale = scaleSpring_.getCurrent();
+  canvas->save();
+  canvas->translate(rect.centerX(), rect.centerY());
+  canvas->scale(currentScale, currentScale);
+  canvas->translate(-rect.centerX(), -rect.centerY());
+
+  SkRRect rrect =
+      SkRRect::MakeRectXY(rect, getCornerRadius(), getCornerRadius());
+
+  // Draw layers
+  if (hovered_ || pressed_ || (toggleable_ && toggleState_) ||
+      !glowSpring_.isResting()) {
+    drawGlow(canvas, rrect);
+  }
+
+  drawBackground(canvas, rrect);
+  drawBorder(canvas, rrect);
+
+  // Focus ring
+  if (focused_) {
+    SkPaint focusPaint;
+    focusPaint.setAntiAlias(true);
+    focusPaint.setStyle(SkPaint::kStroke_Style);
+    focusPaint.setStrokeWidth(2.0f);
+    focusPaint.setColor(SkColorSetARGB(150, 0, 200, 255));
+
+    SkRRect focusRect = rrect;
+    focusRect.outset(2.0f, 2.0f);
+    canvas->drawRRect(focusRect, focusPaint);
+  }
+
+  // Layout content
+  if (layoutDirty_) {
+    calculateLayout();
+  }
+
+  // Draw icon
+  if (iconPosition_ != IconPosition::Only || iconText_.isNotEmpty()
+#ifdef ZENITH_USE_SKIA
+      || icon_ != nullptr
+#endif
+  ) {
+    drawIcon(canvas, iconRect_);
+  }
+
+  // Draw text (if not icon-only)
+  if (iconPosition_ != IconPosition::Only && text_.isNotEmpty()) {
+    drawText(canvas, textRect_);
+  }
+
+  canvas->restore(); // Restore scale transform
+#else
+  juce::ignoreUnused(canvas);
+#endif
+}
+
+#ifdef ZENITH_USE_SKIA
+
+SkColor ZenithButton::getBackgroundColor() const {
+  SkColor base;
+  uint8_t alpha = pressed_ ? 200 : (hovered_ ? 180 : 150);
+
+  switch (style_) {
+  case Style::Primary:
+    base = design::colors::CYAN;
+    break;
+  case Style::Danger:
+    base = design::colors::RED;
+    break;
+  case Style::Warning:
+    base = design::colors::AMBER;
+    break;
+  case Style::Success:
+    base = design::colors::GREEN;
+    break;
+  case Style::Ghost:
+    base = hovered_ ? design::lighten(design::colors::BG_DARK, 0.1f)
+                    : SK_ColorTRANSPARENT;
+    alpha = hovered_ ? 100 : 0;
+    break;
+  case Style::Secondary:
+  default:
+    base = design::colors::BG_DARK;
+    break;
+  }
+
+  if (toggleable_ && toggleState_) {
+    base = getGlowColor();
+    alpha = 200;
+  }
+
+  if (!isEnabled()) {
+    alpha = 80;
+  }
+
+  return SkColorSetA(base, alpha);
+}
+
+SkColor ZenithButton::getTextColor() const {
+  if (!isEnabled()) {
+    return design::withAlpha(design::colors::TEXT_PRIMARY, 0.4f);
+  }
+
+  return design::colors::TEXT_PRIMARY;
+}
+
+SkColor ZenithButton::getBorderColor() const {
+  if (style_ == Style::Ghost) {
+    return hovered_ ? design::withAlpha(design::colors::BORDER_DEFAULT, 0.6f)
+                    : design::withAlpha(design::colors::BORDER_DEFAULT, 0.3f);
+  }
+  return design::colors::BORDER_DEFAULT;
+}
+
+SkColor ZenithButton::getGlowColor() const {
+  switch (style_) {
+  case Style::Primary:
+    return design::colors::CYAN;
+  case Style::Danger:
+    return design::colors::RED;
+  case Style::Warning:
+    return design::colors::AMBER;
+  case Style::Success:
+    return design::colors::GREEN;
+  case Style::Ghost:
+    return design::colors::VIOLET;
+  case Style::Secondary:
+  default:
+    return design::colors::VIOLET;
+  }
+}
+
+void ZenithButton::drawGlow(SkCanvas *canvas, const SkRRect &bounds) {
+  SkPaint glowPaint;
+  glowPaint.setAntiAlias(true);
+  glowPaint.setStyle(SkPaint::kStroke_Style);
+  glowPaint.setStrokeWidth(2.0f);
+
+  SkColor glowColor = getGlowColor();
+  float glowIntensity = (pressed_ ? 8.0f : 6.0f) * glowSpring_.getCurrent();
+
+  if (audioReactive_) {
+    glowIntensity *= (0.5f + audioLevel_ * 0.5f);
+  }
+
+  glowPaint.setColor(design::withAlpha(glowColor, 0.6f));
+  glowPaint.setMaskFilter(
+      SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, glowIntensity));
+  canvas->drawRRect(bounds, glowPaint);
+}
+
+void ZenithButton::drawBackground(SkCanvas *canvas, const SkRRect &bounds) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kFill_Style);
+
+  // Gradient background
+  auto rect = bounds.getBounds();
+  SkPoint pts[2] = {{0, rect.top()}, {0, rect.bottom()}};
+
+  SkColor bgColor = getBackgroundColor();
+  SkColor colors[2] = {SkColorSetA(bgColor, hovered_ ? 200 : 150),
+                       SkColorSetA(bgColor, hovered_ ? 150 : 100)};
+
+  paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
+                                               SkTileMode::kClamp));
+  canvas->drawRRect(bounds, paint);
+}
+
+void ZenithButton::drawBorder(SkCanvas *canvas, const SkRRect &bounds) {
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kStroke_Style);
+  paint.setStrokeWidth(1.0f);
+
+  // Gradient border (top-left light, bottom-right dark)
+  auto rect = bounds.getBounds();
+  SkPoint pts[2] = {{0, 0}, {rect.width(), rect.height()}};
+  SkColor colors[2] = {SkColorSetARGB(100, 255, 255, 255),
+                       SkColorSetARGB(50, 0, 0, 0)};
+
+  paint.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
+                                               SkTileMode::kClamp));
+  canvas->drawRRect(bounds, paint);
+}
+
+void ZenithButton::drawIcon(SkCanvas *canvas, const SkRect &rect) {
+  if (iconText_.isNotEmpty()) {
+    // Use design system font
+    SkFont font =
+        design::getSkFont(getFontSize() + 2.0f, design::FontWeight::Bold);
+
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    paint.setColor(getTextColor());
+
+    std::string str = iconText_.toStdString();
+    float textWidth =
+        font.measureText(str.c_str(), str.length(), SkTextEncoding::kUTF8);
+
+    canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+                           rect.centerX() - textWidth / 2,
+                           rect.centerY() + getFontSize() * 0.35f, font, paint);
+  } else if (icon_ != nullptr) {
+    SkPaint paint;
+    paint.setAntiAlias(true);
+    if (!isEnabled()) {
+      paint.setAlpha(100);
+    }
+
+    // Scale icon to fit rect
+    float scale = std::min(rect.width() / icon_->width(),
+                           rect.height() / icon_->height());
+    float drawWidth = icon_->width() * scale;
+    float drawHeight = icon_->height() * scale;
+
+    SkRect destRect = SkRect::MakeXYWH(rect.centerX() - drawWidth / 2,
+                                       rect.centerY() - drawHeight / 2,
+                                       drawWidth, drawHeight);
+
+    canvas->drawImageRect(icon_, destRect, SkSamplingOptions(), &paint);
+  }
+}
+
+void ZenithButton::drawText(SkCanvas *canvas, const SkRect &rect) {
+  if (text_.isEmpty())
+    return;
+
+  // Use design system font
+  SkFont font = design::getSkFont(getFontSize(), design::FontWeight::Medium);
+
+  std::string str = text_.toStdString();
+  float textWidth =
+      font.measureText(str.c_str(), str.length(), SkTextEncoding::kUTF8);
+
+  // Text shadow
+  SkPaint shadowPaint;
+  shadowPaint.setAntiAlias(true);
+  shadowPaint.setColor(SkColorSetARGB(100, 0, 0, 0));
+
+  float textX = rect.centerX() - textWidth / 2;
+  float textY = rect.centerY() + getFontSize() * 0.35f;
+
+  canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+                         textX + 1, textY + 1, font, shadowPaint);
+
+  // Text foreground
+  SkPaint textPaint;
+  textPaint.setAntiAlias(true);
+  textPaint.setColor(getTextColor());
+
+  canvas->drawSimpleText(str.c_str(), str.length(), SkTextEncoding::kUTF8,
+                         textX, textY, font, textPaint);
+}
+
+void ZenithButton::calculateLayout() {
+  auto bounds = getLocalBounds().toFloat();
+  float padding = 12.0f;
+  float iconSize = getFontSize() + 4.0f;
+  float spacing = 6.0f;
+
+  bool hasIcon = iconText_.isNotEmpty() || icon_ != nullptr;
+  bool hasText = text_.isNotEmpty() && iconPosition_ != IconPosition::Only;
+
+  if (hasIcon && hasText) {
+    // Both icon and text
+    if (iconPosition_ == IconPosition::Left) {
+      iconRect_ = SkRect::MakeXYWH(padding, (bounds.getHeight() - iconSize) / 2,
+                                   iconSize, iconSize);
+      textRect_ =
+          SkRect::MakeXYWH(padding + iconSize + spacing, 0,
+                           bounds.getWidth() - padding * 2 - iconSize - spacing,
+                           bounds.getHeight());
+    } else {
+      textRect_ = SkRect::MakeXYWH(
+          padding, 0, bounds.getWidth() - padding * 2 - iconSize - spacing,
+          bounds.getHeight());
+      iconRect_ = SkRect::MakeXYWH(bounds.getWidth() - padding - iconSize,
+                                   (bounds.getHeight() - iconSize) / 2,
+                                   iconSize, iconSize);
+    }
+  } else if (hasIcon) {
+    // Icon only - center it
+    iconRect_ = SkRect::MakeXYWH((bounds.getWidth() - iconSize) / 2,
+                                 (bounds.getHeight() - iconSize) / 2, iconSize,
+                                 iconSize);
+    textRect_ = SkRect::MakeEmpty();
+  } else {
+    // Text only - use full width
+    iconRect_ = SkRect::MakeEmpty();
+    textRect_ = SkRect::MakeXYWH(padding, 0, bounds.getWidth() - padding * 2,
+                                 bounds.getHeight());
+  }
+
+  layoutDirty_ = false;
+}
+
+#endif // ZENITH_USE_SKIA
+
+} // namespace zenith

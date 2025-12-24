@@ -20,13 +20,10 @@ const juce::String SecureKeyStore::GrokAPIKey = "zenith_grok_api_key";
 const juce::String SecureKeyStore::OpenAIAPIKey = "zenith_openai_api_key";
 const juce::String SecureKeyStore::AnthropicAPIKey = "zenith_anthropic_api_key";
 
+#if ! (JUCE_LINUX || JUCE_MAC || JUCE_WINDOWS)
 juce::String SecureKeyStore::getServiceName() {
   return "com.zenithaudio.zenith-daw";
 }
-
-//==============================================================================
-// Public API - Common Implementations
-//==============================================================================
 
 bool SecureKeyStore::hasKey(const juce::String &keyName) {
   juce::String dummy;
@@ -40,5 +37,6 @@ bool SecureKeyStore::clearAllKeys() {
   success &= deleteKey(AnthropicAPIKey);
   return success;
 }
+#endif
 
 } // namespace zenith

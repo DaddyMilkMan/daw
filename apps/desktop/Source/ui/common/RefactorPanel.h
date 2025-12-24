@@ -92,7 +92,7 @@ public:
     // Summary
     if (plan_.isEmpty()) {
       textPaint.setColor(colors::NEON_GREEN);
-      canvas->drawSimpleText("✓ Project is clean - no refactoring needed!", 44,
+      canvas->drawSimpleText("V Project is clean - no refactoring needed!", 44,
                              SkTextEncoding::kUTF8, 20.0f, y, bodyFont,
                              textPaint);
     } else {

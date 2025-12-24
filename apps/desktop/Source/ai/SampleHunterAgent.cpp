@@ -412,7 +412,7 @@ SampleHunterAgent::executeFreesoundSearch(const juce::String &query) {
     sample.license = obj->getProperty("license").toString();
     sample.type = obj->getProperty("type").toString();
     sample.duration = (double)obj->getProperty("duration");
-    sample.fileSize = (int64_t)obj->getProperty("filesize");
+    sample.fileSize = (juce::int64)obj->getProperty("filesize");
     sample.sampleRate = (int)obj->getProperty("samplerate");
     sample.bitDepth = (int)obj->getProperty("bitdepth");
 

@@ -5,65 +5,142 @@
 
 #pragma once
 
+#include "Actions.h"
 #include "Engine.h"
 #include "ProjectState.h"
 #include <functional>
+#include <juce_core/juce_core.h>
 #include <map>
 #include <memory>
 #include <string>
-#include <juce_core/juce_core.h>
 
 // Forward declarations for helper classes
 namespace zenith {
-    class TrackCommands;
-    class ClipCommands;
-    class TransportCommands;
-    namespace ai { class UXDirectorAgent; class PresetGeneticistAgent; }
-}
+class TrackCommands;
+class ClipCommands;
+class TransportCommands;
+namespace ai {
+class UXDirectorAgent;
+class PresetGeneticistAgent;
+} // namespace ai
+} // namespace zenith
 
 namespace zenith {
 
 class CommandAPI {
 public:
   enum class CommandID {
-      ListTracks, CreateTrack, DeleteTrack, RenameTrack, SetTrackVolume, SetTrackPan,
-      ExportAudio, ExportProjectAdvanced, SeparateTrack,
-      ListClips, CreateClip, DeleteClip, SplitClip, MoveClip, ResizeClip,
-      Play, Stop, Record, Rewind, SetLoop, SetTempo, SetTimeSignature,
-      GetSessionGraph, Undo, Redo, History,
-      DescribeInstrument, AddPlugin, RemovePlugin, SetPluginParam, GetPluginParams, ListPlugins,
-      AddAutomationPoint, ClearAutomation, GetAutomation,
-      AddTempoChange, GetTempoMap,
-      AddMarker, GetMarkers, DeleteMarker, GotoMarker,
-      AddNote, DeleteNote, MoveNote, GetNotes, SetNoteVelocity, SetNoteLength, GetMidiData,
-      SetClipNotes,
-      ListPresets, LoadPreset, SavePreset, CreatePreset, DeletePreset, GeneratePreset,
-      GetInstrumentParameters, SetInstrumentParameter, GetInstrumentParameterSchema,
-      SetTrackSend, SetTrackEQ, SetTrackCompressor,
-      // Aux Bus Commands
-      CreateAuxBus, RemoveAuxBus, SetAuxBusVolume, SetAuxBusPan, SetAuxBusMute, GetAuxBuses,
-      // Vision Command
-      GetUIState,
-      SearchPlugins,
-      StartEvolution,
-      StopEvolution,
-      GetEvolutionStats,
-      // Routing Graph Commands
-      GetRoutingGraph, ConnectNodes, DisconnectNodes
+    ListTracks,
+    CreateTrack,
+    DeleteTrack,
+    RenameTrack,
+    SetTrackVolume,
+    SetTrackPan,
+    ExportAudio,
+    ExportProjectAdvanced,
+    SeparateTrack,
+    ListClips,
+    CreateClip,
+    DeleteClip,
+    SplitClip,
+    MoveClip,
+    ResizeClip,
+    Play,
+    Stop,
+    Record,
+    Rewind,
+    SetLoop,
+    SetTempo,
+    SetTimeSignature,
+    GetSessionGraph,
+    Undo,
+    Redo,
+    History,
+    DescribeInstrument,
+    AddPlugin,
+    RemovePlugin,
+    SetPluginParam,
+    GetPluginParams,
+    ListPlugins,
+    AddAutomationPoint,
+    ClearAutomation,
+    GetAutomation,
+    AddTempoChange,
+    GetTempoMap,
+    AddMarker,
+    GetMarkers,
+    DeleteMarker,
+    GotoMarker,
+    AddNote,
+    DeleteNote,
+    MoveNote,
+    GetNotes,
+    SetNoteVelocity,
+    SetNoteLength,
+    GetMidiData,
+    SetClipNotes,
+    ListPresets,
+    LoadPreset,
+    SavePreset,
+    CreatePreset,
+    DeletePreset,
+    GeneratePreset,
+    GetInstrumentParameters,
+    SetInstrumentParameter,
+    GetInstrumentParameterSchema,
+    SetTrackSend,
+    SetTrackEQ,
+    SetTrackCompressor,
+    // Aux Bus Commands
+    CreateAuxBus,
+    RemoveAuxBus,
+    SetAuxBusVolume,
+    SetAuxBusPan,
+    SetAuxBusMute,
+    GetAuxBuses,
+    // Vision Command
+    GetUIState,
+    SearchPlugins,
+    StartEvolution,
+    StopEvolution,
+    GetEvolutionStats,
+    // Routing Graph Commands
+    GetRoutingGraph,
+    ConnectNodes,
+    DisconnectNodes
   };
 
   //==========================================================================
   // Command API (Step 2)
   //==========================================================================
-  
+
   // The UI or AI calls this
-  void setTrackVolume(int trackIndex, float newVolume) {
-      auto tracks = projectState.getState().getChildWithName(ProjectState::ID_TRACKS);
-      auto track = tracks.getChild(trackIndex);
-      
-      if (track.isValid()) {
-          track.setProperty(ProjectState::PROP_VOLUME, newVolume, &projectState.getUndoManager());
-      }
+  void setTrackVolume(const juce::String &trackId, float newVolume) {
+    performAction(std::make_unique<SetTrackVolumeAction>(projectState, trackId,
+                                                         newVolume));
+  }
+
+  /**
+   * @brief Performs an action and ensures it is undoable
+   */
+  bool performAction(std::unique_ptr<juce::UndoableAction> action) {
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+      bool success = false;
+      juce::WaitableEvent event;
+
+      // Transfer ownership to raw pointer for capture
+      juce::UndoableAction *rawAction = action.release();
+
+      juce::MessageManager::callAsync([this, rawAction, &event, &success]() {
+        // UndoManager::perform takes ownership and handles deletion
+        success = projectState.getUndoManager().perform(rawAction);
+        event.signal();
+      });
+
+      event.wait();
+      return success;
+    }
+    return projectState.getUndoManager().perform(action.release());
   }
 
   void undo() { projectState.getUndoManager().undo(); }
@@ -75,87 +152,94 @@ public:
 
   //==========================================================================
   juce::String executeCommand(const juce::String &commandJson);
-  juce::var executeCommand(const juce::var &request); // Added overload used in cpp
-  juce::var executeCommand(CommandID id, const juce::var &params); // Overload for internal use
-  
-  juce::String executeCommandString(const juce::String& jsonRequest);
-  juce::var executeBatch(const juce::Array<juce::var>& commands, const juce::String& batchName);
+  juce::var
+  executeCommand(const juce::var &request); // Added overload used in cpp
+  juce::var
+  executeCommand(CommandID id,
+                 const juce::var &params); // Overload for internal use
+
+  juce::String executeCommandString(const juce::String &jsonRequest);
+  juce::var executeBatch(const juce::Array<juce::var> &commands,
+                         const juce::String &batchName);
 
   using CommandHandler = std::function<juce::var(const juce::var &params)>;
   void registerCommand(const juce::String &commandName, CommandHandler handler);
 
-  void setUXDirector(ai::UXDirectorAgent* agent) { uxDirector_ = agent; }
-  void setPresetGeneticist(ai::PresetGeneticistAgent* agent) { presetGeneticist_ = agent; }
+  void setUXDirector(ai::UXDirectorAgent *agent) { uxDirector_ = agent; }
+  void setPresetGeneticist(ai::PresetGeneticistAgent *agent) {
+    presetGeneticist_ = agent;
+  }
 
-  juce::var startEvolution(const juce::var& params);
-  juce::var stopEvolution(const juce::var& params);
-  juce::var getEvolutionStats(const juce::var& params);
+  juce::var startEvolution(const juce::var &params);
+  juce::var stopEvolution(const juce::var &params);
+  juce::var getEvolutionStats(const juce::var &params);
 
 private:
   void initializeCommandMap();
 
   // Member functions matching cpp implementation
-  juce::var exportAudio(const juce::var& params);
-  juce::var exportProjectAdvanced(const juce::var& params);
-  juce::var getSessionGraph(const juce::var& params);
-  juce::var undo(const juce::var& params);
-  juce::var redo(const juce::var& params);
-  juce::var history(const juce::var& params);
-  juce::var describeInstrument(const juce::var& params);
-  juce::var addPlugin(const juce::var& params);
-  juce::var removePlugin(const juce::var& params);
-  juce::var listPlugins(const juce::var& params);
-  juce::var searchPlugins(const juce::var& params);
-  juce::var setPluginParam(const juce::var& params);
-  juce::var getPluginParams(const juce::var& params);
-  juce::var addAutomationPoint(const juce::var& params);
-  juce::var clearAutomation(const juce::var& params);
-  juce::var getAutomation(const juce::var& params);
-  juce::var addMarker(const juce::var& params);
-  juce::var getMarkers(const juce::var& params);
-  juce::var deleteMarker(const juce::var& params);
-  juce::var gotoMarker(const juce::var& params);
-  juce::var addNote(const juce::var& params);
-  juce::var deleteNote(const juce::var& params);
-  juce::var moveNote(const juce::var& params);
-  juce::var getNotes(const juce::var& params);
-  juce::var setNoteVelocity(const juce::var& params);
-  juce::var setNoteLength(const juce::var& params);
-  juce::var getMidiData(const juce::var& params);
-  
+  juce::var exportAudio(const juce::var &params);
+  juce::var exportProjectAdvanced(const juce::var &params);
+  juce::var getSessionGraph(const juce::var &params);
+  juce::var undo(const juce::var &params);
+  juce::var redo(const juce::var &params);
+  juce::var history(const juce::var &params);
+  juce::var describeInstrument(const juce::var &params);
+  juce::var addPlugin(const juce::var &params);
+  juce::var removePlugin(const juce::var &params);
+  juce::var listPlugins(const juce::var &params);
+  juce::var searchPlugins(const juce::var &params);
+  juce::var setPluginParam(const juce::var &params);
+  juce::var getPluginParams(const juce::var &params);
+  juce::var addAutomationPoint(const juce::var &params);
+  juce::var clearAutomation(const juce::var &params);
+  juce::var getAutomation(const juce::var &params);
+  juce::var addMarker(const juce::var &params);
+  juce::var getMarkers(const juce::var &params);
+  juce::var deleteMarker(const juce::var &params);
+  juce::var gotoMarker(const juce::var &params);
+  juce::var addNote(const juce::var &params);
+  juce::var deleteNote(const juce::var &params);
+  juce::var moveNote(const juce::var &params);
+  juce::var getNotes(const juce::var &params);
+  juce::var setNoteVelocity(const juce::var &params);
+  juce::var setNoteLength(const juce::var &params);
+  juce::var getMidiData(const juce::var &params);
+
   // Instrument/Preset methods (assuming they exist in cpp)
-  juce::var listPresets(const juce::var& params);
-  juce::var loadPreset(const juce::var& params);
-  juce::var savePreset(const juce::var& params);
-  juce::var createPreset(const juce::var& params);
-  juce::var deletePreset(const juce::var& params);
-  juce::var generatePreset(const juce::var& params);
-  juce::var getInstrumentParameters(const juce::var& params);
-  juce::var setInstrumentParameter(const juce::var& params);
-  juce::var getInstrumentParameterSchema(const juce::var& params);
+  juce::var listPresets(const juce::var &params);
+  juce::var loadPreset(const juce::var &params);
+  juce::var savePreset(const juce::var &params);
+  juce::var createPreset(const juce::var &params);
+  juce::var deletePreset(const juce::var &params);
+  juce::var generatePreset(const juce::var &params);
+  juce::var getInstrumentParameters(const juce::var &params);
+  juce::var setInstrumentParameter(const juce::var &params);
+  juce::var getInstrumentParameterSchema(const juce::var &params);
 
   // Aux Bus Handlers
-  juce::var createAuxBus(const juce::var& params);
-  juce::var removeAuxBus(const juce::var& params);
-  juce::var setAuxBusVolume(const juce::var& params);
-  juce::var setAuxBusPan(const juce::var& params);
-  juce::var setAuxBusMute(const juce::var& params);
-  juce::var getAuxBuses(const juce::var& params);
+  juce::var createAuxBus(const juce::var &params);
+  juce::var removeAuxBus(const juce::var &params);
+  juce::var setAuxBusVolume(const juce::var &params);
+  juce::var setAuxBusPan(const juce::var &params);
+  juce::var setAuxBusMute(const juce::var &params);
+  juce::var getAuxBuses(const juce::var &params);
 
   // Vision Handlers
-  juce::var getUIHealth(const juce::var& params);
-  juce::var getUIState(const juce::var& params);
+  juce::var getUIHealth(const juce::var &params);
+  juce::var getUIState(const juce::var &params);
 
   // Routing Graph Handlers
-  juce::var getRoutingGraph(const juce::var& params);
-  juce::var connectNodes(const juce::var& params);
-  juce::var disconnectNodes(const juce::var& params);
+  juce::var getRoutingGraph(const juce::var &params);
+  juce::var connectNodes(const juce::var &params);
+  juce::var disconnectNodes(const juce::var &params);
 
   // Helpers
   juce::String createResponse(const juce::var &data) const;
   juce::String createErrorResponse(const juce::String &errorMessage) const;
-  juce::var createSuccessResponse(const juce::var& result = juce::var()) const;
-  bool validateParam(const juce::var &params, const juce::String &paramName, juce::String &errorOut) const;
+  juce::var createSuccessResponse(const juce::var &result = juce::var()) const;
+  bool validateParam(const juce::var &params, const juce::String &paramName,
+                     juce::String &errorOut) const;
 
   // Members
   ProjectState &projectState;
@@ -168,8 +252,8 @@ private:
   std::map<std::string, CommandID> commandMap;
   std::map<juce::String, CommandHandler> commandHandlers;
 
-  ai::UXDirectorAgent* uxDirector_ = nullptr;
-  ai::PresetGeneticistAgent* presetGeneticist_ = nullptr;
+  ai::UXDirectorAgent *uxDirector_ = nullptr;
+  ai::PresetGeneticistAgent *presetGeneticist_ = nullptr;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CommandAPI)
 };

@@ -55,7 +55,7 @@ void BrowserModel::buildStructure() {
 
   // 0. Favorites (always at top)
   favoritesNode_ = std::make_shared<BrowserItem>(
-      "favorites_root", "★ Favorites", BrowserItemType::Folder);
+      "favorites_root", "* Favorites", BrowserItemType::Folder);
   rootItem->addChild(favoritesNode_);
 
   // 1. Internal Instruments Group

@@ -13,8 +13,7 @@
 
 #ifdef ZENITH_USE_SKIA
 
-#include <core/SkCanvas.h>
-#include <core/SkRect.h>
+#include "ZenithSkia.h"
 
 namespace zenith {
 

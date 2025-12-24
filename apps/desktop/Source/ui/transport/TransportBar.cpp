@@ -11,14 +11,10 @@
 */
 
 #include "TransportBar.h"
+#include "../../engine/ZenithLogger.h"
 
-#include <core/SkBlurTypes.h> // Explicitly include
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h" // Explicitly include
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
 #include <effects/SkGradientShader.h>
 
 #ifdef ZENITH_USE_SKIA
@@ -55,7 +51,6 @@ void TransportBar::resized() {
       leftSection.removeFromLeft(buttonWidth).reduced(buttonPadding);
 
   // View Toggle Button (Right side)
-  // View Toggle Button (Right side)
   auto rightSection =
       area.removeFromRight(static_cast<int>(spacing::XXL * 2.5f));
   settingsButtonBounds_ =
@@ -69,8 +64,10 @@ void TransportBar::resized() {
 
   // Update cached resources on Message Thread (Safe)
   SkRect skBounds = SkRect::MakeWH((float)getWidth(), (float)getHeight());
+  ZENITH_LOG_INFO("TransportBar: calling updateCachedPaints...");
   updateCachedPaints(skBounds);
   cachedBounds_ = skBounds;
+  ZENITH_LOG_INFO("TransportBar: resized() End");
 }
 
 void TransportBar::drawSkia(SkCanvas *canvas) {
@@ -89,9 +86,9 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
   drawTransportButton(canvas, playButtonBounds_, icons::Play(), isPlaying_,
                       design::colors::NEON_GREEN, playState_);
   drawTransportButton(canvas, stopButtonBounds_, icons::Stop(), !isPlaying_,
-                      design::colors::BLUE, stopState_);
+                      design::colors::CYAN, stopState_);
   drawTransportButton(canvas, recordButtonBounds_, icons::Record(),
-                      isRecording_, design::colors::RED, recordState_);
+                      isRecording_, design::colors::NEON_RED, recordState_);
 
   // View Toggle - uses ViewToggle icon
   drawTransportButton(canvas, viewToggleButtonBounds_, icons::ViewToggle(),
@@ -124,11 +121,11 @@ void TransportBar::drawSkia(SkCanvas *canvas) {
 }
 
 void TransportBar::updateCachedPaints(const SkRect &bounds) {
+  ZENITH_LOG_INFO("TransportBar: updateCachedPaints Start");
   // 1. Background Paint
   bgPaint_.setAntiAlias(true);
   SkPoint pts[2] = {{0, 0}, {0, bounds.height()}};
-  SkColor colors[2] = {SkColorSetARGB(240, 20, 20, 25),
-                       SkColorSetARGB(240, 10, 10, 15)};
+  SkColor colors[2] = {design::colors::BG_DARKEST, design::colors::BG_DARKER};
   bgPaint_.setShader(SkGradientShader::MakeLinear(pts, colors, nullptr, 2,
                                                   SkTileMode::kClamp));
   bgPaint_.setStyle(SkPaint::kFill_Style);
@@ -137,14 +134,17 @@ void TransportBar::updateCachedPaints(const SkRect &bounds) {
   borderPaint_.setAntiAlias(true);
   borderPaint_.setStyle(SkPaint::kStroke_Style);
   borderPaint_.setStrokeWidth(1.0f);
-  borderPaint_.setColor(SkColorSetARGB(50, 0, 255, 255)); // Cyan glow
+  borderPaint_.setColor(design::colors::BORDER_FOCUS); // Cyan glow
 
   // 3. Fonts
   // Use Mono font for Tempo/BPM display to avoid jitter
+  ZENITH_LOG_INFO("TransportBar: Getting Mono font...");
   font_ = design::getMonoFont(18.0f, design::FontWeight::Medium);
 
   // Use UI font for labels
+  ZENITH_LOG_INFO("TransportBar: Getting UI font...");
   smallFont_ = design::getSkFont(14.0f, design::FontWeight::Regular);
+  ZENITH_LOG_INFO("TransportBar: updateCachedPaints End");
 }
 
 void TransportBar::drawTransportButton(SkCanvas *canvas,
@@ -206,7 +206,7 @@ void TransportBar::drawTransportButton(SkCanvas *canvas,
 
   if (showGlow) {
     style.glowRadius =
-        isActive ? design::effects::GLOW_STRONG : design::effects::GLOW_SUBTLE;
+        isActive ? design::glow::GLOW_STRONG : design::glow::GLOW_SUBTLE;
     if (!isActive) {
       style.glowRadius *= state.hoverAmount; // Fade in glow
     }
@@ -248,7 +248,7 @@ void TransportBar::drawMeter(SkCanvas *canvas,
     SkPoint pts[2] = {{rect.left(), rect.centerY()},
                       {rect.right(), rect.centerY()}};
     SkColor colors[3] = {design::colors::NEON_GREEN, design::colors::AMBER,
-                         design::colors::RED};
+                         design::colors::NEON_RED};
     SkScalar pos[3] = {0.0f, 0.6f, 1.0f};
 
     SkPaint fillPaint;

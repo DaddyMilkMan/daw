@@ -45,13 +45,13 @@
 #include <memory>
 #include <vector>
 
-#include "../Source/dsp/Dither.h"
-#include "../Source/dsp/MasterLimiter.h"
-#include "../Source/dsp/StereoAudioFifo.h"
-#include "../Source/engine/EngineConstants.h"
-#include "../Source/engine/MacroControl.h"
-#include "../Source/engine/RoutingGraph.h"
+#include "../dsp/Dither.h"
+#include "../dsp/MasterLimiter.h"
+#include "../dsp/StereoAudioFifo.h"
+#include "EngineConstants.h"
 #include "EngineEvent.h"
+#include "MacroControl.h"
+#include "RoutingGraph.h"
 
 // Forward declarations
 namespace zenith {
@@ -96,18 +96,21 @@ class AIMasteringAgent;
  * **Parent -> Child (shared_ptr/unique_ptr):**
  * - Engine owns Tracks via std::vector<std::shared_ptr<Track>>
  * - Engine owns AuxBuses via std::vector<std::shared_ptr<AuxBus>>
- * - Engine owns subsystems via std::unique_ptr (AudioRenderer, RecordingManager, etc.)
+ * - Engine owns subsystems via std::unique_ptr (AudioRenderer,
+ * RecordingManager, etc.)
  *
  * **Child -> Parent (raw pointer/reference):**
- * - Subsystems hold Engine& references (TrackStateSynchronizer, RecordingManager, etc.)
+ * - Subsystems hold Engine& references (TrackStateSynchronizer,
+ * RecordingManager, etc.)
  * - No child component holds std::shared_ptr<Engine>
  *
  * **RT-safe snapshots:**
- * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle vector)
+ * - TrackSnapshot uses shared_ptr only for lifetime management (lifecycle
+ * vector)
  * - Audio thread accesses raw pointers extracted from the snapshot
  *
- * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child components.
- *       Use Engine& or Engine* for back-references.
+ * @note To avoid memory leaks: NEVER store std::shared_ptr<Engine> in child
+ * components. Use Engine& or Engine* for back-references.
  */
 class Engine : public juce::AudioIODeviceCallback,
                public juce::MidiInputCallback {
@@ -914,8 +917,8 @@ private:
     // Fast lookup maps (ID -> Pointer)
     // Audio thread usage: Read-only access to find tracks by ID from
     // RoutingGraph
-    std::unordered_map<std::string, zenith::Track *> trackMap;
-    std::unordered_map<std::string, zenith::AuxBus *> auxBusMap;
+    std::unordered_map<juce::String, zenith::Track *> trackMap;
+    std::unordered_map<juce::String, zenith::AuxBus *> auxBusMap;
 
     TrackSnapshot() = default;
 
@@ -927,10 +930,9 @@ private:
 
   // Lock-free snapshot mechanism
   // Audio thread reads activeSnapshot_ (atomic raw pointer)
-  // Main thread manages lifetime via currentSnapshotHolder_ and snapshotTrash_
-  std::atomic<TrackSnapshot *> activeSnapshot_{nullptr};
-  std::shared_ptr<TrackSnapshot> currentSnapshotHolder_;
-  std::vector<std::shared_ptr<TrackSnapshot>> snapshotTrash_;
+  // Message thread owns currentSnapshot_ and uses RealTimeGarbageCollector for updates
+  std::atomic<TrackSnapshot*> activeSnapshot_{nullptr};
+  std::shared_ptr<TrackSnapshot> currentSnapshot_;
 
   void updateTrackSnapshot();
 

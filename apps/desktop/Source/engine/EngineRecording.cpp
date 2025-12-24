@@ -4,11 +4,11 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
+#include "../engine/RecordingManager.h"
+#include "../engine/Track.h"
+#include "../engine/TransportController.h"
 #include "Engine.h"
 #include "ProjectState.h"
-#include "../engine/RecordingManager.h"
-#include "../engine/TransportController.h"
-#include "../engine/Track.h"
 
 namespace zenith {
 
@@ -63,21 +63,27 @@ void Engine::toggleRecording() {
   }
 }
 
-void Engine::setSidechainSource(int destTrackIndex, int pluginIndex, int sourceTrackIndex) {
+void Engine::setSidechainSource(int destTrackIndex, int pluginIndex,
+                                int sourceTrackIndex) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
-  
-  if (destTrackIndex < 0 || destTrackIndex >= tracks_.size()) return;
-  if (sourceTrackIndex < 0 || sourceTrackIndex >= tracks_.size()) return;
-  
-  auto& destTrack = tracks_[destTrackIndex];
-  auto& sourceTrack = tracks_[sourceTrackIndex];
-  
-  DBG("Engine: Routing Sidechain: " << sourceTrack->getName() << " -> " << destTrack->getName() << " (Plugin " << pluginIndex << ")");
-  
+
+  if (destTrackIndex < 0 || destTrackIndex >= tracks_.size())
+    return;
+  if (sourceTrackIndex < 0 || sourceTrackIndex >= tracks_.size())
+    return;
+
+  auto &destTrack = tracks_[destTrackIndex];
+  auto &sourceTrack = tracks_[sourceTrackIndex];
+
+  DBG("Engine: Routing Sidechain: " << sourceTrack->getName() << " -> "
+                                    << destTrack->getName() << " (Plugin "
+                                    << pluginIndex << ")");
+
   // Connect in routing graph (Stub Logic for Phase 2)
   if (destTrack && sourceTrack) {
-     // routingGraph_.connect(sourceTrack->getTrackId(), destTrack->getTrackId(), 1.0f);
-     // Note: Real implementation needs to target specific plugin inputs, not just track mix.
+    // routingGraph_.connect(sourceTrack->getTrackId(),
+    // destTrack->getTrackId(), 1.0f); Note: Real implementation needs to target
+    // specific plugin inputs, not just track mix.
   }
 }
 
@@ -152,7 +158,7 @@ void Engine::handleIncomingMidiMessage(juce::MidiInput *source,
 
     // Route to ALL armed MIDI/Instrument tracks for multi-track recording
     // Use snapshot for RT-safe access to tracks
-    auto *snapshot = activeSnapshot_.load();
+    auto snapshot = activeSnapshot_.load(std::memory_order_acquire);
     if (snapshot) {
       for (size_t i = 0; i < snapshot->tracks.size(); ++i) {
         auto *track = snapshot->tracks[i];

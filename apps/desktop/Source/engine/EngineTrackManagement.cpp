@@ -4,11 +4,12 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
+#include "../engine/AudioRenderer.h"
+#include "../engine/AuxBus.h"
+#include "../engine/Track.h"
 #include "Engine.h"
 #include "ProjectState.h"
-#include "../engine/Track.h"
-#include "../engine/AuxBus.h"
-#include "../engine/AudioRenderer.h"
+#include "RealTimeGarbageCollector.h"
 
 namespace zenith {
 
@@ -36,9 +37,9 @@ void Engine::addTestTracks(int count) {
 
   for (int i = 0; i < count; ++i) {
     // Create track via Factory
-    auto track = zenith::Track::create(
-        "Track " + juce::String(tracks_.size() + 1),
-        zenith::Track::Type::Audio);
+    auto track =
+        zenith::Track::create("Track " + juce::String(tracks_.size() + 1),
+                              zenith::Track::Type::Audio);
 
     // Prepare track for audio processing if engine is already running
     if (currentSampleRate.load() > 0) {
@@ -46,7 +47,8 @@ void Engine::addTestTracks(int count) {
     }
 
     track->setTrackIndex((int)tracks_.size());
-    tracks_.push_back(std::move(track)); // Corrected: transfer ownership from unique_ptr to shared_ptr
+    tracks_.push_back(std::move(
+        track)); // Corrected: transfer ownership from unique_ptr to shared_ptr
 
     // Register track with RoutingGraph and connect to master bus
     RoutingGraph::Node node;
@@ -89,7 +91,8 @@ juce::String Engine::createTrack(const juce::String &name,
     zenith::Track::Type trackType = (type == "midi")
                                         ? zenith::Track::Type::MIDI
                                         : zenith::Track::Type::Audio;
-    auto track = std::shared_ptr<zenith::Track>(zenith::Track::create(name, trackType));
+    auto track =
+        std::shared_ptr<zenith::Track>(zenith::Track::create(name, trackType));
 
     // Use atomic counter for ID generation
     juce::String trackId = "track_" + juce::String(nextTrackId_++);
@@ -99,7 +102,7 @@ juce::String Engine::createTrack(const juce::String &name,
 
     return trackId;
   }
-}    
+}
 
 // Accept shared_ptr for RT-safe snapshot sharing across threads
 void Engine::addTrack(std::shared_ptr<zenith::Track> track) {
@@ -177,42 +180,42 @@ void Engine::removeTrack(int index) {
 }
 
 void Engine::updateTrackSnapshot() {
+  jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
+
   // Create new snapshot
   // Include Aux Buses in snapshot for consistent audio thread access
   auto newSnapshot = std::make_shared<TrackSnapshot>(tracks_, auxBuses_);
 
-  // [DSP Optimization] Update routing graph snapshot with direct pointers for fast lookup
+  // [DSP Optimization] Update routing graph snapshot with direct pointers for
+  // fast lookup
   {
-      std::unordered_map<juce::String, Track*> trackMap;
-      for (const auto& track : tracks_) {
-          if (track) trackMap[track->getTrackId()] = track.get();
-      }
-      
-      std::unordered_map<juce::String, AuxBus*> auxBusMap;
-      for (const auto& bus : auxBuses_) {
-          if (bus) auxBusMap[bus->getId()] = bus.get();
-      }
-      
-      routingGraph_.updateSnapshotWithPointers(trackMap, auxBusMap);
+    std::vector<Track *> trackPtrs;
+    trackPtrs.reserve(tracks_.size());
+    for (const auto &track : tracks_) {
+      if (track)
+        trackPtrs.push_back(track.get());
+    }
+
+    std::vector<AuxBus *> auxBusPtrs;
+    auxBusPtrs.reserve(auxBuses_.size());
+    for (const auto &bus : auxBuses_) {
+      if (bus)
+        auxBusPtrs.push_back(bus.get());
+    }
+
+    routingGraph_.updateSnapshotWithPointers(trackPtrs, auxBusPtrs);
   }
 
-  // Atomic swap (release semantics for the store)
+  // Atomic swap
   // The audio thread will see the new pointer immediately
-  activeSnapshot_.store(newSnapshot.get());
-
-  // Manage lifetime of old snapshots
-  // We keep the previous snapshot alive in snapshotTrash_
-  // because the audio thread might still be reading it.
-  snapshotTrash_.push_back(currentSnapshotHolder_);
-
-  // Update current holder to the new snapshot
-  currentSnapshotHolder_ = newSnapshot;
-
-  // Garbage collection: Keep last 5 snapshots
-  // At 60Hz updates, this gives plenty of margin for the audio thread to finish
-  if (snapshotTrash_.size() > 5) {
-    snapshotTrash_.erase(snapshotTrash_.begin());
+  activeSnapshot_.store(newSnapshot.get(), std::memory_order_release);
+  
+  // Defer deletion of old snapshot
+  if (currentSnapshot_) {
+    RealTimeGarbageCollector::getInstance().push(currentSnapshot_);
   }
+  
+  currentSnapshot_ = newSnapshot;
 }
 
 void Engine::prepareTracks(int samplesPerBlockExpected, double sampleRate) {
@@ -266,7 +269,7 @@ Engine::TrackSnapshot::TrackSnapshot(
     if (track != nullptr) {
       this->tracks.push_back(track.get());
       this->lifecycle.push_back(track); // Increment refcount
-      this->trackMap[track->getTrackId().toStdString()] = track.get();
+      this->trackMap[track->getTrackId()] = track.get();
     }
   }
 
@@ -276,7 +279,7 @@ Engine::TrackSnapshot::TrackSnapshot(
     if (bus != nullptr) {
       this->auxBuses.push_back(bus.get());
       this->lifecycleAux.push_back(bus);
-      this->auxBusMap[bus->getId().toStdString()] = bus.get();
+      this->auxBusMap[bus->getId()] = bus.get();
     }
   }
 }

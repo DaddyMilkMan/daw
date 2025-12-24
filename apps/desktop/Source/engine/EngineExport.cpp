@@ -4,15 +4,15 @@
  * @note This is a modular component of Engine - declarations remain in Engine.h
  */
 
-#include "Engine.h"
+#include "../Source/dsp/Dither.h"
 #include "../engine/AudioRenderer.h"
-#include "../engine/Track.h"
-#include "../engine/Clip.h"
 #include "../engine/AuxBus.h"
+#include "../engine/Clip.h"
 #include "../engine/PluginHost.h"
 #include "../engine/RoutingGraph.h"
 #include "../engine/TempoMap.h"
-#include "../Source/dsp/Dither.h"
+#include "../engine/Track.h"
+#include "Engine.h"
 
 namespace zenith {
 
@@ -65,9 +65,19 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
   }
 
   juce::WavAudioFormat wavFormat;
-  std::unique_ptr<juce::AudioFormatWriter> writer(wavFormat.createWriterFor(
-      new juce::FileOutputStream(outputFile), sampleRate,
-      static_cast<unsigned int>(numChannels), bitDepth, {}, 0));
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(sampleRate)
+                           .withNumChannels(static_cast<int>(numChannels))
+                           .withBitsPerSample(bitDepth);
+
+  // Create stream first to check success
+  auto rawStream = std::make_unique<juce::FileOutputStream>(outputFile);
+  if (!rawStream->openedOk())
+    return false;
+
+  std::unique_ptr<juce::OutputStream> stream = std::move(rawStream);
+  std::unique_ptr<juce::AudioFormatWriter> writer =
+      wavFormat.createWriterFor(stream, writerOptions);
 
   if (!writer)
     return false;
@@ -83,16 +93,18 @@ bool Engine::exportProjectToWav(const juce::File &outputFile, double sampleRate,
     // Render using AudioRenderer
     if (audioRenderer_) {
       juce::MidiBuffer dummyMidi;
-      
+
       // Build raw pointer vectors for AudioRenderer
-      std::vector<Track*> trackPtrs;
+      std::vector<Track *> trackPtrs;
       trackPtrs.reserve(tracks_.size());
-      for (const auto& t : tracks_) trackPtrs.push_back(t.get());
-      
-      std::vector<AuxBus*> auxPtrs;
+      for (const auto &t : tracks_)
+        trackPtrs.push_back(t.get());
+
+      std::vector<AuxBus *> auxPtrs;
       auxPtrs.reserve(auxBuses_.size());
-      for (const auto& a : auxBuses_) auxPtrs.push_back(a.get());
-      
+      for (const auto &a : auxBuses_)
+        auxPtrs.push_back(a.get());
+
       audioRenderer_->renderAudioGraph(
           renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
           routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
@@ -157,12 +169,17 @@ bool Engine::exportProject(const ExportOptions &options) {
   if (fileStream->failedToOpen())
     return false;
 
-  std::unique_ptr<juce::AudioFormatWriter> writer(
-      format->createWriterFor(fileStream.release(), options.sampleRate,
-                              2,                    // Stereo
-                              options.bitDepth, {}, // Metadata
-                              0                     // Quality
-                              ));
+  // Convert FileOutputStream to unique_ptr<OutputStream> for API
+  std::unique_ptr<juce::OutputStream> stream = std::move(fileStream);
+
+  auto writerOptions = juce::AudioFormatWriterOptions()
+                           .withSampleRate(options.sampleRate)
+                           .withNumChannels(2) // Stereo
+                           .withBitsPerSample(options.bitDepth)
+                           .withQualityOptionIndex(0);
+
+  std::unique_ptr<juce::AudioFormatWriter> writer =
+      format->createWriterFor(stream, writerOptions);
 
   if (!writer)
     return false;
@@ -190,13 +207,20 @@ bool Engine::exportProject(const ExportOptions &options) {
         (int)juce::jmin((juce::int64)blockSize, totalSamples - samplesWritten);
 
     // Render Mix - create raw pointer vectors for export
-    std::vector<zenith::Track*> trackPtrs;
-    std::vector<zenith::AuxBus*> auxPtrs;
-    for (const auto& t : tracks_) { if (t) trackPtrs.push_back(t.get()); }
-    for (const auto& a : auxBuses_) { if (a) auxPtrs.push_back(a.get()); }
-    
+    std::vector<zenith::Track *> trackPtrs;
+    std::vector<zenith::AuxBus *> auxPtrs;
+    for (const auto &t : tracks_) {
+      if (t)
+        trackPtrs.push_back(t.get());
+    }
+    for (const auto &a : auxBuses_) {
+      if (a)
+        auxPtrs.push_back(a.get());
+    }
+
     // Use Engine's wrapper which handles graph rendering
-    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs, auxPtrs, nullptr);
+    renderAudioGraph(renderBuffer, numSamples, samplesWritten, trackPtrs,
+                     auxPtrs, nullptr);
 
     // Apply Dithering
     if (options.enableDither && options.bitDepth < 32) {
@@ -206,11 +230,10 @@ bool Engine::exportProject(const ExportOptions &options) {
     // Normalization (2-Pass: Find Peak -> Apply Gain)
     // Normalization (Offline Render Refactor required for full track)
     // NOTE: Per-block normalization is WRONG for full track export.
-    // Correct implementation requires render-to-temp-file -> scan -> write-to-final
-    // This is disabled pending a full offline-render refactor.
+    // Correct implementation requires render-to-temp-file -> scan ->
+    // write-to-final This is disabled pending a full offline-render refactor.
     // See: applyNormalization() for when this gets properly implemented.
     (void)options.normalize; // Suppress unused warning
-
 
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, numSamples)) {
       return false;
@@ -224,8 +247,9 @@ bool Engine::exportProject(const ExportOptions &options) {
 
 void Engine::applyNormalization(juce::AudioBuffer<float> &buffer, float maxPeak,
                                 float targetDb) {
-  if (maxPeak <= 0.00001f) return;
-  
+  if (maxPeak <= 0.00001f)
+    return;
+
   float targetLinear = juce::Decibels::decibelsToGain(targetDb);
   float gain = targetLinear / maxPeak;
   buffer.applyGain(gain);

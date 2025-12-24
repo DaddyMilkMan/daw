@@ -4,7 +4,7 @@ namespace zenith {
 
 AuxBus::AuxBus(const juce::String &name) : name_(name) {}
 
-AuxBus::~AuxBus() { clearPlugins(); }
+AuxBus::~AuxBus() { pluginChain.clearPlugins(); }
 
 void AuxBus::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   currentSampleRate_ = sampleRate;
@@ -18,24 +18,13 @@ void AuxBus::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
 
   // Prepare all plugins
-  const juce::ScopedLock sl(pluginLock_);
-  for (auto &plugin : plugins_) {
-    if (plugin != nullptr) {
-      plugin->prepareToPlay(sampleRate, samplesPerBlockExpected);
-      plugin->setNonRealtime(false);
-    }
-  }
+  pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
 }
 
 void AuxBus::releaseResources() {
   mixerChannel.releaseResources();
 
-  const juce::ScopedLock sl(pluginLock_);
-  for (auto &plugin : plugins_) {
-    if (plugin != nullptr) {
-      plugin->releaseResources();
-    }
-  }
+  pluginChain.releaseResources();
 }
 
 void AuxBus::getNextAudioBlock(
@@ -48,11 +37,7 @@ void AuxBus::getNextAudioBlock(
 
   // Process through plugin chain (effect processors)
   juce::MidiBuffer emptyMidi; // Aux buses don't process MIDI
-  for (auto &plugin : plugins_) {
-    if (plugin != nullptr) {
-      plugin->processBlock(inputBuffer_, emptyMidi);
-    }
-  }
+  pluginChain.process(inputBuffer_, emptyMidi);
 
   // Process through mixer channel (volume, pan, metering, etc.)
   juce::AudioSourceChannelInfo mixerInfo(&inputBuffer_, 0,
@@ -76,54 +61,20 @@ void AuxBus::getNextAudioBlock(
 //==============================================================================
 
 void AuxBus::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
-  if (plugin == nullptr)
-    return;
-
-  const juce::ScopedLock sl(pluginLock_);
-
-  // Prepare the plugin if we're already initialized
-  if (currentSampleRate_ > 0) {
-    plugin->prepareToPlay(currentSampleRate_, currentBlockSize_);
-    plugin->setNonRealtime(false);
-  }
-
-  plugins_.push_back(std::move(plugin));
+  pluginChain.addPlugin(std::move(plugin), currentSampleRate_,
+                        currentBlockSize_);
 }
 
 void AuxBus::removePlugin(int pluginIndex) {
-  const juce::ScopedLock sl(pluginLock_);
-
-  if (pluginIndex >= 0 && pluginIndex < static_cast<int>(plugins_.size())) {
-    auto &plugin = plugins_[pluginIndex];
-    if (plugin != nullptr) {
-      plugin->releaseResources();
-    }
-    plugins_.erase(plugins_.begin() + pluginIndex);
-  }
+  pluginChain.removePlugin(pluginIndex);
 }
 
-void AuxBus::clearPlugins() {
-  const juce::ScopedLock sl(pluginLock_);
+void AuxBus::clearPlugins() { pluginChain.clearPlugins(); }
 
-  for (auto &plugin : plugins_) {
-    if (plugin != nullptr) {
-      plugin->releaseResources();
-    }
-  }
-
-  plugins_.clear();
-}
-
-int AuxBus::getNumPlugins() const {
-  const juce::ScopedLock sl(pluginLock_);
-  return static_cast<int>(plugins_.size());
-}
+int AuxBus::getNumPlugins() const { return pluginChain.getNumPlugins(); }
 
 juce::AudioPluginInstance *AuxBus::getPlugin(int index) const {
-  const juce::ScopedLock sl(pluginLock_);
-  if (index >= 0 && index < static_cast<int>(plugins_.size()))
-    return plugins_[index].get();
-  return nullptr;
+  return pluginChain.getPlugin(index);
 }
 
 } // namespace zenith

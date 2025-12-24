@@ -24,17 +24,23 @@ class ProjectState;
 /**
     Handles I/O operations for ProjectState.
 */
+enum class SerializationFormat {
+    Xml,
+    MessagePack
+};
+
+struct IOSettings {
+    SerializationFormat format = SerializationFormat::Xml;
+    bool useAtomicWrite = true;
+};
+
+/**
+    Handles I/O operations for ProjectState.
+*/
 class ProjectFileIO {
 public:
-    enum class SerializationFormat {
-        Xml,
-        MessagePack
-    };
-
-    struct IOSettings {
-        SerializationFormat format = SerializationFormat::Xml;
-        bool useAtomicWrite = true;
-    };
+    using SerializationFormat = zenith::SerializationFormat;
+    using IOSettings = zenith::IOSettings;
     explicit ProjectFileIO(ProjectState& projectState);
     ~ProjectFileIO() = default;
 
@@ -59,7 +65,7 @@ public:
      * @brief Save project to file
      * @return true if successful
      */
-    bool saveToFile(const juce::File& file, IOSettings settings = {});
+    bool saveToFile(const juce::File& file, IOSettings settings = IOSettings());
 
     /**
      * @brief Save project to file asynchronously

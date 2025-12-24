@@ -16,14 +16,8 @@
 #include "ZenithDesignSystem.h"
 
 // Skia Includes
-#include <core/SkBlurTypes.h>
-#include <core/SkCanvas.h>
-#include <core/SkColor.h>
-#include <core/SkFont.h>
+#include "ZenithSkia.h"
 #include <core/SkMaskFilter.h>
-#include <core/SkPaint.h>
-#include <core/SkRRect.h>
-#include <core/SkRect.h>
 #include <core/SkSpan.h>
 #include <effects/SkDashPathEffect.h>
 #include <effects/SkGradientShader.h>
@@ -274,7 +268,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         SkPaint shadowPaint;
         shadowPaint.setAntiAlias(true);
         shadowPaint.setColor(SkColorSetARGB(60, 0, 0, 0));
-        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+        shadowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
         SkRect shadowRect = r;
         shadowRect.offset(0, 2);
         canvas->drawRRect(SkRRect::MakeRectXY(shadowRect, clipRadius, clipRadius), shadowPaint);
@@ -346,7 +340,7 @@ void ArrangerRenderer::drawSingleClip(SkCanvas* canvas, const ClipView& clipView
         glowPaint.setStyle(SkPaint::kStroke_Style);
         glowPaint.setStrokeWidth(3.0f);
         glowPaint.setColor(withAlpha(colors::NEON_CYAN, 0.6f));
-        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 6.0f));
+        glowPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 6.0f));
         canvas->drawRRect(rr, glowPaint);
         
         SkPaint corePaint;
@@ -617,7 +611,7 @@ void ArrangerRenderer::drawPlayhead(SkCanvas* canvas, float width, float height)
     playheadPaint.setAntiAlias(true);
     
     // Glow Effect
-    playheadPaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    playheadPaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
     canvas->drawLine(playheadX, 0, playheadX, height, playheadPaint);
     
     // Core Line
@@ -666,7 +660,7 @@ void ArrangerRenderer::drawInsertionGuide(SkCanvas* canvas, float height) {
     guidePaint.setAntiAlias(true);
     
     // Neon Glow
-    guidePaint.setMaskFilter(SkMaskFilter::MakeBlur(kNormal_SkBlurStyle, 4.0f));
+    guidePaint.setMaskFilter(SkMaskFilter::MakeBlur(SkBlurStyle::kNormal, 4.0f));
     canvas->drawLine(insertionGuideX, RULER_HEIGHT, insertionGuideX, height, guidePaint);
     
     // Core bright line

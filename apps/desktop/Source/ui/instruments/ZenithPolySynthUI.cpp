@@ -14,6 +14,9 @@
 #include "ZenithPolySynthUI.h"
 #include "../../instruments/ZenithFilter.h" // For FilterType
 #include "../../instruments/ZenithPolySynth.h"
+#include "../controls/ZenithButton.h"
+#include "../controls/ZenithKnob.h"
+#include "../controls/ZenithSlider.h"
 #include "ZenithDesignSystem.h"
 #include "ZenithLayout.h"
 #include "ZenithUIComponents.h" // For ZenithVisualizer
@@ -81,23 +84,6 @@ void ZenithPolySynthUI::resized() {
   layoutWidgets();
 }
 
-template <typename T>
-T *ZenithPolySynthUI::addWidget(const juce::String &name,
-                                const juce::String &paramId) {
-  auto widget = std::make_unique<T>(name);
-
-  // Find parameter in APVTS
-  auto *param = processor.getParameters().getParameter(paramId);
-  if (auto *rangedParam = dynamic_cast<juce::RangedAudioParameter *>(param)) {
-    widget->setParameter(rangedParam);
-  }
-
-  T *ptr = widget.get();
-  addAndMakeVisible(*widget);
-  widgets_.push_back(std::move(widget));
-  return ptr;
-}
-
 void ZenithPolySynthUI::buildUI() {
   widgets_.clear();
 
@@ -153,7 +139,10 @@ void ZenithPolySynthUI::layoutWidgets() {
 //==============================================================================
 // Timer callback for UI updates
 void ZenithPolySynthUI::timerCallback() {
-  // Trigger UI repaint - visualizer handles data internally via timerCallback
+  // Sync UI to processor parameters (for automation/external changes)
+  syncProcessorToUI();
+
+  // Trigger UI repaint
   repaint();
 }
 
@@ -194,8 +183,11 @@ void ZenithPolySynthUI::drawSkiaContent(SkCanvas *canvas) {
 #endif
 
 void ZenithPolySynthUI::syncProcessorToUI() {
-  // Update UI elements based on processor state
-  // For example, set knob values
+  for (auto &widget : widgets_) {
+    if (auto *control = dynamic_cast<ZenithControl *>(widget.get())) {
+      control->updateFromParameter();
+    }
+  }
 }
 
 void ZenithPolySynthUI::changeListenerCallback(
@@ -209,24 +201,7 @@ void ZenithPolySynthUI::changeListenerCallback(
 // Event handlers for UI interaction (to update processor parameters)
 //==============================================================================
 
-void ZenithPolySynthUI::mouseDown(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
-  // Handle mouse down events on custom components
-}
-
-void ZenithPolySynthUI::mouseDrag(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
-  // Handle mouse drag events
-}
-
-void ZenithPolySynthUI::mouseUp(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
-  // Handle mouse up events
-}
-
-void ZenithPolySynthUI::mouseMove(const juce::MouseEvent &e) {
-  juce::ignoreUnused(e);
-  // Handle mouse move events
-}
+// Mouse event handlers removed - let juce::Component children handle
+// themselves.
 
 } // namespace zenith
