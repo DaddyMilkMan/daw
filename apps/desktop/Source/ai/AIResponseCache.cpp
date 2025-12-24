@@ -95,17 +95,10 @@ AIResponseCache::get(const juce::String &promptHash) {
   if (!enabled_)
     return std::nullopt;
 
-  juce::ScopedReadLock rl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
 
   auto it = cache_.find(promptHash);
-  if (it == cache_.end()) {
-    stats_.misses++;
-    stats_.updateHitRate();
-    return std::nullopt;
-  }
-
-  // Check expiration
-  if (it->second.isExpired()) {
+  if (it == cache_.end() || it->second.isExpired()) {
     stats_.misses++;
     stats_.updateHitRate();
     return std::nullopt;
@@ -114,12 +107,7 @@ AIResponseCache::get(const juce::String &promptHash) {
   // Cache hit!
   stats_.hits++;
   stats_.updateHitRate();
-
-  // Update hit count (need write lock for this)
-  {
-    juce::ScopedWriteLock wl(cacheLock_);
-    cache_[promptHash].hitCount++;
-  }
+  it->second.hitCount++;
 
   DBG("AIResponseCache: HIT for " + promptHash.substring(0, 16) + "...");
 
@@ -131,7 +119,7 @@ void AIResponseCache::put(const juce::String &promptHash,
   if (!enabled_)
     return;
 
-  juce::ScopedWriteLock wl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
 
   CacheEntry entry;
   entry.promptHash = promptHash;
@@ -159,7 +147,7 @@ bool AIResponseCache::has(const juce::String &promptHash) const {
   if (!enabled_)
     return false;
 
-  juce::ScopedReadLock rl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
 
   auto it = cache_.find(promptHash);
   if (it == cache_.end())
@@ -169,7 +157,7 @@ bool AIResponseCache::has(const juce::String &promptHash) const {
 }
 
 void AIResponseCache::invalidate(const juce::String &pattern) {
-  juce::ScopedWriteLock wl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
 
   if (pattern.isEmpty()) {
     // Clear all
@@ -207,14 +195,14 @@ juce::String AIResponseCache::generateHash(const juce::String &systemMessage,
 //==============================================================================
 
 CacheStats AIResponseCache::getStats() const {
-  juce::ScopedReadLock rl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
   CacheStats statsCopy = stats_;
   statsCopy.totalSizeBytes = calculateTotalSize();
   return statsCopy;
 }
 
 void AIResponseCache::resetStats() {
-  juce::ScopedWriteLock wl(cacheLock_);
+  juce::ScopedLock sl(cacheLock_);
   stats_.hits = 0;
   stats_.misses = 0;
   stats_.hitRate = 0.0f;

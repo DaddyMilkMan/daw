@@ -61,5 +61,3 @@ target_sources(ZenithDAW PRIVATE
     ../plugins/ZenithPlugin.cpp
     ../plugins/modulation/ZenithTremolo.cpp
 )# Touch for rebuild
-
-

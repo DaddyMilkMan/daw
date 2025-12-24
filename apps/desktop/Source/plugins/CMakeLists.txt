@@ -4,11 +4,11 @@ target_sources(ZenithDAW PRIVATE
     InternalPluginFormat.cpp
 
     # Effects
-    ../effects/ConsoleEmulation.cpp
     ../effects/ZenithChannelStrip.cpp
     ../effects/ZenithDeEsser.cpp
     ../effects/ZenithTransientShaper.cpp
     ../effects/ZenithVoiceChanger.cpp
+    ../effects/ConsoleEmulation.cpp
 
     # Modulation
     modulation/ZenithTremolo.cpp

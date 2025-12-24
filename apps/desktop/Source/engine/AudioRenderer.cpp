@@ -111,6 +111,10 @@ void AudioRenderer::renderAudioGraph(
   // Build aux buffer pointers for tracks (RT-safe stack allocation or fixed
   // member) We'll use a local array for safety since it's small (max 16 aux
   // buses usually)
+<<<<<<< HEAD
+  static constexpr int kMaxAuxBuses = 32;
+=======
+>>>>>>> origin/master
   std::array<juce::AudioBuffer<float> *, kMaxAuxBuses> auxBufferPtrs;
   size_t actualAuxCount = 0;
   for (size_t i = 0; i < numBuses && actualAuxCount < kMaxAuxBuses; ++i) {
@@ -290,6 +294,16 @@ void AudioRenderer::renderAudioGraph(
 
   // Update metering
   updateMasterMeters(outputBuffer);
+}
+
+//==============================================================================
+void AudioRenderer::updateClipPositions(std::span<Track *const> tracks,
+                                        juce::int64 playheadPosition) noexcept {
+  for (auto *track : tracks) {
+    if (track != nullptr) {
+      track->updateClipPositions(playheadPosition);
+    }
+  }
 }
 
 //==============================================================================

@@ -118,6 +118,34 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/Metronome.cpp
     apps/desktop/Source/engine/AudioTrack.cpp
     apps/desktop/Source/engine/MIDITrack.cpp
+<<<<<<< HEAD
+=======
+    # Instruments
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthEditor.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/ZenithSamplerEditor.cpp
+
+    # AI
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/ai/AIMasteringAgent.cpp
+
+    apps/desktop/Source/ai/SampleHunterAgent.cpp
+    apps/desktop/Source/ai/UXDirectorAgent.cpp
+    apps/desktop/Source/ai/ProjectRefactorerAgent.cpp
+    apps/desktop/Source/ai/PresetGeneticistAgent.cpp
+
+>>>>>>> origin/fix/effects-suite-pr-review
     apps/desktop/Source/engine/ClipTrack.cpp
     apps/desktop/Source/engine/AuxBusTrack.cpp
     apps/desktop/Source/engine/ClipStateManager.cpp
@@ -443,6 +471,7 @@ if(BUILD_TESTS)
         apps/desktop/Source/ui/arranger
         apps/desktop/Source/ui/browser
         apps/desktop/Source/ui/common
+<<<<<<< HEAD
         apps/desktop/Source/ui/framework
         apps/desktop/Source/ui/instruments
         apps/desktop/Source/ui/design-system
@@ -451,6 +480,12 @@ if(BUILD_TESTS)
         apps/desktop/Source/network
         apps/desktop/Source/dsp
         apps/desktop/Source/automation
+=======
+        apps/desktop/Source/ui/instruments
+        apps/desktop/Source/ui/browser
+        apps/desktop/Source/instruments
+        apps/desktop/Source/ai
+>>>>>>> origin/fix/effects-suite-pr-review
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"

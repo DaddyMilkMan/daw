@@ -219,6 +219,16 @@ public:
   virtual Instrument *getInstrument() const { return nullptr; }
   virtual bool hasInstrument() const { return getInstrument() != nullptr; }
 
+  /**
+   * @brief Update clip playback positions for this track
+   * @param playheadPosition Current playhead position in samples
+   * @note Audio thread safe - implementations should be lock-free
+   */
+  virtual void updateClipPositions(juce::int64 playheadPosition) noexcept {
+    juce::ignoreUnused(playheadPosition);
+    // Default implementation does nothing - subclasses with clips override
+  }
+
   // MIDI Scheduling (moved to MIDITrack)
 
   // Clip management (moved to subclasses)
