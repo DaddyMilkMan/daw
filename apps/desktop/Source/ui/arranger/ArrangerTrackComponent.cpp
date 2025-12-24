@@ -353,10 +353,17 @@ void ArrangerTrackComponent::mouseDown(const juce::MouseEvent &e) {
     if (e.position.x < HEADER_WIDTH && hoveredButtonIndex_ >= 0) {
       // Button clicked
       if (hoveredButtonIndex_ == 0) {
-        setMuted(!isMuted_);
-        // TODO: Sync to ValueTree
+        bool newMute = !isMuted_;
+        setMuted(newMute);
+        if (trackId_.isNotEmpty()) {
+          projectState.setTrackMute(trackId_, newMute, "Toggle Mute");
+        }
       } else if (hoveredButtonIndex_ == 1) {
-        setSoloed(!isSoloed_);
+        bool newSolo = !isSoloed_;
+        setSoloed(newSolo);
+        if (trackId_.isNotEmpty()) {
+          projectState.setTrackSolo(trackId_, newSolo, "Toggle Solo");
+        }
       } else if (hoveredButtonIndex_ == 2) {
         bool newArmed = !isRecordArmed_;
         setRecordArmed(newArmed);

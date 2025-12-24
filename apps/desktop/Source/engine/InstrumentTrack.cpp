@@ -1,15 +1,6 @@
 #include "InstrumentTrack.h"
-#include "EngineConstants.h"
 
 namespace zenith {
-
-InstrumentTrack::InstrumentTrack(const juce::String &name)
-    : ClipTrack(name, Type::Instrument) {}
-
-void InstrumentTrack::prepareToPlay(int samplesPerBlockExpected,
-                                    double sampleRate) {
-  ClipTrack::prepareToPlay(samplesPerBlockExpected, sampleRate);
-}
 
 void InstrumentTrack::getNextAudioBlock(
     const juce::AudioSourceChannelInfo &bufferToFill, int64_t playheadSamples,
