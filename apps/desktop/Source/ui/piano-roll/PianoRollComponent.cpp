@@ -21,6 +21,7 @@
 #include <limits>
 
 #include <unordered_set>
+#include <vector>
 
 using namespace zenith;
 
@@ -2633,5 +2634,3 @@ void MidiEditorContainer::injectMidiMessage(const juce::MidiMessage &msg) {
     }
   }
 }
-=======
->>>>>>> origin/refactor/header-consolidation

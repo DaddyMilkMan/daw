@@ -324,6 +324,8 @@ void MainComponent::handleImportAudio() {
 // MainWindow Implementation
 //==============================================================================
 
+#include "../../engine/ProjectFileIO.h"
+
 MainWindow::MainWindow(const juce::String &name)
     : DocumentWindow(
           name,
@@ -332,6 +334,13 @@ MainWindow::MainWindow(const juce::String &name)
           DocumentWindow::allButtons) {
   engine = std::make_unique<zenith::Engine>();
   projectState = std::make_unique<zenith::ProjectState>();
+  
+  fileIO_ = std::make_unique<zenith::ProjectFileIO>(*projectState);
+  fileIO_->setAutoSaveInterval(300);
+  fileIO_->setAutoSaveEnabled(true);
+  fileIO_->setMaxBackups(10);
+  startTimer(30000);
+
   automationSync = std::make_unique<zenith::TrackAutomationSynchronizer>(*projectState, *engine);
   commandAPI = std::make_unique<zenith::CommandAPI>(*projectState, *engine);
   engine->setProjectState(projectState.get());
@@ -341,7 +350,7 @@ MainWindow::MainWindow(const juce::String &name)
   mainComponent = std::make_unique<MainComponent>(
       *engine, *commandAPI, *projectState, *recentProjectManager_,
       [this](const juce::File &file) { loadProject(file); },
-      [this]() { DBG("MainWindow: New project requested"); });
+      [this]() { newProject(); });
 
   uxDirector = std::make_unique<ai::UXDirectorAgent>(*engine, *projectState, *mainComponent);
   commandAPI->setUXDirector(uxDirector.get());
@@ -363,14 +372,34 @@ MainWindow::MainWindow(const juce::String &name)
   juce::Component::setVisible(true);
   engine->initialize();
   automationSync->start(60);
+  
+  checkForRecovery();
+  updateWindowTitle();
 }
 
 MainWindow::~MainWindow() {
+  stopTimer();
   if (engine) engine->shutdown();
   setContentOwned(nullptr, true);
 }
 
 void MainWindow::closeButtonPressed() {
+  if (projectState->hasUnsavedChanges()) {
+    int result = juce::NativeMessageBox::showYesNoCancelBox(
+        juce::AlertWindow::WarningIcon,
+        "Unsaved Changes",
+        "Save changes before closing?");
+    
+    if (result == 1) { // Yes
+      saveProject();
+      // Wait for save? it's synchronous mostly except recent files
+      // But if user cancels save?
+    } else if (result == 0) { // Cancel
+      return;
+    }
+    // Result 2 is No (discard)
+  }
+
   juce::JUCEApplication::getInstance()->systemRequestedQuit();
 }
 
@@ -380,16 +409,104 @@ void MainWindow::showAboutDialog() {
   juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon, "About Zenith DAW", aboutMessage, "OK");
 }
 
-void MainWindow::saveProject() {
-  if (currentProjectFile.existsAsFile()) {
-    if (projectState->saveToFile(currentProjectFile)) {
-      if (recentProjectManager_) {
-        recentProjectManager_->addProject(currentProjectFile, projectState->getProjectName());
-        recentProjectManager_->save();
-      }
+void MainWindow::timerCallback() {
+  if (fileIO_) fileIO_->autoSave();
+}
+
+void MainWindow::checkForRecovery() {
+  if (!fileIO_) return;
+  auto recoveries = fileIO_->getAvailableRecoveries();
+  
+  if (recoveries.empty()) return;
+  
+  juce::AlertWindow dialog("Project Recovery",
+      "Zenith detected unsaved work from a previous session.",
+      juce::AlertWindow::QuestionIcon);
+  
+  dialog.addButton("Recover Latest", 1, juce::KeyPress(juce::KeyPress::returnKey));
+  dialog.addButton("Discard", 2);
+  
+  int result = dialog.showDialog();
+  
+  if (result == 1) {
+    zenith::FileIOError error = fileIO_->recoverFromFile(recoveries.back().recoveryFile);
+    if (error == zenith::FileIOError::Success) {
+      updateWindowTitle();
+      repaint();
     }
+  }
+}
+
+void MainWindow::createManualBackup() {
+  if (!fileIO_) return;
+  juce::File backupFile = fileIO_->createBackup();
+  
+  if (backupFile.existsAsFile()) {
+    juce::NativeMessageBox::showMessageBoxAsync(
+        juce::AlertWindow::InfoIcon,
+        "Backup Created",
+        "Project backed up to:\n" + backupFile.getFullPathName());
+  }
+}
+
+void MainWindow::updateWindowTitle() {
+  juce::File projectFile = fileIO_->getCurrentProjectFile();
+  juce::String title = "Zenith DAW";
+  
+  if (projectFile.existsAsFile()) {
+    title += " - " + projectFile.getFileNameWithoutExtension();
   } else {
+    title += " - [Untitled]";
+  }
+  
+  if (projectState->hasUnsavedChanges()) {
+    title += " *";
+  }
+  
+  setName(title);
+}
+
+void MainWindow::newProject() {
+  if (projectState->hasUnsavedChanges()) {
+      int result = juce::NativeMessageBox::showYesNoCancelBox(
+          juce::AlertWindow::WarningIcon,
+          "Unsaved Changes",
+          "Save changes before creating a new project?");
+      
+      if (result == 1) {
+          saveProject();
+      } else if (result == 0) {
+          return;  // Cancel
+      }
+  }
+  
+  fileIO_->newProject();
+  updateWindowTitle();
+  repaint();
+}
+
+void MainWindow::saveProject() {
+  juce::File projectFile = fileIO_->getCurrentProjectFile();
+  
+  if (!projectFile.existsAsFile()) {
     saveProjectAs();
+    return;
+  }
+  
+  zenith::FileIOError error = fileIO_->saveToFile(projectFile);
+  
+  if (error != zenith::FileIOError::Success) {
+    juce::NativeMessageBox::showMessageBoxAsync(
+        juce::AlertWindow::WarningIcon,
+        "Save Failed",
+        "Failed to save project: " + zenith::ProjectFileIO::getErrorMessage(error));
+    return;
+  }
+  
+  updateWindowTitle();
+  if (recentProjectManager_) {
+    recentProjectManager_->addProject(projectFile, projectState->getProjectName());
+    recentProjectManager_->save();
   }
 }
 
@@ -403,13 +520,21 @@ void MainWindow::saveProjectAs() {
     if (file == juce::File{}) return;
     if (!file.hasFileExtension(".zth")) file = file.withFileExtension(".zth");
 
-    if (projectState->saveToFile(file)) {
-      currentProjectFile = file;
-      setName("Zenith DAW - " + file.getFileNameWithoutExtension());
-      if (recentProjectManager_) {
-        recentProjectManager_->addProject(file, projectState->getProjectName());
-        recentProjectManager_->save();
-      }
+    zenith::FileIOError error = fileIO_->saveToFileAs(file);
+    
+    if (error != zenith::FileIOError::Success) {
+        juce::NativeMessageBox::showMessageBoxAsync(
+            juce::AlertWindow::WarningIcon,
+            "Save Failed",
+            "Failed to save project: " + zenith::ProjectFileIO::getErrorMessage(error));
+        return;
+    }
+
+    currentProjectFile = file;
+    updateWindowTitle();
+    if (recentProjectManager_) {
+      recentProjectManager_->addProject(file, projectState->getProjectName());
+      recentProjectManager_->save();
     }
   });
 }
@@ -417,13 +542,26 @@ void MainWindow::saveProjectAs() {
 bool MainWindow::loadProject(const juce::File &file) {
   if (!file.existsAsFile()) return false;
   engine->stop();
-  if (!projectState->loadFromFile(file)) return false;
+  
+  zenith::FileIOError error = fileIO_->loadFromFile(file);
+        
+  if (error != zenith::FileIOError::Success) {
+      juce::NativeMessageBox::showMessageBoxAsync(
+          juce::AlertWindow::WarningIcon,
+          "Load Failed",
+          "Failed to load project: " + 
+          zenith::ProjectFileIO::getErrorMessage(error) +
+          "\n\nDetails: " + fileIO_->getLastErrorDetails());
+      return false;
+  }
+  
   currentProjectFile = file;
   if (recentProjectManager_) {
     recentProjectManager_->addProject(file, projectState->getProjectName());
     recentProjectManager_->save();
   }
-  setName("Zenith DAW - " + file.getFileNameWithoutExtension());
+  updateWindowTitle();
+  repaint();
   return true;
 }
 

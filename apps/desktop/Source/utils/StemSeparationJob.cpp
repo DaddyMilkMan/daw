@@ -98,7 +98,6 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
     // Optional: Abort if stricter requirements needed
     // result.error = "ONNX Runtime not available or model missing.";
     // ...
->>>>>>> origin/feat/ui-overhaul
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);

@@ -43,6 +43,7 @@ class WingmanPanel;
 class ZenithMenuBar;
 class ZenithHubComponent;
 class ZenithKnob;
+class ProjectFileIO;
 namespace ai {
 class UXDirectorAgent;
 class PresetGeneticistAgent;
@@ -116,7 +117,7 @@ private:
  * @class MainWindow
  * @brief Top-level application window
  */
-class MainWindow : public juce::DocumentWindow {
+class MainWindow : public juce::DocumentWindow, private juce::Timer {
 public:
   explicit MainWindow(const juce::String &name);
   ~MainWindow() override;
@@ -129,6 +130,7 @@ public:
   void saveProjectAs();
   bool loadProject(const juce::File &file);
   void openProject();
+  void newProject();
 
   zenith::RecentProjectManager &getRecentProjectManager() {
     return *recentProjectManager_;
@@ -136,10 +138,15 @@ public:
 
 private:
   void showAboutDialog();
+  void timerCallback() override;
+  void checkForRecovery();
+  void createManualBackup();
+  void updateWindowTitle();
 
   juce::File currentProjectFile;
   std::unique_ptr<zenith::Engine> engine;
   std::unique_ptr<zenith::ProjectState> projectState;
+  std::unique_ptr<zenith::ProjectFileIO> fileIO_;
   std::unique_ptr<zenith::TrackStateSynchronizer> trackSynchronizer;
   std::unique_ptr<zenith::TrackAutomationSynchronizer> automationSync;
   std::unique_ptr<zenith::CommandAPI> commandAPI;

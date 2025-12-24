@@ -849,6 +849,10 @@ void ProjectState::createDefaultState() {
   mixer.setProperty(PROP_VOLUME, 0.8, nullptr);
   state.appendChild(mixer, nullptr);
 
+  // Create TEMPO_MAP node
+  juce::ValueTree tempoMap(ID_TEMPO_MAP);
+  state.appendChild(tempoMap, nullptr);
+
   DBG("ProjectState: Default state created");
 }
 

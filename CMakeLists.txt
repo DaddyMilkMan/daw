@@ -61,18 +61,8 @@ set(ZENITH_SOURCES
     apps/desktop/Source/utils/SampleGenerator.cpp
 )
 
-# Test sources
-set(ZENITH_TEST_SOURCES
-    apps/desktop/Source/tests/TestMain.cpp
-    apps/desktop/Source/tests/AudioEngineTests.cpp
-    apps/desktop/Source/tests/ProjectStateTests.cpp
-    apps/desktop/Source/tests/EngineTests.cpp
-    apps/desktop/Source/tests/ConcurrencyTests.cpp
-    apps/desktop/Source/tests/AITests.cpp
-    apps/desktop/Source/tests/UITests.cpp
-    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
-    
-    # Engine sources required for linking
+# Core engine and command sources
+set(ZENITH_CORE_SOURCES
     apps/desktop/Source/engine/Engine.cpp
     apps/desktop/Source/engine/EngineTransport.cpp
     apps/desktop/Source/engine/EngineTrackManagement.cpp
@@ -125,14 +115,8 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
     apps/desktop/Source/instruments/ZenithPolySynth.cpp
     apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
-    
-    apps/desktop/Source/tests/BasicAudioTest.cpp
-    apps/desktop/Source/network/GrokUtils.cpp
     apps/desktop/Source/instruments/Instrument.cpp
-    apps/desktop/Source/instruments/InstrumentRegistry.cpp
     apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
-    apps/desktop/Source/instruments/ZenithPolySynth.cpp
-    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
     apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
     apps/desktop/Source/instruments/ZenithOscillator.cpp
     apps/desktop/Source/instruments/ZenithFilter.cpp
@@ -141,8 +125,21 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/instruments/WavetableLoader.cpp
     apps/desktop/Source/instruments/PresetGenerator.cpp
     apps/desktop/Source/instruments/ZenithPresetManager.cpp
-    apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
     apps/desktop/Source/ai/SessionDebuggerAgent.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+)
+
+# Test sources
+set(ZENITH_TEST_SOURCES
+    apps/desktop/Source/tests/TestMain.cpp
+    apps/desktop/Source/tests/AudioEngineTests.cpp
+    apps/desktop/Source/tests/ProjectStateTests.cpp
+    apps/desktop/Source/tests/EngineTests.cpp
+    apps/desktop/Source/tests/ConcurrencyTests.cpp
+    apps/desktop/Source/tests/AITests.cpp
+    apps/desktop/Source/tests/UITests.cpp
+    apps/desktop/Source/ui/design-system/ZenithLayout.cpp
+    apps/desktop/Source/tests/BasicAudioTest.cpp
 )
 
 # Create main executable
@@ -156,7 +153,7 @@ juce_add_gui_app(ZenithDAW
 # Generate JuceHeader.h
 juce_generate_juce_header(ZenithDAW)
 
-target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES})
+target_sources(ZenithDAW PRIVATE ${ZENITH_SOURCES} ${ZENITH_CORE_SOURCES})
 
 # Skia Integration
 option(ZENITH_ENABLE_SKIA "Enable Skia Rendering" ON)
@@ -279,7 +276,6 @@ if(BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"
     )
     target_link_libraries(ZenithDAWTests PRIVATE
-        ZenithDAW
         juce::juce_core
         juce::juce_data_structures
         juce::juce_audio_basics

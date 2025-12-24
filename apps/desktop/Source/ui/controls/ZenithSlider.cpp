@@ -24,14 +24,12 @@ namespace zenith {
 
 ZenithSlider::ZenithSlider() : ZenithControl("") {
   accentColor_ = design::colors::MAGENTA;
-=======
 #include "../design-system/ZenithDesignSystem.h" // Use design tokens
 
 namespace zenith {
 
 ZenithSlider::ZenithSlider(Orientation orientation)
     : orientation_(orientation) {
-  startTimerHz(60); // 60fps animation
 >>>>>>> origin/refactor/header-consolidation:apps/desktop/Source/ui/widgets/ZenithSlider.cpp
 }
 
