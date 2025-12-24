@@ -13,7 +13,7 @@
 #pragma once
 
 #include <memory>
-#include <vector>y>
+#include <vector>
 
 #include "../../engine/EngineConstants.h"
 #include "MixerComponent.h"

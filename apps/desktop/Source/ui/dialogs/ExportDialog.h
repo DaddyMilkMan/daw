@@ -13,10 +13,10 @@
 
 #pragma once
 
-#include "SkiaComponent.h"
-#include "SkiaButton.h"
-#include "ZenithUIComponents.h"
 #include "../../commands/CommandAPI.h"
+#include "../controls/SkiaButton.h"
+#include "../controls/ZenithUIComponents.h"
+#include "../framework/SkiaComponent.h"
 
 namespace zenith {
 
