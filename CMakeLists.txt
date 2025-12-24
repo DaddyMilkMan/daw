@@ -104,7 +104,7 @@ set(ZENITH_TEST_SOURCES
     apps/desktop/Source/engine/TempoMapSynchronizer.cpp
     apps/desktop/Source/engine/TempoMap.cpp
     apps/desktop/Source/engine/TrackFreeze.cpp
-    apps/desktop/Source/engine/AudioRenderer_Fixed.cpp
+    apps/desktop/Source/engine/AudioRenderer.cpp
     apps/desktop/Source/engine/RecordingManager.cpp
     apps/desktop/Source/engine/TransportController.cpp
     apps/desktop/Source/engine/MeteringSystem.cpp
@@ -132,7 +132,7 @@ set(ZENITH_TEST_SOURCES
     
     apps/desktop/Source/instruments/InstrumentRegistry.cpp
     apps/desktop/Source/instruments/ZenithPolySynth.cpp
-    apps/desktop/Source/instruments/ZenithPolySynthVoice_Fixed.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
     
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
