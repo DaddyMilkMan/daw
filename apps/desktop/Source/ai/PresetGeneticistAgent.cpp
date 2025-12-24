@@ -549,28 +549,29 @@ std::pair<Individual *, Individual *> PresetGeneticistAgent::selectParents() {
     for (size_t idx : indices) {
       candidates.push_back(&population_[idx]);
     }
-  }
 
-  // Sort by fitness (higher first)
-  std::sort(candidates.begin(), candidates.end(),
-            [](Individual *a, Individual *b) { return *a < *b; });
+    // Sort by fitness (higher first)
+    // NOTE: Perform inside lock to ensure pointers remain valid
+    std::sort(candidates.begin(), candidates.end(),
+              [](Individual *a, Individual *b) { return *a < *b; });
 
-  // Return top 2, but ensure they're not dead
-  Individual *p1 = nullptr;
-  Individual *p2 = nullptr;
+    // Return top 2, but ensure they're not dead
+    Individual *p1 = nullptr;
+    Individual *p2 = nullptr;
 
-  for (auto *candidate : candidates) {
-    if (!candidate->isDead && candidate->fitness > config_.fitnessThreshold) {
-      if (!p1)
-        p1 = candidate;
-      else if (!p2) {
-        p2 = candidate;
-        break;
+    for (auto *candidate : candidates) {
+      if (!candidate->isDead && candidate->fitness > config_.fitnessThreshold) {
+        if (!p1)
+          p1 = candidate;
+        else if (!p2) {
+          p2 = candidate;
+          break;
+        }
       }
     }
-  }
 
-  return {p1, p2};
+    return {p1, p2};
+  }
 }
 
 Individual PresetGeneticistAgent::crossover(const Individual &parent1,

@@ -231,6 +231,10 @@ TARGET SPECIFICATION:
 ═══════════════════════════════════════════════════════════════
 Target Loudness: )" +
       juce::String(targetLoudness, 1) + R"( LUFS (streaming standard)
+// Target loudness values follow streaming platform standards:
+// -14 LUFS: Spotify, YouTube (default)
+// -16 LUFS: Apple Music
+// -23 LUFS: Broadcast (EBU R128)
 User Intent: ")" +
       userIntent + R"("
 
@@ -241,6 +245,7 @@ MASTERING GUIDELINES:
 3. Determine EQ moves to enhance clarity and balance
 4. Set compression to glue the mix without over-squashing
 5. Choose limiter ceiling based on target loudness and headroom
+6. Explain your reasoning for EVERY decision
 
 Respond with ONLY this JSON structure (no markdown, no extra text):
 {
@@ -323,6 +328,8 @@ GrokMasteringAI::parseGrokResponse(const juce::String &response) {
   decision.compression.release =
       juce::jlimit(50.0f, 500.0f, decision.compression.release);
 
+  // Limiter ceiling is negative because it represents dB below 0dBFS.
+  // Range -1.0 to -0.1 dB provides headroom for true peak limiting.
   decision.limiterCeiling = juce::jlimit(-1.0f, -0.1f, decision.limiterCeiling);
 
   decision.valid = true;
@@ -390,7 +397,13 @@ AIMasteringAgent::AIMasteringAgent(Engine &engine) : engine_(engine) {
   DBG("═══════════════════════════════════════════════════════════════");
 }
 
-AIMasteringAgent::~AIMasteringAgent() { DBG("AI Mastering Agent destroyed"); }
+AIMasteringAgent::~AIMasteringAgent() { 
+    // Bug 32 fix: Properly release DSP resources
+    eq_.reset();
+    compressor_.reset();
+    limiter_.reset();
+    DBG("AI Mastering Agent destroyed"); 
+}
 
 void AIMasteringAgent::prepare(double sampleRate, int samplesPerBlock,
                                int numChannels) {
@@ -450,7 +463,8 @@ void AIMasteringAgent::analyzeAndConfigure(
       const juce::ScopedLock lock(decisionLock_);
       lastDecision_ = decision;
       applyAIDecision(decision);
-      isConfigured_.store(true);
+      // Bug fix: use memory order release for atomic state sync
+      isConfigured_.store(true, std::memory_order_release);
       DBG("✓ AI mastering configuration applied successfully");
     } else {
       DBG("ERROR: AI decision invalid, mastering not configured");
@@ -466,7 +480,8 @@ void AIMasteringAgent::analyzeAndConfigure(
 void AIMasteringAgent::applyAIDecision(
     const GrokMasteringAI::MasteringDecision &decision) {
   // Apply EQ settings
-  if (decision.valid) {
+  // (Caller ensures decision.valid, removing redundant check - Bug 65)
+  {
     MasteringEQ::Settings eqSettings;
     eqSettings.lowShelfGain = decision.eq.lowShelfGain;
     eqSettings.midCutGain = decision.eq.midCutGain;
@@ -492,9 +507,10 @@ void AIMasteringAgent::applyAIDecision(
 }
 
 void AIMasteringAgent::balanceTracks(const Options &options) {
+  juce::ignoreUnused(options);
   auto &tracks = engine_.tracks();
   if (tracks.empty()) {
-    DBG("No tracks to balance");
+    DBG("AIMasteringAgent: No tracks to balance");
     return;
   }
 
