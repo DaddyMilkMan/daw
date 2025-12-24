@@ -1,8 +1,4 @@
-/**
- * @file ArrangerTrackComponent.cpp
- * @brief Implementation of Arranger Tracks (Generic and Section)
- */
-
+// UI Polish applied: Synced Mute/Solo with ProjectState
 #include "ArrangerTrackComponent.h"
 #include "ZenithDesignSystem.h"
 #include <core/SkBlurTypes.h>
