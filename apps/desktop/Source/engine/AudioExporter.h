@@ -69,3 +69,5 @@ private:
 };
 
 } // namespace zenith
+
+} // namespace zenith

@@ -10,7 +10,6 @@
 
 #ifdef ZENITH_USE_SKIA
 #include "ZenithDesignSystem.h"
-#include "SkiaTheme.h"
 #include <include/core/SkFont.h>
 #include <include/core/SkImageInfo.h>
 #include <include/core/SkPaint.h>
@@ -108,13 +107,6 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 #ifdef ZENITH_USE_SKIA
   // Use Skia rendering for automation lanes
   using namespace zenith::design;
-<<<<<<< HEAD
-  
-  // Get theme colors and typography
-  const auto& colors = zenith::SkiaTheme::getInstance().getColors();
-  const auto& typo = zenith::SkiaTheme::getInstance().getTypography();
-=======
->>>>>>> origin/refactor/header-consolidation
 
   // Get Skia canvas by wrapping JUCE Graphics in a temporary surface
   juce::Image tempImage(juce::Image::ARGB, std::max(1, getWidth()),
@@ -133,11 +125,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
       // Background with subtle tint
       SkPaint bgPaint;
-<<<<<<< HEAD
       bgPaint.setColor(zenith::design::colors::BG_DARKER);
-=======
-      bgPaint.setColor(colors::BG_DARKER);
->>>>>>> origin/refactor/header-consolidation
       bgPaint.setAntiAlias(true);
       canvas.drawRect(SkRect::MakeWH(getWidth(), getHeight()), bgPaint);
 
@@ -173,9 +161,6 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
             // Vertical offset based on tension and width
             float cpY = midY - (p1.tension * width * 0.5f);
 
-            // Limit vertical excursion to keep it reasonable
-            // cpY = juce::jlimit(midY - width, midY + width, cpY);
-
             path.quadTo(midX, cpY, p2.screenPos.x, p2.screenPos.y);
           }
         }
@@ -186,11 +171,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Draw curve
         SkPaint curvePaint;
-<<<<<<< HEAD
-        curvePaint.setColor(colors::VIOLET);
-=======
         curvePaint.setColor(colors::CYAN);
->>>>>>> origin/refactor/header-consolidation
         curvePaint.setStyle(SkPaint::kStroke_Style);
         curvePaint.setStrokeWidth(2.5f);
         curvePaint.setAntiAlias(true);
@@ -215,27 +196,14 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Control point fill
         SkPaint fillPaint;
-<<<<<<< HEAD
-        fillPaint.setColor(isSelected  ? colors::VIOLET
-                           : isHovered ? colors::VIOLET
-                                       : colors::VIOLET);
-=======
-        fillPaint.setColor(isSelected  ? colors::CYAN
-                           : isHovered ? colors::CYAN
-                                       : colors::CYAN);
->>>>>>> origin/refactor/header-consolidation
+        fillPaint.setColor(colors::CYAN);
         fillPaint.setAntiAlias(true);
         canvas.drawCircle(handle.screenPos.x, handle.screenPos.y, handle.radius,
                           fillPaint);
 
         // Control point border
         SkPaint borderPaint;
-<<<<<<< HEAD
-        borderPaint.setColor(isSelected ? selectionColor : colors::TEXT_PRIMARY);
-=======
-        borderPaint.setColor(isSelected ? selectionColor
-                                        : colors::TEXT_PRIMARY);
->>>>>>> origin/refactor/header-consolidation
+        borderPaint.setColor(colors::TEXT_PRIMARY);
         borderPaint.setStyle(SkPaint::kStroke_Style);
         borderPaint.setStrokeWidth(isSelected ? 2.5f : 1.5f);
         borderPaint.setAntiAlias(true);
@@ -258,11 +226,7 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
                                    " @ " + juce::String(hoveredPointTime, 2) +
                                    " beats";
 
-<<<<<<< HEAD
-        SkFont font = zenith::design::typography::getMonoFont(typography::FONT_XS);
-=======
         SkFont font = zenith::design::typography::getMonoFont(10.0f);
->>>>>>> origin/refactor/header-consolidation
 
         auto textStr = tooltipText.toStdString();
         SkRect textBounds;
@@ -281,16 +245,12 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
 
         // Tooltip background
         SkPaint tooltipBg;
-<<<<<<< HEAD
-        tooltipBg.setColor(colors::BG_DARK);
-=======
         tooltipBg.setColor(colors::BG_MEDIUM);
->>>>>>> origin/refactor/header-consolidation
         tooltipBg.setAntiAlias(true);
         SkRRect tooltipRect = SkRRect::MakeRectXY(
             SkRect::MakeXYWH(tooltipX, tooltipY, tooltipWidth, tooltipHeight),
             4.0f, 4.0f);
-        canvas.drawRRect(tooltipRect, tooltipBg);
+        canvas->drawRRect(tooltipRect, tooltipBg);
 
         // Tooltip border
         SkPaint tooltipBorder;
@@ -298,33 +258,26 @@ void AutomationLaneComponent::paint(juce::Graphics &g) {
         tooltipBorder.setStyle(SkPaint::kStroke_Style);
         tooltipBorder.setStrokeWidth(1.0f);
         tooltipBorder.setAntiAlias(true);
-        canvas.drawRRect(tooltipRect, tooltipBorder);
+        canvas->drawRRect(tooltipRect, tooltipBorder);
 
         // Tooltip text
         SkPaint textPaint;
         textPaint.setColor(colors::TEXT_PRIMARY);
         textPaint.setAntiAlias(true);
         auto blob = SkTextBlob::MakeFromString(textStr.c_str(), font);
-        canvas.drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
+        canvas->drawTextBlob(blob, tooltipX + 6.0f, tooltipY + 14.0f, textPaint);
       }
 
       // Draw parameter name
-<<<<<<< HEAD
-      SkFont nameFont = zenith::design::typography::getSkFont(typography::FONT_MD);
-
-      SkPaint namePaint;
-      namePaint.setColor(colors::TEXT_SECONDARY);
-=======
       SkFont nameFont = zenith::design::typography::getSkFont(14.0f);
 
       SkPaint namePaint;
       namePaint.setColor(colors::TEXT_TERTIARY);
->>>>>>> origin/refactor/header-consolidation
       namePaint.setAntiAlias(true);
 
       auto nameStr = paramInfo.displayName.toStdString();
       auto nameBlob = SkTextBlob::MakeFromString(nameStr.c_str(), nameFont);
-      canvas.drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
+      canvas->drawTextBlob(nameBlob, 8.0f, 18.0f, namePaint);
     }
   }
 

@@ -1368,7 +1368,6 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
     }
   }
 
-<<<<<<< HEAD
   void Engine::renderAudioGraph(juce::AudioBuffer<float> & outputBuffer,
                                 int numSamples, juce::int64 playheadPosition,
                                 const std::vector<zenith::Track *> &tracks,
@@ -1377,12 +1376,12 @@ void Engine::processAudioBlock(const float *const *inputChannelData,
     if (audioRenderer_) {
       audioRenderer_->renderAudioGraph(
           outputBuffer, numSamples, playheadPosition, tracks, auxBuses,
-          routingGraph_, masterLimiter_, tempoMap_.get(), incomingMidi, nullptr,
-          0);
-=======
-void Engine::renderAudioGraph(juce::AudioBuffer<float> &outputBuffer,
-                              int numSamples, juce::int64 playheadPosition,
-                              const std::vector<zenith::Track *> &tracks,
+          routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
+          incomingMidi, nullptr, 0);
+    } else {
+      outputBuffer.clear();
+    }
+  }
                               const std::vector<zenith::AuxBus *> &auxBuses,
                               const juce::MidiBuffer *incomingMidi) {
   if (audioRenderer_) {
@@ -1933,22 +1932,7 @@ void Engine::enableMidiInput() {
       for (const auto &t : tracks_)
         trackPtrs.push_back(t.get());
 
-<<<<<<< HEAD
       audioRenderer_->calculatePDC(trackPtrs);
-=======
-      std::vector<AuxBus *> auxPtrs;
-      auxPtrs.reserve(auxBuses_.size());
-      for (const auto &a : auxBuses_)
-        auxPtrs.push_back(a.get());
-
-      audioRenderer_->renderAudioGraph(
-          renderBuffer, samplesToRender, samplesRendered, trackPtrs, auxPtrs,
-          routingGraph_, masterLimiter_, masterPlugins_, tempoMap_.get(),
-          &dummyMidi);
-    } else {
-      renderBuffer.clear();
-    }
-
     if (!writer->writeFromAudioSampleBuffer(renderBuffer, 0, samplesToRender)) {
       break; // Error
     }

@@ -33,10 +33,7 @@
 
 namespace zenith {
 
-<<<<<<< HEAD
-=======
 // Bring in design namespace types for convenience
->>>>>>> origin/refactor/header-consolidation
 using design::FontWeight;
 
 //==============================================================================

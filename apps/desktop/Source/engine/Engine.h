@@ -72,6 +72,7 @@ class AudioRenderer;
 class RecordingManager;
 class TransportController;
 class MeteringSystem;
+class MixerController;
 
 namespace ai {
 class SessionDebuggerAgent;
@@ -605,6 +606,11 @@ public:
    */
   int getMasterLimiterLatency() const;
 
+  /**
+   * @brief Get the mixer controller
+   */
+  MixerController& getMixerController() { return *mixerController_; }
+
   //==========================================================================
   // Track Freeze (CPU optimization)
   //==========================================================================
@@ -746,6 +752,17 @@ public:
   //==========================================================================
   // Project Export
   //==========================================================================
+  
+  friend class AudioExporter;
+
+  /**
+   * @brief Render a specific block of audio for offline export
+   * @param buffer Buffer to fill (must be sized correctly)
+   * @param numSamples Number of samples to render
+   * @param position Sample position in the project
+   * @note Message thread only
+   */
+  void renderOfflineBlock(juce::AudioBuffer<float>& buffer, int numSamples, juce::int64 position);
 
   /**
    * @brief Export project to WAV file
@@ -975,6 +992,7 @@ private:
   std::unique_ptr<RecordingManager> recordingManager_;
   std::unique_ptr<TransportController> transportController_;
   std::unique_ptr<MeteringSystem> meteringSystem_;
+  std::unique_ptr<MixerController> mixerController_;
   std::unique_ptr<zenith::TempoMap>
       tempoMap_; // Kept for now, shared with controllers
 

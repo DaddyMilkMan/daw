@@ -212,14 +212,22 @@ void ExportDialog::drawSkia(SkCanvas *canvas) {
 void ExportDialog::triggerExport() {
   // Construct JSON parameters
   juce::DynamicObject *params = new juce::DynamicObject();
-  params->setProperty("output_path",
-                      "C:\\zenith\\exports\\project_export"); // Default path
+  
+  // Default Path: Music/Zenith Exports/Mixdown_TIMESTAMP
+  juce::File defaultDir = juce::File::getSpecialLocation(juce::File::userMusicDirectory)
+                            .getChildFile("Zenith Exports");
+  if (!defaultDir.exists()) defaultDir.createDirectory();
+
+  juce::String filename = "Mixdown_" + juce::Time::getCurrentTime().formatted("%Y-%m-%d_%H-%M-%S") + "." + selectedFormat_;
+  juce::File outputFile = defaultDir.getChildFile(filename);
+
+  params->setProperty("outputPath", outputFile.getFullPathName());
   params->setProperty("format", selectedFormat_);
-  params->setProperty("bit_depth", selectedBitDepth_);
-  params->setProperty("enable_dither", toggleDither_->getToggleState());
+  params->setProperty("bitDepth", selectedBitDepth_);
+  params->setProperty("dither", toggleDither_->getToggleState());
   params->setProperty("normalize", toggleNormalize_->getToggleState());
-  params->setProperty("ai_mastering", toggleAIEnhance_->getToggleState());
-  params->setProperty("duration", 0.0); // Full project
+  params->setProperty("aiEnhance", toggleAIEnhance_->getToggleState());
+  params->setProperty("durationSeconds", 0.0); // Full project
 
   juce::var args(params);
 
