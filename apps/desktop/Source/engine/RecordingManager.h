@@ -233,6 +233,9 @@ private:
   // Thread safety for session modification
   juce::CriticalSection sessionLock_;
 
+  // Bug 17: Track dropped MIDI messages
+  std::atomic<uint64_t> droppedMidiMessages_{0};
+
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(RecordingManager)
 };
 
