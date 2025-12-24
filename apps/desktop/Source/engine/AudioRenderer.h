@@ -88,30 +88,19 @@ public:
    * @param masterPlugins Master bus plugin chain
    * @param tempoMap Tempo map for automation
    * @param incomingMidi Optional incoming MIDI buffer
+   * @param inputChannelData Optional input channel data
+   * @param numInputChannels Number of input channels
    * @note AUDIO THREAD ONLY
    */
-  /**
-   * @brief Render the audio graph to output buffer
-   * @param outputBuffer Output buffer to fill
-   * @param numSamples Number of samples to render
-   * @param playheadPosition Current playhead position in samples
-   * @param tracks Vector of tracks to render
-   * @param auxBuses Vector of aux buses
-   * @param routingGraph Routing graph for signal flow
-   * @param masterLimiter Master bus limiter
-   * @param tempoMap Tempo map for automation
-   * @param incomingMidi Optional incoming MIDI buffer
-   * @note AUDIO THREAD ONLY
-   */
-  void renderAudioGraph(juce::AudioBuffer<float> &outputBuffer, int numSamples,
-                        juce::int64 playheadPosition,
-                        std::span<Track *const> tracks,
-                        std::span<AuxBus *const> auxBuses,
-                        const RoutingGraph &routingGraph,
-                        MasterLimiter &masterLimiter, const TempoMap *tempoMap,
-                        const juce::MidiBuffer *incomingMidi = nullptr,
-                        const float *const *inputChannelData = nullptr,
-                        int numInputChannels = 0) noexcept;
+  void renderAudioGraph(
+      juce::AudioBuffer<float> &outputBuffer, int numSamples,
+      juce::int64 playheadPosition, std::span<Track *const> tracks,
+      std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
+      MasterLimiter &masterLimiter,
+      std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+      const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi = nullptr,
+      const float *const *inputChannelData = nullptr,
+      int numInputChannels = 0) noexcept;
 
   /**
    * @brief Update playhead position for all clips in all tracks
@@ -264,10 +253,6 @@ private:
   // [DSP Optimization] Pre-allocated vector for aux buffers to avoid RT
   // allocations (Bug 69)
   // Reserved in prepare()
-  std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector_;
-
-  JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
-};
   std::vector<juce::AudioBuffer<float> *> auxBufferPtrsVector_;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AudioRenderer)
