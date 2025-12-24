@@ -251,10 +251,12 @@ void RecordingManager::drainMidiFifo() {
   const int numReady = midiFifoIndex_.getNumReady();
   midiFifoIndex_.prepareToRead(numReady, start1, size1, start2, size2);
 
-  // Process first block
+  // Process both blocks under a single lock for efficiency
   {
-      // Acquire lock ONCE before the loop
+      // Acquire lock ONCE before the loops to avoid overhead
       const juce::ScopedLock sl(sessionLock_);
+
+      // Process first block
       for (int i = 0; i < size1; ++i) {
         const auto &entry = midiFifoData_[start1 + i];
 
@@ -274,16 +276,13 @@ void RecordingManager::drainMidiFifo() {
           }
         }
       }
-  } // End first block (Fix 1)
 
-  // Process second block (wrap-around)
-  {
-      const juce::ScopedLock sl(sessionLock_);
+      // Process second block (wrap-around)
       for (int i = 0; i < size2; ++i) {
         const auto &entry = midiFifoData_[start2 + i];
         
         // Find matching session
-        for (auto &session : midiSessions_) { // (Fix 2: Removed duplicate loop)
+        for (auto &session : midiSessions_) {
           if (session.trackIndex == entry.trackIndex && session.isActive) {
             double timeSeconds = static_cast<double>(entry.samplePosition -
                                                      session.startSamplePosition) /
@@ -296,7 +295,6 @@ void RecordingManager::drainMidiFifo() {
         }
       }
   }
-
   midiFifoIndex_.finishedRead(size1 + size2);
 }
 

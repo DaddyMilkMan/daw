@@ -83,6 +83,8 @@ private:
 
   // Plugin chain (effect processors)
   std::vector<std::unique_ptr<juce::AudioPluginInstance>> plugins_;
+  // MESSAGE THREAD ONLY - Protects plugin chain modifications.
+  // Note: Modifying plugins during playback without a snapshot pattern is not RT-safe.
   juce::CriticalSection pluginLock_;
 
   // Processing state

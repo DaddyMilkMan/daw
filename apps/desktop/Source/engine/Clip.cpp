@@ -580,8 +580,8 @@ void Clip::processAudioClip(const juce::AudioSourceChannelInfo& bufferToFill, in
 
             // Bug 39 & 45: Guard modulo and boundary conditions
             if (looping.load() && sourceLen > 0) {
-                idx0 = ((idx0 % sourceLen) + sourceLen) % sourceLen;  // Handle negative wrap
-                idx1 = ((idx1 % sourceLen) + sourceLen) % sourceLen;
+                idx0 = juce::positiveModulo(idx0, sourceLen);
+                idx1 = juce::positiveModulo(idx1, sourceLen);
             } else {
                 idx0 = juce::jlimit(0, sourceLen - 1, idx0);
                 idx1 = juce::jlimit(0, sourceLen - 1, idx1);

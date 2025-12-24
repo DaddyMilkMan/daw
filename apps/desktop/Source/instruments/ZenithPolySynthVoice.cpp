@@ -612,7 +612,7 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = nullptr;
     }
 
-    // Call updateSampleRate only when the factor changes.
+    // Call updateSampleRate to propagate the new rate (Bug Fix)
     updateSampleRate();
   }
 }

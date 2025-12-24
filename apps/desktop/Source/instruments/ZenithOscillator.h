@@ -57,6 +57,13 @@ public:
     phase_ -= amount;
   } // For adjusting phase after sync reset
 
+  // Wavetable management (Pro Upgrade)
+  void setWavetable(const Wavetable *wt) { wavetable_ = wt; }
+  const Wavetable *getWavetable() const { return wavetable_; }
+  bool hasWavetable() const {
+    return wavetable_ != nullptr && wavetable_->isValid();
+  }
+
 private:
   OscillatorWaveform waveform_ = OscillatorWaveform::Saw;
   double phase_ = 0.0;

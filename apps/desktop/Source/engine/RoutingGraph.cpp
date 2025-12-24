@@ -293,17 +293,17 @@ juce::var RoutingGraph::toVar() const
     jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());
     
     const juce::ScopedLock sl(writeLock_);
-    auto* obj = new juce::DynamicObject();
+    juce::DynamicObject::Ptr obj = new juce::DynamicObject();
     
     // Serialize Nodes
     juce::var nodesArray;
     for (const auto& pair : nodes_)
     {
-        auto* nodeObj = new juce::DynamicObject();
+        juce::DynamicObject::Ptr nodeObj = new juce::DynamicObject();
         nodeObj->setProperty("id", pair.second.id);
         nodeObj->setProperty("name", pair.second.name);
         nodeObj->setProperty("type", (int)pair.second.type);
-        nodesArray.append(nodeObj);
+        nodesArray.append(juce::var(nodeObj.get()));
     }
     obj->setProperty("nodes", nodesArray);
     
@@ -311,15 +311,15 @@ juce::var RoutingGraph::toVar() const
     juce::var connsArray;
     for (const auto& c : connections_)
     {
-        auto* connObj = new juce::DynamicObject();
+        juce::DynamicObject::Ptr connObj = new juce::DynamicObject();
         connObj->setProperty("source", c.sourceId);
         connObj->setProperty("dest", c.destId);
         connObj->setProperty("gain", c.gain);
-        connsArray.append(connObj);
+        connsArray.append(juce::var(connObj.get()));
     }
     obj->setProperty("connections", connsArray);
     
-    return juce::var(obj);
+    return juce::var(obj.get());
 }
 
 void RoutingGraph::fromVar(const juce::var& data)

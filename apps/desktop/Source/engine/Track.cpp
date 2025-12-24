@@ -23,6 +23,7 @@ std::unique_ptr<Track> Track::create(const juce::String &name, Type type) {
   case Type::Bus:
     return std::make_unique<AuxBusTrack>(name);
   default:
+    jassertfalse; // Bug 40: Unknown track type - should never reach here
     return nullptr;
   }
 }
@@ -35,10 +36,24 @@ Track::~Track() {}
 
 //==============================================================================
 void Track::prepareToPlay(int samplesPerBlockExpected, double sampleRate) {
+  // Validate input parameters
+  jassert(samplesPerBlockExpected > 0 && samplesPerBlockExpected <= 8192);
+  jassert(sampleRate > 0.0 && sampleRate <= 192000.0);
+  
   currentSampleRate = sampleRate;
   currentBlockSize = samplesPerBlockExpected;
 
-  pluginBuffer.setSize(2, samplesPerBlockExpected);
+  // Dynamic Buffer Handling (Roast Fix #5):
+  // Buffer may be resized when audio device settings change.
+  // Only resize if needed to avoid unnecessary allocations.
+  const int currentBufferSize = pluginBuffer.getNumSamples();
+  if (currentBufferSize != samplesPerBlockExpected || pluginBuffer.getNumChannels() != 2) {
+    pluginBuffer.setSize(2, samplesPerBlockExpected);
+    DBG("Track::prepareToPlay - Resized pluginBuffer from " 
+        + juce::String(currentBufferSize) + " to " 
+        + juce::String(samplesPerBlockExpected) + " samples");
+  }
+  pluginBuffer.clear();
 
   pluginChain.prepareToPlay(sampleRate, samplesPerBlockExpected);
   mixerChannel.prepareToPlay(samplesPerBlockExpected, sampleRate);
@@ -52,7 +67,12 @@ void Track::releaseResources() {
 //==============================================================================
 void Track::setName(const juce::String &newName) {
   trackName = newName;
-  sendChangeMessage();
+  // Ensure sendChangeMessage called from message thread (Bug 93)
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 juce::String Track::getTypeString() const {
@@ -72,12 +92,20 @@ juce::String Track::getTypeString() const {
 
 void Track::setArmed(bool shouldBeArmed) {
   armed.store(shouldBeArmed);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::setEnabled(bool shouldBeEnabled) {
   enabled.store(shouldBeEnabled);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 //==============================================================================
@@ -110,17 +138,29 @@ void Track::setFreezeFile(const juce::File &file) {
 //==============================================================================
 void Track::addPlugin(std::unique_ptr<juce::AudioPluginInstance> plugin) {
   pluginChain.addPlugin(std::move(plugin), currentSampleRate, currentBlockSize);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::removePlugin(int pluginIndex) {
   pluginChain.removePlugin(pluginIndex);
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 void Track::clearPlugins() {
   pluginChain.clearPlugins();
-  sendChangeMessage();
+  if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
+    sendChangeMessage();
+  } else {
+    juce::MessageManager::callAsync([this]() { sendChangeMessage(); });
+  }
 }
 
 int Track::getNumPlugins() const { return pluginChain.getNumPlugins(); }
@@ -202,10 +242,27 @@ void Track::applyGainAndPan(juce::AudioBuffer<float> &buffer, int numSamples) {
   juce::ignoreUnused(buffer, numSamples);
 }
 
-void Track::addClip(std::unique_ptr<Clip> /*clip*/) {
+// Bug 44: This is intentionally a no-op for the base Track class.
+
+// Only ClipTrack subclasses (AudioTrack, MIDITrack) support clip management.
+
+// Calling addClip on other track types is a programming error - we log it.
+
+void Track::addClip(std::unique_ptr<Clip> clip) {
+
+  juce::ignoreUnused(clip);
+
   // This track type does not support clips. The passed clip will be destroyed
+
   // on scope exit.
-  jassertfalse;
+
+  DBG("Track::addClip called on track type that doesn't support clips: " +
+
+      getTypeString());
+
+  jassertfalse; // Bug 44: Alert developer about incorrect usage
+
+}
 }
 
 void Track::updateLevelMeters(const juce::AudioBuffer<float> &buffer,
