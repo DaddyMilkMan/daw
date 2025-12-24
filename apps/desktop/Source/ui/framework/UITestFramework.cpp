@@ -12,9 +12,15 @@
 
 #include "UITestFramework.h"
 #include "ZenithDesignSystem.h"
+<<<<<<< HEAD
 #include "controls/SkiaButton.h"
 #include "controls/SkiaLabel.h"
 #include "controls/SkiaTextEditor.h"
+=======
+#include "widgets/SkiaButton.h"
+#include "widgets/SkiaLabel.h"
+#include "widgets/SkiaTextEditor.h"
+>>>>>>> origin/refactor/header-consolidation
 #include <algorithm>
 #include <cmath>
 
@@ -145,7 +151,6 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
                                           const juce::Image &current) {
   juce::Image diffImage(juce::Image::ARGB, baseline.getWidth(),
                         baseline.getHeight(), true);
-  juce::Graphics g(diffImage);
 
   // Create a red overlay where pixels differ
   for (int y = 0; y < baseline.getHeight(); ++y) {
@@ -155,12 +160,19 @@ VisualRegressionTester::generateDiffImage(const juce::Image &baseline,
 
       if (baselinePixel != currentPixel) {
         // Pixel differs - mark in red
+<<<<<<< HEAD
         g.setColour(juce::Colours::red.withAlpha(0.5f));
         g.fillRect(x, y, 1, 1);
       } else {
         // Pixel matches - use baseline pixel with reduced opacity
         g.setColour(baselinePixel.withAlpha(0.3f));
         g.fillRect(x, y, 1, 1);
+=======
+        diffImage.setPixelAt(x, y, juce::Colours::red.withAlpha(0.5f));
+      } else {
+        // Pixel matches - use baseline pixel with reduced opacity
+        diffImage.setPixelAt(x, y, baselinePixel.withAlpha(0.3f));
+>>>>>>> origin/refactor/header-consolidation
       }
     }
   }

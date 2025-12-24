@@ -16,6 +16,10 @@
 #include "MixerComponent.h"
 #include "PianoKeyboardViewSkia.h"
 #include "SkiaComponent.h"
+<<<<<<< HEAD
+=======
+#include <JuceHeader.h>
+>>>>>>> origin/refactor/header-consolidation
 #include <core/SkCanvas.h>
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
@@ -24,6 +28,7 @@
 #include <juce_core/juce_core.h>
 #include <juce_graphics/juce_graphics.h>
 #include <juce_gui_basics/juce_gui_basics.h>
+
 
 namespace zenith {
 class Engine;

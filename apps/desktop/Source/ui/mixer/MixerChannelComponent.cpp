@@ -11,6 +11,7 @@
  */
 
 #include "MixerChannelComponent.h"
+<<<<<<< HEAD
 #include "../../Source/effects/ConsoleEmulation.h"
 #include "../../Source/engine/EngineConstants.h"
 #include "../../Source/engine/Track.h"
@@ -18,6 +19,13 @@
 #include "NeonGlow.h"
 #include "SkiaTheme.h"
 #include "ZenithDesignSystem.h"
+=======
+#include "../../engine/EngineConstants.h"
+#include "../../engine/Track.h"
+#include "../design-system/ZenithTheme.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
+>>>>>>> origin/refactor/header-consolidation
 #include <JuceHeader.h>
 
 
@@ -245,6 +253,7 @@ void MixerChannelComponent::resized() {
   auto bounds = getLocalBounds();
 
   // Top section: Track name
+  auto bounds = getLocalBounds();
   int topHeight = isMaster_ ? kTopHeightMaster : kTopHeightNormal;
   nameLabel_.setBounds(bounds.removeFromTop(topHeight));
   bounds.removeFromTop(4);

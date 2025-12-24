@@ -4,14 +4,15 @@
  */
 
 // POLISH: spacing normalized to 8px grid (stripe 8px, padding 4/8, buttons
-// 24x24, radius 4px) POLISH: typography now uses SkiaTheme::Typography (body)
+// 24x24, radius 4px) POLISH: typography now uses ZenithDesignSystem
 // POLISH: flattened background (removed gradient), unified hover/active using
 // theme
 
 #include "TrackHeaderComponent.h"
 
-#include "GlassmorphicPanel.h" // Added
-#include "NeonGlow.h"          // Added
+#include "../design-system/ZenithTheme.h"
+#include "../framework/GlassmorphicPanel.h"
+#include "../framework/NeonGlow.h"
 #include <core/SkFont.h>
 #include <core/SkPaint.h>
 #include <core/SkPath.h>
@@ -36,10 +37,9 @@ TrackHeaderComponent::TrackHeaderComponent(ProjectState &projectState,
     trackNode_.addListener(this);
 
   // Setup name label (editable) with Apple styling
-  auto &typo = zenith::SkiaTheme::getInstance().getTypography();
   nameLabel_.setEditable(true);
   nameLabel_.setJustificationType(juce::Justification::centredLeft);
-  nameLabel_.setFont(juce::FontOptions(typo.header.size));
+  nameLabel_.setFont(juce::FontOptions(ZenithTheme::Typography::heading));
   nameLabel_.setColour(juce::Label::textColourId,
                        juce::Colours::white.withAlpha(0.95f));
   nameLabel_.setColour(juce::Label::backgroundColourId,

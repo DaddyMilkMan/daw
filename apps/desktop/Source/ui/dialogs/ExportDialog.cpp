@@ -9,9 +9,13 @@
 */
 
 #include "ExportDialog.h"
+<<<<<<< HEAD
 #include "../commands/CommandAPI.h"
 #include "../design-system/ZenithDesignSystem.h"
-
+=======
+#include "../../commands/CommandAPI.h"
+#include "ZenithDesignSystem.h"
+>>>>>>> origin/refactor/header-consolidation
 
 namespace zenith {
 

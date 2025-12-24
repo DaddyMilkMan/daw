@@ -1533,8 +1533,12 @@ void PianoRollComponent::drawSkia(SkCanvas *canvas) {
       static constexpr float kPlayheadMarkerHalfWidth = 5.0f;
       static constexpr float kPlayheadMarkerHeight = 8.0f;
 
+<<<<<<< HEAD
       const float contentTop = TOOLBAR_HEIGHT + RULER_HEIGHT;
 
+=======
+      float contentTop = static_cast<float>(TOOLBAR_HEIGHT + RULER_HEIGHT);
+>>>>>>> origin/refactor/header-consolidation
       SkPath trianglePath;
       trianglePath.moveTo(playheadX, contentTop);
       trianglePath.lineTo(playheadX - kPlayheadMarkerHalfWidth,
@@ -1749,6 +1753,7 @@ void PianoRollComponent::stopPianoKey(int pitch) {
 //==============================================================================
 
 juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
+<<<<<<< HEAD
   // Clamp velocity to valid MIDI range
   velocity = juce::jlimit(0, 127, velocity);
 
@@ -1765,12 +1770,19 @@ juce::Colour PianoRollComponent::getColorForVelocity(int velocity) const {
   float brightness = 0.6f + normalized * 0.4f; // Brighter at high velocity
 
   return juce::Colour::fromHSV(hue, saturation, brightness, 1.0f);
+=======
+  float intensity = velocity / 127.0f;
+  // Using a violet-ish color similar to Zenith design system
+  // Base color: #A020F0 (Violet)
+  return juce::Colour(0xFFA020F0).withAlpha(0.5f + 0.5f * intensity);
+>>>>>>> origin/refactor/header-consolidation
 }
 
 SkColor PianoRollComponent::getSkiaColorForVelocity(int velocity) const {
   juce::Colour c = getColorForVelocity(velocity);
   return SkColorSetARGB(c.getAlpha(), c.getRed(), c.getGreen(), c.getBlue());
 }
+<<<<<<< HEAD
 
 //==============================================================================
 // Rendering Modules
@@ -2634,3 +2646,5 @@ void MidiEditorContainer::injectMidiMessage(const juce::MidiMessage &msg) {
     }
   }
 }
+=======
+>>>>>>> origin/refactor/header-consolidation

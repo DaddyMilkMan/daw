@@ -57,6 +57,7 @@ class TrackStateManager;
 class ClipStateManager;
 class AutomationStateManager;
 class ProjectFileIO;
+class Engine;
 
 class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ArrangerComponent;
@@ -64,6 +65,7 @@ class ProjectState : public juce::ValueTree::Listener, private juce::Timer {
   friend class ClipStateManager;
   friend class AutomationStateManager;
   friend class ProjectFileIO;
+  friend class Engine;
 
 public:
   //==========================================================================
@@ -170,6 +172,17 @@ public:
   juce::File getProjectFile() const { return projectFile; }
   void setProjectFile(const juce::File &file) { projectFile = file; }
   bool hasUnsavedChanges() const { return isDirty.load(); }
+
+  /**
+   * @brief Get sample rate
+   */
+  double getSampleRate() const { return sampleRate_; }
+  void setSampleRate(double rate) { sampleRate_ = rate; }
+
+  /**
+   * @brief Mark as dirty (unsaved changes)
+   */
+  void markDirty() { isDirty.store(true); }
 
   //==========================================================================
   // ValueTree::Listener overrides
@@ -547,6 +560,7 @@ private:
   std::atomic<bool> isDirty{false};
   juce::File projectFile;
   zenith::RoutingGraph routingGraph;
+  double sampleRate_ = 44100.0;
 
   std::unique_ptr<TrackStateManager> trackStateManager;
   std::unique_ptr<ClipStateManager> clipStateManager;

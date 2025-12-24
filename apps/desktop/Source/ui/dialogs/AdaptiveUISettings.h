@@ -12,10 +12,18 @@
 
 #pragma once
 
+<<<<<<< HEAD
 #include "SkiaButton.h"
 #include "SkiaComponent.h"
 #include "../controls/SkiaComboBox.h"
 #include "../controls/SkiaLabel.h"
+=======
+#include "../framework/SkiaComponent.h"
+#include "../widgets/SkiaButton.h"
+#include "../widgets/SkiaComboBox.h"
+#include "../widgets/SkiaLabel.h"
+
+>>>>>>> origin/refactor/header-consolidation
 
 namespace zenith {
 namespace settings {
