@@ -40,6 +40,7 @@ public:
   bool isSessionView() const;
   bool isBrowserVisible() const;
   bool isSampleEditorVisible() const;
+  bool isMidiEditorVisible() const;
 
   bool isSampleEditorVisible() const;
   bool isMidiEditorVisible() const;

@@ -60,14 +60,24 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
   // 3. Run Separation
   ONNXStemSeparator separator;
 
-  // Check for model file availability (delegated to platform discovery)
-  if (!separator.isAvailable()) {
-    result.error = "ONNX Runtime not available.";
-    if (callback_) {
-      juce::MessageManager::callAsync(
-          [cb = callback_, res = result]() { cb(res); });
-    }
-    return juce::ThreadPoolJob::jobHasFinished;
+  // Check for model file availability
+  juce::File modelFile;
+
+  // 1. Check AppData
+  auto appDataDir =
+      juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory);
+  auto appDataModel = appDataDir.getChildFile("ZenithDAW/Models/htdemucs.onnx");
+
+  // 2. Check App Directory (Portable)
+  auto appDir =
+      juce::File::getSpecialLocation(juce::File::currentApplicationFile)
+          .getParentDirectory();
+  auto localModel = appDir.getChildFile("Models/htdemucs.onnx");
+
+  if (appDataModel.existsAsFile()) {
+    modelFile = appDataModel;
+  } else if (localModel.existsAsFile()) {
+    modelFile = localModel;
   }
 
   // Initialize with default model path
@@ -78,6 +88,17 @@ juce::ThreadPoolJob::JobStatus StemSeparationJob::runJob() {
           juce::MessageManager::callAsync([cb = callback_, res = result]() { cb(res); });
       }
       return juce::ThreadPoolJob::jobHasFinished;
+  }
+    // If we can't use ONNX (runtime missing OR model missing/failed),
+    // the separator might have a DSP fallback.
+    // However, if the user explicitly requested AI separation, this might be
+    // disappointing. For now, we proceed to separate(), which handles fallback
+    // internally and sets the 'usedONNX' flag in the result.
+
+    // Optional: Abort if stricter requirements needed
+    // result.error = "ONNX Runtime not available or model missing.";
+    // ...
+>>>>>>> origin/feat/ui-overhaul
   }
 
   auto separationResult = separator.separate(buffer, sampleRate);
