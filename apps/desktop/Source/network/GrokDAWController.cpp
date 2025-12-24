@@ -38,21 +38,21 @@ public:
   GrokAPIClient grokClient;
   AudioAnalysisService analysisService;
 
-  // Thread Pool for safe async operations (Complaint #8 Fix)
-  juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job for now
+  // Thread Pool for safe async operations
+  juce::ThreadPool threadPool{1}; // Limit to 1 concurrent analysis job
 
   std::function<juce::var()> contextProvider;
 
   bool isInitialized = false;
 
-  // Command Registry (Critique #1 Fix: Use unordered_map)
+  // Command Registry
   std::unordered_map<std::string, FunctionHandler> functionRegistry;
 
-  // Command ID Mapping (Critique #1 Fix: Strong typing)
+  // Command ID Mapping
   std::unordered_map<std::string, CommandAPI::CommandID> commandIdMap;
 
   //==========================================================================
-  // Helper for safe threading (Critique #4 Fix: No Pyramid of Doom)
+  // Helper for safe threading
   void executeOnMessageThread(std::function<void()> task) {
     if (juce::MessageManager::getInstance()->isThisTheMessageThread()) {
       task();
@@ -73,7 +73,8 @@ public:
     commandIdMap["generate_midi_pattern"] =
         CommandAPI::CommandID::GetMidiData; // verify mapping
     commandIdMap["generate_lyrics"] =
-        CommandAPI::CommandID::AddMarker; // Mapped to lyrics-aware marker creation
+        CommandAPI::CommandID::AddMarker; // Mapped to lyrics-aware marker
+                                          // creation
     commandIdMap["separate_stems"] = CommandAPI::CommandID::SeparateTrack;
     commandIdMap["analyze_track"] =
         CommandAPI::CommandID::ExportAudio; // uses export
@@ -81,7 +82,8 @@ public:
     commandIdMap["get_routing_graph"] = CommandAPI::CommandID::GetRoutingGraph;
     commandIdMap["start_evolution"] = CommandAPI::CommandID::StartEvolution;
     commandIdMap["stop_evolution"] = CommandAPI::CommandID::StopEvolution;
-    commandIdMap["get_evolution_stats"] = CommandAPI::CommandID::GetEvolutionStats;
+    commandIdMap["get_evolution_stats"] =
+        CommandAPI::CommandID::GetEvolutionStats;
 
     // Handler for audio analysis (special case with side effects)
     functionRegistry["analyze_track"] = [this](const GrokFunctionCall &call,
@@ -120,7 +122,7 @@ public:
         });
 
       executeOnMessageThread([this, call, onComplete, onError]() {
-        // Critique #1 & #2 Fix: Typed Command Execution
+        // Typed Command Execution
         juce::var result = commandAPI.executeCommand(
             CommandAPI::CommandID::SeparateTrack, call.arguments);
 
@@ -137,17 +139,17 @@ public:
       });
     };
 
-    // Default handler for all other CommandAPI commands (Critique #2 Fix:
-    // Thread Safety)
+    // Default handler for standard commands
     auto defaultHandler = [this](const GrokFunctionCall &call, auto onComplete,
                                  auto onError, auto onProgress) {
+      juce::ignoreUnused(onProgress);
       executeOnMessageThread([this, call, onComplete, onError]() {
-        // Try to resolve CommandID (Critique #1 Fix)
+        // Try to resolve CommandID
         auto idIt = commandIdMap.find(call.functionName.toStdString());
         juce::var result;
 
         if (idIt != commandIdMap.end()) {
-          // Safe Path: Direct Enum Dispatch
+          // Direct Enum Dispatch
           result = commandAPI.executeCommand(idIt->second, call.arguments);
         } else {
           // Fallback Path: String Dispatch
@@ -168,8 +170,8 @@ public:
 
     // Register common commands to use the default handler
     const char *standardCommands[] = {
-        "create_track",          "list_tracks",    "delete_track",
-        "list_presets",          "add_note",       "set_tempo",
+        "create_track",          "list_tracks",     "delete_track",
+        "list_presets",          "add_note",        "set_tempo",
         "generate_midi_pattern", "generate_lyrics", "search_plugins",
         "get_routing_graph",     "start_evolution", "stop_evolution",
         "get_evolution_stats"};
@@ -185,7 +187,7 @@ public:
                       std::function<void(juce::String response)> onComplete,
                       std::function<void(juce::String error)> onError,
                       std::function<void(juce::String status)> onProgress) {
-    // Use ThreadPool instead of detached threads (Complaint #8 Fix)
+    // Use ThreadPool instead of detached threads
     threadPool.addJob([this, call, onComplete, onError, onProgress]() {
       // Check if analysis service is available (Python installed?)
       if (!analysisService.isAvailable()) {
@@ -208,10 +210,10 @@ public:
       paramsObj->setProperty("durationSeconds", 10.0); // Default 10s
       exportParams = juce::var(paramsObj);
 
-      // DEADLOCK FIX: Use completion callback pattern instead of blocking wait.
-      // The original code used WaitableEvent::wait() which could deadlock if
-      // called from the message thread (callAsync would never execute).
-      // Now we use a fully async chain.
+      // Use completion callback pattern instead of blocking wait to prevent
+      // deadlocks. The original code used WaitableEvent::wait() which could
+      // deadlock if called from the message thread (callAsync would never
+      // execute). Now we use a fully async chain.
 
       juce::MessageManager::callAsync([this, exportParams, tempPath, onComplete,
                                        onError, onProgress]() {
@@ -235,8 +237,8 @@ public:
                 [onProgress]() { onProgress("Analyzing audio..."); });
           }
 
-          // CONST_CAST FIX: Capture tempPath by value (String), create File
-          // when needed. This avoids the const_cast hack on captured-by-value
+          // Capture tempPath by value (String), create File when needed.
+          // This avoids the need for const_cast on captured-by-value
           // juce::File.
           analysisService.analyzeAudioFile(
               juce::File(tempPath),
@@ -282,7 +284,7 @@ public:
       if (idIt != commandIdMap.end()) {
         // Valid ID known, dispatch safely using helper
         executeOnMessageThread([this, call, onComplete, onError, idIt]() {
-          // Typed Dispatch (Critique #1 Fix)
+          // Typed Dispatch
           juce::var result =
               commandAPI.executeCommand(idIt->second, call.arguments);
 
@@ -373,7 +375,8 @@ void GrokDAWController::generatePreset(
       "- Oscillators: osc1_waveform, osc1_detune, osc1_mix (same for osc2, "
       "osc3)\n"
       "- Filter: filter_type, filter_cutoff, filter_resonance, filter_drive\n"
-      "- Envelopes: amp_attack, amp_decay, amp_sustain, amp_release (same for "
+      "- Envelopes: amp_attack, amp_decay, amp_sustain, amp_release (same "
+      "for "
       "mod_*)\n"
       "- LFOs: lfo1_rate, lfo1_amount, lfo1_target (same for lfo2)\n"
       "- Effects: distortion, chorus\n"
@@ -384,7 +387,8 @@ void GrokDAWController::generatePreset(
   pImpl->grokClient.sendChat(
       prompt, GrokMode::Thinking,
       {}, // No function calling for preset generation
-      "You are an expert sound designer. Generate synthesizer presets based on "
+      "You are an expert sound designer. Generate synthesizer presets based "
+      "on "
       "descriptions.",
       [this, instrumentId, description, genre, onComplete,
        onError](juce::String response) {

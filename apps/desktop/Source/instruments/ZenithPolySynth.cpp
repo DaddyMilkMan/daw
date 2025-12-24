@@ -14,11 +14,10 @@
 */
 
 #include "ZenithPolySynth.h"
+#include "../ui/instruments/ZenithPolySynthUI.h"
 #include "ContentPaths.h"
-#include "ZenithPolySynthUI.h"
 #include "ZenithPolySynthVoice.h"
 #include <juce_core/juce_core.h>
-
 
 namespace zenith {
 

@@ -43,8 +43,8 @@ ZenithDeEsser::createParameterLayout() {
 void ZenithDeEsser::prepareToPlay(double sampleRate, int samplesPerBlock) {
   juce::dsp::ProcessSpec spec;
   spec.sampleRate = sampleRate;
-  spec.maximumBlockSize = samplesPerBlock;
-  spec.numChannels = getTotalNumOutputChannels();
+  spec.maximumBlockSize = static_cast<juce::uint32>(samplesPerBlock);
+  spec.numChannels = static_cast<juce::uint32>(getTotalNumOutputChannels());
 
   crossoverLow.prepare(spec);
   crossoverHigh.prepare(spec);
@@ -53,6 +53,9 @@ void ZenithDeEsser::prepareToPlay(double sampleRate, int samplesPerBlock) {
   // De-Esser settings: Fast attack, Fast release usually
   compressor.setAttack(1.0f);   // 1ms
   compressor.setRelease(50.0f); // 50ms
+
+  // Pre-allocate highBand buffer for real-time safety
+  highBandBuffer.setSize(static_cast<int>(spec.numChannels), samplesPerBlock);
 }
 
 void ZenithDeEsser::releaseResources() {}
@@ -73,32 +76,41 @@ void ZenithDeEsser::processBlock(juce::AudioBuffer<float> &buffer,
   float ratio = 1.0f + (amt * 19.0f); // Max 20:1
   compressor.setRatio(ratio);
 
-  // Create copy for High Band
-  juce::AudioBuffer<float> highBand(buffer);
+  // Resize highBandBuffer if needed (RT-safe: only grows, no deallocation)
+  if (highBandBuffer.getNumChannels() < buffer.getNumChannels() ||
+      highBandBuffer.getNumSamples() < buffer.getNumSamples()) {
+    highBandBuffer.setSize(buffer.getNumChannels(), buffer.getNumSamples(),
+                           false, false, true);
+  }
+
+  // Copy input to pre-allocated highBand buffer (RT-safe)
+  for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+    highBandBuffer.copyFrom(ch, 0, buffer, ch, 0, buffer.getNumSamples());
+  }
 
   juce::dsp::AudioBlock<float> block(buffer);
-  juce::dsp::AudioBlock<float> highBlock(highBand);
+  juce::dsp::AudioBlock<float> highBlock(highBandBuffer);
 
   juce::dsp::ProcessContextReplacing<float> contextLow(block);
   juce::dsp::ProcessContextReplacing<float> contextHigh(highBlock);
 
   // Split
   crossoverLow.process(contextLow);   // buffer becomes Low Band
-  crossoverHigh.process(contextHigh); // highBand becomes High Band
+  crossoverHigh.process(contextHigh); // highBandBuffer becomes High Band
 
   // Compress High Band
   compressor.process(contextHigh);
 
-  // Sum
+  // Sum or Listen
   if (listen->load() > 0.5f) {
-    // Output only compressed high band
-    buffer.allocate(buffer.getNumChannels(),
-                    buffer.getNumSamples()); // Clear? No.
-    buffer.makeCopyOf(highBand);
+    // Output only compressed high band (RT-safe copy)
+    for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
+      buffer.copyFrom(ch, 0, highBandBuffer, ch, 0, buffer.getNumSamples());
+    }
   } else {
     // Sum Low + High
     for (int ch = 0; ch < buffer.getNumChannels(); ++ch) {
-      buffer.addFrom(ch, 0, highBand, ch, 0, buffer.getNumSamples());
+      buffer.addFrom(ch, 0, highBandBuffer, ch, 0, buffer.getNumSamples());
     }
   }
 }

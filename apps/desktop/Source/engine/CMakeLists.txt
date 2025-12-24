@@ -10,7 +10,9 @@ target_sources(ZenithDAW PRIVATE
     Clip.cpp
     AudioTrack.cpp
     MIDITrack.cpp
+    AuxBusTrack.cpp
     ClipTrack.cpp
+    InstrumentTrack.cpp
     MixerChannel.cpp
     AudioFilePool.cpp
     PluginHost.cpp
@@ -48,6 +50,16 @@ target_sources(ZenithDAW PRIVATE
     TrackStateSynchronizer.cpp
     TrackAutomationSynchronizer.cpp
     TempoMapSynchronizer.cpp
+    
+    # Effects
+    ../effects/ConsoleEmulation.cpp
+    ../effects/ZenithChannelStrip.cpp
+    ../effects/ZenithDeEsser.cpp
+    ../effects/ZenithTransientShaper.cpp
+    ../effects/ZenithVoiceChanger.cpp
+    ../plugins/InternalPluginFormat.cpp
+    ../plugins/ZenithPlugin.cpp
+    ../plugins/modulation/ZenithTremolo.cpp
 )# Touch for rebuild
 
 

@@ -86,7 +86,7 @@ void ZenithPolySynthVoice::noteStarted() {
   auto note = getCurrentlyPlayingNote();
   midiNoteNumber_ = note.initialNote;
 
-  if (monoMode_ && isVoiceActive()) {
+  if (monoMode_ && isActive()) {
     previousFrequency_ = currentFrequency_;
   } else {
     previousFrequency_ = note.getFrequencyInHertz();
@@ -104,11 +104,11 @@ void ZenithPolySynthVoice::noteStarted() {
   }
 
   targetFrequency_ = note.getFrequencyInHertz();
-  velocity_ = std::pow(note.noteOnVelocity.toFloat(), velocityCurve_);
+  velocity_ = std::pow(note.noteOnVelocity.asUnsignedFloat(), velocityCurve_);
 
   // Initialize MPE values
-  aftertouch_ = note.pressure.toFloat();
-  timbre_ = note.timbre.toFloat();
+  aftertouch_ = note.pressure.asUnsignedFloat();
+  timbre_ = note.timbre.asUnsignedFloat();
 
   // Pitch bend calculation for Mod Matrix (normalized approx)
   // ZenithPolySynth uses pitchBendRange_ parameter, we can normalize against it
@@ -132,7 +132,7 @@ void ZenithPolySynthVoice::noteStopped(bool allowTailOff) {
 }
 
 void ZenithPolySynthVoice::notePressureChanged() {
-  aftertouch_ = getCurrentlyPlayingNote().pressure.toFloat();
+  aftertouch_ = getCurrentlyPlayingNote().pressure.asUnsignedFloat();
 }
 
 void ZenithPolySynthVoice::notePitchbendChanged() {
@@ -143,7 +143,7 @@ void ZenithPolySynthVoice::notePitchbendChanged() {
 }
 
 void ZenithPolySynthVoice::noteTimbreChanged() {
-  timbre_ = getCurrentlyPlayingNote().timbre.toFloat();
+  timbre_ = getCurrentlyPlayingNote().timbre.asUnsignedFloat();
 }
 
 void ZenithPolySynthVoice::noteKeyStateChanged() {
@@ -196,20 +196,33 @@ void ZenithPolySynthVoice::renderNextBlock(
   while (samplesProcessed < numSamples) {
     int chunk = juce::jmin(numSamples - samplesProcessed,
                            maxBlockSize_); // Limit to max safe block
-    int upsampledChunk = chunk * oversamplingFactor_;
 
-    // Safety check against buffer sizes
-    if (chunk > downsamplingBuffer_.getNumSamples() ||
-        upsampledChunk > oversamplingBuffer_.getNumSamples()) {
-      // This should theoretically not happen if maxBlockSize_ is respected and
-      // buffers are sized correctly
-      jassertfalse;
-      // Fallback: render non-oversampled to avoid crash/silence
-      renderInnerBlock(outputBuffer, startSample + samplesProcessed,
-                       numSamples - samplesProcessed);
-      return;
+    // Create a block for the input chunk
+    juce::dsp::AudioBlock<float> inputBlock(outputBuffer);
+    auto subBlock =
+        inputBlock.getSubBlock(startSample + samplesProcessed, chunk);
+
+    // 1. Upsample (returns the upsampled block to process)
+    auto upsampledBlock = oversampler_->processSamplesUp(subBlock);
+
+    // 2. Create temp buffer and render synth logic at upsampled rate
+    int upsampledSamples = static_cast<int>(upsampledBlock.getNumSamples());
+    oversamplingBuffer_.setSize(
+        static_cast<int>(upsampledBlock.getNumChannels()), upsampledSamples,
+        false, false, true);
+    oversamplingBuffer_.clear();
+    renderInnerBlock(oversamplingBuffer_, 0, upsampledSamples);
+
+    // Copy rendered audio to upsampled block
+    for (size_t ch = 0; ch < upsampledBlock.getNumChannels(); ++ch) {
+      upsampledBlock.getChannelPointer(ch);
+      std::copy(oversamplingBuffer_.getReadPointer(static_cast<int>(ch)),
+                oversamplingBuffer_.getReadPointer(static_cast<int>(ch)) +
+                    upsampledSamples,
+                upsampledBlock.getChannelPointer(ch));
     }
 
+<<<<<<< HEAD
     // 1. Render synth logic into upsampled buffer
     // Note: Internal components (Oscs, Filters) are already configured for
     // baseRate * factor
@@ -233,6 +246,11 @@ void ZenithPolySynthVoice::renderNextBlock(
       outputBuffer.addFrom(ch, startSample + samplesProcessed,
                            downsamplingBuffer_, ch, 0, chunk);
     }
+=======
+    // 3. Downsample back to original rate (modifies the original subBlock in
+    // place)
+    oversampler_->processSamplesDown(subBlock);
+>>>>>>> origin/feat/effects-suite
 
     samplesProcessed += chunk;
   }
@@ -240,7 +258,7 @@ void ZenithPolySynthVoice::renderNextBlock(
 
 void ZenithPolySynthVoice::renderInnerBlock(
     juce::AudioBuffer<float> &outputBuffer, int startSample, int numSamples) {
-  if (!isVoiceActive())
+  if (!isActive())
     return;
 
   filter1_.setModel(static_cast<FilterModelType>(filterModel_));
@@ -604,17 +622,19 @@ void ZenithPolySynthVoice::setQualityPreset(QualityPreset quality) {
       oversampler_ = std::make_unique<juce::dsp::Oversampling<float>>(
           2,                                   // numChannels
           (int)std::log2(oversamplingFactor_), // factorLog2
-          juce::dsp::Oversampling<
-              float>::filter_half_band_polyphase_iir, // filter
-          true                                        // isBuffered
+          juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR, // filter
+          true // isBuffered
       );
     } else {
       oversampler_ = nullptr;
     }
+<<<<<<< HEAD
 
     } else {
       oversampler_ = nullptr;
     }
+=======
+>>>>>>> origin/feat/effects-suite
   }
 
   // Call updateSampleRate to propagate the new rate (Bug Fix)

@@ -20,7 +20,6 @@
 #include <memory>
 #include <vector>
 
-
 namespace zenith {
 
 //==============================================================================
@@ -144,7 +143,7 @@ private:
       float maxVal = 0.0f;
       for (float s : curr)
         maxVal = std::max(maxVal, std::abs(s));
-      if (maxVal > 0.0f && maxVal < 0.99f) {
+      if (maxVal > 1e-6f) {
         float scale = 1.0f / maxVal;
         for (float &s : curr)
           s *= scale;
@@ -250,9 +249,6 @@ private:
     @return MIP level (0 = full bandwidth, higher = more filtered)
 */
 inline int calculateMipLevel(float frequency, double sampleRate) {
-  // Nyquist frequency
-  float nyquist = static_cast<float>(sampleRate) * 0.5f;
-
   // Base frequency is table size cycles per second at 1 Hz playback
   // At 1 Hz, all harmonics are below Nyquist
   // At higher frequencies, harmonics fold back

@@ -108,6 +108,13 @@ void Track::setEnabled(bool shouldBeEnabled) {
   }
 }
 
+void Track::setSoloed(bool shouldBeSoloed) {
+  mixerChannel.setSolo(shouldBeSoloed);
+  sendChangeMessage();
+}
+
+bool Track::isSoloed() const { return mixerChannel.isSolo(); }
+
 //==============================================================================
 void Track::setFreezeFile(const juce::File &file) {
   jassert(juce::MessageManager::getInstance()->isThisTheMessageThread());

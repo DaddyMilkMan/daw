@@ -1,12 +1,13 @@
 /*
   ==============================================================================
     AIMasteringAgent.cpp
-    Complete implementation with Grok 4.1 integration
   ==============================================================================
 */
 
 #include "AIMasteringAgent.h"
 #include "../network/SecureKeyStore.h"
+#include "../engine/Engine.h"
+#include "../engine/Track.h"
 
 namespace zenith {
 namespace ai {
@@ -555,11 +556,26 @@ void AIMasteringAgent::reset() {
   isConfigured_.store(false);
 }
 
-//==============================================================================
-// DSP Component Template Implementations
-//==============================================================================
-
-// Include template implementations here or in separate .inl file
+void AIMasteringAgent::normalizeLoudness(juce::AudioBuffer<float> &buffer,
+                                         float targetLufs) {
+  float rms = 0.0f;
+  int numSamples = buffer.getNumSamples();
+  int numChannels = buffer.getNumChannels();
+  for (int ch = 0; ch < numChannels; ++ch) {
+    const float *data = buffer.getReadPointer(ch);
+    for (int i = 0; i < numSamples; ++i) {
+      rms += data[i] * data[i];
+    }
+  }
+  rms = std::sqrt(rms / (numSamples * numChannels));
+  float currentLufs = 20.0f * std::log10(rms + 1e-10f) - 10.0f;
+  float gainDb = targetLufs - currentLufs;
+  gainDb = juce::jlimit(-12.0f, 12.0f, gainDb);
+  float gainLinear = juce::Decibels::decibelsToGain(gainDb);
+  buffer.applyGain(gainLinear);
+  DBG("AIMasteringAgent: Normalized loudness by " + juce::String(gainDb, 1) +
+      "dB");
+}
 
 } // namespace ai
 } // namespace zenith

@@ -105,15 +105,6 @@ private:
   // Random number generator for noise and phase randomization
   juce::Random random_;
 
-public:
-  // Wavetable management (Pro Upgrade)
-  void setWavetable(const Wavetable *wt) { wavetable_ = wt; }
-  const Wavetable *getWavetable() const { return wavetable_; }
-  bool hasWavetable() const {
-    return wavetable_ != nullptr && wavetable_->isValid();
-  }
-
-private:
   // PolyBLEP anti-aliasing helper
   // t: current phase (0..1)
   // dt: phase increment per sample

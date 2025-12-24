@@ -136,7 +136,22 @@ set(ZENITH_TEST_SOURCES
     
     # apps/desktop/Source/tests/FlecsSyncTests.cpp - Removed
     # Dependencies for tests
-    # apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/network/GrokUtils.cpp
+    apps/desktop/Source/instruments/Instrument.cpp
+    apps/desktop/Source/instruments/InstrumentRegistry.cpp
+    apps/desktop/Source/instruments/RegisterBuiltInInstruments.cpp
+    apps/desktop/Source/instruments/ZenithPolySynth.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthVoice.cpp
+    apps/desktop/Source/instruments/ZenithPolySynthParameterManager.cpp
+    apps/desktop/Source/instruments/ZenithOscillator.cpp
+    apps/desktop/Source/instruments/ZenithFilter.cpp
+    apps/desktop/Source/instruments/ZenithEffects.cpp
+    apps/desktop/Source/instruments/ZenithSampler.cpp
+    apps/desktop/Source/instruments/WavetableLoader.cpp
+    apps/desktop/Source/instruments/PresetGenerator.cpp
+    apps/desktop/Source/instruments/ZenithPresetManager.cpp
+    apps/desktop/Source/ui/instruments/ZenithPolySynthUI.cpp
+    apps/desktop/Source/ai/SessionDebuggerAgent.cpp
 )
 
 # Create main executable
@@ -417,12 +432,19 @@ if(BUILD_TESTS)
     target_include_directories(ZenithDAWTests PRIVATE 
         apps/desktop/Source 
         apps/desktop/Source/engine
+        apps/desktop/Source/instruments
         apps/desktop/Source/ui
+        apps/desktop/Source/ui/arranger
+        apps/desktop/Source/ui/browser
         apps/desktop/Source/ui/common
         apps/desktop/Source/ui/framework
         apps/desktop/Source/ui/instruments
         apps/desktop/Source/ui/design-system
         apps/desktop/Source/ui/widgets
+        apps/desktop/Source/ai
+        apps/desktop/Source/network
+        apps/desktop/Source/dsp
+        apps/desktop/Source/automation
         apps/desktop/include
         ${CMAKE_BINARY_DIR}/ZenithDAWTests_artefacts/JuceLibraryCode
         "${CMAKE_CURRENT_SOURCE_DIR}/external/JUCE/modules"

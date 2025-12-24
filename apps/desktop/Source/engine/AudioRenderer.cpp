@@ -14,6 +14,7 @@
 #include "../dsp/MasterLimiter.h"
 #include "../dsp/SIMDHelpers.h"
 #include "AuxBus.h"
+#include "Clip.h"
 #include "TempoMap.h"
 #include "Track.h"
 
@@ -83,9 +84,10 @@ void AudioRenderer::renderAudioGraph(
     juce::AudioBuffer<float> &outputBuffer, int numSamples,
     juce::int64 playheadPosition, std::span<Track *const> tracks,
     std::span<AuxBus *const> auxBuses, const RoutingGraph &routingGraph,
-    MasterLimiter &masterLimiter, const TempoMap *tempoMap,
-    const juce::MidiBuffer *incomingMidi, const float *const *inputChannelData,
-    int numInputChannels) noexcept {
+    MasterLimiter &masterLimiter,
+    std::vector<std::unique_ptr<juce::AudioPluginInstance>> &masterPlugins,
+    const TempoMap *tempoMap, const juce::MidiBuffer *incomingMidi,
+    const float *const *inputChannelData, int numInputChannels) noexcept {
 
   // RT-Safety: Disable denormals to prevent CPU spikes with near-zero floats
   juce::ScopedNoDenormals noDenormals;
@@ -194,6 +196,7 @@ void AudioRenderer::renderAudioGraph(
 
       track->getNextAudioBlock(trackInfo, playheadPosition, trackMidiInput,
                                auxBufferPtrsVector_, tempoMap);
+<<<<<<< HEAD
 
       // Input Monitoring Logic
       if (inputChannelData != nullptr && track->isInputMonitorEnabled()) {
@@ -217,6 +220,8 @@ void AudioRenderer::renderAudioGraph(
           }
         }
       }
+=======
+>>>>>>> origin/feat/effects-suite
 
       if (pdcEnabled_.load()) {
         applyPDCDelay(trackBuffer, static_cast<int>(trackIdx), numSamples);
@@ -285,8 +290,6 @@ void AudioRenderer::renderAudioGraph(
   // converted later. Standard practice for DAWs to dither the final monitoring
   // output.
   dither_.process(outputBuffer, 24); // Assume 24-bit DAC monitoring
-
-  // Update metering
 
   // Update metering
   updateMasterMeters(outputBuffer);
@@ -443,7 +446,6 @@ void AudioRenderer::updateMasterLatency(
   masterLatency_.store(totalLatency);
 }
 
-//==============================================================================
 void AudioRenderer::updateClipPositions(std::span<Track *const> tracks,
                                         juce::int64 playheadPosition) noexcept {
   for (auto *track : tracks) {

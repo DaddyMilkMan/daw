@@ -615,6 +615,26 @@ juce::var CommandAPI::getUIState(const juce::var &params) {
   return createSuccessResponse(juce::var(resultObj));
 }
 
+// Force recompile
+juce::var CommandAPI::getUIHealth(const juce::var &params) {
+  juce::ignoreUnused(params);
+
+  auto *resultObj = new juce::DynamicObject();
+
+  if (uxDirector_) {
+    resultObj->setProperty("healthScore", uxDirector_->getUIHealthScore());
+    resultObj->setProperty("issueCount",
+                           uxDirector_->getUnresolvedIssueCount());
+    // Also include summary for quick view
+    resultObj->setProperty("summary", uxDirector_->getIssueSummary());
+  } else {
+    resultObj->setProperty("healthScore", 0);
+    resultObj->setProperty("error", "UXDirectorAgent not available");
+  }
+
+  return createSuccessResponse(juce::var(resultObj));
+}
+
 juce::var CommandAPI::redo(const juce::var &params) {
   juce::ignoreUnused(params);
 
